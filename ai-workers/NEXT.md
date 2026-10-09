@@ -3,7 +3,7 @@
 *Replace, don't append. The story, ratings and plan are in `REPORT-CARD.md`; status in `PROGRESS.md`; decisions in `decisions.md`. This file holds only what the next session must know to start.*
 
 ## State, 9 Oct 2026, 16:35 (after the full audit)
-- **Full audit done** (`REPORT-CARD.md` §5): 12 removals and an order change (W3b before Phase B) wait for Ranjan.
+- **Full audit done** (`REPORT-CARD.md` §5): 12 removals and an order change (W3b before Phase B) wait for Ranjan. **W2 closed** (re-review W2b). **Provider/cost and W3b drafts done** the same day; residency wording (AG11-D15 vs SA-11 §3.6) is a new founder question.
 - W1 done, reviewed, page published: https://claude.ai/artifact/7ABbMaVaoYQ32osUgDJNU7
 - W2 content done and corrected after review W2 (reference index 1,300+ refs; 28 workers; 41 improvements). No agent running.
 - **W2 page published:** https://claude.ai/artifact/KWqX2Hr9tJGcmqDoY9bx4s (28 workers, product map with workers, rules, 22 decisions). Ranjan's answers to the 22 decisions are the next input.
@@ -18,5 +18,5 @@ Read `design/direction-review-2026-10-09.md` and `checks/lead-verification-2026-
 3. ~~W2 page~~ done. Collect Ranjan's answers to the 22 decisions (page tab "Your 22 decisions") and record them in decisions.md.
 4. ~~Provider/region check and cost-per-file estimate~~ done 9 Oct → `commercial/provider-and-cost.md` (Lead spot-checked 3 claims live: Anthropic geo options, Claude prices, Bedrock Canada).
 5. Phase B for the File Builder: requirements in `product/requirements/` format + clickable demo in the simulator (`product/app`), including the readiness report and a shadow-mode summary.
-6. W3b validation script and price card, then W3c/d.
+6. ~~W3b validation script and price card~~ drafted 9 Oct in `commercial/`; ten conversations not run (who runs them: open). Then W3c/d from the results.
 Bootstrap prompt: `PROMPTS.md` §1a (full audit, first time), then §1.

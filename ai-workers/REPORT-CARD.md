@@ -35,7 +35,7 @@
 2. ~~Short re-review of the corrected catalogue and improvements~~ done 9 Oct: `checks/review-W2b-2026-10-09.md`, 0 blocking, 1 major fixed. **W2 closed.**
 3. Collect Ranjan's answers to the blocking decisions (page tab "Your 22 decisions"); record them in `decisions.md`.
 4. ~~Provider and Canada-only check; cost-per-file estimate~~ done 9 Oct → `commercial/provider-and-cost.md`. Finding: no major provider processes Claude or GPT models inside Canada today; Gemini in Montréal is listed; the product's own gate (AG-11-93) keeps every AI Worker switched off until a Canada-processing provider is recorded. Model cost per prepared file about CAD 0.40 / 2.20 / 14 (Assumptions, arithmetic shown).
-5. W3a/W3b: proposition, validation script and price card for 5–10 licensed consultants. **Moved ahead of Phase B** (audit finding §5.4).
+5. ~~W3b: validation script and price card~~ drafted 9 Oct (`commercial/validation-script.md`, `commercial/price-card.md`). Next: Ranjan names who runs the ten conversations; results feed W3c. W3a proposition folds into the price card page 1. **Kept ahead of Phase B** (audit finding §5.4), pending his yes.
 6. Phase B for the File Builder: requirements in `product/requirements/` format + clickable demo in the simulator.
 7. W3c/d: pricing in the money model; investor story.
 
