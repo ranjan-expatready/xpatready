@@ -2,7 +2,7 @@
 
 *Audited by the Lead at the end of every session and re-audited at the start of the next (bootstrap prompt, `PROMPTS.md` §1). Ratings are the Lead's honest judgement, out of 10, with the evidence. Replace, don't append; git keeps history.*
 
-**Last audit:** 9 Oct 2026, evening.
+**Last audit:** 9 Oct 2026, late evening (after the W2 page and the LMIA-folder check).
 
 ## 1. The story so far (so a new session knows how we got here)
 
@@ -21,20 +21,20 @@
 | Parameter | Score | Evidence | What would raise it |
 |---|---|---|---|
 | Evidence quality | 8 | 46/46 documents read in full; 269 sampled quotes checked, 0 wrong; 24 competitor URLs confirmed; errors found by review were fixed | Re-check competitor quotes on live pages before investor use |
-| Freshness, no stale or duplicated data | 8 | Snapshot 9 Oct from master folders only (257 old versions excluded); code matches GitHub `dev`; archive never read; one team document was missed and then added | Include the team-documents folder in every future snapshot |
+| Freshness, no stale or duplicated data | 9 | Snapshot 9 Oct from master folders only (257 old versions excluded); code matches GitHub `dev`; archive never read; the one missed team document was added; the "missing LMIA folder" was traced (never on Drive, decisions already inside AG-17) | Include team documents in every snapshot; re-copy ERv2-frontend when Phase B needs code |
 | Isolation from junk | 8 | `archive/` and `code/` are git-ignored and ruled "never current"; agents may read only the newest snapshot; reviewers check every citation points to it | Nothing further unless a review finds a stale citation |
 | Direction and strategy | 8 | Wedge, hook, four shapes, build order, moat argument, honest counter-argument | Consultant validation |
-| Workflow setup | 7 | Rules, hook, agents, tracker, decisions, proposals, local git. Slightly heavy; two overlapping files were merged today | Keep it; add nothing without a review-found failure |
+| Workflow setup | 8 | Rules, hook, agents, tracker, decisions, proposals, report card, local git; audit at every session start; overlapping files merged; freshness script fixed | Keep it; add nothing without a review-found failure |
 | Honesty and challenge | 9 | Two hostile reviews, challenge review of Ranjan's own decisions, invented quote caught, "Hard today" rating kept | — |
 | Validation with customers | 2 | None yet | 5–10 peer conversations (W3b) |
 | Things built | 1 | Nothing runs; all requirements and strategy | File Builder demo in the simulator (Phase B) |
-| Communication | 7 | Short step reports; one visual page | Second page with workers and the 22 decisions |
+| Communication | 8 | Short step reports; two visual pages (evidence; 28 workers + map + 22 decisions) | Ranjan's answers to the 22 decisions |
 
 ## 3. Plan of action (next session)
 
 1. Re-audit this card against `PROGRESS.md` and the agents' last lines; update it.
 2. Short re-review of the corrected catalogue and improvements; close review W2.
-3. Visual page with the 28 workers on the product map and the 22 decisions in plain words; present to Ranjan.
+3. ~~Visual page with the 28 workers and the 22 decisions~~ published 9 Oct: https://claude.ai/artifact/KWqX2Hr9tJGcmqDoY9bx4s Collect Ranjan's answers.
 4. Provider and Canada-only check; cost-per-file estimate.
 5. Phase B: File Builder requirements + clickable demo in the simulator (readiness report, shadow-mode summary).
 6. Validation script and price card for 5–10 consultants.
@@ -42,5 +42,5 @@
 ## 4. Waiting on Ranjan
 
 - **Program Charter** (see `PROMPTS.md` §7 for exactly what to change).
-- **Corporate/LMIA folder** shared with the Expat Ready accounts.
+- ~~Corporate/LMIA folder~~ resolved: never on Drive; decisions are inside AG-17 (snapshot note updated).
 - 22 decisions, on the next page.

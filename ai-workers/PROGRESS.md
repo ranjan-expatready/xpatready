@@ -20,7 +20,7 @@
 ## Waiting on Ranjan
 - ~~Licensed-only approval~~ replaced by human approval per the firm's role settings (AIW-D26).
 - Update the Program Charter on Drive (still says "not in Release 1"); Ranjan: launch needs all of it (AIW-D21).
-- Share the Corporate/LMIA decision folder with the Expat Ready accounts.
+- ~~LMIA folder~~ resolved 9 Oct: never on Drive; decisions are inside AG-17.
 - 22 decisions from review W2: on the next page.
 
 ## Agent log (append only; newest at the bottom)
@@ -56,3 +56,4 @@
 | 9 Oct 19:30 | ai-worker-designer (W2 catalogue) | Done: catalogue.md revised and re-read end to end — reconciled to ws2-improvements (G16 hard limits/blocked list, G17 status-content templates "ask me first", Reader types attachments, AG-9-11 AUTO pending IMP-13, W-12/W-16/W-27 prepare lists never export, §1.1 is a pointer to IMP-1 with no second delegation definition, two expert sources per IMP-20); ranking "Unsolved?" replaced by an evidence column matching every entry (no Y without a cited absence); all missing fields filled; G10 and W-24 reworded per IMP-37; "why it sells" lines labelled Proposal with absolutes and legal words removed; Built/Specified/Proposed/Content on every dependency and Ease re-rated on today's state (W-01 E1, W-02 E2, W-14 E2, W-13 E1 today); W-13 FD-7 re-sourced to FDL; m-2/m-3/m-4/m-5/m-7/m-8/m-9/m-16 fixed. module-map.md: Doer plane added (§5), exports and typing aligned |
 | 9 Oct 19:20 | Lead | Catalogue and module map corrected after review W2; W2 content complete pending a short re-review |
 | 9 Oct 19:50 | Lead | REPORT-CARD.md created (story, ratings, plan); bootstrap prompt now starts with an audit; Charter and LMIA guidance in PROMPTS §7–8 |
+| 9 Oct 21:00 | Lead | LMIA folder traced (never on Drive); W2 page built with 28 workers, product map, rules, 22 decisions; report card re-audited |

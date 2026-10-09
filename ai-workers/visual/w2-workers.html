@@ -1,0 +1,213 @@
+<title>AI Workers Catalogue</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: same dossier system as the W1 page; a roster of worker cards by shape, the product map with workers assigned, and a decision sheet */
+:root{
+  --bg:#f5f6f8; --paper:#ffffff; --ink:#18212f; --muted:#5b6575; --rule:#d9dde4;
+  --accent:#1f4e8c; --accent-soft:#e3ebf6; --stamp:#b3261e; --stamp-soft:#f8e3e1;
+  --ok:#1e6b45; --ok-soft:#e0f0e7; --warn:#8a5a00; --warn-soft:#fbefd5; --ai:#5a3d8f; --ai-soft:#ece6f6;
+  --display:"Newsreader",Georgia,"Times New Roman",serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#11161e;--paper:#18202b;--ink:#e7ebf1;--muted:#a3adbb;--rule:#2c3644;--accent:#86aee6;--accent-soft:#1d2c44;--stamp:#f08a80;--stamp-soft:#3a2120;--ok:#7fcfa2;--ok-soft:#163327;--warn:#e8bd66;--warn-soft:#3a2d12;--ai:#c2a9f0;--ai-soft:#2a2240;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#11161e;--paper:#18202b;--ink:#e7ebf1;--muted:#a3adbb;--rule:#2c3644;--accent:#86aee6;--accent-soft:#1d2c44;--stamp:#f08a80;--stamp-soft:#3a2120;--ok:#7fcfa2;--ok-soft:#163327;--warn:#e8bd66;--warn-soft:#3a2d12;--ai:#c2a9f0;--ai-soft:#2a2240;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--body);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:28px 64px}
+h1,h2,h3{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(28px,4vw,40px)} h2{font-size:26px} h3{font-size:17px}
+p{margin:0;max-width:72ch}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{color:var(--muted);font-size:16px;margin-top:10px}
+header{display:grid;gap:14px;margin-bottom:22px}
+.facts{display:flex;flex-wrap:wrap;gap:8px 18px;font:13px/1.4 var(--mono);color:var(--muted)} .facts b{color:var(--ink);font-weight:500}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--rule);margin-bottom:24px;overflow-x:auto}
+nav .tabs{display:flex;gap:4px;min-width:max-content}
+nav button{font:500 14px var(--body);color:var(--muted);background:none;border:0;border-bottom:3px solid transparent;padding:12px 12px 10px;cursor:pointer}
+nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav button:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+section{display:grid;gap:18px}
+.grid{display:grid;gap:14px} .two{grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))} .three{grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr))}
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:16px;display:grid;gap:8px;min-width:0}
+.find{border-left:4px solid var(--accent)} .find.red{border-left-color:var(--stamp)} .find.ai{border-left-color:var(--ai)} .find.ok{border-left-color:var(--ok)}
+.muted{color:var(--muted)} .small{font-size:13px} q{font-style:italic}
+.src{font:12px/1.4 var(--mono);color:var(--muted)}
+.chip{display:inline-flex;align-items:center;font:500 11px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:4px 7px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
+.c-task{color:var(--accent);background:var(--accent-soft)} .c-journey{color:var(--ok);background:var(--ok-soft)} .c-twin{color:var(--warn);background:var(--warn-soft)} .c-expert{color:var(--ai);background:var(--ai-soft)}
+.c-easy{color:var(--ok)} .c-med{color:var(--warn)} .c-hard{color:var(--stamp)} .c-build{color:var(--stamp);background:var(--stamp-soft)}
+.legend{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+.worker{background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:12px 14px;display:grid;gap:6px;min-width:0}
+.worker .top{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.worker .id{font:500 12px var(--mono);color:var(--muted)} .worker .nm{font-weight:600}
+.worker .job{font-size:13.5px} .worker .meta{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--muted)}
+.worker.first{border-color:var(--ok);box-shadow:0 0 0 2px var(--ok-soft)}
+.planes{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));align-items:start}
+.plane{display:grid;gap:10px;min-width:0}
+.plane>h3{font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);border-bottom:2px solid var(--accent);padding-bottom:6px}
+.mod{background:var(--paper);border:1px solid var(--rule);border-radius:5px;padding:10px 12px;display:grid;gap:5px}
+.mod .top{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap} .mod .id{font:500 12px var(--mono);color:var(--muted)} .mod .nm{font-weight:600}
+.mod .row{font-size:13px;color:var(--muted)} .mod .row b{color:var(--ink);font-weight:500}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;min-width:720px;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--rule)}
+th{font:500 12px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg)}
+tr:last-child td{border-bottom:0} .num{font-variant-numeric:tabular-nums}
+.stack{display:grid;max-width:760px}
+.layer{display:grid;grid-template-columns:150px 1fr;gap:14px;padding:12px 14px;background:var(--paper);border:1px solid var(--rule);border-top:0}
+.layer:first-child{border-top:1px solid var(--rule);border-radius:6px 6px 0 0} .layer:last-child{border-radius:0 0 6px 6px}
+.layer .k{font:500 12px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--accent)}
+.layer.new{background:var(--ai-soft);border-color:var(--ai)} .layer.new .k{color:var(--ai)}
+@media (max-width:560px){.layer{grid-template-columns:1fr;gap:4px}}
+ul{margin:0;padding-left:20px;display:grid;gap:6px}
+.dec{display:grid;grid-template-columns:44px 1fr;gap:12px;background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:12px 14px}
+.dec .n{font:600 20px/1 var(--display);color:var(--accent)} .dec b{display:block;margin-bottom:3px}
+.dec .rec{font-size:13px;color:var(--ok)} .dec .rec::before{content:"Recommendation: ";font-weight:600}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">Expat Ready · Workstream 2 · AI Workers · 9 Oct 2026</span>
+  <h1>28 AI Workers for Expat Ready, and what each one needs from you</h1>
+  <p class="lede">Every worker runs inside the product, uses only the Doers and recipes the requirements already define, acts on behalf of a named person, and stops at a human approval. This page keeps all 28, the product map with workers assigned, the design rules, and the 22 decisions that are yours.</p>
+  <div class="facts"><span><b>28</b> workers (18 task · 5 journey · 4 role twins · 1 expert)</span><span><b>1,307</b> requirement references in the Workstream 2 index</span><span><b>41</b> improvements proposed</span><span><b>2</b> hostile reviews, findings fixed</span></div>
+</header>
+
+<nav aria-label="Sections"><div class="tabs" role="tablist">
+  <button role="tab" aria-selected="true" data-t="first">Build first</button>
+  <button role="tab" aria-selected="false" data-t="all">All 28 workers</button>
+  <button role="tab" aria-selected="false" data-t="map">Product map with workers</button>
+  <button role="tab" aria-selected="false" data-t="rules">How every worker is governed</button>
+  <button role="tab" aria-selected="false" data-t="dec">Your 22 decisions</button>
+  <button role="tab" aria-selected="false" data-t="honest">Honest limits</button>
+</div></nav>
+
+<section id="first">
+  <h2>Build first: one wedge, one hook, one expert</h2>
+  <div class="grid three">
+    <div class="card find ok"><span class="chip c-journey">Journey · build 1st</span><h3>W-01 File Builder (the wedge)</h3>
+      <p>From the moment the retainer is signed: chases documents, reads them, proposes questionnaire values, cross-checks facts, keeps the checklist and a <b>readiness report</b> current, and stops at the reviewer's sign-off. Includes the Upload Reviewer and Inbox Filer.</p>
+      <p class="small"><b>Sold:</b> per prepared file, after a flat allowance in the pilot (Proposal). <b>Difficulty today:</b> Hard, because the case spine and the Canada pack content are not built yet; Medium on paper.</p>
+      <p class="small"><b>Who has it:</b> VisaFlo's whole-file review is "coming soon", invitation only; Clio has agents but no IRCC content. Partly solved.</p></div>
+    <div class="card find ok"><span class="chip c-task">Task · build 2nd</span><h3>W-02 Deadline Guardian (the hook)</h3>
+      <p>Watches every government, document and status deadline on every file; nudges the right person; escalates when nobody acts. Free or near-free; its job is adoption.</p>
+      <p class="small"><b>Difficulty today:</b> Medium: the Minder it relies on does not exist yet (AG-11-47), and the Canada deadline catalogue is unwritten. Easy once they do.</p><p class="small"><b>Who has it:</b> rivals have reminders; no rival's evidence shows a stateful deadline model. Unknown.</p></div>
+    <div class="card find ai"><span class="chip c-expert">Expert · build 3rd</span><h3>W-24 Practice Expert</h3>
+      <p>Answers any staff question from two sources only: the published rulebook (Country Pack) version in force, and the firm's own records the asker is allowed to see. Cites its source; refuses when it has none. <b>Never acts.</b> Version 1 answers a fixed set of question shapes ("which of my files are at risk this week and why?").</p>
+      <p class="small"><b>Difficulty:</b> Medium (v1), Hard (v2). The riskiest piece for hallucination, privacy and cost, so it has eleven written limits (IMP-20).</p></div>
+  </div>
+  <div class="card"><h3>Then, in order</h3><p>Letter Reader (reads government letters after filing) → Lifecycle Keeper (PR card, citizenship, re-engagement: repeat revenue) → Money Matcher (cash in) → Bilingual Writer → Intake Assistant → Migration Mapper → LMIA Clerk → the role twins, starting with the AI Case Processor. Rule from the challenge review: <b>catalogue all, ship one</b>; the second worker starts when the first has pilot numbers.</p><span class="src">design/workers/catalogue.md §3 ranking, §4 hard but worth it</span></div>
+</section>
+
+<section id="all" hidden>
+  <h2>All 28 workers</h2>
+  <div class="legend"><span class="chip c-task">Task: one job</span><span class="chip c-journey">Journey: end to end</span><span class="chip c-twin">Role twin: assistant to a role</span><span class="chip c-expert">Expert: answers only</span><span>Difficulty is rated on today's real state.</span></div>
+  <div class="grid two" id="roster"></div>
+  <p class="src">Full entries with citations, guardrails, approval point, cost drivers and dependencies: design/workers/catalogue.md</p>
+</section>
+
+<section id="map" hidden>
+  <h2>The product map, with workers assigned</h2>
+  <p class="muted">Bold = the worker that owns the module. "No worker" is a deliberate choice, with the reason.</p>
+  <div class="planes" id="planes"></div>
+  <p class="src">design/workers/module-map.md (every module; a Doer plane shows which workers call which Doer)</p>
+</section>
+
+<section id="rules" hidden>
+  <h2>How every worker is governed</h2>
+  <p class="muted">The key design sentence: <b>an AI Worker is a recipe the Conductor runs from a closed menu of actions; the AI inside never holds tools and never chooses actions.</b> It keeps your founding rule, the automation rules and the reproducibility claim true at once (IMP-10).</p>
+  <div class="stack">
+    <div class="layer"><span class="k">On behalf of</span><div>Every worker works for one named person, with a subset of that person's permissions, recorded in a <b>delegation record</b>. No AI identity (FD-16 kept, AIW-D13). The person may end it at any time.</div></div>
+    <div class="layer"><span class="k">Approval</span><div>Output is approved by a named person, whoever the firm's settings allow for that role, licensed by default (AIW-D26). Floors the firm cannot lower: client text, government forms, verified-profile values. Nothing runs on timeout.</div></div>
+    <div class="layer new"><span class="k">Hard limits</span><div>Never submits to a government authority. Never fabricates a value. Never promises an outcome. Never exports data or writes a money entry. Never approves anything. The expert never acts. (IMP-27, proposed for your ratification.)</div></div>
+    <div class="layer"><span class="k">Record</span><div>One record joins "AI prepared this" and "this person approved it" (IMP-2, proposed). Every AI model call is logged. Each result carries the rulebook version it was computed from.</div></div>
+    <div class="layer"><span class="k">Switches</span><div>Plan includes it → firm Owner switches it on → Expat Ready can stop it instantly. AI stays off until a Canada-only, no-training provider is recorded.</div></div>
+    <div class="layer"><span class="k">Safety</span><div>Protection against instructions hidden in client documents or messages (IMP-26). Spend caps. Shadow mode first: the worker runs silently beside the staff and shows what it would have done before it does anything (direction review).</div></div>
+  </div>
+  <p class="src">FD-16 · AG-11 v1.11 · design/ws2-improvements.md IMP-1, 2, 10, 20, 26, 27 · decisions AIW-D13, D25, D26</p>
+</section>
+
+<section id="dec" hidden>
+  <h2>Your 22 decisions, in plain words</h2>
+  <p class="muted">Deduplicated by the reviewer across the improvements, the catalogue and the proposals log. Each carries my recommendation. Say "yes to all except…" and I record the rest.</p>
+  <div class="grid two" id="decs"></div>
+  <p class="src">checks/review-W2-2026-10-09.md "Decisions that genuinely need Ranjan" · design/ws2-improvements.md §10</p>
+</section>
+
+<section id="honest" hidden>
+  <h2>Honest limits</h2>
+  <div class="grid two">
+    <div class="card find red"><h3>Nothing is built</h3><p>All 28 workers are requirements and strategy. The product they run on is itself partly unbuilt (case spine, Minder, pack content). By your rule we assume it will be built; investors will ask what is live today.</p></div>
+    <div class="card find red"><h3>No customer has seen this</h3><p>Every time-saved figure is an Assumption. The per-file price is untested. Five to ten conversations with licensed consultants come before any number is fixed.</p></div>
+    <div class="card find"><h3>"Unsolved" is mostly "partly"</h3><p>VisaFlo has announced several of these. What no rival's evidence shows: answers from a versioned, two-person-approved rulebook under the user's permissions; a stateful deadline model; lifecycle re-engagement; delegation-scoped twins; a visible value-by-value trace.</p></div>
+    <div class="card find"><h3>Form filling is the gap firms will name first</h3><p>Every rival fills IMM forms and the IRCC portal. Ours is parked, and the built engine refuses the format IRCC's barcode forms use. The Form Preparer is "hard but worth it" and needs a decision on the technical route.</p></div>
+    <div class="card find ok"><h3>What was checked</h3><p>Two hostile reviews: 269 sampled quotes against the source files, 0 wrong; 24 competitor pages re-opened, all confirmed; contradictions between the catalogue and the improvements found and reconciled; every "unsolved" claim now carries its evidence or says Unknown.</p></div>
+  </div>
+</section>
+</div>
+
+<script>
+const W=[
+["W-01","File Builder","journey","Retainer signed → file ready for review: chases, reads, proposes values, cross-checks, readiness report.","Hard today / Medium on paper","Partly solved",1],
+["W-02","Deadline Guardian","task","Watches every deadline on every file; nudges; escalates.","Medium today / Easy on paper","Unknown",1],
+["W-03","Letter Reader","task","When a government letter arrives, proposes the milestone, deadline, task and client notice.","Medium","Partly (announced only)",0],
+["W-04","Upload Reviewer","task","Checks each upload: right type, legible, not expired, matches the profile; drafts the reason in the client's language.","Easy","Partly",0],
+["W-05","Form Preparer","task","Assembles the form set, fills from verified values only, flags gaps. Hard but worth it (XFA blocker).","Hard","Solved by rivals; we lack it",0],
+["W-06","Submission Letter Drafter","task","Drafts letters of explanation, cover letters and fairness responses from verified facts.","Medium","Solved by rivals",0],
+["W-07","Inbox Filer","task","Files every inbound email and WhatsApp on the right record; hands attachments to the Reader.","Easy","Solved by rivals",0],
+["W-08","Bilingual Writer","task","Drafts the firm's free-text client words in the client's language; legal text never machine-translated.","Easy","Unknown",0],
+["W-09","Intake Assistant","task","Lists missing facts, drafts targeted questions, proposes answers from a client's free-text reply.","Medium","Partly (announced)",0],
+["W-10","Lead Responder","journey","Answers an enquiry in minutes with a consented, eligibility-grounded message; books; recovers no-shows.","Easy","Solved by rivals",0],
+["W-11","Consult Scribe","task","With consent, drafts the consult record and proposal scope for the host.","Medium","Solved by rivals",0],
+["W-12","Money Matcher","task","Proposes matches for offline payments, lists unbilled work, drafts overdue reminders; never writes a money entry.","Easy to Medium","Unknown",0],
+["W-13","LMIA Compliance Clerk","journey","Builds the advertising and candidate record for an LMIA file; proposes the compliance report. No candidate ranking (FD-7).","Hard today","Unknown",0],
+["W-14","Lifecycle Keeper","journey","Computes each client's next moment (permit expiry, PR card, citizenship) and drafts the re-engagement. CASL check first.","Medium today","Unknown",0],
+["W-15","Migration Mapper","journey","Proposes column, value and program mappings from Officio or CaseEasy exports; nothing written before dry run and confirm.","Medium","Unknown",0],
+["W-16","Privacy Clerk","task","Logs access, correction and erasure requests on their legal clocks; prepares an internal draft; a person runs the export.","Easy to Medium","Unknown",0],
+["W-17","Case Briefer and Day Planner","task","Pickup summary per file, handover list, each person's ranked day with reasons. Safest first switch-on.","Easy","Solved by rivals",0],
+["W-18","Report Narrator","task","A weekly plain-language note from the dashboards, quoting only computed numbers.","Easy","Solved by rivals",0],
+["W-19","Pack Drafter","task","Admin: drafts form box maps for a new edition, diffs editions, proposes reference rows with sources.","Medium to Hard","Unknown",0],
+["W-20","Pack Tester","task","Admin: drafts sample clients with expected outcomes, runs the dry run, explains version differences.","Medium","Unknown",0],
+["W-21","Rule-change Watcher","task","Admin: watches the official pages a pack cites, flags changes, drafts the proposed pack change.","Medium","Partly (VisaFlo 'launching soon')",0],
+["W-22","Support Triager","task","Admin: suggests category, priority and route; drafts the first reply from the knowledge base.","Easy","Solved by rivals",0],
+["W-23","Firm Health Watcher","task","Admin: watches firm health signals (over limit, trial ending, stalled setup) and drafts outreach.","Easy","Solved by rivals",0],
+["W-24","Practice Expert","expert","Answers staff questions from the published rulebook and the firm's own records, with sources; never acts.","Medium (v1) / Hard (v2)","Partly",1],
+["W-25","AI Case Processor","twin","Assistant to the case officer: the officer's recipes bundled under their delegated permissions; prepares, never approves.","Hard","Unknown",0],
+["W-26","AI Intake Clerk","twin","Assistant to intake: capture, de-duplicate, run the Qualifier, ask missing questions; firm side only.","Medium to Hard","Partly",0],
+["W-27","AI Billing Clerk","twin","Assistant to billing: invoice drafts from milestones, time entries, dunning wording; a person issues everything.","Medium","Partly",0],
+["W-28","AI Pack Author","twin","Admin: keeps a rulebook current as drafts under the two-person publishing rule.","Medium to Hard","Unknown",0]];
+const SH={task:["Task","c-task"],journey:["Journey","c-journey"],twin:["Role twin","c-twin"],expert:["Expert","c-expert"]};
+document.getElementById('roster').innerHTML=W.map(([id,nm,sh,job,diff,ev,first])=>`<div class="worker${first?' first':''}"><div class="top"><span class="id">${id}</span><span class="nm">${nm}</span><span class="chip ${SH[sh][1]}">${SH[sh][0]}</span>${first?'<span class="chip c-build">build first</span>':''}</div><div class="job">${job}</div><div class="meta"><span><b>Difficulty:</b> ${diff}</span><span><b>Who has it:</b> ${ev}</span></div></div>`).join('');
+const P=[["Firm console",[["AG-1","Firm setup","W-17, W-23, twins read roles","Setup itself is a person's job"],["AG-2","Leads & CRM","<b>W-10</b>, W-26, W-07, W-09, W-14, W-15",""],["AG-3","Eligibility","<b>W-24</b> explains; W-09, W-10, W-26 run only","Never overrides, reviews or shares"],["AG-4","Booking","<b>W-11</b>, W-10, W-26, W-14",""],["AG-5","Retainer & e-sign","W-11 (scope text), W-01 starts here","Locked clauses untouched; signing never on behalf"],["AG-6","Billing","<b>W-12</b>, W-27, W-18","Never issues, records or refunds"],["AG-7","Case core","<b>W-01</b>, W-03, W-04, W-05, W-06, W-13, W-14",""],["AG-8","Questionnaire","<b>W-09</b>, W-01, W-04, W-15, W-25, W-26","Proposes; a person verifies"],["AG-9","Documents","<b>W-04</b>, W-01, W-03, W-07, W-13, W-15",""],["AG-10","Communications","<b>W-07</b>, <b>W-08</b>, W-03, W-09, W-10, W-12, W-14, twins","Every send passes the AI-text setting"],["AG-11","Conductor & Needs you","Every firm-side worker: recipes are the building blocks; Needs you is the hand-off",""],["AG-12","Templates","W-08, W-06, W-04",""],["AG-13","Tasks & audit","<b>W-17</b>, W-02, W-24","Delegation shows on every audit row"],["AG-14","Reporting","<b>W-18</b>, W-24, W-02, W-12; AI metrics for all",""],["AG-15","Portal management","W-04, W-01, W-08, W-16",""],["AG-16","Settings","All workers read the AI switch, autonomy and safeguards","No worker changes settings"],["AG-17","Corporate & LMIA","<b>W-13</b>, W-02, W-03, W-24","No candidate ranking (FD-7)"],["AG-18","Import","<b>W-15</b>, W-07, W-02","Nothing written before dry run"]]],
+["Client portal",[["CP-1","Access","No worker","Access and isolation are firm actions"],["CP-2","Progress","W-03, W-02","Decision disclosure stays firm judgement"],["CP-3","Questionnaire","W-09, W-01",""],["CP-4","Documents","W-04, W-02, W-01",""],["CP-5","Payments","W-12, W-27 (drafts only)","The client's only money action is to pay"],["CP-6","Signing","W-11 (scope only)","Never signed on behalf"],["CP-7","Messaging","W-08, W-07, W-09","Replies are the firm's judgement"],["CP-8","Consent & privacy","W-16 (drafts only)",""],["CP-9","Employer view","W-13 (counts, list)","The employee wall is a firm decision"]]],
+["Expat Ready admin",[["SA-1","Country packs","<b>W-19</b>, <b>W-20</b>, <b>W-21</b>, W-28; W-24 reads","Publishing stays two-person"],["SA-1B","Pack configurator","<b>W-19</b>, W-20, W-21, W-28","The fill path gets no AI"],["SA-2","Firms","<b>W-23</b>, W-15","Locks and deletion stay human"],["SA-3","Plans","W-23; all workers gated by plan",""],["SA-4","Billing","W-23 (lists)","No worker touches money state"],["SA-5","Templates","W-08, W-28 (non-legal only)",""],["SA-6","Roles","Twins draw subsets from it","No worker edits roles"],["SA-7","Platform users","W-28 needs a delegating author",""],["SA-8","Rails","No worker","The AI provider entry is the gap all wait on"],["SA-9","Analytics","W-23; adoption measured",""],["SA-10","Support","<b>W-22</b>",""],["SA-11","Audit & governance","W-16; every delegation recorded",""],["SA-12","Flags","All launch behind flags and the kill switch","No worker changes flags"]]]];
+document.getElementById('planes').innerHTML=P.map(([t,ms])=>`<div class="plane"><h3>${t}</h3>${ms.map(([id,nm,w,note])=>`<div class="mod"><div class="top"><span class="id">${id}</span><span class="nm">${nm}</span></div><div class="row"><b>Workers:</b> ${w}</div>${note?`<div class="row">${note}</div>`:''}</div>`).join('')}</div>`).join('');
+const D=[
+["Delegation record","A record saying \"worker X acted for person Y with these of Y's permissions\". Is that consistent with \"no AI identity\" (FD-16)? And does Y count as the preparer for the four-eyes check?","Yes to both."],
+["What \"effect\" means in FD-16","Is an internal, reversible, audited filing label (a document type the Reader sets) an \"effect\" that needs approval?","No; record it as a reading of FD-16, not a change."],
+["Supervision floor (FD-22)","Keep FD-22 (the Practice Pack sets supervision rules for unlicensed staff) and add: firms may only tighten, never loosen.","Yes; counsel / RCIC sets the Canadian floor."],
+["Pause when no licensed user is active","Should workers stop preparing client-facing items when a firm has no active licensed user? This is a proposed exception to your rule AIW-D26.","Yes, as a firm setting the Owner may switch off with a reason."],
+["Metering a prepared file","Define \"prepared file\" as a run whose readiness report a person approved; sell an allowance inside plans for the pilot; amend the \"no add-on prices\" rule at launch; role twins take no seat.","Yes to that sequence."],
+["Doer names","Amend FD-8 so Minder (watches dates) and Reminder (sends nudges) are two Doers; keep \"Clocker\"; give the AI message writer a new one-word name so \"Drafter\" stays the template engine.","Yes; you pick the new name."],
+["Ratify the automation rules","Sanjay's AG11-D1 to D18 (and the SA6-D rows) go into the Founder Decisions Log, with the corrections proposed.","Yes, one batch."],
+["Hard limits list","Ratify what no worker may ever do: submit, fabricate, promise, export, write money, approve.","Yes, after counsel reads it."],
+["Canada-only AI processing","Promise it; AI stays off if no Canadian option exists for the chosen model.","Yes; provider and region decided before any switch-on."],
+["Which document wins, and the Charter","Adopt the rule that the newest module file wins; update the Charter (AI in scope, launch date, AG-18, CP-9, the Minder and Filler).","Yes."],
+["Wording rules","Use the precise two-sentence reproducibility claim; say \"AI assistant\" to clients and regulators; no human names or avatars.","Yes."],
+["Expert co-pilot scope","Version 1 answers fixed question shapes; it may read case files within the asker's permissions but never the Restricted field set, whose list you still have to set with counsel.","Yes, and set the list."],
+["Portal autofill","Ask counsel / RCIC now whether a browser helper that fills but never submits is acceptable.","Ask now; it is the gap firms will name first."],
+["File Builder approvals","Per-value approval by the people who hold the verify permission, plus one sign-off on the whole report.","Confirm."],
+["Lifecycle Keeper and CASL","Is post-decision re-engagement a transactional or a marketing message under Canada's anti-spam law? The worker exists or not on the answer.","Ask counsel now."],
+["LMIA Clerk and FD-7","Confirm no candidate ranking or screening by AI.","Confirm."],
+["Admin-plane workers","Are Expat Ready's own six workers part of the investor story, or internal only?","Internal only in the story; mention as margin."],
+["Tamper-evident audit","The 5 Oct triage proposes moving the hash chain to Release 2. Accept or reject; it decides whether \"tamper-evident\" may be claimed.","Reject; keep it in."],
+["E-signature identity","Keep FD-21 (passcode before every signature) and update AG-05, or amend FD-21.","Keep FD-21; confirm with counsel."],
+["Trust accounting","FD-17 says light trust accounting in v1; AG-06 defers it; FD-11 rules out credit notes but AG-6-6 names them.","Follow the founder decisions; fix the files."],
+["Translation helper","Bring non-legal firm text translation (human-reviewed, legal text marked) into Workstream 2; AG-12 defers it today.","Yes."],
+["Corporate/LMIA folder","Resolved: it was never on Drive; the decisions are inside AG-17. Only the long reasoning is missing.","No action unless Sanjay wants it on Drive."]];
+document.getElementById('decs').innerHTML=D.map((d,i)=>`<div class="dec"><span class="n num">${i+1}</span><div><b>${d[0]}</b><div class="small">${d[1]}</div><div class="rec">${d[2]}</div></div></div>`).join('');
+const tabs=[...document.querySelectorAll('nav button')];
+function show(t){tabs.forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));document.querySelectorAll('section').forEach(s=>s.hidden=s.id!==t);try{localStorage.setItem('w2tab',t)}catch(e){}}
+tabs.forEach(b=>b.addEventListener('click',()=>show(b.dataset.t)));
+let st=(location.hash||'').slice(1);if(!tabs.some(b=>b.dataset.t===st)){try{st=localStorage.getItem('w2tab')||'first'}catch(e){st='first'}}show(tabs.some(b=>b.dataset.t===st)?st:'first');
+</script>
