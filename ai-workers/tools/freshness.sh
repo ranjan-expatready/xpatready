@@ -13,7 +13,7 @@ for d in "$ROOT"/code/*(/); do
   [[ -z "$slug" ]] && continue
   for br in dev main; do
     remote=$(gh api "repos/$slug/commits/$br" --jq '.sha[0:7]+" "+.commit.committer.date[0:10]' 2>/dev/null)
-    [[ "$remote" == *"Not Found"* || -z "$remote" ]] && continue
+    [[ "$remote" == *"message"* || -z "$remote" ]] && continue
     echo "$name  local $local_sha ($local_date)  |  $slug $br: $remote"
   done
 done

@@ -8,8 +8,8 @@
 |---|---|---|---|---|
 | W1 | Evidence: fresh sources, full read of 46 documents, VisaFlo + 40 competitors, review | The evidence page | Done and reviewed; page published | `visual/w1-evidence.html`, `research/`, `design/inventory/`, `checks/review-W1-2026-10-09.md` |
 | W2a | Workstream 2 baseline: reference index of every AI, Doer and Conductor requirement | One clean reference set for Workstream 2 | Done: A (9 files, 627 refs) + B (20 files, 680 refs incl. Recruiter); all quotes verified; conflicts logged in proposals.md | `design/ws2-baseline/` |
-| W2b | Challenge and improve: gaps, weak points, proposals (labelled) | Decisions to take, with reasons | Not started | `design/ws2-improvements.md` |
-| W2c | AI Worker catalogue and product map with workers | The visual of which worker does what | Not started | `design/workers/`, `visual/` |
+| W2b | Challenge and improve: gaps, weak points, proposals (labelled) | Decisions to take, with reasons | Done: 41 items (10 blocking), revised after review W2 | `design/ws2-improvements.md` |
+| W2c | AI Worker catalogue and product map with workers | The visual of which worker does what | Done: 28 workers ranked + module map, revised after review W2; visual pending | `design/workers/`, `visual/` |
 | W2d | Independent review + updated visual page | Confidence it is right | Not started | `checks/`, `visual/` |
 | W3a | Proposition and the wedge product (see recommendation) | What we sell first and why | Not started | `commercial/` |
 | W3b | Validation script for 5–10 licensed consultants | Evidence before pricing | Not started | `commercial/` |
@@ -21,7 +21,7 @@
 - ~~Licensed-only approval~~ replaced by human approval per the firm's role settings (AIW-D26).
 - Update the Program Charter on Drive (still says "not in Release 1"); Ranjan: launch needs all of it (AIW-D21).
 - Share the Corporate/LMIA decision folder with the Expat Ready accounts.
-- ~~Wedge~~ approved: File Builder + Deadline Guardian (AIW-D17); more use cases wanted (AIW-D18).
+- 22 decisions from review W2: on the next page.
 
 ## Agent log (append only; newest at the bottom)
 | When | Agent | Status |
