@@ -14,6 +14,7 @@
 4. **Write like a person.** Chat updates are short and plain, in small chunks. Documents are plain English with no jargon (explain any unavoidable term where it appears), complete and in depth (AIW-D15).
 5. **Investor-grade.** Every claim has a source or is labelled Proposal, Assumption or Unknown. Ranjan's reputation and the raise depend on it (AIW-D9).
 6. **Report after every step, unasked (AIW-D20).** When a step finishes, the Lead tells Ranjan in a few plain lines what changed, what it means, what is needed from him, and where to look. Nothing waits for him to ask.
+6c. **Audit at every session start and end (9 Oct).** `REPORT-CARD.md` holds the story so far, honest ratings and the plan of action. The bootstrap prompt makes every new session re-audit and update it before working.
 6b. **Version history (9 Oct).** The folder is a local-only git repository (no remote; the deny rules block any push). The Lead commits at the end of every step so changes can be compared and rolled back.
 6a. **Progress is visible.** `PROGRESS.md` is the one-page tracker. Every agent appends a line to its log when it starts, at milestones and when it finishes; the Lead keeps the plan table current. No silent work.
 7. **Coach, and never follow blindly (AIW-D6, D20).** Challenge Ranjan's asks and our own earlier decisions; say plainly when something is weak; the current challenge review is `design/challenge-review-<date>.md`.
@@ -59,7 +60,7 @@ Gaps in the product requirements: we **assume they will be filled**, record each
 
 | Thing | Only home | Rule |
 |---|---|---|
-| Where we are, what's next | `NEXT.md` | Replaced each session; loaded **automatically** at session start by the hook in `../.claude/settings.json` |
+| Where we are, what's next | `NEXT.md` (handoff) and `REPORT-CARD.md` (audit, ratings, plan) | Replaced each session; loaded **automatically** at session start by the hook in `../.claude/settings.json` |
 | Ranjan's decisions for this workstream | [`decisions.md`](decisions.md) | Append only, dated, with his exact words |
 | Assumptions filling product gaps | [`assumptions.md`](assumptions.md) | Each one has an ID, its effect, and who can confirm it |
 | Product facts | newest `../sources/drive-snapshot-*` | Never the archive; never a copy older than Drive |

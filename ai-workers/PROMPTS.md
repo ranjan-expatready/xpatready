@@ -4,7 +4,7 @@ You don't need to know how to prompt. Every new session already loads `NEXT.md` 
 
 ## 1. Every new session (the bootstrap prompt)
 ```
-Continue Workstream 2 (AI Workers). You are the lead and my coach. Read ai-workers/README.md §0–§1, PROGRESS.md, NEXT.md and the newest design/challenge-review-*.md, then run the freshness check. Tell me in a few plain lines: where we are, which agents are running or finished, what you will do next, and what you need from me. Then continue the plan, report after every step without being asked, and never follow anything blindly.
+Continue Workstream 2 (AI Workers). You are the lead and my coach. Start with an audit: read ai-workers/README.md §0–§1, REPORT-CARD.md (the story so far, ratings, plan), PROGRESS.md, NEXT.md, decisions.md and the newest design/direction-review-*.md; run the freshness check (code and Drive) and confirm nothing stale or duplicated is in use. Then tell me in a few plain lines: where we stand, whether the files still match my latest instructions, the updated report card scores, what you will do next, and what you need from me. Update REPORT-CARD.md and continue the plan. Report after every step without being asked, in short plain messages, and never follow anything blindly, including your own earlier decisions.
 ```
 
 ## 2. Start a wave (replace W1 with the wave named in NEXT.md)
@@ -57,3 +57,18 @@ Design Expat Ready's AI Workers: governed AI users of our own product that do th
 7. Then detailed requirements developers can build from, in product/requirements/.
 Label every assumption. Invent nothing. Tell me what I'm missing.
 ```
+
+## 7. What Ranjan must change in the Program Charter (only he can)
+
+The Charter lives on Drive in the Program Management folder (`1T3GRrvwDmPRbBChvGCrnmENgcYhwAfQr`): "Program Charter_V2.pptx" (slides, 6 Oct) and "Program Charter V1 - G1 expanded" (text). The team plans from it. Four edits:
+
+1. **Scope line.** Slide 1 and the V1 text say: "NOT IN RELEASE 1 — AI-assisted features · Automation engine (AG-11) and its Doers". Change to: in scope as **Workstream 2** (AI Workers, AI Doers, all Doers, Conductor), delivered alongside Release 1, with the note that the product does not go live without it (your decision AIW-D14/D21). If you want a softer line for the team, say "specified by Workstream 2; build order agreed with the tech leads".
+2. **Launch date.** V2 says 28 Feb 2027 (production 23 Feb); the V1 text says 12 Mar 2027. Pick one and fix the other.
+3. **Module list.** Add AG-18 (data import and migration), which exists in the requirements but not in the Charter.
+4. **CP-9.** The Charter says "Employer view (read-only)"; the portal document gives the employer upload, pay, sign and seat management. Say which.
+
+How: open the slide or document on Drive, edit, and tell the team in your usual channel. We never edit Drive.
+
+## 8. The Corporate/LMIA folder
+
+AG-17 (corporate cases and LMIA) cites a Drive folder holding `DECISION-LOG.md` and `SA-01-SA-01B-CHANGE-NOTE.md` (decision D83 is referenced). Neither Sanjay's nor Ranjan's account can see it, so our snapshot has `05-corporate-lmia/NOT-FOUND.md`. Ask whoever wrote AG-17 v0.5 (the author is named in its header on Drive) to share that folder with sanjay@ and ranjan@expatready.com, view access is enough. Then the next session re-snapshots it.
