@@ -1,7 +1,7 @@
 # AI Workers — how this workstream runs
 
 **Owner:** Ranjan Singh (founder). **Maker / lead:** Claude. **Started:** 8 Oct 2026.
-**Resume point:** [`NEXT.md`](NEXT.md), always read it first. The project-wide rules in `../AGENTS.md` and `../product/README.md` §8 still apply here.
+**Resume point:** [`NEXT.md`](NEXT.md), always read it first. The project-wide rules in `../AGENTS.md` still apply here.
 
 ## 0. Mandatory rules (read first, every session and every agent)
 
@@ -9,12 +9,12 @@
 2. **Carve out, then improve.** The Drive requirement documents mix AI and non-AI. Read them in full (newest snapshot), carve out every requirement that belongs to Workstream 2, wherever it sits (AG, SA, CP, Doc 1–4, decisions log), then challenge it, fix gaps and improve it. Existing wording is evidence, not gospel. Treat it as our own product. Ratified founder decisions (FD-n) still change only with Ranjan's yes.
 3. **No duplicate source of truth (AIW-D22).** If a requirement already exists in the Drive documents, cite it (ID, file, version) and build on it. Never restate or re-author it. Workstream 2 files contain only references, gaps, improvements and the AI Worker layer. The register in `design/ws2-baseline/` is a reference index with quotes, not a second copy of the requirements.
 3a. **Assume it is built (AIW-D21).** Everything in the documents is treated as built or to be built; timelines and team capacity are not Workstream 2's concern. Design the best product.
-3b. **Agents improve the rules (AIW-D23).** Found something that should be a rule or a decision? Append it to `proposals.md`. The Lead merges rules; Ranjan ratifies decisions.
+3b. **Agents improve the rules and the plan (AIW-D23, D30).** Found something that should be a rule, a decision or a change to the plan? Append it to `proposals.md` (type Rule / Decision / Plan). The Lead merges rules and plan changes into `README.md` §0 and `PROGRESS.md` and tells Ranjan; Ranjan ratifies decisions. Nobody follows the plan blindly.
 4a. **Local only.** All Workstream 2 work lives in this folder. Nothing is written to Drive, any repository, the mailbox or anything shared (AIW-D10, enforced in settings).
 4b. **Write like a person.** Chat updates are short and plain, in small chunks. Documents are plain English with no jargon (explain any unavoidable term where it appears), complete and in depth (AIW-D15).
 5. **Investor-grade.** Every claim has a source or is labelled Proposal, Assumption or Unknown. Ranjan's reputation and the raise depend on it (AIW-D9).
 6. **Report after every step, unasked (AIW-D20).** One outcome per step, no side artefacts (AIW-D28). When a step finishes, the Lead tells Ranjan in a few plain lines what changed, what it means, what is needed from him, and where to look. Nothing waits for him to ask.
-7. **Bookkeeping (9 Oct, merged after the audit).** `PROGRESS.md` is the one-page plan and log: every agent appends a line when it starts, at milestones and when it finishes. The Lead commits to the local git repository (no remote) at the end of every step. `REPORT-CARD.md` holds the story, honest ratings and audits; a short audit at session start, not at end. Workstream 2 demo screens in the simulator (`../product/app`) go in a clearly marked "Workstream 2" area and never touch the team's protected files.
+7. **Bookkeeping (9 Oct, merged after the audit).** `PROGRESS.md` is the one-page plan and log: every agent appends a line when it starts, at milestones and when it finishes. The Lead commits to the local git repository (no remote) at the end of every step. `REPORT-CARD.md` holds the story, honest ratings and audits; a short audit at session start, not at end. The simulator was retired on 9 Oct (AIW-D30); any prototype is a standalone page in `prototype/`, every screen traced to a requirement.
 8. **Coach, and never follow blindly (AIW-D6, D20).** Challenge Ranjan's asks and our own earlier decisions; say plainly when something is weak; challenges and their outcomes are recorded in `decisions.md`.
 
 ## 1. The idea in one paragraph (Ranjan, 8 Oct 2026, in his words, paraphrased)
@@ -50,7 +50,7 @@ Some work needs two kinds at once: a task worker that acts, and the expert that 
 | Phase | Waves | What Ranjan gets | Where it lives |
 |---|---|---|---|
 | **A. Concept** | W1 Evidence (fresh sources, full read of every requirement document, VisaFlo study) → W2 AI Worker concept (component map, worker catalogue, guardrail model) → W3 Commercial concept (proposition, pricing, investor story) | Understand and approve the idea at business level | `ai-workers/` |
-| **B. Requirements** | W4+ one wave per group of AI Workers and Doers | Detailed requirements developers can build from, with worked examples and generated test cases | `../product/requirements/` (the project's single requirement source), same templates and checks as every other module |
+| **B. Requirements** | Steps 2–3 of the plan (`PROGRESS.md`) | Behaviour documents, then build specifications developers can build from, with worked examples and generated test cases | `design/behaviours/`, `requirements/` (same document format as the Drive FR documents, until Ranjan places them on Drive) |
 
 Gaps in the product requirements: we **assume they will be filled**, record each assumption in [`assumptions.md`](assumptions.md) with its effect, and never present an assumption as a fact.
 
@@ -63,7 +63,7 @@ Gaps in the product requirements: we **assume they will be filled**, record each
 | Assumptions filling product gaps | [`assumptions.md`](assumptions.md) | Each one has an ID, its effect, and who can confirm it |
 | Product facts | newest `../sources/drive-snapshot-*` | Never the archive; never a copy older than Drive |
 | Concept outputs | `research/`, `design/`, `commercial/` | Superseded versions move to `archive/`, never kept side by side |
-| Detailed requirements (Phase B) | `../product/requirements/` | Concept files link to them; text is not duplicated |
+| Detailed requirements (Step 3) | `requirements/` in the Drive FR document format | Concept files link to them; text is not duplicated |
 | Review findings | `checks/` | One file per review |
 
 ## 3. Roles (sub-agents in `../.claude/agents/`)
@@ -79,13 +79,13 @@ Gaps in the product requirements: we **assume they will be filled**, record each
 
 One writer of shared files: only the Lead edits this README, `NEXT.md`, the wave briefs and anything outside `ai-workers/`.
 
-## 4. How a wave runs (same pattern as `../product/README.md` §3)
+## 4. How a step runs
 
 1. **Freshness first.** The hook runs `tools/freshness.sh`; the Lead searches Drive for files modified after the newest snapshot. If any master is newer than our copy, the Lead takes a new dated snapshot (`../sources/README.md`, "How to refresh") **before** reading requirements. Never read the archive as current.
 2. **Step brief → Ranjan's yes** (one outcome, which agents, what is out), given in chat and recorded in `PROGRESS.md`.
 3. Agents work in parallel, each in its own folder.
 4. Adversarial review → findings fixed or recorded in `checks/`.
-5. Ranjan reviews. Lead updates `NEXT.md` (replace, don't append) and the one-line pointer in `../product/NEXT.md`.
+5. Ranjan reviews. Lead updates `PROGRESS.md` and `NEXT.md` (replace, don't append) and commits.
 
 ## 5. Guardrails for this workstream
 

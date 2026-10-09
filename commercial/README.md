@@ -26,16 +26,6 @@
 - `tools/test_model.py` runs the scenario tests.
 - `tools/make_plan_docx.py` and `tools/plan-reference.docx` build the Word plan from `plan.md`.
 
-## Superseded, kept for history (7 Oct 2026, v0.2)
+## Superseded (7 Oct 2026, v0.2)
 
-These files are kept so that existing links keep working. **Do not use their funding figures.** Codex's recheck of 7 Oct found calculation defects in them.
-
-- 00-decision-summary.md
-- 01-market-revenue-strategy.md
-- 02-sales-affiliate-cs-playbook.md
-- 03-funding-investor-plan.md
-- 04-execution-team-financial-workbook.md and 04-execution-team-financial-workbook.xlsx
-- coverage-map.md, discovery.md, review-dispositions.md and workflow-review.md
-- tests/ and the v0.2 tools in tools/ (build_workbook.py, refresh_reports.py and the others)
-- The previous index: README-v0.2-2026-10-07.md
-- The previous handoff: ready-for-review-v0.2-2026-10-07.md
+Moved to `../archive/commercial-v0.2-2026-10-07/` on 9 Oct 2026 together with the `company-planning/` workflow. **Do not use their funding figures** (Codex's recheck of 7 Oct found calculation defects). The AI Workers workstream (`../ai-workers/`, Steps 5–6) extends this plan and model; see `../ai-workers/commercial/` for the drafts.

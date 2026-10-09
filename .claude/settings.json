@@ -47,6 +47,17 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/stop-check.sh",
+            "timeout": 20
+          }
+        ]
+      }
     ]
   }
 }

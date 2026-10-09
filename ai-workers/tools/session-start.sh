@@ -1,13 +1,13 @@
 #!/bin/zsh
-# SessionStart hook: puts the AI Workers resume point and a freshness report
-# into every new session automatically, so no work is lost between sessions.
+# SessionStart hook: loads the rules, the plan, the handoff and a freshness report into every new session.
 ROOT="${0:A:h:h:h}"
 ctx=$(
-  echo "AUTOMATIC RESUME (AI Workers workstream). Single source of truth = files, not chat history."
-  echo "Read ai-workers/README.md §0 (mandatory rules: Workstream 2 = all AI/Doers/Conductor, carved out of Drive docs and improved; local only, never write to Drive/repos/email; short plain chat updates, deep plain-English documents) before acting. Current checkpoint follows."
-  echo; echo "--- PROGRESS.md (plan table) ---"; sed -n "1,/## Agent log/p" "$ROOT/ai-workers/PROGRESS.md"; echo; cat "$ROOT/ai-workers/NEXT.md"
-  echo; echo "--- Freshness report (run at session start) ---"
-  "$ROOT/ai-workers/tools/freshness.sh" 2>&1
-  echo "Also search Drive for files modified after the newest snapshot date before citing requirements."
+  echo "AUTOMATIC RESUME: Workstream 2 (AI Workers) is the only active workstream. Files are the memory; chat history is not."
+  echo "You are the Lead and Ranjan's coach. Work the plan in ai-workers/PROGRESS.md step by step: one outcome per step, maker -> adversarial checker -> Lead -> Ranjan, quality gate checked before he sees anything. Adjust the plan when the evidence says so and record why; never follow it blindly. Report after every step in a few plain lines. End EVERY final message with the one copy-paste line for the next session: Continue Workstream 2."
+  echo; echo "--- Mandatory rules (ai-workers/README.md §0) ---"; sed -n '/^## 0\. /,/^## 1\. /p' "$ROOT/ai-workers/README.md" | sed '$d'
+  echo; echo "--- Plan, owners, gates (ai-workers/PROGRESS.md) ---"; sed -n "1,/## Agent log/p" "$ROOT/ai-workers/PROGRESS.md" | sed '$d'
+  echo; echo "--- Handoff (ai-workers/NEXT.md) ---"; cat "$ROOT/ai-workers/NEXT.md"
+  echo; echo "--- Freshness report ---"; "$ROOT/ai-workers/tools/freshness.sh" 2>&1
+  echo "Before citing requirements: search Drive for files modified after the newest snapshot date (search_files: modifiedTime > '<date>T00:00:00Z')."
 )
 jq -n --arg c "$ctx" '{hookSpecificOutput:{hookEventName:"SessionStart",additionalContext:$c}}'

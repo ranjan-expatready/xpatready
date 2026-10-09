@@ -1,18 +1,14 @@
 # Workstream 2: handoff for the next session
 
-*Replace, don't append. Plan and status: `PROGRESS.md`. Decisions: `decisions.md`. Story, ratings, audits: `REPORT-CARD.md`.*
+*Replace, don't append. Plan, gates and status: `PROGRESS.md`. Decisions: `decisions.md`. Story, ratings, audits: `REPORT-CARD.md`.*
 
-## State, 9 Oct 2026, 18:00
-- Ranjan set the shape of the work (AIW-D28): three layers, one outcome each. Step 0 (groundwork) is done and reviewed. **Step 1 is next: the AI organisation in business terms**, one page he can show business people.
-- The audit removals were applied the same day; the folder is smaller (see `REPORT-CARD.md` §5.5 and the 18:00 log line).
-- Pages published: evidence https://claude.ai/artifact/7ABbMaVaoYQ32osUgDJNU7 ; workers and decisions https://claude.ai/artifact/KWqX2Hr9tJGcmqDoY9bx4s (the 22 decisions there are parked until Step 2 needs them).
-- Blocking risk: the Canada-only processing rule (`commercial/provider-and-cost.md`). Needs Ranjan's wording decision, then counsel.
-- Sources current as of 9 Oct 16:30 (snapshot `sources/drive-snapshot-2026-10-09/`, team doc re-copied at 09:18Z); ERv2-frontend moved on GitHub, copy when Step 3 needs code.
+## State, 9 Oct 2026, 18:45
+- Plan Steps 0–6 ratified (AIW-D29) and reviewed lens by lens (AIW-D30; `PROGRESS.md` "Plan review"). Step 0 done. **Step 1 (the AI organisation in business terms) is next and approved.**
+- Folder cleaned on Ranjan's instruction: root is now `ai-workers/`, `sources/` (newest snapshot only), `code/` (dated copies only), `commercial/` (plan v1.1 + model), `archive/` (everything superseded, including the retired simulator and the company-planning workflow).
+- Hooks: SessionStart loads rules, plan, handoff, freshness; Stop refuses to end with uncommitted work. Resume line: **Continue Workstream 2.**
+- Blocking risk: the Canada-only processing rule (`commercial/provider-and-cost.md`). Decision checkpoint before Step 3.
 
 ## Next
-1. On Ranjan's yes: Step 1, `design/ai-organisation.md` + one page. Personas drawn from the 28 workers in `design/workers/catalogue.md`; business language only; each persona: name, job, does, never does, who approves, where it sits in the firm. Adversarial review, then show Ranjan.
-2. Step 2 behaviours, one persona at a time, starting with the File Builder family.
-3. Step 5 conversations when Ranjan names who runs them (`commercial/validation-script.md`).
-
-## Ranjan's yes (9 Oct, AIW-D29)
-Step 1 approved. Owners, formats, gates and models per step are in `PROGRESS.md`. Next session: paste `PROMPTS.md` §2 for Step 1.
+1. **Step 1, first task:** open the Drive folders never opened (`sources/README.md`, "Drive folders seen"): the "Expatready" shared folder (Requirement Docs, Product Docs, Technical Docs) and Tanu's SuperAdmin business requirements. Record current / superseded / irrelevant. Copy anything current into the snapshot's team-documents folder.
+2. **Step 1, the outcome:** `design/ai-organisation.md` + one web page: the AI personas in business terms (name, job, does, never does, who approves, where it sits in the firm, hours saved as Assumption, charge unit), plus "How a firm runs it". Built from the 28 workers in `design/workers/catalogue.md`. Maker: ai-worker-designer. Checker: adversarial-reviewer against the Step 1 gate in `PROGRESS.md`. Then Ranjan.
+3. Step 5 conversations can start as soon as Step 1 is approved (`commercial/validation-script.md`); Ranjan names who runs them.

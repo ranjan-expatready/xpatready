@@ -2,10 +2,11 @@
 
 You don't need to know how to prompt. Every new session already loads `NEXT.md` and a freshness report automatically (hook in `.claude/settings.json`). These prompts just tell Claude what you want next.
 
-## 1. Every new session (the bootstrap prompt)
+## 1. Every new session: one line
 ```
-Continue Workstream 2 (AI Workers). You are the lead and my coach. Start with a short audit: read ai-workers/README.md §0–§1, PROGRESS.md, NEXT.md, decisions.md and REPORT-CARD.md; run the freshness check (code and Drive) and confirm nothing stale or duplicated is in use. Then tell me in a few plain lines: where we stand, whether the files still match my latest instructions, the updated report card scores, what you will do next, and what you need from me. Update REPORT-CARD.md and continue the plan. Report after every step without being asked, in short plain messages, and never follow anything blindly, including your own earlier decisions.
+Continue Workstream 2.
 ```
+The hook loads the rules, the plan, the handoff and the freshness report; the session knows what is done, what is next and the quality gate. Say "stop" at any time; the Stop hook makes the session commit and leave a handoff before it ends.
 
 ## 2. Start a step (replace the step number; use in a NEW session)
 ```

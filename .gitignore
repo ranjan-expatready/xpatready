@@ -2,6 +2,4 @@
 node_modules/
 code/
 archive/
-product/app/dist/
-product/app/test-results/
-product/app/playwright-report/
+__pycache__/
