@@ -10,7 +10,7 @@
 | W2a | Workstream 2 baseline: reference index of every AI, Doer and Conductor requirement | One clean reference set for Workstream 2 | Done: A (9 files, 627 refs) + B (20 files, 680 refs incl. Recruiter); all quotes verified; conflicts logged in proposals.md | `design/ws2-baseline/` |
 | W2b | Challenge and improve: gaps, weak points, proposals (labelled) | Decisions to take, with reasons | Done: 41 items (10 blocking), revised after review W2 | `design/ws2-improvements.md` |
 | W2c | AI Worker catalogue and product map with workers | The visual of which worker does what | Done: 28 workers ranked + module map, revised after review W2; visual pending | `design/workers/`, `visual/` |
-| W2d | Independent review + updated visual page | Confidence it is right | Not started | `checks/`, `visual/` |
+| W2d | Independent review + updated visual page | Confidence it is right | Done: review W2 (2 blocking, fixed) and re-review W2b (0 blocking; 1 major fixed by the Lead). **W2 closed 9 Oct.** Page published | `checks/review-W2-2026-10-09.md`, `checks/review-W2b-2026-10-09.md`, `visual/` |
 | W3a | Proposition and the wedge product (see recommendation) | What we sell first and why | Not started | `commercial/` |
 | W3b | Validation script for 5–10 licensed consultants | Evidence before pricing | Not started | `commercial/` |
 | W3c | Pricing and business case, added to the existing plan and money model | Numbers you can defend | Not started | `../commercial/plan.md`, `model.xlsx` |
@@ -58,3 +58,7 @@
 | 9 Oct 19:50 | Lead | REPORT-CARD.md created (story, ratings, plan); bootstrap prompt now starts with an audit; Charter and LMIA guidance in PROMPTS §7–8 |
 | 9 Oct 21:00 | Lead | LMIA folder traced (never on Drive); W2 page built with 28 workers, product map, rules, 22 decisions; report card re-audited |
 | 9 Oct 16:35 | Lead | Full audit done (REPORT-CARD §5): setup sound; SAModules re-copied (09:18Z), test-case sheet noted; 39 quotes + 5 URLs checked, 0 wrong, 1 citation gap fixed; drift: money unstarted, process over-built, D4 vs D21; 12 removals proposed; W3b moved before Phase B |
+| 9 Oct 21:30 | adversarial-reviewer (W2b re-review) | Started: re-check of every review-W2 finding against the revised catalogue.md, module-map.md and ws2-improvements.md; fresh check of both files |
+| 9 Oct 21:35 | commercial-strategist (provider and cost) | Started: provider/Canada-only check and File Builder cost-per-file estimate → commercial/provider-and-cost.md |
+| 9 Oct 22:20 | adversarial-reviewer (W2b re-review) | Done: checks/review-W2b-2026-10-09.md — verdict: W2 can close once one line is corrected (catalogue L269 attributes a real Doc 3 v1.4 sentence to AG-17 v0.5); B-1, B-2 and 20 others fixed, M-5 and m-15 partly, m-11/m-12/m-14 untouched (outside the revised files); new: 0 blocking, 1 major, 19 minor; 28 "Why it sells" lines plus other quoted proposal wording listed for italics |
+| 9 Oct 16:50 | Lead | Re-review W2b received; N-1 (FD-7 phrase re-sourced to Doc 3 L8123), two-vs-three sources, IMP-19 wording, A-W2-8 → AIW-A10, 28 "why it sells" lines to italics. W2 closed |

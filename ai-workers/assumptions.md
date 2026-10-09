@@ -13,3 +13,4 @@
 | AIW-A7 | A role twin holds a subset of one named person's permissions and takes no paid seat; it is charged by work done | Role twins and pricing | Seat rules (AG-1-13) and plan limits (SA-3-41) are silent on this | Ranjan (pricing), team |
 | AIW-A8 | The expert co-pilot's search of case files is limited server-side to what the asking user may see | Expert co-pilot (AIW-D25) | Data leak between staff | Team |
 | AIW-A9 | The tamper-evident audit chain stays in Release 1 (the 5 Oct triage proposes moving it) | "Every action is recorded" claims | Weaker trust claim | Ranjan |
+| AIW-A10 | FD-16's "effect" (nothing takes effect without a person) does not cover an internal, reversible, audited filing label such as a document type (catalogue A-W2-8; improvements IMP-13) | Reader and Sorter can label documents without a queue | Every label needs a human tick; the Sorter saves nothing | Ranjan |

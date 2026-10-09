@@ -100,7 +100,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Value:** the firm pays per file for junior-clerk work; revenue tracks caseload, not seats. Time saved: Assumption, measured in W3b.
 - **Cost drivers:** Reader pages per file (AG-09 §3.14 groups), one Checker pass per change, chase messages, review minutes.
 - **Dependencies and risks:** D1 Proposed; D2 Content; D4 Open (AG-07 §13 item 22 on Deficiency Library and Checker); D6 Open; D7 Specified not built; D8 Proposed; D10, D11 Specified. The readiness report is internal until a person decides what reaches the client: confirm with counsel / RCIC.
-- **Why it sells (Proposal wording):** "A prepared file for a fixed price, every value traced to its document, approved by your named person."
+- **Why it sells (Proposal wording):** *A prepared file for a fixed price, every value traced to its document, approved by your named person.*
 
 #### W-02 Deadline Guardian (the hook, AIW-D17)
 
@@ -116,7 +116,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Value:** the hook; low run cost (Assumption). Record-keeping value: the firm can show when it reminded whom (autopilot design §14). "The fear every consultant has" is **Assumption** until the W3b interviews.
 - **Cost drivers:** messages; Reader on letters.
 - **Dependencies and risks:** D2 Content (SA-01B §3.8); D5 Specified not built; D4 Open (Charter watcher decision, `foundation.md` C8); X3 escalation default conflict (IMP-41 adopts AG-11's). Values: confirm with counsel / RCIC.
-- **Why it sells (Proposal wording; "never" is a design aim per AG-11 §3.4, not a warranty):** "Every IRCC deadline watched by design, and a record of every reminder you sent."
+- **Why it sells (Proposal wording; "never" is a design aim per AG-11 §3.4, not a warranty):** *Every IRCC deadline watched by design, and a record of every reminder you sent.*
 
 #### W-03 Letter Reader (post-filing watcher)
 
@@ -132,7 +132,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Value:** the highest-risk period of a file. Assumption on time.
 - **Cost drivers:** Reader per page; Drafter per notice; review minutes.
 - **Dependencies and risks:** D1 Proposed; D2 Content (AG-07 §13 item 16); D5 Specified not built; D7 Specified not built; D10 Specified. Letter formats change. Response plans are advice: confirm with counsel / RCIC.
-- **Why it sells (Proposal wording):** "Every IRCC letter becomes a dated task and a client update."
+- **Why it sells (Proposal wording):** *Every IRCC letter becomes a dated task and a client update.*
 
 #### W-04 Upload Reviewer (inside W-01; usable alone)
 
@@ -145,7 +145,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** G1, G2, G6, G7, G12, G13, G17; verify stays the officer's act (AG-09 §3.9). **Automatic typing:** whether a high-confidence type may be applied without a person (AG-9-11 AUTO) is **pending Ranjan's reading of FD-16 (IMP-13)**; until then every type goes to review (AG-11 §3.10) and this worker assumes review. **Approval point:** `agent/case:document-manage` for the verdict; the client message via the AI-text setting, or, once the firm confirms the reason library as standard messages (AG-16 §3.12), under G17.
 - **Who has solved it (evidence):** VisaFlo's AI document validation has been live since 2025 (`visaflo.md` §12). **Partly solved**; our difference is reasons tied to pack rules, in the client's language, audited.
 - **Difficulty:** Easy. **Value:** the most frequent loop per file (Assumption). **Cost drivers:** Reader and Checker per document. **Dependencies:** D1 Proposed; D2 Content; D6 Open; D10 Specified; IMP-13 Open for Ranjan.
-- **Why it sells (Proposal wording):** "Problems with an upload found on arrival, not at filing."
+- **Why it sells (Proposal wording):** *Problems with an upload found on arrival, not at filing.*
 
 #### W-05 Form Preparer (hard but worth it)
 
@@ -159,7 +159,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Who has solved it (evidence):** everyone (`field-scan.md` §4 row 2; `visaflo.md` §16 row 8). **Solved by rivals; we have none.** Our angle: every value traceable to a verified source and pack version, the reason it was parked (SA1B-D28).
 - **Difficulty:** Hard: XFA unsupported (SA-01B §12, *Built engine refuses it*), box maps unauthored (*Content*), release undecided (AG-07 §13 item 22; proposals.md Filler row).
 - **Value:** closes the biggest gap; inside the per-file price. **Cost drivers:** content, not model calls. **Dependencies:** D2 Content; D4 Open; D7 Specified not built; XFA route Unknown. Confirm with counsel / RCIC.
-- **Why it sells (Proposal wording):** "Forms filled only from verified facts, with the source beside every box."
+- **Why it sells (Proposal wording):** *Forms filled only from verified facts, with the source beside every box.*
 
 #### W-06 Submission Letter Drafter
 
@@ -172,7 +172,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** G1, G2, G6, G7, G12, G13, G16. **Approval point:** the representative who files; the firm's AI-text setting decides who may approve (AIW-D26).
 - **Who has solved it (evidence):** VisaFlo (`visaflo.md` §16 row 10), Visto's VistoBot (`field-scan.md` §3.3) and others (§4 row 1). **Solved; parity.** Our difference is traceability and no-promise.
 - **Difficulty:** Medium. **Value:** hours per complex file (Assumption). **Cost drivers:** one model call per letter; review minutes. **Dependencies:** D1 Proposed; D2 Content; D10 Specified. Federal Court AI-content declaration (`field-scan.md` §6 item 9): confirm with counsel / RCIC.
-- **Why it sells (Proposal wording):** "A first draft that cites its facts, in minutes, that you still own."
+- **Why it sells (Proposal wording):** *A first draft that cites its facts, in minutes, that you still own.*
 
 ### 2.2 Group B. Messages and words
 
@@ -187,7 +187,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** AI-only matches never filed (AG-10 §3.2); no lead from an unknown number (AG-10-58); G6, G7, G8. **Approval point:** `agent/communication:resolve-unmatched`.
 - **Who has solved it (evidence):** VisaFlo claims it live (`visaflo.md` §16 row 6). **Solved; parity.**
 - **Difficulty:** Easy. **Value:** daily minutes (Assumption); precondition for W-03, W-09. **Cost drivers:** one Sorter call per message; Reader per attachment. **Dependencies:** D1 Proposed; D4 Open; D6 Open; D10 Specified; mailbox connection (AG-16 §3.4, *Specified*); WhatsApp provider (AG-10-43, *Open*).
-- **Why it sells (Proposal wording):** "Every reply lands on the right file, with the attachment already named."
+- **Why it sells (Proposal wording):** *Every reply lands on the right file, with the attachment already named.*
 
 #### W-08 Bilingual Writer
 
@@ -200,7 +200,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** G2, G6, G7, G12, G13, G16, G17; stage labels are SME content (AG-15 §13). **Approval point:** the AI-text setting (AG11-D11) for client text; `agent/template:publish` for template French (AG-12 §3.7).
 - **Who has solved it (evidence):** VisaFlo's 13 languages are client-side intake (`visaflo.md` §16 row 4). Firm free-text French: **Unknown; the research did not look for it.**
 - **Difficulty:** Easy. **Value:** French-serving firms; otherwise modest (Assumption). **Cost drivers:** one model call per text. **Dependencies:** D1 Proposed; D4 Open; D10 Specified. Quebec language duties: confirm with counsel.
-- **Why it sells (Proposal wording):** "Answer every client in their language without a second keyboard."
+- **Why it sells (Proposal wording):** *Answer every client in their language without a second keyboard.*
 
 #### W-09 Intake Assistant (gap asker and message-to-answer)
 
@@ -213,7 +213,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** G1, G2, G7, G8, G13, G17; AG-8-23. **Approval point:** `agent/sqr:verify` for answers; the AI-text setting for outgoing questions.
 - **Who has solved it (evidence):** VisaFlo announced it about 2 Oct 2026, not shown live (`visaflo.md` §16 row 6, https://www.linkedin.com/company/visaflo/). **Partly (announced, not live).**
 - **Difficulty:** Medium. **Value:** fewer rounds with the client (Assumption). **Cost drivers:** one call per message. **Dependencies:** D1 Proposed; D3 Proposed; D6 Open; D10 Specified. Pre-retainer questions as advice: confirm with counsel / RCIC.
-- **Why it sells (Proposal wording):** "Ask only what is missing, and let the client answer in a WhatsApp message."
+- **Why it sells (Proposal wording):** *Ask only what is missing, and let the client answer in a WhatsApp message.*
 
 ### 2.3 Group C. Front of the funnel
 
@@ -228,7 +228,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** G8, G13, G17; AG-2-56. **Approval point:** the AI-text setting; template steps run under the recipe's autonomy.
 - **Who has solved it (evidence):** general CRMs (the founders' design borrows the pattern, autopilot §1.3) and VisaFlo's lead agent (`visaflo.md` §16 row 1). **Solved; parity.** Difference: rules engine, consent, firm-only.
 - **Difficulty:** Easy. **Value:** conversion (Assumption). **Cost drivers:** one call per personalised message. **Dependencies:** D1 Proposed; D4 Open (`doc3-firm.md` Part 5 on sequences in R1); D11 Specified; engagement scoring deferred (`foundation.md` C18). CASL class of each message: confirm with counsel / RCIC.
-- **Why it sells (Proposal wording; "legally" removed, consent class is a counsel question):** "Every enquiry answered in minutes, with consent checked at every send."
+- **Why it sells (Proposal wording; "legally" removed, consent class is a counsel question):** *Every enquiry answered in minutes, with consent checked at every send.*
 
 #### W-11 Consult Scribe and Proposal Drafter
 
@@ -242,7 +242,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Who has solved it (evidence):** VisaFlo lists AI meeting notes live (`visaflo.md` §16 row 3). **Solved; parity.**
 - **Difficulty:** Medium. **Value:** Unknown until measured. **Cost drivers:** transcription minutes (a second provider under D1), one model call per record.
 - **Dependencies and risks:** D1 Proposed (twice: text and speech providers, both Canada-only); D10 Specified; video room depth open (AG-04 §13 Q5); AG-04 §12 says reminders are not delivered in today's code (*Specified, not built*). Recording consent and storage: confirm with counsel.
-- **Why it sells (Proposal wording):** "Finish the consult with the proposal already written."
+- **Why it sells (Proposal wording):** *Finish the consult with the proposal already written.*
 
 ### 2.4 Group D. Money, corporate files and the long tail
 
@@ -257,7 +257,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** AG-06 BR-11, §9, AG-6-43, AG-6-24; G16, G17. **Approval point:** the Billing user's own record-payment and issue keys; the export by its holder; client wording via the AI-text setting; template dunning is transactional.
 - **Who has solved it (evidence):** bank matching exists in general accounting tools (Inferred); immigration tools export instead (`visaflo.md` §16 row 11). **Unknown in this niche; the research did not look for it.**
 - **Difficulty:** Easy to Medium. **Value:** cash collected sooner (Assumption). **Cost drivers:** one call per unmatched line. **Dependencies:** D1 Proposed; AG-06 online rail *Specified, "effectively NEW"* (AG-06 §12); refunds Phase 2 (AG-6-23); trust posture open (proposals.md trust row). Confirm with counsel / RCIC.
-- **Why it sells (Proposal wording; "nothing goes unbilled" is an aim, Assumption):** "Every e-transfer gets a proposed match, and unbilled work gets a list."
+- **Why it sells (Proposal wording; "nothing goes unbilled" is an aim, Assumption):** *Every e-transfer gets a proposed match, and unbilled work gets a list.*
 
 #### W-13 LMIA Compliance Clerk
 
@@ -266,11 +266,11 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Works for:** corporate case officers and the sign-off holder.
 - **Replaces:** AG-17 v0.5 §3.4 to §3.6, §3.8 manual logging, ticking, reporting and bundling. Inventory: `ag-frs-2.md` L141 to L145.
 - **Uses:** AG-17 §3.2 to §3.8; SA-01B reference tables; Minder; Reader (new use); AI writer; AG-17-28, AG-17-82.
-- **New (Proposal):** Reader on screenshots and CVs; a proposed duties comparison for the human tick (AG-17-32); the Needs you path for AG-17 (none today: inventory X5). **Excluded:** candidate screening or ranking: AG-17 v0.5 §1 ("no sourcing/matching intelligence") and Founder Decisions Log v1.5 **FD-7** (light-evidence scope, no candidate identity plane). (Review M-1: the earlier "FD-7" quote attributed to AG-17 §13 does not exist; re-sourced here.)
+- **New (Proposal):** Reader on screenshots and CVs; a proposed duties comparison for the human tick (AG-17-32); the Needs you path for AG-17 (none today: inventory X5). **Excluded:** candidate screening or ranking: Doc 3 v1.4, AG-17 chapter, L8123 ("no sourcing/matching intelligence"; AG-17 v0.5 itself does not carry the phrase) and Founder Decisions Log v1.5 **FD-7** (light-evidence scope, no candidate identity plane). (Review M-1: the earlier "FD-7" quote attributed to AG-17 §13 does not exist; re-sourced here.)
 - **Guardrails and approval point:** G1, G6, G7, G11, G16; AG-17-34. **Approval point:** `agent/case:review-approve`; retainers need an active licensed consultant (AG-17-74).
 - **Who has solved it (evidence):** AG-17 v0.5 §1's own claim that rivals lack recruitment compliance and pre-submission checks rests on an internal 2026-09-27 scan **not verified in W1**; VisaFlo's evidence shows no LMIA module. **Unknown.**
 - **Difficulty:** Medium. **Value:** higher fees; record-keeping exposure (the retention period is an ESDC value: confirm with counsel). **Cost drivers:** Reader per screenshot and CV. **Dependencies:** SA-01B row-and-line model *Specified, not built* (AG-17 §13); expert check of values *Content*; release conflict Open (AG-07 §13 item 22); D5 Specified not built. ESDC rules: confirm with counsel / RCIC.
-- **Why it sells (Proposal wording):** "An LMIA file kept inspection-ready as you go."
+- **Why it sells (Proposal wording):** *An LMIA file kept inspection-ready as you go.*
 
 #### W-14 Lifecycle Keeper
 
@@ -283,7 +283,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** G8 is the whole question (CASL class routed to SME in AG-10 §13; proposals.md row asks counsel); G16, G17; a person converts (AG-2-47). **Approval point:** the AI-text setting; the Owner switches the recipe on.
 - **Who has solved it (evidence):** not found in `visaflo.md` §16 or `field-scan.md`; **Unknown** (absence not proven; the research did not look for lifecycle products).
 - **Difficulty:** Easy to Medium as rules; **Medium today** (depends on the unbuilt Minder, D5). **Value:** repeat revenue at low acquisition cost (Assumption). **Cost drivers:** messages; one call per draft. **Dependencies:** D2 Content; D5 Specified not built; AG-2-59 consent rule *Specified*. CASL and closed-file contact retention: confirm with counsel / RCIC.
-- **Why it sells (Proposal wording; "lawfully" removed, CASL is a counsel question):** "Your closed files become next year's clients, with consent checked first."
+- **Why it sells (Proposal wording; "lawfully" removed, CASL is a counsel question):** *Your closed files become next year's clients, with consent checked first.*
 
 #### W-15 Migration Mapper
 
@@ -296,7 +296,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** AG-18 BR-1, BR-2, BR-3, BR-6, BR-8; AG-18-13, AG-18-36, AG-18-47; G16 (the worker never imports; a person confirms). **Approval point:** the Owner's attestation and confirm (AG-18-49); nothing client-facing.
 - **Who has solved it (evidence):** VisaFlo imports from Drive and OneDrive (`visaflo.md` §16 row 16); mapped migration from Officio and CaseEasy: **Unknown**; our adapters await samples (AG-18 §13 Q20).
 - **Difficulty:** Medium. **Value:** lowers our cost of sale (assisted migration free at launch, AG-18 §3.9). **Cost drivers:** one pass per header and note; Reader per document. **Dependencies:** D1 Proposed; D10 Specified; AG-18 engine *Built* for PARTY, DOCUMENT, NOTE only, no undo (AG-18 §12); AG-18-79 key *Open*; AG-18 §13 Q5 *Open*. Imported consent: confirm with counsel.
-- **Why it sells (Proposal wording):** "Bring years of files across with every mapping proposed, and switch them on when you are ready."
+- **Why it sells (Proposal wording):** *Bring years of files across with every mapping proposed, and switch them on when you are ready.*
 
 #### W-16 Privacy Clerk
 
@@ -309,7 +309,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** CP-8 BR-7, BR-8, §3.2; G16. **Approval point:** the Owner (export is Owner-only); identity checks stay human.
 - **Who has solved it (evidence):** **Unknown**; the research did not look for it.
 - **Difficulty:** Easy to Medium. **Value:** low frequency, high consequence (Assumption). **Cost drivers:** one call per request; negligible volume. **Dependencies:** SA-11 registers *Specified, not built* (SA-11 §12); clocks and purposes set with counsel (CP-8 §3.6; SA-11 §13); automated-decision review is FD-20 (Founder Decisions Log v1.5), with a Law 25 overlay still open (SA-11 §13 Q2 is about breach notification; review m-2).
-- **Why it sells (Proposal wording):** "Every privacy request tracked on its clock, with the law's limits stated honestly."
+- **Why it sells (Proposal wording):** *Every privacy request tracked on its clock, with the law's limits stated honestly.*
 
 #### W-17 Case Briefer and Day Planner
 
@@ -322,7 +322,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** AG-13 BR-4 note wall; G11; G9; G15; G3; G16. **Approval point:** the reader; `agent/note:share-with-client` is never used by it.
 - **Who has solved it (evidence):** matter summaries are common in general practice software (`field-scan.md` §3 profiles); not immigration-specific. **Solved elsewhere; convenience, not a moat.**
 - **Difficulty:** Easy; lowest exposure. **Value:** minutes per handover (Assumption). **Cost drivers:** one model call per brief or per day per person. **Dependencies:** D1 Proposed; D10 Specified; AG-13 timeline *Specified, "NEW"* in code (`ag-frs-2.md` L75).
-- **Why it sells (Proposal wording):** "Pick up any file in minutes."
+- **Why it sells (Proposal wording):** *Pick up any file in minutes.*
 
 #### W-18 Report Narrator
 
@@ -334,7 +334,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **New (Proposal):** the narrative; anomaly alerts stay deferred (AG-14 §13).
 - **Guardrails and approval point:** AG-14 BR-12, BR-2, BR-15; G16 (never exports). **Approval point:** the schedule owner.
 - **Who has solved it (evidence):** common outside this niche. **Solved elsewhere.** **Difficulty:** Easy. **Value:** low. **Cost drivers:** one call per report. **Dependencies:** D1 Proposed; AG-14 aggregation layer *Specified, not built* (AG-14 §12).
-- **Why it sells (Proposal wording):** "Your Monday numbers, explained."
+- **Why it sells (Proposal wording):** *Your Monday numbers, explained.*
 
 ### 2.5 Group E. Expat Ready's own work (admin plane; never touches a client)
 
@@ -349,7 +349,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** SA-01 §3.12 two-person rule; SA-1B-35; SA-01B §3.6 source and review dates; G16. **Approval point:** the Content Approver; values by SME and founder (SA-01 §13).
 - **Who has solved it (evidence):** **Unknown**; VisaFlo builds form automation by hand (`visaflo.md` §12).
 - **Difficulty:** Medium to Hard (XFA: SA1B-D28). **Value:** our content cost; scale across countries (autopilot design §5). **Cost drivers:** model calls per form page; approver time. **Dependencies:** D2 Content; filler *Built but refuses XFA* (SA-01B §12); SA1B-D18, SA1B-D23 *decided against tests and library*. Values: confirm with counsel / RCIC.
-- **Why it sells (internally; Proposal wording):** "A new IRCC form edition mapped in hours, checked by a person."
+- **Why it sells (internally; Proposal wording):** *A new IRCC form edition mapped in hours, checked by a person.*
 
 #### W-20 Pack Tester
 
@@ -362,7 +362,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** AI never scores. **Approval point:** the Content Approver.
 - **Who has solved it (evidence):** **Unknown**; deterministic-model trust is an English regulator example only (`field-scan.md` §6 item 1).
 - **Difficulty:** Medium. **Value:** proof that advice has not shifted (safety, not revenue). **Cost drivers:** model calls per program per version; approver time. **Dependencies:** D2 Content; dry-run *Specified* (SA-1-52), scoring engine *Built, generic* (SA-01 §0.3); SA1B-D18 a founder decision.
-- **Why it sells (internally; Proposal wording):** "Prove every rule change before a firm sees it."
+- **Why it sells (internally; Proposal wording):** *Prove every rule change before a firm sees it.*
 
 #### W-21 Rule-change Watcher
 
@@ -375,7 +375,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** never edits a pack; two-person publish; open files unchanged (Charter V2 journey J9); adoption by firm staff (SA-1-58); G16. **Approval point:** Content Approver.
 - **Who has solved it (evidence):** VisaFlo's monitor ("launching soon") maps changes to cases directly (`visaflo.md` §16 row 14, https://visaflo.ca/monitor). **Partly (announced; a different design, not an unsolved problem).** Ours routes changes through reviewed packs.
 - **Difficulty:** Medium. **Value:** content currency with a paper trail. **Cost drivers:** page fetches; one model call per changed page; content-team review time. **Dependencies:** D2 Content; SA-01B source fields *Specified, not built* (SA-01B §12 "No source, date-checked or next-review fields"); public pages only. Values: confirm with counsel / RCIC.
-- **Why it sells (Proposal wording):** "When IRCC changes a rule, your pack changes after a person checked it, and your open files stay as they were."
+- **Why it sells (Proposal wording):** *When IRCC changes a rule, your pack changes after a person checked it, and your open files stay as they were.*
 
 #### W-22 Support Triager
 
@@ -388,7 +388,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** SA-10 BR-4; Immigration Content routes to the Content Manager; SA-2-17; AG-18-47; G16. **Approval point:** the support agent.
 - **Who has solved it (evidence):** common everywhere. **Solved elsewhere; margin only.**
 - **Difficulty:** Easy. **Value:** Expat Ready's support cost per firm; matters for margin as firms scale (Assumption). **Cost drivers:** one call per ticket; one per article. **Dependencies:** D1 Proposed; SA-10 routing and SLA engine *Specified, "NEW"* (SA-10 §12); stale `global/*` keys (`sa-frs.md` Part 5).
-- **Why it sells (internally; Proposal wording):** "First reply in minutes, in both languages, by a person who only had to check it."
+- **Why it sells (internally; Proposal wording):** *First reply in minutes, in both languages, by a person who only had to check it.*
 
 #### W-23 Firm Health Watcher
 
@@ -400,7 +400,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **New (Proposal):** drafting only; the AI never changes a firm's state (G16).
 - **Guardrails and approval point:** SA-04 §3.5 to §3.6 goodwill rule. **Approval point:** the account manager.
 - **Who has solved it (evidence):** generic customer-success tooling. **Solved elsewhere.** **Difficulty:** Easy. **Value:** low; churn prevention. **Cost drivers:** one call per outreach draft. **Dependencies:** SA-04 *Specified, "no part works on dev"* (SA-04 §12); SA-02 health lists *Specified, not built* (SA-02 §12).
-- **Why it sells (internally; Proposal wording):** "No firm goes quiet unnoticed."
+- **Why it sells (internally; Proposal wording):** *No firm goes quiet unnoticed.*
 
 ### 2.6 Group F. The expert co-pilot and the role twins (AIW-D19, D24, D25)
 
@@ -418,7 +418,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Value:** adoption and retention across every role; inside the plan (AI plan gating open, AG-16-35; IMP-8).
 - **Cost drivers:** retrieval plus one call per question; context size; capped per user per day and per firm per month (IMP-36); the least predictable cost.
 - **Dependencies and risks:** D1 Proposed; D2 Content (pack reasons); D7 Specified not built; D9 Proposed; Restricted field set *Open for Ranjan* (FDL B-1; IMP-21). Automated-decision review is FD-20 (scoring only); whether a human-approved AI answer counts under Law 25 is IMP-33: confirm with counsel / RCIC.
-- **Why it sells (Proposal wording):** "Ask your practice anything, and get the rule, the file and the reason, with the source."
+- **Why it sells (Proposal wording):** *Ask your practice anything, and get the rule, the file and the reason, with the source.*
 
 #### W-25 AI Case Processor (role twin: assistant to the case officer)
 
@@ -431,7 +431,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** G1 to G17; for four-eyes the preparer rule in IMP-1 applies, so neither the twin nor the officer it works for approves what it prepared (AG-7-65). **Approval point:** the delegating officer for internal actions (G4); the firm's role settings for client, form and filing output (AIW-D26); the approval record per IMP-17.
 - **Who has solved it (evidence):** VisaFlo sells fewer hires with agents that own the flow (`visaflo.md` §12 item 1); Clio Work runs multi-step agents (`field-scan.md` §4 row 4). **Partly solved.** Delegation under one person's permission subset: not found in the evidence; Unknown.
 - **Difficulty:** Hard (D3 plus every component). **Value:** the sentence firms and investors understand; priced through W-01, not per twin. **Cost drivers:** the sum of its components' model calls plus the officer's review minutes; no extra model cost for being a twin. **Dependencies:** D3 Proposed first; all component dependencies (D1, D2, D5, D7, D10, D11). Supervision rules and perception: confirm with counsel / RCIC.
-- **Why it sells (Proposal wording):** "Give every case officer an assistant that prepares, and let your named person decide."
+- **Why it sells (Proposal wording):** *Give every case officer an assistant that prepares, and let your named person decide.*
 
 #### W-26 AI Intake Clerk (role twin: assistant to intake)
 
@@ -444,7 +444,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** G8, G13, G16, G17; conversion stays a person's act (AG-02 §3.5; AG-2-47). **Approval point:** the rep; the AI-text setting for lead messages; AG-3-38 for any shared summary.
 - **Who has solved it (evidence):** VisaFlo's lead agent and chatbot cover the front door, applicant-facing (`visaflo.md` §16 rows 1, 2), which AIW-D11 rules out for us. **Partly solved.**
 - **Difficulty:** Medium to Hard (D3). **Value:** conversion (Assumption). **Cost drivers:** the components' calls (one per personalised message, one per client message read, transcription minutes); low. **Dependencies:** D3 Proposed; D4 Open; D10, D11 Specified; engagement scoring deferred (`foundation.md` C18). CASL and pre-retainer advice: confirm with counsel / RCIC.
-- **Why it sells (Proposal wording):** "Every enquiry qualified, asked the right questions and booked, before your rep's coffee."
+- **Why it sells (Proposal wording):** *Every enquiry qualified, asked the right questions and booked, before your rep's coffee.*
 
 #### W-27 AI Billing Clerk (role twin: assistant to Billing)
 
@@ -457,7 +457,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** AG-06 §9, BR-13, BR-14, AG-6-24; G16, G17. **Approval point:** the Billing user's issue and record keys; the export holder; the AI-text setting for client wording.
 - **Who has solved it (evidence):** VisaFlo announced retainer-to-invoice automation under "Agents" (`visaflo.md` §12). **Partly**; reconciliation and unbilled-work detection not shown (Unknown).
 - **Difficulty:** Medium. **Value:** cash (Assumption); the twin a solo practitioner may switch on first. **Cost drivers:** one call per unmatched line and per draft; low. **Dependencies:** D3 Proposed; AG-06 rail *Specified, "effectively NEW"* (AG-06 §12); trust posture *Open* (proposals.md trust row). Confirm with counsel / RCIC.
-- **Why it sells (Proposal wording; the "never" is the blocked list G16, a Proposal for Ranjan to ratify):** "Drafts and matches prepared for you; money is only ever moved by a person."
+- **Why it sells (Proposal wording; the "never" is the blocked list G16, a Proposal for Ranjan to ratify):** *Drafts and matches prepared for you; money is only ever moved by a person.*
 
 #### W-28 AI Pack Author (role twin, admin plane: assistant to the content author)
 
@@ -470,7 +470,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Guardrails and approval point:** SA-01 §3.12; SA-5-23; G12; G16. **Approval point:** Content Approver; values by SME and founder.
 - **Who has solved it (evidence):** **Unknown**; no rival shows pack-as-data (`field-scan.md` §4 row 8).
 - **Difficulty:** Medium to Hard. **Value:** content cost and country speed (autopilot design §6). **Cost drivers:** model calls per page watched, per form page and per program per version; approver time. **Dependencies:** D2 Content; D3 Proposed; XFA (*Built engine refuses it*); SA-01B source fields *Specified, not built*. Values: confirm with counsel / RCIC.
-- **Why it sells (internally, investors; Proposal wording):** "A country pack kept current by an assistant, approved by two people, every change traceable."
+- **Why it sells (internally, investors; Proposal wording):** *A country pack kept current by an assistant, approved by two people, every change traceable.*
 
 ### 2.7 Where a task worker and the expert must work together
 
