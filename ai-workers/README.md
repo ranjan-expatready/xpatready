@@ -10,14 +10,12 @@
 3. **No duplicate source of truth (AIW-D22).** If a requirement already exists in the Drive documents, cite it (ID, file, version) and build on it. Never restate or re-author it. Workstream 2 files contain only references, gaps, improvements and the AI Worker layer. The register in `design/ws2-baseline/` is a reference index with quotes, not a second copy of the requirements.
 3a. **Assume it is built (AIW-D21).** Everything in the documents is treated as built or to be built; timelines and team capacity are not Workstream 2's concern. Design the best product.
 3b. **Agents improve the rules (AIW-D23).** Found something that should be a rule or a decision? Append it to `proposals.md`. The Lead merges rules; Ranjan ratifies decisions.
-4. **Local only.** All Workstream 2 work lives in this folder. Nothing is written to Drive, any repository, the mailbox or anything shared (AIW-D10, enforced in settings).
-4. **Write like a person.** Chat updates are short and plain, in small chunks. Documents are plain English with no jargon (explain any unavoidable term where it appears), complete and in depth (AIW-D15).
+4a. **Local only.** All Workstream 2 work lives in this folder. Nothing is written to Drive, any repository, the mailbox or anything shared (AIW-D10, enforced in settings).
+4b. **Write like a person.** Chat updates are short and plain, in small chunks. Documents are plain English with no jargon (explain any unavoidable term where it appears), complete and in depth (AIW-D15).
 5. **Investor-grade.** Every claim has a source or is labelled Proposal, Assumption or Unknown. Ranjan's reputation and the raise depend on it (AIW-D9).
-6. **Report after every step, unasked (AIW-D20).** When a step finishes, the Lead tells Ranjan in a few plain lines what changed, what it means, what is needed from him, and where to look. Nothing waits for him to ask.
-6c. **Audit at every session start and end (9 Oct).** `REPORT-CARD.md` holds the story so far, honest ratings and the plan of action. The bootstrap prompt makes every new session re-audit and update it before working.
-6b. **Version history (9 Oct).** The folder is a local-only git repository (no remote; the deny rules block any push). The Lead commits at the end of every step so changes can be compared and rolled back.
-6a. **Progress is visible.** `PROGRESS.md` is the one-page tracker. Every agent appends a line to its log when it starts, at milestones and when it finishes; the Lead keeps the plan table current. No silent work.
-7. **Coach, and never follow blindly (AIW-D6, D20).** Challenge Ranjan's asks and our own earlier decisions; say plainly when something is weak; the current challenge review is `design/challenge-review-<date>.md`.
+6. **Report after every step, unasked (AIW-D20).** One outcome per step, no side artefacts (AIW-D28). When a step finishes, the Lead tells Ranjan in a few plain lines what changed, what it means, what is needed from him, and where to look. Nothing waits for him to ask.
+7. **Bookkeeping (9 Oct, merged after the audit).** `PROGRESS.md` is the one-page plan and log: every agent appends a line when it starts, at milestones and when it finishes. The Lead commits to the local git repository (no remote) at the end of every step. `REPORT-CARD.md` holds the story, honest ratings and audits; a short audit at session start, not at end. Workstream 2 demo screens in the simulator (`../product/app`) go in a clearly marked "Workstream 2" area and never touch the team's protected files.
+8. **Coach, and never follow blindly (AIW-D6, D20).** Challenge Ranjan's asks and our own earlier decisions; say plainly when something is weak; challenges and their outcomes are recorded in `decisions.md`.
 
 ## 1. The idea in one paragraph (Ranjan, 8 Oct 2026, in his words, paraphrased)
 
@@ -60,7 +58,7 @@ Gaps in the product requirements: we **assume they will be filled**, record each
 
 | Thing | Only home | Rule |
 |---|---|---|
-| Where we are, what's next | `NEXT.md` (handoff) and `REPORT-CARD.md` (audit, ratings, plan) | Replaced each session; loaded **automatically** at session start by the hook in `../.claude/settings.json` |
+| Where we are, what's next | `PROGRESS.md` (plan and log) and `NEXT.md` (handoff); `REPORT-CARD.md` holds story, ratings and audits | Replaced each session; `PROGRESS.md` and `NEXT.md` are loaded **automatically** at session start by the hook in `../.claude/settings.json` |
 | Ranjan's decisions for this workstream | [`decisions.md`](decisions.md) | Append only, dated, with his exact words |
 | Assumptions filling product gaps | [`assumptions.md`](assumptions.md) | Each one has an ID, its effect, and who can confirm it |
 | Product facts | newest `../sources/drive-snapshot-*` | Never the archive; never a copy older than Drive |
@@ -73,7 +71,6 @@ Gaps in the product requirements: we **assume they will be filled**, record each
 | Role | Does | Writes only to |
 |---|---|---|
 | **Lead and coach (Claude, main session)** | Plans waves, writes every shared file, integrates. **Coaches Ranjan (his request, 9 Oct):** sharpens or corrects his asks before acting, says plainly when an idea is weak or a claim would not survive an investor or regulator, and ends each wave with the questions he must answer | everything in `ai-workers/` |
-| `source-keeper` | Freshness check; takes a new dated Drive snapshot or code copy when stale | `../sources/drive-snapshot-<date>/`, `../code/` (new dated copies only) |
 | `competitor-analyst` | Researches competitors from their own sites, LinkedIn, reviews, press; separates fact from claim | `research/` |
 | `requirements-cartographer` | Reads the requirement documents module by module; builds the component inventory with exact citations | `design/inventory/` |
 | `ai-worker-designer` | Proposes AI Workers per component: task, inputs, Doers used, guardrails, human sign-off | `design/workers/` |
@@ -84,8 +81,8 @@ One writer of shared files: only the Lead edits this README, `NEXT.md`, the wave
 
 ## 4. How a wave runs (same pattern as `../product/README.md` §3)
 
-1. **Freshness first.** Run `tools/freshness.sh` and the Drive check (skill `ai-workers-resume`). If any master is newer than our copy, take a new dated snapshot **before** reading requirements. Never read the archive as current.
-2. **Wave brief → Ranjan's yes** (scope, agents, budget cap, what is out).
+1. **Freshness first.** The hook runs `tools/freshness.sh`; the Lead searches Drive for files modified after the newest snapshot. If any master is newer than our copy, the Lead takes a new dated snapshot (`../sources/README.md`, "How to refresh") **before** reading requirements. Never read the archive as current.
+2. **Step brief → Ranjan's yes** (one outcome, which agents, what is out), given in chat and recorded in `PROGRESS.md`.
 3. Agents work in parallel, each in its own folder.
 4. Adversarial review → findings fixed or recorded in `checks/`.
 5. Ranjan reviews. Lead updates `NEXT.md` (replace, don't append) and the one-line pointer in `../product/NEXT.md`.

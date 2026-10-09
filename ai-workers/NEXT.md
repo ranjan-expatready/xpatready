@@ -1,22 +1,15 @@
 # Workstream 2: handoff for the next session
 
-*Replace, don't append. The story, ratings and plan are in `REPORT-CARD.md`; status in `PROGRESS.md`; decisions in `decisions.md`. This file holds only what the next session must know to start.*
+*Replace, don't append. Plan and status: `PROGRESS.md`. Decisions: `decisions.md`. Story, ratings, audits: `REPORT-CARD.md`.*
 
-## State, 9 Oct 2026, 16:35 (after the full audit)
-- **Full audit done** (`REPORT-CARD.md` §5): 12 removals and an order change (W3b before Phase B) wait for Ranjan. **W2 closed** (re-review W2b). **Provider/cost and W3b drafts done** the same day; residency wording (AG11-D15 vs SA-11 §3.6) is a new founder question.
-- W1 done, reviewed, page published: https://claude.ai/artifact/7ABbMaVaoYQ32osUgDJNU7
-- W2 content done and corrected after review W2 (reference index 1,300+ refs; 28 workers; 41 improvements). No agent running.
-- **W2 page published:** https://claude.ai/artifact/KWqX2Hr9tJGcmqDoY9bx4s (28 workers, product map with workers, rules, 22 decisions). Ranjan's answers to the 22 decisions are the next input.
-- LMIA folder resolved (never on Drive; decisions inside AG-17).
-- Verified current on 9 Oct evening: code copies (`code/*@*-2026-10-09`), Drive snapshot `sources/drive-snapshot-2026-10-09/` (+ team doc SAModules in `07-team-documents/`). ERv2-frontend `dev` moved again late on 9 Oct (92f5667); take a new code copy only when Phase B needs the code.
-- Charter V2 says 28 Feb 2027; V1 text says 12 Mar; AI still "NOT IN RELEASE 1" on Drive (Ranjan to fix, `PROMPTS.md` §7).
+## State, 9 Oct 2026, 18:00
+- Ranjan set the shape of the work (AIW-D28): three layers, one outcome each. Step 0 (groundwork) is done and reviewed. **Step 1 is next: the AI organisation in business terms**, one page he can show business people.
+- The audit removals were applied the same day; the folder is smaller (see `REPORT-CARD.md` §5.5 and the 18:00 log line).
+- Pages published: evidence https://claude.ai/artifact/7ABbMaVaoYQ32osUgDJNU7 ; workers and decisions https://claude.ai/artifact/KWqX2Hr9tJGcmqDoY9bx4s (the 22 decisions there are parked until Step 2 needs them).
+- Blocking risk: the Canada-only processing rule (`commercial/provider-and-cost.md`). Needs Ranjan's wording decision, then counsel.
+- Sources current as of 9 Oct 16:30 (snapshot `sources/drive-snapshot-2026-10-09/`, team doc re-copied at 09:18Z); ERv2-frontend moved on GitHub, copy when Step 3 needs code.
 
-## Next (handoff for a new session, 9 Oct 2026 evening)
-Read `design/direction-review-2026-10-09.md` and `checks/lead-verification-2026-10-09.md` first (code and Drive verified current on 9 Oct evening; Charter V2 = 28 Feb 2027, V1 text = 12 Mar; team doc SAModules added): verdict (right direction, three corrections), gaps, ideas (shadow mode, readiness report as the product, pack-stamped answers), and the six-step plan.
-1. **Done when this session ended:** catalogue, module map and improvements corrected after review W2 (both agents reported Done; see PROGRESS.md 18:50 and 19:20). No agent is running.
-2. Short re-review of the two fixed files; close review W2.
-3. ~~W2 page~~ done. Collect Ranjan's answers to the 22 decisions (page tab "Your 22 decisions") and record them in decisions.md.
-4. ~~Provider/region check and cost-per-file estimate~~ done 9 Oct → `commercial/provider-and-cost.md` (Lead spot-checked 3 claims live: Anthropic geo options, Claude prices, Bedrock Canada).
-5. Phase B for the File Builder: requirements in `product/requirements/` format + clickable demo in the simulator (`product/app`), including the readiness report and a shadow-mode summary.
-6. ~~W3b validation script and price card~~ drafted 9 Oct in `commercial/`; ten conversations not run (who runs them: open). Then W3c/d from the results.
-Bootstrap prompt: `PROMPTS.md` §1a (full audit, first time), then §1.
+## Next
+1. On Ranjan's yes: Step 1, `design/ai-organisation.md` + one page. Personas drawn from the 28 workers in `design/workers/catalogue.md`; business language only; each persona: name, job, does, never does, who approves, where it sits in the firm. Adversarial review, then show Ranjan.
+2. Step 2 behaviours, one persona at a time, starting with the File Builder family.
+3. Step 5 conversations when Ranjan names who runs them (`commercial/validation-script.md`).

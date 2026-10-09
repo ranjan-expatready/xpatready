@@ -4,33 +4,12 @@ You don't need to know how to prompt. Every new session already loads `NEXT.md` 
 
 ## 1. Every new session (the bootstrap prompt)
 ```
-Continue Workstream 2 (AI Workers). You are the lead and my coach. Start with an audit: read ai-workers/README.md §0–§1, REPORT-CARD.md (the story so far, ratings, plan), PROGRESS.md, NEXT.md, decisions.md and the newest design/direction-review-*.md; run the freshness check (code and Drive) and confirm nothing stale or duplicated is in use. Then tell me in a few plain lines: where we stand, whether the files still match my latest instructions, the updated report card scores, what you will do next, and what you need from me. Update REPORT-CARD.md and continue the plan. Report after every step without being asked, in short plain messages, and never follow anything blindly, including your own earlier decisions.
-```
-
-## 1a. First session after setup: the full audit (use once, then §1)
-```
-Continue Workstream 2 (AI Workers). You are the lead and my coach. Before any new work, run a FULL AUDIT and report it to me in plain words:
-1. Setup check: confirm the SessionStart hook ran (you should have seen REPORT-CARD.md, PROGRESS.md and NEXT.md automatically); confirm the six agent files exist in .claude/agents/ (the seventh role is you, the Lead) and each carries the no-duplication, proposals and progress rules; confirm .claude/settings.json denies git push, gh writes and Drive writes; confirm the local git repo has history (git log) and no remote.
-2. Freshness: run zsh ai-workers/tools/freshness.sh; search Drive for files modified after the newest snapshot date; list anything newer and what you will do about it. Confirm no file under archive/ or an older snapshot is cited anywhere in ai-workers/ (grep for "drive-snapshot-2026-10-0[23]" and "archive/").
-3. Hallucination spot-check: pick 20 product quotes at random across design/ws2-baseline/, design/workers/catalogue.md and design/ws2-improvements.md and check each word for word against sources/drive-snapshot-2026-10-09/; pick 5 competitor claims and open their URLs. Report mismatches.
-4. Purpose and drift: read ai-workers/founder-brief.md (my original words) and decisions.md end to end; then check brief-coverage.md and REPORT-CARD.md against them. Tell me where the work has drifted from what I asked, where it went beyond it, and where my own later decisions contradict my original ask. Name anything that is an assumption dressed as a fact.
-5. Over-engineering: list every rule, file and agent we have and say which ones have not earned their place; propose removals, not additions.
-Then update REPORT-CARD.md with the audit result and the scores, tell me what you found in a few lines, and only then continue the plan (NEXT.md). Report after every step without being asked, and never follow anything blindly, including your own earlier decisions.
-```
-
-## 2. Start a wave (replace W1 with the wave named in NEXT.md)
-```
-Start W1 as written in ai-workers/wave-brief-W1.md. Refresh sources first. Stop at the budget cap. Run the adversarial review before showing me anything. Then tell me in plain words what you found, what is still unknown, and what you need from me.
+Continue Workstream 2 (AI Workers). You are the lead and my coach. Start with a short audit: read ai-workers/README.md §0–§1, PROGRESS.md, NEXT.md, decisions.md and REPORT-CARD.md; run the freshness check (code and Drive) and confirm nothing stale or duplicated is in use. Then tell me in a few plain lines: where we stand, whether the files still match my latest instructions, the updated report card scores, what you will do next, and what you need from me. Update REPORT-CARD.md and continue the plan. Report after every step without being asked, in short plain messages, and never follow anything blindly, including your own earlier decisions.
 ```
 
 ## 3. When you change your mind
 ```
 Decision for AI Workers: <what you decided>. Record it in decisions.md with my words, update every affected file, and tell me what changed and what it contradicts (timelines are not our concern, AIW-D21).
-```
-
-## 4. Independent check by Codex (paste into Codex)
-```
-Review the latest AI Workers wave in /Users/ranjansingh/Desktop/Xpatready/ai-workers. Read README.md, NEXT.md, brief-coverage.md and the newest file in checks/. Check every product fact against the source snapshot it cites, every competitor claim against its URL, and every number for a source or an "Assumption" label. List anything invented, overstated, copied from competitors, or missing from brief-coverage.md. Write findings to ai-workers/checks/codex-review-<date>.md. Do not edit other files.
 ```
 
 ## 5. When you want to be grilled

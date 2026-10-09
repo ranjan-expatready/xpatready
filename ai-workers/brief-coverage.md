@@ -28,3 +28,4 @@
 | B22 | Assume gaps are filled, labelled | `assumptions.md` | Done: AIW-A1..A9 registered (9 Oct) |
 | B23 | Write the prompts for me | `PROMPTS.md` | Done |
 | B24 | Be brutally honest; grill me | Honest status in `NEXT.md`; open questions each wave | Ongoing |
+| B25 | Step by step, three layers (business organisation → behaviours → build spec), no over-engineering, one outcome per step (AIW-D28) | `PROGRESS.md` plan table rebuilt on 9 Oct | Step 1 next |

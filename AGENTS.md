@@ -20,4 +20,4 @@ Method since 3 Oct 2026: Simulator v2 — waves by plane and module (`product/RE
 
 At the end of substantive work, update `product/NEXT.md`.
 
-Workstreams with their own resume point: **Workstream 2 — AI Workers, Doers, Conductor and all AI (Ranjan, 9 Oct 2026; read `ai-workers/README.md` §0 first)** — `ai-workers/README.md` then `ai-workers/NEXT.md` (skill `ai-workers-resume`); **commercial plan** — `company-planning/START-HERE.md`.
+Workstreams with their own resume point: **Workstream 2 — AI Workers, Doers, Conductor and all AI (Ranjan, 9 Oct 2026; read `ai-workers/README.md` §0 first)** — `ai-workers/README.md` then `ai-workers/PROGRESS.md` and `ai-workers/NEXT.md` (loaded by the SessionStart hook); **commercial plan** — `company-planning/START-HERE.md`.
