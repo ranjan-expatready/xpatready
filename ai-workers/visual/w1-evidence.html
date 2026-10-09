@@ -1,0 +1,343 @@
+<title>AI Workers Evidence Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a case-file dossier — tabbed sections, plane columns of module "file cards", stamp-style status chips */
+:root{
+  --bg:#f5f6f8; --paper:#ffffff; --ink:#18212f; --muted:#5b6575; --rule:#d9dde4;
+  --accent:#1f4e8c; --accent-soft:#e3ebf6; --stamp:#b3261e; --stamp-soft:#f8e3e1;
+  --ok:#1e6b45; --ok-soft:#e0f0e7; --warn:#8a5a00; --warn-soft:#fbefd5; --ai:#5a3d8f; --ai-soft:#ece6f6;
+  --display:"Newsreader",Georgia,"Times New Roman",serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161e; --paper:#18202b; --ink:#e7ebf1; --muted:#a3adbb; --rule:#2c3644;
+  --accent:#86aee6; --accent-soft:#1d2c44; --stamp:#f08a80; --stamp-soft:#3a2120;
+  --ok:#7fcfa2; --ok-soft:#163327; --warn:#e8bd66; --warn-soft:#3a2d12; --ai:#c2a9f0; --ai-soft:#2a2240; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161e; --paper:#18202b; --ink:#e7ebf1; --muted:#a3adbb; --rule:#2c3644;
+  --accent:#86aee6; --accent-soft:#1d2c44; --stamp:#f08a80; --stamp-soft:#3a2120;
+  --ok:#7fcfa2; --ok-soft:#163327; --warn:#e8bd66; --warn-soft:#3a2d12; --ai:#c2a9f0; --ai-soft:#2a2240; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--body);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px;padding-block:28px 64px}
+h1,h2,h3{font-family:var(--display);font-weight:600;text-wrap:balance;margin:0;line-height:1.15}
+h1{font-size:clamp(28px,4vw,40px)} h2{font-size:26px} h3{font-size:18px}
+p{margin:0;max-width:72ch}
+.eyebrow{font:500 12px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lede{color:var(--muted);font-size:16px;margin-top:10px}
+header{display:grid;gap:14px;margin-bottom:22px}
+.facts{display:flex;flex-wrap:wrap;gap:8px 18px;font:13px/1.4 var(--mono);color:var(--muted)}
+.facts b{color:var(--ink);font-weight:500}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--rule);margin-bottom:24px;overflow-x:auto}
+nav .tabs{display:flex;gap:4px;min-width:max-content}
+nav button{font:500 14px var(--body);color:var(--muted);background:none;border:0;border-bottom:3px solid transparent;padding:12px 12px 10px;cursor:pointer}
+nav button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
+nav button:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+section{display:grid;gap:18px}
+.grid{display:grid;gap:14px}
+.two{grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:16px;display:grid;gap:8px;min-width:0}
+.find{border-left:4px solid var(--accent)}
+.find.red{border-left-color:var(--stamp)} .find.ai{border-left-color:var(--ai)} .find.ok{border-left-color:var(--ok)}
+.find h3{font-size:17px}
+.muted{color:var(--muted)} .small{font-size:13px}
+q,blockquote{font-style:italic}
+.src{font:12px/1.4 var(--mono);color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:4px;font:500 11px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:4px 7px;border-radius:3px;border:1px solid currentColor;white-space:nowrap}
+.c-r1{color:var(--ok);background:var(--ok-soft)} .c-later{color:var(--muted);background:var(--bg)}
+.c-conf{color:var(--stamp);background:var(--stamp-soft)} .c-ai{color:var(--ai);background:var(--ai-soft)}
+.c-sign{color:var(--warn);background:var(--warn-soft)}
+.legend{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--muted)}
+/* product map */
+.planes{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,270px),1fr));align-items:start}
+.plane{display:grid;gap:10px;min-width:0}
+.plane>h3{font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);border-bottom:2px solid var(--accent);padding-bottom:6px}
+.mod{background:var(--paper);border:1px solid var(--rule);border-radius:5px;padding:10px 12px;display:grid;gap:5px}
+.mod .top{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.mod .id{font:500 12px var(--mono);color:var(--muted)}
+.mod .nm{font-weight:600}
+.mod .row{font-size:13px;color:var(--muted)}
+.mod .row b{color:var(--ink);font-weight:500}
+.mod .chips{display:flex;flex-wrap:wrap;gap:5px}
+/* stack */
+.stack{display:grid;gap:0;max-width:760px}
+.layer{display:grid;grid-template-columns:150px 1fr;gap:14px;padding:12px 14px;background:var(--paper);border:1px solid var(--rule);border-top:0}
+.layer:first-child{border-top:1px solid var(--rule);border-radius:6px 6px 0 0}
+.layer:last-child{border-radius:0 0 6px 6px}
+.layer .k{font:500 12px/1.4 var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--accent)}
+.layer.new{background:var(--ai-soft);border-color:var(--ai)}
+.layer.new .k{color:var(--ai)}
+@media (max-width:560px){.layer{grid-template-columns:1fr;gap:4px}}
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:6px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;min-width:760px;font-size:13.5px}
+th,td{text-align:left;vertical-align:top;padding:10px 12px;border-bottom:1px solid var(--rule)}
+th{font:500 12px var(--mono);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--bg);position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+td.ahead{color:var(--stamp)}
+.num{font-variant-numeric:tabular-nums}
+details{background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:12px 14px}
+summary{cursor:pointer;font-weight:600}
+ul{margin:0;padding-left:20px;display:grid;gap:6px}
+.status{display:flex;flex-wrap:wrap;gap:10px}
+.status .card{flex:1 1 200px}
+.big{font:600 28px/1 var(--display)}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">Expat Ready · AI Workers · Wave W1 evidence · 9 Oct 2026</span>
+  <h1>Workstream 2 starts here: what your product already says about AI, Doers and the Conductor</h1>
+  <p class="lede">Every current requirement document was read in full, plus the founders' June Doer specs, the company mailbox (topic-limited) and 40+ competitors. This page keeps all the findings. Each one links back to a file in the <code>ai-workers/</code> folder.</p>
+  <div class="facts">
+    <span><b>46</b> requirement files (Drive, 9 Oct)</span><span><b>≈1.15 M</b> words read by 7 readers</span><span><b>0</b> files skipped</span><span><b>63</b> VisaFlo capabilities</span><span><b>51</b> competitor-capability rows</span><span>Review: <b id="rv">independent check done — see "Checks"</b></span>
+  </div>
+</header>
+
+<nav aria-label="Sections"><div class="tabs" role="tablist">
+  <button role="tab" aria-selected="true" data-t="key">Key findings</button>
+  <button role="tab" aria-selected="false" data-t="map">Product map</button>
+  <button role="tab" aria-selected="false" data-t="gov">How AI is governed</button>
+  <button role="tab" aria-selected="false" data-t="comp">Competitors</button>
+  <button role="tab" aria-selected="false" data-t="price">How AI is priced</button>
+  <button role="tab" aria-selected="false" data-t="gaps">Gaps &amp; conflicts</button>
+  <button role="tab" aria-selected="false" data-t="dec">Your decisions</button>
+  <button role="tab" aria-selected="false" data-t="chk">Checks</button>
+</div></nav>
+
+<!-- KEY -->
+<section id="key">
+  <h2>Seven things you need to know</h2>
+  <div class="grid two">
+    <div class="card find ai"><h3>1. AI is already designed into your product</h3>
+      <p>Firm requirements AG-10, AG-11 and AG-16 (changed 4–5 Oct) add four <b>AI Doers</b>: <b>Reader</b> (reads documents), <b>Sorter</b> (files incoming email and WhatsApp), <b>Drafter</b> (drafts messages) and <b>Checker</b> (flags mismatches). They <q>only propose</q>. They ship built but switched off until a Canada-only provider with no training on your data is recorded. The firm Owner then switches all four on together.</p>
+      <span class="src">AG-11 v1.11 §3.0, AG-11-93 · AG-16 v1.12 AG-16-35 · inventory/ag-frs-2.md</span></div>
+    <div class="card find ok"><h3>2. The approval machinery an AI Worker needs exists</h3>
+      <p>AG-11: <q>the Doers prepare; the practitioner decides</q>. Every automated action is <b>Send automatically / Ask me first / Off</b>. Some floors can never be lowered: AI-written client text, government forms and verified-profile values always need a person. Items wait in a <b>Needs you</b> inbox where <q>Nothing in it executes on timeout</q>. Every run is recorded.</p>
+      <span class="src">AG-11 v1.11 §3.3, §3.9, §3.13 · inventory/ag-frs-2.md, ag-frs-1.md</span></div>
+    <div class="card find ok"><h3>3. Your founding rule fits a governed AI Worker</h3>
+      <p>FD-16 (2 Aug 2026): <q>"AI assists, humans decide."</q> The scoring and eligibility engines stay deterministic, and <q>no model output is ever a decision</q>. You chose to keep FD-16. Each AI Worker acts <b>on behalf of a named licensed person</b>, using only that person's permissions.</p>
+      <span class="src">Founder Decisions Log v1.5 FD-16 · decision AIW-D13</span></div>
+    <div class="card find red"><h3>4. VisaFlo already markets the same idea</h3>
+      <p>Since late Sep 2026 their homepage shows three AI agents per case with a licensed person "releasing" results, plus five guardrails. Much of it is "coming soon" or invitation-only. They are a team of 2–10 with about USD 289K of disclosed funding. <b>The idea alone is not our edge.</b> Exact rule engines, the audit trail, country packs and the Doer family are.</p>
+      <span class="src">research/visaflo.md §12 (vendor claims, accessed 9 Oct)</span></div>
+    <div class="card find red"><h3>5. Rivals ship AI features we don't have at launch</h3>
+      <p>Government-form auto-fill (IMM PDFs and the IRCC portal) is <b>table stakes</b> in Canada (Visto, CaseEasy, Officio, VisaFlo). Our Charter parks it for Release 1 (SA1B-D28). Clio, the biggest threat, has had live agents since 2 Apr 2026 but no IRCC forms.</p>
+      <span class="src">research/field-scan.md §4 rows 2, 4</span></div>
+    <div class="card find red"><h3>6. Your documents disagree on AI at launch. Your direction settles it for us</h3>
+      <p>The Program Charter (re-saved 6 Oct) still says <q>NOT IN RELEASE 1 — AI-assisted features · Automation engine (AG-11) and its Doers</q>. The October requirements put a minimal automation engine and the four AI Doers (switched off) into Release 1, and a 5 Oct triage proposes Release 2. <b>Your direction (9 Oct):</b> all of this is <b>Workstream 2</b>, and the product does not go live without it. We carve it out and improve it. The Charter conflict is still visible to the team until you update it.</p>
+      <span class="src">Charter V2 slide 1 · AG-11 AG11-D3 · SCOPE-TRIAGE 5 Oct · inventory/foundation.md App. A</span></div>
+    <div class="card find"><h3>7. Some building blocks are missing</h3>
+      <p>Nothing yet defines how an AI acts on someone's behalf (Doc-1 amendment A4-1 is pending). The audit log has no "AI prepared, person approved" record. No AI provider is listed among the approved Canadian services. The product records a "licensed" sign-off but never checks the licence. Full list under "Gaps &amp; conflicts".</p>
+      <span class="src">inventory/sa-frs.md, doc3-firm.md, foundation.md, ag-frs-2.md Part 5</span></div>
+  </div>
+</section>
+
+<!-- MAP -->
+<section id="map" hidden>
+  <h2>The whole product on one page</h2>
+  <p class="muted">Every module in the requirements, with the manual work people do there today, the Doers it uses, where a licensed person signs off, and its release status. AI Workers will be mapped onto these cards in W2.</p>
+  <div class="legend"><span class="chip c-r1">Release 1</span><span class="chip c-conf">Release conflict</span><span class="chip c-later">Later / parked</span><span class="chip c-ai">AI already specified</span><span class="chip c-sign">Human sign-off (licensed by default)</span></div>
+  <div class="planes" id="planes"></div>
+  <p class="src">Sources: inventory/foundation.md §1b (release map) cross-checked with the AG, SA and CP slices. Release status follows the Charter and the October requirements; conflicts are marked, not resolved.</p>
+</section>
+
+<!-- GOV -->
+<section id="gov" hidden>
+  <h2>How AI is governed: the layers that already exist, and where an AI Worker sits</h2>
+  <p class="muted">Read from top to bottom: each layer can stop the one below it. The purple layer is the only new idea. Everything else is already in your requirements.</p>
+  <div class="stack">
+    <div class="layer"><span class="k">Founding rule</span><div><b>FD-16:</b> <q>"AI assists, humans decide."</q> No model output is ever a decision. AI is a declared, switchable capability.</div></div>
+    <div class="layer"><span class="k">Switches</span><div>Plan includes it → firm Owner switches it on → Expat Ready can kill it instantly. AI stays locked off until a Canada-only, no-training provider is recorded (AG-11-93).</div></div>
+    <div class="layer new"><span class="k">AI Worker (new)</span><div>A job-shaped bundle, such as "intake and document chase" or "form preparation", that runs <b>on behalf of a named licensed person</b>, with only that person's permissions (AIW-D13). It uses the Doers and recipes below and cannot do anything a person in that role could not.</div></div>
+    <div class="layer"><span class="k">Conductor (brain)</span><div>Recipes: "when X happens, do Y". Each action is Send automatically / Ask me first / Off. The floors can never be lowered. Loop guard, consent check at send time, rate caps. It runs once only, with no double effects.</div></div>
+    <div class="layer"><span class="k">Doers (hands)</span><div>Rule-based Doers: Qualifier, Biller, Signer, Scheduler, Binder, Minder, Mailer, Tasker, Filler (parked). AI Doers: Reader, Sorter, Drafter, Checker, which <q>only propose</q>.</div></div>
+    <div class="layer"><span class="k">Rules &amp; packs</span><div>Country Pack and Practice Pack: versioned, approved by someone other than the author, with conformance tests before publish. The engines (eligibility, scoring, checklists) are deterministic: the same input always gives the same result.</div></div>
+    <div class="layer"><span class="k">Needs you</span><div>An approval inbox showing what will happen, why, and where every value came from. Approve, edit then approve, or reject. Nothing runs on timeout. Four-eyes check on government forms.</div></div>
+    <div class="layer"><span class="k">Audit spine</span><div>Append-only, written with every action; every AI model call is logged (AG-11-72). The tamper-evident hash chain is specified, but the 5 Oct triage proposes moving it to Release 2. <b>Gap:</b> no single record says "AI prepared this, this person approved it".</div></div>
+    <div class="layer"><span class="k">Hard limit</span><div><q>ExpatReady never submits anything to a government authority on its own.</q></div></div>
+  </div>
+  <p class="src">FD-16 · AG-11 v1.11 §3.0–3.13, AG-11-53/54/93 · AG-16-35 · Doc 1 v1.3 §1.12, §5.13, §7.5 · SA-01 v2.2</p>
+</section>
+
+<!-- COMP -->
+<section id="comp" hidden>
+  <h2>What they do, how we cover it, where we go further, where they lead</h2>
+  <p class="muted">"Proposal" means it is not yet in a requirement. Competitor facts are mostly vendor claims; open the research files for the evidence label on each.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Job</th><th>Who does it</th><th>How Expat Ready covers it</th><th>Where we go further</th><th>Where they lead</th></tr></thead>
+    <tbody>
+      <tr><td>AI drafting of letters and messages</td><td>Officio, Visto, DocketWise, VisaFlo ("in your style")</td><td>Drafter AI Doer drafts from published templates. It never promises an outcome, and a human approves client text (AG-10-15, AG-11-68).</td><td>Drafts start from versioned templates, with provenance recorded (FD-16).</td><td class="ahead">They ship today; ours is switched off at launch.</td></tr>
+      <tr><td>Government form and portal auto-fill</td><td>Visto, CaseEasy, Officio, VisaFlo (Chrome extension), Migrawise, OpenVisa</td><td>Filler Doer (a pure, data-driven function) exists in the design, but form auto-fill is parked for Release 1 (SA1B-D28).</td><td>Proposal: each filled form records which pack version produced it.</td><td class="ahead">Clearly ahead. Table stakes in Canada.</td></tr>
+      <tr><td>Reading documents</td><td>DocketWise, Imagility, IMMeFile, VisaFlo, OpenVisa</td><td>Reader AI Doer: passports, IRCC letters, language results, ECA reports. Approving a value counts as verifying it (AG-9-45, AG-8-44).</td><td>A deadline read from a letter reaches the Minder only after a person approves it.</td><td class="ahead">Live today.</td></tr>
+      <tr><td>Agents running multi-step work</td><td>Clio Work (Apr 2026), Harvey, Legora, VisaFlo (announced)</td><td>Conductor recipes plus Doers, with autonomy levels and Needs you (AG-11).</td><td>Approve-first by rule. Clio's control is watch-and-interrupt, with no approval gate found.</td><td class="ahead">They ship; our engine is minimal at launch.</td></tr>
+      <tr><td>Eligibility and scoring</td><td>LawFairy (UK, regulator-authorised), Officio, VisaFlo</td><td>Deterministic Qualifier over versioned packs. Every result has a factor snapshot and a right to human review (FD-20).</td><td>Illustration only: England's solicitors regulator authorised a rule-based UK firm. It is not the CICC and not a Canadian precedent.</td><td>LawFairy is a regulated firm; we are software.</td></tr>
+      <tr><td>Audit of AI actions</td><td>Clio Manage AI (90-day log, unverified)</td><td>Audit spine, plus a log of every AI model call (AG-11-72).</td><td>A design strength, not a market lead: IMMeFile and VisaFlo also claim audit trails. "Tamper-evident" only if the hash chain stays in Release 1.</td><td class="ahead">Theirs is live; ours is specified, not built. AI and approval are not joined in one record.</td></tr>
+      <tr><td>Licensed review of AI work</td><td>Crosby, Casium, Alma, Boundless, VisaFlo "human release"</td><td>Needs you, floors, four-eyes on forms, review before sharing an assessment. Approval is by a named person, <b>licensed by default</b>, but the Owner may widen it and licences are never checked (AG-10-44, SA-06).</td><td>Proposal: licensed-only approval for AI Worker output, with no exception (awaiting your yes).</td><td class="ahead">Some vendors take the outcome risk (insurance, refile guarantees).</td></tr>
+      <tr><td>More than one country</td><td>INSZoom, Casium</td><td>Country Pack plus Practice Pack; countries are data, not code (FD-22).</td><td>Every AI Worker inherits a new country automatically (Inferred).</td><td class="ahead">Canada-only at launch.</td></tr>
+      <tr><td>Answers only from a closed source</td><td>Visto (IRCC-only, declines when unsure)</td><td>Country Pack as the single source of rules.</td><td>Proposal: AI answers only from the published pack and cites it.</td><td class="ahead">Live and IRCC-wide.</td></tr>
+      <tr><td>Languages for clients</td><td>VisaFlo (13 languages, vendor claim)</td><td>English and Canadian French everywhere; legal text is never machine-translated (CP-6, AG-12-24).</td><td>Quebec Law 25 consent per purpose.</td><td class="ahead">More languages.</td></tr>
+    </tbody></table></div>
+  <div class="grid two">
+    <div class="card find red" style="grid-column:1/-1"><h3>VisaFlo versus us: the net position (20 areas compared)</h3>
+      <p><b>They are ahead on everything shipped:</b> IMM and portal form filling (our biggest gap, parked under SA1B-D28), AI reading and drafting in use, a website chatbot and AI meeting notes (not in our requirements at all), intake in 13 languages, turning client messages into answers, watching official pages for rule changes, and paying customers. <b>We go further on paper:</b> approval floors nobody can lower, a dry run before acting, actions that run only once, logs of every approval and AI call, rule-based packs so the same input gives the same result, the Canada-only no-training provider gate, and countries added as data. <b>Condition:</b> the 5 Oct triage proposes moving several of these later; they only count if they stay in scope. <b>Never claim:</b> product-enforced licensed sign-off.</p>
+      <span class="src">research/visaflo.md §16 (20-row table), §17 OpenVisa</span></div>
+    <div class="card"><h3>VisaFlo at a glance</h3><ul class="small">
+      <li>Burnaby BC brand; <b>Korean contracting entity</b>; invitation-only.</li>
+      <li>2–10 staff, 92 LinkedIn followers, about USD 289K disclosed funding (aggregator).</li>
+      <li>Portal autofill: beta Oct 2024 (email to you, 2 Oct 2024). Moved into a Chrome extension (203 users) in 2025.</li>
+      <li>Not published: prices, AI provider, security certification, AI-training terms.</li>
+      <li>"OpenVisa" (CA$49 do-it-yourself for applicants) is listed as "Offered by VisaFlo" in the Chrome store. Ownership is likely, not confirmed.</li></ul>
+      <span class="src">research/visaflo.md · field-scan.md</span></div>
+    <div class="card"><h3>Biggest threat: Clio</h3><ul class="small">
+      <li>Over US$500M annual recurring revenue; bought Canadian case-law content.</li>
+      <li>Agents in Clio Work since 2 Apr 2026: you can watch and interrupt, but they don't ask for approval first.</li>
+      <li>No IRCC forms or country packs.</li></ul>
+      <span class="src">research/field-scan.md §3, §6</span></div>
+  </div>
+</section>
+
+<!-- PRICE -->
+<section id="price" hidden>
+  <h2>How competitors charge for AI (2026)</h2>
+  <p class="muted">Pricing input for W3. In the immigration niche nobody publishes a price per AI task.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Model</th><th>Who</th><th>What the buyer sees</th></tr></thead>
+    <tbody>
+      <tr><td>Bundled into a higher seat tier</td><td>DocketWise (Pro, US$100/user), Clio Manage AI, Visto</td><td>No AI line item; AI drives upgrades</td></tr>
+      <tr><td>Flat monthly add-on</td><td>Immicase CAD 29/month; Clio add-on reported US$39–59 (unverified)</td><td>Small, predictable extra</td></tr>
+      <tr><td>Volume caps</td><td>Visto (CAD 29 per extra application), CaseEasy daily caps</td><td>Pay for throughput</td></tr>
+      <tr><td>Per case</td><td>EvenUp, Navisa US$16/case, CaseEasy portal fill from $25/case, OpenVisa CA$49 (applicants)</td><td>Cost tracks the firm's revenue unit</td></tr>
+      <tr><td>Per document / finished work</td><td>Crosby</td><td>Vendor carries delivery risk</td></tr>
+      <tr><td>Outcome or flat fee with guarantee</td><td>Alma, Boundless, LawFairy £149</td><td>Only for vendors that are, or own, regulated firms</td></tr>
+      <tr><td>Enterprise seats / usage credits</td><td>Harvey, Legora, CoCounsel, Casefleet</td><td>Sales-led, metered</td></tr>
+    </tbody></table></div>
+  <div class="card"><p><b>Your own starting points:</b> the website publishes CAD 199/seat/month (annual). FD-18 says <q>Per-seat tiers by firm size … plus metered add-ons for consumption rails</q>. SA-04 says there are no add-on prices in Release 1, and a new metered limit is configuration, not a rebuild (SA-03). Whether to price per firm or per seat is still open.</p></div>
+</section>
+
+<!-- GAPS -->
+<section id="gaps" hidden>
+  <h2>What must be closed before AI Workers can be specified</h2>
+  <div class="grid two">
+    <div class="card find red"><h3>Decisions only you can make</h3><ul>
+      <li><b>Charter update:</b> you have put all AI in Workstream 2 and said launch needs it. The Charter still says "not in Release 1", so the team plans to a different scope until you change it.</li><li><b>Licensed-only approval</b> for anything an AI Worker prepares (recommended).</li>
+      <li><b>Launch date:</b> 28 Feb 2027 (Charter V2 notes and slide 3) or 12 Mar 2027 (Charter slides and V1 text). The notes also move G1 to 30 Oct and go/slip to 18 Dec.</li>
+      <li><b>Automation engine and Minder at launch?</b> Who watches deadlines on day one (Charter: "Founder decision needed").</li>
+      <li><b>Government-form auto-fill</b> stays parked while every rival has it.</li>
+      <li><b>CP-9 employer view:</b> the Charter says read-only; Doc 4 includes upload, pay, sign and seats.</li>
+    </ul></div>
+    <div class="card find"><h3>Missing building blocks (for W2 to design as proposals)</h3><ul>
+      <li>How an AI acts on someone's behalf: Doc-1 amendment A4-1 is pending. Today there are three sign-in pools and no machine actor.</li>
+      <li>One audit record joining "AI prepared" and "person approved".</li>
+      <li>An AI model provider in the approved services (SA-08), with Canadian residency (SA-11).</li>
+      <li>Licence verification: <q>The permission system never checks licence</q> (SA-06). Confirm with counsel / RCIC whether recorded sign-off is enough.</li>
+      <li>No AI or Doer performance metric in reporting (AG-14).</li><li>The founders' older code (Jul 2026) already drafts emails with AI, but sends data to the AI provider's standard service with no Canada-only setting. Your rules require Canada-only processing (AG11-D15).</li>
+      <li>Reader classifies document types automatically at high confidence (AG-9-11), the one AI output without per-item approval. W2 to decide.</li>
+    </ul></div>
+    <div class="card find"><h3>Source problems</h3><ul>
+      <li>Doc 1–4 (July) are older than the October module files and contradict them in places. <b>Recommendation:</b> the newer module files win, and the gaps are logged.</li>
+      <li>The Corporate/LMIA decision folder is not shared with our accounts (AG-17 cites it).</li>
+      <li>The Founder Decisions Log stops at FD-22, but FD-68 is cited elsewhere.</li>
+      <li>Canada Release 1 pack content (checklists, form maps, Reader field lists) is not written yet; it comes from the immigration specialist.</li>
+      <li>Six admin files (SA-05, SA-08–12) still describe retired designs.</li>
+    </ul></div>
+    <div class="card find ok"><h3>Legal and regulatory (confirm with counsel / RCIC)</h3><ul>
+      <li>No CICC guidance on AI for licensees found; CICC plans a licensee AI-use survey.</li>
+      <li>Federal Court of Canada: declare AI-generated content in filings (practice notice, via law-firm summaries).</li>
+      <li>Quebec Law 25 automated-decision transparency is an open question (SA-11 Q2).</li>
+      <li>Who is liable when an AI Worker's prepared work is wrong: the firm signs, but the product's role needs counsel.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- DEC -->
+<section id="dec" hidden>
+  <h2>Decisions you have made so far</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>ID</th><th>Date</th><th>Decision</th></tr></thead>
+    <tbody id="dect"></tbody></table></div>
+  <p class="src">Full wording in ai-workers/decisions.md (append-only).</p>
+</section>
+
+<!-- CHK -->
+<section id="chk" hidden>
+  <h2>How this evidence was checked</h2>
+  <div class="status">
+    <div class="card"><span class="big num">46/46</span><span class="small muted">files in the 9 Oct snapshot appear in a coverage list as read in full</span></div>
+    <div class="card"><span class="big num">7</span><span class="small muted">readers; every quote machine-checked against its source by the readers</span></div>
+    <div class="card"><span class="big num">1</span><span class="small muted">independent hostile review: findings and fixes below</span></div>
+  </div>
+  <div class="card" id="reviewbox"><h3>Independent review (9 Oct)</h3><ul class="small"><li><b>Held up:</b> 141 quoted product facts checked word for word, none wrong. 9 random mid-document spot checks matched. 24 competitor web pages re-opened, all confirmed.</li><li><b>Fixed:</b> the competitor table was rebuilt on the 9 Oct documents (it had used 3 Oct); the audit-trail lead was toned down; the UK regulator example was correctly attributed and narrowed; licensed sign-off is no longer claimed as enforced; the AI Worker is no longer called "a new kind of user".</li><li><b>Added:</b> the founders' autopilot spec (18 Jun) and the existing AI drafting code.</li><li><b>Done:</b> the VisaFlo-versus-us comparison table (20 areas).</li><li><b>Still open:</b> licensed-only approval (your decision).</li></ul><span class="src">checks/review-W1-2026-10-09.md</span></div>
+  <div class="card"><h3>Read-only rule</h3><p>Nothing was changed on Drive, in any repository or in the mailbox. Repository pushes and Drive edits are blocked in the project settings (AIW-D10).</p></div>
+</section>
+</div>
+
+<script>
+const R1='<span class="chip c-r1">Release 1</span>', CONF='<span class="chip c-conf">Release conflict</span>', LATER='<span class="chip c-later">Later / parked</span>', AI='<span class="chip c-ai">AI specified</span>', SIGN='<span class="chip c-sign">Human sign-off</span>';
+const planes=[
+ ["Foundation (Doc 1)",[
+  ["F","Identity & sign-in","Three walled sign-in pools (Expat Ready staff, firm staff, clients); no AI or service pool","—",[R1]],
+  ["F","Permissions (RBAC)","Default-deny; about 259 firm permissions; six starter roles","—",[R1]],
+  ["F","Rules, scoring & eligibility engines","Deterministic over the Country Pack; same input, same result","Qualifier",[R1]],
+  ["F","Capability switches","Each Doer can be switched by plan, firm and platform; kill-switch","—",[R1]],
+  ["F","Audit spine","Append-only, hash-chained, written with every action","—",[R1]],
+  ["F","Consent, retention, privacy","Consent per purpose (Law 25); legal hold beats deletion","—",[R1]],
+ ]],
+ ["Expat Ready admin (SA)",[
+  ["SA-1","Country & Practice Packs","Author drafts; a different person approves and publishes","—",[R1,SIGN]],
+  ["SA-1B","Pack content configurator","Authors configure fields, documents, forms by hand. AI drafting of form maps and reading documents into answers: Phase 3","Filler (parked)",[R1,AI]],
+  ["SA-2","Firms","Create firms, send sign-up links, read-only support sessions","—",[R1]],
+  ["SA-3","Plans & entitlements","Second approver for live plan changes","—",[R1]],
+  ["SA-4","Subscription billing","Approve discounts and refunds; fixed 14-day failed-payment timeline","—",[R1]],
+  ["SA-5","Global templates","Author templates; legal templates must be reviewed before publish","—",[R1]],
+  ["SA-6","Roles & permissions","Copy and edit roles; written reason required; AI approval settings","—",[R1]],
+  ["SA-7","Platform users","Invite, deactivate, reset MFA; step-up for sensitive acts","—",[R1]],
+  ["SA-8","Integrations & rails","Configure rails and secrets; no AI provider listed yet","All rail Doers",[R1]],
+  ["SA-9","Analytics","Basic tenant and revenue dashboard","Reporter",[R1]],
+  ["SA-10","Support","Triage tickets; keyword hints the operator confirms","—",[R1]],
+  ["SA-11","Audit & compliance","Investigations and exports; residency, DSR, breach later","—",[R1]],
+  ["SA-12","Flags & configuration","Flip flags; per-firm emergency off","Kill-switch",[R1]],
+ ]],
+ ["Firm console (AG)",[
+  ["AG-1","Firm setup","Invite staff, set licence, branding","—",[R1]],
+  ["AG-2","Leads & CRM","Enter leads, check duplicates, call, follow up; rule-based next-best-action","Mailer, Scheduler",[R1]],
+  ["AG-3","Pathway assessment","Re-run, review, override, stamp 'reviewed by'","Qualifier",[R1,SIGN]],
+  ["AG-4","Consultation booking","Mark completed or no-show; reminders","Scheduler",[R1]],
+  ["AG-5","Retainer & e-signature","Draft, review and approve; countersign by the assigned RCIC","Drafter, Signer",[R1,SIGN]],
+  ["AG-6","Billing & payments","Record offline payments, chase overdue invoices","Biller",[R1]],
+  ["AG-7","Case delivery","Fill IMM forms by hand, upload, internal review, record filing and decisions","Binder, Reviewer, Filler (parked), Checker",[R1,SIGN,AI]],
+  ["AG-8","Smart questionnaire","Verify answers against documents by hand","Reader (off at launch)",[R1,AI,SIGN]],
+  ["AG-9","Documents","Review, accept or reject each upload with a reason; re-request","Reader (auto-classifies at high confidence)",[R1,AI]],
+  ["AG-10","Communications","Write and send messages; match incoming email to files","Mailer, Messenger, Sorter, Drafter",[R1,AI]],
+  ["AG-11","Automation (Conductor)","Switch recipes on, set autonomy, approve items in Needs you","Conductor + all Doers incl. 4 AI Doers",[CONF,AI]],
+  ["AG-12","Templates","Adopt, edit, publish templates; legal text never machine-translated","—",[R1]],
+  ["AG-13","Tasks, reminders & audit","Create and assign tasks; set reminders","Tasker, Minder",[R1]],
+  ["AG-14","Reporting","Two dashboards, CSV export; no AI metrics","Reporter",[R1]],
+  ["AG-15","Client portal management","Invite clients, nudge by hand, 'done on behalf'","—",[R1]],
+  ["AG-16","Firm settings","Profile, payments, MFA, four-eyes rule, the one AI switch","—",[R1,AI]],
+  ["AG-17","Corporate & LMIA","Candidate log, readiness, waive with reason, sign-off record","Minder",[R1,SIGN]],
+  ["AG-18","Data import (new)","Map columns by hand, dry-run, owner attests; Reader for documents only","Reader",[CONF,AI]],
+ ]],
+ ["Client portal (CP)",[
+  ["CP-1","Access","Clients sign in to the firm-branded portal","—",[R1]],
+  ["CP-2","Dashboard & tracking","Clients follow progress; refusals never shown before the firm contacts them","—",[R1]],
+  ["CP-3","Questionnaire","Clients answer; firm resolves conflicts and verifies changes","Conductor",[R1]],
+  ["CP-4","Documents","Clients upload; officer verifies or rejects each with a reason in the client's language","Minder (expiry), Binder",[R1]],
+  ["CP-5","Invoices & payment","Clients pay online","Biller",[R1]],
+  ["CP-6","Signing","Clients sign with a passcode; legal text EN/FR, never machine-translated","Signer",[R1]],
+  ["CP-7","Messaging","Every client message notifies the officer, who replies under the firm's brand","Messenger",[R1]],
+  ["CP-8","Consent & privacy","Consent per purpose; data-rights requests on a legal clock","Conductor",[R1]],
+  ["CP-9","Employer view","Charter: read-only. Doc 4: upload, pay, sign, seats","—",[CONF]],
+ ]],
+];
+document.getElementById('planes').innerHTML=planes.map(([t,mods])=>`<div class="plane"><h3>${t}</h3>${mods.map(([id,nm,work,doers,ch])=>`<div class="mod"><div class="top"><span class="id">${id}</span><span class="nm">${nm}</span></div><div class="row"><b>Manual work today:</b> ${work}</div><div class="row"><b>Doers:</b> ${doers}</div><div class="chips">${ch.join('')}</div></div>`).join('')}</div>`).join('');
+const dec=[["AIW-D1","8 Oct","All AI features, AI Workers and Doers are in scope of this project"],["AIW-D2","8 Oct","The competitor is VisaFlo"],["AIW-D4","8 Oct","Work back from the March 2027 launch"],["AIW-D5","9 Oct","Concept first, then detailed requirements; assume gaps filled; automatic resume; one source of truth"],["AIW-D6","9 Oct","Claude acts as your coach"],["AIW-D7","9 Oct","Full authority to run W1; read-only email search approved"],["AIW-D8","9 Oct","Every phase ends in one visual page that keeps all information"],["AIW-D9","9 Oct","Investor-grade bar: every claim sourced or labelled"],["AIW-D10","9 Oct","Read everything connected; never write to any repo, Drive or mailbox"],["AIW-D11","9 Oct","Firms only: no applicant-facing AI Workers"],["AIW-D12","9 Oct","Raise size not decided: W3 models options"],["AIW-D13","9 Oct","Keep FD-16: AI Workers act on behalf of a named licensed person"],["AIW-D14","9 Oct","Workstream 2 = all AI, Doers, Conductor, agents; carved out of the Drive documents and improved; launch needs it; local only"],["AIW-D15","9 Oct","Short plain updates; deep plain-English documents"]];
+document.getElementById('dect').innerHTML=dec.map(d=>`<tr><td class="num">${d[0]}</td><td>${d[1]}</td><td>${d[2]}</td></tr>`).join('');
+const tabs=[...document.querySelectorAll('nav button')];
+function show(t){tabs.forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));document.querySelectorAll('section').forEach(s=>s.hidden=s.id!==t);try{localStorage.setItem('w1tab',t)}catch(e){}}
+tabs.forEach(b=>b.addEventListener('click',()=>show(b.dataset.t)));
+let start=(location.hash||'').slice(1);if(!tabs.some(b=>b.dataset.t===start)){try{start=localStorage.getItem('w1tab')||'key'}catch(e){start='key'}}show(tabs.some(b=>b.dataset.t===start)?start:'key');
+</script>

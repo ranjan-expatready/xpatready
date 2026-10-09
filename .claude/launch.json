@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "product-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "4320", "--directory", "product"],
+      "port": 4320
+    },
+    {
+      "name": "prototype",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--prefix", "product/app", "vite", "product/app", "--port", "5180", "--strictPort"],
+      "port": 5180
+    }
+  ]
+}
