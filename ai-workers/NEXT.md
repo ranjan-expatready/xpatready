@@ -13,3 +13,6 @@
 1. On Ranjan's yes: Step 1, `design/ai-organisation.md` + one page. Personas drawn from the 28 workers in `design/workers/catalogue.md`; business language only; each persona: name, job, does, never does, who approves, where it sits in the firm. Adversarial review, then show Ranjan.
 2. Step 2 behaviours, one persona at a time, starting with the File Builder family.
 3. Step 5 conversations when Ranjan names who runs them (`commercial/validation-script.md`).
+
+## Ranjan's yes (9 Oct, AIW-D29)
+Step 1 approved. Owners, formats, gates and models per step are in `PROGRESS.md`. Next session: paste `PROMPTS.md` §2 for Step 1.

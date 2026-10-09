@@ -14,10 +14,23 @@
 | 5. Price and sell | Ten conversations with future customers (licensed consultants); then the price in the money model | Price card confirmed; `../commercial/plan.md` section | Step 1 (to show) and 4 (to measure); drafts ready in `commercial/` | Drafts ready; conversations not run |
 | 6. Raise | High-level investor story plus the detailed report; 2–3 raise options | Investor pages, published only on Ranjan's yes | Steps 1, 4, 5 | Not started |
 
+## Per step: who owns it, the artefact, the quality gate, the model (AIW-D29)
+
+| Step | Owner | Artefact format (one, no side files) | Quality gate before Ranjan sees it | Session model |
+|---|---|---|---|---|
+| 1. AI organisation | Ranjan (we make, he sells with it) | Markdown source + one web page (org chart, personas, "does / never does / who approves"). A slide deck only when he has a meeting | Every persona traces to catalogue workers; every "does" traces to a requirement ID; no superlative without a source; business words only; adversarial review passed | Lead and checker: Fable 5.1. Maker: Fable 5.1 (one maker, sequential) |
+| 2. Behaviours | Ranjan | One Markdown file per persona: trigger, steps, never-does, approval point, what is recorded, one worked example with real field names | Every step maps to an existing product action, Doer or pack rule (cited); no new product feature unless listed as a gap in `assumptions.md`; the example runs end to end on paper; adversarial review passed | Fable 5.1 (personas can run in parallel, one maker each, Lead integrates) |
+| 3. Build specification | Ranjan (hands to the team) | Requirement files in `../product/requirements/` format + generated test cases + a clickable prototype in the simulator (`../product/app`, "Workstream 2" area), every screen traced to a requirement | Team format check; every requirement cites its Step 2 behaviour and the Drive requirement it extends; tests generated from the spec; prototype demo walked through; adversarial review passed | Fable 5.1 for spec and review; Opus 5.5 for bulk test generation |
+| 4. Build and pilot | Tech team | From us: a readiness checklist and a pilot measurement sheet (spreadsheet) | Team's own gates | — |
+| 5. Price and sell | Ranjan / Sanjay | Conversation guide (Markdown, printable), scoring sheet (spreadsheet), then the section in `../commercial/plan.md` and `model.xlsx` | Ten scored conversations before any price is called final | Fable 5.1 |
+| 6. Raise | Ranjan | Investor deck (PowerPoint from the brand kit) + the detailed report (web page / PDF) | Every number sourced or labelled; adversarial review; published only on Ranjan's yes | Fable 5.1 |
+
+**Session rule:** each step starts in a new session (clean context, files are the memory). The Lead says "cut here, open a new session" at every logical cut-out (a step done, a review done, or a change of topic) and `PROMPTS.md` §2 holds the exact prompt to paste.
+
 Blocking risk across all steps: the Canada-only processing rule (`commercial/provider-and-cost.md` §2, §4); a founder decision on the wording, then counsel.
 
 ## Waiting on Ranjan
-- Yes to start Step 1 (the AI organisation page).
+- ~~Yes to start Step 1~~ given 9 Oct (AIW-D29). Start it in a new session with `PROMPTS.md` §2.
 - Residency wording: AG11-D15 "only in Canada" or SA-11 §3.6 "with documented safeguards".
 - ~~Licensed-only approval~~ replaced by human approval per the firm's role settings (AIW-D26).
 - Update the Program Charter on Drive (still says "not in Release 1"); Ranjan: launch needs all of it (AIW-D21).

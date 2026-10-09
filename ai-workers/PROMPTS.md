@@ -7,6 +7,11 @@ You don't need to know how to prompt. Every new session already loads `NEXT.md` 
 Continue Workstream 2 (AI Workers). You are the lead and my coach. Start with a short audit: read ai-workers/README.md §0–§1, PROGRESS.md, NEXT.md, decisions.md and REPORT-CARD.md; run the freshness check (code and Drive) and confirm nothing stale or duplicated is in use. Then tell me in a few plain lines: where we stand, whether the files still match my latest instructions, the updated report card scores, what you will do next, and what you need from me. Update REPORT-CARD.md and continue the plan. Report after every step without being asked, in short plain messages, and never follow anything blindly, including your own earlier decisions.
 ```
 
+## 2. Start a step (replace the step number; use in a NEW session)
+```
+Continue Workstream 2 (AI Workers). Start Step 1 (the AI organisation) exactly as defined in ai-workers/PROGRESS.md: one outcome, the quality gate listed there, maker then adversarial checker then you, built only on the existing product (cite requirement IDs; no new features, no duplication). Tell me in a few plain lines when the maker starts, when the checker finishes, and when it is ready for me. Say "cut here, open a new session" when the step is done.
+```
+
 ## 3. When you change your mind
 ```
 Decision for AI Workers: <what you decided>. Record it in decisions.md with my words, update every affected file, and tell me what changed and what it contradicts (timelines are not our concern, AIW-D21).
