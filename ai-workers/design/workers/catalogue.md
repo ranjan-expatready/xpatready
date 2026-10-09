@@ -1,6 +1,6 @@
 # AI Worker catalogue: every use case we can find, in four shapes (W2 step 3, revised after review W2)
 
-**Author:** ai-worker-designer. **Date:** 9 Oct 2026, revised the same day after `../../checks/review-W2-2026-10-09.md` (B-1, B-2, M-1, M-2, M-6, M-7, M-8, m-2 to m-5, m-7 to m-9, m-16). **Status:** Proposal for Ranjan and the Lead. A product fact carries a citation (file, version, requirement ID or section); everything else is labelled Proposal, Assumption or Unknown.
+**Author:** ai-worker-designer. **Date:** 9 Oct 2026, revised the same day after `../../checks/review-W2-2026-10-09.md` (B-1, B-2, M-1, M-2, M-6, M-7, M-8, m-2 to m-5, m-7 to m-9, m-16) and re-read end to end against the revised `../ws2-improvements.md` (18:50 version). **Status:** Proposal for Ranjan and the Lead. A product fact carries a citation (file, version, requirement ID or section); everything else is labelled Proposal, Assumption or Unknown.
 **Rules applied:** AIW-D18 (find every use case, rated Easy / Medium / Hard-but-worth-it), AIW-D19 (four shapes), AIW-D22 (no duplication: existing requirements cited by ID, file and version, never restated; this file describes only what is new), AIW-D24 (role twin = delegation), AIW-D25 (expert co-pilot answers only), AIW-D26 (approval = a named person, whoever the firm's settings allow for that role; licensed by default per the existing requirements; the product's floors stay; we never claim product-enforced licensed sign-off), AIW-D21 (assume everything in the documents is or will be built; dependencies are information only, but each one is marked Built / Specified / Proposed so no gap is hidden), AIW-D11 (firms only). **Where this file and `../ws2-improvements.md` conflict, the improvements win** (review B-1); the IMP numbers below point to the governing text.
 **Sources:** the W1 inventory (`../inventory/*.md`, from `sources/drive-snapshot-2026-10-09/`), `../../research/visaflo.md` §11, §12, §16, `../../research/field-scan.md` §3 to §7, the founders' autopilot design (`code/expat-ready-api@c4117a3-2026-10-09/docs/superpowers/specs/2026-06-18-rna-autopilot-design.md`), `../wedge-recommendation.md`, `../challenge-review-2026-10-09.md`, `../ws2-improvements.md`. Web facts carry the URL and access date recorded in the research files (9 Oct 2026 unless marked).
 
@@ -14,7 +14,7 @@
 |---|---|
 | **Task worker** | One job, done well. W-02 to W-09, W-11, W-12, W-16 to W-23 (18 entries) |
 | **Journey worker** | A whole journey, end to end, stopping at approvals. W-01, W-10, W-13, W-14, W-15 (5) |
-| **Role twin** | An AI version of a user role, scoped as a **subset of one named person's permissions** (AIW-D24; delegation model IMP-22; blocked list IMP-23). Externally: an *assistant to the role* (AIW-D27). W-25 to W-28 (4) |
+| **Role twin** | An AI version of a user role, scoped as a **subset of one named person's permissions** (AIW-D24; the delegation is defined once in IMP-1; twin specifics in IMP-22; blocked list IMP-23). Externally: an *assistant to the role* (AIW-D27). W-25 to W-28 (4) |
 | **Expert co-pilot** | Answers only, never acts; sources only; refuses without a source; Canada-only (AIW-D25; IMP-20, IMP-21). W-24 (1) |
 
 A task worker acts; the expert explains. §2.7 lists the pairs. Total 28 entries.
@@ -30,7 +30,7 @@ A task worker acts; the expert explains. §2.7 lists the pairs. Total 28 entries
 
 ### 1.1 Identity: how every worker acts
 
-Every worker acts on behalf of a named person, with only that person's permissions, and nothing takes effect until a person approves (AIW-D13; FD-16, Founder Decisions Log v1.5). The requirements anticipate but do not define a non-human actor (Doc 3 v1.4 AG-8 §3.11, AG-11 §3.3a: "Doc-1 Amendment A4-1", never written). The audit log records `actorUserId` only (AG-13 v1.12 §7; inventory X7); SA-11 v2.7 SA-11-2 has no AI actor type. **The delegation record is specified in one place: IMP-1 (record), IMP-2 (audit join), IMP-22 (role-twin delegation: granted by the named person it works for, or the Owner on their behalf; one twin per person per role; ends on deactivation, AI switch-off or kill switch; a twin never approves).** This file does not restate it. Status: *Proposed*.
+Every worker acts on behalf of a named person, with only that person's permissions, and nothing takes effect until a person approves (AIW-D13; FD-16, Founder Decisions Log v1.5). The requirements anticipate but do not define a non-human actor (Doc 3 v1.4 AG-8 §3.11, AG-11 §3.3a: "Doc-1 Amendment A4-1", never written). The audit log records `actorUserId` only (AG-13 v1.12 §7; inventory X7); SA-11 v2.7 SA-11-2 has no AI actor type. **The delegation that fills this gap is defined once, in `../ws2-improvements.md` IMP-1** (the record and its rules), with the audit join in IMP-2 and what is specific to role twins in IMP-22. This file defines nothing of it twice; where an entry below says "delegation", "subset" or "no seat", it means the IMP-1 rules. Status: *Proposed*.
 
 ### 1.2 Guardrails already in the requirements (cited, not restated; every worker obeys all)
 
@@ -56,7 +56,7 @@ Every worker acts on behalf of a named person, with only that person's permissio
 
 ### 1.3 The approval rule (AIW-D26, supersedes AIW-D17's licensed-only rule)
 
-AI Worker output is approved by a **named person, whoever the firm's own settings allow for that role**. The existing requirements set the defaults and floors: AI client text to a licensed user by default, Owner may widen (AG11-D11; AG-10-44; SA6-D9, BR-20); professional approvals to every holder, licensed marked preferred, Owner fallback (AG-7-68; AG-5-27; AG-11-89, AG-11-90); supervised messages (AG-10-49; AG-16 §3.11); the product never checks a licence (AG1-D19; AG-11-88). What the approval record must show after D26 is IMP-17. **We never claim product-enforced licensed sign-off.** Each entry names its *approval point* as the permission key or setting that already governs the same action by hand (G4). Internal-only output is approved by whoever would do that work by hand.
+AI Worker output is approved by a **named person, whoever the firm's own settings allow for that role**. The existing requirements set the defaults and floors: AI client text to a licensed user by default, Owner may widen (AG11-D11; AG-10-44; SA6-D9, BR-20); professional approvals to every holder, licensed marked preferred, Owner fallback (AG-7-68; AG-5-27; AG-11-89, AG-11-90); supervised messages (AG-10-49; AG-16 §3.11); the product never checks a licence (AG1-D19; AG-11-88). What the approval record must show after D26 is IMP-17 (its part (b), a default pause when a firm has no licensed user, is a proposed exception to D26 for Ranjan, not a rule this file relies on). **We never claim product-enforced licensed sign-off.** Each entry names its *approval point* as the permission key or setting that already governs the same action by hand (G4). Internal-only output is approved by whoever would do that work by hand.
 
 ### 1.4 Dependencies (information for the team, AIW-D21), each with its status
 
@@ -64,13 +64,13 @@ AI Worker output is approved by a **named person, whoever the firm's own setting
 |---|---|---|---|
 | D1 | AI provider recorded with Canada-only, no-training terms; an AI rail in SA-08 | *Proposed* (IMP-6, IMP-7); no rail exists (SA-08 v2.2 §1); old code calls the provider's standard service (`../ws2-baseline/A-ai-switch-provider-residency.md`) | AG-11-93 |
 | D2 | Canada pack content (checklists, box maps, deadline rules, obligation catalogue, deficiency library, Reader field lists, plain-words rule reasons) | *Content*, not authored (SA-01 v2.2 §0 Parked, §12; SA-01B v1.2 §12) | Charter V2 dates |
-| D3 | Delegated-session and permission-subset model | *Proposed* (IMP-1, IMP-2, IMP-22, IMP-23) | §1.1 |
+| D3 | The delegation record and, for twins, the permission subset | *Proposed* (IMP-1, IMP-2, IMP-22, IMP-23) | §1.1 |
 | D4 | Release labels conflict (Charter, SCOPE-TRIAGE, module files); precedence rule | *Open for Ranjan* (IMP-31) | `../inventory/foundation.md` Part 3 |
 | D5 | The Minder | *Specified* (AG-11 §3.4), **not built**: AG-11-47 "Today the Minder does not exist" (AG-11 v1.11 §12); Charter leaves the watcher open (`foundation.md` C8) | IMP-41 |
 | D6 | Reader and Sorter confidence thresholds; shadow-then-trust rule | *Open* (AG-11 §13 Q11); *Proposed* (IMP-30) | — |
 | D7 | Case spine (Case, Filing, Deficiency, Submission, Decision) | *Specified*, **not built** (AG-07 v2.7 §12) | — |
 | D8 | Audit attribution of AI work | *Proposed* (IMP-2) | inventory X7 |
-| D9 | Permission-scoped retrieval over packs, help content and records for the expert | *Proposed* (IMP-20); the Finder is *Specified* (Doc 1 §8.8), release Unknown | — |
+| D9 | Permission-scoped retrieval over packs and records for the expert | *Proposed* (IMP-20); the Finder is *Specified* (Doc 1 §8.8), release Unknown | — |
 | D10 | Four AI Doers (Reader, Sorter, Drafter, Checker) | *Specified*, built but switched off per Phasing v1.4; SCOPE-TRIAGE proposes Release 2 (D4) | AG11-D4; AG-11-93 |
 | D11 | Needs you inbox, autonomy levels, recipes | *Specified* (AG-11 §3.5, §3.13); AG-11 §12: engine "~55–60% foundation", no idempotency, no CASL gate today | D4 |
 
@@ -407,7 +407,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 #### W-24 Practice Expert (the expert co-pilot)
 
 - **Shape:** Expert co-pilot. **Answers only, never acts; sources only; refuses without a source; Canada-only** (AIW-D25). The full rule set is IMP-20 (eleven rules) and IMP-21 (data minimisation); this entry does not restate them.
-- **Job:** answers any staff question in context from the sources IMP-20 allows: the published pack version in force, the product's own help content, and the firm's records that this user may see. Examples: "Which of my files are at risk this week, and why?" (AIW-D19); "What does this client still need, and which rule says so?"; "Why did the Qualifier rank this program below the cutoff?"; "What did we promise this employer in the retainer?". Every answer lists its sources (pack section and version; record and field).
+- **Job:** answers any staff question in context from the two sources IMP-20 allows: the published pack version in force for the firm's country, and the firm's own records that this user may see (the product's run and audit records are firm records). Examples: "Which of my files are at risk this week, and why?" (AIW-D19); "What does this client still need, and which rule says so?"; "Why did the Qualifier rank this program below the cutoff?"; "What did we promise this employer in the retainer?". Every answer lists its sources (pack section and version; record and field).
 - **Works for:** every firm role within its own permissions; the Owner for firm-wide questions.
 - **Replaces:** knowledge held in a senior consultant's head (AG-03 v1.4 §1); timeline reading (AG-13 §3.4); stalled-case hunting (AG-14 §3.2); reading the reasons the pack already carries (SA-1B-59; SA-01B §9). Inventory: `ag-frs-1.md` L74; `ag-frs-2.md` L75, L88; `sa-frs.md` L96.
 - **Uses (read-only):** SA-01, SA-01B published packs (SA-01 BR-3); AG-03 breakdown and provenance; AG-07 §3.6; AG-11 §3.4 Minder, §3.9 run history, §3.13 Needs you; AG-13 timeline and audit; AG-14 under viewer scope; AG-06 money tab; AG-17 reference tables; the Finder (Doc 1 §8.8). No write Doer.
@@ -422,13 +422,13 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 
 #### W-25 AI Case Processor (role twin: assistant to the case officer)
 
-- **Shape:** Role twin: the recipes of W-01, W-03, W-04, W-07, W-08 and W-17 under one delegation (IMP-22) from a named case officer, using a subset of that officer's permissions; **paired with W-24 for answers** (the expert is not a component; it never acts). External wording: *assistant to the case officer*.
+- **Shape:** Role twin: the recipes of W-01, W-03, W-04, W-07, W-08 and W-17 under one delegation (IMP-1, IMP-22) from a named case officer, using a subset of that officer's permissions; **paired with W-24 for answers** (the expert is not a component; it never acts). External wording: *assistant to the case officer*.
 - **Job:** the persona's work in Overview v1.11 (Case Officer/Paralegal: collect documents, manage questionnaires, execute checklists, draft forms, log correspondence) across the officer's files, prepared for the officer's own approval and then the review sign-off.
 - **Works for:** a named case officer and the representative.
 - **Replaces:** the loops listed under W-01 (AG-07 §3.4, AG-08 §3.8, AG-09 §3.8 to §3.9, CP-4 §3.5), W-03 (AG-07 §3.7), W-04, W-07 (AG-10 §3.2, §3.5), W-08 (CP-7 §1, CP-3 §3.7) and W-17 (AG-13 §3.4), in one delegation instead of six switches. Inventory rows as cited in those entries.
 - **Uses:** the union of its components; AG-01 §3.3 roles; AG-11 §3.13 as the single hand-off.
-- **New (Proposal):** the subset per IMP-22 and the blocked list per IMP-23 (G16): `agent/case:document-manage`, `agent/sqr:*` except `verify`, communication drafting, `agent/task:*`; never the professional approvals. Seats: AG-1-13 and SA-3-41 count only humans and invitations (Unknown for twins); proposal: no seat, metered by files (proposals.md row).
-- **Guardrails and approval point:** G1 to G17; four-eyes stops it approving what it prepared (AG-7-65). **Approval point:** the delegating officer for internal actions (G4); the firm's role settings for client, form and filing output (AIW-D26); the approval record per IMP-17.
+- **New (Proposal):** the subset per IMP-22 and the blocked list per IMP-23 (G16): `agent/case:document-manage`, `agent/sqr:*` except `verify`, communication drafting, `agent/task:*`; never the professional approvals. Seats and metering: per IMP-1 (AG-1-13 and SA-3-41 count only humans and invitations).
+- **Guardrails and approval point:** G1 to G17; for four-eyes the preparer rule in IMP-1 applies, so neither the twin nor the officer it works for approves what it prepared (AG-7-65). **Approval point:** the delegating officer for internal actions (G4); the firm's role settings for client, form and filing output (AIW-D26); the approval record per IMP-17.
 - **Who has solved it (evidence):** VisaFlo sells fewer hires with agents that own the flow (`visaflo.md` §12 item 1); Clio Work runs multi-step agents (`field-scan.md` §4 row 4). **Partly solved.** Delegation under one person's permission subset: not found in the evidence; Unknown.
 - **Difficulty:** Hard (D3 plus every component). **Value:** the sentence firms and investors understand; priced through W-01, not per twin. **Cost drivers:** the sum of its components' model calls plus the officer's review minutes; no extra model cost for being a twin. **Dependencies:** D3 Proposed first; all component dependencies (D1, D2, D5, D7, D10, D11). Supervision rules and perception: confirm with counsel / RCIC.
 - **Why it sells (Proposal wording):** "Give every case officer an assistant that prepares, and let your named person decide."
@@ -490,7 +490,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 
 ## 3. Ranking: value against ease, with shape and the evidence column
 
-Judgement (Proposal). **Value**: H = firm pays per file or it makes the firm money; M = clear time or risk; L = convenience. **Ease**: E3 Easy, E2 Medium, E1 Hard, **rated on what exists today** (review M-8), with the "on paper" rating in brackets where it differs. **Evidence of being unsolved** repeats the entry's own finding word for word in kind: *Not found* (a cited absence), *Partly* (announced or adjacent), *Solved* (parity), *Unknown* (no evidence either way). No "Y" appears without a cited absence (review B-2). **Shape**: T task, J journey, R role twin, X expert.
+Judgement (Proposal). **Value**: H = firm pays per file or it makes the firm money; M = clear time or risk; L = convenience. **Ease**: E3 Easy, E2 Medium, E1 Hard, **rated on what exists today** (review M-8), with the "on paper" rating in brackets where it differs. **Evidence of being unsolved** repeats the entry's own finding in kind: *Not found* (a cited absence), *Partly* (announced or adjacent), *Solved* (parity), *Unknown* (no evidence either way). No "Y" appears without a cited absence (review B-2). **Shape**: T task, J journey, R role twin, X expert.
 
 | Rank | Worker | Shape | Value | Ease today (on paper) | Evidence of being unsolved | Build order | Note |
 |---|---|---|---|---|---|---|---|
@@ -533,7 +533,7 @@ Judgement (Proposal). **Value**: H = firm pays per file or it makes the firm mon
 |---|---|---|---|
 | W-05 Form Preparer | XFA unsupported; box maps unauthored; parked; release undecided | every rival has it; the File Builder stops short without it | XFA route (Unknown), first box maps (D2), release call (D4), counsel on portal filling (IMP-40) |
 | W-24 Practice Expert v2 | hallucination, privacy, cost (challenge review) | the feature every role uses daily | v1 first; permission-scoped retrieval (D9); Restricted field set (FDL B-1); pack reasons as content (D2) |
-| W-25 AI Case Processor and the other twins | delegation and permission-subset model Proposed only (IMP-22, IMP-23); regulator perception | the sentence that sells; the investor's role twin | Phase B requirement; "assistant to the role" wording; counsel |
+| W-25 AI Case Processor and the other twins | delegation and permission-subset model Proposed only (IMP-1, IMP-22, IMP-23); regulator perception | the sentence that sells; the investor's role twin | Phase B requirement; "assistant to the role" wording; counsel |
 | W-19 Pack Drafter / W-28 AI Pack Author | XFA; content tooling; two-person rule | one engine, many packs | Canada content first; SA1B-D18 revisited |
 | W-13 LMIA Clerk | SA-01B rows unbuilt; values unchecked; no agent-native path; FD-7 | higher fees; inspection exposure | SA-01B rows; expert check; founder confirmation of FD-7 for AI |
 | W-21 Rule-change Watcher | materiality is human; sites change | the safe answer to VisaFlo's monitor | content capacity; pack source URLs (SA-01B §3.6, not built) |
@@ -542,9 +542,9 @@ Judgement (Proposal). **Value**: H = firm pays per file or it makes the firm mon
 
 ## 5. Assumptions and questions
 
-**Assumptions (for the Lead to carry into `../../assumptions.md`):** A-W2-1 delegated-session record (D3, D8; IMP-1, IMP-2). A-W2-2 AI rail with Canada-only terms recorded (D1; IMP-6, IMP-7). A-W2-3 Canada pack content arrives, including plain-words reasons (D2). A-W2-4 Release 1 keeps what the 7 Oct module files say (D4; AIW-D21). A-W2-5 time saved and cost words are measured, not assumed. A-W2-6 a role twin holds a permission subset of one named person and takes no seat; metered by work. A-W2-7 the expert's retrieval is permission-scoped server-side (G15, D9; IMP-20). A-W2-8 FD-16's "effect" excludes an internal, reversible, audited filing label (IMP-13), pending Ranjan.
+**Assumptions (for the Lead to carry into `../../assumptions.md`):** A-W2-1 delegated-session record (D3, D8; IMP-1, IMP-2). A-W2-2 AI rail with Canada-only terms recorded (D1; IMP-6, IMP-7). A-W2-3 Canada pack content arrives, including plain-words reasons (D2). A-W2-4 Release 1 keeps what the 7 Oct module files say (D4; AIW-D21). A-W2-5 time saved and cost words are measured, not assumed. A-W2-6 a role twin holds a permission subset of one named person and takes no seat; metered by work (now IMP-1 rules 2 and 3). A-W2-7 the expert's retrieval is permission-scoped server-side (G15, D9; IMP-20). A-W2-8 FD-16's "effect" excludes an internal, reversible, audited filing label (IMP-13), pending Ranjan.
 
-**Proposals in `../../proposals.md` (AIW-D23):** role-twin permission subset and no seat; expert v1 question shapes and permission-scoped index; CASL class of lifecycle re-engagement; FD-7 confirmation for the LMIA clerk (re-sourced to FDL FD-7 per review M-1; the proposals row still carries the wrong AG-17 quote and is the Lead's to correct, since that file is append-only); per-file metering vs SA-4-44; non-legal translation helper into scope; the rule that every entry names shape and approval key.
+**Proposals in `../../proposals.md` (AIW-D23):** role-twin permission subset and no seat; expert v1 question shapes and permission-scoped index; CASL class of lifecycle re-engagement; FD-7 confirmation for the LMIA clerk (re-sourced to FDL FD-7 per review M-1; the Lead corrected the proposals row); per-file metering vs SA-4-44; non-legal translation helper into scope; the rule that every entry names shape and approval key.
 
 **Questions for Ranjan (deduplicated against the review's list of 22):**
 1. File Builder per-value approvals: `agent/sqr:verify` holders for values, one review sign-off for the report (review item 14). Confirm.
@@ -553,7 +553,7 @@ Judgement (Proposal). **Value**: H = firm pays per file or it makes the firm mon
 4. LMIA Clerk: confirm no candidate ranking or screening by AI (review item 16).
 5. Admin-plane workers: in the investor story, or internal only (review item 17).
 6. Expert v1 limited to structured question shapes before free questions over documents (review item 12).
-7. Role twins: agree the no-seat, metered-by-work proposal (review item 5).
+7. Role twins: agree the no-seat, metered-by-work rule in IMP-1 (review item 5).
 8. FD-16 reading on automatic document typing (IMP-13; review item 2): until answered, W-04 and W-01 review every type.
 
 **For counsel / RCIC (collected):** the advice boundary for readiness reports, response plans, pre-retainer questions and expert answers; whether firm-set approvers meet supervision rules (the product never verifies a licence; IMP-15, IMP-17); CASL class of lifecycle and lead messages; recording consent for consults; Federal Court AI-content declarations; Law 25 treatment of human-approved AI drafts (IMP-33); DSR clocks and retention floors; trust-money posture; ESDC record-keeping periods; portal filling (IMP-40); all immigration values.
@@ -562,11 +562,11 @@ Judgement (Proposal). **Value**: H = firm pays per file or it makes the firm mon
 
 ## 6. Summary (ten lines) and top five
 
-1. Twenty-eight entries across the four shapes: 18 task, 5 journey, 4 role twins, 1 expert; 22 for firms, 6 for Expat Ready's own team. Each is a bundle of what the October requirements already specify plus a small, labelled new part; nothing existing is restated (AIW-D22), and where this file and `ws2-improvements.md` differed, the improvements now govern (exports and trust entries, Reader typing, AUTO typing pending FD-16, status-content templates at "ask me first").
+1. Twenty-eight entries across the four shapes: 18 task, 5 journey, 4 role twins, 1 expert; 22 for firms, 6 for Expat Ready's own team. Each is a bundle of what the October requirements already specify plus a small, labelled new part; nothing existing is restated (AIW-D22), and where this file and `ws2-improvements.md` differed, the improvements now govern (exports and trust entries, Reader typing, AUTO typing pending FD-16, status-content templates at "ask me first", one delegation definition in IMP-1, two expert sources).
 2. The guardrail layer is already written (G1 to G15, cited by ID) plus the Proposed hard limits and blocked list (G16, G17). Approval is by a named person under the firm's own role settings, licensed by default (AIW-D26); we never claim product-enforced licensed sign-off.
 3. Wedge and hook stand, but rated on what exists today both are harder than they look on paper: the case spine and the Minder are specified, not built, and the pack content is unauthored (D2, D5, D7).
-4. The expert co-pilot answers only, from versioned packs, help content and the firm's own records under the asker's permissions (AIW-D25; IMP-20, IMP-21); rule results it quotes are reproducible, its wording is not promised identical (IMP-37). Build v1 third, with fixed question shapes.
-5. Role twins are delegation (IMP-22): a subset of one named person's permissions, never the professional approvals or the blocked list (IMP-23), "assistant to the role" externally. AI Case Processor first, after its components have pilot numbers.
+4. The expert co-pilot answers only, from the published pack version and the firm's own records under the asker's permissions (AIW-D25; IMP-20, IMP-21); rule results it quotes are reproducible, its wording is not promised identical (IMP-37). Build v1 third, with fixed question shapes.
+5. Role twins are a delegation (IMP-1, IMP-22): a subset of one named person's permissions, never the professional approvals or the blocked list (IMP-23), "assistant to the role" externally. AI Case Processor first, after its components have pilot numbers.
 6. Next by value: Letter Reader (post-filing), Lifecycle Keeper (repeat revenue), Money Matcher (cash). None has cited evidence of being unsolved: the research did not look for the last two; the first is announced by VisaFlo.
 7. Parity items (Inbox Filer, Lead Responder, Submission Letters, Consult Scribe) are needed, not our edge; the edge is traceable values, versioned rules, the approval record and the hard limits.
 8. Hard but worth it: Form Preparer, expert v2, the twins, Pack Drafter, LMIA Clerk, Rule-change Watcher.
