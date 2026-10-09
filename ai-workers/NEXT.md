@@ -19,7 +19,7 @@
 - **AIW-D5 (9 Oct):** concept first, then detailed requirements; assume gaps are filled (`assumptions.md`); automatic resume; one source of truth.
 
 ## Next (handoff for a new session, 9 Oct 2026 evening)
-Read `design/direction-review-2026-10-09.md` first: verdict (right direction, three corrections), gaps, ideas (shadow mode, readiness report as the product, pack-stamped answers), and the six-step plan.
+Read `design/direction-review-2026-10-09.md` and `checks/lead-verification-2026-10-09.md` first (code and Drive verified current on 9 Oct evening; Charter V2 = 28 Feb 2027, V1 text = 12 Mar; team doc SAModules added): verdict (right direction, three corrections), gaps, ideas (shadow mode, readiness report as the product, pack-stamped answers), and the six-step plan.
 1. **Running when this session ended:** catalogue fix (ai-worker-designer) and improvements fix (ai-worker-designer) after review W2. Check `PROGRESS.md` log and `design/workers/catalogue.md`, `design/ws2-improvements.md` for their "Done" lines; if missing, relaunch with the review's B-1, B-2, M-2, M-6–M-11 items.
 2. Short re-review of the two fixed files; close review W2.
 3. Update `visual/w1-evidence.html` (or a new `visual/w2-workers.html`): product map with workers, the 22 decisions from `checks/review-W2-2026-10-09.md` in plain words; republish to https://claude.ai/artifact/7ABbMaVaoYQ32osUgDJNU7 or publish new; present to Ranjan.

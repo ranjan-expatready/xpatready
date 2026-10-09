@@ -9,9 +9,12 @@ for d in "$ROOT"/code/*(/); do
   name=${d:t}
   local_sha=$(git -C "$d" rev-parse --short HEAD 2>/dev/null)
   local_date=$(git -C "$d" log -1 --format=%cs 2>/dev/null)
+  slug=$(git -C "$d" remote get-url origin 2>/dev/null | sed -E 's#.*github.com[:/]##; s#\.git$##')
+  [[ -z "$slug" ]] && continue
   for br in dev main; do
-    remote=$(gh api "repos/ExpatReady-EROS/$name/commits/$br" --jq '.sha[0:7]+" "+.commit.committer.date[0:10]' 2>/dev/null)
-    [[ -n "$remote" ]] && echo "$name  local $local_sha ($local_date)  |  GitHub $br: $remote"
+    remote=$(gh api "repos/$slug/commits/$br" --jq '.sha[0:7]+" "+.commit.committer.date[0:10]' 2>/dev/null)
+    [[ "$remote" == *"Not Found"* || -z "$remote" ]] && continue
+    echo "$name  local $local_sha ($local_date)  |  $slug $br: $remote"
   done
 done
 echo "== Drive =="
