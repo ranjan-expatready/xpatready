@@ -10,7 +10,7 @@ Continue Workstream 2 (AI Workers). You are the lead and my coach. Start with an
 ## 1a. First session after setup: the full audit (use once, then §1)
 ```
 Continue Workstream 2 (AI Workers). You are the lead and my coach. Before any new work, run a FULL AUDIT and report it to me in plain words:
-1. Setup check: confirm the SessionStart hook ran (you should have seen REPORT-CARD.md, PROGRESS.md and NEXT.md automatically); confirm the seven agents exist in .claude/agents/ and each carries the no-duplication, proposals and progress rules; confirm .claude/settings.json denies git push, gh writes and Drive writes; confirm the local git repo has history (git log) and no remote.
+1. Setup check: confirm the SessionStart hook ran (you should have seen REPORT-CARD.md, PROGRESS.md and NEXT.md automatically); confirm the six agent files exist in .claude/agents/ (the seventh role is you, the Lead) and each carries the no-duplication, proposals and progress rules; confirm .claude/settings.json denies git push, gh writes and Drive writes; confirm the local git repo has history (git log) and no remote.
 2. Freshness: run zsh ai-workers/tools/freshness.sh; search Drive for files modified after the newest snapshot date; list anything newer and what you will do about it. Confirm no file under archive/ or an older snapshot is cited anywhere in ai-workers/ (grep for "drive-snapshot-2026-10-0[23]" and "archive/").
 3. Hallucination spot-check: pick 20 product quotes at random across design/ws2-baseline/, design/workers/catalogue.md and design/ws2-improvements.md and check each word for word against sources/drive-snapshot-2026-10-09/; pick 5 competitor claims and open their URLs. Report mismatches.
 4. Purpose and drift: read ai-workers/founder-brief.md (my original words) and decisions.md end to end; then check brief-coverage.md and REPORT-CARD.md against them. Tell me where the work has drifted from what I asked, where it went beyond it, and where my own later decisions contradict my original ask. Name anything that is an assumption dressed as a fact.
@@ -25,7 +25,7 @@ Start W1 as written in ai-workers/wave-brief-W1.md. Refresh sources first. Stop 
 
 ## 3. When you change your mind
 ```
-Decision for AI Workers: <what you decided>. Record it in decisions.md with my words, update every affected file, and tell me what changed and what it costs us against the March 2027 launch.
+Decision for AI Workers: <what you decided>. Record it in decisions.md with my words, update every affected file, and tell me what changed and what it contradicts (timelines are not our concern, AIW-D21).
 ```
 
 ## 4. Independent check by Codex (paste into Codex)

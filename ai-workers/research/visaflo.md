@@ -116,7 +116,7 @@ The status column uses VisaFlo's own labels. "Live (claimed)" means the page pre
 |---|---|---|---|
 | Retainer and service agreement filled from lead data (firm template or VisaFlo default), sent, status tracked | Live (claimed) since 2024 | https://visaflo.ca/crm ; https://vflo.inblog.ai/faq | Vendor claim |
 | E-signature inside VisaFlo, real-time notices, signed PDF filed automatically, certificate of authenticity | Live (claimed) since Feb 2025; redesigned Oct 2025 | https://visaflo.ca/crm ; changelog 2025-02, 2025-10 ; https://visaflo.ca/compare/officio | Vendor claim |
-| PDF invoices and receipts, Stripe payments, milestones, reminders, balances, QuickBooks-ready CSV export; invoices to leads | Live (claimed) | https://visaflo.ca/crm ; changelog 2025-06 | Vendor claim |
+| PDF invoices and receipts, Stripe payments, balances, QuickBooks-ready CSV export (all on /crm, re-checked 9 Oct). Milestones, reminders and invoices to leads: not on /crm; attributed to a June 2025 changelog entry whose link was not recorded, so **Unknown** until the link is added | Live (claimed) | https://visaflo.ca/crm (9 Oct 2026); changelog 2025-06 (no link) | Vendor claim; partly Unknown (audit 9 Oct) |
 | **Trust accounting** | "Launching in July" (comparison tables dated July 2026). Not confirmed as live as of 9 Oct 2026 | https://visaflo.ca/compare/caseeasy | Vendor claim; current status Unknown |
 
 ### 3.9 Monitoring after filing

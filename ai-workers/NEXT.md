@@ -2,7 +2,8 @@
 
 *Replace, don't append. The story, ratings and plan are in `REPORT-CARD.md`; status in `PROGRESS.md`; decisions in `decisions.md`. This file holds only what the next session must know to start.*
 
-## State, 9 Oct 2026 evening
+## State, 9 Oct 2026, 16:35 (after the full audit)
+- **Full audit done** (`REPORT-CARD.md` §5): 12 removals and an order change (W3b before Phase B) wait for Ranjan.
 - W1 done, reviewed, page published: https://claude.ai/artifact/7ABbMaVaoYQ32osUgDJNU7
 - W2 content done and corrected after review W2 (reference index 1,300+ refs; 28 workers; 41 improvements). No agent running.
 - **W2 page published:** https://claude.ai/artifact/KWqX2Hr9tJGcmqDoY9bx4s (28 workers, product map with workers, rules, 22 decisions). Ranjan's answers to the 22 decisions are the next input.

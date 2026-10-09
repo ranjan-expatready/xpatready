@@ -23,7 +23,7 @@
 | B17 | Visual: whole product by component, mapped to AI Worker X, Y… | Component map web page with worker mapping | W2 |
 | B18 | Claude takes the lead and asks for what it needs | Lead role; decisions asked in chat and logged in `decisions.md` | Ongoing |
 | B19 | Resume in new sessions with no loss and no context overload | SessionStart hook loads `NEXT.md` + freshness; files are the memory; agents read only their slice | Done |
-| B20 | Tell me what I'm missing; work back to the target | "Missing" list each wave; March 2027 launch (AIW-D4) | Ongoing |
+| B20 | Tell me what I'm missing; work back to the target | "Missing" list each wave. Target date dropped by AIW-D21 (contradicts AIW-D4; Ranjan to confirm, audit 9 Oct §5.4) | Ongoing |
 | B21 | Concept first, then detailed requirements developers can build | Phase A / Phase B (README §2a) | Planned |
 | B22 | Assume gaps are filled, labelled | `assumptions.md` | Done: AIW-A1..A9 registered (9 Oct) |
 | B23 | Write the prompts for me | `PROMPTS.md` | Done |
