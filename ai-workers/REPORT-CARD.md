@@ -32,9 +32,9 @@
 ## 3. Plan of action (next steps, in order)
 
 1. ~~Full audit~~ done 9 Oct 16:30 (§5). Ranjan's yes needed on the removals (§5.5) and on the order change (W3b before Phase B).
-2. Short re-review of the corrected catalogue and improvements by the adversarial reviewer; close review W2.
+2. ~~Short re-review of the corrected catalogue and improvements~~ done 9 Oct: `checks/review-W2b-2026-10-09.md`, 0 blocking, 1 major fixed. **W2 closed.**
 3. Collect Ranjan's answers to the blocking decisions (page tab "Your 22 decisions"); record them in `decisions.md`.
-4. Provider and Canada-only check; cost-per-file estimate → `design/provider-and-cost.md` (needed for pricing either way).
+4. ~~Provider and Canada-only check; cost-per-file estimate~~ done 9 Oct → `commercial/provider-and-cost.md`. Finding: no major provider processes Claude or GPT models inside Canada today; Gemini in Montréal is listed; the product's own gate (AG-11-93) keeps every AI Worker switched off until a Canada-processing provider is recorded. Model cost per prepared file about CAD 0.40 / 2.20 / 14 (Assumptions, arithmetic shown).
 5. W3a/W3b: proposition, validation script and price card for 5–10 licensed consultants. **Moved ahead of Phase B** (audit finding §5.4).
 6. Phase B for the File Builder: requirements in `product/requirements/` format + clickable demo in the simulator.
 7. W3c/d: pricing in the money model; investor story.
@@ -42,6 +42,7 @@
 ## 4. Waiting on Ranjan
 
 - **Program Charter** on Drive still says AI is not in Release 1 (`PROMPTS.md` §7).
+- **Residency wording:** AG11-D15 says AI processing "only in Canada"; SA-11 §3.6 allows "explicitly approved with documented safeguards". On 9 Oct no major provider runs Claude or GPT inside Canada. Which wording wins decides whether any current route is allowed (`commercial/provider-and-cost.md` §4). Confirm with counsel.
 - **Timelines:** AIW-D4 ("work back from March 2027") and AIW-D21 ("don't think about timelines") contradict each other. We follow D21; say if that is wrong.
 - **Removals** proposed in §5.5; **order change** (W3b before Phase B) in §3.
 - The 22 decisions on the W2 page; the 5 that block are marked in `design/ws2-improvements.md` §"blocking".

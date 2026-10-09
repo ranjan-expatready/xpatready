@@ -16,7 +16,7 @@ Read `design/direction-review-2026-10-09.md` and `checks/lead-verification-2026-
 1. **Done when this session ended:** catalogue, module map and improvements corrected after review W2 (both agents reported Done; see PROGRESS.md 18:50 and 19:20). No agent is running.
 2. Short re-review of the two fixed files; close review W2.
 3. ~~W2 page~~ done. Collect Ranjan's answers to the 22 decisions (page tab "Your 22 decisions") and record them in decisions.md.
-4. Provider/region check and cost-per-file estimate → `design/provider-and-cost.md`.
+4. ~~Provider/region check and cost-per-file estimate~~ done 9 Oct → `commercial/provider-and-cost.md` (Lead spot-checked 3 claims live: Anthropic geo options, Claude prices, Bedrock Canada).
 5. Phase B for the File Builder: requirements in `product/requirements/` format + clickable demo in the simulator (`product/app`), including the readiness report and a shadow-mode summary.
 6. W3b validation script and price card, then W3c/d.
 Bootstrap prompt: `PROMPTS.md` §1a (full audit, first time), then §1.
