@@ -10,7 +10,7 @@
 | W2a | Workstream 2 baseline: reference index of every AI, Doer and Conductor requirement | One clean reference set for Workstream 2 | Done: A (9 files, 627 refs) + B (19 files, 646 refs); all quotes verified; conflicts logged in proposals.md | `design/ws2-baseline/` |
 | W2b | Challenge and improve: gaps, weak points, proposals (labelled) | Decisions to take, with reasons | Not started | `design/ws2-improvements.md` |
 | W2c | AI Worker catalogue and product map with workers | The visual of which worker does what | Not started | `design/workers/`, `visual/` |
-| W2d | Independent review + updated visual page | Confidence it is right | Not started | `checks/`, `visual/` |
+| W2d | Independent review + updated visual page | Confidence it is right | Review done (2 blocking, 12 major); improvements fixed; catalogue fix running; page update next | `checks/`, `visual/` |
 | W3a | Proposition and the wedge product (see recommendation) | What we sell first and why | Not started | `commercial/` |
 | W3b | Validation script for 5–10 licensed consultants | Evidence before pricing | Not started | `commercial/` |
 | W3c | Pricing and business case, added to the existing plan and money model | Numbers you can defend | Not started | `../commercial/plan.md`, `model.xlsx` |
