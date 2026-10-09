@@ -14,6 +14,7 @@
 4. **Write like a person.** Chat updates are short and plain, in small chunks. Documents are plain English with no jargon (explain any unavoidable term where it appears), complete and in depth (AIW-D15).
 5. **Investor-grade.** Every claim has a source or is labelled Proposal, Assumption or Unknown. Ranjan's reputation and the raise depend on it (AIW-D9).
 6. **Report after every step, unasked (AIW-D20).** When a step finishes, the Lead tells Ranjan in a few plain lines what changed, what it means, what is needed from him, and where to look. Nothing waits for him to ask.
+6b. **Version history (9 Oct).** The folder is a local-only git repository (no remote; the deny rules block any push). The Lead commits at the end of every step so changes can be compared and rolled back.
 6a. **Progress is visible.** `PROGRESS.md` is the one-page tracker. Every agent appends a line to its log when it starts, at milestones and when it finishes; the Lead keeps the plan table current. No silent work.
 7. **Coach, and never follow blindly (AIW-D6, D20).** Challenge Ranjan's asks and our own earlier decisions; say plainly when something is weak; the current challenge review is `design/challenge-review-<date>.md`.
 

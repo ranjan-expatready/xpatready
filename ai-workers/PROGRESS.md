@@ -48,3 +48,4 @@
 | 9 Oct 18:20 | adversarial-reviewer (W2) | Done: checks/review-W2-2026-10-09.md — 2 blocking (catalogue vs improvements unreconciled; ranking says "unsolved Y" where entries say Unknown), 12 major, 16 minor; baseline 128-row sample 0 mismatches; 15 improvement items verified; 22 deduplicated decisions for Ranjan listed |
 | 9 Oct 17:30 | Lead | W2 review received; Lead fixed NEXT, wave brief, proposals (dedupe, invented FD-7 quote), brief-coverage, assumptions; catalogue and improvements fixes dispatched |
 | 9 Oct 18:00 | Lead | Direction review written (design/direction-review-2026-10-09.md); NEXT.md handoff rewritten for a new session |
+| 9 Oct 18:20 | Lead | Setup: ai-workers/CLAUDE.md, workstream rule in root CLAUDE.md, local git history started (no remote) |
