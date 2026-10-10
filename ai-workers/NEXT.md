@@ -2,15 +2,13 @@
 
 *Replace, don't append. Plan, gates and status: `PROGRESS.md`. Decisions: `decisions.md`. Story, ratings, audits: `REPORT-CARD.md`.*
 
-## State, 9 Oct 2026, 18:45
-- Plan Steps 0–6 ratified (AIW-D29) and reviewed lens by lens (AIW-D30; `PROGRESS.md` "Plan review"). Step 0 done. **Step 1 (the AI organisation in business terms) is next and approved.**
-- Folder cleaned on Ranjan's instruction: root is now `ai-workers/`, `sources/` (newest snapshot only), `code/` (dated copies only), `commercial/` (plan v1.1 + model), `archive/` (everything superseded, including the retired simulator and the company-planning workflow).
-- Hooks: SessionStart loads rules, plan, handoff, freshness; Stop refuses to end with uncommitted work. Resume line: **Continue Workstream 2.**
-- Blocking risk: the Canada-only processing rule (`commercial/provider-and-cost.md`). Decision checkpoint before Step 3.
-
-- **Side deliverable, 10 Oct (Sanjay's ask, Workstream 1 requirements, not WS2):** `requirements-planning/ag-detailing-plan-2026-10-10.md` — four planes, AG scorecard, detailing order in six waves, SA-1B answer, review-pass method; adversarial check in `requirements-planning/checks/`. Fresh code copies `code/*@*-2026-10-10` are now current (freshness.sh will show them).
+## State, 10 Oct 2026, 14:00
+- **Step 1 (the AI organisation in business terms) is in its fix round.** Maker draft done (7 personas, 28/28 workers placed): `design/ai-organisation.md` + `visual/ai-organisation.html`. Adversarial review `checks/review-S1-2026-10-10.md`: Fail, fixable in one round (2 blocking, 10 major, 19 minor; 91/95 citations hold). Lead read agreed and added L1–L6 (too register-like to sell with; plain layer and one-screen charts needed). Fix round dispatched to the maker with the Lead's calls: solo-firm chart first, the free Deadline watch shown on its own, permission keys kept in the master and moved to an evidence line on the page, Intake/Billing hours to Unknown, option (c) kept on the price card until the ten conversations.
+- Step 1 first task done: Drive checked (no requirement change after the 9 Oct snapshot), the two never-opened folders opened and recorded in `sources/README.md`; the team's Product Vision v1.0 (frozen 2 Aug) found and filed in the snapshot's `07-team-documents/`.
+- A parallel session (requirements planning, Sanjay's ask) commits to the same local repo; its files are outside `ai-workers/design/ai-organisation.*`. Commit only your own files.
+- The weekly usage limit on Fable 5.1 cut one checker run short (resets 11 Oct 22:30 IST); the retry completed. If a maker or checker is cut off again, re-run it on Opus 5.5 and log the deviation from AIW-D29.
 
 ## Next
-1. **Step 1, first task:** open the Drive folders never opened (`sources/README.md`, "Drive folders seen"): the "Expatready" shared folder (Requirement Docs, Product Docs, Technical Docs) and Tanu's SuperAdmin business requirements. Record current / superseded / irrelevant. Copy anything current into the snapshot's team-documents folder.
-2. **Step 1, the outcome:** `design/ai-organisation.md` + one web page: the AI personas in business terms (name, job, does, never does, who approves, where it sits in the firm, hours saved as Assumption, charge unit), plus "How a firm runs it". Built from the 28 workers in `design/workers/catalogue.md`. Maker: ai-worker-designer. Checker: adversarial-reviewer against the Step 1 gate in `PROGRESS.md`. Then Ranjan.
+1. When the fix round lands: Lead re-read of both files against the review and L1–L6; page checked in the browser (light/dark, phone width); a short checker re-check of the fixes only (not a full review); then Ranjan sees the page with the decisions in §7 (seven from the maker plus the Lead's calls). Then "cut here, open a new session".
+2. Step 2 (behaviours, one document per persona) starts only after Ranjan's yes on the persona set, naming, and the delegation record under FD-16 (§7 decisions 1, 2, 5).
 3. Step 5 conversations can start as soon as Step 1 is approved (`commercial/validation-script.md`); Ranjan names who runs them.
