@@ -228,7 +228,7 @@ Each card opens in plain words, then has the same fields. "What it does" lines p
   3. Watches the official pages a pack cites, flags changes, drafts the proposed pack change with the differences marked (W-21; SA-01B v1.2 §3.6 to §3.7; SA-01 v2.2 §3.14).
 - **What it never does:** never approves, publishes or rolls back a pack (SA-01 v2.2 §3.12 two-person rule; catalogue W-28); never scores an outcome (the engine decides, catalogue G10; W-20 "AI never scores"); never edits a pack in place (W-21); never machine-translates legal or consent text ("authored per locale, never machine-translated", SA-05 v2.2 SA-5-15, §3.5; catalogue G12); the hard limits (IMP-27).
 - **Who approves (in plain words):** the Content approver; every immigration value by the Immigration SME, with the product owners final.
-- **Who approves (evidence):** the Content Approver (SA-01 v2.2 §3.12); immigration values "Routed to the Immigration SME (Ishaan), product owners final (BR-15)" (SA-01 v2.2 §13; BR-15).
+- **Who approves (evidence):** the Content Approver (SA-01 v2.2 §3.12); immigration values "Routed to the Immigration SME [name withheld], product owners final (BR-15)" (SA-01 v2.2 §13; BR-15).
 - **Where it sits:** beside the Content author (SA-07 v2.10 SA7-D8), one named author per delegation; SA-07 has no route for a non-human staff account, so the delegation record is needed here too (catalogue W-28 "New").
 - **Bundles:** W-19, W-20, W-21.
 - **Hours saved (Assumption):** saves Expat Ready's content cost, not the firm's hours: "a new IRCC form edition mapped in hours, checked by a person" (W-19 "Why it sells", Proposal wording). Unknown until measured.

@@ -113,7 +113,7 @@
 | AG-11-104 | Each client SHALL have a preferred channel (email or WhatsApp). A recipe SHALL send on the client's preferred channel; a person MAY send the same … | AG-11 v1.11 §4, L720 | Text: Release 1 (via AG11-D18(a)) | Overlap: carve-out B (Messenger). |
 | AG-11-105 | Where no approved template exists for that message, the recipe SHALL fall back to email, record the fallback in run-history, and SHALL NOT send free … | AG-11 v1.11 §4, L721 | Text: Release 1 | — |
 | AG-11-106 | The Release 1 library SHALL include five more recipes: no-show recovery, going-cold follow-up, post-consult follow-up, biometrics countdown (a client-facing reminder on top of the Minder's … | AG-11 v1.11 §4, L722 | Text: Release 1 | SCOPE-TRIAGE L143 proposes Release 2. |
-| AG-11-107 | The lead times and wording SHALL come from the Country Pack through the Immigration-SME (Ishaan), not from code. Manually enrolling a lead into a sequence, … | AG-11 v1.11 §4, L723 | Text: Release 2 items named | Canada pack content does not exist yet (W1 inventory sa-frs §D, Inferred). |
+| AG-11-107 | The lead times and wording SHALL come from the Country Pack through the Immigration-SME [name withheld], not from code. Manually enrolling a lead into a sequence, … | AG-11 v1.11 §4, L723 | Text: Release 2 items named | Canada pack content does not exist yet (W1 inventory sa-frs §D, Inferred). |
 
 ## 4. Business rules BR-1 to BR-19 and other engine rules
 

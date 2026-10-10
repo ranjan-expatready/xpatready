@@ -28,7 +28,7 @@
 | AG11-D16 | A firm connects its own Gmail or Microsoft 365 mailbox (OAuth) or, for any other provider, a plain IMAP mailbox, and the Sorter files the … | AG-11 v1.11 §0 AG11-D16, L45 | Text: "all Release 1" | SCOPE-TRIAGE L129 proposes moving mailbox connection to Release 2 [F]. |
 | AG11-D18(b) | an inbound message from an unknown number lands in the Unmatched inbox with a "Create lead" action … Never automatic — a person clicks it | AG-11 v1.11 §0 AG11-D18, L47 | Text: Release 1 | — |
 | AG-11 §3.0 Reader | Reader — reads an uploaded document and proposes profile values (with where each value came from and how confident it is) plus the document's type. | AG-11 v1.11 §3.0, L247 | R1-gate | — |
-| AG-11 §3.0 Reader list | The Immigration-SME (Ishaan) confirms the final list as pack content; the Reader is not hardcoded to any list. | AG-11 v1.11 §3.0, L247 | None stated | — |
+| AG-11 §3.0 Reader list | The Immigration-SME [name withheld] confirms the final list as pack content; the Reader is not hardcoded to any list. | AG-11 v1.11 §3.0, L247 | None stated | — |
 | AG-11 §3.0 Sorter | A low-confidence match goes to AG-10's Unmatched inbox and to Needs you; it is never filed on a guess. | AG-11 v1.11 §3.0, L248 | R1-gate | — |
 | AG-11 §3.0 Drafter | Drafter — AG-10's AI-assist drafter, now a Doer any recipe can call to prepare a message. It never promises an immigration outcome (BR-9). | AG-11 v1.11 §3.0, L249 | R1-gate | RNA spec §16 L348 lists "AI-generated message content" as out of scope (v1). |
 | AG-11 §3.0 Checker | Checker — cross-checks name, date of birth, document numbers and dates across documents, the profile and forms. Its findings feed AG-07's Deficiency Library as warnings … | AG-11 v1.11 §3.0, L250 | R1-gate | — |
@@ -41,7 +41,7 @@
 | AG-11 §3.10 thresholds | (Until a firm sets confidence thresholds, every Reader value and Sorter match goes to review / Needs you — defaulted same day, §13 Q11.) | AG-11 v1.11 §3.10, L464 | None stated | AG-09 AG-9-11 applies a "high-confidence type" at AUTO without a set threshold. |
 | AG-11 §3.10 no promises | No outcome promises. Drafter output is bound by BR-9 like every other message. | AG-11 v1.11 §3.10, L469 | None stated | — |
 | AG-11-66 | The Reader SHALL extract data from an uploaded document into proposed profile values, each with provenance (document, page/region) and confidence, and SHALL classify the document's … | AG-11 v1.11 §4, L653 | R1-gate | — |
-| AG-11-66 (list) | The final list SHALL be confirmed by the Immigration-SME (Ishaan) as pack content; further document types SHALL be added as pack content, not code. | AG-11 v1.11 §4, L653 | None stated | — |
+| AG-11-66 (list) | The final list SHALL be confirmed by the Immigration-SME [name withheld] as pack content; further document types SHALL be added as pack content, not code. | AG-11 v1.11 §4, L653 | None stated | — |
 | AG-11-66 (imports) | Its values on an imported document SHALL stay PROPOSED on the document and be reviewed one document at a time in the document view … never … | AG-11 v1.11 §4, L653 | None stated | Same rule AG-18-78, AG-9-49. |
 | AG-11-67 | The Sorter SHALL classify inbound email, portal and WhatsApp messages, match each to the right file beyond header/reply-token matching, and file attachments to AG-9 with … | AG-11 v1.11 §4, L654 | R1-gate | AG-10 §13 Q12 L814 moves document classification to the Reader. |
 | AG-11-67 (cont.) | A match below the confidence threshold SHALL go to AG-10's Unmatched inbox and to Needs you, never filed on a guess. … It SHALL NOT process … | AG-11 v1.11 §4, L654 | R1-gate | — |
@@ -58,7 +58,7 @@
 | AG-11 §9 provider down | AI provider down or timing out → treated as unavailable for that call: logged in AiRunLog as PROVIDER_ERROR, the manual path applies, and the work … | AG-11 v1.11 §9, L1082 | None stated | — |
 | AG-11 §9 disagreement | Reader and an existing verified value disagree → the Reader's value is a proposal only; the verified value stays until a person approves the change, … | AG-11 v1.11 §9, L1084 | None stated | AG-08 L595 same rule. |
 | AG-11 §13 Q11 | Reader confidence thresholds — what confidence counts as "low" for the Reader's values and the Sorter's matches (below it → Needs you / Unmatched inbox). … | AG-11 v1.11 §13, L1267 | Open (default: everything to review) | — |
-| AG-11 §13 Q13 | Still open: the final list, the fields extracted from each and the order. Immigration-SME (Ishaan); founder final. | AG-11 v1.11 §13, L1269 | Open | — |
+| AG-11 §13 Q13 | Still open: the final list, the fields extracted from each and the order. Immigration-SME [name withheld]; founder final. | AG-11 v1.11 §13, L1269 | Open | — |
 | AG-11 §13 SME note | which cross-checks the Checker runs beyond name, date of birth, document numbers and dates. | AG-11 v1.11 §13, L1320 | Open (Immigration-SME) | — |
 
 ## 2. Reader in AG-08 (questionnaire) and AG-09 (documents)
@@ -105,7 +105,7 @@
 | AG-10 §3.2 proposal | Its output is always a proposal with provenance and a confidence; it never guesses a file. | AG-10 v1.9 §3.2, L222 | None stated | — |
 | AG-10 §3.2 filing | Filing a message or document to a record is an internal action (AUTO, AG11-D1) only when a deterministic signal backs the match. | AG-10 v1.9 §3.2, L222 | None stated | — |
 | AG-10-37 | after the deterministic matching of AG-10-10 the Sorter SHALL (a) propose the file by reading the message beyond header/reply-token matching, (b) classify the message, (c) … | AG-10 v1.9 §4, L419 | None stated | (c) conflicts with AG-10 §13 Q12 L814 (Reader, not Sorter, classifies documents). |
-| AG-10-37 (cont.) | The classification and document-type values SHALL be pack/firm content, not hard-coded; the values are routed to the Immigration-SME (Ishaan), founder final. | AG-10 v1.9 §4, L419 | None stated | — |
+| AG-10-37 (cont.) | The classification and document-type values SHALL be pack/firm content, not hard-coded; the values are routed to the Immigration-SME [name withheld], founder final. | AG-10 v1.9 §4, L419 | None stated | — |
 | AG-10-38 | Every Sorter output SHALL be a proposal with provenance and confidence. … the Sorter SHALL NOT attach such an item to any file. Until a threshold … | AG-10 v1.9 §4, L420 | None stated | — |
 | AG-10-38 (cont.) | no threshold can make an AI-only match file automatically (§13 Q10). | AG-10 v1.9 §4, L420 | — | — |
 | AG-10-39 | inbound SHALL continue on the deterministic matching of AG-10-10; anything not matched by it SHALL go to the Unmatched inbox for manual linking, with no … | AG-10 v1.9 §4, L421 | None stated | — |
@@ -127,7 +127,7 @@
 | AG-07 §3.5 Checker | A Checker finding is never a lock — it is shown and fixed, acknowledged, or resolved like any deficiency; it becomes a CRITICAL warning only … | AG-07 v2.7 §3.5, L496 | None stated | SCOPE-TRIAGE L94 proposes moving "Deficiency library, auto-detect rules, readiness score, Checker" to Release 2. |
 | AG-07 §3.5 optional | The Checker is optional per firm; without it, every check can still be raised by hand (AG-7-26). | AG-07 v2.7 §3.5, L496 | None stated | — |
 | AG-7-61 | Each finding SHALL be a Deficiency (source = Checker) carrying provenance (the values compared and where each came from) and a confidence. A finding SHALL … | AG-07 v2.7 §4, L689 | None stated | — |
-| AG-7-61 (cont.) | Which fields and document types are cross-checked, their default severities, and any confidence threshold are pack values owned by the Immigration-SME (Ishaan), founder final. | AG-07 v2.7 §4, L689 | Open (pack values) | — |
+| AG-7-61 (cont.) | Which fields and document types are cross-checked, their default severities, and any confidence threshold are pack values owned by the Immigration-SME [name withheld], founder final. | AG-07 v2.7 §4, L689 | Open (pack values) | — |
 | AG-7-62 | When the Checker or the Reviewer raises a new Deficiency (AG-7-30, AG-7-61), the case SHALL emit a deficiency.detected event in the standard Conductor envelope, idempotent … | AG-07 v2.7 §4, L690 | None stated | — |
 | AG-7-62 (cont.) | Emitting the event SHALL NOT itself send anything to a client | AG-07 v2.7 §4, L690 | — | — |
 | AG-07 §3.4 Filler input | The Filler pre-populates only from verified values … BR-7 is the rule every AI Doer follows: unreadable or missing is flagged, not guessed (BR-23). | AG-07 v2.7 §3.4, L464 | None stated | Filler is carve-out B. |

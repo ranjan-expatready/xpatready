@@ -295,7 +295,7 @@ Notes were written per file as each was read, then grouped into Parts 1 to 5 bel
 
 ### AG-10
 
-- Sorter reads content: "it reads the message content to propose the right file, **classifies** the message ... and **files each attachment to AG-9 with a proposed document type**" (AG-10 v1.9 §3.2). Classification values are "pack/firm content, not hard-coded; the values are routed to the Immigration-SME (Ishaan), founder final" (AG-10-37).
+- Sorter reads content: "it reads the message content to propose the right file, **classifies** the message ... and **files each attachment to AG-9 with a proposed document type**" (AG-10 v1.9 §3.2). Classification values are "pack/firm content, not hard-coded; the values are routed to the Immigration-SME [name withheld], founder final" (AG-10-37).
 - Document classification moved to Reader: "the Reader — not the Sorter — classifies documents. Release 1 covers identity documents, IRCC/government letters, language test results and ECA reports" (§13 Q12, decided AG11-D18(e)).
 - Drafter: "The **AI-assist drafter** is the **Drafter Doer**, callable by the rep in the composer and by any recipe" (AG-10-15). Today's code already has "**AI draft** (Anthropic, with a no-over-promise system prompt and a graceful \"not configured\" path)" (§12).
 - Ranked suggestions in Unmatched inbox: "with ranked suggested entities" (AG-10-12); the matcher learns: "which also teaches the matcher the address→Contact mapping for next time" (§3.2).

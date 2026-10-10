@@ -211,7 +211,7 @@ Two operating rules make this scale: **one knock-on day a week** (apply all pend
 | Conductor, Doers, Needs you | The automation engine ("when X, do Y"), its named workers (Minder for dates, Reader for documents, and so on), and the inbox of items waiting for a person's approval |
 | Four-eyes, Filler, deficiency library | A second person approving a government form; the engine that would fill government forms; the list of standard reasons a case is not ready |
 | Golden journey, G1 to G6 | The nine end-to-end business scenarios that must pass before launch; the six founder gates of the Charter |
-| SME, RCIC, CICC | The Immigration Subject Matter Expert (Ishaan); Regulated Canadian Immigration Consultant; the College that regulates them |
+| SME, RCIC, CICC | The Immigration Subject Matter Expert [name withheld]; Regulated Canadian Immigration Consultant; the College that regulates them |
 | Must now / Should now | The Release 1 priority labels used in §0.3 of a reviewed module |
 
 ## 10. Sources cited
