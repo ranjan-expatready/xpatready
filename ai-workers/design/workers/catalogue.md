@@ -66,7 +66,7 @@ AI Worker output is approved by a **named person, whoever the firm's own setting
 | D2 | Canada pack content (checklists, box maps, deadline rules, obligation catalogue, deficiency library, Reader field lists, plain-words rule reasons) | *Content*, not authored (SA-01 v2.2 §0 Parked, §12; SA-01B v1.2 §12) | Charter V2 dates |
 | D3 | The delegation record and, for twins, the permission subset | *Proposed* (IMP-1, IMP-2, IMP-22, IMP-23) | §1.1 |
 | D4 | Release labels conflict (Charter, SCOPE-TRIAGE, module files); precedence rule | *Open for Ranjan* (IMP-31) | `../inventory/foundation.md` Part 3 |
-| D5 | The Minder | *Specified* (AG-11 §3.4), **not built**: AG-11-47 "Today the Minder does not exist" (AG-11 v1.11 §12); Charter leaves the watcher open (`foundation.md` C8) | IMP-41 |
+| D5 | The Minder | *Specified* (AG-11 §3.4), **not built**: AG-11-47 "Today the Minder does not exist" (AG-11 v1.11 §4); Charter leaves the watcher open (`foundation.md` C8) | IMP-41 |
 | D6 | Reader and Sorter confidence thresholds; shadow-then-trust rule | *Open* (AG-11 §13 Q11); *Proposed* (IMP-30) | — |
 | D7 | Case spine (Case, Filing, Deficiency, Submission, Decision) | *Specified*, **not built** (AG-07 v2.7 §12) | — |
 | D8 | Audit attribution of AI work | *Proposed* (IMP-2) | inventory X7 |
@@ -346,7 +346,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Replaces:** SA-01 v2.2 §1 and §3.13 manual authoring; form maps as manual specialist work (`doc2-admin.md` Part 3 item 12, L160); content not yet existing (`doc2-admin.md` Part 5 item 12, L276); the overdue-review queue (SA-1B-40).
 - **Uses:** SA-01 §3.12, §3.13; SA-01B §3.5 to §3.7; SA-11 §3.9.
 - **New (Proposal):** the already-permitted, deferred features SA-1B-33 and SA-1B-34 (SA-01B §0.3 Defer) brought into scope, plus reference-table drafting.
-- **Guardrails and approval point:** SA-01 §3.12 two-person rule; SA-1B-35; SA-01B §3.6 source and review dates; G16. **Approval point:** the Content Approver; values by SME and founder (SA-01 §13).
+- **Guardrails and approval point:** SA-01 §3.12 two-person rule; SA-1B-35; SA-01B §3.6 source and review dates; G16. **Approval point:** the Content Approver; values by the Immigration SME, product owners final (SA-01 v2.2 §13; BR-15).
 - **Who has solved it (evidence):** **Unknown**; VisaFlo builds form automation by hand (`visaflo.md` §12).
 - **Difficulty:** Medium to Hard (XFA: SA1B-D28). **Value:** our content cost; scale across countries (autopilot design §5). **Cost drivers:** model calls per form page; approver time. **Dependencies:** D2 Content; filler *Built but refuses XFA* (SA-01B §12); SA1B-D18, SA1B-D23 *decided against tests and library*. Values: confirm with counsel / RCIC.
 - **Why it sells (internally; Proposal wording):** *A new IRCC form edition mapped in hours, checked by a person.*
@@ -383,7 +383,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Job:** suggests category, priority and route; drafts the first reply from the bilingual knowledge base; drafts an article from each resolved ticket.
 - **Works for:** Expat Ready Support (SA-07 v2.10: a 4 to 6 person team).
 - **Replaces:** SA-10 v2.5 §1 manual triage and replies. Inventory: `sa-frs.md` L208 to L214.
-- **Uses:** SA-10 §3.2 to §3.3 keyword hints (SA-10-7), §3.9, §3.10.
+- **Uses:** SA-10 §3.2 to §3.3 keyword hints (SA-10-7), §3.9.
 - **New (Proposal):** AI drafting; launch posture stays suggest-only (SA-10 §13 Q7, Q8).
 - **Guardrails and approval point:** SA-10 BR-4; Immigration Content routes to the Content Manager; SA-2-17; AG-18-47; G16. **Approval point:** the support agent.
 - **Who has solved it (evidence):** common everywhere. **Solved elsewhere; margin only.**
@@ -467,7 +467,7 @@ Fields: **Shape** · **Job** · **Works for** · **Replaces** (manual work today
 - **Replaces:** the Content Manager's authoring of every content value (SA-01 v2.2 §3.2), form uploads and bulk table uploads (§1, §3.13), sample-client building for dry-runs (§3.13) and re-reading official pages for currency (AG-17 v0.5 §3.1). Inventory: `sa-frs.md` L72, L74, L76; `ag-frs-2.md` L138.
 - **Uses:** SA-01, SA-01B, SA-05 (non-legal bodies), SA-11 §3.9.
 - **New (Proposal):** subset: pack draft and submit; never approve, publish, rollback (SA-01 §3.12). SA-07 has no route for a non-human staff account (`sa-frs.md` Part 3 SA-07, L444): D3 on the admin plane.
-- **Guardrails and approval point:** SA-01 §3.12; SA-5-23; G12; G16. **Approval point:** Content Approver; values by SME and founder.
+- **Guardrails and approval point:** SA-01 §3.12; SA-5-23; G12; G16. **Approval point:** Content Approver; values by the Immigration SME, product owners final (SA-01 v2.2 §13; BR-15).
 - **Who has solved it (evidence):** **Unknown**; no rival shows pack-as-data (`field-scan.md` §4 row 8).
 - **Difficulty:** Medium to Hard. **Value:** content cost and country speed (autopilot design §6). **Cost drivers:** model calls per page watched, per form page and per program per version; approver time. **Dependencies:** D2 Content; D3 Proposed; XFA (*Built engine refuses it*); SA-01B source fields *Specified, not built*. Values: confirm with counsel / RCIC.
 - **Why it sells (internally, investors; Proposal wording):** *A country pack kept current by an assistant, approved by two people, every change traceable.*
