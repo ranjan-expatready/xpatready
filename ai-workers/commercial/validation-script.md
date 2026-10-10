@@ -2,12 +2,12 @@
 
 *Workstream 2, wave W3b. Written by the commercial-strategist agent on 9 Oct 2026. Draft for the Lead to merge; it changes nothing in `../../commercial/` on its own. Status of everything in this file: **Proposal** unless a line cites a file or URL. Companion file: [`price-card.md`](price-card.md) (the three options the conversation tests).*
 
-**Why this exists.** The direction review says the riskiest assumption is untested and cheap to test: "Firms will pay per prepared file" has no evidence; "Five peers from your network, one demo, one price card, one hour each. Until then every pricing number is a guess" (`../design/direction-review-2026-10-09.md` §2 item 2). The business plan already schedules "20 problem conversations with warm contacts (guide and order form drafted first)" as action 5, marked † "Needs Ranjan's go-ahead before anyone is contacted" (`../../commercial/plan.md` v1.1 §8). This script is that guide, extended with the two AI Worker stories and the price test, so a firm is interviewed once, not twice (proposal logged in `../proposals.md`).
+**Why this exists.** The direction review says the riskiest assumption is untested and cheap to test: "Firms will pay per prepared file" has no evidence; "Five peers from your network, one demo, one price card, one hour each. Until then every pricing number is a guess" (`../design/direction-review-2026-10-09.md` §2 item 2). The business plan already schedules "20 problem conversations with warm contacts (guide and order form drafted first)" as action 5, marked † "Needs the founder's go-ahead before anyone is contacted" (`../../commercial/plan.md` v1.1 §8). This script is that guide, extended with the two AI Worker stories and the price test, so a firm is interviewed once, not twice (proposal logged in `../proposals.md`).
 
 **Who runs it.** The plan proposes "the licensed founder-consultant sells Expat Ready personally to owners of small immigration-consultant practices" (`plan.md` §1). The same person runs this script. A second person takes notes so the interviewer can listen.
 
 **Before the first call (checklist for the founder).**
-1. Ranjan's go-ahead (plan.md §8, action 5 †).
+1. The founder's go-ahead (plan.md §8, action 5 †).
 2. Counsel has confirmed the outreach rules in `plan.md` §4 ("Contact warm contacts first … Do not scrape the CICC register … Always identify ourselves … Counsel confirms these rules before outreach starts").
 3. Ten target rows filled in (§7 below). Names stay in a private file, never in this folder (proposal in `../proposals.md`).
 4. The two stories in §3 rehearsed out loud. If the clickable File Builder demo in the simulator exists by then (direction review §6 step 4), show it, labelled "simulator — not the product" (`plan.md` §4). If it does not, tell the stories with the one-page storyboard in §3 and say so.
@@ -243,9 +243,9 @@ Who qualifies (Proposal, from the task brief and `plan.md` §2's first-buyer pro
 
 ---
 
-## 11. Open questions for Ranjan
+## 11. Open questions for the founder
 
 1. Does this script replace the plan's "20 problem conversations" guide (`plan.md` §8 action 5), or run alongside it? Recommendation: replace, so each firm is asked once.
-2. Who runs the calls: the licensed founder-consultant named in action 2 of `plan.md` §8 (still unnamed), Ranjan, or Sanjay? The regulator questions land better from a licensed peer.
+2. Who runs the calls: the licensed founder-consultant named in action 2 of `plan.md` §8 (still unnamed), the founder, or the co-founder? The regulator questions land better from a licensed peer.
 3. Will the clickable File Builder demo (direction review §6 step 4) exist before the first call? If not, the stories go verbal with the storyboard; say so in the wave brief.
 4. Lawyers: the three regulator questions are written for RCICs; counsel should confirm the equivalent law-society wording before a lawyer is interviewed.

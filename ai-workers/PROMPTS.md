@@ -1,4 +1,4 @@
-# Prompts for Ranjan: copy, paste, done
+# Prompts for the founder: copy, paste, done
 
 You don't need to know how to prompt. Every new session already loads `NEXT.md` and a freshness report automatically (hook in `.claude/settings.json`). These prompts just tell Claude what you want next.
 
@@ -54,7 +54,7 @@ Design Expat Ready's AI Workers: governed AI users of our own product that do th
 Label every assumption. Invent nothing. Tell me what I'm missing.
 ```
 
-## 7. What Ranjan must change in the Program Charter (only he can)
+## 7. What the founder must change in the Program Charter (only he can)
 
 The Charter lives on Drive in the Program Management folder (`1T3GRrvwDmPRbBChvGCrnmENgcYhwAfQr`): "Program Charter_V2.pptx" (slides, 6 Oct) and "Program Charter V1 - G1 expanded" (text). The team plans from it. Four edits:
 
@@ -67,4 +67,4 @@ How: open the slide or document on Drive, edit, and tell the team in your usual 
 
 ## 8. The Corporate/LMIA folder
 
-AG-17 (corporate cases and LMIA) cites a Drive folder holding `DECISION-LOG.md` and `SA-01-SA-01B-CHANGE-NOTE.md` (decision D83 is referenced). Neither Sanjay's nor Ranjan's account can see it, so our snapshot has `05-corporate-lmia/NOT-FOUND.md`. Ask whoever wrote AG-17 v0.5 (the author is named in its header on Drive) to share that folder with sanjay@ and ranjan@expatready.com, view access is enough. Then the next session re-snapshots it.
+AG-17 (corporate cases and LMIA) cites a Drive folder holding `DECISION-LOG.md` and `SA-01-SA-01B-CHANGE-NOTE.md` (decision D83 is referenced). Neither the co-founder's nor the founder's account can see it, so our snapshot has `05-corporate-lmia/NOT-FOUND.md`. Ask whoever wrote AG-17 v0.5 (the author is named in its header on Drive) to share that folder with the co-founder's account and the founder's account, view access is enough. Then the next session re-snapshots it.

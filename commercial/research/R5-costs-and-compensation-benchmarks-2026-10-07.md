@@ -70,7 +70,7 @@ Statistics Canada, *The Daily — Labour Force Survey, August 2026* (released 4 
 | Typical base/commission split (OTE) for SaaS account executives, SDRs, customer success | **No primary source.** No government source publishes splits. GitLab's public handbook (a provider's own published policy) confirms that sales roles are paid on OTE but says "The split between base and commission varies by role". It publishes no split. Third-party salary sites were not used. |
 | Do Job Bank wages include commission? | **Yes.** Labour Force Survey wages "include tips and commissions" (Job Bank wage methodology). |
 | On-costs on commission | Vacation pay (4% or 6%) applies to commissions (Ontario ESA). EHT remuneration includes bonuses. CPP and EI apply to employment income up to the maximums above. |
-| What to do instead | Treat the plan as a decision, not a benchmark. Set a scenario in the workbook (for example, central = Job Bank median as total cash, with the split decided by Ranjan). Validate with 2–3 recruiter quotes before any offer. |
+| What to do instead | Treat the plan as a decision, not a benchmark. Set a scenario in the workbook (for example, central = Job Bank median as total cash, with the split decided by the founder). Validate with 2–3 recruiter quotes before any offer. |
 
 ---
 
@@ -173,7 +173,7 @@ All prices are the provider's own published "from" or "starting at" figures, che
 | Head of sales (higher capacity only) | 75,000 | 116,100 | 286,800 | per FTE per year | CAD | Job Bank 60010 Toronto | M |
 | Bookkeeper, employed part-time | 18.00 | 29.22 | 47.36 | per hour | CAD | Job Bank 12200 Toronto | H |
 | Uplift from 2023–24 to 2026 pay levels | 0% | +5.5% | not sourced | % of pay | — | StatCan LFS Aug 2026 (calc. 1.034 × 1.020) | L |
-| Commission / OTE split | — | — | — | — | — | **No primary source. Decision for Ranjan.** | — |
+| Commission / OTE split | — | — | — | — | — | **No primary source. Decision for the founder.** | — |
 | Employer CPP + CPP2 + EI | 3,085 (at $40k) | 6,019 (at $80k) | 6,219 (cap, ≥ $85k) | per employee per year | CAD | CRA 2026 rates (calc.) | H |
 | Ontario EHT | 0 | 0 | 1.95% of payroll above $1M | per year | CAD | Ontario EHT page | H |
 | Vacation pay on commission and hourly pay | 4% | 4% | 6% (5+ years) | % of those wages | — | Ontario ESA | H |

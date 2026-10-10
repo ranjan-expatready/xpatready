@@ -50,7 +50,7 @@ INPUTS = [
      "After counsel has reviewed the founding offer and the website claims are corrected.", True),
     ("sec", "Cash at the start"),
     ("OpeningINR", "Founder capital available (INR)", 20000000, '#,##0', "INR", "STATEMENT",
-     "Ranjan, 7 Oct: INR 2 crore of capital reported as provided by Sanjay. Used as an unverified opening-cash assumption, not proven current cash. Replace with a dated bank balance.", True),
+     "The founder, 7 Oct: INR 2 crore of capital reported as provided by the co-founder. Used as an unverified opening-cash assumption, not proven current cash. Replace with a dated bank balance.", True),
     ("FxINR", "Exchange rate", 0.01476, '0.00000', "CAD per INR", "FACT",
      "Bank of Canada, 6 Oct 2026.", True),
     ("OpeningCash", "Opening cash (CAD) — calculated", "=OpeningINR*FxINR", CAD, "CAD", "CALC", "Calculated; do not type here.", False),
@@ -58,7 +58,7 @@ INPUTS = [
      "About two months of non-product costs plus a cushion. The 'funding gap' is measured against this line.", True),
     ("sec", "Prices (CAD per firm per month, before tax)"),
     ("PriceSolo", "Solo plan (1 practitioner + 1 assistant)", 89, CAD, "CAD/month", "PROPOSAL",
-     "Proposal, not approved. Per-firm pricing changes the per-seat unit in ratified FD-18 — needs Ranjan's yes. The model prices per firm; per-seat pricing would need a seat-count input added.", True),
+     "Proposal, not approved. Per-firm pricing changes the per-seat unit in ratified FD-18 — needs the founder's yes. The model prices per firm; per-seat pricing would need a seat-count input added.", True),
     ("PricePractice", "Practice plan (up to 4 users)", 229, CAD, "CAD/month", "PROPOSAL", "As above.", True),
     ("PriceFirm", "Firm plan (up to 10 users)", 549, CAD, "CAD/month", "PROPOSAL", "As above.", True),
     ("MixSolo", "Share of new firms choosing Solo", 0.50, PCT, "%", "ASSUMPTION", "The three shares must add up to 100%.", True),
@@ -97,7 +97,7 @@ INPUTS = [
     ("NonRenew", "Annual firms that do not renew at each anniversary", 0.20, PCT, "% per renewal", "ASSUMPTION", "", True),
     ("sec", "Necessary costs (CAD per month unless stated) — kept because the plan cannot run safely without them"),
     ("ProductCost", "Product and engineering team (all-in)", 25000, CAD, "CAD/month", "PLACEHOLDER",
-     "UNKNOWN. Placeholder until Ranjan/Sanjay give the actual monthly cost and commitments. This number moves the cash answer more than anything else.", True),
+     "UNKNOWN. Placeholder until the founder/the co-founder give the actual monthly cost and commitments. This number moves the cash answer more than anything else.", True),
     ("ProductCut", "Product cost reduction (option, not decided)", 0, PCT, "%", "OPTION",
      "A separate, explicit choice. 0 = no cut.", True),
     ("ProductCutFrom", "Product cost reduction starts", None, MON, "month", "OPTION", "Blank = no cut.", False),
@@ -183,7 +183,7 @@ def add_name(name, ref):
 ws_in["A1"] = "Inputs — the only place to type numbers"
 ws_in["A1"].font = TITLE
 ws_in["A2"] = ("Type in the yellow cells (blue text). Orange = unknown placeholder. Status says what kind of number it is: "
-               "FACT (checked source), STATEMENT (from Ranjan, not verified), PROPOSAL (Claude's recommendation, not approved), "
+               "FACT (checked source), STATEMENT (from the founder, not verified), PROPOSAL (Claude's recommendation, not approved), "
                "ASSUMPTION (a guess to replace with evidence), OPTION (a choice to test), CALC (calculated).")
 ws_in["A2"].font = GREY
 ws_in["A2"].alignment = WRAP
@@ -727,9 +727,9 @@ lines = [
      "After launch this is not yet supported, because the model has no input for customers already paying. Add one only when there are real customers.", BLACK),
     ("", BLACK),
     ("What the numbers are", BOLD),
-    ("• Opening cash uses the INR 2 crore of capital Ranjan reported as provided by Sanjay, an unverified assumption, not a bank balance. The product-team cost is a placeholder. Until both are replaced, the cash answers are illustrative.", BLACK),
+    ("• Opening cash uses the INR 2 crore of capital the founder reported as provided by the co-founder, an unverified assumption, not a bank balance. The product-team cost is a placeholder. Until both are replaced, the cash answers are illustrative.", BLACK),
     ("• Every customer number is a planning experiment, not a growth promise. No records of customer conversations, pilots or commitments were found in the project files.", BLACK),
-    ("• Prices are a proposal, per firm. Ratified decision FD-18 says per seat; Ranjan decides. Per-seat pricing would need a seat-count input added to the model.", BLACK),
+    ("• Prices are a proposal, per firm. Ratified decision FD-18 says per seat; the founder decides. Per-seat pricing would need a seat-count input added to the model.", BLACK),
     ("", BLACK),
     ("How it works (in brief)", BOLD),
     ("• Founding orders signed before launch go live in the launch month. After launch, new firms = conversations x close rate, plus referrals from live firms. Deals close in the month of the conversation.", BLACK),

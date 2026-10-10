@@ -45,9 +45,9 @@ I("CAL.START", "CAL", "Forecast start (month 1)", "date", D(2026, 10, 1), lo=DMI
 I("CAL.HORIZON", "CAL", "Forecast horizon reported", "months", 36, lo=12, hi=60, status="Proposal",
   source="Codex brief §1 proposes 36 months")
 I("CAL.LAUNCH", "CAL", "Launch month (onboarding of paying firms starts)", "date", D(2027, 3, 1), lo=DMIN, hi=DMAX,
-  status="Decision (target)", source="Charter v6 slide 1: market launch 12 Mar 2027; team confirms 9 Oct (DEC-10)", owner="Ranjan", fmt="date")
+  status="Decision (target)", source="Charter v6 slide 1: market launch 12 Mar 2027; team confirms 9 Oct (DEC-10)", owner="The founder", fmt="date")
 I("CAL.ACT_CUTOFF", "CAL", "Actuals cutoff: last closed month (blank = no actuals yet)", "date", None, req="N", lo=DMIN, hi=DMAX,
-  status="Fact (none yet)", source="No verified actuals as of 7 Oct 2026 (OBS-8)", owner="Sanjay / finance", fmt="date")
+  status="Fact (none yet)", source="No verified actuals as of 7 Oct 2026 (OBS-8)", owner="The co-founder / finance", fmt="date")
 I("CAL.FX_INR", "CAL", "Exchange rate", "CAD per INR", 0.01476, lo=0.005, hi=0.05, status="Fact",
   source="Bank of Canada FXINRCAD, 6 Oct 2026 (FX-1)", fmt="fx")
 I("CAL.MILESTONE", "CAL", "Funding milestone month (reporting point)", "date", D(2028, 3, 1), lo=DMIN, hi=DMAX,
@@ -55,19 +55,19 @@ I("CAL.MILESTONE", "CAL", "Funding milestone month (reporting point)", "date", D
 
 # ---- Cash
 I("CASH.OPEN_INR", "CASH", "Opening founder capital (statement, not a verified bank balance)", "INR", 20_000_000, lo=0, hi=1e10,
-  status="Founder statement", source="Ranjan 7 Oct 2026 (RAN-10): INR 2 crore provided by Sanjay", owner="Sanjay", fmt="int")
+  status="Founder statement", source="The founder 7 Oct 2026 (RAN-10): INR 2 crore provided by the co-founder", owner="The co-founder", fmt="int")
 I("CASH.OPEN_VERIFIED", "CASH", "Opening cash verified against a bank statement? (1 = yes, 0 = no)", "flag", 0, lo=0, hi=1,
-  status="Fact", source="Not verified as of 7 Oct 2026", owner="Sanjay / finance", fmt="int")
+  status="Fact", source="Not verified as of 7 Oct 2026", owner="The co-founder / finance", fmt="int")
 I("CASH.FLOOR", "CASH", "Minimum cash reserve (floor)", "CAD", 50_000, lo=0, hi=5e6, status="Proposal",
-  source="Proposal: about 1 month of base costs; configurable (CR-06)", owner="Ranjan", fmt="cad")
+  source="Proposal: about 1 month of base costs; configurable (CR-06)", owner="The founder", fmt="cad")
 I("CASH.RESERVE_M", "CASH", "Forward reserve after milestone, for raise sizing", "months", 6, lo=0, hi=24, status="Proposal",
   source="Proposal; YC guidance: raise for 12-18 months (R4 §8)")
 
 # ---- Funding
 I("FUND.AMT", "FUND", "Proposed funding amount (scenario, not committed)", "CAD", 1_000_000, lo=0, hi=2e7, status="Proposal",
-  source="A3 F-1 scenario; investor interest unverified", owner="Ranjan / Sanjay", fmt="cad")
+  source="A3 F-1 scenario; investor interest unverified", owner="The founder / the co-founder", fmt="cad")
 I("FUND.DATE", "FUND", "Funding cash received (end of month; blank = none)", "date", D(2027, 2, 1), req="N", lo=DMIN, hi=DMAX,
-  status="Proposal", source="Scenario; cash counts on receipt, not commitment (CR-06)", owner="Ranjan / Sanjay", fmt="date")
+  status="Proposal", source="Scenario; cash counts on receipt, not commitment (CR-06)", owner="The founder / the co-founder", fmt="date")
 I("FUND.FEE_PCT", "FUND", "Placement fee on funds raised", "%", 0.0, lo=0, hi=0.2, status="Proposal",
   source="A3 F-4: no success-fee intermediary for pre-seed; Equivesto publishes 7% or 1.5% (FND-3)", fmt="pct")
 I("FUND.FEE_FIXED", "FUND", "Fixed placement or platform fee", "CAD", 0, lo=0, hi=1e6, status="Proposal",
@@ -77,11 +77,11 @@ I("FUND.LEGAL", "FUND", "Legal cost of the round (paid in the funding month)", "
 I("FUND.LEAD_M", "FUND", "Fundraising process lead time", "months", 4, lo=0, hi=18, status="Assumption",
   source="Assumption; A3 plans Feb-May 2027")
 I("FUND.BRIDGE_AMT", "FUND", "Founder bridge amount (option, not a commitment)", "CAD", 0, lo=0, hi=1e7, status="Proposal",
-  source="A3 F-2 lists a Sanjay bridge as an option only", owner="Sanjay", fmt="cad")
+  source="A3 F-2 lists a the co-founder bridge as an option only", owner="The co-founder", fmt="cad")
 I("FUND.BRIDGE_DATE", "FUND", "Founder bridge received (blank = none)", "date", None, req="N", lo=DMIN, hi=DMAX,
-  status="Proposal", source="Option only", owner="Sanjay", fmt="date")
+  status="Proposal", source="Option only", owner="The co-founder", fmt="date")
 I("FUND.GOV_AMT", "FUND", "Government programme cash (excluded from base)", "CAD", 0, lo=0, hi=5e6, status="Proposal",
-  source="Eligibility unconfirmed (FND-1; CR-10)", owner="Sanjay / accountant", fmt="cad")
+  source="Eligibility unconfirmed (FND-1; CR-10)", owner="The co-founder / accountant", fmt="cad")
 I("FUND.GOV_DATE", "FUND", "Government programme cash received (blank = none)", "date", None, req="N", lo=DMIN, hi=DMAX,
   status="Proposal", source="Eligibility unconfirmed", fmt="date")
 I("FUND.CAP1", "FUND", "Illustrative post-money cap 1 (dilution table only)", "CAD", 5_000_000, lo=1e5, hi=1e9, status="Proposal",
@@ -158,7 +158,7 @@ I("PART.AFF_PAY_LAG", "PART", "Commission paid after (quarterly after 60-day cla
 
 # ---- Selling
 I("SELL.PRESALE_START", "SELL", "Founder pre-launch selling starts", "date", D(2026, 11, 1), lo=DMIN, hi=DMAX, status="Proposal",
-  source="A4 A-08/A-09; needs Ranjan's instruction to contact anyone", fmt="date")
+  source="A4 A-08/A-09; needs the founder's instruction to contact anyone", fmt="date")
 I("SELL.PRE_CONV", "SELL", "Pre-launch qualified founder conversations wanted per month", "per month", 15, lo=0, hi=1000, status="Assumption",
   source="Tests HYP-5")
 I("SELL.FOUND_RATE", "SELL", "Conversations that become founding commitments", "%", 0.20, lo=0, hi=1, status="Assumption",
@@ -205,7 +205,7 @@ I("RET.COLLECT_LAG", "RET", "Share of each month's invoices collected next month
 
 # ---- Costs
 I("COST.PRODUCT", "COST", "Product and engineering team cost (all-in)", "CAD/month", 25_000, lo=0, hi=1e6,
-  status="Placeholder scenario", source="UNKNOWN actual (QB-1); placeholder only", owner="Ranjan / Sanjay", fmt="cad")
+  status="Placeholder scenario", source="UNKNOWN actual (QB-1); placeholder only", owner="The founder / the co-founder", fmt="cad")
 I("COST.PRODUCT_COGS", "COST", "Share of product team cost that is production operations (service delivery)", "%", 0.10, lo=0, hi=1,
   status="Proposal", source="Allocation policy (CR-05)", fmt="pct")
 I("COST.PROD_CUT_PCT", "COST", "Product cost reduction (managed case lever; not decided)", "%", 0.0, lo=0, hi=1, status="Proposal",
@@ -259,7 +259,7 @@ ROLES = [
 ]
 for rid, rname, req, cost, alloc in ROLES:
     I(f"ROLE.{rid}.REQ", "ROLE", f"{rname}: requested start (blank = not requested)", "date", req, req="N", lo=DMIN, hi=DMAX,
-      status="Proposal", source="A4 §3.3", owner="Ranjan", fmt="date")
+      status="Proposal", source="A4 §3.3", owner="The founder", fmt="date")
     I(f"ROLE.{rid}.COST", "ROLE", f"{rname}: loaded cost", "CAD/month", cost, lo=0, hi=1e5, status="Estimate",
       source="R5 Job Bank medians + 5.5% uplift + CPP/EI + $3,600 benefits (CST-1, CST-2)", fmt="cad")
     for k, cls in enumerate(["COGS", "SM", "RD", "GA"]):

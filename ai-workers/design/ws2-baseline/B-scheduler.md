@@ -71,7 +71,7 @@ Requirement rows: **42**.
 ## Gaps noticed
 
 - Release split: AG-04 v1.5 specifies paid consults, round-robin, calendar sync, video connectors and analytics without Release labels (it still uses "Phase" and "demo" wording in §13); the scope review proposes moving most of them and dropping the in-house video room. No founder answer to the proposals is in the snapshot.
-- FD-13 (ratified 3 Jul 2026) makes the in-house WebRTC room the v1 video adapter; AG-04 defers full WebRTC and the scope review proposes dropping the room. Changing FD-13 needs Ranjan's yes.
+- FD-13 (ratified 3 Jul 2026) makes the in-house WebRTC room the v1 video adapter; AG-04 defers full WebRTC and the scope review proposes dropping the room. Changing FD-13 needs the founder's yes.
 - Two reminder systems: consult reminders are scheduled by the Scheduler's own rules (AG-4-31, AG-4-34) while AG-11 and the scope review want one reminder system.
 - Deterministic: slot maths, locking, timezone, ICS, lifecycle events. Human steps: staff mark Completed or No-show and fill the consult record; "Create proposal from consult" is a person's action that hands to the Drafter and Signer.
 - Audit: lifecycle events end in AuditLog (AG-04 L391). No requirement says what is audited for a public self-service booking or reschedule beyond the event itself.

@@ -6,7 +6,7 @@
 
 **Scope of this file.** AG-11 v1.11 (read in full) sections on the engine, triggers, conditions, actions, the Minder, recipes, execution, simulation, lifecycle, guardrails, timezone, imports and WhatsApp sending; plus every other source that defines the Conductor. Approvals and autonomy are in `A-approval-and-autonomy.md`; the four AI Doers in `A-ai-doers.md`; the AI switch and providers in `A-ai-switch-provider-residency.md`; run history and audit in `A-ai-logging-and-audit.md`.
 
-**How to read the table.** The exact-words column is copied from the source; `…` marks words left out. Bold, italics and code marks in the source are dropped. L-numbers are line numbers in the snapshot file (`sources/drive-snapshot-2026-10-09/`). Who decided: AG-11 decisions AG11-D1 to D18 are "Decided by Sanjay (product owner)" (AG-11 v1.11 L22); they are not Founder Decisions Log (FD) items.
+**How to read the table.** The exact-words column is copied from the source; `…` marks words left out. Bold, italics and code marks in the source are dropped. L-numbers are line numbers in the snapshot file (`sources/drive-snapshot-2026-10-09/`). Who decided: AG-11 decisions AG11-D1 to D18 are "Decided by the co-founder (product owner)" (AG-11 v1.11 L22); they are not Founder Decisions Log (FD) items.
 
 **Release labels used below (exact words of the label source).**
 - **R1-AG11** = AG-11 v1.11 §13 Phasing L1291 "Release 1:" and L1297 "A minimal Conductor (AG11-D3): triggers (entity events incl. the four agent-native ones, scheduled at the seeds' standard cadences, date-anchored, manual), conditions, Doer dispatch, idempotency keys (§3.6), retry/dead-letter, guardrails incl. CASL gate, rate caps and loop guard (§3.10), run-history (§3.9), dry-run (§3.7)."
@@ -151,7 +151,7 @@
 | AG-11 §13 Q10 | Business-hours mode default (on/off) and the firm/office timezone source of truth (firm-level vs per-office). | AG-11 v1.11 §13, L1264 | Open | — |
 | AG-11 §13 named deferrals | External message broker for cross-service events (Release 2 or later) — in-process emit → Bull now, behind the same envelope contract. | AG-11 v1.11 §13, L1315 | Text: Release 2 or later | — |
 | AG-11 §13 named deferrals | Cross-module "automation marketplace" / shareable recipes between firms (later release). | AG-11 v1.11 §13, L1318 | Text: later release | — |
-| Charter V2 notes slide 1 | NOT IN RELEASE 1. AI-assisted features; the AG-11 automation engine and its Doers (rule-based "when X, do Y" tools such as Minder, Tasker and Messenger; … | Charter V2 pptx notes slide 1 | Not in Release 1 | Conflicts with AG11-D3, AG-11 §13 Phasing and Agent Phasing v1.4 L19. Decision AIW-D1 puts it in Workstream 2 scope; only Ranjan can change the Charter. |
+| Charter V2 notes slide 1 | NOT IN RELEASE 1. AI-assisted features; the AG-11 automation engine and its Doers (rule-based "when X, do Y" tools such as Minder, Tasker and Messenger; … | Charter V2 pptx notes slide 1 | Not in Release 1 | Conflicts with AG11-D3, AG-11 §13 Phasing and Agent Phasing v1.4 L19. Decision AIW-D1 puts it in Workstream 2 scope; only the founder can change the Charter. |
 | Charter V1 md | AI-assisted features · Automation engine (AG-11) and its Doers · Advanced engagement scoring. Earlier exclusions: Appendix A. | Charter V1 md, L107 | Under "NOT IN RELEASE 1" heading | Same conflict. |
 | SCOPE-TRIAGE status | A review file, not a requirements document. Nothing here has changed any spec. | SCOPE-TRIAGE 2026-10-05 header, L3 | Not a scope source (says so itself) | Its AG-11 proposals (L141-152) are cited in rows above as proposals only. |
 
@@ -161,6 +161,6 @@
 - AG-11-5 lists "custom cron" with no release note, while AG11-D3 and §13 Phasing put custom cron in Release 2.
 - AG-11-9, AG-11-12 and AG-11-23 describe the builder; the builder is Release 2 (L1309), but the FRs carry no release label.
 - Doc 3 v1.4 (Jul) has a closed list of Doer actions that does not include the four AI Doer actions; AG-11 v1.11 (Oct) adds them. Doc 3 also has `invite_portal` and `create_work_item`, which AG-11-2 does not list.
-- Every AG-11 decision is "Decided by Sanjay (product owner)" (L22). None is a ratified Founder Decisions Log item, and the Charter V2 (6 Oct) still lists the engine as not in Release 1.
+- Every AG-11 decision is "Decided by the co-founder (product owner)" (L22). None is a ratified Founder Decisions Log item, and the Charter V2 (6 Oct) still lists the engine as not in Release 1.
 - Idempotency window, dead-letter policy, rate-cap values, storage choice and business-hours default are open (§13 Q5–Q10).
 - Inferred: no requirement says how a Doer run or a recipe's results are measured for quality beyond per-recipe approve/edit/reject counts (AG-11-63); AG-14 defines no metric for automation or Doers (W1 inventory ag-frs-2, AG-14 Part 3).

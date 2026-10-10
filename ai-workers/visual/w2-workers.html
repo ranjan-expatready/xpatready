@@ -131,7 +131,7 @@ ul{margin:0;padding-left:20px;display:grid;gap:6px}
   <h2>Your 22 decisions, in plain words</h2>
   <p class="muted">Deduplicated by the reviewer across the improvements, the catalogue and the proposals log. Each carries my recommendation. Say "yes to all except…" and I record the rest.</p>
   <div class="grid two" id="decs"></div>
-  <p class="src">checks/review-W2-2026-10-09.md "Decisions that genuinely need Ranjan" · design/ws2-improvements.md §10</p>
+  <p class="src">checks/review-W2-2026-10-09.md "Decisions that genuinely need the founder" · design/ws2-improvements.md §10</p>
 </section>
 
 <section id="honest" hidden>
@@ -189,7 +189,7 @@ const D=[
 ["Pause when no licensed user is active","Should workers stop preparing client-facing items when a firm has no active licensed user? This is a proposed exception to your rule AIW-D26.","Yes, as a firm setting the Owner may switch off with a reason."],
 ["Metering a prepared file","Define \"prepared file\" as a run whose readiness report a person approved; sell an allowance inside plans for the pilot; amend the \"no add-on prices\" rule at launch; role twins take no seat.","Yes to that sequence."],
 ["Doer names","Amend FD-8 so Minder (watches dates) and Reminder (sends nudges) are two Doers; keep \"Clocker\"; give the AI message writer a new one-word name so \"Drafter\" stays the template engine.","Yes; you pick the new name."],
-["Ratify the automation rules","Sanjay's AG11-D1 to D18 (and the SA6-D rows) go into the Founder Decisions Log, with the corrections proposed.","Yes, one batch."],
+["Ratify the automation rules","The co-founder's AG11-D1 to D18 (and the SA6-D rows) go into the Founder Decisions Log, with the corrections proposed.","Yes, one batch."],
 ["Hard limits list","Ratify what no worker may ever do: submit, fabricate, promise, export, write money, approve.","Yes, after counsel reads it."],
 ["Canada-only AI processing","Promise it; AI stays off if no Canadian option exists for the chosen model.","Yes; provider and region decided before any switch-on."],
 ["Which document wins, and the Charter","Adopt the rule that the newest module file wins; update the Charter (AI in scope, launch date, AG-18, CP-9, the Minder and Filler).","Yes."],
@@ -204,7 +204,7 @@ const D=[
 ["E-signature identity","Keep FD-21 (passcode before every signature) and update AG-05, or amend FD-21.","Keep FD-21; confirm with counsel."],
 ["Trust accounting","FD-17 says light trust accounting in v1; AG-06 defers it; FD-11 rules out credit notes but AG-6-6 names them.","Follow the founder decisions; fix the files."],
 ["Translation helper","Bring non-legal firm text translation (human-reviewed, legal text marked) into Workstream 2; AG-12 defers it today.","Yes."],
-["Corporate/LMIA folder","Resolved: it was never on Drive; the decisions are inside AG-17. Only the long reasoning is missing.","No action unless Sanjay wants it on Drive."]];
+["Corporate/LMIA folder","Resolved: it was never on Drive; the decisions are inside AG-17. Only the long reasoning is missing.","No action unless the co-founder wants it on Drive."]];
 document.getElementById('decs').innerHTML=D.map((d,i)=>`<div class="dec"><span class="n num">${i+1}</span><div><b>${d[0]}</b><div class="small">${d[1]}</div><div class="rec">${d[2]}</div></div></div>`).join('');
 const tabs=[...document.querySelectorAll('nav button')];
 function show(t){tabs.forEach(b=>b.setAttribute('aria-selected',b.dataset.t===t));document.querySelectorAll('section').forEach(s=>s.hidden=s.id!==t);try{localStorage.setItem('w2tab',t)}catch(e){}}

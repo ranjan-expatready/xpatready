@@ -1,6 +1,6 @@
 # Direction review: are we building the right thing, and what is missing? (9 Oct 2026)
 
-*Written as the Lead's brainstorm with Ranjan, at his request. Opinions are marked as such; facts cite the files.*
+*Written as the Lead's brainstorm with the founder, at his request. Opinions are marked as such; facts cite the files.*
 
 ## 1. Where we stand, in one paragraph
 
@@ -22,7 +22,7 @@ In one day we turned a voice note into a governed workstream: every current requ
 | 2 | **No AI provider with confirmed Canada-only processing** | Your rules (AG11-D15) keep AI off until one is recorded; the old code used the provider's standard service with no region | One hour: check which providers offer Canadian-region processing and no-training terms; record the answer, not an assumption |
 | 3 | **No cost per prepared file** | Decides margin and price | Estimate from the File Builder design: documents per file × model calls per document; label it Assumption |
 | 4 | **The Charter still says "no AI in Release 1"** | The team builds to it; we plan the opposite | You update it or write to the team |
-| 5 | **Who sells** | The commercial plan says the seller is undecided | Decide with Sanjay before W3 |
+| 5 | **Who sells** | The commercial plan says the seller is undecided | Decide with the co-founder before W3 |
 | 6 | **Twenty-two decisions waiting on you** | Each one unblocks design | One sitting, plain-words list on the updated page |
 
 ## 4. Ideas worth adding (my best-in-class suggestions, all Proposal)
@@ -43,10 +43,10 @@ A competitor with paying customers and shipped AI (VisaFlo) could add a readines
 | Step | What | Output |
 |---|---|---|
 | 1 | Finish W2 fixes (two agents running) and a short re-review | catalogue, improvements, review-W2 closed |
-| 2 | Update the visual page: workers on the product map, the 22 decisions in plain words | page republished; Ranjan decides in one sitting |
+| 2 | Update the visual page: workers on the product map, the 22 decisions in plain words | page republished; the founder decides in one sitting |
 | 3 | Provider and region check; cost-per-file estimate | `design/provider-and-cost.md` |
 | 4 | **Phase B for the File Builder**: requirements in the project's standard format (screens, worked examples, test cases) and a clickable demo in the simulator with the readiness report and shadow-mode summary | `product/requirements/screens/...`, demo in `product/app` |
-| 5 | W3b validation: demo script and price card; Ranjan runs 5–10 conversations | written reactions |
+| 5 | W3b validation: demo script and price card; the founder runs 5–10 conversations | written reactions |
 | 6 | W3c/d: pricing into the existing plan and model; investor story with 2–3 raise options | `commercial/` |
 
 Steps 1–3 can run in parallel; step 4 is the real work and starts as soon as step 1 closes.

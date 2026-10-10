@@ -88,7 +88,7 @@ Without assuming what it is: 25,000 is about 2.1 times the 11,994 RCICs in good 
 
 ## 2. Channel directory — ranked shortlist
 
-**How the ranking works.** Each factor scored 1–3, where 3 is best: **Fit** (are they practice owners in our beginning segment?), **Reach** (published size), **Cost** (3 = low or free), **Permission** (3 = a clear published route to market; 1 = no route or explicit restriction). Score = Fit × Reach × Cost × Permission (maximum 81). Scores are my judgement from the evidence below; Ranjan can re-weight.
+**How the ranking works.** Each factor scored 1–3, where 3 is best: **Fit** (are they practice owners in our beginning segment?), **Reach** (published size), **Cost** (3 = low or free), **Permission** (3 = a clear published route to market; 1 = no route or explicit restriction). Score = Fit × Reach × Cost × Permission (maximum 81). Scores are my judgement from the evidence below; the founder can re-weight.
 
 **Membership never equals permission to market.** Every route below needs a separate permission (sponsor agreement, organiser approval, or the College's approval of a CPD activity). Emails to individual practitioners are governed by Canada's anti-spam law (§3).
 

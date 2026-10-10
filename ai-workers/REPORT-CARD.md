@@ -2,20 +2,20 @@
 
 *Audited by the Lead at the start of every session. Ratings are the Lead's honest judgement, out of 10, with the evidence. Replace, don't append; git keeps history.*
 
-**Last audit:** 10 Oct 2026, evening session start (short, per rule 7). Setup: hooks ran, repo clean, plan (`PROGRESS.md`) and handoff (`NEXT.md`) agree: Step 1 ready for Ranjan, Step 2 blocked on decisions 1, 2 and 5. Freshness: Drive searched for files modified after 10 Oct 00:00 UTC: the same three team files as the morning check (Action_Item_Tracker, Full Build in Two Sprints, Super Admin Test Cases), none a requirement, no new snapshot. Code: ERv2-frontend `dev` moved to 1162ffb on 10 Oct (local copy 6643b33); not cited by any Workstream 2 file yet, copy when Step 3 reads code. Drift: none; this session's job is Ranjan's Step 1 decisions. Previous short audit: 10 Oct morning; previous full audit: 9 Oct 2026, 16:30 IST (§5).
+**Last audit:** 10 Oct 2026, evening session start (short, per rule 7). Setup: hooks ran, repo clean, plan (`PROGRESS.md`) and handoff (`NEXT.md`) agree: Step 1 ready for the founder, Step 2 blocked on decisions 1, 2 and 5. Freshness: Drive searched for files modified after 10 Oct 00:00 UTC: the same three team files as the morning check (Action_Item_Tracker, Full Build in Two Sprints, Super Admin Test Cases), none a requirement, no new snapshot. Code: ERv2-frontend `dev` moved to 1162ffb on 10 Oct (local copy 6643b33); not cited by any Workstream 2 file yet, copy when Step 3 reads code. Drift: none; this session's job is the founder's Step 1 decisions. Previous short audit: 10 Oct morning; previous full audit: 9 Oct 2026, 16:30 IST (§5).
 
 ## 1. The story so far (so a new session knows how we got here)
 
 | When | What happened |
 |---|---|
-| 8 Oct | Ranjan's voice brief: build an "AI Workers" layer on Expat Ready, study VisaFlo, pricing, business plan, investor story, visual map, resumable workflow. Setup created (README, agents, resume skill). He paused W1 to review. |
-| 9 Oct morning | Honest admission: the requirement documents had only been searched, not read. Automatic resume hook, decisions log, assumptions, prompts added. Ranjan gave full authority; W1 ran: fresh Drive snapshot (46 files), code copies, 7 readers read every file in full, VisaFlo and 40-competitor studies, email evidence, founders' June Doer specs. Hostile review found 3 blocking items; fixed. |
-| 9 Oct midday | Ranjan's decisions: everything AI is **Workstream 2** (ours); firms only; keep FD-16 (AI acts on behalf of a named person); File Builder wedge + Deadline Guardian hook; find every use case; four shapes (task, journey, role twin, expert co-pilot). |
-| 9 Oct afternoon | W2: reference index of 1,300+ AI/Doer/Conductor requirements, 28-worker catalogue, 41 improvements, hostile review (2 blocking); all fixed. Challenge review of every decision; Ranjan answered: assume everything is built, timelines not our concern, approval = human per the firm's role settings, co-pilot answers only, report after every step. |
+| 8 Oct | The founder's voice brief: build an "AI Workers" layer on Expat Ready, study VisaFlo, pricing, business plan, investor story, visual map, resumable workflow. Setup created (README, agents, resume skill). He paused W1 to review. |
+| 9 Oct morning | Honest admission: the requirement documents had only been searched, not read. Automatic resume hook, decisions log, assumptions, prompts added. The founder gave full authority; W1 ran: fresh Drive snapshot (46 files), code copies, 7 readers read every file in full, VisaFlo and 40-competitor studies, email evidence, founders' June Doer specs. Hostile review found 3 blocking items; fixed. |
+| 9 Oct midday | The founder's decisions: everything AI is **Workstream 2** (ours); firms only; keep FD-16 (AI acts on behalf of a named person); File Builder wedge + Deadline Guardian hook; find every use case; four shapes (task, journey, role twin, expert co-pilot). |
+| 9 Oct afternoon | W2: reference index of 1,300+ AI/Doer/Conductor requirements, 28-worker catalogue, 41 improvements, hostile review (2 blocking); all fixed. Challenge review of every decision; the founder answered: assume everything is built, timelines not our concern, approval = human per the firm's role settings, co-pilot answers only, report after every step. |
 | 9 Oct evening | Direction review; verification pass (code and Drive current, Charter quotes verified); local git history; W2 page published with 28 workers, product map and 22 decisions. |
-| 9 Oct, 16:30 | **Full audit (this card, §5).** Setup sound. Drive moved again (team document re-copied; a new team test-case sheet noted). 39 quotes and 5 competitor URLs checked, 0 wrong, 1 citation gap. Drift found: commercial deliverables unstarted while requirements work grew; process over-built; two of Ranjan's decisions contradict each other on timelines. Scores lowered where earned. |
-| 10 Oct | **Step 1 done, ready for Ranjan.** First task: Drive checked, the two never-opened folders opened, the team's Product Vision v1.0 found and filed. Maker wrote the AI organisation (7 personas, 28/28 workers). Hostile review: fail, fixable (2 blocking, 10 major, 19 minor; 91/95 citations held). Lead agreed and added: too register-like to sell with. Fix round: solo-firm chart first, free Deadline watch on its own, at-a-glance table, plain-words approvals with evidence lines. Re-check: pass with ten small fixes, applied by the Lead. One checker run was cut off by the weekly usage limit on the top model and re-run. |
-| 10 Oct, evening | **Ranjan decided Step 1** (AIW-D31 to D34): naming adopted with "Practice expert" kept internal, the seven personas, the delegation record under FD-16 with the named person as preparer, the Lead's four calls confirmed. Four decisions can wait (charge unit, admin-plane personas in the investor story, hard limits, IMP-17(b)). Step 2 unblocked. |
+| 9 Oct, 16:30 | **Full audit (this card, §5).** Setup sound. Drive moved again (team document re-copied; a new team test-case sheet noted). 39 quotes and 5 competitor URLs checked, 0 wrong, 1 citation gap. Drift found: commercial deliverables unstarted while requirements work grew; process over-built; two of the founder's decisions contradict each other on timelines. Scores lowered where earned. |
+| 10 Oct | **Step 1 done, ready for the founder.** First task: Drive checked, the two never-opened folders opened, the team's Product Vision v1.0 found and filed. Maker wrote the AI organisation (7 personas, 28/28 workers). Hostile review: fail, fixable (2 blocking, 10 major, 19 minor; 91/95 citations held). Lead agreed and added: too register-like to sell with. Fix round: solo-firm chart first, free Deadline watch on its own, at-a-glance table, plain-words approvals with evidence lines. Re-check: pass with ten small fixes, applied by the Lead. One checker run was cut off by the weekly usage limit on the top model and re-run. |
+| 10 Oct, evening | **the founder decided Step 1** (AIW-D31 to D34): naming adopted with "Practice expert" kept internal, the seven personas, the delegation record under FD-16 with the named person as preparer, the Lead's four calls confirmed. Four decisions can wait (charge unit, admin-plane personas in the investor story, hard limits, IMP-17(b)). Step 2 unblocked. |
 
 ## 2. Ratings
 
@@ -25,17 +25,17 @@
 | Freshness, no stale or duplicated data | 8 (was 9) | Snapshot 9 Oct from the master folders; code copies match GitHub `dev` except ERv2-frontend (moved again, copy when Phase B needs code); no stale snapshot or archive cited anywhere (grep, 0 hits). Lowered because Drive moves within hours: the team document copied at 07:16 UTC had changed by 09:18 UTC, and a new team sheet ("Super Admin Test Cases") appeared that no manifest knew | Accept that team documents change daily; re-copy only the ones a wave cites, on the day it cites them |
 | Isolation from junk | 8 | `archive/` and `code/` git-ignored and ruled "never current"; agents read only the newest snapshot; every citation checked today points to it | Nothing further |
 | Direction and strategy | 6 (was 8) | The wedge (File Builder, per-file price) and the "moat" (governed AI, packs, audit) are hypotheses accepted on the Lead's recommendation with no customer evidence. The brief's four commercial deliverables (pricing, proposition, business plan, investor story) are unstarted; the plan had drifted to building requirements and a demo first | Run the validation script and price card (W3b) before Phase B; VisaFlo's own AI claims re-read before any "they cannot copy" line |
-| Workflow setup | 6 (was 8) | Resumable and safe (hook, deny rules, local git, decisions log all work). Over-built: three overlapping state files, 13 rules with duplicate numbers, a skill that repeats the hook, seven small process files, two indexes of the same documents (see §5.5) | Ranjan's yes to the removals in §5.5 |
-| Honesty and challenge | 8 (was 9) | Two hostile reviews, challenge review, invented quote caught. Lowered: the last card said "files match Ranjan's latest instructions"; this audit found two places that still follow timelines he told us to drop (§5.4) | Keep auditing our own claims first |
+| Workflow setup | 6 (was 8) | Resumable and safe (hook, deny rules, local git, decisions log all work). Over-built: three overlapping state files, 13 rules with duplicate numbers, a skill that repeats the hook, seven small process files, two indexes of the same documents (see §5.5) | The founder's yes to the removals in §5.5 |
+| Honesty and challenge | 8 (was 9) | Two hostile reviews, challenge review, invented quote caught. Lowered: the last card said "files match the founder's latest instructions"; this audit found two places that still follow timelines he told us to drop (§5.4) | Keep auditing our own claims first |
 | Validation with customers | 2 | None yet | 5–10 peer conversations (W3b) |
 | Things built | 1 | Nothing runs; requirements and strategy only | File Builder demo in the simulator (Phase B), after W3b |
 | Communication | 8 (was 7) | Short step reports; two pages. Raised 10 Oct: Step 1's 11 decisions are split into blocking now (3), confirm the Lead's call (4) and later (4); the page opens with five lines, an at-a-glance table and a one-screen chart | Keep every step report this short |
 
-## 3. Plan and waiting-on-Ranjan
+## 3. Plan and waiting-on-the founder
 
-Live only in `PROGRESS.md` (plan table and "Waiting on Ranjan"), since the 9 Oct audit removals. The 9 Oct audit below stays as the record.
+Live only in `PROGRESS.md` (plan table and "Waiting on the founder"), since the 9 Oct audit removals. The 9 Oct audit below stays as the record.
 
-## 5. Full audit, 9 Oct 2026 (the five steps Ranjan asked for)
+## 5. Full audit, 9 Oct 2026 (the five steps the founder asked for)
 
 ### 5.1 Setup
 - Hook ran: this session opened with the report card plan, the progress table, `NEXT.md` and the freshness report.
@@ -46,9 +46,9 @@ Live only in `PROGRESS.md` (plan table and "Waiting on Ranjan"), since the 9 Oct
 ### 5.2 Freshness
 - Code: all dated copies match GitHub `dev` except ERv2-frontend, which moved again on 9 Oct (b4c7702). Take a new copy only when Phase B reads code.
 - Drive, files modified after the 9 Oct morning snapshot (none in the requirement folders):
-  - "Expatready - SAModules" (team journey document, vaibhav@): changed at 09:18 UTC, after our 07:16 UTC copy. **Done:** re-copied as `07-team-documents/Expatready-SAModules_vaibhav_2026-10-09T0918Z.md`. The change adds SA-02 test scenarios (invoices, subscription, discounts); nothing about AI, Doers or the Conductor, so no Workstream 2 file is affected.
-  - "Super Admin Test Cases" (Google Sheet, vaibhav@, 09:14 UTC): new; the team's QA test cases for the Super Admin plane. **Not copied** (not a requirement); noted in `07-team-documents/README.md`. Read it when Phase B writes generated test cases, so ours use the team's format.
-  - "ExpatReady — Full Build in Two Sprints" (sheet, ak@, 03:58 UTC): already noted, a delivery plan, not copied.
+  - "Expatready - SAModules" (team journey document, a team member's account): changed at 09:18 UTC, after our 07:16 UTC copy. **Done:** re-copied as `07-team-documents/Expatready-SAModules_vaibhav_2026-10-09T0918Z.md`. The change adds SA-02 test scenarios (invoices, subscription, discounts); nothing about AI, Doers or the Conductor, so no Workstream 2 file is affected.
+  - "Super Admin Test Cases" (Google Sheet, a team member's account, 09:14 UTC): new; the team's QA test cases for the Super Admin plane. **Not copied** (not a requirement); noted in `07-team-documents/README.md`. Read it when Phase B writes generated test cases, so ours use the team's format.
+  - "ExpatReady — Full Build in Two Sprints" (sheet, a team member's account, 03:58 UTC): already noted, a delivery plan, not copied.
 - Stale citations: `drive-snapshot-2026-10-0[23]` 0 hits in `ai-workers/`; `archive/` 3 hits, all rule text, no citation.
 
 ### 5.3 Hallucination spot-check
@@ -57,11 +57,11 @@ Live only in `PROGRESS.md` (plan table and "Waiting on Ranjan"), since the 9 Oct
 - 5 competitor claims opened live (9 Oct): Chrome extension counters (203 users, 1 rating, v1.0.6, 26 Sep 2026, non-trader) **confirmed**; homepage tagline, footer line, Claude/ChatGPT logos **confirmed** (now also listed under a "Filing & Monitor Agent" integrations list); terms (liability cap, customer indemnity) **confirmed**; billing row **partly confirmed**: PDF invoices, receipts, Stripe, balances, QuickBooks CSV are on `/crm`; milestones, reminders and invoices-to-leads are not on that page (the row also cites "changelog 2025-06" without a link). Fixed: the row now says which items come from which source and marks the three as Unknown until the changelog link is added.
 
 ### 5.4 Purpose and drift
-**What Ranjan asked for on 8 Oct, in order:** a workflow that never deviates and resumes without loss; fresh data, no junk; clone the code; treat the product as ready; AI Workers that operate the product with guardrails and the same result every time; the Doer concept; pricing, proposition and a high-level business plan to raise money; a detailed visual report of innovative AI Workers; VisaFlo covered and bettered, never copied; a component map of the whole product with workers assigned; tell him what he is missing.
+**What the founder asked for on 8 Oct, in order:** a workflow that never deviates and resumes without loss; fresh data, no junk; clone the code; treat the product as ready; AI Workers that operate the product with guardrails and the same result every time; the Doer concept; pricing, proposition and a high-level business plan to raise money; a detailed visual report of innovative AI Workers; VisaFlo covered and bettered, never copied; a component map of the whole product with workers assigned; tell him what he is missing.
 
 **Where the work went beyond the ask**
 1. **Scope grew from "AI Workers on top of a ready product" to "everything AI, every Doer and the Conductor"** (his decision AIW-D14). That produced a 29-file reference index of the team's own automation requirements (`design/ws2-baseline/`, 792 quoted extracts) on top of the 14-file product inventory from W1. Two indexes of the same documents. The no-duplication rule (AIW-D22) says "cite, never restate"; the baseline is a copy in all but name. It was useful once (the catalogue was built from it); it should now be frozen, not maintained.
-2. **41 improvements to the team's requirements** (delegation record, hard-limits list, Doer roster, an FD-8 amendment). The brief said AI Workers use the product; these change the product. They are good findings, but they are Workstream 1 changes that the team cannot see (local only). Ranjan must decide how they reach the team.
+2. **41 improvements to the team's requirements** (delegation record, hard-limits list, Doer roster, an FD-8 amendment). The brief said AI Workers use the product; these change the product. They are good findings, but they are Workstream 1 changes that the team cannot see (local only). The founder must decide how they reach the team.
 3. **Process:** seven roles, hook, skill, report card, progress, proposals, assumptions, brief coverage, prompts, three Lead opinion files, two wave briefs: about 900 lines of process for two days of work. The brief justifies the hook, `NEXT.md`, `decisions.md` and the deny rules; not the rest (§5.5).
 
 **Where the work drifted from the ask**
@@ -69,7 +69,7 @@ Live only in `PROGRESS.md` (plan table and "Waiting on Ranjan"), since the 9 Oct
 5. **The code was cloned and is unused.** No Workstream 2 file cites the code. Not wrong (Phase B will), but no return yet.
 6. **VisaFlo was "most important"** and was studied once. Since then their homepage lists Claude and ChatGPT integrations and a filing and monitoring agent, and they sell direct to applicants (OpenVisa). Any "they cannot copy this" line is an assumption until re-checked on the day it is used.
 
-**Where Ranjan's later decisions contradict his original ask or each other**
+**Where the founder's later decisions contradict his original ask or each other**
 - **Timelines.** 8 Oct brief and AIW-D4: work back from the March 2027 launch, show the cost against the date. AIW-D21: "don't think about the timelines". Our files followed D21 but `brief-coverage.md` B20 and `PROMPTS.md` §3 still asked for the launch-date cost. Corrected to D21; he should confirm.
 - **Charter.** AIW-D1/D14 say AI is in scope and the product does not go live without it; the Charter his team plans from says "NOT IN RELEASE 1". Until he edits Drive, the team is building to the opposite decision.
 - **Approval.** AIW-D17 (licensed-only) was superseded by AIW-D26 (human approval per firm settings); recorded correctly. One improvement (IMP-17b) proposes an exception to D26; it is in the 22 decisions.
@@ -78,13 +78,13 @@ Live only in `PROGRESS.md` (plan table and "Waiting on Ranjan"), since the 9 Oct
 
 **Assumptions that were dressed as facts (now labelled)**
 - "AI WordPress" = AI Workers was marked "unconfirmed" in `founder-brief.md`; his 9 Oct words ("concept of AI work", "AI workers") confirm it. Note updated.
-- The last card's "files match Ranjan's latest instructions": partly wrong (timelines, above).
+- The last card's "files match the founder's latest instructions": partly wrong (timelines, above).
 - "46/46 documents read in full": the agents' own report, backed by their coverage lists. Evidence, not proof. Now worded that way.
-- The wedge (File Builder, per-file price), the hook (Deadline Guardian) and the moat: the Lead's judgement, accepted by Ranjan, zero customer evidence. Direction score lowered from 8 to 6 to say so.
-- "The product does not go live without Workstream 2" (README §0.1): Ranjan's decision, not the team's plan; the Charter says otherwise.
+- The wedge (File Builder, per-file price), the hook (Deadline Guardian) and the moat: the Lead's judgement, accepted by the founder, zero customer evidence. Direction score lowered from 8 to 6 to say so.
+- "The product does not go live without Workstream 2" (README §0.1): the founder's decision, not the team's plan; the Charter says otherwise.
 - `assumptions.md` A5 repeats A1 (both: everything is built). Merged.
 
-### 5.5 Over-engineering: what has not earned its place (removals, for Ranjan's yes)
+### 5.5 Over-engineering: what has not earned its place (removals, for the founder's yes)
 **Rules (README §0):** 13 rules, two numbered 4, three numbered 6. Proposed: merge 6a/6b/6c into one bookkeeping rule (progress line, commit at step end, audit at session start only, not at end); renumber. Keep the rest; each is one of his decisions.
 
 **Files, in order of confidence that they can go:**

@@ -6,7 +6,7 @@
 
 **Conflict of interest:** I am a Claude model. Some benchmarks below rank Claude models first. I have not used those rankings to recommend Claude products, and the test I propose uses a non-Claude tool, so the author of the plans is not grading its own work.
 
-**Status:** this is research, not a decision. Any trial, purchase or upload of company material needs Ranjan's separate authorization.
+**Status:** this is research, not a decision. Any trial, purchase or upload of company material needs the founder's separate authorization.
 
 ---
 
@@ -22,7 +22,7 @@
 4. **The smallest useful addition is a check, not a tool.** Add two steps to the workbook review:
    - plant known errors in a copy of the workbook and see whether the review finds them;
    - recalculate the key outputs independently and compare.
-5. **Codex's comparison test is not worth running as designed.** If Ranjan wants one test, it should cover a single task: auditing a cleaned copy of the workbook with planted errors. The candidates would be ChatGPT for Excel (only if an existing subscription already includes it) and, optionally, Shortcut.
+5. **Codex's comparison test is not worth running as designed.** If the founder wants one test, it should cover a single task: auditing a cleaned copy of the workbook with planted errors. The candidates would be ChatGPT for Excel (only if an existing subscription already includes it) and, optionally, Shortcut.
 
 ---
 
@@ -109,7 +109,7 @@ The five criteria are training evidence, end-to-end coverage, export, data terms
 | PrometAI | None | Plan and valuation. Same gaps. | PDF; PowerPoint on top plan only | Broad licence over your content | Unconfirmed | None identified |
 | Venturekit | None | Generic US small-business plan | PDF (Word not confirmed) | Says it does not train on your data | Free to US$38 a month | None identified |
 | Plan Pilot | Claim only | Unknown | PDF or Word claimed | Privacy policy unreachable | Unknown | None: not testable |
-| Excel add-ins (§2b) | Base models with dated public benchmarks | Workbook only | Native formulas | Plan-dependent | Often already included in a subscription | Helping Ranjan explore the workbook himself ("what if launch slips two months?") with cell-level explanations, and auditing it |
+| Excel add-ins (§2b) | Base models with dated public benchmarks | Workbook only | Native formulas | Plan-dependent | Often already included in a subscription | Helping the founder explore the workbook himself ("what if launch slips two months?") with cell-level explanations, and auditing it |
 | Deck tools (§2d) | Not relevant | Deck only | Editable PowerPoint | Gamma trains by default on individual plans | About €10–15 a month | Visual polish of the investor deck |
 
 ---
@@ -152,7 +152,7 @@ This targets the documented weak point at no cost.
 - Every business-plan app fails the cash-model task before scoring, on export alone.
 - Comparing three outputs per vendor mostly measures prose.
 
-If Ranjan wants a test anyway:
+If the founder wants a test anyway:
 
 - **One task:** audit a cleaned copy of the workbook that contains the planted errors. Use fictional figures only.
 - **One or two candidates:**
@@ -175,9 +175,9 @@ If Ranjan wants a test anyway:
    - match to the independently recalculated outputs, within a stated tolerance;
    - the count of typed-in numbers in cells that should hold formulas.
 3. **Run each prompt twice**, because AI output varies between runs, and report both results.
-4. **Keep the grader independent.** No model grades its own family's output; Ranjan or a human reviewer settles disputes.
+4. **Keep the grader independent.** No model grades its own family's output; the founder or a human reviewer settles disputes.
 5. **Measure cost per accepted output.** Include correction time, not just the subscription price.
-6. **Set the adoption bar in advance.** Ranjan should decide before the test what counts as success, for example "finds at least 3 planted errors that the Codex review missed".
+6. **Set the adoption bar in advance.** the founder should decide before the test what counts as success, for example "finds at least 3 planted errors that the Codex review missed".
 
 ---
 

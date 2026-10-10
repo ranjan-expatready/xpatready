@@ -81,7 +81,7 @@ Requirement rows: **46**.
 
 ## Gaps noticed
 
-- Ratified decision vs October module: FD-21 and A22-5 (Founder Decisions Log v1.5) require a one-time passcode and a sealed evidence bundle before any signature; AG-05 v1.9 never mentions FD-21 and defers "OTP-to-phone" to Release 2. The Charter journey says "Passcode e-signing". Changing FD-21 needs Ranjan's yes; legal adequacy: confirm with counsel.
+- Ratified decision vs October module: FD-21 and A22-5 (Founder Decisions Log v1.5) require a one-time passcode and a sealed evidence bundle before any signature; AG-05 v1.9 never mentions FD-21 and defers "OTP-to-phone" to Release 2. The Charter journey says "Passcode e-signing". Changing FD-21 needs the founder's yes; legal adequacy: confirm with counsel.
 - Event name is not settled: envelope.signed (AG-5-37) vs esign.envelope.completed (existing code, AG-09-23); AG-05 §13 Q6 is open.
 - Portal signing: July Doc 4 CP-6 signs inside the portal; October (CP1-D4, AG-5-53) hands the client to the AG-05 signing page. Corporate seat signing (Doc 4 CP-9-9) is not in the October Release 1 (one primary contact).
 - Deterministic: order, consent gate, required fields, hashing, certificate, expiry, reminders. Human steps that may never be automated: the client's own signature (AG-5-39: staff never sign for a client), the consultant's "approve for send" (AG-5-17), and the firm countersignature (AG-5-27).

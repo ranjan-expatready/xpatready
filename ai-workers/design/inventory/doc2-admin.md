@@ -15,7 +15,7 @@
 - *Flag* = an on/off switch the Expat Ready team controls.
 - *Impersonation* = an audited, time-limited session in which Expat Ready staff see a firm's console.
 - *RLS* = the database rule that keeps each firm's data separate.
-- *[FOUNDER-CONFIRM]* = the document's own marker for values Ranjan (and, where stated, counsel or the immigration expert) must supply.
+- *[FOUNDER-CONFIRM]* = the document's own marker for values the founder (and, where stated, counsel or the immigration expert) must supply.
 
 **Important framing from D2's header.** The document says it is "**Content-neutral** — specs the BUILDERS/machinery; the Canada Country-Pack content is the founder's deferred deliverable." In plain words, Doc 2 specifies the tools, not the immigration facts. Every AI Worker that relies on pack data depends on content that does not yet exist.
 
@@ -166,7 +166,7 @@
 - CH2 Appendix A: "Deferred: AI-assisted features · AG-11 automation engine and its Doers · advanced engagement scoring." It continues: "Already out by earlier decisions: government form auto-fill, Quebec programs, SMS and WhatsApp, single sign-on, credit notes."
 - CH2 notes, slide 1: "NOT IN RELEASE 1. AI-assisted features; the AG-11 automation engine and its Doers (rule-based "when X, do Y" tools such as Minder, Tasker and Messenger ...)".
 - PH §16, SA-1B row, Phase 3 "Could": "AI drafting and diffing of box maps" (parked, SA1B-D28) and "AI reading of uploaded documents into answers; translation tooling". This is outside my slice and cited for context; the SA-01B reader owns it.
-- The ruling that conflicts with this: AIW-D1 puts all AI features, AI Workers and Doers in scope for this workstream (`ai-workers/README.md` §5). The Charter still says "NOT IN RELEASE 1". Ranjan has to resolve this; it is not changed here.
+- The ruling that conflicts with this: AIW-D1 puts all AI features, AI Workers and Doers in scope for this workstream (`ai-workers/README.md` §5). The Charter still says "NOT IN RELEASE 1". The founder has to resolve this; it is not changed here.
 
 ---
 
@@ -244,7 +244,7 @@
 5. **"Doers" deferral is unclear against Doc 2.**
    - CH2 defers "the AG-11 automation engine and its Doers (rule-based ... Minder, Tasker and Messenger)".
    - D2 has Release 1 modules using Doers by name: the Mailer sends the owner invite and dunning emails (SA-4 §3.2, §3.5), and the Signer is configured in SA-8 (PH Phase 1 "in-house Signer settings").
-   - **Inferred:** the deferral covers automation-style Doers, not every Doer. Ranjan needs to confirm this.
+   - **Inferred:** the deferral covers automation-style Doers, not every Doer. The founder needs to confirm this.
 
 6. **No place for an AI Worker identity.**
    - Platform users must be invited by email, use a second factor, and be "attributable to a named human" (SA-7).

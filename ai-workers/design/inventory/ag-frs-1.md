@@ -623,7 +623,7 @@
 4. **Most of the case spine is not built.** "Does not exist (no table and no module directory found): Case, Filing, CaseApplicant, CaseStageDef, CaseTeamMember, Deficiency, ... Submission, Decision" (§12 Backend check v2.5, local checkout `4d9999e2`, not fetched). Exists: Filler render engine, form editions, field maps, answer store, pack pins, import engine.
 5. **Pending knock-ons not applied** to AG-01, AG-05, AG-14, AG-15, AG-11 (`client.created`/`client.updated` triggers), AG-18, SA-01/SA-01B, backend (§0.3 table "Pending").
 6. **Approval routing differs from AI text approval.** Professional approvals go to "every active holder" with licensed holders "preferred" (AG-7-68, F4); AI-written client text needs "a licensed approver by default" (AG11-D11(a), unchanged). **Inferred:** two routing rules an AI Worker must respect.
-7. **Many "proposed default" decisions** (AG7-D11 to D24) "stand until Sanjay changes them" (v2.5 change log) — not founder-ratified.
+7. **Many "proposed default" decisions** (AG7-D11 to D24) "stand until the co-founder changes them" (v2.5 change log) — not founder-ratified.
 8. **SME-owned values missing:** government steps per program, form sets/editions/mappings, checklists, deficiency taxonomy and severities, milestone set, submission references, default lead time (§13 items 12, 16, 23 and SME note).
 
 ### From AG-08 v1.7

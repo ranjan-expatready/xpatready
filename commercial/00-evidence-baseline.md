@@ -1,6 +1,6 @@
 # Expat Ready — commercial evidence baseline
 
-**Version:** 1.3, 7 Oct 2026 (after Codex review; model v0.2). **Owner:** Ranjan. **Writer:** Claude (only writer of `commercial/`).
+**Version:** 1.3, 7 Oct 2026 (after Codex review; model v0.2). **Owner:** the founder. **Writer:** Claude (only writer of `commercial/`).
 **Supersedes:** `discovery.md`, which is kept as the record Codex reviewed.
 **Rule:** every commercial fact lives here once. The four plan artifacts link to rows here and do not restate them.
 **Boundaries:** no product requirement or shared product file is changed. Nobody has been contacted, nothing published, spent, hired, promised or applied for.
@@ -10,7 +10,7 @@
 | Label | Means |
 |---|---|
 | **DEC** | Recorded decision, with its status |
-| **RAN** | Ranjan's statement, dated |
+| **RAN** | The founder's statement, dated |
 | **OBS** | Observed by Claude on the date shown, with method |
 | **HIST** | Historical record. True when written; current state unknown |
 | **HYP** | Hypothesis to test |
@@ -40,8 +40,8 @@
 
 | ID | Date | Statement | Recorded in |
 |---|---|---|---|
-| RAN-1 | 2 Oct | "I am Ranjan, the founder." | Claude memory |
-| RAN-2 | 7 Oct | "The founder is a registered immigration consultant with relationships among consultants and immigration lawyers." **Which founder holds the licence is not established.** RAN-1 (Ranjan as founder) comes from Claude memory and is a lead, not a verified credential; RAN-11 names Sanjay as owner and funder. The plan uses the role "founder-consultant" until confirmed (company-planning/SOURCE-REGISTER.md, item 1) | Prompt of 7 Oct; NEXT.md (Codex note, 7 Oct) |
+| RAN-1 | 2 Oct | "I am the founder, the founder." | Claude memory |
+| RAN-2 | 7 Oct | "The founder is a registered immigration consultant with relationships among consultants and immigration lawyers." **Which founder holds the licence is not established.** RAN-1 (the founder as founder) comes from Claude memory and is a lead, not a verified credential; RAN-11 names the co-founder as owner and funder. The plan uses the role "founder-consultant" until confirmed (company-planning/SOURCE-REGISTER.md, item 1) | Prompt of 7 Oct; NEXT.md (Codex note, 7 Oct) |
 | RAN-3 | 7 Oct | Launch period March 2027; full demonstrations and customer onboarding around March–April | This prompt |
 | RAN-4 | 7 Oct | Existing requirements, research and decisions are substantially final; you prefer to sell when ready | NEXT.md (Codex note) |
 | RAN-5 | 7 Oct | Intended buyers and possible referrers are consultants and lawyers who run practices. Referral reward could be commission or subscription credit | This prompt; NEXT.md |
@@ -49,8 +49,8 @@
 | RAN-7 | 7 Oct | Founder time is available. You want a reasoned budget proposal, not a cap | This prompt |
 | RAN-8 | 7 Oct | expatready.com is the company website. Its claims are to be reconciled, not assumed true | This prompt |
 | RAN-9 | 7 Oct (answers) | The "25,000" audience means the registered consultant (RCIC) population; the real figure may be 25,000 or 10,000. Build the ideal customer profile and demographics from registered-consultant data | Chat, 7 Oct |
-| RAN-10 | 7 Oct | Plan ideally; do not treat money as a constraint for now. **Available capital: INR 2 crore, provided by Sanjay.** The company must reach profit or raise funds within this money. All calculations in CAD | Chat, 7 Oct |
-| RAN-11 | 7 Oct | ExpatReady Technologies Inc. is a **federal corporation, owned by Sanjay**, selling across Canada. No money has been raised | Chat, 7 Oct |
+| RAN-10 | 7 Oct | Plan ideally; do not treat money as a constraint for now. **Available capital: INR 2 crore, provided by the co-founder.** The company must reach profit or raise funds within this money. All calculations in CAD | Chat, 7 Oct |
+| RAN-11 | 7 Oct | ExpatReady Technologies Inc. is a **federal corporation, owned by the co-founder**, selling across Canada. No money has been raised | Chat, 7 Oct |
 | RAN-12 | 7 Oct | Ambition: raise as much money as possible once the product is in market with regular customers, as fast as makes sense for both investors and the company | Chat, 7 Oct |
 | RAN-13 | 7 Oct | **Pricing, plan names and every number published so far are notional.** No pricing strategy has been done. Claude designs it, and may change metrics and components | Chat, 7 Oct |
 | RAN-14 | 7 Oct | Take a stand on every other open question, showing pros and cons | Chat, 7 Oct |
@@ -88,8 +88,8 @@
 |---|---|---|---|---|
 | K-1 | Launch date: 12 Mar vs 3–4 Mar vs 28 Feb | DEC-10 | Pilot conversion and the start of public sale | Team plan 9 Oct; you |
 | K-4 | Add-ons: FD-18 includes them; SA-04 says "no add-ons" | DEC-1, DEC-7 | Pricing design | You |
-| K-5 | Who's who: the RFP and RAN-2 say "the founder" is a licensed consultant without naming which founder. The mandate is signed "founder sanjay@expatready.com". RAN-11 says Sanjay owns the company and provided the capital. RAN-1 (Ranjan as founder) is a memory lead. Ranjan's equity, if any, is unknown | RAN-1, RAN-2, RAN-11 | Who sells as a peer; founder equity and vesting for investors; signing authority | Ranjan (open question, see section G) |
-| K-7 | Tier names and prices: Solo/Small/Firm (FD-18), Basic/Professional/Enterprise (HIST-4), Practice/Firm/Scale with prices (OBS-1). The website's entry tier says "2–25 practitioners", so there is no Solo tier, although FD-19 makes solo the first focus | DEC-1, DEC-2, DEC-9, HIST-4, OBS-1 | The first segment has no plan named for it | Proposed: Artifact 1 D-P1–D-P3 (Solo/Practice/Firm per-firm plans); Ranjan confirms (QB-3) |
+| K-5 | Who's who: the RFP and RAN-2 say "The founder" is a licensed consultant without naming which founder. The mandate is signed "founder the co-founder's account". RAN-11 says the co-founder owns the company and provided the capital. RAN-1 (the founder as founder) is a memory lead. The founder's equity, if any, is unknown | RAN-1, RAN-2, RAN-11 | Who sells as a peer; founder equity and vesting for investors; signing authority | The founder (open question, see section G) |
+| K-7 | Tier names and prices: Solo/Small/Firm (FD-18), Basic/Professional/Enterprise (HIST-4), Practice/Firm/Scale with prices (OBS-1). The website's entry tier says "2–25 practitioners", so there is no Solo tier, although FD-19 makes solo the first focus | DEC-1, DEC-2, DEC-9, HIST-4, OBS-1 | The first segment has no plan named for it | Proposed: Artifact 1 D-P1–D-P3 (Solo/Practice/Firm per-firm plans); the founder confirms (QB-3) |
 | K-8 | Trial: FD log C-6 recommends a 14-day trial without a card; SA-04 requires a card; the seed has 0 days; the website shows no trial | DEC-7, HIST-4, OBS-1 | How prospects try the product | You |
 | K-9 | Sign-up: assisted set-up (R-03) vs SA-04 sign-up link "Must now" | DEC-8 | How firms come on board at launch | You |
 | K-10 | **The website says more than Release 1 delivers or than has been proven:**<br>• SMS reminders, the automation builder and SSO are excluded in DEC-5.<br>• A custom domain and an API are Release 2, and time tracking is Release 1.1 (roadmap v1.0 §3, §10).<br>• Multi-office conflicts with "one practice unit per firm" (roadmap R-16).<br>• "65+ programs" vs the Canada content: Express Entry plus two provincial streams in full depth, the rest information only (roadmap R-01).<br>• The roadmap items were decided on your behalf and are overturnable.<br>• "99.9% SLA", "4hr SLA", "RPO 5 minutes" with no production yet (HIST-1, OBS-6).<br>• Refund wording differs between the pricing page and the terms.<br>• Client-facing French is in Release 1 but not on the website.<br>• The legal pages are unreviewed drafts. | OBS-1 to OBS-6; DEC-5; HIST-1 | Risk under misleading-advertising rules and to the founder's professional credibility (confirm with counsel; research R3); it also sets what customers will expect | You, then the website owner |
@@ -120,12 +120,12 @@
 **Status after your answers of 7 Oct:**
 - **QA-1:** answered. The audience is the registered-consultant population: about 12,500 licensees, not 25,000 (MKT-1, MKT-6; profile in R7).
 - **QA-2:** answered. INR 2 crore, about CAD 295,200.
-- **QA-3:** partly answered. Federal corporation, owned by Sanjay; nothing raised; venture ambition after traction (RAN-11, RAN-12).
+- **QA-3:** partly answered. Federal corporation, owned by the co-founder; nothing raised; venture ambition after traction (RAN-11, RAN-12).
 - **QA-4 and QA-5:** handed to Claude to decide (RAN-13, RAN-14). Website claims are treated as notional and are corrected in Artifact 1.
 
 **Still open: these change decisions. Asked on 7 Oct; the decision summary carries the same IDs.**
 - **QB-1:** the product team's monthly cost (or permission to read `Resource Cost.xlsx`, totals only). Until then, the CAD 25k scenario.
-- **QB-2:** which founder is the licensed consultant who will sell; Ranjan's role and equity; whether Sanjay is resident in Canada (CCPC status).
+- **QB-2:** which founder is the licensed consultant who will sell; the founder's role and equity; whether the co-founder is resident in Canada (CCPC status).
 - **QB-3:** confirm per-firm pricing and the price levels (amends ratified FD-18's per-seat unit).
 - **QB-4:** how the India team is engaged (employees or contractors), and whether any R&D could be done in Canada. This affects IP and grants.
 
@@ -135,7 +135,7 @@
 |---|---|---|
 | QA-1 | The 25,000-member audience: what is it (platform, who runs it, your role, rules on commercial posts), and roughly what share are practice owners rather than students, staff or applicants? | Channel plan, campaign size, referral design |
 | QA-2 | Money: cash available, monthly spending, how much more you could add, and the most you could accept losing. Or allow Claude to read `~/Desktop/Resource Cost.xlsx` and use totals only | Lean vs higher-capacity budget; whether and when to raise |
-| QA-3 | Company and ambition: federal or Ontario corporation; who owns what (including Sanjay); any money already raised and how; how the India team is engaged. Do you want a profitable company you control, or venture-scale growth with dilution? | Funding options (several programmes need a Canadian-controlled company and Canadian staff); investor fit |
+| QA-3 | Company and ambition: federal or Ontario corporation; who owns what (including the co-founder); any money already raised and how; how the India team is engaged. Do you want a profitable company you control, or venture-scale growth with dilution? | Funding options (several programmes need a Canadian-controlled company and Canadian staff); investor fit |
 | QA-4 | Earlier activity: has any firm used an earlier version, seen a demo, requested one through the website, or been offered founding-firm pricing? Where is the market research you mentioned, if it is outside the project folder? | Starting pipeline; what not to redo |
 | QA-5 | The website: did you approve its prices, plan names and feature, uptime and security claims? Who maintains it, and which codebase do the claims describe? | Pricing (K-7), claim corrections (K-10), affiliate readiness |
 
@@ -143,7 +143,7 @@
 - The team's plan (9 Oct): dates, cut line, onboarding and migration tooling.
 - Counsel: CICC Code and referral rewards, anti-spam law, advertising claims, terms of service, securities rules for introducers (R3).
 - Accountant: tax treatment of referral rewards; SR&ED and IRAP eligibility.
-- Sanjay: his role.
+- The co-founder: his role.
 
 ## I. Key research facts (7 Oct 2026)
 

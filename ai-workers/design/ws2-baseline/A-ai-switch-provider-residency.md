@@ -49,7 +49,7 @@
 | AG-11 §0.2 SA-11 | the processing-terms record that gates AI (AG11-D13), which must show a Canadian region (AG11-D15) | AG-11 v1.11 §0.2, L54 | Pending | — |
 | AG-11 §0.2 SA-12 | Platform kill switch for the AI Doers | AG-11 v1.11 §0.2, L55 | Pending | — |
 | AG-11 §0.2 SA-03 | Which AI Doers / volumes are plan-gated (standard deadline reminders stay never-gated, AG-11-48) | AG-11 v1.11 §0.2, L56 | Pending | — |
-| AG-11 §13 Q19 | Decided (Sanjay, 5 Oct): the core (the client record and all Doer logic) stays in-house; outside providers are allowed only for AI/OCR, WhatsApp and mailbox … | AG-11 v1.11 §13, L1275 | Decided | — |
+| AG-11 §13 Q19 | Decided (the co-founder, 5 Oct): the core (the client record and all Doer logic) stays in-house; outside providers are allowed only for AI/OCR, WhatsApp and mailbox … | AG-11 v1.11 §13, L1275 | Decided | — |
 | AG-11 §13 Q20 | Pricing model (per-seat vs per-case) — affects how AI volumes are gated (SA-03). Not decided. | AG-11 v1.11 §13, L1276 | Open | — |
 | AG-11 US-27 | the AI switch is off and locked, no AI Doer runs and uploads follow the manual path. | AG-11 v1.11 §8 US-27, L1020 | None stated | — |
 

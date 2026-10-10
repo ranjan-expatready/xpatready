@@ -45,7 +45,7 @@
 | AOVW release vocabulary | "ExpatReady plans in Release 1 (go-live, including AG-17 and the Minder core)" | Agent 00-Overview v1.11, Detailed Scope Index, L76 | "Release 1 (go-live, including AG-17 and the Minder core)" | Charter V1 L121 defers it. |
 | AG17-D38 | "The Minder: one reminder service on top of the whole application, its core in Release … the Minder watches them all, creates reminders, tasks …" | AG-17 v0.5, §0 Decisions, L156 | "its core in Release 1" | — |
 | AG17-D55 | "AG-17 uses AG-11's Minder, which is part of ExpatReady Release 1 … by default a standard deadline reminds only the file owner. Replaces D54." | AG-17 v0.5, §0 Decisions, L173 | "part of ExpatReady Release 1" | Default "opt-in per firm" for escalation is changed by AG11-D9 (on from 5 staff). |
-| AG17-D71 owner | "Ayush builds the Minder core" | AG-17 v0.5, §0 Decisions, L189 | None stated | — |
+| AG17-D71 owner | "Team lead 1 builds the Minder core" | AG-17 v0.5, §0 Decisions, L189 | None stated | — |
 | AG-11 §3.0 | "The Minder is the one new non-AI Doer. … a watcher that continuously evaluates "is a deadline/condition approaching or breached?" and drives an escalation cascade" | AG-11 v1.11, §3.0 Conductor↔Doers model, L245 | None stated | — |
 | AG-11 §3.4 why | "The Minder exists so that no government deadline is ever missed — by design, not diligence." | AG-11 v1.11, §3.4 The Minder, L339 | None stated | — |
 | AG-11 §3.4 default split | "ExpatReady assists firms; it does not monitor them … The Minder is part of ExpatReady Release 1 (AG17-D38, AG17-D55)" | AG-11 v1.11, §3.4, L341 | "part of ExpatReady Release 1" | Doc 3 v1.4 L5207 (July) records a compliance fact on every breach; October drops that. |

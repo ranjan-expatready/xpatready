@@ -72,7 +72,7 @@ Requirement rows: **37**.
 
 ## Gaps noticed
 
-- Naming conflict (ratified decision vs October files): FD-8 folds the Reminder into the Minder; Doc 2 has no reminder capability; Doc 3 says there is no separate Reminder Doer. The October AG-11, AG-13, Overview and Glossary keep the Reminder as a separate Doer and split it as "client nudges" against the Minder's "deadlines and dates". FD-8 changes only with Ranjan's yes.
+- Naming conflict (ratified decision vs October files): FD-8 folds the Reminder into the Minder; Doc 2 has no reminder capability; Doc 3 says there is no separate Reminder Doer. The October AG-11, AG-13, Overview and Glossary keep the Reminder as a separate Doer and split it as "client nudges" against the Minder's "deadlines and dates". FD-8 changes only with the founder's yes.
 - Two reminder systems remain: AG-04 consult reminders are scheduled by the Scheduler on its own rules (AG-04 §3.7), while AG-11 and the scope review say there should be one reminder system.
 - Release: ordinary reminders are Release 1 in every source; the Charter calls the Reminder an automation Doer that is deferred and folded into the Minder. WhatsApp reminders are Release 1 in AG-11 but Release 2 in AG-13.
 - Deterministic: timing, dedup, skip-if-stale and recurrence are all rules. Human steps: a person creates ad-hoc reminders and snoozes them; client-facing reminders sent by recipes are template messages that send automatically once the firm has confirmed its standard messages (AG11-D12).

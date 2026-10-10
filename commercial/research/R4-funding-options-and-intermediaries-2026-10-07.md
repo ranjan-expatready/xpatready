@@ -49,9 +49,9 @@
 |---|---|---|---|
 | **The company is a CCPC.** Private, resident in Canada, not controlled directly or indirectly by non-residents or public companies [S9] | SR&ED **35%** credit on up to **$6M** a year of qualifying spending, **100% refundable** on current spending [S1][S2] | **15%** credit, not refundable [S2]. With no tax to pay before revenue, there is no cash until the company is profitable | Accountant; incorporation and shareholder records |
 | **The R&D work is done in Canada.** Employees, or contractors working in Canada | SR&ED, the Ontario Innovation Tax Credit (OITC) and IRAP projects are all possible | **SR&ED:** contract work done entirely outside Canada earns nothing [S5]. Salary for SR&ED done outside Canada counts only for employees resident in Canada, capped at 10% of in-Canada SR&ED salary [S4]. **IRAP:** does not fund "work done outside Canada" [S10]. **OITC:** needs SR&ED done in Ontario and a permanent establishment there [S13] | Accountant; contracts with the development team |
-| **Canadian payroll.** Canadian employer; hires citizens, permanent residents or protected persons at Canadian institutions | Wage subsidies (SWPP, Canada Summer Jobs, IRAP youth) and Mitacs [S12][S24][S25][S26] | None of these apply | Ranjan |
+| **Canadian payroll.** Canadian employer; hires citizens, permanent residents or protected persons at Canadian institutions | Wage subsidies (SWPP, Canada Summer Jobs, IRAP youth) and Mitacs [S12][S24][S25][S26] | None of these apply | The founder |
 | **Revenue history** | BDC start-up loan after 12 months of revenue [S18]; DMZ Incubator (needs MRR) [S33]; CanExport (from $300k revenue) [S17] | Pre-revenue routes only (§0, point 2) | Records (none found, OBS-8) |
-| **Founder profile.** Age 18–39; citizen or permanent resident living in Canada; more than 50% ownership | Futurpreneur up to $75k [S22]; NEXT Founders [S38]; Starter Company Plus [S16] | Not eligible | Ranjan |
+| **Founder profile.** Age 18–39; citizen or permanent resident living in Canada; more than 50% ownership | Futurpreneur up to $75k [S22]; NEXT Founders [S38]; Starter Company Plus [S16] | Not eligible | The founder |
 | **Corporate form** | IRAP needs an incorporated, for-profit company. It excludes ULCs and LLCs, sole proprietorships, partnerships and co-operatives [S10] | — | Incorporation papers |
 
 ---
@@ -303,7 +303,7 @@ My derivation, each tied to a source:
 - **Accountant:** CCPC status; where the work is done and how the India team is engaged; SR&ED pre-claim approval; OITC; whether the digital media credit is excluded.
 - **Securities counsel:** any intermediary agreement; which exemption to use; whether 32-509 applies; Form 45-106F1 fees.
 - **Counsel or RCIC:** whether the LSO sandbox applies; any Start-up Visa matters (out of scope).
-- **Ranjan:** QA-2 (money) and QA-3 (company, ownership, team engagement, ambition).
+- **the founder:** QA-2 (money) and QA-3 (company, ownership, team engagement, ambition).
 
 ---
 

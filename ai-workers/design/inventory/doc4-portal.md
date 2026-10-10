@@ -6,7 +6,7 @@
 
 **Release source:** `sources/drive-snapshot-2026-10-09/06-program-management/Program Charter_V2.pptx` (cited **Charter V2**). Slide 4 lists "4  Client portal · 9" with "CP-1 Secure access" to "CP-9 Employer view (read-only)". Slides 1 and 4 say: "NOT IN RELEASE 1   AI-assisted features · Automation engine (AG-11) and its Doers · Advanced engagement scoring". The speaker notes on slide 1 add: "Ordinary tasks, reminders and three plain notices (consultation reminder, unsigned document chase, missing evidence nudge) stay." The supporting text dump `Program Charter V1 - G1 expanded.md` (same folder) says: "AG-17 (LMIA recruitment evidence) and CP-9 (employer view, read-only) are in Release 1."
 
-**Framing (Ranjan, decision AIW-D11):** AI Workers are for firms only. For the portal this inventory records (a) the firm-side work that client actions create and (b) the places where a firm's AI Worker would touch content the client sees. That content would need firm review before the client sees it. Lines marked **Inferred** are my reading, not the document's words.
+**Framing (the founder, decision AIW-D11):** AI Workers are for firms only. For the portal this inventory records (a) the firm-side work that client actions create and (b) the places where a firm's AI Worker would touch content the client sees. That content would need firm review before the client sees it. Lines marked **Inferred** are my reading, not the document's words.
 
 ---
 

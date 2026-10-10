@@ -1,8 +1,8 @@
 # Workstream 2 improvements: what is weak, missing or contradictory in the AI, Doer and Conductor requirements, and what to change
 
-**Author:** ai-worker-designer (W2, step 2). **Date:** 9 Oct 2026; revised the same day after review W2 (`checks/review-W2-2026-10-09.md` M-9, M-10, M-11, m-1, m-2). **Status:** every "Proposed change" below is a **Proposal** until the named decider says yes. Ratified founder decisions (FD-n) are never changed here; where one should change, the item says so and leaves it to Ranjan.
+**Author:** ai-worker-designer (W2, step 2). **Date:** 9 Oct 2026; revised the same day after review W2 (`checks/review-W2-2026-10-09.md` M-9, M-10, M-11, m-1, m-2). **Status:** every "Proposed change" below is a **Proposal** until the named decider says yes. Ratified founder decisions (FD-n) are never changed here; where one should change, the item says so and leaves it to the founder.
 
-**What this file is for.** Ranjan's direction (AIW-D14): carve out everything AI, Doer and Conductor from the Drive documents, then challenge it and improve it as our own product. Step 1 (the carve-out) is the reference index in `ws2-baseline/`. This is step 2: the complete list of what stops us from running AI Workers of all four shapes (task worker, journey worker, role twin, expert co-pilot; README §1, AIW-D19) and the fix for each.
+**What this file is for.** the founder's direction (AIW-D14): carve out everything AI, Doer and Conductor from the Drive documents, then challenge it and improve it as our own product. Step 1 (the carve-out) is the reference index in `ws2-baseline/`. This is step 2: the complete list of what stops us from running AI Workers of all four shapes (task worker, journey worker, role twin, expert co-pilot; README §1, AIW-D19) and the fix for each.
 
 **Rules followed.** No requirement is restated (AIW-D22): each item points to the requirement by ID, file, version and line as recorded in `ws2-baseline/A-*.md` and `B-*.md`, where every quote was machine-checked against `sources/drive-snapshot-2026-10-09/`; lines I cite that are not in the baseline were opened and read by me (AG-14 §4 L348–L402 and AG-14-22 L381; SA-02 L381–382; SA-03 L593; FDL L54 and L149; AG-11 L40 and L1168–L1191; AG-18 L848; SA-11 L291, L623–L624). Short quotes appear only where the exact words carry the point. Labels: **Proposal** (our change), **Assumption** (needed, unconfirmed), **Unknown** (no source either way), **Inferred** (our reading of a source). Legal and immigration values: **confirm with counsel / RCIC**.
 
@@ -27,47 +27,47 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 
 | ID | Plain title | Severity | Shapes | Who decides |
 |---|---|---|---|---|
-| IMP-1 | A named person behind every AI action: the delegation record | Blocking | all | Ranjan (FD-16 reading), Lead (detail) |
+| IMP-1 | A named person behind every AI action: the delegation record | Blocking | all | The founder (FD-16 reading), Lead (detail) |
 | IMP-2 | One record that says "AI prepared, person approved" | Blocking | all | Lead / team |
 | IMP-3 | Retire the wait for "Doc-1 Amendment A4-1" | Minor | all | team |
 | IMP-4 | AI log: one authoritative place, retention, export | Major | all | team; counsel on retention |
 | IMP-5 | Instructions to the model, model choice and testing: who changes them, how they are checked | Major | all | Lead / team |
-| IMP-6 | SA-08 has no AI provider entry and still forbids outside providers | Blocking | all | team (Sanjay owns SA-08) |
-| IMP-7 | Canada-only (AG11-D15) vs SA-11's "non-Canadian with safeguards" | Blocking | all | Ranjan; counsel |
+| IMP-6 | SA-08 has no AI provider entry and still forbids outside providers | Blocking | all | team (the co-founder owns SA-08) |
+| IMP-7 | Canada-only (AG11-D15) vs SA-11's "non-Canadian with safeguards" | Blocking | all | The founder; counsel |
 | IMP-8 | Platform emergency stop and what happens to waiting items | Major | all | team |
-| IMP-9 | Plan gating: SA-03 says closed, AG-11 and AG-16 say pending; no AI usage measure | Major | all | team; Ranjan on pricing |
+| IMP-9 | Plan gating: SA-03 says closed, AG-11 and AG-16 say pending; no AI usage measure | Major | all | team; the founder on pricing |
 | IMP-10 | "Models get no tool access" vs a worker that operates the product | Blocking | journey, role twin | Lead |
 | IMP-11 | Client notice and disclosure of AI-prepared content | Major | all | counsel / RCIC |
 | IMP-12 | Reader or Sorter: who classifies documents | Major | task, journey | team |
-| IMP-13 | AG-9-11 applies a document type on its own vs "everything to review" and FD-16 | Major | task, journey | Ranjan (FD-16 reading) |
+| IMP-13 | AG-9-11 applies a document type on its own vs "everything to review" and FD-16 | Major | task, journey | The founder (FD-16 reading) |
 | IMP-14 | Supervised-message routing: AG-16-47 vs AG-11-82 | Minor | all | team |
-| IMP-15 | FD-22 (supervision rules in the Practice Pack) vs AG11-D11 (firm setting) | Major | all | Ranjan; counsel / RCIC |
+| IMP-15 | FD-22 (supervision rules in the Practice Pack) vs AG11-D11 (firm setting) | Major | all | The founder; counsel / RCIC |
 | IMP-16 | Owner-approves wording in two forms; "widen" vs "switch off" | Minor | all | team |
-| IMP-17 | Approval of AI Worker output: what the record must show after AIW-D26, and one proposed exception | Major | all | Ranjan (the exception), counsel |
-| IMP-18 | Metering a prepared file: SA-4-44 says no add-ons | Blocking for the wedge | journey | Ranjan |
-| IMP-19 | Per-seat vs per-file: FD-18 already allows metered add-ons | Minor | journey | Ranjan |
+| IMP-17 | Approval of AI Worker output: what the record must show after AIW-D26, and one proposed exception | Major | all | The founder (the exception), counsel |
+| IMP-18 | Metering a prepared file: SA-4-44 says no add-ons | Blocking for the wedge | journey | The founder |
+| IMP-19 | Per-seat vs per-file: FD-18 already allows metered add-ons | Minor | journey | The founder |
 | IMP-20 | Expert co-pilot: limits in writing | Blocking for the co-pilot | expert co-pilot | Lead; counsel on wording |
-| IMP-21 | Co-pilot and restricted personal data | Major | expert co-pilot | Ranjan; counsel |
+| IMP-21 | Co-pilot and restricted personal data | Major | expert co-pilot | The founder; counsel |
 | IMP-22 | Role twin: how it uses the delegation | Blocking for role twins | role twin | Lead (AIW-D24) |
 | IMP-23 | What a twin may never do: the blocked list | Major | role twin, journey | Lead |
-| IMP-24 | One name, one meaning: the Doer roster | Major | all | Ranjan (FD-8, names); team |
+| IMP-24 | One name, one meaning: the Doer roster | Major | all | The founder (FD-8, names); team |
 | IMP-25 | Is the Filler an AI Doer? | Minor | journey | team |
 | IMP-26 | Instructions hidden in client content | Blocking | all | Lead / team |
-| IMP-27 | The hard limits: what no worker may ever do | Blocking | all | Ranjan (ratify), Lead |
+| IMP-27 | The hard limits: what no worker may ever do | Blocking | all | The founder (ratify), Lead |
 | IMP-28 | "Anything that reads as advice" is not a floor | Major | task, journey | counsel / RCIC |
 | IMP-29 | AI performance measures for AG-14 | Major | all | Lead / team |
-| IMP-30 | When is a Doer good enough to lower review? | Major | task, journey | Lead; Ranjan |
-| IMP-31 | Which document wins on release | Major | all | Ranjan |
-| IMP-32 | AG-11's decisions are Sanjay's, not ratified founder decisions | Major | all | Ranjan |
+| IMP-30 | When is a Doer good enough to lower review? | Major | task, journey | Lead; the founder |
+| IMP-31 | Which document wins on release | Major | all | The founder |
+| IMP-32 | AG-11's decisions are the co-founder's, not ratified founder decisions | Major | all | The founder |
 | IMP-33 | Human review of AI-assisted output that reached a client (FD-20 covers scoring only) | Major | task, journey | counsel |
 | IMP-34 | Needs you will flood: approvals per file, not per value | Major | journey | Lead |
 | IMP-35 | A worker run has no start, state or stop | Major | journey, role twin | Lead / team |
 | IMP-36 | Spend caps per firm and per person | Major | all | Lead / team |
-| IMP-37 | "Same input, same result" is true for rules, not for models | Major | all | Ranjan (wording) |
-| IMP-38 | "AI Worker" as a name against FD-16's marketing rule | Minor | all | Ranjan; counsel |
-| IMP-39 | Tamper-evident audit may move to Release 2 | Minor | all | Ranjan |
-| IMP-40 | Portal autofill: is typing into a government website "submitting"? | Major | journey | counsel / RCIC; Ranjan |
-| IMP-41 | Dependencies the hook and the wedge still have | Minor | journey, task | Ranjan (Charter), team |
+| IMP-37 | "Same input, same result" is true for rules, not for models | Major | all | The founder (wording) |
+| IMP-38 | "AI Worker" as a name against FD-16's marketing rule | Minor | all | The founder; counsel |
+| IMP-39 | Tamper-evident audit may move to Release 2 | Minor | all | The founder |
+| IMP-40 | Portal autofill: is typing into a government website "submitting"? | Major | journey | counsel / RCIC; the founder |
+| IMP-41 | Dependencies the hook and the wedge still have | Minor | journey, task | The founder (Charter), team |
 
 ---
 
@@ -80,7 +80,7 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 - **Proposed change (Proposal). The delegation, defined once here.** A delegation is one record, and it is not an identity. It says: *which worker (name and version) · for which one named firm user · which of that user's permissions it may use (always a subset, never more) · on which files or recipes · from when until when · who set it up · its state (active, paused, ended)*. Rules: (1) it is **granted by the named person it works for**; the Owner may set one up for that person, but it takes effect only when the person accepts it, and the person can end it at any time; (2) **one delegation per person per worker**; (3) a delegation **takes no seat** and is metered by the work it does, not per delegation (this matches the catalogue's assumption A-W2-6); (4) it ends by itself when the person is deactivated or suspended (the same rule that stops automations acting for a deactivated user, AG-11-45, AG1-D4), when the firm's AI switch goes off, or when the platform's emergency stop trips (IMP-8); (5) the worker can **never hold an approval permission**: every approval is made by a person. Every action, approval item and AI run carries the delegation's reference number. Each audit entry gains two things: whether a person acted directly, a worker acted for them, or a plain automation ran; and, if a worker, which delegation (developers: `mode = PERSON | DELEGATED | AUTOMATION`, `delegationId`). The actor on the entry stays the named person (the existing "firm staff" kind); no new kind of actor is added, so FD-16 holds. For four-eyes and self-approval rules, **the person the worker worked for counts as the preparer** (replacing "counts as no person" for worker-prepared items; the Filler rule stays for plain automations). IMP-22 says what is specific to role twins; it adds no second definition.
 - **Why it matters.** User: sees "prepared by File Builder for Priya Shah, approved by Daniel Roy" on every item. Investor: FD-16 kept and provable. Regulator: a named person is answerable for every step, and the record shows it.
 - **Risk if not fixed.** The core claim of the whole workstream ("acts on behalf of a named person") is a sentence with no record behind it; the reviewer flagged this (review W1 M-7, inventory X7).
-- **Who decides.** Ranjan confirms that a delegation record is consistent with FD-16 (we say it is: no identity, no permissions of its own). Lead designs the detail (Phase B). Whether the on-behalf person counts as preparer: Ranjan (it tightens four-eyes).
+- **Who decides.** the founder confirms that a delegation record is consistent with FD-16 (we say it is: no identity, no permissions of its own). Lead designs the detail (Phase B). Whether the on-behalf person counts as preparer: the founder (it tightens four-eyes).
 - **Shapes.** All four.
 
 ### IMP-2 One record that says "AI prepared, person approved"
@@ -121,7 +121,7 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 
 ### IMP-6 SA-08 has no AI provider entry and still forbids outside providers
 
-- **Today.** AG11-D14 (L43), AG-11-3 (L554), AG-11 §13 Q19 (L1275, decided by Sanjay 5 Oct): outside providers are allowed for AI/OCR (reading text from images), WhatsApp and mailboxes, each approved by Super Admin in SA-08. SA-08 v2.2 (2 Oct): "NO third-party product-tool integrations" (L23), "no fourth shape" (L163), BR-1 (L419); the list of outside services (developers: rails) has no AI or OCR entry (L23); SA-8-27 health monitoring and SA-8-31 residency declaration per outside service. AG-11 §0.2 (L53) marks SA-08 as Pending. Review W1 M-6.
+- **Today.** AG11-D14 (L43), AG-11-3 (L554), AG-11 §13 Q19 (L1275, decided by the co-founder 5 Oct): outside providers are allowed for AI/OCR (reading text from images), WhatsApp and mailboxes, each approved by Super Admin in SA-08. SA-08 v2.2 (2 Oct): "NO third-party product-tool integrations" (L23), "no fourth shape" (L163), BR-1 (L419); the list of outside services (developers: rails) has no AI or OCR entry (L23); SA-8-27 health monitoring and SA-8-31 residency declaration per outside service. AG-11 §0.2 (L53) marks SA-08 as Pending. Review W1 M-6.
 - **What is wrong or missing.** The AI switch is locked "until SA-08 / SA-11 record a provider" (AG-11-93), and SA-08 has no place to record one. By its own words, SA-08 would reject the requirement that unlocks AI.
 - **Proposed change (Proposal).** Add an entry type to SA-08: **AI model and OCR provider**: provider name, contract reference, processing region, no-training and no-retention terms (both, matching AG-11; AG-16 L577 says only "no-training"), approval date and approver, health fed by real call outcomes (SA-8-27 pattern), and a feed into the residency declaration (SA-8-31). Reword L23, L163 and BR-1 to "no third-party *product-tool* integrations; approved *processing providers* for AI/OCR, WhatsApp and mailboxes only (AG11-D14)". Record the actual provider and region chosen before any firm switches AI on (AIW-D27).
 - **Why it matters / risk.** Nothing AI can be switched on, for any firm, until this exists. The founders' earlier code called a US endpoint with no region setting (code fact, `A-ai-switch-provider-residency.md` L124–125; W1 evidence E6); without an entry the same thing can happen again. **Who decides.** Team (SA-08 owner); the provider choice itself is a founder call (AIW-D27). **Shapes.** All.
@@ -131,7 +131,7 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 - **Today.** AG11-D15 (L44), AG-11-73 (L660), AG-11-93 (L701), BR-37 (L766), AG-16 §3.9 (L335): Canada only. SA-11 §3.6 RES2 (L269) and SA-11-21 (L373): non-Canadian processors allowed with documented safeguards. SA-11-20 (L372): the residency declaration lists storage locations only, not processing. SA-08 Q1 (L629): per-country routing "Phase-3".
 - **What is wrong or missing.** Two rules for the same data. The looser one sits in the governance document a regulator or buyer would read. Whether a Canada-region option exists at the chosen provider is **Unknown** (challenge review: do not assume one exists).
 - **Proposed change (Proposal).** SA-11 gets an "AI processing" category with the stricter rule: Canada only, no safeguard exception, and the declaration shows the AI processing region. Keep the general RES2 rule for other outside services. Add one honest fallback in writing: if no Canada-region option exists for the chosen model, AI stays locked off (AG-11-93 already does this) rather than quietly using safeguards. Legal sufficiency of Canada-only, and whether it is required at all: confirm with counsel.
-- **Why it matters / risk.** "Data hosted in Canada" is a visible competitor claim: the VisaFlo homepage footer read "VANCOUVER, BC · DATA HOSTED IN CANADA" when the reviewer opened https://visaflo.ca/ on 9 Oct 2026 (review W1 m-3; not in `research/visaflo.md`, which recorded Burnaby only). A buyer who reads SA-11 would find our promise weaker than our module file. **Who decides.** Ranjan (the promise), counsel (the law). **Shapes.** All.
+- **Why it matters / risk.** "Data hosted in Canada" is a visible competitor claim: the VisaFlo homepage footer read "VANCOUVER, BC · DATA HOSTED IN CANADA" when the reviewer opened https://visaflo.ca/ on 9 Oct 2026 (review W1 m-3; not in `research/visaflo.md`, which recorded Burnaby only). A buyer who reads SA-11 would find our promise weaker than our module file. **Who decides.** the founder (the promise), counsel (the law). **Shapes.** All.
 
 ### IMP-8 Platform emergency stop and what happens to waiting items
 
@@ -145,7 +145,7 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 - **Today.** SA3-D3 (L42): the product map (the Super Admin's master list of every switchable feature) closes AG-11's question about plan tiers. AG-11 §0.2 (L56), §13 Q8, AG-11-39 (L616), AG-16 §13 Q7 (L851): AI plan gating pending. SA-03 §11 (L593): a new metered measure is configuration, not a code change. FD-16 (L52): AI features are capabilities in the Capability Registry (developers: `cap.ai.*`), plan-gated, opted into per firm; Doc 1 §1.12 (L312): the Doer list has no Reader, Sorter or Checker, and no AI capability is defined. Doc 1 §1.12 (L294) "one capability, one toggle" vs AG-16-35 "no per-Doer setting".
 - **What is wrong or missing.** Two layers disagree on whether AI gating is decided, no AI item exists on the product map, no AI usage measure exists, and FD-16's capability model was never applied.
 - **Proposed change (Proposal).** Keep the one firm **consent** switch (AG-16-35) as a consent act, not an entitlement. Put AI on the product map as items (SA-3-31): the four AI Doers as one item, each AI Worker as its own item, the co-pilot as its own item; each off on existing plans until added (SA-3-38). Add usage measures as SA-03 limit rows: model calls, pages read, prepared files, co-pilot questions. This satisfies FD-16, Doc 1's one-toggle rule and AG-16's one consent switch at once.
-- **Why it matters / risk.** Without product-map items, no AI Worker can be sold, limited or switched off per plan; without usage measures, no per-file price (IMP-18). **Who decides.** Team for the mechanism; Ranjan for which plan gets what (FD-18 cells are open). **Shapes.** All.
+- **Why it matters / risk.** Without product-map items, no AI Worker can be sold, limited or switched off per plan; without usage measures, no per-file price (IMP-18). **Who decides.** Team for the mechanism; the founder for which plan gets what (FD-18 cells are open). **Shapes.** All.
 
 ### IMP-10 "Models get no tool access" vs a worker that operates the product
 
@@ -161,7 +161,7 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 - **Today.** AG11-D13 (L42), AG-11-93 (L701): "the product supplies client-notice wording the firm may use"; the wording exists nowhere. AG-16 §3.9 (L335): "ExpatReady is the data processor". FD-16 (L52): marketing may say "AI-assisted", never that AI decides; the origin is recorded on any AI-assisted artifact. AG-10 marks AI-written text on the message (L545). FD-20 (FDL L56): a client may ask a named person to review an automated *eligibility* result; "counsel confirms wording, not mechanism". SA-11 v2.7 mentions Quebec's Law 25 only for breach notification (L291, §13 Q2 L623) and data-request deadlines (§13 Q3 L624); whether Law 25's rules on automated decisions apply to a human-approved AI draft is **Unknown** in the sources (an earlier inventory line attributed it to SA-11 Q2; that was wrong, review W2 m-2). Nothing says whether a client is told that a message, a letter or a form they receive was AI-prepared and human-approved.
 - **What is wrong or missing.** Three legal questions with no owner: the processor notice; whether and how clients are told; whether an approved AI draft counts as an "automated decision" under Quebec or federal privacy law. The Federal Court's declaration rule for AI-generated content in filed material (`research/field-scan.md` §6 item 9, secondary sources) touches the Submission Letter use case.
 - **Proposed change (Proposal).** Counsel drafts: (a) the client notice (two languages; legal copy is never machine-translated, AG-12-24, SA-5-15); (b) a disclosure rule for client-facing AI-prepared items (recommended default: the item carries "prepared with AI assistance and approved by <name>" in the firm's record and, where the firm chooses or the law requires, in the message); (c) a position on Law 25 and PIPEDA for human-approved AI drafts. The product keeps the "AI-written" marker on every artifact (messages, letters, form drafts, values), not only on messages.
-- **Why it matters / risk.** A firm that cannot answer a client's "did a computer write this?" with a record is exposed, and so is our investor story. **Who decides.** Counsel / RCIC; Ranjan on the default. **Shapes.** All; the co-pilot only if its answers are copied to clients (then the AI-text floor applies).
+- **Why it matters / risk.** A firm that cannot answer a client's "did a computer write this?" with a record is exposed, and so is our investor story. **Who decides.** Counsel / RCIC; the founder on the default. **Shapes.** All; the co-pilot only if its answers are copied to clients (then the AI-text floor applies).
 
 ---
 
@@ -178,8 +178,8 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 
 - **Today.** AG-9-11 (L484): a high-confidence type is applied automatically (an internal filing action); a firm may raise it to "ask me first"; setting a type never verifies. AG-11 §3.10 (L464) and §13 Q11 (L1267): until a firm sets confidence thresholds, every Reader value and Sorter match goes to review. AG-09 §3.1 (L204): "the officer confirms". AG-09 BR-19 (L577): a type is a proposal. FD-16 (L52): every AI output "is human-approved before it has effect". Thresholds are open everywhere (AG-11 Q11, AG-09 Q10, AG-10 Q10, AG-18 Q8). AG-18 BR-9 (L471) similar.
 - **What is wrong or missing.** Is an internal, reversible filing action an "effect" under FD-16? The documents assume yes (review until thresholds) and no (automatic at high confidence) at once. For the Upload Reviewer and File Builder this decides whether a person touches every upload.
-- **Proposed change (Proposal).** Recommended reading of FD-16 for Ranjan: **"effect" means anything that reaches a client, a form, the verified profile, a deadline or a professional decision; an internal, reversible, audited filing label is not an effect.** On that reading AG-9-11 stands, with three conditions written in: (a) automatic only above a threshold the firm has set (until then, review, as AG-11 §3.10 says); (b) the applied type is shown as "proposed by Reader" until a person touches the document, and is always reversible; (c) the firm's agreement rate (person kept vs changed the type) is measured and shown (IMP-29), so a firm lowers review on evidence (IMP-30). Record the reading as an interpretation note on FD-16, not a change.
-- **Why it matters / risk.** Without it the product either reviews everything (no time saved) or breaks a ratified decision by stealth. **Who decides.** Ranjan (FD-16 reading). **Shapes.** Task, journey.
+- **Proposed change (Proposal).** Recommended reading of FD-16 for the founder: **"effect" means anything that reaches a client, a form, the verified profile, a deadline or a professional decision; an internal, reversible, audited filing label is not an effect.** On that reading AG-9-11 stands, with three conditions written in: (a) automatic only above a threshold the firm has set (until then, review, as AG-11 §3.10 says); (b) the applied type is shown as "proposed by Reader" until a person touches the document, and is always reversible; (c) the firm's agreement rate (person kept vs changed the type) is measured and shown (IMP-29), so a firm lowers review on evidence (IMP-30). Record the reading as an interpretation note on FD-16, not a change.
+- **Why it matters / risk.** Without it the product either reviews everything (no time saved) or breaks a ratified decision by stealth. **Who decides.** the founder (FD-16 reading). **Shapes.** Task, journey.
 
 ### IMP-14 Supervised-message routing: AG-16-47 vs AG-11-82
 
@@ -192,7 +192,7 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 - **Today.** FD-22 table (FDL v1.5 L78), ratified: the Practice Pack holds "supervision rules for unlicensed staff" and who may lawfully advise; A22-1 (L98): the practice jurisdiction licenses the human. AG11-D11(c) (L40), AG-11-82 (L681), AG-10-49 (L435): supervision is a firm setting, on by default, the Owner may switch it off with a reason. AG11-D11(a), AG-11-88 (L692), AG-16-46 (L482): a licensed approver for AI text is a default the Owner may widen. AG1-D19 (L66), SA6-D9 (L29), SA-06 BR-20 (L495): a licence is never checked or verified. AIW-D26: approval of AI Worker output is human, per the firm's role settings, licensed by default. Proposals.md row (carve-out A) already asks for this to be settled.
 - **What is wrong or missing.** A ratified decision says the pack sets supervision; the October design lets the Owner switch it off. Both can be right only if the pack sets a floor and the firm can only go stricter. Today the Canada pack has no such content (W1 inventory, sa-frs §D), so the floor is empty.
 - **Proposed change (Proposal).** Keep FD-22. Add one rule to AG-11 / AG-16: **the Practice Pack sets the supervision floor for the firm's jurisdiction; firm settings may tighten it, never loosen it below the floor.** Until the pack carries a floor, today's firm defaults stand as the floor. What the Canadian floor is (whether an unlicensed person may send advice-like text under supervision, and what "supervision" must look like): confirm with counsel / RCIC. For AI Workers: a worker acting for an **unlicensed** person produces "unlicensed-written" items and falls under supervision automatically; a worker acting for a licensed person still needs that person (or another human the firm allows) to approve, since the worker never approves (IMP-1 rule 5).
-- **Why it matters / risk.** Any sentence in the investor story about supervision rests on this. **Who decides.** Ranjan (keep FD-22 and adopt the floor rule); counsel / RCIC for the floor's content. **Shapes.** All.
+- **Why it matters / risk.** Any sentence in the investor story about supervision rests on this. **Who decides.** the founder (keep FD-22 and adopt the floor rule); counsel / RCIC for the floor's content. **Shapes.** All.
 
 ### IMP-16 Owner-approves wording in two forms; "widen" vs "switch off"
 
@@ -205,8 +205,8 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 - **Today.** AIW-D26 supersedes AIW-D17: human approval by whoever the firm's settings allow for that role, licensed by default; the product floors stay; external wording "approved by a named person". The product: AG-11-58 (L641), AG-11-88, AG-16-46, AG11-D11(d), SA6-D2 (L22), SA6-D9, AG-7-68 (L696: a plain note when a professional permission is granted to an unlicensed user). Review W1 B-3.
 - **What is wrong or missing.** Now that licensed-only is not the rule, the record must carry the facts a firm or regulator would ask for, and the product must make the firm's choice visible and deliberate. Separately: when a firm has **no** active licensed user, AG11-D11(d) lets the Owner approve AI text so that "nothing is blocked"; for a worker that prepares client-facing items all day, that route could become the norm in a firm whose only credential has lapsed.
 - **Proposed change (Proposal).** (a) Every approval of a worker-prepared item records: approver name, whether the approver was linked to a regulator credential at that moment (yes / no), the firm's setting in force (licensed only, or widened to named roles), and the Owner-route wording if used. (c) A monthly line in the firm's settings and in the Reporter: how many AI items were approved by the Owner route. (d) Optional, later: a check of the firm-entered licence number against the public register (AG1-D19 forbids licence monitoring today; a one-time format check is not monitoring: confirm with counsel / RCIC).
-- **(b) A proposed exception to AIW-D26, for Ranjan to accept or reject.** We propose a firm setting, **on by default**, that makes AI Workers pause their *client-facing* preparation while the firm has no active licensed user; the Owner may switch it off with a recorded reason. We say plainly that this runs against the direction of AIW-D26 ("whatever the firm selects"): it makes the presence of a licensed person a de facto gate for the worker layer unless the Owner opts out, whereas D26 made licence a default for the *approver*, not a condition for the *worker*. The trade-off in one sentence: default-on protects a firm whose only credential has lapsed from building a backlog of AI-prepared client items approved by an unlicensed Owner, at the cost of the worker stopping until someone acts; default-off keeps D26's direction exactly and relies on the record in (a) and the count in (c) to make the risk visible. If Ranjan rejects the exception, (b) is dropped and (a), (c) and (d) stand on their own.
-- **Why it matters / risk.** Keeps the trust story honest after D26: "approved by a named person, and the record shows whether that person was licensed". **Who decides.** Ranjan on (b); counsel on (d). **Shapes.** All.
+- **(b) A proposed exception to AIW-D26, for the founder to accept or reject.** We propose a firm setting, **on by default**, that makes AI Workers pause their *client-facing* preparation while the firm has no active licensed user; the Owner may switch it off with a recorded reason. We say plainly that this runs against the direction of AIW-D26 ("whatever the firm selects"): it makes the presence of a licensed person a de facto gate for the worker layer unless the Owner opts out, whereas D26 made licence a default for the *approver*, not a condition for the *worker*. The trade-off in one sentence: default-on protects a firm whose only credential has lapsed from building a backlog of AI-prepared client items approved by an unlicensed Owner, at the cost of the worker stopping until someone acts; default-off keeps D26's direction exactly and relies on the record in (a) and the count in (c) to make the risk visible. If the founder rejects the exception, (b) is dropped and (a), (c) and (d) stand on their own.
+- **Why it matters / risk.** Keeps the trust story honest after D26: "approved by a named person, and the record shows whether that person was licensed". **Who decides.** the founder on (b); counsel on (d). **Shapes.** All.
 
 ---
 
@@ -216,14 +216,14 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 
 - **Today.** SA-4-44 (SA-04 v2.14 L470): "Nothing is sold outside a plan: there are no add-on prices in Release 1." SA-03 §11 (L593): a metered measure is configuration. SA-1B X10 (SA-01B L90, in `B-filler.md`): the "auto-prefilled forms" plan limit has nothing to meter in Release 1. AG-11 §13 Q20 (L1276): per-seat vs per-case open. FD-18 (FDL L54): per-seat tiers "plus metered add-ons for consumption rails (e-sign envelopes, SMS, storage overage)". AIW-D17: the File Builder is priced per prepared file. Challenge review: pilot price as a flat monthly allowance, then per file.
 - **What is wrong or missing.** The wedge's business model has no meter, no definition of "a prepared file", no usage record and no billing line.
-- **Proposed change (Proposal).** (a) Define the unit: **a prepared file = one File Builder run on one case whose readiness report a person approved** (an abandoned or rejected run is not billed; a re-run on the same case within N days is not a new unit; N: Ranjan). (b) A run record per worker (IMP-35) carrying its model-call cost from the AI run log, so margin per file is known. (c) An SA-03 limit row "prepared files per month" per plan (the allowance) and an SA-04 metered line for use above it. (d) For Release 1, two honest options for Ranjan: amend SA-4-44 to allow this one metered add-on, or sell the File Builder as an allowance inside plan tiers and meter silently during the pilot. We recommend the second for the pilot and the first for launch.
-- **Why it matters / risk.** Without a meter there is no per-file revenue line in the W3 model and no cost-per-file number for investors. **Who decides.** Ranjan. **Shapes.** Journey (File Builder); the same meter pattern serves any worker sold per unit.
+- **Proposed change (Proposal).** (a) Define the unit: **a prepared file = one File Builder run on one case whose readiness report a person approved** (an abandoned or rejected run is not billed; a re-run on the same case within N days is not a new unit; N: the founder). (b) A run record per worker (IMP-35) carrying its model-call cost from the AI run log, so margin per file is known. (c) An SA-03 limit row "prepared files per month" per plan (the allowance) and an SA-04 metered line for use above it. (d) For Release 1, two honest options for the founder: amend SA-4-44 to allow this one metered add-on, or sell the File Builder as an allowance inside plan tiers and meter silently during the pilot. We recommend the second for the pilot and the first for launch.
+- **Why it matters / risk.** Without a meter there is no per-file revenue line in the W3 model and no cost-per-file number for investors. **Who decides.** the founder. **Shapes.** Journey (File Builder); the same meter pattern serves any worker sold per unit.
 
 ### IMP-19 Per-seat vs per-file: FD-18 already allows metered add-ons
 
 - **Today.** FD-18 (L54) fixes the shape: per-seat tiers plus metered add-ons for consumption; cell values and prices open (C-2, C-3). AG-11 Q20 asks per-seat vs per-case as if open.
-- **Proposed change (Proposal).** Treat "prepared file" as a metered add-on under FD-18. FD-18 names metered add-ons for "consumption rails"; whether a prepared file is such a rail is Ranjan's reading to confirm (no FD-18 wording change proposed); AG-11 Q20 closes by pointing to FD-18. W3 prices it.
-- **Why it matters / risk.** Avoids reopening a ratified decision for no reason. **Who decides.** Ranjan (confirm the reading). **Shapes.** Journey.
+- **Proposed change (Proposal).** Treat "prepared file" as a metered add-on under FD-18. FD-18 names metered add-ons for "consumption rails"; whether a prepared file is such a rail is the founder's reading to confirm (no FD-18 wording change proposed); AG-11 Q20 closes by pointing to FD-18. W3 prices it.
+- **Why it matters / risk.** Avoids reopening a ratified decision for no reason. **Who decides.** the founder (confirm the reading). **Shapes.** Journey.
 
 ---
 
@@ -241,7 +241,7 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 - **Today.** The SA-11 Restricted field set (the most sensitive personal data, such as passport and financial numbers) is an open founder item (FDL L149, B-1). AG-11 §11 (L1174): no personal data in logs; AG-11-98: previews stored encrypted or by reference; catalogue G9: passport and financial numbers never in messages or logs. AG-18-47: support staff never see personal data in an assisted migration session. Nothing says what a model may receive.
 - **What is wrong or missing.** A question like "list every client whose passport expires before March" needs dates, not passport numbers; nothing stops the full record going into the request sent to the model.
 - **Proposed change (Proposal).** A **least-data rule for every model call**: the Doer or co-pilot passes only the fields its task needs; Restricted fields (once B-1 is set) are never passed, only their status (present, expired, missing); names and numbers that identify a person are replaced by record references the product resolves after the answer comes back. The Reader is the one exception (it must read the passport) and its output stays by reference (AG-9-48).
-- **Why it matters / risk.** A privacy breach through the request to the model is the realistic failure mode. **Who decides.** Ranjan (B-1 field set), counsel. **Shapes.** Expert co-pilot; applies to all.
+- **Why it matters / risk.** A privacy breach through the request to the model is the realistic failure mode. **Who decides.** the founder (B-1 field set), counsel. **Shapes.** Expert co-pilot; applies to all.
 
 ---
 
@@ -259,7 +259,7 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 - **Today.** SA-2-17 (L381) blocks, in a support session: deleting, billing and payment, bulk export, users, roles and security settings, signing, sending messages to clients, starting another session, and the four professional actions. SA2-D14 (L61): no professional judgement in a support session. For automation: AG-11-54 (no submission), AG-11-16 (cases never moved by automation), AG-11-45 (no action for deactivated users), SA-06 Appendix C (L1309) Owner-only actions with no permission key.
 - **What is wrong or missing.** No such list exists for a twin or any worker; the nearest one is for Expat Ready's own support staff.
 - **Proposed change (Proposal).** A **worker blocked list**, enforced on the server like the floors (AG-11-53 pattern) and never delegable: delete clients, cases or documents; any billing, payment, refund or trust entry; any export; users, roles, permissions, settings, the AI switch, Team safeguards, supervision; signing or countersigning; the four professional actions (waive a deficiency, approve a review, record a decision, export a case) and form approval; moving a case stage; creating a lead from an unknown number; sending any free text to a client; granting or editing a delegation. The list is shown in the product on the twin's settings page and in the investor material as the "never" list (IMP-27).
-- **Why it matters / risk.** This is the sentence that answers "what stops it going rogue?". **Who decides.** Lead; Ranjan ratifies as part of IMP-27. **Shapes.** Role twin, journey.
+- **Why it matters / risk.** This is the sentence that answers "what stops it going rogue?". **Who decides.** Lead; the founder ratifies as part of IMP-27. **Shapes.** Role twin, journey.
 
 ---
 
@@ -269,8 +269,8 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 
 - **Today.** `B-index.md` naming conflicts: FD-8 (FDL L33, ratified) folds Reminder into Minder; AG-11 L243, AG-13 L227, Agent Phasing L52 and the RNA spec L25 keep Reminder, Minder, Tasker (and Messenger) as four Doers. FD-8 names Clocker "not Timer"; AG-13 v1.12 says Timer throughout (L314, L395). "Drafter" is the template engine (AG-05 L186, AG-09 L297, SA-06 L752, Doc 2 capability list) and the AI message writer (AG11-D4 L33, glossary L55). Dialer and Finder are absent from the October glossary (L52) and the Overview Doer list (L177). Notification (AG-11-2) and Recruiter (Doc 2 L91) appear as Doers in one place each. The Conductor is defined three ways and SA-08 L21 lists it as a Doer (`A-conductor.md` gaps). Proposals.md already carries the roster decision (carve-out B).
 - **What is wrong or missing.** Permissions, capabilities, audit entries, product-map items and every AI Worker's "Doers called" field key on these names. Today a permission that says "Drafter" is ambiguous and a ratified decision is contradicted by every October file.
-- **Proposed change (Proposal).** One canonical roster page in the glossary with one line per name, and three decisions: (a) **Reminder / Minder**: either the October files comply with FD-8 (rename the "speaks" Doer's actions to Minder actions) or Ranjan amends FD-8. Our recommendation: **amend FD-8** to allow Minder (thinks: deadlines and watches) and Reminder (speaks: client nudges) as two Doers, because AI Workers need the split (the Deadline Guardian is Minder logic; the chase is Reminder sending) and the October design already depends on it. (b) **Clocker**: keep FD-8's name; fix AG-13. (c) **Two Drafters**: keep "Drafter" for the template engine (older, keyed in permissions and capabilities) and give the AI message writer a new one-word name; the name is Ranjan's (naming is founder territory; the June naming spec is the founders'). Also: add Dialer, Finder, Notification and Recruiter to the glossary with a one-line status each; define the Conductor once ("the engine, not a Doer", AG-11 BR-1) and correct SA-08 L21 and Agent Phasing L51.
-- **Why it matters / risk.** Traceability breaks on names; so does the investor map. **Who decides.** Ranjan (FD-8; the AI Drafter's name); team for the glossary. **Shapes.** All.
+- **Proposed change (Proposal).** One canonical roster page in the glossary with one line per name, and three decisions: (a) **Reminder / Minder**: either the October files comply with FD-8 (rename the "speaks" Doer's actions to Minder actions) or the founder amends FD-8. Our recommendation: **amend FD-8** to allow Minder (thinks: deadlines and watches) and Reminder (speaks: client nudges) as two Doers, because AI Workers need the split (the Deadline Guardian is Minder logic; the chase is Reminder sending) and the October design already depends on it. (b) **Clocker**: keep FD-8's name; fix AG-13. (c) **Two Drafters**: keep "Drafter" for the template engine (older, keyed in permissions and capabilities) and give the AI message writer a new one-word name; the name is the founder's (naming is founder territory; the June naming spec is the founders'). Also: add Dialer, Finder, Notification and Recruiter to the glossary with a one-line status each; define the Conductor once ("the engine, not a Doer", AG-11 BR-1) and correct SA-08 L21 and Agent Phasing L51.
+- **Why it matters / risk.** Traceability breaks on names; so does the investor map. **Who decides.** the founder (FD-8; the AI Drafter's name); team for the glossary. **Shapes.** All.
 
 ### IMP-25 Is the Filler an AI Doer?
 
@@ -293,8 +293,8 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 
 - **Today.** Scattered across the sources: never submit to a government authority (AG-11-54 L635, AG-7-59 L687, BR-26 L755, AG11-D1 L30); never fabricate (AG-11-70 L657, BR-23 L752, AG-07 BR-7 L734); never promise an outcome (BR-9 L738, AG-10 BR-10 L464, AG-11-68); never write the verified profile without approval (AG-9-45 L542, AG11-D1 floor); AI client text never below "ask me first" (AG-11-53 L634, AG-10-44 L430); nothing runs because time passed (AG-11-59 L642); never create a lead from an unknown number (AG11-D18(b) L47); cases never moved by automation (AG-11-16 L573); never act for a deactivated user (AG-11-45); never outside the firm's one country pack (BR-2 L731); never cross firms (BR-3 L732); never bypass consent, quiet records or rate caps (AG-11-37, AG-11-87, BR-11); never machine-translate legal copy (AG-12-24, SA-5-15); never put passport or money numbers in messages or logs (AG-11 §11); never report to a regulator or declare a firm non-compliant (BR-34 L763).
 - **What is wrong or missing.** No single list; several limits are written for recipes or Doers, not for anything called a worker; some are missing for automation entirely: a worker never approves its own or anyone's work; never signs; never moves money; never deletes; never changes permissions, settings, the AI switch or safeguards; never contacts a regulator, a government office or a third party on the firm's behalf; never works for a client who is not the firm's client; never acts after the retainer ends or the client is paused.
-- **Proposed change (Proposal).** One **Hard limits** section in the AI Worker requirement (Phase B), enforced on the server at set-up and again at run time like the floors (AG-11-53), not by hiding buttons; the same list printed in the product (worker settings page), the client notice (IMP-11) and the investor material. The list = the scattered limits above plus the missing ones, each pointing to its existing source where one exists. Ranjan ratifies the list as a founder decision so it cannot be loosened by a module edit.
-- **Why it matters / risk.** This is what "cannot freelance" means in one page. **Who decides.** Ranjan (ratify), Lead (draft). **Shapes.** All.
+- **Proposed change (Proposal).** One **Hard limits** section in the AI Worker requirement (Phase B), enforced on the server at set-up and again at run time like the floors (AG-11-53), not by hiding buttons; the same list printed in the product (worker settings page), the client notice (IMP-11) and the investor material. The list = the scattered limits above plus the missing ones, each pointing to its existing source where one exists. The founder ratifies the list as a founder decision so it cannot be loosened by a module edit.
+- **Why it matters / risk.** This is what "cannot freelance" means in one page. **Who decides.** the founder (ratify), Lead (draft). **Shapes.** All.
 
 ### IMP-28 "Anything that reads as advice" is not a floor
 
@@ -317,28 +317,28 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 ### IMP-30 When is a Doer good enough to lower review?
 
 - **Today.** Thresholds are open in four modules (AG-11 Q11, AG-09 Q10, AG-10 Q10, AG-18 Q8); AG-11 §3.10 (L464) sends everything to review by default; AG-9-11 applies types automatically above a threshold nobody has set (IMP-13). No rule says how a firm or the platform decides a threshold.
-- **Proposed change (Proposal).** A **shadow-then-trust** rule: a kind of proposal runs in shadow mode (shown beside the person's own entry, nothing applied) until its agreement rate over the firm's last N decisions passes a bar the platform sets; then the firm may set its threshold, shown with the evidence; the platform publishes default thresholds per pack from the fixed test set (IMP-5), and firms may only go stricter until their own evidence exists. Floors never move (AG-11-53). N and the bar: Lead proposes, Ranjan confirms.
-- **Why it matters / risk.** Turns "review everything" into measured trust without a founder guess. **Who decides.** Lead; Ranjan on the bar. **Shapes.** Task, journey.
+- **Proposed change (Proposal).** A **shadow-then-trust** rule: a kind of proposal runs in shadow mode (shown beside the person's own entry, nothing applied) until its agreement rate over the firm's last N decisions passes a bar the platform sets; then the firm may set its threshold, shown with the evidence; the platform publishes default thresholds per pack from the fixed test set (IMP-5), and firms may only go stricter until their own evidence exists. Floors never move (AG-11-53). N and the bar: Lead proposes, the founder confirms.
+- **Why it matters / risk.** Turns "review everything" into measured trust without a founder guess. **Who decides.** Lead; the founder on the bar. **Shapes.** Task, journey.
 
 ### IMP-31 Which document wins on release
 
 - **Today.** Charter V1 L121 and V2 slides 1 and 4: AI and the AG-11 engine not in Release 1. AG-11 §13 L1297, L1303; Agent Phasing L19, L23; AG-08 L730: Release 1, built but switched off. SA-01B §0.3 L112: Defer. SCOPE-TRIAGE L3: not a requirements document; L149: proposes Release 2. Review W1 B-2; proposals.md rows from carve-out A and B; AIW-D21: assume everything is built, timelines not our concern.
 - **What is wrong or missing.** Under AIW-D21 the date does not matter to us, but every baseline row still carries five release labels and the team builds to the Charter. One precedence rule is needed so Phase B requirements can say "exists" or "new" without re-litigating.
-- **Proposed change (Proposal).** Adopt the reviewer's rule (review W1 Task 7 item 1) in README §2b: the newest dated module file wins over Doc 1–4 for the same topic; the Founder Decisions Log and AIW decisions win over module files; SCOPE-TRIAGE is never a scope source; the Charter wins on dates only and its "NOT IN RELEASE 1" line stays a recorded conflict until Ranjan updates it.
-- **Why it matters / risk.** Without it, the inventory and the investor map carry contradictions a reader can see. **Who decides.** Ranjan (and the Charter update is his alone). **Shapes.** All.
+- **Proposed change (Proposal).** Adopt the reviewer's rule (review W1 Task 7 item 1) in README §2b: the newest dated module file wins over Doc 1–4 for the same topic; the Founder Decisions Log and AIW decisions win over module files; SCOPE-TRIAGE is never a scope source; the Charter wins on dates only and its "NOT IN RELEASE 1" line stays a recorded conflict until the founder updates it.
+- **Why it matters / risk.** Without it, the inventory and the investor map carry contradictions a reader can see. **Who decides.** the founder (and the Charter update is his alone). **Shapes.** All.
 
-### IMP-32 AG-11's decisions are Sanjay's, not ratified founder decisions
+### IMP-32 AG-11's decisions are the co-founder's, not ratified founder decisions
 
-- **Today.** AG-11 §0 (L22): "Decided by Sanjay (product owner), 4 Oct 2026"; SA-06 calls its SA6-D rows "founder decisions" (L1) while crediting Sanjay; SCOPE-TRIAGE marks them [F] "decided earlier by the founder" (L9, L141). FDL v1.5 stops at 2 Aug. AIW-D10: decisions may come from either co-founder. `A-founder-decisions.md` §2.
+- **Today.** AG-11 §0 (L22): "Decided by the co-founder (product owner), 4 Oct 2026"; SA-06 calls its SA6-D rows "founder decisions" (L1) while crediting the co-founder; SCOPE-TRIAGE marks them [F] "decided earlier by the founder" (L9, L141). FDL v1.5 stops at 2 Aug. AIW-D10: decisions may come from either co-founder. `A-founder-decisions.md` §2.
 - **What is wrong or missing.** The entire approval, floor, AI-switch and licence-aware layer rests on decisions that are not in the Founder Decisions Log. A module edit could change any of them.
-- **Proposed change (Proposal).** Ranjan ratifies AG11-D1 to D18 (and the SA6-D rows they depend on) into the FDL in one batch, with the corrections in this file (IMP-12 to IMP-16) applied, so the AI layer rests on ratified ground; or records that product-owner decisions carry founder weight.
-- **Why it matters / risk.** An investor who asks "who decided the AI cannot send without approval?" should get "the founders, on this date". **Who decides.** Ranjan. **Shapes.** All.
+- **Proposed change (Proposal).** the founder ratifies AG11-D1 to D18 (and the SA6-D rows they depend on) into the FDL in one batch, with the corrections in this file (IMP-12 to IMP-16) applied, so the AI layer rests on ratified ground; or records that product-owner decisions carry founder weight.
+- **Why it matters / risk.** An investor who asks "who decided the AI cannot send without approval?" should get "The founders, on this date". **Who decides.** the founder. **Shapes.** All.
 
 ### IMP-33 Human review of AI-assisted output that reached a client (FD-20 covers scoring only)
 
 - **Today.** FD-20 (L56): assessment results carry an "automated decision" marker, a snapshot of the inputs and rules used, and a review request type routed to a named human; Charter V2 notes: a client can ask a named person to review an automated eligibility result. No equivalent for a client who received an AI-drafted message, letter or form value. `A-founder-decisions.md` gap.
 - **Proposed change (Proposal).** Extend the FD-20 review route to any client-visible item marked AI-written (IMP-11): the client can ask for a named person to review it; since a human already approved it, the request is a complaint path, not an automated-decision review. Whether Law 25 or PIPEDA treats a human-approved AI draft as an automated decision: confirm with counsel (the sources are silent; see IMP-11). No change to FD-20 itself.
-- **Why it matters / risk.** Closes the gap a privacy regulator would ask about first. **Who decides.** Counsel; Ranjan on the route. **Shapes.** Task, journey.
+- **Why it matters / risk.** Closes the gap a privacy regulator would ask about first. **Who decides.** Counsel; the founder on the route. **Shapes.** Task, journey.
 
 ### IMP-34 Needs you will flood: approvals per file, not per value
 
@@ -364,36 +364,36 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 - **Today.** README §1: reproducible outputs, same input same result. The Qualifier always gives the same result for the same inputs and pack version (AG-3-39), packs are versioned (SA-01 BR-3), FD-16: no model output is ever a decision. A model's output is not exactly repeatable by nature; AG-11 §11 only requires the instructions to be versioned.
 - **What is wrong or missing.** Said as a blanket claim it is false for every Reader, Sorter, Drafter, Checker and co-pilot step, and an investor's adviser will test it.
 - **Proposed change (Proposal).** Word the claim precisely everywhere: **"Every rule step gives the same result for the same input and pack version. Every AI step is a proposal with its source, its confidence and its model and instruction version recorded, reviewed the same way every time."** Where the provider allows it, fix the settings that control how much the model varies its answers (developers: temperature, seed) and record them in the AI run log; never claim word-for-word identical AI output.
-- **Why it matters / risk.** AIW-D9: no unprovable superlatives. **Who decides.** Ranjan (wording). **Shapes.** All.
+- **Why it matters / risk.** AIW-D9: no unprovable superlatives. **Who decides.** the founder (wording). **Shapes.** All.
 
 ### IMP-38 "AI Worker" as a name against FD-16's marketing rule
 
 - **Today.** FD-16 (L52): marketing may say "AI-assisted", never that AI decides. AIW-D27: externally, twins are "assistants to the role". The product term "AI Worker" implies an actor.
 - **Proposed change (Proposal).** Keep "AI Worker" as the working and investor term, always with "works for a named person; a person approves" in the same breath; use "AI assistant" in client-facing and regulator-facing text; check the wording with counsel before publication. Workers are never given human names or avatars that suggest a person is acting (the "avatars" idea in AIW-D19 can be visual styles, not identities).
-- **Why it matters / risk.** A name can contradict a ratified decision on a slide. **Who decides.** Ranjan; counsel. **Shapes.** All.
+- **Why it matters / risk.** A name can contradict a ratified decision on a slide. **Who decides.** the founder; counsel. **Shapes.** All.
 
 ### IMP-39 Tamper-evident audit may move to Release 2
 
 - **Today.** SA-11 §1 (L136): each audit entry is linked to the one before it, so any later edit or deletion shows (developers: hash chain). SCOPE-TRIAGE L174: proposes moving this and its checker to Release 2. Review W1 M-3: rivals also claim audit trails.
-- **Proposed change (Proposal).** Under AIW-D21 we assume it is built; the investor story may say "tamper-evident" only while that holds. If Ranjan accepts the triage proposal, the wording drops to "complete, append-only". Record the dependency in `assumptions.md`.
-- **Who decides.** Ranjan. **Shapes.** All.
+- **Proposed change (Proposal).** Under AIW-D21 we assume it is built; the investor story may say "tamper-evident" only while that holds. If the founder accepts the triage proposal, the wording drops to "complete, append-only". Record the dependency in `assumptions.md`.
+- **Who decides.** the founder. **Shapes.** All.
 
 ### IMP-40 Portal autofill: is typing into a government website "submitting"?
 
 - **Today.** AG-11-54, AG-7-59: nothing is ever submitted to an authority; the RCIC records a submission. AG-18 §0.1 (L147) and §13 (L848): "IRCC portal autofill / browser extension" is "not decided at platform level". VisaFlo and OpenVisa ship browser autofill extensions (`research/visaflo.md`; review W1 Task 3 rows 14–15, Chrome Web Store pages opened 9 Oct 2026).
 - **What is wrong or missing.** The line between "fills the form the person submits" and "submits" is not drawn for a browser helper. Every rival has one; firms will ask.
 - **Proposed change (Proposal).** State the rule now: a browser helper that fills fields on a government page from verified values, under the signed-in person's own government account, and never presses submit, pay or sign, is *filling*, not *submitting*; whether that is acceptable under CICC rules and IRCC portal terms: confirm with counsel / RCIC before any build. Until then the hard limit (IMP-27) reads "never submits, pays or signs on a government site".
-- **Who decides.** Counsel / RCIC; Ranjan. **Shapes.** Journey (Form Preparer).
+- **Who decides.** Counsel / RCIC; the founder. **Shapes.** Journey (Form Preparer).
 
 ### IMP-41 Dependencies the hook and the wedge still have
 
 - **Today.** The Deadline Guardian needs the Minder, which is not built (AG-11 §12, catalogue D5); the Charter leaves "a simple deadline and expiry reminder" as an open founder decision (`B-minder.md` status line); SCOPE-TRIAGE L119 proposes moving Reader letter deadlines (the Guardian's only AI step) to Release 2; escalation defaults conflict (AG-17 off vs AG-11 on from 5 staff, AG-11 §0.2 L60). The File Builder needs the case records that do not exist yet (AG-07 §12, catalogue D7), Canada pack content (D2) and the Filler decision (proposals.md, carve-out B).
-- **Proposed change (Proposal).** No new requirement; keep these in `assumptions.md` (AIW-D21) and in the team's dependency list (challenge review W2d). Ranjan's Charter update should name the Minder core and Reader letter deadlines as in, since the hook rests on them. The AG-17 / AG-11 escalation default: adopt AG-11's (newest).
-- **Who decides.** Ranjan (Charter), team. **Shapes.** Journey, task.
+- **Proposed change (Proposal).** No new requirement; keep these in `assumptions.md` (AIW-D21) and in the team's dependency list (challenge review W2d). The founder's Charter update should name the Minder core and Reader letter deadlines as in, since the hook rests on them. The AG-17 / AG-11 escalation default: adopt AG-11's (newest).
+- **Who decides.** the founder (Charter), team. **Shapes.** Journey, task.
 
 ---
 
-## 10. Decisions for Ranjan (only what he must decide; plain words; our recommendation)
+## 10. Decisions for the founder (only what he must decide; plain words; our recommendation)
 
 1. **Is a "delegation record" fine under FD-16?** It adds no AI identity; it records which person a worker worked for and which of their permissions it used. *Recommend: yes, confirm in one line. Also: the person the worker worked for counts as the preparer, so four-eyes applies to them.* (IMP-1)
 2. **Does an internal, reversible filing label count as "effect" under FD-16?** *Recommend: no; "effect" is anything reaching a client, a form, the verified profile, a deadline or a professional decision. Record it as a reading of FD-16, not a change.* (IMP-13)
@@ -401,7 +401,7 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 4. **A proposed exception to your decision AIW-D26: should AI Workers pause client-facing preparation when the firm has no active licensed user, by default?** This goes against the direction of D26 ("whatever the firm selects"); it is a firm setting the Owner can switch off with a reason. The trade-off: default-on protects a firm whose only credential has lapsed from piling up AI-prepared client items approved by an unlicensed Owner, at the cost of the worker stopping until someone acts; default-off keeps D26 exactly and relies on the approval record and a monthly count to make the risk visible. *Recommend: accept the exception; a plain "no" is fine and the rest of IMP-17 stands without it.* (IMP-17)
 5. **Metering the File Builder.** Define "prepared file" as a run whose readiness report a person approved; for the pilot sell an allowance inside plans and meter silently; for launch amend SA-4-44 to allow this one metered add-on. *Recommend: that sequence. FD-18 already allows metered add-ons, so no change to FD-18.* (IMP-18, IMP-19)
 6. **Names.** Amend FD-8 so Minder (watches dates) and Reminder (sends nudges) are two Doers, as every October file already assumes; keep "Clocker"; give the AI message writer a new one-word name so "Drafter" stays the template engine. *Recommend: all three; you choose the name.* (IMP-24)
-7. **Ratify Sanjay's AG11-D1 to D18 into the Founder Decisions Log**, with the corrections in this file. *Recommend: yes, one batch.* (IMP-32)
+7. **Ratify the co-founder's AG11-D1 to D18 into the Founder Decisions Log**, with the corrections in this file. *Recommend: yes, one batch.* (IMP-32)
 8. **Ratify the "hard limits" list** (what no worker may ever do) as a founder decision. *Recommend: yes, after counsel reads it.* (IMP-27, IMP-23)
 9. **Canada-only AI processing as the promise**, with the honest fallback that AI stays off if no Canadian option exists for the chosen model; counsel confirms the legal need. *Recommend: yes.* (IMP-7)
 10. **Which document wins on release**, and the Charter update. *Recommend: adopt the precedence rule; update the Charter to name the Minder core and Reader letter deadlines as in.* (IMP-31, IMP-41)
@@ -409,7 +409,7 @@ Severity: **Blocking** = no AI Worker of any shape can ship honestly without it;
 12. **Co-pilot data scope.** Confirm it may read the firm's case files (within the user's permissions) but never the Restricted personal-data fields, whose list (B-1) is still yours to set. *Recommend: yes, and set B-1 with counsel.* (IMP-20, IMP-21)
 13. **Portal autofill.** Ask counsel / RCIC now whether a browser helper that fills but never submits is acceptable; until then it stays outside every worker. *Recommend: ask now; it is the gap firms will name first.* (IMP-40)
 
-Items not for Ranjan (team or Lead decide): IMP-2, 3, 4, 5, 6, 8, 9 (mechanism), 10, 12, 14, 16, 22, 25, 26, 29, 30, 34, 35, 36. For counsel / RCIC: IMP-4 (retention), 7, 11, 15, 17(d), 20 (wording), 21, 28, 33, 40.
+Items not for the founder (team or Lead decide): IMP-2, 3, 4, 5, 6, 8, 9 (mechanism), 10, 12, 14, 16, 22, 25, 26, 29, 30, 34, 35, 36. For counsel / RCIC: IMP-4 (retention), 7, 11, 15, 17(d), 20 (wording), 21, 28, 33, 40.
 
 ---
 
@@ -417,7 +417,7 @@ Items not for Ranjan (team or Lead decide): IMP-2, 3, 4, 5, 6, 8, 9 (mechanism),
 
 - **Unknown:** whether the chosen AI provider offers Canada-region processing (IMP-7); the outcome of the founders' RNA autopilot review (`A-autopilot-spec.md`); whether any Canadian rival ships a delegation-style record; the content of the Canadian supervision floor (IMP-15); whether Law 25 or PIPEDA treats a human-approved AI draft as an automated decision (IMP-11, IMP-33; the sources mention Law 25 only for breach notification and data-request deadlines).
 - **Assumption:** everything in the October module files is built or will be (AIW-D21, `assumptions.md` AIW-A1); the tamper-evident audit chain ships in Release 1 (IMP-39); the Minder core and the case records exist before the hook and wedge run (IMP-41).
-- **Inferred:** that FD-16's "effect" excludes internal filing labels (IMP-13, for Ranjan to confirm); that AG-11 v1.11 (newest) wins over AG-16-47 and Doc 3 (IMP-14, IMP-3) pending the precedence rule (IMP-31).
+- **Inferred:** that FD-16's "effect" excludes internal filing labels (IMP-13, for the founder to confirm); that AG-11 v1.11 (newest) wins over AG-16-47 and Doc 3 (IMP-14, IMP-3) pending the precedence rule (IMP-31).
 
 ---
 
@@ -427,7 +427,7 @@ Items not for Ranjan (team or Lead decide): IMP-2, 3, 4, 5, 6, 8, 9 (mechanism),
 2. The single most important design sentence: an AI Worker is a recipe the Conductor runs from a fixed menu of actions; models inside it never hold tools and never choose actions (IMP-10). It keeps AG-11-94, FD-16 and the reproducibility claim all true at once.
 3. Acting on behalf of a named person needs one new record (the delegation, defined once in IMP-1) and two extra facts on every audit entry; no AI identity, FD-16 unchanged (IMP-1, IMP-3).
 4. The Super Admin side has not caught up with AG-11: no AI provider entry, a looser residency rule, no emergency-stop switch, no product-map item, no usage measure (IMP-6 to IMP-9).
-5. Four contradictions are settled by picking the newest wording and writing the pack-floor rule (IMP-12 to IMP-16); one needs Ranjan's reading of FD-16 (IMP-13).
+5. Four contradictions are settled by picking the newest wording and writing the pack-floor rule (IMP-12 to IMP-16); one needs the founder's reading of FD-16 (IMP-13).
 6. After AIW-D26, trust rests on what the approval record shows, not on "licensed only"; add the licence-link fact to every approval, and decide on one proposed exception to D26 (a default pause when a firm has no licensed user) (IMP-17).
 7. The wedge has no meter; "prepared file" is defined and FD-18 already permits a metered add-on (IMP-18, IMP-19).
 8. The co-pilot and role twins get their first written limits: answers only with sources and permission checked at the moment of reading; twins as delegations that never approve, with a blocked list borrowed from the support-session rule (IMP-20 to IMP-23).

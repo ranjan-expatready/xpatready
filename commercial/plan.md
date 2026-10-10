@@ -9,7 +9,7 @@ subtitle: "Version 1.1 · 8 October 2026 · for discussion with the founders · 
 
 **Why this route.**
 
-- **It is the cheapest way to learn** whether the product sells, and at what price. It uses the founder-consultant's relationships with consultants (Ranjan, 7 Oct) and the small-practice focus already ratified in FD-19.
+- **It is the cheapest way to learn** whether the product sells, and at what price. It uses the founder-consultant's relationships with consultants (the founder, 7 Oct) and the small-practice focus already ratified in FD-19.
 - **Two hypotheses, still to be tested:** owners of small practices decide without long approval chains, and they trust a licensed peer more than a sales team.
 
 **What would change course:** too few founding orders, losing mostly on price, or slow onboarding (§7).
@@ -27,7 +27,7 @@ subtitle: "Version 1.1 · 8 October 2026 · for discussion with the founders · 
 
 - **Fact:** about 12,500 licensed consultants and student advisers were in good standing in June 2025. 83% of consultants work in those three provinces.
 - **Unknown:** how many *practices* there are. If a practice averages 1.5–3 consultants, that is about 3,900–7,800.
-- **Unverified:** Ranjan mentioned an audience of about 25,000, perhaps 10,000. How many owners the founders can reach is unknown.
+- **Unverified:** the founder mentioned an audience of about 25,000, perhaps 10,000. How many owners the founders can reach is unknown.
 - **No customer evidence supplied:** the project files hold no record of customer conversations, pilots, commitments or revenue.
 
 **What should persuade an owner to switch** (the problem side is a hypothesis to test):
@@ -53,11 +53,11 @@ Detail: [competitors and prices (R1)](research/R1-competitors-and-pricing-2026-1
 
 | Term | Proposal (model defaults, 8 Oct 2026) | Reason / open point |
 |---|--------|------|
-| Plans, per firm, users included | Solo (1 practitioner + 1 assistant) CAD 89 · Practice (up to 4 users) CAD 229 · Firm (up to 10 users) CAD 549 a month; unlimited cases and portal users | Most Canadian rivals price per firm. **Ratified FD-18 says per seat: Ranjan decides.** The model prices per firm; per-seat pricing would need a seat-count input added |
+| Plans, per firm, users included | Solo (1 practitioner + 1 assistant) CAD 89 · Practice (up to 4 users) CAD 229 · Firm (up to 10 users) CAD 549 a month; unlimited cases and portal users | Most Canadian rivals price per firm. **Ratified FD-18 says per seat: the founder decides.** The model prices per firm; per-seat pricing would need a seat-count input added |
 | Annual prepayment | 12 months for the price of 10, paid up front | Brings cash in early |
 | Founding firms | First 50 firms: 30% off list for 24 months. They sign an order before launch and pay from go-live. Free assisted import of client records; no feature promises | Tests commitment before launch. A refundable deposit is stronger evidence but adds refund handling; possible later, after counsel review |
 | Trial and cancelling | Guided demonstration (no self-serve trial until a sandbox exists). Monthly plans cancel at period end. Annual plans: 30-day money-back on the first term | Replaces conflicting website and terms wording; counsel confirms |
-| Not at launch | Add-ons, fees on client payments, paid migration | FD-18 includes add-ons; SA-04 says none. Ranjan decides |
+| Not at launch | Add-ons, fees on client payments, paid migration | FD-18 includes add-ons; SA-04 says none. The founder decides |
 
 **Before any offer goes out:** counsel reviews the order form and terms, and the website drops claims Release 1 does not deliver (SMS, single sign-on, API, "65+ programs", uptime and savings figures).
 
@@ -97,7 +97,7 @@ Detail: [legal constraints (R3)](research/R3-legal-and-regulatory-constraints-20
 
 # 5. People, spending and funding
 
-**Who does what:** the founder-consultant sells and leads onboarding; the product team builds and runs the product; Sanjay and an accountant handle finance; counsel reviews terms, privacy, the offer and outreach; a named licensed owner keeps immigration content current. **Support at launch:** business hours, in-app and email, with response targets (not a contract until measured for three months) of 1 business hour for an outage or a data problem, 4 hours for a broken core function, 1 business day for how-to questions.
+**Who does what:** the founder-consultant sells and leads onboarding; the product team builds and runs the product; the co-founder and an accountant handle finance; counsel reviews terms, privacy, the offer and outreach; a named licensed owner keeps immigration content current. **Support at launch:** business hours, in-app and email, with response targets (not a contract until measured for three months) of 1 business hour for an outage or a data problem, 4 hours for a broken core function, 1 business day for how-to questions.
 
 **Help is chosen by workload, not by a rule.**
 
@@ -121,7 +121,7 @@ Detail: [legal constraints (R3)](research/R3-legal-and-regulatory-constraints-20
 - **Off unless chosen:** a content or marketing contractor, monthly events and memberships, a professional demo video, and a fixed-fee fundraising adviser.
 - **Untouched:** product-team commitments, which cost far more than everything else.
 
-**Cash.** Ranjan reported INR 2 crore of capital provided by Sanjay, about CAD 295,000. The model uses it as an unverified opening-cash assumption; it is not proven current cash. **The product-team cost is unknown;** the model uses a placeholder of CAD 25,000 a month.
+**Cash.** the founder reported INR 2 crore of capital provided by the co-founder, about CAD 295,000. The model uses it as an unverified opening-cash assumption; it is not proven current cash. **The product-team cost is unknown;** the model uses a placeholder of CAD 25,000 a month.
 
 | Model defaults, 8 Oct 2026, no outside money | |
 |--------|---|
@@ -190,21 +190,21 @@ It is a fair objection. That is why the plan:
 
 # 8. Next actions
 
-† Needs Ranjan's go-ahead before anyone is contacted, anything is published or money is spent.
+† Needs the founder's go-ahead before anyone is contacted, anything is published or money is spent.
 
 | # | Action | Owner | By |
 |-|----------|----|---|
-| 1 | Actual product-team monthly cost and commitments; dated bank balance | Ranjan, Sanjay | 15 Oct 2026 |
-| 2 | Name the licensed founder-consultant who sells; their weekly hours and any pay | Ranjan, Sanjay | 15 Oct |
-| 3 | Decide per-firm or per-seat pricing, and add-ons | Ranjan | 30 Oct |
-| 4† | Fixed-scope quotes: 2–3 law firms, an accountant, the website correction | Ranjan | 31 Oct |
+| 1 | Actual product-team monthly cost and commitments; dated bank balance | The founder, the co-founder | 15 Oct 2026 |
+| 2 | Name the licensed founder-consultant who sells; their weekly hours and any pay | The founder, the co-founder | 15 Oct |
+| 3 | Decide per-firm or per-seat pricing, and add-ons | The founder | 30 Oct |
+| 4† | Fixed-scope quotes: 2–3 law firms, an accountant, the website correction | The founder | 31 Oct |
 | 5† | 20 problem conversations with warm contacts (guide and order form drafted first) | Founder-consultant | 15 Dec |
 | 6† | Founding offer, after counsel review | Founder-consultant | from mid-Nov |
 | 7 | 3–5 pilot firms; owner named for each pilot safeguard | Founder-consultant, product lead | 15 Dec |
-| 8 | Name the licensed immigration-content owner | Ranjan | 15 Dec |
-| 9† | Choose the funding route; if raising, begin investor conversations | Ranjan, Sanjay | Nov 2026 |
-| 10 | Founders' agreement, cap table, written IP assignments from every developer (India team included) | Sanjay, counsel | before due diligence |
-| 11 | Decide part-time help, with pilot onboarding times in hand | Ranjan, founder-consultant | Jan 2027 |
+| 8 | Name the licensed immigration-content owner | The founder | 15 Dec |
+| 9† | Choose the funding route; if raising, begin investor conversations | The founder, the co-founder | Nov 2026 |
+| 10 | Founders' agreement, cap table, written IP assignments from every developer (India team included) | The co-founder, counsel | before due diligence |
+| 11 | Decide part-time help, with pilot onboarding times in hand | The founder, founder-consultant | Jan 2027 |
 
 **Published contact routes,** checked 7 Oct 2026. No one has been contacted, and membership is not permission to market. Investor fit is unverified.
 

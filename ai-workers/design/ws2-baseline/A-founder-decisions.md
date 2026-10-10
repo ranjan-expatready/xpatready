@@ -31,9 +31,9 @@
 
 | Req ID | Exact words | Source | Release label as written | Conflicts / overlaps |
 |---|---|---|---|---|
-| AG-11 §0 | Decided by Sanjay (product owner), 4 Oct 2026. | AG-11 v1.11 §0, L22 | n/a | AG11-D1 to D18 are product-owner decisions, not FD-n entries; Ranjan (founder) has not ratified them in any snapshot file. |
-| SA-06 decisions | founder decisions SA6-D1–D11 applied | SA-06 v3.1 document control, L1 | n/a | SA-06 calls SA6-D* "founder decisions"; its own table credits Sanjay (7 Oct). |
-| Agent Overview | decided by Sanjay, product owner, 4 Oct 2026; extended 5 Oct by AG11-D14–D18 and AG18-D11–D12 | Agent Overview v1.11 principles, L120 | n/a | — |
+| AG-11 §0 | Decided by the co-founder (product owner), 4 Oct 2026. | AG-11 v1.11 §0, L22 | n/a | AG11-D1 to D18 are product-owner decisions, not FD-n entries; the founder (founder) has not ratified them in any snapshot file. |
+| SA-06 decisions | founder decisions SA6-D1–D11 applied | SA-06 v3.1 document control, L1 | n/a | SA-06 calls SA6-D* "founder decisions"; its own table credits the co-founder (7 Oct). |
+| Agent Overview | decided by the co-founder, product owner, 4 Oct 2026; extended 5 Oct by AG11-D14–D18 and AG18-D11–D12 | Agent Overview v1.11 principles, L120 | n/a | — |
 
 ## 3. Release statements for AI and the automation engine
 
@@ -50,13 +50,13 @@
 | SA-01B §0.3 | AI reading of uploaded documents … Defer | SA-01B v1.2 §0.3, L112 | Defer | Conflicts with AG-08, AG-09, AG-11. |
 | Doc 3 AG-9 | OCR / auto-extraction (e.g. passport MRZ prefill) — OUT of base scope | Doc 3 v1.4 AG-9 §13, L4452 | Out (July, older) | Superseded in the Oct FRs. |
 | SCOPE-TRIAGE status | A review file, not a requirements document. Nothing here has changed any spec. | SCOPE-TRIAGE 2026-10-05, L3 | n/a | — |
-| SCOPE-TRIAGE AG-11 | Proposed to move (almost all [F], decided 4–5 Oct): | SCOPE-TRIAGE 2026-10-05 AG-11, L141 | Proposal only | [F] = "decided earlier by the founder" per its legend (L9); the AG-11 file says Sanjay decided them. |
+| SCOPE-TRIAGE AG-11 | Proposed to move (almost all [F], decided 4–5 Oct): | SCOPE-TRIAGE 2026-10-05 AG-11, L141 | Proposal only | [F] = "decided earlier by the founder" per its legend (L9); the AG-11 file says the co-founder decided them. |
 | SCOPE-TRIAGE savings | AG-11 approval / governance layer + AI Doers + WhatsApp (across AG-09, 10, 11, 16) | SCOPE-TRIAGE 2026-10-05, L266 | Proposal only | Named as the biggest saving if moved. |
 
 ## Gaps noticed
 
-- **No rule says which document wins on release** (review W1 B-2). Charter V1 and V2 (founder) say AI and the AG-11 engine are not in Release 1; AG-11, AG-08, AG-09 and the agent Phasing (product owner, 4–5 Oct) say Release 1, built but switched off; SA-01B says Defer; SCOPE-TRIAGE proposes Release 2. AIW-D1/AIW-D14 make all of it Workstream 2 scope; only Ranjan can change the Charter.
-- **SCOPE-TRIAGE marks AG-11 items [F] "decided earlier by the founder"**, while AG-11 records them as decided by Sanjay (product owner). AIW-D10 notes decisions may come from either co-founder; whether the AG-11 decisions count as founder decisions is not stated in any source.
+- **No rule says which document wins on release** (review W1 B-2). Charter V1 and V2 (founder) say AI and the AG-11 engine are not in Release 1; AG-11, AG-08, AG-09 and the agent Phasing (product owner, 4–5 Oct) say Release 1, built but switched off; SA-01B says Defer; SCOPE-TRIAGE proposes Release 2. AIW-D1/AIW-D14 make all of it Workstream 2 scope; only the founder can change the Charter.
+- **SCOPE-TRIAGE marks AG-11 items [F] "decided earlier by the founder"**, while AG-11 records them as decided by the co-founder (product owner). AIW-D10 notes decisions may come from either co-founder; whether the AG-11 decisions count as founder decisions is not stated in any source.
 - **FD-16 expects AI features as `cap.ai.*` capabilities in the Capability Registry**; neither Doc 1 v1.3 nor AG-11 defines them.
 - **FD-16 says every AI output is human-approved before it has effect.** AG-9-11 applies a high-confidence document type automatically (internal filing at AUTO). Whether that is "effect" under FD-16 is not stated. Inferred.
 - **FD-8 (Reminder folds into Minder)** is not reflected in AG-11 v1.11, the agent glossary or the founders' autopilot spec. Owner: carve-out B.
