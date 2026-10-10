@@ -2,13 +2,13 @@
 
 *Replace, don't append. Plan, gates and status: `PROGRESS.md`. Decisions: `decisions.md`. Story, ratings, audits: `REPORT-CARD.md`.*
 
-## State, 11 Oct 2026, ~03:30 IST
+## State, 11 Oct 2026, ~03:50 IST
 - **Step 2 (behaviours) is done and waiting for the founder.** Seven documents in `design/behaviours/` (case-assistant, intake-assistant, billing-assistant, firm-assistant, practice-expert, pack-authors-assistant, support-and-account-assistant), each passed hostile review (checks/review-S2a … S2h-b). The founder's list: `design/behaviours/00-step2-decisions.md`: 17 decisions before Step 3, 10 Lead's calls to confirm in one yes, 6 after counsel, 6 after the pilot, the team list, the card corrections.
 - **Main finding to carry into every conversation:** far less of the work is AI than Step 1 implied. AI reads documents, sorts messages, cross-checks facts and drafts text a person approves; rules and people decide everything else. The Deadline watch is the product's own feature (pending the founder); the Practice expert's version 1 is four fixed questions answered by rule plus one optional AI line.
 - **Rules added this session (README §0):** 9 one word per thing; 10 no personal names (AIW-D35); 11 newer module files win over Doc 1–4 only, and a conflict with a founder decision always goes to the founder (reworded 10 Oct 23:20). Cross-document rules applied to all seven documents: persona tasks never carry `sourceItemRef`; the Practice expert's own line is display-only; one hard-limit standard (the person saves in the product's own screen); six-kind counting unit (proposal, model call, send, issue, act by a person, act by the product); platform runs stamped with the firm they serve.
 - **Process rule:** only the Lead writes `PROGRESS.md` and, for whole rows, `proposals.md`; agents hand back their log lines and rows (whole-file rewrites by parallel agents erased Lead edits once, at 14:28 on 10 Oct).
 - **Session model:** the founder switched to Opus 5.5 on 10 Oct evening after the Fable 5.1 usage limit; commit attribution follows the current model.
-- **Still running at hand-off (check first):** an agent applying factual corrections to the Step 1 master, page and catalogue (Intake, Firm, Billing, Support, Practice, Pack and Case card lines; lines that depend on founder decisions held). Verify its table of changes with `git diff` on `design/ai-organisation.md`, `visual/ai-organisation.html`, `design/workers/catalogue.md`, then update section 7 of `00-step2-decisions.md` from "being applied now" to "applied", log and commit.
+- **Step 1 card corrections applied and verified (11 Oct 03:50):** 27 in the master, 28 on the page, 22 in the catalogue, each marked; the lines that depend on the founder's decisions are held (the Deadline watch's place and wording; the Practice expert's "answers any staff question").
 - Drive: no requirement file changed after the 9 Oct snapshot (checked 10 Oct twice). Re-check at session start.
 
 ## Next
