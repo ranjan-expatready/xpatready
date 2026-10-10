@@ -14,7 +14,7 @@
 | 9 Oct afternoon | W2: reference index of 1,300+ AI/Doer/Conductor requirements, 28-worker catalogue, 41 improvements, hostile review (2 blocking); all fixed. Challenge review of every decision; Ranjan answered: assume everything is built, timelines not our concern, approval = human per the firm's role settings, co-pilot answers only, report after every step. |
 | 9 Oct evening | Direction review; verification pass (code and Drive current, Charter quotes verified); local git history; W2 page published with 28 workers, product map and 22 decisions. |
 | 9 Oct, 16:30 | **Full audit (this card, §5).** Setup sound. Drive moved again (team document re-copied; a new team test-case sheet noted). 39 quotes and 5 competitor URLs checked, 0 wrong, 1 citation gap. Drift found: commercial deliverables unstarted while requirements work grew; process over-built; two of Ranjan's decisions contradict each other on timelines. Scores lowered where earned. |
-| 10 Oct | Step 1 (the AI organisation) started in a new session. First task: Drive checked (no requirement change), the two never-opened folders opened; the team's Product Vision v1.0 found and filed. Maker started on the organisation page. |
+| 10 Oct | **Step 1 done, ready for Ranjan.** First task: Drive checked, the two never-opened folders opened, the team's Product Vision v1.0 found and filed. Maker wrote the AI organisation (7 personas, 28/28 workers). Hostile review: fail, fixable (2 blocking, 10 major, 19 minor; 91/95 citations held). Lead agreed and added: too register-like to sell with. Fix round: solo-firm chart first, free Deadline watch on its own, at-a-glance table, plain-words approvals with evidence lines. Re-check: pass with ten small fixes, applied by the Lead. One checker run was cut off by the weekly usage limit on the top model and re-run. |
 
 ## 2. Ratings
 
@@ -28,7 +28,7 @@
 | Honesty and challenge | 8 (was 9) | Two hostile reviews, challenge review, invented quote caught. Lowered: the last card said "files match Ranjan's latest instructions"; this audit found two places that still follow timelines he told us to drop (§5.4) | Keep auditing our own claims first |
 | Validation with customers | 2 | None yet | 5–10 peer conversations (W3b) |
 | Things built | 1 | Nothing runs; requirements and strategy only | File Builder demo in the simulator (Phase B), after W3b |
-| Communication | 7 (was 8) | Short step reports; two pages. Lowered: 22 decisions put to Ranjan at once; he needs the 5 that block first | Split the 22 into "blocking now" and "later" |
+| Communication | 8 (was 7) | Short step reports; two pages. Raised 10 Oct: Step 1's 11 decisions are split into blocking now (3), confirm the Lead's call (4) and later (4); the page opens with five lines, an at-a-glance table and a one-screen chart | Keep every step report this short |
 
 ## 3. Plan and waiting-on-Ranjan
 
