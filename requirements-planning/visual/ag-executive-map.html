@@ -9,9 +9,10 @@
 --win:#2563eb;--assess:#0891b2;--engage:#7c3aed;--bill:#059669;--deliver:#d97706;--portal:#db2777;--across:#475569;--setup:#334155;
 --ok:#15803d;--warn:#b45309;--bad:#b91c1c;--sa:#0f766e;--ai:#6d28d9}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.35 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif;padding:24px 28px}
+body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.42 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif;padding:24px 28px}
 h1{font-size:22px;margin:0 0 2px}
-h2{font-size:15px;margin:22px 0 8px}
+h2{font-size:15.5px;margin:26px 0 10px;padding-bottom:4px;border-bottom:2px solid var(--line)}
+h2 .n{display:inline-block;min-width:22px;height:22px;line-height:22px;text-align:center;border-radius:6px;background:var(--ink);color:#fff;font-size:12px;margin-right:8px}
 .sub{color:var(--muted);font-size:12px;margin-bottom:12px}
 .sixty{border:1px solid var(--line);border-left:5px solid var(--sa);border-radius:8px;padding:9px 12px;background:#f0fdfa;font-size:12.5px;margin:10px 0 4px}
 .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:12px 0 4px}
@@ -46,7 +47,8 @@ h2{font-size:15px;margin:22px 0 8px}
 .chip.b{background:#fee2e2;border-color:#fca5a5;color:#7f1d1d}
 .chip.sa{background:#ccfbf1;border-color:#5eead4;color:#134e4a;font-weight:600}
 .chip.sal{background:#f0fdfa;border-color:#99f6e4;color:#134e4a}
-.chip.w{background:#e0e7ff;border-color:#a5b4fc;color:#312e81;font-weight:600}
+.chip.w{font-weight:700;color:#fff;border-color:transparent}
+.chip.w1{background:#334155}.chip.w2{background:#7c3aed}.chip.w3{background:#0f766e}.chip.w4{background:#d97706}.chip.w5{background:#475569}.chip.w6{background:#db2777}
 .chip.ai{background:#ede9fe;border-color:#c4b5fd;color:#4c1d95;font-weight:600}
 .sa1b{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:10px}
 .dep{display:grid;grid-template-columns:1fr;gap:5px}
@@ -94,12 +96,12 @@ h2{font-size:15px;margin:22px 0 8px}
 .tier b{display:block;font-size:11.5px}
 .tier.h{background:#ccfbf1} .tier.l{background:#f0fdfa} .tier.n{background:var(--soft)}
 .flow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:4px}
-.step{border:1px solid var(--line);border-top:5px solid var(--c);border-radius:8px;padding:8px 9px;background:#fff;min-height:132px}
-.step.sa{background:#f0fdfa;border-color:#5eead4;border-top-color:var(--sa)}
-.step .no{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
-.step .ttl{font-weight:700;font-size:12.5px;margin:1px 0 4px}
-.step .mods{font-size:12px;font-weight:600;margin:0 0 5px;line-height:1.4}
-.step .why{font-size:10.5px;color:var(--muted);margin:0}
+.wave{border:1px solid var(--line);border-top:5px solid var(--c);border-radius:8px;padding:8px 9px;background:#fff;min-height:132px}
+.wave.sa{background:#f0fdfa;border-color:#5eead4;border-top-color:var(--sa)}
+.wave .no{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.wave .ttl{font-weight:700;font-size:12.5px;margin:1px 0 4px}
+.wave .mods{font-size:12px;font-weight:600;margin:0 0 5px;line-height:1.4}
+.wave .why{font-size:10.5px;color:var(--muted);margin:0}
 .arrowline{font-size:10.5px;color:var(--muted);margin-top:6px}
 .dec3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .dec3 div{border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:11.5px}
@@ -115,22 +117,22 @@ h2{font-size:15px;margin:22px 0 8px}
   <div class="kpi"><b>0 / 18</b><span>at the standard of SA-01 and SA-02 today</span></div>
   <div class="kpi"><b>5</b><span>have decisions recorded; 13 are still the August first draft</span></div>
   <div class="kpi"><b>5 + 6</b><span>modules that depend on SA-1B: five fully, six for one value</span></div>
-  <div class="kpi"><b>7 steps</b><span>one order, SA-1B at step 3, one module per decision session</span></div>
+  <div class="kpi"><b>7 waves</b><span>one order; SA-1B is wave 3; one module per decision session</span></div>
 </div>
 
-<h2>The scope rule</h2>
+<h2><span class="n">1</span>The scope rule</h2>
 <div class="scope">
   <div class="box ai"><h3>Release 1 = everything in the files, except AI</h3>
     <ul><li><b>In:</b> every feature written in the 18 files, including WhatsApp, corporate and LMIA, data import, reporting, client portal.</li>
     <li><b>Out, a separate Release 2 stream:</b> anything AI: helpers that read documents, sort inbound mail, draft text, cross-check facts; the automation engine with its recipes, approval inbox and safeguards (AG-11); the AI switches in settings.</li></ul>
   </div>
   <div class="box"><h3>What the rule changes in the files</h3>
-    <ul><li>The files currently say the opposite twice: AI helpers "in Release 1, switched off" (4–5 Oct), and earlier "Release 2" lists for non-AI features (corporate depth, extra dashboards, lead sequences, invoice-history import). Both get rewritten to the rule in step 0.</li></ul>
+    <ul><li>The files currently say the opposite twice: AI helpers "in Release 1, switched off" (4–5 Oct), and earlier "Release 2" lists for non-AI features (corporate depth, extra dashboards, lead sequences, invoice-history import). Both get rewritten to the rule in wave 0.</li></ul>
     <div class="hl"><b>Two leftovers for Ranjan:</b> form auto-fill was parked on 23 Sep (SA1B-D28): keep parked or bring back? · plain date reminders at launch (biometrics due, permit expiry) sit in the automation module today: keep a simple reminder in AG-13, or by hand until the AI stream?</div>
   </div>
 </div>
 
-<h2>The four planes</h2>
+<h2><span class="n">2</span>The four planes</h2>
 <div class="planes">
   <div class="plane"><h3>1 · Foundation platform</h3><p class="st">Largely built · finish Oct</p><p>Security, keeping each firm's data separate, sign-in, the record of who did what, Canadian hosting.</p></div>
   <div class="plane"><h3>2 · Super Admin console · 12 modules</h3><p class="st">In build · finish Nov</p><p>How Expat Ready runs firms, Canada rules, plans and billing. 7 of 13 module files finished to standard. The SA-1B rules-builder screens are largely not built yet.</p></div>
@@ -139,58 +141,58 @@ h2{font-size:15px;margin:22px 0 8px}
 </div>
 
 
-<h2>Story map: the firm's journey, left to right, with each module as a card</h2>
-<div class="sub" style="margin-top:-4px">Each card: what the module does · its AI part, if any (Release 2 stream) · tags: how far the requirement is, questions still open, wave and date, and how much it depends on SA-1B. Step numbers refer to the queue below.</div>
+<h2><span class="n">3</span>Story map: the firm's journey, left to right, with each module as a card</h2>
+<div class="sub" style="margin-top:-4px">Each card: what the module does · its AI part, if any (Release 2 stream) · tags: how far the requirement is, questions still open, wave and date, and how much it depends on SA-1B. Wave numbers refer to the queue below.</div>
 <div class="map">
 
   <div class="lane" style="--c:var(--setup)"><h3>0 · Set up the firm</h3><div class="q">A real firm moves in with its staff, settings and old data.</div>
-    <div class="card" style="--c:var(--setup)"><div class="id">AG-01</div><div class="nm">Firm setup &amp; onboarding</div><p class="do">Firm record, staff and their roles, licence record, logo and colours, two-step sign-in, a set-up checklist, who is signed in where.</p><div class="chips"><span class="chip d">decisions recorded · 7 open</span><span class="chip w">Step 1</span><span class="chip sal">SA-1B: regulator wording only</span></div></div>
-    <div class="card" style="--c:var(--setup)"><div class="id">AG-18</div><div class="nm">Data import &amp; migration</div><p class="do">Bring a firm's existing clients, cases, key dates, documents and notes in from spreadsheets or the old system, with a preview before it runs and an undo.</p><p class="aip">AI part: automatic filing of imported documents.</p><div class="chips"><span class="chip d">draft · 20 open</span><span class="chip w">Step 1</span><span class="chip sal">SA-1B: program names only</span><span class="chip b">built in Oct, no date in the Charter</span></div></div>
-    <div class="card" style="--c:var(--setup)"><div class="id">AG-16</div><div class="nm">Firm settings &amp; integrations</div><p class="do">Firm profile, invoice settings, the firm's own card-payment account and mailbox, language, time zone, notification defaults, security.</p><p class="aip">AI part: the AI and safeguards switches.</p><div class="chips"><span class="chip b">first draft · 12 open</span><span class="chip w">Step 6</span></div></div>
+    <div class="card" style="--c:var(--setup)"><div class="id">AG-01</div><div class="nm">Firm setup &amp; onboarding</div><p class="do">Firm record, staff and their roles, licence record, logo and colours, two-wave sign-in, a set-up checklist, who is signed in where.</p><div class="chips"><span class="chip d">decisions recorded · 7 open</span><span class="chip w w1">Wave 1</span><span class="chip sal">SA-1B: regulator wording only</span></div></div>
+    <div class="card" style="--c:var(--setup)"><div class="id">AG-18</div><div class="nm">Data import &amp; migration</div><p class="do">Bring a firm's existing clients, cases, key dates, documents and notes in from spreadsheets or the old system, with a preview before it runs and an undo.</p><p class="aip">AI part: automatic filing of imported documents.</p><div class="chips"><span class="chip d">draft · 20 open</span><span class="chip w w1">Wave 1</span><span class="chip sal">SA-1B: program names only</span><span class="chip b">built in Oct, no date in the Charter</span></div></div>
+    <div class="card" style="--c:var(--setup)"><div class="id">AG-16</div><div class="nm">Firm settings &amp; integrations</div><p class="do">Firm profile, invoice settings, the firm's own card-payment account and mailbox, language, time zone, notification defaults, security.</p><p class="aip">AI part: the AI and safeguards switches.</p><div class="chips"><span class="chip b">first draft · 12 open</span><span class="chip w w6">Wave 6</span></div></div>
   </div>
 
   <div class="lane" style="--c:var(--win)"><h3>1 · Win</h3><div class="q">Every enquiry lands in one place and is followed up.</div>
-    <div class="card" style="--c:var(--win)"><div class="id">AG-02</div><div class="nm">Leads &amp; CRM</div><p class="do">Capture enquiries (website form, booking, typed in), no duplicates, a pipeline board for individuals and for employers, follow-up sequences, notes and call log, turn a lead into a client.</p><div class="chips"><span class="chip b">first draft · 14 open</span><span class="chip w">Step 1</span><span class="chip sal">SA-1B: lead-form questions only</span></div></div>
+    <div class="card" style="--c:var(--win)"><div class="id">AG-02</div><div class="nm">Leads &amp; CRM</div><p class="do">Capture enquiries (website form, booking, typed in), no duplicates, a pipeline board for individuals and for employers, follow-up sequences, notes and call log, turn a lead into a client.</p><div class="chips"><span class="chip b">first draft · 14 open</span><span class="chip w w1">Wave 1</span><span class="chip sal">SA-1B: lead-form questions only</span></div></div>
   </div>
 
   <div class="lane" style="--c:var(--assess)"><h3>2 · Assess &amp; advise</h3><div class="q">The client learns where they stand and books time with a consultant.</div>
-    <div class="card" style="--c:var(--assess)"><div class="id">AG-03</div><div class="nm">Pathway assessment</div><p class="do">Eligible / possibly / not for each immigration program with reasons and gaps; Express Entry, skilled-worker and provincial points from the Canada rules; saved with the rules it used; what-if advice; stamped "reviewed by".</p><div class="chips"><span class="chip b">first draft · 12 open (7 for the immigration expert)</span><span class="chip w">Step 4</span><span class="chip sa">SA-1B: the rules are the module</span></div></div>
-    <div class="card" style="--c:var(--assess)"><div class="id">AG-04</div><div class="nm">Consultation &amp; booking</div><p class="do">Appointment types and availability, public booking page, paid or free consultations, confirmations and reminders, calendar and video links, booker becomes a lead, consult record.</p><div class="chips"><span class="chip b">first draft · 11 open</span><span class="chip w">Step 2</span><span class="chip">nothing built</span></div></div>
+    <div class="card" style="--c:var(--assess)"><div class="id">AG-03</div><div class="nm">Pathway assessment</div><p class="do">Eligible / possibly / not for each immigration program with reasons and gaps; Express Entry, skilled-worker and provincial points from the Canada rules; saved with the rules it used; what-if advice; stamped "reviewed by".</p><div class="chips"><span class="chip b">first draft · 12 open (7 for the immigration expert)</span><span class="chip w w4">Wave 4</span><span class="chip sa">SA-1B: the rules are the module</span></div></div>
+    <div class="card" style="--c:var(--assess)"><div class="id">AG-04</div><div class="nm">Consultation &amp; booking</div><p class="do">Appointment types and availability, public booking page, paid or free consultations, confirmations and reminders, calendar and video links, booker becomes a lead, consult record.</p><div class="chips"><span class="chip b">first draft · 11 open</span><span class="chip w w2">Wave 2</span><span class="chip">nothing built</span></div></div>
   </div>
 
   <div class="lane" style="--c:var(--engage)"><h3>3 · Engage</h3><div class="q">A retainer is agreed and signed with evidence.</div>
-    <div class="card" style="--c:var(--engage)"><div class="id">AG-05</div><div class="nm">Retainer &amp; e-signature</div><p class="do">Retainer from a template with the regulator's required clauses, in-house signing (client, then firm), sealed copy and certificate, English and French; signature moves the lead to Won and starts invoicing.</p><div class="chips"><span class="chip b">first draft · 8 open</span><span class="chip w">Step 2</span><span class="chip sal">SA-1B: required clauses only</span></div></div>
-    <div class="card" style="--c:var(--engage)"><div class="id">AG-12</div><div class="nm">Templates (firm level)</div><p class="do">The firm's own copies of the standard templates (retainer, emails, notices): take a copy, edit, preview with sample data, publish, English and French, version history.</p><div class="chips"><span class="chip b">August draft · 6 open</span><span class="chip w">Step 2</span></div></div>
+    <div class="card" style="--c:var(--engage)"><div class="id">AG-05</div><div class="nm">Retainer &amp; e-signature</div><p class="do">Retainer from a template with the regulator's required clauses, in-house signing (client, then firm), sealed copy and certificate, English and French; signature moves the lead to Won and starts invoicing.</p><div class="chips"><span class="chip b">first draft · 8 open</span><span class="chip w w2">Wave 2</span><span class="chip sal">SA-1B: required clauses only</span></div></div>
+    <div class="card" style="--c:var(--engage)"><div class="id">AG-12</div><div class="nm">Templates (firm level)</div><p class="do">The firm's own copies of the standard templates (retainer, emails, notices): take a copy, edit, preview with sample data, publish, English and French, version history.</p><div class="chips"><span class="chip b">August draft · 6 open</span><span class="chip w w2">Wave 2</span></div></div>
   </div>
 
   <div class="lane" style="--c:var(--bill)"><h3>4 · Bill &amp; collect</h3><div class="q">Invoices go out, money comes in, nothing is unexplained.</div>
-    <div class="card" style="--c:var(--bill)"><div class="id">AG-06</div><div class="nm">Billing &amp; payments</div><p class="do">Invoices with Canadian tax, deposit invoice from the retainer, instalment plans, online card or offline payment, receipts, overdue chasing, government-fee lines, trust-money tag, per-client money summary.</p><div class="chips"><span class="chip b">first draft · 8 open</span><span class="chip w">Step 2</span><span class="chip sal">SA-1B: fee table only</span><span class="chip">sample screens built</span></div></div>
+    <div class="card" style="--c:var(--bill)"><div class="id">AG-06</div><div class="nm">Billing &amp; payments</div><p class="do">Invoices with Canadian tax, deposit invoice from the retainer, instalment plans, online card or offline payment, receipts, overdue chasing, government-fee lines, trust-money tag, per-client money summary.</p><div class="chips"><span class="chip b">first draft · 8 open</span><span class="chip w w2">Wave 2</span><span class="chip sal">SA-1B: fee table only</span><span class="chip">sample screens built</span></div></div>
   </div>
 
   <div class="lane" style="--c:var(--deliver)"><h3>5 · Prepare &amp; deliver</h3><div class="q">The case is built, checked, filed and tracked to a decision.</div>
-    <div class="card" style="--c:var(--deliver)"><div class="id">AG-07</div><div class="nm">Case core &amp; clients</div><p class="do">Client list and screen (individual and employer); cases pinned to the rules in force; applicants, steps, document checklist, government forms, internal review, filing, milestones, decision, closure, linked cases.</p><p class="aip">AI part: automatic cross-checks of names and dates. (Form auto-fill: parked 23 Sep, confirm.)</p><div class="chips"><span class="chip r">decisions recorded · 10 open + 17 proposed answers</span><span class="chip w">Step 4 · revision</span><span class="chip sa">SA-1B: cases run on its rows</span><span class="chip">being built now</span></div></div>
-    <div class="card" style="--c:var(--deliver)"><div class="id">AG-08</div><div class="nm">Smart questionnaire</div><p class="do">The client answers once: a step-by-step questionnaire built from the Canada rules; answers flow into one client profile; conditional questions; lock and re-open; verify against documents; English and French; family members.</p><p class="aip">AI part: reading values from identity documents; mismatch flags.</p><div class="chips"><span class="chip b">first draft · 11 open</span><span class="chip w">Step 4</span><span class="chip sa">SA-1B: the questions come from it</span></div></div>
-    <div class="card" style="--c:var(--deliver)"><div class="id">AG-09</div><div class="nm">Documents</div><p class="do">Upload and versions, request from the client, accept or reject with a reason, checklist from the rules, virus check, private storage, who-opened record, translation and expiry flags, retention.</p><p class="aip">AI part: reading and classifying uploaded documents.</p><div class="chips"><span class="chip b">first draft · 12 open</span><span class="chip w">Step 4</span><span class="chip sa">SA-1B: the checklist comes from it</span></div></div>
-    <div class="card" style="--c:var(--deliver)"><div class="id">AG-17</div><div class="nm">Corporate cases &amp; LMIA</div><p class="do">Employer clients; one LMIA file per occupation and location with positions; wage and stream checks; advertising clock; ready-to-file check; filing and decision; after-approval follow-up; hand-off to the worker's own case.</p><div class="chips"><span class="chip r">82 decisions · rule values await the immigration expert</span><span class="chip w">Step 4 · rule values with the expert</span><span class="chip sa">SA-1B: steps, tables and wording</span><span class="chip">corporate team building it</span></div></div>
+    <div class="card" style="--c:var(--deliver)"><div class="id">AG-07</div><div class="nm">Case core &amp; clients</div><p class="do">Client list and screen (individual and employer); cases pinned to the rules in force; applicants, waves, document checklist, government forms, internal review, filing, milestones, decision, closure, linked cases.</p><p class="aip">AI part: automatic cross-checks of names and dates. (Form auto-fill: parked 23 Sep, confirm.)</p><div class="chips"><span class="chip r">decisions recorded · 10 open + 17 proposed answers</span><span class="chip w w4">Wave 4 · revision</span><span class="chip sa">SA-1B: cases run on its rows</span><span class="chip">being built now</span></div></div>
+    <div class="card" style="--c:var(--deliver)"><div class="id">AG-08</div><div class="nm">Smart questionnaire</div><p class="do">The client answers once: a wave-by-wave questionnaire built from the Canada rules; answers flow into one client profile; conditional questions; lock and re-open; verify against documents; English and French; family members.</p><p class="aip">AI part: reading values from identity documents; mismatch flags.</p><div class="chips"><span class="chip b">first draft · 11 open</span><span class="chip w w4">Wave 4</span><span class="chip sa">SA-1B: the questions come from it</span></div></div>
+    <div class="card" style="--c:var(--deliver)"><div class="id">AG-09</div><div class="nm">Documents</div><p class="do">Upload and versions, request from the client, accept or reject with a reason, checklist from the rules, virus check, private storage, who-opened record, translation and expiry flags, retention.</p><p class="aip">AI part: reading and classifying uploaded documents.</p><div class="chips"><span class="chip b">first draft · 12 open</span><span class="chip w w4">Wave 4</span><span class="chip sa">SA-1B: the checklist comes from it</span></div></div>
+    <div class="card" style="--c:var(--deliver)"><div class="id">AG-17</div><div class="nm">Corporate cases &amp; LMIA</div><p class="do">Employer clients; one LMIA file per occupation and location with positions; wage and stream checks; advertising clock; ready-to-file check; filing and decision; after-approval follow-up; hand-off to the worker's own case.</p><div class="chips"><span class="chip r">82 decisions · rule values await the immigration expert</span><span class="chip w w4">Wave 4 · rule values with the expert</span><span class="chip sa">SA-1B: waves, tables and wording</span><span class="chip">corporate team building it</span></div></div>
   </div>
 
   <div class="lane" style="--c:var(--portal)"><h3>6 · Client portal</h3><div class="q">The firm controls what the client sees and does online.</div>
-    <div class="card" style="--c:var(--portal)"><div class="id">AG-15</div><div class="nm">Client portal management</div><p class="do">Invite and revoke clients, what each client sees, to-dos (upload, questionnaire, invoice, agreement), done on the client's behalf, employer contact, branding, stalled-client view, suspend and restore.</p><div class="chips"><span class="chip b">first draft · 9 open</span><span class="chip w">Step 6</span><span class="chip b">write the client-side file alongside</span></div></div>
+    <div class="card" style="--c:var(--portal)"><div class="id">AG-15</div><div class="nm">Client portal management</div><p class="do">Invite and revoke clients, what each client sees, to-dos (upload, questionnaire, invoice, agreement), done on the client's behalf, employer contact, branding, stalled-client view, suspend and restore.</p><div class="chips"><span class="chip b">first draft · 9 open</span><span class="chip w w6">Wave 6</span><span class="chip b">write the client-side file alongside</span></div></div>
     <div class="card" style="--c:var(--portal)"><div class="id">CP-01 … CP-09</div><div class="nm">Client portal (client side)</div><p class="do">Secure access, progress and next action, questionnaire, uploads, pay, sign, messages, profile and consent, employer read-only view.</p><div class="chips"><span class="chip b">no requirement files yet</span><span class="chip w">Charter: Dec</span><span class="chip">8 sample screens exist</span></div></div>
   </div>
 
-  <div class="lane" style="--c:var(--across)"><h3>Across every step</h3><div class="q">Messages, tasks, reminders and reports that every module uses.</div>
-    <div class="card" style="--c:var(--across)"><div class="id">AG-13</div><div class="nm">Tasks, notes &amp; audit</div><p class="do">Tasks and "My Tasks", reminders staff set themselves, internal and client-visible notes, one activity timeline per record, a permanent record of who did what, handover and bulk reassign.</p><div class="chips"><span class="chip b">first draft · 9 open</span><span class="chip w">Step 5</span><span class="chip sal">SA-1B: deadline types only</span><span class="chip">sample screens built</span></div></div>
-    <div class="card" style="--c:var(--across)"><div class="id">AG-10</div><div class="nm">Communication hub</div><p class="do">Email through the firm's own mail and inbox, WhatsApp, a timeline per record, chat with the client in the portal, templates by language, consent check, bounce handling, notifications, quiet hours.</p><p class="aip">AI part: sorting inbound messages, drafting replies.</p><div class="chips"><span class="chip b">first draft · 12 open</span><span class="chip w">Step 5</span></div></div>
-    <div class="card" style="--c:var(--across)"><div class="id">AG-14</div><div class="nm">Reporting</div><p class="do">Dashboards by role: leads by stage, open cases by stage, billed vs collected, overdue invoices, upcoming and missed deadlines, staff productivity, export to a spreadsheet, emailed reports.</p><div class="chips"><span class="chip b">first draft · 7 open</span><span class="chip w">Step 6</span></div></div>
+  <div class="lane" style="--c:var(--across)"><h3>Across every wave</h3><div class="q">Messages, tasks, reminders and reports that every module uses.</div>
+    <div class="card" style="--c:var(--across)"><div class="id">AG-13</div><div class="nm">Tasks, notes &amp; audit</div><p class="do">Tasks and "My Tasks", reminders staff set themselves, internal and client-visible notes, one activity timeline per record, a permanent record of who did what, handover and bulk reassign.</p><div class="chips"><span class="chip b">first draft · 9 open</span><span class="chip w w5">Wave 5</span><span class="chip sal">SA-1B: deadline types only</span><span class="chip">sample screens built</span></div></div>
+    <div class="card" style="--c:var(--across)"><div class="id">AG-10</div><div class="nm">Communication hub</div><p class="do">Email through the firm's own mail and inbox, WhatsApp, a timeline per record, chat with the client in the portal, templates by language, consent check, bounce handling, notifications, quiet hours.</p><p class="aip">AI part: sorting inbound messages, drafting replies.</p><div class="chips"><span class="chip b">first draft · 12 open</span><span class="chip w w5">Wave 5</span></div></div>
+    <div class="card" style="--c:var(--across)"><div class="id">AG-14</div><div class="nm">Reporting</div><p class="do">Dashboards by role: leads by stage, open cases by stage, billed vs collected, overdue invoices, upcoming and missed deadlines, staff productivity, export to a spreadsheet, emailed reports.</p><div class="chips"><span class="chip b">first draft · 7 open</span><span class="chip w w6">Wave 6</span></div></div>
     <div class="card off" style="--c:var(--ai)"><div class="id">AG-11</div><div class="nm">Automation &amp; AI helpers</div><p class="do">"When this happens, do that" automations with safety checks, an approval inbox, team safeguards, and the AI helpers (read, sort, draft, cross-check).</p><div class="chips"><span class="chip ai">Release 2 · separate AI stream</span><span class="chip">not in this queue</span></div></div>
   </div>
 </div>
-<div class="legend"><span class="chip r">decisions recorded</span><span class="chip d">decisions recorded, questions open</span><span class="chip b">August first draft, or a gap</span><span class="chip sa">SA-1B: cannot finish without it</span><span class="chip sal">SA-1B: takes one value from it</span><span class="chip w">step in the order</span><span class="chip ai">Release 2 AI stream</span><span>"open" = questions still listed as open at the end of the module file.</span></div>
+<div class="legend"><span class="chip r">decisions recorded</span><span class="chip d">decisions recorded, questions open</span><span class="chip b">August first draft, or a gap</span><span class="chip sa">SA-1B: cannot finish without it</span><span class="chip sal">SA-1B: takes one value from it</span><span class="chip w w1">Wave n</span> = its place in the order<span class="chip ai">Release 2 AI stream</span><span>"open" = questions still listed as open at the end of the module file.</span></div>
 
 
 
-<h2>SA-1B</h2>
+<h2><span class="n">4</span>SA-1B</h2>
 <div class="sa3">
   <div class="box"><h3>What it is</h3>
     <p style="font-size:11.5px;margin:0 0 4px"><b>The Canada rules and content every case runs on, held as data.</b></p>
@@ -200,7 +202,7 @@ h2{font-size:15px;margin:22px 0 8px}
       <li>The list of government forms</li>
       <li>Eligibility rules and points</li>
       <li>Reference tables: wages, fees, language scores</li>
-      <li>Government steps and deadlines</li>
+      <li>Government waves and deadlines</li>
       <li>Program structure: who the client is › program › application › variant</li>
       <li>The regulator's required wording</li>
     </ul>
@@ -211,36 +213,36 @@ h2{font-size:15px;margin:22px 0 8px}
     <div class="tier l"><b>Takes one value from it · 6</b>AG-01 regulator wording · AG-02 lead-form questions · AG-05 required clauses · AG-06 fee table · AG-13 deadline types · AG-18 program names</div>
     <div class="tier n"><b>No dependency · 6</b>AG-04 booking · AG-10 communication · AG-12 templates · AG-14 reporting · AG-15 portal management · AG-16 settings</div>
   </div>
-  <div class="box"><h3>When: step 3</h3>
+  <div class="box"><h3>When: wave 3</h3>
     <ul>
       <li><b>After</b> the seven modules that do not need it: they tell SA-1B what they want (lead-form questions, clauses, fee table).</li>
       <li><b>Before</b> the five that run on it: they are then reviewed once, against a settled model.</li>
       <li><b>Not first:</b> would push the three modules being built this month (AG-01, 18, 02) back for nothing.</li>
       <li><b>Not last:</b> the five would be written twice, and no firm can open a case until the Canada rules are published.</li>
-      <li>The Canada <b>content</b> itself (which programs, forms, documents) is a separate job for Tanu and the immigration expert after step 3.</li>
+      <li>The Canada <b>content</b> itself (which programs, forms, documents) is a separate job for Tanu and the immigration expert after wave 3.</li>
     </ul>
   </div>
 </div>
 
-<h2>The order</h2>
+<h2><span class="n">5</span>The order</h2>
 <div class="flow">
-  <div class="step" style="--c:#a5b4fc"><div class="no">Step 0</div><div class="ttl">Settle the ground</div><p class="mods">Scope rule written into files and Charter · AI lines reversed, old Release 2 lines restored · "what is built" refreshed · AG-18 and portal added to the Charter table</p><p class="why">No new decisions. Stops every later review from reopening.</p></div>
-  <div class="step" style="--c:#334155"><div class="no">Step 1</div><div class="ttl">Firm moves in, wins a client</div><p class="mods">AG-01 → AG-18 → AG-02</p><p class="why">Roles first; everything assumes them. These three are being built this month.</p></div>
-  <div class="step" style="--c:#7c3aed"><div class="no">Step 2</div><div class="ttl">Engage and get paid</div><p class="mods">AG-12 → AG-05 → AG-06 → AG-04</p><p class="why">Templates before the retainer that uses them; retainer before invoicing; booking stands alone.</p></div>
-  <div class="step sa" style="--c:#0f766e"><div class="no">Step 3</div><div class="ttl">SA-1B revision</div><p class="mods">Add the LMIA additions and what steps 1–2 asked for · settle which forms ship</p><p class="why">One session, one rewrite. Gates the next step.</p></div>
-  <div class="step" style="--c:#d97706"><div class="no">Step 4</div><div class="ttl">Deliver the case</div><p class="mods">AG-03 → AG-08 → AG-09 → AG-07 revision → AG-17 rule values</p><p class="why">All five run on SA-1B. Questionnaire before documents: the checklist grows from the answers.</p></div>
-  <div class="step" style="--c:#475569"><div class="no">Step 5</div><div class="ttl">Communicate and keep track</div><p class="mods">AG-13 → AG-10</p><p class="why">Tasks and the timeline first; messages write into them.</p></div>
-  <div class="step" style="--c:#db2777"><div class="no">Step 6</div><div class="ttl">Run the firm</div><p class="mods">AG-15 + first client-portal file → AG-16 → AG-14</p><p class="why">Settings and reporting collect everyone else's choices, so last.</p></div>
+  <div class="wave" style="--c:#a5b4fc"><div class="no">Wave 0</div><div class="ttl">Settle the ground</div><p class="mods">Scope rule written into files and Charter · AI lines reversed, old Release 2 lines restored · "what is built" refreshed · AG-18 and portal added to the Charter table</p><p class="why">No new decisions. Stops every later review from reopening.</p></div>
+  <div class="wave" style="--c:#334155"><div class="no">Wave 1</div><div class="ttl">Firm moves in, wins a client</div><p class="mods">AG-01 → AG-18 → AG-02</p><p class="why">Roles first; everything assumes them. These three are being built this month.</p></div>
+  <div class="wave" style="--c:#7c3aed"><div class="no">Wave 2</div><div class="ttl">Engage and get paid</div><p class="mods">AG-12 → AG-05 → AG-06 → AG-04</p><p class="why">Templates before the retainer that uses them; retainer before invoicing; booking stands alone.</p></div>
+  <div class="wave sa" style="--c:#0f766e"><div class="no">Wave 3</div><div class="ttl">SA-1B revision</div><p class="mods">Add the LMIA additions and what waves 1–2 asked for · settle which forms ship</p><p class="why">One session, one rewrite. Gates the next wave.</p></div>
+  <div class="wave" style="--c:#d97706"><div class="no">Wave 4</div><div class="ttl">Deliver the case</div><p class="mods">AG-03 → AG-08 → AG-09 → AG-07 revision → AG-17 rule values</p><p class="why">All five run on SA-1B. Questionnaire before documents: the checklist grows from the answers.</p></div>
+  <div class="wave" style="--c:#475569"><div class="no">Wave 5</div><div class="ttl">Communicate and keep track</div><p class="mods">AG-13 → AG-10</p><p class="why">Tasks and the timeline first; messages write into them.</p></div>
+  <div class="wave" style="--c:#db2777"><div class="no">Wave 6</div><div class="ttl">Run the firm</div><p class="mods">AG-15 + first client-portal file → AG-16 → AG-14</p><p class="why">Settings and reporting collect everyone else's choices, so last.</p></div>
 </div>
-<div class="arrowline">Each step needs only decisions already taken in the steps before it. One module per decision session; Claude prepares the brief before and writes the file after. Charter's latest dates: 28 Oct for step 1, 25 Nov for step 6.</div>
+<div class="arrowline">Each wave needs only decisions already taken in the waves before it. One module per decision session; Claude prepares the brief before and writes the file after. Charter's latest dates: 28 Oct for wave 1, 25 Nov for wave 6.</div>
 
-<h2>Three decisions</h2>
+<h2><span class="n">6</span>Three decisions</h2>
 <div class="dec3">
   <div><b>1 · Record the scope rule</b>Into the Founder Decisions Log and the Charter; confirm the two leftovers (form auto-fill, date reminders). <i>Ranjan.</i></div>
-  <div><b>2 · SA-1B at step 3</b>Name owner and date for the Canada content work that follows; decide where the Practice Pack requirements live. <i>Sanjay, Tanu; Ranjan for the Practice Pack.</i></div>
+  <div><b>2 · SA-1B at wave 3</b>Name owner and date for the Canada content work that follows; decide where the Practice Pack requirements live. <i>Sanjay, Tanu; Ranjan for the Practice Pack.</i></div>
   <div><b>3 · Charter table</b>Add AG-18 and the client-portal files; correct the "SA-1-B" label; record the "one country per firm" rule, missing from the Founder Decisions Log. <i>Ranjan.</i></div>
 </div>
 
-<div class="foot">Story map: the firm's six-step journey runs left to right; each column holds the modules that serve that step; tags show how far each requirement is, open questions, the step in the order, and the SA-1B dependency. Prints on A3 landscape.</div>
+<div class="foot">Story map: the firm's six-step journey runs left to right; each column holds the modules that serve that step; tags show how far each requirement is, open questions, its wave, and the SA-1B dependency. Prints on A3 landscape.</div>
 </body>
 </html>
