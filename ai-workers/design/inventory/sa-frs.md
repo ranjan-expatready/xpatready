@@ -616,7 +616,7 @@ Cross-slice findings are in the section "Slice summary and cross-file findings" 
 - Code state: "No Canada content (by design)." and the listing of who is on which version "(SA-1-62) — not built." (§12).
 - "Restricted-field encryption is still inert for answers" (§12 Gaps).
 - Hierarchy wording differs inside the file: §3.2 table says "Pathway → Program → Stream → Category" but SA1B-D2 says "Pathway (Individual / Corporate) › Program › Category › Sub-category" (§0). The file states SA1B-D2 supersedes.
-- Content values routed to the Immigration SME [name withheld] (§13).
+- Content values routed to the Immigration SME […] (§13).
 
 ### SA-01B Content Pack Configurator (v1.2)
 
