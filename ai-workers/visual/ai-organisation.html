@@ -101,13 +101,14 @@ ul,ol{margin:0;padding-left:20px;display:grid;gap:6px} li{max-width:90ch}
   <h1>The AI organisation of an Expat Ready firm, in business terms</h1>
   <p class="lede">Seven AI personas, each an assistant to one human role, each working under that person's own permissions and stopping where a named person approves. They carry all 28 AI Workers in the catalogue. Nothing here is a user, a login or a decision-maker: <q>AI assists; humans decide</q> (Product Vision v1.0 (team), section 00; FD-16).</p>
   <div class="facts"><span><b>7</b> personas (5 for the firm · 2 for Expat Ready's team)</span><span><b>28 of 28</b> workers placed, 0 left out</span><span><b>11</b> decisions for Ranjan (7 from the maker, 4 from the checker with the Lead's call)</span><span>Master file: <b>design/ai-organisation.md</b> (same content, with every citation)</span></div>
+  <p class="small muted"><b>Who it is for.</b> Ranjan, to "sell and tell" to licensed immigration consultants, his own team and investors (AIW-D28). <b>What it is.</b> The first of three layers (AIW-D28): Step 2 writes one behaviour document per persona; Step 3 writes the build specification. Plain English; any unavoidable term is explained in brackets where it first appears and again in the glossary.</p>
   <p class="small muted">How to read: every product fact points to a requirement by ID, file and version in the 9 Oct 2026 Drive snapshot, or to a catalogue entry (W-nn) or improvement item (IMP-nn) that carries the citation. Everything else is labelled <b>Proposal</b>, <b>Assumption</b> or <b>Unknown</b>. Where the catalogue and the improvements differ, the improvements win. Everything in the documents is treated as built or to be built (AIW-D21); where a buyer should hear "Specified, not built", the card says so. Any term that cannot be avoided is explained in brackets where it first appears and again in the glossary.</p>
 </header>
 
 <nav aria-label="Sections"><div class="tabs">
+  <a href="#idea">In five lines</a>
   <a href="#glance">At a glance</a>
   <a href="#chart">The charts</a>
-  <a href="#idea">In five lines</a>
   <a href="#personas">The seven personas</a>
   <a href="#coverage">Coverage 28/28</a>
   <a href="#run">How a firm runs it</a>
@@ -123,15 +124,31 @@ ul,ol{margin:0;padding-left:20px;display:grid;gap:6px} li{max-width:90ch}
     <li>Expat Ready is built for people: every action has a permission, every automated message has a template or an approval (a person's own hand-written message is a normal send, AG-11 v1.11 §3.3), every rule comes from a published Country Pack (the rulebook for a destination country; FD-22, Founder Decisions Log v1.5).</li>
     <li>An <b>AI persona</b> is an assistant to one of those people. It does the same work, through the same product, under that person's own permissions, and it stops where a named person approves (AIW-D13, AIW-D26).</li>
     <li>There is no AI user. FD-16 (Founder Decisions Log v1.5): <q>no AI principal in the identity spine, no autonomous permissions</q>, and <q>Marketing may say 'AI-assisted'; it may not say the AI decides.</q> The team's own Product Vision says the same in four words: <q>AI assists; humans decide</q> (Product Vision v1.0 (team), section 00).</li>
-    <li>Five personas serve the firm; two serve Expat Ready's own team. Together they carry all 28 workers in the catalogue. The free Deadline watch, the hook, is shown on its own in the chart.</li>
+    <li>Five personas serve the firm; two serve Expat Ready's own team. Together they carry all 28 workers in the catalogue. The free Deadline watch, the hook (the free duty that gets a firm to switch AI on; the wedge is the first paid one, the File Builder; AIW-D17), is shown on its own in the chart.</li>
     <li>Nothing is built yet. Every "hours saved" figure is an Assumption until the pilot (AIW-A6); every price is an Assumption until the Step 5 conversations.</li>
   </ol>
+</section>
+
+<section id="glance">
+  <h2>0a. The seven personas at a glance</h2>
+  <p class="muted">One row per persona. "Who approves" is in plain words; the exact permission key or setting is on each card below. "What it saves" is Assumption or Unknown throughout (AIW-A6).</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Persona</th><th>Assists whom</th><th>Does</th><th>Never does</th><th>Who approves (plain words)</th><th>What it saves</th></tr></thead>
+    <tbody>
+      <tr><td><b>Case assistant</b></td><td>the Case Officer</td><td>prepares each file from the signed retainer to "ready for review": chases and reads documents, proposes values, drafts letters, assembles forms from checked values (no AI in the filling)</td><td>never files anything with the government, never verifies a value itself, never fills a form with AI</td><td>the file's reviewer: the Case Manager or the Owner, whichever the firm's settings allow; client text by whoever the firm allows, a licensed person by default</td><td><b>Time:</b> 1 / 3 / 6 hours of assistant work per prepared file, low / typical / high (Assumption, commercial/provider-and-cost.md §3.6); the pilot measures</td></tr>
+      <tr><td><b>Intake assistant</b></td><td>the intake role (in a solo firm, the Owner wearing that hat)</td><td>answers enquiries with consent, asks only what is missing, books the consult, drafts the proposal</td><td>never converts a lead, never promises an outcome, never messages without consent</td><td>the intake rep; client messages by whoever the firm allows</td><td><b>Time:</b> Unknown; the Step 5 script asks minutes per enquiry; the pilot measures</td></tr>
+      <tr><td><b>Billing assistant</b></td><td>Billing / Finance</td><td>drafts invoices, proposes payment matches, lists unbilled work, drafts reminders</td><td>never issues, records, refunds, moves or exports money</td><td>the Billing user who may issue invoices and record payments</td><td><b>Time and cash:</b> Unknown; the Step 5 script asks invoices per month; the pilot measures</td></tr>
+      <tr><td><b>Firm assistant</b> (holds the free <b>Deadline watch</b> for every file owner)</td><td>the Owner and the Case Manager</td><td>watches every deadline, finds each client's next immigration moment, maps a migration, keeps privacy requests on their clock, explains the week's numbers</td><td>never imports, never deletes, never exports, never computes a deadline itself</td><td>the file owner for a deadline; the Owner for a migration or a privacy request; template reminders: no person, they go out at the level the firm chose</td><td><b>Risk and revenue</b> more than hours (Assumption); the pilot measures the deadline catch rate</td></tr>
+      <tr><td><b>Practice expert</b></td><td>every staff role</td><td>answers questions with sources, from the published rulebook and the records the asker may see</td><td>never acts, never advises a client, never answers without a source</td><td>nobody, for an answer to staff; anything for a client goes through an acting persona</td><td><b>Time:</b> Unknown; minutes per question against minutes of searching (Assumption)</td></tr>
+      <tr><td><b>Pack author's assistant</b></td><td>Expat Ready's content author</td><td>drafts rulebook changes, form box maps and test cases; watches official pages</td><td>never publishes or approves a rulebook, never scores an outcome</td><td>the Content approver; immigration values by the Immigration SME, product owners final</td><td><b>Our own content cost:</b> Unknown until measured</td></tr>
+      <tr><td><b>Support and account assistant</b></td><td>Expat Ready's Support and Account manager</td><td>drafts the first reply to a ticket and the outreach to a quiet firm</td><td>never changes a firm's plan or state; never lets an internal note reach a firm</td><td>the support agent; the account manager</td><td><b>Our own support cost:</b> Unknown until measured</td></tr>
+    </tbody></table></div>
 </section>
 
 <section id="chart">
   <h2>1. The AI organisation chart</h2>
   <div class="card"><h3>1.1 How to read it</h3>
-    <p>Each persona is drawn <b>beside</b> the human role it assists, never above it or in its place. Two charts follow: first <b>a solo firm</b>, the beachhead buyer (FD-19: <q>solo and small, 1 to 5 people</q>, Founder Decisions Log v1.5); then <b>a firm with a team</b>. Three sentences hold for both:</p>
+    <p>Each persona is drawn <b>beside</b> the human role it assists, never above it or in its place. Two charts follow: first <b>a solo firm</b>, the beachhead buyer (FD-19: <q>Solo and small RCIC practices, 1–5 people</q>, Founder Decisions Log v1.5); then <b>a firm with a team</b>. Three sentences hold for both:</p>
     <ul>
       <li><b>No persona ever approves anything; the approver is always the person in the left column.</b></li>
       <li><b>A named person is answerable for every step, and the record shows it</b> (IMP-1: <q>Regulator: a named person is answerable for every step, and the record shows it</q>).</li>
@@ -161,7 +178,7 @@ ul,ol{margin:0;padding-left:20px;display:grid;gap:6px} li{max-width:90ch}
     <div class="grp"><div class="g">The client</div><div class="pairs">
       <div class="pair"><div class="human"><span class="k">Outside the firm's staff</span><b>The client</b> (portal)</div><div class="ai-side none"><span class="k">No persona faces the client</span><span class="small">The client sees only what the person approved.</span></div></div>
     </div></div>
-    <p class="src"><b>Evidence for Chart A.</b> FD-19 (Founder Decisions Log v1.5); SA6-D9 and the Owner role "Everything, including the five Owner-only actions" (SA-06 v3.1 §3.3); the licensed person is by default the approver of AI-written client text (AG-11 v1.11 AG11-D11(a); AG-16 v1.12 §3.9) and holds the professional approvals as Owner (SA6-D2); Deadline watch = W-02, the hook (AIW-D17), proposed free (commercial/price-card.md page 1); no client-facing persona (AIW-D11; workers/module-map.md §2); the expert answers only (AIW-D25). <b>Approval in a solo firm:</b> Team safeguards, including four-eyes on forms (a second person checks before it goes out), switches on at 5 active staff (AG-16 v1.12 §3.10), so the one person approves what their own assistant prepared, and the record shows "prepared by the assistant for [name], approved by [name]" (IMP-1, Proposal). Whether that meets supervision rules: confirm with counsel / RCIC (IMP-15, IMP-17).</p>
+    <p class="src"><b>Evidence for Chart A.</b> FD-19 (Founder Decisions Log v1.5); SA6-D9 and the Owner role "Everything, including the five Owner-only actions" (SA-06 v3.1 §3.3); the licensed person is by default the approver of AI-written client text (AG-11 v1.11 AG11-D11(a); AG-16 v1.12 §3.9) and holds the professional approvals as Owner (SA6-D2); Deadline watch = W-02, the hook (AIW-D17), proposed free (commercial/price-card.md page 1); no client-facing persona (AIW-D11; workers/module-map.md §2); the expert answers only (AIW-D25). <b>Approval in a solo firm:</b> Team safeguards, including four-eyes on forms (a second person checks before it goes out), switches on at 5 active staff (AG-16 v1.12 §3.10), and the same section sets the solo rule: "A solo user never approves their own work twice" and, with one approver, a draft they prepared "is recorded and shown as self-approved, never blocked" (AG-16 v1.12 §3.10, item 1). So the one person approves what their own assistant prepared, and the record names the assistant, the person it worked for and the approver (IMP-1, Proposal; the exact wording of the record is Step 2 work). Whether that meets supervision rules: confirm with counsel / RCIC (IMP-15, IMP-17).</p>
   </div>
 
   <div class="org">
@@ -202,7 +219,7 @@ ul,ol{margin:0;padding-left:20px;display:grid;gap:6px} li{max-width:90ch}
       <div class="pair"><div class="human"><span class="k">Human role</span><b>Support · Firm onboarding / Account manager</b><span class="small">(Product Vision: "Support", "Tenant Account Manager")</span></div><div class="ai-side"><span class="k">AI persona beside it</span><b>Support and account assistant</b><span class="small">W-22, W-23 · Proposal grouping</span></div></div>
     </div></div>
     <div class="grp"><div class="g">Runs the platform</div><div class="pairs">
-      <div class="pair"><div class="human"><span class="k">Human roles</span><b>Platform Owner · Staff manager · Billing · Security &amp; audit · Platform engineer</b><span class="small">(Product Vision: "Platform Owner", "Billing-Ops", "Compliance Officer / DPO", "Auditor", "Platform engineer"). Record the AI provider, trip the emergency stop, change plans and flags, read the audit spine.</span></div><div class="ai-side none"><span class="k">No persona</span><span class="small">The hard limits keep every persona out of these actions.</span></div></div>
+      <div class="pair"><div class="human"><span class="k">Human roles</span><b>Platform Owner · Staff manager · Billing · Security &amp; audit · Platform engineer</b><span class="small">(Product Vision: "Platform Owner", "Platform Admin", "Billing-Ops", "Compliance Officer / DPO", "Auditor"). Record the AI provider, trip the emergency stop, change plans and flags, read the audit spine.</span></div><div class="ai-side none"><span class="k">No persona</span><span class="small">The hard limits keep every persona out of these actions.</span></div></div>
     </div></div>
     <p class="src"><b>Evidence for 1.4.</b> SA-07 v2.10 SA7-D8 (nine starter roles); two-person publishing rule SA-01 v2.2 §3.12; Support SA-10 v2.5; Account manager SA-02 v2.19 §3.6; hard limits IMP-27; workers/module-map.md §3; catalogue §2.5.</p>
   </div>
@@ -214,22 +231,6 @@ ul,ol{margin:0;padding-left:20px;display:grid;gap:6px} li{max-width:90ch}
       <li><b>Is a recipe, not a model with hands</b> (IMP-10, Proposal): the product's own automation engine runs it as an ordered list of product actions; the AI inside proposes values, and <q>a model never selects which action runs</q> (IMP-10, resting on AG-11 v1.11 AG-11-94: models have no tool access).</li>
       <li><b>Is an "assistant to the role", never a user</b> (AIW-D27; FD-16).</li>
     </ul></div>
-</section>
-
-<section id="glance">
-  <h2>0a. The seven personas at a glance</h2>
-  <p class="muted">One row per persona. "Who approves" is in plain words; the exact permission key or setting is on each card below. "What it saves" is Assumption or Unknown throughout (AIW-A6).</p>
-  <div class="tbl"><table>
-    <thead><tr><th>Persona</th><th>Assists whom</th><th>Does</th><th>Never does</th><th>Who approves (plain words)</th><th>What it saves</th></tr></thead>
-    <tbody>
-      <tr><td><b>Case assistant</b></td><td>the Case Officer</td><td>prepares each file from the signed retainer to "ready for review": chases and reads documents, proposes values, drafts letters, prepares forms</td><td>never files anything with the government, never verifies a value itself, never fills a form with AI</td><td>the file's reviewer: the Case Manager or the Owner, whichever the firm's settings allow; client text by whoever the firm allows, a licensed person by default</td><td><b>Time:</b> 1 / 3 / 6 hours of assistant work per prepared file, low / typical / high (Assumption, commercial/provider-and-cost.md §3.6); the pilot measures</td></tr>
-      <tr><td><b>Intake assistant</b></td><td>the intake role (in a solo firm, the Owner wearing that hat)</td><td>answers enquiries with consent, asks only what is missing, books the consult, drafts the proposal</td><td>never converts a lead, never promises an outcome, never messages without consent</td><td>the intake rep; client messages by whoever the firm allows</td><td><b>Time:</b> Unknown; the Step 5 script asks minutes per enquiry; the pilot measures</td></tr>
-      <tr><td><b>Billing assistant</b></td><td>Billing / Finance</td><td>drafts invoices, proposes payment matches, lists unbilled work, drafts reminders</td><td>never issues, records, refunds, moves or exports money</td><td>the Billing user who may issue invoices and record payments</td><td><b>Time and cash:</b> Unknown; the Step 5 script asks invoices per month; the pilot measures</td></tr>
-      <tr><td><b>Firm assistant</b> (holds the free <b>Deadline watch</b> for every file owner)</td><td>the Owner and the Case Manager</td><td>watches every deadline, finds each client's next immigration moment, maps a migration, keeps privacy requests on their clock, explains the week's numbers</td><td>never imports, never deletes, never exports, never computes a deadline itself</td><td>the file owner for a deadline; the Owner for a migration or a privacy request; the level the firm set for template reminders</td><td><b>Risk and revenue</b> more than hours (Assumption); the pilot measures the deadline catch rate</td></tr>
-      <tr><td><b>Practice expert</b></td><td>every staff role</td><td>answers questions with sources, from the published rulebook and the records the asker may see</td><td>never acts, never advises a client, never answers without a source</td><td>nobody, for an answer to staff; anything for a client goes through an acting persona</td><td><b>Time:</b> Unknown; minutes per question against minutes of searching (Assumption)</td></tr>
-      <tr><td><b>Pack author's assistant</b></td><td>Expat Ready's content author</td><td>drafts rulebook changes, form box maps and test cases; watches official pages</td><td>never publishes or approves a rulebook, never scores an outcome</td><td>the Content approver; immigration values by the Immigration SME, product owners final</td><td><b>Our own content cost:</b> Unknown until measured</td></tr>
-      <tr><td><b>Support and account assistant</b></td><td>Expat Ready's Support and Account manager</td><td>drafts the first reply to a ticket and the outreach to a quiet firm</td><td>never changes a firm's plan or state; never lets an internal note reach a firm</td><td>the support agent; the account manager</td><td><b>Our own support cost:</b> Unknown until measured</td></tr>
-    </tbody></table></div>
 </section>
 
 <section id="personas">
@@ -341,7 +342,7 @@ ul,ol{margin:0;padding-left:20px;display:grid;gap:6px} li{max-width:90ch}
   <!-- 2.5 Practice expert -->
   <article class="persona" id="p-expert">
     <div class="top"><span class="chip c-expert">Expert: answers only</span><h3>2.5 Practice expert</h3><span class="muted">for every staff role · catalogue W-24 "Practice Expert" (AIW-D19, D25)</span></div>
-    <p class="plain"><b>In plain words</b>The colleague you ask. Any staff member can ask it a question about a file, a rule or what is waiting, and it answers from two sources only: the published rulebook version in force and the firm's own records that the asker is allowed to see. Every answer lists its sources; with no source it refuses. It never acts and never speaks to a client.</p>
+    <p class="plain"><b>In plain words</b>The reference desk you ask. Any staff member can ask it a question about a file, a rule or what is waiting, and it answers from two sources only: the published rulebook version in force and the firm's own records that the asker is allowed to see. Every answer lists its sources; with no source it refuses. It never acts and never speaks to a client.</p>
     <dl>
       <dt>Job</dt><dd>Answers any staff question from two sources only, the published rulebook version in force and the firm's own records the asker may see, lists its sources, and refuses when it has none.</dd>
       <dt>What it does</dt><dd><ol>
@@ -577,12 +578,13 @@ ul,ol{margin:0;padding-left:20px;display:grid;gap:6px} li{max-width:90ch}
     <div><b>Team safeguards</b>One firm switch with four parts for firms of five or more staff (AG-16 v1.12 §3.10).</div>
     <div><b>Emergency stop (kill switch)</b>Expat Ready's platform-wide off switch with a mandatory reason (SA-12 v2.7 §3.4); the AI-specific stops are IMP-8 (Proposal).</div>
     <div><b>Hash chain</b>Each audit entry carries a fingerprint of the entry before it, so any later change to an entry shows; what makes the audit log "tamper-evident" (AG-13 v1.12 §3.5; IMP-39; AIW-A9).</div>
-    <div><b>Licensed person · RCIC · CICC</b>A Regulated Canadian Immigration Consultant, licensed by the College of Immigration and Citizenship Consultants. In the product a licence is a credential on a person's profile, never checked by the product (SA6-D9; AG1-D19).</div>
-    <div><b>IRCC</b>Immigration, Refugees and Citizenship Canada, the federal department that receives immigration applications and issues the forms the packs map.</div>
-    <div><b>ESDC</b>Employment and Social Development Canada, the federal department that handles LMIAs and inspects employers.</div>
-    <div><b>LMIA</b>Labour Market Impact Assessment, the federal approval an employer needs before hiring a foreign worker; the corporate file type in AG-17 v0.5.</div>
-    <div><b>Procedural fairness (letter / response)</b>A letter in which the government states its concerns before refusing and invites a reply; the response is that reply, which W-06 drafts for the representative.</div>
-    <div><b>CASL · Law 25 · PIPEDA · XFA</b>Canada's anti-spam law on commercial messages; Quebec's and Canada's privacy laws; the file format of IRCC's barcode PDF forms, which the built filler cannot open (catalogue header).</div>
+    <div><b>Licensed person · RCIC · CICC</b>A Regulated Canadian Immigration Consultant, licensed by the College of Immigration and Citizenship Consultants (general knowledge; confirm with counsel). In the product a licence is a credential on a person's profile, never checked by the product (SA6-D9; AG1-D19).</div>
+    <div><b>IRCC</b>Immigration, Refugees and Citizenship Canada, the federal department that receives immigration applications and issues the forms the packs map (general knowledge; confirm with counsel).</div>
+    <div><b>ESDC</b>Employment and Social Development Canada, the federal department that handles LMIAs and inspects employers (general knowledge; confirm with counsel).</div>
+    <div><b>LMIA</b>Labour Market Impact Assessment, the federal approval an employer needs before hiring a foreign worker (general knowledge; confirm with counsel); the corporate file type in AG-17 v0.5.</div>
+    <div><b>Procedural fairness (letter / response)</b>A letter in which the government states its concerns before refusing and invites a reply (general knowledge; confirm with counsel); the response is that reply, which W-06 drafts for the representative.</div>
+    <div><b>Hook · wedge</b>Selling words (AIW-D17): the hook is the free duty that gets a firm to switch AI on (the Deadline watch); the wedge is the first paid duty (the File Builder, inside the Case assistant).</div>
+    <div><b>CASL · Law 25 · PIPEDA · XFA</b>Canada's anti-spam law on commercial messages; Quebec's and Canada's privacy laws (both general knowledge; confirm with counsel; SA-11 v2.7 names them); the file format of IRCC's barcode PDF forms, which the built filler cannot open (catalogue header).</div>
     <div><b>Specified, not built</b>In the October requirement files but not in the code copies (catalogue §0 status markers).</div>
   </div>
   <p class="src">Master file with every citation: ai-workers/design/ai-organisation.md · Sources: workers/catalogue.md, workers/module-map.md, ws2-improvements.md, assumptions.md, decisions.md, commercial/price-card.md, commercial/provider-and-cost.md; Drive snapshot 2026-10-09 (AG-01 v1.16, AG-11 v1.11, AG-13 v1.12, AG-16 v1.12, SA-06 v3.1, SA-07 v2.10, SA-11 v2.7, SA-12 v2.7, Overview v1.11, Founder Decisions Log v1.5); Product Vision v1.0 (team), frozen 2 Aug 2026.</p>
