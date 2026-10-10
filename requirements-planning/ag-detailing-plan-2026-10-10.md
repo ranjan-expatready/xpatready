@@ -2,6 +2,8 @@
 
 *Prepared 10 Oct 2026 for Sanjay (product owner) and Ranjan (founder). Every statement below is grounded in the Drive requirement masters (9 Oct snapshot, re-checked today), GitHub `dev` (fresh read-only copies taken today), the Program Charter V2 (6 Oct) and the team's own tracking sheets. Anything that is my judgement is marked **Recommendation** or **Assumption**.*
 
+> **Update, 10 Oct afternoon (Sanjay).** Scope rule: **everything in the requirement files is Release 1, except AI**; the AI helpers, the automation engine (AG-11) and the AI switches form a separate Release 2 stream. This supersedes the "stays / proposed to move" lists below (they came from the 5 Oct scope review, which is now overtaken) and removes AG-11 from the waves. The current one-page view, with the SA-1B dependency checked module by module (5 modules cannot be finished without it, 6 take one value from it, 6 do not depend on it), is `requirements-planning/visual/ag-executive-map.html`. The order, the SA-1B answer and the method below stand.
+
 ---
 
 ## 0. What was checked, and how fresh it is
