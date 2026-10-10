@@ -2,7 +2,7 @@
 
 *Audited by the Lead at the start of every session. Ratings are the Lead's honest judgement, out of 10, with the evidence. Replace, don't append; git keeps history.*
 
-**Last audit:** 10 Oct 2026, evening session start (short, per rule 7). Setup: hooks ran, repo clean, plan (`PROGRESS.md`) and handoff (`NEXT.md`) agree: Step 1 ready for the founder, Step 2 blocked on decisions 1, 2 and 5. Freshness: Drive searched for files modified after 10 Oct 00:00 UTC: the same three team files as the morning check (Action_Item_Tracker, Full Build in Two Sprints, Super Admin Test Cases), none a requirement, no new snapshot. Code: ERv2-frontend `dev` moved to 1162ffb on 10 Oct (local copy 6643b33); not cited by any Workstream 2 file yet, copy when Step 3 reads code. Drift: none. Lens audit (frameworks and thinkers) added as §6 on the founder's ask, the same evening. Previous short audit: 10 Oct morning; previous full audit: 9 Oct 2026, 16:30 IST (§5).
+**Last audit:** 10 Oct 2026, 12:00–12:30 IST session start (short, per rule 7). Setup: hooks ran, repo clean, plan (`PROGRESS.md`) and handoff (`NEXT.md`) agree: Step 1 ready for the founder, Step 2 blocked on decisions 1, 2 and 5. Freshness: Drive searched for files modified after 10 Oct 00:00 UTC: the same three team files as the morning check (Action_Item_Tracker, Full Build in Two Sprints, Super Admin Test Cases), none a requirement, no new snapshot. Code: ERv2-frontend `dev` moved to 1162ffb on 10 Oct (local copy 6643b33); not cited by any Workstream 2 file yet, copy when Step 3 reads code. Drift: none. Lens audit (frameworks and thinkers) added as §6 on the founder's ask, the same morning. Previous short audit: 10 Oct 09:30 IST; previous full audit: 9 Oct 2026, 16:30 IST (§5).
 
 ## 1. The story so far (so a new session knows how we got here)
 
@@ -15,7 +15,7 @@
 | 9 Oct evening | Direction review; verification pass (code and Drive current, Charter quotes verified); local git history; W2 page published with 28 workers, product map and 22 decisions. |
 | 9 Oct, 16:30 | **Full audit (this card, §5).** Setup sound. Drive moved again (team document re-copied; a new team test-case sheet noted). 39 quotes and 5 competitor URLs checked, 0 wrong, 1 citation gap. Drift found: commercial deliverables unstarted while requirements work grew; process over-built; two of the founder's decisions contradict each other on timelines. Scores lowered where earned. |
 | 10 Oct | **Step 1 done, ready for the founder.** First task: Drive checked, the two never-opened folders opened, the team's Product Vision v1.0 found and filed. Maker wrote the AI organisation (7 personas, 28/28 workers). Hostile review: fail, fixable (2 blocking, 10 major, 19 minor; 91/95 citations held). Lead agreed and added: too register-like to sell with. Fix round: solo-firm chart first, free Deadline watch on its own, at-a-glance table, plain-words approvals with evidence lines. Re-check: pass with ten small fixes, applied by the Lead. One checker run was cut off by the weekly usage limit on the top model and re-run. |
-| 10 Oct, evening | **the founder decided Step 1** (AIW-D31 to D34): naming adopted with "Practice expert" kept internal, the seven personas, the delegation record under FD-16 with the named person as preparer, the Lead's four calls confirmed. Four decisions can wait (charge unit, admin-plane personas in the investor story, hard limits, IMP-17(b)). Step 2 unblocked. |
+| 10 Oct, 12:00–12:30 IST | **the founder decided Step 1** (AIW-D31 to D34): naming adopted with "Practice expert" kept internal, the seven personas, the delegation record under FD-16 with the named person as preparer, the Lead's four calls confirmed. Four decisions can wait (charge unit, admin-plane personas in the investor story, hard limits, IMP-17(b)). Step 2 unblocked. |
 
 ## 2. Ratings
 
@@ -111,7 +111,7 @@ Not touched: the deny rules, the hook, `decisions.md`, `assumptions.md`, `propos
 
 ## 6. Lens audit, 10 Oct 2026: the work so far judged by the best frameworks and thinkers (the founder's ask)
 
-*Written by the Lead the evening Step 1 was decided. Each lens is a published framework or a leading thinker's test. For each: what the lens demands, where our work stands with the evidence, a score out of 10 for how well the work holds up under that lens, and what to change. Sources are marked **opened 10 Oct 2026** (URL read today) or **general knowledge** (a well-known book or guideline, quoted from memory; confirm the wording before it is used outside this folder). Authors of published works are cited as sources; rule 10 (no personal names) is about the people in and around the company, not about citing a book.*
+*Written by the Lead the evening Step 1 was decided (midday). Each lens is a published framework or a leading thinker's test. For each: what the lens demands, where our work stands with the evidence, a score out of 10 for how well the work holds up under that lens, and what to change. Sources are marked **opened 10 Oct 2026** (URL read today) or **general knowledge** (a well-known book or guideline, quoted from memory; confirm the wording before it is used outside this folder). Authors of published works are cited as sources; rule 10 (no personal names) is about the people in and around the company, not about citing a book.*
 
 ### 6.1 Scores at a glance
 
