@@ -422,7 +422,7 @@ Not needed for Step 2 but still open and blocking before Step 3: the residency w
 - **`envelope.signed`:** the product's event name for the moment the retainer is signed; the trigger that starts the Case assistant's file build (catalogue W-01).
 - **Verified profile:** the client's facts a person has checked against a document (AG-08). Approving a Reader value in its review view is the verification (AG11-D10).
 - **Restricted field:** a personal-data field classed as most sensitive (passport and financial numbers); never passed to a model, only its status (IMP-21). The exact set is the founder's open item B-1 (Founder Decisions Log v1.5).
-- **Readiness report:** the Case assistant's one-item summary of a file: every value with its source and confidence, every open deficiency, every message sent (catalogue W-01 "New (a)"; IMP-34).
+- **Readiness report:** the Case assistant's one-item summary of a file, built by rule from the records with one labelled AI-written paragraph (*corrected 11 Oct 2026 after Step 2 review S2a*): every value with its source and confidence, every open deficiency, every message sent (catalogue W-01 "New (a)"; IMP-34).
 - **Prepared file:** one Case assistant run on one case whose readiness report a person approved (IMP-18, Proposal). The unit of price-card option (a).
 - **Country Pack / Practice Pack:** the rulebook for the destination country (programs, forms, checklists, deadlines) and the rulebook for the firm's own regulator (who may advise, trust money, retention, privacy) (FD-22, Founder Decisions Log v1.5).
 - **Box map:** the list that says which verified value goes into which box of a government form (SA-01B v1.2 §3.5); pack content, not yet authored (catalogue D2).
