@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent console map</title>
+<style>
+:root{--ink:#1b1f24;--muted:#5b6470;--line:#d9dee5;--bg:#ffffff;--soft:#f4f6f9;
+--win:#2563eb;--assess:#0891b2;--engage:#7c3aed;--bill:#059669;--deliver:#d97706;--portal:#db2777;--across:#475569;--setup:#334155;
+--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--sa:#0f766e;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.35 -apple-system,"Segoe UI",Helvetica,Arial,sans-serif;padding:24px 28px}
+h1{font-size:22px;margin:0 0 2px}
+h2{font-size:15px;margin:22px 0 8px;letter-spacing:.2px}
+.sub{color:var(--muted);font-size:12px;margin-bottom:14px}
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:12px 0 4px}
+.kpi{background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.kpi b{display:block;font-size:20px;line-height:1.1}
+.kpi span{color:var(--muted);font-size:11px}
+.planes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.plane{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff}
+.plane h3{margin:0 0 4px;font-size:13px}
+.plane p{margin:2px 0;font-size:11.5px;color:var(--muted)}
+.plane .st{font-size:11px;font-weight:600;color:var(--ink)}
+/* story map */
+.map{display:grid;grid-template-columns:repeat(8,1fr);gap:8px;align-items:start}
+.lane{border-top:4px solid var(--c);padding-top:6px}
+.lane h3{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--c)}
+.lane .q{font-size:11px;color:var(--muted);margin:-4px 0 8px;min-height:28px}
+.card{border:1px solid var(--line);border-left:4px solid var(--c);border-radius:7px;padding:7px 8px;margin-bottom:8px;background:#fff;break-inside:avoid}
+.card .id{font-weight:700;font-size:12px}
+.card .nm{font-weight:600;font-size:12px;margin-bottom:3px}
+.card .do{font-size:11.5px;margin:0 0 5px}
+.card .keep,.card .move{font-size:10.5px;margin:0;line-height:1.3}
+.card .keep b{color:var(--ok)} .card .move b{color:var(--warn)}
+.chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px}
+.chip{font-size:10px;padding:1px 6px;border-radius:999px;border:1px solid var(--line);background:var(--soft);white-space:nowrap}
+.chip.r{background:#dcfce7;border-color:#86efac;color:#14532d}
+.chip.d{background:#fef3c7;border-color:#fcd34d;color:#78350f}
+.chip.b{background:#fee2e2;border-color:#fca5a5;color:#7f1d1d}
+.chip.sa{background:#ccfbf1;border-color:#5eead4;color:#134e4a;font-weight:600}
+.chip.w{background:#e0e7ff;border-color:#a5b4fc;color:#312e81;font-weight:600}
+/* waves */
+.waves{display:grid;grid-template-columns:1.25fr repeat(5,1fr);gap:8px}
+.wave{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff}
+.wave.w0{background:#eef2ff;border-color:#a5b4fc}
+.wave h3{margin:0;font-size:12.5px}
+.wave .dt{font-size:11px;color:var(--muted);margin-bottom:6px}
+.wave ol{margin:0;padding-left:16px;font-size:11.5px}
+.wave li{margin:2px 0}
+.wave .why{font-size:10.5px;color:var(--muted);margin-top:6px;border-top:1px dashed var(--line);padding-top:5px}
+/* SA-1B */
+.sa1b{display:grid;grid-template-columns:1.1fr 1fr;gap:10px}
+.box{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#fff}
+.box h3{margin:0 0 6px;font-size:13px;color:var(--sa)}
+.scope{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.scope div{background:var(--soft);border-radius:6px;padding:6px 8px;font-size:11.5px}
+.scope div b{display:block;font-size:11.5px}
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.opt{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff}
+.opt.rec{border:2px solid var(--sa);background:#f0fdfa}
+.opt h4{margin:0 0 4px;font-size:12.5px}
+.opt .tag{font-size:10px;font-weight:700;color:var(--sa);letter-spacing:.4px}
+.opt ul{margin:4px 0;padding-left:14px;font-size:11px}
+.opt .p li::marker{color:var(--ok)} .opt .c li::marker{color:var(--bad)}
+.dec{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.dec div{border:1px solid var(--line);border-radius:7px;padding:7px 10px;font-size:11.5px;background:#fff}
+.dec b{display:block;font-size:12px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:10.5px;color:var(--muted);margin-top:10px;align-items:center}
+.foot{font-size:10.5px;color:var(--muted);margin-top:14px;border-top:1px solid var(--line);padding-top:8px}
+@media print{@page{size:A3 landscape;margin:10mm} body{padding:0} h2{break-after:avoid} .card,.wave,.box,.opt{break-inside:avoid}}
+@media (max-width:1100px){.map{grid-template-columns:repeat(4,1fr)} .waves{grid-template-columns:repeat(3,1fr)} .kpis{grid-template-columns:repeat(3,1fr)} .planes,.sa1b,.opts,.dec{grid-template-columns:1fr 1fr}}
+@media (max-width:700px){.map,.waves,.planes,.sa1b,.opts,.dec,.kpis,.scope{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<h1>Agent console (AG-01 to AG-18): scope, state, order, and where SA-1B fits</h1>
+<div class="sub">One page for Sanjay and Ranjan · 10 Oct 2026 · Sources: Drive masters (9 Oct snapshot), GitHub <code>dev</code> (frontend 6643b33, backend 042be70), Program Charter V2 (6 Oct), scope triage (5 Oct). Detail and citations: <code>requirements-planning/ag-detailing-plan-2026-10-10.md</code>.</div>
+
+<div class="kpis">
+  <div class="kpi"><b>4</b><span>planes, 37 modules, one client record · all go live together (Charter)</span></div>
+  <div class="kpi"><b>18</b><span>AG module files on Drive (AG-01 to AG-18)</span></div>
+  <div class="kpi"><b>0 / 18</b><span>AG files at the "reviewed like SA-02" standard today</span></div>
+  <div class="kpi"><b>5</b><span>AG files with a decision log (AG-01 partly, 07, 11, 17, 18); 13 still on the 28 Aug baseline</span></div>
+  <div class="kpi"><b>6</b><span>waves to finish all 18 by 25 Nov, keeping Charter dates</span></div>
+  <div class="kpi"><b>4</b><span>AG modules blocked on SA-1B (AG-3, 7, 8, 9) · SA-1B runs now, in parallel</span></div>
+</div>
+
+<h2>The four planes (what exists, what is missing)</h2>
+<div class="planes">
+  <div class="plane"><h3>1 · Foundation platform</h3><p class="st">Largely built · finish Oct</p><p>Security, data isolation, sign-in, audit, Canadian hosting. Spec = Doc 1 (no module files by design).</p></div>
+  <div class="plane"><h3>2 · Super Admin console · 12 modules</h3><p class="st">In build · finish Nov</p><p>How Expat Ready runs firms, packs, plans, billing. 13 module files; 7 reviewed to standard (SA-01, 01B, 02, 03, 04, 06, 07). SA-1B configurator still largely unbuilt.</p></div>
+  <div class="plane"><h3>3 · Agent console · 16 modules in Charter, 18 files</h3><p class="st">Build Oct–Dec</p><p>Where the firm runs every case. This page. Backend has no AG module on <code>dev</code> yet; frontend has mock screens for 7 modules.</p></div>
+  <div class="plane"><h3>4 · Client portal · 9 modules</h3><p class="st">Design Oct · build Nov–Dec</p><p>What the client sees and does. <b>No requirement files exist on Drive</b>; only Doc 4 and the client-side halves inside AG-05/06/08/09/10/15.</p></div>
+</div>
+
+<h2>Story map: the firm's journey (left to right) with each AG module as a card</h2>
+<div class="sub" style="margin-top:-4px">Each card: what it does · <b style="color:var(--ok)">stays</b> in Release 1 · <b style="color:var(--warn)">proposed to move</b> to Release 2 (triage 5 Oct, founder decides) · chips: state, open questions, wave and due date, needs SA-1B.</div>
+<div class="map">
+
+  <div class="lane" style="--c:var(--setup)"><h3>0 · Set up the firm</h3><div class="q">A real firm moves in with its staff, settings and old data.</div>
+    <div class="card" style="--c:var(--setup)"><div class="id">AG-01</div><div class="nm">Firm setup &amp; onboarding</div><p class="do">Firm record, staff and roles, licence record, branding, two-factor sign-in, onboarding checklist, sessions.</p><p class="keep"><b>Stays:</b> firm, staff, six starter roles, last-admin guard, instant lock-out, seat cap, two-factor, branding.</p><p class="move"><b>Move:</b> staff-leaving extras, role-editor polish, stalled-setup nudges.</p><div class="chips"><span class="chip d">decision log · 7 open</span><span class="chip w">Wave 1 · 28 Oct</span></div></div>
+    <div class="card" style="--c:var(--setup)"><div class="id">AG-18</div><div class="nm">Data import &amp; migration</div><p class="do">Bring a firm's existing clients, cases, key dates, documents and notes from CSV, Excel or Officio with mapping, dry-run and undo.</p><p class="keep"><b>Stays:</b> import engine, clients, open cases, key dates, documents, "Not started" quiet clients, undo.</p><p class="move"><b>Move:</b> correspondence history, CaseEasy adapter, assisted migration, AI filing.</p><div class="chips"><span class="chip d">draft · 20 open</span><span class="chip w">Wave 1 · 28 Oct</span><span class="chip b">in Oct build, no due date in Charter</span></div></div>
+    <div class="card" style="--c:var(--setup)"><div class="id">AG-16</div><div class="nm">Firm settings &amp; integrations</div><p class="do">Profile, invoice settings, the firm's own Stripe and mailbox, language, timezone, notification defaults, security.</p><p class="keep"><b>Stays:</b> profile, invoice settings, own Stripe, firm mail with fallback, two-factor, audit viewer.</p><p class="move"><b>Move:</b> notification matrix, calendar connection, AI settings, IP allow-list.</p><div class="chips"><span class="chip b">baseline · 12 open</span><span class="chip w">Wave 5 · 25 Nov</span></div></div>
+  </div>
+
+  <div class="lane" style="--c:var(--win)"><h3>1 · Win</h3><div class="q">Every enquiry lands in one place and is followed up.</div>
+    <div class="card" style="--c:var(--win)"><div class="id">AG-02</div><div class="nm">Leads &amp; CRM</div><p class="do">Capture enquiries (web form, booking, manual), no duplicates, pipeline board for individuals and employers, notes and calls, convert to client.</p><p class="keep"><b>Stays:</b> person/employer model, duplicate check, two pipelines, loss reasons, convert to client, consent check, speed-to-lead task.</p><p class="move"><b>Move:</b> lead scoring, routing rules, dashboards, bulk actions, API keys, dialer (drop).</p><div class="chips"><span class="chip b">baseline · 14 open</span><span class="chip w">Wave 1 · 28 Oct</span></div></div>
+  </div>
+
+  <div class="lane" style="--c:var(--assess)"><h3>2 · Assess &amp; advise</h3><div class="q">The client learns where they stand and books time with a consultant.</div>
+    <div class="card" style="--c:var(--assess)"><div class="id">AG-03</div><div class="nm">Pathway assessment</div><p class="do">Eligible / possibly / not for each program with reasons and gaps, points (CRS, FSW) from the Canada pack, saved with the rules version, reviewed-by stamp.</p><p class="keep"><b>Stays:</b> engine, CRS + FSW, breakdown, disclaimer, reviewed-by, re-run, result on the lead card.</p><p class="move"><b>Move:</b> what-if advice, draw-cutoff band, five provincial streams, client-shareable PDF.</p><div class="chips"><span class="chip b">baseline · 12 open (7 for SME)</span><span class="chip w">Wave 1 · 28 Oct</span><span class="chip sa">needs SA-1B</span></div></div>
+    <div class="card" style="--c:var(--assess)"><div class="id">AG-04</div><div class="nm">Consultation &amp; booking</div><p class="do">Appointment types and availability, public booking page, confirmations and reminders, booker becomes a lead, consult record, cancel or reschedule.</p><p class="keep"><b>Stays:</b> types, public page, double-booking guard, consent, reminders through one system, self-service cancel.</p><p class="move"><b>Move:</b> paid consults, round-robin, two-way calendar sync, video connectors, analytics.</p><div class="chips"><span class="chip b">baseline · 11 open</span><span class="chip w">Wave 2 · 4 Nov</span><span class="chip">nothing built</span></div></div>
+  </div>
+
+  <div class="lane" style="--c:var(--engage)"><h3>3 · Engage</h3><div class="q">A retainer is agreed and signed with evidence.</div>
+    <div class="card" style="--c:var(--engage)"><div class="id">AG-05</div><div class="nm">Retainer &amp; e-signature</div><p class="do">Retainer from a template with locked clauses, in-house signing (client, then firm), sealed copy and certificate, signature moves the lead to Won and starts invoicing.</p><p class="keep"><b>Stays:</b> template, merge fields, signing order, seal and audit, void/re-issue, EN/FR, paper upload.</p><p class="move"><b>Move:</b> parallel signing, field editor, PDF/A, witness signer (drop).</p><div class="chips"><span class="chip b">baseline · 8 open</span><span class="chip w">Wave 2 · 4 Nov</span></div></div>
+    <div class="card" style="--c:var(--engage)"><div class="id">AG-12</div><div class="nm">Templates (firm level)</div><p class="do">The firm's own copies of platform templates (retainer, emails, notices): adopt, edit, preview with sample data, publish, EN/FR.</p><p class="keep"><b>Stays:</b> override of pack default, adopt-edit-publish, safe renderer, unknown-variable check, preview.</p><p class="move"><b>Move:</b> version history screen, bilingual side-by-side, re-sync with pack.</p><div class="chips"><span class="chip b">28 Aug text · 6 open</span><span class="chip w">Wave 2 · 4 Nov (pulled forward)</span></div></div>
+  </div>
+
+  <div class="lane" style="--c:var(--bill)"><h3>4 · Bill &amp; collect</h3><div class="q">Invoices go out, money comes in, nothing is unexplained.</div>
+    <div class="card" style="--c:var(--bill)"><div class="id">AG-06</div><div class="nm">Billing &amp; payments</div><p class="do">Invoices with Canadian tax, deposit invoice from the retainer, online card or offline payment, receipts, overdue flag, government-fee lines, per-client money summary.</p><p class="keep"><b>Stays:</b> invoices, numbering, tax, offline + receipt, retainer → deposit, no invoice without signed retainer, milestone invoice.</p><p class="move"><b>Move:</b> payment plans and dunning, FX, trust tag, accounting export, dashboard.</p><div class="chips"><span class="chip b">baseline · 8 open</span><span class="chip w">Wave 2 · 4 Nov</span><span class="chip">mock screens built</span></div></div>
+  </div>
+
+  <div class="lane" style="--c:var(--deliver)"><h3>5 · Prepare &amp; deliver</h3><div class="q">The case is built, checked, filed and tracked to a decision.</div>
+    <div class="card" style="--c:var(--deliver)"><div class="id">AG-07</div><div class="nm">Case core &amp; clients</div><p class="do">Client list and screen (individual and employer); cases pinned to the rules in force; applicants, steps, document checklist, forms uploaded and approved, review, submission, milestones, decision, closure.</p><p class="keep"><b>Stays:</b> create case, applicants, checklist, forms, submission, milestones, decision, My Cases, clients.</p><p class="move"><b>Move:</b> form auto-fill (Filler), deficiency library, four-eyes, case board, evidence bundle.</p><div class="chips"><span class="chip r">decision log · 10 open + 17 proposed defaults</span><span class="chip w">Wave 3 · revision 11 Nov</span><span class="chip sa">needs SA-1B</span><span class="chip">being built now</span></div></div>
+    <div class="card" style="--c:var(--deliver)"><div class="id">AG-08</div><div class="nm">Smart questionnaire</div><p class="do">The client answers once: a wizard built from the pack, answers flow into one profile, conditional questions, lock and targeted re-open, verify against documents, EN/FR.</p><p class="keep"><b>Stays:</b> wizard with autosave, pack questionnaires, version pinning, conditions, lock/re-open, manual verify, family section.</p><p class="move"><b>Move:</b> firm questionnaire builder, per-family-member questionnaires, WhatsApp invites.</p><div class="chips"><span class="chip b">baseline · 11 open</span><span class="chip w">Wave 3 · 11 Nov</span><span class="chip sa">needs SA-1B</span></div></div>
+    <div class="card" style="--c:var(--deliver)"><div class="id">AG-09</div><div class="nm">Documents</div><p class="do">Upload and versions, request from client, accept or reject with reason, checklist status, virus scan, private storage, who-opened log, translation and expiry flags.</p><p class="keep"><b>Stays:</b> upload, versions, request, reject, scan, storage, audit, type picker, flags, bulk request.</p><p class="move"><b>Move:</b> retention engine and legal hold, Reader AI, annotations, per-firm keys (drop).</p><div class="chips"><span class="chip b">baseline · 12 open</span><span class="chip w">Wave 3 · 11 Nov</span><span class="chip sa">needs SA-1B</span></div></div>
+    <div class="card" style="--c:var(--deliver)"><div class="id">AG-17</div><div class="nm">Corporate cases &amp; LMIA</div><p class="do">Employer clients; one LMIA file per occupation and location with positions; advertising clock and warnings; readiness; submission and decision; "create work permit case" hand-off to the worker.</p><p class="keep"><b>Stays:</b> employer client, LMIA file, wage and stream checks, advertising clock, readiness, decision, worker hand-off, LMIA list.</p><p class="move"><b>Move:</b> after-approval tab, inspection pack, quick LMIA check, candidate CSV.</p><div class="chips"><span class="chip r">decision log (82) · values await SME</span><span class="chip w">parallel · SME check Nov</span><span class="chip">corporate pod building</span></div></div>
+  </div>
+
+  <div class="lane" style="--c:var(--portal)"><h3>6 · Client portal</h3><div class="q">The firm controls what the client sees and does online.</div>
+    <div class="card" style="--c:var(--portal)"><div class="id">AG-15</div><div class="nm">Client portal management</div><p class="do">Invite and revoke clients, what each client sees, work items (upload, questionnaire, invoice, agreement), done-on-behalf, employer contact, branding, suspend and restore.</p><p class="keep"><b>Stays:</b> invite, access state, visibility switches, step labels, work items, done on behalf, branding, EN/FR, nudge.</p><p class="move"><b>Move:</b> stall dashboard, auto-nudges, live preview, client two-factor, custom domain.</p><div class="chips"><span class="chip b">baseline · 9 open</span><span class="chip w">Wave 5 · 25 Nov</span><span class="chip b">draft CP-01 alongside</span></div></div>
+    <div class="card" style="--c:var(--portal)"><div class="id">CP-01 … CP-09</div><div class="nm">Client portal (client side)</div><p class="do">Secure access, progress and next action, questionnaire, uploads, pay, sign, messages, profile and consent, employer read-only view.</p><p class="move"><b>Gap:</b> no requirement files exist yet; Charter due dates 2–23 Dec; eight mock screens already built against Doc 4.</p><div class="chips"><span class="chip b">no files on Drive</span><span class="chip w">Dec</span></div></div>
+  </div>
+
+  <div class="lane" style="--c:var(--across)"><h3>Across every step</h3><div class="q">Messages, tasks, reminders, reports and automation that every module uses.</div>
+    <div class="card" style="--c:var(--across)"><div class="id">AG-13</div><div class="nm">Tasks, notes &amp; audit</div><p class="do">Tasks and My Tasks, reminders staff set, internal and client-visible notes, one timeline per record, append-only audit kept forever, handover and bulk reassign.</p><p class="keep"><b>Stays:</b> tasks, isolation fix, notes, audit viewer, deadline → task, Unassigned list, reminders, handover.</p><p class="move"><b>Move:</b> hash-chain verifier, @mentions, subtasks, timer.</p><div class="chips"><span class="chip b">baseline · 9 open</span><span class="chip w">Wave 4 · 18 Nov</span><span class="chip">mock screens built</span></div></div>
+    <div class="card" style="--c:var(--across)"><div class="id">AG-10</div><div class="nm">Communication hub</div><p class="do">Outbound email through the firm's mail, timeline per record, portal chat, templates by language, consent check, bounces, in-app notifications, quiet hours.</p><p class="keep"><b>Stays:</b> outbound email, timeline, portal chat, templates, consent, one send path, bounces, scheduled send.</p><p class="move"><b>Move:</b> mailbox connection and unmatched inbox, Sorter and Drafter AI, WhatsApp, inbox polish.</p><div class="chips"><span class="chip b">baseline · 12 open</span><span class="chip w">Wave 4 · 18 Nov</span></div></div>
+    <div class="card" style="--c:var(--across)"><div class="id">AG-11</div><div class="nm">Automation</div><p class="do">Deadline reminders (the Minder), an engine of "when X, do Y" recipes with send-time safety, run history; AI Doers (Reader, Sorter, Drafter, Checker) built but switched off.</p><p class="keep"><b>Stays (triage):</b> deadline reminders, engine, four starter recipes, no double-sends, imported clients stay quiet.</p><p class="move"><b>Move (triage):</b> AI Doers, autonomy levels, Needs-you inbox, team safeguards, extra recipes, WhatsApp.</p><div class="chips"><span class="chip r">decision log · 27 open</span><span class="chip b">Charter: not in Release 1 · phasing doc: in · decide in Wave 0</span><span class="chip w">Wave 4 remainder</span></div></div>
+    <div class="card" style="--c:var(--across)"><div class="id">AG-14</div><div class="nm">Reporting</div><p class="do">Owner and staff dashboards: leads by stage, open cases by stage, billed vs collected, overdue invoices, upcoming and missed deadlines, CSV export.</p><p class="keep"><b>Stays:</b> secure scoping, two dashboards, core tiles, per-currency totals, audited export.</p><p class="move"><b>Move:</b> rollup engine, four extra dashboards, source ROI, saved views, scheduled reports (moved).</p><div class="chips"><span class="chip b">baseline · 7 open</span><span class="chip w">Wave 5 · 25 Nov</span></div></div>
+  </div>
+</div>
+<div class="legend"><span class="chip r">reviewed with decision log</span><span class="chip d">decision log, questions open</span><span class="chip b">baseline (28 Aug) or a gap</span><span class="chip sa">needs SA-1B</span><span class="chip w">wave · Charter due date</span><span>"open" = numbered open questions in the file's §13 still to be answered.</span></div>
+
+<h2>SA-1B: what it is, who needs it, and when to do it</h2>
+<div class="sa1b">
+  <div class="box"><h3>What SA-1B contains (Content Pack Configurator, v1.2 · reviewed 22 Sep · 28 decisions)</h3>
+    <div class="scope">
+      <div><b>The library, authored once</b>Canonical fields flagged lead / prospect / case, field groups, answer lists, reusable sections, master documents with substitutes and validity, the form list (auto-fill parked), rules and scoring, reference tables, government steps, regulator wording.</div>
+      <div><b>The configurator</b>One row per full combination Pathway › Program › Category › Sub-category, holding the ordered list of sections, documents, forms and steps, each with who it is for and an optional condition.</div>
+      <div><b>Filings and routes</b>A case holds filings: side by side for a family's separate permits, in sequence for two- or three-step provincial routes.</div>
+      <div><b>People and roles</b>A family is one case with per-person questionnaire, checklist, forms, fee and decision.</div>
+      <div><b>Prospect tiers and the PQR</b>One prospect questionnaire per country; a capped lead form that pre-fills the next tier.</div>
+      <div><b>Assessment output, startable checks, firm questions</b>Verdict, reason and gap with "rules as at"; a program is offered only when its row is complete; firms add their own questions but never change a required one.</div>
+    </div>
+    <p style="font-size:11.5px;margin:8px 0 0"><b>Who reads from it:</b> AG-3 (assessment), AG-7 (cases and filings), AG-8 (questionnaire), AG-9 (checklist), and in small ways AG-2 (lead-form tiers) and AG-5/6 (fee wording). <b>Still open:</b> the three extensions AG-17 requires (steps before submission, action lines, clocks from reference tables) are not yet in the file; which forms ship; the Canada content scope session has no date or owner. <b>Not the same thing as the Practice Pack</b> (firm's regulator, trust, fee and retention rules, FD-22), which has no module file at all and which Charter V2 mislabels as "SA-1-B".</p>
+  </div>
+  <div class="box"><h3>Three ways to time it</h3>
+    <div class="opts">
+      <div class="opt"><h4>Before all AG</h4><ul class="p"><li>Nothing is reviewed twice</li><li>Clean dependency story</li></ul><ul class="c"><li>Delays AG-01, AG-02, AG-18, which do not need it and are in the October build</li><li>About a week of calendar lost for no gain on 12 modules</li></ul></div>
+      <div class="opt rec"><div class="tag">RECOMMENDED</div><h4>Now, in parallel with Wave 1; closed before Wave 3</h4><ul class="p"><li>AG-3/7/8/9 are reviewed once, against a settled model</li><li>Keeps the Charter's October build and 28 Oct dates</li><li>Serves the 13 Nov "v0 packs on staging" and the 11 Dec core-journey gate</li><li>Removes the triage's "bigger risk than any feature"</li></ul><ul class="c"><li>Two tracks at once: Tanu and Sanjay on SA-1B content, the AG reviews beside it</li></ul></div>
+      <div class="opt"><h4>After AG</h4><ul class="p"><li>None that hold: AG work does not make SA-1B easier</li></ul><ul class="c"><li>AG-3/7/8/9 written against a moving target, then rewritten</li><li>v0 packs miss 13 Nov; no firm can become ready without a published pack</li><li>Dev paused SA-01 "waiting on 1-B" since 18 Sep; QA on hold</li></ul></div>
+    </div>
+    <p style="font-size:11px;color:var(--muted);margin:8px 0 0">Remaining SA-1B requirements work is small: one revision pass (apply the AG-17 extensions and AG-07 filings, close "which forms") plus one Canada content scope session. The <i>build</i> of the configurator is the long pole, and it starts from that revision.</p>
+  </div>
+</div>
+
+<h2>The order: six waves, Charter dates kept</h2>
+<div class="waves">
+  <div class="wave w0"><h3>Wave 0 · Settle the ground</h3><div class="dt">by Fri 16 Oct · no module review</div><ol><li>Ranjan decides the scope triage and its 5 questions</li><li>Ranjan settles AG-11 in Release 1 (Charter vs phasing document) and records the deferrals in the Founder Decisions Log</li><li>SA-1B v1.3; date and owner for the Canada content session</li><li>Claude Code rebuilds every AG "what exists today" section against <code>dev</code>; Release wording replaces "Phase 1 / demo"</li><li>Fix Charter Appendix D (add AG-18, AG-11; rename SA-1-B; G1 wording)</li></ol><div class="why">Everything downstream reopens if 1–3 are not fixed. Step 4 has no decisions in it.</div></div>
+  <div class="wave"><h3>Wave 1 · Firm moves in, wins a client</h3><div class="dt">by 28 Oct · golden journeys 3 and 4</div><ol><li>AG-01 Firm setup</li><li>AG-18 Data import</li><li>AG-02 Leads &amp; CRM</li><li>AG-03 Pathway assessment</li></ol><div class="why">Matches the October build. AG-01 first: all others assume its roles. AG-18 is being built but has no requirement date. AG-03 last: short once SA-1B's assessment output is settled.</div></div>
+  <div class="wave"><h3>Wave 2 · Engage and get paid</h3><div class="dt">by 4 Nov · journeys 4 and 6</div><ol><li>AG-12 Templates (pulled forward)</li><li>AG-05 Retainer &amp; e-sign</li><li>AG-06 Billing &amp; payments</li><li>AG-04 Consultation &amp; booking</li></ol><div class="why">Templates before the retainer that uses them; retainer before invoicing (no invoice without a signed retainer); booking last, it stands alone.</div></div>
+  <div class="wave"><h3>Wave 3 · Deliver the case</h3><div class="dt">by 11 Nov · journey 5 · SA-1B v1.3 must be done</div><ol><li>AG-08 Smart questionnaire</li><li>AG-09 Documents</li><li>AG-07 revision (close triage items; confirm the 17 proposed defaults)</li></ol><div class="why">Questionnaire before documents (the checklist grows from the answers). AG-07 is "delivered" but the corporate pod builds it now; closing the triage stops building what gets cut.</div></div>
+  <div class="wave"><h3>Wave 4 · Communicate and keep track</h3><div class="dt">by 18 Nov</div><ol><li>AG-13 Tasks, notes &amp; audit</li><li>AG-10 Communication hub</li><li>AG-11 Automation (Release 1 remainder only)</li></ol><div class="why">Tasks and the timeline are what messages and automations write into. AG-10 has the most stale "exists today" text: budget an extra day.</div></div>
+  <div class="wave"><h3>Wave 5 · Run the firm</h3><div class="dt">by 25 Nov · then CP-02 to CP-09 in Dec</div><ol><li>AG-15 Portal management, with CP-01 drafted alongside</li><li>AG-16 Firm settings</li><li>AG-14 Reporting</li></ol><div class="why">Every AG-15 line has a client-side twin: draft the missing portal file from it. Settings collect everyone else's switches; reporting reads everything, so last.</div></div>
+</div>
+<div class="legend"><span><b>Parallel tracks:</b> SA-1B (Tanu, Sanjay) from now to Wave 3 · AG-17 rule values with the Immigration SME before the corporate pod reaches LMIA checks.</span><span><b>Pace:</b> three module passes a week; one pass = Claude prepares a brief → one decision session (Sanjay, Tanu) → Claude applies → independent check → shared to the team.</span></div>
+
+<h2>Decisions that unlock the plan</h2>
+<div class="dec">
+  <div><b>1 · Scope triage</b>Accept, change or reject each module's "move to Release 2" list and answer the five questions (Quebec/French, online payment, two-factor default, role templates, escalation). <i>Ranjan, before Wave 1.</i></div>
+  <div><b>2 · AG-11 in Release 1?</b>Charter says no; the Agent phasing document says a minimal engine plus AI Doers; eleven modules carry its knock-ons. <i>Ranjan, before Wave 1.</i></div>
+  <div><b>3 · SA-1B track</b>Approve the parallel track; name owner and date for the Canada content session; decide where the Practice Pack requirements live. <i>Sanjay, Tanu; Ranjan for the Practice Pack.</i></div>
+  <div><b>4 · The wave order</b>Four changes to Charter Appendix D: AG-18 into 28 Oct; AG-12 to 4 Nov; AG-13 before AG-10; dated AG-07 revision and AG-17 SME check. <i>Ranjan.</i></div>
+  <div><b>5 · Client portal files</b>Draft CP-01 with AG-15 in Wave 5 and CP-02 to CP-09 in December, or pull them earlier because eight portal mock screens already exist. <i>Ranjan, Sanjay.</i></div>
+  <div><b>6 · Charter housekeeping</b>Add AG-18 and AG-11 to Appendix D, correct the SA-1B label, reconcile G1 "all requirements signed off" (30 Oct) with due dates to 25 Nov and 23 Dec, and record FD-68 (one country per firm) in the Founder Decisions Log, where it is missing. <i>Ranjan.</i></div>
+</div>
+
+<div class="foot">Format: a user story map. The backbone is the firm's six-step journey from the Charter; each column holds the modules that serve that step; the "stays / move" lines are the Release 1 slice from the 5 Oct triage; chips carry state, open questions and the wave. Read left to right for scope, top to bottom for depth, and the wave chips for order. Prints on A3 landscape.</div>
+</body>
+</html>
