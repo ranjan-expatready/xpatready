@@ -1,6 +1,6 @@
 # Step 2: what the seven behaviour documents ask of the founder
 
-*Written by the Lead, 11 Oct 2026, after all seven behaviour documents passed hostile review. This file holds no new requirement: every item points to the section 11 of a behaviour document where the evidence and the full recommendation sit. 98 decision entries across the seven documents are merged here into one list without duplicates. Plain words; no person is named (README rule 10).*
+*Written by the Lead, 11 Oct 2026, after all seven behaviour documents passed hostile review. This file holds no new requirement: every item points to the section 11 of a behaviour document where the evidence and the full recommendation sit. 98 decision entries across the seven documents are merged here into one list without duplicates (17 decisions before Step 3; the seventeenth, FD-5, came from the Case assistant's integration round). Plain words; no person is named (README rule 10).*
 
 ## 1. What Step 2 found, in five lines
 
@@ -30,6 +30,7 @@ Each line: the question, the Lead's recommendation, where the evidence is.
 14. **Residency** (open since 9 Oct): "only in Canada" (AG11-D15) or "with documented safeguards" (SA-11 §3.6), now also for Expat Ready's own model calls on support tickets. *Recommend: decide the wording, then one test call from the Canada region before Step 3.* Pack author's §11 decision 14; Support §11 decision 3.
 15. **The Billing / Finance role's missing keys** (no message or manual-run key, so the bookkeeper can never approve an AI-drafted payment reminder). *Recommend: keep the role as you accepted it on 7 Oct; a licensed colleague approves client-money messages.* Billing §11 decision 5.
 16. **Doer names** (FD-8: Clocker, Reminder folded into Minder; the newer modules say Timer and keep Reminder). *Recommend: decide once (IMP-24); Workstream 2 follows.* Billing §11.
+17. **Government form filling in version 1:** FD-5 promises flattened-overlay filling in version 1; the newer pack configurator parks box maps and filling (SA1B-D28), and the built filler cannot open IRCC's dynamic forms (SA-01B §12). This decides whether the Case assistant's Form Preparer duty (W-05) exists at launch. *Recommend: keep FD-5's intent; ask the team for the overlay route and a date in Step 3; until then the pilot runs without form filling and says so.* Case assistant §1.6 and §11 decision 14.
 
 ## 3. Confirm the Lead's calls (one yes covers all)
 
