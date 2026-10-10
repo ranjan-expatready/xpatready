@@ -2,7 +2,7 @@
 
 *Audited by the Lead at the start of every session. Ratings are the Lead's honest judgement, out of 10, with the evidence. Replace, don't append; git keeps history.*
 
-**Last audit:** 9 Oct 2026, 16:30 IST. Full five-step audit (setup, freshness, quotes, drift, over-engineering) on Ranjan's instruction (`PROMPTS.md` §1a).
+**Last audit:** 10 Oct 2026, session start (short, per rule 7). Setup: hooks ran, repo clean at start, plan and handoff consistent. Freshness: code copies unchanged since 9 Oct; Drive searched for files modified after 9 Oct: four team files, none a requirement, no new snapshot. Gap closed: the two Drive folders never opened were opened; one current team document found (Product Vision v1.0, frozen 2 Aug 2026) and copied into the snapshot's team documents. Drift: none; Step 1 started as planned. Previous full five-step audit: 9 Oct 2026, 16:30 IST (§5).
 
 ## 1. The story so far (so a new session knows how we got here)
 
@@ -14,6 +14,7 @@
 | 9 Oct afternoon | W2: reference index of 1,300+ AI/Doer/Conductor requirements, 28-worker catalogue, 41 improvements, hostile review (2 blocking); all fixed. Challenge review of every decision; Ranjan answered: assume everything is built, timelines not our concern, approval = human per the firm's role settings, co-pilot answers only, report after every step. |
 | 9 Oct evening | Direction review; verification pass (code and Drive current, Charter quotes verified); local git history; W2 page published with 28 workers, product map and 22 decisions. |
 | 9 Oct, 16:30 | **Full audit (this card, §5).** Setup sound. Drive moved again (team document re-copied; a new team test-case sheet noted). 39 quotes and 5 competitor URLs checked, 0 wrong, 1 citation gap. Drift found: commercial deliverables unstarted while requirements work grew; process over-built; two of Ranjan's decisions contradict each other on timelines. Scores lowered where earned. |
+| 10 Oct | Step 1 (the AI organisation) started in a new session. First task: Drive checked (no requirement change), the two never-opened folders opened; the team's Product Vision v1.0 found and filed. Maker started on the organisation page. |
 
 ## 2. Ratings
 
