@@ -348,7 +348,7 @@ Grep checks: RFP, ADR and DOC1 contain no "AI", "LLM" or "machine learning" (DOC
 - My Day cards: Consults today (Scheduler), Tasks due (Tasker), Follow-ups (Reminder), Docs overdue (Binder), Deadlines this week (Minder), Awaiting signature (Signer), Money in (Biller), New assessments (Qualifier).
 - On a Case: "Binder (docs) · Filler (forms) · Drafter (letters) · Reviewer (QA) · Signer (e-sign) · Minder (deadlines/audit) · Biller (invoice)." On a Lead: "Qualifier (assess) · Scheduler (book) · Mailer (email) · Drafter + Signer (retainer) · Biller (invoice)."
 - Visibility gate: "`accessControlProvider.can()` defaults to DENY".
-- Phasing: "Demo ship (Priya journey)": rename sidebar, My Day, "the 4 live Doers as surfaces", basic ⌘K, contextual Doer actions on the Case.
+- Phasing: "Demo ship ([the client] journey)": rename sidebar, My Day, "the 4 live Doers as surfaces", basic ⌘K, contextual Doer actions on the Case.
 - NOTE: these specs live in a personal repo (sanjaysingh2103), not on Drive; Doc 1 naming must be checked against them.
 
 ### Notes: Program Charter_V2.pptx (7 slides, header "RELEASE 1 / PRODUCT & LAUNCH PLAN / v6"; text extracted from slide XML, read in full)
@@ -494,7 +494,7 @@ Glossary items relevant to AI Workers:
 - §5 OUT: **"Immigration legal advice | The platform produces scores, flags, and information. It does not provide legal opinions. Compliance features help RCICs fulfill their obligations; they do not replace qualified legal judgment."** "IRCC live API integration | IRCC does not publish a public machine-readable API". "Firms' trust accounting" OUT (superseded by FD-17). "the single authoritative OUT table — everything not listed here is IN, under the frozen-scope default-IN rule."
 - §6 hard constraints: "**Canadian data residency.** All production data ... must be stored and processed within Canada (ca-central-1; DR within Canadian regions). Sub-processors must be assessed for Canadian residency." (Relevant to any AI model provider — Inferred.) Polymorphic "EntityTypeRegistry". "Field-level envelope encryption for the Restricted PII set (CMK → per-firm DEK → per-subject key), mask-by-default + audited reveal". "PIPEDA erasure is by crypto-shredding".
 - §7 audit: "One platform-wide append-only spine; immutability at the DB GRANT (INSERT-only role); hash-chained ...; periodic WORM anchor (S3 Object Lock)". Restricted PII "never projected into the search index".
-- §8 one frozen scope, Waves A–E; Wave D includes "Automation (Conductors + Doers)". DoD "Priya" journey ends "IRCC form generated → case tracked to decision".
+- §8 one frozen scope, Waves A–E; Wave D includes "Automation (Conductors + Doers)". DoD "[the client]" journey ends "IRCC form generated → case tracked to decision".
 
 ### Notes: 02-Architecture-Decision-Record.md (document version 1.0, last updated 2026-06-22; decisions dated 2026-06-21), read in full (512 lines)
 - Status: "decisions LOCKED"; "this is a DECISIONS REGISTER, not the vendor build source". No mention of AI/OCR/ML (grep confirmed).

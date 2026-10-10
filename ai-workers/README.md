@@ -1,6 +1,6 @@
 # AI Workers — how this workstream runs
 
-**Owner:** the founder Singh (founder). **Maker / lead:** Claude. **Started:** 8 Oct 2026.
+**Owner:** the founder. **Maker / lead:** Claude. **Started:** 8 Oct 2026.
 **Resume point:** [`NEXT.md`](NEXT.md), always read it first. The project-wide rules in `../AGENTS.md` still apply here.
 
 ## 0. Mandatory rules (read first, every session and every agent)
