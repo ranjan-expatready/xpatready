@@ -214,7 +214,7 @@ From README §5 ("Nothing invented … Don't copy competitors … Never claim pr
 | Referrals (count here; names in the private file) | ___ |
 | Interviewer's one-line read (opinion, labelled) | |
 
-**Comparing ten sheets.** Put the ten rows side by side: median hours per file, median expected price, count per option, count of pilot yes. Any claim with a median under 3 is a claim we must rewrite or drop before W3c. Any option chosen by fewer than 2 of 10 is out. If expected prices cluster below CAD 15 per file or above CAD 60, the card's range is wrong (see `price-card.md` "What would make us wrong").
+**Comparing ten sheets.** Weight commitments above opinions: a pilot yes, a referral given, a number at which they say no, and the hours and prices they state are the signals; a 1–5 rating is a weak signal, and a claim rated 5 by someone who gives no commitment counts as unproven (the Lead's lens audit, `../REPORT-CARD.md` §6 lens 11). Put the ten rows side by side: median hours per file, median expected price, count per option, count of pilot yes. Any claim with a median under 3 is a claim we must rewrite or drop before W3c. Any option chosen by fewer than 2 of 10 is out. If expected prices cluster below CAD 15 per file or above CAD 60, the card's range is wrong (see `price-card.md` "What would make us wrong").
 
 ---
 
