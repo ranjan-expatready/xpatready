@@ -10,8 +10,8 @@
 
 ## Step R in progress (11 Oct)
 - Founder's interview so far: AIW-D81 to D87 (see `rethink-plan.md`). Evidence filed: `research/ai-in-regulated-work-2026-10.md`, `research/ai-coverage-vs-competitors-2026-10.md`, `design/ai-carve-out-register-2026-10-11.md`.
-- Running: architecture research `research/ai-architecture-deterministic-2026-10.md` (platform as the guardrail; skill structure, naming, scalability, maintainability; tracing; evaluation; tokens; access; models in Canada). When it lands: put interview question 6 (names of the levels) to the founder with the research's recommendation.
-- **Way forward chosen: AIW-D88, option E.** Order: names (question 6) → AI profiles → AI Team Handbook and coded prototype in parallel → three consultant conversations → appendix trim and archive → hand to the team.
+- Running: architecture research `research/ai-architecture-deterministic-2026-10.md` (platform as the guardrail; skill structure, naming, scalability, maintainability; tracing; evaluation; tokens; access; models in Canada). Landed; names decided (AIW-D89: AI teammate / skill / step). Provider file and test script corrected: only Gemini 3.5 Flash has a Canada promise today.
+- **Way forward chosen: AIW-D88, option E.** Order: names (done, D89) → AI profiles → AI Team Handbook and coded prototype in parallel → three consultant conversations → appendix trim and archive → hand to the team.
 - Then build the Step R deliverables (AIW-D86): one blueprint (product map, PRD, AI team and skills with reuse map, journeys and use cases with edge cases, stories linked to tests, technical design, evaluation and driving tests, traceability to team IDs or NEW) and a working coded prototype, both buildable and agnostic of build status (AIW-D87). Consolidate: the blueprint becomes the one source; superseded design files move to `archive/` with pointers.
 
 ## Next
