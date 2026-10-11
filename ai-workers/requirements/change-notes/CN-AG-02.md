@@ -1,0 +1,52 @@
+# CN-AG-02: change note to AG-02 Prospect, Lead and Sales CRM
+
+| Field | Value |
+|---|---|
+| Module changed | AG-02 Prospect / Lead / Sales CRM |
+| Version and file | v1.9 of 7 Oct 2026, `02-functional-requirements/agent/AG-02-prospect-lead-sales-crm_v1.9_2026-10-07.md` (Drive snapshot of 9 Oct 2026; line numbers below are that file's) |
+| Date of this note | 11 Oct 2026 |
+| Status | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
+| Next free numbers used | none (the changes reword existing text; the highest are AG-2-64, L644, and BR-21, L681) |
+| Companion files | CN-AG-03 (BR-19, eligibility only through the consultant); CN-AG-12 (eligibility mark on templates); AW-01 (the Intake assistant) |
+
+**In plain words.** The founder decided on 11 Oct that no automatic or AI-drafted message to a lead carries eligibility content; the planned "your CRS would change if…" nudge is therefore dropped. Two small alignments follow: the AI writing tool is now called the Writer, and the call-outcome list should be one list, not two.
+
+---
+
+## 1. Drop the "your CRS would change if…" nudge from nurture
+
+1. **Where.** §3.10 Nurture & recycling (L420).
+2. **Current words.**
+   > L420: "A nurtured lead can be enrolled in a **long-horizon re-engagement** (e.g. quarterly check-in, "draw cut-offs moved" update, "your CRS would change if…" nudge — all CASL-consented and in the lead's locale)"
+3. **Proposed words.** "A nurtured lead can be enrolled in a **long-horizon re-engagement** (e.g. quarterly check-in, "draw cut-offs moved" update — all CASL-consented and in the lead's locale). No automatic or AI-drafted re-engagement message SHALL carry eligibility content about the lead (an outcome, a score, a band, "likely", or a lever that would change a result); eligibility reaches a lead only through the consultant's audited share (AG-3-38; AG-03 BR-19 as proposed in CN-AG-03)."
+4. **Why.** AIW-D41 (the founder, 11 Oct: "The team's "your CRS would change if…" nudge (AG-02 §3.10) is dropped: a change note in Step 3"); `proposals.md` row of 10 Oct (Intake assistant, eligibility in lead messages, "Disclosed conflict"); `intake-assistant.md` §9 GI-10.
+5. **Knock-ons.** AG-2-45 (Nurture) is unchanged in shape; the going-cold and post-consult recipes (AG-2-57) carry no eligibility content; the catalogue's W-10 "levers" wording is narrowed by the Lead; counsel reads any nurture template that touches eligibility (`intake-assistant.md` §7).
+
+## 2. The AI writing tool is the Writer
+
+1. **Where.** "Applied from AG-11" decision row AG11-D11 (L61).
+2. **Current words.**
+   > L61: "a Drafter draft sent unedited counts as AI-written"
+3. **Proposed words.** "a Writer draft sent unedited counts as AI-written". Elsewhere in AG-02, "Drafter" names the retainer template engine (L179, L764) and stays.
+4. **Why.** AIW-D53 (the AI Doer is the **Writer**; *Drafter* stays the template engine).
+5. **Knock-ons.** CN-AG-11 item 1.
+
+## 3. One call-outcome list
+
+1. **Where.** §3.12 `outcome` (L469); §3.12 world-class behaviour (L483); AG-2-37a (L608); §7 `Call` (L736).
+2. **Current words.**
+   > L469: "**`outcome`** — a firm-configurable **picklist**: defaults `Connected`, `No answer`, `Left voicemail`, `Busy`, `Wrong number`, `Callback requested`, `Not in service`."
+   >
+   > L608: "Staff SHALL **log a call** with an **outcome** (answered / no answer / left message / wrong number / callback requested / not interested)"
+   >
+   > L736: "`outcome` (answered/no-answer/left-message/wrong-number/callback-requested/not-interested)"
+3. **Proposed words.** One default list, used by §3.12, AG-2-37a and `Call`. Recommended form, the list AG-2-37a and `Call` already share: "**`outcome`** — a firm-configurable **picklist**: defaults answered, no answer, left message, wrong number, callback requested, not interested." L483 reads "answered" for "Connected". If the team prefers §3.12's list, AG-2-37a and `Call` change instead; either way there is one list.
+4. **Why.** `proposals.md` row of 10 Oct (Intake assistant, "Also for the team: one call-outcome vocabulary (AG-02 v1.9 §3.12 defaults … against AG-2-37a and the `Call` entity, which agree with each other …)"); `intake-assistant.md` §9 GI-12. A decision for the team.
+5. **Knock-ons.** AG-14-7 "calls logged/connected" (AG-14 v1.10 L356) uses the chosen word; the Intake assistant's next-step rule reads the outcome (AW-01).
+
+---
+
+## Not changed here (pointers only)
+
+- Which outbound touch satisfies speed-to-lead and moves a lead to Contacted is Unknown (`intake-assistant.md` §9 GI-24); no change proposed.
+- Restricted fields in exports (AG-2-49a, AG-2-51) follow CN-AG-07 item 1 (FD-15 kept).
