@@ -4,11 +4,11 @@
 |---|---|
 | **Document changed** | ExpatReady — Founder Decisions Log (consolidated sign-off), document version 1.5, last updated 2026-08-02 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/01-techno-functional/07-Founder-Decisions-Log.md` |
-| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d: AIW-D72 as corrected; refunds open point) |
+| **Date of this note** | 11 Oct 2026 (sixth round, after check S3a-e: AIW-D72 correction 2; refunds open point and FD-13) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 9: 2 amendments, 5 reaffirmations, 1 new section, 1 reading of FD-16. Also 6 open points (below, not changes): five for the founder, one recorded as applied. |
 
-**What this note is.** The Founder Decisions Log is the founder's own record; only the founder changes it. On 11 Oct 2026 the founder answered the Workstream 2 decisions one by one (`ai-workers/decisions.md`, AIW-D36 to AIW-D72, with the appended *AIW-D72 correction* row). This note does four things:
+**What this note is.** The Founder Decisions Log is the founder's own record; only the founder changes it. On 11 Oct 2026 the founder answered the Workstream 2 decisions one by one (`ai-workers/decisions.md`, AIW-D36 to AIW-D72, with the appended rows *AIW-D72 correction* and *AIW-D72 correction 2*). This note does four things:
 - **Two amendments.** Two of his answers amend a ratified decision (FD-4, FD-8).
 - **Five reaffirmations.** Five answers keep a log decision against newer team documents that had drifted from it (FD-5, FD-11, FD-15, FD-17, FD-21), so those team documents come back to the log. FD-17 is kept in full (AIW-D72).
 - **One new section.** Nine answers are decisions the team should be able to read in the log rather than in a Workstream 2 file.
@@ -61,12 +61,12 @@ These are conflicts or gaps the fix rounds found. Points 1, 3, 4, 5 and 6 need t
    - FD-11 names AG-6 ("AG-6 mentions scrubbed", L36).
    - SA-04 v2.17 §10 lists "credit notes" under `system/billing:view` (L752), and SA-08 v2.4 keeps "invoice and credit-note copies" (SA-8-44, L301).
    - **Question:** does FD-11 reach Expat Ready's own billing to firms?
-6. **Refunds in Release 1 (FD-17 against AG-06).**
-   - FD-17 (L53) names refund among the version 1 client-money records that carry a designation: "on every client-money record — quote, retainer, deposit, invoice line, payment, refund". The trust ledger of part (c) needs a way to record money returned to a client.
-   - AG-06 v1.7 holds refunds to Phase 2: "**Refunds (Phase-2)** SHALL be a **reversing fact** with a **mandatory reason** …" (AG-6-23, L377).
-   - A team file never overrides a founder decision (README §0 rule 11), so the conflict goes to the founder.
-   - **The Lead's recommendation** (`00-step3-plan.md`, "Refunds in Release 1"): Release 1 records an **offline refund fact** with its designation, posting a reversing ledger entry, entered by a person; the platform never moves money (FD-12). Online refund execution stays Phase 2.
-   - **Question:** accept the minimum (an offline refund fact in Release 1), or keep refunds in Phase 2 and amend FD-17's list?
+6. **Refunds in Release 1: money returned to a client from trust.**
+   - FD-17 (L53) names refund among the version 1 client-money records: "on every client-money record — quote, retainer, deposit, invoice line, payment, refund".
+   - AG-06 v1.7 holds general refunds to Phase 2: "**Refunds (Phase-2)** SHALL be a **reversing fact** with a **mandatory reason** …" (AG-6-23, L377).
+   - FD-13 (L38) already decides consultation refunds: "**Firm-configurable refunds with platform defaults**", and AG-04 v1.5 refunds a cancelled paid consultation in Release 1 ("**AG-4-46** Refund-on-cancel per policy via Biller", L515).
+   - **Question:** must Release 1 also record money returned to a client from trust (for example an unused retainer)?
+   - **The Lead recommends yes**, with the mechanics designed by the team under FD-17 (`00-step3-plan.md`, "Refunds and FD-13"; "Trust accounting belongs to the team"). This note proposes no refund rule.
 
 ---
 
@@ -188,19 +188,19 @@ L53 (extract, opening and part (a)):
 > | FD-17 | Trust accounting (**supersedes FD-10**) | B/C | **Trust-aware from day one, LIGHT.** In scope for v1: (a) a mandatory `fundsDesignation` (TRUST \| OPERATING) on every client-money record — quote, retainer, deposit, invoice line, payment, refund;
 
 **(3) Proposed words.** The row is unchanged; the decision cell ends with:
-> *Reaffirmed in full 2026-10-11 (AIW-D45, AIW-D72) against AG-06 v1.7 AG-6-24 (an optional `fundsNature` tag, trust accounting deferred as an "explicit deferral, §13"): Release 1 carries all four parts (a) to (d) as worded above, with rules resolved from the Practice Pack (FD-22); AG-06 comes back to FD-17. The Billing assistant never posts a trust entry, moves a designation or computes a balance; it keeps no list and only reminds the person who holds the reconciliation, at the reconciliation cadence the Practice Pack sets, that the product's report is due (AIW-D72 as corrected 11 Oct 2026). Counsel reads it before any pilot on real client money.*
+> *Reaffirmed in full 2026-10-11 (AIW-D45, AIW-D72) against AG-06 v1.7 AG-6-24 (an optional `fundsNature` tag, trust accounting deferred as an "explicit deferral, §13"): Release 1 carries all four parts (a) to (d) as worded above, with rules resolved from the Practice Pack (FD-22); AG-06 comes back to FD-17. The Billing assistant never posts a trust entry, moves a designation or computes a balance; it keeps no list and quotes no figure, and only reminds the person who holds the reconciliation, at the reconciliation cadence the Practice Pack sets, that the product's report is due (AIW-D72 as corrected 11 Oct 2026). Counsel reads it before any pilot on real client money.*
 
 **(4) Why.**
 - **AIW-D72**, 11 Oct 2026, asked again in full after the Lead's correction ("the 11 Oct question for AIW-D45 described FD-17 only as a mandatory tag"). The founder chose "Keep FD-17 in full": "Release 1 carries all four parts of FD-17 as the Founder Decisions Log words them: (a) a mandatory `fundsDesignation` (TRUST \| OPERATING) on every client-money record; (b) no automatic sweep of client funds into operating, only an audited, reason-coded move tied to a delivered milestone or issued invoice; (c) a per-client trust ledger with running balance; (d) a trust reconciliation report; rules resolved from the Practice Pack (FD-22). … The Billing assistant never posts a trust entry, moves a designation or computes a balance …"
-- **The AIW-D72 correction** (`decisions.md`, appended row): the rest of that last sentence is superseded. The Billing assistant keeps no list of its own; it only reminds the person who holds the reconciliation (`agent/trust:reconcile`) that the product's trust reconciliation report is due, with a link, and quotes no figure. The founder's choice ("Keep FD-17 in full") is unchanged. AIW-D72 also confirms AIW-D45 and sends the trust rules to counsel before any pilot on real client money (counsel pack question 9).
-- **The cadence.** The correction row speaks of a monthly reminder; FD-17 makes the reconciliation cadence a Practice Pack value ("reconciliation cadence … are all pack-supplied values", L53), so the line for the log names the Practice Pack's cadence.
+- **The two correction rows** (`decisions.md`, appended). *AIW-D72 correction* supersedes the rest of that last sentence: the Billing assistant keeps no list of its own; it only reminds the person who holds the reconciliation (`agent/trust:reconcile`) that the product's trust reconciliation report is due, with a link, and quotes no figure. *AIW-D72 correction 2* sets the timing: the reminder goes out at the reconciliation cadence the Practice Pack sets, not monthly, because FD-17 makes the cadence a pack-supplied value ("reconciliation cadence … are all pack-supplied values", L53); Canada's value is set with counsel (counsel question 9). The founder's choice ("Keep FD-17 in full") is unchanged by either row.
 - **AIW-D45.** The founder chose "Keep FD-17": "FD-17 stands (mandatory trust-or-operating tag on every client-money record, trust-aware light from day one). The team brings AG-06 back to FD-17 (change note in Step 3); counsel reads it before any pilot on real client money."
 - **The drift.** AG-06 v1.7 AG-6-24 (L380): "The platform SHALL record transactions and MAY tag a payment's **`fundsNature`** … in Phase-1 (explicit deferral, §13)."
+- **The mechanics are the team's.** How the trust ledger, the move and the reconciliation work is the team's billing design under FD-17 (`00-step3-plan.md`, "Trust accounting belongs to the team"); this line only reaffirms the decision.
 - Proposals row of 9 Oct (carve-out B, "Settle trust accounting for Release 1").
-- The first version of this change quoted AIW-D45 only, which described FD-17 as a mandatory tag. AIW-D72 corrects that (re-check S3a-b R-4). The fourth version quoted AIW-D72's last sentence before its correction row existed (re-check S3a-d M-1).
+- The first version of this change quoted AIW-D45 only, which described FD-17 as a mandatory tag. AIW-D72 corrects that (re-check S3a-b R-4). A later version quoted AIW-D72's last sentence before its correction rows existed (re-check S3a-d M-1).
 
 **(5) Knock-ons.**
-- AG-06 (CN-AG-06 change 1), to FD-17's words only (`00-step3-plan.md` shared rule "FD-17").
+- AG-06 (CN-AG-06 changes 1 and 6), to FD-17's words only, with the accounting questions in AG-06 §13.
 - The Billing assistant's limits (AW-01).
 - Refunds: open point 6.
 - Counsel pack question 9.

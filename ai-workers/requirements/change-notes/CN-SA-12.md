@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-12 Feature Flags & Platform Configuration, version 2.7, dated 2026-10-08 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-12-feature-flags-and-platform-configuration_v2.7_2026-10-08.md` |
-| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d: platform values only; firm values in AG-16; spend-cap defaults; platform assistants under a stop) |
+| **Date of this note** | 11 Oct 2026 (sixth round, after check S3a-e: spend-cap defaults Owner-only; who sets firm values; after the approve-all part ends) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 4 |
 
@@ -155,32 +155,33 @@ New requirement:
 >     - a platform value of (b) may be changed under config-manage, with a reason (SA-12-25), but never to a value that switches a safeguard off. A value that would switch one off is refused on write: no low-confidence values opened first, no value hidden for the approver to fill, or the agreement alarm off;
 >     - a firm's own value is used only if it is stricter than the platform value (below).
 >
->     When the founder's recorded decision ends the **approve-all part**, the firm's own settings govern the approve-all safeguards. When it ends the **second-person part**, SA-4-89 stops applying.
+>     When the founder's recorded decision ends the **approve-all part**, the firm's own settings govern the approve-all safeguards: a firm that never set its own value keeps the platform default as its starting value, and may then change it freely. When the founder's recorded decision ends the **second-person part**, SA-4-89 stops applying.
 >   - **(b) The approve-all safeguard values** (AIW-D57): the confidence level below which a value is opened first; the share of values hidden for the approver to fill (at least one value on every approve-all); and the level and time window of the agreement alarm.
 >   - **(c) The AI spend caps** *(Proposal — IMP-36)*:
 >     - per firm per month: a warning at 80 %; at 100 % new model calls stop and the manual path applies (AG-11-71);
 >     - per Practice expert user per day;
 >     - per assistant run: a runaway run is stopped and parked for a person, from day one;
->     - **platform-wide per month, for Expat Ready's own assistant calls**: a warning to the Platform Owner at 80 %; at 100 % the platform assistants make no new model calls and their people work by hand.
+>     - **platform-wide per month, for Expat Ready's own assistant calls**: a warning to the Platform Owner at 80 %; at 100 % the platform assistants make no new model calls and their people work by hand. This is a platform-only value; no firm has a value for it.
 >
 >     **Reaching a cap stops new model calls only.** It never pauses, cancels or withdraws an item already waiting in Needs you: that item stays approvable, because approving it makes no model call (AG-11-112, CN-AG-11 change 6). Spend caps never stop the product's own non-AI work.
 >
->   **Firm values.** A firm's stricter values for (b) and for its own caps in (c) are **firm settings in AG-16** (CN-AG-16 change 4), set by the firm's Owner under the firm's settings permission. They are never written into this registry: no firm staff hold its `system/*` keys (L571). The engine uses the stricter of the platform value and the firm value: for (b) while the approve-all part is on, and for the caps at all times. A firm value looser than the platform value is refused where the firm sets it (AG-16).
+>   **Firm values.** A firm's stricter values for (b) and for its own caps in (c) are **firm settings in AG-16** (CN-AG-16 change 4). Every holder of the firm's `agent/settings:edit` (Owner and Admin, SA-06 v3.3) may set them, and each change is audited; no Owner-only check is added, because a stricter value only raises safety. They are never written into this registry: no firm staff hold its `system/*` keys (L571). The engine uses the stricter of the platform value and the firm value: for (b) while the approve-all part is on, and for the firm's caps at all times. A firm value looser than the platform value is refused where the firm sets it (AG-16).
 >
->   **Defaults.** The values in (b) and (c) are set by the team before the first production deployment. Until the founder's decision on spend caps after the pilot (AIW-D62), the Platform Owner may change a spend-cap default with a recorded reason (SA-12-25); no founder decision is needed meanwhile. Every change is audited with a reason (SA-12-25).
+>   **Defaults.** The values in (b) and (c) are set by the team before the first production deployment. A **spend-cap default** in (c), the platform-wide cap included, is changed **only by the Platform Owner**, with a recorded reason (SA-12-25), under the same Owner-only pattern as SA-12-27: a Platform engineer can view it but cannot change it; the change is refused with a clear message and the refusal is audited. Until the founder's decision on spend caps after the pilot (AIW-D62), no founder decision is needed for such a change. Every change is audited with a reason (SA-12-25).
 
-SA-12-27 gains: "*(changed — SA-12-33)* The founder safeguards setting of SA-12-33 is changed under the same rule: only an Owner, and only with the founder's decision reference recorded."
+SA-12-27 gains: "*(changed — SA-12-33)* The founder safeguards setting and the spend-cap defaults of SA-12-33 are changed under the same rule: only an Owner; for the founder safeguards setting, only with the founder's decision reference recorded; for a spend-cap default, with a recorded reason."
 
-Role mapping (L571), first sentence, becomes: "Config-manage excludes the security settings of SA-12-27 and the founder safeguards setting of SA-12-33, which only an Owner may change."
+Role mapping (L571), first sentence, becomes: "Config-manage excludes the security settings of SA-12-27 and the founder safeguards setting and spend-cap defaults of SA-12-33, which only an Owner may change."
 
 **(4) Why.**
-- **One home.** The Lead's call of 11 Oct (re-check S3c-b N-7), `00-step3-plan.md`, "Pilot safeguard values, one home": the approve-all safeguards and spend caps are platform settings in SA-12-33. The platform-wide cap for Expat Ready's own assistant calls has its home here too (`00-step3-plan.md`, "AW-02 calls" (a)).
-- **Platform values only; firm values in AG-16.** The Lead's call of 11 Oct, `00-step3-plan.md`, "A firm's tightening, write path (S3a-d M-3)": "a firm Owner's stricter values for the approve-all safeguards and the firm's spend caps are **firm settings in AG-16** (under the Owner's existing firm-settings permission), never written into SA-12-33, whose platform keys no firm staff hold (SA-12 L571). The server refuses a firm value looser than the platform value while it applies (the approve-all part while it is on; caps always), the engine uses the stricter of the two, and every change is audited (AG-13)." Because firm values live in AG-16, SA-12-33 uses no per-plan or per-firm override of SA-12-17 (re-check S3a-d M-3, m-3 (b)).
+- **One home.** The Lead's call of 11 Oct (re-check S3c-b N-7), `00-step3-plan.md`, "Pilot safeguard values, one home": the approve-all safeguards and spend caps are platform settings in SA-12-33. The platform-wide cap for Expat Ready's own assistant calls has its home here too (`00-step3-plan.md`, "AW-02 calls" (a)); it is a platform-only value (`00-step3-plan.md`, "Tighten-only means firm against platform").
+- **Platform values only; firm values in AG-16.** The Lead's call of 11 Oct, `00-step3-plan.md`, "A firm's tightening, write path (S3a-d M-3)": firm values are "**firm settings in AG-16** … never written into SA-12-33, whose platform keys no firm staff hold (SA-12 L571). The server refuses a firm value looser than the platform value while it applies (the approve-all part while it is on; caps always), the engine uses the stricter of the two, and every change is audited (AG-13)." Because firm values live in AG-16, SA-12-33 uses no per-plan or per-firm override of SA-12-17.
+- **Who sets a firm's stricter values.** `00-step3-plan.md`, "Who sets a firm's stricter values (S3a-e n-6)": "every holder of `agent/settings:edit` (Owner and Admin, SA-06 v3.3), audited; stricter values only raise safety, so no Owner-only check is added." SA-06 v3.3 L745 gives `agent/settings:edit` ("Edit non-legal firm settings: branding, locale/timezone, safeguards, reminder timings") to Owner and Admin.
+- **Who changes a spend-cap default.** `00-step3-plan.md`, "Who changes a spend-cap default (S3a-e n-1)": "the Platform Owner only (SA-12's Owner-only settings pattern, SA-12-27), with a recorded reason; the Platform engineer is refused." The earlier "Changing a spend-cap default (S3a-d m-2)" call stands for the founder's role: "until the founder's post-pilot decision on caps (AIW-D62), the Platform Owner may change a default with a recorded reason (SA-12-25); no founder decision is needed meanwhile; the post-pilot values are the founder's."
 - **The name and the parts.** `00-step3-plan.md`, "The *founder safeguards* setting": the setting once called *pilot safeguards* is renamed, because AIW-D57 has no pilot limit, while AIW-D59 was chosen as "Yes, for the pilot" and its effect reads "during the pilot; reviewed after it". Each part ends only by a recorded founder decision naming that part.
-- **After a part ends.** `00-step3-plan.md`, "Tighten-only and the founder safeguards": "when the founder's recorded decision ends a part, firm settings govern it." The second-person part has no firm setting, so ending it simply stops SA-4-89 (re-check S3a-d m-3 (a)).
-- **The platform value while the approve-all part is on.** It can change under config-manage but never to a value that switches a safeguard off; that is the floor AW-02 refers to (re-check S3a-d m-3 (c)).
+- **After a part ends.** `00-step3-plan.md`, "Tighten-only and the founder safeguards" and "After the approve-all part ends (S3a-e n-2)": "a firm that never set its own value keeps the platform default as its starting value; the firm may then change it freely." The second-person part has no firm setting, so ending it simply stops SA-4-89.
+- **The platform value while the approve-all part is on.** It can change under config-manage but never to a value that switches a safeguard off; that is the floor AW-02 refers to.
 - **Who switches it off.** `00-step3-plan.md`, "Who switches it off (S3a-c N-2)": SA-12's existing Owner-only settings pattern (SA-12-27; L571), with the founder's decision reference recorded; no new key; the Platform engineer's `system/platform-config:manage` does not reach it. SA-12-27 already holds this pattern for the security settings (quoted above).
-- **Changing a spend-cap default.** `00-step3-plan.md`, "Changing a spend-cap default (S3a-d m-2)": "until the founder's post-pilot decision on caps (AIW-D62), the Platform Owner may change a default with a recorded reason (SA-12-25); no founder decision is needed meanwhile; the post-pilot values are the founder's."
 - **A setting, not a period.** `00-step3-plan.md`, "No 'during the pilot' in a requirement".
 - **Caps never pause waiting items.** `00-step3-plan.md`, "Spend caps never pause waiting items": "reaching a cap stops new model calls only, then the manual path; items already waiting in Needs you are unaffected (a cost control, not a safety stop)". CN-AG-11 change 6's halt table says the same.
 - **Caps are not a founder safeguard.** Caps are tighten-only at all times, not tied to a part (`00-step3-plan.md`, "Pilot safeguard values, one home").
@@ -193,9 +194,10 @@ Role mapping (L571), first sentence, becomes: "Config-manage excludes the securi
 
 **(5) Knock-ons.**
 - AG-11-112 and the spend-cap row of its halt table (CN-AG-11 change 6).
-- AG-16 (CN-AG-16 change 4): the firm's stricter values and caps are firm settings there, shown beside the platform values; the caps are tighten-only at all times, and the approve-all values only while their part is on.
-- SA-04 SA-4-89 (CN-SA-04 change 3), SA-07 L351 and the Appendix A row (CN-SA-07 changes 1 and 3) and SA-01B (CN-SA-01B change 6) cite the founder safeguards setting.
-- SA-06 catalogue: no key for the switch-off (CN-SA-06 change 4).
+- AG-16 (CN-AG-16 change 4): the firm's stricter values and caps are firm settings there, set by holders of `agent/settings:edit` and audited, shown beside the platform values; the caps are tighten-only at all times, and the approve-all values only while their part is on; after that part ends, a firm with no value of its own starts from the platform default.
+- SA-04 SA-4-89 (CN-SA-04 change 3), SA-07 L351 and the Appendix A rows (CN-SA-07 changes 1 and 3) and SA-01B (CN-SA-01B change 6) cite the founder safeguards setting.
+- SA-07 Appendix A: changing a spend-cap default is Owner-only (CN-SA-07 change 1).
+- SA-06 catalogue: no key for the switch-off or for spend-cap defaults (CN-SA-06 change 4).
 - AW-01 and AW-02 cite SA-12-33 for the platform values and the platform-wide cap.
 - SA-09 shows spend against the caps (CN-SA-09).
 
@@ -207,7 +209,7 @@ Role mapping (L571), first sentence, becomes: "Config-manage excludes the securi
 
 **(2) Current words.** The last row is v2.7 of 2026-10-08.
 
-**(3) Proposed words.** A version row: "| 2.8 | *(date placed)* | Workstream 2 change note CN-SA-12 applied: AI emergency stops that pause, with the `PLATFORM_STOP` reason of AG-11, for firm and platform assistants (SA-12-31); the AI recall action and key (SA-12-32); the founder safeguards setting with its approve-all and second-person parts, Owner-only like the security settings (SA-12-27); platform values of the approve-all safeguards and AI spend caps, including a platform-wide cap; firm values held in AG-16, the stricter one used; caps never pause waiting items (SA-12-33). | IMP-8, IMP-36; AIW-D57, AIW-D59, AIW-D62 |".
+**(3) Proposed words.** A version row: "| 2.8 | *(date placed)* | Workstream 2 change note CN-SA-12 applied: AI emergency stops that pause, with the `PLATFORM_STOP` reason of AG-11, for firm and platform assistants (SA-12-31); the AI recall action and key (SA-12-32); the founder safeguards setting with its approve-all and second-person parts, Owner-only like the security settings (SA-12-27); platform values of the approve-all safeguards and AI spend caps, including a platform-wide cap, with spend-cap defaults Owner-only; firm values held in AG-16, the stricter one used; caps never pause waiting items (SA-12-33). | IMP-8, IMP-36; AIW-D57, AIW-D59, AIW-D62 |".
 
 **(4) Why.** Review S3a m-20(c).
 
