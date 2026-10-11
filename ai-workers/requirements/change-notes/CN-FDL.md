@@ -4,11 +4,11 @@
 |---|---|
 | **Document changed** | ExpatReady — Founder Decisions Log (consolidated sign-off), document version 1.5, last updated 2026-08-02 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/01-techno-functional/07-Founder-Decisions-Log.md` |
-| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
+| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d: AIW-D72 as corrected; refunds open point) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
-| **Changes** | 9: 2 amendments, 5 reaffirmations, 1 new section, 1 reading of FD-16. Also 5 open points (below, not changes): four for the founder, one recorded as applied. |
+| **Changes** | 9: 2 amendments, 5 reaffirmations, 1 new section, 1 reading of FD-16. Also 6 open points (below, not changes): five for the founder, one recorded as applied. |
 
-**What this note is.** The Founder Decisions Log is the founder's own record; only the founder changes it. On 11 Oct 2026 the founder answered the Workstream 2 decisions one by one (`ai-workers/decisions.md`, AIW-D36 to AIW-D72). This note does four things:
+**What this note is.** The Founder Decisions Log is the founder's own record; only the founder changes it. On 11 Oct 2026 the founder answered the Workstream 2 decisions one by one (`ai-workers/decisions.md`, AIW-D36 to AIW-D72, with the appended *AIW-D72 correction* row). This note does four things:
 - **Two amendments.** Two of his answers amend a ratified decision (FD-4, FD-8).
 - **Five reaffirmations.** Five answers keep a log decision against newer team documents that had drifted from it (FD-5, FD-11, FD-15, FD-17, FD-21), so those team documents come back to the log. FD-17 is kept in full (AIW-D72).
 - **One new section.** Nine answers are decisions the team should be able to read in the log rather than in a Workstream 2 file.
@@ -35,7 +35,7 @@ The founder's words are quoted from `ai-workers/decisions.md`.
 
 ## Open points (recorded, not changed)
 
-These are conflicts or gaps the fix rounds found. Points 1, 3, 4 and 5 need the founder's answer. Point 2 is recorded as applied and asks nothing. None is written as a change.
+These are conflicts or gaps the fix rounds found. Points 1, 3, 4, 5 and 6 need the founder's answer. Point 2 is recorded as applied and asks nothing. None is written as a change.
 
 1. **FD-7 against the team's CP1-D7.**
    - FD-7 (L32) resolves "**CP-9 employer sees read-only summary**". That is the recruitment summary tile of Doc 4 §3.9 (L3043) and §13 item 8 (L3207).
@@ -52,7 +52,7 @@ These are conflicts or gaps the fix rounds found. Points 1, 3, 4 and 5 need the 
    - AIW-D52 reads "AI processing of client data happens only in Canada (AG11-D15 wording, for firms' data and Expat Ready's own support tickets)".
    - The Pack author's assistant drafts pack content that holds no client data (synthetic samples only).
    - **Question:** do such calls also use only the Canada provider record?
-   - The Super Admin notes keep D52's literal scope and do not state the wider reach as a requirement (CN-SA-08 change 2, CN-SA-11 change 1; review S3a M-2; re-check S3a-b R-2).
+   - The Super Admin notes keep D52's literal scope and do not state the wider reach as a requirement (CN-SA-08 change 2, CN-SA-11 change 1; review S3a M-2; re-check S3a-b R-2). Until he answers, the Pack author's assistant makes no model call; its rule-built steps run (`00-step3-plan.md`, "Pack calls before the founder answers").
 4. **FD-4 as amended, and Practice Pack reference data.**
    - FD-22 applies FD-4 to the Practice Pack ("dual control on rule-bearing artifacts (FD-4)", A22-6.6, L142).
    - AIW-D48 speaks of "a published country pack".
@@ -61,6 +61,12 @@ These are conflicts or gaps the fix rounds found. Points 1, 3, 4 and 5 need the 
    - FD-11 names AG-6 ("AG-6 mentions scrubbed", L36).
    - SA-04 v2.17 §10 lists "credit notes" under `system/billing:view` (L752), and SA-08 v2.4 keeps "invoice and credit-note copies" (SA-8-44, L301).
    - **Question:** does FD-11 reach Expat Ready's own billing to firms?
+6. **Refunds in Release 1 (FD-17 against AG-06).**
+   - FD-17 (L53) names refund among the version 1 client-money records that carry a designation: "on every client-money record — quote, retainer, deposit, invoice line, payment, refund". The trust ledger of part (c) needs a way to record money returned to a client.
+   - AG-06 v1.7 holds refunds to Phase 2: "**Refunds (Phase-2)** SHALL be a **reversing fact** with a **mandatory reason** …" (AG-6-23, L377).
+   - A team file never overrides a founder decision (README §0 rule 11), so the conflict goes to the founder.
+   - **The Lead's recommendation** (`00-step3-plan.md`, "Refunds in Release 1"): Release 1 records an **offline refund fact** with its designation, posting a reversing ledger entry, entered by a person; the platform never moves money (FD-12). Online refund execution stays Phase 2.
+   - **Question:** accept the minimum (an offline refund fact in Release 1), or keep refunds in Phase 2 and amend FD-17's list?
 
 ---
 
@@ -123,9 +129,9 @@ L30:
 > | FD-5 | XFA/flattened IRCC forms | **Flattened-overlay support in v1** (coordinate-mapped fill + FormFieldMap visual editor), unit-priced per form edition; XFA runtime = named later-wave stub |
 
 **(3) Proposed words.** The row is unchanged; the decision cell ends with:
-> *Reaffirmed 2026-10-11 (AIW-D43) against SA-01B v1.2 SA1B-D28 ("Form autofill is parked for Release 1"): the team states the overlay route for IRCC's forms and a date; in the founder's words, "until it exists the pilot runs without form filling and says so".*
+> *Reaffirmed 2026-10-11 (AIW-D43) against SA-01B v1.2 SA1B-D28 ("Form autofill is parked for Release 1"): the team states the overlay route for IRCC's forms and a date; as recorded in AIW-D43, until it exists the pilot runs without form filling and says so.*
 
-**(4) Why.** AIW-D43. The founder chose "Keep FD-5, ask the team": "FD-5 (form filling in version 1) stands; Step 3 asks the team for the overlay route and a date. Until it exists the pilot runs without form filling and says so; the Form Preparer duty (W-05) stays specified." SA-01B v1.2 (L53) parked filling. A module file never overrides a founder decision by date (README §0 rule 11). The product rule that applies the founder's words in SA-01B names a state the product can check (CN-SA-01B change 1).
+**(4) Why.** AIW-D43. The founder chose "Keep FD-5, ask the team". As recorded in AIW-D43: "FD-5 (form filling in version 1) stands; Step 3 asks the team for the overlay route and a date. Until it exists the pilot runs without form filling and says so; the Form Preparer duty (W-05) stays specified." SA-01B v1.2 (L53) parked filling. A module file never overrides a founder decision by date (README §0 rule 11). The product rule that applies this in SA-01B names a state the product can check (CN-SA-01B change 1).
 
 **(5) Knock-ons.** SA-01B SA1B-D28 and P1 (CN-SA-01B change 1). AG-07 (CN-AG-07).
 
@@ -182,18 +188,21 @@ L53 (extract, opening and part (a)):
 > | FD-17 | Trust accounting (**supersedes FD-10**) | B/C | **Trust-aware from day one, LIGHT.** In scope for v1: (a) a mandatory `fundsDesignation` (TRUST \| OPERATING) on every client-money record — quote, retainer, deposit, invoice line, payment, refund;
 
 **(3) Proposed words.** The row is unchanged; the decision cell ends with:
-> *Reaffirmed in full 2026-10-11 (AIW-D45, AIW-D72) against AG-06 v1.7 AG-6-24 (an optional `fundsNature` tag, trust accounting deferred as an "explicit deferral, §13"): Release 1 carries all four parts (a) to (d) as worded above, with rules resolved from the Practice Pack (FD-22); AG-06 comes back to FD-17. The Billing assistant never posts a trust entry, moves a designation or computes a balance; it reads and lists. Counsel reads it before any pilot on real client money.*
+> *Reaffirmed in full 2026-10-11 (AIW-D45, AIW-D72) against AG-06 v1.7 AG-6-24 (an optional `fundsNature` tag, trust accounting deferred as an "explicit deferral, §13"): Release 1 carries all four parts (a) to (d) as worded above, with rules resolved from the Practice Pack (FD-22); AG-06 comes back to FD-17. The Billing assistant never posts a trust entry, moves a designation or computes a balance; it keeps no list and only reminds the person who holds the reconciliation, at the reconciliation cadence the Practice Pack sets, that the product's report is due (AIW-D72 as corrected 11 Oct 2026). Counsel reads it before any pilot on real client money.*
 
 **(4) Why.**
-- **AIW-D72**, 11 Oct 2026, asked again in full after the Lead's correction ("the 11 Oct question for AIW-D45 described FD-17 only as a mandatory tag"). The founder chose "Keep FD-17 in full": "Release 1 carries all four parts of FD-17 as the Founder Decisions Log words them: (a) a mandatory `fundsDesignation` (TRUST \| OPERATING) on every client-money record; (b) no automatic sweep of client funds into operating, only an audited, reason-coded move tied to a delivered milestone or issued invoice; (c) a per-client trust ledger with running balance; (d) a trust reconciliation report; rules resolved from the Practice Pack (FD-22). … The Billing assistant never posts a trust entry, moves a designation or computes a balance; it reads and lists. Confirms AIW-D45; counsel reads it before any pilot on real client money (counsel pack question 9)."
+- **AIW-D72**, 11 Oct 2026, asked again in full after the Lead's correction ("the 11 Oct question for AIW-D45 described FD-17 only as a mandatory tag"). The founder chose "Keep FD-17 in full": "Release 1 carries all four parts of FD-17 as the Founder Decisions Log words them: (a) a mandatory `fundsDesignation` (TRUST \| OPERATING) on every client-money record; (b) no automatic sweep of client funds into operating, only an audited, reason-coded move tied to a delivered milestone or issued invoice; (c) a per-client trust ledger with running balance; (d) a trust reconciliation report; rules resolved from the Practice Pack (FD-22). … The Billing assistant never posts a trust entry, moves a designation or computes a balance …"
+- **The AIW-D72 correction** (`decisions.md`, appended row): the rest of that last sentence is superseded. The Billing assistant keeps no list of its own; it only reminds the person who holds the reconciliation (`agent/trust:reconcile`) that the product's trust reconciliation report is due, with a link, and quotes no figure. The founder's choice ("Keep FD-17 in full") is unchanged. AIW-D72 also confirms AIW-D45 and sends the trust rules to counsel before any pilot on real client money (counsel pack question 9).
+- **The cadence.** The correction row speaks of a monthly reminder; FD-17 makes the reconciliation cadence a Practice Pack value ("reconciliation cadence … are all pack-supplied values", L53), so the line for the log names the Practice Pack's cadence.
 - **AIW-D45.** The founder chose "Keep FD-17": "FD-17 stands (mandatory trust-or-operating tag on every client-money record, trust-aware light from day one). The team brings AG-06 back to FD-17 (change note in Step 3); counsel reads it before any pilot on real client money."
 - **The drift.** AG-06 v1.7 AG-6-24 (L380): "The platform SHALL record transactions and MAY tag a payment's **`fundsNature`** … in Phase-1 (explicit deferral, §13)."
 - Proposals row of 9 Oct (carve-out B, "Settle trust accounting for Release 1").
-- The first version of this change quoted AIW-D45 only, which described FD-17 as a mandatory tag. AIW-D72 corrects that (re-check S3a-b R-4).
+- The first version of this change quoted AIW-D45 only, which described FD-17 as a mandatory tag. AIW-D72 corrects that (re-check S3a-b R-4). The fourth version quoted AIW-D72's last sentence before its correction row existed (re-check S3a-d M-1).
 
 **(5) Knock-ons.**
 - AG-06 (CN-AG-06 change 1), to FD-17's words only (`00-step3-plan.md` shared rule "FD-17").
 - The Billing assistant's limits (AW-01).
+- Refunds: open point 6.
 - Counsel pack question 9.
 
 ---
@@ -267,7 +276,7 @@ AIW-D71 and AIW-D72 are not rows here: AIW-D72 is FD-17 kept in full (change 6),
 
 The log is "the single sign-off artifact" (L12), so a decision the team must follow belongs here. IMP-32 made the same point for the co-founder's AG11-D rows; this note does not ratify those.
 
-**(5) Knock-ons.** AG-11 §0: where they touch these founder decisions, the AG11-D rows sit below them (CN-AG-11). The Program Charter's release-scope text is in `ai-workers/charter-edits.md` §1. The counsel pack (`ai-workers/requirements/counsel-pack.md`, written by the Lead) covers the provisional rows. The values of the approve-all safeguards (FD-30) are platform settings in SA-12-33, held on by the approve-all part of the *founder safeguards* setting until a recorded founder decision ends that part (CN-SA-12 change 3).
+**(5) Knock-ons.** AG-11 §0: where they touch these founder decisions, the AG11-D rows sit below them (CN-AG-11). The Program Charter's release-scope text is in `ai-workers/charter-edits.md` §1. The counsel pack (`ai-workers/requirements/counsel-pack.md`, written by the Lead) covers the provisional rows. The platform values of the approve-all safeguards (FD-30) are platform settings in SA-12-33, held on by the approve-all part of the *founder safeguards* setting until a recorded founder decision ends that part (CN-SA-12 change 3).
 
 ---
 
