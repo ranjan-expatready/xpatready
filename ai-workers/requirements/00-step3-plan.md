@@ -33,3 +33,12 @@
 - **Interim retention:** AI log rows on both planes follow AG-11-98's interim values until counsel answers; no new value is invented.
 - **One AI log shape:** the firm's AI run log reused for the platform with an empty firm (CN-AG-11 change 11).
 - **The founder's pilot safeguards cannot be switched off** by any firm or platform setting during the pilot (AIW-D57, D59).
+- **One home per rule (after review S3c M-9):** a change to the team's product data model (an entity, field, enum, event, permission key) lives in the change note for that module; the AI assistant behaviour lives in AW-01 / AW-02, which cite the change note's new IDs and never restate them. Where the two already differ, the change note wins and AW is corrected.
+- **Eligibility to leads (AIW-D41, review S3c B-1):** a template marked as carrying status or eligibility content can never be sent to a lead by an assistant, whoever approves; eligibility reaches a lead only through the consultant's audited assessment share (AG-3-38).
+- **Waiting items, one rule per stop reason (S3c M-2):** emergency stop or AI switched off = pause (nothing sends; on release every waiting item re-renders stale and needs fresh approval); a delegation ended by its person, deactivation or suspension = its waiting items are cancelled with that reason (AG-11-61) and stay visible in the audit.
+- **Keys (S3c M-3):** retainer *generate* and *approve for send* are split (CN-AG-05 carries it, matching CN-SA-06); document status acts including waive and not-applicable sit under AG-09's keys (AG-9-35 owns document state); Binder request and add sit under `agent/case:document-manage`.
+- **Onboarding (S3c M-4):** one list, sent once: AG-07's `case.created` playbook (portal invite, questionnaire link, welcome) and the first document request after the Binder is built; the AG-11 seed is re-pointed, never a second invitation.
+- **Double-run check key (S3c M-5):** the case, the checklist item or document version, the action type and the template, never the recipe definition.
+- **FD-17 (S3c M-6):** the change note brings AG-06 back to FD-17's words only; it adds no *no default* rule; how an automatic invoice line gets its designation is a team question in §13.
+- **Bookkeeper (S3c M-7):** the bookkeeper sees the candidate invoices and that a payment notice is linked, never the message content.
+- **Status-content templates sent by an assistant (S3c M-10):** *ask me first* is the default the firm may change (IMP-28(c), as the behaviour documents say); the lead block above is the only hard rule.
