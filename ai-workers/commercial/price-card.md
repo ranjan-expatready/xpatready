@@ -2,11 +2,17 @@
 
 *Workstream 2, wave W3b. Written by the commercial-strategist agent on 9 Oct 2026. Draft for the Lead to merge; nothing here changes `../../commercial/plan.md` or `model.xlsx` on its own (README §2 D4: the AI section is added to the existing plan, not a competing one). Every number is either sourced (file and line, or URL and access date) or labelled **Assumption**. Every option is a **Proposal**. Used in [`validation-script.md`](validation-script.md) §5. Page 2 (the three half-pages) is what the consultant sees; page 1 and page 3 are for the founder only.*
 
+*Updated 11 Oct 2026 with the founder's decisions (`../decisions.md`): the free hook is the product's own deadline watching, never described as AI, and the AI wedge stays the File Builder (AIW-D37, which corrects AIW-D17's "Deadline Guardian hook"); the ten conversations lead with (a) and (b) and keep (c) on the card (AIW-D60). Each changed place says* decided 11 Oct 2026, AIW-Dnn.
+
 ---
 
 ## Page 1 (founder only): what this sits on
 
-**The unit.** A prepared file = "one File Builder run on one case whose readiness report a person approved (an abandoned or rejected run is not billed; a re-run on the same case within N days is not a new unit; N: the founder)" (`../design/ws2-improvements.md` IMP-18, Proposal). The Deadline Guardian is the hook and is proposed free (`../design/direction-review-2026-10-09.md` §4 item 6: "Sell the Deadline Guardian free, measure the switch-on"); it is not priced on this card.
+**The unit.** A prepared file = "one File Builder run on one case whose readiness report a person approved (an abandoned or rejected run is not billed; a re-run on the same case within N days is not a new unit; N: the founder)" (`../design/ws2-improvements.md` IMP-18, Proposal).
+
+**The free hook is the product's deadline watching, not AI.** Every file owner's deadline reminders come from the product's own Minder, with no AI: standard deadline reminders "work on every plan and never stop when a firm switches automations off" (AG-11 v1.11 change history, version 1.6; AG-11-48), and they are among the items that "are always on and cannot be switched off by any plan or flag" (SA-03 v2.14 SA-3-35). We sell it as the free hook, described as the product's deadline watching, never as an AI feature; it is not priced on this card. The AI wedge, the first paid AI duty, stays the File Builder. *Decided 11 Oct 2026, AIW-D37; corrects AIW-D17. The earlier line here quoted the direction review's "Sell the Deadline Guardian free, measure the switch-on" (`../design/direction-review-2026-10-09.md` §4 item 6), which AIW-D37 corrects: what is free is the product's deadline watching, not an AI Worker.*
+
+**How the ten conversations use this card (decided 11 Oct 2026, AIW-D60).** Lead with (a) per prepared file (CAD 25–40, Assumption) and (b) an allowance inside the plan, as the pilot arrangement; keep (c) on the card until the conversations report. Only the Case assistant (the File Builder) is costed; the other assistants ride inside the plan for the pilot, with usage measured. The Pack author's and Support and account assistants appear in the investor story as Expat Ready's own team and are never sold (AIW-D61). The founder runs the conversations, a second person taking notes (AIW-D63).
 
 **The base plan the options sit on is itself undecided.** The website publishes "Practice at CAD 199 per seat per month billed annually (249 monthly), Firm at 359 / 449, and Scale as custom" (`../../commercial/research/R1-competitors-and-pricing-2026-10-07.md` L130). The business plan's model defaults are per firm: "Solo (1 practitioner + 1 assistant) CAD 89 · Practice (up to 4 users) CAD 229 · Firm (up to 10 users) CAD 549 a month; unlimited cases and portal users", with the note "Ratified FD-18 says per seat: the founder decides" (`../../commercial/plan.md` v1.1 §3). FD-18's shape is "Per-seat tiers by firm size (Solo / Small 2–5 / Firm 6+) … plus metered add-ons for consumption rails" (Founder Decisions Log v1.5 FD-18, quoted in `provider-and-cost.md` §1). This card uses **Practice at CAD 229 per firm** (plan default) as the base in its arithmetic and shows the per-seat figure once; whichever base the founder picks, options (a) and (c) sit on top unchanged, and option (b) needs the tier list to exist.
 
@@ -24,9 +30,11 @@
 
 ## Page 2 (show to the consultant): three options, none decided
 
+*Founder's note, not shown to the consultant: lead with (a) and (b); show (c) last and keep it on the card until the ten conversations report (decided 11 Oct 2026, AIW-D60).*
+
 ### (a) Per prepared file
 
-**What the firm pays.** Its plan as today, plus **CAD 25 to 40 for each file whose readiness report its named person approves** (Proposal, `provider-and-cost.md` §3.6). Nothing for a run that is abandoned or rejected (IMP-18). Deadline Guardian included at no charge (Proposal, direction review §4 item 6).
+**What the firm pays.** Its plan as today, plus **CAD 25 to 40 for each file whose readiness report its named person approves** (Proposal, `provider-and-cost.md` §3.6). Nothing for a run that is abandoned or rejected (IMP-18). The product's own deadline watching stays free on every plan; it is part of the product, not AI (*decided 11 Oct 2026, AIW-D37; corrects AIW-D17*).
 
 **What it gets.** For each file: documents chased and read, questionnaire values proposed with the page they came from and a confidence level, facts cross-checked, a readiness report for the named person to approve, and a kept record of who approved and when (catalogue W-01 "Job" and "New (a)"). The firm's own settings decide who may approve (AIW-D26).
 
@@ -49,7 +57,7 @@
 
 **What the firm pays.** The Practice plan as today, with **10 prepared files a month included** (Proposal, `provider-and-cost.md` §3.6: "an allowance of 10 files inside Practice"). Above ten: **CAD 25 to 40 per file** (same unit and range as (a)). Solo: 3 files included; Firm: 25 files included (both **Assumption**, scaled to the user counts in `plan.md` §3; the founder sets). Whether the plan price rises when the allowance is added: **Unknown; the founder decides** (for the pilot, IMP-18 (d) proposes no change and silent metering).
 
-**What it gets.** The same prepared file as (a), without a separate line on the invoice until the allowance is used up; the same Deadline Guardian at no charge.
+**What it gets.** The same prepared file as (a), without a separate line on the invoice until the allowance is used up; the same free deadline watching, which is part of the product on every plan (*decided 11 Oct 2026, AIW-D37*).
 
 **Illustration at Practice CAD 229, midpoint CAD 30 over the allowance.** 5 files: CAD 229. 10 files: CAD 229. 20 files: 229 + 10 × 30 = CAD 529. Our typical model cost inside the allowance: 10 × 2.24 = CAD 22.40, which is 9.8% of CAD 229 (`provider-and-cost.md` §3.6 table); in the high case 10 × 14.38 = CAD 144, 63% of the plan, which is why IMP-36's caps ("a warning at 80 %, a hard stop at 100 %, then the manual path") go with this option too.
 
@@ -67,7 +75,7 @@
 
 ### (c) Per AI Worker per month
 
-**What the firm pays.** The plan as today, plus **a flat CAD 199 a month per firm for the File Builder** (Assumption: set equal to the published per-seat price so it is one number to remember, and equal to about 8 files at CAD 25, so a firm preparing more than 8 files a month is better off here than on (a)), with a **fair-use cap of 20 prepared files a month** (Assumption, from the volume tail in `provider-and-cost.md` §4 item 6), then CAD 25 per file. Deadline Guardian: CAD 0 (Proposal). Later workers (Practice Expert, Letter Reader; `catalogue.md` §6 top five) would each carry their own monthly price: not on this card.
+**What the firm pays.** The plan as today, plus **a flat CAD 199 a month per firm for the File Builder** (Assumption: set equal to the published per-seat price so it is one number to remember, and equal to about 8 files at CAD 25, so a firm preparing more than 8 files a month is better off here than on (a)), with a **fair-use cap of 20 prepared files a month** (Assumption, from the volume tail in `provider-and-cost.md` §4 item 6), then CAD 25 per file. The deadline watching is not an AI Worker and costs nothing: it is part of the product on every plan (*decided 11 Oct 2026, AIW-D37; corrects AIW-D17*). Later workers (Practice Expert, Letter Reader; `catalogue.md` §6 top five) would each carry their own monthly price: not on this card. For the pilot, every assistant other than the Case assistant rides inside the plan, with usage measured (*decided 11 Oct 2026, AIW-D60*).
 
 **What it gets.** Unlimited prepared files up to the cap, the same readiness report and approval record, one predictable line on the invoice.
 
@@ -91,6 +99,7 @@
 
 | | (a) Per prepared file | (b) Allowance in Practice | (c) Per AI Worker per month |
 |---|---|---|---|
+| Place in the conversations (AIW-D60) | Lead | Lead (the pilot arrangement) | Kept on the card; shown last |
 | Unit | Approved readiness report | Plan tier, then approved report | Worker per firm per month |
 | Firm pays at 5 / 10 / 20 files (Practice CAD 229 base, CAD 30 midpoint) | 379 / 529 / 829 | 229 / 229 / 529 | 428 / 428 / 428 |
 | Our typical model cost at 5 / 10 / 20 files (CAD 2.24) | 11.20 / 22.40 / 44.80 | same | same |
@@ -106,6 +115,6 @@
 
 **The strongest objection to the whole card.** *"If my named person still reviews every file, the saving is the clerk's hours, not mine, and I do not know what those hours are. Show me the number before you show me a price."* That is why the script asks for hours per file before it shows the card, and why the pilot measures review minutes (U8 in `provider-and-cost.md` §5) before W3c fixes anything.
 
-**What would make us wrong.** We are wrong about the range if the ten expected prices, given unprompted, cluster below CAD 15 or above CAD 60 per file, or if most consultants expect AI to be bundled at no extra charge, as most rivals do (`field-scan.md` §5 rows A and B: the most common patterns are "bundled into a higher seat tier" and "flat monthly add-on"). We are wrong about the unit if the staff hours per file they report are under one hour, because then even CAD 25 exceeds the assistant-rate value (CAD 34 at one hour, Assumption) once their review minutes are added. We are wrong about the whole wedge if review minutes in the pilot come close to the minutes saved (the wedge's own objection), or if counsel or the College say that delegating file preparation needs more than a named person's approval (no CICC guidance on AI was found, `field-scan.md` §6 item 9; `validation-script.md` §6). And we are wrong about timing if no provider that "process[es] in Canada" (AG11-D15) is recorded, because then the AI switch stays locked, there is no prepared file to sell, and this card is moot (`provider-and-cost.md` §4 items 1 and 2).
+**What would make us wrong.** We are wrong about the range if the ten expected prices, given unprompted, cluster below CAD 15 or above CAD 60 per file, or if most consultants expect AI to be bundled at no extra charge, as most rivals do (`field-scan.md` §5 rows A and B: the most common patterns are "bundled into a higher seat tier" and "flat monthly add-on"). We are wrong about the unit if the staff hours per file they report are under one hour, because then even CAD 25 exceeds the assistant-rate value (CAD 34 at one hour, Assumption) once their review minutes are added. We are wrong about the whole wedge if review minutes in the pilot come close to the minutes saved (the wedge's own objection), or if counsel or the College say that delegating file preparation needs more than a named person's approval (no CICC guidance on AI was found, `field-scan.md` §6 item 9; `validation-script.md` §6). And we are wrong about timing if no provider that "process[es] in Canada" (AG11-D15) is recorded, because then the AI switch stays locked, there is no prepared file to sell, and this card is moot (`provider-and-cost.md` §4 items 1 and 2). AI processing of client data happens only in Canada, decided 11 Oct 2026 (AIW-D52): the provider is chosen from Canada-region options and confirmed by one test call before Step 3 closes; if no capable option passes, the Lead returns to the founder.
 
 **What the Lead merges after ten conversations (Proposal).** The chosen option and its number go into `../../commercial/plan.md` §3 as a row with "Proposal, tested with N consultants, see ai-workers/commercial/" and into `model.xlsx` as an AI input block; the two rejected options go to `archive/` with the reason in the scoring summary. W3c owns that step, not this file.
