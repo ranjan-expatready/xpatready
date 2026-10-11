@@ -9,6 +9,7 @@
 - Sources: `sources/drive-snapshot-2026-10-11/` (CURRENT). Check Drive at the start of the next step.
 
 ## Next
+0. **Step R first (founder's ask, 11 Oct):** read `rethink-plan.md`. Evidence tasks were started on 11 Oct (three files under `research/` and `design/ai-carve-out-register-2026-10-11.md`); if they are missing, re-run them. Then decide the version 1 scope with the founder, consolidate to one source, and build the blueprint.
 1. Done 11 Oct: batch applied, report card refreshed. Start the next session with the Drive freshness check.
 2. Give the founder the Step 3 summary and the standing actions.
 3. **Step 4 (build and pilot)** cannot start on real client files until: counsel has read the counsel pack (engage by 31 Oct, AIW-D68); a Canada provider has passed the test (AIW-D69); the immigration specialist has reviewed pack content; the evaluation sets pass. Meanwhile: hand AW-01, AW-02, the change notes and the tests to the team (the founder does this; we never write to Drive); Step 5 conversations (AIW-D63).
