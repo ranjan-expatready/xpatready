@@ -25,7 +25,7 @@
 
    AG-10-12 adds "unless the address is a shared sender (AG-10-60) or the person chose not to learn it". New §13 item: "**19. One address mapped to two contacts.** AG-10 does not say how the matcher resolves an address that links have mapped to two different contacts; the team specifies it."
 4. **Why.** `proposals.md` row of 10 Oct (Billing assistant, shared senders: "a *shared sender* mark on the firm's side (or a *do not learn this address* choice on the link) so that such senders are never mapped to a contact and always land in the Unmatched inbox for a person"); `billing-assistant.md` §9 G-4; `case-assistant.md` §9 G-34; `00-step2-decisions.md` §6 (the team list). Confidentiality of one client's payment details reaching another client's file is for counsel (`billing-assistant.md` §7 item 3).
-5. **Knock-ons.** AG-06 Reconciliation view (CN-AG-06 item 3): an assistant never starts from a notice the matcher filed by itself; AG-11-94 verified-sender definition gains the exception; AG-16 may host the list of shared senders under the mailbox integration (the team's choice).
+5. **Knock-ons.** AG-06 Reconciliation view (CN-AG-06 item 3): an assistant never starts from a notice the matcher filed by itself; AG-11-94's verified-sender definition needs the same exception (a follow-on for the team, not written in CN-AG-11); AG-16 may host the list of shared senders under the mailbox integration (the team's choice).
 
 ## 2. The Sorter files attachments; the Reader proposes their type
 
@@ -33,7 +33,7 @@
 2. **Current words.**
    > L419: "(c) **file each attachment to AG-9** with a proposed document type"
 3. **Proposed words.** "(c) **file each attachment to AG-9** and hand it to the Reader, which proposes its document type (AG-9-42)".
-4. **Why.** IMP-12, relied on by `case-assistant.md` §2 step 4; the module's own §13 item 12 (L814) is already decided: "the Reader — not the Sorter — classifies documents".
+4. **Why.** IMP-12, relied on by `case-assistant.md` §2.3 step 4 ("the Reader proposes the document type, not the Sorter"); the module's own §13 item 12 (L814) is already decided: "the Reader — not the Sorter — classifies documents".
 5. **Knock-ons.** AG-11 AG11-D4 and AG-11-67 (CN-AG-11 item 2).
 
 ## 3. The AI writing tool is the Writer
