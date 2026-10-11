@@ -23,12 +23,14 @@
 4. VisaFlo leads today on filling IMM forms and IRCC portals (its browser extension has 205 users, a store-verified count), a website chatbot, meeting notes, intake in 13 languages and a staff question-and-answer assistant.
 5. Part of that lead is our own choice: no AI chatbot talking to the public, no eligibility content to leads, no AI typing into government portals until counsel answers, no call recording for now.
 6. Several of VisaFlo's "agent" features are still announced, not shipped: its whole-file AI review and its rule-change monitor are both labelled "coming soon", and we found no independent user review anywhere.
-7. The newest close rival is Navisa: it claims seven AI agents, including government-letter tracking and policy-change alerts, at USD 16 per case; none of this is independently verified.
+7. The newest close rival is Navisa: it claims seven AI agents, including government-letter tracking and policy-change alerts, for USD 36 a month plus USD 16 per case; none of this is independently verified.
 8. Worth closing for version 1: form filling (already designed, waiting for the team's route), a counsel answer on portal filling, turning client messages into answers on case files, and a scan-quality check; leave the chatbot, transcription and style-learning.
 
 ---
 
-## 2. Who we compared, and why
+## 2. Capability matrix
+
+### 2.1 Who we compared, and why
 
 | Company | Why chosen (from the field scan) | What is new since 9 Oct (fresh check, 11 Oct) |
 |---|---|---|
@@ -42,9 +44,7 @@
 **Not chosen:** Officio (its site refused our reader again, HTTP 403; its AI writer is known only from third-party listings, field scan §3.1); US platforms such as DocketWise and INSZoom (no Canadian forms, field scan §3.5–3.6).
 **Name trap, new:** **"VisaFlow AI"** (visaflow.cloud) is a different product from VisaFlo (visaflo.ca). Its page names no company and does not mention VisaFlo (C, 11 Oct). It sells AI drafting, a readiness check and a copilot to Canadian consultants at CAD 49 / 99 a month. Together with "VisaFlow Pro" (field scan §3.14) there are now three look-alike names. Not studied further here.
 
----
-
-## 3. Capability matrix
+### 2.2 The matrix
 
 **Column key.** VisaFlo and each competitor: status and label. **Expat Ready as specified:** the AW requirement ID (AW-01 v0.6 or AW-02 v0.8), or the team's AG ID where the capability is the product's own (non-AI) or already in the team's requirements (snapshot `sources/drive-snapshot-2026-10-11/`). **Verdict** is against VisaFlo first (the founder's question), with a note where another rival changes it: *we cover* / *we go further* / *they lead* / *gap*. "On paper" applies to every Expat Ready cell (see the frame above).
 
@@ -74,7 +74,7 @@
 
 ---
 
-## 4. Where they lead, and whether it matters for a compliance-heavy buyer
+## 3. Where they lead, and whether it matters for a compliance-heavy buyer
 
 *A compliance-heavy buyer* here means a licensed firm that worries about its regulator, client consent and liability more than about speed. Whether a feature "matters" is our judgement (I) unless a source is given.
 
@@ -90,12 +90,12 @@
 | **Staff knowledge Q&A with citations** | Visto, Navisa, Migrawise, VisaFlo (announced) | **Yes, moderately.** Practitioners like it; the risk is a wrong answer presented as fact. Visto's reported refusal when it cannot find a source (`field-scan.md` §3.3, excerpt) is the right pattern | Version 1 is four fixed questions by rule (AIW-D39); free questions are version 2 |
 | **Intake in 13 languages; reading foreign documents** | VisaFlo; Navisa | **Moderate.** Matters to firms serving many communities. A compliance buyer may prefer our rule that legal and consent text is never machine-translated | English and Canadian French; AI drafts messages in the client's language (AW-1-82) |
 | **Meeting notes from recordings** | VisaFlo | **Low to moderate, with risk.** Recording a consultation needs consent; VisaFlo's page does not mention it (C, absence) | Off until decided after the pilot (AIW-D62) |
-| **Rule change mapped to affected clients, with a client briefing** | VisaFlo (announced), Navisa (claimed) | **Yes.** A compliance buyer wants to know which files a change touches, fast | Our watcher feeds a reviewed pack; the per-firm "which of my files" list is not specified (see §6) |
+| **Rule change mapped to affected clients, with a client briefing** | VisaFlo (announced), Navisa (claimed) | **Yes.** A compliance buyer wants to know which files a change touches, fast | Our watcher feeds a reviewed pack; the per-firm "which of my files" list is not specified (see §5) |
 | **Learning the firm's style** | VisaFlo | **Low.** Helps drafting quality; adds a data-use question (whose past files train what) | Not specified; templates are the firm's own |
 
 ---
 
-## 5. Where we lead, stated honestly
+## 4. Where we lead, stated honestly
 
 **First, the honest frame.** Everything in this section is **a written requirement, not a working product**. Nothing is built. The AI provider is not chosen (the tech lead's provider test, AIW-D69). Counsel has not read the limits (AIW-D68). The Canada pack content the AI would read is not authored (`field-scan.md` §4 row 9). Several of these strengths rest on team modules that the Charter or scope triage may still move (`visaflo.md` §16 frame). A rival with shipped AI could copy most of these ideas in a quarter (`design/direction-review-2026-10-09.md` §5).
 
@@ -112,7 +112,7 @@ With that said, where our specification is ahead of every rival's public pages:
 
 ---
 
-## 6. Gaps worth closing in version 1, and gaps to leave
+## 5. Gaps worth closing in version 1, and gaps to leave
 
 All rows are **Proposals** for the Lead and the founder. None changes a founder decision on its own.
 
@@ -140,7 +140,7 @@ All rows are **Proposals** for the Lead and the founder. None changes a founder 
 
 ---
 
-## 7. Sources
+## 6. Sources
 
 All accessed **11 Oct 2026** unless marked. "C" and "V" as defined at the top.
 
@@ -160,6 +160,7 @@ All accessed **11 Oct 2026** unless marked. "C" and "V" as defined at the top.
 - LinkedIn company page (posts, followers, size): https://www.linkedin.com/company/visaflo/ (C; counters V)
 - Chrome Web Store, VisaFlo Autofill Extension (205 users, 1 rating, v1.0.6, 26 Sep 2026): https://chromewebstore.google.com/detail/visaflo-autofill-extensio/kndagmebkjldnepmbmmkdnopohefghjh (V counters; description C)
 - Third-party comparison by a rival vendor (9 Aug 2026; no AI content): https://infrabit.co/best-immigration-crm-canada/ (V as an independent view, written by a competitor)
+- Searches for independent reviews (G2, Capterra, Reddit) found none (11 Oct 2026; V, absence)
 - Earlier VisaFlo facts reused, accessed 9 Oct 2026: `research/visaflo.md` §3, §7, §11, §12, §16, §17
 
 **Navisa** (NovaCore Systems Inc.)
