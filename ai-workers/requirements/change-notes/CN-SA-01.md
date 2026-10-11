@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-01 Country & Immigration-Pack Management, version 2.2, dated 2026-09-22 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-01-country-and-immigration-pack-management_v2.2_2026-09-22.md` |
-| **Date of this note** | 11 Oct 2026 (second fix round, after re-check S3a-b) |
+| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 6 |
 
@@ -44,7 +44,7 @@ SA-1-52 gains: "Sample clients are always synthetic (SA-1-66)."
 
 **(4) Why.**
 - **AIW-D49**, 11 Oct 2026. The founder chose "Attach a rehearsal report": "Every production pack submission carries the report of the product's rehearsal on sample clients; the second person reads it before approving. No new blocking test gate."
-- **Approve only after opening.** Proposals row 112 (AW-02 maker): "approve only after the report is opened". AW-02 AW-2-52 specifies the same. A disabled approve button until the report is opened is not a test gate: it checks only that the approver looked, which is how "reads it before approving" is made checkable.
+- **Approve only after opening.** Proposals row 112 (AW-02 maker) asks that approval wait until the report is opened; AW-02 AW-2-52 specifies the same. A disabled approve button until the report is opened is not a test gate: it checks only that the approver looked, which is how "reads it before approving" is made checkable.
 - **The conflict it settles** is in the proposals row of 10 Oct (Pack author's assistant, test gate). That row recommends running "the draft and the current version on the same synthetic samples". It sets SA1B-D18 (SA-01B v1.2, L42), "Rules and scoring are trusted by second-person approval alone — no mandatory test profiles, no test run at publish", against AG-03 v1.4 BR-18 (L421), "A pack version must pass **conformance tests** … before it can be published".
 - **Samples are chosen by the author, not fixed** (review S3a M-5).
 - **The synthetic-sample rule** comes from the proposals row of 10 Oct (Pack author's assistant, Rule): "A sample client used for a pack dry-run (SA-1-52; SA-1B-62) is always synthetic and marked so; no real client's record, in any firm, is ever used as a sample". It rests on SA-01's own code note, "The only Canada artefact is a synthetic `TEST_ONLY` test fixture" (L488). The founder adopted the same "synthetic samples only" rule for the Practice expert's test sets (AIW-D70).
@@ -98,7 +98,7 @@ One name: *release note*, as AW-02 AW-2-51 calls it (README §0 rule 9).
 - BR-5 (L333);
 - §6 "Client pin" (L358);
 - §7 `PackWorkPin` (L371);
-- US-5 (L398–L400);
+- US-5 (L397–L400);
 - §9 (L434).
 
 **(2) Current words.**
@@ -148,7 +148,8 @@ L434:
 
 Further current words, not quoted in full:
 - L261 reads "… prompts staff to adopt the newer rules — one click, with a reason, audited. …".
-- L398 and L399 (US-5) read "(one click, reason)" and "adds a new client on 2 March … starts on the 1 March version". They are not quoted in full because the example carries personal names.
+- L397 is US-5's title, "Rules change for an existing client".
+- L398 and L399 (US-5) describe a firm that "starts a new assessment" for a client, sees the newer rules and "must adopt them (one click, reason) before running it", and a firm that "adds a new client on 2 March … starts on the 1 March version". They are not quoted in full because the example carries personal names.
 
 **(3) Proposed words.** In each case, client becomes case and the reason goes.
 
@@ -169,15 +170,17 @@ Further current words, not quoted in full:
 - **BR-5 (L333):** "**(Pinned per case, deliberate adoption.)** *(changed — FD-3)* A case's work stays on its version until firm staff adopt a newer one, audited."
 - **§6 (L358):** "**Case pin:** pinned at case open → (adopt, audited) → pinned to a newer version; the chain is kept."
 - **§7 `PackWorkPin` (L371):** "firm, case, country, purpose, pinned version, revision chain (adoption = a new revision, audited)".
-- **US-5:**
-  - L398: "(one click)";
-  - L399: "opens a new case on 2 March … starts on the 1 March version";
+- **US-5, recast on a case** (the example's names are kept as the team wrote them):
+  - L397, the title: "Rules change for an existing case".
+  - L398: "**Given** a firm opened a case in January and a new pack took effect on 1 March, **When** staff add new work to that case, **Then** they see "newer rules available since 1 March" and may adopt them for the case (one click); until they do, the new work runs on the January version; the case's January results still reproduce under the January version; the adoption is audited."
+  - L399: "**Given** the firm opens a new case on 2 March, **Then** it starts on the 1 March version."
   - L400: "40 cases across firms".
 - **§9 (L434):** "**Case pinned to a rolled-back version** → stays pinned to it; adoption offers the current version."
 
 **(4) Why.**
 - **FD-3** (Founder Decisions Log v1.5, L28) is the founder's decision on this subject: "**Pin at case open + explicit audited re-pin/migrate**". It pins at **case open** and asks for an audited act. It says nothing about a reason. The FDL's own amendment A22-6.2 reads it the same way (L120: "FD-3 pins the Country Pack at case open").
 - **SA-01 disagrees with FD-3.** Its per-client wording ("A client's assessments and case …") disagrees with FD-3. A team file never overrides a founder decision (README §0 rule 11), so SA-01 is brought back to FD-3 everywhere it states the grain. Re-check S3a-b R-3 listed the remaining places.
+- **US-5 follows the requirement.** Its first criterion described adopting rules for one person's new assessment, which would contradict the case pin of SA-1-58. It is recast on a case (re-check S3a-c m-5). How a lead's assessment, before any case exists, is re-run stays the team's question (knock-on below).
 - **"No reason" is the team's decision, not FD-3's.** AG17-D65 (AG-07 v2.7, L201): "Rules pinned per case, not per client … adopting a newer version is one click, no reason, audited"; also BR-21 (L748). Re-check S3a-b m-5. AG17-D65 is the later team decision, and FD-3 does not require a reason, so the reason is removed.
 - Proposals row of 10 Oct (Pack author's assistant, adoption reason). `pack-authors-assistant.md` §9 G-9.
 
@@ -230,7 +233,7 @@ Each carries "*(changed — SA-07 role names, SA7-D8)*".
 - `pack-authors-assistant.md` §9 G-14 (Note for the team): "One role, two names: 'Content author' (SA-07 v2.10) and 'Content Manager' (SA-01 v2.2, SA-01B v1.2, SA-05 v2.2); likewise 'Content approver' and 'content publisher' / 'Content Approver'".
 - SA7-D8 (SA-07 v2.12, L46): "**Nine starter roles:** Platform Owner · Staff manager · Content author · Content approver · …".
 
-**(5) Knock-ons.** SA-01B (CN-SA-01B, header). SA-05 v2.4 is not changed by this set of notes.
+**(5) Knock-ons.** SA-01B (CN-SA-01B, header). SA-05 v2.4 is not changed by this set of notes for role names.
 
 ---
 
@@ -244,7 +247,7 @@ L17 (extract):
 > New requirements continue from the highest number (next: SA-1-66).
 
 **(3) Proposed words.**
-- A version row: "| 2.3 | *(date placed)* | Workstream 2 change note CN-SA-01 applied: rehearsal report, approve only after it is opened (SA-1-66); release note (SA-1-67); pin per case at case open and adoption without a reason (FD-3, AG17-D65), everywhere SA-01 states the grain; assistant read-only keys; role names. | AIW-D49, AIW-D54, FD-3 |".
+- A version row: "| 2.3 | *(date placed)* | Workstream 2 change note CN-SA-01 applied: rehearsal report, approve only after it is opened (SA-1-66); release note (SA-1-67); pin per case at case open and adoption without a reason (FD-3, AG17-D65), everywhere SA-01 states the grain, US-5 recast on a case; assistant read-only keys; role names. | AIW-D49, AIW-D54, FD-3 |".
 - L17: "(next: SA-1-68)".
 
 **(4) Why.** Review S3a m-20(c).

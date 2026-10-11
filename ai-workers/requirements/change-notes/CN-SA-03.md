@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-03 Subscription Plans & Entitlements, version 2.17, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-03-subscription-plans-and-entitlements_v2.17_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (second fix round, after re-checks S3a-b and S3c-b) |
+| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 4 |
 
@@ -29,7 +29,7 @@ Plans have **four limits** only (SA3-D14, L74).
 **Not changed.**
 - SA-4-44 and plan prices (AIW-D60).
 - Row 2, the Minder, always on (AIW-D37).
-- Row 26's WhatsApp part is Phase 2 (SA-08 v2.4 SA8-X11, the team's own pending knock-on).
+- Row 26's WhatsApp part is Phase 2 (SA-08 v2.4 SA8-X11, L103, the team's own pending knock-on).
 
 ---
 
@@ -101,12 +101,12 @@ L347 (extract):
 - AG17-D38 is a team decision; a team file never overrides a founder decision (README §0 rule 11).
 - CN-AG-15 changes 1 and 2 apply the decision in AG-15 and name SA-03 as the Super Admin half.
 - SA3-D20's shape (one on/off extra, not a limit) is kept: the founder decided the timing, not the price.
-- Whether a launch plan includes the extra is the team's launch configuration (SA-3-38; §13 note L662).
+- Whether a launch plan includes the extra is the team's launch configuration (SA-3-38; the §13 note at L829: "Not an open requirement — launch plan configuration").
 - Re-check S3a-b R-1; `00-step3-plan.md`, "Extra employer seats".
 
 **(5) Knock-ons.**
 - AG-15 (CN-AG-15); AG-17 AG17-D38 (the Agent-plane note).
-- **Unknown:** where the corporate portal seat keys live. SA-06 v3.3 §10c lists no `portal/corporate:*` key and points portal keys to CP-01, which is not on Drive (`08-client-portal/NOT-FOUND.md`).
+- **Seat keys: gated by E-1, now on the Release 1 path.** Doc 4 names the key: CP-9-10 (L3066) says "A seat holding `portal/corporate:seat-manage` SHALL invite/list/capability-grant/request-removal of seats under the SAME organisation only". CN-AG-15 change 1 cites the same key. SA-06 v3.3 does not yet catalogue it, and the Founder Decisions Log's E-1 (L362–L367, an item for the human architect) says: "SA-6 does not yet catalog `portal/corporate:*` keys or portal-corporate role templates" and "**Blocks build?** Yes". Because of AIW-D67, E-1 now gates Release 1 seat management. **Unknown:** where the keys live (SA-06 §10c, or the team's portal module CP-01, which is not on Drive: `08-client-portal/NOT-FOUND.md`). That is the team's and the architect's question.
 - `ai-workers/charter-edits.md` §3.
 
 ---
