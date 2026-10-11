@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-01B Content Pack Configurator, version 1.2, dated 2026-10-05 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-01B-content-pack-configurator_v1.2_2026-10-05.md` |
-| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
+| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 7 |
 
@@ -52,8 +52,8 @@ P1's "Decide before" becomes: "**Now** — the team names the route and a date (
 **(4) Why.**
 - FD-5 (Founder Decisions Log v1.5, L30): "**Flattened-overlay support in v1** (coordinate-mapped fill + FormFieldMap visual editor), unit-priced per form edition; XFA runtime = named later-wave stub".
 - SA1B-D28 parked filling. The conflict went to the founder: proposals row of 9 Oct (carve-out B, "Settle the Filler's release"); `00-step2-decisions.md` §2 item 17.
-- He chose "Keep FD-5, ask the team" (AIW-D43): "FD-5 (form filling in version 1) stands; Step 3 asks the team for the overlay route and a date. Until it exists the pilot runs without form filling and says so; the Form Preparer duty (W-05) stays specified."
-- **A product rule, not a period.** The founder's "the pilot runs without form filling and says so" is written as a state the product can check, a form edition with no published box map, so the rule does not depend on a pilot period (`00-step3-plan.md`, "No 'during the pilot' in a requirement"; re-check S3a-c m-12).
+- The founder chose "Keep FD-5, ask the team" (AIW-D43). As recorded in AIW-D43: "FD-5 (form filling in version 1) stands; Step 3 asks the team for the overlay route and a date. Until it exists the pilot runs without form filling and says so; the Form Preparer duty (W-05) stays specified."
+- **A product rule, not a period.** AIW-D43's recorded effect, that the pilot runs without form filling and says so, is written as a state the product can check, a form edition with no published box map, so the rule does not depend on a pilot period (`00-step3-plan.md`, "No 'during the pilot' in a requirement"; re-check S3a-c m-12).
 - SA-01B's own P1 (L400) says why the route matters: "The engine fills **AcroForm** PDFs and refuses XFA templates (§12), and IRCC's 2D-barcode forms are XFA."
 
 **(5) Knock-ons.**
@@ -164,7 +164,7 @@ L208:
 
 > - **SA-1B-40** *(changed — G-4)* Overdue items appear on a work queue and warn at publish. Content never expires silently. The same queue also carries a **"source page changed"** item when the government page recorded under SA-1B-39 has changed since it was last checked. The item lists the content items that cite the page and, where the Pack author's assistant drafted one, a proposed change file for the author to review. Dismissing the item records who dismissed it and why.
 
-**(4) Why.** `pack-authors-assistant.md` §9 G-4 (Proposal; SA-1B-40): "The work queue of SA-1B-40 carries overdue reviews only; a *changed source* item kind with the proposed change file is needed." The assistant never writes into the pack (AIW-D54 item 7).
+**(4) Why.** `pack-authors-assistant.md` §9 G-4 (Proposal; SA-1B-40): "The work queue of SA-1B-40 carries overdue reviews only; a *changed source* item kind with the proposed change file is needed." The assistant never writes into the pack (AIW-D54 item 7). The comparison and the list of citing items are rule-built and run now; a drafted change file is a model call and waits for CN-FDL open point 3 (`00-step3-plan.md`, "Pack calls before the founder answers").
 
 **(5) Knock-ons.** AW-02 (the watcher, `pack-authors-assistant.md` §9 G-21).
 
@@ -188,6 +188,7 @@ SA-1-31 (field-map import) and SA-1-41 (reference-table import) carry the same t
 **(4) Why.**
 - `pack-authors-assistant.md` §9 G-23 (Proposal; IMP-11): "each drafted map line, scoring row or reference row carries an *AI-drafted* marker and the model's confidence inside the import file and on the line after the author's commit, until the author reviews it".
 - "Low-confidence lines first" is the first of the approve-all safeguards the founder adopted (AIW-D57, provisional until counsel; G-16). The safeguard cannot be switched off while the approve-all part of the *founder safeguards* setting is on (SA-12-33).
+- **Drafting waits for the founder.** Drafting a map line is a model call, so it waits for the founder's answer to CN-FDL open point 3; until then the two columns stay empty and the author maps by hand (`00-step3-plan.md`, "Pack calls before the founder answers"). This change writes the marker rule now so that it is in place when drafting starts.
 
 **(5) Knock-ons.** FD-5 (change 1) decides when box maps return. AW-02 specifies the drafting step.
 

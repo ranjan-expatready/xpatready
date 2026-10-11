@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-06 RBAC — Roles & Permissions, version 3.3, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-06-rbac_v3.3_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
+| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 7 |
 
@@ -15,7 +15,7 @@
 4. Why: the founder's decision (Founder Decisions Log FD-*n*; `ai-workers/decisions.md`, AIW-D*n*), the improvement (`ai-workers/design/ws2-improvements.md`, IMP-*n*) or the proposals row (`ai-workers/proposals.md`).
 5. What else must change.
 
-Sibling Workstream 2 files that are in a fix round (the CN-AG notes, AW-01, AW-02) are cited by change and line, without quotation marks (`00-step3-plan.md`, "Quoting a file in a fix round").
+Other Workstream 2 files (the CN-AG notes, AW-01, AW-02) are cited by change and requirement ID, never by line or in quotation marks (`00-step3-plan.md`, "Point by ID while files can change").
 
 **Plain words used here.**
 - *Delegation record*: which AI assistant works for which named person, with a subset of that person's permissions, on which files, from when until when.
@@ -83,7 +83,7 @@ Appendix C, after "first AI switch-on", add: "; **switching off the pause on cli
 - **IMP-23:** the blocked list is "enforced on the server like the floors … and never delegable".
 - **AIW-D55** adopted the hard limits and blocked list, provisional until counsel.
 - **AIW-D56:** "the Owner may switch it off with a recorded reason". AW-01 §0.2 names the pause switch-off among SA-06's Owner-only role checks.
-- **AIW-D72:** "The Billing assistant never posts a trust entry, moves a designation or computes a balance; it reads and lists." Hence the trust keys in the never-lendable list.
+- **AIW-D72, with its correction row.** AIW-D72 records that "The Billing assistant never posts a trust entry, moves a designation or computes a balance"; the *AIW-D72 correction* row in `decisions.md` supersedes the rest of that sentence: the assistant keeps no list of its own and only reminds the person who holds the reconciliation that the product's report is due. Hence the trust keys in the never-lendable list.
 - **No Owner-only check for delegation set-up.** The earlier version also listed "setting up an AI assistant's delegation for another staff member" as an Owner-only check with no key. That line is **withdrawn**, because it duplicated what AW-01 already specifies: the firm side is AW-1-6, and the platform side has its own key (change 4).
 
 **(5) Knock-ons.**
@@ -231,7 +231,7 @@ No key is added for switching off the *founder safeguards* setting: it follows S
 
 **(5) Knock-ons.**
 - SA-07 Appendix A (CN-SA-07 change 1).
-- AW-02 §10 table E uses the two `system/ai-provider:*` keys in place of `system/integration:manage`, describes `system/ai-delegation:manage` as set-up only, and names no key of its own for switching off the founder safeguards setting.
+- AW-02 §10 table E uses the two `system/ai-provider:*` keys, describes `system/ai-delegation:manage` as set-up only, names no key of its own for switching off the founder safeguards setting, and names the Owner under `system/ai-provider:publish` as the one who withdraws a published provider record.
 
 ---
 
@@ -266,12 +266,13 @@ L845:
 
 | Key | Meaning | Default holders | Lendable to an AI assistant | Code status |
 |---|---|---|---|---|
-| `agent/trust:move` *(new — CN-AG-06 change 6, AG-6-47)* | Record a move of a client's trust money to operating: reason code and the link AG-6-47 requires; audited. The platform does not move money (FD-12). | Follow the starter roles Expat Ready publishes (SA6-D12), as CN-AG-06 change 6 proposes; not set by this note | **Never** (SA-6-44) | NEW |
-| `agent/trust:reconcile` *(new — CN-AG-06 change 6, AG-6-48)* | Record the trust bank position and run the trust reconciliation report; export uses `agent/billing:export` | Follow the starter roles Expat Ready publishes (SA6-D12), as CN-AG-06 change 6 proposes; not set by this note | **Never** (SA-6-44) | NEW |
+| `agent/trust:move` *(new — CN-AG-06 change 6, AG-6-47)* | Record a move of a client's trust money to operating: reason code and the link AG-6-47 requires; audited. The platform does not move money (FD-12). | The Owner only until Super Admin ticks it onto other starter roles (SA-6-41); then the published starter roles (SA6-D12), as CN-AG-06 change 6 proposes | **Never** (SA-6-44) | NEW |
+| `agent/trust:reconcile` *(new — CN-AG-06 change 6, AG-6-48)* | Record the trust bank position and run the trust reconciliation report; export uses `agent/billing:export` | The Owner only until Super Admin ticks it onto other starter roles (SA-6-41); then the published starter roles (SA6-D12), as CN-AG-06 change 6 proposes | **Never** (SA-6-44) | NEW |
 
 **(4) Why.**
-- **CN-AG-06 change 6** creates both keys: AG-6-47 requires `agent/trust:move` and marks it never lendable (CN-AG-06 L126); AG-6-48 requires `agent/trust:reconcile` (CN-AG-06 L128); default roles follow the published starter roles, SA6-D12 (CN-AG-06 L130). Its knock-ons name this change as the SA-06 half (CN-AG-06 L135).
-- **AIW-D72** ("Keep FD-17 in full"): Release 1 carries the trust ledger, the recorded move and the reconciliation report, and "The Billing assistant never posts a trust entry, moves a designation or computes a balance; it reads and lists."
+- **CN-AG-06 change 6** creates both keys: AG-6-47 requires `agent/trust:move` and marks it never lendable; AG-6-48 requires `agent/trust:reconcile`; default roles follow the published starter roles (SA6-D12). Its knock-ons name this change as the SA-06 half.
+- **SA-6-41** (L503): "A new firm permission is held only by Owner until Super Admin ticks it onto other starter roles and publishes".
+- **AIW-D72, with its correction row** ("Keep FD-17 in full"): Release 1 carries the trust ledger, the recorded move and the reconciliation report; "The Billing assistant never posts a trust entry, moves a designation or computes a balance"; and, per the *AIW-D72 correction* row, it keeps no list of its own and only reminds the reconciliation holder that the product's report is due.
 - **Never lendable:** a move records money, and reconciling records the bank position the report relies on; both are on the blocked list of change 1 (keys that record money).
 - **Proposal — not approved.** CN-AG-06 change 6 labels AG-6-46 to AG-6-48 Proposals; counsel reads the trust rules before any pilot on real client money (counsel pack question 9).
 

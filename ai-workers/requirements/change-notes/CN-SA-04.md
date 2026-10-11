@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-04 SaaS Billing, version 2.17, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-04-saas-billing_v2.17_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c: the *founder safeguards* setting; SA-4-89 in AIW-D59's own words) |
+| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 6 |
 
@@ -112,7 +112,7 @@ L496 (extract):
 **(3) Proposed words.**
 
 New requirement:
-> - **SA-4-89** *(new — AIW-D59)* While the **second-person part** of the **founder safeguards** setting is on (SA-12-33), **any change to a firm's account or plan** that the **Support and account assistant** proposed, working for a Super Admin user, needs a **second Super Admin user** to confirm the assistant's note before the change is applied. This covers a change of **plan** (SA-4-28), of **billing period**, a **discount** (SA-4-43) and a **cancellation or its undo** made on a firm's behalf (§3 "Cancellation"). The user holding the key then applies it, with a reason.
+> - **SA-4-89** *(new — AIW-D59)* While the **second-person part** of the **founder safeguards** setting is on (SA-12-33), **any change to a firm's account or plan** that the **Support and account assistant** proposed, working for a Super Admin user, needs a **second Super Admin user** to confirm the assistant's note before the change is applied. This covers a change of **plan** (SA-4-28), of **billing period**, an **approved discount** (SA-4-42, applied under SA-4-43 by a Billing user) and a **cancellation or its undo** made on a firm's behalf (§3 "Cancellation"). The user holding the key then applies it, with a reason. The assistant never makes a discount entry itself and never proposes a refund.
 >
 > Acts that change no account need no second person: re-running a failed notification (SA-4-36) and sending an update-card link (SA-4-24). The assistant never proposes a firm status change.
 >
@@ -125,15 +125,16 @@ SA-4-28, SA-4-43 and the §3 "Cancellation" paragraph each gain: "A change of th
 **(4) Why.**
 - **AIW-D59**, 11 Oct 2026. The founder chose "Yes, for the pilot": "A second Expat Ready person confirms any account or plan change the Support assistant proposes, during the pilot; reviewed after it."
 - **AIW-D59 in its own words.** The Lead's call of 11 Oct (`00-step3-plan.md`, "AIW-D59 in its own words", after AW-02 re-check S3b-c N-15): the rule covers **any account or plan change** (plan, billing period, discount, cancellation); re-running a failed notification or sending an update-card link changes no account and needs no second person; status changes are never proposed. The earlier version of this change covered plan and billing period only; it is widened to the founder's words.
+- **Discounts.** The Lead's call of 11 Oct (`00-step3-plan.md`, "Discounts"): on the account manager's request the assistant may write an internal note naming an **approved** discount (SA-4-42), confirmed by a second Expat Ready person before a Billing user applies it; it never makes a discount entry and never proposes a refund. The same call says no version 1 recipe drafts a cancellation or its undo; SA-4-89 still covers one if it is ever proposed.
 - **Who may confirm.** SA-07's SA7-D4 already says "Nobody can approve their own request — enforced per action" (SA-07 v2.12, L351). The person the assistant worked for asked for the change, so that person cannot confirm it. No further rule (for example that the confirmer must differ from whoever applies the change) is added.
-- **A product state, not a period.** A requirement names a part of the *founder safeguards* setting, on from the start and ended only by a recorded founder decision naming that part (`00-step3-plan.md`, "The *founder safeguards* setting" and "No 'during the pilot' in a requirement"). The founder's "reviewed after it" is his decision to end this part. The setting lives in SA-12-33.
+- **A product state, not a period.** A requirement names a part of the *founder safeguards* setting, on from the start and ended only by a recorded founder decision naming that part (`00-step3-plan.md`, "The *founder safeguards* setting" and "No 'during the pilot' in a requirement"). The founder's review after the pilot is where he may end this part by a recorded decision. The setting lives in SA-12-33.
 - **Narrow reading.** AIW-D59 names the Support assistant only, so the rule is not widened to other assistants.
 
 **(5) Knock-ons.**
 - SA-07 §3.3 (CN-SA-07 change 3) uses the same words.
 - SA-12-33 holds the founder safeguards setting and its parts (CN-SA-12 change 3).
 - AW-02 (AW-2-72) cites SA-4-89.
-- The behaviour document `support-and-account-assistant.md` §4 (L170, L180, L181) is aligned by the Lead to the wider scope.
+- The behaviour document `support-and-account-assistant.md` §4 approval table is to be aligned by the Lead to the wider scope (cancellation added; the discount rows read as the Lead's "Discounts" call).
 
 ---
 

@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-02 Tenant & Firm Management, version 2.21, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-02-tenant-firm-management_v2.21_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (fix round after review S3a; re-based from v2.19 to v2.21; second fix round: the message key named) |
+| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d: AIW-D59 in its own words) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 3 |
 
@@ -19,7 +19,7 @@ The Support and account assistant that exposed these points is specified in AW-0
 
 **Re-base.** v2.20 and v2.21 (10 Oct) changed starter-role wording and trials. Neither touches the lines below.
 
-The first version's change 3 (a second person on AI-proposed firm *status* changes) is **withdrawn**. The behaviour document's approval table says a status change is "never proposed by the persona" (`support-and-account-assistant.md` §4, L184). The founder's AIW-D59 covers only the plan and billing-period changes the Support assistant proposes (CN-SA-04 change 3).
+The first version's change 3 (a second person on AI-proposed firm *status* changes) is **withdrawn**. The behaviour document's approval table (§4) says a status change is never proposed by the assistant. AIW-D59 covers **any account or plan change** the Support and account assistant proposes (plan, billing period, discount, cancellation); status changes are never proposed. That rule lives in SA-04 (SA-4-89, CN-SA-04 change 3), not here.
 
 ---
 

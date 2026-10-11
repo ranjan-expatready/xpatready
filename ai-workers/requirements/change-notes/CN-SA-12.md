@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-12 Feature Flags & Platform Configuration, version 2.7, dated 2026-10-08 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-12-feature-flags-and-platform-configuration_v2.7_2026-10-08.md` |
-| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c: the *founder safeguards* setting and its parts; switch-off by SA-12's Owner-only pattern; platform-wide cap) |
+| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d: platform values only; firm values in AG-16; spend-cap defaults; platform assistants under a stop) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 4 |
 
@@ -15,15 +15,15 @@
 4. Why: the founder's decision (`ai-workers/decisions.md`, AIW-D*n*), the improvement (`ai-workers/design/ws2-improvements.md`, IMP-*n*) or the proposals row (`ai-workers/proposals.md`).
 5. What else must change.
 
-What each AI assistant does when stopped is specified in AW-01 and AW-02, which cite these IDs. Sibling Workstream 2 files that are in a fix round (the CN-AG notes, AW-01, AW-02) are cited by change and line, without quotation marks (`00-step3-plan.md`, "Quoting a file in a fix round").
+What each AI assistant does when stopped is specified in AW-01 and AW-02, which cite these IDs. Other Workstream 2 files (the CN-AG notes, AW-01, AW-02) are cited by change and requirement ID, never by line or in quotation marks (`00-step3-plan.md`, "Point by ID while files can change").
 
 **Plain words used here.**
 - *Kill switch*: SA-12's emergency brake that forces a feature off for every firm at once.
 - *Needs you*: the firm's inbox where anything prepared without a person present waits for a person to approve, edit or reject.
-- *Platform setting*: one typed, versioned value in SA-12's registry, with per-plan and per-firm overrides (SA-12-17).
+- *Platform setting*: one typed, versioned value in SA-12's registry (SA-12-17).
 - *Founder safeguards setting*: one platform setting with two parts, each on from the first deployment, that keeps the founder's safeguards in force: the approve-all part (AIW-D57) and the second-person part (AIW-D59). Each part ends only by a recorded founder decision naming that part (change 3). Requirements name this setting instead of saying "during the pilot", because the product can check a setting but cannot check a period.
 
-**This note is the one home of** the AI spend caps (the platform-wide cap included), the values of the founder's approve-all safeguards (AIW-D57) and the *founder safeguards* setting (SA-12-33; `00-step3-plan.md`, "Pilot safeguard values, one home"). Other notes and AW files cite SA-12-33 and restate no value. **It is not the home of the pause reasons:** the four reasons an AI-prepared item is paused, in one PAUSED state, live in CN-AG-11 change 6; this note cites `PLATFORM_STOP` from there.
+**This note is the one home of** the platform values of the AI spend caps (the platform-wide cap included), the platform values of the founder's approve-all safeguards (AIW-D57) and the *founder safeguards* setting (SA-12-33; `00-step3-plan.md`, "Pilot safeguard values, one home"). A firm's own stricter values are firm settings in AG-16 (CN-AG-16 change 4), not values in SA-12-33 (`00-step3-plan.md`, "A firm's tightening, write path"). **It is not the home of the pause reasons:** the four reasons an AI-prepared item is paused, in one PAUSED state, live in CN-AG-11 change 6 (AG-11-112); this note cites `PLATFORM_STOP` from there.
 
 **Phasing.** The shared 99-Phasing-and-Glossary v2.18 puts SA-12's "Dedicated flag catalog, other firm overrides" in the second phase (L42). Release 1 does not launch without the AI assistants (AIW-D66), so the AI stops of change 1 need the catalogue in Release 1. That phasing row is the team's to change (not written here).
 
@@ -50,9 +50,9 @@ New requirement:
 > - **SA-12-31:** The catalogue holds `killSwitchEligible` flags for AI: **one for the four AI Doers together** (Reader, Sorter, Writer, Checker) and **one for each AI assistant** (the five firm assistants and Expat Ready's two platform assistants); the team names the keys. Tripping an AI flag (SA-12-12, mandatory reason) does the following:
 >   - (a) new AI work covered by the flag stops at once, and queued AI jobs are paused, not deleted;
 >   - (b) running assistant runs **pause at the next safe point, never in the middle of a send**; the delegations they run under are **not ended**;
->   - (c) **nothing covered by the flag is sent while it is tripped**; every item already waiting in Needs you is paused with the reason **`PLATFORM_STOP`** (CN-AG-11 change 6, AG-11-112 (e)), stays visible, marked "AI paused by Expat Ready on <date>: <reason>", and may be withdrawn with the recall action (SA-12-32). This is an exception to SA-12-9's hide-or-refuse for this flag family;
->   - (d) on untrip, paused runs resume from where they stopped, and the `PLATFORM_STOP` reason clears; an item with no other pause reason **re-renders as stale and needs a fresh approval** before anything is sent (AG-11-112 (e));
->   - (e) the firm's Owner sees a banner, and the stop and its reason show beside the firm's own AI switch (AG-16-35);
+>   - (c) **nothing covered by the flag is sent while it is tripped**; every item already waiting in Needs you is paused with the reason **`PLATFORM_STOP`** (AG-11-112 (e), CN-AG-11 change 6), stays visible, marked "AI paused by Expat Ready on <date>: <reason>", and may be withdrawn with the recall action (SA-12-32). For a platform assistant, whose proposals wait in the person's own screen rather than in Needs you, those waiting proposals are paused and marked the same way. This is an exception to SA-12-9's hide-or-refuse for this flag family;
+>   - (d) on untrip, paused runs resume from where they stopped, and the `PLATFORM_STOP` reason clears; an item or proposal with no other pause reason **re-renders as stale and needs a fresh approval** before anything is sent (AG-11-112 (e));
+>   - (e) the firm's Owner sees a banner, and the stop and its reason show beside the firm's own AI switch (AG-16-35); for a platform assistant's flag, the Platform Owner is notified (SA-12-12) and each person the assistant works for sees the stop and its reason;
 >   - (f) the product's own deadline and expiry reminders (SA-3-35; the Minder has no AI) and the Practice expert's rule-built answers, which work with AI off, are never affected; only the Practice expert's summary line sits behind an AI flag.
 >
 >   The firm's own AI switch and the per-assistant firm switches sit below these flags; a platform stop always wins (SA-12-4).
@@ -63,7 +63,8 @@ New requirement:
 - **The team's pending knock-on.** AG-11 v1.12 lists this as pending (§0.2, L56: "| **SA-12** | Platform kill switch for the AI Doers | Pending |").
 - **IMP-8** asks for "the SA-12 switches: one for all four AI Doers and one per AI Worker, each an emergency stop at platform level with a mandatory reason".
 - **The one stop rule.** The Step 3 shared rule fixes the behaviour: "a stop pauses runs and delegations; nothing sends while stopped; waiting items can be withdrawn with the recall action (SA-12-32); on release every waiting item re-renders stale and needs fresh approval. A delegation ends only when its person ends it or is deactivated or suspended" (`00-step3-plan.md`, emergency stop). It replaces the first version's "end running assistant runs" and "approvable" wording (review S3a m-7).
-- **One home for the pause reasons.** CN-AG-11 change 6 holds the four reasons in one PAUSED state, `PLATFORM_STOP` among them (CN-AG-11 L127), and is their one home (`00-step3-plan.md`, "One word, *paused*"). This note cites the reason and does not define it.
+- **One home for the pause reasons.** CN-AG-11 change 6 (AG-11-112) holds the four reasons in one PAUSED state, `PLATFORM_STOP` among them, and is their one home (`00-step3-plan.md`, "One word, *paused*"). This note cites the reason and does not define it.
+- **Platform assistants.** The Support and account assistant has no Needs you queue on its plane; its proposals wait in the person's own screen (`support-and-account-assistant.md` §4). AW-02 pauses those proposals under a stop, so SA-12-31 says the same (re-check S3a-d m-5).
 - **No one stops another person's delegation.** The kill switch pauses every run under a flag; it is not a key that ends any person's delegation (`00-step3-plan.md`, "No one stops another person's delegation").
 - **Prior art.** Doc 2 v1.4 already numbers a pause-hook contract SA-12-29 to SA-12-31 (L5453): "`pause` parks queued work retaining payload+order, checkpoints executing runs, withholds scheduled sends … nothing is deleted". The module file SA-12 v2.7 is current (rule 11), so its numbering stands and Doc 2's contract is cited as the mechanism, not as a live ID (review S3a m-10).
 - **Relied on by the behaviour documents.**
@@ -73,11 +74,11 @@ New requirement:
 - **Point (f)** follows AIW-D37 (the deadline watch "is the product's own Minder … never as AI") and AIW-D54 item 10 ("the expert's answers work with AI off").
 
 **(5) Knock-ons.**
-- AG-11 change 6 (`PLATFORM_STOP`, AG-11-112) and the §0.2 SA-12 row (CN-AG-11).
+- AG-11-112 (`PLATFORM_STOP`) and the §0.2 SA-12 row (CN-AG-11 change 6).
 - AG-16-35 and AG-16 §13 Q7 and Q9 (CN-AG-16).
 - SA-07 Appendix A row L741 (CN-SA-07 change 1).
 - SA-08 SA-8-50 (withdrawing the provider record pauses waiting items with its own reason, `PROVIDER_RECORD_WITHDRAWN`; CN-SA-08 change 2).
-- AW-01 AW-1-56 pauses runs at the next safe point and does not end delegations (the change note wins; `00-step3-plan.md`, "One home per rule").
+- AW-01 AW-1-56 and AW-02 pause runs at the next safe point and do not end delegations (the change note wins; `00-step3-plan.md`, "One home per rule").
 
 ---
 
@@ -118,7 +119,7 @@ Role mapping gains: "The AI recall key is held by the Platform Owner; whether th
 
 ---
 
-## 3. The AI settings: the *founder safeguards* setting and its parts, the approve-all safeguard values and the spend caps
+## 3. The AI settings: the *founder safeguards* setting and its parts, and the platform values of the approve-all safeguards and the spend caps
 
 **(1) What it changes.** §3.6 "Categories (initial)" (L274); SA-12-27 (L392); §10 role-mapping paragraph (L571); a new requirement SA-12-33.
 
@@ -133,15 +134,17 @@ L370:
 L392 (extract):
 > - **SA-12-27:** The registry marks a group of settings as **security settings**: approved staff email domains, invite-link validity, step-up window, password rules and auto-logout values. Only an Owner may change them. A Platform engineer can view them but cannot change them; the change is refused with a clear message and the refusal is audited.
 
-L571 (extract, first sentence):
+L571 (extract, first sentence and last sentence):
 > **Role mapping (Section 2):** *(changed v2.1 — SA7-D54)* Config-manage excludes the security settings of SA-12-27, which only an Owner may change.
+>
+> All are `system/*` GLOBAL — never assignable to firm staff (default-deny; firm staff hold only `agent/*` LOCAL).
 
 **(3) Proposed words.**
 
-L274 gains: "AI settings (the founder safeguards setting, the approve-all safeguard values and the AI spend caps, SA-12-33)."
+L274 gains: "AI settings (the founder safeguards setting, the platform values of the approve-all safeguards and the AI spend caps, SA-12-33)."
 
 New requirement:
-> - **SA-12-33:** *(new — AIW-D57, AIW-D59, AIW-D62; IMP-36)* The registry (SA-12-17) holds three groups of AI settings:
+> - **SA-12-33:** *(new — AIW-D57, AIW-D59, AIW-D62; IMP-36)* The registry (SA-12-17) holds three groups of AI settings, **at platform scope only**: no per-plan or per-firm override in this registry is used for them.
 >   - **(a) The founder safeguards setting** (the team names the key). It has two parts, each **on** from the first deployment:
 >     - the **approve-all part** (AIW-D57): keeps the approve-all safeguards of (b) in force;
 >     - the **second-person part** (AIW-D59): keeps SA-4-89 in force.
@@ -149,10 +152,10 @@ New requirement:
 >     Each part is switched off only by the Platform Owner, recording as the change reason the reference of the founder's decision that names that part (SA-12-25). Like the security settings of SA-12-27, the setting is outside config-manage: a Platform engineer can view it but cannot change it; the change is refused with a clear message and the refusal is audited. No separate key exists for it.
 >
 >     While the **approve-all part** is on:
->     - a per-firm value of (b) **may only tighten** the platform default (a higher confidence level, a larger hidden share, a lower alarm level), and a value that would loosen it is refused on write;
->     - no approve-all safeguard can be switched off, at platform, plan or firm level. A value that would switch one off is refused on write: no low-confidence values opened first, no value hidden for the approver to fill, or the agreement alarm off.
+>     - a platform value of (b) may be changed under config-manage, with a reason (SA-12-25), but never to a value that switches a safeguard off. A value that would switch one off is refused on write: no low-confidence values opened first, no value hidden for the approver to fill, or the agreement alarm off;
+>     - a firm's own value is used only if it is stricter than the platform value (below).
 >
->     When the founder's recorded decision ends a part, the firm's own settings govern what that part covered.
+>     When the founder's recorded decision ends the **approve-all part**, the firm's own settings govern the approve-all safeguards. When it ends the **second-person part**, SA-4-89 stops applying.
 >   - **(b) The approve-all safeguard values** (AIW-D57): the confidence level below which a value is opened first; the share of values hidden for the approver to fill (at least one value on every approve-all); and the level and time window of the agreement alarm.
 >   - **(c) The AI spend caps** *(Proposal — IMP-36)*:
 >     - per firm per month: a warning at 80 %; at 100 % new model calls stop and the manual path applies (AG-11-71);
@@ -160,34 +163,40 @@ New requirement:
 >     - per assistant run: a runaway run is stopped and parked for a person, from day one;
 >     - **platform-wide per month, for Expat Ready's own assistant calls**: a warning to the Platform Owner at 80 %; at 100 % the platform assistants make no new model calls and their people work by hand.
 >
->     **Reaching a cap stops new model calls only.** It never pauses, cancels or withdraws an item already waiting in Needs you: that item stays approvable, because approving it makes no model call (CN-AG-11 change 6). Spend caps never stop the product's own non-AI work. A per-firm cap may be set lower than the platform default, never higher.
+>     **Reaching a cap stops new model calls only.** It never pauses, cancels or withdraws an item already waiting in Needs you: that item stays approvable, because approving it makes no model call (AG-11-112, CN-AG-11 change 6). Spend caps never stop the product's own non-AI work.
 >
->   The values in (b) and (c) are platform defaults, set by the team before the first production deployment. A change to a spend-cap default needs a recorded founder decision (AIW-D62). Every change is audited with a reason (SA-12-25). The firm's own settings screen shows these values read-only, together with any tightening the firm has chosen (AG-16, CN-AG-16).
+>   **Firm values.** A firm's stricter values for (b) and for its own caps in (c) are **firm settings in AG-16** (CN-AG-16 change 4), set by the firm's Owner under the firm's settings permission. They are never written into this registry: no firm staff hold its `system/*` keys (L571). The engine uses the stricter of the platform value and the firm value: for (b) while the approve-all part is on, and for the caps at all times. A firm value looser than the platform value is refused where the firm sets it (AG-16).
+>
+>   **Defaults.** The values in (b) and (c) are set by the team before the first production deployment. Until the founder's decision on spend caps after the pilot (AIW-D62), the Platform Owner may change a spend-cap default with a recorded reason (SA-12-25); no founder decision is needed meanwhile. Every change is audited with a reason (SA-12-25).
 
 SA-12-27 gains: "*(changed — SA-12-33)* The founder safeguards setting of SA-12-33 is changed under the same rule: only an Owner, and only with the founder's decision reference recorded."
 
 Role mapping (L571), first sentence, becomes: "Config-manage excludes the security settings of SA-12-27 and the founder safeguards setting of SA-12-33, which only an Owner may change."
 
 **(4) Why.**
-- **One home.** The Lead's call of 11 Oct (re-check S3c-b N-7), `00-step3-plan.md`, "Pilot safeguard values, one home": the approve-all safeguards and spend caps are platform settings in SA-12-33 (the plan line as corrected on 11 Oct: the safeguards are tighten-only while their part is on; the caps are tighten-only at all times and are not a founder safeguard); CN-AG-16 shows them read-only and restates no value. The platform-wide cap for Expat Ready's own assistant calls has its home here too (`00-step3-plan.md`, "AW-02 calls" (a)); AW-02 points to it.
-- **The name and the parts.** `00-step3-plan.md`, "The *founder safeguards* setting": the setting once called *pilot safeguards* is renamed, because AIW-D57 has no pilot limit while AIW-D59 is "for the pilot; reviewed after it"; each part ends only by a recorded founder decision naming that part.
-- **Tighten-only, and after.** `00-step3-plan.md`, "Tighten-only and the founder safeguards": "while a part of the founder safeguards setting is on, firms may tighten its values and never loosen them; when the founder's recorded decision ends a part, firm settings govern it." CN-AG-16 follows this note (re-check S3a-c m-13).
+- **One home.** The Lead's call of 11 Oct (re-check S3c-b N-7), `00-step3-plan.md`, "Pilot safeguard values, one home": the approve-all safeguards and spend caps are platform settings in SA-12-33. The platform-wide cap for Expat Ready's own assistant calls has its home here too (`00-step3-plan.md`, "AW-02 calls" (a)).
+- **Platform values only; firm values in AG-16.** The Lead's call of 11 Oct, `00-step3-plan.md`, "A firm's tightening, write path (S3a-d M-3)": "a firm Owner's stricter values for the approve-all safeguards and the firm's spend caps are **firm settings in AG-16** (under the Owner's existing firm-settings permission), never written into SA-12-33, whose platform keys no firm staff hold (SA-12 L571). The server refuses a firm value looser than the platform value while it applies (the approve-all part while it is on; caps always), the engine uses the stricter of the two, and every change is audited (AG-13)." Because firm values live in AG-16, SA-12-33 uses no per-plan or per-firm override of SA-12-17 (re-check S3a-d M-3, m-3 (b)).
+- **The name and the parts.** `00-step3-plan.md`, "The *founder safeguards* setting": the setting once called *pilot safeguards* is renamed, because AIW-D57 has no pilot limit, while AIW-D59 was chosen as "Yes, for the pilot" and its effect reads "during the pilot; reviewed after it". Each part ends only by a recorded founder decision naming that part.
+- **After a part ends.** `00-step3-plan.md`, "Tighten-only and the founder safeguards": "when the founder's recorded decision ends a part, firm settings govern it." The second-person part has no firm setting, so ending it simply stops SA-4-89 (re-check S3a-d m-3 (a)).
+- **The platform value while the approve-all part is on.** It can change under config-manage but never to a value that switches a safeguard off; that is the floor AW-02 refers to (re-check S3a-d m-3 (c)).
 - **Who switches it off.** `00-step3-plan.md`, "Who switches it off (S3a-c N-2)": SA-12's existing Owner-only settings pattern (SA-12-27; L571), with the founder's decision reference recorded; no new key; the Platform engineer's `system/platform-config:manage` does not reach it. SA-12-27 already holds this pattern for the security settings (quoted above).
-- **A setting, not a period.** `00-step3-plan.md`, "No 'during the pilot' in a requirement". The earlier sentence about values set "before the pilot" and changed "after it" now names a product event (the first production deployment) and a recorded decision (re-check S3a-c m-11).
-- **Caps never pause waiting items.** `00-step3-plan.md`, "Spend caps never pause waiting items": "reaching a cap stops new model calls only, then the manual path; items already waiting in Needs you are unaffected (a cost control, not a safety stop)". CN-AG-11 change 6's halt table says the same (CN-AG-11 L145).
-- **The safeguards.** AIW-D57 ("Adopt all three"): "low-confidence values opened first; a few values hidden for the approver to fill, match rate recorded; an alarm when a person's agreement rate climbs suddenly. Provisional until counsel." No number is set here; AW-01 §13 names the values to be set (AW-01 L1249).
+- **Changing a spend-cap default.** `00-step3-plan.md`, "Changing a spend-cap default (S3a-d m-2)": "until the founder's post-pilot decision on caps (AIW-D62), the Platform Owner may change a default with a recorded reason (SA-12-25); no founder decision is needed meanwhile; the post-pilot values are the founder's."
+- **A setting, not a period.** `00-step3-plan.md`, "No 'during the pilot' in a requirement".
+- **Caps never pause waiting items.** `00-step3-plan.md`, "Spend caps never pause waiting items": "reaching a cap stops new model calls only, then the manual path; items already waiting in Needs you are unaffected (a cost control, not a safety stop)". CN-AG-11 change 6's halt table says the same.
+- **Caps are not a founder safeguard.** Caps are tighten-only at all times, not tied to a part (`00-step3-plan.md`, "Pilot safeguard values, one home").
+- **The safeguards.** AIW-D57 ("Adopt all three"): "low-confidence values opened first; a few values hidden for the approver to fill, match rate recorded; an alarm when a person's agreement rate climbs suddenly. Provisional until counsel." No number is set here; AW-01 §13 (item T7) names the values to be set.
 - **The second person.** AIW-D59 ("Yes, for the pilot"): "A second Expat Ready person confirms any account or plan change the Support assistant proposes, during the pilot; reviewed after it."
 - **Spend caps are not plan limits.** SA-03 v2.17 limits plans to four limits (SA3-D14, L74: "**Four limits only:** staff seats, active individual cases, active corporate cases, document storage."). AG-11 v1.12 records the same: "volumes are not plan limits (SA3-D14)" (§0.2, L57). SA3-D14 is a later team decision than IMP-36, which was only a proposal. So the first version's "cap rows in SA-03" is withdrawn (CN-SA-03), and the caps go to the platform registry.
-- **IMP-36:** "per firm per month (a warning at 80 %, a hard stop at 100 %, then the manual path, AG-11-71), per co-pilot user per day, per worker run". All of group (c) rests on IMP-36, so the requirement itself carries the **Proposal** label (re-check S3a-c m-11). A firm setting a lower cap is part of that Proposal.
-- **AIW-D62:** spend caps are decided after the pilot, "with today's defaults meanwhile". AW-01 §13 A1 records that no model-spend cap exists today, so defaults are set before the first production deployment.
+- **IMP-36:** "per firm per month (a warning at 80 %, a hard stop at 100 %, then the manual path, AG-11-71), per co-pilot user per day, per worker run". All of group (c) rests on IMP-36, so the requirement itself carries the **Proposal** label.
+- **AIW-D62:** spend caps are decided after the pilot, "with today's defaults meanwhile". AW-01 §13 (item A1) records that no model-spend cap exists today, so defaults are set before the first production deployment.
 - **The per-run stop from day one** follows review S3a m-11.
 
 **(5) Knock-ons.**
-- AG-11 change 6 (the spend-cap row of its halt table) (CN-AG-11).
-- AG-16 (CN-AG-16): the firm screen shows (b) and (c) read-only with the firm's tightening and restates no value; after a part ends, the firm's settings govern it.
+- AG-11-112 and the spend-cap row of its halt table (CN-AG-11 change 6).
+- AG-16 (CN-AG-16 change 4): the firm's stricter values and caps are firm settings there, shown beside the platform values; the caps are tighten-only at all times, and the approve-all values only while their part is on.
 - SA-04 SA-4-89 (CN-SA-04 change 3), SA-07 L351 and the Appendix A row (CN-SA-07 changes 1 and 3) and SA-01B (CN-SA-01B change 6) cite the founder safeguards setting.
 - SA-06 catalogue: no key for the switch-off (CN-SA-06 change 4).
-- AW-01 and AW-02 cite SA-12-33 for the safeguard values, the caps and the platform-wide cap.
+- AW-01 and AW-02 cite SA-12-33 for the platform values and the platform-wide cap.
 - SA-09 shows spend against the caps (CN-SA-09).
 
 ---
@@ -198,7 +207,7 @@ Role mapping (L571), first sentence, becomes: "Config-manage excludes the securi
 
 **(2) Current words.** The last row is v2.7 of 2026-10-08.
 
-**(3) Proposed words.** A version row: "| 2.8 | *(date placed)* | Workstream 2 change note CN-SA-12 applied: AI emergency stops that pause, with the `PLATFORM_STOP` reason of AG-11 (SA-12-31); the AI recall action and key (SA-12-32); the founder safeguards setting with its approve-all and second-person parts, Owner-only like the security settings (SA-12-27); approve-all safeguard values that a firm may tighten but never loosen while their part is on; AI spend caps including a platform-wide cap, which never pause waiting items (SA-12-33). | IMP-8, IMP-36; AIW-D57, AIW-D59, AIW-D62 |".
+**(3) Proposed words.** A version row: "| 2.8 | *(date placed)* | Workstream 2 change note CN-SA-12 applied: AI emergency stops that pause, with the `PLATFORM_STOP` reason of AG-11, for firm and platform assistants (SA-12-31); the AI recall action and key (SA-12-32); the founder safeguards setting with its approve-all and second-person parts, Owner-only like the security settings (SA-12-27); platform values of the approve-all safeguards and AI spend caps, including a platform-wide cap; firm values held in AG-16, the stricter one used; caps never pause waiting items (SA-12-33). | IMP-8, IMP-36; AIW-D57, AIW-D59, AIW-D62 |".
 
 **(4) Why.** Review S3a m-20(c).
 

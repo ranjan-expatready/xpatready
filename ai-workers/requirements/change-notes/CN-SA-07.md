@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-07 Platform Users, version 2.12, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-07-platform-users_v2.12_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
+| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 4 |
 
@@ -51,7 +51,7 @@ The ticks on the four existing rows are unchanged. Each row gains its key:
 - **L737:** "— `system/billing:view` or the narrower read key the team chooses (SA-04 §10 note)".
 - **L738:** "— `system/billing:webhook-log` (view only, SA-4-36)".
 - **L739:** "— `system/billing:webhook-rerun` (SA-4-36)".
-- **L741:** "— includes the AI emergency-stop flags (SA-12-31); the AI spend caps and approve-all safeguard values within their locks (SA-12-33). Not the switch-off of the founder safeguards setting, which is Owner-only (SA-12-33)".
+- **L741:** "— includes the AI emergency-stop flags (SA-12-31) and the platform values of the AI spend caps and approve-all safeguards, never to a value that switches a safeguard off (SA-12-33 (a)). Not the switch-off of the founder safeguards setting, which is Owner-only (SA-12-33)".
 
 New rows after L741. Rows marked *(proposal)* are proposals. The columns are as in Appendix A: Own · SM · CA · CP · AM · Bil · Sup · Sec · Eng.
 > | AI provider record — enter or change, not its keys (SA-8-49, `system/ai-provider:edit`) *(proposal)* | ✔ | | | | | | | | ✔ |
@@ -72,6 +72,7 @@ L689 gains: "Rows touched by the Workstream 2 change notes (CN-SA-02, CN-SA-04, 
 - **The narrower read:** the same document, G-19.
 - **The provider record:** IMP-6; AIW-D52 and AIW-D69 (CN-SA-08 change 2). Owner publication follows SA8-D22 (SA-08 v2.4, L59), where e-sign wording is "**approved and published by the Owner**". Withdrawing sits with publishing (re-check S3a-c m-10).
 - **The founder safeguards switch-off:** `00-step3-plan.md`, "Who switches it off (S3a-c N-2)": SA-12's existing Owner-only settings pattern, no new key; the Platform engineer's config key does not reach it.
+- **The platform values:** SA-12-33 holds platform values only; firm values are firm settings in AG-16 (`00-step3-plan.md`, "A firm's tightening, write path"), so no firm staff appear here.
 - **The stops and the recall:** IMP-8 (CN-SA-12).
 - **The delegation and instruction keys:** AW-02 §10 table E; IMP-1 rule 1; IMP-5. Instruction editing by the Platform engineer and the Platform Owner, approval by the Platform Owner: `00-step3-plan.md`, "AW-02 calls" (b).
 - **No key stops another person's delegation:** `00-step3-plan.md`, "No one stops another person's delegation": "No key lets an Owner stop or end someone else's delegation."

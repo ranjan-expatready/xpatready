@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-01 Country & Immigration-Pack Management, version 2.2, dated 2026-09-22 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-01-country-and-immigration-pack-management_v2.2_2026-09-22.md` |
-| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
+| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 6 |
 
@@ -16,6 +16,8 @@
 5. What else must change.
 
 **Why AI touches this document.** Expat Ready's Pack author's assistant works for a Content author. It drafts box-map lines, scoring and reference rows, synthetic sample clients and a plain-words release note; it prepares the rehearsal and watches the government pages a pack cites. It only reads the pack: the author commits and submits, and a second person approves (AIW-D54 item 7). Its behaviour is specified in AW-02, which cites the IDs below and does not restate them.
+
+**Drafting waits for the founder.** The drafting steps that need a model call wait for the founder's answer to CN-FDL open point 3; until then the assistant makes no model call, and its rule-built steps (the rehearsal's test runs, the watcher's comparison, the list of affected content) run now (`00-step3-plan.md`, "Pack calls before the founder answers"). No requirement below depends on a model call.
 
 **Numbering.** L17 says: "New requirements continue from the highest number (next: SA-1-66)." New requirements here are SA-1-66 and SA-1-67.
 
@@ -53,7 +55,7 @@ SA-1-52 gains: "Sample clients are always synthetic (SA-1-66)."
 **(5) Knock-ons.**
 - SA-01B: SA1B-D18 and SA-1B-38, the deferral lines, and the synthetic rule for SA-1-19, SA-1-26 and SA-1B-62 (CN-SA-01B change 2).
 - AG-03 BR-18 (CN-AG-03).
-- The author can run the rehearsal by hand; the Pack author's assistant may prepare it (AW-02).
+- The author can run the rehearsal by hand; the Pack author's assistant may prepare it with rule-built steps (AW-02).
 
 ---
 
@@ -76,7 +78,7 @@ New requirement:
 
 **(4) Why.** Proposals row of 10 Oct (Pack author's assistant): "A pack version has no change-note or release-note field … while SA-05 v2.2 §3.7 gives every template version 'a change-note'. Firms see only 'newer rules available since <date>' (SA1-D3). Recommendation: add a plain-words note per pack version, written by the author (the assistant drafts it, W-20), shown in the approval step beside the diff and to firms beside the 'newer rules' prompt".
 
-See also `pack-authors-assistant.md` §9 G-6 (Proposal).
+See also `pack-authors-assistant.md` §9 G-6 (Proposal). The assistant's draft of the note is a model call, so it waits for CN-FDL open point 3; the author writes the note in the meantime.
 
 One name: *release note*, as AW-02 AW-2-51 calls it (README §0 rule 9).
 
@@ -161,7 +163,7 @@ Further current words, not quoted in full:
   - L159 reads "New case";
   - L161 reads "for this case";
   - L162 reads "adopt — audited".
-- **§2 (L188):** "move a case to the new rules deliberately". This is the user's voice, so it is written in italics, not quoted.
+- **§2 (L188):** the user's voice becomes *"When the rules change, I want to know, and move a case to the new rules deliberately."*
 - **§3.12 (L246):** "Super Admin can list, per version, how many firms' cases are still pinned to it."
 - **§3.14 "Pinning" (L260):** "a case is pinned to the pack version in force when the case opens; outputs are stamped with the version used and can be reproduced."
 - **§3.14 "Adoption" (L261):** "one click, audited".
