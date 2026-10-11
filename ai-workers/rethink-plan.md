@@ -20,3 +20,9 @@ The founder asked, after Step 3: where are we, what is the quality, is there jun
 
 ## Quality dimensions to raise (score each 1 to 10 before and after)
 Single source of truth and traceability · Simplicity (words per decision, layers) · Competitive coverage · Compliance safety · Buildability by the team · Customer validation · Presentation (can a buyer, a developer and an investor each find their page in a minute).
+
+## Added by the founder, 11 Oct: agents, micro-agents and seeing them work
+- **Structure:** one AI team member per firm role (for example the Case Officer's AI), with **skills** (micro-agents) under it, each skill doing one job (read documents, check readiness, chase the client, draft a letter). Each skill has its own run record, its own test set and its own health, so a failure points to one skill, not the whole agent.
+- **Seeing it work:** a person clicks the AI team member and sees its skills and what each is doing now; the detail is optional, opened on click (like an agent panel that expands to show its steps): what it read, what it proposed, from which source, who approved, what failed and why.
+- **This maps onto what exists:** today's assistant (persona) = the AI team member; today's duties (W-01 to W-28) = skills; today's AI Doer steps (Reader, Sorter, Writer, Checker) and product actions = the steps inside a skill. Step R names these three levels once and designs the screens for them.
+- **Method:** the Lead interviews the founder one question at a time, with examples and a recommendation; answers become AIW-D rows; the blueprint and the high-fidelity prototype are built from them.
