@@ -42,3 +42,4 @@
 - **FD-17 (S3c M-6):** the change note brings AG-06 back to FD-17's words only; it adds no *no default* rule; how an automatic invoice line gets its designation is a team question in §13.
 - **Bookkeeper (S3c M-7):** the bookkeeper sees the candidate invoices and that a payment notice is linked, never the message content.
 - **Status-content templates sent by an assistant (S3c M-10):** *ask me first* is the default the firm may change (IMP-28(c), as the behaviour documents say); the lead block above is the only hard rule.
+- **Sources from 11 Oct: `sources/drive-snapshot-2026-10-11/` only** (CURRENT). Step 2 behaviour documents stay pinned to the 9 Oct snapshot; a Step 3 citation to a module changed on 10 Oct quotes the new version and its new line. New IDs proposed in change notes take the next number free in the 11 Oct version.
