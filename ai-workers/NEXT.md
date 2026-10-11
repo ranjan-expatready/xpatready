@@ -5,10 +5,8 @@
 ## State, 11 Oct 2026 (Step 3 in fix and re-check)
 - **Step 3, the build specification, is in its first fix round.** Sources are `sources/drive-snapshot-2026-10-11/` (CURRENT). Shared rules for every maker: `requirements/00-step3-plan.md`.
 - **AIW-D72 (11 Oct):** the founder kept FD-17 in full after the Lead corrected its own incomplete question. The four parts are designation, no sweep, a per-client trust ledger and a reconciliation report. The counsel pack (question 9, plus new question 15 on breach notification) and the Billing document are corrected.
-- **Running at hand-off:**
-  - AW-01 fix round after review S3d. The maker was resumed with the full brief.
-  - Three hostile re-checks: S3a-b (SA, portal and decisions-log change notes), S3b-b (AW-02 v0.2), S3c-b (AG change notes, CN-AG-15 new).
-  - Each writes only `checks/review-<id>-2026-10-11.md` and hands back log lines.
+- **Running at hand-off (second fix rounds):** the SA change-note maker (re-check S3a-b plus the S3c-b additions), the AG change-note maker (re-check S3c-b) and the AW-01 maker (review S3d plus corrections). The AW-02 second fix round (re-check S3b-b) is held until the change notes settle. All Lead's calls are in the shared rules of `requirements/00-step3-plan.md`. SA maker files are committed as WIP: verify the final version against commit `2c6c982`.
+- **Re-checks done 11 Oct:** S3a-b, S3b-b, S3c-b all Fail, fixable, no blocking; quotes word for word throughout. Counsel pack now 17 questions (15 breach notification, 16 portability).
 - **Step 2 documents** are aligned with the 11 Oct actor and stop rules (Pack, Support, IMP-1, IMP-8). They otherwise stay pinned to the 9 Oct snapshot.
 
 ## Next
