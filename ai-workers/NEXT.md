@@ -5,8 +5,8 @@
 ## State, 11 Oct 2026 (Step 3 in fix and re-check)
 - **Step 3, the build specification, is in its first fix round.** Sources are `sources/drive-snapshot-2026-10-11/` (CURRENT). Shared rules for every maker: `requirements/00-step3-plan.md`.
 - **AIW-D72 (11 Oct):** the founder kept FD-17 in full after the Lead corrected its own incomplete question. The four parts are designation, no sweep, a per-client trust ledger and a reconciliation report. The counsel pack (question 9, plus new question 15 on breach notification) and the Billing document are corrected.
-- **Running at hand-off (second fix rounds):** the SA change-note maker (re-check S3a-b plus the S3c-b additions), the AG change-note maker (re-check S3c-b) and the AW-01 maker (review S3d plus corrections). The AW-02 second fix round (re-check S3b-b) is held until the change notes settle. All Lead's calls are in the shared rules of `requirements/00-step3-plan.md`. SA maker files are committed as WIP: verify the final version against commit `2c6c982`.
-- **Re-checks done 11 Oct:** S3a-b, S3b-b, S3c-b all Fail, fixable, no blocking; quotes word for word throughout. Counsel pack now 17 questions (15 breach notification, 16 portability).
+- **Running at hand-off:** fix rounds on both change-note sets (after re-checks S3a-c and S3c-c: 0 blocking; 3 and 4 majors); hostile re-checks S3d-b (AW-01 v0.2) and S3b-c (AW-02 v0.3). Then AW-01 and AW-02 fix rounds carry the *founder safeguards* rename, *change n* wording and any findings. All Lead's calls: shared rules at the end of `requirements/00-step3-plan.md`.
+- **Lead's own error corrected 11 Oct:** the setting named *pilot safeguards* tied AIW-D57 to the pilot; renamed *founder safeguards* (each part ends only by a recorded founder decision).
 - **Step 2 documents** are aligned with the 11 Oct actor and stop rules (Pack, Support, IMP-1, IMP-8). They otherwise stay pinned to the 9 Oct snapshot.
 
 ## Next
@@ -26,6 +26,7 @@
    - D52 scope for non-client calls;
    - Phasing v2.18 against D66 (proposals row);
    - machine-translated pack labels against SA-05 v2.4;
+   - whether AIW-D71's reading extends to AI-drafted internal notes (meanwhile each goes to a person);
    - the request that the team upload CP-01.
 5. **Founder actions** (no question pending):
    - paste the Charter edits;
