@@ -1,0 +1,1359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Assistants Prototype</title>
+<meta name="description" content="Clickable prototype of Expat Ready's firm AI assistants, built from AW-01 v0.5 and AW-02 v0.6 (11 Oct 2026). Illustrative only; fictional data.">
+<style>
+:root{
+  --bg:#f5f6f8; --surface:#ffffff; --surface-2:#f0f2f5; --surface-3:#e8ebf0;
+  --text:#141821; --muted:#555f6e; --faint:#828b99; --border:#e2e5ea; --border-strong:#cfd4dc;
+  --accent:#2c56c9; --accent-ink:#ffffff; --accent-soft:#e9effc;
+  --ok:#17744a; --ok-soft:#e2f3e9; --warn:#9a5600; --warn-soft:#fcf0dc;
+  --danger:#b3261e; --danger-soft:#fce7e5; --ai:#6440b8; --ai-soft:#eee8fa;
+  --paused:#8a5a00; --paused-soft:#fbefd6;
+  --shadow:0 1px 2px rgba(16,24,40,.05),0 1px 3px rgba(16,24,40,.07);
+  --radius:12px; --radius-sm:8px;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1117; --surface:#161a22; --surface-2:#1b2029; --surface-3:#232934;
+    --text:#e6e9ef; --muted:#a2abb9; --faint:#79828f; --border:#2a303b; --border-strong:#39404d;
+    --accent:#7fa3ff; --accent-ink:#0e1117; --accent-soft:#1c2843;
+    --ok:#5cc690; --ok-soft:#13301f; --warn:#f0b55e; --warn-soft:#382912;
+    --danger:#ff8c82; --danger-soft:#3b1a18; --ai:#b9a0ff; --ai-soft:#271f3f;
+    --paused:#f0b55e; --paused-soft:#352712;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1117; --surface:#161a22; --surface-2:#1b2029; --surface-3:#232934;
+  --text:#e6e9ef; --muted:#a2abb9; --faint:#79828f; --border:#2a303b; --border-strong:#39404d;
+  --accent:#7fa3ff; --accent-ink:#0e1117; --accent-soft:#1c2843;
+  --ok:#5cc690; --ok-soft:#13301f; --warn:#f0b55e; --warn-soft:#382912;
+  --danger:#ff8c82; --danger-soft:#3b1a18; --ai:#b9a0ff; --ai-soft:#271f3f;
+  --paused:#f0b55e; --paused-soft:#352712;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--accent)}
+code,.code{font-family:var(--mono);font-size:.86em;overflow-wrap:anywhere}
+h1,h2,h3,h4{margin:0;line-height:1.25;letter-spacing:-.01em}
+p{margin:0}
+
+/* ---------- shell ---------- */
+.app{display:grid;grid-template-columns:256px minmax(0,1fr);min-height:100vh}
+.side{background:var(--surface);border-right:1px solid var(--border);padding:20px 14px;position:sticky;top:0;height:100vh;overflow:auto;display:flex;flex-direction:column;gap:18px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px}
+.brand-mark{width:30px;height:30px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-weight:700;font-size:13px;flex:none}
+.brand-name{font-weight:650;font-size:14px}
+.brand-sub{font-size:12px;color:var(--muted)}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav-label{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);padding:8px 10px 4px}
+.nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;padding:9px 10px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:14px}
+.nav button:hover{background:var(--surface-2);color:var(--text)}
+.nav button[aria-current="page"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.nav .num{width:20px;height:20px;border-radius:6px;background:var(--surface-3);display:grid;place-items:center;font-size:11px;font-weight:600;flex:none;color:var(--muted)}
+.nav button[aria-current="page"] .num{background:var(--accent);color:var(--accent-ink)}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px;padding:0 6px}
+.mini-toggle{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;color:var(--muted)}
+.main{min-width:0;padding:28px clamp(16px,4vw,44px) 60px}
+.topbar{display:none}
+
+/* ---------- common ---------- */
+.screen{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.eyebrow{font-size:12px;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+.page-head{display:flex;flex-direction:column;gap:8px}
+.page-head h1{font-size:26px;font-weight:700}
+.lead{color:var(--muted);max-width:760px}
+.scenario{display:flex;gap:10px;align-items:flex-start;background:var(--surface-2);border:1px dashed var(--border-strong);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;color:var(--muted)}
+.scenario b{color:var(--text);font-weight:600}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card-pad{padding:18px 20px}
+.card-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.card-head h2{font-size:17px;font-weight:650}
+.card-head h3{font-size:15px;font-weight:650}
+.section{padding:16px 20px;border-bottom:1px solid var(--border)}
+.section:last-child{border-bottom:0}
+.section h4{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);margin-bottom:10px;font-weight:650}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.stack{display:flex;flex-direction:column;gap:10px}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.grid2.split-l{grid-template-columns:minmax(0,310px) minmax(0,1fr)}
+.muted{color:var(--muted)}
+.faint{color:var(--faint)}
+.small{font-size:13px}
+.xs{font-size:12px}
+.sep{height:1px;background:var(--border);margin:6px 0}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;background:var(--surface-3);color:var(--muted);white-space:nowrap}
+.pill.ai{background:var(--ai-soft);color:var(--ai)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.danger{background:var(--danger-soft);color:var(--danger)}
+.pill.paused{background:var(--paused-soft);color:var(--paused)}
+.pill.accent{background:var(--accent-soft);color:var(--accent)}
+.pill.outline{background:transparent;border:1px solid var(--border-strong)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor;display:inline-block}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--border-strong);background:var(--surface);padding:8px 14px;border-radius:9px;cursor:pointer;font-weight:600;font-size:14px;color:var(--text);min-height:38px}
+.btn:hover:not(:disabled){background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover:not(:disabled){filter:brightness(1.06);background:var(--accent)}
+.btn.danger{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,var(--border))}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--accent);padding:6px 8px;min-height:auto}
+.btn.sm{padding:5px 10px;font-size:13px;min-height:30px;border-radius:7px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,.nav button:focus-visible,.seg button:focus-visible,.switch:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;padding:6px 11px;border-radius:7px;cursor:pointer;font-size:13px;color:var(--muted);font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
+.switch{position:relative;width:40px;height:23px;border-radius:999px;background:var(--surface-3);border:1px solid var(--border-strong);cursor:pointer;flex:none;padding:0}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:17px;height:17px;border-radius:50%;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+.switch[aria-checked="true"]{background:var(--accent);border-color:var(--accent)}
+.switch[aria-checked="true"]::after{transform:translateX(17px)}
+.switch:disabled{opacity:.45;cursor:not-allowed}
+input[type=text],input[type=number],input[type=date],select,textarea{background:var(--surface);border:1px solid var(--border-strong);border-radius:8px;padding:8px 10px;min-height:38px;max-width:100%}
+textarea{width:100%;min-height:70px;resize:vertical}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label,.lbl{font-size:12.5px;font-weight:600;color:var(--muted)}
+.notice{border-radius:10px;padding:12px 14px;display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.notice.info{background:var(--accent-soft);color:var(--text)}
+.notice.ok{background:var(--ok-soft)}
+.notice.warn{background:var(--warn-soft)}
+.notice.paused{background:var(--paused-soft)}
+.notice.danger{background:var(--danger-soft)}
+.notice .ic{flex:none;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;margin-top:1px}
+.notice.info .ic{background:var(--accent);color:var(--accent-ink)}
+.notice.ok .ic{background:var(--ok);color:var(--surface)}
+.notice.warn .ic,.notice.paused .ic{background:var(--warn);color:var(--surface)}
+.notice.danger .ic{background:var(--danger);color:var(--surface)}
+.tw{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);font-weight:650;padding:8px 10px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px;border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:0}
+tr.low td{background:color-mix(in srgb,var(--warn-soft) 70%,transparent)}
+tr.low.opened td{background:transparent}
+.conf{font-family:var(--mono);font-size:12.5px}
+.conf.lowc{color:var(--warn);font-weight:700}
+.src-box{margin-top:8px;border:1px solid var(--border);border-radius:8px;padding:10px;background:var(--surface-2);font-size:12.5px;color:var(--muted)}
+.src-img{height:54px;border-radius:6px;margin-top:6px;background:repeating-linear-gradient(135deg,var(--surface-3) 0 8px,var(--surface) 8px 16px);display:grid;place-items:center;font-size:11.5px;color:var(--faint);border:1px solid var(--border)}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.check .box{flex:none;width:20px;height:20px;border-radius:6px;border:1.5px solid var(--border-strong);display:grid;place-items:center;font-size:12px;font-weight:800;margin-top:1px}
+.check.done .box{background:var(--ok);border-color:var(--ok);color:var(--surface)}
+.check.done .t{color:var(--muted)}
+.ai-block{border-left:3px solid var(--ai);background:var(--ai-soft);border-radius:0 8px 8px 0;padding:10px 12px}
+.kv{display:grid;grid-template-columns:minmax(120px,190px) minmax(0,1fr);gap:6px 14px;font-size:13.5px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;overflow-wrap:anywhere}
+.steps{display:flex;gap:6px;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--faint);padding:5px 10px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border)}
+.step .n{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;background:var(--surface-3);font-size:11px}
+.step.on{color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--border));background:var(--accent-soft)}
+.step.on .n{background:var(--accent);color:var(--accent-ink)}
+.step.past{color:var(--ok)}
+.step.past .n{background:var(--ok);color:var(--surface)}
+.keylist{display:flex;flex-direction:column;gap:2px}
+.keyrow{display:flex;gap:10px;align-items:flex-start;padding:7px 8px;border-radius:7px}
+.keyrow:hover{background:var(--surface-2)}
+.keyrow input{margin-top:3px;flex:none}
+.keyrow.never{opacity:.62}
+.keyrow.never .lock{flex:none;width:16px;text-align:center;margin-top:1px;color:var(--faint)}
+.keyrow .k{font-family:var(--mono);font-size:12.5px;overflow-wrap:anywhere}
+.keyrow .why{font-size:12.5px;color:var(--muted)}
+.audit{display:flex;flex-direction:column;gap:0;font-size:13px}
+.audit div{display:grid;grid-template-columns:120px minmax(0,1fr);gap:10px;padding:7px 0;border-bottom:1px dashed var(--border)}
+.audit div:last-child{border-bottom:0}
+.audit time{color:var(--faint);font-family:var(--mono);font-size:12px}
+.item{border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);box-shadow:var(--shadow);overflow:hidden}
+.item-top{padding:14px 18px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between;cursor:pointer;width:100%;border:0;background:transparent;text-align:left}
+.item-top:hover{background:var(--surface-2)}
+.item-title{font-weight:650;font-size:15.5px}
+.item-meta{font-size:13px;color:var(--muted);margin-top:3px}
+.chev{flex:none;color:var(--faint);transition:transform .15s;margin-top:4px}
+.item[data-open="true"] .chev{transform:rotate(90deg)}
+.foot{margin-top:6px;border-top:1px solid var(--border);padding-top:12px;font-size:12px;color:var(--faint);line-height:1.6}
+.foot b{font-weight:600;color:var(--muted)}
+.tag{display:inline-block;font-family:var(--mono);font-size:10.5px;color:var(--faint);border:1px solid var(--border);border-radius:5px;padding:0 5px;margin-left:6px;vertical-align:1px;white-space:nowrap;font-weight:400;letter-spacing:0;text-transform:none}
+body.hide-tags .tag{display:none}
+.illus{font-size:11px;font-style:italic;color:var(--faint)}
+.answer-line{padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+.answer-line:last-child{border-bottom:0}
+.menu-q{display:flex;flex-direction:column;gap:6px}
+.menu-q button{text-align:left;border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:11px 13px;cursor:pointer;font-size:14px;font-weight:600;display:flex;gap:10px;align-items:center}
+.menu-q button:hover{border-color:var(--border-strong)}
+.menu-q button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.menu-q .qn{width:22px;height:22px;border-radius:6px;background:var(--surface-3);display:grid;place-items:center;font-size:12px;flex:none;color:var(--muted)}
+.cand{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.cand.exact{border-color:var(--ok);box-shadow:0 0 0 1px var(--ok) inset}
+.cand .amt{font-family:var(--mono);font-weight:600}
+.overlay{position:fixed;inset:0;background:rgba(10,14,22,.45);display:grid;place-items:center;padding:16px;z-index:50}
+.modal{background:var(--surface);border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.3);width:min(520px,100%);max-height:calc(100vh - 32px);overflow:auto;border:1px solid var(--border)}
+.setrow{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;padding:14px 20px;border-bottom:1px solid var(--border)}
+.setrow:last-child{border-bottom:0}
+.setrow .t{font-weight:600}
+.setrow .d{font-size:13px;color:var(--muted);margin-top:2px}
+.vals td input{width:110px}
+.err{color:var(--danger);font-size:12.5px;margin-top:4px}
+.okmsg{color:var(--ok);font-size:12.5px;margin-top:4px}
+.locked-box{display:flex;gap:14px;align-items:flex-start}
+.lock-ic{width:38px;height:38px;border-radius:10px;background:var(--surface-3);display:grid;place-items:center;flex:none;font-size:17px}
+.demo{border:1px dashed var(--ai);border-radius:10px;padding:12px 14px;background:color-mix(in srgb,var(--ai-soft) 55%,transparent)}
+.demo .lbl{color:var(--ai)}
+.about p+p{margin-top:10px}
+.about ul{margin:6px 0 0 18px;padding:0}
+.about li{margin:4px 0}
+.prov-row{cursor:pointer}
+.prov-row:hover td{background:var(--surface-2)}
+.ba{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ba > div{border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;background:var(--surface-2)}
+.ba .lbl{display:block;margin-bottom:4px}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+
+/* ---------- phone ---------- */
+@media (max-width: 860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .side{display:none}
+  .topbar{display:flex;flex-direction:column;gap:10px;position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border);padding:12px 16px 10px}
+  .topbar .brand{padding:0}
+  .topnav{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .topnav::-webkit-scrollbar{display:none}
+  .topnav button{flex:none;border:1px solid var(--border);background:var(--surface);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;white-space:nowrap}
+  .topnav button[aria-current="page"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .main{padding:18px 16px 48px}
+  .page-head h1{font-size:22px}
+  .grid2,.grid2.split-l,.ba{grid-template-columns:minmax(0,1fr)}
+  .kv{grid-template-columns:minmax(0,1fr)}
+  .kv dt{margin-top:6px}
+  .audit div{grid-template-columns:minmax(0,1fr);gap:2px}
+  .card-pad,.section,.card-head,.setrow{padding-left:14px;padding-right:14px}
+  .item-top{padding:12px 14px}
+  .setrow{flex-direction:column}
+}
+.topbar-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side" aria-label="Prototype navigation">
+    <div class="brand"><div class="brand-mark">ER</div><div><div class="brand-name">AI Assistants</div><div class="brand-sub">Firm F · prototype</div></div></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="side-foot">
+      <div class="mini-toggle"><span>Requirement tags</span><button class="switch" role="switch" aria-checked="true" data-act="tags" aria-label="Show requirement tags on elements"></button></div>
+      <div class="mini-toggle" style="flex-direction:column;align-items:flex-start"><span>Theme</span><div class="seg" id="theme-seg-side"></div></div>
+    </div>
+  </aside>
+  <div class="topbar">
+    <div class="topbar-row">
+      <div class="brand"><div class="brand-mark">ER</div><div><div class="brand-name">AI Assistants</div><div class="brand-sub">Firm F · prototype</div></div></div>
+      <div class="row" style="gap:8px"><span class="xs muted">IDs</span><button class="switch" role="switch" aria-checked="true" data-act="tags" aria-label="Show requirement tags on elements"></button><div class="seg" id="theme-seg-top"></div></div>
+    </div>
+    <nav class="topnav" id="topnav" aria-label="Screens"></nav>
+  </div>
+  <main class="main" id="main" tabindex="-1"></main>
+</div>
+<div id="modal-root"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* =============================== helpers =============================== */
+const $ = (s, r=document) => r.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const tag = t => `<span class="tag">${t}</span>`;
+const ill = (t='illustrative') => `<span class="illus">${t}</span>`;
+const nowStamp = () => { const d=new Date(); return d.toTimeString().slice(0,5); };
+const pct = n => Math.round(n*100) + '%';
+function foot(ids, extra){
+  return `<div class="foot"><b>Traces to:</b> ${ids}${extra?`<br>${extra}`:''}</div>`;
+}
+
+/* =============================== state =============================== */
+const S = {
+  screen: 'needs',
+  tags: true,
+  theme: 'auto',
+  needs: { open:{report:true, paused:false}, opened:{}, srcOpen:null, holdout:'', holdoutResult:null,
+           report:'pending', reportAt:null, rejecting:false, rejectReason:'', someNote:false,
+           alarmSeen:false, viewAs:'approver', paused:'paused', pausedRejecting:false },
+  dl: { assistant:'billing', person:'bookkeeper', keys:null, state:'setup', viewAs:'owner', log:[], waiting:'pending', switchOn:true, confirmEnd:false },
+  pv: { filter:'all', open:null },
+  ex: { q:1, file:'C-2', item:'bio', scope:'all', aiOff:false, untested:false },
+  bi: { amount:'', currency:'CAD', picked:null, modal:false, saved:false, item:'pending', method:'', designation:'', date:'', ref:'', closedUnsaved:false },
+  st: { record:'none', ai:'locked', ack:false, sw:{case:false,intake:false,billing:false,firm:false,expert:false},
+        firm:{conf:'',hidden:'',alarm:'',capMonth:'',capDay:'',capRun:''}, errors:{}, saved:null, log:[] }
+};
+
+/* =============================== screens =============================== */
+const SCREENS = [
+  {id:'needs', n:'1', label:'Needs you'},
+  {id:'deleg', n:'2', label:'Delegation'},
+  {id:'prov',  n:'3', label:'AI provenance'},
+  {id:'expert',n:'4', label:'Practice expert'},
+  {id:'bill',  n:'5', label:'Payment match'},
+  {id:'set',   n:'6', label:'AI switch'},
+  {id:'about', n:'i', label:'About this prototype'}
+];
+
+function renderNav(){
+  $('#nav').innerHTML = `<div class="nav-label">Screens</div>` + SCREENS.map(s =>
+    `<button data-go="${s.id}" ${S.screen===s.id?'aria-current="page"':''}><span class="num">${s.n}</span>${s.label}</button>`).join('');
+  $('#topnav').innerHTML = SCREENS.map(s =>
+    `<button data-go="${s.id}" ${S.screen===s.id?'aria-current="page"':''}>${s.n==='i'?'About':s.n+'. '+s.label}</button>`).join('');
+  const themeSeg = ['auto','light','dark'].map(t=>`<button data-theme-set="${t}" aria-pressed="${S.theme===t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('');
+  $('#theme-seg-side').innerHTML = themeSeg; $('#theme-seg-top').innerHTML = themeSeg;
+  document.querySelectorAll('[data-act="tags"]').forEach(b=>b.setAttribute('aria-checked', String(S.tags)));
+  document.body.classList.toggle('hide-tags', !S.tags);
+}
+
+function render(){
+  renderNav();
+  const fn = {needs:screenNeeds, deleg:screenDeleg, prov:screenProv, expert:screenExpert, bill:screenBill, set:screenSet, about:screenAbout}[S.screen];
+  $('#main').innerHTML = `<div class="screen">${fn()}</div>`;
+  $('#modal-root').innerHTML = (S.screen==='bill' && S.bi.modal) ? billModal() : '';
+}
+
+/* ======================================================================
+   SCREEN 1 — NEEDS YOU
+   ====================================================================== */
+const VALUES = [
+  {id:'v1', field:'Date of birth', val:'1991-03-14', src:'Passport, version 1 · machine-readable line 2', conf:.98, ver:'4 Nov'},
+  {id:'v2', field:'Passport expiry', val:'2031-06-30', src:'Passport, version 1 · machine-readable line 2', conf:.97, ver:'4 Nov'},
+  {id:'v3', field:'Passport number', restricted:true, src:'Passport, version 1 · machine-readable line 2', conf:.99, ver:'4 Nov'},
+  {id:'v4', field:'Language test date', val:'2026-07-18', src:'Language test result · page 1', conf:.95, ver:'11 Nov'},
+  {id:'v5', field:'Listening score', val:'8.0', src:'Language test result · page 1, scores box', conf:.62, ver:'11 Nov', low:true},
+  {id:'v6', field:'Writing score', val:'7.0', src:'Language test result · page 1, scores box', conf:.71, ver:'11 Nov', low:true},
+  {id:'v7', field:'Education equivalency (ECA)', val:"Bachelor's degree", src:'ECA report · page 2', conf:.68, ver:'11 Nov', low:true},
+  {id:'v8', field:'Employment start date', val:'2019-04-01', src:'Employment reference letter, version 2 · page 1', conf:.91, ver:'23 Nov', holdout:true}
+];
+const LOW = VALUES.filter(v=>v.low);
+
+function needsGate(){
+  const n = S.needs;
+  const openedCount = LOW.filter(v=>n.opened[v.id]).length;
+  const allOpened = openedCount === LOW.length;
+  const holdoutDone = n.holdoutResult !== null;
+  return {openedCount, allOpened, holdoutDone, ready: allOpened && holdoutDone};
+}
+
+function screenNeeds(){
+  const n = S.needs;
+  const head = `
+  <div class="page-head">
+    <div class="eyebrow">Screen 1 of 6</div>
+    <h1>Needs you</h1>
+    <p class="lead">The approval inbox of one person. An assistant prepares; a named person decides, with the same permission as doing it by hand. ${tag('AW-1-29')}${tag('AW-1-30')}</p>
+  </div>
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Signed in as <b>the Owner of Firm F</b>, a licensed user who is also the case officer on <b>Case C-1 (Client A)</b>. Firm F has a published provider record, AI on, and its assistants switched on. Wednesday 2 December 2026. All names, dates and values are fictional.</div></div>
+  <div class="row" style="justify-content:space-between">
+    <div class="small muted">Viewing as ${tag('AW-1-33(c)')}${tag('AW1-D38')}</div>
+    <div class="seg" role="group" aria-label="View as">
+      <button data-act="n-view" data-v="approver" aria-pressed="${n.viewAs==='approver'}">The Owner (approver)</button>
+      <button data-act="n-view" data-v="cm" aria-pressed="${n.viewAs==='cm'}">The Case Manager</button>
+    </div>
+  </div>`;
+
+  if(n.viewAs==='cm'){
+    return head + `
+    <div class="card card-pad stack">
+      <h3 style="font-size:16px">The Case Manager's view</h3>
+      <p class="muted">No screen shows another person's agreement alarm, or whose alarm it was. ${tag('AW-1-33(c)')}${tag('US-19')}</p>
+      <div class="notice info"><span class="ic">i</span><div><b>Firm AI measures</b> · Agreement alarms this month: <b>1</b> <span class="muted">(firm-wide count, no names)</span>${tag('AG-14-39')}<div class="illus">Count illustrative.</div></div></div>
+      <p class="small muted">Items in the Owner's Needs you are the Owner's; they are not listed here.</p>
+    </div>
+    ${foot(needsTraces())}`;
+  }
+
+  const alarm = !n.alarmSeen ? `
+  <div class="notice warn" role="status"><span class="ic">!</span><div style="flex:1">
+    <b>Only you can see this.</b> Over the alarm window, you have agreed with AI proposals more often than the alarm level. Take a closer look before you approve. ${tag('AW-1-33(c)')}${tag('AgreementAlarm')}
+    <div class="small muted" style="margin-top:4px">The firm sees only a count of alarms, with no names. The level and window are Expat Ready's settings (see screen 6). ${ill('Wording illustrative.')}</div>
+  </div><button class="btn sm" data-act="n-alarm">Got it</button></div>` : '';
+
+  return head + alarm + `
+  <div class="row" style="justify-content:space-between"><h2 style="font-size:16px">2 items waiting</h2><span class="small muted">Sorted by due date</span></div>
+  ${reportItem()}
+  ${pausedItem()}
+  ${foot(needsTraces())}`;
+}
+function needsTraces(){
+  return 'AW-1-20, AW-1-25, AW-1-26, AW-1-29, AW-1-30, AW-1-31, AW-1-32, AW-1-33 (a)(b)(c), AW-1-56, AW-1-59, AW-1-65, AW-1-72, AW-1-73, AW-1-74, AW-1-75, AW-1-105; AW1-D5, AW1-D25, AW1-D34, AW1-D38; AG-11-112 (CN-AG-11 change 6: item kinds, PAUSED, stopMarker); AG-7-93 (CN-AG-07 change 3); AG-14-39; AG-16-55; SA-12-31, SA-12-32; US-16, US-17, US-18, US-19, US-42, US-52.';
+}
+
+function reportItem(){
+  const n = S.needs, g = needsGate();
+  const open = n.open.report;
+  let status = '<span class="pill accent"><span class="dot"></span>Pending</span>';
+  if(n.report==='approved') status = '<span class="pill ok"><span class="dot"></span>Accepted</span>';
+  if(n.report==='rejected') status = '<span class="pill danger"><span class="dot"></span>Rejected</span>';
+  const top = `
+  <button class="item-top" data-act="n-toggle" data-k="report" aria-expanded="${open}">
+    <div style="min-width:0">
+      <div class="row" style="gap:6px;margin-bottom:6px"><span class="pill">Readiness report</span><span class="pill ai">AI-prepared</span>${status}</div>
+      <div class="item-title">Case C-1 · Client A is ready for review ${tag('READINESS_REPORT')}</div>
+      <div class="item-meta">Prepared by <b>AI assistance, assistant to the case officer</b>, acting for <b>the Owner</b> · due Fri 4 Dec ${tag('AW-1-65')}${tag('AW-1-72')}</div>
+    </div>
+    <span class="chev">›</span>
+  </button>`;
+  if(!open) return `<div class="item" data-open="false">${top}</div>`;
+
+  if(n.report==='approved'){
+    return `<div class="item" data-open="true">${top}
+    <div class="section"><div class="notice ok"><span class="ic">✓</span><div>
+      <b>Accepted by the Owner today at ${esc(n.reportAt)}.</b> Case C-1 is now <b>submitted for internal review</b>. The reviewer's approval stays a separate act. ${tag('AG-7-93')}${tag('AW-1-74')}
+      <ul class="small" style="margin:8px 0 0 18px;padding:0">
+        <li>Audit: the Owner, mode PERSON (the report was prepared in mode DELEGATED). ${tag('AW-1-21')}</li>
+        <li>Hidden-value check recorded: ${n.holdoutResult==='match'?'matched':'not matched'}; the typed value is not stored. ${tag('HoldoutCheck')}</li>
+        <li>The prepared-file count rises by one. ${tag('AW-1-75')}</li>
+        <li>The AI provenance view (screen 3) now shows this decision. ${tag('AW-1-23')}</li>
+      </ul></div></div></div></div>`;
+  }
+  if(n.report==='rejected'){
+    return `<div class="item" data-open="true">${top}
+    <div class="section"><div class="notice danger"><span class="ic">×</span><div><b>Rejected by the Owner.</b> Reason recorded: “${esc(n.rejectReason||'No reason given')}”. Nothing is submitted. ${tag('AG-11-112(a)')}</div></div>
+    <div style="margin-top:10px"><button class="btn sm" data-act="n-reset">Reset this demo</button></div></div></div>`;
+  }
+
+  const valueRows = VALUES.map(v=>{
+    const isOpen = n.srcOpen===v.id;
+    let valueCell;
+    if(v.restricted){
+      valueCell = `<span class="pill">Present</span> <span class="small muted">Restricted, status only</span>${tag('AW-1-59')}`;
+    } else if(v.holdout){
+      if(n.holdoutResult===null){
+        valueCell = `<div class="stack" style="gap:6px"><span class="small muted">Hidden for you. Type the value you see in the source.</span>
+          <div class="row" style="gap:6px"><input type="text" id="holdout-in" placeholder="YYYY-MM-DD" value="${esc(n.holdout)}" aria-label="Type the hidden value" style="width:140px"><button class="btn sm" data-act="n-holdout">Record</button></div></div>${tag('AW-1-33(b)')}`;
+      } else {
+        valueCell = n.holdoutResult==='match'
+          ? `<span class="okmsg" style="margin:0">Match recorded. Your typed value is not stored.</span>${tag('AW-1-33(b)')}`
+          : `<span class="err" style="margin:0">No match recorded. Check the source before you approve.</span> <span class="illus">What follows a mismatch is not specified.</span>${tag('AW-1-33(b)')}`;
+      }
+    } else {
+      valueCell = `<b>${esc(v.val)}</b>`;
+    }
+    let action = '';
+    if(v.low){
+      action = n.opened[v.id] ? `<span class="pill ok">Opened</span>` : `<button class="btn sm" data-act="n-open" data-v="${v.id}">Open</button>`;
+    } else {
+      action = `<button class="btn ghost sm" data-act="n-src" data-v="${v.id}">${isOpen?'Hide':'Source'}</button>`;
+    }
+    const srcBox = isOpen ? `<tr><td colspan="5" style="padding-top:0"><div class="src-box"><b>Source:</b> ${esc(v.src)} · read by the product's Reader; verified ${esc(v.ver)} by the Owner${v.low?'; below the confidence level, so you must open it before Approve all':''}.<div class="src-img">document region ${ill('(placeholder image)')}</div></div></td></tr>` : '';
+    return `<tr class="${v.low?'low':''} ${v.low&&n.opened[v.id]?'opened':''}">
+      <td><b style="font-weight:600">${esc(v.field)}</b>${v.low&&!n.opened[v.id]?'<div class="xs" style="color:var(--warn);font-weight:600">Below the confidence level</div>':''}</td>
+      <td>${valueCell}</td>
+      <td class="small muted" style="min-width:170px">${esc(v.src)}</td>
+      <td><span class="conf ${v.low?'lowc':''}">${pct(v.conf)}</span></td>
+      <td style="white-space:nowrap">${action}</td></tr>${srcBox}`;
+  }).join('');
+
+  const gateList = `
+    <div class="check ${g.allOpened?'done':''}"><span class="box">${g.allOpened?'✓':''}</span><span class="t">Open the ${LOW.length} values below the confidence level (${g.openedCount} of ${LOW.length} opened) ${tag('AW-1-33(a)')}</span></div>
+    <div class="check ${g.holdoutDone?'done':''}"><span class="box">${g.holdoutDone?'✓':''}</span><span class="t">Type the hidden value; a match is recorded without storing the value ${tag('AW-1-33(b)')}</span></div>
+    <div class="check done"><span class="box">✓</span><span class="t">Agreement alarm: shown to you only, never to anyone else ${tag('AW-1-33(c)')}</span></div>`;
+
+  return `<div class="item" data-open="true">${top}
+  <div class="section">
+    <dl class="kv">
+      <dt>What approving does</dt><dd>Accepting this report <b>is</b> your submission of Case C-1 for internal review. The reviewer approves separately. ${tag('AW-1-74')}${tag('AG-7-93')}</dd>
+      <dt>Built how</dt><dd>By rule, from the file's provenance, the Reviewer's state, run history and approval items. One paragraph is AI-written. ${tag('AW-1-72')}${tag('AW-1-73')}</dd>
+      <dt>Delegation</dt><dd>DL-CA-01 · the Owner's Case assistant delegation · started by: product alert (case created) ${tag('startedBy')}${ill(' · reference illustrative')}</dd>
+    </dl>
+  </div>
+  <div class="section">
+    <h4>Before you can approve all</h4>
+    <div class="stack" style="gap:8px">${gateList}</div>
+  </div>
+  <div class="section">
+    <h4>Values · 8 of 23 shown ${ill('(counts fictional)')}</h4>
+    <div class="tw"><table>
+      <thead><tr><th>Value</th><th>Proposed</th><th>Source document and region</th><th>Confidence</th><th></th></tr></thead>
+      <tbody>${valueRows}</tbody>
+    </table></div>
+    <p class="xs faint" style="margin-top:8px">Confidence level used: Expat Ready's value or your firm's stricter one, whichever is stricter (screen 6). Percentages ${ill('illustrative')}.</p>
+  </div>
+  <div class="section">
+    <h4>Findings ${tag('lineType FINDING')}</h4>
+    <div class="small"><span class="pill outline">MAJOR · resolved</span> Name spelling differs between passport and questionnaire. Resolved by the Owner on 24 Nov with a note. The pack's reason is linked.</div>
+  </div>
+  <div class="section">
+    <h4>Client-facing sends on this case · 18 ${tag('lineType SEND')}</h4>
+    <div class="tw"><table><tbody>
+      <tr><td class="small muted" style="width:80px">Day 0</td><td class="small">Signing passcode (the product's Signer email)</td></tr>
+      <tr><td class="small muted">Day 0</td><td class="small">Executed copy and certificate (the product's Signer email)</td></tr>
+      <tr><td class="small muted">Day 0</td><td class="small"><i>Welcome to the firm</i> · template v1, published by the Owner</td></tr>
+      <tr><td class="small muted">Day 9</td><td class="small">Approved draft · reply about the ECA translation</td></tr>
+      <tr><td class="small muted">Day 30</td><td class="small"><i>We received your document</i> · template v1, published by the Owner</td></tr>
+    </tbody></table></div>
+    <p class="xs faint" style="margin-top:6px">+ 13 more. Template titles fictional.</p>
+  </div>
+  <div class="section">
+    <h4>Passed warnings ${tag('lineType PASSED_WARNING')}</h4>
+    <p class="small muted">None.</p>
+  </div>
+  <div class="section">
+    <h4>Summary <span class="pill ai" style="margin-left:6px">AI-drafted</span>${tag('AI_SUMMARY')}${tag('AW-1-25')}</h4>
+    <div class="ai-block small">All seven requested documents are verified; one name-spelling difference was resolved on 24 November; the medical is not yet due.</div>
+    <p class="xs faint" style="margin-top:6px">The only part of this report written by AI. Everything above is built by rule.</p>
+  </div>
+  <div class="section stack">
+    <div class="notice info"><span class="ic">i</span><div class="small">Values on this report came from <b>client content</b> (Client A's uploads). ${tag('AW-1-32')}${tag('fromClientContent')}</div></div>
+    ${n.rejecting ? `
+      <div class="field"><label for="rej">Reason for rejecting</label><textarea id="rej" placeholder="Say what is wrong">${esc(n.rejectReason)}</textarea></div>
+      <div class="row"><button class="btn danger" data-act="n-reject-confirm">Reject report</button><button class="btn" data-act="n-reject-cancel">Cancel</button></div>` : `
+      <div class="row">
+        <button class="btn primary" data-act="n-approve" ${g.ready?'':'disabled'}>Approve all and submit for review</button>
+        <button class="btn" data-act="n-some">Approve some</button>
+        <button class="btn danger" data-act="n-reject">Reject with reason</button>
+      </div>
+      ${g.ready ? '<p class="small" style="color:var(--ok)">All safeguards met. You may approve all.</p>' : `<p class="small muted">Approve all stays off until ${!g.allOpened?`you open ${LOW.length-g.openedCount} more value${LOW.length-g.openedCount===1?'':'s'}`:''}${!g.allOpened&&!g.holdoutDone?' and ':''}${!g.holdoutDone?'you type the hidden value':''}.</p>`}
+      ${n.someNote ? `<p class="small muted">Approve some lets you approve or reject line by line. ${ill('Not built in this prototype.')}</p>`:''}`}
+  </div>
+  </div>`;
+}
+
+function pausedItem(){
+  const n = S.needs, open = n.open.paused, st = n.paused;
+  let pill = '<span class="pill paused"><span class="dot"></span>Paused</span>';
+  if(st==='stale') pill = '<span class="pill warn"><span class="dot"></span>Stale · needs fresh approval</span>';
+  if(st==='reviewed') pill = '<span class="pill accent"><span class="dot"></span>Pending · re-rendered</span>';
+  if(st==='approved') pill = '<span class="pill ok"><span class="dot"></span>Approved</span>';
+  if(st==='rejected') pill = '<span class="pill danger"><span class="dot"></span>Rejected</span>';
+  const top = `
+  <button class="item-top" data-act="n-toggle" data-k="paused" aria-expanded="${open}">
+    <div style="min-width:0">
+      <div class="row" style="gap:6px;margin-bottom:6px"><span class="pill">Draft message</span><span class="pill ai">AI-drafted</span>${pill}</div>
+      <div class="item-title">Client E · proposed conversation about a next step ${tag('W-14')}</div>
+      <div class="item-meta">Prepared by <b>AI assistance, assistant to the Owner</b>, acting for <b>the Owner</b> · past client</div>
+    </div><span class="chev">›</span>
+  </button>`;
+  if(!open) return `<div class="item" data-open="false">${top}</div>`;
+  let body = '';
+  if(st==='paused'){
+    body = `
+    <div class="notice paused"><span class="ic">ǁ</span><div><b>AI paused by Expat Ready on 1 Dec 2026: routine safety review.</b> ${ill('(reason illustrative)')}
+      <div class="small muted" style="margin-top:4px">Reason code <code>PLATFORM_STOP</code> · one of the four pause reasons. While paused, this item cannot be approved or sent. You may reject it, and Expat Ready may recall it. A pause never ends a delegation. ${tag('AG-11-112(e)')}${tag('AW-1-56')}${tag('SA-12-32')}</div></div></div>`;
+  } else if(st==='stale'){
+    body = `<div class="notice warn"><span class="ic">!</span><div><b>The stop was released.</b> This draft was re-rendered and marked stale. It needs a fresh approval; your earlier view of it does not count. ${tag('AW-1-20(a)')}${tag('AG-11-61')}</div></div>`;
+  } else if(st==='approved'){
+    body = `<div class="notice ok"><span class="ic">✓</span><div><b>Approved by the Owner at ${nowStamp()}.</b> The product's own send rules apply from here; the assistant sends nothing itself. ${tag('AW-1-29')}${tag('AW-1-46')}</div></div>`;
+  } else if(st==='rejected'){
+    body = `<div class="notice danger"><span class="ic">×</span><div><b>Rejected by the Owner.</b> Nothing is sent. ${tag('AG-11-112(e)')}</div></div>`;
+  }
+  const draft = `<div class="ai-block small" style="margin-top:12px">Hello, a date on your file with us is coming up. Would you like to talk about the next step? <span class="illus">(fictional draft; never a promise)</span></div>`;
+  let actions = '';
+  if(st==='paused'){
+    actions = n.pausedRejecting
+      ? `<div class="row"><button class="btn danger" data-act="p-reject-confirm">Confirm reject</button><button class="btn" data-act="p-reject-cancel">Cancel</button></div>`
+      : `<div class="row"><button class="btn primary" disabled>Approve</button><button class="btn danger" data-act="p-reject">Reject</button></div>
+         <div class="demo" style="margin-top:12px"><div class="lbl" style="font-size:12px;font-weight:700;margin-bottom:6px">DEMO CONTROL · Expat Ready side</div>
+         <div class="row" style="justify-content:space-between"><span class="small">Release the emergency stop for this assistant.</span><button class="btn sm" data-act="p-release">Release the stop</button></div></div>`;
+  } else if(st==='stale'){
+    actions = `<div class="row"><button class="btn" data-act="p-review">Review the re-rendered draft</button><button class="btn primary" disabled>Approve</button><button class="btn danger" data-act="p-reject-confirm">Reject</button></div>`;
+  } else if(st==='reviewed'){
+    actions = `<div class="row"><button class="btn primary" data-act="p-approve">Approve</button><button class="btn danger" data-act="p-reject-confirm">Reject</button></div>`;
+  } else {
+    actions = `<button class="btn sm" data-act="p-reset">Reset this demo</button>`;
+  }
+  return `<div class="item" data-open="true">${top}<div class="section stack">${body}${st!=='approved'&&st!=='rejected'?draft:''}${actions}</div></div>`;
+}
+
+/* ======================================================================
+   SCREEN 2 — DELEGATION
+   ====================================================================== */
+const A = {
+  case: { name:'Case assistant', screen:'assistant to the case officer', persons:{officer:{label:'the case officer', role:'Case Officer', licensed:'not linked to a licence'}},
+    scope:'The person\'s own files (OWN_FILES)', waiting:'1 upload verdict on Case C-4',
+    may:[
+      ['Files and clients', [['agent/case:view.own','the officer\'s own files'],['agent/case:show','open a file'],['agent/client:show','open a client']]],
+      ['Documents and questionnaire', [['agent/document:list','list documents'],['agent/document:show','read a document'],['agent/sqr:view','see the questionnaire state']]],
+      ['Work it prepares', [['agent/case:form-prepare','prepare a form draft, once the form route exists'],['agent/task:create','create a task for a finding']]],
+      ['Reading context', [['agent/communication:view','read the message thread'],['agent/timeline:list','read the timeline'],['agent/pack:read','read the pack\'s reasons']]]
+    ],
+    never:[
+      [['agent/case:form-approve','agent/case:review-approve','agent/case:waive-deficiency'],'Professional approvals stay with a person','AW-1-43'],
+      [['agent/sqr:verify'],'Verifying a value stays with a person','AW-1-43'],
+      [['agent/document:change-status','agent/document:waive','agent/case:document-manage'],'Document decisions and requests are the officer\'s own acts','AW-1-76'],
+      [['agent/case:milestone-record','agent/case:submit','agent/case:record-decision','agent/case:review-submit'],'Records a milestone, submission or decision','AW-1-43, AW-1-74'],
+      [['agent/communication:send-email','agent/communication:send-message'],'No assistant sends; a person approves','AW-1-46'],
+      [['agent/retainer:countersign','agent/retainer:approve-for-send'],'No signing, no retainer','AW-1-42'],
+      [['agent/case:export'],'No export','AW-1-40'],
+      [['every settings and automation key'],'Settings, switches and automations','AW-1-41']
+    ]},
+  intake: { name:'Intake assistant', screen:'assistant to the intake role', persons:{rep:{label:'the intake rep', role:'Intake rep (custom role)', licensed:'not linked to a licence'}},
+    scope:'Leads (ALL_LEADS)', waiting:'1 proposed stage move on Lead L-3',
+    may:[
+      ['Leads', [['agent/prospect:view.own','own leads'],['agent/prospect:view.all','all leads'],['agent/prospect:show','open a lead']]],
+      ['Context', [['agent/assessment:view','read the assessment result'],['agent/booking:list','booking state'],['agent/booking-event-type:list','booking types'],['agent/retainer:show','retainer state'],['agent/communication:view','read the thread'],['agent/sqr:view','existing answers'],['agent/pack:read','the pack\'s reason']]],
+      ['Work it prepares', [['agent/task:create','the run-an-assessment task']]]
+    ],
+    never:[
+      [['agent/assessment:run','agent/assessment:override','agent/assessment:share'],'A person runs and shares the assessment','AW-1-88'],
+      [['agent/prospect:convert','agent/prospect:edit','agent/prospect:lose'],'Stage moves are only proposed','AW-1-44'],
+      [['agent/retainer:draft','agent/retainer:approve-for-send','agent/retainer:send','agent/retainer:countersign'],'No retainer, no signing','AW-1-42'],
+      [['send keys'],'No assistant sends','AW-1-46'],
+      [['agent/sqr:verify'],'No verification','AW-1-43'],
+      [['agent/prospect:export'],'No export','AW-1-40'],
+      [['every settings, automation, template and role key'],'Settings and switches','AW-1-41']
+    ]},
+  billing: { name:'Billing assistant', screen:'assistant to Billing / Finance', persons:{bookkeeper:{label:'the bookkeeper', role:'Billing / Finance', licensed:'not linked to a licence'}},
+    scope:'Billing parties (BILLING_PARTIES)', waiting:'1 proposed payment match for Client B',
+    may:[
+      ['Invoices and expenses', [['agent/invoice:list','list invoices'],['agent/invoice:show','open an invoice'],['agent/expense:list','list expenses']]],
+      ['Reports', [['agent/billing-report:view','billing reports'],['agent/report:view-financial','financial reports'],['agent/report:view.own','own reports']]],
+      ['Retainers', [['agent/retainer:list','list retainers'],['agent/retainer:show','fee schedule; signed or not']]],
+      ['Parties, files and clients', [['agent/case:show','open a file'],['agent/case:view.all','all files'],['agent/case:view.own','own files'],['agent/client:show','open a client'],['agent/client:view.all','all clients'],['agent/client:view.own','own clients'],['agent/prospect:show','open a lead'],['agent/prospect:view.all','all leads'],['agent/prospect:view.own','own leads'],['agent/party:view.all','billing parties']]],
+      ['Time, tasks and notes', [['agent/time-entry:view.all','all time entries'],['agent/time-entry:view.own','own time entries'],['agent/task:view.all','all tasks'],['agent/task:view.own','own tasks'],['agent/note:list','notes'],['agent/reminder:list','reminders']]],
+      ['Work it prepares', [['agent/reminder:create','the unbilled list; the reconciliation reminder']]],
+      ['Settings it reads', [['agent/settings:list','payment terms; tax profile'],['agent/pack:read','the designation words the pack supplies']]]
+    ],
+    never:[
+      [['agent/invoice:create','agent/invoice:edit','agent/invoice:issue','agent/invoice:void'],'No invoice entry, not even an unsaved draft','AW-1-39'],
+      [['agent/payment:record','agent/payment:online','agent/refund:create','agent/payment-plan:manage'],'Records or moves money: a person saves it','AW-1-39'],
+      [['agent/expense:create','agent/expense:edit','agent/time-entry:create','agent/time-entry:edit'],'No billing entry of any kind','AW-1-39'],
+      [['agent/trust:move','agent/trust:reconcile'],'Trust keys are never lendable to an AI assistant','AG-6-46'],
+      [['agent/billing:export'],'No export','AW-1-40'],
+      [['agent/retainer:download','agent/reminder:delete','agent/reminder:snooze','agent/notification:manage-preferences'],'Not on the Billing assistant\'s allowed list','§10'],
+      [['every send, communication, document, task-create, settings and automation key, including agent/automation:run'],'No sends, no settings, no manual runs','AW-1-41, AW-1-46']
+    ]},
+  firm: { name:'Firm assistant', screen:'assistant to the Owner and the Case Manager', persons:{owner:{label:'the Owner', role:'Owner', licensed:'linked to a licence'}, cm:{label:'the Case Manager', role:'Case Manager (weekly note only)', licensed:'linked to a licence'}},
+    scope:'Firm-wide (FIRM_WIDE)', waiting:'1 weekly note draft',
+    may:[
+      ['Reads before proposing', [['agent/case:view.all','all files'],['agent/case:show','open a file'],['agent/client:view.all','all clients'],['agent/client:show','open a client'],['agent/document:list','list documents'],['agent/document:show','read a document'],['agent/note:list','notes'],['agent/timeline:list','timeline'],['agent/sqr:view','questionnaire state'],['agent/communication:view','threads']]],
+      ['Weekly note and checks', [['agent/report:view.all','firm reports'],['agent/report:view-compliance','compliance view'],['agent/automation:list','list automations'],['agent/automation:show','open an automation'],['agent/automation:view-history','run history'],['agent/import:view-report','import reports'],['agent/governance:read','consent and privacy-request state'],['agent/pack:read','lead times'],['agent/settings:list','firm timings']]],
+      ['Work it prepares', [['agent/task:create','privacy-request task'],['agent/reminder:create','deadline reminder'],['agent/reminder:list','reminders']]]
+    ],
+    cmMay:[['Weekly note only', [['agent/case:view.all','all files'],['agent/case:show','open a file'],['agent/client:view.all','all clients'],['agent/client:show','open a client'],['agent/report:view.all','firm reports'],['agent/report:view-compliance','compliance view'],['agent/automation:list','list automations'],['agent/automation:show','open an automation'],['agent/automation:view-history','run history'],['agent/settings:list','firm timings']]]],
+    never:[
+      [['the six never-delegable Owner-only keys','agent/document:dispose'],'Owner-only acts and disposal stay with a person','AW-1-38, AW-1-41'],
+      [['agent/import:run','agent/import:undo'],'The Owner confirms an import in its own screen','AW-1-106'],
+      [['agent/dsr:manage','agent/consent:manage','agent/legal-hold:manage','agent/retention-policy:manage','agent/breach:manage'],'Privacy registers stay the Owner\'s acts','AW-1-107'],
+      [['agent/trust:move','agent/trust:reconcile'],'Trust keys are never lendable','AG-6-46'],
+      [['every export'],'No export','AW-1-40'],
+      [['send keys','every agent/portal:* key'],'No assistant sends','AW-1-46'],
+      [['every settings and automation write key'],'Settings and switches','AW-1-41']
+    ]},
+  expert: { name:'Practice expert (summary line)', screen:'AI summary line on practice answers', persons:{officer:{label:'the case officer', role:'any staff the firm allows', licensed:'not linked to a licence'}},
+    scope:'Read-only; stores no keys', waiting:null, may:[], never:[] }
+};
+
+function dlPerson(){ const a=A[S.dl.assistant]; return a.persons[S.dl.person] || Object.values(a.persons)[0]; }
+function dlMay(){ const a=A[S.dl.assistant]; return (S.dl.assistant==='firm' && S.dl.person==='cm') ? a.cmMay : a.may; }
+function dlInitKeys(){ const k={}; dlMay().forEach(g=>g[1].forEach(x=>k[x[0]]=true)); S.dl.keys=k; }
+function dlLog(text){ S.dl.log.unshift({t:nowStamp(), text}); }
+
+function screenDeleg(){
+  const d = S.dl, a = A[d.assistant], p = dlPerson();
+  if(!d.keys) dlInitKeys();
+  const order = ['setup','pending','active','ended'];
+  const labels = {setup:'Set up', pending:'Pending acceptance', active:'Active', ended:'Ended'};
+  const cur = d.state==='paused' ? 'active' : d.state;
+  const ci = order.indexOf(cur);
+  const steps = order.map((s,i)=>`<span class="step ${i<ci?'past':''} ${i===ci?'on':''}"><span class="n">${i<ci?'✓':i+1}</span>${labels[s]}${s==='active'&&d.state==='paused'?' · paused':''}</span>`).join('');
+
+  const head = `
+  <div class="page-head">
+    <div class="eyebrow">Screen 2 of 6</div>
+    <h1>Set up an assistant for a person</h1>
+    <p class="lead">An assistant works for one named person, with a subset of that person's own permissions. It runs only after that person accepts. Only that person can end it. ${tag('AW-1-5')}${tag('AW-1-6')}</p>
+  </div>
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Firm F, AI on. The Owner opens an assistant's settings page and sets one up for a staff member. Use <b>Viewing as</b> to switch between the Owner and the named person. Fictional.</div></div>
+  <div class="row" style="justify-content:space-between">
+    <div class="steps">${steps}</div>
+    <div class="seg" role="group" aria-label="Viewing as">
+      <button data-act="d-view" data-v="owner" aria-pressed="${d.viewAs==='owner'}">The Owner</button>
+      <button data-act="d-view" data-v="person" aria-pressed="${d.viewAs==='person'}">${esc(p.label[0].toUpperCase()+p.label.slice(1))}</button>
+    </div>
+  </div>`;
+
+  let body = '';
+  if(d.state==='setup'){
+    if(d.viewAs==='person'){
+      body = `<div class="card card-pad"><p class="muted">Nothing has been offered to ${esc(p.label)} yet. A person may also set up their own assistant. ${tag('AW-1-6')}</p></div>`;
+    } else body = setupCard();
+  } else {
+    body = statusCard();
+  }
+
+  const audit = d.log.length ? `
+  <div class="card"><div class="card-head"><h3>Audit trail ${tag('AW-1-6')}${tag('AG-13-68')}</h3><span class="small muted">every act on a delegation is audited</span></div>
+  <div class="card-pad"><div class="audit">${d.log.map(l=>`<div><time>${l.t}</time><span>${l.text}</span></div>`).join('')}</div></div></div>` : '';
+
+  return head + body + audit + foot('AW-1-5, AW-1-6, AW-1-7, AW-1-8, AW-1-9, AW-1-10, AW-1-11, AW-1-12, AW-1-20, AW-1-37, AW-1-47, AW-1-111, AW-1-125; AW1-D2, AW1-D34; AW1-BR-3, AW1-BR-4, AW1-BR-23; §6 Delegation states; §7 Delegation; §10 delegation subsets; SA-6-44 (CN-SA-06 change 1); AG-6-46 (CN-AG-06 change 6); AG-11-112(e)(f); US-1, US-2, US-3, US-111, US-113, US-114.');
+}
+
+function setupCard(){
+  const d = S.dl, a = A[d.assistant], p = dlPerson();
+  const asstOpts = Object.entries(A).map(([k,v])=>`<option value="${k}" ${d.assistant===k?'selected':''}>${esc(v.name)}</option>`).join('');
+  const personOpts = Object.entries(a.persons).map(([k,v])=>`<option value="${k}" ${d.person===k?'selected':''}>${esc(v.label)} · ${esc(v.role)}</option>`).join('');
+  const may = dlMay();
+  const keysHtml = d.assistant==='expert'
+    ? `<div class="notice info"><span class="ic">i</span><div class="small">This delegation stores <b>no permission keys</b>. It only allows the optional AI summary line under practice answers. The answers themselves need no delegation. ${tag('AW-1-111')}${tag('§7 permissionKeys[] empty')}</div></div>`
+    : may.map(g=>`<div style="margin-bottom:10px"><div class="lbl" style="margin:4px 8px">${esc(g[0])}</div><div class="keylist">${g[1].map(k=>`
+        <label class="keyrow"><input type="checkbox" data-act="d-key" data-v="${esc(k[0])}" ${d.keys[k[0]]?'checked':''}><span><span class="k">${esc(k[0])}</span><br><span class="why">${esc(k[1])}</span></span></label>`).join('')}</div></div>`).join('');
+  const neverHtml = a.never.length ? a.never.map(n=>`
+      <div class="keyrow never" aria-disabled="true"><span class="lock">🔒</span><span><span class="k">${n[0].map(esc).join(' · ')}</span><br><span class="why">${esc(n[1])} <span class="faint">(${esc(n[2])})</span></span></span></div>`).join('') : '<p class="small muted">None: nothing is lent.</p>';
+  const count = d.assistant==='expert' ? 0 : Object.values(d.keys).filter(Boolean).length;
+  const total = d.assistant==='expert' ? 0 : Object.keys(d.keys).length;
+  return `
+  <div class="card">
+    <div class="card-head"><h2>New delegation</h2><span class="pill outline">${d.person==='owner'?'Your own delegation':'Owner only, for another person'} ${tag('AW-1-6')}</span></div>
+    <div class="section grid2">
+      <div class="field"><label for="d-asst">1 · Choose the assistant</label><select id="d-asst" data-act="d-asst">${asstOpts}</select><span class="xs faint">On screens it is called “${esc(a.screen)}”. ${tag('AW-1-65')}</span></div>
+      <div class="field"><label for="d-person">For this person</label><select id="d-person" data-act="d-person">${personOpts}</select><span class="xs faint">Licence: ${esc(p.licensed)}. Information only; it never gates a delegation. ${tag('AW-1-7')}</span></div>
+    </div>
+    <div class="section">
+      <dl class="kv">
+        <dt>Scope</dt><dd>${esc(a.scope)} ${tag('§7 scope')}</dd>
+        <dt>Valid from</dt><dd>When ${esc(p.label)} accepts · no end date ${ill('(an optional end date is allowed)')}</dd>
+        <dt>Taken from</dt><dd>The <b>${esc(p.role)}</b> column of the firm's permissions, key by key, lendable keys only. Never more than the person holds at the moment of acting. ${tag('AW-1-8')}${tag('AW-1-10')}</dd>
+      </dl>
+    </div>
+    <div class="section">
+      <h4>2 · Permissions the assistant may use ${d.assistant==='expert'?'':`· ${count} of ${total} ticked`} ${tag('SA-6-44')}</h4>
+      ${d.assistant==='expert'?'':'<p class="small muted" style="margin-bottom:8px">Untick any key to narrow the subset.</p>'}
+      ${keysHtml}
+    </div>
+    <div class="section">
+      <h4>Never lent to an assistant · shown for your information ${tag('AW-1-9')}</h4>
+      <p class="small muted" style="margin-bottom:8px">The server refuses these at set-up and again at every action. They cannot be ticked.</p>
+      <div class="keylist">${neverHtml}</div>
+      <p class="xs faint" style="margin-top:10px">The full list of hard limits is shown on each assistant's settings page. ${tag('AW-1-37')}</p>
+    </div>
+    <div class="section row" style="justify-content:space-between">
+      <span class="small muted">${esc(p.label[0].toUpperCase()+p.label.slice(1))} will be asked to accept. Nothing runs until then.</span>
+      <button class="btn primary" data-act="d-offer">Send offer to ${esc(p.label)}</button>
+    </div>
+  </div>`;
+}
+
+function statusCard(){
+  const d = S.dl, a = A[d.assistant], p = dlPerson();
+  const P = p.label[0].toUpperCase()+p.label.slice(1);
+  const stateMap = {
+    pending:'<span class="pill accent"><span class="dot"></span>PENDING_ACCEPTANCE</span>',
+    active:'<span class="pill ok"><span class="dot"></span>ACTIVE</span>',
+    paused:'<span class="pill paused"><span class="dot"></span>PAUSED · ASSISTANT_SWITCH_OFF</span>',
+    ended:'<span class="pill"><span class="dot"></span>ENDED</span>'
+  };
+  const count = d.assistant==='expert' ? 0 : Object.values(d.keys).filter(Boolean).length;
+  const summary = `
+  <div class="section"><dl class="kv">
+    <dt>Assistant</dt><dd>${esc(a.name)} · “${esc(a.screen)}”</dd>
+    <dt>Works for</dt><dd>${esc(p.label)} (${esc(p.role)}) · licence ${esc(p.licensed)}, information only</dd>
+    <dt>Permissions</dt><dd>${d.assistant==='expert'?'none stored (summary line only)':count+' lendable keys, listed one by one'}</dd>
+    <dt>Scope</dt><dd>${esc(a.scope)}</dd>
+    <dt>Set up by</dt><dd>the Owner</dd>
+    ${d.endReason?`<dt>End reason</dt><dd><code>${d.endReason}</code></dd>`:''}
+  </dl></div>`;
+
+  let actions = '', note = '';
+  if(d.state==='pending'){
+    if(d.viewAs==='owner'){
+      note = `<div class="notice info"><span class="ic">i</span><div class="small">Waiting for ${esc(p.label)} to accept. While it is still pending, you may withdraw the offer: it never took effect. ${tag('AW-1-6')}${tag('US-114')}</div></div>`;
+      actions = `<button class="btn danger" data-act="d-withdraw">Withdraw offer</button>`;
+    } else {
+      note = `<div class="notice info"><span class="ic">i</span><div class="small">The Owner offered you ${esc(a.name.toLowerCase())}. Review the permissions it would use on your behalf. Every act it prepares will name you as the person behind it. ${tag('AW-1-3')}</div></div>`;
+      actions = `<button class="btn primary" data-act="d-accept">Accept</button><button class="btn" data-act="d-decline">Decline</button>`;
+    }
+  } else if(d.state==='active' || d.state==='paused'){
+    const waitingPill = d.waiting==='pending' ? '<span class="pill accent">pending</span>' : d.waiting==='paused' ? '<span class="pill paused">paused</span>' : d.waiting==='stale' ? '<span class="pill warn">stale · needs fresh approval</span>' : '';
+    const waitLine = a.waiting ? `<div class="small" style="margin-top:8px">Waiting from this delegation: ${esc(a.waiting)} ${waitingPill} ${ill('(fictional)')}</div>` : '';
+    if(d.viewAs==='owner'){
+      note = `<div class="notice ${d.state==='paused'?'paused':'ok'}"><span class="ic">${d.state==='paused'?'ǁ':'✓'}</span><div class="small">
+        ${d.state==='paused' ? `Paused because you switched ${esc(a.name.toLowerCase())} off for the firm. It resumes with no new acceptance when you switch it on. ${tag('AW-1-11(a)')}${tag('AW-1-125')}` : `Accepted by ${esc(p.label)}. The assistant now prepares work for ${esc(p.label)}.`}
+        <div style="margin-top:6px"><b>You have no control to end this.</b> Only ${esc(p.label)} can end it. To halt the assistant at once, use its switch or the AI switch, or deactivate the person. ${tag('AW-1-6')}${tag('AW1-D34')}</div>${waitLine}</div></div>`;
+      actions = `<div class="row" style="gap:10px"><span class="small muted">${esc(a.name)} switch for the firm</span><button class="switch" role="switch" aria-checked="${d.switchOn}" data-act="d-switch" aria-label="${esc(a.name)} switch"></button>${tag('AG-16-57')}</div>`;
+    } else {
+      note = `<div class="notice ${d.state==='paused'?'paused':'ok'}"><span class="ic">${d.state==='paused'?'ǁ':'✓'}</span><div class="small">${d.state==='paused'?'Your assistant is paused by a firm switch. You do not need to accept again.':'Your assistant is active.'}${waitLine}</div></div>`;
+      actions = d.confirmEnd
+        ? `<div class="stack"><p class="small">Ending is final. Anything it has waiting will be cancelled and stay visible in the audit. A later assistant needs a new acceptance.</p><div class="row"><button class="btn danger" data-act="d-end-confirm">End my delegation</button><button class="btn" data-act="d-end-cancel">Keep it</button></div></div>`
+        : `<button class="btn danger" data-act="d-end">End my delegation</button>`;
+    }
+  } else if(d.state==='ended'){
+    const reasonText = {WITHDRAWN:'The Owner withdrew the offer before it was accepted. Nothing ran under it.', DECLINED:`${P} declined. Nothing ran under it.`, PERSON_ENDED:`${P} ended it.`}[d.endReason];
+    const cancelled = d.endReason==='PERSON_ENDED' && a.waiting ? `<div class="small" style="margin-top:6px">${esc(a.waiting)}: <span class="pill">cancelled · DELEGATION_ENDED</span> stays visible in the audit. ${tag('AG-11-112(f)')}</div>` : '';
+    note = `<div class="notice info"><span class="ic">i</span><div class="small">${reasonText} The record is final; a new offer is a new record needing a new acceptance. ${tag('AW-1-11(b)(c)')}${cancelled}</div></div>`;
+    actions = d.viewAs==='owner' ? `<button class="btn primary" data-act="d-restart">Set up a new offer</button>` : '';
+  }
+  return `<div class="card">
+    <div class="card-head"><h2>${esc(a.name)} for ${esc(p.label)}</h2>${stateMap[d.state]}</div>
+    ${summary}
+    <div class="section stack">${note}<div class="row">${actions}</div></div>
+  </div>`;
+}
+
+/* ======================================================================
+   SCREEN 3 — AI PROVENANCE
+   ====================================================================== */
+function provRows(){
+  const rep = S.needs.report;
+  const repDecision = rep==='approved' ? 'approved' : rep==='rejected' ? 'rejected' : 'pending';
+  return [
+    { id:'r1', what:'Reply to Client A about the ECA translation', kind:'AI draft (client message)', worker:'W-08',
+      run:'CA-C1-01', sources:['Client A\'s message of 10 Nov','Canada pack 2026.3 · documents, ECA (fictional label)'],
+      actor:'the Owner', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (message received)',
+      approver:'the Owner · linked to a licence at decision · setting: licensed users only', decision:'edited', date:'11 Nov',
+      before:'Your ECA report does not need a translation because it is issued in English.',
+      after:'Your ECA report does not need a certified translation because it is issued in English.', marker:'Edited AI draft' },
+    { id:'r2', what:'Upload verdict · Employment reference letter, version 1', kind:'Upload verdict', worker:'W-04',
+      run:'CA-C1-01', sources:['Employment reference letter v1, pages 1–2','Pack acceptable-form rule (fictional)'],
+      actor:'the Owner', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (document read)',
+      approver:'the Owner', decision:'rejected', date:'16 Nov',
+      before:'Status: Received', after:'Status: Rejected · reason: the letter does not state hours per week (fictional). The product re-requested it.', marker:'AI-prepared' },
+    { id:'r3', what:'Upload verdict · Employment reference letter, version 2', kind:'Upload verdict', worker:'W-04',
+      run:'CA-C1-01', sources:['Employment reference letter v2, page 1'],
+      actor:'the Owner', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (document read)',
+      approver:'the Owner', decision:'approved', date:'23 Nov',
+      before:'Status: Received', after:'Status: Verified', marker:'AI-prepared' },
+    { id:'r4', what:'Readiness report for Case C-1', kind:'Readiness report', worker:'W-01',
+      run:'CA-C1-01', sources:['This provenance view','The Reviewer\'s state','Run history','Approval items on the file'],
+      actor:'the Owner', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (case created)',
+      approver: repDecision==='pending' ? '—' : 'the Owner · linked to a licence at decision', decision:repDecision, date: repDecision==='pending' ? 'due 4 Dec' : 'today',
+      before:'Case stage: in preparation', after: repDecision==='approved' ? 'Case stage: submitted for internal review' : repDecision==='rejected' ? 'No change (report rejected)' : 'Waiting in Needs you (screen 1)',
+      marker:'Built by rule · one AI-written paragraph' },
+    { id:'r5', what:'Passport values (3)', kind:'Proposed profile values', worker:'the product\'s Reader',
+      run:'— (firm automation, no assistant)', sources:['Passport, version 1 · machine-readable line 2'],
+      actor:'the Owner (decision)', mode:'AUTOMATION', deleg:'none', started:'—', startedPlain:'not an assistant run',
+      approver:'the Owner · approving verifies the values', decision:'approved', date:'4 Nov',
+      before:'Proposed: date of birth, passport expiry, passport number', after:'Verified · passport number shown by status only (present)', marker:'AI-prepared' }
+  ];
+}
+const DEC = {approved:['ok','Approved'], edited:['accent','Edited, then approved'], rejected:['danger','Rejected'], pending:['warn','Pending'], paused:['paused','Paused'], cancelled:['','Cancelled']};
+
+function screenProv(){
+  const p = S.pv;
+  const rows = provRows().filter(r => p.filter==='all' || r.decision===p.filter);
+  const filters = [['all','All'],['approved','Approved'],['edited','Edited'],['rejected','Rejected'],['pending','Pending']]
+    .map(f=>`<button class="btn sm ${p.filter===f[0]?'primary':''}" data-act="pv-filter" data-v="${f[0]}">${f[1]}</button>`).join('');
+  const body = rows.map(r=>{
+    const d = DEC[r.decision]; const open = p.open===r.id;
+    const detail = open ? `<tr><td colspan="6" style="background:var(--surface-2)">
+      <div class="stack" style="gap:12px">
+        <div class="ba"><div><span class="lbl">Before</span>${esc(r.before)}</div><div><span class="lbl">After</span>${esc(r.after)}</div></div>
+        <dl class="kv">
+          <dt>Run</dt><dd><code>${esc(r.run)}</code> ${r.mode==='DELEGATED'?ill('(run reference illustrative)'):''}${tag('personaRunId')}</dd>
+          <dt>Sources</dt><dd>${r.sources.map(esc).join('<br>')}</dd>
+          <dt>Prepared</dt><dd>Actor <b>${esc(r.actor)}</b> · mode <code>${r.mode}</code>${r.mode==='DELEGATED'?` · delegation <code>${r.deleg}</code> · started by <code>${r.started}</code> (${esc(r.startedPlain)})`:' · the product\'s own AI call, not an assistant'} ${tag('AG-13-68')}${tag('AG-11-113')}</dd>
+          <dt>Decided</dt><dd>${esc(r.approver)} · mode <code>PERSON</code> ${tag('AW-1-26')}</dd>
+          <dt>Marker</dt><dd>${esc(r.marker)} ${tag('AW-1-25')}</dd>
+        </dl>
+      </div></td></tr>` : '';
+    return `<tr class="prov-row" data-act="pv-open" data-v="${r.id}" tabindex="0" aria-expanded="${open}">
+      <td><b style="font-weight:600">${esc(r.what)}</b><div class="xs faint">${esc(r.kind)} · ${esc(r.worker)}</div></td>
+      <td class="small">${esc(r.actor)}<div class="xs faint">${r.mode}${r.mode==='DELEGATED'?' · started by '+r.started:''}</div></td>
+      <td class="small">${r.sources.length} source${r.sources.length>1?'s':''}</td>
+      <td class="small">${esc(r.approver.split(' · ')[0])}</td>
+      <td><span class="pill ${d[0]}">${d[1]}</span><div class="xs faint">${esc(r.date)}</div></td>
+      <td class="faint">${open?'▾':'▸'}</td></tr>${detail}`;
+  }).join('') || `<tr><td colspan="6" class="small muted">No items with this decision.</td></tr>`;
+
+  return `
+  <div class="page-head">
+    <div class="eyebrow">Screen 3 of 6</div>
+    <h1>AI provenance · Case C-1</h1>
+    <p class="lead">One read-only page per file. Every AI-prepared item, its run, its sources, who decided, what they decided, and what changed. ${tag('AW-1-23')}${tag('IMP-2(c)')}</p>
+  </div>
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Case C-1 (Client A), Firm F, viewed by the Owner. Every record shown passes the viewer's own permission check; Restricted values show by status only. The readiness report row follows what you did on screen 1. Fictional.</div></div>
+  <div class="card">
+    <div class="card-head"><div class="filters">${filters}</div>
+      <div class="legend"><span><code>DELEGATED</code> an assistant acted for the person</span><span><code>PERSON</code> the person acted</span><span><code>AUTOMATION</code> the product's own automation</span></div></div>
+    <div class="tw"><table>
+      <thead><tr><th>Item</th><th>Actor</th><th>Sources</th><th>Approver</th><th>Decision</th><th></th></tr></thead>
+      <tbody>${body}</tbody>
+    </table></div>
+  </div>
+  <div class="notice info"><span class="ic">i</span><div class="small">The actor is always the named person the assistant worked for, never “system”. A separate <b>started by</b> field says what started the run: the delegating person, another person, the schedule, a product alert or a watcher item. ${tag('AW-1-3')}${tag('AW-1-21')}${tag('AG-11-113')}</div></div>
+  ${foot('AW-1-3, AW-1-21, AW-1-22, AW-1-23, AW-1-25, AW-1-26, AW-1-59; AW1-BR-2; AG-13-68 (CN-AG-13 change 2: mode, delegationId, startedBy, personaRunId); AG-11-113 (CN-AG-11 change 7: the five startedBy values); AG-11-112 (decisions); US-10, US-11, US-102, US-103, US-104.', 'Also shown, as the requirement asks: the product\'s own Reader item (mode AUTOMATION), because the view lists every AI-prepared item on the file, not only an assistant\'s.')}`;
+}
+
+/* ======================================================================
+   SCREEN 4 — PRACTICE EXPERT
+   ====================================================================== */
+const QS = [
+  {n:1, label:'At risk this week, and why'},
+  {n:2, label:'What is missing on this file'},
+  {n:3, label:'Which rule is behind this item'},
+  {n:4, label:'What is waiting on me'}
+];
+function exAnswer(){
+  const e = S.ex;
+  if(e.q===1){
+    return { shape:1, outcome:'ANSWERED', pack:'2026.3', sources:['Minder watches on Cases C-2 and C-3','Canada pack 2026.3 · deadlines (fictional label)'],
+      lines:[
+        '<b>Overdue · Case C-2 (Client B).</b> Medical results were due Fri 27 Nov; the watch is breached. The pack says: <i>[fictional one-line definition]</i> (Canada pack 2026.3 · deadlines, medical).',
+        '<b>Next seven days · Case C-3 (Client C).</b> Biometrics due Mon 7 Dec; the watch\'s reminder steps have started; next step: the reminder two days before. (Canada pack 2026.3 · deadlines, biometrics).'
+      ], summary:'One deadline is overdue (Client B) and one falls in the next seven days (Client C).', scopeAsk:true };
+  }
+  if(e.q===2){
+    if(e.file==='C-2') return { shape:2, outcome:'ANSWERED', pack:'2026.3', sources:['Open findings on Case C-2','Canada pack 2026.3 · documents (fictional label)'],
+      lines:[
+        '<b>Police certificate outstanding</b> · MAJOR, open. The pack asks for it because <i>[fictional reason]</i> (Canada pack 2026.3 · documents).',
+        '<b>Proof of address</b> · MINOR, open. Your firm\'s own item; the pack carries no rule for it.'
+      ], summary:'Two items are open on this file; one comes from the pack and one is your firm\'s own.', file:true };
+    return { shape:2, outcome:'ANSWERED', pack:'2026.3', sources:[`Open findings on Case ${e.file}`],
+      lines:['<b>No open item on this file.</b>'], summary:null, file:true };
+  }
+  if(e.q===3){
+    if(e.item==='hand') return { shape:3, outcome:'REFUSED_NO_SOURCE', pack:'—', sources:['The watch on Case C-3 (date added by hand)'],
+      lines:['<b>No source in the pack for this date: it was added by hand.</b> <span class="illus">(refusal wording illustrative)</span>'], summary:null, file:true, item:true };
+    return { shape:3, outcome:'ANSWERED', pack:'2026.3', sources:['The biometrics watch on Case C-3','Canada pack 2026.3 · deadlines, biometrics (fictional label)'],
+      lines:['<b>Biometrics deadline on Case C-3:</b> <i>[fictional rule text]</i> (Canada pack 2026.3 · deadlines, biometrics; government source [fictional], checked [fictional date]). Case C-3 is pinned to 2026.3.'], summary:null, file:true, item:true };
+  }
+  return { shape:4, outcome:'ANSWERED', pack:'—', sources:['Your Needs you queue'],
+    lines:[
+      '<b>Readiness report on Case C-1</b> · due Fri 4 Dec.',
+      '<b>Draft message to Client E</b> · paused by Expat Ready on 1 Dec; it cannot be approved while paused.'
+    ], summary:'Two items wait for you; one of them is paused.' };
+}
+function screenExpert(){
+  const e = S.ex, a = exAnswer();
+  let summaryStatus = 'PRODUCED';
+  if(!a.summary) summaryStatus = a.outcome==='ANSWERED' ? 'NOT_NEEDED' : 'NOT_NEEDED';
+  else if(e.aiOff) summaryStatus = 'SKIPPED_AI_OFF';
+  else if(e.untested && a.pack!=='—') summaryStatus = 'SKIPPED_PACK_UNTESTED';
+  const showSummary = summaryStatus==='PRODUCED';
+  const menu = QS.map(q=>`<button data-act="ex-q" data-v="${q.n}" aria-pressed="${e.q===q.n}"><span class="qn">${q.n}</span>${q.label}</button>`).join('');
+  let pickers = '';
+  if(e.q===1) pickers = `<div class="field"><label for="ex-scope">Scope</label><select id="ex-scope" data-act="ex-scope"><option value="all" ${e.scope==='all'?'selected':''}>All files I may see</option><option value="own" ${e.scope==='own'?'selected':''}>My own files</option></select><span class="xs faint">“All files I may see” is offered only to holders of the see-all reports permission. ${tag('AG-14-36')}</span></div>`;
+  if(e.q===2) pickers = `<div class="field"><label for="ex-file">File</label><select id="ex-file" data-act="ex-file">${['C-1','C-2','C-3'].map(f=>`<option ${e.file===f?'selected':''}>${f}</option>`).join('')}</select><span class="xs faint">Picked with the product's permission-filtered search.</span></div>`;
+  if(e.q===3) pickers = `<div class="field"><label for="ex-item">File and item</label><select id="ex-item" data-act="ex-item"><option value="bio" ${e.item==='bio'?'selected':''}>Case C-3 · biometrics deadline</option><option value="hand" ${e.item==='hand'?'selected':''}>Case C-3 · a date added by hand</option></select></div>`;
+  const scopeLine = e.q===4 ? 'Scope: your own queue.' : (e.q===1 ? (e.scope==='all'?'Scope: all files you may see.':'Scope: your own files.') : 'Scope: all files you may see.');
+  const standing = 'Information for staff, not a message to a client.' + ((e.untested && a.pack!=='—') ? ' <b>This answer cites pack version 2026.3, whose test set has not passed.</b> <span class="illus">(wording illustrative)</span>' : '');
+  return `
+  <div class="page-head">
+    <div class="eyebrow">Screen 4 of 6</div>
+    <h1>Practice answers</h1>
+    <p class="lead">Four fixed questions, answered by rule from the firm's own records and the pack. An optional one-line AI summary may sit on top; everything else works with AI off. ${tag('AG-14-35')}${tag('AW-1-109')}</p>
+  </div>
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> The Owner of Firm F (licensed) asks on Wed 2 Dec 2026. The Owner holds an accepted read-only delegation for the summary line, and the firm's summary-line switch is on. Internally this is the <b>Practice expert</b>; on screens it is never called that to clients. Screen label ${ill('illustrative')}. Fictional.</div></div>
+  <div class="grid2 split-l">
+    <div class="card card-pad stack">
+      <div class="lbl">Pick a question ${tag('AW-1-110')}</div>
+      <div class="menu-q">${menu}</div>
+      <p class="xs faint">No typed questions in version 1. ${tag('US-87')}${tag('AW-1-117')}</p>
+      ${pickers}
+      <div class="sep"></div>
+      <div class="mini-toggle"><span><b>AI off</b> (the firm's AI switch)</span><button class="switch" role="switch" aria-checked="${e.aiOff}" data-act="ex-ai" aria-label="AI off"></button></div>
+      <div class="mini-toggle"><span>Pack version not yet tested</span><button class="switch" role="switch" aria-checked="${e.untested}" data-act="ex-untested" aria-label="Pack version untested"></button></div>
+      <p class="xs faint">Demo toggles. The rule-built answers have no switch of their own. ${tag('AG-14-38')}${tag('AW-1-111')}</p>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>${esc(QS[e.q-1].label)}</h3><span class="pill outline">Built by rule</span></div>
+      ${showSummary ? `<div class="section"><div class="ai-block"><div class="xs" style="font-weight:700;color:var(--ai);margin-bottom:2px">AI-written summary ${tag('AW-1-112')}</div>${esc(a.summary)}</div></div>` : ''}
+      <div class="section">${a.lines.map(l=>`<div class="answer-line">${l}</div>`).join('')}</div>
+      <div class="section stack" style="gap:6px">
+        <div class="small"><span class="pill outline">Licensed mark</span> Answered to a licensed user. <span class="faint">Information only, never a permission check.</span> ${tag('AG-14-40(a)')}</div>
+        <div class="small"><span class="pill outline">Scope</span> ${scopeLine} ${tag('AG-14-40(b)')}</div>
+        <div class="small"><span class="pill outline">Standing</span> ${standing} ${tag('AG-14-40(c)')}</div>
+      </div>
+      <div class="section">
+        <h4>Sources</h4>
+        <div class="small">${a.sources.map(esc).join('<br>')}</div>
+      </div>
+      <div class="section">
+        <h4>Question record ${tag('ExpertQuestionRecord')}${tag('AW-1-115')}</h4>
+        <dl class="kv small">
+          <dt>Shape</dt><dd>${a.shape} of 4</dd>
+          <dt>Outcome</dt><dd><code>${a.outcome}</code></dd>
+          <dt>Summary status</dt><dd><code>${summaryStatus}</code>${!a.summary?' <span class="faint">(one line or a refusal: no model call)</span>':''}</dd>
+          <dt>Licensed mark</dt><dd><code>LICENSED</code> ${tag('AW-1-126')}</dd>
+          <dt>Readable by</dt><dd>the asker; the Owner only through the whole-firm export</dd>
+        </dl>
+      </div>
+      <div class="section"><p class="xs faint">The answer has no approve, edit, task or send control. You act in Needs you. ${tag('AW-1-118')}${tag('US-95')}</p></div>
+    </div>
+  </div>
+  ${foot('AW-1-109, AW-1-110, AW-1-111, AW-1-112, AW-1-113, AW-1-114, AW-1-115, AW-1-116, AW-1-117, AW-1-118, AW-1-125, AW-1-126; AW1-D10, AW1-D13, AW1-BR-24; AG-14-35 to AG-14-38 (CN-AG-14 change 1); AG-14-40 (CN-AG-14 change 4); AG-16-57 (CN-AG-16 change 4: the expert\'s one switch); §6 question record outcomes; US-87 to US-95, US-112.', 'Not shown: the summary line\'s number-match, forbidden-word and shape checks (AW-1-113) run before any summary appears.')}`;
+}
+
+/* ======================================================================
+   SCREEN 5 — BILLING: PROPOSED PAYMENT MATCH
+   ====================================================================== */
+const INV = [
+  {id:'INV-2026-0042', bal:2000.00, cur:'CAD', due:'Sat 7 Nov', what:'Deposit'},
+  {id:'INV-2026-0047', bal:1365.00, cur:'CAD', due:'Mon 30 Nov', what:'Professional fees, stage 2'}
+];
+const money = n => n.toLocaleString('en-CA',{minimumFractionDigits:2, maximumFractionDigits:2});
+function parseAmt(s){ const v = parseFloat(String(s).replace(/[, ]/g,'')); return isFinite(v) && v>0 ? Math.round(v*100)/100 : null; }
+function candMark(inv){
+  const amt = parseAmt(S.bi.amount);
+  if(amt===null) return null;
+  if(S.bi.currency!==inv.cur) return 'choice';
+  if(amt===inv.bal) return 'exact';
+  if(amt<inv.bal) return 'partial';
+  return 'choice';
+}
+function candHtml(){
+  const amt = parseAmt(S.bi.amount);
+  return INV.map(inv=>{
+    const m = candMark(inv);
+    const mark = m==='exact' ? '<span class="pill ok">Exact</span>' : m==='partial' ? '<span class="pill warn">Partial</span>' : m==='choice' ? '<span class="pill outline">Your choice</span>' : '<span class="pill outline">Candidate</span>';
+    return `<div class="cand ${m==='exact'?'exact':''}">
+      <div style="min-width:0"><div class="row" style="gap:8px"><b>${inv.id}</b>${mark}</div>
+      <div class="small muted">${esc(inv.what)} · due ${esc(inv.due)} · balance <span class="amt">${money(inv.bal)} ${inv.cur}</span></div></div>
+      <button class="btn sm ${m==='exact'?'primary':''}" data-act="b-pick" data-v="${inv.id}" ${amt===null?'disabled':''}>Pick this invoice</button>
+    </div>`;
+  }).join('') + `<p class="xs faint">${amt===null?'No invoice is marked exact until you type the amount received.':'Exact = the balance equals your amount, same currency. Partial = your amount is less than the balance. A larger amount or another currency is your choice.'} ${tag('AW-1-97')}</p>`;
+}
+function screenBill(){
+  const b = S.bi;
+  const head = `
+  <div class="page-head">
+    <div class="eyebrow">Screen 5 of 6</div>
+    <h1>Reconciliation view · Client B</h1>
+    <p class="lead">The assistant lists candidate invoices. You type the amount, pick the invoice, and save the payment in the product's own screen. The assistant never saves and never fills in an amount. ${tag('AW-1-97')}${tag('AG-6-44')}</p>
+  </div>
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Signed in as <b>the bookkeeper</b> (Billing / Finance) of Firm F. You opened a <b>proposed payment match</b> from Needs you; approving it opens this view. Fictional.</div></div>
+  <div class="small muted">Needs you › Proposed payment match <span class="pill ${b.item==='approved'?'ok':'accent'}">${b.item==='approved'?'APPROVED':'PENDING'}</span> ${tag('PAYMENT_MATCH')}${tag('AG-11-112(b)')}</div>`;
+  if(b.saved){
+    return head + `
+    <div class="card card-pad stack">
+      <div class="notice ok"><span class="ic">✓</span><div><b>Payment saved by the bookkeeper.</b> ${money(parseAmt(b.amount))} ${b.currency} recorded against ${esc(b.picked)} under the bookkeeper's own payment permission. ${tag('agent/payment:record')}
+      <ul class="small" style="margin:8px 0 0 18px;padding:0">
+        <li>The proposed match is now <b>APPROVED</b>, linked to the saved payment (PAY-0001 ${ill('illustrative')}). ${tag('resultRef')}</li>
+        <li>Funds designation set by you: <b>${esc(b.designation)}</b>. ${tag('AG-6-24 (FD-17)')}</li>
+        <li>Audit: the bookkeeper, mode PERSON. The assistant's part (listing candidates) is mode DELEGATED.</li>
+        <li>The product recomputes the invoice; the assistant does not.</li>
+      </ul></div></div>
+      <div><button class="btn sm" data-act="b-reset">Reset this demo</button></div>
+    </div>
+    ${foot(billTraces())}`;
+  }
+  return head + `
+  <div class="card">
+    <div class="card-head"><h2>Linked payment notice</h2><span class="pill outline">content not shown</span></div>
+    <div class="section"><p class="small">A payment notice is linked to <b>Client B</b> · linked by <b>the case officer</b> on Mon 9 Nov 2026, 10:30. The notice's content stays in the communication hub; this view never shows it. No model reads an amount, currency, date or reference out of a message. ${tag('AW-1-96')}${tag('Bookkeeper rule')}</p></div>
+  </div>
+  <div class="grid2 split-l">
+    <div class="card card-pad stack">
+      <div class="field"><label for="b-amt">Amount received</label>
+        <div class="row" style="gap:6px;flex-wrap:nowrap"><input type="text" inputmode="decimal" id="b-amt" placeholder="Type the amount" value="${esc(b.amount)}" style="flex:1;min-width:0" aria-describedby="b-amt-h"><select id="b-cur" data-act="b-cur" aria-label="Currency"><option ${b.currency==='CAD'?'selected':''}>CAD</option><option ${b.currency==='USD'?'selected':''}>USD</option></select></div>
+        <span class="xs faint" id="b-amt-h">Empty until you type it. The assistant never fills it in. ${tag('AG-11-112(b)')}</span></div>
+      <div class="sep"></div>
+      <div class="field"><label for="b-search">Your own search</label><input type="text" id="b-search" placeholder="Search invoices for Client B" disabled><span class="xs faint">The product's search, beside the proposals. ${ill('(not built here)')}</span></div>
+      ${b.closedUnsaved ? `<div class="notice info"><span class="ic">i</span><div class="small">You closed Record payment without saving. The match stays <b>PENDING</b>.</div></div>` : ''}
+    </div>
+    <div class="card">
+      <div class="card-head"><h3>Candidate invoices</h3><span class="pill ai">Proposed by AI assistance, assistant to Billing / Finance</span></div>
+      <div class="section stack" id="cands">${candHtml()}</div>
+    </div>
+  </div>
+  <div class="notice info"><span class="ic">i</span><div class="small">The assistant <b>proposes</b>; a person <b>saves</b> in the product's own screen. It never records, edits or refunds a payment, never sets a funds designation, and never creates an invoice. ${tag('AW-1-39')}${tag('AW1-D6')}</div></div>
+  ${foot(billTraces())}`;
+}
+function billTraces(){
+  return 'AW-1-30, AW-1-39, AW-1-96, AW-1-97; AW1-D6, AW1-BR-9; AG-6-44 (CN-AG-06 change 3: the Reconciliation view and the typed amount); AG-11-112(b) (CN-AG-11 change 6: PAYMENT_MATCH opens the view, never fills an amount; APPROVED on save with resultRef); AG-6-24 (CN-AG-06 change 1: funds designation, FD-17); 00-step3-plan.md "Payment match keeps the typed amount" and "Bookkeeper"; US-73, US-113.';
+}
+function billModal(){
+  const b = S.bi, inv = INV.find(i=>i.id===b.picked);
+  const canSave = b.method && b.designation;
+  return `<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="rp-t">
+    <div class="modal">
+      <div class="card-head"><h2 id="rp-t">Record payment</h2><span class="pill outline">the product's own screen</span></div>
+      <div class="section stack">
+        <dl class="kv small">
+          <dt>Party</dt><dd>Client B</dd>
+          <dt>Invoice</dt><dd>${esc(inv.id)} · balance ${money(inv.bal)} ${inv.cur}</dd>
+          <dt>Amount</dt><dd><b>${money(parseAmt(b.amount))} ${b.currency}</b> <span class="faint">· the amount you typed</span> ${tag('AG-6-44')}</dd>
+        </dl>
+        <div class="field"><label for="rp-m">Method</label><select id="rp-m" data-act="rp-m"><option value="">Choose…</option>${['E-transfer','Cheque','Bank transfer','Cash'].map(m=>`<option ${b.method===m?'selected':''}>${m}</option>`).join('')}</select><span class="xs faint">List ${ill('illustrative')}</span></div>
+        <div class="grid2">
+          <div class="field"><label for="rp-d">Date received</label><input type="date" id="rp-d" value="${esc(b.date)}"></div>
+          <div class="field"><label for="rp-r">Reference</label><input type="text" id="rp-r" value="${esc(b.ref)}" placeholder="e.g. ET-48213"></div>
+        </div>
+        <div class="field"><span class="lbl">Funds designation (required) ${tag('AG-6-24 (FD-17)')}</span>
+          <div class="row">${['Trust','Operating'].map(x=>`<label class="row small" style="gap:6px"><input type="radio" name="rp-des" data-act="rp-des" value="${x}" ${b.designation===x?'checked':''}> ${x}</label>`).join('')}</div>
+          <span class="xs faint">Set by you. No assistant sets or moves a designation. ${tag('AW-1-39')}</span></div>
+      </div>
+      <div class="section row" style="justify-content:flex-end">
+        <button class="btn" data-act="rp-cancel">Close without saving</button>
+        <button class="btn primary" data-act="rp-save" ${canSave?'':'disabled'}>Save payment</button>
+      </div>
+    </div></div>`;
+}
+
+/* ======================================================================
+   SCREEN 6 — AI SWITCH LOCKED
+   ====================================================================== */
+const PLAT = { conf:85, hidden:5, alarm:95, window:30, capMonth:300, capDay:3, capRun:10 };
+const FIRMVALS = [
+  {k:'conf', label:'Confidence level below which values are opened first', unit:'%', dir:'higher', group:'safe', tagid:'AW-1-33(a)'},
+  {k:'hidden', label:'Share of values hidden for the approver to fill (at least one)', unit:'%', dir:'higher', group:'safe', tagid:'AW-1-33(b)'},
+  {k:'alarm', label:'Agreement alarm level', unit:'%', dir:'lower', group:'safe', tagid:'AW-1-33(c)'},
+  {k:'window', label:'Agreement alarm time window', unit:' days', dir:null, group:'safe', tagid:'AW-1-33(c)'},
+  {k:'capMonth', label:'Spend cap · per firm per month (warning at 80 %, stop at 100 %)', unit:' CAD', dir:'lower', group:'cap', tagid:'AW-1-54'},
+  {k:'capDay', label:'Spend cap · per practice-answers user per day', unit:' CAD', dir:'lower', group:'cap', tagid:'AW-1-54'},
+  {k:'capRun', label:'Spend cap · per assistant run (a runaway run is parked)', unit:' CAD', dir:'lower', group:'cap', tagid:'AW-1-54'}
+];
+function validateFirm(){
+  const errs = {};
+  FIRMVALS.forEach(f=>{
+    if(!f.dir) return;
+    const raw = S.st.firm[f.k]; if(raw==='' || raw==null) return;
+    const v = parseFloat(raw);
+    if(!isFinite(v) || v<0){ errs[f.k]='Enter a number.'; return; }
+    if((f.k==='conf'||f.k==='hidden'||f.k==='alarm') && v>100){ errs[f.k]='Enter 100 or less.'; return; }
+    const p = PLAT[f.k];
+    if(f.dir==='higher' && v<p) errs[f.k]=`Refused: looser than Expat Ready's ${p}${f.unit}. You may only make it stricter (higher).`;
+    if(f.dir==='lower' && v>p) errs[f.k]=`Refused: looser than Expat Ready's ${p}${f.unit}. You may only make it stricter (lower).`;
+  });
+  return errs;
+}
+const ASSTS = [
+  ['case','Case assistant','Assistant to the case officer'],
+  ['intake','Intake assistant','Assistant to the intake role'],
+  ['billing','Billing assistant','Assistant to Billing / Finance'],
+  ['firm','Firm assistant','Assistant to the Owner and the Case Manager'],
+  ['expert','Practice expert · summary line only','The AI summary line on practice answers; the answers themselves have no switch']
+];
+function screenSet(){
+  const st = S.st;
+  const recPill = st.record==='none' ? '<span class="pill">Not published</span>' : st.record==='published' ? '<span class="pill ok">Published</span>' : '<span class="pill danger">Withdrawn</span>';
+  let aiBox;
+  if(st.record==='none'){
+    aiBox = `<div class="locked-box"><div class="lock-ic">🔒</div><div class="stack" style="gap:6px">
+      <div class="row" style="gap:8px"><b>AI is locked</b><span class="pill">Locked</span>${tag('AG-16-35')}</div>
+      <p class="small">Locked because there is <b>no published AI provider record (Canada region, no training, no retention, a passed test call)</b>. ${tag('AW-1-52')}${tag('SA-8-49')}</p>
+      <p class="xs faint">While locked, no AI step runs. Practice answers and the deadline watch still work. Nothing here names a provider; the provider is replaceable. ${tag('AW1-D21')}${tag('AW-2-26')}</p>
+    </div><button class="switch" role="switch" aria-checked="false" disabled aria-label="AI switch (locked)" style="margin-left:auto"></button></div>`;
+  } else if(st.record==='withdrawn'){
+    aiBox = `<div class="notice paused"><span class="ic">ǁ</span><div class="small"><b>AI paused: Expat Ready withdrew the published provider record.</b> Reason code <code>PROVIDER_RECORD_WITHDRAWN</code>. Assistants and their waiting items are paused, not ended; on release, waiting items need a fresh approval. ${tag('AG-16-55')}${tag('SA-8-50')}${tag('AW-1-11(a)')}</div></div>`;
+  } else {
+    const on = st.ai==='on';
+    aiBox = `<div class="stack">
+      <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap;gap:14px">
+        <div class="stack" style="gap:4px"><div class="row" style="gap:8px"><b>AI for Firm F</b><span class="pill ${on?'ok':''}">${on?'On':'Off · record published, not yet switched on'}</span>${tag('AG-16-35')}</div>
+        <p class="small muted">${on?'Switched on by the Owner with an audited acknowledgement. One switch for all four AI Doers.':'The record is published. The Owner switches AI on once, with an audited acknowledgement.'}</p></div>
+        <button class="switch" role="switch" aria-checked="${on}" data-act="s-ai" ${(!on && !st.ack)?'disabled':''} aria-label="AI switch"></button>
+      </div>
+      ${on?'':`<label class="check" style="cursor:pointer"><input type="checkbox" data-act="s-ack" ${st.ack?'checked':''} style="margin-top:3px"> <span class="small">I acknowledge that firm data is processed by the published AI provider in Canada, under no-training and no-retention terms. ${ill('(wording illustrative)')}</span></label>`}
+    </div>`;
+  }
+  const aiOn = st.record==='published' && st.ai==='on';
+  const swRows = ASSTS.map(a=>`<div class="setrow"><div><div class="t">${esc(a[1])}</div><div class="d">${esc(a[2])} · off by default ${tag(a[0]==='expert'?'AG-16-57 expertSummaryLine':'AG-16-57')}</div>
+      ${st.sw[a[0]] && !aiOn ? '<div class="xs" style="color:var(--warn);margin-top:3px">On, but no effect while AI is off or locked.</div>' : ''}</div>
+      <button class="switch" role="switch" aria-checked="${st.sw[a[0]]}" data-act="s-sw" data-v="${a[0]}" aria-label="${esc(a[1])}"></button></div>`).join('');
+  const valRow = f => {
+    const p = PLAT[f.k];
+    const editable = !!f.dir;
+    const err = st.errors[f.k];
+    return `<tr><td class="small" style="min-width:200px">${esc(f.label)} ${tag(f.tagid)}</td>
+      <td class="small"><b>${p}${f.unit}</b> <div class="illus">illustrative</div></td>
+      <td>${editable ? `<input type="number" step="any" data-firm="${f.k}" value="${esc(st.firm[f.k])}" placeholder="none set" aria-label="Firm value for ${esc(f.label)}">${err?`<div class="err">${esc(err)}</div>`:''}` : '<span class="small muted">No firm value: which direction is stricter is not settled.</span>'}</td>
+      <td class="small muted">${f.dir==='higher'?'Higher':f.dir==='lower'?'Lower':'—'}</td></tr>`;
+  };
+  return `
+  <div class="page-head">
+    <div class="eyebrow">Screen 6 of 6</div>
+    <h1>Firm settings · AI</h1>
+    <p class="lead">AI stays locked for every firm until Expat Ready publishes a provider record that processes in Canada, with no training, no retention and a passed test call. Each assistant then has its own switch, off by default. ${tag('AW-1-52')}${tag('AW-1-125')}</p>
+  </div>
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Signed in as <b>the Owner of Firm F</b>, before Expat Ready has published its AI provider record. Use the demo control to publish it. Values are illustrative: the real values are set by the team before launch. Fictional.</div></div>
+  <div class="demo">
+    <div class="lbl" style="font-size:12px;font-weight:700;margin-bottom:8px">DEMO CONTROL · Expat Ready side · AI provider record ${recPill} ${tag('SA-8-49')}${tag('SA-8-50')}</div>
+    <div class="row" style="justify-content:space-between">
+      <div class="seg" role="group" aria-label="Provider record state">
+        <button data-act="s-rec" data-v="none" aria-pressed="${st.record==='none'}">Not published</button>
+        <button data-act="s-rec" data-v="published" aria-pressed="${st.record==='published'}">Published</button>
+        <button data-act="s-rec" data-v="withdrawn" aria-pressed="${st.record==='withdrawn'}">Withdrawn</button>
+      </div>
+      ${st.record==='published'?'<span class="small muted">Region: Canada · no training · no retention · test call passed from that region · provider: [name on the record] '+ill('(placeholder)')+'</span>':''}
+    </div>
+  </div>
+  <div class="card"><div class="card-head"><h2>AI</h2>${tag('AG-16-35')}</div><div class="card-pad">${aiBox}</div></div>
+  <div class="card">
+    <div class="card-head"><h2>Advanced · AI assistants</h2><span class="small muted">The Owner sets these; every change is audited ${tag('AG-16-29')}</span></div>
+    ${swRows}
+    <div class="setrow"><div class="d">Switching an assistant off pauses its work (<code>ASSISTANT_SWITCH_OFF</code>); it never ends anyone's delegation. No switch turns an AI Doer on or off. Assistants are firm settings inside the one AI extra, not plan features. ${tag('AW-1-11')}${tag('AW-1-57')}</div></div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h2>Safeguards and spend caps</h2><span class="small muted">Editable by the Owner and the Admin · audited ${tag('agent/settings:edit')}</span></div>
+    <div class="section">
+      <div class="notice info"><span class="ic">i</span><div class="small"><b>Founder safeguards · approve-all part: On.</b> Expat Ready's values are read-only here. Your firm may set stricter values, never looser. Only Expat Ready's Platform Owner can switch this part off, recording the founder's decision. ${tag('SA-12-33(a)')}${tag('AW1-D25')}</div></div>
+    </div>
+    <div class="section">
+      <h4>Approve-all safeguards ${tag('AW-1-33')}</h4>
+      <div class="tw"><table class="vals"><thead><tr><th>Setting</th><th>Expat Ready</th><th>Your firm (stricter only)</th><th>Stricter is</th></tr></thead>
+      <tbody>${FIRMVALS.filter(f=>f.group==='safe').map(valRow).join('')}</tbody></table></div>
+    </div>
+    <div class="section">
+      <h4>Spend caps · a cost control, not a founder safeguard ${tag('AW-1-54')}</h4>
+      <div class="tw"><table class="vals"><thead><tr><th>Cap</th><th>Expat Ready</th><th>Your firm (lower only)</th><th>Stricter is</th></tr></thead>
+      <tbody>${FIRMVALS.filter(f=>f.group==='cap').map(valRow).join('')}</tbody></table></div>
+      <p class="xs faint" style="margin-top:8px">Reaching a cap stops new model calls only; items already waiting stay approvable. Assistants use the stricter of the two values. ${tag('AW-1-20(c)')}</p>
+    </div>
+    <div class="section row" style="justify-content:space-between">
+      <span class="small ${st.saved==='ok'?'':'muted'}" style="${st.saved==='ok'?'color:var(--ok)':st.saved==='err'?'color:var(--danger)':''}">${st.saved==='ok'?'Saved and audited.':st.saved==='err'?'Not saved: fix the refused values.':'Changes are checked on save.'}</span>
+      <button class="btn primary" data-act="s-save">Save firm values</button>
+    </div>
+  </div>
+  ${foot('AW-1-11, AW-1-20(c), AW-1-33, AW-1-52, AW-1-53, AW-1-54, AW-1-57, AW-1-125; AW1-D21, AW1-D25, AW1-D34, AW1-D37; AG-16-35 (CN-AG-16 change 1: locked until a published record); AG-16-55 (CN-AG-16 change 2); AG-16-57 (CN-AG-16 change 4: per-assistant switches off by default, platform values read-only, firm\'s stricter values); SA-8-49, SA-8-50 (CN-SA-08 change 2); SA-12-33 (CN-SA-12 change 3); AW-2-25, AW-2-26; US-38, US-40, US-106, US-111.', 'Every number on this screen is illustrative: SA-12-33 leaves the values to the team before the first deployment, and AW-01 restates none.')}`;
+}
+
+/* ======================================================================
+   ABOUT
+   ====================================================================== */
+function screenAbout(){
+  return `
+  <div class="page-head">
+    <div class="eyebrow">About</div>
+    <h1>About this prototype</h1>
+  </div>
+  <div class="card card-pad about">
+    <p><b>What it is.</b> A clickable walk-through of six moments in Expat Ready's firm AI assistants, for the founder and the product team. Each screen shows one rule working: a person approves, an assistant works for a named person, and every step is recorded.</p>
+    <p><b>What it is not.</b> Illustrative only. It is <b>not</b> the product's design system, not a screen specification, and not a promise of layout or wording. Where the requirements leave a detail open, the screen keeps it generic or marks it <span class="illus">illustrative</span>. All names, dates, amounts and values are fictional. No provider is named.</p>
+    <p><b>Built from.</b> AW-01 Firm AI assistants v0.5 and AW-02 Platform AI assistants v0.6 (both passed), with the change notes they cite and the worked examples in the behaviour documents, on <b>11 October 2026</b>.</p>
+    <p><b>How to read it.</b></p>
+    <ul>
+      <li>Each screen ends with a muted <b>Traces to</b> line listing the requirements it shows.</li>
+      <li>Small grey tags beside elements give the exact requirement. Turn them off with <b>Requirement tags</b> in the menu.</li>
+      <li>Dashed purple boxes are <b>demo controls</b>: they play a part the real product leaves to someone else (for example, Expat Ready releasing a stop).</li>
+      <li>Internal names (Case assistant, Practice expert) appear only in this prototype's menu and captions. Inside the product screens, assistants are called “AI assistance” or “assistant to the <i>role</i>” (AW-1-65).</li>
+      <li>Screens share one story: what you decide on screen 1 appears on screen 3.</li>
+    </ul>
+    <p class="small muted" style="margin-top:14px">Every requirement here is still a Proposal until the founder places the modules on Drive. The safety rules are provisional until counsel reads them (AIW-D55 to D58, D64).</p>
+  </div>
+  ${foot('AW-01 v0.5 (AW-1-1 to AW-1-126); AW-02 v0.6; 00-step3-plan.md item E; README rule 7 (prototype in prototype/, every screen traced), rule 9 (one word per thing), rule 10 (no personal names).')}`;
+}
+
+/* =============================== events =============================== */
+document.addEventListener('click', e=>{
+  const go = e.target.closest('[data-go]');
+  if(go){ S.screen = go.dataset.go; render(); $('#main').focus({preventScroll:true}); window.scrollTo(0,0); return; }
+  const th = e.target.closest('[data-theme-set]');
+  if(th){ S.theme = th.dataset.themeSet; if(S.theme==='auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', S.theme); try{localStorage.setItem('aiw-theme', S.theme);}catch(_){} renderNav(); return; }
+  const el = e.target.closest('[data-act]');
+  if(!el) return;
+  const act = el.dataset.act, v = el.dataset.v;
+  if(el.tagName==='SELECT' || (el.tagName==='INPUT' && el.type!=='checkbox' && el.type!=='radio')) return;
+  const n = S.needs, d = S.dl, b = S.bi, st = S.st;
+  switch(act){
+    case 'tags': S.tags = !S.tags; renderNav(); return;
+    /* needs */
+    case 'n-view': n.viewAs = v; break;
+    case 'n-alarm': n.alarmSeen = true; break;
+    case 'n-toggle': n.open[el.dataset.k] = !n.open[el.dataset.k]; break;
+    case 'n-open': n.opened[v] = true; n.srcOpen = v; break;
+    case 'n-src': n.srcOpen = n.srcOpen===v ? null : v; break;
+    case 'n-holdout': {
+      const inp = $('#holdout-in'); const val = (inp?inp.value:n.holdout).trim();
+      if(!val){ inp && inp.focus(); return; }
+      n.holdout = val; n.holdoutResult = (val === VALUES.find(x=>x.holdout).val) ? 'match' : 'nomatch'; break; }
+    case 'n-approve': if(!needsGate().ready) return; n.report='approved'; n.reportAt = nowStamp(); break;
+    case 'n-some': n.someNote = !n.someNote; break;
+    case 'n-reject': n.rejecting = true; break;
+    case 'n-reject-cancel': n.rejecting = false; break;
+    case 'n-reject-confirm': { const t=$('#rej'); n.rejectReason = t?t.value.trim():''; if(!n.rejectReason){ t&&t.focus(); return; } n.rejecting=false; n.report='rejected'; break; }
+    case 'n-reset': Object.assign(n, {opened:{}, srcOpen:null, holdout:'', holdoutResult:null, report:'pending', reportAt:null, rejecting:false, rejectReason:'', someNote:false}); break;
+    case 'p-release': n.paused='stale'; break;
+    case 'p-review': n.paused='reviewed'; break;
+    case 'p-approve': n.paused='approved'; break;
+    case 'p-reject': n.pausedRejecting = true; break;
+    case 'p-reject-cancel': n.pausedRejecting = false; break;
+    case 'p-reject-confirm': n.pausedRejecting=false; n.paused='rejected'; break;
+    case 'p-reset': n.paused='paused'; break;
+    /* delegation */
+    case 'd-view': d.viewAs = v; d.confirmEnd=false; break;
+    case 'd-key': d.keys[v] = el.checked; render(); return;
+    case 'd-offer': {
+      const p = dlPerson();
+      if(d.assistant!=='expert' && !Object.values(d.keys).some(Boolean)){ alert('Tick at least one permission.'); return; }
+      d.state='pending'; d.endReason=null; d.waiting='pending'; d.switchOn=true;
+      dlLog(`The Owner set up ${A[d.assistant].name.toLowerCase()} for ${p.label} · mode PERSON · ${p.label} notified`); break; }
+    case 'd-withdraw': d.state='ended'; d.endReason='WITHDRAWN'; dlLog('The Owner withdrew the pending offer · endReason WITHDRAWN · nothing ran under it'); break;
+    case 'd-accept': {
+      const p = dlPerson();
+      if(d.switchOn){ d.state='active'; dlLog(`${p.label[0].toUpperCase()+p.label.slice(1)} accepted · ACTIVE · acceptedAt recorded`); }
+      else { d.state='paused'; dlLog(`${p.label[0].toUpperCase()+p.label.slice(1)} accepted · PAUSED (ASSISTANT_SWITCH_OFF)`); }
+      break; }
+    case 'd-decline': { const p=dlPerson(); d.state='ended'; d.endReason='DECLINED'; dlLog(`${p.label[0].toUpperCase()+p.label.slice(1)} declined · endReason DECLINED`); break; }
+    case 'd-switch': {
+      d.switchOn = !d.switchOn;
+      if(!d.switchOn){ d.state='paused'; if(d.waiting==='pending'||d.waiting==='stale') d.waiting='paused'; dlLog(`The Owner switched ${A[d.assistant].name.toLowerCase()} off · delegation PAUSED (ASSISTANT_SWITCH_OFF) · waiting items PAUSED`); }
+      else { d.state='active'; if(d.waiting==='paused') d.waiting='stale'; dlLog(`The Owner switched ${A[d.assistant].name.toLowerCase()} on · delegation ACTIVE, no new acceptance · waiting items re-rendered stale`); }
+      break; }
+    case 'd-end': d.confirmEnd = true; break;
+    case 'd-end-cancel': d.confirmEnd = false; break;
+    case 'd-end-confirm': { const p=dlPerson(); d.confirmEnd=false; d.state='ended'; d.endReason='PERSON_ENDED'; d.waiting='cancelled';
+      dlLog(`${p.label[0].toUpperCase()+p.label.slice(1)} ended the delegation · endReason PERSON_ENDED${A[d.assistant].waiting?' · waiting item cancelled (DELEGATION_ENDED)':''}`); break; }
+    case 'd-restart': d.state='setup'; d.endReason=null; d.waiting='pending'; d.switchOn=true; dlInitKeys(); break;
+    /* provenance */
+    case 'pv-filter': S.pv.filter = v; S.pv.open=null; break;
+    case 'pv-open': S.pv.open = S.pv.open===v ? null : v; break;
+    /* expert */
+    case 'ex-q': S.ex.q = +v; break;
+    case 'ex-ai': S.ex.aiOff = !S.ex.aiOff; break;
+    case 'ex-untested': S.ex.untested = !S.ex.untested; break;
+    /* billing */
+    case 'b-pick': if(parseAmt(b.amount)===null) return; b.picked = v; b.modal = true; b.closedUnsaved=false; break;
+    case 'rp-cancel': b.modal=false; b.closedUnsaved=true; break;
+    case 'rp-save': {
+      const dt=$('#rp-d'), rf=$('#rp-r'); b.date = dt?dt.value:''; b.ref = rf?rf.value:'';
+      if(!b.method || !b.designation) return; b.modal=false; b.saved=true; b.item='approved'; break; }
+    case 'b-reset': Object.assign(b,{amount:'', currency:'CAD', picked:null, modal:false, saved:false, item:'pending', method:'', designation:'', date:'', ref:'', closedUnsaved:false}); break;
+    /* settings */
+    case 's-rec': st.record = v; if(v!=='published'){ st.ai = v==='none'?'locked':st.ai; } if(v==='published' && st.ai==='locked') st.ai='off'; if(v==='none'){ st.ai='locked'; st.ack=false; } break;
+    case 's-ack': st.ack = el.checked; render(); return;
+    case 's-ai': st.ai = st.ai==='on' ? 'off' : 'on'; break;
+    case 's-sw': st.sw[v] = !st.sw[v]; break;
+    case 's-save': { document.querySelectorAll('[data-firm]').forEach(i=>st.firm[i.dataset.firm]=i.value); st.errors = validateFirm(); st.saved = Object.keys(st.errors).length ? 'err' : 'ok'; break; }
+    default: return;
+  }
+  render();
+});
+
+document.addEventListener('change', e=>{
+  const el = e.target, act = el.dataset && el.dataset.act;
+  if(!act) return;
+  const d = S.dl, b = S.bi;
+  switch(act){
+    case 'd-asst': d.assistant = el.value; d.person = Object.keys(A[d.assistant].persons)[0]; dlInitKeys(); break;
+    case 'd-person': d.person = el.value; dlInitKeys(); break;
+    case 'ex-scope': S.ex.scope = el.value; break;
+    case 'ex-file': S.ex.file = el.value; break;
+    case 'ex-item': S.ex.item = el.value; break;
+    case 'b-cur': b.currency = el.value; { const c=$('#cands'); if(c) c.innerHTML = candHtml(); } return;
+    case 'rp-m': b.method = el.value; break;
+    case 'rp-des': b.designation = el.value; break;
+    default: return;
+  }
+  if(act==='rp-m' || act==='rp-des'){ const dt=$('#rp-d'), rf=$('#rp-r'); if(dt) b.date=dt.value; if(rf) b.ref=rf.value; }
+  render();
+});
+
+document.addEventListener('input', e=>{
+  const el = e.target;
+  if(el.id==='b-amt'){ S.bi.amount = el.value; const c=$('#cands'); if(c) c.innerHTML = candHtml(); return; }
+  if(el.id==='holdout-in'){ S.needs.holdout = el.value; return; }
+  if(el.dataset && el.dataset.firm){
+    S.st.firm[el.dataset.firm] = el.value;
+    const errs = validateFirm(); const cell = el.parentElement;
+    let m = cell.querySelector('.err'); if(m) m.remove();
+    if(errs[el.dataset.firm]){ m = document.createElement('div'); m.className='err'; m.textContent = errs[el.dataset.firm]; cell.appendChild(m); }
+    S.st.saved = null;
+  }
+});
+
+document.addEventListener('keydown', e=>{
+  if(e.key==='Enter' && e.target.id==='holdout-in'){ e.preventDefault(); const btn=document.querySelector('[data-act="n-holdout"]'); btn && btn.click(); }
+  if((e.key==='Enter' || e.key===' ') && e.target.classList && e.target.classList.contains('prov-row')){ e.preventDefault(); e.target.click(); }
+  if(e.key==='Escape' && S.bi.modal){ S.bi.modal=false; S.bi.closedUnsaved=true; render(); }
+});
+
+/* =============================== init =============================== */
+try{ const t = localStorage.getItem('aiw-theme'); if(t==='light'||t==='dark'){ S.theme=t; document.documentElement.setAttribute('data-theme', t); } }catch(_){}
+render();
+})();
+</script>
+</body>
+</html>
