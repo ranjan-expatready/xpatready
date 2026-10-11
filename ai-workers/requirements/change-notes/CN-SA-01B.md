@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-01B Content Pack Configurator, version 1.2, dated 2026-10-05 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-01B-content-pack-configurator_v1.2_2026-10-05.md` |
-| **Date of this note** | 11 Oct 2026 (second fix round, after re-check S3a-b) |
+| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 7 |
 
@@ -41,7 +41,7 @@ L400 (extract, "Decide before" cell):
 **(3) Proposed words.**
 
 SA1B-D28 gains, at the start of its decision cell:
-> *(changed 11 Oct 2026 — FD-5 kept by the founder, AIW-D43)* **Founder Decisions Log FD-5 stands: flattened-overlay filling in version 1.** The team states the route for IRCC's forms (P1) and a date for box maps and filling. Until filling exists, the pilot runs without form filling and says so. When filling ships it stays deterministic (SA1B-D16).
+> *(changed 11 Oct 2026 — FD-5 kept by the founder, AIW-D43)* **Founder Decisions Log FD-5 stands: flattened-overlay filling in version 1.** The team states the route for IRCC's forms (P1) and a date for box maps and filling. **While a form edition has no published box map, the case shows that form as filled by hand and offers no filling**; the form list, upload, e-sign and the readiness gate work as today. When filling ships it stays deterministic (SA1B-D16).
 
 The rest of the cell stays as the record of the product owners' 23 Sep reasoning.
 
@@ -53,6 +53,7 @@ P1's "Decide before" becomes: "**Now** — the team names the route and a date (
 - FD-5 (Founder Decisions Log v1.5, L30): "**Flattened-overlay support in v1** (coordinate-mapped fill + FormFieldMap visual editor), unit-priced per form edition; XFA runtime = named later-wave stub".
 - SA1B-D28 parked filling. The conflict went to the founder: proposals row of 9 Oct (carve-out B, "Settle the Filler's release"); `00-step2-decisions.md` §2 item 17.
 - He chose "Keep FD-5, ask the team" (AIW-D43): "FD-5 (form filling in version 1) stands; Step 3 asks the team for the overlay route and a date. Until it exists the pilot runs without form filling and says so; the Form Preparer duty (W-05) stays specified."
+- **A product rule, not a period.** The founder's "the pilot runs without form filling and says so" is written as a state the product can check, a form edition with no published box map, so the rule does not depend on a pilot period (`00-step3-plan.md`, "No 'during the pilot' in a requirement"; re-check S3a-c m-12).
 - SA-01B's own P1 (L400) says why the route matters: "The engine fills **AcroForm** PDFs and refuses XFA templates (§12), and IRCC's 2D-barcode forms are XFA."
 
 **(5) Knock-ons.**
@@ -98,7 +99,7 @@ SA-1-19, SA-1-26 and SA-1B-62 each gain: "The sample client (or family) is alway
 
 **(4) Why.**
 - AIW-D49, 11 Oct 2026. The founder chose "Attach a rehearsal report": "Every production pack submission carries the report of the product's rehearsal on sample clients; the second person reads it before approving. No new blocking test gate."
-- Proposals row 112 (approve only after the report is opened). Proposals row of 10 Oct (Pack author's assistant, test gate). `pack-authors-assistant.md` §9 G-11.
+- Proposals row 112 (approval waits until the report is opened). Proposals row of 10 Oct (Pack author's assistant, test gate). `pack-authors-assistant.md` §9 G-11.
 - The synthetic rule: proposals row of 10 Oct (Pack author's assistant, Rule, naming SA-1-52 and SA-1B-62); G-7.
 
 **(5) Knock-ons.** SA-01 SA-1-66 (CN-SA-01 change 1). AG-03 BR-18 (CN-AG-03).
@@ -186,7 +187,7 @@ SA-1-31 (field-map import) and SA-1-41 (reference-table import) carry the same t
 
 **(4) Why.**
 - `pack-authors-assistant.md` §9 G-23 (Proposal; IMP-11): "each drafted map line, scoring row or reference row carries an *AI-drafted* marker and the model's confidence inside the import file and on the line after the author's commit, until the author reviews it".
-- "Low-confidence lines first" is the first of the approve-all safeguards the founder adopted (AIW-D57, provisional until counsel; G-16). The safeguard cannot be switched off while the *pilot safeguards* setting is on (SA-12-33).
+- "Low-confidence lines first" is the first of the approve-all safeguards the founder adopted (AIW-D57, provisional until counsel; G-16). The safeguard cannot be switched off while the approve-all part of the *founder safeguards* setting is on (SA-12-33).
 
 **(5) Knock-ons.** FD-5 (change 1) decides when box maps return. AW-02 specifies the drafting step.
 
@@ -198,7 +199,7 @@ SA-1-31 (field-map import) and SA-1-41 (reference-table import) carry the same t
 
 **(2) Current words.** The last row is v1.2 of 2026-10-05.
 
-**(3) Proposed words.** A version row: "| 1.3 | *(date placed)* | Workstream 2 change note CN-SA-01B applied: FD-5 kept (route and date requested), rehearsal report at the publish gate (approve only after opening it), synthetic samples, reference rows under two people (FD-4 as amended), source addresses, changed-source queue item, AI-drafted line marker. | FD-5, FD-4 (amended), AIW-D43, AIW-D48, AIW-D49 |".
+**(3) Proposed words.** A version row: "| 1.3 | *(date placed)* | Workstream 2 change note CN-SA-01B applied: FD-5 kept (route and date requested; forms with no published box map are filled by hand), rehearsal report at the publish gate (approve only after opening it), synthetic samples, reference rows under two people (FD-4 as amended), source addresses, changed-source queue item, AI-drafted line marker. | FD-5, FD-4 (amended), AIW-D43, AIW-D48, AIW-D49 |".
 
 **(4) Why.** Review S3a m-20(c).
 

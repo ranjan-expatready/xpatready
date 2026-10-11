@@ -170,7 +170,7 @@ Further current words, not quoted in full:
 - **BR-5 (L333):** "**(Pinned per case, deliberate adoption.)** *(changed — FD-3)* A case's work stays on its version until firm staff adopt a newer one, audited."
 - **§6 (L358):** "**Case pin:** pinned at case open → (adopt, audited) → pinned to a newer version; the chain is kept."
 - **§7 `PackWorkPin` (L371):** "firm, case, country, purpose, pinned version, revision chain (adoption = a new revision, audited)".
-- **US-5, recast on a case** (the example's names are kept as the team wrote them):
+- **US-5, recast on a case** (the recast leaves out the example's personal names):
   - L397, the title: "Rules change for an existing case".
   - L398: "**Given** a firm opened a case in January and a new pack took effect on 1 March, **When** staff add new work to that case, **Then** they see "newer rules available since 1 March" and may adopt them for the case (one click); until they do, the new work runs on the January version; the case's January results still reproduce under the January version; the adoption is audited."
   - L399: "**Given** the firm opens a new case on 2 March, **Then** it starts on the 1 March version."

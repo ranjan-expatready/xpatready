@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-04 SaaS Billing, version 2.17, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-04-saas-billing_v2.17_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (second fix round, after re-check S3a-b) |
+| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c: the *founder safeguards* setting) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 6 |
 
@@ -94,7 +94,7 @@ SA-4-21, second sentence:
 
 ---
 
-## 3. A second person confirms a plan or billing-period change the Support and account assistant proposed, while the pilot safeguards setting is on
+## 3. A second person confirms a plan or billing-period change the Support and account assistant proposed, while the second-person part of the founder safeguards setting is on
 
 **(1) What it changes.** SA-4-28 (L473); a new requirement **SA-4-89**.
 
@@ -106,24 +106,24 @@ L473:
 **(3) Proposed words.**
 
 New requirement:
-> - **SA-4-89** *(new — AIW-D59)* While the **pilot safeguards** setting is on (SA-12-33), a change to a firm's **plan or billing period** that the **Support and account assistant** proposed, working for a Super Admin user, needs a **second Super Admin user** to confirm the assistant's note. Only then does the user holding the key apply it, with a reason.
+> - **SA-4-89** *(new — AIW-D59)* While the **second-person part** of the **founder safeguards** setting is on (SA-12-33), a change to a firm's **plan or billing period** that the **Support and account assistant** proposed, working for a Super Admin user, needs a **second Super Admin user** to confirm the assistant's note. Only then does the user holding the key apply it, with a reason.
 >
 > Nobody confirms a change they requested (SA7-D4). The confirmation, the note it confirmed and the reason are audited on the firm record.
 >
-> No setting other than the pilot safeguards setting turns this rule off. A change a person makes without the assistant's note follows SA-4-28 as today.
+> Only a recorded founder decision naming this part switches the rule off (SA-12-33). A change a person makes without the assistant's note follows SA-4-28 as today.
 
-SA-4-28 gains: "A plan or billing-period change proposed by the Support and account assistant also needs a second person's confirmation while the pilot safeguards setting is on (SA-4-89)."
+SA-4-28 gains: "A plan or billing-period change proposed by the Support and account assistant also needs a second person's confirmation while the second-person part of the founder safeguards setting is on (SA-4-89)."
 
 **(4) Why.**
 - **AIW-D59**, 11 Oct 2026. The founder chose "Yes, for the pilot": "A second Expat Ready person confirms any account or plan change the Support assistant proposes, during the pilot; reviewed after it."
-- **"The pilot" as a product state.** A requirement names the *pilot safeguards* setting, on from the start and switched off only by a recorded founder decision (`00-step3-plan.md`, "No 'during the pilot' in a requirement"; re-check S3a-b m-4). The setting lives in SA-12-33.
+- **A product state, not a period.** A requirement names a part of the *founder safeguards* setting, on from the start and ended only by a recorded founder decision naming that part (`00-step3-plan.md`, "The *founder safeguards* setting" and "No 'during the pilot' in a requirement"). The founder's "reviewed after it" is his decision to end this part. The setting lives in SA-12-33.
 - **Scope: plan and billing-period changes only.** This follows the behaviour document's approval table: "A firm's plan or billing-period change the persona's note described … **yes, during the pilot (AIW-D59)**" (`support-and-account-assistant.md` §4, L181). The same table says status changes are "never proposed by the persona" (L184).
 - **One discrepancy is left open.** The behaviour document's L170, as aligned on 11 Oct, now names "a plan, billing-period or discount change"; its L180 says of a refund or discount, "the persona never proposes either". This rule follows L180 and L181 and leaves discounts out. The L170 against L180 discrepancy is flagged to the Lead (re-check S3a-b m-7).
 - **Narrow reading.** "AIW-D59 names this assistant only" (L170), so the rule is not widened to other assistants.
 
 **(5) Knock-ons.**
 - SA-07 §3.3 (CN-SA-07 change 3).
-- SA-12-33 holds the pilot safeguards setting (CN-SA-12 change 3).
+- SA-12-33 holds the founder safeguards setting and its parts (CN-SA-12 change 3).
 - AW-02 (AW-2-72) cites SA-4-89.
 
 ---
@@ -181,7 +181,7 @@ L32 (extract):
 > New requirements continue from the highest number (next: SA-4-89).
 
 **(3) Proposed words.**
-- A version row: "| 2.18 | *(date placed)* | Workstream 2 change note CN-SA-04 applied: webhook-log split; one statement of the reminder days; a second person on the Support and account assistant's plan proposals while the pilot safeguards setting is on (SA-4-89); billing event code names; `system/billing:view` covers sent notices. | AIW-D59; proposals rows of 10–11 Oct |".
+- A version row: "| 2.18 | *(date placed)* | Workstream 2 change note CN-SA-04 applied: webhook-log split; one statement of the reminder days; a second person on the Support and account assistant's plan proposals while the second-person part of the founder safeguards setting is on (SA-4-89); billing event code names; `system/billing:view` covers sent notices. | AIW-D59; proposals rows of 10–11 Oct |".
 - L32: "(next: SA-4-90)".
 
 **(4) Why.** Review S3a m-20(c).

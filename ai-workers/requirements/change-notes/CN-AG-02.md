@@ -4,10 +4,10 @@
 |---|---|
 | Module changed | AG-02 Prospect / Lead / Sales CRM |
 | Version and file | v1.9 of 7 Oct 2026, `02-functional-requirements/agent/AG-02-prospect-lead-sales-crm_v1.9_2026-10-07.md` (Drive snapshot of 11 Oct 2026, `sources/drive-snapshot-2026-10-11/`, unchanged since 9 Oct; line numbers below are that file's) |
-| Date of this note | 11 Oct 2026 (second fix round, after re-check S3c-b) |
+| Date of this note | 11 Oct 2026 (third fix round, after re-check S3c-c) |
 | Status | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | Next free numbers used | none (the changes reword existing text; the highest are AG-2-64, L644, and BR-21, L681) |
-| Companion files | CN-AG-03 item 2 (BR-19, eligibility only through the consultant); CN-AG-12 item 1 (eligibility mark on templates); CN-AG-11 item 6 (the `STAGE_MOVE` item) and item 13 (AG-11-115, the send-time check); AW-01 v0.1 (the Intake assistant) |
+| Companion files | CN-AG-03 change 2 (BR-19, eligibility only through the consultant); CN-AG-12 change 1 (eligibility mark on templates); CN-AG-11 change 6 (the `STAGE_MOVE` item) and change 13 (AG-11-115, the send-time check); AW-01 (the Intake assistant) |
 
 **In plain words.** The founder decided on 11 Oct that no automatic or AI-drafted message to a lead carries eligibility content; the planned "your CRS would change if…" nudge is therefore dropped. Two small alignments follow: the AI writing tool is now called the Writer, and the call-outcome list should be one list, not two.
 
@@ -29,7 +29,7 @@
    > L61: "a Drafter draft sent unedited counts as AI-written"
 3. **Proposed words.** "a Writer draft sent unedited counts as AI-written". Elsewhere in AG-02, "Drafter" names the retainer template engine (L179, L764) and stays.
 4. **Why.** AIW-D53 (the AI Doer is the **Writer**; *Drafter* stays the template engine).
-5. **Knock-ons.** CN-AG-11 item 1.
+5. **Knock-ons.** CN-AG-11 change 1.
 
 ## 3. One call-outcome list
 
@@ -48,6 +48,6 @@
 
 ## Not changed here (pointers only)
 
-- An AI assistant's proposed lead stage move is the `STAGE_MOVE` item kind defined in AG-11 (CN-AG-11 item 6); approving it moves the lead through AG-02's own guarded stage service (BR-5) under `agent/prospect:edit`, never to WON or LOST. AG-02 needs no change for it (AW-1-44, AW-1-92).
+- An AI assistant's proposed lead stage move is the `STAGE_MOVE` item kind defined in AG-11 (CN-AG-11 change 6); approving it moves the lead through AG-02's own guarded stage service (BR-5) under `agent/prospect:edit`, never to WON or LOST. AG-02 needs no change for it (AW-1-44, AW-1-92).
 - Which outbound touch satisfies speed-to-lead and moves a lead to Contacted is Unknown (`intake-assistant.md` §9 GI-24); no change proposed.
-- Restricted fields in exports (AG-2-49a, AG-2-51) follow CN-AG-07 item 1 (FD-15 kept, AG7-D28).
+- Restricted fields in exports (AG-2-49a, AG-2-51) follow CN-AG-07 change 1 (FD-15 kept, AG7-D28).
