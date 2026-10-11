@@ -46,3 +46,6 @@ Handbook + coded prototype + three consultant conversations, from the same AI pr
 - **The one-skill rule is kept and the rows are split to meet it:** one skill = the same ability, input kind, checks and kind of approver; the Document reader for files is split from answer extraction from typed text; the Field mapper is split by plane (firm, Expat Ready). A failure must point to one skill (AIW-D81).
 - **Front page:** a ten-minute front page of six three-line teammate cards, plus a paragraph on how a solo or small firm uses them (FD-19's target buyer).
 - **Worked days** list every client-facing send in the window, as README rule 11 asks of worked examples.
+
+## Founder's direction AIW-D91 (11 Oct): the moat is the platform under the AI
+Every Step R deliverable shows the AI as a thin, replaceable layer on the platform's own rule engine, Doers and pathway-program rules (packs): the rules decide, the AI prepares language. The Handbook gains a front-page section "Why this AI is different"; the blueprint's PRD gains "Why it is hard to copy, and its honest limits"; the sales story (Step 5) leads with it. Research: `research/ai-moat-and-positioning-2026-10.md`.
