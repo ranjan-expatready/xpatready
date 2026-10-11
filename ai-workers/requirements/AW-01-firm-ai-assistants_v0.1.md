@@ -201,18 +201,18 @@ Built by the Step 3 maker from the founder's decisions; nothing here is a new fo
 
 ### 2. Users & Jobs-to-be-Done
 
-| Role | Relationship to AW-01 | Jobs-to-be-done (representative) |
+| Role | Relationship to AW-01 | Jobs-to-be-done (representative; our wording) |
 |---|---|---|
-| **Case Officer** (starter role) | Delegates to the Case assistant; verifies values; accepts the readiness report | "Chase and read everything for me; show me what is missing and why; give me the file ready for review with every fact beside its source." |
-| **Intake rep** (a custom role, AG-01 v1.16 §3.3) | Delegates to the Intake assistant; runs assessments; approves stage moves | "Answer every enquiry fast without saying anything I would not say; tell me who to call and what to ask." |
-| **Billing / Finance** (bookkeeper) | Delegates to the Billing assistant; saves and issues invoices; records payments | "Show me what I have not billed and which invoice a payment belongs to; let me save it myself." |
-| **Owner** | Sets up delegations; delegates to the Firm assistant; owns the pause and the safeguards; approves on the Owner route | "Help me with renewals, migrations, privacy requests and a weekly picture; never act behind my back." |
-| **Case Manager** | Delegates to the Firm assistant for the weekly note; reviewer and form approver | "One plain note a week; the files I sign off must show who prepared what." |
-| **Any staff member the firm allows** | Asks the Practice expert | "What is waiting on me? What rule is behind this item? Answer with sources, never from memory." |
-| **Licensed approver** | Approves AI-written client text by default | "Show me what I am approving, where every value came from, and make me look at the uncertain ones." |
-| **Expat Ready (platform)** | Records the provider; trips emergency stops; versions model instructions (AW-02) | "Nothing runs before a Canada-only provider is recorded; we can stop it everywhere in one action." |
-| **The client (indirect)** | Receives only template messages and drafts a named person approved | "Whatever reaches me was sent by my consultant's firm, by a person who read it." |
-| **Counsel (indirect)** | Reads the counsel pack before any pilot on real files (AIW-D64) | "Show me the limits, the approval record and what the AI sees." |
+| **Case Officer** (starter role) | Delegates to the Case assistant; verifies values; accepts the readiness report | *Chase and read everything for me; show me what is missing and why; give me the file ready for review with every fact beside its source.* |
+| **Intake rep** (a custom role, AG-01 v1.16 §3.3) | Delegates to the Intake assistant; runs assessments; approves stage moves | *Answer every enquiry fast without saying anything I would not say; tell me who to call and what to ask.* |
+| **Billing / Finance** (bookkeeper) | Delegates to the Billing assistant; saves and issues invoices; records payments | *Show me what I have not billed and which invoice a payment belongs to; let me save it myself.* |
+| **Owner** | Sets up delegations; delegates to the Firm assistant; owns the pause and the safeguards; approves on the Owner route | *Help me with renewals, migrations, privacy requests and a weekly picture; never act behind my back.* |
+| **Case Manager** | Delegates to the Firm assistant for the weekly note; reviewer and form approver | *One plain note a week; the files I sign off must show who prepared what.* |
+| **Any staff member the firm allows** | Asks the Practice expert | *What is waiting on me? What rule is behind this item? Answer with sources, never from memory.* |
+| **Licensed approver** | Approves AI-written client text by default | *Show me what I am approving, where every value came from, and make me look at the uncertain ones.* |
+| **Expat Ready (platform)** | Records the provider; trips emergency stops; versions model instructions (AW-02) | *Nothing runs before a Canada-only provider is recorded; we can stop it everywhere in one action.* |
+| **The client (indirect)** | Receives only template messages and drafts a named person approved | *Whatever reaches me was sent by my consultant's firm, by a person who read it.* |
+| **Counsel (indirect)** | Reads the counsel pack before any pilot on real files (AIW-D64) | *Show me the limits, the approval record and what the AI sees.* |
 
 ---
 
@@ -252,7 +252,7 @@ Only the fields a step needs, with names and numbers replaced by references (AW-
 
 #### 3.8 Case assistant (assistant to the Case Officer; CA)
 
-From the day the case is built, the product's own seeds send the welcome, the portal invite, the document request and the chases, and its Reader and Checker read and compare every upload. The Case assistant adds: a task for each new finding (W-01); a rule that decides *ready for review* and a readiness report built by rule, which the officer accepts as the submission for internal review (W-01; AW1-D5); one verdict per upload with a reason picked by rule or drafted by the Writer (W-04); the hand-offs of each inbound message by its classification (W-07); the dates and milestone a government letter brings, a client notice and an internal response plan (W-03); client words in the client's language (W-08); the government forms through the rule-based Filler, disabled until the team's route exists (W-05; AW1-D17); letters with a "facts used" footer (W-06); LMIA advertising and candidate entries without ever judging a candidate (W-13); and each officer's ranked day, pickup summaries and a leaver's list (W-17). In the pilot every document type the Reader proposes goes to a person (AW1-D30). Requirements AW-1-69 to AW-1-86.
+From the day the case is built, the product's own seeds send the welcome, the portal invite, the document request and the chases, and its Reader and Checker read and compare every upload. The Case assistant adds: a task for each new finding (W-01); a rule that decides *ready for review* and a readiness report built by rule, which the officer accepts as the submission for internal review (W-01; AW1-D5); one verdict per upload with a reason picked by rule or drafted by the Writer (W-04); the hand-offs of each inbound message by its classification (W-07); the dates and milestone a government letter brings, a client notice and an internal response plan (W-03); client words in the client's language (W-08); the government forms through the rule-based Filler, disabled until the team's route exists (W-05; AW1-D17); letters with a *facts used* footer (W-06); LMIA advertising and candidate entries without ever judging a candidate (W-13); and each officer's ranked day, pickup summaries and a leaver's list (W-17). In the pilot every document type the Reader proposes goes to a person (AW1-D30). Requirements AW-1-69 to AW-1-86.
 
 #### 3.9 Intake assistant (assistant to the intake role; IA)
 
@@ -380,7 +380,7 @@ Numbered `AW-1-x`, AW-1-1 to AW-1-123. New requirements continue from AW-1-124; 
 - **AW-1-81.** (W-03) The Writer SHALL draft a plain-language client notice (AI-written client text, AW-1-31) and an internal response plan for the representative, delivered by internal notification and never client-visible. *[Spec: CA §2.4 steps 5–6 · Ext: AG-11-68 (AG-11 v1.11); AG-13 BR-4 (AG-13 v1.12) · Flag: R-CQ2 (a response plan is advice)]*
 - **AW-1-82.** (W-08) The Writer SHALL draft client words (a reply, a *please fix* note, a status update) in the client's language from the thread and only the verified facts the text needs; a firm-started WhatsApp message with no provider-approved template SHALL fall back to email (AG-11-105); a French draft of a non-legal template body SHALL go to the template publisher (`agent/template:publish`); legal, consent and regulator-mandated text SHALL be refused. *[Spec: CA §2.5 · Ext: AG-11-14, AG-11-105 (AG-11 v1.11); AG-10-49, AG-10-57 (AG-10 v1.9); AG-12-24, AG-12 v1.2 §3.6, §10 · IMP-21 · Flag: R-CQ13]*
 - **AW-1-83.** (W-05) When a form set's required values are verified, the assistant SHALL run the rule-based Filler (once an action for it exists, §13 T1), have the Checker cross-check the draft, and route a FORM_DRAFT item to every holder of `agent/case:form-approve` (AW-1-35); no model SHALL set a value on a form. Until the team delivers the form-filling route for the government's forms, this duty SHALL stay disabled in the recipe library, and the pilot runs without it. *[Spec: CA §1.6, §2.6 · Ext: AG-07 v2.7 §3.5; AG-7-59, AG-7-65, AG-7-66 (AG-07 v2.7); SA-1B-26 to SA-1B-35 (SA-01B v1.2); AG-11-81, AG-11-89 · FD-5; AIW-D43; IMP-25]*
-- **AW-1-84.** (W-06) On a person's request the Writer SHALL draft a letter of explanation, a submission letter or a procedural-fairness response from the verified profile only, listing unverified facts as *not yet verified*, with a "facts used" footer built by rule; the representative who files approves it under the AI-text setting; it SHALL be filed as a typed document by generate-from-template; a letter flagged as a litigation document SHALL carry the court's declaration on AI-generated content, in wording counsel fixes. *[Spec: CA §1.7, §2.7 · Ext: AG-9-22 (AG-09 v1.8); AG-12 v1.2 §3.9 (no such template type, CA G-14); AG-10-15 · Flag: R-CQ2, CQ11]*
+- **AW-1-84.** (W-06) On a person's request the Writer SHALL draft a letter of explanation, a submission letter or a procedural-fairness response from the verified profile only, listing unverified facts as *not yet verified*, with a *facts used* footer built by rule; the representative who files approves it under the AI-text setting; it SHALL be filed as a typed document by generate-from-template; a letter flagged as a litigation document SHALL carry the court's declaration on AI-generated content, in wording counsel fixes. *[Spec: CA §1.7, §2.7 · Ext: AG-9-22 (AG-09 v1.8); AG-12 v1.2 §3.9 (no such template type, CA G-14); AG-10-15 · Flag: R-CQ2, CQ11]*
 - **AW-1-85.** (W-13) On a corporate LMIA case the assistant SHALL propose, for staff to accept under `agent/case:edit`, channel entries read from dated advertising screenshots and candidate-log fields (name, date received, channel) read from résumés, never residence status, outcome, rejection reason or any ranking; a duties comparison note for the staff's own tick; a drafted outstanding-items message (AI-written client text); and, on demand only, a task *Generate recruitment report* and the inspection-pack evidence checklist. It SHALL never generate the report or run the inspection-pack export. *[Spec: CA §1.8, §2.8 · Ext: AG-17-28, AG-17-32, AG-17-73, AG-17-80, AG-17-82, AG-17 v0.5 §3.4, §3.8, §10 · FD-7 · Flag: P-CQ8 (record-keeping period)]*
 - **AW-1-86.** (W-17) Once per working day per delegating officer the assistant SHALL produce a ranked list built by rule (overdue Needs you items, then urgent deadline-linked items, then tasks by due date and priority), with the reason beside each item built by rule and worded by the Writer; on demand or on reassignment, an internal pickup summary of one file; on the handover prompt, a leaver's list of open files. All three SHALL be internal, need no approval, carry the AI-written marker, never use `agent/note:share-with-client` and never contain a Restricted value. *[Spec: CA §1.9, §2.9 · Ext: AG-13 v1.12 §3.4, AG-13-67; AG-07 v2.7 §3.8; AG-11-59, AG-11-100 · Flag: P-CQ4]*
 
@@ -577,7 +577,7 @@ Numbered `AW-1-x`, AW-1-1 to AW-1-123. New requirements continue from AW-1-124; 
 - **Given** the Owner requests the whole-firm export, **When** it completes, **Then** it contains the AI run log and the provenance view beside the approval history.
 
 **US-13 — The approval record shows the licence fact and the Owner route.** *(AW-1-26, AW-1-27)*
-- **Given** a firm with no active licensed user and the pause switched off by the Owner with a reason, **When** the Owner approves an AI-drafted reply, **Then** the approval record shows the approver, "not linked to a credential at decision", the setting in force and "approved by Owner without a licensed user"; **and** the month's Owner-route count rises by one.
+- **Given** a firm with no active licensed user and the pause switched off by the Owner with a reason, **When** the Owner approves an AI-drafted reply, **Then** the approval record shows the approver, *not linked to a credential at decision*, the setting in force and "approved by Owner without a licensed user"; **and** the month's Owner-route count rises by one.
 
 **US-14 — An assistant's item goes to the person it worked for.** *(AW-1-30)*
 - **Given** a proposed invoice prepared for the bookkeeper's delegation on a case whose file owner is the case officer, **When** it is created, **Then** it appears in the bookkeeper's Needs you, not the case officer's.
@@ -619,7 +619,7 @@ Numbered `AW-1-x`, AW-1-1 to AW-1-123. New requirements continue from AW-1-124; 
 - **Given** a proposed invoice the bookkeeper approved, **When** the builder opens, **Then** no invoice record, draft or number exists until the bookkeeper saves; **and** any assistant call to create a payment, refund, credit, trust entry or funds tag is refused.
 
 **US-26 — No export.** *(AW-1-40)*
-- **Given** the Firm assistant handling a privacy request, **When** the reply is drafted, **Then** the per-individual package is not generated by the assistant; only the Owner's act under `agent/data-export:request` runs it.
+- **Given** the Firm assistant handling a privacy request, **When** the reply is drafted, **Then** the per-individual package is not generated by the assistant; only a person's act under `agent/data-export:request` (the Owner's, in this duty) runs it.
 
 **US-27 — No change to people, roles or settings.** *(AW-1-41)*
 - **Given** any run, **When** a step would change a role, the AI switch, Team safeguards, supervision, the AI-text approver, an autonomy level or a recipe's state, **Then** it is refused and recorded.
@@ -823,7 +823,7 @@ Numbered `AW-1-x`, AW-1-1 to AW-1-123. New requirements continue from AW-1-124; 
 - **Given** the expert screen in version 1, **When** a user opens it, **Then** there are four menu questions and record pickers, and no free-text box.
 
 **US-88 — Permission at the moment of reading; nothing counted beyond it.** *(AW-1-111)*
-- **Given** a case officer whose role was copied without `agent/case:view.all`, **When** they ask about deadlines with *all files I may see*, **Then** the option is not offered (no `agent/report:view.all`), and the answer neither shows nor counts other people's files.
+- **Given** a case officer whose role was copied without `agent/case:view.all`, **When** they ask about deadlines, **Then** *all files I may see* is not offered (no `agent/report:view.all`), and the answer neither shows nor counts other people's files.
 
 **US-89 — When a summary line may appear.** *(AW-1-112)*
 - **Given** a two-line answer with the setting on, AI on and caps not reached, **Then** one line labelled *AI-written summary* appears above the lines; **Given** a one-line answer or a refusal, **Then** no model call is made.
@@ -1012,7 +1012,7 @@ Never holds: the five Owner + Case Manager approvals and `agent/sqr:verify`; `ag
 | E-3 | Letter dates | Reader | made-up government letters | each date and its region; no computed validity (AG-9-52) |
 | E-4 | Message sorting | Sorter | made-up emails and WhatsApp messages | classification accuracy; candidate list only; no AI-only filing |
 | E-5 | Message-to-answer (W-09) | per §13 T1 | made-up lead replies | exact match per proposed answer |
-| E-6 | Client drafts | Writer | reasons, replies, notices, letters, reminders, re-engagement, privacy replies, employer messages | language; facts only from the input; zero-tolerance items; the "facts used" footer matches the profile |
+| E-6 | Client drafts | Writer | reasons, replies, notices, letters, reminders, re-engagement, privacy replies, employer messages | language; facts only from the input; zero-tolerance items; the *facts used* footer matches the profile |
 | E-7 | Internal text | Writer | readiness paragraph, briefs, ranked-day reasons, money and weekly notes, consult notes, response plan, outline | every number present in the input; no invented fact |
 | E-8 | Mapping proposals (W-15) | Writer | made-up spreadsheets with known mappings | mapping accuracy; only allowed values |
 | E-9 | Expert summary line | Writer | rule-built answers with known summaries | number match; forbidden words; shape; nothing beyond the lines |
