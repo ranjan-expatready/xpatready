@@ -2,14 +2,39 @@
 
 *Replace, don't append. Plan, gates and status: `PROGRESS.md`. Decisions: `decisions.md`. Story, ratings, audits: `REPORT-CARD.md`.*
 
-## State, 11 Oct 2026 (after the founder's decisions)
-- **Step 2 done; the founder answered every decision one by one** (`decisions.md` AIW-D36 to D69). He took the Lead's recommendation on all but three: the Firm assistant keeps both delegations (D38), **Release 1 waits for the AI assistants** (D66, overriding the co-founder's 10 Oct plan that put AI in a separate Release 2 stream), and full employer portal actions at launch (D67). FD-4 and FD-8 amended; FD-5, FD-11, FD-15, FD-17, FD-21 kept against newer team documents. Counsel engaged by 31 Oct 2026 (D68); the tech lead runs the Canada-only provider test this month (D69).
-- **Applying the decisions (in progress at hand-off):** three agents edit (1) case, intake, billing behaviour documents; (2) firm, practice expert, pack author's, support documents; (3) the Step 1 master, page, catalogue, price card. Work in progress was committed at the stop hook. **First job next session (or when they report):** verify each by `git diff` against commit `fb0293c` (before the decision round): pending labels replaced by AIW-D numbers; the AI Doer renamed Writer only where it is our wording (the template engine stays Drafter; source quotes untouched); the email passcode counted in the Intake and Case examples; the Deadline watch shown as the product in both charts and the price card; the Practice expert's version 1 wording; page tags balanced; no personal names.
-- **Done for the founder:** `charter-edits.md` (paste into the Charter on Drive); `requirements/provider-test-script.md` (for the tech lead); `requirements/00-step3-plan.md` (Step 3 plan).
-- **Rules (README §0):** 9 one word per thing; 10 no personal names; 11 newer module files win over Doc 1–4 only, never over a founder decision. Only the Lead writes `PROGRESS.md` and whole `proposals.md` rows; commit specific files while agents are writing.
-- Drive: no requirement file changed after the 9 Oct snapshot (checked 10 Oct). Re-check at session start.
+## State, 11 Oct 2026 (Step 3 in fix and re-check)
+- **Step 3, the build specification, is in its first fix round.** Sources are `sources/drive-snapshot-2026-10-11/` (CURRENT). Shared rules for every maker: `requirements/00-step3-plan.md`.
+- **AIW-D72 (11 Oct):** the founder kept FD-17 in full after the Lead corrected its own incomplete question. The four parts are designation, no sweep, a per-client trust ledger and a reconciliation report. The counsel pack (question 9, plus new question 15 on breach notification) and the Billing document are corrected.
+- **Running at hand-off:**
+  - AW-01 fix round after review S3d. The maker was resumed with the full brief.
+  - Three hostile re-checks: S3a-b (SA, portal and decisions-log change notes), S3b-b (AW-02 v0.2), S3c-b (AG change notes, CN-AG-15 new).
+  - Each writes only `checks/review-<id>-2026-10-11.md` and hands back log lines.
+- **Step 2 documents** are aligned with the 11 Oct actor and stop rules (Pack, Support, IMP-1, IMP-8). They otherwise stay pinned to the 9 Oct snapshot.
 
 ## Next
-1. Verify and commit the three decision rounds (above).
-2. **Step 3 (build specification)**, per `requirements/00-step3-plan.md`: start A (AW-01 firm AI assistants), B (AW-02 platform AI assistants) and the two halves of C (change notes) in parallel; hostile check, fix, re-check; then D (test cases, Opus 5.5) and E (prototype); the Lead writes F (`requirements/counsel-pack.md`, needed by 31 Oct, AIW-D68).
-3. Founder actions (no question pending): paste the Charter edits; place the FD-4 and FD-8 amendments on Drive; tell the co-founder about AIW-D66; engage counsel by 31 Oct; give the provider test script to the tech lead; run the first three consultant conversations; name one licensed reviewer; contract the immigration specialist before Step 4.
+1. Receive the re-checks.
+   - A Pass, or a Pass with minors: the Lead verifies and closes the minors.
+   - A Fail: one more fix round to the same maker.
+2. Receive the AW-01 v0.2 hand-back, then run the hostile re-check S3d-b.
+3. When A, B and C pass, start the rest:
+   - D: test cases, `requirements/tests/AW-test-cases.csv`, in the team format, with Opus 5.5.
+   - E: the prototype, in `prototype/`.
+   - Then the integration pass. It covers the glossary entry for "lendable to an AI assistant", renaming the v0.1 files to v0.2, and one consistency pass.
+   - Then the Step 3 report.
+4. **Founder batch at the end of Step 3** (held):
+   - FD-11's reach to Expat Ready's own billing;
+   - FD-4's reach to the Practice Pack;
+   - FD-7 against CP1-D7;
+   - D52 scope for non-client calls;
+   - Phasing v2.18 against D66 (proposals row);
+   - machine-translated pack labels against SA-05 v2.4;
+   - the request that the team upload CP-01.
+5. **Founder actions** (no question pending):
+   - paste the Charter edits;
+   - place the FD-4 and FD-8 amendments on Drive;
+   - tell the co-founder about D66;
+   - engage counsel by 31 Oct;
+   - give the provider test script to the tech lead;
+   - run three consultant conversations;
+   - name a licensed reviewer;
+   - contract the immigration specialist before Step 4.
