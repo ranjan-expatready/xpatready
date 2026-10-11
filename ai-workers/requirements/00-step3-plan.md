@@ -27,3 +27,9 @@
 - The six-kind counting unit, the `sourceItemRef` rule, the why-line rule and the tenant rule apply as in the behaviour documents.
 - No personal names (rule 10); plain words first, field names in brackets; every term explained or in the glossary.
 - Illustrative user voice (jobs-to-be-done lines) goes in italics, never in quotation marks; quotation marks are only for word-for-word source quotes (added 11 Oct from the AW-02 maker).
+- Before a hostile check, the Lead confirms that each proposals outcome marked Done is applied in every file it names (added 11 Oct after review S3b).
+- **Actor rule (the Lead, 11 Oct, correcting the 10 Oct 22:00 call):** every delegated entry names the delegating person as the actor, mode DELEGATED, with the delegation reference, never `system`; a separate *started by* field records what started the run (the persona's schedule, another person, a product alert, a watcher item). FD-16 and IMP-1 hold.
+- **Emergency stop (one rule, all documents):** a stop pauses runs and delegations; nothing sends while stopped; waiting items can be withdrawn with the recall action (SA-12-32); on release every waiting item re-renders stale and needs fresh approval. A delegation ends only when its person ends it or is deactivated or suspended.
+- **Interim retention:** AI log rows on both planes follow AG-11-98's interim values until counsel answers; no new value is invented.
+- **One AI log shape:** the firm's AI run log reused for the platform with an empty firm (CN-AG-11 change 11).
+- **The founder's pilot safeguards cannot be switched off** by any firm or platform setting during the pilot (AIW-D57, D59).
