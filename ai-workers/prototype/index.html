@@ -286,7 +286,7 @@ const S = {
   needs: { open:{report:true, paused:false}, opened:{}, srcOpen:null, holdout:'', holdoutResult:null,
            report:'pending', reportAt:null, rejecting:false, rejectReason:'', someNote:false,
            alarmSeen:false, viewAs:'approver', paused:'paused', pausedRejecting:false },
-  dl: { assistant:'billing', person:'bookkeeper', keys:null, state:'setup', viewAs:'owner', log:[], waiting:'pending', switchOn:true, confirmEnd:false },
+  dl: { assistant:'billing', person:'bookkeeper', keys:null, state:'setup', viewAs:'owner', log:[], waiting:'pending', switchOn:false, confirmEnd:false },
   pv: { filter:'all', open:null },
   ex: { q:1, file:'C-2', item:'bio', scope:'all', aiOff:false, untested:false },
   bi: { amount:'', currency:'CAD', picked:null, modal:false, saved:false, item:'pending', method:'', designation:'', date:'', ref:'', closedUnsaved:false },
@@ -299,7 +299,7 @@ const SCREENS = [
   {id:'needs', n:'1', label:'Needs you'},
   {id:'deleg', n:'2', label:'Delegation'},
   {id:'prov',  n:'3', label:'AI provenance'},
-  {id:'expert',n:'4', label:'Practice expert'},
+  {id:'expert',n:'4', label:'Practice answers'},
   {id:'bill',  n:'5', label:'Payment match'},
   {id:'set',   n:'6', label:'AI switch'},
   {id:'about', n:'i', label:'About this prototype'}
@@ -354,11 +354,11 @@ function screenNeeds(){
     <h1>Needs you</h1>
     <p class="lead">The approval inbox of one person. An assistant prepares; a named person decides, with the same permission as doing it by hand. ${tag('AW-1-29')}${tag('AW-1-30')}</p>
   </div>
-  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Signed in as <b>the Owner of Firm F</b>, a licensed user who is also the case officer on <b>Case C-1 (Client A)</b>. Firm F has a published provider record, AI on, and its assistants switched on. Wednesday 2 December 2026. All names, dates and values are fictional.</div></div>
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Signed in as <b>the case officer of Firm F</b>, a licensed user (licence linked), file owner of <b>Case C-1 (Client A)</b>, who accepted a Case Officer delegation for AI assistance ${tag('AW-01 §10 Case Officer delegation')}. Firm F has a published provider record, AI on, and its assistants switched on. The second item below sits in <b>the Owner's</b> Needs you and is shown here only to illustrate a paused item. Wednesday 2 December 2026. All names, dates and values are fictional.</div></div>
   <div class="row" style="justify-content:space-between">
     <div class="small muted">Viewing as ${tag('AW-1-33(c)')}${tag('AW1-D38')}</div>
     <div class="seg" role="group" aria-label="View as">
-      <button data-act="n-view" data-v="approver" aria-pressed="${n.viewAs==='approver'}">The Owner (approver)</button>
+      <button data-act="n-view" data-v="approver" aria-pressed="${n.viewAs==='approver'}">The case officer (approver)</button>
       <button data-act="n-view" data-v="cm" aria-pressed="${n.viewAs==='cm'}">The Case Manager</button>
     </div>
   </div>`;
@@ -369,7 +369,7 @@ function screenNeeds(){
       <h3 style="font-size:16px">The Case Manager's view</h3>
       <p class="muted">No screen shows another person's agreement alarm, or whose alarm it was. ${tag('AW-1-33(c)')}${tag('US-19')}</p>
       <div class="notice info"><span class="ic">i</span><div><b>Firm AI measures</b> · Agreement alarms this month: <b>1</b> <span class="muted">(firm-wide count, no names)</span>${tag('AG-14-39')}<div class="illus">Count illustrative.</div></div></div>
-      <p class="small muted">Items in the Owner's Needs you are the Owner's; they are not listed here.</p>
+      <p class="small muted">Items in the case officer's and the Owner's Needs you are theirs; they are not listed here.</p>
     </div>
     ${foot(needsTraces())}`;
   }
@@ -381,8 +381,9 @@ function screenNeeds(){
   </div><button class="btn sm" data-act="n-alarm">Got it</button></div>` : '';
 
   return head + alarm + `
-  <div class="row" style="justify-content:space-between"><h2 style="font-size:16px">2 items waiting</h2><span class="small muted">Sorted by due date</span></div>
+  <div class="row" style="justify-content:space-between"><h2 style="font-size:16px">1 item waiting for you</h2><span class="small muted">Sorted by due date</span></div>
   ${reportItem()}
+  <div class="row" style="justify-content:space-between;margin-top:6px"><h2 style="font-size:16px">In the Owner's Needs you · 1 item</h2><span class="small muted">A second inbox, shown to illustrate a paused item ${ill('(demo layout)')}</span></div>
   ${pausedItem()}
   ${foot(needsTraces())}`;
 }
@@ -401,7 +402,7 @@ function reportItem(){
     <div style="min-width:0">
       <div class="row" style="gap:6px;margin-bottom:6px"><span class="pill">Readiness report</span><span class="pill ai">AI-prepared</span>${status}</div>
       <div class="item-title">Case C-1 · Client A is ready for review ${tag('READINESS_REPORT')}</div>
-      <div class="item-meta">Prepared by <b>AI assistance, assistant to the case officer</b>, acting for <b>the Owner</b> · due Fri 4 Dec ${tag('AW-1-65')}${tag('AW-1-72')}</div>
+      <div class="item-meta">Prepared by <b>AI assistance, assistant to the case officer</b>, acting for <b>the case officer</b> · due Fri 4 Dec ${tag('AW-1-65')}${tag('AW-1-72')}</div>
     </div>
     <span class="chev">›</span>
   </button>`;
@@ -410,9 +411,9 @@ function reportItem(){
   if(n.report==='approved'){
     return `<div class="item" data-open="true">${top}
     <div class="section"><div class="notice ok"><span class="ic">✓</span><div>
-      <b>Accepted by the Owner today at ${esc(n.reportAt)}.</b> Case C-1 is now <b>submitted for internal review</b>. The reviewer's approval stays a separate act. ${tag('AG-7-93')}${tag('AW-1-74')}
+      <b>Accepted by the case officer today at ${esc(n.reportAt)}.</b> Case C-1 is now <b>submitted for internal review</b>. The reviewer's approval stays a separate act. ${tag('AG-7-93')}${tag('AW-1-74')}
       <ul class="small" style="margin:8px 0 0 18px;padding:0">
-        <li>Audit: the Owner, mode PERSON (the report was prepared in mode DELEGATED). ${tag('AW-1-21')}</li>
+        <li>Audit: the case officer, mode PERSON (the report was prepared in mode DELEGATED, with the case officer as actor). ${tag('AW-1-21')}</li>
         <li>Hidden-value check recorded: ${n.holdoutResult==='match'?'matched':'not matched'}; the typed value is not stored. ${tag('HoldoutCheck')}</li>
         <li>The prepared-file count rises by one. ${tag('AW-1-75')}</li>
         <li>The AI provenance view (screen 3) now shows this decision. ${tag('AW-1-23')}</li>
@@ -420,7 +421,7 @@ function reportItem(){
   }
   if(n.report==='rejected'){
     return `<div class="item" data-open="true">${top}
-    <div class="section"><div class="notice danger"><span class="ic">×</span><div><b>Rejected by the Owner.</b> Reason recorded: “${esc(n.rejectReason||'No reason given')}”. Nothing is submitted. ${tag('AG-11-112(a)')}</div></div>
+    <div class="section"><div class="notice danger"><span class="ic">×</span><div><b>Rejected by the case officer.</b> Reason recorded: “${esc(n.rejectReason||'No reason given')}”. Nothing is submitted. ${tag('AG-11-112(a)')}</div></div>
     <div style="margin-top:10px"><button class="btn sm" data-act="n-reset">Reset this demo</button></div></div></div>`;
   }
 
@@ -447,7 +448,7 @@ function reportItem(){
     } else {
       action = `<button class="btn ghost sm" data-act="n-src" data-v="${v.id}">${isOpen?'Hide':'Source'}</button>`;
     }
-    const srcBox = isOpen ? `<tr><td colspan="5" style="padding-top:0"><div class="src-box"><b>Source:</b> ${esc(v.src)} · read by the product's Reader; verified ${esc(v.ver)} by the Owner${v.low?'; below the confidence level, so you must open it before Approve all':''}.<div class="src-img">document region ${ill('(placeholder image)')}</div></div></td></tr>` : '';
+    const srcBox = isOpen ? `<tr><td colspan="5" style="padding-top:0"><div class="src-box"><b>Source:</b> ${esc(v.src)} · read by the product's Reader; verified ${esc(v.ver)} by the case officer${v.low?'; below the confidence level, so you must open it before Approve all':''}.<div class="src-img">document region ${ill('(placeholder image)')}</div></div></td></tr>` : '';
     return `<tr class="${v.low?'low':''} ${v.low&&n.opened[v.id]?'opened':''}">
       <td><b style="font-weight:600">${esc(v.field)}</b>${v.low&&!n.opened[v.id]?'<div class="xs" style="color:var(--warn);font-weight:600">Below the confidence level</div>':''}</td>
       <td>${valueCell}</td>
@@ -458,7 +459,7 @@ function reportItem(){
 
   const gateList = `
     <div class="check ${g.allOpened?'done':''}"><span class="box">${g.allOpened?'✓':''}</span><span class="t">Open the ${LOW.length} values below the confidence level (${g.openedCount} of ${LOW.length} opened) ${tag('AW-1-33(a)')}</span></div>
-    <div class="check ${g.holdoutDone?'done':''}"><span class="box">${g.holdoutDone?'✓':''}</span><span class="t">Type the hidden value; a match is recorded without storing the value ${tag('AW-1-33(b)')}</span></div>
+    <div class="check ${g.holdoutDone?'done':''}"><span class="box">${g.holdoutDone?'✓':''}</span><span class="t">Type the hidden value; a match is recorded without storing the value ${tag('AW-1-33(b)')} ${ill('Illustrative: that approve all waits for the typed value is the prototype\'s reading of AW-1-33 (b).')}</span></div>
     <div class="check done"><span class="box">✓</span><span class="t">Agreement alarm: shown to you only, never to anyone else ${tag('AW-1-33(c)')}</span></div>`;
 
   return `<div class="item" data-open="true">${top}
@@ -466,7 +467,7 @@ function reportItem(){
     <dl class="kv">
       <dt>What approving does</dt><dd>Accepting this report <b>is</b> your submission of Case C-1 for internal review. The reviewer approves separately. ${tag('AW-1-74')}${tag('AG-7-93')}</dd>
       <dt>Built how</dt><dd>By rule, from the file's provenance, the Reviewer's state, run history and approval items. One paragraph is AI-written. ${tag('AW-1-72')}${tag('AW-1-73')}</dd>
-      <dt>Delegation</dt><dd>DL-CA-01 · the Owner's Case assistant delegation · started by: product alert (case created) ${tag('startedBy')}${ill(' · reference illustrative')}</dd>
+      <dt>Delegation</dt><dd>DL-CA-01 · the case officer's delegation (assistant to the case officer) · started by: product alert (case created) ${tag('startedBy')}${tag('AW-1-5')}${ill(' · reference illustrative')}</dd>
     </dl>
   </div>
   <div class="section">
@@ -483,7 +484,7 @@ function reportItem(){
   </div>
   <div class="section">
     <h4>Findings ${tag('lineType FINDING')}</h4>
-    <div class="small"><span class="pill outline">MAJOR · resolved</span> Name spelling differs between passport and questionnaire. Resolved by the Owner on 24 Nov with a note. The pack's reason is linked.</div>
+    <p class="small muted">No open findings. ${tag('AW-1-72')}</p>
   </div>
   <div class="section">
     <h4>Client-facing sends on this case · 18 ${tag('lineType SEND')}</h4>
@@ -501,7 +502,7 @@ function reportItem(){
     <p class="small muted">None.</p>
   </div>
   <div class="section">
-    <h4>Summary <span class="pill ai" style="margin-left:6px">AI-drafted</span>${tag('AI_SUMMARY')}${tag('AW-1-25')}</h4>
+    <h4>Summary <span class="pill ai" style="margin-left:6px">AI-written</span>${tag('AI_SUMMARY')}${tag('AW-1-25')}${tag('AW-1-73')}</h4>
     <div class="ai-block small">All seven requested documents are verified; one name-spelling difference was resolved on 24 November; the medical is not yet due.</div>
     <p class="xs faint" style="margin-top:6px">The only part of this report written by AI. Everything above is built by rule.</p>
   </div>
@@ -531,7 +532,7 @@ function pausedItem(){
   const top = `
   <button class="item-top" data-act="n-toggle" data-k="paused" aria-expanded="${open}">
     <div style="min-width:0">
-      <div class="row" style="gap:6px;margin-bottom:6px"><span class="pill">Draft message</span><span class="pill ai">AI-drafted</span>${pill}</div>
+      <div class="row" style="gap:6px;margin-bottom:6px"><span class="pill">Draft message</span><span class="pill ai">AI-written</span>${pill}</div>
       <div class="item-title">Client E · proposed conversation about a next step ${tag('W-14')}</div>
       <div class="item-meta">Prepared by <b>AI assistance, assistant to the Owner</b>, acting for <b>the Owner</b> · past client</div>
     </div><span class="chev">›</span>
@@ -622,7 +623,7 @@ const A = {
       [['agent/expense:create','agent/expense:edit','agent/time-entry:create','agent/time-entry:edit'],'No billing entry of any kind','AW-1-39'],
       [['agent/trust:move','agent/trust:reconcile'],'Trust keys are never lendable to an AI assistant','AG-6-46'],
       [['agent/billing:export'],'No export','AW-1-40'],
-      [['agent/retainer:download','agent/reminder:delete','agent/reminder:snooze','agent/notification:manage-preferences'],'Not on the Billing assistant\'s allowed list','§10'],
+      [['agent/retainer:download','agent/reminder:delete','agent/reminder:snooze','agent/notification:manage-preferences'],'Not on this assistant\'s allowed list','§10'],
       [['every send, communication, document, task-create, settings and automation key, including agent/automation:run'],'No sends, no settings, no manual runs','AW-1-41, AW-1-46']
     ]},
   firm: { name:'Firm assistant', screen:'assistant to the Owner and the Case Manager', persons:{owner:{label:'the Owner', role:'Owner', licensed:'linked to a licence'}, cm:{label:'the Case Manager', role:'Case Manager (weekly note only)', licensed:'linked to a licence'}},
@@ -666,7 +667,7 @@ function screenDeleg(){
     <h1>Set up an assistant for a person</h1>
     <p class="lead">An assistant works for one named person, with a subset of that person's own permissions. It runs only after that person accepts. Only that person can end it. ${tag('AW-1-5')}${tag('AW-1-6')}</p>
   </div>
-  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Firm F, AI on. The Owner opens an assistant's settings page and sets one up for a staff member. Use <b>Viewing as</b> to switch between the Owner and the named person. Fictional.</div></div>
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Firm F, AI on. The assistant's firm switch is <b>off</b>, its default, so an accepted delegation starts paused until the Owner switches the assistant on. ${tag('AW-1-125')}${tag('AG-16-57')} The Owner opens an assistant's settings page and sets one up for a staff member. Use <b>Viewing as</b> to switch between the Owner and the named person. Fictional.</div></div>
   <div class="row" style="justify-content:space-between">
     <div class="steps">${steps}</div>
     <div class="seg" role="group" aria-label="Viewing as">
@@ -693,7 +694,7 @@ function screenDeleg(){
 
 function setupCard(){
   const d = S.dl, a = A[d.assistant], p = dlPerson();
-  const asstOpts = Object.entries(A).map(([k,v])=>`<option value="${k}" ${d.assistant===k?'selected':''}>${esc(v.name)}</option>`).join('');
+  const asstOpts = Object.entries(A).map(([k,v])=>`<option value="${k}" ${d.assistant===k?'selected':''}>${esc(v.screen[0].toUpperCase()+v.screen.slice(1))}</option>`).join('');
   const personOpts = Object.entries(a.persons).map(([k,v])=>`<option value="${k}" ${d.person===k?'selected':''}>${esc(v.label)} · ${esc(v.role)}</option>`).join('');
   const may = dlMay();
   const keysHtml = d.assistant==='expert'
@@ -708,7 +709,7 @@ function setupCard(){
   <div class="card">
     <div class="card-head"><h2>New delegation</h2><span class="pill outline">${d.person==='owner'?'Your own delegation':'Owner only, for another person'} ${tag('AW-1-6')}</span></div>
     <div class="section grid2">
-      <div class="field"><label for="d-asst">1 · Choose the assistant</label><select id="d-asst" data-act="d-asst">${asstOpts}</select><span class="xs faint">On screens it is called “${esc(a.screen)}”. ${tag('AW-1-65')}</span></div>
+      <div class="field"><label for="d-asst">1 · Choose the assistant</label><select id="d-asst" data-act="d-asst">${asstOpts}</select><span class="xs faint">Product screens use only this role wording (AI assistance). ${tag('AW-1-65')}${tag('internal name, prototype only: '+a.name)}</span></div>
       <div class="field"><label for="d-person">For this person</label><select id="d-person" data-act="d-person">${personOpts}</select><span class="xs faint">Licence: ${esc(p.licensed)}. Information only; it never gates a delegation. ${tag('AW-1-7')}</span></div>
     </div>
     <div class="section">
@@ -748,7 +749,7 @@ function statusCard(){
   const count = d.assistant==='expert' ? 0 : Object.values(d.keys).filter(Boolean).length;
   const summary = `
   <div class="section"><dl class="kv">
-    <dt>Assistant</dt><dd>${esc(a.name)} · “${esc(a.screen)}”</dd>
+    <dt>Assistant</dt><dd>AI assistance · ${esc(a.screen)} ${tag('internal name, prototype only: '+a.name)}</dd>
     <dt>Works for</dt><dd>${esc(p.label)} (${esc(p.role)}) · licence ${esc(p.licensed)}, information only</dd>
     <dt>Permissions</dt><dd>${d.assistant==='expert'?'none stored (summary line only)':count+' lendable keys, listed one by one'}</dd>
     <dt>Scope</dt><dd>${esc(a.scope)}</dd>
@@ -762,7 +763,7 @@ function statusCard(){
       note = `<div class="notice info"><span class="ic">i</span><div class="small">Waiting for ${esc(p.label)} to accept. While it is still pending, you may withdraw the offer: it never took effect. ${tag('AW-1-6')}${tag('US-114')}</div></div>`;
       actions = `<button class="btn danger" data-act="d-withdraw">Withdraw offer</button>`;
     } else {
-      note = `<div class="notice info"><span class="ic">i</span><div class="small">The Owner offered you ${esc(a.name.toLowerCase())}. Review the permissions it would use on your behalf. Every act it prepares will name you as the person behind it. ${tag('AW-1-3')}</div></div>`;
+      note = `<div class="notice info"><span class="ic">i</span><div class="small">The Owner offered you AI assistance (${esc(a.screen)}). Review the permissions it would use on your behalf. Every act it prepares will name you as the person behind it. ${tag('AW-1-3')}</div></div>`;
       actions = `<button class="btn primary" data-act="d-accept">Accept</button><button class="btn" data-act="d-decline">Decline</button>`;
     }
   } else if(d.state==='active' || d.state==='paused'){
@@ -770,9 +771,9 @@ function statusCard(){
     const waitLine = a.waiting ? `<div class="small" style="margin-top:8px">Waiting from this delegation: ${esc(a.waiting)} ${waitingPill} ${ill('(fictional)')}</div>` : '';
     if(d.viewAs==='owner'){
       note = `<div class="notice ${d.state==='paused'?'paused':'ok'}"><span class="ic">${d.state==='paused'?'ǁ':'✓'}</span><div class="small">
-        ${d.state==='paused' ? `Paused because you switched ${esc(a.name.toLowerCase())} off for the firm. It resumes with no new acceptance when you switch it on. ${tag('AW-1-11(a)')}${tag('AW-1-125')}` : `Accepted by ${esc(p.label)}. The assistant now prepares work for ${esc(p.label)}.`}
-        <div style="margin-top:6px"><b>You have no control to end this.</b> Only ${esc(p.label)} can end it. To halt the assistant at once, use its switch or the AI switch, or deactivate the person. ${tag('AW-1-6')}${tag('AW1-D34')}</div>${waitLine}</div></div>`;
-      actions = `<div class="row" style="gap:10px"><span class="small muted">${esc(a.name)} switch for the firm</span><button class="switch" role="switch" aria-checked="${d.switchOn}" data-act="d-switch" aria-label="${esc(a.name)} switch"></button>${tag('AG-16-57')}</div>`;
+        ${d.state==='paused' ? `Paused because the firm's switch for ${esc(a.screen)} is off (every assistant switch is off by default). It runs, with no new acceptance, when you switch it on. ${tag('AW-1-11(a)')}${tag('AW-1-125')}` : `Accepted by ${esc(p.label)}. The assistant now prepares work for ${esc(p.label)}.`}
+        <div style="margin-top:6px"><b>You have no control to end this.</b> Only ${esc(p.label)} can end it. To halt the assistant at once, use its switch or the AI switch, or deactivate or suspend the person. ${tag('AW-1-6')}${tag('AW-1-125')}${tag('AW1-D34')}</div>${waitLine}</div></div>`;
+      actions = `<div class="row" style="gap:10px"><span class="small muted">Firm switch: ${esc(a.screen)}</span><button class="switch" role="switch" aria-checked="${d.switchOn}" data-act="d-switch" aria-label="Firm switch: ${esc(a.screen)}"></button>${tag('AG-16-57')}</div>`;
     } else {
       note = `<div class="notice ${d.state==='paused'?'paused':'ok'}"><span class="ic">${d.state==='paused'?'ǁ':'✓'}</span><div class="small">${d.state==='paused'?'Your assistant is paused by a firm switch. You do not need to accept again.':'Your assistant is active.'}${waitLine}</div></div>`;
       actions = d.confirmEnd
@@ -786,7 +787,7 @@ function statusCard(){
     actions = d.viewAs==='owner' ? `<button class="btn primary" data-act="d-restart">Set up a new offer</button>` : '';
   }
   return `<div class="card">
-    <div class="card-head"><h2>${esc(a.name)} for ${esc(p.label)}</h2>${stateMap[d.state]}</div>
+    <div class="card-head"><h2>AI assistance · ${esc(a.screen)} · for ${esc(p.label)}</h2>${stateMap[d.state]}</div>
     ${summary}
     <div class="section stack">${note}<div class="row">${actions}</div></div>
   </div>`;
@@ -801,30 +802,30 @@ function provRows(){
   return [
     { id:'r1', what:'Reply to Client A about the ECA translation', kind:'AI draft (client message)', worker:'W-08',
       run:'CA-C1-01', sources:['Client A\'s message of 10 Nov','Canada pack 2026.3 · documents, ECA (fictional label)'],
-      actor:'the Owner', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (message received)',
-      approver:'the Owner · linked to a licence at decision · setting: licensed users only', decision:'edited', date:'11 Nov',
+      actor:'the case officer', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (message received)',
+      approver:'the case officer · linked to a licence at decision · setting: licensed users only', decision:'edited', date:'11 Nov',
       before:'Your ECA report does not need a translation because it is issued in English.',
       after:'Your ECA report does not need a certified translation because it is issued in English.', marker:'Edited AI draft' },
     { id:'r2', what:'Upload verdict · Employment reference letter, version 1', kind:'Upload verdict', worker:'W-04',
       run:'CA-C1-01', sources:['Employment reference letter v1, pages 1–2','Pack acceptable-form rule (fictional)'],
-      actor:'the Owner', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (document read)',
-      approver:'the Owner', decision:'rejected', date:'16 Nov',
+      actor:'the case officer', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (document read)',
+      approver:'the case officer', decision:'rejected', date:'16 Nov',
       before:'Status: Received', after:'Status: Rejected · reason: the letter does not state hours per week (fictional). The product re-requested it.', marker:'AI-prepared' },
     { id:'r3', what:'Upload verdict · Employment reference letter, version 2', kind:'Upload verdict', worker:'W-04',
       run:'CA-C1-01', sources:['Employment reference letter v2, page 1'],
-      actor:'the Owner', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (document read)',
-      approver:'the Owner', decision:'approved', date:'23 Nov',
+      actor:'the case officer', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (document read)',
+      approver:'the case officer', decision:'approved', date:'23 Nov',
       before:'Status: Received', after:'Status: Verified', marker:'AI-prepared' },
     { id:'r4', what:'Readiness report for Case C-1', kind:'Readiness report', worker:'W-01',
       run:'CA-C1-01', sources:['This provenance view','The Reviewer\'s state','Run history','Approval items on the file'],
-      actor:'the Owner', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (case created)',
-      approver: repDecision==='pending' ? '—' : 'the Owner · linked to a licence at decision', decision:repDecision, date: repDecision==='pending' ? 'due 4 Dec' : 'today',
+      actor:'the case officer', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (case created)',
+      approver: repDecision==='pending' ? '—' : 'the case officer · linked to a licence at decision', decision:repDecision, date: repDecision==='pending' ? 'due 4 Dec' : 'today',
       before:'Case stage: in preparation', after: repDecision==='approved' ? 'Case stage: submitted for internal review' : repDecision==='rejected' ? 'No change (report rejected)' : 'Waiting in Needs you (screen 1)',
       marker:'Built by rule · one AI-written paragraph' },
     { id:'r5', what:'Passport values (3)', kind:'Proposed profile values', worker:'the product\'s Reader',
       run:'— (firm automation, no assistant)', sources:['Passport, version 1 · machine-readable line 2'],
-      actor:'the Owner (decision)', mode:'AUTOMATION', deleg:'none', started:'—', startedPlain:'not an assistant run',
-      approver:'the Owner · approving verifies the values', decision:'approved', date:'4 Nov',
+      actor:'no person (the product\'s own job)', mode:'AUTOMATION', deleg:'none', started:'—', startedPlain:'not an assistant run',
+      approver:'the case officer · approving verifies the values (a separate PERSON entry)', decision:'approved', date:'4 Nov',
       before:'Proposed: date of birth, passport expiry, passport number', after:'Verified · passport number shown by status only (present)', marker:'AI-prepared' }
   ];
 }
@@ -843,7 +844,7 @@ function screenProv(){
         <dl class="kv">
           <dt>Run</dt><dd><code>${esc(r.run)}</code> ${r.mode==='DELEGATED'?ill('(run reference illustrative)'):''}${tag('personaRunId')}</dd>
           <dt>Sources</dt><dd>${r.sources.map(esc).join('<br>')}</dd>
-          <dt>Prepared</dt><dd>Actor <b>${esc(r.actor)}</b> · mode <code>${r.mode}</code>${r.mode==='DELEGATED'?` · delegation <code>${r.deleg}</code> · started by <code>${r.started}</code> (${esc(r.startedPlain)})`:' · the product\'s own AI call, not an assistant'} ${tag('AG-13-68')}${tag('AG-11-113')}</dd>
+          <dt>Prepared</dt><dd>Actor <b>${esc(r.actor)}</b> · mode <code>${r.mode}</code>${r.mode==='DELEGATED'?` · delegation <code>${r.deleg}</code> · started by <code>${r.started}</code> (${esc(r.startedPlain)})`:' · the product\'s own AI call, not an assistant; no person is the actor; the job reference is recorded'} ${tag('AG-13-68')}${tag('AG-11-113')}</dd>
           <dt>Decided</dt><dd>${esc(r.approver)} · mode <code>PERSON</code> ${tag('AW-1-26')}</dd>
           <dt>Marker</dt><dd>${esc(r.marker)} ${tag('AW-1-25')}</dd>
         </dl>
@@ -863,7 +864,7 @@ function screenProv(){
     <h1>AI provenance · Case C-1</h1>
     <p class="lead">One read-only page per file. Every AI-prepared item, its run, its sources, who decided, what they decided, and what changed. ${tag('AW-1-23')}${tag('IMP-2(c)')}</p>
   </div>
-  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Case C-1 (Client A), Firm F, viewed by the Owner. Every record shown passes the viewer's own permission check; Restricted values show by status only. The readiness report row follows what you did on screen 1. Fictional.</div></div>
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Case C-1 (Client A), Firm F, viewed by the case officer (licensed; the file owner, whose delegation the assistant works under). Every record shown passes the viewer's own permission check; Restricted values show by status only. The readiness report row follows what you did on screen 1. Fictional.</div></div>
   <div class="card">
     <div class="card-head"><div class="filters">${filters}</div>
       <div class="legend"><span><code>DELEGATED</code> an assistant acted for the person</span><span><code>PERSON</code> the person acted</span><span><code>AUTOMATION</code> the product's own automation</span></div></div>
@@ -872,7 +873,7 @@ function screenProv(){
       <tbody>${body}</tbody>
     </table></div>
   </div>
-  <div class="notice info"><span class="ic">i</span><div class="small">The actor is always the named person the assistant worked for, never “system”. A separate <b>started by</b> field says what started the run: the delegating person, another person, the schedule, a product alert or a watcher item. ${tag('AW-1-3')}${tag('AW-1-21')}${tag('AG-11-113')}</div></div>
+  <div class="notice info"><span class="ic">i</span><div class="small">On an assistant's entry (mode DELEGATED) the actor is always the named person the assistant worked for, never “system”. A separate <b>started by</b> field says what started the run: the delegating person, another person, the schedule, a product alert or a watcher item. The product's own jobs (mode AUTOMATION, such as the Reader) name no person as actor; a person's decision is its own PERSON entry. ${tag('AW-1-3')}${tag('AW-1-21')}${tag('AG-11-113')}${tag('AG-13-68')}</div></div>
   ${foot('AW-1-3, AW-1-21, AW-1-22, AW-1-23, AW-1-25, AW-1-26, AW-1-59; AW1-BR-2; AG-13-68 (CN-AG-13 change 2: mode, delegationId, startedBy, personaRunId); AG-11-113 (CN-AG-11 change 7: the five startedBy values); AG-11-112 (decisions); US-10, US-11, US-102, US-103, US-104.', 'Also shown, as the requirement asks: the product\'s own Reader item (mode AUTOMATION), because the view lists every AI-prepared item on the file, not only an assistant\'s.')}`;
 }
 
@@ -911,9 +912,8 @@ function exAnswer(){
   }
   return { shape:4, outcome:'ANSWERED', pack:'—', sources:['Your Needs you queue'],
     lines:[
-      '<b>Readiness report on Case C-1</b> · due Fri 4 Dec.',
       '<b>Draft message to Client E</b> · paused by Expat Ready on 1 Dec; it cannot be approved while paused.'
-    ], summary:'Two items wait for you; one of them is paused.' };
+    ], summary:null };
 }
 function screenExpert(){
   const e = S.ex, a = exAnswer();
@@ -935,7 +935,7 @@ function screenExpert(){
     <h1>Practice answers</h1>
     <p class="lead">Four fixed questions, answered by rule from the firm's own records and the pack. An optional one-line AI summary may sit on top; everything else works with AI off. ${tag('AG-14-35')}${tag('AW-1-109')}</p>
   </div>
-  <div class="scenario"><span>◇</span><div><b>Scenario.</b> The Owner of Firm F (licensed) asks on Wed 2 Dec 2026. The Owner holds an accepted read-only delegation for the summary line, and the firm's summary-line switch is on. Internally this is the <b>Practice expert</b>; on screens it is never called that to clients. Screen label ${ill('illustrative')}. Fictional.</div></div>
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> The Owner of Firm F (licensed) asks on Wed 2 Dec 2026. The Owner holds an accepted read-only delegation for the summary line, and the firm's summary-line switch is on. On product screens this is called <b>Practice answers</b>; the internal name (Practice expert) is never shown on any product screen. ${tag('AW-1-65')}${tag('AW1-D33')} Screen label ${ill('illustrative')}. Fictional.</div></div>
   <div class="grid2 split-l">
     <div class="card card-pad stack">
       <div class="lbl">Pick a question ${tag('AW-1-110')}</div>
@@ -1109,12 +1109,13 @@ function validateFirm(){
   });
   return errs;
 }
+/* [key, product label shown on the screen (AW-1-65), note, internal name for the prototype's own tags only] */
 const ASSTS = [
-  ['case','Case assistant','Assistant to the case officer'],
-  ['intake','Intake assistant','Assistant to the intake role'],
-  ['billing','Billing assistant','Assistant to Billing / Finance'],
-  ['firm','Firm assistant','Assistant to the Owner and the Case Manager'],
-  ['expert','Practice expert · summary line only','The AI summary line on practice answers; the answers themselves have no switch']
+  ['case','AI assistance · assistant to the case officer','',"Case assistant"],
+  ['intake','AI assistance · assistant to the intake role','',"Intake assistant"],
+  ['billing','AI assistance · assistant to Billing / Finance','',"Billing assistant"],
+  ['firm','AI assistance · assistant to the Owner and the Case Manager','',"Firm assistant"],
+  ['expert','The AI summary line on practice answers','The answers themselves have no switch',"Practice expert"]
 ];
 function screenSet(){
   const st = S.st;
@@ -1140,7 +1141,7 @@ function screenSet(){
     </div>`;
   }
   const aiOn = st.record==='published' && st.ai==='on';
-  const swRows = ASSTS.map(a=>`<div class="setrow"><div><div class="t">${esc(a[1])}</div><div class="d">${esc(a[2])} · off by default ${tag(a[0]==='expert'?'AG-16-57 expertSummaryLine':'AG-16-57')}</div>
+  const swRows = ASSTS.map(a=>`<div class="setrow"><div><div class="t">${esc(a[1])}</div><div class="d">${a[2]?esc(a[2])+' · ':''}off by default ${tag(a[0]==='expert'?'AG-16-57 expertSummaryLine':'AG-16-57')}${tag('internal name, prototype only: '+a[3])}</div>
       ${st.sw[a[0]] && !aiOn ? '<div class="xs" style="color:var(--warn);margin-top:3px">On, but no effect while AI is off or locked.</div>' : ''}</div>
       <button class="switch" role="switch" aria-checked="${st.sw[a[0]]}" data-act="s-sw" data-v="${a[0]}" aria-label="${esc(a[1])}"></button></div>`).join('');
   const valRow = f => {
@@ -1212,13 +1213,13 @@ function screenAbout(){
   <div class="card card-pad about">
     <p><b>What it is.</b> A clickable walk-through of six moments in Expat Ready's firm AI assistants, for the founder and the product team. Each screen shows one rule working: a person approves, an assistant works for a named person, and every step is recorded.</p>
     <p><b>What it is not.</b> Illustrative only. It is <b>not</b> the product's design system, not a screen specification, and not a promise of layout or wording. Where the requirements leave a detail open, the screen keeps it generic or marks it <span class="illus">illustrative</span>. All names, dates, amounts and values are fictional. No provider is named.</p>
-    <p><b>Built from.</b> AW-01 Firm AI assistants v0.5 and AW-02 Platform AI assistants v0.6 (both passed), with the change notes they cite and the worked examples in the behaviour documents, on <b>11 October 2026</b>.</p>
+    <p><b>Built from.</b> AW-01 Firm AI assistants v0.5 and AW-02 Platform AI assistants v0.6 (both passed; aligned after review S3e to AW-01 v0.6 and AW-02 v0.7), with the change notes they cite and the worked examples in the behaviour documents, on <b>11 October 2026</b>.</p>
     <p><b>How to read it.</b></p>
     <ul>
       <li>Each screen ends with a muted <b>Traces to</b> line listing the requirements it shows.</li>
       <li>Small grey tags beside elements give the exact requirement. Turn them off with <b>Requirement tags</b> in the menu.</li>
       <li>Dashed purple boxes are <b>demo controls</b>: they play a part the real product leaves to someone else (for example, Expat Ready releasing a stop).</li>
-      <li>Internal names (Case assistant, Practice expert) appear only in this prototype's menu and captions. Inside the product screens, assistants are called “AI assistance” or “assistant to the <i>role</i>” (AW-1-65).</li>
+      <li>Inside the product screens, assistants are called only “AI assistance” or “assistant to the <i>role</i>”, and the expert's screen is “Practice answers” (AW-1-65, AW1-D33). Internal names (for example Case assistant, Practice expert) appear only in this About page, in grey requirement tags marked “internal name, prototype only”, and in the prototype's own source comments.</li>
       <li>Screens share one story: what you decide on screen 1 appears on screen 3.</li>
     </ul>
     <p class="small muted" style="margin-top:14px">Every requirement here is still a Proposal until the founder places the modules on Drive. The safety rules are provisional until counsel reads them (AIW-D55 to D58, D64).</p>
@@ -1268,8 +1269,8 @@ document.addEventListener('click', e=>{
     case 'd-offer': {
       const p = dlPerson();
       if(d.assistant!=='expert' && !Object.values(d.keys).some(Boolean)){ alert('Tick at least one permission.'); return; }
-      d.state='pending'; d.endReason=null; d.waiting='pending'; d.switchOn=true;
-      dlLog(`The Owner set up ${A[d.assistant].name.toLowerCase()} for ${p.label} · mode PERSON · ${p.label} notified`); break; }
+      d.state='pending'; d.endReason=null; d.waiting='pending';
+      dlLog(`The Owner set up ${A[d.assistant].screen} for ${p.label} · mode PERSON · ${p.label} notified`); break; }
     case 'd-withdraw': d.state='ended'; d.endReason='WITHDRAWN'; dlLog('The Owner withdrew the pending offer · endReason WITHDRAWN · nothing ran under it'); break;
     case 'd-accept': {
       const p = dlPerson();
@@ -1279,14 +1280,14 @@ document.addEventListener('click', e=>{
     case 'd-decline': { const p=dlPerson(); d.state='ended'; d.endReason='DECLINED'; dlLog(`${p.label[0].toUpperCase()+p.label.slice(1)} declined · endReason DECLINED`); break; }
     case 'd-switch': {
       d.switchOn = !d.switchOn;
-      if(!d.switchOn){ d.state='paused'; if(d.waiting==='pending'||d.waiting==='stale') d.waiting='paused'; dlLog(`The Owner switched ${A[d.assistant].name.toLowerCase()} off · delegation PAUSED (ASSISTANT_SWITCH_OFF) · waiting items PAUSED`); }
-      else { d.state='active'; if(d.waiting==='paused') d.waiting='stale'; dlLog(`The Owner switched ${A[d.assistant].name.toLowerCase()} on · delegation ACTIVE, no new acceptance · waiting items re-rendered stale`); }
+      if(!d.switchOn){ d.state='paused'; if(d.waiting==='pending'||d.waiting==='stale') d.waiting='paused'; dlLog(`The Owner switched ${A[d.assistant].screen} off · delegation PAUSED (ASSISTANT_SWITCH_OFF) · waiting items PAUSED`); }
+      else { d.state='active'; if(d.waiting==='paused') d.waiting='stale'; dlLog(`The Owner switched ${A[d.assistant].screen} on · delegation ACTIVE, no new acceptance · waiting items re-rendered stale`); }
       break; }
     case 'd-end': d.confirmEnd = true; break;
     case 'd-end-cancel': d.confirmEnd = false; break;
     case 'd-end-confirm': { const p=dlPerson(); d.confirmEnd=false; d.state='ended'; d.endReason='PERSON_ENDED'; d.waiting='cancelled';
       dlLog(`${p.label[0].toUpperCase()+p.label.slice(1)} ended the delegation · endReason PERSON_ENDED${A[d.assistant].waiting?' · waiting item cancelled (DELEGATION_ENDED)':''}`); break; }
-    case 'd-restart': d.state='setup'; d.endReason=null; d.waiting='pending'; d.switchOn=true; dlInitKeys(); break;
+    case 'd-restart': d.state='setup'; d.endReason=null; d.waiting='pending'; dlInitKeys(); break;
     /* provenance */
     case 'pv-filter': S.pv.filter = v; S.pv.open=null; break;
     case 'pv-open': S.pv.open = S.pv.open===v ? null : v; break;
