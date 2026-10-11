@@ -8,6 +8,11 @@
 - **Lessons this step** (memory `ws2-step3-scope-lesson`): stay inside AI; decisions.md is append-only; no whole-file rewrites of large files; sweep the Lead's own edits for contradictions; never edit a file twice with a pattern that may match two rows.
 - Sources: `sources/drive-snapshot-2026-10-11/` (CURRENT). Check Drive at the start of the next step.
 
+## Step R in progress (11 Oct)
+- Founder's interview so far: AIW-D81 to D87 (see `rethink-plan.md`). Evidence filed: `research/ai-in-regulated-work-2026-10.md`, `research/ai-coverage-vs-competitors-2026-10.md`, `design/ai-carve-out-register-2026-10-11.md`.
+- Running: architecture research `research/ai-architecture-deterministic-2026-10.md` (platform as the guardrail; skill structure, naming, scalability, maintainability; tracing; evaluation; tokens; access; models in Canada). When it lands: put interview question 6 (names of the levels) to the founder with the research's recommendation.
+- Then build the Step R deliverables (AIW-D86): one blueprint (product map, PRD, AI team and skills with reuse map, journeys and use cases with edge cases, stories linked to tests, technical design, evaluation and driving tests, traceability to team IDs or NEW) and a working coded prototype, both buildable and agnostic of build status (AIW-D87). Consolidate: the blueprint becomes the one source; superseded design files move to `archive/` with pointers.
+
 ## Next
 0. **Step R first (founder's ask, 11 Oct):** read `rethink-plan.md`. Evidence tasks were started on 11 Oct (three files under `research/` and `design/ai-carve-out-register-2026-10-11.md`); if they are missing, re-run them. Then decide the version 1 scope with the founder, consolidate to one source, and build the blueprint.
 1. Done 11 Oct: batch applied, report card refreshed. Start the next session with the Drive freshness check.
