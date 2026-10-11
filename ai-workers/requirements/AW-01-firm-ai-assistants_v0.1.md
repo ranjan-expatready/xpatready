@@ -908,7 +908,7 @@ Numbered `AW-1-x`, AW-1-1 to AW-1-126. New requirements continue from AW-1-127; 
 
 **US-88 — Answers need no delegation; permission at the moment of reading.** *(AW-1-111)*
 - **Given** a case officer with no Practice expert delegation, **When** they ask *what is waiting on me*, **Then** the rule-built answer shows with its answer lines, with no summary line (NO_DELEGATION).
-- **Given** a case officer whose role was copied without `agent/case:view.all`, **When** they ask about deadlines, **Then** *all files I may see* is not offered, and the answer neither shows nor counts other people's files.
+- **Given** a case officer whose role does not hold `agent/report:view.all` (AG-14-36, CN-AG-14 change 1; corrected by the Lead 11 Oct from `agent/case:view.all`), **When** they ask about deadlines, **Then** *all files I may see* is not offered, and the answer neither shows nor counts other people's files.
 
 **US-89 — When a summary line may appear.** *(AW-1-112)*
 - **Given** a two-line answer with the summary-line switch on, AI on, an active delegation and caps not reached, **Then** one line labelled *AI-written summary* appears above the lines; **Given** a one-line answer or a refusal, **Then** no model call is made.
