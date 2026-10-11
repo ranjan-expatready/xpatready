@@ -13,8 +13,8 @@ Turn the seven decided behaviour documents of Step 2 into something the team can
 | A. Firm AI assistants (Case, Intake, Billing, Firm, Practice expert) | `AW-01-firm-ai-assistants_v0.1.md` (version 0.5 inside) | 126 requirements, 114 user stories, 39 module decisions, 24 business rules, 13 evaluation sets, 5 risk registers, 1 incident procedure | Passed |
 | B. Platform AI assistants (Pack author's assistant, Support and account assistant) | `AW-02-platform-ai-assistants_v0.1.md` (version 0.6 inside) | 77 requirements, 55 user stories, 26 decisions, 16 business rules, 11 hard limits | Passed |
 | C. Change notes for the team's own documents | `change-notes/` | 33 notes: 18 for the firm side (79 changes), 15 for Super Admin, the client portal and the Founder Decisions Log (73 changes) | Both sets passed |
-| D. Test cases, in the team's format | `tests/AW-test-cases.csv` | 429 test cases (plus the gap rows the last check asked for) | In its last fix |
-| E. Clickable prototype | `../prototype/index.html` | Six screens, offline, every screen traced to a requirement | In its last fix |
+| D. Test cases, in the team's format | `tests/AW-test-cases.csv` | 436 test cases (271 for the firm assistants, 165+6 for the platform assistants; 10 blocked until your answer to question 2) | Passed |
+| E. Clickable prototype | `../prototype/index.html` | Six screens, offline, every screen traced to a requirement | Passed |
 | F. Counsel pack | `counsel-pack.md` | 17 questions for counsel, in the order they block the pilot | Ready for counsel (engage by 31 Oct, AIW-D68) |
 
 ## 3. What the specification guarantees, in plain words
