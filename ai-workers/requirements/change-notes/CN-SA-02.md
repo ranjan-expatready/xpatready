@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-02 Tenant & Firm Management, version 2.21, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-02-tenant-firm-management_v2.21_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (fix round after review S3a; re-based from v2.19 to v2.21) |
+| **Date of this note** | 11 Oct 2026 (fix round after review S3a; re-based from v2.19 to v2.21; second fix round: the message key named) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 3 |
 
@@ -68,7 +68,7 @@ L345:
 L345 gains at the end: "; **account-manager messages** (SA-2-42)."
 
 New requirement:
-> - **SA-2-42** *(new — proposals row of 10 Oct, account-manager outreach)* A firm's account manager can send a message to the firm through the platform's own Mailer. The recipient is fixed to the firm's owner contact and, for money matters, also the billing email (SA-4-53); no other recipient can be entered. The message, its sender and its time are recorded on the firm record and in the audit log.
+> - **SA-2-42** *(new — proposals row of 10 Oct, account-manager outreach)* A firm's account manager can send a message to the firm through the platform's own Mailer. The recipient is fixed to the firm's owner contact and, for money matters, also the billing email (SA-4-53); no other recipient can be entered. The message, its sender and its time are recorded on the firm record and in the audit log. Sending requires `system/firm:message-owner` (name for the team; CN-SA-06 change 4).
 
 **(4) Why.** Proposals row of 10 Oct (Support and account assistant):
 - the gap: "No platform action sends an account manager's own message to a firm … An outreach to a firm in trouble is therefore sent from the account manager's own mailbox and is outside the platform audit log";
@@ -80,7 +80,7 @@ Today the only sends are system notices (L345) and the overdue list's "send remi
 
 **(5) Knock-ons.**
 - SA-07 Appendix A gains the row (CN-SA-07 change 1).
-- SA-06 gains its key in the catalogue (CN-SA-06 change 4).
+- SA-06 gains the key in the catalogue (CN-SA-06 change 4).
 - SA-11 records it like any staff action (SA-11-14).
 
 ---

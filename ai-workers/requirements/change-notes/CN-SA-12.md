@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-12 Feature Flags & Platform Configuration, version 2.7, dated 2026-10-08 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-12-feature-flags-and-platform-configuration_v2.7_2026-10-08.md` |
-| **Date of this note** | 11 Oct 2026 (fix round after review S3a) |
+| **Date of this note** | 11 Oct 2026 (second fix round, after re-check S3a-b) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 4 |
 
@@ -20,7 +20,10 @@ What each AI assistant does when stopped is specified in AW-01 and AW-02, which 
 **Plain words used here.**
 - *Kill switch*: SA-12's emergency brake that forces a feature off for every firm at once.
 - *Needs you*: the firm's inbox where anything prepared without a person present waits for a person to approve, edit or reject.
-- *Platform setting*: one typed, versioned value in SA-12's registry, with per-firm overrides (§3.6).
+- *Platform setting*: one typed, versioned value in SA-12's registry, with per-plan and per-firm overrides (SA-12-17).
+- *Pilot safeguards setting*: one platform setting, on from the start, that keeps the founder's pilot safeguards in force. It is switched off only by a recorded founder decision (change 3). Requirements name this setting instead of saying "during the pilot", because the product can check a setting but cannot check a period.
+
+**This note is the one home of** the AI spend caps, the values of the founder's approve-all safeguards (AIW-D57) and the *pilot safeguards* setting (SA-12-33; `00-step3-plan.md`, "Pilot safeguard values, one home"). Other notes and AW files cite SA-12-33 and restate no value.
 
 **Phasing.** The shared 99-Phasing-and-Glossary v2.18 puts SA-12's "Dedicated flag catalog, other firm overrides" in the second phase (L42). Release 1 does not launch without the AI assistants (AIW-D66), so the AI stops of change 1 need the catalogue in Release 1. That phasing row is the team's to change (not written here).
 
@@ -60,6 +63,7 @@ New requirement:
 - **The team's pending knock-on.** AG-11 v1.12 lists this as pending (§0.2, L56: "| **SA-12** | Platform kill switch for the AI Doers | Pending |").
 - **IMP-8** asks for "the SA-12 switches: one for all four AI Doers and one per AI Worker, each an emergency stop at platform level with a mandatory reason".
 - **The one stop rule.** The Step 3 shared rule fixes the behaviour: "a stop pauses runs and delegations; nothing sends while stopped; waiting items can be withdrawn with the recall action (SA-12-32); on release every waiting item re-renders stale and needs fresh approval. A delegation ends only when its person ends it or is deactivated or suspended" (`00-step3-plan.md`, emergency stop). It replaces the first version's "end running assistant runs" and "approvable" wording (review S3a m-7).
+- **No one stops another person's delegation.** The kill switch pauses every run under a flag; it is not a key that ends any person's delegation (`00-step3-plan.md`, "No one stops another person's delegation").
 - **Prior art.** Doc 2 v1.4 already numbers a pause-hook contract SA-12-29 to SA-12-31 (L5453): "`pause` parks queued work retaining payload+order, checkpoints executing runs, withholds scheduled sends … nothing is deleted". The module file SA-12 v2.7 is current (rule 11), so its numbering stands and Doc 2's contract is cited as the mechanism, not as a live ID (review S3a m-10).
 - **Relied on by the behaviour documents.**
   - The Support assistant's start condition: "The persona's own flag is on and not kill-switched … one flag per persona is IMP-8 (Proposal)" (`support-and-account-assistant.md` §1).
@@ -113,37 +117,52 @@ Role mapping gains: "The AI recall key is held by the Platform Owner; whether th
 
 ---
 
-## 3. Proposal: AI spend caps and the AI safeguard settings are platform settings, not plan limits
+## 3. The AI settings: the *pilot safeguards* setting, the approve-all safeguard values and the spend caps, as platform settings a firm may tighten but never loosen
 
-**(1) What it changes.** §3.6 "Categories (initial)" (L274); a new requirement SA-12-33.
+**(1) What it changes.** §3.6 "Categories (initial)" (L274); §10 role-mapping paragraph (L571); a new requirement SA-12-33.
 
 **(2) Current words.**
 
 L274:
 > **Categories (initial):** upload limits (max bytes, MIME allowlist), session/auth (session timeout, token TTLs that are safe to expose), platform defaults (default locale/currency/timezone fallbacks — *not* a firm's own settings, the platform fallback), branding defaults (platform name, support email, default theme tokens), system params (pagination caps, queue concurrency hints), and the rate-limit config (3.9).
 
-**(3) Proposed words.** *Proposal.*
+L370:
+> - **SA-12-17:** The platform maintains a `PlatformSetting` registry: typed (int/bool/string/enum/json/duration/bytes), **schema-validated** on write (no manual validation chains), scoped (PLATFORM default with per-plan/per-firm overrides), and **environment-aware** (dev/staging/prod values).
 
-L274 gains: "AI settings (spend caps and the AI safeguard settings, SA-12-33)."
+**(3) Proposed words.**
+
+L274 gains: "AI settings (the pilot safeguards setting, the approve-all safeguard values and the AI spend caps, SA-12-33)."
 
 New requirement:
-> - **SA-12-33:** *(new — IMP-36; AIW-D57, AIW-D59, AIW-D62; proposal)* The registry holds the AI settings as platform settings with per-firm overrides (SA-12-17):
->   - **spend caps** per firm per month (warning at 80 %, then a stop of new model calls at 100 % with the manual path, AG-11-71), per Practice expert user per day, and per assistant run (a runaway run is stopped and parked for a person, from day one);
->   - the values of the founder's approve-all safeguards (AIW-D57).
+> - **SA-12-33:** *(new — AIW-D57, AIW-D59, AIW-D62; IMP-36)* The registry (SA-12-17) holds three groups of AI settings:
+>   - **(a) The pilot safeguards setting** (a yes/no setting; the team names the key). It is **on** from the first deployment. Only the Platform Owner can switch it off, and only by recording, as the change reason, the reference of the founder's decision that ends it (SA-12-25). While it is on:
+>     - no approve-all safeguard in (b) can be switched off, at platform, plan or firm level. A value that would switch one off is refused on write: no low-confidence values opened first, no value hidden for the approver to fill, or the agreement alarm off;
+>     - a plan or billing-period change proposed by the Support and account assistant needs a second person's confirmation (SA-4-89).
+>   - **(b) The approve-all safeguard values** (AIW-D57): the confidence level below which a value is opened first; the share of values hidden for the approver to fill (at least one value on every approve-all); and the level and time window of the agreement alarm.
+>   - **(c) The AI spend caps:** per firm per month (warning at 80 %, then a stop of new model calls at 100 % with the manual path, AG-11-71); per Practice expert user per day; and per assistant run (a runaway run is stopped and parked for a person, from day one). Spend caps never stop the product's own non-AI work.
 >
->   Values are set before the pilot by the team and changed by the founder after it (AIW-D62). **During the pilot, no setting can switch off the founder's pilot safeguards** (AIW-D57; AIW-D59's second-person rule, SA-4-89); a change to a value is audited with a reason (SA-12-25). Spend caps never stop the product's own non-AI work.
+>   The values in (b) and (c) are platform defaults. A per-firm value **may only tighten** a default: a higher confidence level, a larger hidden share, a lower alarm level or a lower cap. A value that would loosen a default is refused on write. The pilot values are set by the team before the pilot; spend caps are changed after it on the founder's decision (AIW-D62). Every change is audited with a reason (SA-12-25). The firm's own settings screen shows these values read-only, together with any tightening the firm has chosen (AG-16, CN-AG-16).
+
+Role mapping (L571) gains: "Switching the pilot safeguards setting off is reserved to the Platform Owner (SA-12-33)."
 
 **(4) Why.**
+- **One home.** The Lead's call of 11 Oct (re-check S3c-b N-7), recorded in `00-step3-plan.md`: "the founder's approve-all safeguards (AIW-D57) and spend caps are platform settings in CN-SA-12 (SA-12-33), locked by the *pilot safeguards* setting; a firm may tighten them, never loosen them. CN-AG-16 shows them read-only with the firm's tightening and restates no value."
+- **A setting, not a period.** `00-step3-plan.md`, "No 'during the pilot' in a requirement": "a requirement names a platform setting the product can check, the *pilot safeguards* setting, on from the start and switched off only by a recorded founder decision (AIW-D57, D59)". This replaces this note's earlier "During the pilot, no setting can switch off …" (re-check S3a-b m-4).
+- **The safeguards.** AIW-D57 ("Adopt all three"): "low-confidence values opened first; a few values hidden for the approver to fill, match rate recorded; an alarm when a person's agreement rate climbs suddenly. Provisional until counsel." The names of the values follow AW-01 §13 T7 ("confidence threshold, holdout share, alarm level and window"). No number is set here.
+- **What "switched off" means.** AW-02 AW-2-77 states the same floors: "low-confidence first, at least one hidden value per accept-all, the always-on agreement alarm … settings may only raise values above those floors". This note becomes their one home, so AW-2-77 cites SA-12-33 (listed for the Lead).
+- **The second person.** AIW-D59 ("Yes, for the pilot"): "A second Expat Ready person confirms any account or plan change the Support assistant proposes, during the pilot; reviewed after it."
+- **Owner only.** SA-12's Platform Owner "holds everything plus the confirmation authority on the most dangerous switches" (L571); `system/platform-config:manage` is also held by the Platform Engineer (L566, L571), so the switch-off is narrowed to the Owner.
 - **Spend caps are not plan limits.** SA-03 v2.17 limits plans to four limits (SA3-D14, L74: "**Four limits only:** staff seats, active individual cases, active corporate cases, document storage."). AG-11 v1.12 records the same: "volumes are not plan limits (SA3-D14)" (§0.2, L57). SA3-D14 is a later team decision than IMP-36, which was only a proposal. So the first version's "cap rows in SA-03" is withdrawn (CN-SA-03), and the caps go to the platform registry.
-- **AW-02 already places them here:** its §10 table E gives `system/platform-config:manage` the "Spend-cap values, the pilot rule setting, the AIW-D57 settings".
-- **IMP-36:** "per firm per month (a warning at 80 %, a hard stop at 100 %, then the manual path, AG-11-71), per co-pilot user per day, per worker run".
+- **IMP-36:** "per firm per month (a warning at 80 %, a hard stop at 100 %, then the manual path, AG-11-71), per co-pilot user per day, per worker run". The placement of the caps in the registry is **Proposal — not approved** (IMP-36 is an improvement, not a founder decision).
 - **AIW-D62:** spend caps are decided after the pilot, "with today's defaults meanwhile". AW-01 §13 A1 records that no model-spend cap exists today, so the pilot values are set before the pilot.
+- **AW-02 already places them under SA-12's key:** its §10 table E gives `system/platform-config:manage` "Spend-cap values; safeguard values above the floors (AW-2-29, AW-2-57, AW-2-77)".
 - **The per-run stop from day one** follows review S3a m-11.
-- **The lock** follows the Step 3 shared rule: "The founder's pilot safeguards cannot be switched off by any firm or platform setting during the pilot (AIW-D57, D59)".
 
 **(5) Knock-ons.**
-- AW-01 AW-1-54 cites SA-12-33 in place of "plan limit rows" (the change note wins).
-- AW-02 (AW-2-29, AW-2-57) cites SA-12-33.
+- AG-16 (CN-AG-16): the firm screen shows (b) and (c) read-only with the firm's tightening and restates no value.
+- SA-04 SA-4-89 (CN-SA-04 change 3), SA-07 L351 (CN-SA-07 change 3) and SA-01B (CN-SA-01B change 6) cite the pilot safeguards setting.
+- AW-01 AW-1-54 cites SA-12-33 in place of "plan limit rows" (the change note wins). AW-01 L356 ("cannot be switched off during the pilot") and L1095 ("not switchable off during it") read "while the pilot safeguards setting is on (SA-12-33)" (listed for the Lead).
+- AW-02 AW-2-29, AW-2-57 and AW-2-77 cite SA-12-33; AW-2-77's "during the pilot" reads "while the pilot safeguards setting is on" (listed for the Lead).
 - SA-09 shows spend against the caps (CN-SA-09).
 
 ---
@@ -154,7 +173,7 @@ New requirement:
 
 **(2) Current words.** The last row is v2.7 of 2026-10-08.
 
-**(3) Proposed words.** A version row: "| 2.8 | *(date placed)* | Workstream 2 change note CN-SA-12 applied: AI emergency stops that pause (SA-12-31); the AI recall action and key (SA-12-32); AI spend caps and safeguard settings as platform settings, locked during the pilot (SA-12-33, proposal). | IMP-8, IMP-36; AIW-D57, AIW-D59, AIW-D62 |".
+**(3) Proposed words.** A version row: "| 2.8 | *(date placed)* | Workstream 2 change note CN-SA-12 applied: AI emergency stops that pause (SA-12-31); the AI recall action and key (SA-12-32); the pilot safeguards setting, the approve-all safeguard values and AI spend caps as platform settings that a firm may tighten but never loosen (SA-12-33). | IMP-8, IMP-36; AIW-D57, AIW-D59, AIW-D62 |".
 
 **(4) Why.** Review S3a m-20(c).
 

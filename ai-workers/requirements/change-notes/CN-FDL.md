@@ -4,14 +4,15 @@
 |---|---|
 | **Document changed** | ExpatReady — Founder Decisions Log (consolidated sign-off), document version 1.5, last updated 2026-08-02 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/01-techno-functional/07-Founder-Decisions-Log.md` |
-| **Date of this note** | 11 Oct 2026 (fix round after review S3a) |
+| **Date of this note** | 11 Oct 2026 (second fix round, after re-check S3a-b) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
-| **Changes** | 8: 2 amendments, 5 reaffirmations, 1 new section. Also 5 open points for the founder (below, not changes). |
+| **Changes** | 9: 2 amendments, 5 reaffirmations, 1 new section, 1 reading of FD-16. Also 5 open points for the founder (below, not changes). |
 
-**What this note is.** The Founder Decisions Log is the founder's own record; only the founder changes it. On 11 Oct 2026 the founder answered the Workstream 2 decisions one by one (`ai-workers/decisions.md`, AIW-D36 to AIW-D70). This note does three things:
+**What this note is.** The Founder Decisions Log is the founder's own record; only the founder changes it. On 11 Oct 2026 the founder answered the Workstream 2 decisions one by one (`ai-workers/decisions.md`, AIW-D36 to AIW-D72). This note does four things:
 - **Two amendments.** Two of his answers amend a ratified decision (FD-4, FD-8).
-- **Five reaffirmations.** Five answers keep a ratified decision against newer team documents that had drifted from it (FD-5, FD-11, FD-15, FD-17, FD-21), so those team documents come back to the log.
+- **Five reaffirmations.** Five answers keep a ratified decision against newer team documents that had drifted from it (FD-5, FD-11, FD-15, FD-17, FD-21), so those team documents come back to the log. FD-17 is kept in full (AIW-D72).
 - **One new section.** Nine answers are decisions the team should be able to read in the log rather than in a Workstream 2 file.
+- **One reading.** The founder's reading of FD-16 on document typing (AIW-D71) is added to FD-16's row.
 
 The founder's words are quoted from `ai-workers/decisions.md`.
 
@@ -22,19 +23,19 @@ The founder's words are quoted from `ai-workers/decisions.md`.
 4. Why: the founder's decision.
 5. Which team documents follow. Each has its own change note in this folder: CN-SA-*n* by this note's author, CN-AG-*n* by the Agent-plane author.
 
-**How amendments are shown.** The log already has one pattern for changing a resolved decision: FD-10 keeps its old words struck through and adds "**SUPERSEDED 2026-08-02 by FD-17**" (L35). Changes 1 and 2 use the same pattern with "**AMENDED 2026-10-11**". Reaffirmations add one italic line to the row and change nothing else.
+**How amendments are shown.** The log already has one pattern for changing a resolved decision: FD-10 keeps its old words struck through and adds "**SUPERSEDED 2026-08-02 by FD-17**" (L35). Changes 1 and 2 use the same pattern with "**AMENDED 2026-10-11**". Reaffirmations and the reading add one italic line to the row and change nothing else.
 
 **Founder decisions applied in the Super Admin notes without a new answer.** Rule 11 says a team file never overrides a founder decision. Two older founder decisions are therefore applied directly:
 - **FD-3** ("**Pin at case open + explicit audited re-pin/migrate**", L28) settles the pin grain in SA-01. See CN-SA-01 change 3.
 - **FD-20**'s "**`REVIEW_OF_AUTOMATED_DECISION`** request type in the DSR machinery" (L56) is added to SA-11's request types. See CN-SA-11 change 6.
 
-FD-16 ("AI assists, humans decide", L52) is unchanged. The founder kept it (AIW-D13, "Keep FD-16, delegate") and confirmed that a delegation record is consistent with it (AIW-D33).
+**FD-16** ("AI assists, humans decide", L52) keeps its words. The founder kept it (AIW-D13, "Keep FD-16, delegate") and confirmed that a delegation record is consistent with it (AIW-D33). On 11 Oct he also gave one reading of it, on document typing (AIW-D71); change 9 adds that reading to the row without changing the decision.
 
 ---
 
 ## Open points for the founder (recorded, not changed)
 
-These are conflicts or gaps the fix round found. Each needs the founder's answer. None is written as a change.
+These are conflicts or gaps the fix rounds found. Each needs the founder's answer. None is written as a change.
 
 1. **FD-7 against the team's CP1-D7.**
    - FD-7 (L32) resolves "**CP-9 employer sees read-only summary**". That is the recruitment summary tile of Doc 4 §3.9 (L3043) and §13 item 8 (L3207).
@@ -44,13 +45,13 @@ These are conflicts or gaps the fix round found. Each needs the founder's answer
 2. **The employer portal against AIW-D67.**
    - The founder chose "Full employer actions at launch" (AIW-D67).
    - The newer AG-15 v1.7 limits Release 1 to "only the employer's primary contact has portal access" (AG-15-12, L355). No seats means no seat management.
-   - Rule 11 keeps the founder's decision. The change note that applies it is the Agent-plane CN-AG-15, with AG17-D38.
+   - Rule 11 keeps the founder's decision. The change notes that apply it are the Agent-plane CN-AG-15, with AG17-D38, and CN-SA-03 change 3 for the extra employer seats.
    - *Correction:* the first version of this note said AIW-D67 "does not touch" anything. That was wrong (review S3a B-2).
 3. **Whether AIW-D52 covers Expat Ready's own non-client AI calls.**
    - AIW-D52 reads "AI processing of client data happens only in Canada (AG11-D15 wording, for firms' data and Expat Ready's own support tickets)".
    - The Pack author's assistant drafts pack content that holds no client data (synthetic samples only).
    - **Question:** do such calls also use only the Canada provider record?
-   - The Super Admin notes keep D52's literal scope. Using one record for both planes is labelled a Proposal there (CN-SA-08 change 2, CN-SA-11 change 1; review S3a M-2).
+   - The Super Admin notes keep D52's literal scope and do not state the wider reach as a requirement (CN-SA-08 change 2, CN-SA-11 change 1; review S3a M-2; re-check S3a-b R-2).
 4. **FD-4 as amended, and Practice Pack reference data.**
    - FD-22 applies FD-4 to the Practice Pack ("dual control on rule-bearing artifacts (FD-4)", A22-6.6, L142).
    - AIW-D48 speaks of "a published country pack".
@@ -170,7 +171,7 @@ Proposals row of 10 Oct (Practice expert, two Restricted-field models).
 
 ---
 
-## 6. FD-17 reaffirmed: trust-aware from day one, light
+## 6. FD-17 reaffirmed in full: trust-aware from day one, light, all four parts
 
 **(1) What it changes.** FD-17, Blueprint table (L53): one line added at the end of the decision cell.
 
@@ -180,11 +181,19 @@ L53 (extract, opening and part (a)):
 > | FD-17 | Trust accounting (**supersedes FD-10**) | B/C | **Trust-aware from day one, LIGHT.** In scope for v1: (a) a mandatory `fundsDesignation` (TRUST \| OPERATING) on every client-money record — quote, retainer, deposit, invoice line, payment, refund;
 
 **(3) Proposed words.** The row is unchanged; the decision cell ends with:
-> *Reaffirmed 2026-10-11 (AIW-D45) against AG-06 v1.7 AG-6-24 (an optional `fundsNature` tag, trust accounting deferred as an "explicit deferral, §13"): AG-06 comes back to FD-17; counsel reads it before any pilot on real client money.*
+> *Reaffirmed in full 2026-10-11 (AIW-D45, AIW-D72) against AG-06 v1.7 AG-6-24 (an optional `fundsNature` tag, trust accounting deferred as an "explicit deferral, §13"): Release 1 carries all four parts (a) to (d) as worded above, with rules resolved from the Practice Pack (FD-22); AG-06 comes back to FD-17. The Billing assistant never posts a trust entry, moves a designation or computes a balance; it reads and lists. Counsel reads it before any pilot on real client money.*
 
-**(4) Why.** AIW-D45. The founder chose "Keep FD-17": "FD-17 stands (mandatory trust-or-operating tag on every client-money record, trust-aware light from day one). The team brings AG-06 back to FD-17 (change note in Step 3); counsel reads it before any pilot on real client money." AG-06 v1.7 AG-6-24 (L380): "The platform SHALL record transactions and MAY tag a payment's **`fundsNature`** … in Phase-1 (explicit deferral, §13)." Proposals row of 9 Oct (carve-out B, "Settle trust accounting for Release 1").
+**(4) Why.**
+- **AIW-D72**, 11 Oct 2026, asked again in full after the Lead's correction ("the 11 Oct question for AIW-D45 described FD-17 only as a mandatory tag"). The founder chose "Keep FD-17 in full": "Release 1 carries all four parts of FD-17 as the Founder Decisions Log words them: (a) a mandatory `fundsDesignation` (TRUST \| OPERATING) on every client-money record; (b) no automatic sweep of client funds into operating, only an audited, reason-coded move tied to a delivered milestone or issued invoice; (c) a per-client trust ledger with running balance; (d) a trust reconciliation report; rules resolved from the Practice Pack (FD-22). … The Billing assistant never posts a trust entry, moves a designation or computes a balance; it reads and lists. Confirms AIW-D45; counsel reads it before any pilot on real client money (counsel pack question 9)."
+- **AIW-D45.** The founder chose "Keep FD-17": "FD-17 stands (mandatory trust-or-operating tag on every client-money record, trust-aware light from day one). The team brings AG-06 back to FD-17 (change note in Step 3); counsel reads it before any pilot on real client money."
+- **The drift.** AG-06 v1.7 AG-6-24 (L380): "The platform SHALL record transactions and MAY tag a payment's **`fundsNature`** … in Phase-1 (explicit deferral, §13)."
+- Proposals row of 9 Oct (carve-out B, "Settle trust accounting for Release 1").
+- The first version of this change quoted AIW-D45 only, which described FD-17 as a mandatory tag. AIW-D72 corrects that (re-check S3a-b R-4).
 
-**(5) Knock-ons.** AG-06 (CN-AG-06), to FD-17's words only (`00-step3-plan.md` shared rule "FD-17").
+**(5) Knock-ons.**
+- AG-06 (CN-AG-06 change 1), to FD-17's words only (`00-step3-plan.md` shared rule "FD-17").
+- The Billing assistant's limits (AW-01).
+- Counsel pack question 9.
 
 ---
 
@@ -216,7 +225,7 @@ L57 (extract, first sentence):
 
 > ## RESOLVED 2026-10-11 — Workstream 2 (AI assistants) batch
 >
-> > **Origin:** the founder's answers of 11 Oct 2026 to the Workstream 2 decision list, one by one, recorded with his words in Workstream 2's decision record (AIW-D36 to AIW-D70). FD-16 is unchanged. Rows marked *provisional* stay provisional until counsel has read them (AIW-D64; counsel engaged by 31 Oct 2026, AIW-D68). Numbers FD-23 onward are proposed; the founder assigns them.
+> > **Origin:** the founder's answers of 11 Oct 2026 to the Workstream 2 decision list, one by one, recorded with his words in Workstream 2's decision record (AIW-D36 to AIW-D72). FD-16 keeps its words; its reading on document typing is on its own row. Rows marked *provisional* stay provisional until counsel has read them (AIW-D64; counsel engaged by 31 Oct 2026, AIW-D68). Numbers FD-23 onward are proposed; the founder assigns them.
 >
 > | # | Decision | Category | RESOLVED as |
 > |---|----------|----------|-------------|
@@ -249,6 +258,32 @@ The wording of each row follows the "Effect" column of its decision. Review S3a 
 - FD-26 drops a team-decision clause (m-3).
 - FD-31 keeps only AIW-D66's decision, not the consequences the Lead recorded beside it (M-7).
 
+AIW-D71 and AIW-D72 are not rows here: AIW-D72 is FD-17 kept in full (change 6), and AIW-D71 is a reading of FD-16 (change 9).
+
 The log is "the single sign-off artifact" (L12), so a decision the team must follow belongs here. IMP-32 made the same point for the co-founder's AG11-D rows; this note does not ratify those.
 
-**(5) Knock-ons.** AG-11 §0: where they touch these founder decisions, the AG11-D rows sit below them (CN-AG-11). The Program Charter's release-scope text is in `ai-workers/charter-edits.md` §1. The counsel pack (`ai-workers/requirements/counsel-pack.md`, written by the Lead) covers the provisional rows.
+**(5) Knock-ons.** AG-11 §0: where they touch these founder decisions, the AG11-D rows sit below them (CN-AG-11). The Program Charter's release-scope text is in `ai-workers/charter-edits.md` §1. The counsel pack (`ai-workers/requirements/counsel-pack.md`, written by the Lead) covers the provisional rows. The values of the approve-all safeguards (FD-30) are platform settings in SA-12-33 (CN-SA-12 change 3).
+
+---
+
+## 9. FD-16 read: a document's filing type is not an "effect"
+
+**(1) What it changes.** FD-16, Blueprint table (L52): one line added at the end of the decision cell.
+
+**(2) Current words.**
+
+L52 (extract, second and third sentences):
+> AI is a bounded, declared capability layer over the machinery (drafting, summarisation, document extraction, suggestion) whose every output is human-approved before it has effect. **Consequence:** AI is NOT a first-class actor — no AI principal in the identity spine, no autonomous permissions, no new plane.
+
+**(3) Proposed words.** The row is unchanged; the decision cell ends with:
+> *Read 2026-10-11 (AIW-D71): an internal, reversible, audited filing label (the Reader's proposed document type) is not an "effect" under this decision, so high-confidence types may later be applied without a person's click; in the pilot every type still goes to a person, and the pilot's accuracy figures set the threshold. Values read from documents always need a person (AG11-D10).*
+
+**(4) Why.**
+- **AIW-D71**, 11 Oct 2026. The founder chose "Not an effect, but after the pilot": "An internal, reversible, audited filing label (the Reader's proposed document type) is not an "effect" under FD-16, so high-confidence types may later be applied without a person's click; **in the pilot every type still goes to a person**, and the pilot's accuracy figures set the threshold (IMP-30). Values read from documents always need a person (AG11-D10)."
+- The reading closes `case-assistant.md` §11 decision 8 and assumption AIW-A10 (AIW-D71).
+- FD-16's "human-approved before it has effect" is what the reading interprets, so the reading belongs on FD-16's row, where the team will look for it.
+
+**(5) Knock-ons.**
+- AG-09 (CN-AG-09 item 1). The product rule there names a state the product can check (no published threshold) instead of "the pilot".
+- AW-01 AW1-D30, AW-1-120 and §13 A3 cite AIW-D71.
+- No change to FD-16's own words, to AIW-D13 or to AIW-D33.

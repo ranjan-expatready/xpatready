@@ -78,9 +78,9 @@ New requirement:
 
 See also `pack-authors-assistant.md` §9 G-6 (Proposal).
 
-One name: *release note*, as AW-02 AW-2-51 calls it. Where AW-02 says "change-note field", it should say *release-note field* (README §0 rule 9).
+One name: *release note*, as AW-02 AW-2-51 calls it (README §0 rule 9).
 
-**(5) Knock-ons.** AG-07's adoption prompt shows the note (CN-AG-07). AW-02 wording as above.
+**(5) Knock-ons.** AG-07's adoption prompt shows the note (CN-AG-07). AW-02 cites SA-1-67.
 
 ---
 
