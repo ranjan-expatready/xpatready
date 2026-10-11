@@ -29,3 +29,6 @@ Single source of truth and traceability · Simplicity (words per decision, layer
 
 ## Founder's decisions in the Step R interview (11 Oct)
 AIW-D81 role AI with skills · D82 full scope at launch, every gap fixed, best in class · D83 a driving test per skill (test set, shadow, live, automatic drop back) · D84 the platform is the guardrail (AI only where language or judgement is needed; reusable, diagnosable, cost-controlled skills; access by delegation) · D85 three linked views (AI team page, case panel, detail drawer) · D86 one blueprint plus a working coded prototype · D87 buildable and agnostic of build status, every dependency named, edge cases and failure responses in every journey. Naming of the levels: from the architecture research (question 6).
+
+## Chosen way forward (AIW-D88): Option E
+Handbook + coded prototype + three consultant conversations, from the same AI profiles; the existing specification becomes the trimmed technical appendix. Order: names (question 6, from the architecture research) → AI profiles → Handbook and prototype in parallel → consultant conversations → appendix trim and archive → hand to the team.
