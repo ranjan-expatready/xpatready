@@ -351,3 +351,4 @@ Blocking risk across all steps: the Canada-only processing rule (`commercial/pro
 | 11 Oct 2026 | Lead | Architecture research started (`research/ai-architecture-deterministic-2026-10.md`) |
 | 11 Oct 2026 | Founder | Step R interview question 4: AIW-D85, AI team page, case panel and detail drawer |
 | 11 Oct 2026 | Founder | Step R interview question 5: AIW-D86, coded prototype plus one blueprint |
+| 11 Oct 2026 | Founder | Step R interview question 6 (names for the two levels): asked for the choice to come from detailed research of proven frameworks, for scalability, maintainability and other key factors; the architecture research was widened to structure and naming |
