@@ -1,6 +1,6 @@
 # AI Team Handbook, part 1: the AI teammates and their skills
 
-*Expat Ready, Workstream 2, Step R. Maker's draft, fix round after hostile check R1, 11 Oct 2026. Sources: `requirements/AW-01-firm-ai-assistants_v0.1.md` (document v0.6), `requirements/AW-02-platform-ai-assistants_v0.1.md` (document v0.8), `design/ai-carve-out-register-2026-10-11.md` (Registers A.12 and B), decisions AIW-D81 to D90 and the Lead's calls in `rethink-plan.md`. All people, firms and files in the examples are made up.*
+*Expat Ready, Workstream 2, Step R. Maker's draft, fix round after hostile check R1, 11 Oct 2026. Sources: `requirements/AW-01-firm-ai-assistants_v0.1.md` (document v0.6), `requirements/AW-02-platform-ai-assistants_v0.1.md` (document v0.8), `design/ai-carve-out-register-2026-10-11.md` (Registers A.12 and B), decisions AIW-D81 to D91 and the Lead's calls in `rethink-plan.md`. All people, firms and files in the examples are made up.*
 
 ---
 
@@ -19,6 +19,12 @@ Expat Ready has **six AI teammates** (AIW-D90). Each one works for one named per
 **At Expat Ready (never sold)**
 - **Pack author's AI.** Works for a content author, who maintains a country's rulebook (the Country Pack). Prepares form-field mappings, rulebook rows, test runs and change alerts. Never writes into or publishes a rulebook.
 - **Support AI.** Works for support staff and account managers. Prepares ticket labels, causes, replies and account change notes. Never sends, and never changes a firm's account.
+
+**Why this AI is different** (AIW-D84, AIW-D91; to be refined by a separate research file)
+- **The firm's own system makes the decisions.** Its fixed rules, its deadlines, and the immigration program rules held in maintained rulebooks decide what happens: the Country Pack, kept up by Expat Ready, and the firm's own Practice Pack.
+- **The AI only prepares the language.** It reads, sorts, drafts and checks.
+- **Rules check every AI output first, then a named person decides.** Every output is checked against the product's rules before anyone sees it: at least its form and what it may contain, and more for some skills.
+- **A rival can use the same AI model.** It cannot copy the rules, the packs, the record of every step, or the accuracy each skill must prove on its own test before going live.
 
 **Two product features with no AI** (they work with AI off):
 - **Deadline watch.** The product watches every deadline on every file and reminds the file owner.
