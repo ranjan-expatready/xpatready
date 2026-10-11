@@ -4,15 +4,15 @@
 
 **Rule for the test:** use made-up text only. No client data, no firm data, no real names.
 
-## 1. Try in this order
+## 1. Try in this order *(corrected 11 Oct 2026 by the Lead after `research/ai-architecture-deterministic-2026-10.md` §8: the earlier list read Google's locations page; Google's data-residency page, updated 9 Oct 2026, is the one that promises where processing happens)*
 
-| # | Route | Why it is on the list (9 Oct 2026) |
+| # | Route | Why it is on the list (11 Oct 2026) |
 |---|---|---|
-| 1 | **Google Gemini on Vertex AI, Montréal region** (`northamerica-northeast1`), a current Flash model and the current Pro model | The only route whose own page lists current models in Montréal. Google: on a regional endpoint "ML processing stays within that specific geographical region"; global endpoints "don't provide regional isolation or data residency guarantees" |
-| 2 | **Anthropic Claude on Vertex AI, Montréal region** | Google's locations page lists Claude models in Montréal, but its data-residency page shows no Canada column for partner models. The test settles which page is right |
-| 3 | **Cohere, dedicated deployment in Canada** | A Canadian company; a Canadian region is plausible only by a dedicated deployment ("contact Cohere to confirm the regions available"); its default allows training unless switched off |
+| 1 | **Google Gemini 3.5 Flash on Vertex AI, Montréal regional endpoint** (`northamerica-northeast1`) | Google's data-residency page promises Canadian processing for Gemini 3.5 Flash (and for 2.5 Flash and 2.5 Pro, which retire "not before 16 Oct 2026"). It is the only current model with that promise. Check the page on the day; confirm the model you call is in its Canada table |
+| 2 | **Cohere, single-tenant deployment in Canada** | A Canadian company; a Canadian region was reported on 23 Sep 2026 but is not confirmed by Cohere; ask Cohere in writing which regions are available and get the no-training setting confirmed |
+| 3 | **An open-weight model hosted by us in a Canadian cloud region** (for example Cohere Command A+ under its Apache 2.0 licence, or a comparable open model) | A fallback we control fully; quality was about 6 points behind the best paid models on a public index in April 2026, so the capability tasks below decide |
 
-Not on the list: Anthropic direct, Anthropic on Bedrock, OpenAI direct, Azure OpenAI and the other Bedrock models, because on 9 Oct none processed current text models in Canada.
+Not on the list, on 11 Oct 2026: Claude on Google Cloud (newer models run only on global, US or EU endpoints; no Canada column in Google's partner-model residency table), the Anthropic API (US or global), Claude on Amazon Bedrock (requests enter in Canada but are processed elsewhere), Azure OpenAI (no published plan for current models in Canada). Re-check before the test: this changes month to month.
 
 ## 2. For each route, record yes / no with the evidence
 

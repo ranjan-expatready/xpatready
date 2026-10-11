@@ -86,6 +86,8 @@ All prices are US dollars per million tokens, standard (not batch), as published
 
 ### 2.6 Google Gemini via Vertex AI
 
+> **Correction, 11 Oct 2026 (the Lead):** this section read Google's *locations* page. Google's *data-residency* page (updated 9 Oct 2026) promises Canadian processing only for Gemini 3.5 Flash, Gemini 2.5 Flash and 2.5 Pro (the 2.5 models retire "not before 16 Oct 2026") and two embedding models. Treat Gemini 3.5 Flash as the only current model with a Canada promise (regional price about USD 1.65 per million tokens in, 9.90 out); about CAD 1.98 per typical prepared file with OCR. Source and detail: `../research/ai-architecture-deterministic-2026-10.md` §6 and §8.
+
 - **Canada region for processing:** **Yes, listed.** Google's locations page lists under "Montréal (northamerica-northeast1)" Gemini 3.8 Flash, Gemini 3.7 Flash, Gemini 3.6 Flash, Gemini 3.5 Flash, Gemini 3.5 Flash-Lite, Gemini 3.1 Pro preview, Gemini 2.5 Pro, Gemini 2.5 Flash and others (https://docs.cloud.google.com/vertex-ai/generative-ai/docs/learn/locations, 9 Oct 2026). Toronto (northamerica-northeast2) does not appear on that page. Google's residency wording for a regional endpoint: "ML processing stays within that specific geographical region" (2.3).
 - **Training and retention:** as in 2.3 (*Vendor claim*).
 - **Prices** (Gemini API page, https://ai.google.dev/gemini-api/docs/pricing, 9 Oct 2026; whether Vertex charges the same is *Unknown*, see 2.3): top-tier **Gemini 3.1 Pro Preview: $2.00 / $12.00** (prompts up to 200k); mid-tier **Gemini 3.8 Flash: $0.75 / $3.75 "through December 31, 2026 ($1.50 … $7.50 starting January 1, 2027)"**. Output prices include thinking tokens.
