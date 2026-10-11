@@ -43,6 +43,7 @@ These are conflicts or gaps the fix rounds found. Points 1, 3, 4, 5 and 6 need t
    - The team's newer decision CP1-D7 removes the tile for Release 1: "In Release 1 the employer portal shows nothing about recruitment candidates (no list, no counts, no notes)" (AG-15 v1.7, L43). The same rule is in AG-17 v0.6 (L211, AG-17-30 at L746).
    - A team file overriding a founder decision goes to the founder (README §0 rule 11; review S3a M-1).
    - **Question:** keep FD-7's tile in Release 1, or amend FD-7?
+   - **The Lead recommends amending FD-7:** defer the read-only recruitment tile to a later release, as the team's CP1-D7 does. It is not AI; the launch already carries AIW-D66 (AI in Release 1) and AIW-D67 (full employer actions), which give employers the acts that matter; the tile adds build and a candidate-data question for little launch value. *(Recommendation added by the Lead, 11 Oct 2026.)*
 2. **The employer portal and AIW-D67: recorded; applied, no question.**
    - The founder chose "Full employer actions at launch" (AIW-D67).
    - The newer AG-15 v1.7 limits Release 1 to "only the employer's primary contact has portal access" (AG-15-12, L355). No seats means no seat management.
@@ -52,15 +53,18 @@ These are conflicts or gaps the fix rounds found. Points 1, 3, 4, 5 and 6 need t
    - AIW-D52 reads "AI processing of client data happens only in Canada (AG11-D15 wording, for firms' data and Expat Ready's own support tickets)".
    - The Pack author's assistant drafts pack content that holds no client data (synthetic samples only).
    - **Question:** do such calls also use only the Canada provider record?
+   - **The Lead recommends yes:** one provider record, one contract and one test for every AI call Expat Ready makes, so no exception has to be policed; pack drafting holds no client data, so the only cost is using the Canada route the firms' calls already need. Until the founder answers, the Pack author's assistant makes no model call. *(Recommendation added by the Lead, 11 Oct 2026.)*
    - The Super Admin notes keep D52's literal scope and do not state the wider reach as a requirement (CN-SA-08 change 2, CN-SA-11 change 1; review S3a M-2; re-check S3a-b R-2). Until he answers, the Pack author's assistant makes no model call; its rule-built steps run (`00-step3-plan.md`, "Pack calls before the founder answers").
 4. **FD-4 as amended, and Practice Pack reference data.**
    - FD-22 applies FD-4 to the Practice Pack ("dual control on rule-bearing artifacts (FD-4)", A22-6.6, L142).
    - AIW-D48 speaks of "a published country pack".
    - **Question:** does the amended clause also cover Practice Pack reference data?
+   - **The Lead recommends yes:** FD-22 already applies FD-4's dual control to the Practice Pack's rule-bearing artifacts (A22-6.6), and AIW-D48 chose "Two people for all" reference data in country packs; the same two-person publish for Practice Pack reference data keeps one rule for every pack. *(Recommendation added by the Lead, 11 Oct 2026.)*
 5. **FD-11 and the platform's own SaaS billing.**
    - FD-11 names AG-6 ("AG-6 mentions scrubbed", L36).
    - SA-04 v2.17 §10 lists "credit notes" under `system/billing:view` (L752), and SA-08 v2.4 keeps "invoice and credit-note copies" (SA-8-44, L301).
    - **Question:** does FD-11 reach Expat Ready's own billing to firms?
+   - **The Lead recommends no:** FD-11's words name AG-6 (the firms' billing of their clients); Expat Ready's own subscription billing (SA-04, SA-08) is a different system that keeps the copies the team specified. Not AI. *(Recommendation added by the Lead, 11 Oct 2026.)*
 6. **Refunds in Release 1: money returned to a client from trust.**
    - FD-17 (L53) names refund among the version 1 client-money records: "on every client-money record — quote, retainer, deposit, invoice line, payment, refund".
    - AG-06 v1.7 holds general refunds to Phase 2: "**Refunds (Phase-2)** SHALL be a **reversing fact** with a **mandatory reason** …" (AG-6-23, L377).
