@@ -26,3 +26,4 @@
 - The provider is replaceable: no requirement names a provider; the residency rule, the no-training and no-retention agreement and the test call are requirements on the provider record.
 - The six-kind counting unit, the `sourceItemRef` rule, the why-line rule and the tenant rule apply as in the behaviour documents.
 - No personal names (rule 10); plain words first, field names in brackets; every term explained or in the glossary.
+- Illustrative user voice (jobs-to-be-done lines) goes in italics, never in quotation marks; quotation marks are only for word-for-word source quotes (added 11 Oct from the AW-02 maker).

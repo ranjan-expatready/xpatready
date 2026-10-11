@@ -25,7 +25,7 @@
 
    `sourceItemRef?` description adds: "never set on a task an AI assistant created (BR-22)".
 4. **Why.** AIW-D54 (the founder confirmed: "no assistant task can close a deadline"); `proposals.md` rule row of 10 Oct (Firm assistant: "A persona-created task never carries the task's link field `sourceItemRef` … completing it can never complete a dated case item or a Minder deadline", merged by the Lead for all seven documents); `firm-assistant.md` §9 G-21; `case-assistant.md` §9 G-33.
-5. **Knock-ons.** AG-11 `create_task` from an assistant recipe leaves the field empty (CN-AG-11 item 9); AG-07 dated items unchanged.
+5. **Knock-ons.** AG-11 (follow-on for the team, not written in CN-AG-11): `create_task` called by an AI assistant's recipe (CN-AG-11 item 9) leaves the field empty; AG-07 dated items unchanged.
 
 ## 2. Every audit entry records how the act was done and under which delegation
 

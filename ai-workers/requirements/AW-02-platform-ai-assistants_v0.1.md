@@ -10,7 +10,7 @@
 **How to read this module.**
 - **What it rests on.** Two passed Step 2 behaviour documents, cited by section: **PA** = `ai-workers/design/behaviours/pack-authors-assistant.md`; **SU** = `ai-workers/design/behaviours/support-and-account-assistant.md`. The founder's decisions are `ai-workers/decisions.md` rows **AIW-Dnn**. Improvement items are `ai-workers/design/ws2-improvements.md` **IMP-nn**. The persona cards are `ai-workers/design/ai-organisation.md` §1.4, §1.5, §2.6, §2.7, §4.
 - **Product facts** come only from `sources/drive-snapshot-2026-10-09/` (the 9 Oct 2026 snapshot): SA-01 v2.2, SA-01B v1.2, SA-02 v2.19, SA-03 v2.14, SA-04 v2.14, SA-05 v2.2, SA-06 v3.1, SA-07 v2.10, SA-08 v2.2, SA-09 v2.2, SA-10 v2.5, SA-11 v2.7, SA-12 v2.7 (`02-functional-requirements/super-admin/`); AG-03 v1.4, AG-07 v2.7, AG-11 v1.11 and AG-13 v1.12 (`02-functional-requirements/agent/`); the Founder Decisions Log v1.5 (`01-techno-functional/07-Founder-Decisions-Log.md`).
-- **No duplication (AIW-D22).** A Drive requirement is cited by its ID (for example SA-1-56) or by file, version and section, never restated. Short quotes appear in quotation marks only where the exact words carry the point, and each was checked word for word against the 9 Oct snapshot. Our own words are never in quotation marks.
+- **No duplication (AIW-D22).** A Drive requirement is cited by its ID (for example SA-1-56) or by file, version and section, never restated. Short quotes appear in quotation marks only where the exact words carry the point, and each was checked word for word against the 9 Oct snapshot (or, for a behaviour-document heading, against that document). Our own words are never in quotation marks; illustrative user voice is in italics.
 - **Labels.** Everything that is not a product fact is labelled **Proposal**, **Assumption** or **Unknown**. Every requirement in §4 says which behaviour section it specifies and which Drive requirement it extends. Where a requirement needs counsel, it carries **Flag**.
 - **Which document wins (README rule 11).** A newer module file wins over Doc 1–4 only. A module file, including this one, never overrides a founder decision (FD-n, or an AIW-D decision); a conflict goes to the founder. Two founder decisions that change a Drive text are carried here and placed on Drive by the founder: FD-4's second clause amended (AIW-D48) and FD-8 amended (AIW-D51).
 - **One word per thing (README rule 9).** The **Writer** is the AI Doer that drafts text for a person (AIW-D53); *Drafter* is only the template engine. The AI run log's source field value for the Writer is `DRAFTER` (AG-11 v1.11 §7) until the AG-11 change note renames it (§0.2). A **persona** is one assistant to one human role; a **worker** is one catalogue entry (W-nn). No persona carries a human name.
@@ -186,20 +186,18 @@ Every decision below carries a founder decision (AIW-D row) or is a design call 
 
 ### 2. Users & Jobs-to-be-Done
 
-| Role (SA-07 v2.10 Appendix A column) | Relationship to AW-02 | Jobs-to-be-done (representative) |
+| Role (SA-07 v2.10 Appendix A column) | Relationship to AW-02 | Jobs-to-be-done (representative; illustrative, in our own words) |
 |---|---|---|
-| **Content author** (CA; SA-01's Content Manager) | Delegates to the Pack author's assistant for the countries assigned to them; commits, edits and submits | "When IRCC issues a new form edition, I want the moved boxes drafted, checked against the import's own rules and listed for me, so I map in hours and check every box myself." · "When an official page changes, I want to know the same day what changed and what in the pack reads it." |
-| **Content approver** (CP) | Approves and publishes; never edits; reads the rehearsal report | "Before I approve, I want to see what the change does to sample clients in plain words, not only a diff." |
-| **Immigration specialist** (not a platform role; BR-15) | Confirms every immigration value | "Every value in the pack is mine to confirm; the assistant never invents one." |
-| **Support** (Sup) | Delegates to the Support and account assistant for tickets assigned to them or replied on by them | "When a firm's ticket lands on me, I want the category suggested, the likely cause named from the facts we hold, and a first reply in the firm's language in my reply box, so I check and send." |
-| **Firm onboarding / Account manager** (AM) | Delegates to the same assistant for the firms they manage | "When a firm goes over a limit, I want the outreach drafted with the right facts and what we already sent." · "When a firm asks for a plan change, I want a note of what changes and when, by the product's own rule." |
-| **A second Expat Ready person** (any Super Admin user other than the one applying) | Confirms a persona-proposed account change during the pilot (AIW-D59) | "I check the note before the change is applied." |
-| **Platform Owner** (Own) | Sets up delegations for others, enables recipes, trips kill switches, is notified of parked runs and kill switches | "If an assistant misbehaves I stop it with one switch and a reason, and nothing is lost." |
-| **Platform engineer** (Eng) | Enables recipes and holds the kill switch (SA-12 v2.7 §10 role mapping); notified of runaway runs | "A runaway run stops itself and tells me." |
-| **Security & audit** (Sec) | Reads the audit chain and the platform AI run log | "For any published rule and any ticket reply I can show who proposed, who acted, when, and under which delegation." |
-| **The firm (indirect)** | Receives only what a person sent | "Whatever Expat Ready sends me, a named person sent it." |
-
-*(The jobs-to-be-done lines are illustrative user voice, written in the AG-18 format's style; they are not source quotations.)*
+| **Content author** (CA; SA-01's Content Manager) | Delegates to the Pack author's assistant for the countries assigned to them; commits, edits and submits | *When IRCC issues a new form edition, I want the moved boxes drafted, checked against the import's own rules and listed for me, so I map in hours and check every box myself.* · *When an official page changes, I want to know the same day what changed and what in the pack reads it.* |
+| **Content approver** (CP) | Approves and publishes; never edits; reads the rehearsal report | *Before I approve, I want to see what the change does to sample clients in plain words, not only a diff.* |
+| **Immigration specialist** (not a platform role; BR-15) | Confirms every immigration value | *Every value in the pack is mine to confirm; the assistant never invents one.* |
+| **Support** (Sup) | Delegates to the Support and account assistant for tickets assigned to them or replied on by them | *When a firm's ticket lands on me, I want the category suggested, the likely cause named from the facts we hold, and a first reply in the firm's language in my reply box, so I check and send.* |
+| **Firm onboarding / Account manager** (AM) | Delegates to the same assistant for the firms they manage | *When a firm goes over a limit, I want the outreach drafted with the right facts and what we already sent.* · *When a firm asks for a plan change, I want a note of what changes and when, by the product's own rule.* |
+| **A second Expat Ready person** (any Super Admin user other than the one applying) | Confirms a persona-proposed account change during the pilot (AIW-D59) | *I check the note before the change is applied.* |
+| **Platform Owner** (Own) | Sets up delegations for others, enables recipes, trips kill switches, is notified of parked runs and kill switches | *If an assistant misbehaves I stop it with one switch and a reason, and nothing is lost.* |
+| **Platform engineer** (Eng) | Enables recipes and holds the kill switch (SA-12 v2.7 §10 role mapping); notified of runaway runs | *A runaway run stops itself and tells me.* |
+| **Security & audit** (Sec) | Reads the audit chain and the platform AI run log | *For any published rule and any ticket reply I can show who proposed, who acted, when, and under which delegation.* |
+| **The firm (indirect)** | Receives only what a person sent | *Whatever Expat Ready sends me, a named person sent it.* |
 
 ---
 
@@ -227,7 +225,7 @@ A **delegation** is one record, not an identity (IMP-1): which persona, for whic
 
 #### 3.2 The run record, the audit trail and the platform AI run log
 
-**Run record (IMP-35, Proposal).** One per run: persona and version, recipe and version, delegation, the firm it serves (or none), its subject (a ticket, a firm, a pack draft, a recorded source), who or what started it, its state (started, handed over, stopped, closed), start and end, the proposals it produced and what happened to each, model calls and usage. Starting the persona again on the same subject continues the same run; a ticket reopened within its window continues the same run (SU §2.1 step 9).
+**Run record (IMP-35, Proposal).** One per run: persona and version, recipe and version, delegation, the firm it serves (or none), its subject (a ticket, a firm, a pack draft, a recorded source), who or what started it, its state (started, handed over, paused, stopped, closed), start and end, the proposals it produced and what happened to each, model calls and usage. Starting the persona again on the same subject continues the same run; a ticket reopened within its window continues the same run (SU §2.1 step 9).
 
 **Audit trail (SA-11).** Every read the persona makes under a `system/*` key and every proposal it shows writes a platform audit entry with the SA-11-2 fields, plus two facts from IMP-1: whether a person acted directly, a persona acted for them, or a plain automation ran (`mode` = PERSON, DELEGATED, AUTOMATION), and which delegation (`delegationId`). The actor rule is AW2-D3.
 
@@ -272,7 +270,7 @@ Each use of the Writer by either persona has its own evaluation set of made-up i
 
 ### 4. Detailed Functional Requirements
 
-Numbered `AW-2-x`, AW-2-1 to AW-2-74. Each requirement ends with: *Specifies* (the behaviour section; "row n" is the n-th row of that section's preconditions table), *Extends* (the Drive requirement, file and version), the label where it is not a product fact, and **Flag** where counsel must read it. Nothing here is built.
+Numbered `AW-2-x`, AW-2-1 to AW-2-74. Each requirement ends with: *Specifies* (the behaviour section; *row n* means the n-th row of that section's preconditions table), *Extends* (the Drive requirement, file and version), the label where it is not a product fact, and **Flag** where counsel must read it. Nothing here is built.
 
 **Engine and the tenant rule**
 - **AW-2-1.** Platform persona recipes SHALL run on the product's one automation engine, in its recipe shape (trigger, conditions, ordered steps), at GLOBAL scope under the Super Admin sign-in group; no second engine SHALL be built. Each step SHALL be a read under a key the delegation holds, a rule the platform already evaluates, or a Writer call; a model output SHALL NOT select which step runs. *Specifies* PA §1 (row 4), §2 "How to read"; SU §1 (row 4), §2 "How to read". *Extends* AG-11 v1.11 §2, AG-11-2; SA-07 v2.10 §3.0. **Proposal** (PA G-1; SU G-1; IMP-10).
@@ -842,7 +840,7 @@ Default-deny; additive. Platform staff hold only `system/*` keys: "Platform staf
 
 **Open — for the team (Step 3 change notes, or the tech lead before build):**
 1. **Engine placement and the AI processing data category.** Where the GLOBAL recipes run on the one engine, and SA-11's *AI processing* category with its retention row (PA G-1; SU G-1, G-3; IMP-4). *Owner: the team, with the Lead.*
-2. **Key names and the Appendix A mapping.** The read key for the test run and the diff (PA G-5); the support-ticket keys for the Support and Account manager roles (SU G-17); a narrower one-firm billing read and whether it covers `BillingNotice` (SU G-19); the read key for canned responses and articles (SU G-20); the three new keys of §10 E; and SA-10 v2.5 §10's target names `global/support:*` (and §3.5's `global/firm:impersonate`), which SA-06 v3.1's catalogue refuses to load (its grammar allows only `system`, `agent` and `portal`, and it throws on "a legacy `global/` prefix", SA-06 v3.1 §3.1), while SA-02 v2.19 §10 already uses `system/firm:impersonate`. *Owner: the tech lead (SA-07 v2.10 §13).*
+2. **Key names and the Appendix A mapping.** The read key for the test run and the diff (PA G-5); the support-ticket keys for the Support and Account manager roles (SU G-17); a narrower one-firm billing read and whether it covers `BillingNotice` (SU G-19); the read key for canned responses and articles (SU G-20); the three new keys of §10 E; and SA-10 v2.5's target names `global/support:*` (§10) and `global/firm:impersonate` (§3.8, SA-10-18, SA-10-19), which SA-06 v3.1's catalogue refuses to load (its grammar allows only `system`, `agent` and `portal`, and it throws on "a legacy `global/` prefix", SA-06 v3.1 §3.1), while SA-02 v2.19 §10 already uses `system/firm:impersonate`. *Owner: the tech lead (SA-07 v2.10 §13).*
 3. **Split `system/billing:webhook-log`** into a view key and a re-run key (SU G-18). *Owner: the team.*
 4. **An immigration-content ticket category** (SU G-4; SA-10 v2.5 §13 Q1). *Owner: the team.*
 5. **A recorded platform send for the account manager's outreach** (SU G-8). *Owner: the team.*

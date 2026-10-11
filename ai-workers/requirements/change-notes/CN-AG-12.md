@@ -7,7 +7,7 @@
 | Date of this note | 11 Oct 2026 |
 | Status | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | Next free numbers used | AG-12-38, AG-12-39 (highest AG-12-37, L320); BR-15 (highest BR-14, L339) |
-| Companion files | CN-AG-03 item 2 (BR-19); CN-AG-11 (the Writer; persona recipes); AW-01 (the Case and Intake assistants) |
+| Companion files | CN-AG-03 item 2 (BR-19); CN-AG-11 (the Writer; assistant recipes); AW-01 (the Case and Intake assistants) |
 
 **In plain words.** Firm templates send on their own once the firm has approved them, which is right for routine messages. Two safeguards are needed now that AI assistants also send templates: a mark for templates that talk about a client's status or eligibility, so an assistant never sends one without a person looking first (and never to a lead, by the founder's decision); and a letter template type for case letters, with locked wording, a list of the facts used, wording the Writer may never touch, and a court-declaration flag. "Drafter" in this module is the template engine and stays.
 
@@ -25,7 +25,7 @@
 
    `Template` gains the mark (proposed field `statusOrEligibilityContent`, boolean; name to assign).
 4. **Why.** IMP-28(b), (c) ("any worker free text is "ask me first""; "Templates used by workers get a **"contains status or eligibility content" mark** set by the firm at review time; marked templates default to "ask me first" when a worker sends them"), relied on by `case-assistant.md` §9 G-9, `billing-assistant.md` §9 G-28 and `firm-assistant.md` §9 G-26; AIW-D41 (no eligibility content in any automatic or AI-drafted message to a lead).
-5. **Knock-ons.** AG-11 recipe engine honours the mark (CN-AG-11 item 9); AG-16-48 "Review your standard messages" screen shows the mark; counsel: whether an unlicensed-sent template with status content is lawful under supervision (IMP-28(d)).
+5. **Knock-ons.** AG-11 (follow-on for the team, not written in CN-AG-11): the engine reads the mark when an assistant recipe sends a template and applies "Ask me first" (AG-11-52); AG-16-48 "Review your standard messages" screen shows the mark; counsel: whether an unlicensed-sent template with status content is lawful under supervision (IMP-28(d)).
 
 ## 2. A letter template type for case letters
 
