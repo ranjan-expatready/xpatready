@@ -4,10 +4,10 @@
 |---|---|
 | Module changed | AG-09 Document Management |
 | Version and file | v1.8 of 7 Oct 2026, `02-functional-requirements/agent/AG-09-document-management_v1.8_2026-10-07.md` (Drive snapshot of 11 Oct 2026, `sources/drive-snapshot-2026-10-11/`, unchanged since 9 Oct; line numbers below are that file's) |
-| Date of this note | 11 Oct 2026 (second fix round, after re-check S3c-b) |
+| Date of this note | 11 Oct 2026 (third fix round, after re-check S3c-c) |
 | Status | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | Next free numbers used | AG-9-54 (highest AG-9-53, L553) |
-| Companion files | CN-AG-07 (items 1, 2, 6); CN-AG-11 (item kinds `DOCUMENT_TYPE`, `UPLOAD_VERDICT`, `KEY_DATE`; action `propose_key_date`); CN-AG-18 item 2; CN-SA-06 change 3 |
+| Companion files | CN-AG-07 (changes 1, 2, 6); CN-AG-11 (item kinds `DOCUMENT_TYPE`, `UPLOAD_VERDICT`, `KEY_DATE`; action `propose_key_date`); CN-AG-18 change 2; CN-SA-06 change 3 |
 
 **In plain words.** The founder read FD-16 on 11 Oct: a document type the Reader proposes is an internal, reversible filing label, not an "effect", so one day high-confidence types may be applied without a click; until the measured accuracy sets that threshold, every type still goes to a person. The founder also kept FD-15, which is about this module: Restricted fields in document data are encrypted and masked with an audited reveal. Two team fixes follow: one rule for which permission key covers which act on a document (status acts are this module's; every request to the client is AG-07's one request key), and the same approval rule for a key date wherever it is read from.
 
@@ -22,9 +22,9 @@
    > L484: "classification is an internal filing action, so by default (`AUTO`, AG11-D1) a high-confidence type is applied and labelled "set by Reader" with its confidence, and any user who can edit the document can change it; a low-confidence type goes to Needs you instead. A firm may raise classification to `APPROVE`."
    >
    > L883: "10. **Reader confidence thresholds** *(NEW v1.4)*. What confidence counts as "low" for a type suggestion or an extracted value (flag vs offer)? Not decided."
-3. **Proposed words.** Add to AG-9-11: "*(11 Oct 2026, the founder — AIW-D71)* Applying a proposed type is an internal, reversible, audited filing label and is not an "effect" under FD-16, so high-confidence types MAY be applied without a person's click once a threshold is set. **No proposed type SHALL be applied without a person's confirmation until the platform publishes, for that document type, a confidence threshold set from measured accuracy** (IMP-30); until then every proposed type SHALL go to a person as a document-type approval item (AG-11 item kind `DOCUMENT_TYPE`, CN-AG-11 item 6). Values read from a document SHALL always need a person (AG11-D10; AG-9-45)." §13 item 10 adds: "For types, decided by AIW-D71: the threshold is set from measured accuracy."
+3. **Proposed words.** Add to AG-9-11: "*(11 Oct 2026, the founder — AIW-D71)* Applying a proposed type is an internal, reversible, audited filing label and is not an "effect" under FD-16, so high-confidence types MAY be applied without a person's click once a threshold is set. **No proposed type SHALL be applied without a person's confirmation until the platform publishes, for that document type, a confidence threshold set from measured accuracy** (IMP-30); until then every proposed type SHALL go to a person as a document-type approval item (AG-11 item kind `DOCUMENT_TYPE`, CN-AG-11 change 6). Values read from a document SHALL always need a person (AG11-D10; AG-9-45)." §13 item 10 adds: "For types, decided by AIW-D71: the threshold is set from measured accuracy."
 4. **Why.** AIW-D71 (the founder, 11 Oct: "Not an effect, but after the pilot … **in the pilot every type still goes to a person**, and the pilot's accuracy figures set the threshold (IMP-30). Values read from documents always need a person (AG11-D10)"); IMP-13; IMP-30; `case-assistant.md` §9 G-32. The product rule names a state the product can see (no published threshold) instead of "the pilot" (review S3c m-10; `00-step3-plan.md`, "No 'during the pilot' in a requirement").
-5. **Knock-ons.** AG-11 §3.10 and §13 Q11 (the default "everything to review" stands until a threshold is published); AG-14 measures record the accuracy (CN-AG-14 item 2); AG-18-33 imported documents follow the same rule; AW-1-120.
+5. **Knock-ons.** AG-11 §3.10 and §13 Q11 (the default "everything to review" stands until a threshold is published); AG-14 measures record the accuracy (CN-AG-14 change 2); AG-18-33 imported documents follow the same rule; AW-1-120.
 
 ## 2. Which key covers which act on a document
 
@@ -42,9 +42,9 @@
    > | `agent/document:waive` | **NEW** | Waive a document or mark it Not-Applicable (reason; audited), on a case's Binder or anywhere else *(changed — one home for status acts)* |
    > | ~~`agent/document:request`~~ | **merged** | Merged into `agent/case:document-manage` (AG-07), which covers every request or re-request of a document from the client, on a case's Binder or not, including a lead's or client's own documents with no case *(changed)* |
 
-   A combined upload-verdict item (AG-11 item kind `UPLOAD_VERDICT`, CN-AG-11 item 6) SHALL check, line by line, the key each act needs: `agent/document:change-status` or `agent/document:waive` for the status, `agent/case:document-manage` for a request or an ad-hoc item. AG-07's side is CN-AG-07 item 6.
+   A combined upload-verdict item (AG-11 item kind `UPLOAD_VERDICT`, CN-AG-11 change 6) SHALL check, line by line, the key each act needs: `agent/document:change-status` or `agent/document:waive` for the status, `agent/case:document-manage` for a request or an ad-hoc item. AG-07's side is CN-AG-07 change 6.
 4. **Why.** `00-step3-plan.md` "Keys (S3c M-3)" ("document status acts including waive and not-applicable sit under AG-09's keys (AG-9-35 owns document state); Binder request and add sit under `agent/case:document-manage`") and "Document requests key" (every document request, on the Binder or not, sits under `agent/case:document-manage`; `agent/document:request` is not kept; CN-AG-09 aligns to CN-SA-06); `proposals.md` rows of 10 Oct (Case assistant: two permission keys cover overlapping acts on an upload verdict; a combined verdict item checks both) and of 11 Oct (three keys overlap); `case-assistant.md` §9 G-29. This replaces the first fix round, which kept `agent/document:request` for documents outside the Binder (review S3c-b N-5).
-5. **Knock-ons.** CN-AG-07 item 6 (AG-7-16 and the AG-07 §10 row); SA-06 §10b and Appendix B (CN-SA-06 change 3 merges the request key the same way and keeps waive on `agent/document:waive`); AG-09 §3 text that names "request" follows the merged key; key defaults sit in the published starter roles (SA6-D12).
+5. **Knock-ons.** CN-AG-07 change 6 (AG-7-16 and the AG-07 §10 row); SA-06 §10b and Appendix B (CN-SA-06 change 3 merges the request key the same way and keeps waive on `agent/document:waive`); AG-09 §3 text that names "request" follows the merged key; key defaults sit in the published starter roles (SA6-D12).
 
 ## 3. Restricted document data: encrypted, masked, audited reveal (FD-15 kept)
 
@@ -56,20 +56,20 @@
 
    The §10 row returns as a pointer to the one platform reveal permission named by SA-06 (Doc 1 v1.3 §7.2 names `agent/pii:reveal`).
 4. **Why.** AIW-D58 (the founder: "Keep FD-15"); FD-15 (Founder Decisions Log v1.5 L40: "**B-1-derived rule** — metadata fields whose canonical class is in the B-1 Restricted list get envelope-encryption + masked audited reveal; binaries SSE + signed-URL"); README §0 rule 11; IMP-21 (the Reader is the one exception, its output by reference). **Provisional until counsel reads it**; counsel confirms B-1 before any Restricted field is stored (AIW-D58, AIW-D64, AIW-D68).
-5. **Knock-ons.** CN-AG-07 item 1 (AG7-D28, platform-wide); BR-9 audit adds the reveal event (CN-AG-13 item 4).
+5. **Knock-ons.** CN-AG-07 change 1 (AG7-D28, platform-wide); BR-9 audit adds the reveal event (CN-AG-13 change 4).
 
 ## 4. A key date proposed from any source is approved under AG-9-51's rule
 
 1. **Where.** AG-9-51 (L550); BR-21 (L579).
 2. **Current words.**
    > L550: "A proposed date SHALL be **registered with the Minder** (as a key date on the file, AG-11-47) **only after a person approves it** (or edits then approves it) in the review view; approval SHALL need the same permission as adding that key date by hand and, as for every Reader value, `agent/sqr:verify` (AG-9-45)."
-3. **Proposed words.** Add to AG-9-51: "The same rule SHALL apply to a key date proposed from an imported note's text (AG-18-93, as proposed in CN-AG-18 item 2) or derived by a rule from the product's own records (AG-11 `propose_key_date`, CN-AG-11 item 3; item kind `KEY_DATE`): it reaches the Minder only after a person approves it, with the same permissions, never inferred, and registered once per file and date. A date read from a government letter keeps AG-11-108's route." BR-21's title "A date from a letter" becomes "A proposed date".
+3. **Proposed words.** Add to AG-9-51: "The same rule SHALL apply to a key date proposed from an imported note's text (AG-18-93, as proposed in CN-AG-18 change 2) or derived by a rule from the product's own records (AG-11 `propose_key_date`, CN-AG-11 change 3; item kind `KEY_DATE`): it reaches the Minder only after a person approves it, with the same permissions, never inferred, and registered once per file and date. A date read from a government letter keeps AG-11-108's route." BR-21's title "A date from a letter" becomes "A proposed date".
 4. **Why.** `proposals.md` row of 10 Oct (Firm assistant, item (3): an action and an item kind *key date*, approved under AG-9-51's rule, registered with the Minder only after approval); `firm-assistant.md` §9 G-4; review S3c-b n-8 (AG-11-108 already routes letter dates).
-5. **Knock-ons.** AG-11 `KEY_DATE` (CN-AG-11 items 3 and 6).
+5. **Knock-ons.** AG-11 `KEY_DATE` (CN-AG-11 changes 3 and 6).
 
 ---
 
 ## Not changed here (pointers only)
 
-- This module's status list (AG-9-26) becomes the one list for the case file (CN-AG-07 item 2); no change here.
-- The Reader proposes the document type, not the Sorter (AG-9-42 already says so); AG-10 and AG-11 are aligned (CN-AG-10 item 2, CN-AG-11 item 2).
+- This module's status list (AG-9-26) becomes the one list for the case file (CN-AG-07 change 2); no change here.
+- The Reader proposes the document type, not the Sorter (AG-9-42 already says so); AG-10 and AG-11 are aligned (CN-AG-10 change 2, CN-AG-11 change 2).

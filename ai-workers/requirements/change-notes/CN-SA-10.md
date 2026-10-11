@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-10 Support, version 2.5, dated 2026-10-07 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-10-support_v2.5_2026-10-07.md` |
-| **Date of this note** | 11 Oct 2026 (second fix round, after re-check S3a-b) |
+| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 5 |
 
@@ -165,7 +165,7 @@ New open question:
 **(5) Knock-ons.**
 - SA-07 Appendix A (CN-SA-07 change 2).
 - SA-06 catalogue and Appendix B: the new `system/support-ticket:*` keys, mapped from today's `:edit`, `:create` and `:delete` (the team).
-- AW-02 §10 tables B to D use the new names. Its table C (an Account manager holds no ticket key) is re-checked if the team gives the Account manager these keys.
+- AW-02 §10 uses the new names. The Account manager role may hold these keys, but the Account manager's delegation never lends them (`00-step3-plan.md`, "AW-02 calls" (d)).
 
 ---
 

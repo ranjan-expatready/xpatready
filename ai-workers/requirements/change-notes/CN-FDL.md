@@ -4,13 +4,13 @@
 |---|---|
 | **Document changed** | ExpatReady — Founder Decisions Log (consolidated sign-off), document version 1.5, last updated 2026-08-02 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/01-techno-functional/07-Founder-Decisions-Log.md` |
-| **Date of this note** | 11 Oct 2026 (second fix round, after re-check S3a-b) |
+| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
-| **Changes** | 9: 2 amendments, 5 reaffirmations, 1 new section, 1 reading of FD-16. Also 5 open points for the founder (below, not changes). |
+| **Changes** | 9: 2 amendments, 5 reaffirmations, 1 new section, 1 reading of FD-16. Also 5 open points (below, not changes): four for the founder, one recorded as applied. |
 
 **What this note is.** The Founder Decisions Log is the founder's own record; only the founder changes it. On 11 Oct 2026 the founder answered the Workstream 2 decisions one by one (`ai-workers/decisions.md`, AIW-D36 to AIW-D72). This note does four things:
 - **Two amendments.** Two of his answers amend a ratified decision (FD-4, FD-8).
-- **Five reaffirmations.** Five answers keep a ratified decision against newer team documents that had drifted from it (FD-5, FD-11, FD-15, FD-17, FD-21), so those team documents come back to the log. FD-17 is kept in full (AIW-D72).
+- **Five reaffirmations.** Five answers keep a log decision against newer team documents that had drifted from it (FD-5, FD-11, FD-15, FD-17, FD-21), so those team documents come back to the log. FD-17 is kept in full (AIW-D72).
 - **One new section.** Nine answers are decisions the team should be able to read in the log rather than in a Workstream 2 file.
 - **One reading.** The founder's reading of FD-16 on document typing (AIW-D71) is added to FD-16's row.
 
@@ -25,24 +25,25 @@ The founder's words are quoted from `ai-workers/decisions.md`.
 
 **How amendments are shown.** The log already has one pattern for changing a resolved decision: FD-10 keeps its old words struck through and adds "**SUPERSEDED 2026-08-02 by FD-17**" (L35). Changes 1 and 2 use the same pattern with "**AMENDED 2026-10-11**". Reaffirmations and the reading add one italic line to the row and change nothing else.
 
-**Founder decisions applied in the Super Admin notes without a new answer.** Rule 11 says a team file never overrides a founder decision. Two older founder decisions are therefore applied directly:
-- **FD-3** ("**Pin at case open + explicit audited re-pin/migrate**", L28) settles the pin grain in SA-01. See CN-SA-01 change 3.
-- **FD-20**'s "**`REVIEW_OF_AUTOMATED_DECISION`** request type in the DSR machinery" (L56) is added to SA-11's request types. See CN-SA-11 change 6.
+**Log rows applied in the Super Admin notes without a new answer.** Rule 11 says a team file never overrides a row of this log (an FD-*n*). Two older rows are therefore applied directly:
+- **FD-3**, a founder decision ("**Pin at case open + explicit audited re-pin/migrate**", L28), settles the pin grain in SA-01. See CN-SA-01 change 3.
+- **FD-20**'s "**`REVIEW_OF_AUTOMATED_DECISION`** request type in the DSR machinery" (L56) is added to SA-11's request types. See CN-SA-11 change 6. FD-20 is an **architect call**, not the founder's own: the log says "FD-20 and FD-21 are architect calls taken under the standing technical delegation and are recorded here for ratification only" (L46), and no AIW-D row has ratified FD-20. Rule 11 still applies, because it covers every FD-*n* row.
 
 **FD-16** ("AI assists, humans decide", L52) keeps its words. The founder kept it (AIW-D13, "Keep FD-16, delegate") and confirmed that a delegation record is consistent with it (AIW-D33). On 11 Oct he also gave one reading of it, on document typing (AIW-D71); change 9 adds that reading to the row without changing the decision.
 
 ---
 
-## Open points for the founder (recorded, not changed)
+## Open points (recorded, not changed)
 
-These are conflicts or gaps the fix rounds found. Each needs the founder's answer. None is written as a change.
+These are conflicts or gaps the fix rounds found. Points 1, 3, 4 and 5 need the founder's answer. Point 2 is recorded as applied and asks nothing. None is written as a change.
 
 1. **FD-7 against the team's CP1-D7.**
    - FD-7 (L32) resolves "**CP-9 employer sees read-only summary**". That is the recruitment summary tile of Doc 4 §3.9 (L3043) and §13 item 8 (L3207).
-   - The team's newer decision CP1-D7 removes it for Release 1: "In Release 1 the employer portal shows nothing about recruitment candidates (no list, no counts, no notes)" (AG-15 v1.7, L43). The same rule is in AG-17 v0.6 (L211, AG-17-30 at L746).
+   - FD-7's "read-only" concerns that recruitment summary only. It does not limit the employer actions of AIW-D67 (upload, pay, sign, seat management); see point 2.
+   - The team's newer decision CP1-D7 removes the tile for Release 1: "In Release 1 the employer portal shows nothing about recruitment candidates (no list, no counts, no notes)" (AG-15 v1.7, L43). The same rule is in AG-17 v0.6 (L211, AG-17-30 at L746).
    - A team file overriding a founder decision goes to the founder (README §0 rule 11; review S3a M-1).
    - **Question:** keep FD-7's tile in Release 1, or amend FD-7?
-2. **The employer portal against AIW-D67.**
+2. **The employer portal and AIW-D67: recorded; applied, no question.**
    - The founder chose "Full employer actions at launch" (AIW-D67).
    - The newer AG-15 v1.7 limits Release 1 to "only the employer's primary contact has portal access" (AG-15-12, L355). No seats means no seat management.
    - Rule 11 keeps the founder's decision. The change notes that apply it are the Agent-plane CN-AG-15, with AG17-D38, and CN-SA-03 change 3 for the extra employer seats.
@@ -122,9 +123,9 @@ L30:
 > | FD-5 | XFA/flattened IRCC forms | **Flattened-overlay support in v1** (coordinate-mapped fill + FormFieldMap visual editor), unit-priced per form edition; XFA runtime = named later-wave stub |
 
 **(3) Proposed words.** The row is unchanged; the decision cell ends with:
-> *Reaffirmed 2026-10-11 (AIW-D43) against SA-01B v1.2 SA1B-D28 ("Form autofill is parked for Release 1"): the team states the overlay route for IRCC's forms and a date; until it exists the pilot runs without form filling and says so.*
+> *Reaffirmed 2026-10-11 (AIW-D43) against SA-01B v1.2 SA1B-D28 ("Form autofill is parked for Release 1"): the team states the overlay route for IRCC's forms and a date; in the founder's words, "until it exists the pilot runs without form filling and says so".*
 
-**(4) Why.** AIW-D43. The founder chose "Keep FD-5, ask the team": "FD-5 (form filling in version 1) stands; Step 3 asks the team for the overlay route and a date. Until it exists the pilot runs without form filling and says so; the Form Preparer duty (W-05) stays specified." SA-01B v1.2 (L53) parked filling. A module file never overrides a founder decision by date (README §0 rule 11).
+**(4) Why.** AIW-D43. The founder chose "Keep FD-5, ask the team": "FD-5 (form filling in version 1) stands; Step 3 asks the team for the overlay route and a date. Until it exists the pilot runs without form filling and says so; the Form Preparer duty (W-05) stays specified." SA-01B v1.2 (L53) parked filling. A module file never overrides a founder decision by date (README §0 rule 11). The product rule that applies the founder's words in SA-01B names a state the product can check (CN-SA-01B change 1).
 
 **(5) Knock-ons.** SA-01B SA1B-D28 and P1 (CN-SA-01B change 1). AG-07 (CN-AG-07).
 
@@ -207,9 +208,13 @@ L57 (extract, first sentence):
 > | FD-21 | Retainer signer assurance | B | **ARCHITECT-DECIDED.** Signing a retainer or any legally-operative instrument requires **one-time-passcode verification to the signer's on-file channel** (email by default, SMS where captured) before the signature is applied, and produces a sealed **evidence bundle**:
 
 **(3) Proposed words.** The row is unchanged; the decision cell ends with:
-> *Reaffirmed 2026-10-11 (AIW-D42) for the email passcode before every retainer signature, against AG-05 v1.9, which ships "token + consent + IP/UA capture" only; only the phone passcode is deferred.*
+> *Confirmed by the founder 2026-10-11 (AIW-D42) for the email passcode before every retainer signature, against AG-05 v1.9, which ships "token + consent + IP/UA capture" only; only the phone passcode is deferred.*
 
-**(4) Why.** AIW-D42. The founder chose "Keep the email passcode": "FD-21 stands for the email passcode before every retainer signature; only the phone passcode is deferred. The team adds the email passcode to Release 1 (change note to AG-05 §13 in Step 3)." AG-05 v1.9 L757: "Knowledge-based / strong identity verification (KBA, gov-ID, OTP-to-phone) before signing (Release 2 or later) — token + consent + IP/UA capture ships now". A22-5 (L106) already makes "OTP + sealed evidence bundle … the platform minimum". Proposals row of 9 Oct (carve-out B, "Settle e-signature identity for Release 1").
+**(4) Why.**
+- FD-21 is an architect call recorded for ratification (L46). AIW-D42 is the founder's confirmation of its email-passcode part, so that part is now his decision.
+- AIW-D42. The founder chose "Keep the email passcode": "FD-21 stands for the email passcode before every retainer signature; only the phone passcode is deferred. The team adds the email passcode to Release 1 (change note to AG-05 §13 in Step 3)."
+- AG-05 v1.9 L757: "Knowledge-based / strong identity verification (KBA, gov-ID, OTP-to-phone) before signing (Release 2 or later) — token + consent + IP/UA capture ships now". A22-5 (L106) already makes "OTP + sealed evidence bundle … the platform minimum".
+- Proposals row of 9 Oct (carve-out B, "Settle e-signature identity for Release 1").
 
 **(5) Knock-ons.** AG-05 signing page (CN-AG-05). The portal renders no signing step of its own (AG-05 CP1-D4, AG-5-53), so Doc 4 is not changed (CN-CP-portal).
 
@@ -262,7 +267,7 @@ AIW-D71 and AIW-D72 are not rows here: AIW-D72 is FD-17 kept in full (change 6),
 
 The log is "the single sign-off artifact" (L12), so a decision the team must follow belongs here. IMP-32 made the same point for the co-founder's AG11-D rows; this note does not ratify those.
 
-**(5) Knock-ons.** AG-11 §0: where they touch these founder decisions, the AG11-D rows sit below them (CN-AG-11). The Program Charter's release-scope text is in `ai-workers/charter-edits.md` §1. The counsel pack (`ai-workers/requirements/counsel-pack.md`, written by the Lead) covers the provisional rows. The values of the approve-all safeguards (FD-30) are platform settings in SA-12-33 (CN-SA-12 change 3).
+**(5) Knock-ons.** AG-11 §0: where they touch these founder decisions, the AG11-D rows sit below them (CN-AG-11). The Program Charter's release-scope text is in `ai-workers/charter-edits.md` §1. The counsel pack (`ai-workers/requirements/counsel-pack.md`, written by the Lead) covers the provisional rows. The values of the approve-all safeguards (FD-30) are platform settings in SA-12-33, held on by the approve-all part of the *founder safeguards* setting until a recorded founder decision ends that part (CN-SA-12 change 3).
 
 ---
 
@@ -272,7 +277,7 @@ The log is "the single sign-off artifact" (L12), so a decision the team must fol
 
 **(2) Current words.**
 
-L52 (extract, second and third sentences):
+L52 (extract, third and fourth sentences):
 > AI is a bounded, declared capability layer over the machinery (drafting, summarisation, document extraction, suggestion) whose every output is human-approved before it has effect. **Consequence:** AI is NOT a first-class actor — no AI principal in the identity spine, no autonomous permissions, no new plane.
 
 **(3) Proposed words.** The row is unchanged; the decision cell ends with:
@@ -284,6 +289,6 @@ L52 (extract, second and third sentences):
 - FD-16's "human-approved before it has effect" is what the reading interprets, so the reading belongs on FD-16's row, where the team will look for it.
 
 **(5) Knock-ons.**
-- AG-09 (CN-AG-09 item 1). The product rule there names a state the product can check (no published threshold) instead of "the pilot".
-- AW-01 AW1-D30, AW-1-120 and §13 A3 cite AIW-D71.
+- AG-09 (CN-AG-09 change 1). The product rule there names a state the product can check (no published threshold) instead of "the pilot".
+- AW-01 cites AIW-D71.
 - No change to FD-16's own words, to AIW-D13 or to AIW-D33.

@@ -4,10 +4,10 @@
 |---|---|
 | Module changed | AG-17 Corporate Cases & LMIA |
 | Version and file | v0.6 of 10 Oct 2026, `02-functional-requirements/agent/AG-17-corporate-cases-and-lmia_v0.6_2026-10-10.md` (Drive snapshot of 11 Oct 2026, `sources/drive-snapshot-2026-10-11/`; line numbers below are that file's) |
-| Date of this note | 11 Oct 2026 (second fix round, after re-check S3c-b) |
+| Date of this note | 11 Oct 2026 (third fix round, after re-check S3c-c) |
 | Status | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | Next free numbers used | AG-17-91 (highest AG-17-90, L737); BR-17 (highest BR-16, L850) |
-| Companion files | CN-AG-15 (employer seats at launch, AIW-D67); CN-SA-03 (the Super Admin half of AIW-D67); CN-AG-11 item 6 (item kind `LMIA_ENTRY`); CN-FDL open point 1 (FD-7 against CP1-D7); AW-01 v0.1 (the Case assistant's LMIA duty, labelled Proposal by AIW-D34) |
+| Companion files | CN-AG-15 (employer seats at launch, AIW-D67); CN-SA-03 (the Super Admin half of AIW-D67); CN-AG-11 change 6 (item kind `LMIA_ENTRY`); CN-FDL open point 1 (FD-7 against CP1-D7); AW-01 (the Case assistant's LMIA duty, labelled Proposal by AIW-D34) |
 
 **In plain words.** Three changes where the founder's decisions and the Step 2 gaps touch this module. First, AG-17 still says escalation and at-risk marks are off by default, while the newer engine decision makes them on by default once a firm has five or more staff; this note aligns the wording. Second, if the firm's AI is on, the Reader may propose advertising and candidate entries and an assistant may propose a duties comparison, but each waits for a person, and no AI ever screens, ranks or scores a candidate. Third, the founder decided that employers get their full portal actions at launch, including extra seats, so AG-17's plan that puts employer seats in Release 2 follows CN-AG-15. Whether the employer sees the recruitment summary in Release 1 (FD-7) is open for the founder and is not touched here.
 
@@ -36,7 +36,7 @@
    >
    > L750: "duties SHALL be captured as one **`dutiesMatch`** yes/no tick per ad/offer, not a field-by-field comparison"
 3. **Proposed words.**
-   > **AG-17-91 (AI-proposed entries).** Where the firm's AI is on (AG-16-35), the Reader MAY propose advertising-channel entries from a dated screenshot of an advertisement and candidate-log entries from a résumé (the Reader document types are pack content, AG-9-43), and an AI assistant MAY propose a short note comparing an advertisement's duties with the file's job details to help the person's `dutiesMatch` tick (AG-17-32). Each proposal SHALL wait in Needs you as an `LMIA_ENTRY` item (AG-11, CN-AG-11 item 6) for a person to accept under `agent/case:edit`; nothing SHALL enter the channel record, the candidate log or the tick without that acceptance.
+   > **AG-17-91 (AI-proposed entries).** Where the firm's AI is on (AG-16-35), the Reader MAY propose advertising-channel entries from a dated screenshot of an advertisement and candidate-log entries from a résumé (the Reader document types are pack content, AG-9-43), and an AI assistant MAY propose a short note comparing an advertisement's duties with the file's job details to help the person's `dutiesMatch` tick (AG-17-32). Each proposal SHALL wait in Needs you as an `LMIA_ENTRY` item (AG-11, CN-AG-11 change 6) for a person to accept under `agent/case:edit`; nothing SHALL enter the channel record, the candidate log or the tick without that acceptance.
    >
    > **BR-17 (No AI judges a candidate).** No AI Doer or AI assistant SHALL screen, rank, score or recommend a candidate, or propose a hiring outcome or a rejection reason. Candidate entries are records only (FD-7).
 4. **Why.** AIW-D34 item 10 (the founder: W-13 LMIA Compliance Clerk sits inside the Case assistant, labelled Proposal); `proposals.md` row of 9 Oct (W2 catalogue: the LMIA Compliance Clerk (W-13) may read advertising proof and CVs and propose a duties comparison, but never ranks, screens or scores candidates); FD-7 (Founder Decisions Log v1.5 L32: "**no candidate identity plane** (records-only)"); `case-assistant.md` §1.8, §3 and §9 G-15.

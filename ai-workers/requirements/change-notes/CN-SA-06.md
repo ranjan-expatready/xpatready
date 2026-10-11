@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-06 RBAC — Roles & Permissions, version 3.3, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-06-rbac_v3.3_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (third round: trust keys added) |
+| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 7 |
 
@@ -14,6 +14,8 @@
 3. The proposed words, in SA-06's own style.
 4. Why: the founder's decision (Founder Decisions Log FD-*n*; `ai-workers/decisions.md`, AIW-D*n*), the improvement (`ai-workers/design/ws2-improvements.md`, IMP-*n*) or the proposals row (`ai-workers/proposals.md`).
 5. What else must change.
+
+Sibling Workstream 2 files that are in a fix round (the CN-AG notes, AW-01, AW-02) are cited by change and line, without quotation marks (`00-step3-plan.md`, "Quoting a file in a fix round").
 
 **Plain words used here.**
 - *Delegation record*: which AI assistant works for which named person, with a subset of that person's permissions, on which files, from when until when.
@@ -27,7 +29,7 @@
 **Checked, not changed.**
 - SA-06's key descriptions that name "Drafter" (L790, L816, L905) mean the template engine, which keeps that name (AIW-D53).
 - The Billing / Finance starter role keeps its keys (AIW-D47).
-- No key reads AI run-log rows on screen (AIW-D70).
+- No key opens a per-person screen of the Practice expert's question records: they are read by the asker and by the Owner through the firm data export (AIW-D70).
 - **No key lets an Owner stop or end another person's delegation.** To halt an assistant at once, an Owner uses the switches: the firm's per-assistant switch (AG-16-57), the firm's AI switch (AG-16-35), or the platform kill switch (SA-12-31). Deactivation also ends it (`00-step3-plan.md`, "No one stops another person's delegation").
 
 ---
@@ -80,14 +82,13 @@ Appendix C, after "first AI switch-on", add: "; **switching off the pause on cli
 - **IMP-22:** "The permission subset is the role's starter permissions minus the blocked list (IMP-23), never more than the person holds" and "The permission is re-checked at every action".
 - **IMP-23:** the blocked list is "enforced on the server like the floors … and never delegable".
 - **AIW-D55** adopted the hard limits and blocked list, provisional until counsel.
-- **AIW-D56:** "the Owner may switch it off with a recorded reason". AW-01 §0.2 names "the pause switch-off among the Owner-only role checks" as SA-06's half.
+- **AIW-D56:** "the Owner may switch it off with a recorded reason". AW-01 §0.2 names the pause switch-off among SA-06's Owner-only role checks.
 - **AIW-D72:** "The Billing assistant never posts a trust entry, moves a designation or computes a balance; it reads and lists." Hence the trust keys in the never-lendable list.
-- **No Owner-only check for delegation set-up.** The earlier version also listed "setting up an AI assistant's delegation for another staff member" as an Owner-only check with no key. That line is **withdrawn**, because it duplicated what AW-01 already specifies: the firm side is AW-1-6 ("the Owner MAY set one up for any active staff member"), and the platform side has its own key (change 4).
+- **No Owner-only check for delegation set-up.** The earlier version also listed "setting up an AI assistant's delegation for another staff member" as an Owner-only check with no key. That line is **withdrawn**, because it duplicated what AW-01 already specifies: the firm side is AW-1-6, and the platform side has its own key (change 4).
 
 **(5) Knock-ons.**
 - SA-07 SA-7-48 (CN-SA-07 change 3).
 - AG-16 hosts the firm's set-up screen and the pause switch-off (CN-AG-16).
-- AW-02 §10 table E's note "until then CN-SA-06 change 1's Owner-only check with no key applies" is now stale (listed for the Lead).
 - Counsel reads the blocked list before the pilot (AIW-D55, D64).
 
 ---
@@ -210,22 +211,27 @@ L912:
 | `system/billing:webhook-rerun` | SA-04 | Re-run failed processor notifications | Platform Owner, Billing, Platform engineer (SA-07 Appendix A L739) | CN-SA-04 change 1 |
 | `system/ai-recall:withdraw` | SA-12 | Withdraw waiting AI-prepared items for a safety recall | Platform Owner | CN-SA-12 change 2; IMP-8(c) |
 | `system/ai-provider:edit` | SA-08 | Enter or change the AI provider record (not its keys) | Platform engineer, Platform Owner | CN-SA-08 change 2; IMP-6 |
-| `system/ai-provider:publish` | SA-08 | Approve and publish the AI provider record; never one's own entry | Platform Owner | CN-SA-08 change 2; SA8-D22 pattern |
+| `system/ai-provider:publish` | SA-08 | Approve and publish the AI provider record, never one's own entry; **withdraw** the published record (SA-8-50) | Platform Owner | CN-SA-08 change 2; SA8-D22 pattern |
 | `system/ai-delegation:manage` (§10a) | SA-06 | **Set up** an AI assistant's delegation for another staff member; it takes effect only when that person accepts. A person sets up, accepts and ends their own with no key. **No key stops or ends someone else's delegation.** | Platform Owner | AW-02 §10 table E; IMP-1 rule 1 |
-| `system/ai-instruction:edit` | AW-02 | Author a new version of an assistant's model instructions and evaluation set | Platform engineer | AW-02 §10 table E; IMP-5 |
+| `system/ai-instruction:edit` | AW-02 | Author a new version of an assistant's model instructions and evaluation set | Platform engineer, Platform Owner | AW-02 §10 table E; IMP-5; `00-step3-plan.md`, "AW-02 calls" (b) |
 | `system/ai-instruction:approve` | AW-02 | Approve an instruction version for live use; never one's own | Platform Owner | AW-02 §10 table E; IMP-5; SA7-D4 |
 | `system/firm:message-owner` | SA-02 | Send an account-manager message to a firm (SA-2-42) | Firm onboarding / Account manager | CN-SA-02 change 2 |
 
+No key is added for switching off the *founder safeguards* setting: it follows SA-12's existing Owner-only settings pattern (SA-12-27; SA-12 L571), and `system/platform-config:manage` does not reach it (CN-SA-12 change 3).
+
 **(4) Why.**
-- **AW-02 §10 table E** proposes `system/ai-delegation:manage`, `system/ai-instruction:edit` and `system/ai-instruction:approve`. The Lead asked for them as Proposals here.
+- **AW-02 §10 table E** proposes `system/ai-delegation:manage`, `system/ai-instruction:edit` and `system/ai-instruction:approve`.
+- **Holders of `system/ai-instruction:edit`.** The Lead's call of 11 Oct (`00-step3-plan.md`, "AW-02 calls" (b)): held by the Platform engineer and the Platform Owner, approval by the Platform Owner, as in CN-SA-07's Appendix A row (re-check S3a-c m-9).
+- **Withdrawing the provider record** sits with publishing it, Owner only, so the record has one owner of its live state (re-check S3a-c m-10).
 - **IMP-1 rule 1:** the delegation "is **granted by the named person it works for**; the Owner may set one up for that person, but it takes effect only when the person accepts it, and the person can end it at any time".
 - **IMP-5:** "only a named platform role may change them; a second person approves before a version goes live".
 - **No stop key** (`00-step3-plan.md`, "No one stops another person's delegation"): "No key lets an Owner stop or end someone else's delegation". The earlier "Set up or stop" wording is withdrawn. To halt an assistant at once, the Platform Owner trips the platform kill switch (SA-12-31).
+- **No switch-off key** (`00-step3-plan.md`, "Who switches it off (S3a-c N-2)").
 - The other rows are the keys the sibling notes create.
 
 **(5) Knock-ons.**
 - SA-07 Appendix A (CN-SA-07 change 1).
-- AW-02 §10 table E uses the two `system/ai-provider:*` keys in place of `system/integration:manage`, and describes `system/ai-delegation:manage` as set-up only.
+- AW-02 §10 table E uses the two `system/ai-provider:*` keys in place of `system/integration:manage`, describes `system/ai-delegation:manage` as set-up only, and names no key of its own for switching off the founder safeguards setting.
 
 ---
 
@@ -260,19 +266,19 @@ L845:
 
 | Key | Meaning | Default holders | Lendable to an AI assistant | Code status |
 |---|---|---|---|---|
-| `agent/trust:move` *(new — CN-AG-06 item 6, AG-6-47)* | Record a move of a client's trust money to operating: reason code and a link to a delivered milestone or an issued invoice; audited. The platform does not move money (FD-12). | Follow the starter roles Expat Ready publishes (SA6-D12), as CN-AG-06 item 6 proposes; not set by this note | **Never** (SA-6-44) | NEW |
-| `agent/trust:reconcile` *(new — CN-AG-06 item 6, AG-6-48)* | Record the trust bank position and run the trust reconciliation report; export uses `agent/billing:export` | Follow the starter roles Expat Ready publishes (SA6-D12), as CN-AG-06 item 6 proposes; not set by this note | **Never** (SA-6-44) | NEW |
+| `agent/trust:move` *(new — CN-AG-06 change 6, AG-6-47)* | Record a move of a client's trust money to operating: reason code and the link AG-6-47 requires; audited. The platform does not move money (FD-12). | Follow the starter roles Expat Ready publishes (SA6-D12), as CN-AG-06 change 6 proposes; not set by this note | **Never** (SA-6-44) | NEW |
+| `agent/trust:reconcile` *(new — CN-AG-06 change 6, AG-6-48)* | Record the trust bank position and run the trust reconciliation report; export uses `agent/billing:export` | Follow the starter roles Expat Ready publishes (SA6-D12), as CN-AG-06 change 6 proposes; not set by this note | **Never** (SA-6-44) | NEW |
 
 **(4) Why.**
-- **CN-AG-06 item 6** (AG-6-47): the move "SHALL require a new key `agent/trust:move`, which SHALL never be marked lendable to an AI assistant (SA-6-44 as proposed in CN-SA-06, under which no key that records money is lendable)". AG-6-48: recording the bank position and running the report "SHALL require a new key `agent/trust:reconcile`". The holders: "§10 gains the two keys (`agent/trust:move`, `agent/trust:reconcile`; status **NEW**; default roles follow the starter roles Expat Ready publishes, SA6-D12)". Its knock-ons say the SA-06 catalogue is "not yet carried by CN-SA-06, raised to the Lead"; this change carries it.
+- **CN-AG-06 change 6** creates both keys: AG-6-47 requires `agent/trust:move` and marks it never lendable (CN-AG-06 L126); AG-6-48 requires `agent/trust:reconcile` (CN-AG-06 L128); default roles follow the published starter roles, SA6-D12 (CN-AG-06 L130). Its knock-ons name this change as the SA-06 half (CN-AG-06 L135).
 - **AIW-D72** ("Keep FD-17 in full"): Release 1 carries the trust ledger, the recorded move and the reconciliation report, and "The Billing assistant never posts a trust entry, moves a designation or computes a balance; it reads and lists."
 - **Never lendable:** a move records money, and reconciling records the bank position the report relies on; both are on the blocked list of change 1 (keys that record money).
-- **Proposal — not approved.** CN-AG-06 item 6 labels AG-6-46 to AG-6-48 Proposals; counsel reads the trust rules before any pilot on real client money (counsel pack question 9).
+- **Proposal — not approved.** CN-AG-06 change 6 labels AG-6-46 to AG-6-48 Proposals; counsel reads the trust rules before any pilot on real client money (counsel pack question 9).
 
 **(5) Knock-ons.**
-- AG-06 §10 (CN-AG-06 item 6).
+- AG-06 §10 (CN-AG-06 change 6).
 - SA-6-44's never-lendable list names both keys (change 1).
-- The published starter roles (SA6-D12) set the default holders; the Billing assistant reminds whoever holds `agent/trust:reconcile` (CN-AG-06 item 6 knock-ons; AW-01).
+- The published starter roles (SA6-D12) set the default holders; the Billing assistant reminds whoever holds `agent/trust:reconcile` (AW-01).
 
 ---
 

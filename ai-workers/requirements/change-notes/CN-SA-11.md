@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-11 Audit, Compliance & Data Governance, version 2.7, dated 2026-10-07 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-11-audit-compliance-and-data-governance_v2.7_2026-10-07.md` |
-| **Date of this note** | 11 Oct 2026 (third round: change 4 applies CN-AG-13's audit-field rule by pointer) |
+| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 8 |
 
@@ -15,7 +15,7 @@
 4. Why: the founder's decision (Founder Decisions Log FD-*n*; `ai-workers/decisions.md`, AIW-D*n*), the improvement (`ai-workers/design/ws2-improvements.md`, IMP-*n*) or the proposals row (`ai-workers/proposals.md`).
 5. What else must change.
 
-The AI assistants are specified in AW-01 and AW-02, which cite these IDs.
+The AI assistants are specified in AW-01 and AW-02, which cite these IDs. Sibling Workstream 2 files that are in a fix round (the CN-AG notes, AW-01, AW-02) are cited by change and line, without quotation marks.
 
 **Plain words used here.**
 - *AI processing*: any call to an AI model that reads a client's or a firm's data. This covers the four AI Doers, the AI assistants' model calls, and reading text from images.
@@ -124,7 +124,7 @@ The category list in SA-11-13 gains "**AI processing records**". A sentence is a
 
 **(5) Knock-ons.**
 - AG-11-98 and AG-16-39 (CN-AG-11, CN-AG-16).
-- AW-01 and AW-02 cite this category. AW-02 AW2-D20, which gives run records the `ApprovalItem` value, is corrected (listed for the Lead).
+- AW-01 and AW-02 cite this category.
 
 ---
 
@@ -145,20 +145,20 @@ L400:
 SA-11-2 gains a second paragraph:
 > *(changed — AIW-D33, AIW-D54)* Each entry SHALL also carry the audit fields of **AG-13-68** (`mode`, `delegationId`, `startedBy`, `personaRunId`), under that requirement's rule, which applies to this platform audit chain (CN-AG-13 change 2). On this chain:
 > - the `actorType` of an entry an AI assistant made for a named person is that person's own (`firm_staff` or `super_admin`), never `system`; no actor type is added;
-> - an entry written by a platform-plane AI assistant run SHALL carry as `tenantId` the one firm that run serves, or null (the empty firm) when it serves no firm (CN-AG-11 item 11). A run that serves one firm SHALL NOT read another firm's data; any operation spanning firms remains subject to SA-11-12.
+> - an entry written by a platform-plane AI assistant run SHALL carry as `tenantId` the one firm that run serves, or null (the empty firm) when it serves no firm (CN-AG-11 change 11). A run that serves one firm SHALL NOT read another firm's data; any operation spanning firms remains subject to SA-11-12.
 
 BR-3 gains: "An entry an AI assistant made for a named person names that person as actor, never `system` (SA-11-2; AG-13-68)."
 
 §7 `AuditLog` adds "the fields of AG-13-68 (CN-AG-13 change 2)".
 
 **(4) Why.**
-- **One home.** The Lead's call of 11 Oct, `00-step3-plan.md`, "Audit fields, one home": "the rule for `mode`, `delegationId`, `startedBy` on audit entries lives in CN-AG-13 change 2; CN-SA-11 change 4 applies it to the platform audit chain by pointer, with the platform's empty firm (as the one AI log shape)". AG-13-68 itself ends: "The same rule SHALL apply to Expat Ready's platform audit chain, where a platform run that serves no firm has an empty firm (AG-11 §7 as proposed in CN-AG-11 item 11; SA-11 by pointer)." This change is that pointer; it restates none of the rule.
+- **One home.** The Lead's call of 11 Oct, `00-step3-plan.md`, "Audit fields, one home": "the rule for `mode`, `delegationId`, `startedBy` on audit entries lives in CN-AG-13 change 2; CN-SA-11 change 4 applies it to the platform audit chain by pointer, with the platform's empty firm (as the one AI log shape)". AG-13-68's last sentence applies the same rule to Expat Ready's platform audit chain and points here (CN-AG-13 change 2, L41). This change is that pointer; it restates none of the rule.
 - **FD-16** (Founder Decisions Log v1.5, L52): "AI is NOT a first-class actor — no AI principal in the identity spine, no autonomous permissions, no new plane." SA-11's own `actorType` list is the only SA-11-specific part, so it is stated here.
 - **AIW-D33** (the delegation record is consistent with FD-16) and **AIW-D54 item 8** (platform runs are stamped with one firm, with no cross-firm sweep in version 1).
-- The `startedBy` values are AG-11-113's (CN-AG-11 item 7; `00-step3-plan.md`, "Started by, one list").
+- The `startedBy` values are AG-11-113's (CN-AG-11 change 7; `00-step3-plan.md`, "Started by, one list").
 
 **(5) Knock-ons.**
-- AG-13-68 (CN-AG-13 change 2), the one home of the rule; AG-11-113 (CN-AG-11 item 7), the one home of the `startedBy` values; CN-AG-11 item 11, the platform's empty firm.
+- AG-13-68 (CN-AG-13 change 2), the one home of the rule; AG-11-113 (CN-AG-11 change 7), the one home of the `startedBy` values; CN-AG-11 change 11, the platform's empty firm.
 - Whether SA-11's and AG-13's audit logs are one table or two stays for the Lead and the team (CN-AG-13 change 2 knock-ons).
 - AW-01 and AW-02 cite AG-13-68.
 - SA-07 Activity (CN-SA-07 change 3).
@@ -213,7 +213,7 @@ SA-11-10, reinstated:
 
 ---
 
-## 6. Data-subject requests: the founder's automated-decision review type, portability (counsel question 16), and the firm-side screen
+## 6. Data-subject requests: FD-20's automated-decision review type, portability (counsel question 16), and the firm-side screen
 
 **(1) What it changes.** SA-11-27 (L385); §3.8 "How it works" (L299); §7 `DsrRequest` (L472); §13, a new open question after item 10 (L631).
 
@@ -238,7 +238,7 @@ New open question:
 > 11. **The firm-side DSR screen (product owners).** *(new)* §3.8 says "the firm executes within their tenant", and SA-06 seeds `agent/dsr:manage` and `agent/governance:read` on Owner and Admin, but no firm screen is specified. Name the firm screen that lists a firm's requests, who records a request raised outside the portal, and who sets HELD and COMPLETED.
 
 **(4) Why.**
-- **FD-20** (FDL v1.5, L56) requires "a **`REVIEW_OF_AUTOMATED_DECISION`** request type in the DSR machinery routing to a named human reviewer with a recorded outcome". No module file carries it, and a team file never overrides a founder decision (rule 11). FD-20 also says: "Counsel confirms wording, not mechanism."
+- **FD-20** (FDL v1.5, L56) requires "a **`REVIEW_OF_AUTOMATED_DECISION`** request type in the DSR machinery routing to a named human reviewer with a recorded outcome". FD-20 is an **architect call** taken under the founder's standing technical delegation and recorded in the Founder Decisions Log for ratification (FDL L46: "FD-20 and FD-21 are architect calls taken under the standing technical delegation and are recorded here for ratification only"); no AIW-D row has ratified it. No module file carries it, and rule 11 covers every FD-n row, so it applies over the team file. FD-20 also says: "Counsel confirms wording, not mechanism."
 - **Portability against rule 11's default.** README §0 rule 11 makes the newer module file (SA-11, 7 Oct) win over Doc 4 (July), which lists PORTABILITY (CP-8-15, L2716). This note sets that default aside for two reasons:
   - the proposals row of 10 Oct (Firm assistant) asks to "add PORTABILITY to SA-11, which owns the register and clock (CP-8-16)";
   - the team's current portal module, CP-01, is not on Drive (`08-client-portal/NOT-FOUND.md`).
@@ -273,7 +273,7 @@ Both events are delivered once per change to firm modules, including the firm's 
 **(4) Why.**
 - Proposals row of 10 Oct (Firm assistant). Its trigger events include "a data-subject request being opened" and "a consent record being withdrawn".
 - `firm-assistant.md` §9 G-17.
-- The Agent-plane note CN-AG-11 change 4 adds both events to the engine's trigger list as items (e) and (f), and names SA-11 as their emitter under SA-11-29 and SA-11-27, pointing to this change. This change is that SA-11 half.
+- The Agent-plane note CN-AG-11 change 4 adds both events to the engine's trigger list as items (e) and (f), and names SA-11 as their emitter under SA-11-29 and SA-11-27, pointing to this change (CN-AG-11 L86). This change is that SA-11 half.
 - "One home per rule": an event lives in the change note of the module that owns the record (`00-step3-plan.md`).
 
 **(5) Knock-ons.**

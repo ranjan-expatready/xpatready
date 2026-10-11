@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-07 Platform Users, version 2.12, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-07-platform-users_v2.12_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (second fix round, after re-check S3a-b) |
+| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 4 |
 
@@ -51,11 +51,12 @@ The ticks on the four existing rows are unchanged. Each row gains its key:
 - **L737:** "— `system/billing:view` or the narrower read key the team chooses (SA-04 §10 note)".
 - **L738:** "— `system/billing:webhook-log` (view only, SA-4-36)".
 - **L739:** "— `system/billing:webhook-rerun` (SA-4-36)".
-- **L741:** "— includes the AI emergency-stop flags (SA-12-31)".
+- **L741:** "— includes the AI emergency-stop flags (SA-12-31); the AI spend caps and approve-all safeguard values within their locks (SA-12-33). Not the switch-off of the founder safeguards setting, which is Owner-only (SA-12-33)".
 
 New rows after L741. Rows marked *(proposal)* are proposals. The columns are as in Appendix A: Own · SM · CA · CP · AM · Bil · Sup · Sec · Eng.
 > | AI provider record — enter or change, not its keys (SA-8-49, `system/ai-provider:edit`) *(proposal)* | ✔ | | | | | | | | ✔ |
-> | AI provider record — approve and publish; never one's own entry (SA-8-49, `system/ai-provider:publish`) *(proposal)* | ✔ | | | | | | | | |
+> | AI provider record — approve and publish, never one's own entry; withdraw the published record (SA-8-49, SA-8-50, `system/ai-provider:publish`) *(proposal)* | ✔ | | | | | | | | |
+> | Switch off a part of the founder safeguards setting, recording the founder's decision (SA-12-33; Owner-only setting, SA-12-27 pattern) | ✔ | | | | | | | | |
 > | AI recall: withdraw waiting AI-prepared items (SA-12-32) *(proposal)* | ✔ | | | | | | | | *(team decides)* |
 > | Set up an AI assistant's delegation for another staff member; it takes effect when that person accepts (`system/ai-delegation:manage`) *(proposal)* | ✔ | | | | | | | | |
 > | AI assistant model instructions — author a new version (`system/ai-instruction:edit`) *(proposal)* | ✔ | | | | | | | | ✔ |
@@ -69,16 +70,17 @@ L689 gains: "Rows touched by the Workstream 2 change notes (CN-SA-02, CN-SA-04, 
 **(4) Why.**
 - **The webhook split:** proposals row of 10 Oct (Support and account assistant); `support-and-account-assistant.md` §9 G-18.
 - **The narrower read:** the same document, G-19.
-- **The provider record:** IMP-6; AIW-D52 and AIW-D69 (CN-SA-08 change 2). Owner publication follows SA8-D22 (SA-08 v2.4, L59), where e-sign wording is "**approved and published by the Owner**".
+- **The provider record:** IMP-6; AIW-D52 and AIW-D69 (CN-SA-08 change 2). Owner publication follows SA8-D22 (SA-08 v2.4, L59), where e-sign wording is "**approved and published by the Owner**". Withdrawing sits with publishing (re-check S3a-c m-10).
+- **The founder safeguards switch-off:** `00-step3-plan.md`, "Who switches it off (S3a-c N-2)": SA-12's existing Owner-only settings pattern, no new key; the Platform engineer's config key does not reach it.
 - **The stops and the recall:** IMP-8 (CN-SA-12).
-- **The delegation and instruction keys:** AW-02 §10 table E; IMP-1 rule 1; IMP-5.
+- **The delegation and instruction keys:** AW-02 §10 table E; IMP-1 rule 1; IMP-5. Instruction editing by the Platform engineer and the Platform Owner, approval by the Platform Owner: `00-step3-plan.md`, "AW-02 calls" (b).
 - **No key stops another person's delegation:** `00-step3-plan.md`, "No one stops another person's delegation": "No key lets an Owner stop or end someone else's delegation."
 - **The account-manager message:** proposals row of 10 Oct, outreach (CN-SA-02 change 2); key per CN-SA-06 change 4.
 
 **(5) Knock-ons.**
 - SA-04 §10 (CN-SA-04 changes 1 and 5).
 - SA-08 §10 (CN-SA-08 change 2).
-- SA-12 §10 (CN-SA-12 change 2).
+- SA-12 §10 (CN-SA-12 changes 2 and 3).
 - SA-06 catalogue (CN-SA-06 change 4).
 - SA-08 v2.4's own pending Appendix A row (SA8-X7, L99) is the team's and is not repeated here.
 
@@ -112,7 +114,7 @@ L723:
 
 **(5) Knock-ons.**
 - SA-10 §10 (CN-SA-10 change 4).
-- **AW-02:** its §10 table C assumes an Account manager holds no ticket key. If the team gives the Account manager these keys, AW-02's subsets and ticket recipes are re-checked.
+- **AW-02:** the Account manager role may hold these keys, but the Account manager's delegation never lends them (`00-step3-plan.md`, "AW-02 calls" (d)).
 
 ---
 
@@ -149,7 +151,7 @@ New requirement:
 New business rule:
 > - **BR-21** *(new — AIW-D33)* **An AI assistant borrows, never holds.** Its actions are recorded against the named staff member it worked for, marked as done under a delegation, with what started the run (SA-11-2), and appear in that person's Activity marked so.
 
-L351 gains: "While the pilot safeguards setting is on (SA-12-33), a plan or billing-period change that the Support and account assistant proposed also needs a second person's confirmation (SA-4-89)."
+L351 gains: "While the second-person part of the founder safeguards setting is on (SA-12-33), any account or plan change that the Support and account assistant proposed also needs a second person's confirmation; the person it worked for cannot confirm it (SA-4-89)."
 
 L377 gains: "Entries made under a delegation (an AI assistant working for the person) carry a marker and the delegation reference (SA-11-2)."
 
@@ -163,7 +165,7 @@ L377 gains: "Entries made under a delegation (an AI assistant working for the pe
   - "Actor rule".
   - "No 'during the pilot' in a requirement".
 - **Gaps:** `pack-authors-assistant.md` §9 G-19; `support-and-account-assistant.md` §9 G-14.
-- **The second-person sentence** is AIW-D59 (CN-SA-04 change 3).
+- **The second-person sentence** is AIW-D59 in its own words (CN-SA-04 change 3; `00-step3-plan.md`, "AIW-D59 in its own words"); it rests on SA7-D4 on this same line.
 
 **(5) Knock-ons.**
 - SA-11-2 (CN-SA-11 change 4).
@@ -182,7 +184,7 @@ L29 (extract):
 > New requirements continue from SA-7-48.
 
 **(3) Proposed words.**
-- A version row: "| 2.13 | *(date placed)* | Workstream 2 change note CN-SA-07 applied: Appendix A keys and new rows (AI provider record, recall, delegation set-up and instruction keys as proposals; account-manager message); support-ticket rows with `system/support-ticket:*` keys; an AI assistant is not a staff account (SA-7-48, BR-21). | AIW-D33, AIW-D59; IMP-1, IMP-5, IMP-6, IMP-8 |".
+- A version row: "| 2.13 | *(date placed)* | Workstream 2 change note CN-SA-07 applied: Appendix A keys and new rows (AI provider record with withdrawal, founder safeguards switch-off as Owner-only, recall, delegation set-up and instruction keys as proposals; account-manager message); support-ticket rows with `system/support-ticket:*` keys; an AI assistant is not a staff account (SA-7-48, BR-21). | AIW-D33, AIW-D59; IMP-1, IMP-5, IMP-6, IMP-8 |".
 - L29: "continue from SA-7-49".
 
 **(4) Why.** Review S3a m-20(c).
