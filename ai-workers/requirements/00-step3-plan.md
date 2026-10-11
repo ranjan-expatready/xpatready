@@ -43,3 +43,5 @@
 - **Bookkeeper (S3c M-7):** the bookkeeper sees the candidate invoices and that a payment notice is linked, never the message content.
 - **Status-content templates sent by an assistant (S3c M-10):** *ask me first* is the default the firm may change (IMP-28(c), as the behaviour documents say); the lead block above is the only hard rule.
 - **Sources from 11 Oct: `sources/drive-snapshot-2026-10-11/` only** (CURRENT). Step 2 behaviour documents stay pinned to the 9 Oct snapshot; a Step 3 citation to a module changed on 10 Oct quotes the new version and its new line. New IDs proposed in change notes take the next number free in the 11 Oct version.
+- **Newer decisions first (S3a maker, adopted 11 Oct):** before writing a change against Doc 1–4, search the module files for a newer module or team decision on the same subject, and name any cited module file the snapshot does not hold.
+- **FD-17 in full (AIW-D72):** all four parts (designation, no sweep, per-client trust ledger, reconciliation report) are in Release 1; no assistant posts a trust entry, moves a designation or computes a balance.

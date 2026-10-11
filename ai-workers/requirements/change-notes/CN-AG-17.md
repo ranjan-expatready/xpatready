@@ -3,39 +3,56 @@
 | Field | Value |
 |---|---|
 | Module changed | AG-17 Corporate Cases & LMIA |
-| Version and file | v0.5 of 7 Oct 2026, `02-functional-requirements/agent/AG-17-corporate-cases-and-lmia_v0.5_2026-10-07.md` (Drive snapshot of 9 Oct 2026; line numbers below are that file's) |
-| Date of this note | 11 Oct 2026 |
+| Version and file | v0.6 of 10 Oct 2026, `02-functional-requirements/agent/AG-17-corporate-cases-and-lmia_v0.6_2026-10-10.md` (Drive snapshot of 11 Oct 2026, `sources/drive-snapshot-2026-10-11/`; line numbers below are that file's) |
+| Date of this note | 11 Oct 2026 (fix round after review S3c; re-based on the 11 Oct snapshot) |
 | Status | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
-| Next free numbers used | AG-17-91 (highest AG-17-90); BR-17 (highest BR-16, L849) |
-| Companion files | AW-01 (the Case assistant's LMIA duty, labelled Proposal by AIW-D34); CN-AG-11 (Needs you item kinds) |
+| Next free numbers used | AG-17-91 (highest AG-17-90, L737); BR-17 (highest BR-16, L850) |
+| Companion files | CN-AG-15 (employer seats at launch, AIW-D67); CN-AG-11 item 6 (item kind `LMIA_ENTRY`); AW-01 v0.1 (the Case assistant's LMIA duty, labelled Proposal by AIW-D34) |
 
-**In plain words.** Two changes where the Step 2 gaps touch this module. First, AG-17 still says escalation and at-risk marks are off by default, while the newer engine decision makes them on by default once a firm has five or more staff; this note aligns the wording. Second, if the firm's AI is on, the Reader may propose advertising and candidate entries and an assistant may propose a duties comparison, but each waits for a person, and no AI ever screens, ranks or scores a candidate.
+**In plain words.** Three changes where the founder's decisions and the Step 2 gaps touch this module. First, AG-17 still says escalation and at-risk marks are off by default, while the newer engine decision makes them on by default once a firm has five or more staff; this note aligns the wording. Second, if the firm's AI is on, the Reader may propose advertising and candidate entries and an assistant may propose a duties comparison, but each waits for a person, and no AI ever screens, ranks or scores a candidate. Third, the founder decided that employers get their full portal actions at launch, including extra seats, so AG-17's plan that puts employer seats in Release 2 follows CN-AG-15.
+
+**What the team changed on 10 Oct (v0.6).** Corporate is now the corporate-case feature of SA-03's catalogue (always on), and limit modes are fixed; no AG-17 requirement changed. Nothing proposed here was already made.
 
 ---
 
 ## 1. Escalation and at-risk marks: off by default only under five staff
 
-1. **Where.** Decision rows AG17-D55 (L173) and AG17-D70 (L188); §0.2 AG-16 row (L255); AG-17-73 (L812).
+1. **Where.** Decision rows AG17-D55 (L174) and AG17-D70 (L189); §0.2 AG-16 row (L256); AG-17-73 (L813).
 2. **Current words.**
-   > L188: "**Minder:** modules register standard deadlines directly; standard reminders never plan-gated or stopped; escalation and at-risk marks off by default, opt-in per firm. Confirms AG17-D55."
+   > L189: "**Minder:** modules register standard deadlines directly; standard reminders never plan-gated or stopped; escalation and at-risk marks off by default, opt-in per firm. Confirms AG17-D55."
    >
-   > L255: "**Add two on/off settings: Minder escalation chains, and at-risk marks — both off by default (AG17-D70).**"
+   > L256: "**Add two on/off settings: Minder escalation chains, and at-risk marks — both off by default (AG17-D70).**"
    >
-   > L812: "by default they remind only the file owner, and any escalation chain or at-risk flag applies only if the firm has switched it on (AG17-D55)."
-3. **Proposed words.** Annotate AG17-D55 and AG17-D70: "*(changed by AG11-D9, 4 Oct 2026: escalation and at-risk marks are parts of Team safeguards — off by default for a firm under 5 active staff, on by default at 5 or more; AG-11-49, AG-16-32.)*" L255: "… both off by default under 5 active staff and on by default at 5 or more, as parts of Team safeguards (AG11-D9)." AG-17-73: "… applies only if it is on for the firm — switched on by the firm, or on through Team safeguards at 5 or more active staff (AG-11-80)."
-4. **Why.** IMP-41 ("The AG-17 / AG-11 escalation default: adopt AG-11's (newest)"), relied on by `firm-assistant.md` §9 G-10 ("Decision for the team (IMP-41 adopts AG-11's)"); AG-11 v1.11 §0.2 (L60) lists the AG-17 knock-on as Pending.
+   > L813: "by default they remind only the file owner, and any escalation chain or at-risk flag applies only if the firm has switched it on (AG17-D55)."
+3. **Proposed words.** Annotate AG17-D55 and AG17-D70: "*(changed by AG11-D9, 4 Oct 2026: escalation and at-risk marks are parts of Team safeguards — off by default for a firm under 5 active staff, on by default at 5 or more; AG-11-49, AG-16-32.)*" L256: "… both off by default under 5 active staff and on by default at 5 or more, as parts of Team safeguards (AG11-D9)." AG-17-73: "… applies only if it is on for the firm — switched on by the firm, or on through Team safeguards at 5 or more active staff (AG-11-80)."
+4. **Why.** IMP-41 ("The AG-17 / AG-11 escalation default: adopt AG-11's (newest)"), relied on by `firm-assistant.md` §9 G-10 ("Decision for the team (IMP-41 adopts AG-11's)"); AG-11 v1.12 §0.2 (L61) still lists the AG-17 knock-on as Pending.
 5. **Knock-ons.** Closes AG-11 §0.2's AG-17 row; AG-13 BR-20 (overdue-task escalation, AG17-D57) is a different setting and unchanged.
 
 ## 2. AI-proposed LMIA entries wait for a person; no AI screens or ranks candidates
 
-1. **Where.** §3.4 recruitment (L527–L563); AG-17-26 (L741); AG-17-32 (L749); new requirement **AG-17-91**; new rule **BR-17**.
+1. **Where.** §3.4 recruitment (L528–L564); AG-17-26 (L742); AG-17-32 (L750); new requirement **AG-17-91**; new rule **BR-17**.
 2. **Current words.**
-   > L741: "entries SHALL be addable singly, in bulk, or imported from a spreadsheet (AG-17-80)."
+   > L742: "entries SHALL be addable singly, in bulk, or imported from a spreadsheet (AG-17-80)."
    >
-   > L749: "duties SHALL be captured as one **`dutiesMatch`** yes/no tick per ad/offer, not a field-by-field comparison"
+   > L750: "duties SHALL be captured as one **`dutiesMatch`** yes/no tick per ad/offer, not a field-by-field comparison"
 3. **Proposed words.**
-   > **AG-17-91 (AI-proposed entries).** Where the firm's AI is on (AG-16-35), the Reader MAY propose advertising-channel entries from a dated screenshot of an advertisement and candidate-log entries from a résumé (the Reader document types are pack content, AG-9-43), and an AI assistant MAY propose a short note comparing an advertisement's duties with the file's job details to help the person's `dutiesMatch` tick (AG-17-32). Each proposal SHALL wait in Needs you for a person to accept under `agent/case:edit`; nothing SHALL enter the channel record, the candidate log or the tick without that acceptance.
+   > **AG-17-91 (AI-proposed entries).** Where the firm's AI is on (AG-16-35), the Reader MAY propose advertising-channel entries from a dated screenshot of an advertisement and candidate-log entries from a résumé (the Reader document types are pack content, AG-9-43), and an AI assistant MAY propose a short note comparing an advertisement's duties with the file's job details to help the person's `dutiesMatch` tick (AG-17-32). Each proposal SHALL wait in Needs you as an `LMIA_ENTRY` item (AG-11, CN-AG-11 item 6) for a person to accept under `agent/case:edit`; nothing SHALL enter the channel record, the candidate log or the tick without that acceptance.
    >
    > **BR-17 (No AI judges a candidate).** No AI Doer or AI assistant SHALL screen, rank, score or recommend a candidate, or propose a hiring outcome or a rejection reason. Candidate entries are records only (FD-7).
 4. **Why.** AIW-D34 item 10 (the founder: W-13 LMIA Compliance Clerk sits inside the Case assistant, labelled Proposal); `proposals.md` row of 9 Oct (W2 catalogue: "the LMIA Compliance Clerk (W-13) may read advertising proof and CVs and propose a duties comparison, but never ranks, screens or scores candidates"); FD-7 (Founder Decisions Log v1.5 L32: "**no candidate identity plane** (records-only)"); `case-assistant.md` §1.8, §3 and §9 G-15.
-5. **Knock-ons.** AG-11 Needs you: which item kind carries an AI-proposed channel or candidate entry is the team's to name in AG-11 §7 (`case-assistant.md` §9 G-15 records the AG-17 Needs you path as a Proposal); AG-17-30 retention and AG-17-53 inspection pack unchanged; counsel on what an assistant may hold about candidates (`case-assistant.md` §7 item 3).
+5. **Knock-ons.** AG-17-30 retention and AG-17-53 inspection pack unchanged; AW-1-51 cites BR-17; counsel on what an assistant may hold about candidates (`case-assistant.md` §7 item 3).
+
+## 3. Employer seats move into Release 1 (knock-on of AIW-D67)
+
+1. **Where.** Decision rows AG17-D38 (L157) and AG17-D51 (L170); §0.1 Release 2 table item 3 (L225); §0.2 AG-15 row (L255); §1 release plan (L287).
+2. **Current words.**
+   > L157: "gives the employer's primary contact portal access (extra seats with AG-15 later)"
+   >
+   > L170: "**Release 2, in order:** other corporate services (exempt offers, endorsements) · full employer qualifier · employer portal entry and seats · corporate dashboard · full post-approval compliance · recruitment engine."
+   >
+   > L225: "| 3 | **Employer entering channels and candidates in the portal; extra employer seats** | Depend on AG-15's employer portal; staff do it in Release 1 (CSV import, AG-17-80) |"
+   >
+   > L287: "| **2** | Other corporate services · full employer qualifier · employer portal entry and seats · corporate dashboard · full post-approval compliance · recruitment engine — in that order | See §0.1 (AG17-D51) |"
+3. **Proposed words.** Annotate AG17-D38 and AG17-D51: "*(changed by AIW-D67, the founder, 11 Oct 2026: the employer's portal actions — upload, pay, sign and seat management — are in Release 1; extra employer seats are Release 1, AG-15-12 as changed by CN-AG-15.)*" §0.1 item 3 reads "**Employer entering channels and candidates in the portal**" (seats removed from the Release 2 list); L287 reads "… employer portal entry of channels and candidates …" without "and seats"; the §0.2 AG-15 row adds "Release 1 also gives additional employer seats (AIW-D67; CN-AG-15)". Entering channels and candidates in the portal stays Release 2 (AIW-D67 does not name it; CP1-D7 keeps candidates out of the employer portal in Release 1).
+4. **Why.** AIW-D67 (the founder, 11 Oct: "Full employer actions at launch … The Charter's "CP-9 Employer view (read-only)" becomes the employer actions the client portal document specifies (upload, pay, sign, seat management) in Release 1"); Doc 4 v1.3 CP-9-10 (L3066: "A seat holding `portal/corporate:seat-manage` SHALL invite/list/capability-grant/request-removal of seats under the SAME organisation only"); README §0 rule 11 (a module's later plan does not override the founder's decision). FD-7's "employer sees read-only summary" is the recruitment summary tile, not the portal as a whole (CN-FDL "Checked and not changed"), so FD-7 is not touched.
+5. **Knock-ons.** CN-AG-15 (AG-15-12, BR-17 and the seat screens); SA-03 (how the seats extra is priced at launch, SA3-D20; Super Admin half); the Charter edit is the founder's (`charter-edits.md` §3).

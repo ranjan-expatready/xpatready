@@ -3,22 +3,32 @@
 | | |
 |---|---|
 | **Document changed** | SA-01B Content Pack Configurator, version 1.2, dated 2026-10-05 |
-| **File (9 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-09/02-functional-requirements/super-admin/SA-01B-content-pack-configurator_v1.2_2026-10-05.md` |
-| **Date of this note** | 11 Oct 2026 |
+| **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-01B-content-pack-configurator_v1.2_2026-10-05.md` |
+| **Date of this note** | 11 Oct 2026 (fix round after review S3a) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
-| **Changes** | 6 |
+| **Changes** | 7 |
 
-**How to read this note.** Each numbered change has five parts: (1) what it changes, by ID, section and line of the 9 Oct snapshot; (2) the current words, quoted exactly; (3) the proposed words, in SA-01B's own style; (4) why, pointing to the founder's decision (Founder Decisions Log FD-*n*; `ai-workers/decisions.md`, AIW-D*n*), the improvement (`ai-workers/design/ws2-improvements.md`, IMP-*n*), the proposals row (`ai-workers/proposals.md`) or the gap list of the passed behaviour document (`ai-workers/design/behaviours/pack-authors-assistant.md` §9, G-*n*); (5) what else must change.
+**How to read this note.** Each numbered change has five parts:
+1. What it changes, by ID, section and line of the snapshot.
+2. The current words, quoted exactly.
+3. The proposed words, in SA-01B's own style (plain present tense).
+4. Why: the founder's decision (Founder Decisions Log FD-*n*; `ai-workers/decisions.md`, AIW-D*n*), the improvement (`ai-workers/design/ws2-improvements.md`, IMP-*n*), the proposals row (`ai-workers/proposals.md`) or the gap list of the passed behaviour document (`ai-workers/design/behaviours/pack-authors-assistant.md` §9, G-*n*).
+5. What else must change.
 
-**Numbering.** SA-01B states its range: "new requirements are SA-1B-1 – SA-1B-95" (L9). Any new requirement here would start at SA-1B-96; none is needed, because the new rules live in SA-01 (SA-1-66, SA-1-67) and SA-08 (SA-8-40). Role names follow CN-SA-01 change 5 (Content author, Content approver).
+**Numbering and names.** No new requirement number is needed here: the new rules live in SA-01 (SA-1-66, SA-1-67) and SA-08 (SA-8-52). Role names follow CN-SA-01 change 5 (Content author, Content approver).
 
-**Two founder decisions bring this module back to the Founder Decisions Log** (changes 1 and 3). A module file never overrides a founder decision by date (README §0 rule 11); both conflicts went to the founder on 11 Oct 2026 and he decided them.
+**Two founder decisions bring this module back to the Founder Decisions Log** (changes 1 and 3). A module file never overrides a founder decision by date (README §0 rule 11). Both conflicts went to the founder on 11 Oct 2026, and he decided them.
 
 ---
 
 ## 1. Government form filling: FD-5 stands; the team gives the route and a date
 
-**(1) What it changes.** SA1B-D28 (L53); §0.1 deferral rows for box maps and P1 (L67–L68); §0.3 "Defer" row (L110); §3.5 Release 1 note (L180); §13 placeholder P1 (L400).
+**(1) What it changes.**
+- SA1B-D28 (L53);
+- §0.1 deferral rows for box maps and P1 (L67–L68);
+- §0.3 "Defer" row (L110);
+- §3.5 Release 1 note (L180);
+- §13 placeholder P1 (L400).
 
 **(2) Current words.**
 
@@ -30,22 +40,36 @@ L400 (extract, "Decide before" cell):
 
 **(3) Proposed words.**
 
-SA1B-D28 gains at the start of its decision cell:
+SA1B-D28 gains, at the start of its decision cell:
 > *(changed 11 Oct 2026 — FD-5 kept by the founder, AIW-D43)* **Founder Decisions Log FD-5 stands: flattened-overlay filling in version 1.** The team states the route for IRCC's forms (P1) and a date for box maps and filling. Until filling exists, the pilot runs without form filling and says so. When filling ships it stays deterministic (SA1B-D16).
 
 The rest of the cell stays as the record of the product owners' 23 Sep reasoning.
 
-P1 "Decide before" becomes: "**Now** — the team names the route and a date (FD-5, AIW-D43)." §0.1 (L67–L68), §0.3 (L110) and §3.5 (L180) are re-read against the date the team gives.
+P1's "Decide before" becomes: "**Now** — the team names the route and a date (FD-5, AIW-D43)."
 
-**(4) Why.** FD-5 (Founder Decisions Log v1.5, L30, resolved 3 Jul 2026, "BINDING"): "**Flattened-overlay support in v1** (coordinate-mapped fill + FormFieldMap visual editor), unit-priced per form edition; XFA runtime = named later-wave stub". SA1B-D28 parked it; the conflict went to the founder (proposals row of 9 Oct, carve-out B, "Settle the Filler's release"; `00-step2-decisions.md` §2 item 17) and he chose "Keep FD-5, ask the team" (AIW-D43: "FD-5 (form filling in version 1) stands; Step 3 asks the team for the overlay route and a date. Until it exists the pilot runs without form filling and says so; the Form Preparer duty (W-05) stays specified."). SA-01B's own §13 P1 (L400) records why the route matters: "The engine fills **AcroForm** PDFs and refuses XFA templates (§12), and IRCC's 2D-barcode forms are XFA."
+§0.1 (L67–L68), §0.3 (L110) and §3.5 (L180) are re-read against the date the team gives.
 
-**(5) Knock-ons.** SA1B-X10 (L90, the "auto-prefilled forms" plan limit) and SA-03 SA-3-4 follow the date. AG-07's Filler requirements and the Case assistant's Form Preparer duty (CN-AG-07; AW-01). The Program Charter line on form filling is in `ai-workers/charter-edits.md` §2 (the founder pastes it; not repeated here).
+**(4) Why.**
+- FD-5 (Founder Decisions Log v1.5, L30): "**Flattened-overlay support in v1** (coordinate-mapped fill + FormFieldMap visual editor), unit-priced per form edition; XFA runtime = named later-wave stub".
+- SA1B-D28 parked filling. The conflict went to the founder (proposals row of 9 Oct, carve-out B, "Settle the Filler's release"; `00-step2-decisions.md` §2 item 17).
+- He chose "Keep FD-5, ask the team" (AIW-D43): "FD-5 (form filling in version 1) stands; Step 3 asks the team for the overlay route and a date. Until it exists the pilot runs without form filling and says so; the Form Preparer duty (W-05) stays specified."
+- SA-01B's own P1 (L400) says why the route matters: "The engine fills **AcroForm** PDFs and refuses XFA templates (§12), and IRCC's 2D-barcode forms are XFA."
+
+**(5) Knock-ons.**
+- SA1B-X10 (L90, the "auto-prefilled forms" metric) is moot: SA-03 v2.17 no longer limits prefilled forms (SA3-D14).
+- The shared 99-Phasing-and-Glossary v2.18 SA-1B row (L31) follows the team's date.
+- AG-07's Filler (CN-AG-07).
+- The Charter line is in `ai-workers/charter-edits.md` §2.
 
 ---
 
-## 2. The publish gate: second-person approval, with the rehearsal report attached
+## 2. The publish gate: second-person approval, with the rehearsal report attached; synthetic samples everywhere
 
-**(1) What it changes.** SA1B-D18 (L42); SA-1B-38 (L206).
+**(1) What it changes.**
+- SA1B-D18 (L42);
+- SA-1B-38 (L206);
+- §0.1 deferral row (L71) and §0.3 row (L114);
+- SA-1-19 (L214), SA-1-26 (L221) and SA-1B-62 (L287).
 
 **(2) Current words.**
 
@@ -55,14 +79,28 @@ L42:
 L206:
 > - **SA-1B-38** A change to a gate or a scoring grid is trusted by **second-person approval**; there are no mandatory test profiles and publishing runs no test set.
 
+L214:
+> - **SA-1-19** Rule sets can be test-run against a sample client, showing pass / fail / missing input per rule.
+
+L287:
+> - **SA-1B-62** Preview shows, for a sample family, **each person's** questionnaire, checklist and forms exactly as they will appear.
+
 **(3) Proposed words.**
 
 SA1B-D18 gains: "*(changed 11 Oct 2026 — AIW-D49)* The approver reads the **rehearsal report** attached to every production submission (SA-1-66) before approving; it is evidence, not a blocking gate."
 
 SA-1B-38:
-> - **SA-1B-38** *(changed — AIW-D49)* A change to a gate or a scoring grid is trusted by **second-person approval**, given after reading the **rehearsal report** that every production submission carries (SA-1-66); there are no mandatory test profiles and publishing runs no blocking test set.
+> - **SA-1B-38** *(changed — AIW-D49)* A change to a gate or a scoring grid is trusted by **second-person approval**, given after reading the **rehearsal report** that every production submission carries (SA-1-66); there are no mandatory or blocking test profiles, and publishing runs no blocking test set.
 
-**(4) Why.** AIW-D49, 11 Oct 2026, the founder chose "Attach a rehearsal report": "Every production pack submission carries the report of the product's rehearsal on sample clients; the second person reads it before approving. No new blocking test gate." It answers the exposure SA1B-D18 itself records. Proposals row of 10 Oct (Pack author's assistant, test gate); `pack-authors-assistant.md` §9 G-11 ("Decided (AIW-D49)").
+§0.1 L71 and §0.3 L114 gain: "The rehearsal report of SA-1-66 is not a test profile: it is evidence the approver reads (AIW-D49)."
+
+SA-1-19, SA-1-26 and SA-1B-62 each gain: "The sample client (or family) is always synthetic and marked so (SA-1-66)."
+
+**(4) Why.**
+- AIW-D49, 11 Oct 2026. The founder chose "Attach a rehearsal report": "Every production pack submission carries the report of the product's rehearsal on sample clients; the second person reads it before approving. No new blocking test gate." It answers the exposure SA1B-D18 itself records.
+- Proposals row of 10 Oct (Pack author's assistant, test gate). `pack-authors-assistant.md` §9 G-11 ("Decided (AIW-D49)").
+- The synthetic rule: proposals row of 10 Oct (Pack author's assistant, Rule, naming SA-1-52 and SA-1B-62); G-7.
+- Review S3a M-5 (wording consistent with "no mandatory test profiles") and m-9 (the synthetic rule applied to every sample-client run).
 
 **(5) Knock-ons.** SA-01 SA-1-66 (CN-SA-01 change 1). AG-03 BR-18 (CN-AG-03).
 
@@ -83,17 +121,21 @@ L228:
 **(3) Proposed words.**
 
 SA-1B-44:
-> - **SA-1B-44** *(changed — FD-4 as amended 11 Oct 2026, AIW-D48)* Rows are maintained in the console and by bulk upload, with the upload validated against the table definition before it is accepted. **Rows that go into a production pack are approved by a second person with the pack (SA-01 §3.12, SA-1-61)**, exactly like table definitions (SA-1B-42); there is no separate setting that lets reference rows skip the second person.
+> - **SA-1B-44** *(changed — FD-4 as amended 11 Oct 2026, AIW-D48)* Rows are maintained in the console and by bulk upload, with the upload validated against the table definition before it is accepted. **Rows that go into a production pack are approved by a second person with the pack (SA-01 §3.12, SA-1-61)**, exactly like table definitions (SA-1B-42); no setting lets reference rows skip the second person.
 
 SA1B-D17 gains: "*(changed — AIW-D48)* Rows in a production pack also need second-person approval."
 
-**(4) Why.** FD-4 (Founder Decisions Log v1.5, L29) read: "**Dual-control for rule/scoring/eligibility artifacts; platform-config toggle for reference data**". The founder amended its second clause (AIW-D48, "Two people for all"): "reference data in a published country pack (fees, wage tables) also needs two people, matching SA-01 v2.2 §3.12." SA-1B-42 requires a second person for table definitions; SA-1B-44 names no second person for rows. Proposals row of 10 Oct (Pack author's assistant, test gate, part 2, "Reference rows"); `pack-authors-assistant.md` §9 G-25 ("Decided (AIW-D48)"). Fees, funds and wages are values a client's file depends on.
+**(4) Why.**
+- FD-4 (Founder Decisions Log v1.5, L29) read: "**Dual-control for rule/scoring/eligibility artifacts; platform-config toggle for reference data**".
+- The founder amended its second clause (AIW-D48, "Two people for all"): "reference data in a published country pack (fees, wage tables) also needs two people, matching SA-01 v2.2 §3.12."
+- SA-1B-42 requires a second person for table definitions; SA-1B-44 names none for rows.
+- Proposals row of 10 Oct (Pack author's assistant, test gate, part 2). `pack-authors-assistant.md` §9 G-25 ("Decided (AIW-D48)").
 
-**(5) Knock-ons.** The Founder Decisions Log carries the amendment (CN-FDL change 1). SA-01 §3.12 already puts the whole production pack under two people; no change there.
+**(5) Knock-ons.** The Founder Decisions Log carries the amendment (CN-FDL change 1).
 
 ---
 
-## 4. A government source is recorded as its web address, so the watcher can fetch only that
+## 4. A government source is recorded as its web address, so the watcher fetches only that
 
 **(1) What it changes.** SA-1B-39 (L207).
 
@@ -102,13 +144,11 @@ SA1B-D17 gains: "*(changed — AIW-D48)* Rows in a production pack also need sec
 L207:
 > - **SA-1B-39** Every gate, scoring row, document requirement, form edition, fee, programme definition and reference table carries a **government source, a date checked and a next-review date**.
 
-**(3) Proposed words.**
+**(3) Proposed words.** SA-1B-39 gains: "*(changed — read-only source rail)* Where the government source is a web page, it is recorded as the page's **full official web address**. Only addresses recorded here may be fetched by the read-only government source rail (SA-8-52)."
 
-SA-1B-39 gains: "*(changed — read-only source rail)* Where the government source is a web page, it is recorded as the page's **full official web address**. Only addresses recorded here may be fetched by the read-only government source rail (SA-8-40)."
+**(4) Why.** Proposals row of 10 Oct (Pack author's assistant, outbound fetch). The read-only rail is "limited to the addresses recorded as sources under SA-1B-39, never an address found on a page". A source recorded only as free text cannot limit what is fetched. `pack-authors-assistant.md` §9 G-3.
 
-**(4) Why.** Proposals row of 10 Oct (Pack author's assistant, outbound fetch): the read-only rail is "limited to the addresses recorded as sources under SA-1B-39, never an address found on a page". A source recorded only as free text cannot limit what is fetched. `pack-authors-assistant.md` §9 G-3.
-
-**(5) Knock-ons.** SA-08 SA-8-40 (CN-SA-08 change 3). The Canada pack content the specialist authors (AIW-D50) records addresses in this form.
+**(5) Knock-ons.** SA-08 SA-8-52 (CN-SA-08 change 3). The Canada pack content the specialist authors (AIW-D50) records addresses in this form.
 
 ---
 
@@ -123,9 +163,11 @@ L208:
 
 **(3) Proposed words.**
 
-> - **SA-1B-40** *(changed)* Overdue items appear on a work queue and warn at publish. Content never expires silently. The same queue also carries a **"source page changed"** item when the government page recorded under SA-1B-39 has changed since it was last checked, with the content items that cite it and, where the Pack author's assistant drafted one, a proposed change file for the author to review. Dismissing the item records who dismissed it and why.
+> - **SA-1B-40** *(changed — G-4)* Overdue items appear on a work queue and warn at publish. Content never expires silently. The same queue also carries a **"source page changed"** item when the government page recorded under SA-1B-39 has changed since it was last checked. The item lists the content items that cite the page and, where the Pack author's assistant drafted one, a proposed change file for the author to review. Dismissing the item records who dismissed it and why.
 
-**(4) Why.** `pack-authors-assistant.md` §9 G-4 (Proposal; SA-1B-40): "The work queue of SA-1B-40 carries overdue reviews only; a *changed source* item kind with the proposed change file is needed." The watcher is the duty the persona card sells ("Watches the official pages a pack cites", proposals row of 10 Oct, outbound fetch). The proposed change file is a proposal only; the assistant never writes into the pack (AIW-D54 item 7).
+**(4) Why.**
+- `pack-authors-assistant.md` §9 G-4 (Proposal; SA-1B-40): "The work queue of SA-1B-40 carries overdue reviews only; a *changed source* item kind with the proposed change file is needed."
+- The proposed change file is a proposal only; the assistant never writes into the pack (AIW-D54 item 7).
 
 **(5) Knock-ons.** AW-02 (the watcher and its stored page copies, `pack-authors-assistant.md` §9 G-21).
 
@@ -133,7 +175,7 @@ L208:
 
 ## 6. AI-drafted box-map lines carry a marker and the model's confidence until the author reviews them
 
-**(1) What it changes.** SA-1B-33 (L189).
+**(1) What it changes.** SA-1B-33 (L189); the import format of SA-1-31 (L199) and SA-1-41 (L234), both in this module.
 
 **(2) Current words.**
 
@@ -142,8 +184,28 @@ L189:
 
 **(3) Proposed words.**
 
-> - **SA-1B-33** *(changed — per-line marker)* AI may **draft** a box map for a new form or edition and **diff** a new edition against the existing map; a person approves before publishing. **Every drafted line carries an "AI-drafted" marker and the model's confidence, in the import file and on the line after the author commits it, until the author reviews that line**; low-confidence lines are shown to the author first.
+> - **SA-1B-33** *(changed — G-23)* AI may **draft** a box map for a new form or edition and **diff** a new edition against the existing map; a person approves before publishing. **Every drafted line carries an "AI-drafted" marker and the model's confidence, in the import file and on the line after the author commits it, until the author reviews that line**; low-confidence lines are shown to the author first.
 
-**(4) Why.** `pack-authors-assistant.md` §9 G-23 (Proposal; IMP-11): "each drafted map line, scoring row or reference row carries an *AI-drafted* marker and the model's confidence inside the import file and on the line after the author's commit, until the author reviews it. SA-1-31's import carries a canonical field → form field map and SA-1B-29 a box status, neither a marker nor a confidence". IMP-11: the product keeps the "AI-written" marker on every artifact. "Low-confidence lines first" is the first of the automation-bias safeguards the founder adopted for every "approve all" (AIW-D57, provisional until counsel; `pack-authors-assistant.md` §9 G-16).
+SA-1-31 (field-map import) and SA-1-41 (reference-table import) carry the same two optional columns for drafted lines.
 
-**(5) Knock-ons.** SA-01 SA-1-31 import format carries the two fields (the same line marker applies to drafted scoring and reference rows imported under SA-1-41). FD-5 (change 1) decides when box maps return. AW-02 specifies the drafting step.
+**(4) Why.**
+- `pack-authors-assistant.md` §9 G-23 (Proposal; IMP-11): "each drafted map line, scoring row or reference row carries an *AI-drafted* marker and the model's confidence inside the import file and on the line after the author's commit, until the author reviews it".
+- IMP-11: the product keeps the "AI-written" marker on every artifact.
+- "Low-confidence lines first" is the first of the safeguards the founder adopted for every "approve all" (AIW-D57, provisional until counsel; G-16). The pilot safeguards cannot be switched off during the pilot (`00-step3-plan.md` shared rule).
+- Review S3a m-12: SA-1-31 and SA-1-41 live in this module.
+
+**(5) Knock-ons.** FD-5 (change 1) decides when box maps return. AW-02 specifies the drafting step.
+
+---
+
+## 7. Document control
+
+**(1) What it changes.** The document-control table (L5–L9).
+
+**(2) Current words.** The last row is v1.2 of 2026-10-05.
+
+**(3) Proposed words.** A version row: "| 1.3 | *(date placed)* | Workstream 2 change note CN-SA-01B applied: FD-5 kept (route and date requested), rehearsal report at the publish gate, synthetic samples, reference rows under two people (FD-4 as amended), source addresses, changed-source queue item, AI-drafted line marker. | FD-5, FD-4 (amended), AIW-D43, AIW-D48, AIW-D49 |".
+
+**(4) Why.** Review S3a m-20(c).
+
+**(5) Knock-ons.** None.

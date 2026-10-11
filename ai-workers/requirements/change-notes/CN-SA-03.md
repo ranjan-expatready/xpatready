@@ -2,71 +2,123 @@
 
 | | |
 |---|---|
-| **Document changed** | SA-03 Subscription Plans & Entitlements, version 2.14, dated 2026-10-07 |
-| **File (9 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-09/02-functional-requirements/super-admin/SA-03-subscription-plans-and-entitlements_v2.14_2026-10-07.md` |
-| **Date of this note** | 11 Oct 2026 |
+| **Document changed** | SA-03 Subscription Plans & Entitlements, version 2.17, dated 2026-10-10 |
+| **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-03-subscription-plans-and-entitlements_v2.17_2026-10-10.md` |
+| **Date of this note** | 11 Oct 2026 (fix round after review S3a; re-based from v2.14 to v2.17) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
-| **Changes** | 2 |
+| **Changes** | 4 |
 
-**How to read this note.** Each numbered change has five parts: (1) what it changes, by ID, section and line of the 9 Oct snapshot; (2) the current words, quoted exactly; (3) the proposed words, in SA-03's own style; (4) why, pointing to the founder's Workstream 2 decision (`ai-workers/decisions.md`, AIW-D*n*), the improvement (`ai-workers/design/ws2-improvements.md`, IMP-*n*) or the proposals row (`ai-workers/proposals.md`); (5) what else must change.
+**How to read this note.** Each numbered change has five parts:
+1. What it changes, by ID, section and line of the 11 Oct snapshot.
+2. The current words, quoted exactly.
+3. The proposed words, in SA-03's own style (plain present tense).
+4. Why: the founder's decision (`ai-workers/decisions.md`, AIW-D*n*), the improvement (`ai-workers/design/ws2-improvements.md`, IMP-*n*) or the proposals row (`ai-workers/proposals.md`).
+5. What else must change.
 
-**Plain words used here.** *Product map*: SA-03's master list of every firm-app module, tab and action, switched on or off per plan (SA3-D3). *Limit row*: one `(metric, limit, mode, unit?)` entry on a plan (SA-3-4). *Spend cap*: a ceiling on what AI model calls may cost per firm, per person or per run. *Prepared file*: one Case assistant run on one case whose readiness report the case officer accepted (IMP-18; the pricing unit itself is decided in Step 5, AIW-D60).
+**What changed on 10 Oct, and what that does to this note.** SA-03 v2.16 and v2.17 replaced the product map with a **feature catalogue**. A feature is one module, or a named "extra" inside a module (SA3-D10, §3.3). The four AI Doers are already in it, as one sellable extra with one firm switch:
+> row 30 (L345): "| 30 | AI Doers (Reader, Sorter, Drafter, Checker — one switch, AG-16-35) | extra · Company settings *(corrected: one firm switch for all four)* | Sellable — locked off until the provider terms are recorded (AG11-D13) | AG-10, AG-11, AG-16 |"
 
-**What is not changed.** No price and no add-on is proposed: SA-4-44 ("Nothing is sold outside a plan: there are no add-on prices in Release 1") stands, and the founder's pilot arrangement is an allowance inside the plan (AIW-D60). The always-on list (SA3-D3a, SA-3-35) is unchanged: the deadline watch is the product's own Minder, with no AI (AIW-D37), so it stays always on and is never behind an AI item.
+The team also limited plans to **four limits** (SA3-D14, L74: "**Four limits only:** staff seats, active individual cases, active corporate cases, document storage.").
 
----
+So:
+- the first version's "AI product-map items" become a proposal **inside** the catalogue (change 2), not a parallel map;
+- the first version's "AI usage measures and spend caps as limit rows" are **withdrawn** from this note. SA3-D14 is a later team decision, and IMP-9 and IMP-36 were only proposals. AG-11 v1.12 records the same: "volumes are not plan limits (SA3-D14)" (§0.2, L57).
+- AI usage is counted in platform analytics (CN-SA-09); spend caps are platform settings (CN-SA-12 change 3).
 
-## 1. Product-map items for AI
+AW-01 AW-1-54 ("caps SHALL be plan limit rows") and AW-1-57 ("its own item on the platform's product map") are to be corrected to match. Where a change note and AW differ, the change note wins (`00-step3-plan.md`, "One home per rule").
 
-**(1) What it changes.** A new requirement after SA-3-49 (the document's last, L405); §3.3 "The product map" (L263 onward); §0.2 SA3-X3 (L86).
-
-**(2) Current words.**
-
-L390:
-> - **SA-3-31** *(SA3-D3)* Each plan version holds an on/off state for every product-map item, editable by Super Admin without a code release. No item is hardcoded as included, except the always-on items of SA-3-35.
-
-L397:
-> - **SA-3-38** *(SA3-D3d; changed v2.12 — AG17-D59)* Except the corporate-case items, which are always on (SA-3-35), an item newly added to the product map is off on every existing plan, even where its parent is on, and is listed under "New — needs a decision" with reminders until decided on every plan. A release never changes the state of an existing item on any plan.
-
-The product map has no AI item today (IMP-9).
-
-**(3) Proposed words.**
-
-New requirement:
-> - **SA-3-50** *(new — IMP-9; AIW-D37, AIW-D54, AIW-D61)* The product map SHALL hold these AI items, each a module-level item with declared dependencies (SA-3-37):
->   - **AI Doers** (Reader, Sorter, Writer, Checker): one item;
->   - one item per **firm AI assistant**: Case assistant, Intake assistant, Billing assistant, Firm assistant, each depending on *AI Doers*;
->   - **Practice expert summary line**: one item, depending on *AI Doers*. The Practice expert's rule-built answers are a reporting item of AG-14, not an AI item, and work with AI off.
->
->   Like every new item they start **off on every plan** and appear under "New — needs a decision" (SA-3-38). A plan item says only that the firm *may* use the feature; the firm's own one-time AI switch (AG-16-35) stays a separate consent act by the Owner and is not an entitlement. Expat Ready's own AI assistants (Pack author's, Support and account) are not firm-facing and have no product-map item. The standard deadline and expiry reminders stay always-on (SA-3-35) and are never placed under an AI item.
-
-§0.2 SA3-X3 (L86) note: "AI items registered by Workstream 2 (SA-3-50)."
-
-**(4) Why.** IMP-9: "Put AI on the product map as items (SA-3-31): the four AI Doers as one item, each AI Worker as its own item, the co-pilot as its own item; each off on existing plans until added (SA-3-38) … Keep the one firm **consent** switch (AG-16-35) as a consent act, not an entitlement." The team's AG-11 v1.11 lists it as pending (§0.2, L56: "| **SA-03** | Which AI Doers / volumes are plan-gated (standard deadline reminders stay never-gated, AG-11-48) | Pending |"); SA-03's own SA3-D3 already closed the "entitlement tiers" question for AG-11 (L42), so only the items are missing. The Practice expert's document relies on it ("Whether the expert is on at all (a product-map item on the plan)", `practice-expert.md` §4, IMP-9), and AIW-D62 records that who may ask the expert is "any staff the firm allows". The split between the rule-built answers and the summary line is the founder's AIW-D39 ("The rule-built answers go to Workstream 1 as a change note to AG-14; Workstream 2 keeps the summary line") and AIW-D54 item 10 ("the expert's answers work with AI off"). The deadline watch staying always-on is AIW-D37. The platform assistants are "never sold" (AIW-D61). FD-16 (Founder Decisions Log v1.5, L52) already says "AI features are ordinary capabilities in the Capability Registry (`cap.ai.*`), plan-gated, per-tenant opt-in", which these items implement.
-
-**(5) Knock-ons.** AG-11 §0.2 SA-03 row and AG-11-39 ("AI Doers and AI volumes MAY be plan-gated once SA-03 decides") point to SA-3-50 (CN-AG-11). AG-16-35 (the one firm AI switch) is unchanged. AG-14 owns the Practice expert's rule-built answers (CN-AG-14). Which plans get which item is the product owners' launch configuration (§13 note, L662) with the founder's Step 5 pricing.
+**Not changed.**
+- SA-4-44 / the plan prices: the charge unit is decided in Step 5 (AIW-D60).
+- Row 2 (Minder, always on) stays as it is: the deadline watch is the product's own, with no AI (AIW-D37).
+- Row 26's WhatsApp part is Phase 2 (SA-08 v2.4 SA8-X11, the team's own pending knock-on); no AI change relies on it.
 
 ---
 
-## 2. AI usage measures and spend caps as limit rows
+## 1. Row 30 names the AI writer Writer
 
-**(1) What it changes.** SA-3-4 (L347); a new requirement after SA-3-50 (change 1).
+**(1) What it changes.** §3.3 Release 1 catalogue, row 30 (L345).
+
+**(2) Current words.** Row 30, quoted above.
+
+**(3) Proposed words.** "AI Doers (Reader, Sorter, **Writer**, Checker — one switch, AG-16-35)", with "*(changed — FD-8 as amended; AIW-D53)*".
+
+**(4) Why.** AIW-D53, the founder chose "Writer": "The AI Doer that drafts messages and letters for a person to approve is named **Writer**; the four AI Doers are Reader, Sorter, Writer, Checker. *Drafter* stays the template engine." The FD-8 amendment is in CN-FDL change 2.
+
+**(5) Knock-ons.** AG-10, AG-11 and AG-16 rename the same way (CN-AG-10, CN-AG-11, CN-AG-16).
+
+---
+
+## 2. Proposal: the AI assistants as extras in the feature catalogue
+
+**(1) What it changes.** §3.3 Release 1 catalogue (after row 30, L345); §3.3 "Rules" (L349–L354); a new requirement after SA-3-62 (the document's last, L544).
 
 **(2) Current words.**
 
-L347:
-> - **SA-3-4** *(changed v2.8 — SA3-A5)* Each plan version carries limits as `(metric, limit, mode, unit?)` entries for at least: staff users; individual clients; corporate clients; active cases by group (individual / corporate; the group comes from the program's client type, SA-1-60; family cases count as individual); auto-prefilled forms and retainer agreements by group; document storage (value + MB/GB/TB); tasks; messages; time-and-activity entries. `null` = unlimited; `0` = none allowed.
+L351:
+> - **Extras follow their module (SA-3-51).** An extra is off whenever its module feature is off; an extra cannot be switched on while its module is off.
 
-L593:
-> - **Limits as rows:** a new metered metric is configuration, not a migration.
+L352 (extract):
+> a feature newly added to the catalogue is off on every existing plan and appears in a **"New — needs a decision"** list with a reminder until each plan has a decision.
 
-**(3) Proposed words.**
+**(3) Proposed words.** *Proposal.*
 
-SA-3-4: the list of metrics gains "**AI usage: model calls; pages read by the Reader; prepared files (Case assistant); Practice expert summary lines; AI spend per firm per month (in CAD)** *(changed — IMP-9, IMP-36)*".
+Five catalogue rows:
+> | 31 | Case assistant | extra · Company settings | *Step 5 decides (AIW-D60)* — works only while row 30 is on | AW-01 |
+> | 32 | Intake assistant | extra · Company settings | *as row 31* | AW-01 |
+> | 33 | Billing assistant | extra · Company settings | *as row 31* | AW-01 |
+> | 34 | Firm assistant | extra · Company settings | *as row 31* | AW-01 |
+> | 35 | Practice expert summary line | extra · Reports | *as row 31* — the Practice expert's rule-built answers are part of Reports (row 19) and work with AI off | AW-01, AG-14 |
 
 New requirement:
-> - **SA-3-51** *(new — IMP-9, IMP-36; AIW-D60, AIW-D62)* The AI usage metrics of SA-3-4 SHALL be counted for every firm from the first AI call, whatever the plan says, so usage is measured during the pilot. Their limits default to `null` (unlimited) until the founder sets them after the pilot. The **AI spend** metric is a **spend cap**: when set, it warns the firm at 80 % and stops new AI work at 100 %, after which the work falls back to the manual path (AG-11-71); a per-person daily cap for Practice expert summary lines and a per-run cap follow the same rule. A spend cap never stops the product's own non-AI work, deadline and expiry reminders included (SA-3-35).
+> - **SA-3-63** *(new — IMP-9; proposal)* An AI assistant extra (rows 31–35) resolves off whenever the AI Doers extra (row 30) is off, and cannot be switched on while it is off, in addition to SA-3-51. Expat Ready's own AI assistants (Pack author's, Support and account) are not firm features and have no row.
 
-**(4) Why.** IMP-9: "Add usage measures as SA-03 limit rows: model calls, pages read, prepared files, co-pilot questions"; IMP-36: spend caps "per firm per month (a warning at 80 %, a hard stop at 100 %, then the manual path, AG-11-71), per co-pilot user per day, per worker run … Caps are SA-03 limit rows so plans can carry them (IMP-9)". The passed behaviour documents rely on both ("the caps are plan limit rows (IMP-9). The cap values per firm and per person are decided after the pilot, with today's defaults meanwhile (decided 11 Oct 2026, AIW-D62)", `case-assistant.md` §6; also `practice-expert.md` §6, `billing-assistant.md` §6, `firm-assistant.md` §6). AIW-D60: "Only the Case assistant is costed; the others ride inside the plan for the pilot, usage measured." AIW-D62: spend caps are "Decided after the pilot, with today's defaults meanwhile". SA-03's own §11 (L593) says a new metered metric is configuration. The prepared-file metric counts; pricing it is Step 5 (AIW-D60; IMP-18 defines the unit).
+Like every new feature, rows 31–35 start off on every plan (SA-3-38).
 
-**(5) Knock-ons.** SA-04 is unchanged until Step 5 decides the charge unit (SA-4-44 stands). AG-11-71 (manual path) is the fallback named here. SA-09 platform analytics may show the same counts (not covered by this note). The per-run cap and the run record are specified in AW-01.
+**(4) Why.**
+- IMP-9 proposed one plan item per assistant beside the four AI Doers, keeping "the one firm **consent** switch (AG-16-35) as a consent act, not an entitlement". It is relied on by the Practice expert's document ("Whether the expert is on at all (a product-map item on the plan)", `practice-expert.md` §4). The Lead's call of 11 Oct places it inside the new catalogue.
+- AIW-D60: "Only the Case assistant is costed; the others ride inside the plan for the pilot, usage measured". Whether rows 31–35 are sellable or in every plan is therefore a Step 5 decision, not proposed here.
+- AIW-D39 and AIW-D54 item 10: the expert's rule-built answers go to AG-14 and work with AI off.
+- AIW-D61: the platform assistants are "never sold".
+
+**(5) Knock-ons.** AG-16 holds the per-assistant firm switches under the one AI switch (CN-AG-16). AW-01 AW-1-57 is corrected to cite rows 31–35 and SA-3-63. SA-06: every assistant's keys name their feature (SA-3-52).
+
+---
+
+## 3. An AI assistant's delegation takes no seat
+
+**(1) What it changes.** SA-3-41 (L517); §3.2 "Seat counting" (L296).
+
+**(2) Current words.**
+
+L517:
+> - **SA-3-41** *(SA3-U2; changed v2.9 — AG1-D3)* Seats count active users, suspended users and pending invitations; deactivated and deleted users do not count. A suspended user keeps the seat until reactivated or deactivated; deactivating frees it, and deleting a deactivated user never takes a seat back. Sending an invitation that would exceed the seat limit is refused; a cancelled or expired invitation frees its seat.
+
+**(3) Proposed words.** SA-3-41 and L296 each gain: "*(changed — AIW-D33; IMP-1)* An AI assistant's delegation is not a user and never counts as a seat."
+
+**(4) Why.**
+- AIW-D33: the delegation record has "no identity and no permissions of its own" and is consistent with FD-16.
+- IMP-1 rule 3: "a delegation **takes no seat** and is metered by the work it does, not per delegation".
+- The Agent-plane note CN-AG-01 change 1 adds the same sentence to AG-1-13 and names this requirement as its Super Admin half.
+
+**(5) Knock-ons.** AG-01 AG-1-13 (CN-AG-01).
+
+---
+
+## 4. Document control and numbering
+
+**(1) What it changes.** The document-control table (L5 onward) and the numbering line (L32).
+
+**(2) Current words.**
+
+L32 (extract):
+> New requirements continue from SA-3-27.
+
+**(3) Proposed words.**
+- A version row: "| 2.18 | *(date placed)* | Workstream 2 change note CN-SA-03 applied: row 30 names the Writer; AI assistant extras (rows 31–35, SA-3-63), proposal; a delegation takes no seat (SA-3-41). | AIW-D33, AIW-D53, IMP-9 |".
+- L32: "New requirements continue from SA-3-64."
+
+The highest number in use is SA-3-62 (L544).
+
+**(4) Why.** Review S3a m-20(b), (c).
+
+**(5) Knock-ons.** None.

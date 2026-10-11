@@ -3,13 +3,16 @@
 | Field | Value |
 |---|---|
 | Module changed | AG-13 Tasks, Reminders, Notes & Activity / Audit |
-| Version and file | v1.12 of 7 Oct 2026, `02-functional-requirements/agent/AG-13-tasks-reminders-notes-and-activity-audit_v1.12_2026-10-07.md` (Drive snapshot of 9 Oct 2026; line numbers below are that file's) |
-| Date of this note | 11 Oct 2026 |
+| Version and file | v1.12 of 7 Oct 2026, `02-functional-requirements/agent/AG-13-tasks-reminders-notes-and-activity-audit_v1.12_2026-10-07.md` (Drive snapshot of 11 Oct 2026, `sources/drive-snapshot-2026-10-11/`, unchanged since 9 Oct; line numbers below are that file's) |
+| Date of this note | 11 Oct 2026 (fix round after review S3c) |
 | Status | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
-| Next free numbers used | AG-13-68, AG-13-69 (highest AG-13-67, L412); BR-22 (highest BR-21) |
-| Companion files | CN-AG-07 item 1 (Restricted fields); CN-AG-11 items 3 and 7; AW-01 |
+| Next free numbers used | AG-13-68, AG-13-69 (highest AG-13-67, L412); BR-22 (highest BR-21, L438) |
+| One home | This note holds the data-model changes to `AuditLog`, `Task`, `Reminder` and `Note` that the AI assistants need; AW-01 v0.1 cites them (`00-step3-plan.md`, "One home per rule"). |
+| Companion files | CN-AG-07 item 1 (Restricted fields); CN-AG-11 items 3, 7 and 9; AW-01 v0.1 |
 
-**In plain words.** Five changes. A task an AI assistant creates must never be linked to a government deadline, so ticking it by mistake can never mark the deadline met (founder-confirmed 11 Oct). Every audit entry says whether a person acted, an assistant acted for a named person, or a plain automation ran, and which delegation it was; the actor stays the named person. A note an assistant drafted carries an AI-drafted mark and stays internal. The audit log records reveals of Restricted fields again (FD-15 kept). And the time-tracking tool is called Clocker, not Timer (FD-8, as the founder amended it on 11 Oct).
+**In plain words.** Five changes. A task an AI assistant creates must never be linked to a government deadline, so ticking it by mistake can never mark the deadline met (founder-confirmed 11 Oct). Every audit entry says whether a person acted, an assistant acted for a named person, or a plain automation ran, which delegation it was, and what started the run; the actor stays the named person, never "system". A note an assistant drafted carries an AI-drafted mark and stays internal. The audit log records reveals of Restricted fields again (FD-15 kept). And the time-tracking tool is called Clocker, not Timer (FD-8, as the founder amended it on 11 Oct).
+
+**Terms used.** *Delegation*: the record of which AI assistant works for which named person (AW-01 §7). *Hash chain*: each audit row is linked to the one before it, so a later edit shows.
 
 ---
 
@@ -25,19 +28,21 @@
 
    `sourceItemRef?` description adds: "never set on a task an AI assistant created (BR-22)".
 4. **Why.** AIW-D54 (the founder confirmed: "no assistant task can close a deadline"); `proposals.md` rule row of 10 Oct (Firm assistant: "A persona-created task never carries the task's link field `sourceItemRef` … completing it can never complete a dated case item or a Minder deadline", merged by the Lead for all seven documents); `firm-assistant.md` §9 G-21; `case-assistant.md` §9 G-33.
-5. **Knock-ons.** AG-11 (follow-on for the team, not written in CN-AG-11): `create_task` called by an AI assistant's recipe (CN-AG-11 item 9) leaves the field empty; AG-07 dated items unchanged.
+5. **Knock-ons.** AG-11 sets it so when an assistant recipe calls `create_task` (CN-AG-11 item 9 (f)); AW-1-66 cites this rule; AG-07 dated items unchanged.
 
-## 2. Every audit entry records how the act was done and under which delegation
+## 2. Audit entries, tasks and reminders record the delegation and the mode
 
-1. **Where.** §7 `AuditLog` (L487); new requirement **AG-13-68**.
+1. **Where.** §7 `AuditLog` (L487), `Task` (L481), `Reminder` (L484); new requirement **AG-13-68**.
 2. **Current words.**
    > L487: "**`AuditLog`** *(exists; harden)* — `id`, `firm_id` *(today `clientId`)*, `category` (DATA_CHANGE/API_CALL/AUTH_EVENT/EXPORT *(changed v1.8 — AG7-D10: no PII_REVEAL or UNMASKED_EXPORT category)*), `action` (CREATE/UPDATE/DELETE/VIEW/EXPORT/… *(no REVEAL or EXPORT_UNMASKED action — AG7-D10)*), `entityType`, `entityId`, `entityName?`, `actorUserId`"
+   >
+   > L484: "`createdBy` *(human or Conductor)*, `workflowId?`/`workflowActionId?` *(Conductor-origin)*"
 3. **Proposed words.**
-   > **AG-13-68 (how an act was done).** Every audit entry SHALL record its `mode` — `PERSON` (a person acted directly), `DELEGATED` (an AI assistant acted for the named person, AW-01) or `AUTOMATION` (a plain firm automation ran) — and, for `DELEGATED`, the `delegationId` and the AI run that produced the act (`aiRunId?`). `actorUserId` SHALL stay the named person; no AI actor exists (FD-16). The audit viewer SHALL show the mode in plain words (for example "prepared by the Case assistant for <person>").
+   > **AG-13-68 (how an act was done).** Every audit entry SHALL record its `mode` — `PERSON` (a person acted directly), `DELEGATED` (an AI assistant acted for the named person, AW-01) or `AUTOMATION` (a plain firm automation ran). A `DELEGATED` entry, and a `PERSON` entry that decides an item an AI assistant prepared, SHALL carry the `delegationId`. A `DELEGATED` entry SHALL also carry `startedBy?` (what started the run: the assistant's schedule, a person, a product alert, a watcher item). `actorUserId` SHALL be the delegating person on every `DELEGATED` entry, never `system`; no AI actor exists (FD-16). The audit viewer SHALL show the mode in plain words (for example "prepared by the Case assistant for <person>"). A `Task` or `Reminder` an AI assistant created SHALL carry `delegationId`.
 
-   `AuditLog` gains `mode`, `delegationId?`, `aiRunId?`.
-4. **Why.** AIW-D33 (the founder: the delegation record is consistent with FD-16; no identity or permissions of its own); IMP-1 ("Each audit entry gains two things: whether a person acted directly, a worker acted for them, or a plain automation ran; and, if a worker, which delegation (developers: `mode = PERSON | DELEGATED | AUTOMATION`, `delegationId`)"); IMP-2; `proposals.md` row of 9 Oct (carve-out A, an on-behalf-of person on AuditLog). Behaviour: `case-assistant.md` §9 G-6.
-5. **Knock-ons.** AG-11 `ApprovalItem`, `AiRunLog`, `AutomationRun` (CN-AG-11 item 7); BR-10 and BR-11 (append-only, hash chain) unchanged; AG-16-39 export carries the new fields (CN-AG-16 item 5); SA-11 actor kinds unchanged (Super Admin half).
+   `AuditLog` gains `mode`, `delegationId?`, `startedBy?`; `Task` and `Reminder` gain `delegationId?`.
+4. **Why.** AIW-D33 (the founder: the delegation record is consistent with FD-16; no identity or permissions of its own); IMP-1 ("Each audit entry gains two things: whether a person acted directly, a worker acted for them, or a plain automation ran; and, if a worker, which delegation (developers: `mode = PERSON | DELEGATED | AUTOMATION`, `delegationId`)"); IMP-2; `00-step3-plan.md` actor rule ("every delegated entry names the delegating person as the actor, mode DELEGATED, with the delegation reference, never `system`; a separate *started by* field records what started the run") and "One home per rule"; `proposals.md` row of 9 Oct (carve-out A, an on-behalf-of person on AuditLog). Review S3c M-1 (the field set now matches AW-01 §7, with the decider's delegation reference and the task and reminder field added; the earlier `aiRunId?` is dropped, the AI run being reached through the approval item, CN-AG-11 item 6). Behaviour: AW-1-21; `case-assistant.md` §9 G-6.
+5. **Knock-ons.** AG-11 `ApprovalItem`, `AiRunLog`, `AutomationRun` (CN-AG-11 items 6 and 7); BR-10 and BR-11 (append-only, hash chain) unchanged; AG-16-39 export carries the new fields (CN-AG-16 item 5); SA-11 actor kinds unchanged (Super Admin half).
 
 ## 3. A note an AI assistant drafted carries an AI-drafted mark and stays internal
 
@@ -47,7 +52,7 @@
 3. **Proposed words.**
    > **AG-13-69 (AI-drafted notes).** A note whose text came from the Writer (created by AG-11's `create_note`, or accepted by a person from a Writer draft) SHALL carry the AI-drafted mark (`aiDrafted`) and the AI run and delegation it came from (`aiRunId?`, `delegationId?`), shown on the note. Such a note SHALL be created `internal-only`. Making it `client-visible` SHALL be treated as sending AI-written text to a client and SHALL need a person's approval under AG-11-53 and AG-11-88.
 4. **Why.** `proposals.md` row of 10 Oct (Case assistant, item (2): "create an internal-only Note carrying the AI-drafted marker"); IMP-11 (the AI-written marker on every artefact); `case-assistant.md` §9 G-2; `firm-assistant.md` §9 G-2.
-5. **Knock-ons.** AG-11 `create_note` (CN-AG-11 item 3); AG-04 consult notes use the same mark (CN-AG-04 item 1); the timeline shows the mark.
+5. **Knock-ons.** AG-11 `create_note` (CN-AG-11 item 3 (b)); AG-04 consult notes carry the same mark (CN-AG-04 item 1); the timeline shows the mark; AW-1-25.
 
 ## 4. The audit log records reveals of Restricted fields (FD-15 kept)
 
@@ -56,13 +61,13 @@
    > L487: "`category` (DATA_CHANGE/API_CALL/AUTH_EVENT/EXPORT *(changed v1.8 — AG7-D10: no PII_REVEAL or UNMASKED_EXPORT category)*)"
    >
    > L429: "**BR-12 (An export is auditable).** *(changed v1.8 — AG7-D10)* Personal data is never masked."
-3. **Proposed words.** `category` adds `PII_REVEAL`; `action` adds `REVEAL`. BR-12: "Restricted fields are masked by default, and every reveal writes a `PII_REVEAL` audit entry before the value is shown (AG7-D10 as amended, CN-AG-07 item 1; Doc 1 v1.3 §7.2). Other personal data is never masked. An export writes an audit event." The audit viewer masks Restricted values like every other surface.
+3. **Proposed words.** `category` adds `PII_REVEAL`; `action` adds `REVEAL`. BR-12: "Restricted fields are masked by default, and every reveal writes a `PII_REVEAL` audit entry before the value is shown (AG7-D15 as proposed in CN-AG-07 item 1; Doc 1 v1.3 §7.2). Other personal data is never masked. An export writes an audit event." The audit viewer masks Restricted values like every other surface.
 4. **Why.** AIW-D58 (the founder: "Keep FD-15"); FD-15 ("masked audited reveal"); Doc 1 v1.3 §7.2 (L2064: "**Every reveal emits a `PII_REVEAL` audit event**"); README §0 rule 11. **Provisional until counsel reads it** (AIW-D64, AIW-D68).
 5. **Knock-ons.** CN-AG-07 item 1.
 
 ## 5. The time-tracking tool is called Clocker
 
-1. **Where.** §3.6 heading (L314); §4 heading "Timer — AG-13-50…" (L395); BR-1, BR-17 (L434); §6 (L473); the Visual Overview and §3.5 table; every place where "Timer" names the tool.
+1. **Where.** §3.6 heading (L314); §4 heading "Timer — AG-13-50…" (L395); BR-1 (L418); BR-17 (L434); §6 (L473); the Visual Overview and §3.5 table; every place where "Timer" names the tool.
 2. **Current words.**
    > L314: "#### 3.6 Timer (billable time) — a related-but-distinct Doer (brief)"
    >
