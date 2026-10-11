@@ -347,3 +347,5 @@ Blocking risk across all steps: the Canada-only processing rule (`commercial/pro
 | 11 Oct 2026 | Founder | Step R interview question 1: AIW-D81, role AI with skills |
 | 11 Oct 2026 | Founder | Step R interview question 2: AIW-D82, full scope at launch, every gap fixed, most reliable and best in class |
 | 11 Oct 2026 | Founder | Step R interview question 3: AIW-D83, a driving test per skill (test set, shadow, live; automatic drop to shadow) |
+| 11 Oct 2026 | Founder | Direction AIW-D84: the platform is the guardrail; AI only where language or judgement is needed; reusable skills; diagnosable; token cost; access by delegation |
+| 11 Oct 2026 | Lead | Architecture research started (`research/ai-architecture-deterministic-2026-10.md`) |
