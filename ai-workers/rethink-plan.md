@@ -32,3 +32,11 @@ AIW-D81 role AI with skills · D82 full scope at launch, every gap fixed, best i
 
 ## Chosen way forward (AIW-D88): Option E
 Handbook + coded prototype + three consultant conversations, from the same AI profiles; the existing specification becomes the trimmed technical appendix. Order: names (question 6, from the architecture research) → AI profiles → Handbook and prototype in parallel → consultant conversations → appendix trim and archive → hand to the team.
+
+## Lead's calls from Handbook part 1 (11 Oct)
+- **One meaning of "shadow":** AIW-D83's: the skill prepares on real work, nobody sees it, accuracy is measured. The older AW-01 idea of showing a proposal beside the person's own entry is called **side-by-side** and is a separate, optional practice step. The health light and the automatic drop back go into the appendix (AW-01, AW-02) at the trim.
+- **Test sets:** graded by a licensed expert (AIW-D83), with the immigration specialist writing the right answers; made-up samples only until counsel has read the pack (AIW-D64); real files with names removed only after that.
+- **Rules-only skills** are tested like any product feature and keep a health light; the expert-graded driving test applies to skills that call AI.
+- **One skill = the same ability, input kind, checks and approver kind;** its test set is the union of the specification's evaluation sets mapped to it.
+- **Fixes for the appendix trim:** AW-02 §3.3 "Stops" (a withdrawn provider record pauses both platform teammates, AIW-D74); AW-1-86 (AI-drafted internal notes go to a person during the pilot, AIW-D80); AW-1-79 against evaluation set E-4 (the Message sorter proposes; filing is by a person or a fixed rule, never AI alone); README rule 9 and AW-1-65 wording updated to AIW-D89, with client-facing wording kept as "AI assistance" until counsel reads the list.
+- **For the founder:** whether Practice answers is presented as an AI teammate or as a product feature with one AI skill (honesty in selling).
