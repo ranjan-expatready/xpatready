@@ -59,7 +59,7 @@ New rows after L741. Rows marked *(proposal)* are proposals. The columns are as 
 > | Switch off a part of the founder safeguards setting, recording the founder's decision (SA-12-33; Owner-only setting, SA-12-27 pattern) | ✔ | | | | | | | | |
 > | Change an AI spend-cap default, the platform-wide cap included, with a recorded reason (SA-12-33 (c); Owner-only setting, SA-12-27 pattern; the Platform engineer is refused) | ✔ | | | | | | | | |
 > | AI recall: withdraw waiting AI-prepared items (SA-12-32) *(proposal)* | ✔ | | | | | | | | *(team decides)* |
-> | Set up an AI assistant's delegation for another staff member; it takes effect when that person accepts (`system/ai-delegation:manage`) *(proposal)* | ✔ | | | | | | | | |
+> | Set up an AI assistant's delegation for another staff member, or withdraw that offer while it is still pending; it takes effect when that person accepts (`system/ai-delegation:manage`) *(proposal)* | ✔ | | | | | | | | |
 > | AI assistant model instructions — author a new version (`system/ai-instruction:edit`) *(proposal)* | ✔ | | | | | | | | ✔ |
 > | AI assistant model instructions — approve a version; never one's own (`system/ai-instruction:approve`) *(proposal)* | ✔ | | | | | | | | |
 > | Send an account-manager message to a firm (SA-2-42, `system/firm:message-owner`) | ✔ | | | | ✔ | | | | |

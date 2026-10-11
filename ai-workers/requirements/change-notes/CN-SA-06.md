@@ -220,7 +220,7 @@ L912:
 | `system/ai-recall:withdraw` | SA-12 | Withdraw waiting AI-prepared items for a safety recall | Platform Owner | CN-SA-12 change 2; IMP-8(c) |
 | `system/ai-provider:edit` | SA-08 | Enter or change the AI provider record (not its keys) | Platform engineer, Platform Owner | CN-SA-08 change 2; IMP-6 |
 | `system/ai-provider:publish` | SA-08 | Approve and publish the AI provider record, never one's own entry; **withdraw** the published record (SA-8-50) | Platform Owner | CN-SA-08 change 2; SA8-D22 pattern |
-| `system/ai-delegation:manage` (§10a) | SA-06 | **Set up** an AI assistant's delegation for another staff member; it takes effect only when that person accepts. A person sets up, accepts and ends their own with no key. **No key stops or ends someone else's delegation.** | Platform Owner | AW-02 §10 table E; IMP-1 rule 1 |
+| `system/ai-delegation:manage` (§10a) | SA-06 | **Set up** an AI assistant's delegation for another staff member, or withdraw a still-pending offer; it takes effect only when that person accepts. A person sets up, accepts and ends their own with no key. **No key stops or ends someone else's delegation.** | Platform Owner | AW-02 §10 table E; IMP-1 rule 1 |
 | `system/ai-instruction:edit` | AW-02 | Author a new version of an assistant's model instructions and evaluation set | Platform engineer, Platform Owner | AW-02 §10 table E; IMP-5; `00-step3-plan.md`, "AW-02 calls" (b) |
 | `system/ai-instruction:approve` | AW-02 | Approve an instruction version for live use; never one's own | Platform Owner | AW-02 §10 table E; IMP-5; SA7-D4 |
 | `system/firm:message-owner` | SA-02 | Send an account-manager message to a firm (SA-2-42) | Firm onboarding / Account manager | CN-SA-02 change 2 |
@@ -239,7 +239,7 @@ No key is added for switching off the *founder safeguards* setting or for changi
 
 **(5) Knock-ons.**
 - SA-07 Appendix A (CN-SA-07 change 1).
-- AW-02 §10 table E uses the two `system/ai-provider:*` keys, describes `system/ai-delegation:manage` as set-up only, names no key of its own for switching off the founder safeguards setting or changing a spend-cap default, and names the Owner under `system/ai-provider:publish` as the one who withdraws a published provider record.
+- AW-02 §10 table E uses the two `system/ai-provider:*` keys, describes `system/ai-delegation:manage` as set-up or withdrawal of a still-pending offer (AW-02 v0.6), names no key of its own for switching off the founder safeguards setting or changing a spend-cap default, and names the Owner under `system/ai-provider:publish` as the one who withdraws a published provider record.
 
 ---
 
