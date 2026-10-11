@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-12 Feature Flags & Platform Configuration, version 2.7, dated 2026-10-08 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-12-feature-flags-and-platform-configuration_v2.7_2026-10-08.md` |
-| **Date of this note** | 11 Oct 2026 (sixth round, after check S3a-e: spend-cap defaults Owner-only; who sets firm values; after the approve-all part ends) |
+| **Date of this note** | 11 Oct 2026 (seventh round: the founder's Step 3 batch, AIW-D78: the per-assistant emergency switches move into Release 1) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 4 |
 
@@ -25,7 +25,7 @@ What each AI assistant does when stopped is specified in AW-01 and AW-02, which 
 
 **This note is the one home of** the platform values of the AI spend caps (the platform-wide cap included), the platform values of the founder's approve-all safeguards (AIW-D57) and the *founder safeguards* setting (SA-12-33; `00-step3-plan.md`, "Pilot safeguard values, one home"). A firm's own stricter values are firm settings in AG-16 (CN-AG-16 change 4), not values in SA-12-33 (`00-step3-plan.md`, "A firm's tightening, write path"). **It is not the home of the pause reasons:** the four reasons an AI-prepared item is paused, in one PAUSED state, live in CN-AG-11 change 6 (AG-11-112); this note cites `PLATFORM_STOP` from there.
 
-**Phasing.** The shared 99-Phasing-and-Glossary v2.18 puts SA-12's "Dedicated flag catalog, other firm overrides" in the second phase (L42). Release 1 does not launch without the AI assistants (AIW-D66), so the AI stops of change 1 need the catalogue in Release 1. That phasing row is the team's to change (not written here).
+**Phasing.** The shared 99-Phasing-and-Glossary v2.18 puts SA-12's "Dedicated flag catalog, other firm overrides" in the second phase (L42). **Decided 11 Oct 2026 (AIW-D78, "Only what safety needs"):** the **per-assistant emergency switches** move into Release 1, that is SA-12-31 to SA-12-33 and the part of SA-12's flag catalogue they use. Everything else on that row (the rest of the dedicated flag catalogue, other firm overrides) stays in the team's phase. That phasing row is the team's to change, with this note (not written here).
 
 ---
 

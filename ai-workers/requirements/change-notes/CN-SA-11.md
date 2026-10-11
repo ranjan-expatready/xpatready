@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-11 Audit, Compliance & Data Governance, version 2.7, dated 2026-10-07 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-11-audit-compliance-and-data-governance_v2.7_2026-10-07.md` |
-| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d: pointers by change and ID) |
+| **Date of this note** | 11 Oct 2026 (sixth round: the founder's Step 3 batch, AIW-D74 (Canada for every AI call) and AIW-D78 (the residency declaration in Release 1)) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 8 |
 
@@ -26,7 +26,7 @@ The AI assistants are specified in AW-01 and AW-02, which cite these IDs. Other 
 
 **Newer team files that bear on this note.**
 - SA-08 v2.4 removed the residency generator. SA8-D9 (L41): "**The data-location statement is written once** (subscription terms and a firm-facing Security & privacy page, maintained in SA-11) — no generator". It asks SA-11 to hold that statement (SA8-X6, L98, pending, the team's own knock-on). Change 2 fits either form.
-- The shared 99-Phasing-and-Glossary v2.18 places "Data residency declaration, retention config, PIPEDA DSR register" in SA-11's second phase (L41). Release 1 waits for the AI assistants (AIW-D66), so the team's phasing row follows (not written here).
+- The shared 99-Phasing-and-Glossary v2.18 places "Data residency declaration, retention config, PIPEDA DSR register" in SA-11's second phase (L41). **Decided 11 Oct 2026 (AIW-D78, "Only what safety needs"):** the **data-residency declaration** moves into Release 1; everything else on that row (retention configuration, the PIPEDA DSR register), and SA-11's breach register, stays in the team's phase, and the assistant step that depends on it waits and works without it (for example no breach-register link). The phasing row is the team's to change, with this note (not written here).
 
 ---
 
@@ -55,7 +55,7 @@ New requirement:
 
 **(4) Why.**
 - AIW-D52. The founder chose "Only in Canada": "AI processing of client data happens only in Canada (AG11-D15 wording, for firms' data and Expat Ready's own support tickets) … SA-11 §3.6's *with safeguards* wording gets a change note."
-- The scope is the founder's, word for word. Whether Expat Ready's other own AI calls that hold no client data also fall under it is CN-FDL open point 3, for the founder (`00-step3-plan.md`, "The provider record").
+- The scope is the founder's, word for word. Whether Expat Ready's other own AI calls that hold no client data also fall under the Canada rule was CN-FDL open point 3; the founder decided it on 11 Oct 2026 (AIW-D74, "Yes, Canada for all AI"): every AI call Expat Ready makes, including pack drafting, happens only in Canada under the one published provider record (SA-8-49, SA-8-51 as CN-SA-08 change 2 now words it).
 - AG-11 v1.12 AG11-D15 (L45): "Super Admin may record only a provider and region that process in Canada (SA-08 / SA-11)". §0.2 (L55) lists this as a pending knock-on.
 - IMP-7.
 

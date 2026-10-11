@@ -4,7 +4,7 @@
 |---|---|
 | Module changed | AG-13 Tasks, Reminders, Notes & Activity / Audit |
 | Version and file | v1.12 of 7 Oct 2026, `02-functional-requirements/agent/AG-13-tasks-reminders-notes-and-activity-audit_v1.12_2026-10-07.md` (Drive snapshot of 11 Oct 2026, `sources/drive-snapshot-2026-10-11/`, unchanged since 9 Oct; line numbers below are that file's) |
-| Date of this note | 11 Oct 2026 (third fix round, after re-check S3c-c) |
+| Date of this note | 11 Oct 2026 (third fix round, after re-check S3c-c; later the same day, targeted: the AUTOMATION actor ruling in AG-13-68 (review S3e M-4) and AIW-D80 cited for AI-drafted internal notes) |
 | Status | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | Next free numbers used | AG-13-68, AG-13-69 (highest AG-13-67, L412); BR-22 (highest BR-21, L438) |
 | One home | This note holds the data-model changes to `AuditLog`, `Task`, `Reminder` and `Note` that the AI assistants need. **Change 2 is the one home of the audit-field rule** (`mode`, `delegationId`, `startedBy` on audit entries): CN-SA-11 change 4 applies it to the platform audit chain by pointer, and AW-01 and AW-02 cite it (`00-step3-plan.md`, "Audit fields, one home"; "One home per rule"). The five *started by* values themselves live in AG-11-113 (CN-AG-11 change 7). |
@@ -51,7 +51,7 @@
    > L485: "**`Note`** *(exists; re-key + extend)* — `id`, `firm_id`, **`entityType`/`entityId`** *(polymorphic)*, `subject?`, `body` *(rich text/HTML, server-sanitised — today plain `note`)*, **`visibility`** *(NEW — `internal-only` (default) / `client-visible`)*"
 3. **Proposed words.**
    > **AG-13-69 (AI-drafted notes).** A note whose text came from the Writer SHALL be created only when a person approves it (AG-11 item kind `INTERNAL_NOTE_DRAFT`, AG-11-109 (b) and AG-11-112 (g) as proposed in CN-AG-11), or when a person accepts a Writer draft in the note editor. It SHALL carry the AI-drafted mark (`aiDrafted`) and the AI run and delegation it came from (`aiRunId?`, `delegationId?`), shown on the note. Such a note SHALL be created `internal-only`. Making it `client-visible` SHALL be treated as sending AI-written text to a client and SHALL need a person's approval under AG-11-53 and AG-11-88.
-4. **Why.** `proposals.md` row of 10 Oct (Case assistant, item (2): create an internal-only Note carrying the AI-drafted marker); IMP-11 (the AI-written marker on every artefact); `00-step3-plan.md` "AI-drafted internal notes with no approval" (until the founder answers whether AIW-D71's reading extends to them, every AI-drafted internal note goes to a person; the question joins the founder batch); review S3c-c k-13; `case-assistant.md` §9 G-2; `firm-assistant.md` §9 G-2.
+4. **Why.** `proposals.md` row of 10 Oct (Case assistant, item (2): create an internal-only Note carrying the AI-drafted marker); IMP-11 (the AI-written marker on every artefact); AIW-D80, 11 Oct 2026 (the founder chose "Same as labels": an AI-drafted internal note, never sent, is like a document label not an effect under FD-16 in principle; during the pilot every one still goes to a person, and the pilot's figures decide later, as AIW-D71); review S3c-c k-13; `case-assistant.md` §9 G-2; `firm-assistant.md` §9 G-2.
 5. **Knock-ons.** AG-11 `create_note` and `INTERNAL_NOTE_DRAFT` (CN-AG-11 changes 3 and 6); AG-04 consult notes carry the same mark through the same item kind (CN-AG-04 change 1); the timeline shows the mark; AW-1-25.
 
 ## 4. The audit log records reveals of Restricted fields (FD-15 kept)

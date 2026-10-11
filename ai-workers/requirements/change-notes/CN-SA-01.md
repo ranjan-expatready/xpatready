@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-01 Country & Immigration-Pack Management, version 2.2, dated 2026-09-22 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-01-country-and-immigration-pack-management_v2.2_2026-09-22.md` |
-| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d) |
+| **Date of this note** | 11 Oct 2026 (sixth round: the founder's Step 3 batch, AIW-D74: drafting runs once the provider record is published) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 6 |
 
@@ -17,7 +17,7 @@
 
 **Why AI touches this document.** Expat Ready's Pack author's assistant works for a Content author. It drafts box-map lines, scoring and reference rows, synthetic sample clients and a plain-words release note; it prepares the rehearsal and watches the government pages a pack cites. It only reads the pack: the author commits and submits, and a second person approves (AIW-D54 item 7). Its behaviour is specified in AW-02, which cites the IDs below and does not restate them.
 
-**Drafting waits for the founder.** The drafting steps that need a model call wait for the founder's answer to CN-FDL open point 3; until then the assistant makes no model call, and its rule-built steps (the rehearsal's test runs, the watcher's comparison, the list of affected content) run now (`00-step3-plan.md`, "Pack calls before the founder answers"). No requirement below depends on a model call.
+**Drafting runs once the provider record is published.** The founder decided CN-FDL open point 3 on 11 Oct 2026 (AIW-D74, "Yes, Canada for all AI"): the assistant's drafting steps that need a model call run once the one published provider record exists (SA-8-49), in Canada like every Expat Ready AI call; its rule-built steps (the rehearsal's test runs, the watcher's comparison, the list of affected content) run regardless. The plan rule "Pack calls before the founder answers" is superseded. No requirement below depends on a model call.
 
 **Numbering.** L17 says: "New requirements continue from the highest number (next: SA-1-66)." New requirements here are SA-1-66 and SA-1-67.
 
@@ -78,7 +78,7 @@ New requirement:
 
 **(4) Why.** Proposals row of 10 Oct (Pack author's assistant): "A pack version has no change-note or release-note field … while SA-05 v2.2 §3.7 gives every template version 'a change-note'. Firms see only 'newer rules available since <date>' (SA1-D3). Recommendation: add a plain-words note per pack version, written by the author (the assistant drafts it, W-20), shown in the approval step beside the diff and to firms beside the 'newer rules' prompt".
 
-See also `pack-authors-assistant.md` §9 G-6 (Proposal). The assistant's draft of the note is a model call, so it waits for CN-FDL open point 3; the author writes the note in the meantime.
+See also `pack-authors-assistant.md` §9 G-6 (Proposal). The assistant's draft of the note is a model call, so it runs once the provider record is published (AIW-D74); until then, and whenever the record is withdrawn, the author writes the note.
 
 One name: *release note*, as AW-02 AW-2-51 calls it (README §0 rule 9).
 

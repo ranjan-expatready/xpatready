@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-01B Content Pack Configurator, version 1.2, dated 2026-10-05 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-01B-content-pack-configurator_v1.2_2026-10-05.md` |
-| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d) |
+| **Date of this note** | 11 Oct 2026 (sixth round: the founder's Step 3 batch, AIW-D74: drafting runs once the provider record is published) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 7 |
 
@@ -188,7 +188,7 @@ SA-1-31 (field-map import) and SA-1-41 (reference-table import) carry the same t
 **(4) Why.**
 - `pack-authors-assistant.md` §9 G-23 (Proposal; IMP-11): "each drafted map line, scoring row or reference row carries an *AI-drafted* marker and the model's confidence inside the import file and on the line after the author's commit, until the author reviews it".
 - "Low-confidence lines first" is the first of the approve-all safeguards the founder adopted (AIW-D57, provisional until counsel; G-16). The safeguard cannot be switched off while the approve-all part of the *founder safeguards* setting is on (SA-12-33).
-- **Drafting waits for the founder.** Drafting a map line is a model call, so it waits for the founder's answer to CN-FDL open point 3; until then the two columns stay empty and the author maps by hand (`00-step3-plan.md`, "Pack calls before the founder answers"). This change writes the marker rule now so that it is in place when drafting starts.
+- **Drafting runs once the provider record is published.** Drafting a map line is a model call; since the founder decided CN-FDL open point 3 (AIW-D74, "Yes, Canada for all AI"), it runs once the one published provider record exists (SA-8-49). Until then, and whenever the record is withdrawn, the two columns stay empty and the author maps by hand. The marker rule applies from the first drafted line.
 
 **(5) Knock-ons.** FD-5 (change 1) decides when box maps return. AW-02 specifies the drafting step.
 

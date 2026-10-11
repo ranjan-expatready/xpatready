@@ -10,10 +10,10 @@ Turn the seven decided behaviour documents of Step 2 into something the team can
 
 | Item | File | Size | Status |
 |---|---|---|---|
-| A. Firm AI assistants (Case, Intake, Billing, Firm, Practice expert) | `AW-01-firm-ai-assistants_v0.1.md` (version 0.5 inside) | 126 requirements, 114 user stories, 39 module decisions, 24 business rules, 13 evaluation sets, 5 risk registers, 1 incident procedure | Passed |
-| B. Platform AI assistants (Pack author's assistant, Support and account assistant) | `AW-02-platform-ai-assistants_v0.1.md` (version 0.6 inside) | 77 requirements, 55 user stories, 26 decisions, 16 business rules, 11 hard limits | Passed |
+| A. Firm AI assistants (Case, Intake, Billing, Firm, Practice expert) | `AW-01-firm-ai-assistants_v0.1.md` (version 0.6 inside) | 126 requirements, 114 user stories, 39 module decisions, 24 business rules, 13 evaluation sets, 5 risk registers, 1 incident procedure | Passed |
+| B. Platform AI assistants (Pack author's assistant, Support and account assistant) | `AW-02-platform-ai-assistants_v0.1.md` (version 0.8 inside, with your batch applied) | 77 requirements (AW-2-49 withdrawn by AIW-D79), 55 user stories (US-15 withdrawn), 26 decisions, 16 business rules, 11 hard limits | Passed |
 | C. Change notes for the team's own documents | `change-notes/` | 33 notes: 18 for the firm side (79 changes), 15 for Super Admin, the client portal and the Founder Decisions Log (73 changes) | Both sets passed |
-| D. Test cases, in the team's format | `tests/AW-test-cases.csv` | 436 test cases (271 for the firm assistants, 165+6 for the platform assistants; 10 blocked until your answer to question 2) | Passed |
+| D. Test cases, in the team's format | `tests/AW-test-cases.csv` | 436 test cases (265 for the firm assistants, 171 for the platform assistants; none blocked since your answer to question 2, AIW-D74; 1 withdrawn with the French-label duty, AIW-D79) | Passed |
 | E. Clickable prototype | `../prototype/index.html` | Six screens, offline, every screen traced to a requirement | Passed |
 | F. Counsel pack | `counsel-pack.md` | 17 questions for counsel, in the order they block the pilot | Ready for counsel (engage by 31 Oct, AIW-D68) |
 
@@ -47,19 +47,19 @@ Four things the founder should know:
 
 ## 6. Your decisions (the batch)
 
-Eight questions and one request. Each has the Lead's recommendation.
+Eight questions and one request. Each has the Lead's recommendation. **You decided all eight on 11 Oct 2026** (`decisions.md` AIW-D73 to AIW-D80), each as the Lead recommended; the files now apply them.
 
-| # | Question | The Lead recommends |
-|---|---|---|
-| 1 | FD-7's read-only recruitment tile for employers: the team's CP1-D7 removes it from Release 1. Keep FD-7 or amend it? | **Amend FD-7:** defer the tile. It is not AI; your AIW-D67 already gives employers the acts that matter. |
-| 2 | Does "only in Canada" (AIW-D52) also cover Expat Ready's own pack-writing AI, which holds no client data? | **Yes:** one provider, one contract, one test, no exceptions to police. Until you answer, the Pack author's assistant makes no AI call. |
-| 3 | Does your two-person rule for published reference data (AIW-D48, amending FD-4) also cover Practice Pack reference data? | **Yes:** one rule for every pack; FD-22 already applies FD-4 there. |
-| 4 | Does FD-11 (no credit notes) reach Expat Ready's own billing of firms? | **No:** FD-11 names the firms' billing of their clients; Expat Ready's subscription billing keeps the team's design. |
-| 5 | Must Release 1 record money returned to a client from trust (for example an unused retainer)? FD-17 lists refunds; the team holds general refunds to Phase 2; FD-13 already covers consultation refunds. | **Yes,** with the team designing how. |
-| 6 | The team's phasing puts several inputs of the platform assistants after Phase 1 (the rules-version listing, the content work queue, the per-assistant emergency switches, the residency declaration, the breach register, canned support answers). Release 1 waits for AI (AIW-D66). | **Bring into Release 1 only what safety needs** (the per-assistant emergency switches and the residency declaration); for the rest, the assistant's dependent step waits and works without it (for example, drafting a reply with no canned answer). |
-| 7 | The team closed machine translation of templates on 10 Oct. Should the Pack author's assistant still propose French for non-legal pack labels for a person to review? | **Drop it for version 1;** follow the team's decision. Legal and consent text is always written by a person anyway. |
-| 8 | Your reading that an AI-proposed document label is not an "effect" needing a person (AIW-D71): does it also cover AI-drafted internal notes? | **Same answer as AIW-D71:** not an effect in principle, but during the pilot every one goes to a person; the pilot's figures decide later. |
-| Request | Ask the team to upload the current client portal document (CP-01), which is not on Drive. | — |
+| # | Question | The Lead recommends | Decided |
+|---|---|---|---|
+| 1 | FD-7's read-only recruitment tile for employers: the team's CP1-D7 removes it from Release 1. Keep FD-7 or amend it? | **Amend FD-7:** defer the tile. It is not AI; your AIW-D67 already gives employers the acts that matter. | **AIW-D73** "Defer the tile" (CN-FDL change 10) |
+| 2 | Does "only in Canada" (AIW-D52) also cover Expat Ready's own pack-writing AI, which holds no client data? | **Yes:** one provider, one contract, one test, no exceptions to police. Until you answer, the Pack author's assistant makes no AI call. | **AIW-D74** "Yes, Canada for all AI": the Pack author's assistant may make AI calls once the provider record is published (CN-FDL change 11; CN-SA-08; AW-02 v0.8) |
+| 3 | Does your two-person rule for published reference data (AIW-D48, amending FD-4) also cover Practice Pack reference data? | **Yes:** one rule for every pack; FD-22 already applies FD-4 there. | **AIW-D75** "Yes, two people for all packs" (CN-FDL change 12) |
+| 4 | Does FD-11 (no credit notes) reach Expat Ready's own billing of firms? | **No:** FD-11 names the firms' billing of their clients; Expat Ready's subscription billing keeps the team's design. | **AIW-D76** "No, FD-11 is about firms' billing only" (CN-FDL change 13) |
+| 5 | Must Release 1 record money returned to a client from trust (for example an unused retainer)? FD-17 lists refunds; the team holds general refunds to Phase 2; FD-13 already covers consultation refunds. | **Yes,** with the team designing how. | **AIW-D77** "Yes, team designs how" (CN-FDL change 14; CN-AG-06 §13 item 11 (h)) |
+| 6 | The team's phasing puts several inputs of the platform assistants after Phase 1 (the rules-version listing, the content work queue, the per-assistant emergency switches, the residency declaration, the breach register, canned support answers). Release 1 waits for AI (AIW-D66). | **Bring into Release 1 only what safety needs** (the per-assistant emergency switches and the residency declaration); for the rest, the assistant's dependent step waits and works without it (for example, drafting a reply with no canned answer). | **AIW-D78** "Only what safety needs" (CN-SA-11; CN-SA-12; AW-02 §12) |
+| 7 | The team closed machine translation of templates on 10 Oct. Should the Pack author's assistant still propose French for non-legal pack labels for a person to review? | **Drop it for version 1;** follow the team's decision. Legal and consent text is always written by a person anyway. | **AIW-D79** "Drop it for version 1" (AW-2-49 withdrawn) |
+| 8 | Your reading that an AI-proposed document label is not an "effect" needing a person (AIW-D71): does it also cover AI-drafted internal notes? | **Same answer as AIW-D71:** not an effect in principle, but during the pilot every one goes to a person; the pilot's figures decide later. | **AIW-D80** "Same as labels" (CN-AG-11 change 3; CN-AG-13 change 3) |
+| Request | Ask the team to upload the current client portal document (CP-01), which is not on Drive. | — | Standing request (no decision) |
 
 ## 7. Your standing actions (no question)
 

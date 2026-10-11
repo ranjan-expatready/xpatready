@@ -4,9 +4,9 @@
 |---|---|
 | **Document changed** | ExpatReady — Founder Decisions Log (consolidated sign-off), document version 1.5, last updated 2026-08-02 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/01-techno-functional/07-Founder-Decisions-Log.md` |
-| **Date of this note** | 11 Oct 2026 (sixth round, after check S3a-e: AIW-D72 correction 2; refunds open point and FD-13) |
+| **Date of this note** | 11 Oct 2026 (seventh round: the founder's Step 3 batch, AIW-D73 to AIW-D77, applied to open points 1 and 3 to 6; changes 10 to 14 added) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
-| **Changes** | 9: 2 amendments, 5 reaffirmations, 1 new section, 1 reading of FD-16. Also 6 open points (below, not changes): five for the founder, one recorded as applied. |
+| **Changes** | 14: 3 amendments (FD-4, FD-8, FD-7), 5 reaffirmations, 1 new section, 1 reading of FD-16, and 4 further lines from the founder's Step 3 batch (AIW-D52's reach, FD-4 for Practice Pack reference data, FD-11's reach, money returned from trust). The 6 open points (below, not changes) are all settled: five decided by the founder on 11 Oct (AIW-D73 to AIW-D77), one recorded as applied. |
 
 **What this note is.** The Founder Decisions Log is the founder's own record; only the founder changes it. On 11 Oct 2026 the founder answered the Workstream 2 decisions one by one (`ai-workers/decisions.md`, AIW-D36 to AIW-D72, with the appended rows *AIW-D72 correction* and *AIW-D72 correction 2*). This note does four things:
 - **Two amendments.** Two of his answers amend a ratified decision (FD-4, FD-8).
@@ -35,7 +35,7 @@ The founder's words are quoted from `ai-workers/decisions.md`.
 
 ## Open points (recorded, not changed)
 
-These are conflicts or gaps the fix rounds found. Points 1, 3, 4, 5 and 6 need the founder's answer. Point 2 is recorded as applied and asks nothing. None is written as a change.
+These are conflicts or gaps the fix rounds found. Points 1, 3, 4, 5 and 6 were put to the founder and **decided on 11 Oct 2026** (AIW-D73 to AIW-D77); each question is kept as asked, with the decision beneath it, and the proposed log words are changes 10 to 14. Point 2 is recorded as applied and asks nothing.
 
 1. **FD-7 against the team's CP1-D7.**
    - FD-7 (L32) resolves "**CP-9 employer sees read-only summary**". That is the recruitment summary tile of Doc 4 §3.9 (L3043) and §13 item 8 (L3207).
@@ -44,6 +44,7 @@ These are conflicts or gaps the fix rounds found. Points 1, 3, 4, 5 and 6 need t
    - A team file overriding a founder decision goes to the founder (README §0 rule 11; review S3a M-1).
    - **Question:** keep FD-7's tile in Release 1, or amend FD-7?
    - **The Lead recommends amending FD-7:** defer the read-only recruitment tile to a later release, as the team's CP1-D7 does. It is not AI; the launch already carries AIW-D66 (AI in Release 1) and AIW-D67 (full employer actions), which give employers the acts that matter; the tile adds build and a candidate-data question for little launch value. *(Recommendation added by the Lead, 11 Oct 2026.)*
+   - **Decided 11 Oct 2026 (AIW-D73, "Defer the tile"):** FD-7 is amended: the employer's read-only recruitment summary tile is deferred to a later release, as the team's CP1-D7 plans; AIW-D67's full employer actions stand. Proposed log words: change 10.
 2. **The employer portal and AIW-D67: recorded; applied, no question.**
    - The founder chose "Full employer actions at launch" (AIW-D67).
    - The newer AG-15 v1.7 limits Release 1 to "only the employer's primary contact has portal access" (AG-15-12, L355). No seats means no seat management.
@@ -54,23 +55,27 @@ These are conflicts or gaps the fix rounds found. Points 1, 3, 4, 5 and 6 need t
    - The Pack author's assistant drafts pack content that holds no client data (synthetic samples only).
    - **Question:** do such calls also use only the Canada provider record?
    - **The Lead recommends yes:** one provider record, one contract and one test for every AI call Expat Ready makes, so no exception has to be policed; pack drafting holds no client data, so the only cost is using the Canada route the firms' calls already need. Until the founder answers, the Pack author's assistant makes no model call. *(Recommendation added by the Lead, 11 Oct 2026.)*
-   - The Super Admin notes keep D52's literal scope and do not state the wider reach as a requirement (CN-SA-08 change 2, CN-SA-11 change 1; review S3a M-2; re-check S3a-b R-2). Until he answers, the Pack author's assistant makes no model call; its rule-built steps run (`00-step3-plan.md`, "Pack calls before the founder answers").
+   - *(Before the answer)* The Super Admin notes kept D52's literal scope and did not state the wider reach as a requirement (CN-SA-08 change 2, CN-SA-11 change 1; review S3a M-2; re-check S3a-b R-2), and the Pack author's assistant made no model call (`00-step3-plan.md`, "Pack calls before the founder answers", now superseded).
+   - **Decided 11 Oct 2026 (AIW-D74, "Yes, Canada for all AI"):** AI processing for every AI call Expat Ready makes, including pack drafting that holds no client data, happens only in Canada under the one published provider record (SA-8-49); the Pack author's assistant may make model calls once that record is published. Proposed log words: change 11.
 4. **FD-4 as amended, and Practice Pack reference data.**
    - FD-22 applies FD-4 to the Practice Pack ("dual control on rule-bearing artifacts (FD-4)", A22-6.6, L142).
    - AIW-D48 speaks of "a published country pack".
    - **Question:** does the amended clause also cover Practice Pack reference data?
    - **The Lead recommends yes:** FD-22 already applies FD-4's dual control to the Practice Pack's rule-bearing artifacts (A22-6.6), and AIW-D48 chose "Two people for all" reference data in country packs; the same two-person publish for Practice Pack reference data keeps one rule for every pack. *(Recommendation added by the Lead, 11 Oct 2026.)*
+   - **Decided 11 Oct 2026 (AIW-D75, "Yes, two people for all packs"):** reference data in a published Practice Pack also needs two people before publishing, as for country packs (AIW-D48; FD-22 A22-6.6). Proposed log words: change 12.
 5. **FD-11 and the platform's own SaaS billing.**
    - FD-11 names AG-6 ("AG-6 mentions scrubbed", L36).
    - SA-04 v2.17 §10 lists "credit notes" under `system/billing:view` (L752), and SA-08 v2.4 keeps "invoice and credit-note copies" (SA-8-44, L301).
    - **Question:** does FD-11 reach Expat Ready's own billing to firms?
    - **The Lead recommends no:** FD-11's words name AG-6 (the firms' billing of their clients); Expat Ready's own subscription billing (SA-04, SA-08) is a different system that keeps the copies the team specified. Not AI. *(Recommendation added by the Lead, 11 Oct 2026.)*
+   - **Decided 11 Oct 2026 (AIW-D76, "No, FD-11 is about firms' billing only"):** FD-11 applies to the firms' billing of their clients (AG-06) only; Expat Ready's own subscription billing (SA-04, SA-08) keeps the team's design, including processor credit notes. Proposed log words: change 13.
 6. **Refunds in Release 1: money returned to a client from trust.**
    - FD-17 (L53) names refund among the version 1 client-money records: "on every client-money record — quote, retainer, deposit, invoice line, payment, refund".
    - AG-06 v1.7 holds general refunds to Phase 2: "**Refunds (Phase-2)** SHALL be a **reversing fact** with a **mandatory reason** …" (AG-6-23, L377).
    - FD-13 (L38) already decides consultation refunds: "**Firm-configurable refunds with platform defaults**", and AG-04 v1.5 refunds a cancelled paid consultation in Release 1 ("**AG-4-46** Refund-on-cancel per policy via Biller", L515).
    - **Question:** must Release 1 also record money returned to a client from trust (for example an unused retainer)?
    - **The Lead recommends yes**, with the mechanics designed by the team under FD-17 (`00-step3-plan.md`, "Refunds and FD-13"; "Trust accounting belongs to the team"). This note proposes no refund rule.
+   - **Decided 11 Oct 2026 (AIW-D77, "Yes, team designs how"):** Release 1 records money returned to a client from trust (for example an unused retainer), so the trust ledger stays right; the team designs the mechanics under FD-17 (AG-06 §13 item 11); the platform never moves money (FD-12); consultation refunds stay as FD-13 and AG-4-46 have them; no assistant records a refund. Proposed log words: change 14 (a decision line only; still no refund mechanics).
 
 ---
 
@@ -91,7 +96,7 @@ L29:
 - the proposals row of 10 Oct (Pack author's assistant, test gate, part 2);
 - `ai-workers/design/behaviours/pack-authors-assistant.md` §9 G-25. SA-01 v2.2 §3.12 put the whole production pack under two people, while SA-01B v1.2 SA-1B-44 named no second person for reference rows.
 
-**(5) Knock-ons.** SA-01B SA-1B-44 and SA1B-D17 (CN-SA-01B change 3). Practice Pack reference data: open point 4.
+**(5) Knock-ons.** SA-01B SA-1B-44 and SA1B-D17 (CN-SA-01B change 3). Practice Pack reference data: decided by AIW-D75 (change 12).
 
 ---
 
@@ -155,7 +160,7 @@ L36:
 
 **(4) Why.** AIW-D46. The founder chose "Keep FD-11": "FD-11 stands: no credit notes in version 1; the team removes the mentions from AG-06 (change note in Step 3)." The quoted text is AG-06 v1.7 AG-6-6 (L354), unchanged in the 11 Oct snapshot. Proposals row of 9 Oct (carve-out B, "Settle trust accounting … Also FD-11 (no credit notes) vs AG-6-6").
 
-**(5) Knock-ons.** AG-06 (CN-AG-06). The platform's own billing is open point 5.
+**(5) Knock-ons.** AG-06 (CN-AG-06). The platform's own billing: decided by AIW-D76 (change 13).
 
 ---
 
@@ -206,7 +211,7 @@ L53 (extract, opening and part (a)):
 **(5) Knock-ons.**
 - AG-06 (CN-AG-06 changes 1 and 6), to FD-17's words only, with the accounting questions in AG-06 §13.
 - The Billing assistant's limits (AW-01).
-- Refunds: open point 6.
+- Refunds: decided by AIW-D77 (change 14).
 - Counsel pack question 9.
 
 ---
@@ -305,3 +310,83 @@ L52 (extract, third and fourth sentences):
 - AG-09 (CN-AG-09 change 1). The product rule there names a state the product can check (no published threshold) instead of "the pilot".
 - AW-01 cites AIW-D71.
 - No change to FD-16's own words, to AIW-D13 or to AIW-D33.
+- AIW-D80 (11 Oct 2026, "Same as labels") reads AIW-D71 the same way for an AI-drafted internal note that is never sent; during the pilot every one still goes to a person (CN-AG-11 change 3). It is recorded in Workstream 2's decision record and needs no further line in the log.
+
+---
+
+## 10. FD-7 amended: the employer's read-only recruitment summary tile is deferred
+
+**(1) What it changes.** FD-7, Wave-0 table (L32).
+
+**(2) Current words.**
+
+L32:
+> | FD-7 | AG-17 Recruiter | **Light-evidence** (LMIA recruitment-effort evidencing, not ATS-grade) · **no candidate identity plane** (records-only) · **CP-9 employer sees read-only summary**. ATS-grade = plan-gated growth path |
+
+**(3) Proposed words.**
+
+> | FD-7 | AG-17 Recruiter | **Light-evidence** (LMIA recruitment-effort evidencing, not ATS-grade) · **no candidate identity plane** (records-only) · ~~**CP-9 employer sees read-only summary**~~ **AMENDED 2026-10-11:** the employer's read-only recruitment summary tile is deferred to a later release, as the team's CP1-D7 plans; AIW-D67's full employer actions (upload, pay, sign, seat management) stand (AIW-D73). ATS-grade = plan-gated growth path |
+
+**(4) Why.** AIW-D73, 11 Oct 2026 (open point 1). The founder chose "Defer the tile": "**Amends FD-7:** the employer's read-only recruitment summary tile is deferred to a later release, as the team's CP1-D7 plans. AIW-D67's full employer actions (upload, pay, sign, seat management) stand. Not AI. The founder places the amendment in the Founder Decisions Log on Drive."
+
+**(5) Knock-ons.** AG-15 CP1-D7 and AG-17 (AG-17-30) already match; Doc 4 §3.9 and §13 item 8 follow (the team's own change). Not AI.
+
+---
+
+## 11. The reach of AIW-D52: Canada for every Expat Ready AI call
+
+**(1) What it changes.** The proposed row FD-26 of change 8 ("Where AI processing happens").
+
+**(2) Current words.** Change 8's proposed FD-26 row: "**AI processing of client data happens only in Canada** (AG11-D15 wording, for firms' data and Expat Ready's own support tickets)."
+
+**(3) Proposed words.** FD-26's row gains, after its first sentence:
+> **Every AI call Expat Ready makes**, including pack drafting that holds no client data, happens only in Canada under the one published provider record (SA-8-49) (AIW-D74).
+
+**(4) Why.** AIW-D74, 11 Oct 2026 (open point 3). The founder chose "Yes, Canada for all AI": "AI processing for **every** AI call Expat Ready makes, including pack drafting that holds no client data, happens only in Canada under the one published provider record (SA-8-49). The Pack author's assistant may make model calls once that record is published."
+
+**(5) Knock-ons.** SA-08 SA-8-51 (CN-SA-08 change 2); SA-01 and SA-01B drafting steps (CN-SA-01, CN-SA-01B); AW-02 (the Pack author's assistant).
+
+---
+
+## 12. FD-4 as amended: Practice Pack reference data also needs two people
+
+**(1) What it changes.** FD-4, Wave-0 table (L29), the amendment of change 1.
+
+**(2) Current words.** Change 1's proposed amendment: "reference data in a published country pack (fees, wage tables) also needs two people, matching SA-01 v2.2 §3.12 (AIW-D48)".
+
+**(3) Proposed words.** The amendment of change 1 ends with:
+> ; **and in a published Practice Pack**, as for country packs (FD-22 A22-6.6) (AIW-D75)
+
+**(4) Why.** AIW-D75, 11 Oct 2026 (open point 4). The founder chose "Yes, two people for all packs": "Reference data in a published **Practice Pack** also needs two people before publishing, as for country packs (AIW-D48; FD-22 A22-6.6). The founder places the amendment with AIW-D48's on Drive."
+
+**(5) Knock-ons.** FD-22 A22-6.6 already applies FD-4's dual control to the Practice Pack's rule-bearing artifacts; the team's Practice Pack publishing follows (the team's own change).
+
+---
+
+## 13. FD-11's reach: the firms' billing only
+
+**(1) What it changes.** FD-11, Wave-0 table (L36): one more line added, after change 4's line.
+
+**(2) Current words.** As change 4.
+
+**(3) Proposed words.** The decision cell also ends with:
+> *Read 2026-10-11 (AIW-D76): FD-11 applies to the firms' billing of their clients (AG-06) only; Expat Ready's own subscription billing (SA-04, SA-08) keeps the team's design, including processor credit notes.*
+
+**(4) Why.** AIW-D76, 11 Oct 2026 (open point 5). The founder chose "No, FD-11 is about firms' billing only": "FD-11 (no credit notes in version 1) applies to the firms' billing of their clients (AG-06) only; Expat Ready's own subscription billing (SA-04, SA-08) keeps the team's design, including processor credit notes. Not AI."
+
+**(5) Knock-ons.** None: SA-04 and SA-08 keep their words.
+
+---
+
+## 14. FD-17: money returned to a client from trust is recorded in Release 1
+
+**(1) What it changes.** FD-17, Blueprint table (L53): one more line added, after change 6's line.
+
+**(2) Current words.** As change 6.
+
+**(3) Proposed words.** The decision cell also ends with:
+> *Decided 2026-10-11 (AIW-D77): Release 1 records money returned to a client from trust (for example an unused retainer), so the trust ledger stays right; the team designs the mechanics under FD-17; the platform never moves money (FD-12); consultation refunds stay as FD-13 and AG-4-46 have them. No assistant records a refund.*
+
+**(4) Why.** AIW-D77, 11 Oct 2026 (open point 6). The founder chose "Yes, team designs how": "Release 1 records **money returned to a client from trust** (for example an unused retainer), so the trust ledger stays right; the team designs the mechanics under FD-17 (AG-06 §13 item 11); the platform never moves money (FD-12); consultation refunds stay as FD-13 and AG-4-46 have them. No assistant records a refund."
+
+**(5) Knock-ons.** AG-06 §13 item 11 (h) (CN-AG-06 change 6): refunds of trust money are decided for Release 1; the mechanics stay the team's. AW-01 AW-1-39 (no assistant records a refund).
