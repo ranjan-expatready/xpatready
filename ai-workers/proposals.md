@@ -141,3 +141,5 @@
 | 11 Oct 2026 | Step 3 maker (AW-01) | Rule (for the Lead) | One word: *suspend* and *pause* for one state. | 00-step3-plan.md | One term | Decided: PAUSED with the reason (shared rules) |
 | 11 Oct 2026 | Step 3 maker (AW-01) | Plan (for the Lead) | Behaviour documents still say AI off ends a delegation and the expert is unavailable in a stop. | firm-assistant.md §1; practice-expert.md §1 | Done means done | Done: aligned 11 Oct |
 | 11 Oct 2026 | Step 3 maker (AW-01) | Plan (for the AW-02 maker) | AW-2-25's provider record lacks the passed test call. | AW-02; SA-8-49 | Align | Open: in the AW-02 second fix round |
+| 11 Oct 2026 | Step 3 maker (SA notes) | Decision (for the Lead) | Audit fields have two homes (CN-SA-11 change 4, CN-AG-13 change 2). | CN-SA-11; CN-AG-13; AW-01 L573 | One home per rule | Decided: CN-AG-13 is the home; CN-SA-11 points (shared rules) |
+| 11 Oct 2026 | Step 3 maker (SA notes) | Rule (for the Lead) | Only the Platform Owner switches the pilot safeguards off, recording the founder's decision reference. | CN-SA-12 SA-12-33; SA-12 L566, L571 | Protects the founder's safeguards | Adopted (shared rules) |
