@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-08 Platform Integrations & Infrastructure Rails, version 2.4, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-08-platform-integrations-and-infrastructure-rails_v2.4_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d: replacing a provider) |
+| **Date of this note** | 11 Oct 2026 (fifth round, after re-check S3a-d: replacing a provider; what a withdrawal pauses) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 4 |
 
@@ -85,7 +85,7 @@ New §3.9 "AI and OCR provider: the terms record" (summary paragraph). New requi
 >   The record is published only if the processing region is in Canada **and the test call passed**. A record with any other region, or with a test call that failed or is missing, is refused with a clear reason (SA-11-32). The provider's keys are not part of the record; the engineer sets them at deploy like every service key (SA8-D1).
 >
 >   **Replacing the provider.** A new provider is a new record under the same rules. Only one record is published at a time: publishing the new record marks the old one **Superseded** at the same moment, and new model calls move to the new provider with no pause. Only a withdrawal with no published successor pauses work (SA-8-50). Until a published record exists, the AI switch of every firm stays locked (AG-11-93, AG-16-35).
-> - **SA-8-50** *(new)* The Integrations status page shows the AI provider as one line: working or not, processing region, the record's version and the last error. A red line alerts the Owner and engineer (SA-8-27). The Owner may **withdraw** the published record, with a reason, under `system/ai-provider:publish`; withdrawing it with no published successor stops new AI processing at once, and every AI-prepared item already waiting is paused with the reason `PROVIDER_RECORD_WITHDRAWN` (AG-11-112 (e), CN-AG-11 change 6).
+> - **SA-8-50** *(new)* The Integrations status page shows the AI provider as one line: working or not, processing region, the record's version and the last error. A red line alerts the Owner and engineer (SA-8-27). The Owner may **withdraw** the published record, with a reason, under `system/ai-provider:publish`. Withdrawing it with no published successor stops at once the model calls the record governs, and pauses with the reason `PROVIDER_RECORD_WITHDRAWN` (AG-11-112 (e), CN-AG-11 change 6) only the waiting items of the assistants whose calls it governs: the five firm assistants and the Support and account assistant. It pauses no other waiting item.
 > - **SA-8-51** *(new — AIW-D52)* Expat Ready's own AI calls on **support tickets** run only under the published record, since AIW-D52 requires Canada-only processing for them.
 
 §7 gains: "**AI provider record** *(new)* — provider, contract reference, processing region, no-training and no-retention terms with source and date checked, test call (date, model, outcome — passed or failed, who ran it), version, status Draft / Published / Superseded / Withdrawn, entered by, approved by, approved at, superseded by, withdrawn by and reason. At most one record is Published. No keys."
@@ -102,6 +102,7 @@ New §3.9 "AI and OCR provider: the terms record" (summary paragraph). New requi
 - **AIW-D52** ("Only in Canada"): AI processing of client data "for firms' data and Expat Ready's own support tickets", with the provider "confirmed by one test call … if no capable option passes, the Lead returns to the founder".
 - **AIW-D69:** the team's tech lead runs the test call; "the result goes into the provider record the product requires before the AI switch unlocks (AG-16-35, AG-11-93)".
 - **The Step 3 shared rule on the provider record:** "it requires a *passed* test call … Whether the same record governs Expat Ready's own platform AI calls with no client data is the founder's open question (CN-FDL open point 3); until he answers, no file states it as a SHALL or credits it to AIW-D52" (`00-step3-plan.md`; re-check S3a-b R-2).
+- **What a withdrawal pauses.** `00-step3-plan.md`, "Pack calls before the founder answers": "a withdrawn provider record pauses only the assistants whose calls the record governs (the five firm assistants and the Support and account assistant)". The Pack author's assistant makes no model call until the founder answers, so it has nothing for the record to pause (the Lead's call after AW-02 re-check S3b-d, n-31).
 - **Replacing a provider** needed its own status so that two records are never live at once and a planned change does not stop work (re-check S3a-d m-6).
 - **The pause reason.** CN-AG-11 change 6 (AG-11-112) is the one home of the four pause reasons, `PROVIDER_RECORD_WITHDRAWN` among them.
 - **Owner approval** follows SA8-D22 (L59): e-sign wording is "**approved and published by the Owner**". Withdrawing a live record is the same Owner act in reverse, so it uses the same key (re-check S3a-c m-10).
@@ -161,7 +162,7 @@ L23 (extract):
 > New requirements continue from SA-8-49.
 
 **(3) Proposed words.**
-- A version row: "| 2.5 | *(date placed)* | Workstream 2 change note CN-SA-08 applied: BR-1 names the AI and OCR provider; AI provider terms record with a passed test call, published, superseded and withdrawn by the Owner (SA-8-49 – SA-8-51); read-only government source rail (SA-8-52); counsel question 1. | AG11-D13 – D15; AIW-D52, AIW-D69 |".
+- A version row: "| 2.5 | *(date placed)* | Workstream 2 change note CN-SA-08 applied: BR-1 names the AI and OCR provider; AI provider terms record with a passed test call, published, superseded and withdrawn by the Owner, a withdrawal pausing only the assistants the record governs (SA-8-49 – SA-8-51); read-only government source rail (SA-8-52); counsel question 1. | AG11-D13 – D15; AIW-D52, AIW-D69 |".
 - L23: "continue from SA-8-53".
 
 **(4) Why.** Review S3a m-20(c).

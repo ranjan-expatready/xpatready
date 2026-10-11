@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-10 Support, version 2.5, dated 2026-10-07 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-10-support_v2.5_2026-10-07.md` |
-| **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
+| **Date of this note** | 11 Oct 2026 (fifth round: which tickets an article draft may start from) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 5 |
 
@@ -84,7 +84,7 @@ L450:
 
 ---
 
-## 3. A knowledge-base article drafted from a resolved ticket carries no firm's or client's data
+## 3. A knowledge-base article drafted from a ticket: only from a resolved ticket, and carrying no firm's or client's data
 
 **(1) What it changes.** SA-10-23 (L384).
 
@@ -93,11 +93,17 @@ L450:
 L384:
 > - **SA-10-23** *(NEW)*: A bilingual, country-taggable knowledge base; an internal subset for agents and a firm-facing subset surfaced in firm help to deflect tickets; contextual article suggestions by category/keywords.
 
-**(3) Proposed words.** SA-10-23 gains: "*(changed — IMP-21)* An article drafted from a resolved ticket, by a person or by an AI assistant, carries no firm's name, no client's personal data and no ticket content that identifies either. A person confirms this before the article is saved, and again before a firm-facing article is published. The de-identification rule is confirmed with counsel."
+L425 (the `CLOSED` row of the ticket status table):
+> | `CLOSED` | terminal | Reopen window elapsed / firm closed / force-closed | — |
 
-**(4) Why.** `support-and-account-assistant.md` §9 G-7 (Proposal; counsel; IMP-21). Ticket attachments and messages are client personal data (BR-13, L409).
+**(3) Proposed words.** SA-10-23 gains:
+> *(changed — IMP-21)* An article drafted from a ticket, by a person or by an AI assistant, may be started only from a ticket that **reached `RESOLVED`**: one still `RESOLVED`, or one the reopen window has since moved from `RESOLVED` to `CLOSED`. It is never started from a ticket that was force-closed or `CANCELLED` without being resolved. The article carries no firm's name, no client's personal data and no ticket content that identifies either. A person confirms this before the article is saved, and again before a firm-facing article is published. The de-identification rule is confirmed with counsel.
 
-**(5) Knock-ons.** The counsel pack (AIW-D68). AW-02.
+**(4) Why.**
+- `support-and-account-assistant.md` §9 G-7 (Proposal; counsel; IMP-21). Ticket attachments and messages are client personal data (BR-13, L409).
+- **Only resolved tickets.** The Lead's calls of 11 Oct (`00-step3-plan.md`, "Support run at RESOLVED", answer (2), and the call after AW-02 re-check S3b-d, n-30): the help-article draft is its own run, started by the person on a ticket that reached RESOLVED, whether it is still RESOLVED or the window has since closed it; never on a ticket force-closed or cancelled without being resolved. SA-10's own states make the difference checkable: `CLOSED` covers both "Reopen window elapsed" and "force-closed" (L425, quoted above), and the transitions show `IN_PROGRESS → CLOSED` as the force-close and `OPEN → CANCELLED` as a withdrawal (§6, L438), so the product tells them apart by whether the ticket passed through `RESOLVED`.
+
+**(5) Knock-ons.** The counsel pack (AIW-D68). AW-02 (the article run, started by the person).
 
 ---
 
@@ -175,7 +181,7 @@ New open question:
 
 **(2) Current words.** The last row is v2.5 of 2026-10-07.
 
-**(3) Proposed words.** A version row: "| 2.6 | *(date placed)* | Workstream 2 change note CN-SA-10 applied: `IMMIGRATION_CONTENT` category; AI-draft provenance on messages; de-identified knowledge-base articles; ticket keys renamed within `system/support-ticket:*` and `system/firm:impersonate`, holders recorded in SA-07; open question 11. | IMP-2, IMP-11, IMP-21; AIW-D55; proposals row 90 |".
+**(3) Proposed words.** A version row: "| 2.6 | *(date placed)* | Workstream 2 change note CN-SA-10 applied: `IMMIGRATION_CONTENT` category; AI-draft provenance on messages; knowledge-base articles drafted only from resolved tickets and de-identified; ticket keys renamed within `system/support-ticket:*` and `system/firm:impersonate`, holders recorded in SA-07; open question 11. | IMP-2, IMP-11, IMP-21; AIW-D55; proposals row 90 |".
 
 **(4) Why.** Review S3a m-20(c).
 
