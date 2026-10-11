@@ -353,3 +353,4 @@ Blocking risk across all steps: the Canada-only processing rule (`commercial/pro
 | 11 Oct 2026 | Founder | Step R interview question 5: AIW-D86, coded prototype plus one blueprint |
 | 11 Oct 2026 | Founder | Step R interview question 6 (names for the two levels): asked for the choice to come from detailed research of proven frameworks, for scalability, maintainability and other key factors; the architecture research was widened to structure and naming |
 | 11 Oct 2026 | Founder | Direction AIW-D87: buildable and agnostic of build status; dependencies named; edge cases and what can go wrong in every journey |
+| 11 Oct 2026 | Lead | Direction review for the founder (`direction-review-2026-10-11.md`): direction right, writing and validation wrong; five options; recommends E (one human-language AI Team Handbook plus the coded prototype plus three consultant conversations, the existing specification kept as a trimmed appendix) |
