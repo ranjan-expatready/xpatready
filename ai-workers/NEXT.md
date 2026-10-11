@@ -27,7 +27,7 @@
    - Phasing v2.18 against D66 (proposals row);
    - machine-translated pack labels against SA-05 v2.4;
    - whether AIW-D71's reading extends to AI-drafted internal notes (meanwhile each goes to a person);
-   - refunds in Release 1: record at least an offline refund fact so the trust ledger can show money returned (Lead recommends yes; AG-06 holds refunds to Phase 2);
+   - refunds in Release 1: must Release 1 record money returned to a client from trust? FD-13 already covers consultation refunds (AG-04 refunds them in Release 1); AG-06 holds other refunds to Phase 2. Lead recommends yes, designed by the team;
    - the request that the team upload CP-01.
 5. **Founder actions** (no question pending):
    - paste the Charter edits;
