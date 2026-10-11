@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-08 Platform Integrations & Infrastructure Rails, version 2.4, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-08-platform-integrations-and-infrastructure-rails_v2.4_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (second fix round, after re-check S3a-b) |
+| **Date of this note** | 11 Oct 2026 (third round: withdrawal pause reason cited; resolved pointer removed) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 4 |
 
@@ -83,7 +83,7 @@ New §3.9 "AI and OCR provider: the terms record" (summary paragraph). New requi
 >   - who entered it, who approved it, and when.
 >
 >   The record is published only if the processing region is in Canada **and the test call passed**. A record with any other region, or with a test call that failed or is missing, is refused with a clear reason (SA-11-32). The provider's keys are not part of the record; the engineer sets them at deploy like every service key (SA8-D1). Replacing the provider is a new record under the same rules. Until a published record exists, the AI switch of every firm stays locked (AG-11-93, AG-16-35).
-> - **SA-8-50** *(new)* The Integrations status page shows the AI provider as one line: working or not, processing region, the record's version and the last error. A red line alerts the Owner and engineer (SA-8-27). Withdrawing the published record stops new AI processing at once; waiting work follows SA-12-31.
+> - **SA-8-50** *(new)* The Integrations status page shows the AI provider as one line: working or not, processing region, the record's version and the last error. A red line alerts the Owner and engineer (SA-8-27). Withdrawing the published record stops new AI processing at once; every AI-prepared item already waiting is paused with the reason `PROVIDER_RECORD_WITHDRAWN` (CN-AG-11 item 6, AG-11-112 (e)).
 > - **SA-8-51** *(new — AIW-D52)* Expat Ready's own AI calls on **support tickets** run only under the published record, since AIW-D52 requires Canada-only processing for them.
 
 §7 gains: "**AI provider record** *(new)* — provider, contract reference, processing region, no-training and no-retention terms with source and date checked, test call (date, model, outcome — passed or failed, who ran it), version, status Draft / Published / Withdrawn, entered by, approved by, approved at. No keys."
@@ -100,12 +100,12 @@ New §3.9 "AI and OCR provider: the terms record" (summary paragraph). New requi
 - **AIW-D52** ("Only in Canada"): AI processing of client data "for firms' data and Expat Ready's own support tickets", with the provider "confirmed by one test call … if no capable option passes, the Lead returns to the founder".
 - **AIW-D69:** the team's tech lead runs the test call; "the result goes into the provider record the product requires before the AI switch unlocks (AG-16-35, AG-11-93)".
 - **The Step 3 shared rule on the provider record:** "it requires a *passed* test call … Whether the same record governs Expat Ready's own platform AI calls with no client data is the founder's open question (CN-FDL open point 3); until he answers, no file states it as a SHALL or credits it to AIW-D52" (`00-step3-plan.md`; re-check S3a-b R-2).
+- **The pause reason.** CN-AG-11 item 6 is the one home of the four pause reasons; one of them is "`PROVIDER_RECORD_WITHDRAWN` (Super Admin withdrew the AI provider record, SA-8-50)".
 - **Owner approval** follows SA8-D22 (L59): e-sign wording is "**approved and published by the Owner**".
 
 **(5) Knock-ons.**
 - SA-11 (CN-SA-11 changes 1 and 2).
-- SA-12-31 (CN-SA-12 change 1).
-- AG-11-93, AG-11-73 and AG-16-35 cite SA-8-49 (CN-AG-11 change 8, CN-AG-16). CN-AG-11 change 8 now holds the wider reach as a Proposal pending open point 3. Its pointer "SA-8-51 is labelled a proposal in CN-SA-08" is stale: SA-8-51 now covers support tickets only, under AIW-D52 (listed for the Lead).
+- AG-11-93, AG-11-73 and AG-16-35 cite SA-8-49; AG-11-112 holds the withdrawal pause (CN-AG-11 items 6 and 8, CN-AG-16).
 - AW-02 AW2-D5, AW2-BR-6 and the lines that say the record serves "both planes" follow the same rule (listed for the Lead).
 - SA-07 Appendix A rows (CN-SA-07 change 1).
 - SA-06 catalogue (CN-SA-06 change 4).

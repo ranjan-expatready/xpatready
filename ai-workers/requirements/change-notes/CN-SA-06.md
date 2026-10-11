@@ -4,9 +4,9 @@
 |---|---|
 | **Document changed** | SA-06 RBAC — Roles & Permissions, version 3.3, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-06-rbac_v3.3_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (second fix round, after re-check S3a-b) |
+| **Date of this note** | 11 Oct 2026 (third round: trust keys added) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
-| **Changes** | 6 |
+| **Changes** | 7 |
 
 **How to read this note.** Each numbered change has five parts:
 1. What it changes, by ID, section and line of the 11 Oct snapshot.
@@ -62,6 +62,7 @@ New requirement:
 >   - the sign-off keys (`agent/case:waive-deficiency`, `agent/case:form-approve`, `agent/case:review-approve`, `agent/retainer:countersign`, SA-6-26);
 >   - the retainer approve-for-send key (change 3);
 >   - `agent/pii:reveal` (change 2);
+>   - the trust keys `agent/trust:move` and `agent/trust:reconcile` (change 6);
 >   - every other key on the blocked list of AW-01 and AW-02: keys that approve, verify, sign, submit, record money, delete or export, and keys that change users, roles, settings, switches or delegations.
 >
 >   The server refuses a delegation that includes a key not marked lendable, with 403, nothing written and a security audit event (the SA-6-13 pattern).
@@ -80,6 +81,7 @@ Appendix C, after "first AI switch-on", add: "; **switching off the pause on cli
 - **IMP-23:** the blocked list is "enforced on the server like the floors … and never delegable".
 - **AIW-D55** adopted the hard limits and blocked list, provisional until counsel.
 - **AIW-D56:** "the Owner may switch it off with a recorded reason". AW-01 §0.2 names "the pause switch-off among the Owner-only role checks" as SA-06's half.
+- **AIW-D72:** "The Billing assistant never posts a trust entry, moves a designation or computes a balance; it reads and lists." Hence the trust keys in the never-lendable list.
 - **No Owner-only check for delegation set-up.** The earlier version also listed "setting up an AI assistant's delegation for another staff member" as an Owner-only check with no key. That line is **withdrawn**, because it duplicated what AW-01 already specifies: the firm side is AW-1-6 ("the Owner MAY set one up for any active staff member"), and the platform side has its own key (change 4).
 
 **(5) Knock-ons.**
@@ -183,14 +185,14 @@ L912:
 
 **(4) Why.**
 - **The Keys rule** (`00-step3-plan.md`, "Keys (S3c M-3)"): "retainer *generate* and *approve for send* are split …; document status acts including waive and not-applicable sit under AG-09's keys …; Binder request and add sit under `agent/case:document-manage`."
-- **The document-requests key** (`00-step3-plan.md`, re-check S3a-b R-5): "every document request, on the Binder or not, sits under `agent/case:document-manage` …; `agent/document:request` is not kept. CN-AG-09 aligns to CN-SA-06." This note was checked against that rule in the second fix round and matches it. The L856 wording now says "on the Binder or not" outright.
+- **The document-requests key** (`00-step3-plan.md`, re-check S3a-b R-5): "every document request, on the Binder or not, sits under `agent/case:document-manage` …; `agent/document:request` is not kept. CN-AG-09 aligns to CN-SA-06." This note matches that rule; the L856 wording says "on the Binder or not" outright.
 - **Proposals rows of 10 Oct:** Case assistant, fix round (two keys overlap on an upload verdict); Intake assistant, retainer draft, item (2).
 - **AIW-D54 item 6** ("no AI text in the retainer").
 - **Gaps:** `case-assistant.md` §9 G-29; `intake-assistant.md` §9 GI-19.
 
 **(5) Knock-ons.**
 - AG-05 (CN-AG-05).
-- AG-07 and AG-09 §10 (CN-AG-07, CN-AG-09). CN-AG-09 is to drop its "kept for documents not on a Binder" wording (listed for the Lead).
+- AG-07 and AG-09 §10 (CN-AG-07, CN-AG-09), which merge the request key the same way.
 - Appendix B gains rows; Appendix C counts are recounted.
 
 ---
@@ -245,13 +247,42 @@ L912:
 
 ---
 
-## 6. Document control
+## 6. Proposal: two firm keys for trust money, never lendable to an AI assistant
+
+**(1) What it changes.** §10b, the billing block (after L845, `agent/payment:record`); Appendix B gains two rows.
+
+**(2) Current words.** None: SA-06 v3.3 has no trust key. The nearest row is:
+
+L845:
+> | `agent/payment:record` | Record an offline payment / take money — today rides on `invoice:edit` | Y | Y | - | - | Y | - | NEW |
+
+**(3) Proposed words.** *Proposal.* Two rows in §10b, written in §10b's columns once their default holders are set:
+
+| Key | Meaning | Default holders | Lendable to an AI assistant | Code status |
+|---|---|---|---|---|
+| `agent/trust:move` *(new — CN-AG-06 item 6, AG-6-47)* | Record a move of a client's trust money to operating: reason code and a link to a delivered milestone or an issued invoice; audited. The platform does not move money (FD-12). | Follow the starter roles Expat Ready publishes (SA6-D12), as CN-AG-06 item 6 proposes; not set by this note | **Never** (SA-6-44) | NEW |
+| `agent/trust:reconcile` *(new — CN-AG-06 item 6, AG-6-48)* | Record the trust bank position and run the trust reconciliation report; export uses `agent/billing:export` | Follow the starter roles Expat Ready publishes (SA6-D12), as CN-AG-06 item 6 proposes; not set by this note | **Never** (SA-6-44) | NEW |
+
+**(4) Why.**
+- **CN-AG-06 item 6** (AG-6-47): the move "SHALL require a new key `agent/trust:move`, which SHALL never be marked lendable to an AI assistant (SA-6-44 as proposed in CN-SA-06, under which no key that records money is lendable)". AG-6-48: recording the bank position and running the report "SHALL require a new key `agent/trust:reconcile`". The holders: "§10 gains the two keys (`agent/trust:move`, `agent/trust:reconcile`; status **NEW**; default roles follow the starter roles Expat Ready publishes, SA6-D12)". Its knock-ons say the SA-06 catalogue is "not yet carried by CN-SA-06, raised to the Lead"; this change carries it.
+- **AIW-D72** ("Keep FD-17 in full"): Release 1 carries the trust ledger, the recorded move and the reconciliation report, and "The Billing assistant never posts a trust entry, moves a designation or computes a balance; it reads and lists."
+- **Never lendable:** a move records money, and reconciling records the bank position the report relies on; both are on the blocked list of change 1 (keys that record money).
+- **Proposal — not approved.** CN-AG-06 item 6 labels AG-6-46 to AG-6-48 Proposals; counsel reads the trust rules before any pilot on real client money (counsel pack question 9).
+
+**(5) Knock-ons.**
+- AG-06 §10 (CN-AG-06 item 6).
+- SA-6-44's never-lendable list names both keys (change 1).
+- The published starter roles (SA6-D12) set the default holders; the Billing assistant reminds whoever holds `agent/trust:reconcile` (CN-AG-06 item 6 knock-ons; AW-01).
+
+---
+
+## 7. Document control
 
 **(1) What it changes.** The document-control table (L5 onward).
 
 **(2) Current words.** The last row is v3.3 of 2026-10-10.
 
-**(3) Proposed words.** A version row: "| 3.4 | *(date placed)* | Workstream 2 change note CN-SA-06 applied: keys lendable to an AI assistant (SA-6-44, BR-27); the pause switch-off among the Owner-only checks; reveal keys held under FD-15; keys split by act, every document request under `agent/case:document-manage`; new platform keys (proposal); open question 13. | AIW-D33, AIW-D55, AIW-D56, AIW-D58; FD-15 |".
+**(3) Proposed words.** A version row: "| 3.4 | *(date placed)* | Workstream 2 change note CN-SA-06 applied: keys lendable to an AI assistant (SA-6-44, BR-27); the pause switch-off among the Owner-only checks; reveal keys held under FD-15; keys split by act, every document request under `agent/case:document-manage`; new platform keys (proposal); trust keys `agent/trust:move` and `agent/trust:reconcile`, never lendable (proposal); open question 13. | AIW-D33, AIW-D55, AIW-D56, AIW-D58, AIW-D72; FD-15, FD-17 |".
 
 **(4) Why.** Review S3a m-20(c).
 

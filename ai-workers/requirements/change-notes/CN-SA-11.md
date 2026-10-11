@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-11 Audit, Compliance & Data Governance, version 2.7, dated 2026-10-07 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-11-audit-compliance-and-data-governance_v2.7_2026-10-07.md` |
-| **Date of this note** | 11 Oct 2026 (second fix round, after re-check S3a-b) |
+| **Date of this note** | 11 Oct 2026 (third round: change 4 applies CN-AG-13's audit-field rule by pointer) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 8 |
 
@@ -128,7 +128,7 @@ The category list in SA-11-13 gains "**AI processing records**". A sentence is a
 
 ---
 
-## 4. Every audit entry says how the act was done, which delegation it ran under and what started it; platform runs are stamped with the firm they serve
+## 4. Platform audit entries follow AG-13-68's audit-field rule, with the platform's empty firm
 
 **(1) What it changes.** SA-11-2 (L348); BR-3 (L400); §7 `AuditLog` (L465).
 
@@ -143,32 +143,24 @@ L400:
 **(3) Proposed words.**
 
 SA-11-2 gains a second paragraph:
-> *(changed — AIW-D33, AIW-D54)* Each entry SHALL also record **how the action was taken** (`mode` ∈ {PERSON, DELEGATED, AUTOMATION}).
-> - A **DELEGATED** entry SHALL carry the **delegation record** it ran under (`delegationId`), the run (`personaRunId`) and **what started the run** (`startedBy`, one of the five values of AG-11-113). Its `actor` and `actorType` SHALL be the named person the AI assistant works for (`firm_staff` or `super_admin`), never `system`; no new actor type is added.
-> - A **PERSON** entry that decides an item an AI assistant prepared SHALL also carry that item's `delegationId`. Examples: confirming the Support and account assistant's note under SA-4-89, or committing AI-drafted pack lines.
-> - An entry written by a platform-plane AI assistant run SHALL carry as `tenantId` the one firm that run serves, or null when it serves no firm. A run that serves one firm SHALL NOT read another firm's data; any operation spanning firms remains subject to SA-11-12.
+> *(changed — AIW-D33, AIW-D54)* Each entry SHALL also carry the audit fields of **AG-13-68** (`mode`, `delegationId`, `startedBy`, `personaRunId`), under that requirement's rule, which applies to this platform audit chain (CN-AG-13 change 2). On this chain:
+> - the `actorType` of an entry an AI assistant made for a named person is that person's own (`firm_staff` or `super_admin`), never `system`; no actor type is added;
+> - an entry written by a platform-plane AI assistant run SHALL carry as `tenantId` the one firm that run serves, or null (the empty firm) when it serves no firm (CN-AG-11 item 11). A run that serves one firm SHALL NOT read another firm's data; any operation spanning firms remains subject to SA-11-12.
 
-BR-3 gains: "Actions an AI assistant took for a named person carry that person as actor, with `mode` DELEGATED, the `delegationId`, `personaRunId` and `startedBy` (SA-11-2); never `system`, never a separate AI actor."
+BR-3 gains: "An entry an AI assistant made for a named person names that person as actor, never `system` (SA-11-2; AG-13-68)."
 
-§7 `AuditLog` adds:
-- `mode` (enum: PERSON/DELEGATED/AUTOMATION);
-- `delegationId` (nullable; required when DELEGATED or when a PERSON decides an AI-prepared item);
-- `personaRunId` (nullable; required when DELEGATED);
-- `startedBy` (nullable; the values of AG-11-113: DELEGATING_PERSON, OTHER_PERSON, SCHEDULE, PRODUCT_ALERT, WATCHER_ITEM; required when DELEGATED).
+§7 `AuditLog` adds "the fields of AG-13-68 (CN-AG-13 change 2)".
 
 **(4) Why.**
-- **FD-16** (Founder Decisions Log v1.5, L52): "AI is NOT a first-class actor — no AI principal in the identity spine, no autonomous permissions, no new plane."
-- **AIW-D13 and AIW-D33.** IMP-1 defines the two facts (developers: "`mode = PERSON | DELEGATED | AUTOMATION`, `delegationId`") and states "The actor on the entry stays the named person (the existing "firm staff" kind); no new kind of actor is added, so FD-16 holds."
-- **The Step 3 shared rules** (`00-step3-plan.md`):
-  - "Actor rule".
-  - "Started by, one list": "`startedBy` takes exactly five values: DELEGATING_PERSON, OTHER_PERSON, SCHEDULE, PRODUCT_ALERT, WATCHER_ITEM. CN-AG-11 (AG-11-113) is its one home; CN-SA-11 and AW-01 / AW-02 cite it. It is on the run record and on every audit entry in mode DELEGATED. The run reference is `personaRunId`."
-- **The decider's `delegationId` on a PERSON entry** follows CN-AG-13 change 2 (AG-13-68), so both planes share one field rule (re-check S3a-b m-6).
-- **The platform tenant rule** is AIW-D54 item 8.
+- **One home.** The Lead's call of 11 Oct, `00-step3-plan.md`, "Audit fields, one home": "the rule for `mode`, `delegationId`, `startedBy` on audit entries lives in CN-AG-13 change 2; CN-SA-11 change 4 applies it to the platform audit chain by pointer, with the platform's empty firm (as the one AI log shape)". AG-13-68 itself ends: "The same rule SHALL apply to Expat Ready's platform audit chain, where a platform run that serves no firm has an empty firm (AG-11 §7 as proposed in CN-AG-11 item 11; SA-11 by pointer)." This change is that pointer; it restates none of the rule.
+- **FD-16** (Founder Decisions Log v1.5, L52): "AI is NOT a first-class actor — no AI principal in the identity spine, no autonomous permissions, no new plane." SA-11's own `actorType` list is the only SA-11-specific part, so it is stated here.
+- **AIW-D33** (the delegation record is consistent with FD-16) and **AIW-D54 item 8** (platform runs are stamped with one firm, with no cross-firm sweep in version 1).
+- The `startedBy` values are AG-11-113's (CN-AG-11 item 7; `00-step3-plan.md`, "Started by, one list").
 
 **(5) Knock-ons.**
-- CN-AG-11 change 7 (AG-11-113) is the one home of the `startedBy` values; this note names them only to type the field.
-- AG-13 (CN-AG-13 change 2). Whether SA-11's `AuditLog` and AG-13's `AuditLog` are one table or two, so that the field rule has one home, is for the Lead (listed).
-- AW-01 and AW-02.
+- AG-13-68 (CN-AG-13 change 2), the one home of the rule; AG-11-113 (CN-AG-11 item 7), the one home of the `startedBy` values; CN-AG-11 item 11, the platform's empty firm.
+- Whether SA-11's and AG-13's audit logs are one table or two stays for the Lead and the team (CN-AG-13 change 2 knock-ons).
+- AW-01 and AW-02 cite AG-13-68.
 - SA-07 Activity (CN-SA-07 change 3).
 - Counsel (AIW-D33, D64).
 
@@ -296,7 +288,7 @@ Both events are delivered once per change to firm modules, including the firm's 
 
 **(2) Current words.** The last row is v2.7 of 2026-10-07.
 
-**(3) Proposed words.** A version row: "| 2.8 | *(date placed)* | Workstream 2 change note CN-SA-11 applied: AI processing only in Canada (SA-11-32); AI provider named in the data-location statement; AI processing records retention category (interim values per AG-11-98, others Unknown); `mode`, `delegationId`, `personaRunId`, `startedBy` on audit entries; Restricted fields under FD-15; FD-20 review request type and portability (counsel); request and consent events; open question 11. | AIW-D33, AIW-D52, AIW-D54, AIW-D58; FD-15, FD-20 |".
+**(3) Proposed words.** A version row: "| 2.8 | *(date placed)* | Workstream 2 change note CN-SA-11 applied: AI processing only in Canada (SA-11-32); AI provider named in the data-location statement; AI processing records retention category (interim values per AG-11-98, others Unknown); the audit fields of AG-13-68 on the platform audit chain, with the platform's empty firm; Restricted fields under FD-15; FD-20 review request type and portability (counsel); request and consent events; open question 11. | AIW-D33, AIW-D52, AIW-D54, AIW-D58; FD-15, FD-20 |".
 
 **(4) Why.** Review S3a m-20(c).
 
