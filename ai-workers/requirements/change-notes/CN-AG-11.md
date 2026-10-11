@@ -4,7 +4,7 @@
 |---|---|
 | Module changed | AG-11 Automation — Conductor & Doers |
 | Version and file | v1.12 of 10 Oct 2026, `02-functional-requirements/agent/AG-11-automation_v1.12_2026-10-10.md` (Drive snapshot of 11 Oct 2026, `sources/drive-snapshot-2026-10-11/`; line numbers below are that file's) |
-| Date of this note | 11 Oct 2026 (fourth fix round, after re-check S3c-d) |
+| Date of this note | 11 Oct 2026 (fifth fix round, after convergence check S3c-e) |
 | Status | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | Next free numbers used | AG-11-109 to AG-11-115 (the module's highest is AG-11-108, L725; a search of the whole file finds no AG-11-109 or above); BR-42 (highest BR-41, L771) |
 | One home | This note is the **one home of the engine's data model** for the AI assistants: actions, events, run targets, `ApprovalItem` kinds and fields, the **four pause reasons** (`stopMarker`), `AiRunLog`, `AutomationRun`, `AutomationActionResult`, `AutomationRecipe`, `AutomationDefinition`, the *started by* list and the double-run key (`00-step3-plan.md`, "One home per rule"; "One word, *paused*"; "Started by, one list"). The assistants' behaviour lives in AW-01 (firm) and AW-02 (platform), which cite these IDs; where the two differ, this note wins and AW is corrected. |
@@ -178,11 +178,17 @@
 
 ## 8. AI unlocks only on a published provider record in Canada with a passed test call, everywhere the module says so
 
-1. **Where.** AG-11-93 (L702), and every other line that unlocks AI on a "recorded" provider: AG11-D13 (L43); AG11-D15 (L45); AG-11-73 (L661); BR-24 (L754); BR-34's fourth floor (L764); BR-37 (L767); §6 AI switch lifecycle (L840); acceptance criteria (L1021, L1022); §9 edge case (L1117); §10 `agent/automation:configure-ai` (L1150); §13 phasing (L1304). (Contradiction sweep: a search of AG-11 v1.12 for "recorded", "records the provider" and "terms recorded" found these lines; L1303 is about the WhatsApp provider of SA-08, not the AI provider, and stays.)
+1. **Where.** AG-11-93 (L702), and every other line that unlocks AI on a "recorded" provider: AG11-D4 row (L34); AG11-D13 (L43); AG11-D15 (L45); §3.0 (L252); §3.10 (L469); AG-11-73 (L661); BR-24 (L754); BR-34's fourth floor (L764); BR-37 (L767); §6 AI switch lifecycle (L840); §7 `aiEnabled` (L881); acceptance criteria (L1021, L1022); §9 edge case (L1117); §10 `agent/automation:configure-ai` (L1150); §11 (L1181); §13 phasing (L1304). (Contradiction sweep: a search of AG-11 v1.12 for "recorded", "records the", "processing-terms record" and "terms recorded" found these lines; L1303 and L1305 are about the WhatsApp provider of SA-08, not the AI provider, and stay.)
 2. **Current words.**
    > L702: "AI Doers SHALL be **off for every firm**, with the switch locked, until the Super Admin has recorded the provider, the processing region (Canada only, AG11-D15) and a no-training/no-retention agreement (SA-08 / SA-11); AI and OCR processing of client data SHALL happen only in Canada."
    >
+   > L34: "AI stays off until they are recorded (AG11-D13)"
+   >
    > L43: "AI Doers are **off for every firm** until the Super Admin records the provider, the processing region (Canada only, AG11-D15) and a no-training/no-retention agreement (SA-08 / SA-11)."
+   >
+   > L252: "AI is **off for every firm until the Super Admin records the processing terms**"
+   >
+   > L469: "**AI off until the terms are recorded; manual always possible**"
    >
    > L661: "AI processing SHALL wait until they are recorded (AG-11-93)."
    >
@@ -193,21 +199,30 @@
    > L767: "AI Doers stay off, locked, until the Super Admin records provider, region (Canada only, AG11-D15) and a no-training/no-retention agreement"
    >
    > L840: "`LOCKED_OFF` (every firm, until the Super Admin records provider, region (Canada only, AG11-D15) and the no-training/no-retention agreement) → `OFF` (terms recorded)"
+   >
+   > L881: "locked off until the Super Admin's processing-terms record (provider, region (Canada only, AG11-D15), no-training/no-retention agreement) exists"
+   >
+   > L1181: "only after the processing terms are recorded"
 3. **Proposed words.** AG-11-93: "AI Doers SHALL be **off for every firm**, with the switch locked, until a **published** AI provider record exists (SA-8-49, CN-SA-08: entered, approved by a second person and published, which it can be only with a processing region in Canada (AG11-D15), the no-training and no-retention terms, and a **passed** test call made from that region); AI and OCR processing of client data SHALL happen only in Canada. A record that is entered but not published SHALL NOT unlock the switch. If no provider passes, AI stays locked off. No requirement in this module names a provider; the provider is replaceable by publishing a new provider record."
 
    New words for every other line the sweep found ("records" or "recorded" for the AI provider terms becomes "publishes" or "published", with nothing else changed in the line):
+   - **AG11-D4 row (L34):** "… AI stays off until a published AI provider record exists (AG11-D13; SA-8-49)".
    - **AG11-D13 (L43):** title "**AI Doers off until a published provider record exists; injection safeguards.**"; text "AI Doers are **off for every firm** until a published AI provider record exists (SA-8-49: provider, processing region in Canada only, AG11-D15, no-training and no-retention terms, a passed test call)."
    - **AG11-D15 (L45):** "… AI stays off for every firm until a published AI provider record exists (AG11-D13; SA-8-49)."
+   - **§3.0 (L252):** "AI is **off for every firm until a published AI provider record exists** (SA-8-49) …".
+   - **§3.10 (L469):** heading "**AI off until a published provider record exists; manual always possible**", and "until the Super Admin records the provider …" in the same paragraph reads "until a published AI provider record exists (SA-8-49) …".
    - **AG-11-73 (L661):** "… AI processing SHALL wait until a published AI provider record exists (AG-11-93; SA-8-49)." It also gains: "The same record SHALL govern Expat Ready's own AI processing of support tickets (AIW-D52; SA-8-51 as proposed in CN-SA-08; AW-02)." **Not stated as a requirement:** whether the record also governs Expat Ready's own platform AI calls that hold no client data is the founder's open question (CN-FDL open point 3); one record for both is a Proposal only.
    - **BR-24 (L754):** "AI Doers are off until a published AI provider record exists and the Owner switches them on (BR-37) …".
    - **BR-34 (L764), fourth floor:** "AI processing only after a published AI provider record exists (BR-37; SA-8-49)". The wording of the floor changes; BR-34 still has exactly four floors.
    - **BR-37 (L767):** "AI Doers stay off, locked, until a published AI provider record exists (SA-8-49: provider, region in Canada only, AG11-D15, no-training and no-retention terms, a passed test call); …".
    - **§6 AI switch lifecycle (L840):** "`LOCKED_OFF` (every firm, until a published AI provider record exists, SA-8-49) → `OFF` (record published) → `ON` (the Owner switches it on once, with an audited acknowledgement; one switch for all four Doers) ⇄ `OFF` (switched off, audited). Withdrawing the published record pauses AI work (`PROVIDER_RECORD_WITHDRAWN`, AG-11-112)."
+   - **§7 `aiEnabled` (L881):** "… locked off until a published AI provider record exists (SA-8-49: provider, region in Canada only, AG11-D15, no-training and no-retention terms, a passed test call) …".
    - **L1021:** "**Given** no published AI provider record exists, **When** the Owner opens settings, **Then** the AI switch is off and locked, …". **L1022:** "**Given** a published AI provider record exists, **When** the Owner switches AI on, …".
    - **§9 (L1117):** "**AI Doers before a provider record is published** → switch locked off; manual path …".
    - **§10 (L1150):** "… Switching AI **on** is the Owner's alone, once a published AI provider record exists, …".
+   - **§11 (L1181):** "… only after a published AI provider record exists (SA-8-49) …".
    - **§13 phasing (L1304):** "… they ship built but switched off until SA-08 / SA-11 publish an AI provider record (SA-8-49) …".
-4. **Why.** AIW-D52 (the founder: "Only in Canada"; "confirmed by one test call"; the wording covers "firms' data and Expat Ready's own support tickets"); AIW-D69 (the test call and "the provider record the product requires before the AI switch unlocks (AG-16-35, AG-11-93)"); AIW-D27; IMP-6, IMP-7; `00-step3-plan.md` "The provider is replaceable", "The provider record" (a *passed* test call; the wider reach is the founder's open question and is never a SHALL until he answers) and "Contradiction sweep"; review S3c-b N-8; review S3c-c k-7 (recorded against published); review S3c-d M-3 (the lifecycle, floors and decision rows still said "recorded").
+4. **Why.** AIW-D52 (the founder: "Only in Canada"; "confirmed by one test call"; the wording covers "firms' data and Expat Ready's own support tickets"); AIW-D69 (the test call and "the provider record the product requires before the AI switch unlocks (AG-16-35, AG-11-93)"); AIW-D27; IMP-6, IMP-7; `00-step3-plan.md` "The provider is replaceable", "The provider record" (a *passed* test call; the wider reach is the founder's open question and is never a SHALL until he answers) and "Contradiction sweep"; review S3c-b N-8; review S3c-c k-7 (recorded against published); review S3c-d M-3 (the lifecycle, floors and decision rows still said "recorded"); review S3c-e m-1 (L34, L252, L469, L881 and L1181 had been missed; L1305 is WhatsApp).
 5. **Knock-ons.** AG-16-35 and its own sweep (CN-AG-16 change 1); SA-08 SA-8-49 to SA-8-51 and SA-11 §3.6 (Super Admin half); AW-02 for the platform's own calls.
 
 ## 9. AI assistant recipes are seed rows; the double-run key; the engine's assistant rules
