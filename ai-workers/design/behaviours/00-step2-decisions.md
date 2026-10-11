@@ -1,5 +1,7 @@
 # Step 2: what the seven behaviour documents ask of the founder
 
+**Decided 11 Oct 2026.** The founder answered every item one by one (`../../decisions.md` AIW-D36 to D65). He took the Lead's recommendation on all but one: the Firm assistant keeps both delegations, Owner and Case Manager (AIW-D38). Section 2 maps to D36–D53, section 3 to D54, section 4 to D55–D59 (provisional until counsel, D64), section 5 to D62.
+
 *Written by the Lead, 11 Oct 2026, after all seven behaviour documents passed hostile review. This file holds no new requirement: every item points to the section 11 of a behaviour document where the evidence and the full recommendation sit. 98 decision entries across the seven documents are merged here into one list without duplicates (17 decisions before Step 3; the seventeenth, FD-5, came from the Case assistant's integration round). Plain words; no person is named (README rule 10).*
 
 ## 1. What Step 2 found, in five lines
