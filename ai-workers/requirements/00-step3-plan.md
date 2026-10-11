@@ -69,3 +69,4 @@
 - **Audit fields, one home (the Lead, 11 Oct):** the rule for `mode`, `delegationId`, `startedBy` on audit entries lives in CN-AG-13 change 2; CN-SA-11 change 4 applies it to the platform audit chain by pointer, with the platform's empty firm (as the one AI log shape).
 - **Spend caps never pause waiting items (the Lead, 11 Oct):** reaching a cap stops new model calls only, then the manual path; items already waiting in Needs you are unaffected (a cost control, not a safety stop). CN-AG-11 item 6 carries it; AW-1-20 aligns.
 - **SA-05 template mark (the Lead, 11 Oct):** a CN-SA-05 note is written so Expat Ready presets the status or eligibility mark on the templates it seeds and publishes the case letter type (CN-AG-12 items 1 and 2).
+- **W-12d with no holder (the Lead, 11 Oct):** when no one in the firm holds `agent/trust:reconcile`, the monthly reminder goes to the delegating Billing user and says that no holder exists (AW-01 §9, Proposal).
