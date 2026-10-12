@@ -2,38 +2,67 @@
 
 *Replace, don't append. Plan, gates and status: `PROGRESS.md`. Decisions: `decisions.md`. Story, ratings, audits: `REPORT-CARD.md`.*
 
-## State, 11 Oct 2026 (Step 3 done; founder decided its batch)
-- **Step 3 (build specification) is done.** All items passed: AW-01 v0.6, AW-02 v0.7, 33 change notes, 436 test cases (`requirements/tests/AW-test-cases.csv`), the prototype (`prototype/index.html`), the counsel pack (17 questions). Report: `requirements/step3-report.md`.
-- **The founder decided the Step 3 batch** (AIW-D73 to D80, all on the Lead's recommendation). Applied and verified (CN-FDL changes 10 to 14, AW-02 v0.8, Pack document, tests 435 Not run and 1 Withdrawn of 436, report §6).
-- **Lessons this step** (memory `ws2-step3-scope-lesson`): stay inside AI; decisions.md is append-only; no whole-file rewrites of large files; sweep the Lead's own edits for contradictions; never edit a file twice with a pattern that may match two rows.
-- Sources: `sources/drive-snapshot-2026-10-11/` (CURRENT). Check Drive at the start of the next step.
+## State, 12 Oct 2026 (Step R; improvement pass in progress)
+- **The founder's direction (12 Oct):**
+  - deliver the full agreed scope in this release;
+  - simplest complete design;
+  - design against a Workstream 1 that is complete and tested (assumed, AIW-D98);
+  - proportionate safeguards through the existing product;
+  - no counsel and no consultant conversations (AIW-D94).
 
-## 12 Oct session (in progress)
-- Started: review R1-b of the handbook (`checks/review-R1-b-2026-10-12.md`) and the founder's new ask, research on AI accuracy and determinism (`research/ai-accuracy-and-determinism-2026-10.md`; gaps only, builds on `research/ai-architecture-deterministic-2026-10.md`). Each goes to an adversarial check before the founder sees it. If either file is missing, re-run it.
-- Founder question 1 of 2 (moat wording as the combination) asked 12 Oct; answer pending.
-- Review R1-b done: PASS WITH FIXES (`checks/review-R1-b-2026-10-12.md` §8: N-M1, N-M2, N-M3, n-2, n-3, n-6, n-7, n-11; plus Register B AG-13 BR-22 fix and brief-coverage Step R rows, §7). **Held on purpose** until the rules-and-AI framework lands, because the framework may reshape skills 21 and 22 (N-M3) and settles the moat wording (N-M1). Then the Lead applies the fixes and checks the changed lines only.
-- Review R2 of the accuracy research: FAIL (1 blocking, 7 major, 22 minor; `checks/review-R2-2026-10-12.md`). Maker fix round running; then re-check. Lead to settle R2's open questions in the framework document: (1) rule that no colour, score or signal removes a person's approval; (2) README §1 "same input gives the same result" is not true for a fresh AI call, put to the founder; (3) two conflicts inside `research/ai-architecture-deterministic-2026-10.md` (§5.3 item 1 against AW-1-119; §8.3 item 5 against AIW-D74), fix by appended correction note; (4) add Step R and 12 Oct asks to `brief-coverage.md`.
-- Founder's second ask, 12 Oct: one framework strategy that classifies every capability as rules only / AI using rule tools / AI language / person only, and how to sell it ("rules under the flavour of AI"). Makers started: `design/rules-ai-classification-2026-10-12.md` and `research/rules-and-ai-positioning-2026-10.md`. When all three makers land: adversarial check, then the Lead writes one framework document (`design/rules-and-ai-framework-2026-10-12.md`) and puts the decision to the founder. Lead's position already given: do not call rule results "AI"; call them "rules-verified" with an AI teammate that runs and explains them (AI-washing risk: Competition Act, FTC DoNotPay order).
+  Rules in README §0 rule 12.
+- **Decided today:** AIW-D92 to D105, plus the AIW-D98 note (closes F4). Summary in `design/rules-and-ai-framework-2026-10-12.md` v2.
+- **Files of the pass:**
+  - instruction audit `checks/audit-instructions-2026-10-12.md` (applied: 88 edits);
+  - classification aligned to D92–D105;
+  - autonomy model revision 5;
+  - journeys `design/journey-walkthroughs-2026-10-12.md` (paper only; 19 gaps; Lead rulings in `proposals.md` 12 Oct);
+  - value map `commercial/ai-value-map-2026-10-12.md`;
+  - framework v2;
+  - accuracy research and positioning research (both passed checks).
+- **Handbook:** the R1-b fixes are released and largely applied through the audit (D97 moat wording closes N-M1). Remaining R1-b items are checked in review R7.
+- **Running or pending:**
+  - Build specification update: AW-01 v0.7, AW-02 v0.9, change notes, tests.
+  - Prototype update to the decisions.
+  - Focused reviews R7 (framework, classification, autonomy, instruction edits) and R8 (value map, journeys).
+  - If any of these files is missing or unchanged next session, re-run it.
+- **Then:**
+  - apply the review fixes;
+  - add appended correction notes to the moat file §3.1 (stale "no assessment output") and the architecture file §5.3 item 1 (synthetic tests, AW-1-119) and §8.3 item 5 (Canada for all AI, AIW-D74);
+  - update `REPORT-CARD.md` from evidence (consistency may rise; accuracy and market fit may not without results);
+  - give the founder the short report;
+  - resume the interview.
 
-## Founder decisions, 12 Oct (interview one question at a time; memory `interview-one-question`)
-- Decided today: AIW-D92 (four classes) to AIW-D105 (template sends). See `decisions.md`.
-- **Next question to ask:** autonomy D9, make the AIW-D57 anti-rubber-stamp safeguards final (dismissed once on 12 Oct; ask again). Then none left from the framework or the autonomy model.
-- **Then the Lead's work:** (1) autonomy model revision 4 needs a short re-check of the D103 rows, the D104/D105 build-in and the 22/23 fallback; (2) classification: R4-c fixes 1 to 5 plus D92 to D105; (3) framework: review R5 fixes plus D92 to D105, then re-check, then give it to the founder; (4) handbook: held R1-b fixes plus the new decisions; (5) proposals.md: Q1 to Q7, PR1 to PR8, R2, R7, R12; (6) correction notes on the moat file §3.1 and architecture file §5.3 item 1 and §8.3 item 5; (7) list for the team: AG-11-94, AG-11-60, SA1B-D18, AW-1-88, AG-6-46/47 trust keys.
+## Interview (one question at a time, recommendation and one-line why; memory `interview-one-question`)
+Open founder questions, in this order (framework v2 §9):
+1. **AIW-D102 against the full-release direction.** Bring the conversational AI (admin intake, FAQs, booking) into Release 1?
+   - **Option A**, no floor lowered: the AI only sorts the question into an approved topic, a rule picks the approved answer, the Scheduler books, anything else goes to a person. Amends D102, AIW-D11 and AW-1-46.
+   - **Option B**: live AI-written replies. Needs the team's AI-text floor lowered (AG11-D1, AG-11-53) and FD-16 amended.
+   - **Or** keep "later" as an explicit choice.
+2. **AIW-D57 safeguards:** make them final (counsel dropped). Asked once and dismissed.
+3. **README §1 wording:** "Same facts, same rules, same answer; AI answers are stored and replayed."
+4. **Support AI reading across firms:** bring into Release 1, or record as a named exclusion (audit H-14).
 
-## Lead's improvements adopted 12 Oct (coach review of the founder's effort)
-- Research is frozen after the framework: no new research files until the blueprint and the prototype exist, unless the founder asks.
-- Founder's critical path, in order: engage counsel by 31 Oct (AIW-D68); run the ten consultant conversations; get the Canada pack written and tested (the moat is not real until it exists); provider test (AIW-D69).
+## For the team (we never write to Drive; the founder passes these on)
+Framework v2 §8: AG-11-94 tools; AG-11-60 upload values in the bundle; SA1B-D18 untested packs; AW-1-88 knock-ons; AG-6-46/47 trust keys; G-6 permission change mid-job; G-13 stale assessment; G2 approval opened-times; grid storage and screens.
 
-## Step R in progress (11 Oct)
-- Founder's interview so far: AIW-D81 to D87 (see `rethink-plan.md`). Evidence filed: `research/ai-in-regulated-work-2026-10.md`, `research/ai-coverage-vs-competitors-2026-10.md`, `design/ai-carve-out-register-2026-10-11.md`.
-- Handbook part 1 fixed after R1 (`handbook/ai-team-profiles.md`: six teammates, 23 skills, three kinds kept apart, front page). **First job next session: re-check it (review R1-b)**, then move the requirement-ID lists to the appendix if the founder wants it under 6,000 words. The moat research is done (`research/ai-moat-and-positioning-2026-10.md`). **Put two questions to the founder, one at a time:** (1) restate "hard to copy" as the combination (dated two-person-reviewed packs, accuracy measured per skill, the per-file record, the system of record), not "the rules", since IRCC rules are public; (2) ask the team to revisit SA1B-D18 so pack rules are tested before publishing, because the AI's checks rely on them (the team's subject: state the conflict, no change note).
-- Done: architecture research `research/ai-architecture-deterministic-2026-10.md` (platform as the guardrail; skill structure, naming, scalability, maintainability; tracing; evaluation; tokens; access; models in Canada). Landed; names decided (AIW-D89: AI teammate / skill / step). Provider file and test script corrected: only Gemini 3.5 Flash has a Canada promise today.
-- **Way forward chosen: AIW-D88, option E.** Order: names (done, D89) → AI profiles → AI Team Handbook and coded prototype in parallel → three consultant conversations → appendix trim and archive → hand to the team.
-- Then build the Step R deliverables (AIW-D86): one blueprint (product map, PRD, AI team and skills with reuse map, journeys and use cases with edge cases, stories linked to tests, technical design, evaluation and driving tests, traceability to team IDs or NEW) and a working coded prototype, both buildable and agnostic of build status (AIW-D87). Consolidate: the blueprint becomes the one source; superseded design files move to `archive/` with pointers.
+## Founder actions still standing (no question pending)
+- Paste the Charter edits (`charter-edits.md`).
+- Place the FD-4 (D48, D75), FD-7 (D73), FD-8 and FD-16 (narrowed by D92) amendments on Drive.
+- Tell the co-founder about AIW-D66.
+- Give the provider test script to the tech lead (AIW-D69).
+- Name one licensed reviewer for the test sets (AIW-D83).
+- Ask the team to upload CP-01.
+- Pass the team list above to the team.
+- Superseded by AIW-D94: engage counsel; run the consultant conversations.
 
-## Next
-0. **Step R first (founder's ask, 11 Oct):** read `rethink-plan.md`. Evidence tasks were started on 11 Oct (three files under `research/` and `design/ai-carve-out-register-2026-10-11.md`); if they are missing, re-run them. Then decide the version 1 scope with the founder, consolidate to one source, and build the blueprint.
-1. Done 11 Oct: batch applied, report card refreshed. Start the next session with the Drive freshness check.
-2. Give the founder the Step 3 summary and the standing actions.
-3. **Step 4 (build and pilot)** cannot start on real client files until: counsel has read the counsel pack (engage by 31 Oct, AIW-D68); a Canada provider has passed the test (AIW-D69); the immigration specialist has reviewed pack content; the evaluation sets pass. Meanwhile: hand AW-01, AW-02, the change notes and the tests to the team (the founder does this; we never write to Drive); Step 5 conversations (AIW-D63).
-4. **Founder actions (no question pending):** paste the Charter edits; place the FD-4 (D48, D75), FD-7 (D73) and FD-8 amendments on Drive; tell the co-founder about AIW-D66; engage counsel by 31 Oct; give the provider test script to the tech lead; run the first three consultant conversations; name one licensed reviewer; contract the immigration specialist; ask the team to upload CP-01.
+## Standing
+- Sources: `../sources/drive-snapshot-2026-10-11/` (CURRENT). Check Drive at the start of the next step.
+- Lessons:
+  - stay inside AI;
+  - decisions.md is append-only;
+  - targeted edits, never whole-file rewrites of large files;
+  - makers without an Edit tool must not be given large-file edits;
+  - one Lead writes shared files.
+- Research is frozen until the blueprint and the coded prototype exist (Lead's working rule, `proposals.md`).
+- After Step R: the blueprint and coded prototype (AIW-D86, D88), built on framework v2.
