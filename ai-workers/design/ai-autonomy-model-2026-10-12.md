@@ -4,7 +4,7 @@
 
 **The founder's words** (`founder-brief.md`, "12 Oct 2026 (autonomy answer, same session)", quoted exactly, with omissions marked): "I like the idea of on autonomy, but why every action, right? Wherever we can basically um, ask only approvals at the critical points, right, which makes sense. Otherwise, let, let them do end-to-end job and approve it at the end. ... But not blind autonomy that he's doing what he's doing, nobody knowing. So human approval is required, but minimal human approval or maybe there are various without over-engineering, if you can keep toggle what kind of permissions are required. I don't know. If you want to go the giving the permissions, if it is easy, let's do it. That who can do what and what not, but I want the maximum level of autonomy possible. Also, not blind autonomy where humans are completely removed from the loop." Recorded as AIW-D95.
 
-**Builds on (cited, not restated):** FD-16 (`sources/drive-snapshot-2026-10-11/01-techno-functional/07-Founder-Decisions-Log.md` line 52); in AG-11 v1.12 (`sources/drive-snapshot-2026-10-11/02-functional-requirements/agent/AG-11-automation_v1.12_2026-10-10.md`): AG11-D1, AG11-D2, AG11-D8, AG11-D9, AG11-D10, AG11-D11, AG11-D12, AG-11-51 to AG-11-63, AG-11-66, AG-11-94, AG-11-97, AG-11-100, AG-11-108, AG-11-89, §3.3, §3.13; AG-01 v1.18 (six starter roles); in `ai-workers/decisions.md`: AIW-D13, D41, D55, D57, D71, D78, D80, D83, D85, D92 to D101; in `requirements/AW-01-firm-ai-assistants_v0.1.md`: AW-1-5, AW-1-8, AW-1-11, AW-1-12, AW-1-15, AW-1-19, AW-1-30, AW-1-31, AW-1-33, AW-1-36, AW-1-37 to AW-1-51, AW-1-53, AW-1-56, AW-1-69 to AW-1-72, AW-1-76, AW-1-78, AW-1-119, AW-1-120, AW-1-125, AW1-D5, AW1-D23, AW1-D25, AW1-BR-20; `research/ai-architecture-deterministic-2026-10.md` §4.5, §7.4; `handbook/ai-team-profiles.md` §1, §2, §3.1; `design/rules-ai-classification-2026-10-12.md` §1.
+**Builds on (cited, not restated):** FD-16 and FD-19 (`sources/drive-snapshot-2026-10-11/01-techno-functional/07-Founder-Decisions-Log.md` v1.5, lines 52 and 55); in AG-11 v1.12 (`sources/drive-snapshot-2026-10-11/02-functional-requirements/agent/AG-11-automation_v1.12_2026-10-10.md`): AG11-D1, AG11-D2, AG11-D8, AG11-D9, AG11-D10, AG11-D11, AG11-D12, AG-11-51 to AG-11-63, AG-11-66, AG-11-94, AG-11-97, AG-11-100, AG-11-108, AG-11-89, §3.3, §3.13; AG-01 v1.18 (six starter roles); in `ai-workers/decisions.md`: AIW-D13, D41, D44, D55, D57, D71, D72, D77, D78, D80, D83, D85, D92 to D103; in `requirements/AW-01-firm-ai-assistants_v0.1.md`: AW-1-5, AW-1-8, AW-1-11, AW-1-12, AW-1-15, AW-1-19, AW-1-30, AW-1-31, AW-1-33, AW-1-36, AW-1-37 to AW-1-51, AW-1-53, AW-1-56, AW-1-69 to AW-1-72, AW-1-76, AW-1-78, AW-1-119, AW-1-120, AW-1-125, AW1-D5, AW1-D23, AW1-D25, AW1-BR-20; `research/ai-architecture-deterministic-2026-10.md` §4.5, §7.4; `handbook/ai-team-profiles.md` §1, §2, §3.1; `design/rules-ai-classification-2026-10-12.md` §1.
 
 **Labels.** [V] verified in a primary source that we or the checker opened; [S] a secondary source, or a primary nobody opened; [VC] the vendor's own claim; [I] our inference or estimate. **Proposal** = new design, not yet decided. **Team need** = something only the team's product can supply; we state the need and do not design it (the 11 Oct scope lesson).
 
@@ -17,13 +17,13 @@
 3. Some stops can never move to the end. **Anything linked to a government deadline is always "ask now"**, in every setting. So is anything another step needs verified first, such as a rejected upload the client must re-send.
 4. Your AIW-D100 is built in: values the product reads from uploads wait for the bundle sitting, stay provisional until approved, sit beside their source passage, and identity details, consequential values and conflicts each need an explicit check (a spot check never counts as checking every value).
 5. Your "maximum autonomy" meets the team's rule "Lowering an AI-text floor is impossible" (AG11-D1). Every AI-written client message, every form and every value read from a document still needs a person. This model keeps those floors.
-6. Money, deletion, export, settings and signing are blocked for the AI by **our own provisional limits**, not by law or the team. With counsel dropped (AIW-D94), you decide whether they stay (decision D8). I recommend they stay.
+6. As you decided (AIW-D103), our blanket bans are replaced by action-specific controls: the AI may **prepare** invoices, proposed trust entries, exports, deletion requests, settings changes and signature workflows through the product; the rules engine calculates; an authorised person approves each one before it runs, bound to the exact preview; signatures stay with the signer.
 7. The toggle, as you decided (AIW-D101): two presets, **"Review each step"** (the default) and **"Review at checkpoints"**, with a role-by-action grid under **"Customise"**. Floors are locked in all three; the grid never grants access. The screens are the team's to build.
 8. "Fewer checks, earned": an AI-drafted internal note may stop needing a click once it passes its test set and its measured agreement bar (AW-1-119, AW-1-120). The Owner confirms with one click, and it drops back by itself if quality falls. Nothing client-facing can be earned this way.
 9. Never blind: the live "AI on this case" panel, a stop button for the person, the switches you already have (AIW-D78) and a daily summary.
-10. Honest estimate [I]: on a typical file, under **"Review at checkpoints"**, separate approval visits fall from about **31 to about 14 (a little over half fewer)** where one person holds every approval key, and to about 15 where an officer and a consultant split the bundle. The default "Review each step" stays at 31. The number of things a person decides does not fall. What the AI really takes off people is the **preparation work** and the interruptions, not the checks.
+10. Honest estimate [I]: on a typical file, under **"Review at checkpoints"**, separate approval visits fall from about **29 to about 14 (roughly half)** where one person holds every approval key, and to about 15 where an officer and a consultant split the bundle. The default "Review each step" stays at 29. The number of things a person decides does not fall. What the AI really takes off people is the **preparation work** and the interruptions, not the checks.
 11. Most of the file is built by the product's rules, not by AI (AIW-D92). Selling follows your headline: "An AI team for your immigration practice" (AIW-D99).
-12. Six decisions remain open for you in part (d), each a single yes/no question; four earlier ones are marked as already decided by you (AIW-D96, D100, D101).
+12. Three decisions remain open for you in part (d), each a single yes/no question; the rest are marked as already decided by you (AIW-D96, D100, D101, D103).
 
 ---
 
@@ -101,26 +101,31 @@ The team's levels stay: **AUTO** ("Send automatically"), **APPROVE** ("Ask me fi
 | 1 | Read records and packs; read approved engine results | AUTO | AUTO | — | — | AIW-D93 (read tools) |
 | 2 | Create a task or reminder, assign work to a person | AUTO | AUTO | Ask now / at checkpoint / Off | — | AG11-D1 internal actions; AW-1-70 |
 | 3 | AI-drafted internal note (never sent) | Ask now (pilot) | Ask at checkpoint (pilot) | Ask now / at checkpoint / Off; may later be earned (c.6) | — | AIW-D80 |
-| 4 | Start the eligibility assessment (the rules engine calculates) | Ask now (under AIW-D93 the saved run is a proposal) | Ask now | At checkpoint / Off | Runs on verified values only; otherwise it stops (row 10). Telling a lead or client the result is a licensed person's act (AIW-D41) | AIW-D93, D96, D98 |
+| 4 | Start the eligibility assessment (the rules engine calculates) | Ask now (**the Lead's reading** of AIW-D96 under AIW-D93: the saved run is a proposal; AIW-D96 itself does not choose Ask now or Auto) | Ask now | At checkpoint / Off | Runs on verified values only; otherwise it stops (row 10). Telling a lead or client the result is a licensed person's act (AIW-D41) | AIW-D93, D96, D98 |
 | 5 | Client message from a published firm template, chosen by a rule | AUTO | AUTO | Ask now / Off | Drops to APPROVE if an immigration-significant field is not yet verified (AG-11-97). A template marked as carrying status or eligibility content is refused for a lead, and to a client defaults to Ask now (AW-1-46) | AG11-D12; AW-1-46; founder question D7 |
-| 6 | AI-written message to a client | Ask now | Ask now | Ask at checkpoint (only when not linked to a deadline) / Off | **APPROVE floor**; licensed approver by default (AG11-D11(a)) | AG-11-53; AW-1-46 |
+| 6 | AI-written message to a client | Ask now | Ask now | Ask at checkpoint (only when not linked to a deadline) / Off | **APPROVE floor**; licensed approver by default (AG11-D11(a)). **Locked: no preset or grid cell may make an AI-written reply automatic**; that needs a separate decision with the team (AIW-D102) | AG-11-53; AW-1-46; AIW-D102 |
 | 7 | Government form draft (the Filler prepares; the teammate requests it) | Ask now | Ask at checkpoint | Ask now / at checkpoint / Off | **APPROVE floor**; one consultant approval per form (AG11-D8); a second person where the firm's Team safeguards are on (AG11-D9) | AG-11-53 |
 | 8 | AI-drafted application letter (letter of explanation, cover letter) | Ask now | Ask at checkpoint | Ask now / at checkpoint / Off | AI-written; explanations reviewed by a licensed person (AIW-D98) | AIW-D98 |
 | 9 | Anything linked to a government deadline | **Ask now (locked)** | **Ask now (locked)** | — | Lock | AG-11-59, AG-11-100; AW-1-36 |
 | 10 | Stop on missing, stale or conflicting evidence | **Ask now (locked)** | **Ask now (locked)** | — | Lock | AIW-D98 |
-| 11 | Values the product's Reader proposes from uploads (product AI, by AIW-D100) | Ask now (as today, AG-11-60) | Ask at checkpoint (bundle sitting, AIW-D100) | Ask now / at checkpoint | **APPROVE floor** (AG11-D10: approving is verifying); asked earlier when a deadline or a dependent action needs them; explicit check for identity details, consequential values and conflicts | AIW-D100; AG-11-53 |
+| 11 | Values the product's Reader proposes from uploads (product AI, by AIW-D100). Held only while a teammate's job is running on that case; on any other case they stay "ask now" as AG-11-60 says | Ask now (as today, AG-11-60) | Ask at checkpoint (bundle sitting, AIW-D100) | Ask now / at checkpoint | **APPROVE floor** (AG11-D10: approving is verifying); asked earlier when a deadline or a dependent action needs them; explicit check for identity details, consequential values and conflicts | AIW-D100; AG-11-53 |
+| 12 | Prepare an invoice or a proposed trust entry (the rules engine calculates every amount) | Ask now | Ask now | Ask now / Off | **Never Auto.** An authorised person approves before it runs; the approval binds to the exact preview and any change voids it. The platform never moves money (FD-12); FD-17 unchanged | AIW-D103 |
+| 13 | Prepare an export, a deletion request or a settings change | Ask now | Ask now | Ask now / Off | **Never Auto**; binds to the exact preview. Excludes anything that changes permissions, roles, delegations, the AI switches, the safeguards or this grid: the AI cannot grant itself permissions or bypass controls | AIW-D103; AIW-D13, D101 |
+| 14 | Prepare a signature workflow (documents, signers, order) | Ask now | Ask now | Ask now / Off | **Never Auto**; binds to the exact preview. **The signature itself is the signer's** | AIW-D103 |
 
 Every approval needs the same permission as doing the act by hand (AG-11-58).
 
-**The two presets (AIW-D101).** "Review each step" is the default: every APPROVE item is asked now, so a firm starts exactly where today's specification is. "Review at checkpoints" moves rows 3, 7, 8 and 11 to the end-of-job bundle (column 4). Under "Customise", the firm sets the role-by-action grid (c.5). Floors and locks are the same in both presets and in the grid, and a checkpoint approval always comes before the action takes effect (FD-16 unchanged). The names "Careful", "Balanced" and "Fast" from earlier drafts are retired.
+**The two presets (AIW-D101).** "Review each step" is the default: every APPROVE item is asked now, so a firm starts exactly where today's specification is. "Review at checkpoints" moves rows 3, 7, 8 and 11 to the end-of-job bundle (column 4). Rows 12 to 14 are always asked one by one, because each approval binds to one exact action. Under "Customise", the firm sets the role-by-action grid (c.5). Floors and locks are the same in both presets and in the grid, and a checkpoint approval always comes before the action takes effect (FD-16 unchanged). The names "Careful", "Balanced" and "Fast" from earlier drafts are retired.
 
 **Examples the settings screen shows (AIW-D101 point 6; wording is the team's to finalise):**
-- *Runs automatically in both presets:* creating a task or reminder for you; a missing-document reminder from your firm's published template; reading the documents and checking them against the pack.
+- *Runs automatically in both presets:* creating a task or reminder for you; a missing-document reminder from your firm's published template; guided intake questions and approved templates to a new lead (rules, AIW-D102); reading the documents and checking them against the pack.
 - *Waits for the end-of-job review under "Review at checkpoints":* the values read from a clean upload; form drafts; a letter of explanation; internal notes.
-- *Always asks you at once, whatever you choose:* any AI-written message to a client; anything linked to a government deadline; an upload the client must re-send; a stop because evidence is missing, stale or conflicting.
-- *Never done by the AI:* advice, signing, money entries, deleting, exporting, submitting to the government (c.3).
+- *Always asks you at once, whatever you choose:* any AI-written message to a client or lead; an invoice, proposed trust entry, export, deletion request, settings change or signature workflow the AI prepared; anything linked to a government deadline; an upload the client must re-send; a stop because evidence is missing, stale or conflicting.
+- *Never done by the AI:* advice, signing, moving money, giving itself permissions, submitting to the government (c.3).
 
 **Not in the table, because the AI never does them:** see c.3.
+
+**Leads and the launch chat (AIW-D102).** The interactive chat at launch serves only approved content, and **which approved answer it shows is chosen by a rule** (the guided intake flow, a keyword or a menu), **never by a model** (AW-1-46: "A template SHALL be chosen by a rule, never by a model"). A model choosing among approved answers would need its own decision (E15). The future conversational AI for administrative intake, FAQs and booking is outside this model until the separate decision with the team that AIW-D102 requires.
 
 ### c.3 What stays with a person, and why (three different reasons)
 
@@ -128,9 +133,9 @@ Every approval needs the same permission as doing the act by hand (AG-11-58).
 |---|---|---|---|
 | **1. The team's floors and the product's own rule** | Approve every AI-written client message; verify every value read from a document; approve every government form; nothing is ever submitted to the government by the product | AG11-D1, AG-11-53, AG11-D8, AG11-D10, AG-11-54. The team wrote "The floor cannot be lowered by anyone" (AG-11 §3.3). | The team only. Not recommended. |
 | **2. FD-16 (ratified)** | Advice, the pathway choice and any decision: "no model output is ever a decision"; telling a lead or client an eligibility result (AIW-D41) | FD-16; AIW-D41 | The founder only. Recommendation: keep. |
-| **3. Workstream 2's own hard limits (provisional)** | Money and trust entries, even a draft invoice (AW-1-39); deleting; exporting; changing users, roles, settings or delegations; signing; acting for a paused client or a deactivated person (AW-1-37 to AW-1-51) | AIW-D55 and AW1-D23, "provisional until counsel". Counsel was dropped by AIW-D94, so they are now simply our own choice. | The founder: decision D8. |
+| **3. Action-specific controls (AIW-D103, replacing our blanket bans)** | The AI may **prepare** invoices, proposed trust entries, exports, deletion requests, settings changes and signature workflows (rows 12 to 14). A person always: approves each before it runs, bound to the exact preview; signs; moves money (the platform never does, FD-12). The AI never: grants itself permissions or changes roles, delegations, the AI switches, the safeguards or this grid; bypasses a product control; acts for a paused client or a deactivated person (AW-1-50, AW-1-11) | AIW-D103, which reopens and amends AIW-D44, D55, D72 (with its corrections) and D77 | Decided by the founder; knock-ons to AW-1-37 to AW-1-51 are listed by the Lead (E16) |
 
-**Where "maximum autonomy" meets the floors, in plain words.** This model lowers no floor of group 1 or 2. It changes **when** approvals happen (grouped in one bundle where nobody is waiting), not **whether**. Group 3 is the one place where the founder's "AI does everything a person can" (AIW-D95) could reach further. It is put to him openly in D8.
+**Where "maximum autonomy" meets the floors, in plain words.** This model lowers no floor of group 1 or 2. It changes **when** approvals happen (grouped in one bundle where nobody is waiting), not **whether**. Group 3 is where the founder's "AI does everything a person can" (AIW-D95) reaches furthest: by AIW-D103 the AI now prepares even money, export, deletion, settings and signature work, and a person approves each one exactly as previewed.
 
 ### c.4 The end-of-job bundle
 
@@ -151,7 +156,7 @@ What the screen shows, in order:
 
 **Who can do what** already exists and is not changed: the firm's roles and permissions (AG-01, SA-06), plus each teammate's borrowed slice of its person's permissions, taken key by key (AW-1-8).
 
-**How much the AI does alone** is this grid, under "Customise" (decided by AIW-D101; it controls autonomy only within the delegated person's existing permissions and never grants access). There is one row per action kind from c.2 (rows 2 to 8) and one column per **role**: Owner, Admin, Case Manager, Case Officer, Billing / Finance, Read-only, plus any custom role. A teammate follows the column of its delegation's delegating role (AW-1-5, AW-1-12; Lead's ruling on R6 M-11). Each cell holds **Auto**, **Ask now**, **Ask at checkpoint** or **Off**. Rows 9 and 10 show as locked, and floors cannot be set lower.
+**How much the AI does alone** is this grid, under "Customise" (decided by AIW-D101; it controls autonomy only within the delegated person's existing permissions and never grants access). There is one row per action kind from c.2 (rows 2 to 8 and 11 to 14) and one column per **role**: Owner, Admin, Case Manager, Case Officer, Billing / Finance, Read-only, plus any custom role. A teammate follows the column of its delegation's delegating role (AW-1-5, AW-1-12; Lead's ruling on R6 M-11). Each cell holds **Auto**, **Ask now**, **Ask at checkpoint** or **Off**. Rows 9 and 10 show as locked, and floors cannot be set lower.
 
 Example: the grid as it looks when a firm starts from "Review at checkpoints" (cells as in c.2; Proposal):
 
@@ -166,7 +171,12 @@ Example: the grid as it looks when a firm starts from "Review at checkpoints" (c
 | 8 | Application letter | At checkpoint | Off | At checkpoint | At checkpoint | Off | Off |
 | 9 | Linked to a government deadline | Ask now (locked) | same | same | same | same | same |
 | 10 | Stop on missing, stale or conflicting evidence | Ask now (locked) | same | same | same | same | same |
-| 11 | Values read from uploads | At checkpoint | At checkpoint | At checkpoint | At checkpoint | Off | Off |
+| 11 | Values read from uploads (while a teammate's job runs on the case) | At checkpoint | At checkpoint | At checkpoint | At checkpoint | Not applicable | Not applicable |
+| 12 | Invoice or proposed trust entry | Ask now | Ask now | Ask now | Off | Ask now | Off |
+| 13 | Export, deletion request, settings change | Ask now | Ask now | Off | Off | Off | Off |
+| 14 | Signature workflow | Ask now | Off | Ask now | Ask now | Off | Off |
+
+Row 11 shows "not applicable" where a role has no teammate job on cases: the Reader itself is never switched per role; the AI switch is one firm switch (AG-11-93). For rows 12 to 14 a cell can only be "Ask now" or "Off", and only where the person already holds the key.
 
 A cell never grants a permission: if the person lacks the key, the teammate cannot do it at all (AW-1-8, AG-11-58). Today the team sets autonomy **per recipe** (AG-11-52). Storing, showing and enforcing a role × action grid is a **team need** (E9); asking the team for it follows from AIW-D101.
 
@@ -210,7 +220,7 @@ Measures are per firm and per skill, never per person (AW1-BR-20). Keeping the s
 | 10, 15 | Two template sends need an immigration-significant field from a verified value (AG-11-97). | Officer verifies that value **earlier**, 2 times (dependent action) |
 | 3–18 | The teammate writes three internal notes. | Held for the bundle |
 | 19 | The teammate requests three form drafts from the Filler (rules) and drafts two application letters, all from the provisional values. | Held for the bundle |
-| 20 | **End-of-job bundle**: 10 upload verdicts with their values (passport identity details and one conflicting date each checked explicitly), 3 notes, then 3 forms and 2 letters. The officer corrects one date; the two forms and the letter that used it re-render before approval. | Small firm, consultant holds every key: **one sitting**, 18 decisions. Officer plus consultant: **two sittings**, values and notes first (officer), then forms and letters (consultant) |
+| 20 | **End-of-job bundle**: 10 upload verdicts with their values (passport identity details and one conflicting date each checked explicitly), 3 notes, then 3 forms and 2 letters. The person verifying corrects one date; the two forms and the letter that used it re-render before approval. | Small firm, consultant holds every key: **one sitting**, 18 decisions. Officer plus consultant: **two sittings**, values and notes first (officer), then forms and letters (consultant) |
 | 21 | The AW-1-71 conditions are now met (no Reader value still proposed); the readiness report arrives (AW-1-72). | Officer accepts it (the submission for internal review, AW1-D5) |
 | 22 | Review approval (AG-07), then the person submits to the government. | Existing person acts |
 
@@ -223,19 +233,20 @@ Measures are per firm and per skill, never per person (AW1-BR-20). Keeping the s
 | A1 Upload verdicts (10 uploads + 3 re-sent) | 13, of which 3 have a finding the client must act on | 13 | 3 asked earlier; 10 in the bundle |
 | A2 AI-written client replies | 4 | 4 | 4 (ask now) |
 | A3 Government letter: date + client notice | 2 | 2 | 2 (locked) |
-| A4 Values needed early by template sends (AG-11-97) | 2 | 2 | 2 (asked earlier) |
+| A4 Values needed early by template sends (AG-11-97) | 2 under the model; 0 today (assumption: today each upload is verified when it arrives, so AG-11-97 rarely drops a send) | 0 | 2 (asked earlier) |
 | A5 Form drafts | 3 | 3 | in the bundle |
 | A6 Application letters | 2 | 2 | in the bundle |
 | A7 Internal notes (pilot) | 3 | 3 | in the bundle |
 | Bundle sittings | — | — | 1 (one key holder) or 2 (officer and consultant) |
 | A8 Readiness report + review approval | 2 | 2 | 2 |
-| **Total** | | **31** | **14** (one key holder) or **15** (two) |
+| **Total** | | **29** | **14** (one key holder) or **15** (two) |
 
-- **Under "Review at checkpoints", separate visits fall by a little over half (31 to 14 or 15).** Under the default "Review each step" nothing changes (31): the saving is opt-in. Sums: today 13+4+2+2+3+2+3+2 = 31; model 3+4+2+2+1+2 = 14, or 15 with two sittings. The number of decisions stays 31: the bundle groups 18 of them (10 verdicts, 3 notes, 3 forms, 2 letters).
+- **Under "Review at checkpoints", separate visits fall by about half (29 to 14 or 15).** Under the default "Review each step" nothing changes (29): the saving is opt-in. Sums: today 13+4+2+0+3+2+3+2 = 29; model 3+4+2+2+1+2 = 14, or 15 with two sittings. Decisions stay about the same: the bundle groups 18 of them (10 verdicts, 3 notes, 3 forms, 2 letters), and the 2 early checks in A4 are values verified sooner, not extra work.
 - If notes are earned (c.6), the bundle drops to 15 decisions; visits do not change.
 - If the product also raises a separate document-type item per upload while a teammate is on, today's count rises by up to 13 (team question, E5).
-- **What is left is the floors and the deadlines:** AI-written client replies (A2), deadline items (A3), and values another step needs early (A4). Going further would mean lowering a floor (D4 recommends against) or turning AI replies into firm templates, which is the firm's choice, not a model change.
-- If the team does not accept the AG-11-60 change (E13), A1 goes back to 13 visits and the total to about 24, as in revision 2.
+- The file-preparation job prepares no invoice, export or signature workflow here; where a job does (rows 12 to 14), each is one more "ask now" visit in both presets.
+- **What is left is the floors and the deadlines:** AI-written client replies (A2), deadline items (A3), and values another step needs early (A4). Going further would mean lowering a floor (locked by AIW-D101) or turning AI replies into firm templates, which is the firm's choice, not a model change.
+- If the team does not accept the AG-11-60 change (E13), A1 goes back to 13 visits and A4 to 0: the total is about 22 (13+4+2+0+1+2) with one bundle sitting, or 23 with two.
 - **What the founder really gets:** the preparation (reading, checking against the pack, chasing, drafting, assembling) is done by the rules and the teammate, with far fewer interruptions. People keep the checks the floors require, and the bundle sitting is real work by design. Time saved is measured in the pilot (AIW-D83); no figure goes to a buyer or investor before then.
 
 ---
@@ -245,21 +256,21 @@ Measures are per firm and per skill, never per person (AW1-BR-20). Keeping the s
 **Already decided by the founder (no question left):**
 - *Ask now / ask at the checkpoint, presets and grid* (was D1 and the grid question): **AIW-D101**. Two presets, "Review each step" (default) and "Review at checkpoints"; grid under "Customise"; floors locked; never grants access; approval before effect.
 - *End-of-job bundle* (was D2): follows from **AIW-D100** and **AIW-D101**. It is kept separate from the readiness report by the Lead's ruling on R6 M-1.
-- *The AI starting the eligibility assessment* (was D6): **AIW-D96**. Under AIW-D93 the saved run is a proposal a person approves (row 4); it runs on verified values only, otherwise it stops (AIW-D98).
+- *The AI starting the eligibility assessment* (was D6): **AIW-D96** decides that the AI may run it. "Ask now" (row 4) is **the Lead's reading** under AIW-D93 (the saved run is a proposal), not the founder's choice; it runs on verified values only, otherwise it stops (AIW-D98).
 - *Upload values in the bundle sitting* (raised by R6-b N-M2): **AIW-D100**.
+- *Reword AIW-D93 so approval may happen in the job's bundle* (was D3): settled by **AIW-D101**, in the founder's words "Approval at a checkpoint must happen before the action takes effect." The Lead records the reading against AIW-D93's "waits in Needs you" (E1).
+- *Keep FD-16 and the team's floors* (was D4): settled by **AIW-D101**, "Keep safety floors locked in both."
+- *Workstream 2's own hard limits* (was D8): replaced by **AIW-D103**, action-specific controls (c.3 group 3, rows 12 to 14).
 
 **Still open:**
 
 | # | Question | Recommendation | Why, in one line |
 |---|---|---|---|
-| D3 | Reword AIW-D93's "waits in Needs you until a person approves it" to "waits until a person approves it, in Needs you or in the job's bundle"? | **Yes** | Without it, "Review at checkpoints" contradicts a ratified decision. |
-| D4 | Keep FD-16 and the team's floors exactly as they are? | **Yes, keep** | Your buyers' licences rest on them, and with counsel dropped they are the main guard. |
 | D5 | Allow "fewer checks, earned" for AI-drafted internal notes only, with the Owner's click, sample checks and automatic drop-back? | **Yes** | Real autonomy where an error is cheap and stays inside the firm. |
 | D7 | Does the firm's one-time approval of a published template count as the human approval (AIW-D13) for a template send the teammate's recipe makes, with the template chosen by a rule? | **Yes** | It is the same reading the product already uses for its own recipes (AG11-D12). |
-| D8 | Keep Workstream 2's own limits (no money or trust entry, not even a draft invoice; no deletion, export, settings change or signing by the AI), now that counsel is dropped? | **Yes, keep for Release 1** | They are irreversible or touch client trust money, and nobody outside now checks them (AIW-D94); revisit draft invoices after the pilot. |
 | D9 | Are the three anti-rubber-stamp safeguards (AIW-D57) now final, since "provisional until counsel" can no longer end? | **Yes, final** | The bundle relies on them, and leaving them "provisional" for ever is unclear. |
 
-Numbers D1, D2 and D6 are kept out so earlier references stay traceable.
+Numbers D1 to D4, D6 and D8 are kept out so earlier references stay traceable.
 
 ---
 
@@ -267,19 +278,21 @@ Numbers D1, D2 and D6 are kept out so earlier references stay traceable.
 
 | # | Conflict | With | Who decides |
 |---|---|---|---|
-| E1 | The bundle versus "a proposal that waits in Needs you until a person approves it" | AIW-D93 | The founder (D3) |
+| E1 | The bundle versus "a proposal that waits in Needs you until a person approves it" | AIW-D93 | Settled by the founder in AIW-D101 (approval at a checkpoint, before effect); the Lead records the amended reading of AIW-D93 |
 | E2 | No conflict as designed. FD-16 would be broken if "fewer checks, earned" ever reached an action with an effect outside the firm. AIW-D71 covers only document-type labels and AIW-D80 only internal notes. Tasks and reminders are AUTO on the team's own basis (AG11-D1 internal actions; AW-1-70), not under D71 or D80. | FD-16; AIW-D71, D80 | The founder, if ever widened |
 | E3 | The founder's "maximum level of autonomy possible" versus "Lowering an AI-text floor is impossible" | AG11-D1, AG-11-53 | The team owns the floor; this model keeps it |
 | E4 | "Ask at the checkpoint" is a holding state AG-11 does not have ("Needs you holds only what is waiting") | AG11-D2, AG-11-55, AG-11-60 | Team need for the mechanics; the Lead decides whether a change note is due (README §0 rule 11) |
 | E5 | Whether a separate document-type item (AW-1-78) also appears when the teammate's upload verdict (AW-1-76) carries the type | AW-1-76, AW-1-78 | Workstream 2 (AW-01) |
 | E6 | The teammate starting the assessment and calling action tools | AIW-D93 (the saved run is an action with an effect, so a proposal; row 4 follows it); AG-11-94 ("models SHALL have no tool access"), already raised under AIW-D93; AW-1-88 ("SHALL NOT run the eligibility assessment"), which AIW-D96 lists as a knock-on | The team (AG-11-94); the Lead (AW-1-88) |
-| E7 | The teammate's limits (group 3) are "provisional until counsel", and counsel no longer exists | AIW-D55, AW1-D23; AIW-D94 | The founder (D8) |
+| E7 | Our blanket hard limits ("provisional until counsel") versus the founder's action-specific controls | AIW-D44, D55, D72 and its corrections, D77; AW1-D23 | Decided: AIW-D103 reopens and amends them |
 | E8 | The anti-rubber-stamp safeguards are "provisional until counsel" | AIW-D57, AW1-D25; AIW-D94 | The founder (D9) |
 | E9 | The two presets and the role-by-action grid (decided, AIW-D101), and stored sample-check and drop-back figures, are new; the team sets autonomy per recipe today | AG-11-52 | Team need: storage and screens |
 | E10 | A hold window on automatic client sends would change what AUTO means for the product's recipes | AG11-D1 | Team question |
 | E11 | Template sends by the teammate's recipe at AUTO, read as approved by the firm's one-time template approval | AIW-D13 ("nothing takes effect until a human approves it") | The founder (D7) |
 | E12 | Untested pack rules may publish (SA1B-D18), while Workstream 2 assumes a tested engine | AIW-D98 | The team, already flagged under AIW-D98 |
 | E13 | Upload values held for the bundle sitting (AIW-D100) versus "Needs you holds ... Reader-extracted values on client uploads" and the product-AI rule | AG-11-60 (team); AW-1-15 (ours, changes by AIW-D100) | The team is asked to revisit AG-11-60 (their subject, no change note); the Lead updates AW-1-15 |
+| E15 | A launch chat in which a model, not a rule, picks which approved answer to show | AW-1-46 ("A template SHALL be chosen by a rule, never by a model"); (f) item 6 | A separate decision (founder with the team) before the chat is designed that way; this model assumes rule-chosen answers (AIW-D102) |
+| E16 | The AI preparing invoices, proposed trust entries, exports, deletion requests, settings changes and signature workflows (AIW-D103) versus our own AW-1-37 to AW-1-51 (for example AW-1-39, "or create an invoice even as an unsaved draft") and the team's rules that keep the trust keys "never lendable" (AG-6-46, AG-6-47; CN-SA-06 change 6) | AW-01 (ours); AG-06, SA-06 (team) | The Lead lists the knock-ons in AW-01, the change notes and the tests; the team is asked whether a proposed trust entry may be prepared for a key holder to approve; no change note to team documents |
 | E14 | Form drafts and letters prepared from provisional values, re-rendered after a correction (AIW-D100 point 5); the Filler's rule for unverified values is not stated, and template fields render only from verified values (AG-11-97) | AG-07; AG-11-97 | Team question: may the Filler draft from provisional values, marked provisional, and re-render after verification? |
 
 ---
@@ -291,6 +304,7 @@ Numbers D1, D2 and D6 are kept out so earlier references stay traceable.
 3. **Never hold for the bundle anything linked to a deadline, or anything another step needs verified first.** Of the product's AI, only upload values wait (AIW-D100); document types, deadline dates and message matches never do.
 4. **No self-promotion by the AI**, and no "fewer checks, earned" for anything floored or client-facing.
 5. **No bundles across clients**, and no "approve everything today" button.
+5a. **No approval of a consequential action that differs from what was previewed.** Under AIW-D103 an approval binds to the exact preview; any change voids it, and an invoice, trust entry, export, deletion request, settings change or signature workflow is never batched into an "approve all".
 6. **Tools as AIW-D93 allows, and no more.** The AI may choose among read tools. Any action with an effect is only a proposal. No AI output chooses a recipient, a permission or a template (AW-1-46: "A template SHALL be chosen by a rule, never by a model"). Text inside client documents never chooses a tool or its inputs.
 7. **No rules work called AI** (AIW-D92). Use the founder's ratified wording (AIW-D99): headline "An AI team for your immigration practice."; supporting line "Prepare files, organise documents and draft communications—with maintained rules underneath and your team in control."; supporting message "Rules you can defend. AI that does the legwork." Customer benefit first, then the proof. The moat is the combination: reviewed, dated packs, measured accuracy per skill, the full record and the system of record (AIW-D97). It is not "autonomous AI".
 8. **Never claim the AI detects wrong rules** (AIW-D98).
