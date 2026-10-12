@@ -7,6 +7,7 @@
 - *After re-check R4-b (`checks/review-R4-b-2026-10-12.md`): its fixes applied.*
 - *R4-c fixes 1 to 5 (same file, §9) applied.*
 - *Brought in line with the founder's decisions AIW-D92 to AIW-D105 (`decisions.md`, 12 Oct). Where an earlier ruling or reading conflicts with those decisions, the decision wins and the change is noted in place.*
+- *After hostile check R7 (`checks/review-R7-2026-10-12.md`): the AIW-D98 note (A21, V1 decided), D98 point (4) licensed review of explanations, and the Lead's rulings in the AIW-D106 note (AI-started assessment runs on Auto after the stop check; one skill = one job on one plane, so skills 21 and 22 are split; skill 13 moves to rules; V2 time slots in scope) applied; counts redone.*
 
 *Asked by: the Lead, on the founder's ask of 12 Oct 2026 (`founder-brief.md`, "12 Oct 2026", second quote). In his words:*
 > "we will be using AI for basically tool calling and all the rules and determinism is already baked out. Uh, from the from the eligibility and uh, score calculation, eligibility assessment point of view. Rest everything is, I think we can be a little bit more uh, non-deterministic the way we talk, the way we follow up, the way we use the language, the way we book the calendar management, so on and so forth. … let's mark it that it is basically rule engine, but we are sending under the flavor of AI. For easy selling, and then this is pure AI, this is pure determinism, and whatever the combination"
@@ -19,7 +20,7 @@
 - **AI language**;
 - **person only**.
 
-The capabilities cover the firm side (AG-01 to AG-18), the platform side (SA-01 to SA-12) and the client portal (CP-1 to CP-9). The skills are the 23 teammate skills, the summary line and the three product AI calls. The map tests the founder's examples, records which decision answered each conflict, counts each class, and names what is over-AI'd and where an AI layer on top of rules would add real buyer value.
+The capabilities cover the firm side (AG-01 to AG-18), the platform side (SA-01 to SA-12) and the client portal (CP-1 to CP-9). The skills are the 26 teammate skills (23 before the AIW-D106 note split skills 21 and 22), the summary line and the three product AI calls. The map tests the founder's examples, records which decision answered each conflict, counts each class, and names what is over-AI'd and where an AI layer on top of rules would add real buyer value.
 
 **What it is not.**
 - It restates no requirement. Every capability is named in a few words and cited by ID, file and version; the requirement text stays in the team's documents (README §0 rule 3, AIW-D22).
@@ -60,15 +61,15 @@ The capabilities cover the firm side (AG-01 to AG-18), the platform side (SA-01 
    | Rules only (R) | 80 | — |
    | Person only (H) | 25 | — |
    | AI language (A) | 11 | One is the future conversational intake AI, designed now and switched on by a separate decision (AIW-D102) |
-   | AI explains rule results (T) | 6 | One, free questions to Practice answers, is decided for version 2 (AIW-D39); the other five are *Proposals — not approved* |
+   | AI explains rule results (T) | 6 | Free questions to Practice answers are decided for version 2 (AIW-D39); the staff explainer (A21) is decided by the AIW-D98 note; time slots in drafted replies (A27) are in scope by the Lead's ruling (AIW-D106 note (c)); the other three are *Proposals — not approved* |
 
    One more row, submitting to the government, is listed but not counted: the product never does it (AG-11-54).
-2. **AI skills and calls.** Of the 27:
-   - **19 are AI language (A)**.
+2. **AI skills and calls.** Of the 30:
+   - **18 are AI language (A)**.
    - **3 are AI explains rule results (T)**: skill 4, skill 14 and the summary line.
-   - **5 are rules only (R)**.
+   - **9 are rules only (R)**: skills 13, 19 to 23, 21b, 22b and 22c (AIW-D106 note (b), (c)).
 3. **The founder's examples now have decided answers.**
-   - Eligibility and scoring are rules (AG-3-39, FD-16). An AI teammate may *run* the assessment, and the rules calculate it (AIW-D96).
+   - Eligibility and scoring are rules (AG-3-39, FD-16). An AI teammate may *run* the assessment, and the rules calculate it (AIW-D96). An AI-started run is automatic once the stop check passes (the Lead's ruling, AIW-D106 note (a)).
    - Follow-up timing is rules.
    - Follow-up wording comes from published templates, which send automatically, also inside an AI job (AIW-D105). Any AI-written or AI-edited text is approved before it is sent.
 4. **Calendar.** Booking is rules (the Scheduler). An AI teammate may prepare a booking, move or cancellation through the product's own actions; a person approves it before it takes effect (AIW-D93). A conversational AI for booking is designed now and switched on later by a separate decision (AIW-D102).
@@ -88,11 +89,11 @@ The capabilities cover the firm side (AG-01 to AG-18), the platform side (SA-01 
    - Buyer material may not say Canada eligibility is built.
 8. **Conflicts.** All eight (K1 to K8) are now answered by founder decisions (§6). K7 is answered by the standing AIW-D79.
 9. **Over-AI'd.**
-   - Skill 13 (sample clients) should be rules.
+   - Skill 13 (sample clients) moves to rules (the Lead's ruling, AIW-D106 note (c)).
    - Skills 10, 11 and 16 should run rules first and use AI only for the rest.
    - A79 and A103 are rules in the team's own requirements.
-   - Skills 19 to 23 are rules only and are never called AI (AIW-D92).
-10. **Highest-value AI layers on rules** (Proposals): a staff-only explainer of the assessment breakdown and levers, and Scheduler time slots in drafted replies.
+   - Skills 13, 19 to 23, 21b, 22b and 22c are rules only and are never called AI (AIW-D92).
+10. **Highest-value AI layers on rules:** a staff-only explainer of the assessment breakdown and levers (decided by the AIW-D98 note), and Scheduler time slots in drafted replies (in scope by the Lead's ruling, AIW-D106 note (c)).
 11. **Headline for selling** (AIW-D99): "An AI team for your immigration practice."
     - Supporting line: "Prepare files, organise documents and draft communications—with maintained rules underneath and your team in control."
     - Supporting message: "Rules you can defend. AI that does the legwork."
@@ -107,7 +108,7 @@ The short codes R, T, A and H are used in the tables. The names are AIW-D92's (R
 | Code | Class name (AIW-D92) | Plain meaning | Who decides the outcome | Same input, same output? | Where AI is allowed |
 |---|---|---|---|---|---|
 | **R** | **Rules only** (never called AI) | The product's fixed rules do it: the rule engine, the Conductor (workflow engine), a Doer such as the Scheduler, Biller, Signer, Filler or Minder, or a pack. No model is called. | The rules, set by people in advance. | Yes. For assessments: "identical inputs + version ⇒ identical outputs" (AG-3-39). | Nowhere. An AI teammate may *start* a rules-only step through a product action, under the person's permission (AIW-D93, D96). The result is still R and is labelled as calculated by the rules. |
-| **T** | **AI explains rule results** | The rules engine computes the result. The AI fetches it, either by a workflow step or by calling a read tool itself under the delegated person's permission (AIW-D93), and explains or words it with its sources and the pack version (AIW-D98). | The rules. The AI only words the answer. | The result: yes. The wording: no. | Explaining and wording a rule result. The AI never computes a rule result itself. It **stops** with a named failure, sent to a person, when checks find missing, stale or conflicting evidence (AIW-D98). |
+| **T** | **AI explains rule results** | The rules engine computes the result. The AI fetches it, either by a workflow step or by calling a read tool itself under the delegated person's permission (AIW-D93), and explains or words it with its sources and the pack version (AIW-D98). Explanations stay subject to licensed-person review (AIW-D98 point 4). | The rules. The AI only words the answer. | The result: yes. The wording: no. | Explaining and wording a rule result, subject to licensed-person review (AIW-D98 point 4). The AI never computes a rule result itself. It **stops** with a named failure, sent to a person, when checks find missing, stale or conflicting evidence (AIW-D98). |
 | **A** | **AI language** | The AI reads, sorts, drafts, summarises or converses over unstructured input. Output varies from run to run. | A person, for anything with an effect. | No. | Reading, sorting, drafting, summarising, and preparing actions through the product (AIW-D93, D103). Every action with an effect waits for a person's approval first (FD-16; AIW-D13). The approval binds to the exact action previewed (AIW-D103). Exceptions: earned Auto for routine, reversible internal work (AIW-D104), and published-template sends (AIW-D105). |
 | **H** | **Person only** | Licensed judgement, a legal act, or a consequential approval. AI may prepare it (AIW-D103) but never does it. | A named person, with their own permission. | — | Preparing material or the action for approval. Signatures stay with the signer (AIW-D103). |
 
@@ -123,7 +124,7 @@ The short codes R, T, A and H are used in the tables. The names are AIW-D92's (R
 
 **How a row gets its class.** A row's class is the class of whoever decides the outcome in that row. A capability may pass through several classes: for example, the Reader reads (A), a person verifies (H), and the Filler fills (R). Rules-only skills inside an AI teammate are marked *(rules, not AI)* wherever they appear in the "AI may" column.
 
-**Earned Auto (AIW-D104).** Routine, reversible internal actions may run without a per-item approval once three conditions are met: the skill's tests have passed, checked examples from actual use exist, and the Owner has approved. Examples are draft internal notes, ordinary tasks and filing labels. Rows where this applies say "earned Auto".
+**Earned Auto (AIW-D104).** Routine, reversible internal actions may run without a per-item approval once three conditions are met: the skill's tests have passed, checked examples from actual use exist, and the Owner has approved. Examples are draft internal notes, ordinary tasks and filing labels. The sample-check rate is set from evidence, the skill drops back to approval when quality falls, and any material change is retested (AIW-D104; `design/ai-autonomy-model-2026-10-12.md` c.6). Rows where this applies say "earned Auto".
 
 **Presets and grid (AIW-D101).**
 - Two presets: "Review each step" (the default) and "Review at checkpoints". A role-by-action grid sits under "Customise".
@@ -251,16 +252,16 @@ Column key:
 | A15 | Score breakdown and plain explanation | AG-3-21 (AG-03 v1.4); FD-20 | R | Q2 | No AI in the built explanation (see A21) | Rule test | Rules only |
 | A16 | Recommendations and "what-if improvements" | AG-3-22 to AG-3-24 (AG-03 v1.4) | R | Q2 | No AI | Rule test | Rules only, indicative |
 | A17 | Version stamp, explicit re-run, stale flag | AG-3-25, AG-3-26, AG-3-28, AG-3-29 (AG-03 v1.4) | R | Q2 | An AI teammate may request a re-run through the product (AIW-D96) | Rule test | Rules only, replayable |
-| A18 | Running an assessment for a lead | AG-3-1 (AG-03 v1.4); AG-03 §13 Q10; AIW-D96 (amends AIW-D40) | R | Q2 (internal, rule-made) | **An AI teammate may run it** when the facts are ready or a person asks, under `agent/assessment:run`; the rules calculate; saved and stamped (AIW-D96) | Rule test; stop check (AIW-D98) | "Run by [AI teammate] for [person]; calculated by the rules, pack v[n]" |
+| A18 | Running an assessment for a lead | AG-3-1 (AG-03 v1.4); AG-03 §13 Q10; AIW-D96 (amends AIW-D40) | R | Q2 (internal, rule-made) | **An AI teammate may run it** when the facts are ready or a person asks, under `agent/assessment:run`; the rules calculate; saved and stamped (AIW-D96). **Auto** once the stop check passes: internal, saved and rule-computed, so no approval is added (the Lead's ruling, AIW-D106 note (a)). Inputs: a lead's stated answers, labelled "stated by the lead, not verified", or a client's verified values (the Lead's G-2 ruling). Telling the result stays with a licensed person (A20; AIW-D41) | Rule test; stop check (AIW-D98) | "Run by [AI teammate] for [person]; calculated by the rules, pack v[n]" |
 | A19 | Consultant override of an outcome | AG-3-33, AG-3-35 (AG-03 v1.4) | H | Q1 | No AI | Person's act, audited | Your decision |
 | A20 | Telling a lead or client the eligibility result | AG-3-38 (AG-03 v1.4); AIW-D41, AIW-D96 | H | Q1 | No AI text in it (AIW-D41) | Person's act, audited | Your decision |
-| A21 | Staff explainer of an assessment's breakdown and levers | *Proposal — not approved*; would sit on AG-3-21 and AG-3-22 | T | Q2 for the content | May fetch (read tool, AIW-D93) and explain the breakdown and levers the Qualifier computed, with sources and pack version (AIW-D98). May not compute a score or reach a lead (AIW-D41). Questions beyond the computed levers need a run that is not saved: *question for the team* (AG-3-1) | Number check; stop check; driving test | AI explains rule results |
+| A21 | Staff explainer of an assessment's breakdown and levers | **Decided by the AIW-D98 note** (framework F4 closed); sits on AG-3-21 and AG-3-22 | T | Q2 for the content | May fetch (read tool, AIW-D93) and explain the breakdown and levers the Qualifier computed, with sources and pack version (AIW-D98). May not compute a score or reach a lead (AIW-D41). Questions beyond the computed levers need a run that is not saved: *question for the team* (AG-3-1) | Number check; stop check; driving test; licensed-person review of explanations (AIW-D98 point 4) | AI explains rule results |
 | A22 | Free slots and clash-proof booking | AG-4-1 to AG-4-8, AG-4-25, AG-4-26 (AG-04 v1.5) | R | Q2 | AI may prepare a booking, move or cancellation as an action for approval (AIW-D93) | Rule test; person approval of prepared actions | Rules only |
 | A23 | Public booking page; the lead books their own slot | AG-4-16, AG-4-22 (AG-04 v1.5) | R | Q1 → person: the lead's own booking; mechanism: Q2 | No AI | Rule test | Automatic |
 | A24 | Confirmations, reminders, calendar files | AG-4-31 to AG-4-35 (AG-04 v1.5) | R | Q1 → person: the firm's standing decisions (A121; AIW-D105); mechanism: Q2 | No AI | Rule test | Automatic |
 | A25 | Sync with the firm's own calendar | AG-4-40 to AG-4-43 (AG-04 v1.5) | R | Q2 | No AI | Rule test | Automatic |
-| A26 | Reschedule, cancel, no-show, refund on cancel | AG-4-36 to AG-4-39, AG-4-46 (AG-04 v1.5); FD-13 | R | Q1 → person: the firm's refund policy, or the platform default (FD-13; A121); mechanism: Q2 | AI may prepare a cancellation or refund for approval (AIW-D93; AIW-D77 as amended by AIW-D103) | Rule test; person approval | Rules only, your policy |
-| A27 | **Proposing time slots** inside a drafted reply | *Proposal — not approved*; would sit on AG-4-5, AG-4-16 | T | Q2 for the slots; Q1 for the reply | Fetches Scheduler slots (read tool, AIW-D93) and places them with the booking link in a draft. Booking stays with the lead's link or an approved action | Number check; person approval; pass^k | AI explains rule results; reply approved by you |
+| A26 | Reschedule, cancel, no-show, refund on cancel | AG-4-36 to AG-4-39, AG-4-46 (AG-04 v1.5); FD-13 | R | Q1 → person: the firm's refund policy, or the platform default (FD-13; A121); mechanism: Q2 | AI may prepare a cancellation or refund for approval (AIW-D93) | Rule test; person approval | Rules only, your policy |
+| A27 | **Proposing time slots** inside a drafted reply | **In scope by the Lead's ruling** (AIW-D106 note (c), under AIW-D93 and D102); sits on AG-4-5, AG-4-16 | T | Q2 for the slots; Q1 for the reply | Fetches Scheduler slots (read tool, AIW-D93) and places them with the booking link in a draft. Booking stays with the lead's link or an approved action | Number check; person approval; pass^k | AI explains rule results; reply approved by you |
 | A28 | Consultation outcome, recommended pathway and fee | AG-4-49 (AG-04 v1.5) | H | Q1 | May summarise the consultant's typed notes [3]. May not record or transcribe (AIW-D62) | Person's act | Your decision |
 | A29 | Proposal from a consultation, from a template | AG-4-50 (AG-04 v1.5) | R | Q2 | No AI (the Drafter here is the template tool, AIW-D53) | Rule test | Automatic |
 | A30 | Retainer from a template with locked clauses | AG-5-4, AG-5-8 (AG-05 v1.9); AIW-D54 | R | Q1 → person: signing (A32); mechanism: Q2 | No AI text in the retainer (AIW-D54) | Rule test | Rules only |
@@ -317,7 +318,7 @@ Column key:
 | A81 | Data-transfer attestation; verifying imported values | AG-18-49 (AG-18 v1.2); AG18-D10 | H | Q1 | No AI | Person's act | Your decision |
 | A82 | Practice answers: four fixed questions | AIW-D39, AIW-D90; AG-14-22 | R | Q2 | One optional summary line [P] (T) | Rule test | Rules only; works with AI off |
 | A121 | The firm's standing decisions that rules then carry out: approving its standard messages and their automatic use, turning recipes on, setting its refund policy | AG11-D12, AG-11-21 (AG-11 v1.12); FD-13; AIW-D105 | H | Q1 | No AI | The firm's choice (Owner or its chosen role), recorded; where it sets no refund policy, the founder's platform default (FD-13, ratified 3 Jul 2026) | Your rules, set once |
-| A122 | Interactive chat interface at launch, serving approved templates and guided intake questions (*added for AIW-D102*) | AIW-D102; AG11-D1 template sends; AG-8-5 conditional questions | R | Q1 → person: the firm's approval of the content (A121; AIW-D105); mechanism: Q2 | No newly AI-written text in automatic replies (AIW-D102) | Rule test | Approved answers from your firm |
+| A122 | Interactive chat interface at launch, serving approved templates and guided intake questions (*added for AIW-D102*) | AIW-D102; AG11-D1 template sends; AG-8-5 conditional questions | R | Q1 → person: the firm's approval of the content (A121; AIW-D105); mechanism: Q2 | No newly AI-written text in automatic replies (AIW-D102). R assumes a rule picks the answer (guided flow or menu), as the autonomy model does; a model picking among approved answers is open (autonomy E15; framework §9 question 1) | Rule test | Approved answers from your firm |
 | A123 | Conversational AI for administrative intake, FAQs and booking (*added for AIW-D102; designed now, switched on later*) | AIW-D102 | A | Q1, Q3 | Clear boundaries and human handoff; no eligibility (AIW-D41). Switching on, and any automatic AI-written reply, needs a separate decision with the team | Driving test; pass^k; boundaries tested | Not live at launch |
 
 ### 4.2 Platform side (SA-01 to SA-12)
@@ -390,7 +391,7 @@ Skill numbers, names and approvers come from `handbook/ai-team-profiles.md` §4.
 | 10 | Firm field mapper | AG-18-8, AG-18-10 | A, **partly R** (O4) | Q2 for known sources; Q3 for free-text columns | Suggests; the Owner confirms each column | Person approval; driving test | AI-suggested, you confirm |
 | 11 | Rulebook field mapper | SA-1B-27, SA-1B-33 | A, **partly R** (O5) | Q2 for unchanged fields; Q3 for renamed fields | Suggests "needs review" | Author checks each | Internal |
 | 12 | Official page reader | SA-1B-39 | A | Q3 | Drafts rows from a stored page | Author, specialist, second person | Internal |
-| 13 | Sample-client proposer | SA-1-52, SA-1B-62 | A, **should be R** (O3) | Q2 | Proposes made-up clients; never sets an outcome | Author chooses | Internal |
+| 13 | Sample-client proposer | SA-1-52, SA-1B-62 | **R** (moved by the Lead's ruling, AIW-D106 note (c); was A, O3) | Q2 | Picks made-up clients by rule; never sets an outcome | Rule test; author chooses | Internal |
 | 14 | Release-note drafter | SA-1-25, SA-1-53; AW-2-51 | **T** | Q2: its input is the rule-built test-run comparison | Each sentence cites its rule, row or box; the author owns, edits and saves it (AW-2-51) | Author edits; each sentence cites its source (AW-2-51, EV-5); a live number check is a Proposal | Audience: *Unknown* (SA-1-67 is a Workstream 2 number, CN-SA-01 change 2); if firms see it, the author's approval stays mandatory |
 | 15 | Page-change describer | SA-1B-39, SA-1B-40 | A | Q3 | Describes text differences the rules found | Author decides | Internal |
 | 16 | Ticket sorter | SA-10-6, SA-10-7; AW-2-64, AW-2-65 | A, **partly R** (O10) | Q2 for category and priority; Q3 for the likely cause | Suggests from fixed lists; a rule maps cause to fix | Support confirms | Internal |
@@ -398,8 +399,11 @@ Skill numbers, names and approvers come from `handbook/ai-team-profiles.md` §4.
 | 18 | Help-article drafter | SA-10-23 | A | Q3 | Names removed by rule first | Editor publishes | Internal |
 | 19 | Upload and readiness check | SA-1B-18, SA-1B-21; AG-9-26 | R | Q2 | Rules the teammate's workflow runs; no model call | Rule test | Rules only (never "AI") |
 | 20 | Message hand-off | AG-10-37, AG-11-74 | R | Q2 | Rules the teammate's workflow runs: routing only | Rule test | Automatic |
-| 21 | Ready-to-save proposal | AG-6-19, AG-6-20; AG-3-10; SA-4-28 | R | Q2 | Rules the teammate's workflow runs; a person approves in the product's screen | Rule test; person's act | Prepared by rules; you approve |
-| 22 | List and reminder maker | AG-13-10, AG-13-14; AG-6-9 | R | Q2 | Rules the teammate's workflow runs; never marks a deadline met | Rule test | Automatic |
+| 21 | Ready-to-save proposal (firm) | AG-6-19, AG-6-20; AG-3-10 | R | Q2 | Rules the teammate's workflow runs; a person approves in the product's screen | Rule test; person's act | Prepared by rules; you approve |
+| 21b | Account change note (Expat Ready; split from 21 by the AIW-D106 note (b)) | SA-4-28 | R | Q2 | Rules the teammate's workflow runs; a second Expat Ready colleague checks it before someone allowed applies it | Rule test; person's act | Internal |
+| 22 | List and reminder maker (internal, firm) | AG-13-10, AG-13-14; AG-6-9 | R | Q2 | Rules the teammate's workflow runs; never marks a deadline met | Rule test | Automatic |
+| 22b | Lead fact request (split from 22 by the AIW-D106 note (b)) | AG-3-3, AG-3-12 | R | Q2 | A firm template asking a lead for missing facts, chosen by rule; follows the firm's message settings (AIW-D105) | Rule test; send checks (AIW-D105) | Automatic, your templates |
+| 22c | Assessment run (split from 22 by the AIW-D106 note (b)) | AG-3-1; AIW-D96 | R | Q2 | Starts the Qualifier run under `agent/assessment:run`; Auto once the stop check passes (AIW-D106 note (a)); same as A18 | Rule test; stop check (AIW-D98) | "Run by [AI teammate] for [person]; calculated by the rules, pack v[n]" |
 | 23 | Rulebook change check | SA-1-24, SA-1-30, SA-1-53 | R | Q2 | Rules the teammate's workflow runs: compares, test-runs, checks files | Rule test | Internal |
 | P | Practice-answer summary line | AG-11-70, AG-14-22 | **T** | Q2 | One line; failing lines dropped | Number check; promise-word scan | AI explains rule results (off by default) |
 | PA1 | Product AI: Reader on every clean upload | AG-9-42, AG-9-43; AIW-D100 | A | Q3 | Type and values proposed; provisional; reviewed in one sitting (AIW-D100) | Driving test; person approval | AI-read, verified by you |
@@ -440,7 +444,7 @@ The founder's words are from `founder-brief.md`, "12 Oct 2026", second quote. Ev
 | Class (AIW-D92) | Count | Notes |
 |---|---|---|
 | R — Rules only | 80 | — |
-| T — AI explains rule results | 6 | A70 is decided for version 2 (AIW-D39). A21, A27, A89, A95 and A111 are *Proposals — not approved* |
+| T — AI explains rule results | 6 | A70 is decided for version 2 (AIW-D39). A21 is decided by the AIW-D98 note. A27 is in scope by the Lead's ruling (AIW-D106 note (c)). A89, A95 and A111 are *Proposals — not approved* |
 | A — AI language | 11 | A123 is designed now, not live at launch (AIW-D102) |
 | H — Person only | 25 | — |
 | **Counted** | **122** | A44 is listed but not counted (AG-11-54) |
@@ -458,17 +462,15 @@ The founder's words are from `founder-brief.md`, "12 Oct 2026", second quote. Ev
 - A123 added as A (the AIW-D102 future conversational AI).
 - No existing row changed class. AIW-D93, D96, D100, D101, D103, D104 and D105 changed what the AI may do, not who decides.
 
-**Table B (AI skills and calls, 27 rows):** unchanged.
+**Table B (AI skills and calls, 30 rows):** changed after R7: skill 13 moved from A to R, and three rules-only rows added by splitting skills 21 and 22 (AIW-D106 note (b), (c)). Old numbers are kept; the new rows are 21b, 22b and 22c.
 
 | Class | Count | Rows |
 |---|---|---|
-| A — AI language | 19 | Skills 1, 2, 3, 5 to 13, 15 to 18, and PA1 to PA3 |
+| A — AI language | 18 | Skills 1, 2, 3, 5 to 12, 15 to 18, and PA1 to PA3 |
 | T — AI explains rule results | 3 | Skills 4 and 14, and the summary line P |
-| R — Rules only | 5 | Skills 19 to 23 |
+| R — Rules only | 9 | Skills 13, 19, 20, 21, 21b, 22, 22b, 22c, 23 |
 
-**Teammate skills:** 16 A, 2 T, 5 R.
-
-**If §8 is accepted:** 15 A, 2 T, 6 R, and Table B becomes 18 A, 3 T, 6 R.
+**Teammate skills (26):** 15 A, 2 T, 9 R.
 
 **Do not add the two tables together:** the A rows in Table A repeat AI work that Table B also counts.
 
@@ -484,7 +486,7 @@ A caution: AIW-D93, D103 and D104 widen what the AI may *prepare and do* across 
 |---|---|---|---|---|
 | O1 | Skill 4, plain-words summary | handbook §4 row 4 | Q2: the figures are rule-built; classed T | Pilot question (as AIW-D62): does the AI wording earn its place over the product's own text? |
 | O2 | Summary line (P) | handbook §4 row P; AIW-D62 | Q2; classed T | Decide with AIW-D62's pilot data |
-| O3 | Skill 13, sample-client proposer | handbook §4 row 13 | Q2, Q5 [I] | Should be rules. *Question for the team*: can the pack test-run (SA-1-52) supply sample clients for a changed rule? |
+| O3 | Skill 13, sample-client proposer | handbook §4 row 13 | Q2, Q5 [I] | **Moved to rules** (the Lead's ruling, AIW-D106 note (c)). *Question for the team*: can the pack test-run (SA-1-52) supply sample clients for a changed rule? |
 | O4 | Skill 10 for known sources | handbook §4 row 10 | Q2: known-source adapters and program names are rules already (A78, A79) [I] | Rules first; AI only for free-text columns |
 | O5 | Skill 11 for unchanged fields | handbook §4 row 11 | Q2 [I] | Rules first; AI only for renamed or new fields |
 | O6 | Skill 14, release note | handbook §4 row 14 | Q2: input is the rule comparison | Classed T; acceptable only because each sentence cites its source (AW-2-51) |
@@ -499,7 +501,7 @@ A caution: AIW-D93, D103 and D104 widen what the AI may *prepare and do* across 
 
 ## 9. Rules capabilities where an AI layer (T) would add real buyer value
 
-All are *Proposals — not approved* except V3. All call read tools under the person's permission (AIW-D93), stop on missing, stale or conflicting evidence (AIW-D98), and sit behind the driving test (AIW-D83).
+V1 is decided by the AIW-D98 note (explanations subject to licensed-person review, D98 point 4); V2 is in scope by the Lead's ruling (AIW-D106 note (c)); V3 is decided for version 2 (AIW-D39); V4 to V6 are *Proposals — not approved*. All call read tools under the person's permission (AIW-D93), stop on missing, stale or conflicting evidence (AIW-D98), and sit behind the driving test (AIW-D83).
 
 | # | On top of | What the AI adds | Why a buyer would pay | Limits |
 |---|---|---|---|---|
@@ -522,8 +524,8 @@ This brief said to write only this file, so nothing was appended to `proposals.m
 |---|---|---|
 | PR1 | Rule | Every capability in the blueprint carries its AIW-D92 class and the label from §2; rules only is never called AI. |
 | PR2 | — | *Closed by AIW-D93* (tool access widened beyond T-fixed). |
-| PR3 | Decision (founder) | Move skill 13 to rules (a team question, O3). Run the rule part first in skills 10, 11 and 16 (O4, O5, O10). Keep skill 4 and P as T, pending the pilot (AIW-D62). |
-| PR4 | Decision (founder) | Add V1 and V2 to the blueprint as NEW items behind the driving test. This adds to Release 1 scope (AIW-D82). |
+| PR3 | *Settled by the Lead's ruling, AIW-D106 note (c)* | Skill 13 moves to rules (applied in Table B; the team question in O3 stays). Run the rule part first in skills 10, 11 and 16 (O4, O5, O10). Keep skill 4 and P as T, pending the pilot (AIW-D62). |
+| PR4 | *Settled* | V1 is decided by the AIW-D98 note; V2 is in scope by the Lead's ruling in the AIW-D106 note (c) as an implementation choice inside the AI layer, not new scope. Both go into the blueprint as NEW items behind the driving test. |
 | PR5 | Rule | Wherever a Workstream 2 file lets an AI output take effect through "a person or a Doer", read it as FD-16. The exceptions are earned Auto (AIW-D104, extending AIW-D71 and D80) and published-template sends (AIW-D105). |
 | PR6 | Rule: amend `research/ai-architecture-deterministic-2026-10.md` §2.1 (not applied) | State how Q1 is met by a standing decision. AIW-D105 now settles this for template sends; the amendment would cover the rest (refund policy, recipe switches). |
 | PR7 | Rule (from R4) | Code claims cite the newest copy in `code/` by file and line. |
@@ -534,7 +536,7 @@ This brief said to write only this file, so nothing was appended to `proposals.m
 - AIW-D96 knock-ons (AW-1-88, CN-AG-03 change 1, test R-I4) and AIW-D103 knock-ons (AW-1-37 to AW-1-51, change notes, tests) are the Lead's to list.
 - The handbook and the earlier rows of this map that cited AIW-D44 or AIW-D40 are now superseded in this file only.
 
-**Open questions for the founder:** none left from K1 to K8; all are answered by AIW-D79, D92, D93, D98, D102, D103, D104 and D105.
+**Open questions for the founder:** none left from K1 to K8; all are answered by AIW-D79, D92, D93, D98, D102, D103, D104 and D105. PR3 and PR4 are settled by the AIW-D98 note and the Lead's rulings in the AIW-D106 note; the founder may overrule them.
 
 **Questions for the team:**
 1. Does the 10 Oct assessment engine meet AG-03's four outcomes (AG-3-10) and its per-factor breakdown (AG-3-20, AG-3-21)?
@@ -554,7 +556,7 @@ This brief said to write only this file, so nothing was appended to `proposals.m
 - `ai-workers/founder-brief.md`, "12 Oct 2026" (second quote).
 - `ai-workers/PROGRESS.md`, R4 row of 12 Oct (the earlier "T-fixed only" ruling, now widened by AIW-D93).
 - `ai-workers/README.md` §0 rules 3, 5, 9, 10, 11; §5.
-- `ai-workers/decisions.md`: AIW-D9, D11, D13, D19, D21, D22, D25, D37, D39, D40, D41, D42, D43, D44, D48, D53, D54, D59, D61, D62, D67, D71, D72 (and corrections), D73, D74, D75, D77, D78, D79, D80, D81 to D105.
+- `ai-workers/decisions.md`: AIW-D9, D11, D13, D19, D21, D22, D25, D37, D39, D40, D41, D42, D43, D44, D48, D53, D54, D59, D61, D62, D67, D71, D72 (and corrections), D73, D74, D75, D77, D78, D79, D80, D81 to D106 (with the AIW-D98 and AIW-D106 notes).
 - `ai-workers/checks/review-R4-2026-10-12.md`; `ai-workers/checks/review-R4-b-2026-10-12.md` (including §9, R4-c).
 - `ai-workers/handbook/ai-team-profiles.md` §1 to §4, §7.
 - `ai-workers/design/ai-carve-out-register-2026-10-11.md` §1; Registers A.1 to A.11.

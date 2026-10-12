@@ -429,13 +429,12 @@ function scStart(){
   <div class="card card-pad stack">
     <h2 style="font-size:17px">Every output says what made it ${tag('AIW-D92')}</h2>
     <p class="small muted">Each thing you see carries one of four labels. Rule results are never called AI.</p>
-    <div class="tw"><table>
-      <tbody>
-        <tr><td style="width:300px">${L('rules')}</td><td class="small">The product's fixed rules and the pack worked it out. No AI was used. Same input, same result.</td></tr>
-        <tr><td>${L('prep','Case Officer\'s AI')}</td><td class="small">An AI teammate prepared it for a named person, using rule results and the firm's records, with its sources.</td></tr>
-        <tr><td>${L('draft')}</td><td class="small">AI-written words or values read by AI. Nothing happens with it until a person checks and approves it.</td></tr>
-        <tr><td>${L('appr','the licensed consultant')}</td><td class="small">A named person decided. The record keeps who, when and exactly what they approved.</td></tr>
-      </tbody></table></div>
+    <div class="stack" style="gap:12px">
+      <div class="stack" style="gap:4px"><span>${L('rules')}</span><span class="small">The product's fixed rules and the pack worked it out. No AI was used. Same input, same result.</span></div>
+      <div class="stack" style="gap:4px"><span>${L('prep','Case Officer\'s AI')}</span><span class="small">An AI teammate prepared it for a named person, using rule results and the firm's records, with its sources.</span></div>
+      <div class="stack" style="gap:4px"><span>${L('draft')}</span><span class="small">AI-written words or values read by AI. Nothing happens with it until a person checks and approves it.</span></div>
+      <div class="stack" style="gap:4px"><span>${L('appr','the licensed consultant')}</span><span class="small">A named person decided. The record keeps who, when and exactly what they approved.</span></div>
+    </div>
   </div>
   <h2 style="font-size:16px">See it work</h2>
   <div class="jgrid">
