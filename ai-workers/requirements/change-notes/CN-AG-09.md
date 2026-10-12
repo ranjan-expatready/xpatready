@@ -4,7 +4,7 @@
 |---|---|
 | Module changed | AG-09 Document Management |
 | Version and file | v1.8 of 7 Oct 2026, `02-functional-requirements/agent/AG-09-document-management_v1.8_2026-10-07.md` (Drive snapshot of 11 Oct 2026, `sources/drive-snapshot-2026-10-11/`, unchanged since 9 Oct; line numbers below are that file's) |
-| Date of this note | 11 Oct 2026 (third fix round, after re-check S3c-c) |
+| Date of this note | 11 Oct 2026 (third fix round, after re-check S3c-c); **12 Oct 2026:** change 1 amended by AIW-D104 |
 | Status | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | Next free numbers used | AG-9-54 (highest AG-9-53, L553) |
 | Companion files | CN-AG-07 (changes 1, 2, 6); CN-AG-11 (item kinds `DOCUMENT_TYPE`, `UPLOAD_VERDICT`, `KEY_DATE`; action `propose_key_date`); CN-AG-18 change 2; CN-SA-06 change 3 |
@@ -25,6 +25,7 @@
 3. **Proposed words.** Add to AG-9-11: "*(11 Oct 2026, the founder — AIW-D71)* Applying a proposed type is an internal, reversible, audited filing label and is not an "effect" under FD-16, so high-confidence types MAY be applied without a person's click once a threshold is set. **No proposed type SHALL be applied without a person's confirmation until the platform publishes, for that document type, a confidence threshold set from measured accuracy** (IMP-30); until then every proposed type SHALL go to a person as a document-type approval item (AG-11 item kind `DOCUMENT_TYPE`, CN-AG-11 change 6). Values read from a document SHALL always need a person (AG11-D10; AG-9-45)." §13 item 10 adds: "For types, decided by AIW-D71: the threshold is set from measured accuracy."
 4. **Why.** AIW-D71 (the founder, 11 Oct: "Not an effect, but after the pilot … **in the pilot every type still goes to a person**, and the pilot's accuracy figures set the threshold (IMP-30). Values read from documents always need a person (AG11-D10)"); IMP-13; IMP-30; `case-assistant.md` §9 G-32. The product rule names a state the product can see (no published threshold) instead of "the pilot" (review S3c m-10; `00-step3-plan.md`, "No 'during the pilot' in a requirement").
 5. **Knock-ons.** AG-11 §3.10 and §13 Q11 (the default "everything to review" stands until a threshold is published); AG-14 measures record the accuracy (CN-AG-14 change 2); AG-18-33 imported documents follow the same rule; AW-1-120.
+6. **Amended 12 Oct 2026 (AIW-D104, earned Auto).** Add to the proposed words: "For a firm and a document type, the threshold is met when the AI layer's earned-Auto conditions hold (AW-1-136): the skill's tests passed, checked examples from actual use, the Owner's recorded approval, and a sample-check rate set from that evidence, never a fixed rate; an unchanged-approval rate alone is never enough. A type applied without a click stays labelled \"set by Reader\" until a person touches the document, and application returns to a person when quality falls or the skill, model, instructions or pack change materially." *Why:* AIW-D104 (the founder, 12 Oct 2026: earned Auto for "filing labels" with "passed skill tests, checked examples from actual use and the Owner's approval"; "set sampling from evidence rather than assuming 1-in-20 is adequate"). Values read from a document still always need a person (AG11-D10).
 
 ## 2. Which key covers which act on a document
 
@@ -70,6 +71,8 @@
 ---
 
 ## Not changed here (pointers only)
+
+- *12 Oct 2026 (AIW-D100):* holding Reader values from uploads for an AI job's end-of-job review, provisional until approved, touches AG-11-60's timing, which is the team's subject; the founder asks the team to revisit AG-11-60; no change note (AW-01 AW1-D44). AG-9-45's rule that a value is approved by a person is unchanged.
 
 - This module's status list (AG-9-26) becomes the one list for the case file (CN-AG-07 change 2); no change here.
 - The Reader proposes the document type, not the Sorter (AG-9-42 already says so); AG-10 and AG-11 are aligned (CN-AG-10 change 2, CN-AG-11 change 2).

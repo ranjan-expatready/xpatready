@@ -67,11 +67,11 @@ Scan the whole module in about a minute; jump to any part.
 2. **Users & Jobs-to-be-Done**
 3. **Functional Design — How It Works**
    - 3.0 One assistant = one person's delegation + a bundle of recipes · 3.1 Setting up, pausing and ending a delegation · 3.2 What runs, and what stops or pauses it · 3.3 What the record shows · 3.4 Where a person decides · 3.5 What no assistant ever does · 3.6 Switches, caps and stops · 3.7 What the AI may see · 3.8 Case assistant · 3.9 Intake assistant · 3.10 Billing assistant · 3.11 Firm assistant · 3.12 Practice expert · 3.13 Tested before released
-4. **Detailed Functional Requirements** (AW-1-1 to AW-1-126)
-5. **Business Rules & Logic** (AW1-BR-1 to AW1-BR-24)
+4. **Detailed Functional Requirements** (AW-1-1 to AW-1-145)
+5. **Business Rules & Logic** (AW1-BR-1 to AW1-BR-27)
 6. **States & Lifecycle**
 7. **Key Entities & Fields** (new entities here; changed fields by pointer)
-8. **User Stories + Acceptance Criteria** (US-1 to US-113)
+8. **User Stories + Acceptance Criteria** (US-1 to US-128; US-115 to US-128 added in version 0.7)
 9. **Edge Cases & Validations**
 10. **Permissions** (the delegation subsets, key by key)
 11. **Scalability · Security · Performance** (evaluation sets; risk registers; incident procedure)
@@ -228,7 +228,7 @@ Built by the Step 3 maker from the founder's decisions and the Lead's shared rul
 | **AG-18** | Mapping proposals (AG-18-92); key dates from imported notes (AG-18-93); batch-ready event (AG-18-94) | Written: CN-AG-18 changes 1 to 3 |
 | **SA-03** | Row 30 names the Writer; a delegation takes no seat (SA-3-41); no catalogue row per assistant | Written: CN-SA-03 changes 1, 2 |
 | **SA-05** | Expat Ready presets the status or eligibility mark on the templates it seeds and publishes the case letter type | Written: CN-SA-05 changes 1 and 2 (SA-5-47, BR-17; SA-5-48) |
-| **SA-06** | Lendable keys (SA-6-44, BR-27) and the Owner-only pause switch-off (change 1); reveal keys (change 2); keys split by act, every document request under `agent/case:document-manage` (change 3); platform keys (change 4); §13 item 13 (change 5); the two trust keys `agent/trust:move` and `agent/trust:reconcile`, never lendable (change 6) | Written: CN-SA-06 changes 1 to 6 |
+| **SA-06** | *12 Oct 2026, knock-on for the Lead (not yet written): `agent/assessment:run` lendable for the Intake (and Case) delegation, AW-1-131.* Lendable keys (SA-6-44, BR-27) and the Owner-only pause switch-off (change 1); reveal keys (change 2); keys split by act, every document request under `agent/case:document-manage` (change 3); platform keys (change 4); §13 item 13 (change 5); the two trust keys `agent/trust:move` and `agent/trust:reconcile`, never lendable (change 6) | Written: CN-SA-06 changes 1 to 6 |
 | **SA-08** | The AI provider record with a passed test call, status Draft, Published, Superseded or Withdrawn (SA-8-49), its status line and the Owner's withdrawal (SA-8-50), support-ticket calls under it (SA-8-51) | Written: CN-SA-08 change 2 |
 | **SA-11** | AI processing only in Canada (SA-11-32, change 1); retention with interim values only where AG-11-98 gives them (change 3); the audit-field rule applied to the platform chain by pointer (change 4); FD-20 review and portability request types (change 6); consent-withdrawn and request-opened events (SA-11-29, SA-11-27, change 7) | Written: CN-SA-11 changes 1, 3, 4, 6, 7 |
 | **SA-12** | AI emergency stops (SA-12-31, change 1); the recall action (SA-12-32, change 2); the *founder safeguards* setting, the platform values of the approve-all safeguards and the spend caps, platform values only (SA-12-33, change 3) | Written: CN-SA-12 changes 1 to 3 |
@@ -1048,6 +1048,53 @@ Numbered `AW-1-x`, AW-1-1 to AW-1-145 (AW-1-127 to AW-1-145 added in version 0.7
 **US-113 — A person ends their own delegation.** *(AW-1-11)*
 - **Given** the bookkeeper's delegation with one `PAYMENT_MATCH` waiting, **When** the bookkeeper ends the delegation, **Then** it is ENDED (PERSON_ENDED), the match is cancelled with `DELEGATION_ENDED` and stays visible in the audit, and a later delegation needs a new acceptance.
 
+
+**Additions of version 0.7 (the founder's decisions of 12 Oct 2026)**
+
+**US-115 — The Intake assistant starts the assessment; the rules calculate it.** *(AW-1-131, AW-1-132; replaces US-64)*
+- **Given** Lead L-1 with complete stated answers, no current assessment and an intake rep whose role and delegation hold `agent/assessment:run`, **When** the run opens, **Then** the pre-run check passes and the assessment runs automatically with no approval item, stamped "Run by [AI teammate] for [person]; calculated by the rules, pack v[n]" and "stated by the lead, not verified", and nothing about it is sent to the lead.
+- **Given** the same lead with unchanged answers and pack version, **When** the run re-evaluates, **Then** no second assessment is started.
+
+**US-116 — A conflict stops the step with a named failure.** *(AW-1-132)*
+- **Given** a client whose gate input has an open Checker finding, **When** the assistant would start the assessment, **Then** it stops with a named failure naming the input and the finding, as an *Ask now* item, and no assessment is created.
+
+**US-117 — A prepared invoice executes only as previewed.** *(AW-1-130, AW-1-140; replaces US-78)*
+- **Given** an `INVOICE_PROPOSAL` whose preview shows the issued invoice, **When** the bookkeeper (holding create and issue) approves, **Then** the platform creates and issues it once, with the designations the pack rule set; **and Given** a tax rate changes between preview and execution, **Then** execution is refused and a fresh preview is raised.
+- **Given** an unbilled line already in a pending proposal, **When** the weekly run fires, **Then** no second proposal holds that line.
+
+**US-118 — A proposed trust entry waits for the trust key holder.** *(AW-1-141; replaces US-25)*
+- **Given** a delivered milestone with trust money held, **When** the Billing assistant prepares the move to operating, **Then** one item shows the amount the rules engine computed and the linked milestone, it executes only when a holder of `agent/trust:move` approves it, and the assistant's delegation still cannot hold either trust key; no other assistant output quotes a trust figure.
+
+**US-119 — Export and deletion requests are prepared, never run.** *(AW-1-142)*
+- **Given** a privacy request, **When** the Firm assistant prepares the per-individual package request and a deletion request, **Then** neither runs until the Owner approves each preview; identity verification and the register entry stay the Owner's own acts.
+
+**US-120 — A settings change, never a permission.** *(AW-1-143)*
+- **Given** an assistant run, **When** it prepares a change to the chase interval, **Then** an item with old and new values waits for a holder of `agent/settings:edit`; **When** it tries to prepare a change to a role, the grid or a safeguard value, **Then** the server refuses and records it.
+
+**US-121 — A signature workflow is prepared; the signer signs.** *(AW-1-144)*
+- **Given** documents ready for signature, **When** the assistant prepares the workflow, **Then** on approval the product sends the signing requests with the passcode, and the assistant takes no act inside the signing ceremony.
+
+**US-122 — The presets move timing, never the floors.** *(AW-1-128)*
+- **Given** a new firm, **When** the Owner opens the AI settings, **Then** "Review each step" is selected and the examples are shown; **When** the Owner picks "Review at checkpoints", **Then** form drafts and letters wait for the end-of-job review, an AI-written client message is still asked now, and no grid cell for it offers *Auto*.
+
+**US-123 — Values first in the end-of-job review.** *(AW-1-33(d), (e), AW-1-134)*
+- **Given** a bundle with an identity detail, a conflict and ordinary values, **When** the officer presses *approve all*, **Then** the identity detail and the conflict stay unapproved until each is checked on its own, a letter using a still-provisional value cannot be approved, and the bundle lists every skipped step with why.
+
+**US-124 — A correction refreshes every draft that used it.** *(AW-1-135)*
+- **Given** a form draft and a letter that used a passport expiry date, **When** the officer corrects the date, **Then** both re-render, the old renderings cannot be approved; **and Given** a message already sent with the old date, **Then** one task *Sent with a value since corrected* goes to the file owner.
+
+**US-125 — Earned Auto, and losing it.** *(AW-1-136)*
+- **Given** the internal-note skill passed its tests, has checked examples from use and the Owner approved Auto, **When** a sample check then fails, **Then** the skill returns to approval for that firm and the change is recorded.
+
+**US-126 — A template send inside a job.** *(AW-1-137)*
+- **Given** a published missing-document template chosen by rule with merge fields from verified values, **When** the assistant's job reaches that step, **Then** it is sent after the recipient, consent, case-status and duplicate checks with no click; **When** the assistant puts its own words into a merge field, **Then** the send becomes an approval item.
+
+**US-127 — The launch chat answers only with approved content.** *(AW-1-138)*
+- **Given** the chat on a firm's site, **When** a lead asks a question no rule maps, **Then** a person is tasked to answer and no model-written reply is sent; with AI off, the rule-chosen answers still work.
+
+**US-128 — An explanation cites its sources and pack version.** *(AW-1-133)*
+- **Given** a stored assessment, **When** the officer asks for an explanation, **Then** every statement cites its pack passage, the pack version is shown, lead-stated inputs are marked, and an explanation with a number not in the result is dropped and recorded.
+
 ---
 
 ### 9. Edge Cases & Validations
@@ -1089,6 +1136,10 @@ Numbered `AW-1-x`, AW-1-1 to AW-1-145 (AW-1-127 to AW-1-145 added in version 0.7
 - **Two Writer drafts for the same client within minutes** (a question and a stage update) → two items; the rate caps of AG-11-38 still apply at send.
 - **A crafted request sets `mode`, `delegationId`, `startedBy` or `personaRunId` on an audit entry** → refused: all are set by the server only (AG-13-68); `startedBy` outside the five values is refused.
 - **WhatsApp is later confirmed in Release 1** → AW-1-82 and AW-1-91's fallback applies; until then the assistants' messages go by email (AW1-D36).
+- *(12 Oct 2026)* **A prepared item's approver loses the key before deciding** → approval is refused (AG-11-58; AW-1-129); where the item goes next is a team question (§13 T18, journeys G-6).
+- *(12 Oct 2026)* **The pack version changes while a prepared invoice waits** → if a bound field changes (a designation or tax), execution is refused and a fresh preview is raised (AW-1-130); an AI-started assessment pins the version it read (AW-1-131).
+- *(12 Oct 2026)* **The provider fails in the middle of a job under "Review at checkpoints"** → the model step is skipped (AW-1-53) and the bundle lists it as skipped, with why (AW-1-134(d)).
+- *(12 Oct 2026)* **An issued invoice whose proposed trust entry is rejected** → each item shows the other's state (AW-1-139); nothing is undone automatically.
 
 **Validation doctrine.** Every request this module adds (set-up, accept, decline, end, rehearsal, item decisions, switches, settings, inline asks) is validated by schema at the edge; a delegation write is validated against SA-06 v3.3 §10b, the lendable flag and the never-held list before it is stored; nothing is persisted on a failed validation.
 
@@ -1244,7 +1295,7 @@ Never holds: the five Owner + Case Manager approvals and `agent/sqr:verify`; `ag
 | R-I1 | Eligibility content reaches a lead | W-10 messages | E-6 zero tolerance; refusal test for marked templates to leads at the send step (AG-11-115); refusal counts | AW-1-90, AW-1-91; AG-11-115; AG-12-38 | AIW-D41; the licensed approver; counsel (CQ2) |
 | R-I2 | A commercial message is sent as transactional | W-10 | consent-gate skips; counsel's answer | AW-1-91 | counsel (CQ7) |
 | R-I3 | A proposed answer is treated as verified | W-09 | answers later contradicted by documents | AW-1-94; the Filler uses verified values only (AG-07 v2.7 §3.5) | the approver |
-| R-I4 | Automatic assessment creeps in (profiling) | W-10 | assessments created by no person (refusal test); task completion share | AW-1-88 | the founder (AIW-D40); counsel (CQ6) |
+| R-I4 | ~~Automatic assessment creeps in (profiling)~~ *Restated 12 Oct 2026 (AIW-D96; AIW-D106 note (a)):* an AI-started assessment runs on missing, stale or conflicting evidence, runs repeatedly, is called AI, or its result reaches a lead without a licensed person | W-10 | stop-check tests (open finding, proposed value, newer pack); runs per party per input change (G-14); label test; no lead message carries a result (E-6) | AW-1-131, AW-1-132, AW-1-90 | the founder (AIW-D96, D41); the Lead (G-2, G-14, M-2); CQ6 unconfirmed, no counsel (AIW-D94) |
 | R-I5 | AI text bound into the retainer | W-11 | refusal test in the release set (AG-5-55); refusal counts | AW-1-95 | AIW-D54 call 6; the team |
 
 *Billing assistant.*
@@ -1252,7 +1303,7 @@ Never holds: the five Owner + Case Manager approvals and `agent/sqr:verify`; `ag
 | # | Risk | Map | Measure | Manage | Govern |
 |---|---|---|---|---|---|
 | R-B1 | A payment recorded against the wrong invoice | W-12a | match accuracy; corrections | AW-1-97 (amount typed first; the person saves) | the bookkeeper |
-| R-B2 | An assistant creates a money or trust record | W-12, W-27 | refusal test in the release set; refusal counts | AW-1-39, AW-1-101; `agent/trust:*` never lendable | AIW-D44, D72; the team; counsel (CQ9) |
+| R-B2 | ~~An assistant creates a money or trust record~~ *Restated 12 Oct 2026 (AIW-D103):* a money or trust act executes without an authorised person's approval of the exact preview, or differs from it, or the assistant computes a figure itself | W-12, W-27 | direct-act refusal tests in the release set; bound-field change test (AW-1-130); refusal counts | AW-1-130, AW-1-140, AW-1-141; `agent/trust:*` never lendable | AIW-D103, D72 (amended); the team; CQ9 unconfirmed, no counsel (AIW-D94) |
 | R-B3 | A learned bank address exposes a client's payment to another | W-12a | mis-filed notices | AW-1-96; AG-10-60 | the team |
 | R-B4 | A reminder carries bank details or a wrong amount | W-12c | E-6, E-7 | AW-1-99 | the licensed approver |
 | R-B5 | The W-12d reminder states a balance or figure, or is taken as a reconciliation | W-12d | release-set test: the reminder holds no list and no figure (zero tolerance) | AW-1-100 (a reminder with a link only); AW-1-39; the product's report (AG-6-46); AG-6-47 | FD-17, AIW-D72; counsel (CQ9); the founder |
@@ -1299,7 +1350,7 @@ Never holds: the five Owner + Case Manager approvals and `agent/sqr:verify`; `ag
 
 **PROPOSED IN CHANGE NOTES (the product rules this module relies on; cited by ID, owned there).** AG-11-109 to AG-11-115, BR-42 and CN-AG-11 changes 1, 2, 8, 10 to 12; AG-13 BR-22, AG-13-68, AG-13-69; AG-16-55 to AG-16-57 and the AG-16-35, AG-16-39 and AG-16-21 wording; AG-14-35 to AG-14-40, AG-14 BR-17; AG-7-93 and CN-AG-07 changes 1, 2, 4 to 8; AG-9-11 wording, AG-9-54 and CN-AG-09 changes 2, 4; AG-6-24 replaced, AG-6-44 to AG-6-47, FD-11 wording; AG-5-54 to AG-5-56 and the approve-for-send split; AG-4-56; AG-3-42 and CN-AG-03 changes 1, 2; CN-AG-08 changes 1, 2; AG-10-60 and the AG-10-15 addition (CN-AG-10 change 4); AG-12-38, AG-12-39; AG-17-91, AG-17 BR-17; AG-18-92 to AG-18-94; CN-AG-01 changes 1, 2; SA-3-41 wording; SA-6-44, BR-27 and the Owner-only pause switch-off; SA-8-49 to SA-8-51; SA-11-32, SA-11-27 and SA-11-29 events and CN-SA-11 changes 3, 4, 6, 7; SA-12-31 to SA-12-33. Each is a Proposal until the founder places it.
 
-**NEW here (requires build; the assistant layer).** The delegation record, its screens and its PAUSED state; the persona run record with `startedBy`; the assistant's handling of a double-run match (skip, record, reference); routing assistant items to the delegating person; the inline ask to one's own assistant; the per-assistant switch's behaviour; the readiness report's content; the anti-rubber-stamp safeguards' behaviour (holdout, approver-only alarm); the client-facing stop's behaviour; server enforcement of the hard limits and their settings-page list; the handling of platform stops, recall and release on firm assistants; the least-data rule; the AI-written marker on artefacts other than messages and notes (letters, form values, the readiness paragraph, briefs, the money and weekly notes, the summary line); the question record and the summary-line checks; the reconciliation reminder at the Practice Pack's cadence; the evaluation sets of §11.4, the risk registers and the incident procedure. **Proposals added here beyond the behaviour documents:** the provenance view per client, per lead and per billing party (AW-1-23); the old run stopping and a new run starting on reassignment (§9); never holding out a Restricted value (§9, AW-1-33(b)); W-14 switched on by the Owner only (AW-1-105); the W-12d fallback when no one holds `agent/trust:reconcile` (§9). The per-assistant switch's default (off) now lives in AG-16-57 (CN-AG-16 change 4).
+**NEW in version 0.7 (12 Oct 2026):** tool calls with approval before effect; preparing the six AIW-D103 acts with approval bound to named fields; the AI-started assessment and its pre-run stop check; explanations with sources; the presets and the grid's behaviour; the end-of-job bundle's value rules; value versions per draft and the refresh; earned Auto; template sends inside a job; the rule-chosen launch chat (pending the founder); linked items; the cost fields on the AI call record (AW-1-127 to AW-1-145; CN-AG-11 changes 14 to 17). **NEW here (requires build; the assistant layer).** The delegation record, its screens and its PAUSED state; the persona run record with `startedBy`; the assistant's handling of a double-run match (skip, record, reference); routing assistant items to the delegating person; the inline ask to one's own assistant; the per-assistant switch's behaviour; the readiness report's content; the anti-rubber-stamp safeguards' behaviour (holdout, approver-only alarm); the client-facing stop's behaviour; server enforcement of the hard limits and their settings-page list; the handling of platform stops, recall and release on firm assistants; the least-data rule; the AI-written marker on artefacts other than messages and notes (letters, form values, the readiness paragraph, briefs, the money and weekly notes, the summary line); the question record and the summary-line checks; the reconciliation reminder at the Practice Pack's cadence; the evaluation sets of §11.4, the risk registers and the incident procedure. **Proposals added here beyond the behaviour documents:** the provenance view per client, per lead and per billing party (AW-1-23); the old run stopping and a new run starting on reassignment (§9); never holding out a Restricted value (§9, AW-1-33(b)); W-14 switched on by the Owner only (AW-1-105); the W-12d fallback when no one holds `agent/trust:reconcile` (§9). The per-assistant switch's default (off) now lives in AG-16-57 (CN-AG-16 change 4).
 
 **CHANGED (each lives in the change note named in §0.2 and §7).** `ApprovalItem` (kinds, `PAUSED`, `stopMarker[]`, fields); `AiRunLog`; `AutomationRun`; `AutomationRecipe`, `AutomationDefinition`, `AutomationActionResult`; `AuditLog`; `Task`, `Reminder`; `Note`; `FormInstance.preparedByUserId` meaning and `preparedByDelegationId` (AG-7-66); `ConsultRecord`; the SQR `STAFF_ON_BEHALF` path with `basisMessageId` (AG-08); `Template` mark; `fundsDesignation` on client-money records (AG-6-24); `TrustLedger`, `TrustLedgerEntry`, `TrustMovementEvent` and `TrustReconciliation`, named only, and the two trust keys (AG-6-46); the firm AI settings (lock, pause, per-assistant switches off by default, the expert's one summary-line switch, the firm's own stricter values); the export scope (AG-16-39, AG-16-21); AG-9-11's pilot rule; the AG-05 binding rule (AG-5-55); `PermissionCatalog.assistantLendable` and the Owner-only pause switch-off (SA-06); row 30 wording and the seat rule (SA-03); the provider record (SA-08); the AI processing category, audit fields by pointer, request types and events (SA-11); AI flags, recall, the founder safeguards setting, and the platform values of the safeguards and spend caps (SA-12).
 
@@ -1317,15 +1368,19 @@ Only items that are genuinely open, each with its owner. Everything the founder 
 3. **T12 — Where the question record lives, whether a question writes an audit row, and PE rule 13 (pinned version first; AG-14-37 now states it).** *(PE G-13, G-17, G-34)* Owner: the team.
 4. **T13 — Whether triggers that arrive while new client-facing preparation is stopped for lack of a licensed user are prepared when it resumes.** Owner: the team.
 5. **T14 — WhatsApp in Release 1 or Phase 2** (SA8-D19 against AG11-D18(a); SA8-X1). Email meanwhile (AW1-D36). Owner: the team.
+6. **T15 (12 Oct 2026) — AG-11-94 "models SHALL have no tool access"** conflicts with AIW-D93 (AW1-D41); the founder asks the team to revisit it. Owner: the team.
+7. **T16 — AG-11-60** (upload values asked at once) against AIW-D100's bundle sitting (AW1-D44). Owner: the team.
+8. **T17 — SA1B-D18** (pack rules may publish untested) against Workstream 2's assumption that the engine and packs are complete and tested (AIW-D98; AW1-D43). Owner: the team.
+9. **T18 — Team needs for the 12 Oct decisions:** the holding state and bundle screen (autonomy model E4), the role × action grid (E9), the Filler and provisional values (E14), trust-entry keys (E16), re-routing a waiting item when its approver loses the key (journeys G-6), AG-3-29's stale flag on a changed gate input (G-13), whether the Checker compares lead answers (G-19), the lead chat surface (G-1). Owner: the team.
 
-**For counsel** (engaged by 31 Oct 2026; no pilot on real client files before counsel has read the pack, AIW-D64, D68): the hard limits, the W-14 exception, the pause, the safeguards and the approver-only alarm (CQ1, CQ3); the advice boundary of the readiness report, response plan, letters, lead replies, asking a lead for facts and the expert's answers (CQ2); the CASL class of lead messages, re-engagement and personal reminders (CQ7); client notice wording, the AI-written marker and the court declaration (CQ5, CQ11); B-1, the model-call contract and the privacy impact assessment (CQ4); retention of the AI run log, approval items, run records, delegation records, question records, holdout checks, alarms, provenance and candidate data (CQ8; every record type new here is *Unknown, counsel question 8*); automated decisions (CQ6); portal filling (CQ12); Quebec language duties (CQ13); the delegation record itself (CQ13a); FD-17 in full (CQ9); breach and incident notification for I-2 and I-7 (CQ15); the FD-20 review and portability request types in W-16 (CQ16).
+**For counsel** — *superseded by AIW-D94 (12 Oct 2026): no counsel is engaged; the topics below stay listed as the Lead's own unconfirmed guidance, "Unconfirmed: no counsel (AIW-D94)", and nothing waits on them (AW1-D40).* ~~(engaged by 31 Oct 2026; no pilot on real client files before counsel has read the pack, AIW-D64, D68)~~ the hard limits, the W-14 exception, the pause, the safeguards and the approver-only alarm (CQ1, CQ3); the advice boundary of the readiness report, response plan, letters, lead replies, asking a lead for facts and the expert's answers (CQ2); the CASL class of lead messages, re-engagement and personal reminders (CQ7); client notice wording, the AI-written marker and the court declaration (CQ5, CQ11); B-1, the model-call contract and the privacy impact assessment (CQ4); retention of the AI run log, approval items, run records, delegation records, question records, holdout checks, alarms, provenance and candidate data (CQ8; every record type new here is *Unknown, counsel question 8*); automated decisions (CQ6); portal filling (CQ12); Quebec language duties (CQ13); the delegation record itself (CQ13a); FD-17 in full (CQ9); breach and incident notification for I-2 and I-7 (CQ15); the FD-20 review and portability request types in W-16 (CQ16).
 
 **After the pilot** (AIW-D62, D60):
 - **A1** Spend-cap values after the pilot. No model-spend cap exists today (AG-11 v1.12 §11); the values used until then are set by the team before the first production deployment as platform settings (SA-12-33), high enough to measure real use (PE §11 decision 10); meanwhile only the Platform Owner may change a default, with a recorded reason (SA-12-25; CN-SA-12 change 3), and a firm may set its own lower caps (AG-16-57).
 - **A2** Whether the expert's summary line earns its cost.
 - **A3** Evaluation pass bars, confidence thresholds and the shadow-mode bar N (IMP-30), from the pilot's figures (AIW-D71).
 - **A4** Widening the expert's sources; free questions (version 2).
-- **A5** Revisiting the automatic assessment with AG-03 §13 Q10 (AIW-D40).
+- **A5** ~~Revisiting the automatic assessment with AG-03 §13 Q10 (AIW-D40).~~ *Closed 12 Oct 2026 by AIW-D96 and the AIW-D106 note (a) (AW-1-131).*
 - **A6** Transcription of consultations.
 - **A7** Whether the Case Manager's delegation earns its place (AIW-D38).
 - **A8** Dunning reminder days, with the specialist.
@@ -1333,7 +1388,8 @@ Only items that are genuinely open, each with its owner. Everything the founder 
 
 **For the founder.**
 - **F1** With the immigration specialist, before the pilot: the default plan mode and whether a draw invoice is due on its installment's date (BA §11 decision 8; G-10).
-- **F2** Before the pilot: the share or delay of *run an assessment* tasks that would justify revisiting AIW-D40 (IA §11 decision 4).
+- **F2** ~~Before the pilot: the share or delay of *run an assessment* tasks that would justify revisiting AIW-D40 (IA §11 decision 4).~~ *Closed 12 Oct 2026 by AIW-D96.*
+- **F4** *(12 Oct 2026)* M-1, the rule-driven lead chat (AW-1-138(b)), waits for the founder's answer on the AIW-D102 amendment; the conversational AI for leads is pending founder decision with the team.
 - **F3** Step 5: within how many days a re-run on the same case is not a new prepared file (IMP-18(a)).
 
 **For the Lead (integration).**
@@ -1345,6 +1401,6 @@ Only items that are genuinely open, each with its owner. Everything the founder 
 - **L10** *Closed 11 Oct (the Lead):* `agent/trust:move` and `agent/trust:reconcile` (CN-AG-06 change 6) are in CN-SA-06's catalogue and its never-lendable list (CN-SA-06 change 6); §10 lists both under *never holds*.
 - **L11** *Closed 11 Oct (the Lead):* CN-SA-05 carries Expat Ready presetting the status or eligibility mark on the masters it publishes (change 1, SA-5-47, BR-17) and the case letter masters (change 2, SA-5-48); AW-1-46 relies on it. Its open questions for the team are in CN-SA-05 change 3.
 
-**Phasing.** Release 1 (AIW-D66): everything in §4, with the form duty (W-05) disabled until the team's route exists (AIW-D43), document typing to a person until a threshold is published (AIW-D71), assistant messages by email until SA8-X1 is settled (AW1-D36), and every value marked *after the pilot* at the value the team sets before it. Not in Release 1: §0.1. **Date consequences (AIW-D68; README §5):** counsel is engaged by 31 Oct 2026 and reviews in November; counsel's changes to the provisional limits, pause and safeguards land in December, before the 2 Jan 2027 feature-complete gate, so every requirement above must be buildable with its provisional value and changeable by setting or seed row, not by rebuild; the pilot on real files runs from about 25 Jan 2027 for the 26 Feb 2027 acceptance gate. Because Release 1 does not launch without these assistants (AIW-D66), a late counsel answer or a failed provider test (AIW-D69) moves the pilot, and with it the March 2027 launch.
+**Phasing.** *Read with AIW-D94 and AIW-D106 (12 Oct 2026): the counsel dates below no longer apply; nothing waits on counsel; the full agreed scope is in this release.* Release 1 (AIW-D66): everything in §4, with the form duty (W-05) disabled until the team's route exists (AIW-D43), document typing to a person until a threshold is published (AIW-D71), assistant messages by email until SA8-X1 is settled (AW1-D36), and every value marked *after the pilot* at the value the team sets before it. Not in Release 1: §0.1. **Date consequences (AIW-D68; README §5):** counsel is engaged by 31 Oct 2026 and reviews in November; counsel's changes to the provisional limits, pause and safeguards land in December, before the 2 Jan 2027 feature-complete gate, so every requirement above must be buildable with its provisional value and changeable by setting or seed row, not by rebuild; the pilot on real files runs from about 25 Jan 2027 for the 26 Feb 2027 acceptance gate. Because Release 1 does not launch without these assistants (AIW-D66), a late counsel answer or a failed provider test (AIW-D69) moves the pilot, and with it the March 2027 launch.
 
 > **Domain-correctness items routed to the immigration specialist** (AIW-D50; the product owners final): document types and their field lists, the letter-type to milestone mapping, deadline definitions and lead times, finding severities, reason wording, the case letter types, the next-moment dates for W-14, and every known answer in the evaluation sets. This specification defines the mechanism; the immigration values are confirmed there.

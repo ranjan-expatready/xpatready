@@ -158,15 +158,16 @@ The five questions are used exactly as worded in `research/ai-architecture-deter
 
 **Buyer labels.** These follow FD-16 ("Marketing may say 'AI-assisted'; it may not say the AI decides"), **as narrowed by AIW-D92**: "AI-assisted" is not used for assessments, scoring or any rules-only capability. Each output carries its class label (AIW-D92).
 
-| Class | Label |
-|---|---|
-| R | "Rules only" or "Calculated by the rules, pack v[n]"; never called AI (AIW-D92). For an assessment an AI teammate ran: "Run by [AI teammate] for [person]; calculated by the rules, pack v[n]" (AIW-D96) |
-| T | "AI explains rule results" |
-| A, client-facing text | "AI-drafted, approved by you" |
-| A, reading | "AI-read, rule-checked, verified by you" |
-| A, sorting | "AI-suggested, you confirm" |
-| A, prepared actions | "Prepared by AI, approved by you" |
-| H | "Your decision; Expat Ready keeps the record" |
+**The four canonical labels** (the Lead's ruling after review R8; one word per thing, README §0 rule 9). Every output shows one or more of these, in this order:
+
+| Label | Used for | Class |
+|---|---|---|
+| "Calculated by the rules, pack v[n]" | Any rule result (assessment, score, checklist, invoice amount, readiness). Never called AI (AIW-D92). For an assessment an AI teammate started, prefixed "Run by [AI teammate] for [person];" (AIW-D96) | R |
+| "Prepared by [AI teammate]" | Anything an AI teammate prepared or explained: a draft, a reading, a suggestion, an explanation of a rule result, a prepared action | T, A |
+| "AI draft: check before use" | Any AI-written or AI-read content not yet approved | T, A |
+| "Approved by [person]" | Anything a person approved, verified or decided; Expat Ready keeps the record | H, and every approved T or A output |
+
+The "Say to buyers" column in Tables A and B and the older wording ("AI-drafted, approved by you", "AI-read, rule-checked, verified by you", "AI-suggested, you confirm", "Prepared by AI, approved by you", "Your decision") map to these four: before approval, "Prepared by [AI teammate]" + "AI draft: check before use"; after approval, "Prepared by [AI teammate]" + "Approved by [person]". *The older wording in the table cells is superseded by these four labels (12 Oct 2026).*
 
 **Headline and story order (AIW-D99).**
 - Lead headline: "An AI team for your immigration practice."

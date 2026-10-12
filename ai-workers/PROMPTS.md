@@ -18,7 +18,7 @@ Continue Workstream 2 (AI Workers). Continue Step R as defined in ai-workers/NEX
 Decision for AI Workers: <what you decided>. Record it in decisions.md with my words, update every affected file, and tell me what changed and what it contradicts (timelines are not our concern, AIW-D21).
 ```
 
-## 5. When you want to be grilled
+## 4. When you want to be grilled
 ```
 Grill me on AI Workers: the 5 hardest questions an investor, a licensed consultant customer and the CICC regulator would ask, with our honest current answer to each.
 ```
@@ -43,10 +43,10 @@ Grill me on AI Workers: the 5 hardest questions an investor, a licensed consulta
 
 **The coached ask:**
 ```
-Design Expat Ready's AI Workers: governed AI users of our own product that do the manual work a firm does today, through the product's Doers, rules, country packs, permissions and audit trail, ending at a named licensed person's sign-off.
+Design Expat Ready's AI Workers: AI teammates that act for a named person inside our own product (never their own user) and do the manual work a firm does today, through the product's Doers, rules, country packs, permissions and audit trail, ending at a named licensed person's sign-off.
 1. Ground it: read every current requirement document in full and the latest code; map every module and Doer; show build status honestly next to the vision.
 2. Compete: show that we cover every job VisaFlo and the main alternatives do, and the 2–3 advantages they cannot quickly copy.
-3. Concept: one visual map of the product with each component assigned to an AI Worker, plus a detailed catalogue (job, guardrails, sign-off, value, cost to run, release).
+3. Concept: one visual map of the product with each component assigned to an AI Worker, plus a detailed catalogue (job, guardrails, sign-off, value, cost to run, release *(the release field is superseded by AIW-D82 and D106: full agreed scope in Release 1)*).
 4. Choose a wedge: which 1–2 AI Workers ship in the March 2027 launch, and what that costs the date. *(Superseded by AIW-D66 and D82: the full specification ships in Release 1.)*
 5. Validate: a short script to test the concept with 5–10 licensed consultants before pricing. *(Superseded by AIW-D94: no external validation.)*
 6. Commercialise: proposition and pricing, added to the existing business plan and money model; then a high-level investor story with the amount, the milestone it buys, and the risks (liability, privacy, CICC rules, AI cost).
