@@ -4,9 +4,9 @@
 |---|---|
 | Module changed | AG-12 Templates (firm-level) |
 | Version and file | v1.2 of 7 Oct 2026, `02-functional-requirements/agent/AG-12-templates_v1.2_2026-10-07.md` (Drive snapshot of 11 Oct 2026, `sources/drive-snapshot-2026-10-11/`, unchanged since 9 Oct; line numbers below are that file's) |
-| Date of this note | 11 Oct 2026 (fourth fix round, after re-check S3c-d) |
+| Date of this note | 11 Oct 2026 (fourth fix round, after re-check S3c-d); **12 Oct 2026:** change 3 added (AIW-D102, D105) |
 | Status | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
-| Next free numbers used | AG-12-38, AG-12-39 (highest AG-12-37, L320); BR-15 (highest BR-14, L339). Doc 3 v1.4 (`01-techno-functional/05-Doc-3-Agent-Console.md`) uses AG-12-38 and AG-12-39 for other, older requirements (L5873, L5876, L5958); the module file's numbering governs, and Doc 3's older use is superseded (README §0 rule 11: the newer module file wins, and the older source is named only to record the conflict). |
+| Next free numbers used | AG-12-38, AG-12-39, AG-12-40 (12 Oct 2026) (highest AG-12-37, L320); BR-15 (highest BR-14, L339). Doc 3 v1.4 (`01-techno-functional/05-Doc-3-Agent-Console.md`) uses AG-12-38 and AG-12-39 for other, older requirements (L5873, L5876, L5958); the module file's numbering governs, and Doc 3's older use is superseded (README §0 rule 11: the newer module file wins, and the older source is named only to record the conflict). |
 | Companion files | CN-AG-03 change 2 (BR-19); CN-AG-11 change 13 (AG-11-115, the send-time check) and change 9 (g) (the client-side default); CN-AG-10 change 4 (the composer); CN-SA-05 (Super Admin half: SA-5-47, the mark preset on masters; SA-5-48, the case letter masters); AW-01 (the Case and Intake assistants) |
 
 **In plain words.** Firm templates send on their own once the firm has approved them, which is right for routine messages. Two safeguards are needed now that AI assistants also send templates. First, a mark for templates that talk about a client's status or eligibility. No automatic or AI-drafted send ever delivers a marked template to a lead, because the founder decided that eligibility reaches a lead only when a consultant shares the assessment. A person's own message is not blocked. To an existing client, an assistant's send of a marked template waits for a person by default. The check works only on templates that carry the mark: wording in an unmarked template is not checked by machine. Second, a letter type for case letters, with locked wording, a list of the facts used, wording the Writer may never touch, and a court-declaration flag; the letters themselves are country masters Expat Ready publishes. "Drafter" in this module is the template engine and stays.
@@ -40,6 +40,15 @@
 5. **Knock-ons.** AG-09 generate-from-template (AG-9-22) files the approved letter; AW-01 (the Case assistant's letter duty); SA-05 (CN-SA-05 change 2, SA-5-48, the case letter masters).
 
 ---
+
+## 3. Templates used inside an AI job and as answers in the launch chat (12 Oct 2026)
+
+1. **Where.** §3 (template use); after AG-12-39; new requirement **AG-12-40**.
+2. **Current words.** None: AG-12 v1.2 does not say how a template may be used inside an AI teammate's job or as an answer in a chat.
+3. **Proposed words.**
+   > **AG-12-40 (templates used by AI teammates and in the lead chat).** (a) A published template sent by its defined automatic use counts as approved by the firm's own approval of that template, also inside an AI teammate's job (AG-11-114 (g) as amended, CN-AG-11 change 17). Its merge fields SHALL be filled only from verified facts or approved engine results (AG-11-97); any text an AI wrote or edited, including text put into a merge field, SHALL make the send an approval item. (b) Where a firm offers a chat to leads at launch, each answer SHALL be a published template version chosen by a rule (the guided intake flow, a menu or a keyword), never by a model; a template carrying the mark of AG-12-38 is never an answer to a lead; the chat surface is the team's to design. (c) No template SHALL be chosen by a model.
+4. **Why.** AIW-D105 (the founder, 12 Oct 2026: "Templates must be rule-selected, with merge fields populated from verified facts or approved engine results … AI-written or edited content—including text inserted into merge fields—still requires approval before sending"); AIW-D102 ("Allow an interactive chat interface using that approved content"; mechanism M-1 waits for the founder's answer on the AIW-D102 amendment, `proposals.md` row of 12 Oct; any conversational AI is pending a founder decision with the team). Behaviour: AW-1-137, AW-1-138 (AW-01 v0.7).
+5. **Knock-ons.** CN-AG-11 change 17; AG-02 lead capture (the chat surface, a team question, journeys G-1).
 
 ## Not changed here (pointers only)
 

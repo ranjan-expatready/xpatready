@@ -4,9 +4,9 @@
 |---|---|
 | **Document changed** | ExpatReady — Founder Decisions Log (consolidated sign-off), document version 1.5, last updated 2026-08-02 |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/01-techno-functional/07-Founder-Decisions-Log.md` |
-| **Date of this note** | 11 Oct 2026 (seventh round: the founder's Step 3 batch, AIW-D73 to AIW-D77, applied to open points 1 and 3 to 6; changes 10 to 14 added) |
+| **Date of this note** | **12 Oct 2026 (eighth round: change 15, the founder's decisions of 12 Oct, AIW-D92 to D105)**; earlier 11 Oct 2026 (seventh round: the founder's Step 3 batch, AIW-D73 to AIW-D77, applied to open points 1 and 3 to 6; changes 10 to 14 added) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
-| **Changes** | 14: 3 amendments (FD-4, FD-8, FD-7), 5 reaffirmations, 1 new section, 1 reading of FD-16, and 4 further lines from the founder's Step 3 batch (AIW-D52's reach, FD-4 for Practice Pack reference data, FD-11's reach, money returned from trust). The 6 open points (below, not changes) are all settled: five decided by the founder on 11 Oct (AIW-D73 to AIW-D77), one recorded as applied. |
+| **Changes** | 15 (change 15 added 12 Oct 2026):  3 amendments (FD-4, FD-8, FD-7), 5 reaffirmations, 1 new section, 1 reading of FD-16, and 4 further lines from the founder's Step 3 batch (AIW-D52's reach, FD-4 for Practice Pack reference data, FD-11's reach, money returned from trust). The 6 open points (below, not changes) are all settled: five decided by the founder on 11 Oct (AIW-D73 to AIW-D77), one recorded as applied. |
 
 **What this note is.** The Founder Decisions Log is the founder's own record; only the founder changes it. On 11 Oct 2026 the founder answered the Workstream 2 decisions one by one (`ai-workers/decisions.md`, AIW-D36 to AIW-D72, with the appended rows *AIW-D72 correction* and *AIW-D72 correction 2*). This note does four things:
 - **Two amendments.** Two of his answers amend a ratified decision (FD-4, FD-8).
@@ -390,3 +390,30 @@ L32:
 **(4) Why.** AIW-D77, 11 Oct 2026 (open point 6). The founder chose "Yes, team designs how": "Release 1 records **money returned to a client from trust** (for example an unused retainer), so the trust ledger stays right; the team designs the mechanics under FD-17 (AG-06 §13 item 11); the platform never moves money (FD-12); consultation refunds stay as FD-13 and AG-4-46 have them. No assistant records a refund."
 
 **(5) Knock-ons.** AG-06 §13 item 11 (h) (CN-AG-06 change 6): refunds of trust money are decided for Release 1; the mechanics stay the team's. AW-01 AW-1-39 (no assistant records a refund).
+
+## 15. The Workstream 2 (AI) decisions of 12 Oct 2026, and what they change in this note's earlier rows
+
+**(1) What it changes.** (a) FD-16's row (L52): one more line. (b) Change 8's proposed section: the rows FD-27 (call 3) and FD-28, and the words "provisional until counsel" throughout. (c) Change 14's last sentence. (d) A new block of rows after change 8's block.
+
+**(2) Current words.** FD-16 (L52) as change 9 leaves it. Change 8, FD-27 call (3): "money: the assistant proposes, a person saves in the product's screen"; FD-28: "**Adopted, provisional until counsel reads them**, with one exception …"; the block's origin line: "Rows marked *provisional* stay provisional until counsel has read them (AIW-D64; counsel engaged by 31 Oct 2026, AIW-D68)." Change 14: "No assistant records a refund."
+
+**(3) Proposed words.**
+- (a) FD-16 adds: *Narrowed 2026-10-12 (AIW-D92): every capability and output belongs to one of four classes (rules only, AI explains rule results, AI language, person only); the phrase "AI-assisted" is not used for assessments, scoring or any rules-only capability. Read 2026-10-12 (AIW-D93, D103): AI teammates may call read tools and action tools under the delegated person's permission and may prepare consequential acts, but every act with an effect is approved by an authorised person before it takes effect, bound to the exact preview; "no model output is ever a decision" stands.*
+- (b) FD-27 call (3) becomes: "money: the assistant prepares invoices and proposed trust entries; an authorised person approves the exact preview before the product executes; a payment is still recorded by a person; the platform never moves money (AIW-D103; FD-12)". FD-28 becomes: "**Adopted** (AIW-D55), with one exception …; **for invoices, proposed trust entries, exports, deletion requests, settings changes and signature workflows, replaced by action-specific controls** (AIW-D103): the AI prepares, an authorised person approves the exact preview before execution, signatures stay with the signer, and the AI never grants itself permissions or bypasses product controls." The origin line becomes: "No counsel is engaged (AIW-D94, 12 Oct 2026); rows once marked *provisional* are the Lead's guidance, unconfirmed: no counsel."
+- (c) Change 14's last sentence becomes: "An assistant may prepare the return of trust money for an authorised person's approval; it never executes it (AIW-D103)."
+- (d) New rows (numbers to assign by the founder):
+
+> | # | Decision | Category | RESOLVED as |
+> |---|----------|----------|-------------|
+> | FD-32 *(to assign)* | AI tools | D | AI teammates may call read tools and write or action tools, always under the delegated person's own permission; every action with an effect waits for a person's approval, then the platform performs it; text inside client documents never chooses a tool. (AIW-D93) |
+> | FD-33 *(to assign)* | No external validation | C | No counsel and no consultant conversations; building never waits on validation; legal points are the Lead's guidance, unconfirmed. (AIW-D94; supersedes AIW-D64's counsel gate and AIW-D68) |
+> | FD-34 *(to assign)* | Who runs the assessment | D | An AI teammate may run the eligibility assessment under the delegated person's permission; the rules engine calculates every result; telling a lead or client stays with a licensed person. (AIW-D96; reopens AIW-D40) |
+> | FD-35 *(to assign)* | Rules under the AI | D | Workstream 2 assumes the rules engine and packs are complete and tested (Workstream 1's); the AI uses only approved engine results, explains them with sources and the pack version, stops on missing, stale or conflicting evidence; explanations are reviewed by a licensed person; no claim that the AI detects incorrect rules. (AIW-D98) |
+> | FD-36 *(to assign)* | Autonomy | D | Values from uploads reviewed in one sitting, provisional until approved, explicit checks where it matters (AIW-D100); two presets, "Review each step" (default) and "Review at checkpoints", and a grid that never grants access (AIW-D101); earned Auto for routine internal work only (AIW-D104); published templates' automatic use counts as approval inside AI jobs, AI-written text still approved (AIW-D105). |
+> | FD-37 *(to assign)* | Leads at launch | D | Approved templates and guided intake questions automatically; a chat serving approved content; AI-written replies approved; a conversational AI later by a separate decision with the team. (AIW-D102) |
+> | FD-38 *(to assign)* | AI-prepared consequential acts | B | As FD-28 as changed above. (AIW-D103; supersedes AIW-D44; amends AIW-D55, D72, D77) |
+
+**(4) Why.** The founder's answers of 12 Oct 2026, recorded with his words in `ai-workers/decisions.md` AIW-D92 to AIW-D105. AIW-D92 says "The founder places the FD-16 amendment on Drive".
+
+**(5) Knock-ons.** AW-01 v0.7 (AW1-D40 to AW1-D50; AW-1-127 to AW-1-145); AW-02 v0.9; CN-AG-03 change 5; CN-AG-06 changes 6 (amended) and 7; CN-AG-09 change 1 (amended); CN-AG-11 changes 14 to 17; CN-AG-12 change 3. Team conflicts stated, not settled: AG-11-94 (AIW-D93), AG-11-60 (AIW-D100), SA1B-D18 (AIW-D98).
+
