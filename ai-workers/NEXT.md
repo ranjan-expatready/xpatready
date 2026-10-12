@@ -11,6 +11,7 @@
 ## 12 Oct session (in progress)
 - Started: review R1-b of the handbook (`checks/review-R1-b-2026-10-12.md`) and the founder's new ask, research on AI accuracy and determinism (`research/ai-accuracy-and-determinism-2026-10.md`; gaps only, builds on `research/ai-architecture-deterministic-2026-10.md`). Each goes to an adversarial check before the founder sees it. If either file is missing, re-run it.
 - Founder question 1 of 2 (moat wording as the combination) asked 12 Oct; answer pending.
+- Founder's second ask, 12 Oct: one framework strategy that classifies every capability as rules only / AI using rule tools / AI language / person only, and how to sell it ("rules under the flavour of AI"). Makers started: `design/rules-ai-classification-2026-10-12.md` and `research/rules-and-ai-positioning-2026-10.md`. When all three makers land: adversarial check, then the Lead writes one framework document (`design/rules-and-ai-framework-2026-10-12.md`) and puts the decision to the founder. Lead's position already given: do not call rule results "AI"; call them "rules-verified" with an AI teammate that runs and explains them (AI-washing risk: Competition Act, FTC DoNotPay order).
 
 ## Step R in progress (11 Oct)
 - Founder's interview so far: AIW-D81 to D87 (see `rethink-plan.md`). Evidence filed: `research/ai-in-regulated-work-2026-10.md`, `research/ai-coverage-vs-competitors-2026-10.md`, `design/ai-carve-out-register-2026-10-11.md`.
