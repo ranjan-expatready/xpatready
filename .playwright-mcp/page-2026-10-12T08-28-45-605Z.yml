@@ -1,0 +1,114 @@
+- generic [ref=e2]:
+  - complementary "Prototype navigation" [ref=e3]:
+    - generic [ref=e4]:
+      - generic [ref=e5]: ER
+      - generic [ref=e6]:
+        - generic [ref=e7]: Your AI team
+        - generic [ref=e8]: Firm F · simulated prototype
+    - navigation [ref=e9]:
+      - generic [ref=e10]: Screens
+      - button "★ Start" [ref=e11] [cursor=pointer]:
+        - generic [ref=e12]: ★
+        - text: Start
+      - button "1 AI team" [ref=e13] [cursor=pointer]:
+        - generic [ref=e14]: "1"
+        - text: AI team
+      - button "2 File preparation" [ref=e15] [cursor=pointer]:
+        - generic [ref=e16]: "2"
+        - text: File preparation
+      - button "3 Assessment" [ref=e17] [cursor=pointer]:
+        - generic [ref=e18]: "3"
+        - text: Assessment
+      - button "4 Billing" [ref=e19] [cursor=pointer]:
+        - generic [ref=e20]: "4"
+        - text: Billing
+      - button "5 Settings" [ref=e21] [cursor=pointer]:
+        - generic [ref=e22]: "5"
+        - text: Settings
+      - button "6 Intake chat" [ref=e23] [cursor=pointer]:
+        - generic [ref=e24]: "6"
+        - text: Intake chat
+      - button "i About this prototype" [ref=e25] [cursor=pointer]:
+        - generic [ref=e26]: i
+        - text: About this prototype
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - generic [ref=e29]: Show decision IDs
+        - switch "Show decision IDs on elements" [checked] [ref=e30] [cursor=pointer]
+      - generic [ref=e31]:
+        - generic [ref=e32]: Theme
+        - generic [ref=e33]:
+          - button "Auto" [pressed] [ref=e34] [cursor=pointer]
+          - button "Light" [ref=e35] [cursor=pointer]
+          - button "Dark" [ref=e36] [cursor=pointer]
+  - main [ref=e37]:
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - text: "Prototype: simulated data, not the product"
+        - generic [ref=e40]: · Made-up firm, people and files. No AI is called and no test has been run.
+      - generic [ref=e41]:
+        - generic [ref=e42]: Expat Ready · for licensed immigration practices
+        - heading "An AI team for your immigration practice." [level=1] [ref=e43]
+        - paragraph [ref=e44]: Prepare files, organise documents and draft communications—with maintained rules underneath and your team in control.
+        - paragraph [ref=e45]:
+          - text: Rules you can defend. AI that does the legwork.
+          - generic [ref=e46]: AIW-D99
+      - generic [ref=e47]:
+        - heading "Every output says what made it AIW-D92" [level=2] [ref=e48]:
+          - text: Every output says what made it
+          - generic [ref=e49]: AIW-D92
+        - paragraph [ref=e50]: Each thing you see carries one of four labels. Rule results are never called AI.
+        - generic [ref=e51]:
+          - generic [ref=e52]:
+            - generic [ref=e53]: Calculated by the rules, pack v3
+            - generic [ref=e55]: The product's fixed rules and the pack worked it out. No AI was used. Same input, same result.
+          - generic [ref=e56]:
+            - generic [ref=e57]: Prepared by Case Officer's AI
+            - generic [ref=e59]: An AI teammate prepared it for a named person, using rule results and the firm's records, with its sources.
+          - generic [ref=e60]:
+            - generic [ref=e61]: "AI draft: check before use"
+            - generic [ref=e63]: AI-written words or values read by AI. Nothing happens with it until a person checks and approves it.
+          - generic [ref=e64]:
+            - generic [ref=e65]: Approved by the licensed consultant
+            - generic [ref=e67]: A named person decided. The record keeps who, when and exactly what they approved.
+      - heading "See it work" [level=2] [ref=e68]
+      - generic [ref=e69]:
+        - button "1 · Your AI team Who each AI teammate works for, its skills, and a live view of the job running on a case." [ref=e70] [cursor=pointer]:
+          - generic [ref=e71]: 1 · Your AI team
+          - generic [ref=e72]: Who each AI teammate works for, its skills, and a live view of the job running on a case.
+        - button "2 · Prepare a client file Documents collected and checked, drafts prepared, then one review sitting at the end." [ref=e73] [cursor=pointer]:
+          - generic [ref=e74]: 2 · Prepare a client file
+          - generic [ref=e75]: Documents collected and checked, drafts prepared, then one review sitting at the end.
+        - button "3 · Run an assessment The AI starts it and the rules calculate it. Missing facts give an incomplete result; conflicting or stale evidence stops it." [ref=e76] [cursor=pointer]:
+          - generic [ref=e77]: 3 · Run an assessment
+          - generic [ref=e78]: The AI starts it and the rules calculate it. Missing facts give an incomplete result; conflicting or stale evidence stops it.
+        - button "4 · Prepare billing An invoice and a proposed trust entry, each approved against an exact preview." [ref=e79] [cursor=pointer]:
+          - generic [ref=e80]: 4 · Prepare billing
+          - generic [ref=e81]: An invoice and a proposed trust entry, each approved against an exact preview.
+        - button "5 · Choose how much to review Two presets, a grid under \"Customise\", and safety floors that never move." [ref=e82] [cursor=pointer]:
+          - generic [ref=e83]: 5 · Choose how much to review
+          - generic [ref=e84]: Two presets, a grid under "Customise", and safety floors that never move.
+        - button "6 · Intake chat The AI sorts each question into an approved topic and a rule picks the answer; eligibility goes to a person; AI-written replies wait for approval." [ref=e85] [cursor=pointer]:
+          - generic [ref=e86]: 6 · Intake chat
+          - generic [ref=e87]: The AI sorts each question into an approved topic and a rule picks the answer; eligibility goes to a person; AI-written replies wait for approval.
+      - generic [ref=e88]:
+        - heading "What a person always does" [level=2] [ref=e89]
+        - list [ref=e90]:
+          - listitem [ref=e91]:
+            - text: Approves every AI-written message before it reaches a client or lead
+            - generic [ref=e92]: AIW-D102
+            - generic [ref=e93]: AIW-D105
+          - listitem [ref=e94]:
+            - text: Checks values read from documents; a spot check never counts as checking every value
+            - generic [ref=e95]: AIW-D100
+          - listitem [ref=e96]:
+            - text: Approves each invoice, trust entry, export, deletion, settings change or signature workflow exactly as previewed; signs; moves money
+            - generic [ref=e97]: AIW-D103
+          - listitem [ref=e98]:
+            - text: Tells a lead or client their eligibility result
+            - generic [ref=e99]: AIW-D96
+            - generic [ref=e100]: AIW-D41
+          - listitem [ref=e101]:
+            - text: Submits to the government
+            - generic [ref=e102]: FD-16
+      - generic [ref=e103]: "Decisions shown: AIW-D99 (headline, supporting line, supporting message), AIW-D92 (four labels), AIW-D89 (AI teammate, skill, step)."
