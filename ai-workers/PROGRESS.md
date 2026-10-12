@@ -418,3 +418,4 @@ Blocking risk across all steps: the Canada-only processing rule (`commercial/pro
 | 12 Oct 2026 | Maker (founder decisions into build spec) | Done (R10 fixes): M1 to M7 and minors in AW-01, AW-02, change notes (CN-AG-06/07/11/14/16, CN-SA-01B, CN-SA-08), workflow-pricing file; M8 and m15/m16 (research, brief-coverage) left for the Lead; tests 487 (479 Not run, 8 Withdrawn) |
 | 13 Oct 2026 | Founder | Handoff accepted: re-check the final fixes, consolidate the Step R blueprint as the single source (no framework redesign), trace every journey to product, team changes, acceptance criteria and tests, say what can run next, and show the team change list split into decision-required and additional |
 | 13 Oct 2026 | Lead | Started: review R10-b; team change register; blueprint consolidation (`blueprint/`) |
+| 13 Oct 2026 | Maker (blueprint consolidation) | Started: blueprint.md, traceability.csv, run-next.md in `blueprint/` (consolidate and trace; no redesign) |
