@@ -318,5 +318,5 @@ The team designs the mechanics behind both keys under FD-17, with the open quest
 
 **(4) Why.** AIW-D96 (the founder, 12 Oct 2026: an AI teammate may run the eligibility assessment "under the delegated person's permission (`agent/assessment:run`)"); the Lead's *AIW-D106 note* (a) (the AI-started run is automatic once the stop check passes, so the key is used by the delegation itself, not only prepared). Behaviour: AW-1-131 (AW-01 v0.7). The Case delegation is added by the Lead's ruling (d) after review R9 (`ai-workers/proposals.md`, row after review R9): AIW-D96 covers leads and clients. Telling a lead the result stays a licensed person's act (`:share` never lendable; AIW-D41).
 
-**(5) Knock-ons.** AW-01 §10 (moved to "May use" for Intake; added to "May use" for Case); TC-AW1-283, TC-AW1-282; change 7's version row adds "`agent/assessment:run` lendable to the Intake and Case delegations".
+**(5) Knock-ons.** AW-01 §10 (moved to "May use" for Intake; added to "May use" for Case); TC-AW1-283, TC-AW1-308, TC-AW1-309 (TC-AW1-282 withdrawn); change 7's version row adds "`agent/assessment:run` lendable to the Intake and Case delegations".
 

@@ -2,7 +2,7 @@
 
 *Replace, don't append. Plan, gates and status: `PROGRESS.md`. Decisions: `decisions.md`. Story, ratings, audits: `REPORT-CARD.md`.*
 
-## State, 12 Oct 2026 (Step R; improvement pass done; checks R7 to R10 passed with fixes applied)
+## State, 13 Oct 2026 (Step R; R10-b passed with fixes; AIW-D117 decided; fixes and blueprint being built)
 - **The founder's standing direction (AIW-D106):**
   - full agreed scope in this release;
   - simplest complete design;
@@ -11,7 +11,7 @@
   - no counsel and no consultant conversations (AIW-D94).
 
   Rules in README §0 rule 12.
-- **Decided 12 Oct:** AIW-D92 to D116, plus the AIW-D98 and D106 notes. **No founder question is open.** The one-page view is `design/rules-and-ai-framework-2026-10-12.md` v2.
+- **Decided 12–13 Oct:** AIW-D92 to D117 (D117 amends D98 point 3: missing inputs vs unreliable evidence), plus the AIW-D98 and D106 notes. **No founder question is open.** The one-page view is `design/rules-and-ai-framework-2026-10-12.md` v2.
 - **Current files:**
   - classification (aligned to the decisions);
   - autonomy model revision 5;
@@ -27,20 +27,11 @@
   - Tell the founder: his example "work permit, then permanent residence" is two cases under AG-07, so two applications (same count as he intended).
 
 ## Next
-1. Short re-check of the R10 fix round (AW-01, AW-02, pricing file, tests).
-2. **Step R deliverables (AIW-D86, D88):** one blueprint as the single source, built on framework v2. It covers:
-   - the product map;
-   - the PRD;
-   - the AI team and skills;
-   - journeys with edge cases;
-   - stories linked to tests;
-   - technical design;
-   - evaluation and driving tests;
-   - traceability.
-
-   Superseded design files move to `archive/` with pointers.
-3. Keep the coded prototype in step with each confirmed answer.
-4. Open items owned by Workstream 1 or later steps:
+1. **In progress (13 Oct):** maker applying review R10-b (N1–N4, n1–n12) and AIW-D117 into AW-01 v0.8, AW-02 v1.0, change notes, tests, pricing and positioning files. When done: a short adversarial re-check of that fix round only.
+2. **In progress (13 Oct):** maker building `blueprint/` (blueprint.md, traceability.csv, run-next.md), pointers only, no redesign (AIW-D22, D86, D88). When done: adversarial review of the blueprint, then show the founder the team change list in two tables (decision required / additional) and what can run next.
+3. After both pass: list superseded design files and move them to `archive/` with pointers.
+4. Keep the coded prototype in step with each confirmed answer (incl. AIW-D117).
+5. Open items owned by Workstream 1 or later steps:
    - `commercial/plan.md` and `model.xlsx` updated for workflow pricing (K14), in Step 5;
    - the per-firm or per-seat decision, due 30 Oct (FD-18).
 
