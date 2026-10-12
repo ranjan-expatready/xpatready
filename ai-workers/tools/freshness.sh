@@ -2,7 +2,7 @@
 # Freshness check: is our evidence older than the masters?
 # Code: compares each local read-only copy in code/ with the newest commit on GitHub.
 # Drive: prints the date of the newest local snapshot; the Drive side is checked by
-# the agent with the Drive search tool (see .claude/skills/ai-workers-resume/SKILL.md).
+# the agent with the Drive search tool (see ai-workers/README.md §4 step 1).
 ROOT="${0:A:h:h:h}"
 echo "== Code (local copy vs GitHub default branch and dev) =="
 for d in "$ROOT"/code/*(/); do

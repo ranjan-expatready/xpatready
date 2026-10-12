@@ -13,9 +13,9 @@ The founder asked, after Step 3: where are we, what is the quality, is there jun
 
 ## The plan (each step one outcome, maker then checker then founder)
 1. **Evidence (running 11 Oct):** (a) research on what works and fails with AI in regulated professional work, how it is built, and whether we overdo it (`research/ai-in-regulated-work-2026-10.md`); (b) AI capability coverage against VisaFlo and peers (`research/ai-coverage-vs-competitors-2026-10.md`); (c) the one carve-out register: every team AI requirement with its ID, every AW item marked "extends" or NEW, duplications, and one glossary (`design/ai-carve-out-register-2026-10-11.md`).
-2. **Decide the version 1 scope with the founder:** from the evidence, the smallest set of assistants and duties that is safe, valuable and buildable; everything else parked by name, not deleted.
+2. **Decide the version 1 scope with the founder:** from the evidence, the smallest set of assistants and duties that is safe, valuable and buildable; everything else parked by name, not deleted. *Superseded by AIW-D82 (11 Oct 2026) and the founder's 12 Oct direction: the full agreed scope ships in Release 1.*
 3. **Consolidate to one source:** one blueprint document for the AI layer that points to the team's requirement IDs and holds only what is NEW; the AW modules and change notes trimmed to that scope; superseded design files moved to `archive/` with a pointer (nothing deleted, git keeps all).
-4. **The blueprint, best in class:** a visual product map (team modules with the AI layer on top), a short PRD, use cases and user stories for the version 1 scope, the technical design (how the AI steps run on the team's own automation engine, the model provider, evaluation, monitoring), and a high-fidelity prototype (Figma or HTML; the founder has approved spend).
+4. **The blueprint, best in class:** a visual product map (team modules with the AI layer on top), a short PRD, use cases and user stories for the version 1 scope, the technical design (how the AI steps run on the team's own automation engine, the model provider, evaluation, monitoring), and a working coded prototype (AIW-D86).
 5. **Build readiness:** what the team needs beyond normal coding (evaluation sets, prompt and version control, safety tests, monitoring), the risks, and what not to promise.
 
 ## Quality dimensions to raise (score each 1 to 10 before and after)
@@ -31,15 +31,15 @@ Single source of truth and traceability · Simplicity (words per decision, layer
 AIW-D81 role AI with skills · D82 full scope at launch, every gap fixed, best in class · D83 a driving test per skill (test set, shadow, live, automatic drop back) · D84 the platform is the guardrail (AI only where language or judgement is needed; reusable, diagnosable, cost-controlled skills; access by delegation) · D85 three linked views (AI team page, case panel, detail drawer) · D86 one blueprint plus a working coded prototype · D87 buildable and agnostic of build status, every dependency named, edge cases and failure responses in every journey. Naming of the levels: from the architecture research (question 6).
 
 ## Chosen way forward (AIW-D88): Option E
-Handbook + coded prototype + three consultant conversations, from the same AI profiles; the existing specification becomes the trimmed technical appendix. Order: names (question 6, from the architecture research) → AI profiles → Handbook and prototype in parallel → consultant conversations → appendix trim and archive → hand to the team.
+Handbook + coded prototype + three consultant conversations, from the same AI profiles; the existing specification becomes the trimmed technical appendix. Order: names (question 6, from the architecture research) → AI profiles → Handbook and prototype in parallel → consultant conversations *(superseded by AIW-D94, 12 Oct 2026: dropped)* → appendix trim and archive → hand to the team.
 
 ## Lead's calls from Handbook part 1 (11 Oct)
 - **One meaning of "shadow":** AIW-D83's: the skill prepares on real work, nobody sees it, accuracy is measured. The older AW-01 idea of showing a proposal beside the person's own entry is called **side-by-side** and is a separate, optional practice step. The health light and the automatic drop back go into the appendix (AW-01, AW-02) at the trim.
-- **Test sets:** graded by a licensed expert (AIW-D83), with the immigration specialist writing the right answers; made-up samples only until counsel has read the pack (AIW-D64); real files with names removed only after that.
+- **Test sets:** graded by a licensed expert (AIW-D83), with the immigration specialist writing the right answers; made-up samples only until counsel has read the pack (AIW-D64); real files with names removed only after that. *Superseded by AIW-D94 (12 Oct 2026): no counsel; real-file use is the founder's decision.*
 - **Rules-only skills** are tested like any product feature and keep a health light; the expert-graded driving test applies to skills that call AI.
 - **One skill = the same ability, input kind, checks and approver kind;** its test set is the union of the specification's evaluation sets mapped to it.
-- **Fixes for the appendix trim:** AW-02 §3.3 "Stops" (a withdrawn provider record pauses both platform teammates, AIW-D74); AW-1-86 (AI-drafted internal notes go to a person during the pilot, AIW-D80); AW-1-79 against evaluation set E-4 (the Message sorter proposes; filing is by a person or a fixed rule, never AI alone); README rule 9 and AW-1-65 wording updated to AIW-D89, with client-facing wording kept as "AI assistance" until counsel reads the list.
-- **For the founder:** whether Practice answers is presented as an AI teammate or as a product feature with one AI skill (honesty in selling).
+- **Fixes for the appendix trim:** AW-02 §3.3 "Stops" (a withdrawn provider record pauses both platform teammates, AIW-D74); AW-1-86 (AI-drafted internal notes go to a person during the pilot, AIW-D80); AW-1-79 against evaluation set E-4 (the Message sorter proposes; filing is by a person or a fixed rule, never AI alone); README rule 9 and AW-1-65 wording updated to AIW-D89, with client-facing wording kept as "AI assistance" until counsel reads the list. *Superseded by AIW-D89 and AIW-D94 (12 Oct 2026): client-facing "Your AI team"; the say/never-say list (AIW-D92) governs wording.*
+- **For the founder:** whether Practice answers is presented as an AI teammate or as a product feature with one AI skill (honesty in selling). **Decided: AIW-D90** (a product feature).
 
 ## Lead's calls after hostile check R1 (11 Oct)
 - **Three kinds of AI-related capability, never mixed:** (1) **product features with no AI** (deadline watch, practice answers, rule-built reports); (2) **product AI**: the product's own AI calls that run for everyone whatever teammate is on (reading every upload, sorting every incoming message, the cross-check inside a review; AW-01 §3.8, AW-1-15); (3) **teammate skills**: AI calls a teammate's own recipe makes for its person. A skill belongs to a teammate only if the teammate's recipe makes the AI call; where the specification does not say whose call it is (for example the résumé and advert reads of AW-1-85), the Handbook says *to be confirmed by the team*.
@@ -47,5 +47,9 @@ Handbook + coded prototype + three consultant conversations, from the same AI pr
 - **Front page:** a ten-minute front page of six three-line teammate cards, plus a paragraph on how a solo or small firm uses them (FD-19's target buyer).
 - **Worked days** list every client-facing send in the window, as README rule 11 asks of worked examples.
 
-## Founder's direction AIW-D91 (11 Oct): the moat is the platform under the AI
+## Founder's direction AIW-D91 (11 Oct): the moat is the platform under the AI (amended by AIW-D97: the moat is the combination)
 Every Step R deliverable shows the AI as a thin, replaceable layer on the platform's own rule engine, Doers and pathway-program rules (packs): the rules decide, the AI prepares language. The Handbook gains a front-page section "Why this AI is different"; the blueprint's PRD gains "Why it is hard to copy, and its honest limits"; the sales story (Step 5) leads with it. Research: `research/ai-moat-and-positioning-2026-10.md`.
+
+*Amended by AIW-D97 (12 Oct 2026): the rules themselves are public; the moat is the combination of dated packs reviewed by two people, accuracy measured per skill, the full record of every client file, and Expat Ready as the firm's system of record.*
+
+**Decisions since:** AIW-D92 to D105 and the AIW-D98 note (`decisions.md`).

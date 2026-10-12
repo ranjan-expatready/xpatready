@@ -9,10 +9,10 @@
 - `commercial/` — the founders' business plan (`plan.md`, `plan.docx`) and money model (`model.xlsx`); Steps 5–6 extend them.
 - `archive/` — everything superseded (older snapshots, older code copies, the retired simulator and planning workflow). Read only to recover a fact; never current.
 
-**Sources of truth, in order:** Drive requirement documents (newest snapshot) → GitHub code → the founder's decisions (`ai-workers/decisions.md`). Anything else is Proposal, Assumption or Unknown.
+**Sources of truth, in order:** Drive requirement documents (newest snapshot) → GitHub code → the founder's decisions (`ai-workers/decisions.md`). Anything else is Proposal, Assumption or Unknown. A conflict between a source and a founder decision is recorded and goes to the founder; it is never settled by this order (`ai-workers/README.md` §0 rules 2 and 11).
 
-**Access rule (co-founders the co-founder Singh and the founder Singh, 9 Oct 2026):** read anything connected (Drive, email, GitHub, calendar). **Never change anything outside this folder**: no commits, pushes, pull requests or issues in any repository; no create, edit, copy, share or delete on Drive; no email. Enforced by `permissions.deny` in `.claude/settings.json`.
+**Access rule (the co-founders, 9 Oct 2026; this is its one home):** read anything connected (Drive, email, GitHub, calendar). **Never change anything outside this folder**: no commits, pushes, pull requests or issues in any repository; no create, edit, copy, share or delete on Drive; no email. Enforced by `permissions.deny` in `.claude/settings.json`.
 
-**Boundaries:** cite file, version, section and exact words; changing a ratified founder decision needs the founder's yes; legal and immigration values get "confirm with counsel / RCIC"; plain business language; one writer of shared files (the Lead); publish outside only when the founder says so.
+**Boundaries:** cite file, version, section and exact words; changing a ratified founder decision needs the founder's yes; legal points are labelled "Unconfirmed: no counsel (AIW-D94)"; immigration values come from the immigration specialist (AIW-D50); plain business language; one writer of shared files (the Lead); publish outside only when the founder says so.
 
-**Keep in sync every session:** the hook runs `ai-workers/tools/freshness.sh` (code vs GitHub). The Lead then searches Drive for files modified after the newest snapshot date and copies what a step cites. Drive and GitHub change daily; a stale copy is never cited.
+**Keep in sync every session:** follow `ai-workers/README.md` §4 step 1 (freshness first). A stale copy is never cited.
