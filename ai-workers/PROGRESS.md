@@ -386,3 +386,6 @@ Blocking risk across all steps: the Canada-only processing rule (`commercial/pro
 | 12 Oct 2026 | Lead | Checked R3-b fixes 1 to 8 on the changed lines (17 lines; 68-firm low end 137,220 ≈ CAD 0.14M correct; no ruling presented as decided). Positioning research PASSED |
 | 12 Oct 2026 | adversarial-reviewer (R4-b re-check) | Started and Done (appended by the Lead): PASS WITH FIXES (1 major: founder's 'flavour of AI' ask not shown as a conflict; add K8). Lead ruled: quote the founder from founder-brief.md; K8 reading 'AI-assisted' product, rules-only never called AI, founder decides. Maker applying |
 | 12 Oct 2026 | Lead | Framework written: `design/rules-and-ai-framework-2026-10-12.md` (four classes, accuracy mechanics, selling, money, preconditions, decisions F1 to F7); review R5 started |
+| 12 Oct 2026 | adversarial-reviewer (R5, framework) | Started and Done (appended by the Lead): PASS WITH FIXES (9 major, 24 minor); framework not shown to the founder; will be revised after the autonomy model, with AIW-D92 to D95 folded in |
+| 12 Oct 2026 | Founder | AIW-D92 (four classes), D93 (tools with approval), D94 (no counsel, no consultant conversations), D95 (maximum autonomy with checkpoints) |
+| 12 Oct 2026 | general-purpose (autonomy model) | Started: `design/ai-autonomy-model-2026-10-12.md` |
