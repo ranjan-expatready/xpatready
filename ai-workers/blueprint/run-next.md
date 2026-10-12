@@ -2,57 +2,66 @@
 
 *Expat Ready, Workstream 2, Step R blueprint. Maker's draft, 13 Oct 2026. It goes to the checker, then the Lead. Nothing here was executed. Part of `blueprint.md` §7.*
 
-**Source.** `requirements/tests/AW-test-cases.csv` as it stood on 13 Oct 2026. The file has 494 rows: **486 Not run** and **8 Withdrawn**. The brief counted 479 Not run. Since then the parallel AIW-D117 update added seven rows: TC-AW1-314 to -319 and TC-AW2-175. They are included below, so the five buckets add up to 486. If the AIW-D117 update changes the file again, the Lead recounts.
+**Source.** `requirements/tests/AW-test-cases.csv` as it stood on 13 Oct 2026 (recounted after review R11). The file has 500 rows: **492 Not run** and **8 Withdrawn**. The brief counted 479 Not run. Thirteen rows were added since:
+- TC-AW1-314 to -318 (AIW-D117);
+- TC-AW1-319 and TC-AW2-175 (the Lead's rulings N1 and N2 after review R10-b);
+- TC-AW1-320 to -324 (five blueprint steps that had no test);
+- TC-AW2-176 (a review R10-b note).
+
+All of them are included below, so the five buckets add up to 492.
 
 **Every test goes in one bucket: the earliest place it can honestly run.** A test in bucket (a) also lists its real home, because a pass on the prototype proves nothing about the product.
 
 | Bucket | What it needs | Count |
 |---|---|---|
-| (a) Prototype simulation, now | Only `prototype/index.html`, a browser and the tester. Gives **simulation evidence only**. | **25** |
+| (a) Prototype simulation, now | Only `prototype/index.html`, a browser and the tester. Gives **simulation evidence only**. | **27** |
 | (b) The 10 Oct code copy, now | AI-layer code that exists in `code/ERv2-sanitized@042be70-2026-10-10/` | **0** |
 | (c) Driving-test harness on made-up cases | A Canada AI provider that has passed the provider test (AIW-D69), a small harness and graded made-up cases (AIW-D83) | **20** |
-| (d) Workstream 1 build | The team's product: delegations, approval items, Needs you, the Conductor, permissions, billing, packs | **440** |
+| (d) Workstream 1 build | The team's product: delegations, approval items, Needs you, the Conductor, permissions, billing, packs | **444** |
 | (e) The pilot | Real files or real accounts at pilot firm one (AIW-D112), after the driving test and shadow | **1** |
-| **Total** | | **486** |
+| **Total** | | **492** |
 
 ---
 
 ## (a) Can run now against the prototype: simulation evidence only
 
-**How to run.** Open `prototype/index.html` in any browser. It is a single local file and needs no install. Follow the test's steps on the screen named below. Record Pass or Fail and what the screen showed. Write the result as **"Simulated: pass"** or **"Simulated: fail"**, never as "Executed". The test's Status in the CSV stays "Not run" for the product. The prototype has no rules engine and no AI model, and it sends nothing (its About page says so).
+**How to run.** Open `prototype/index.html` in any browser. It is a single local file and needs no install. Follow the test's steps on the screen named below. Record Pass or Fail and what the screen showed. Write the result as **"Pass in simulation"** or **"Fail in simulation"**, never as "Executed". The test's Status in the CSV stays "Not run" for the product. The prototype has no rules engine and no AI model, and it sends nothing (its About page says so).
 
-| Test | Screen | Covers | Expected on today's prototype | Real home |
+| Test | Screen | Covers | Simulation result, 13 Oct (`simulation-run-2026-10-13.csv`) | Real home |
 |---|---|---|---|---|
-| TC-AW1-308 | 3 Assessment | Run proceeds with missing inputs | **Fail.** The prototype stops on missing evidence. AIW-D117 says expected missing inputs never stop the engine. | (d) |
-| TC-AW1-309 | 3 | Stop on stale or conflicting evidence | **Fail on the missing case.** It also stops on missing. Under AIW-D117 a newer pack version means a re-run, not a stop. Test being updated. | (d) |
-| TC-AW1-266 | 3 | AI-started run is automatic after the check, with the label | Pass expected | (d) |
-| TC-AW1-284 | 3 | Explanation cites sources and pack version | Partial. The wrong-number drop is not simulated. | (c) and (d) |
-| TC-AW1-287 | 6 Intake chat | Eligibility question handed to a person | **Expected fail.** "Am I eligible?" is answered by an approved template, not handed off. | (c) and (d) |
-| TC-AW1-288 | 6 | Unknown question handed to a person | Pass expected | (d) |
-| TC-AW1-290 | 6 | AI-written reply never sent unapproved | Pass expected | (d) |
-| TC-AW1-281 | 6 | Chat answers only with rule-chosen published templates | Pass expected for the menu. AI topic sorting (AIW-D107) is not simulated. | (d) |
-| TC-AW1-289 | 6 | Booking from the chat | Partial. It returns a booking-link template; there is no Scheduler. | (d) |
-| TC-AW1-059 | 6 | AI-written client text waits for approval | Partial. Shown for a lead reply only. | (d) |
-| TC-AW1-269 | 4 Billing | Changed tax rate voids the invoice approval | Pass expected (demo control) | (d) |
-| TC-AW1-268 | 4 | Invoice created and issued once on approval | Pass expected | (d) |
-| TC-AW1-271 | 4 | Trust entry runs only on the trust-key holder's approval | Partial. "No other output quotes a trust figure" is not checkable. | (d) |
-| TC-AW1-294 | 4 | Linked items show each other | Partial | (d) |
-| TC-AW1-277 | 2 File preparation | Review: values first, explicit checks, skipped steps | Partial. Skipped steps are not shown. | (d) |
-| TC-AW1-278 | 2 | Correction re-renders dependent drafts | Partial. The sent-message task is not shown. | (d) |
-| TC-AW1-035 | 2 | Approve-all disabled until uncertain values are opened | Pass expected | (d) |
-| TC-AW1-036 | 2 | Approve-all enabled once they are opened | Pass expected | (d) |
-| TC-AW1-037 | 2 | A value held out for the approver to type | Pass expected | (d) |
-| TC-AW1-280 | 2 | Template send in a job after the four checks | Partial. The AI-text-in-a-merge-field case is not shown. | (d) |
-| TC-AW1-111 | 2 | Biometrics date and the rule task due two working days before | Partial | (d) |
-| TC-AW1-120 | 2 | Letter lists the facts used | Partial | (c) and (d) |
-| TC-AW1-276 | 5 Settings | Presets: each step against checkpoints | Pass expected | (d) |
-| TC-AW1-274 | 5 | Settings change prepared and bound to the preview | Partial. Refusal of protected settings is not shown. | (d) |
-| TC-AW1-279 | 5 | Earned Auto conditions and drop back | Partial (demo control only) | (d) then (e) for real evidence |
+| TC-AW1-308 | 3 Assessment | Run proceeds with missing inputs | Pass | (d) |
+| TC-AW1-309 | 3 | Stop on stale or conflicting evidence | Pass | (d) |
+| TC-AW1-266 | 3 | AI-started run is automatic after the check, with the label | Pass | (d) |
+| TC-AW1-284 | 3 | Explanation cites sources and pack version | Pass | (c) and (d) |
+| TC-AW1-287 | 6 Intake chat | Eligibility question handed to a person | Pass | (c) and (d) |
+| TC-AW1-288 | 6 | Unknown question handed to a person | Pass | (d) |
+| TC-AW1-290 | 6 | AI-written reply never sent unapproved | Pass | (d) |
+| TC-AW1-281 | 6 | Chat answers only with rule-chosen published templates | Pass | (d) |
+| TC-AW1-289 | 6 | Booking from the chat | Pass | (d) |
+| TC-AW1-059 | 6 | AI-written client text waits for approval | Pass | (d) |
+| TC-AW1-269 | 4 Billing | Changed tax rate voids the invoice approval | Pass | (d) |
+| TC-AW1-268 | 4 | Invoice created and issued once on approval | Pass | (d) |
+| TC-AW1-271 | 4 | Trust entry runs only on the trust-key holder's approval | **Fail**: Expected the item to show the linked delivered milestone; it shows the linked invoice and retainer, not the milestone (the milestone appears only on the invoice… | (d) |
+| TC-AW1-294 | 4 | Linked items show each other | **Fail**: Expected each item to show the other and its state beside the approve button, and after the trust rejection the invoice item marked 'linked item rejected' and s… | (d) |
+| TC-AW1-277 | 2 File preparation | Review: values first, explicit checks, skipped steps | Pass | (d) |
+| TC-AW1-278 | 2 | Correction re-renders dependent drafts | Pass | (d) |
+| TC-AW1-035 | 2 | Approve-all disabled until uncertain values are opened | Pass | (d) |
+| TC-AW1-036 | 2 | Approve-all enabled once they are opened | Pass | (d) |
+| TC-AW1-037 | 2 | A value held out for the approver to type | Pass | (d) |
+| TC-AW1-280 | 2 | Template send in a job after the four checks | Pass | (d) |
+| TC-AW1-111 | 2 | Biometrics date and the rule task due two working days before | Pass | (d) |
+| TC-AW1-120 | 2 | Letter lists the facts used | Pass | (c) and (d) |
+| TC-AW1-276 | 5 Settings | Presets: each step against checkpoints | Pass | (d) |
+| TC-AW1-274 | 5 | Settings change prepared and bound to the preview | Pass | (d) |
+| TC-AW1-279 | 5 | Earned Auto conditions and drop back | Pass | (d) then (e) for real evidence |
+| TC-AW1-320 | 6 | With AI off, the chat keeps its menu and hands typed questions to a person | **Fail**: Expected a typed free question with AI off to get the hand-off template and a task for a person. The prototype gives the lead no way to type a question when AI… | (d) |
+| TC-AW1-324 | 5 | Plain examples per preset | **Fail**: Expected the lists to change with the preset. Only one heading changes (from 'Waits for the end-of-job review under "Review at checkpoints"' to 'Waits for the e… | (d) |
 
-**What a run of (a) is good for.** It checks that the prototype shows the agreed design. Three tests are expected to fail today: TC-AW1-308, -309 and -287. Together with the prototype's "designed for later" label on the conversational AI, those failures are the **prototype update list**:
-- AIW-D117: missing inputs do not stop the run;
-- AIW-D107: the conversational AI for leads is in Release 1;
-- an eligibility question is handed off, not answered.
+**What a run of (a) is good for.** It checks that the prototype shows the agreed design.
+
+**The run on 13 Oct:** 27 played, 23 passed and 4 failed, all **in simulation** (detail in `simulation-run-2026-10-13.csv`). The prototype had already been updated for AIW-D107 and D117, so TC-AW1-308, -309 and -287, which were expected to fail, passed.
+
+The four failures are the **prototype update list**: TC-AW1-271, -294, -320 and -324.
 
 ---
 
@@ -61,10 +70,10 @@
 **Checked honestly** by searching the code copy on 13 Oct.
 
 **What exists, all Workstream 1:**
-- **The pack assessment engine.** Files: `apps/api/src/spine/pack-assessment-*.ts`, `pack-policy-interpreter.ts` (a pure kernel), `pack-policy-scoring.ts`, and the `PackAssessment` model (input hash, result hash, engine version, pack version; replay by idempotency key) in `apps/api/prisma/models/client-spine.prisma`.
+- **The pack assessment engine, partly implemented.** Files: `apps/api/src/spine/pack-assessment-*.ts`, `pack-policy-interpreter.ts` (a pure kernel), `pack-policy-scoring.ts`, and the `PackAssessment` model (input hash, result hash, engine version, pack version, `createdBy`; replay by idempotency key) in `apps/api/prisma/models/client-spine.prisma` L514–541. It has **no run type** (AG-3-25): there is no `runType` or `run_type` in `apps/api` (our search).
 - **The rule-based Filler.** File: `apps/api/src/spine/filler.service.ts`, a deterministic renderer.
 - **An event bus named Conductor.** File: `apps/api/src/events/conductor-bus.ts`.
-- **The document virus-scan status.** File: `apps/api/src/documents/document-av-status.schema.ts`; its own comment says the scanner is a fake for now.
+- **Document serving, partly implemented.** Only CLEAN documents are served (`apps/api/src/documents/documents.service.ts` L115). The status values are in `document-av-status.schema.ts`, whose comment says the scanner is a fake for now. Storing every upload as a new version is not evidenced.
 - **The platform's SaaS billing (SA-04).** It has no metered quantity.
 
 **What our search did not find:**
@@ -79,11 +88,11 @@
 Every AW test exercises an AI teammate or AI-layer control. So **no AW test can run against this code**.
 
 **Could the team's own engine tests run locally?** Not safely today:
-- The repository needs Node 24 or later (`package.json` "engines"); this machine has Node 22.23.2.
+- The repository needs Node 24 or later (`package.json` L7, "engines"). This machine has Node 22.23.2 (output of `node --version`, run by the maker on 13 Oct 2026).
 - There is no `node_modules`, so running anything needs `pnpm install` from the internet. That is outside our rules.
 - Many of the tests need a Postgres database (`DIRECT_URL`).
 
-If the founder wants the engine's own unit tests run, a team member with the toolchain runs `pnpm --filter @erv2/api exec vitest run src/spine/__tests__/pack-policy-interpreter.test.ts` in their own environment. That would move journey step 3.4 from Implemented to **Executed** for Workstream 1. It still proves nothing about the AI layer.
+If the founder wants the engine's own unit tests run, a team member with the toolchain runs `pnpm --filter @erv2/api exec vitest run src/spine/__tests__/pack-policy-interpreter.test.ts` in their own environment. That alone would not make step 3.4 **Executed**. Its criterion also needs the stamp and the replay, which sit in the persistence service and need the database tests (`apps/api/src/spine/__tests__/*.e2e.test.ts`). The run type is missing from the code (AG-3-25). None of this proves anything about the AI layer.
 
 ---
 
@@ -128,13 +137,22 @@ If the founder wants the engine's own unit tests run, a team member with the too
 
 ---
 
-## (d) Needs the Workstream 1 build: 440
+## (d) Needs the Workstream 1 build: 444
 
-These need the team's product as specified (assumed complete and tested, AIW-D98). That covers delegations and lendable keys, approval items and Needs you, the Conductor recipes, the audit modes, packs, billing, the provider record and kill switches. A further 22 tests (the 25 in (a) less TC-AW1-284, -287 and -120, which are listed under (c) as well) and all 20 in (c) also need (d) for their product-side half.
+These need the team's product as specified (assumed complete and tested, AIW-D98). That covers delegations and lendable keys, approval items and Needs you, the Conductor recipes, the audit modes, packs, billing, the provider record and kill switches. All 27 tests in (a) and all 20 in (c) also need (d) for their product-side half. Three tests in (a), TC-AW1-284, -287 and -120, also have a model-output part that a (c) harness could check; they are not repeated in the (c) table.
+
+**Feature names.** The feature names below are the test file's own column values, kept so the counts can be checked. Several use words retired by AIW-D89 and D90. Map them as follows:
+- "Case assistant" = Case Officer's AI;
+- "Intake assistant" = Intake AI;
+- "Billing assistant" = Billing AI;
+- "Firm assistant" = Owner's AI;
+- "Practice expert" = Practice answers (a product feature, AIW-D90);
+- "Pack author's assistant" = Pack author's AI;
+- "Support and account assistant" = Support AI.
 
 | Module | Feature | Tests |
 |---|---|---|
-| AW-01 | Case assistant | 58 |
+| AW-01 | Case assistant (includes TC-AW1-321 to -323) | 61 |
 | AW-01 | Delegation | 31 |
 | AW-01 | Approvals and safeguards / Approvals | 30 |
 | AW-01 | Hard limits | 29 |
@@ -147,7 +165,7 @@ These need the team's product as specified (assumed complete and tested, AIW-D98
 | AW-01 | Spend caps | 10 |
 | AW-01 | AI call record | 1 |
 | AW-02 | Pack author's assistant | 33 |
-| AW-02 | Support and account assistant (includes TC-AW2-175) | 32 |
+| AW-02 | Support and account assistant (includes TC-AW2-175, -176) | 33 |
 | AW-02 | Pauses and stops | 19 |
 | AW-02 | Hard limits | 17 |
 | AW-02 | Second person (AIW-D59) | 16 |
@@ -157,7 +175,7 @@ These need the team's product as specified (assumed complete and tested, AIW-D98
 | AW-02 | Provider record | 8 |
 | AW-02 | Spend caps | 5 |
 | AW-02 | Model instructions | 4 |
-| **Total** | | **440** (AW-01 274, AW-02 166) |
+| **Total** | | **444** (AW-01 277, AW-02 167) |
 
 **Order inside (d) when the build lands (Proposal).** Run the tests in this order:
 1. Hard limits and Delegation: the server refusals that keep the AI inside the person's permissions.
@@ -179,14 +197,14 @@ TC-AW1-297 needs a planned portal entry approved and then filled with verified v
 
 ## The first 20 tests to run, in order
 
-All 20 can run today and all are **(a) simulation evidence only**. No (c) test can start until a provider passes the provider test, and none in (b), (d) or (e) can start now.
+All 20 are bucket (a), simulation evidence only, and **all 20 were played on 13 Oct together with seven more** (`simulation-run-2026-10-13.csv`). Results: rows 10 and 11 failed in simulation; the other 18 passed. Next, re-run the four failures after the prototype is fixed. No (c) test can start until a provider passes the provider test, and none in (b), (d) or (e) can start now.
 
 | # | Test | Why this order |
 |---|---|---|
-| 1 | TC-AW1-308 | AIW-D117, just decided. Expected to fail; it confirms the prototype update. |
+| 1 | TC-AW1-308 | AIW-D117, just decided |
 | 2 | TC-AW1-309 | Same decision: stale or conflicting evidence stops; a newer pack re-runs |
 | 3 | TC-AW1-266 | The AI-started assessment and its label (AIW-D96) |
-| 4 | TC-AW1-287 | Eligibility hand-off in the chat (AIW-D41, D107). Expected to fail. |
+| 4 | TC-AW1-287 | Eligibility hand-off in the chat (AIW-D41, D107) |
 | 5 | TC-AW1-288 | Unknown question hand-off |
 | 6 | TC-AW1-290 | AI-text floor in the chat |
 | 7 | TC-AW1-281 | Rule-chosen answers only |
