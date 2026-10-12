@@ -1,6 +1,6 @@
 # AI autonomy model: one job, few checkpoints (Proposal, revision 5)
 
-**Status:** Proposal by the maker, 12 Oct 2026. Revision 2 fixed the findings of hostile check R6 (`checks/review-R6-2026-10-12.md`) under the Lead's rulings of 12 Oct; revision 3 applies re-check R6-b (`checks/review-R6-b-2026-10-12.md`) and builds in the founder's AIW-D100 (values from uploads reviewed in the bundle sitting); revision 4 applied re-check R6-c and AIW-D103 (action-specific controls); revision 5 builds in AIW-D104 (earned Auto for routine internal work) and AIW-D105 (template sends inside AI jobs) and removes mechanisms those decisions made unnecessary. It goes back to the checker, then the Lead, then the founder. Nothing here is ratified.
+**Status:** Proposal by the maker, 12 Oct 2026. Revision 2 fixed the findings of hostile check R6 (`checks/review-R6-2026-10-12.md`) under the Lead's rulings of 12 Oct; revision 3 applies re-check R6-b (`checks/review-R6-b-2026-10-12.md`) and builds in the founder's AIW-D100 (values from uploads reviewed in the bundle sitting); revision 4 applied re-check R6-c and AIW-D103 (action-specific controls); revision 5 builds in AIW-D104 (earned Auto for routine internal work) and AIW-D105 (template sends inside AI jobs) and removes mechanisms those decisions made unnecessary; after hostile check R7 (`checks/review-R7-2026-10-12.md`), row 4 follows the Lead's ruling in the AIW-D106 note (a) and AIW-D98 point 4 (licensed review of explanations) is added. It goes back to the checker, then the Lead, then the founder. Nothing here is ratified.
 
 **The founder's words** (`founder-brief.md`, "12 Oct 2026 (autonomy answer, same session)", quoted exactly, with omissions marked): "I like the idea of on autonomy, but why every action, right? Wherever we can basically um, ask only approvals at the critical points, right, which makes sense. Otherwise, let, let them do end-to-end job and approve it at the end. ... But not blind autonomy that he's doing what he's doing, nobody knowing. So human approval is required, but minimal human approval or maybe there are various without over-engineering, if you can keep toggle what kind of permissions are required. I don't know. If you want to go the giving the permissions, if it is easy, let's do it. That who can do what and what not, but I want the maximum level of autonomy possible. Also, not blind autonomy where humans are completely removed from the loop." Recorded as AIW-D95.
 
@@ -167,8 +167,8 @@ Example: the grid as it looks when a firm starts from "Review at checkpoints" (c
 |---|---|---|---|---|---|---|---|
 | 2 | Task, reminder, assignment | Auto | Auto | Auto | Auto | Auto | Off |
 | 3 | Routine internal work (notes, AI-proposed tasks, labels) | At checkpoint or earned Auto | same | same | same | same | Off |
-| 4 | Start the eligibility assessment | Ask now | Ask now | Ask now | Ask now | Off | Off |
-| 5 | Template client message (rule-chosen) | Auto | Auto | Auto | Auto | Auto | Off |
+| 4 | Start the eligibility assessment | Auto after the stop check | Auto after the stop check | Auto after the stop check | Auto after the stop check | Off | Off |
+| 5 | Template client message (rule-chosen) | Auto where its automatic use is approved | same | same | same | same | Off |
 | 6 | AI-written client message | Ask now | Ask now | Ask now | Ask now | Ask now | Off |
 | 7 | Form draft | At checkpoint | Off | At checkpoint | At checkpoint | Off | Off |
 | 8 | Application letter | At checkpoint | Off | At checkpoint | At checkpoint | Off | Off |
