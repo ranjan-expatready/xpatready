@@ -1,6 +1,6 @@
 # Rules and AI: how to name, sell and price them honestly (founder ask, 12 Oct 2026)
 
-**Date:** 12 Oct 2026, revised the same day after review R3 (`../checks/review-R3-2026-10-12.md`) with the Lead's rulings. **Author:** research maker for the Lead. **Status:** research input; nothing here is a decision. **Asked by:** the founder, through the Lead, 12 Oct 2026.
+**Date:** 12 Oct 2026, revised the same day after review R3 (`../checks/review-R3-2026-10-12.md`) with the Lead's rulings, and after re-check R3-b (`../checks/review-R3-b-2026-10-12.md` §5, fixes 1 to 8). **Author:** research maker for the Lead. **Status:** research input; nothing here is a decision. **Asked by:** the founder, through the Lead, 12 Oct 2026.
 
 **The ask, as the Lead relayed it.** Build eligibility, scoring and assessments as fixed (deterministic) rules, but present them to buyers "under the flavour of AI" for easy selling; use real AI for conversation, follow-ups, language and tool calling; and give a framework that makes this a multi-million-dollar product.
 
@@ -17,7 +17,7 @@
 **Plain-English glossary**
 - **Deterministic / rules:** the same input always gives the same output, because a fixed rule written by a person computes it.
 - **AI (in this file):** a large language model: software that reads and writes language and can be wrong in ways that vary from run to run.
-- **Tool calling:** an AI asking another piece of software to compute something. *Note:* the team's specification today says "models SHALL have no tool access" (AG-11 v1.12, AG-11-94); the platform fetches results and gives them to the AI as data.
+- **Tool calling:** an AI asking another piece of software to compute something. *Note:* the team's specification today says "models SHALL have no tool access" (AG-11 v1.12, AG-11-94); our reading is that the platform fetches results and gives them to the AI as data [I].
 - **AI washing:** claiming more or different AI than a product really has.
 - **Substantiation:** the evidence a seller must hold *before* making a claim.
 - **General impression:** under Canadian law, an advert is judged by the overall impression it leaves, not only its literal words.
@@ -33,11 +33,11 @@
 4. **Our buyers carry the risk too.** RCICs must not make "false, misleading or inaccurate representations" (Code s. 44(2)(a)) [18]. A wrong label also spoils the AI-use declarations they make to the Federal Court and the IRB.
 5. **It would also sell worse.** Professionals' conditions for trusting AI are confidential data (96%), grounding in authoritative content (94%) and defensible reasoning (90%) [31]; one US study found the words "artificial intelligence" lowered purchase intent, most for high-risk purchases [32].
 6. **Leaders do the opposite of "flavour":** TurboTax guarantees its *calculations* and calls its AI "guidance" [19][20]; Pega and Salesforce sell rules-based, deterministic steps as the reason to trust [21][22].
-7. **The honest version, on today's design:** your AI teammate notices an assessment is due, prepares the file and proposes the task; a person presses "Assess"; the rules give the exact answer with every factor shown; the AI may then explain that stored result to staff (AW-1-88; CN-AG-03 change 1; the Lead's ruling, 12 Oct). That keeps visible AI legwork without claiming the AI assessed anyone.
+7. **The honest version, on today's design:** for leads, the Intake AI notices an assessment is missing or out of date and proposes the task to the lead's owner (AW-1-88; CN-AG-03 change 1); for clients, the File Builder prepares the file; a person presses "Assess"; the rules give the exact answer with every factor shown (AG-3-21). That keeps visible AI legwork without claiming the AI assessed anyone. *Proposal, not approved:* the AI explaining that stored result to staff (sibling file row A21).
 8. **Letting the AI run the assessment when asked would be a new founder decision** (it reopens AIW-D40), and "tool calling" by the model conflicts with the team's AG-11-94.
 9. **The four classes:** rules only (never called AI); AI working with rule results; AI language work; person only. Each has its own label, verbs and pricing.
 10. **FD-16 already allows "AI-assisted" in marketing.** This framework is stricter for assessments; that narrowing is part of your decision Q1, not settled.
-11. **Money (Assumption):** at about 10 prepared files per firm a month, revenue per firm is about CAD 2,300 to 6,350 a year depending on the pricing option; 500 firms is about CAD 1.1 to 3.2 million a year; the plan's own model reaches about 68 firms by March 2028.
+11. **Money (Assumption):** at about 10 prepared files per firm a month, revenue per firm is about CAD 1,900 to 6,350 a year depending on the pricing option and the founding discount; 500 firms is about CAD 1.1 to 3.2 million a year; the plan's own model reaches about 68 firms by March 2028.
 12. **Decisions needed:** Q1 (replace "flavour" with the four classes, and narrow FD-16's "AI-assisted" for assessments); the headline choice; counsel reads the phrase list before anything is published.
 
 ---
@@ -96,9 +96,9 @@ The CICC has published no AI guidance (`ai-in-regulated-work-2026-10.md` §2.4; 
 
 Today's design (cited, not restated): a person runs the assessment ("The assistant SHALL NOT run the eligibility assessment … the run is the person's own act", AW-1-88; CN-AG-03 change 1; AIW-D40); the rules compute it (AG-03 v1.4 AG-3-39); each result carries "a structured, labelled breakdown (factor → points …)" (AG-3-21); models have "no tool access" (AG-11-94).
 
-| Statement | Lead's reading, for counsel | Why [I] |
+| Statement | Our reading, for counsel | Why [I] |
 |---|---|---|
-| "Your AI teammate gets the file ready and tells you when an assessment is due; you run it; the rules give the answer, factor by factor." | Accurate to the design | Each part is true (AW-1-88; AG-3-21). |
+| "For your leads, the Intake AI tells you when an assessment is due; you run it; the rules give the answer, factor by factor." | Accurate to the design | Each part is true (AW-1-88, the Intake assistant for leads; AG-3-21). |
 | "Scores come from the rules, not the AI: same facts, same answer." | Accurate once AG-3-39 is built | A demonstrable property (moat file §4.3, proof point 2). |
 | "AI-assisted assessment" | Allowed by FD-16; **this framework proposes not using it for assessments** (Q1) | Literally true when the AI prepared the file; the general impression is that AI computed the result. |
 | "Ask the AI to assess this client" / "the AI runs the assessment for you" | **Not true today** | Contradicts AW-1-88 and AIW-D40; true only if the founder reopens AIW-D40 (§(c)3). |
@@ -128,7 +128,7 @@ Today's design (cited, not restated): a person runs the assessment ("The assista
 **Pattern [I].** (1) Regulated-work leaders do not call the rules "AI"; they put the guarantee on the rules and name AI for language work. (2) Enterprise vendors now sell determinism as a headline. (3) Immigration players blur rules and AI and make absolute claims; precision is open ground for us. (4) One AI-native immigration firm does not mention AI at all. (5) Over-claiming AI has backfired [15][30].
 
 **Which framing wins?**
-- Thomson Reuters *Future of Professionals 2026* (fieldwork Mar to Apr 2026; our page reader read 1,816 professionals in 62 countries, which the checker could not confirm on the page): minimum conditions for trustworthy professional AI are confidential data (96%), grounding in authoritative content (94%) and explainable, defensible reasoning (90%); 47% say the individual professional bears final responsibility for an AI-assisted error [31] [Survey, vendor-run]. This is a different survey from the *2026 AI in Professional Services Report* ("more than 1,500 professionals") in the moat file §2.3.
+- Thomson Reuters *Future of Professionals 2026* (fieldwork Mar to Apr 2026; our page reader read 1,816 professionals in 62 countries, which the checker could not confirm on the page): minimum conditions for trustworthy professional AI are confidential data (96%), grounding in authoritative content (94%) and explainable, defensible reasoning (90%); 47% say the individual professional bears final responsibility for an AI-assisted error [31] [Survey, vendor-run]. The moat file's "more than 1,500 professionals" (§2.3) is cited there to a different publication, its source [28], Thomson Reuters Institute's *2026 AI in Professional Services Report* (7 Apr 2026); whether the two draw on the same respondents is **Unknown**.
 - LexisNexis 2026: 81% prefer AI grounded in legal sources (moat file §2.3) [Survey].
 - Adding "artificial intelligence" to product descriptions lowered purchase intent in experiments with more than 1,000 US adults, more for high-risk products; "Focus on describing the features or benefits and avoid the AI buzzwords" (WSU, 30 Jul 2024) [32] [S; consumers, not professionals].
 - Clio 2025: 79% of legal professionals use AI in some form; small firms lag [33] [S].
@@ -170,13 +170,13 @@ This evidence supports, and does not change, the moat file §4.5 split (rules an
 | Class | What it is | Examples (cited) | Call it | On-screen label | "AI"? | Priced in (Proposal, pending the ten conversations, AIW-D60) |
 |---|---|---|---|---|---|---|
 | **1. Rules only** | Fixed rules compute; no model | Assessment and scoring (AG-3-39) with its factor breakdown (AG-3-21; FD-20); checklists; deadline watching (AIW-D37); Practice answers (AIW-D90) | "rules", "calculated", "checked against the rules" | "Calculated from Canada pack v[n], rules reviewed [date]" (once SA-1B-39 is built) | **No** | Subscription |
-| **2. AI working with rule results** (the founder's "AI using rule tools") | The AI prepares and words; the platform runs the rules on a person's act; the AI never computes or runs a rule result | Proposing the assessment task (AW-1-88); preparing the file around it (File Builder); per the Lead's ruling of 12 Oct, explaining the stored per-factor result to staff. *Note:* AW-1-88 and CN-AG-03 change 1 specify the task; an AI "explain this result" for staff is still a Proposal, not approved (sibling file row A21). | "the AI prepares; you run it; the rules decide" | Two parts: "Prepared by Case Officer's AI (approve)" and "Result: from the rules, pack v[n], run by [person]" | **Yes, for the preparing and wording only** | File Builder work: the AI price being tested; other class 2 work rides in the plan for the pilot (AIW-D60) |
+| **2. AI working with rule results** (the founder's "AI using rule tools") | The AI prepares and words; the platform runs the rules on a person's act; the AI never computes or runs a rule result | For leads, the Intake AI proposing the assessment task to the lead's owner (AW-1-88; CN-AG-03 change 1); for clients, preparing the file (File Builder). *Proposal, not approved:* the AI explaining a stored per-factor result to staff (sibling file row A21, which is being corrected to drop any unsaved preview run; such a run would also meet AG-11-94). | "the AI prepares; you run it; the rules decide" | Two parts: "Prepared by [AI teammate] (approve)" and "Result: from the rules, pack v[n], run by [person]" | **Yes, for the preparing and wording only** | File Builder work: the AI price being tested; other class 2 work rides in the plan for the pilot (AIW-D60) |
 | **3. AI language work** | A model reads or writes | Document reader, cross-checker, drafter (`ai-in-regulated-work-2026-10.md` §7) | "AI", "AI teammate", "AI draft" | "AI draft – check before use", source page shown (AW-1-23) | **Yes, always disclosed** | As class 2 |
-| **4. Person only** | A licensee's judgement or act | Running the assessment (AW-1-88); advice; sharing eligibility with a lead (AIW-D41); signing and submitting (Code s. 22(2), reading for counsel) | "your decision", "approved by [role]" | "Approved by [named person], [date]" | **Never** | Not priced |
+| **4. Person only** | A person's act; advice and signing by a licensed person | Running the assessment, a person's act under the `agent/assessment:run` permission (AW-1-88); advice and sharing eligibility with a lead (AIW-D41) by a licensed person; signing and submitting by a licensed person (Code s. 22(2), reading for counsel) | "your decision", "approved by [role]" | "Approved by [named person], [date]" | **Never** | Not priced |
 
 **Three rules (Proposal for `../proposals.md`, type Rule):**
 1. **One label per output.** Every visible result carries its class label; a class 2 result shows both parts.
-2. **Verbs follow the class.** Rules *calculate, check, list, count*. AI *reads, drafts, suggests, prepares, summarises, explains [a stored result]*. People *run [the assessment], decide, advise, approve, sign*. The AI never "assesses", "runs the assessment", "decides" or "advises".
+2. **Verbs follow the class.** Rules *calculate, check, list, count*. AI *reads, drafts, suggests, prepares, summarises* (and *explains [a stored result]* only if the A21 Proposal is approved). People *run [the assessment], decide, advise, approve, sign*. The AI never "assesses", "runs the assessment", "decides" or "advises".
 3. **Umbrella names never cross classes.** "AI team" and "AI teammate" (AIW-D89) cover classes 2 and 3 only.
 
 **FD-16 and this framework (part of Q1).** FD-16 (Founder Decisions Log v1.5, line 52): "**"AI assists, humans decide."** The eligibility/scoring/workflow engine stays fully deterministic, versioned and explainable — no model output is ever a decision … Marketing may say "AI-assisted"; it may not say the AI decides." This framework is **stricter** than FD-16: it proposes not using "AI-assisted" for assessments, because the general impression is that AI computed the result. Narrowing a ratified decision needs the founder's yes; it is put to him in Q1, not treated as settled.
@@ -186,10 +186,10 @@ This evidence supports, and does not change, the moat file §4.5 split (rules an
 | Use (Proposal; counsel reads first) | Never use | Why |
 |---|---|---|
 | "Scores and checklists are calculated by fixed rules. Your AI team prepares the file around them." | "AI-powered assessment", "AI eligibility check", "AI scoring" | General impression [2]; FD-16 "may not say the AI decides" |
-| "Your AI teammate gets the file ready and tells you when an assessment is due; you run it, and the rules show every factor." | "Ask the AI to assess your client", "the AI runs the assessment" | AW-1-88; AIW-D40 |
+| "For your leads, the Intake AI tells you when an assessment is due; you run it, and the rules show every factor." | "Ask the AI to assess your client", "the AI runs the assessment" | AW-1-88; AIW-D40 |
 | Only once built and true: "Every rule shows its government source and the date it was last checked." | "AI that always knows the latest rules" | SA-1B-39, SA-1B-40 not built (SA-01B §12) |
 | Only once built and true: "Rules reviewed by two people before release." Later, once tested: "Rules tested against [N] client profiles before release." | "Rules verified", "AI-verified", "100% accurate" | SA1B-D18; Pega's "100% accuracy" is a vendor's own claim [21] |
-| "We use AI for language: reading, drafting, explaining. We use rules where the answer must be exact." | "AI-native" (meaning "built around AI from the start") as a claim over the rules | Overall impression; investor risk [13][41] |
+| "We use AI for language: reading and drafting. We use rules where the answer must be exact." | "AI-native" (meaning "built around AI from the start") as a claim over the rules | Overall impression; investor risk [13][41] |
 | Investor line: "AI does the language work; a maintained rules engine does the exact calculations; a licensed person runs the assessment and approves." | Any automation rate not measured; "our AI assesses eligibility" | [13][14][41]; moat file P3 |
 
 ### 3. Headline and the selling argument on today's design
@@ -198,7 +198,7 @@ This evidence supports, and does not change, the moat file §4.5 split (rules an
 Two alternatives for the founder: *"Exact where it must be. AI where it helps."* and *"Same facts, same answer. An AI team for the paperwork."* "You decide" is dropped (VisaFlo says "You decide what each agent may touch" and "You stay the decision maker" [29]; README §5). The headline is a tagline only; the pitch text stays in the moat file §4.1, §4.2 and §5, which already say scoring comes from rules, not AI.
 
 **Why the honest version keeps much of the selling power [I]:**
-- **The AI is visible and busy:** it notices an assessment is due, chases and reads the documents that feed the profile, prepares the file and proposes the task (AW-1-88; File Builder). The consultant sees an AI team working.
+- **The AI is visible and busy:** for leads, the Intake AI flags a missing or out-of-date assessment and proposes the task (AW-1-88); for clients, the File Builder chases and reads the documents and prepares the file. The consultant sees an AI team working.
 - **The assessment is one click and exact:** a person presses "Assess"; the result is instant, the same every time, and shows every factor (AG-3-21; FD-20). That is what this buyer says builds trust [31] and what leaders guarantee [19][21][22].
 - **Rivals' blur becomes our point:** "ask any vendor which answers come from rules and which from AI" ([25][26][28]).
 - **It protects licensees** (declarations; Code s. 44(2)(a)) and **survives due diligence** [9].
@@ -222,13 +222,13 @@ Two alternatives for the founder: *"Exact where it must be. AI where it helps."*
 
 Option (a) cannot be sold under today's rules: "Nothing is sold outside a plan: there are no add-on prices in Release 1" (SA-04 v2.14 SA-4-44, via `price-card.md` page 1); it needs SA-4-44 amended.
 
-| Firms | Revenue a year (b, prepaid) to (a, list) |
+| Firms | Revenue a year: low end (b; first 50 firms at the founding rate, the rest prepaid) to high end (a, list) |
 |---|---|
-| About 68, the plan model's figure for March 2028 (`plan.md` §5, "live firms … about 68", revenue about 30% of costs) | about CAD 0.16 to 0.43 million |
+| About 68, the plan model's figure for March 2028 (`plan.md` §5, "live firms … about 68", revenue about 30% of costs); most would still be founding firms, discounted for 24 months from go-live (plan §3, §4) | about CAD 0.14 to 0.43 million (low end: 50 × 1,920 + 18 × 2,290) |
 | 500 | about CAD 1.1 to 3.2 million |
 | 1,000 | about CAD 2.3 to 6.3 million |
 
-About 12,500 licensed consultants and student advisers were in good standing in June 2025; practices number perhaps 3,900 to 7,800 (**Unknown**) (`plan.md` §2). 500 firms is 6 to 13% of that range; 1,000 is 13 to 26%. At the plan's pace (about 12 founding firms, then 4 to 5 a month, `plan.md` §4) and with no firm leaving, 500 firms is about nine years away ((500 − 12) ÷ 4.5 ≈ 108 months). So "multi-million" needs a faster sales engine, the higher-priced option proven by measured time saved, or a second segment or country. The AI label does none of these [I].
+About 12,500 licensed consultants and student advisers were in good standing in June 2025; practices number perhaps 3,900 to 7,800 (**Unknown**) (`plan.md` §2). 500 firms is 6 to 13% of that range; 1,000 is 13 to 26%. At the plan's pace (about 12 founding firms, then 4 to 5 a month, `plan.md` §4) and with no firm leaving, 500 firms is about nine years away ((500 − 12) ÷ 4.5 ≈ 108 months). So "multi-million" needs a faster sales engine, the higher-priced option proven by measured time saved, or a second segment or country. The AI label does none of these [I]. What does drive the path is set out in the moat file and not restated here: winning the firm's records and the switching cost that follows (§1.3), and AI revenue that tracks caseload rather than seats (§4.5 item 2).
 
 ### 5. What to test in the ten conversations (Proposal)
 
@@ -328,4 +328,4 @@ All web sources accessed **12 Oct 2026**.
 - AW-01 document version 0.6: AW-1-23, AW-1-88; test R-I4. `requirements/change-notes/CN-AG-03.md` change 1.
 - `ai-workers/decisions.md`: AIW-D11, D13, D26, D37, D40, D41, D52, D60, D61, D63, D68, D74, D83, D85, D89, D90, D91.
 - `commercial/plan.md` v1.1: §2, §3, §4, §5, §8. `ai-workers/commercial/price-card.md` pages 1 to 3.
-- `ai-workers/research/`: moat file §2.1, §2.3, §4.1 to §4.5, §5, §7; `ai-in-regulated-work-2026-10.md` §2.4, §7; `ai-coverage-vs-competitors-2026-10.md` §2.1. `ai-workers/design/rules-ai-classification-2026-10-12.md` rows A15, A18, A21.
+- `ai-workers/research/`: moat file §1.3, §2.1, §2.3, §4.1 to §4.5, §5, §7 (and its source [28]); `ai-in-regulated-work-2026-10.md` §2.4, §7; `ai-coverage-vs-competitors-2026-10.md` §2.1. `ai-workers/design/rules-ai-classification-2026-10-12.md` rows A15, A18, A21.
