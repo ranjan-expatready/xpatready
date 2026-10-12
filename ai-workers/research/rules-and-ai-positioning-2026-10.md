@@ -1,169 +1,165 @@
 # Rules and AI: how to name, sell and price them honestly (founder ask, 12 Oct 2026)
 
-**Date:** 12 Oct 2026. **Author:** research maker for the Lead. **Status:** research input; not yet through the adversarial checker; nothing here is a decision. **Asked by:** the founder, through the Lead, 12 Oct 2026.
+**Date:** 12 Oct 2026, revised the same day after review R3 (`../checks/review-R3-2026-10-12.md`) with the Lead's rulings. **Author:** research maker for the Lead. **Status:** research input; nothing here is a decision. **Asked by:** the founder, through the Lead, 12 Oct 2026.
 
 **The ask, as the Lead relayed it.** Build eligibility, scoring and assessments as fixed (deterministic) rules, but present them to buyers "under the flavour of AI" for easy selling; use real AI for conversation, follow-ups, language and tool calling; and give a framework that makes this a multi-million-dollar product.
 
 **Builds on, and does not repeat:**
-- `ai-moat-and-positioning-2026-10.md` (moat, selling story §4, proof points §4.3, objections §4.4, pricing fit §4.5, proposals P1 to P5);
-- `ai-in-regulated-work-2026-10.md` (DoNotPay §2.1; regulator guidance §2.4; "How not to overpromise" table §7, the say / do-not-say rows near line 370);
-- `ai-coverage-vs-competitors-2026-10.md` (§1 summary, §2.2 matrix);
-- `visaflo.md` (§3.1 agents, §12 AI direction);
-- `../commercial/price-card.md` (options a, b, c; cost and value pages 1 and 3) and `../../commercial/plan.md` v1.1 (§2, §3).
+- `ai-moat-and-positioning-2026-10.md` ("the moat file"): the one-sentence pitch §4.1, the 30-second pitch §4.2, proof points §4.3, objections §4.4, pricing fit §4.5, "Why this AI is different" §5, proposals P1 to P5. **Those sections stay the one source for the pitch text;** this file adds only the class naming, the verb rule, new phrases, the legal line and new pricing evidence.
+- `ai-in-regulated-work-2026-10.md` (DoNotPay §2.1; regulator guidance §2.4; the say / do-not-say table in §7);
+- `ai-coverage-vs-competitors-2026-10.md` (§1, §2.1, §2.2); `visaflo.md` (§3.1, §12);
+- `../commercial/price-card.md` and `../../commercial/plan.md` v1.1;
+- the design as specified: AW-01 (document version 0.6) AW-1-88; `../requirements/change-notes/CN-AG-03.md` change 1; `../decisions.md` AIW-D11, D37, D40, D41, D60, D61, D89, D90; Founder Decisions Log v1.5 FD-16, FD-18, FD-20 (`sources/drive-snapshot-2026-10-11/`);
+- the sibling maker file `../design/rules-ai-classification-2026-10-12.md` (rows A15, A18, A21), for consistency.
 
-**Evidence labels.** **[V]** verified primary (statute, regulator, court or the company's own legal page read directly). **[S]** secondary (law-firm note, press, third-party price tracker). **[VC]** vendor claim (the company about itself). **[Survey]** self-reported answers. **[I]** our inference. **Proposal / Assumption / Unknown** as in README §5. Every web source below was accessed on **12 Oct 2026** unless the earlier file is cited. No person is named (README rule 10): officials and executives are described by role.
+**Evidence labels.** **[V]** verified primary (statute, regulator, or the company's own legal page read directly). **[S]** secondary (law-firm note, press, third-party price tracker). **[VC]** vendor claim. **[Survey]** self-reported answers. **[I]** our inference. **Proposal / Assumption / Unknown** as in README §5. **Every legal reading in this file is the maker's or the Lead's, not legal advice: for counsel to confirm** (README §5; AIW-D68). Web sources accessed **12 Oct 2026**. No person is named (README rule 10).
 
 **Plain-English glossary**
-- **Deterministic / rules:** the same input always gives the same output, because a fixed rule written by a person computes it (for example, Express Entry points from age, language and education).
-- **AI (in this file):** a large language model (LLM): software that reads and writes language and can be wrong in ways that vary from run to run.
-- **Tool calling:** the AI does not compute the answer itself; it asks another piece of software (here, the product's rules) to compute it and passes the result on.
-- **AI washing:** claiming more or different AI than a product really has. Regulators treat it as ordinary false advertising.
+- **Deterministic / rules:** the same input always gives the same output, because a fixed rule written by a person computes it.
+- **AI (in this file):** a large language model: software that reads and writes language and can be wrong in ways that vary from run to run.
+- **Tool calling:** an AI asking another piece of software to compute something. *Note:* the team's specification today says "models SHALL have no tool access" (AG-11 v1.12, AG-11-94); the platform fetches results and gives them to the AI as data.
+- **AI washing:** claiming more or different AI than a product really has.
 - **Substantiation:** the evidence a seller must hold *before* making a claim.
 - **General impression:** under Canadian law, an advert is judged by the overall impression it leaves, not only its literal words.
+- **Competition Tribunal:** the specialised federal court that hears Competition Act cases.
 
 ---
 
 ## (a) Summary for the founder (12 lines)
 
-1. **"Rules sold as AI" is the textbook example of AI washing.** A Canadian law firm's 2026 definition lists "presenting basic automation or rule-based software as AI" [5]; the Competition Bureau says AI claims are "treated the same as any other claims" and that sellers should say what they mean by AI [3].
-2. **The legal exposure is real, not theoretical.** The Competition Act judges the "general impression", not just the words [2]; penalties for a company reach CAD 10 million or 3 times the benefit [2]; since 20 Jun 2025 competitors can ask the Tribunal for leave to bring their own deceptive-marketing cases [6].
-3. **The US shows the pattern:** the FTC's sweep (2024 onward) says "there is no AI exemption from the laws on the books" [8]; the SEC fined two advisers for claiming AI they did not use [13]; a founder now faces criminal charges [14].
-4. **Our own buyers carry the risk too.** RCICs must not make "false, misleading or inaccurate representations" (Code s. 44(2)(a)) and are responsible for work they delegate (s. 38(2)) [18]. Wrong labels also corrupt the AI-use record they need for Federal Court and IRB declarations.
-5. **It would also sell worse.** In professional work, buyers' top conditions for trusting AI are confidential data (96%), grounding in authoritative content (94%) and reasoning they can explain and defend (90%) [31]. A US study found the words "artificial intelligence" *lowered* purchase intent, most for high-risk purchases [32].
-6. **Best-in-class products do the opposite of "flavour".** TurboTax guarantees its *calculations* and calls the AI "guidance" [19][20]; Pega says critical steps "are executed by rules-based automation" [21]; Salesforce sells "deterministic control" next to the LLM [22]. They sell the rules as the reason to trust, not as AI.
-7. **Your idea has a stronger honest version, and it keeps most of the selling power.** The AI genuinely runs the conversation, gathers the facts and *calls* the rules as a tool. So "Ask the AI to assess this client" is true; "the AI assessed this client" is not. The result is labelled as coming from the rules, with the rule version and source.
-8. **The four honest classes:** rules only (never called AI); AI using rule tools (AI named, the rules named as the source of the answer); AI language (named AI, approve before it leaves); person only (the licensee's judgement).
-9. **Headline story (Proposal):** "Rules you can defend. AI that does the legwork. You decide." Determinism is a selling point to this buyer, not something to hide.
-10. **Pricing follows the classes:** rules and their upkeep sit in the subscription; AI is priced on the approved prepared file (AIW-D60), matching how Intercom, Salesforce and EvenUp price units of finished work [34][35][38].
-11. **Multi-million path (Assumption):** about 500 firms at about CAD 529 a month (Practice plan plus ten prepared files) is about CAD 3.2 million a year; 1,000 firms is about CAD 6.3 million. It depends on winning the firm's records first, not on the AI label.
-12. **Decisions needed:** adopt the four-class naming as a rule; withdraw "under the flavour of AI" from all material; have counsel read the phrase list before anything is published.
+1. **Selling rules "under the flavour of AI" matches a published example of AI washing.** A Canadian law firm's 2026 note lists "presenting basic automation or rule-based software as AI" [5]; the Competition Bureau says AI claims are "treated the same as any other claims" and sellers should say what they mean by AI [3].
+2. **The exposure is legal as well as reputational.** No Canadian case on AI claims was found, but the law (judged on "general impression"), penalties up to the greater of CAD 10 million and three times the benefit, and private access to the Tribunal all exist [1][2][42][43]. For counsel to confirm.
+3. **US regulators act on false AI claims:** the FTC's "no AI exemption" sweep [8]; SEC orders against two advisers for false or misleading claims about their use of AI [13] and against a public company whose "AI" ordering needed human intervention for most orders [41]; criminal charges against one founder [14].
+4. **Our buyers carry the risk too.** RCICs must not make "false, misleading or inaccurate representations" (Code s. 44(2)(a)) [18]. A wrong label also spoils the AI-use declarations they make to the Federal Court and the IRB.
+5. **It would also sell worse.** Professionals' conditions for trusting AI are confidential data (96%), grounding in authoritative content (94%) and defensible reasoning (90%) [31]; one US study found the words "artificial intelligence" lowered purchase intent, most for high-risk purchases [32].
+6. **Leaders do the opposite of "flavour":** TurboTax guarantees its *calculations* and calls its AI "guidance" [19][20]; Pega and Salesforce sell rules-based, deterministic steps as the reason to trust [21][22].
+7. **The honest version, on today's design:** your AI teammate notices an assessment is due, prepares the file and proposes the task; a person presses "Assess"; the rules give the exact answer with every factor shown; the AI may then explain that stored result to staff (AW-1-88; CN-AG-03 change 1; the Lead's ruling, 12 Oct). That keeps visible AI legwork without claiming the AI assessed anyone.
+8. **Letting the AI run the assessment when asked would be a new founder decision** (it reopens AIW-D40), and "tool calling" by the model conflicts with the team's AG-11-94.
+9. **The four classes:** rules only (never called AI); AI working with rule results; AI language work; person only. Each has its own label, verbs and pricing.
+10. **FD-16 already allows "AI-assisted" in marketing.** This framework is stricter for assessments; that narrowing is part of your decision Q1, not settled.
+11. **Money (Assumption):** at about 10 prepared files per firm a month, revenue per firm is about CAD 2,300 to 6,350 a year depending on the pricing option; 500 firms is about CAD 1.1 to 3.2 million a year; the plan's own model reaches about 68 firms by March 2028.
+12. **Decisions needed:** Q1 (replace "flavour" with the four classes, and narrow FD-16's "AI-assisted" for assessments); the headline choice; counsel reads the phrase list before anything is published.
 
 ---
 
 ## (b) Findings
 
-### 1. The legal line on calling rules "AI"
+### 1. The legal line on calling rules "AI" (all readings for counsel to confirm)
 
 #### 1.1 Canada: the Competition Act
 
 | What | Exact words or fact | Label |
 |---|---|---|
-| The general ban (civil, reviewable) | A person engages in reviewable conduct if they make "a representation to the public that is false or misleading in a material respect" (s. 74.01(1)(a)) [1] | [V] |
+| The general ban (civil, reviewable) | "a representation to the public that is false or misleading in a material respect" (s. 74.01(1)(a)) [1] | [V] |
 | Performance claims need a test first | A statement of "the performance, efficacy or length of life of a product that is not based on an adequate and proper test thereof, the proof of which lies on the person making the representation" (s. 74.01(1)(b)) [1] | [V] |
 | Judged by overall impression | "the general impression conveyed by a representation as well as its literal meaning shall be taken into account" (s. 74.03(5), for ss. 74.01 and 74.02) [2] | [V] |
-| Penalty for a company (after the 2024 amendments) | The greater of "$10,000,000 and, for each subsequent order, $15,000,000" and "three times the value of the benefit derived from the deceptive conduct", or, if that cannot be determined, "3% of the corporation's annual worldwide gross revenues" (s. 74.1(1)(c)) [2]. The Act page is current to 21 Sep 2026 [1]. | [V] |
-| Private cases (Bill C-59) | Since 20 Jun 2025 private parties, such as a competitor, may seek the Tribunal's leave to bring a case under s. 74.01; leave for deceptive marketing needs a "public interest" test; no new money award for private applicants [6] | [S] |
-| The Bureau on AI claims | The Bureau's deputy commissioner for deceptive marketing wrote (31 May 2023): "Claims that promote AI related abilities are treated the same as any other claims"; because AI has no standard definition, advertisers should explain what they mean; performance claims need "adequate and proper testing" done before the claim [3] | [V] (the Bureau's own words, published by the Canadian Marketing Association) |
-| Same message repeated | The CMA's July 2025 playbook repeats the Bureau's position and lists red flags: "overstated performance promises, lack of transparency about human involvement, and the absence of verifiable performance data" [4] | [S] |
-| Definition used by Canadian counsel | "AI washing occurs when claims exaggerate or misrepresent the implication of AI in a product or service", with the example "presenting basic automation or rule-based software as AI"; Quebec's Consumer Protection Act s. 219 also bans deceptive representations (BCF, 10 Apr 2026) [5] | [S] |
-| Enforcement so far | I found **no** Competition Bureau case or consent agreement about an AI capability claim up to 12 Oct 2026. The Bureau's AI work has focused on AI-made fakes, deepfakes and algorithmic pricing [5][7]. | [I] from searches; **Unknown** whether any investigation is open |
+| Penalty for a company | Up to the greater of "$10,000,000 and, for each subsequent order, $15,000,000" and "three times the value of the benefit derived from the deceptive conduct", or, if the benefit cannot be determined, "3% of the corporation's annual worldwide gross revenues" (s. 74.1(1)(c)(ii)) [2]. Act current to 21 Sep 2026 [1]. | [V] |
+| Private applications to the Tribunal | The Tribunal "may grant leave to make an application under section 74.1" … "if it is satisfied that it is in the public interest to do so" (s. 103.1(6.1)) [43]. The Bureau: a private applicant can obtain the remedies the Bureau could seek (stopping the conduct, a corrective notice, a penalty paid to the government) and "in limited circumstances … that purchasers of affected products get their money back", the refund applying to s. 74.01(1)(a) only [42]. In force from 20 Jun 2025 per Fasken [6]: **date not re-verified on 12 Oct** (Fasken returned 403; the Bureau's page gives no date). | [V] for leave and remedies; date [S], unverified |
+| The Bureau on AI claims | The Bureau's deputy commissioner for deceptive marketing (31 May 2023): "Claims that promote AI related abilities are treated the same as any other claims"; because AI has no standard definition, advertisers should explain what they mean; performance claims need "adequate and proper testing" before the claim [3] | [V] (the Bureau's own words, published by the Canadian Marketing Association) |
+| Same message repeated | The CMA's July 2025 playbook repeats the Bureau's position; red flags include "lack of transparency about human involvement, and the absence of verifiable performance data" [4] | [S] |
+| One Canadian law firm's note | "AI washing occurs when claims exaggerate or misrepresent the implication of AI in a product or service", with the example "presenting basic automation or rule-based software as AI"; Quebec's Consumer Protection Act s. 219 also bans deceptive representations (BCF, 10 Apr 2026) [5]. This is commentary, not a legal definition. | [S] |
+| Enforcement so far | No Competition Bureau case or consent agreement about an AI capability claim found up to 12 Oct 2026 [I, from searches]; whether any investigation is open is **Unknown**. | [I] |
 
-**Is calling rules "AI" a "material" misstatement for our buyer? [I; confirm with counsel]** Probably yes. For a licensed consultant, *how* an eligibility result is produced changes what they must check, what they must declare to the Federal Court and the IRB (`ai-in-regulated-work-2026-10.md` §2.4), and how they explain the result to a client. A claim that changes a professional buyer's duties is hard to call immaterial. No case decides this yet; that is exactly why it belongs on counsel's list (AIW-D68).
+**Would calling rules "AI" be "material" for our buyer? (Maker's reading, for counsel to confirm.)** It may well be. For a licensed consultant, how an eligibility result is produced changes what they must check, what they declare to the Federal Court and the IRB (`ai-in-regulated-work-2026-10.md` §2.4) and how they explain the result to a client. No case decides this; it is counsel question Q6 below.
 
 #### 1.2 United States: FTC, SEC and the advertising self-regulator
 
 | Body and case | What happened | Lesson for us | Label |
 |---|---|---|---|
-| **FTC, "Operation AI Comply"** (25 Sep 2024) | Five actions announced together, including DoNotPay ("world's first robot lawyer"; no testing against lawyers; US$193,000 and a ban on unsupported claims of substituting for professional services). The FTC Chair at the time: "there is no AI exemption from the laws on the books." [8] | AI claims need the same proof as any other claim; the legal-services case is the closest to ours. | [V] |
-| **FTC business guidance, "Keep your AI claims in check"** (Feb 2023) | Asks "Does the product actually use AI at all?"; warns that FTC technologists "can look under the hood"; distinguishes "using an AI tool to develop the product" from having AI in it [9] | This is the founder's exact question. A regulator can inspect what really computes the result. | [S] (FTC page returned 404 to our reader; quotes via a law firm's summary) |
-| **FTC follow-on cases, 2025 to 2026** | Workado: AI-detector "98%" accuracy claim, alleged real accuracy about 53%; order to stop accuracy claims (final Aug 2025). Click Profit: "AI-powered" storefront claims; ban and suspended judgments (2025). Air AI: AI said to replace human sales staff; settlement announced Mar 2026 with a business-opportunity ban and a largely suspended US$18 million judgment [10][11] | Enforcement continued under the new FTC leadership; accuracy and "replaces a person" claims draw action. | [S] |
-| **FTC proposed policy statement on AI accuracy** (comment sought 1 Jul 2026) | Says AI firms that "steer the outputs of their AI systems toward unexpected objectives" are likely to deceive consumers [12] | Proposal only; shows the FTC still treats AI claims as consumer-protection matters. | [S] (Federal Register page blocked our reader) |
-| **SEC, Delphia and Global Predictions** (18 Mar 2024) | Delphia claimed it used AI and machine learning on client data when it did not (US$225,000); Global Predictions called itself the "first regulated AI financial advisor" (US$175,000). The SEC Chair at the time: "Such AI washing hurts investors." [13] | **Investor material** is covered too. Saying "AI" where rules or people do the work is the exact fact pattern. | [V] |
-| **SEC, Presto Automation** (Jan 2025) | First AI-washing case against a public company: the voice AI belonged to a third party and involved significant human intervention [14] | Hidden human or non-AI work behind an "AI" label is the target. | [S] |
-| **SEC and DOJ, Nate founder** (9 Apr 2025) | Claimed automation "above 90 percent"; the rate was alleged to be "essentially zero"; about US$42 million raised; parallel criminal charges [14] | The worst case: founders are personally charged for AI claims made to investors. | [S] |
-| **Builder.ai** (insolvent May 2025) | Marketed an AI assistant that wrote code; reports say about 700 engineers did the work; revenue reportedly overstated; investigations reported [15] | The reputational end state of "flavour of AI". | [S], allegations |
-| **Advertising self-regulator (NAD), 2025 to 2026** | A baby monitor's "AI-powered" claim was found *supported* because the device really had AI detection; the claim that it could "ensure" safety was not [17]. Counsel note NAD has asked advertisers to fix claims about whether "smart" features were properly described as AI [16]. | "AI-powered" is fine when true of the feature named; outcome promises are the problem. | [S] |
+| **FTC, "Operation AI Comply"** (25 Sep 2024) | Five actions, including DoNotPay ("world's first robot lawyer"; no testing against lawyers; US$193,000 and a ban on unsupported claims of substituting for professional services). The FTC Chair at the time: "there is no AI exemption from the laws on the books." [8] | AI claims need the same proof as any other claim; the legal-services case is the closest to ours. | [V] |
+| **FTC guidance, "Keep your AI claims in check"** (Feb 2023) | Asks "Does the product actually use AI at all?"; FTC technologists "can look under the hood"; separates "using an AI tool to develop the product" from AI in the product [9] | Exactly the founder's question: a regulator can inspect what computes the result. | [S] (FTC page returned 404; quotes via a law firm) |
+| **FTC follow-on cases, 2025 to 2026** | Workado: AI-detector "98%" accuracy claimed, about 53% alleged; an order barring unsupported accuracy claims announced 2025 (the source calls it a proposed order) [10]. Click Profit: "AI-powered" storefront claims; ban and suspended judgments [10]. Air AI: claimed its AI could replace human customer service representatives; a **proposed** order, subject to court approval, announced 24 Mar 2026, with a business-opportunity ban and a largely suspended US$18 million judgment [11] | Accuracy and "replaces a person" claims draw action. | [S] |
+| **FTC proposed policy statement on AI accuracy** (comment sought from 1 Jul 2026) | AI firms that "steer the outputs of their AI systems toward unexpected objectives" are likely to deceive consumers [12] | Proposal only. | [S] |
+| **SEC, Delphia and Global Predictions** (18 Mar 2024) | Delphia claimed AI and machine learning on client data it did not have (US$225,000); Global Predictions called itself the "first regulated AI financial advisor" (US$175,000). "Such AI washing hurts investors." [13] | Investor material is covered: false or misleading claims about the use of AI. | [V] |
+| **SEC, Presto Automation** (14 Jan 2025) | Presto Voice's speech recognition "was owned and operated by a third party", undisclosed; "the vast majority of drive-thru orders … required human intervention"; no civil penalty [41] | Hidden non-AI work behind an "AI" label is the target. | [V] |
+| **SEC and DOJ, Nate founder** (9 Apr 2025) | Automation "above 90 percent" claimed; "essentially zero" alleged; about US$42 million raised; parallel criminal charges [14] | Founders can be personally charged for AI claims to investors. | [S] |
+| **Builder.ai** (insolvent May 2025) | Reports say about 700 engineers did work marketed as AI; revenue reportedly overstated [15] | The reputational end state of "flavour of AI". | [S], allegations |
+| **Advertising self-regulator (NAD)** | A baby monitor's "AI-powered" claim was found *supported* because it had real AI detection; its claim to "ensure" safety was not [17]. Counsel note NAD has asked advertisers to fix claims about whether "smart" features were properly described as AI [16]. | "AI-powered" is fine when true of the feature named; outcome promises are the problem. | [S] |
 
 #### 1.3 The licensee's side: CICC Code of Professional Conduct (SOR/2022-128)
 
-| Section | Exact words [18] | What it means for vendor claims [I; confirm with counsel / RCIC] |
+| Section | Exact words [18] | Maker's reading (confirm with counsel / RCIC) |
 |---|---|---|
-| s. 44(2)(a), (b) | A licensee must not "make false, misleading or inaccurate representations" or "guarantee the success of an application, expression of interest or proceeding" | If a consultant repeats our "AI eligibility assessment" line on their own website or to a client, *they* make the representation. A vendor's wrong label becomes the licensee's compliance problem. |
-| s. 38(2) | The licensee "must supervise and assume professional responsibility for any work done by a person who assists"; supervision must be "adequate for the type of work in question" | Adequate supervision depends on knowing what produced the output. Rules need checking of inputs; AI output needs checking of the content. A wrong label leads to the wrong kind of checking. |
-| s. 38(3) | Non-licensees must not "provide representation or advice" in contravention of IRPA s. 91 | A conversational AI that tells a prospective client "you are eligible" is the risk, whether the verdict came from rules or a model. The AI may collect facts and run the rules for the licensee; it must not deliver the verdict to the public. (Our design already keeps eligibility away from leads: `ai-coverage-vs-competitors-2026-10.md` §1 item 5.) |
-| s. 19(2)(e) | Be able to deliver services "using technology that is appropriate and effective" | The licensee needs truthful information about the tool to judge whether it is appropriate. |
+| s. 44(2)(a), (b) | Must not "make false, misleading or inaccurate representations" or "guarantee the success of an application, expression of interest or proceeding" | If a consultant repeats a vendor's "AI eligibility assessment" line to clients, the consultant makes the representation. |
+| s. 38(2) | "must supervise and assume professional responsibility for any work done by a person who assists"; supervision "adequate for the type of work in question" | Adequate supervision depends on knowing what produced an output; a wrong label invites the wrong kind of checking. |
+| s. 38(3) | Non-licensees must not "provide representation or advice" contrary to IRPA s. 91 | The section speaks of *persons*; applying it to software is our reading (the same one as `ai-in-regulated-work-2026-10.md` §7). The design already keeps AI away from applicants and keeps eligibility away from leads: AIW-D11 ("No applicant-facing AI Workers") and AIW-D41 ("No eligibility content … in any automatic or AI-drafted message to a lead"). |
+| s. 22(2) | Must ensure documents are "properly prepared, signed and submitted" | Signing and submitting sit with the licensee in our class 4; whether the section reserves the acts themselves is for counsel. |
+| s. 19(2)(e) | Deliver services "using technology that is appropriate and effective" | Judging that needs truthful information about the tool. |
 
-The CICC has published no AI guidance (`ai-in-regulated-work-2026-10.md` §2.4, searched 11 Oct; a fresh search on 12 Oct found none either) [I].
+The CICC has published no AI guidance (`ai-in-regulated-work-2026-10.md` §2.4; a new search on 12 Oct found none) [I].
 
-**Two more knock-on effects of a wrong label [I]:**
-- **Court and tribunal declarations.** The Federal Court and the IRB require a declaration when AI produced content (`ai-in-regulated-work-2026-10.md` §2.4). If rules are labelled "AI", licensees may over-declare; if AI drafting is hidden behind "smart rules", they may under-declare, and the IRB can report counsel to their regulator. Our per-file record of what the AI did (AW-1-23, per `ai-moat-and-positioning-2026-10.md` §3.4) is only worth something if the labels are true.
-- **Quebec Law 25 s. 12.1** (automated decisions) applies to *automated processing*, whether rules or AI (`ai-in-regulated-work-2026-10.md` §2.4). Calling rules "AI" changes no duty; it only confuses who must tell whom what.
+**Two knock-on effects of a wrong label [I]:**
+- **Court and tribunal declarations.** The Federal Court and the IRB require a declaration when AI produced content (`ai-in-regulated-work-2026-10.md` §2.4). Rules labelled "AI" invite over-declaring; AI hidden as "smart rules" invites under-declaring, which the IRB can report to the regulator. The per-file AI record (AW-1-23) is only worth something if labels are true.
+- **Automated decisions.** FD-20 (Founder Decisions Log v1.5, line 56) already gives every assessment "an `isAutomatedDecision` flag, an immutable **factor snapshot** … a client-facing plain-language explanation" because of Quebec Law 25 s. 12.1. That duty follows automated processing whether rules or AI; a label changes nothing but the confusion.
 
-#### 1.4 What exactly is safe to say when an AI calls the rules as a tool
+#### 1.4 How each statement reads against today's design
 
-The test regulators apply is: is each claim literally true, is the overall impression true, and do we hold the proof before saying it [1][2][3][9]. Applied to a design where an AI teammate (AIW-D89) talks to the user, gathers facts and calls the assessment rules (AG-3-39, "deterministic pure function", as cited in `ai-moat-and-positioning-2026-10.md` §3.3):
+Today's design (cited, not restated): a person runs the assessment ("The assistant SHALL NOT run the eligibility assessment … the run is the person's own act", AW-1-88; CN-AG-03 change 1; AIW-D40); the rules compute it (AG-03 v1.4 AG-3-39); each result carries "a structured, labelled breakdown (factor → points …)" (AG-3-21); models have "no tool access" (AG-11-94).
 
-| Statement | Safe? | Why [I] |
+| Statement | Lead's reading, for counsel | Why [I] |
 |---|---|---|
-| "Ask the Case Officer's AI to run an assessment; it gathers the facts and runs our Express Entry rules." | **Yes** | True of each part: the AI converses and calls the tool; the rules compute. |
-| "The score comes from the rules, not the AI. Same facts, same score, every time." | **Yes**, once AG-3-39 is built | Determinism is a factual property we can demonstrate (proof point 2 in `ai-moat-and-positioning-2026-10.md` §4.3). |
-| "AI-assisted assessment" | **Borderline** | Literally true if the AI gathered the facts; the general impression is that AI computed the result. Use only with the next sentence attached: "the result is computed by the rules". |
-| "AI-powered eligibility assessment" / "our AI assesses eligibility" / "AI scoring" | **No** | The general impression is that a model decides eligibility. False for our design, contradicts "AI does not decide" (FD-16, as stated in `plan.md` v1.1 §2) and reads as advice (Code s. 38(3)). |
-| "AI that never makes mistakes on scoring" | **No** | The AI does not score; and "never" is a performance claim that needs a test (s. 74.01(1)(b)); pack rules are not tested today (SA1B-D18, per `ai-moat-and-positioning-2026-10.md` §3.2). |
-| "Built with AI" about the rules | **No** | The FTC separates using AI to *build* a product from having AI *in* it [9]. Even if the Pack author's AI (AW-02) helps draft rules, the shipped rule is not AI. |
-| "Expat Ready AI" as an umbrella brand over everything | **Risky** | A brand name that covers rules, the deadline watch and AI together gives the impression all of it is AI. Contradicts AIW-D37 and AIW-D90 (deadline watch and Practice answers "never sold as AI"). |
+| "Your AI teammate gets the file ready and tells you when an assessment is due; you run it; the rules give the answer, factor by factor." | Accurate to the design | Each part is true (AW-1-88; AG-3-21). |
+| "Scores come from the rules, not the AI: same facts, same answer." | Accurate once AG-3-39 is built | A demonstrable property (moat file §4.3, proof point 2). |
+| "AI-assisted assessment" | Allowed by FD-16; **this framework proposes not using it for assessments** (Q1) | Literally true when the AI prepared the file; the general impression is that AI computed the result. |
+| "Ask the AI to assess this client" / "the AI runs the assessment for you" | **Not true today** | Contradicts AW-1-88 and AIW-D40; true only if the founder reopens AIW-D40 (§(c)3). |
+| "AI-powered eligibility assessment", "AI scoring", "our AI assesses eligibility" | Likely misleading | General impression of a model deciding; FD-16: "it may not say the AI decides". |
+| "AI that never makes mistakes on scoring" | Likely misleading | The AI does not score; "never" needs a test (s. 74.01(1)(b)); pack rules are not tested today (SA1B-D18). |
+| "Built with AI" about the rules | Likely misleading | FTC separates building with AI from AI in the product [9]. |
+| "Expat Ready AI" as an umbrella brand | Risky | Implies rules and the deadline watch are AI, against AIW-D37 ("described as the product's deadline watching, never as AI") and AIW-D90 ("a product feature, not an AI teammate"). |
 
 ### 2. How best-in-class products market a fixed core with an AI layer
 
-| Product | What they lead with | How the fixed (rules) part is described | How the AI is described | Label |
+| Product | What they lead with | How the fixed part is described | How the AI is described | Label |
 |---|---|---|---|---|
-| **TurboTax (Intuit)** | Outcome and guarantee | "100% Accurate Calculations Guarantee": if a "TurboTax calculation error" causes a penalty, Intuit pays it; separate "Expert-Approved" guarantees for human experts. **No guarantee mentions AI or Intuit Assist** [19] | "AI-powered guidance from Intuit Assist" for explanations and answers [20] | [VC] |
-| **Pega** | "Predictable AI agents" | "Critical steps – like risk scoring – are executed by rules-based automation for 100% accuracy"; agents "must work inside defined workflows" (8 Dec 2025) [21] | Intelligence used "for judgment calls" | [VC] |
-| **Salesforce Agentforce** | Reliable agents | "a graph runtime that marries LLM intelligence with deterministic control"; "LLM reasoning alone cannot carry enterprise load" [22]; Agent Script mixes fixed logic with prompts (developer blog, Feb 2026) [23] | Agents with "hybrid reasoning" | [VC] |
-| **Avalara** | Compliance done | "AI-curated, human-verified tax rules and rates" (`ai-moat-and-positioning-2026-10.md` §2.1) | "Avi" with human checkpoints | [VC] |
-| **Thomson Reuters CoCounsel** | Grounded professional AI | Content "grounded in Westlaw and Practical Law" (same file §2.1) | Agentic research with citations | [VC] |
-| **Ramp** | Finance agents | The agent "applies your written expense policy" and cites "the exact policy text"; starts "in review-only mode" [24] | "Autonomous finance agents" with "a clear audit trail for every decision"; claims 99% accuracy | [VC] |
-| **Docketwise (immigration, US)** | "Spend 75% less time on admin" | "Smart" forms auto-filled from a questionnaire | AI (8am IQ) "captures data to eliminate errors" [25]. Rules and AI are not separated; "eliminate errors" is an absolute claim. | [VC] |
-| **Boundless (immigration, US)** | Journey and success rate | "smart technology with human expertise"; "four different reviews"; flat fees; "99.7%" success [26] | Not separated | [VC] |
-| **Alma (immigration, US)** | "Hire the best talent. We'll handle immigration." | "attorney-led execution with structured workflows" | **The homepage does not mention AI at all** [27] | [VC] |
-| **Visto (immigration, Canada)** | Speed | "advanced automation and AI technology" | "An AI chatbot trained exclusively on IRCC info" [28] | [VC] |
-| **VisaFlo (immigration, Canada)** | "Make judgment calls, not hires." | "Guardrails" "built into the product, not written in a policy doc"; never says "deterministic" | "friendly AI agents"; "Agents draft; you release, sign and file" [29] | [VC] |
-| **Immicase (immigration, Canada)** | AI add-on | Form filling described as *"Deterministic — no AI inference"* (`ai-coverage-vs-competitors-2026-10.md` §2.1) | Separate AI assistants | [VC] |
-| **Lemonade (insurance), cautionary** | "AI" as the brand | — | In May 2021 it tweeted that its AI picks up "non-verbal cues" in claim videos; after a backlash it deleted the thread, called it "poorly worded" and said it does not use AI "to automatically decline claims" [30] | [S] |
+| **TurboTax (Intuit)** | Outcome and guarantee | "100% Accurate Calculations Guarantee" for "a TurboTax calculation error"; separate expert guarantees; **no guarantee mentions AI or Intuit Assist** [19] | "AI-powered guidance from Intuit Assist" [20] | [VC] |
+| **Pega** | "Predictable AI agents" | "Critical steps – like risk scoring – are executed by rules-based automation for 100% accuracy" (8 Dec 2025) [21]; agents are kept inside defined workflows (paraphrase) | Used for judgement inside the workflow (paraphrase) | [VC] |
+| **Salesforce Agentforce** | Reliable agents | "a graph runtime that marries LLM intelligence with deterministic control"; "LLM reasoning alone cannot carry enterprise load" [22]; Agent Script mixes fixed logic with prompts [23] | "Hybrid reasoning" | [VC] |
+| **Avalara** | Compliance done | "AI-curated, human-verified tax rules and rates" (moat file §2.1) | "Avi" with human checkpoints | [VC] |
+| **Thomson Reuters CoCounsel** | Grounded professional AI | "grounded in Westlaw and Practical Law content" (moat file §2.1) | Research with citations | [VC] |
+| **Ramp** | Finance agents | Applies "your written expense policy" and cites "the exact policy text"; starts "in review-only mode" [24] | Agents with "a clear audit trail for every decision"; claims 99% accuracy | [VC] |
+| **Docketwise** | "Spend 75% less time on admin" | "Smart" forms from a questionnaire | AI that "captures data to eliminate errors" [25]; rules and AI not separated | [VC] |
+| **Boundless** | Journey, success rate | "smart technology with human expertise"; "99.7%" [26] | Not separated | [VC] |
+| **Alma** | "Hire the best talent. We'll handle immigration." | "attorney-led execution with structured workflows" | **Homepage does not mention AI** [27] | [VC] |
+| **Visto** | Speed | "advanced automation and AI technology" | "An AI chatbot trained exclusively on IRCC info" [28] | [VC] |
+| **VisaFlo** | "Make judgment calls, not hires." | "built into the product, not written in a policy doc"; never says "deterministic" | "friendly AI agents"; "Agents draft; you release, sign and file" [29] | [VC] |
+| **Immicase** | AI add-on | *"Deterministic — no AI inference"* for form filling (`ai-coverage-vs-competitors-2026-10.md` §2.1) | Separate AI assistants | [VC] |
+| **Lemonade, cautionary** | "AI" as the brand | — | 2021: claimed its AI read "non-verbal cues"; deleted after backlash, called "poorly worded" [30] | [S] |
 
-**The pattern [I].**
-1. **Regulated-work leaders never call the rules "AI".** They call them calculations, rules, policy, verified content or workflows, and put the guarantee or the accuracy claim *there*. The AI is named for language work: guidance, drafting, answering, orchestrating.
-2. **Enterprise vendors now sell determinism as the headline.** Pega and Salesforce market "predictable" and "deterministic control" because buyers distrust a model doing everything. Determinism has become the premium story, not something to hide.
-3. **Consumer-facing immigration players blur the line**, with absolute claims ("eliminate errors", "99.7%"). That is where the legal and trust risk sits, and it is a gap we can win by being precise.
-4. **One AI-native immigration firm does not mention AI at all** and sells attorneys plus structured workflow (Alma). The buyer pays for the outcome, not the technology.
-5. **Over-claiming AI has backfired publicly** (Lemonade [30]; Builder.ai [15]).
+**Pattern [I].** (1) Regulated-work leaders do not call the rules "AI"; they put the guarantee on the rules and name AI for language work. (2) Enterprise vendors now sell determinism as a headline. (3) Immigration players blur rules and AI and make absolute claims; precision is open ground for us. (4) One AI-native immigration firm does not mention AI at all. (5) Over-claiming AI has backfired [15][30].
 
-**Which framing wins buyers in regulated professions?**
-- **Grounding and explainability beat "AI" as such.** Thomson Reuters' 2026 survey of 1,816 professionals in 62 countries (law, tax, audit, accounting, compliance, risk, trade; fieldwork Mar to Apr 2026) names three minimum conditions for trustworthy professional AI: safeguarding confidential data (96%), grounding outputs in authoritative content (94%), and explainable, defensible reasoning (90%). 47% say the individual professional bears final responsibility for an AI-assisted error; 41% of AI users lack tools that meet those conditions [31] [Survey, vendor-run].
-- **The LexisNexis 2026 survey:** 81% of lawyers prefer AI grounded in legal sources, up from 70% (`ai-moat-and-positioning-2026-10.md` §2.3) [Survey, vendor-run].
-- **The word "AI" can cost sales.** In experiments with more than 1,000 US adults, adding "artificial intelligence" to a product description lowered purchase intent through lower emotional trust, and the effect was stronger for high-risk products such as financial services. The lead author: "Emphasizing AI may not always be beneficial, particularly for high-risk products" and "avoid the AI buzzwords" (Washington State University release, 30 Jul 2024) [32] [S; consumers, not professionals, and older than 2025].
-- **Use is high but specialist tools have not won by default.** Clio's 2025 report: 79% of legal professionals use AI in some form; one summary says 40% use legal-specific AI; solo and small firms lag [33] [S, Survey].
-- **Immigration consultants specifically:** no study found (**Unknown**). The ten founder conversations (AIW-D63) are the only route; the script should test the naming directly (see §(c)5).
+**Which framing wins?**
+- Thomson Reuters *Future of Professionals 2026* (fieldwork Mar to Apr 2026; our page reader read 1,816 professionals in 62 countries, which the checker could not confirm on the page): minimum conditions for trustworthy professional AI are confidential data (96%), grounding in authoritative content (94%) and explainable, defensible reasoning (90%); 47% say the individual professional bears final responsibility for an AI-assisted error [31] [Survey, vendor-run]. This is a different survey from the *2026 AI in Professional Services Report* ("more than 1,500 professionals") in the moat file §2.3.
+- LexisNexis 2026: 81% prefer AI grounded in legal sources (moat file §2.3) [Survey].
+- Adding "artificial intelligence" to product descriptions lowered purchase intent in experiments with more than 1,000 US adults, more for high-risk products; "Focus on describing the features or benefits and avoid the AI buzzwords" (WSU, 30 Jul 2024) [32] [S; consumers, not professionals].
+- Clio 2025: 79% of legal professionals use AI in some form; small firms lag [33] [S].
+- Immigration consultants specifically: **Unknown**; test it in the ten conversations (§(c)5).
 
-### 3. Buyer trust: what licensed professionals need first
+### 3. Buyer trust
 
-| Need | Evidence | What we already design (cited, not restated) |
+| Need | Evidence | Design, cited |
 |---|---|---|
-| Correct, grounded output | 94% grounding [31]; accuracy is the top hesitation (`ai-moat-and-positioning-2026-10.md` §2.3) | Rules with source and review date (SA-1B-39); per-skill driving test (AIW-D83) |
-| Reasoning they can explain and defend | 90% [31] | Assessment shows its reasons (`plan.md` v1.1 §2); detail drawer (AIW-D85) |
-| Confidentiality | 96% [31] | Canada-only processing gate (AIW-D52, D74) |
-| Clear responsibility | 47% say the professional bears it [31]; Code s. 38(2) [18] | A named person approves (AIW-D13, D26) |
-| An audit trail | Ramp sells "a clear audit trail for every decision" [24]; Pega "every decision is logged" (search summary of Pega's page) [21] | Model-call log AG-11-72; run records; provenance view AW-1-23 (as cited in `ai-moat-and-positioning-2026-10.md` §3.4) |
-| Proof, not promises | Bureau: test before the claim [3]; TR: "almost right" is not good enough [31] | P3 in `ai-moat-and-positioning-2026-10.md` §7: say "measured" only next to a number |
+| Grounded output | 94% [31] | SA-1B-39 sources and review dates; AIW-D83 driving tests |
+| Defensible reasoning | 90% [31] | AG-3-21 factor breakdown; FD-20 factor snapshot; AIW-D85 detail drawer |
+| Confidentiality | 96% [31] | AIW-D52, D74 Canada-only gate |
+| Clear responsibility | 47% [31]; Code s. 38(2) [18] | AIW-D13, D26 named approver |
+| Audit trail | Ramp sells it [24] | AG-11-72; AW-1-23 |
+| Proof before claims | Bureau [3] | Moat file P3 |
 
-**Is "deterministic / rules-verified" itself a selling point? [I]** Yes, for this buyer, on three conditions.
-1. **Plain words.** Say "same facts, same answer, every time, with the rule and its government source", not "deterministic" or "neuro-symbolic" (no regulated-work leader uses the jargon in selling; `ai-moat-and-positioning-2026-10.md` §2.2).
-2. **The rules must be right and current.** Today pack rules are trusted on second-person approval alone, with no test profiles (SA1B-D18). "Rules-verified" is only honest once rules are tested before publishing (P2 in the moat file). Until then say "rules reviewed by two people" (SA1-D6).
-3. **Not as a substitute for AI.** Buyers also want the time saved; the AI layer earns that. The story is the pairing.
+**Is "rules-verified" a selling point? [I]** Determinism is, in plain words ("same facts, same answer, with the rule and its source"). **"Rules-verified" is not yet honest:** pack rules are trusted on second-person approval alone (SA1B-D18). *This differs from the Lead's 12 Oct position (`NEXT.md`, "call them 'rules-verified'"); reason SA1B-D18.* Until rules are tested before publishing (moat file P2), say "rules reviewed by two people" (SA1-D6), and only once that review is built.
 
-### 4. Pricing and packaging: how AI layers on a rules core are priced
+### 4. Pricing evidence (new; the pattern itself is the moat file §4.5 items 1 and 2)
 
 | Model | Example and figure | Label |
 |---|---|---|
-| Per user, AI add-on | Salesforce: USD 125 a user a month for Agentforce add-ons on Sales or Service [34]; Clio: AI add-on reported at USD 39 to 59, now quote-only [40]; Harvey: reported about USD 1,200+ a seat a month with seat minimums [37]; CoCounsel: reported USD 104 to 639 a user a month [37] | [VC] for Salesforce; [S] others |
-| AI gated to a higher tier | ServiceNow: AI only in "Pro Plus" or "Enterprise Plus" tiers, metered in "assists"; uplift reported at 30 to 70% [36] | [S] |
-| Per action or per conversation | Salesforce Flex Credits about USD 0.10 an action; USD 2 a conversation (older model) [34] | [VC] |
-| Per outcome | Intercom Fin: "$0.99 per outcome", counted when the customer confirms resolution, stops asking, or a workflow completes [35] | [VC] |
-| Per case (legal) | EvenUp moved to "all-in-one per-case pricing" (May 2025 release); prices unpublished [38] | [VC]; amounts Unknown |
-| Volume of rule calculations | Avalara: priced by transactions, states and modules; one tracker cites USD 79 a state a month for small firms [39] | [S] |
-| Immigration niche | CaseEasy "from $25 per case"; Visto "Extra application CAD 29"; Navisa USD 16 a case; Migrawise and Immicase about CAD 29 a month for AI (`../commercial/price-card.md` page 2) | [VC] via the price card |
+| Per user AI add-on | Salesforce USD 125 a user a month [34]; Clio AI add-on reported USD 39 to 59, now quote-only [40]; Harvey reported about USD 1,200+ a seat [37]; CoCounsel reported USD 104 to 639 a user [37] | [VC] Salesforce; [S] others |
+| AI gated to a higher tier | ServiceNow "Pro Plus", metered in "assists"; uplift reported 30 to 70% [36] | [S] |
+| Per action or conversation | Salesforce about USD 0.10 an action; USD 2 a conversation, still listed [34] | [VC] |
+| Per outcome | Intercom Fin "$0.99 per outcome" [35] | [VC] |
+| Per case (legal) | EvenUp "all-in-one per-case pricing" (May 2025), prices unpublished [38] | [VC] |
+| Volume of rule calculations | Avalara by transactions, states, modules [39] | [S] |
+| Immigration niche | `price-card.md` page 2 (not restated) | [VC] |
 
-**The pattern [I].** The fixed core (calculations, rules, compliance content) is paid for in the platform subscription or by volume of calculations. The AI is either bundled to win seats, or priced on a unit of finished work. The newest, highest-value products price per outcome or per case, because seat counts may fall as AI does more work (`ai-moat-and-positioning-2026-10.md` §4.5 item 2). This supports the split already proposed: rules and pack upkeep in the plan, AI on the approved prepared file (AIW-D60, D61; moat file P5).
+This evidence supports, and does not change, the moat file §4.5 split (rules and upkeep in the subscription; AI on a unit of finished work). Which AI price shape is used is **not decided**: AIW-D60 decides only what the ten conversations test (option (a) per prepared file and option (b) an allowance, with (c) shown last).
 
 ---
 
@@ -171,165 +167,165 @@ The test regulators apply is: is each claim literally true, is the overall impre
 
 ### 1. Four classes, each with one honest name (Proposal)
 
-Every capability in Expat Ready belongs to exactly one class. The class decides what we may call it, how it is labelled on screen and how it is priced.
-
-| Class | What it is | Expat Ready examples (cited) | What we call it | On-screen label | May we say "AI"? | Priced in |
+| Class | What it is | Examples (cited) | Call it | On-screen label | "AI"? | Priced in (Proposal, pending the ten conversations, AIW-D60) |
 |---|---|---|---|---|---|---|
-| **1. Rules only** | Fixed rules compute the result; no model involved | Pathway assessment and scoring (AG-3-39); checklists; deadline watching (AIW-D37); Practice answers (AIW-D90) | "rules", "the [Express Entry] rules", "calculated", "checked against the rules" | "Calculated from Canada pack v[n], rules reviewed [date]" | **No** | Subscription |
-| **2. AI using rule tools** | An AI teammate talks, gathers facts, then *calls* the rules; the rules compute the answer; the AI explains or acts on it | The Case Officer's AI asking for missing facts, then running the assessment; a File Builder run that checks proposals against pack rules (AIW-D84) | "the AI gathers and runs the rules" | Two parts: "Facts gathered by Case Officer's AI (approve)" and "Result: from the rules, pack v[n]" | **Yes, for the gathering and orchestrating only** | AI price (per approved prepared file) |
-| **3. AI language** | A model reads or writes; the output varies and can be wrong | Document reader, cross-checker, drafter, sorting (`ai-in-regulated-work-2026-10.md` §7, v1 scope) | "AI", "AI teammate", "AI draft", "AI reading" | "AI draft – check before use", with source page shown (AW-1-23) | **Yes, always disclosed** | AI price or included allowance |
-| **4. Person only** | A judgement or act reserved to the licensee | Advice, strategy, final eligibility opinion to the client, signing and submitting (Code s. 38(3), s. 22(2)) | "your decision", "approved by [role]" | "Approved by [named person], [date]" | **Never** | Not priced |
+| **1. Rules only** | Fixed rules compute; no model | Assessment and scoring (AG-3-39) with its factor breakdown (AG-3-21; FD-20); checklists; deadline watching (AIW-D37); Practice answers (AIW-D90) | "rules", "calculated", "checked against the rules" | "Calculated from Canada pack v[n], rules reviewed [date]" (once SA-1B-39 is built) | **No** | Subscription |
+| **2. AI working with rule results** (the founder's "AI using rule tools") | The AI prepares and words; the platform runs the rules on a person's act; the AI never computes or runs a rule result | Proposing the assessment task (AW-1-88); preparing the file around it (File Builder); per the Lead's ruling of 12 Oct, explaining the stored per-factor result to staff. *Note:* AW-1-88 and CN-AG-03 change 1 specify the task; an AI "explain this result" for staff is still a Proposal, not approved (sibling file row A21). | "the AI prepares; you run it; the rules decide" | Two parts: "Prepared by Case Officer's AI (approve)" and "Result: from the rules, pack v[n], run by [person]" | **Yes, for the preparing and wording only** | File Builder work: the AI price being tested; other class 2 work rides in the plan for the pilot (AIW-D60) |
+| **3. AI language work** | A model reads or writes | Document reader, cross-checker, drafter (`ai-in-regulated-work-2026-10.md` §7) | "AI", "AI teammate", "AI draft" | "AI draft – check before use", source page shown (AW-1-23) | **Yes, always disclosed** | As class 2 |
+| **4. Person only** | A licensee's judgement or act | Running the assessment (AW-1-88); advice; sharing eligibility with a lead (AIW-D41); signing and submitting (Code s. 22(2), reading for counsel) | "your decision", "approved by [role]" | "Approved by [named person], [date]" | **Never** | Not priced |
 
-**Three binding rules for the classes (Proposal for `../proposals.md`, type Rule):**
-1. **One label per output.** Every visible result carries the label of the class that produced it. A class 2 result always shows both parts: what the AI did and what the rules computed.
-2. **Verbs follow the class.** Rules *calculate, check, list, count*. AI *reads, drafts, suggests, gathers, summarises, runs [the rules]*. People *decide, advise, approve, sign*. The AI never "assesses", "decides", "determines eligibility" or "advises".
-3. **Umbrella names never cross classes.** "AI team" and "AI teammate" (AIW-D89) cover classes 2 and 3 only. The product's rules and deadline watch are "Expat Ready", not "Expat Ready AI".
+**Three rules (Proposal for `../proposals.md`, type Rule):**
+1. **One label per output.** Every visible result carries its class label; a class 2 result shows both parts.
+2. **Verbs follow the class.** Rules *calculate, check, list, count*. AI *reads, drafts, suggests, prepares, summarises, explains [a stored result]*. People *run [the assessment], decide, advise, approve, sign*. The AI never "assesses", "runs the assessment", "decides" or "advises".
+3. **Umbrella names never cross classes.** "AI team" and "AI teammate" (AIW-D89) cover classes 2 and 3 only.
 
-### 2. Approved and forbidden phrases
+**FD-16 and this framework (part of Q1).** FD-16 (Founder Decisions Log v1.5, line 52): "**"AI assists, humans decide."** The eligibility/scoring/workflow engine stays fully deterministic, versioned and explainable — no model output is ever a decision … Marketing may say "AI-assisted"; it may not say the AI decides." This framework is **stricter** than FD-16: it proposes not using "AI-assisted" for assessments, because the general impression is that AI computed the result. Narrowing a ratified decision needs the founder's yes; it is put to him in Q1, not treated as settled.
 
-Builds on the say / do-not-say table in `ai-in-regulated-work-2026-10.md` §7 (still applies unchanged); these rows are new and specific to rules and AI.
+### 2. New phrases (adds to `ai-in-regulated-work-2026-10.md` §7 and moat file §4.3, which still apply)
 
-| Use (Proposal) | Never use | Why |
+| Use (Proposal; counsel reads first) | Never use | Why |
 |---|---|---|
-| "Scores and checklists come from fixed rules, not from AI. Same facts, same answer, every time." | "AI-powered assessment", "AI eligibility check", "AI scoring", "smart AI rules" | General impression [2]; "rule-based software as AI" [5]; FD-16 |
-| "Ask your AI teammate to run an assessment: it collects the facts and runs the rules for you." | "Our AI assesses your client", "the AI decides eligibility" | The AI does not compute or decide; Code s. 38(3) [18] |
-| "Every rule shows its government source and the date it was last checked." | "AI that always knows the latest rules", "always up to date" | Performance claim needs a test [1]; overdue review is possible (SA-1B-40) |
-| "Rules reviewed by two people before release." Later, once tests exist: "Rules tested against [N] client profiles before release." | "Rules verified", "AI-verified", "100% accurate" | SA1B-D18 today; Pega's "100% accuracy" is a vendor's own claim [21], not a model for us |
-| "AI reads the passport and shows you the page each value came from." | "AI that eliminates errors" | Absolute claim (compare [25]); FTC accuracy cases [10] |
-| "We use AI where language is involved: reading, drafting, conversation. We use rules where the answer must be exact." | "AI-native", "AI-first immigration platform" (as a category claim over the rules) | Overall impression; investor-material risk [13][14] |
-| Investor line: "AI handles the language work; a maintained rules engine handles the decisions that must be exact; a licensed person approves." | Investor line: "Our AI assesses eligibility and scores profiles", any automation rate not measured | SEC AI-washing cases [13][14]; P3 of the moat file |
-| "Built with help from AI tools" (only about our own development, if ever relevant) | Treating AI-assisted authoring as "AI in the product" | FTC distinction [9] |
+| "Scores and checklists are calculated by fixed rules. Your AI team prepares the file around them." | "AI-powered assessment", "AI eligibility check", "AI scoring" | General impression [2]; FD-16 "may not say the AI decides" |
+| "Your AI teammate gets the file ready and tells you when an assessment is due; you run it, and the rules show every factor." | "Ask the AI to assess your client", "the AI runs the assessment" | AW-1-88; AIW-D40 |
+| Only once built and true: "Every rule shows its government source and the date it was last checked." | "AI that always knows the latest rules" | SA-1B-39, SA-1B-40 not built (SA-01B §12) |
+| Only once built and true: "Rules reviewed by two people before release." Later, once tested: "Rules tested against [N] client profiles before release." | "Rules verified", "AI-verified", "100% accurate" | SA1B-D18; Pega's "100% accuracy" is a vendor's own claim [21] |
+| "We use AI for language: reading, drafting, explaining. We use rules where the answer must be exact." | "AI-native" (meaning "built around AI from the start") as a claim over the rules | Overall impression; investor risk [13][41] |
+| Investor line: "AI does the language work; a maintained rules engine does the exact calculations; a licensed person runs the assessment and approves." | Any automation rate not measured; "our AI assesses eligibility" | [13][14][41]; moat file P3 |
 
-### 3. The headline story (Proposal)
+### 3. Headline and the selling argument on today's design
 
-**Headline:** *"Rules you can defend. AI that does the legwork. You decide."*
+**Headline (Proposal):** *"Rules you can defend. AI that does the legwork."*
+Two alternatives for the founder: *"Exact where it must be. AI where it helps."* and *"Same facts, same answer. An AI team for the paperwork."* "You decide" is dropped (VisaFlo says "You decide what each agent may touch" and "You stay the decision maker" [29]; README §5). The headline is a tagline only; the pitch text stays in the moat file §4.1, §4.2 and §5, which already say scoring comes from rules, not AI.
 
-**One paragraph for a consultant:** "In Expat Ready, anything that must be exact, such as program scoring, document checklists and deadlines, is calculated by fixed rules that show their government source and review date, so the same file gives the same answer every time and you can defend it to a client, the College or a tribunal. Your AI team does the language work: it talks with you, chases and reads documents, drafts messages, and runs the rules for you when you ask. Everything it does is labelled as AI, shows where it came from, and waits for your approval."
+**Why the honest version keeps much of the selling power [I]:**
+- **The AI is visible and busy:** it notices an assessment is due, chases and reads the documents that feed the profile, prepares the file and proposes the task (AW-1-88; File Builder). The consultant sees an AI team working.
+- **The assessment is one click and exact:** a person presses "Assess"; the result is instant, the same every time, and shows every factor (AG-3-21; FD-20). That is what this buyer says builds trust [31] and what leaders guarantee [19][21][22].
+- **Rivals' blur becomes our point:** "ask any vendor which answers come from rules and which from AI" ([25][26][28]).
+- **It protects licensees** (declarations; Code s. 44(2)(a)) and **survives due diligence** [9].
+- **What it gives up:** the "ask the AI to assess" demo moment. That costs about one click and a less magical story; we judge it worth paying [I].
 
-**Why this is stronger than "rules under the flavour of AI" [I]:**
-- It **still sells the AI experience.** The user does type "assess this client" to an AI teammate, which really does gather facts and run the rules (class 2). That is most of the "flavour" the founder wants, and it is true.
-- It **turns the rules into the trust argument**, which is what this buyer says they need (94% grounding, 90% defensible reasoning [31]) and what the market leaders guarantee (TurboTax [19], Pega [21], Salesforce [22]).
-- It **makes the rivals' weakness visible.** Rivals blur rules and AI and make absolute claims ([25][26][28][29]). We can say, truthfully, "ask any vendor which of their answers come from rules and which from AI".
-- It **protects the licensee's declarations** (Federal Court, IRB) and their own advertising duty (Code s. 44(2)(a)) [18].
-- It **survives due diligence.** An investor's technical reviewer, like an FTC technologist [9], will look under the hood. A story that matches the code survives; a "flavour" does not.
+**A new founder decision, if wanted (one line):** whether the AI may *run* the assessment when a person asks would reopen AIW-D40 (framed "for the pilot") and change AW-1-88, CN-AG-03 change 1, test R-I4 and counsel question CQ6. It would also need the team to revisit AG-11-94 ("models SHALL have no tool access"), which is the team's subject, so we state the conflict and write no change note (README rule 11).
 
-**Wording note.** "You stay the decision maker" and "Make judgment calls, not hires" are VisaFlo's lines [29]; README §5 forbids reusing competitor wording, so "You decide" stands alone and the story leads with rules, which VisaFlo does not.
+### 4. The multi-million path (all figures Assumption unless cited)
 
-### 4. How this supports a multi-million-dollar path
+- **First buyer and reason to switch:** as in `plan.md` v1.1 §2 (not restated); the honest rules story strengthens its "assessments the consultant can explain and defend".
+- **Proof:** moat file §4.3 proof points 1 to 3, then rules tested before publishing (moat file P2).
+- **Expansion (Proposal, input to Step 5):** more AI duties per file, more Country Packs (FD-22), lawyers as a second segment (size **Unknown**).
 
-All figures are **Assumptions** unless cited.
+**Revenue per firm.** **Assumption, no source: about 10 prepared files per firm per month.** Base plan Practice CAD 229 a firm a month (plan default; per seat vs per firm still open, FD-18 and `plan.md` §8 action 3). AI price CAD 30 a file (the price card's illustrative figure inside its CAD 25 to 40 range; the midpoint would be 32.50).
 
-| Element | Recommendation | Basis |
+| Per firm, per year | Option (a) per file: 229 + 10 × 30 = 529 a month | Option (b) allowance of 10 inside Practice: 229 a month |
 |---|---|---|
-| **Who buys first (ICP)** | Owners of 1 to 5 person CICC-licensed practices, mostly Express Entry and PNP files, in Ontario, BC and Alberta | `plan.md` v1.1 §2 (unchanged) |
-| **Wedge** | The connected record plus **assessments the consultant can explain and defend** as the switching reason; the File Builder as the first paid AI duty; deadline watching free, never called AI | `plan.md` §2; AIW-D37; `price-card.md` page 1 |
-| **Why the honest story is the wedge** | Rivals sell AI; few sell defensible rules with sources (`ai-coverage-vs-competitors-2026-10.md` §1 item 3) | [I] |
-| **Pricing** | Rules and pack upkeep in the subscription (per firm or per seat, still open: `plan.md` §8 action 3); AI per approved prepared file or as an allowance (AIW-D60); platform AIs never sold (AIW-D61) | §(b)4 market pattern |
-| **Proof** | (1) Rule cards with source, date and two approvers; (2) same-answer replay with pack version; (3) per-skill test results; later (4) rules tested before publishing | `ai-moat-and-positioning-2026-10.md` §4.3; P2 |
-| **Expansion** | More AI duties per file; Practice Pack; more destination Country Packs (FD-22, as cited in the moat file §3.4); immigration lawyers as a second segment (size **Unknown**) | [I] |
+| List, monthly billing | about CAD 6,350 | about CAD 2,750 |
+| Annual prepayment ("12 months for the price of 10", plan §3), applied to the plan only (Assumption) | about CAD 5,890 | about CAD 2,290 |
+| Founding firm (first 50, "30% off list for 24 months", plan §3), applied to the plan only (Assumption), monthly billing | about CAD 5,520 | about CAD 1,920 |
 
-**Illustrative revenue arithmetic (Assumption, not a forecast).** At the plan's Practice default of CAD 229 a firm a month plus ten prepared files at CAD 30 (the midpoint in `price-card.md` page 2, option a), a firm pays about CAD 529 a month, or about CAD 6,350 a year.
-- 150 firms: about CAD 0.95 million a year.
-- 500 firms: about CAD 3.2 million a year.
-- 1,000 firms: about CAD 6.3 million a year.
+Option (a) cannot be sold under today's rules: "Nothing is sold outside a plan: there are no add-on prices in Release 1" (SA-04 v2.14 SA-4-44, via `price-card.md` page 1); it needs SA-4-44 amended.
 
-Canada has about 12,500 licensed consultants and student advisers, and an estimated 3,900 to 7,800 practices (`plan.md` §2, the practice count is **Unknown**). So 500 firms is roughly 6 to 13% of practices, and 1,000 firms is 13 to 26%. Reaching CAD 5 million or more a year in Canada alone therefore needs a large share of a small market, or a second segment (lawyers) or a second country. The plan's own experiment expects about 12 founding firms at launch and 4 to 5 new firms a month after (`plan.md` §4). At that pace 500 firms is roughly nine years away ((500 − 12) ÷ 4.5 ≈ 108 months, with no firm leaving); the multi-million path needs either a much faster sales engine or higher revenue per firm from the AI layer, which only measured time saved can justify [I].
+| Firms | Revenue a year (b, prepaid) to (a, list) |
+|---|---|
+| About 68, the plan model's figure for March 2028 (`plan.md` §5, "live firms … about 68", revenue about 30% of costs) | about CAD 0.16 to 0.43 million |
+| 500 | about CAD 1.1 to 3.2 million |
+| 1,000 | about CAD 2.3 to 6.3 million |
 
-**What actually makes it multi-million [I].** Not the AI label. It is (1) winning the firm's records, so the AI has something to work on and switching is costly (moat file §1.3); (2) a per-file AI price that tracks caseload, so revenue grows with the firm's work, not its headcount; (3) proof numbers rivals cannot show; (4) spreading pack upkeep across more firms than any rival (moat file §3.2).
+About 12,500 licensed consultants and student advisers were in good standing in June 2025; practices number perhaps 3,900 to 7,800 (**Unknown**) (`plan.md` §2). 500 firms is 6 to 13% of that range; 1,000 is 13 to 26%. At the plan's pace (about 12 founding firms, then 4 to 5 a month, `plan.md` §4) and with no firm leaving, 500 firms is about nine years away ((500 − 12) ÷ 4.5 ≈ 108 months). So "multi-million" needs a faster sales engine, the higher-priced option proven by measured time saved, or a second segment or country. The AI label does none of these [I].
 
-### 5. What to test in the ten conversations (Proposal for the validation script)
+### 5. What to test in the ten conversations (Proposal)
 
-Add one question to `../commercial/validation-script.md` after the hours question, before the price card: show two versions of the same screen, (A) "AI eligibility assessment" and (B) "Assessment calculated from the Express Entry rules, pack v3, gathered by your AI teammate", and ask: "Which would you trust with a client's file, and which would you be comfortable mentioning on your own website?" Record which they pick and why. This is the only way to replace the consumer study [32] and the vendor surveys [31] with evidence from our own buyer.
+Add to `../commercial/validation-script.md`, before the price card: show (A) "AI eligibility assessment" and (B) "Assessment calculated by the Express Entry rules, pack v3; file prepared by your AI teammate; run by you", and ask which they would trust with a client's file and which they would be comfortable describing on their own website.
 
 ### 6. Proposals for the Lead (for `../proposals.md`; this file edits nothing else)
 
 | # | Type | Proposal |
 |---|---|---|
-| Q1 | Decision (for the founder) | Replace "rules under the flavour of AI" with the four-class naming in §(c)1 and the headline in §(c)3. Reason: §(b)1 legal exposure (Competition Act, FTC, SEC, Code s. 44) and §(b)2 market evidence. It follows the founder's own earlier choices for the deadline watch and Practice answers (AIW-D37, AIW-D90). |
-| Q2 | Rule | Every output carries its class label; verbs follow the class; "AI team" covers classes 2 and 3 only (§(c)1 rules 1 to 3). Add to README §0 next to rule 9. |
-| Q3 | Rule | The phrase table in §(c)2 joins the one in `ai-in-regulated-work-2026-10.md` §7 as the single say / never-say list; counsel reads it before any website, deck or sales sheet uses it (AIW-D68). |
-| Q4 | Plan | Add the A/B naming question (§(c)5) to the validation script before the ten conversations. |
-| Q5 | Plan | Investor material uses only the investor line in §(c)2 and states the automation share only once measured (SEC cases [13][14]). |
-| Q6 | Question for counsel | Is labelling a rules-computed result "AI-assisted" a material misrepresentation to a licensed buyer under s. 74.01(1)(a) and s. 74.03(5)? Does a licensee who repeats a vendor's AI claim on their own website breach Code s. 44(2)(a)? |
+| Q1 | Decision (founder) | Replace "rules under the flavour of AI" with the four classes (§(c)1), **and** narrow FD-16's "Marketing may say 'AI-assisted'" so it is not used for assessments. Follows AIW-D37 and AIW-D90. |
+| Q2 | Rule | Class labels, verb rule and umbrella rule (§(c)1), next to README rule 9. |
+| Q3 | Rule | §(c)2 joins `ai-in-regulated-work-2026-10.md` §7 as one say / never-say list; counsel reads it before any use (AIW-D68). |
+| Q4 | Plan | The A/B naming question (§(c)5) in the validation script. |
+| Q5 | Plan | Investor material uses only the investor line in §(c)2. |
+| Q6 | Counsel | Is "AI-assisted" on a rules-computed result a material misrepresentation to a licensed buyer (ss. 74.01(1)(a), 74.03(5))? Does a licensee who repeats a vendor's AI claim breach Code s. 44(2)(a)? Do ss. 38(3) and 22(2) apply to software? |
+| Q7 | Decision (founder), only if wanted | Reopen AIW-D40: may an AI teammate run the assessment when a person asks? Put before the framework document is written (§(c)3). |
 
 ---
 
 ## (d) What not to do
 
-1. **Do not call the assessment, scoring, checklists, deadlines or Practice answers "AI"** anywhere: website, deck, demo, screen, contract, investor update. It is the defined form of AI washing [5], and it contradicts FD-16, AIW-D37 and AIW-D90.
-2. **Do not use "AI" as an umbrella brand** over rules and AI together ("Expat Ready AI", "AI-native platform").
-3. **Do not let the conversational AI give an eligibility verdict to a prospective client or the public**, even if the rules computed it. Code s. 38(3) [18]; our own design keeps eligibility away from leads.
-4. **Do not make performance claims before the test exists:** "accurate", "error-free", "always current", "verified", any percentage or any hours saved (s. 74.01(1)(b) [1]; Bureau [3]; FTC Workado [10]).
-5. **Do not quote an automation rate or "AI does X% of the work" to investors** until it is measured on real files (Nate [14]; Presto [14]; Builder.ai [15]).
-6. **Do not copy rivals' lines or absolute claims** ("eliminate errors", success rates, "You stay the decision maker"). README §5; [25][26][29].
-7. **Do not hide AI inside "smart" or "automated" wording** to avoid disclosure. The opposite mislabel is just as harmful: licensees may under-declare to the Federal Court or the IRB.
-8. **Do not say "deterministic", "neuro-symbolic" or "hybrid reasoning" to consultants.** Say "same facts, same answer, every time, with the rule and its source".
-9. **Do not price "accuracy", "rules" or "Canada"** as AI extras. They are reasons to trust the subscription (moat file §4.5 item 5).
-10. **Do not publish any of this wording** before counsel reads it and the founder says yes (README §5).
+1. **Do not call assessment, scoring, checklists, deadlines or Practice answers "AI"** anywhere. One Canadian law firm's commentary gives this as an example of AI washing [5]; it contradicts FD-16 ("may not say the AI decides"), AIW-D37 and AIW-D90.
+2. **Do not demo or describe the AI running the assessment** unless the founder reopens AIW-D40 (AW-1-88).
+3. **Do not use "AI" as an umbrella brand** over rules and AI ("Expat Ready AI").
+4. **Do not claim performance before the test exists:** "accurate", "always current", "verified", any percentage or hours saved (s. 74.01(1)(b) [1]; [3]; [10]).
+5. **Do not quote an automation rate to investors** until measured (Nate [14]; Presto [41]; Builder.ai [15]).
+6. **Do not copy rivals' lines or absolute claims** ("eliminate errors", success rates, "You decide", "You stay the decision maker") [25][26][29].
+7. **Do not hide AI inside "smart" or "automated" wording**; under-declaring harms licensees as much as over-claiming.
+8. **Do not say "deterministic", "neuro-symbolic" or "hybrid reasoning" to consultants.**
+9. **Do not price "accuracy", "rules" or "Canada" as AI extras** (moat file §4.5 item 5).
+10. **Do not publish any wording** before counsel reads it and the founder says yes (README §5).
 
 ---
 
 ## (e) Sources
 
-All web sources accessed **12 Oct 2026**. Labels as defined at the top.
+All web sources accessed **12 Oct 2026**.
 
 **Canada: law and regulator**
-1. Justice Laws, *Competition Act* (R.S.C. 1985, c. C-34), Part VII.1, ss. 70 to 74.02 (current to 21 Sep 2026). https://laws-lois.justice.gc.ca/eng/acts/c-34/page-11.html [V]
-2. Justice Laws, *Competition Act*, ss. 74.03 to 74.1 (s. 74.03(5) general impression; s. 74.1(1)(c) penalties). https://laws-lois.justice.gc.ca/eng/acts/c-34/page-12.html [V]
-3. Competition Bureau, deputy commissioner for deceptive marketing practices, guest post "Decoding rules for online reviews, influencer marketing and AI deceptive marketing claims", Canadian Marketing Association, 31 May 2023. https://thecma.ca/topic/articles/2023/05/31/decoding-rules-for-online-reviews-influencer-marketing-and-ai-deceptive-marketing-claims [V, the Bureau's own words; older than 2025, kept because it is the Bureau's only located statement on AI claims]
+1. Justice Laws, *Competition Act*, ss. 70 to 74.02 (current to 21 Sep 2026). https://laws-lois.justice.gc.ca/eng/acts/c-34/page-11.html [V]
+2. Justice Laws, *Competition Act*, ss. 74.03 to 74.1 (s. 74.03(5); s. 74.1(1)(c)(ii)). https://laws-lois.justice.gc.ca/eng/acts/c-34/page-12.html [V]
+3. Competition Bureau, deputy commissioner for deceptive marketing practices, guest post, Canadian Marketing Association, 31 May 2023. https://thecma.ca/topic/articles/2023/05/31/decoding-rules-for-online-reviews-influencer-marketing-and-ai-deceptive-marketing-claims [V; older than 2025, the Bureau's only located statement on AI claims]
 4. Canadian Marketing Association, *AI Playbook 14: AI Washing*, July 2025. https://thecma.ca/docs/default-source/default-document-library/CMA-AI-Playbook_AI-Washing.pdf [S]
-5. BCF, "Artificial intelligence or artificial claims? AI washing: the risk your company may be overlooking", 10 Apr 2026. https://www.bcf.ca/en/thought-leadership/case-studies/artificial-intelligence-or-artificial-claims-ai-washing-the-risk-your-company-may/ [S]
-6. Fasken, "New private rights of action have come into force", Jun 2025. https://www.fasken.com/en/knowledge/2025/06/new-private-rights-of-action-have-come-into-force [S]
-7. Competition Bureau, "Consultation on Artificial Intelligence and Competition: What We Heard" (via search summary and Baker McKenzie). https://competition-bureau.canada.ca/en/how-we-foster-competition/education-and-outreach/consultation-artificial-intelligence-and-competition-what-we-heard [S]
+5. BCF, "Artificial intelligence or artificial claims? AI washing", 10 Apr 2026. https://www.bcf.ca/en/thought-leadership/case-studies/artificial-intelligence-or-artificial-claims-ai-washing-the-risk-your-company-may/ [S]
+6. Fasken, "New private rights of action have come into force", Jun 2025 (source of the 20 Jun 2025 date; returned 403 on 12 Oct, not re-verified). https://www.fasken.com/en/knowledge/2025/06/new-private-rights-of-action-have-come-into-force [S]
+7. Competition Bureau, "Consultation on Artificial Intelligence and Competition: What We Heard" (via search summary). https://competition-bureau.canada.ca/en/how-we-foster-competition/education-and-outreach/consultation-artificial-intelligence-and-competition-what-we-heard [S]
+42. Competition Bureau, bulletin on private access to the Competition Tribunal. https://competition-bureau.canada.ca/en/how-we-foster-competition/education-and-outreach/publications/bulletin-private-access-competition-tribunal [V]
+43. Justice Laws, *Competition Act* s. 103.1 (s. 103.1(6.1)). https://laws-lois.justice.gc.ca/eng/acts/C-34/section-103.1.html [V]
 
-**United States: FTC, SEC, self-regulation**
-8. US Federal Trade Commission, press release, "FTC Announces Crackdown on Deceptive AI Claims and Schemes", 25 Sep 2024. https://www.ftc.gov/news-events/news/press-releases/2024/09/ftc-announces-crackdown-deceptive-ai-claims-schemes [V]
-9. Kelley Drye, "FTC Reminds Advertisers to Keep AI Claims in Check", 9 Mar 2023 (summarising the FTC business blog of Feb 2023; the FTC page returned 404). https://www.kelleydrye.com/viewpoints/blogs/ad-law-access/ftc-reminds-advertisers-to-keep-ai-claims-in-check [S]
-10. Benesch, "One Year In, FTC's 'Operation AI Comply' Continues Under New Administration". https://www.beneschlaw.com/insight/one-year-in-ftcs-operation-ai-comply-continues-under-new-administration-signaling-enduring-enforcement-focus/ [S]
-11. PYMNTS, "FTC Seeks to Ban Air AI From Marketing Business Opportunities", Mar 2026. https://www.pymnts.com/legal/2026/ftc-seeks-to-ban-air-ai-from-marketing-business-opportunities/ [S]
-12. Federal Register, "Policy Statement Concerning the Suppression of Accuracy in Artificial Intelligence Systems", 7 Jul 2026 (page blocked our reader; via search summary and Consumer Finance Monitor, 14 Jul 2026). https://www.federalregister.gov/documents/2026/07/07/2026-13628/policy-statement-concerning-the-suppression-of-accuracy-in-artificial-intelligence-systems [S]
-13. US Securities and Exchange Commission, press release 2024-36, Delphia and Global Predictions, 18 Mar 2024. https://www.sec.gov/newsroom/press-releases/2024-36 [V]
-14. DLA Piper, "DOJ and SEC send warning on 'AI washing' with charges against technology startup founder", Apr 2025; Holland & Knight, "SEC and DOJ Warm Up to Enforcement over AI Washing", Jul 2025 (Presto). https://www.dlapiper.com/en/insights/publications/2025/04/doj-and-sec-send-warning-against-ai-washing-with-charges-against-technology-startup-founder ; https://www.hklaw.com/en/insights/publications/2025/07/sec-and-doj-warm-up-to-enforcement-over-ai-washing [S]
-15. eWeek, "700 Engineers – Not AI – Developed Code at $1.5B Disruptor Filing Bankruptcy", 2025. https://www.eweek.com/news/builderai-bankruptcy-ai-developers-coding/ [S, allegations]
+**United States**
+8. FTC, "FTC Announces Crackdown on Deceptive AI Claims and Schemes", 25 Sep 2024. https://www.ftc.gov/news-events/news/press-releases/2024/09/ftc-announces-crackdown-deceptive-ai-claims-schemes [V]
+9. Kelley Drye, "FTC Reminds Advertisers to Keep AI Claims in Check", 9 Mar 2023. https://www.kelleydrye.com/viewpoints/blogs/ad-law-access/ftc-reminds-advertisers-to-keep-ai-claims-in-check [S]
+10. Benesch, "One Year In, FTC's 'Operation AI Comply' Continues", 21 Oct 2025. https://www.beneschlaw.com/insight/one-year-in-ftcs-operation-ai-comply-continues-under-new-administration-signaling-enduring-enforcement-focus/ [S]
+11. PYMNTS, "FTC Seeks to Ban Air AI From Marketing Business Opportunities", 24 Mar 2026. https://www.pymnts.com/legal/2026/ftc-seeks-to-ban-air-ai-from-marketing-business-opportunities/ [S]
+12. Federal Register, proposed "Policy Statement Concerning the Suppression of Accuracy in Artificial Intelligence Systems", 7 Jul 2026 (blocked; via search summary). https://www.federalregister.gov/documents/2026/07/07/2026-13628/policy-statement-concerning-the-suppression-of-accuracy-in-artificial-intelligence-systems [S]
+13. SEC, press release 2024-36, 18 Mar 2024. https://www.sec.gov/newsroom/press-releases/2024-36 [V]
+14. DLA Piper, Apr 2025, and Holland & Knight, 10 Jul 2025 (Nate). https://www.dlapiper.com/en/insights/publications/2025/04/doj-and-sec-send-warning-against-ai-washing-with-charges-against-technology-startup-founder ; https://www.hklaw.com/en/insights/publications/2025/07/sec-and-doj-warm-up-to-enforcement-over-ai-washing [S]
+15. eWeek, Builder.ai, 2025. https://www.eweek.com/news/builderai-bankruptcy-ai-developers-coding/ [S, allegations]
 16. Debevoise & Plimpton, "AI Washing: The Latest False Advertising Battleground", May 2026. https://www.debevoise.com/insights/publications/2026/05/ai-washing [S]
-17. Kelley Drye, "NAD Examines AI Claims"; National Law Review, "NAD Signals Increased Scrutiny of AI Advertising Claims". https://www.kelleydrye.com/viewpoints/blogs/ad-law-access/nad-examines-ai-claims ; https://natlawreview.com/article/nad-signals-increased-scrutiny-ai-advertising-claims [S]
+17. Kelley Drye, "NAD Examines AI Claims"; National Law Review on NAD. https://www.kelleydrye.com/viewpoints/blogs/ad-law-access/nad-examines-ai-claims ; https://natlawreview.com/article/nad-signals-increased-scrutiny-ai-advertising-claims [S]
+41. SEC, administrative proceeding summary, Presto Automation Inc., 14 Jan 2025. https://www.sec.gov/enforcement-litigation/administrative-proceedings/33-11352-s [V]
 
-**The licensee's code**
-18. Justice Laws, *College of Immigration and Citizenship Consultants Code of Professional Conduct* (SOR/2022-128), ss. 19(2)(e), 38(2), 38(3), 44(2). https://laws-lois.justice.gc.ca/eng/regulations/SOR-2022-128/FullText.html [V]
+**Licensee's code**
+18. Justice Laws, CICC *Code of Professional Conduct* (SOR/2022-128), ss. 19(2)(e), 22(2), 38(2), 38(3), 44(2). https://laws-lois.justice.gc.ca/eng/regulations/SOR-2022-128/FullText.html [V]
 
-**How products are marketed**
-19. TurboTax, "Guarantees" page. https://turbotax.intuit.com/corp/guarantees/ [VC]
-20. TurboTax online product page (Intuit Assist wording, via search summary). https://turbotax.intuit.com/personal-taxes/online/ [VC]
-21. Pega blog, "Beyond the black box: Why your enterprise needs predictable AI agents", 8 Dec 2025. https://www.pega.com/node/458106 [VC]
-22. Salesforce Engineering, "Agentforce's Agent Graph: Toward Guided Determinism with Hybrid Reasoning" (Oct, year not shown; image path suggests 2025). https://engineering.salesforce.com/agentforces-agent-graph-toward-guided-determinism-with-hybrid-reasoning/ [VC]
-23. Salesforce Developers blog, "Intro to Agent Script Language Fundamentals", Feb 2026 (via search summary). https://developer.salesforce.com/blogs/2026/02/agent-script-decoded-intro-to-agent-script-language-fundamentals [VC]
-24. Ramp, "Ramp agents" announcement, 9 Jul 2025; Ramp support, "Policy Agent Overview" (via search summaries). https://ramp.com/blog/ramp-agents-announcement ; https://support.ramp.com/hc/en-us/articles/44072387128979-Policy-Agent-Overview [VC]
-25. Docketwise homepage. https://www.docketwise.com/ [VC]
-26. Boundless homepage. https://www.boundless.com/ [VC]
-27. Alma homepage. https://www.tryalma.com/ [VC]
-28. Visto homepage. https://visto.ai/ [VC]
-29. VisaFlo homepage. https://visaflo.ca/ [VC]
-30. Bloomberg Law, "Lemonade's Use of AI to Study Claims Brings Uproar After Tweet", May 2021; Fortune, 26 May 2021. https://news.bloomberglaw.com/insurance/lemonades-use-of-ai-to-study-claims-brings-uproar-after-tweet ; https://www.fortune.com/2021/05/26/lemonade-insurance-ai-face-scanning-fraud [S; older than 2025, kept as the cautionary case]
+**Marketing**
+19. TurboTax guarantees. https://turbotax.intuit.com/corp/guarantees/ [VC]
+20. TurboTax online. https://turbotax.intuit.com/personal-taxes/online/ [VC]
+21. Pega blog, 8 Dec 2025. https://www.pega.com/node/458106 [VC]
+22. Salesforce Engineering, Agent Graph (Oct; year not shown). https://engineering.salesforce.com/agentforces-agent-graph-toward-guided-determinism-with-hybrid-reasoning/ [VC]
+23. Salesforce Developers, Agent Script, Feb 2026 (via search summary). https://developer.salesforce.com/blogs/2026/02/agent-script-decoded-intro-to-agent-script-language-fundamentals [VC]
+24. Ramp, agents announcement 9 Jul 2025; Policy Agent help page (via search summaries). https://ramp.com/blog/ramp-agents-announcement ; https://support.ramp.com/hc/en-us/articles/44072387128979-Policy-Agent-Overview [VC]
+25. Docketwise. https://www.docketwise.com/ [VC]
+26. Boundless. https://www.boundless.com/ [VC]
+27. Alma. https://www.tryalma.com/ [VC]
+28. Visto. https://visto.ai/ [VC]
+29. VisaFlo. https://visaflo.ca/ [VC]
+30. Bloomberg Law and Fortune on Lemonade, May 2021. https://news.bloomberglaw.com/insurance/lemonades-use-of-ai-to-study-claims-brings-uproar-after-tweet ; https://www.fortune.com/2021/05/26/lemonade-insurance-ai-face-scanning-fraud [S]
 
-**What buyers say**
-31. Thomson Reuters Institute, *Future of Professionals Report 2026* (1,816 professionals, 62 countries, fieldwork Mar to Apr 2026). https://www.thomsonreuters.com/en/institute/future-of-professionals-2026/report [Survey, vendor-run]
-32. Washington State University news, "Using the term 'artificial intelligence' in product descriptions reduces purchase intentions", 30 Jul 2024 (study in *Journal of Hospitality Marketing & Management*; paper itself not read). https://news.wsu.edu/?p=244668 [S; consumer study, older than 2025]
-33. *Canadian Lawyer*, "Solos and small firms lag with AI adoption: Clio report" (2025 Legal Trends). https://canadianlawyermag.com/news/general/solos-and-small-firms-lag-with-ai-adoption-clio-report/392441 [S, Survey]
+**Buyers**
+31. Thomson Reuters Institute, *Future of Professionals Report 2026*. https://www.thomsonreuters.com/en/institute/future-of-professionals-2026/report [Survey, vendor-run]
+32. Washington State University news, 30 Jul 2024. https://news.wsu.edu/?p=244668 [S]
+33. *Canadian Lawyer*, Clio 2025 report. https://canadianlawyermag.com/news/general/solos-and-small-firms-lag-with-ai-adoption-clio-report/392441 [S]
 
 **Pricing**
-34. Salesforce, "Agentforce Pricing" (via search summary of the page). https://www.salesforce.com/agentforce/pricing/ [VC]
-35. Intercom, pricing page (Fin "$0.99 per outcome"). https://www.intercom.com/pricing [VC]
-36. Redress Compliance, "Why Now Assist Pricing Is So Hard to Pin Down". https://redresscompliance.com/servicenow-now-assist-ai-pricing.html [S, buyer-side consultancy]
-37. Vaquill, "Harvey, Legora, CoCounsel pricing reality 2026"; CostBench, CoCounsel pricing. https://www.vaquill.ai/blog/harvey-legora-cocounsel-pricing-reality-2026 ; https://costbench.com/software/ai-legal-tools/cocounsel [S]
-38. EvenUp press release, "AI Drafts suite ... and case-based pricing", May 2025 (via Silicon UK). https://www.silicon.co.uk/press-release/evenup-launches-ai-drafts-suite-smart-workflows-medical-bill-summary-and-case-based-pricing-to-redefine-legal-automation-for-personal-injury-firms [VC]
-39. Kintsugi, "Avalara Pricing in 2026". https://trykintsugi.com/blog/avalara-pricing [S]
-40. AI Tools Bakery, "Clio Pricing (2026)". https://aitoolsbakery.com/blog/clio-pricing-2026/ [S]
+34. Salesforce, Agentforce pricing. https://www.salesforce.com/agentforce/pricing/ [VC]
+35. Intercom pricing. https://www.intercom.com/pricing [VC]
+36. Redress Compliance, Now Assist pricing. https://redresscompliance.com/servicenow-now-assist-ai-pricing.html [S]
+37. Vaquill; CostBench. https://www.vaquill.ai/blog/harvey-legora-cocounsel-pricing-reality-2026 ; https://costbench.com/software/ai-legal-tools/cocounsel [S]
+38. EvenUp release via Silicon UK, 15 May 2025. https://www.silicon.co.uk/press-release/evenup-launches-ai-drafts-suite-smart-workflows-medical-bill-summary-and-case-based-pricing-to-redefine-legal-automation-for-personal-injury-firms [VC]
+39. Kintsugi, Avalara pricing 2026. https://trykintsugi.com/blog/avalara-pricing [S]
+40. AI Tools Bakery, Clio pricing 2026. https://aitoolsbakery.com/blog/clio-pricing-2026/ [S]
 
-**Expat Ready (files; product facts via the newest snapshot `sources/drive-snapshot-2026-10-11/` as cited in the files named)**
-- `ai-workers/decisions.md`: AIW-D13, D26, D37, D52, D60, D61, D63, D68, D74, D83 to D85, D89 to D91.
-- `commercial/plan.md` v1.1 (8 Oct 2026): §2 ("Assessments the consultant can explain and defend ... AI does not decide (FD-16)"), §3, §4, §8.
-- `ai-workers/commercial/price-card.md` pages 1 to 3.
-- `ai-workers/research/ai-moat-and-positioning-2026-10.md` §1.3, §2.1 to §2.3, §3.2 to §3.4, §4.3 to §4.5, §7 (citing AG-03 v1.4 AG-3-39; SA-01B v1.2 SA1B-D18, SA-1B-39, SA-1B-40; SA-01 v2.2 SA1-D6; AG-11 v1.12 AG-11-72; AW-01 v0.6 AW-1-23; Founder Decisions Log v1.5 FD-22).
-- `ai-workers/research/ai-in-regulated-work-2026-10.md` §2.1, §2.4, §7.
-- `ai-workers/research/ai-coverage-vs-competitors-2026-10.md` §1, §2.1, §2.2.
-- `ai-workers/research/visaflo.md` §3.1, §12.
+**Expat Ready files**
+- Founder Decisions Log v1.5 (`sources/drive-snapshot-2026-10-11/01-techno-functional/07-Founder-Decisions-Log.md`): FD-16 (line 52), FD-18 (line 54), FD-20 (line 56), FD-22.
+- AG-03 v1.4: AG-3-21, AG-3-28, AG-3-39. AG-11 v1.12: AG-11-72, AG-11-94. SA-01B v1.2: SA1B-D18, SA-1B-39, SA-1B-40. SA-01 v2.2: SA1-D6. SA-04 v2.14 SA-4-44 (via `price-card.md` page 1).
+- AW-01 document version 0.6: AW-1-23, AW-1-88; test R-I4. `requirements/change-notes/CN-AG-03.md` change 1.
+- `ai-workers/decisions.md`: AIW-D11, D13, D26, D37, D40, D41, D52, D60, D61, D63, D68, D74, D83, D85, D89, D90, D91.
+- `commercial/plan.md` v1.1: §2, §3, §4, §5, §8. `ai-workers/commercial/price-card.md` pages 1 to 3.
+- `ai-workers/research/`: moat file §2.1, §2.3, §4.1 to §4.5, §5, §7; `ai-in-regulated-work-2026-10.md` §2.4, §7; `ai-coverage-vs-competitors-2026-10.md` §2.1. `ai-workers/design/rules-ai-classification-2026-10-12.md` rows A15, A18, A21.
