@@ -346,7 +346,7 @@ Every AI Doer use has an evaluation set of made-up samples with known right answ
 
 ### 4. Detailed Functional Requirements
 
-Numbered `AW-1-x`, AW-1-1 to AW-1-126. New requirements continue from AW-1-127; business rules from AW1-BR-25; module decisions from AW1-D40. Where a requirement points to a change-note ID, that ID holds the product rule and this requirement holds only the assistant's behaviour (AW1-D39).
+Numbered `AW-1-x`, AW-1-1 to AW-1-145 (AW-1-127 to AW-1-145 added in version 0.7, §4.16). New requirements continue from AW-1-146; business rules from AW1-BR-28; module decisions from AW1-D51. A superseded requirement keeps its number and text, marked *Superseded by AIW-Dnn (12 Oct 2026)*, with a pointer to its replacement. Where a requirement points to a change-note ID, that ID holds the product rule and this requirement holds only the assistant's behaviour (AW1-D39).
 
 **4.1 Foundation: an assistant is a recipe under a delegation**
 - **AW-1-1.** Each of the five firm assistants SHALL run as a bundle of its own persona recipes executed by the Conductor under one active delegation (4.2); which action runs, which record is read and who receives anything SHALL be decided by the recipe's rule, as BR-42 (CN-AG-11 change 9) states for every recipe. *[Spec: CA header, §2 "How to read the tables"; IA §2; BA §2; FA §2 · Ext: AG-11-1, AG-11-2, AG-11-13 (AG-11 v1.12); BR-42 (CN-AG-11 change 9) · AIW-D32, D33; IMP-10 ("a model never selects which action runs"), IMP-22 rule 5 · Flag: R-CQ1, CQ13a]*
@@ -394,7 +394,7 @@ Numbered `AW-1-x`, AW-1-1 to AW-1-126. New requirements continue from AW-1-127; 
 - **AW-1-35.** A form draft an assistant prepared SHALL record the delegating person as its preparer and the delegation in `preparedByDelegationId`, as AG-7-66 is proposed to read (CN-AG-07 change 5) and AG-11-113 states for approval items; four-eyes then excludes that person (AG-11-81). *[Spec: CA §2.6 step 4, §4 "Four-eyes" · Ext: AG-7-65, AG-7-66 (CN-AG-07 change 5); AG-11-81 (AG-11 v1.12); AG-11-113 (CN-AG-11 change 7) · AIW-D33; IMP-1]*
 - **AW-1-36.** Every item an assistant prepared SHALL follow AG-11-59 (it never runs because time passed), AG-11-61 (stale and cancelled items) and AG-11-100 (deadline-linked due times and the urgent mark), without exception. *[Spec: CA §4 "Stale items", "Never because time passed" · Ext: AG-11-59, AG-11-61, AG-11-100 (AG-11 v1.12)]*
 
-**4.6 Hard limits and the blocked list** (provisional until counsel reads them: AIW-D55, D64, D68)
+**4.6 Hard limits and the blocked list** (provisional until counsel reads them: AIW-D55, D64, D68; *now "Unconfirmed: no counsel (AIW-D94)", AW1-D40; for six kinds of act the outright ban is replaced by action-specific controls, AIW-D103, AW-1-37 as amended and §4.16*)
 - **AW-1-37.** The hard limits AW-1-38 to AW-1-51 SHALL be "enforced on the server at set-up and again at run time like the floors (AG-11-53), not by hiding buttons" (IMP-27); a refused action SHALL be recorded in its action result with the limit it hit, and the run SHALL continue (AG-11-28); the list SHALL be shown on each assistant's settings page. *Amended by AIW-D103 (12 Oct 2026):* the list stays server-enforced, but for the six acts AIW-D103 names (invoices, proposed trust entries, exports, deletion requests, settings changes, signature workflows) the outright ban becomes an action-specific control: the assistant MAY prepare the act (AW-1-129), an authorised person approves the exact preview (AW-1-130), and only then does the platform execute it; any attempt by an assistant to execute such an act directly, without an approved item, SHALL still be refused and recorded as here. *[Spec: CA §3 "By reference", "What happens when a limit is hit"; IA §3; BA §3; FA §3; PE §3 · Ext: AG-11-53, AG-11-28 (AG-11 v1.12); SA-6-44 (CN-SA-06 change 1) · AIW-D55; IMP-27, IMP-23 · Flag: R-CQ3, Prov.]*
 - **AW-1-38.** No assistant SHALL delete or dispose of a client, case, document, note or any other record. *Amended by AIW-D103 (12 Oct 2026):* an assistant MAY prepare a **deletion request** for a person to approve (AW-1-142); it SHALL never delete or dispose of anything itself. *[Spec: CA §3; FA §3 ("Disposes of or deletes a document") · Ext: SA-06 v3.3 §10b (`agent/document:delete`, `agent/document:dispose`) · IMP-27, IMP-23]*
 - **AW-1-39.** No assistant SHALL make any billing, invoice, payment, refund, credit or trust entry of any kind; set, change or move a funds designation; move money or record a trust-to-operating move; record a trust bank position or run the reconciliation report; compute a trust balance; keep a list of trust items or quote a trust figure; or create an invoice even as an unsaved draft. The keys for the trust acts (`agent/trust:move`, `agent/trust:reconcile`) are never lendable (AG-6-46), and AG-6-47 states the same limits for the product. **Superseded by AIW-D103 (12 Oct 2026)** (AIW-D44 superseded; AIW-D72 and D77 amended): replaced by AW-1-140 (prepared invoices) and AW-1-141 (proposed trust entries, returns of trust money, and what an assistant still never does with money). The two trust keys stay never lendable (AG-6-46). *[Spec: BA header, §3; CA §3 · Ext: AG-6-1, AG-6-5, AG-6-19, AG-6-23 (AG-06 v1.7); AG-6-24 as replaced (CN-AG-06 change 1); AG-6-44, AG-6-45 (CN-AG-06 changes 3, 4); AG-6-46, AG-6-47 (CN-AG-06 change 6); `agent/trust:move`, `agent/trust:reconcile` never lendable (CN-SA-06 change 6) · AIW-D44, D45, D46, D72 and its correction rows; IMP-27 · Flag: R-CQ9]*
@@ -720,7 +720,7 @@ Numbered `AW-1-x`, AW-1-1 to AW-1-126. New requirements continue from AW-1-127; 
 **US-24 — No deleting.** *(AW-1-38)*
 - **Given** any assistant run, **When** a step would delete or dispose of a document, note, case or client, **Then** it is refused and recorded.
 
-**US-25 — No money entry, no trust entry, not even a draft invoice.** *(AW-1-39)*
+**US-25 — No money entry, no trust entry, not even a draft invoice.** *(AW-1-39)* — **Superseded by AIW-D103 (12 Oct 2026)**; replaced by US-117 and US-118.
 - **Given** a proposed invoice the bookkeeper approved, **When** the builder opens, **Then** no invoice record, draft or number exists until the bookkeeper saves; **and** any assistant call to create a payment, refund, credit or trust entry of any kind, to set or move a funds designation, to record a trust-to-operating move or a bank position, or to run the reconciliation report is refused; **and** no assistant output carries a trust list or a trust figure.
 
 **US-26 — No export.** *(AW-1-40)*
@@ -855,7 +855,7 @@ Numbered `AW-1-x`, AW-1-1 to AW-1-126. New requirements continue from AW-1-127; 
 
 **Intake assistant**
 
-**US-64 — W-10: the assistant never runs the assessment.** *(AW-1-88)*
+**US-64 — W-10: the assistant never runs the assessment.** *(AW-1-88)* — **Superseded by AIW-D96 (12 Oct 2026)**; replaced by US-115.
 - **Given** a new lead with no assessment, **When** the run opens, **Then** a task *Run an assessment for <lead>* goes to the lead's owner and no assessment is created until a person runs it.
 
 **US-65 — W-10: the ordered next-move rule.** *(AW-1-89)*
@@ -899,7 +899,7 @@ Numbered `AW-1-x`, AW-1-1 to AW-1-126. New requirements continue from AW-1-127; 
 **US-77 — W-12d: a reminder at the pack's cadence with a link, no list, no figure.** *(AW-1-100)*
 - **Given** the first working day of a period at the Practice Pack's reconciliation cadence (a fictional test value) and two people who hold `agent/trust:reconcile`, **When** the scheduled run fires, **Then** each of them receives one reminder that the trust reconciliation report for the period is due, with a link to the product's report; the reminder holds no list of records, no balance and no figure; and no trust entry, designation change, bank position, move, report run or export happens.
 
-**US-78 — W-27: the proposed invoice opens the product's builder.** *(AW-1-101)*
+**US-78 — W-27: the proposed invoice opens the product's builder.** *(AW-1-101)* — **Superseded by AIW-D103 (12 Oct 2026)**; replaced by US-117.
 - **Given** an `INVOICE_PROPOSAL` item, **When** the bookkeeper approves, **Then** the invoice builder opens pre-filled with lines and sources and no designation chosen by the assistant; the draft exists only on the bookkeeper's save, and the number only on their issue.
 
 **US-79 — W-27: a government fee goes through the case's one-click action.** *(AW-1-101)*
@@ -908,7 +908,7 @@ Numbered `AW-1-x`, AW-1-1 to AW-1-126. New requirements continue from AW-1-127; 
 **US-80 — W-27: the money note quotes only the Reporter.** *(AW-1-102)*
 - **Given** the Reporter shows CAD 1,365.00 overdue, **When** the note is written, **Then** every figure in it is one the Reporter computed, and no payer name or bank reference appears.
 
-**US-81 — No refund, no credit note.** *(AW-1-103)*
+**US-81 — No refund, no credit note.** *(AW-1-103)* — *Refund part superseded by AIW-D103 (12 Oct 2026); see US-118. The credit-note part stands (FD-11).*
 - **Given** an overpayment, **When** the Billing assistant evaluates, **Then** it proposes no refund and no credit note.
 
 **Firm assistant**

@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Assistants Prototype</title>
-<meta name="description" content="Clickable prototype of Expat Ready's firm AI assistants, built from AW-01 v0.5 and AW-02 v0.6 (11 Oct 2026). Illustrative only; fictional data.">
+<title>AI Team Prototype</title>
+<meta name="description" content="Prototype: simulated data, not the product. A clickable simulation of Expat Ready's AI team as agreed in the founder's decisions of 12 Oct 2026. Made-up data; no tests run.">
 <style>
 :root{
   --bg:#f5f6f8; --surface:#ffffff; --surface-2:#f0f2f5; --surface-3:#e8ebf0;
@@ -239,23 +239,108 @@ body.hide-tags .tag{display:none}
   .item-top{padding:12px 14px}
   .setrow{flex-direction:column}
 }
+
 .topbar-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+/* ---------- 12 Oct additions ---------- */
+.simbar{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;background:var(--warn-soft);color:var(--text);border:1px solid color-mix(in srgb,var(--warn) 35%,var(--border));border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600;text-align:center}
+.simbar span{font-weight:400;color:var(--muted)}
+.cl{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:650;padding:2px 8px;border-radius:6px;white-space:nowrap;border:1px solid transparent}
+.cl::before{content:"";width:6px;height:6px;border-radius:2px;background:currentColor}
+.cl-r{background:var(--surface-3);color:var(--muted);border-color:var(--border-strong)}
+.cl-p{background:var(--ai-soft);color:var(--ai)}
+.cl-d{background:var(--warn-soft);color:var(--warn)}
+.cl-a{background:var(--ok-soft);color:var(--ok)}
+.labels{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.hero{padding:30px 28px;display:flex;flex-direction:column;gap:12px}
+.hero h1{font-size:clamp(26px,4vw,36px);font-weight:750;letter-spacing:-.02em}
+.hero .sup{font-size:17px;color:var(--muted);max-width:720px}
+.hero .msg{font-size:15px;font-weight:650;color:var(--accent)}
+.jgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.jcard{text-align:left;cursor:pointer;border:1px solid var(--border);background:var(--surface);border-radius:var(--radius);padding:16px;display:flex;flex-direction:column;gap:6px;box-shadow:var(--shadow)}
+.jcard:hover{border-color:var(--border-strong)}
+.jcard b{font-size:15px}
+.jcard span{font-size:13px;color:var(--muted)}
+.tm{display:flex;flex-direction:column;gap:10px}
+.tm-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.skill{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--border)}
+.skill:last-child{border-bottom:0}
+.light{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--faint);white-space:nowrap}
+.light::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--surface-3);border:1px solid var(--border-strong)}
+.counts{display:flex;gap:16px;flex-wrap:wrap;font-size:13px}
+.counts b{font-size:18px;display:block;font-weight:700}
+.jsteps{display:flex;flex-direction:column}
+.jstep{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:start;padding:9px 6px;border-bottom:1px solid var(--border);cursor:pointer;background:transparent;border-left:0;border-right:0;border-top:0;text-align:left;width:100%}
+.jstep:hover{background:var(--surface-2)}
+.jstep:last-child{border-bottom:0}
+.jstep .ic{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800;background:var(--surface-3);color:var(--muted)}
+.jstep.done .ic{background:var(--ok);color:var(--surface)}
+.jstep.held .ic{background:var(--ai);color:var(--surface)}
+.jstep.wait .ic{background:var(--warn);color:var(--surface)}
+.jstep.run .ic{background:var(--accent);color:var(--accent-ink)}
+.jstep.todo{opacity:.55}
+.jstep .st{font-size:13.5px;font-weight:600}
+.jstep .sd{font-size:12.5px;color:var(--muted);margin-top:2px}
+.vrow{border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) auto;gap:12px;align-items:start;background:var(--surface)}
+.vrow.okd{background:color-mix(in srgb,var(--ok-soft) 60%,var(--surface))}
+.vrow .vf{font-size:12.5px;color:var(--muted);font-weight:600}
+.vrow .vv{font-size:15px;font-weight:650;margin-top:2px;overflow-wrap:anywhere}
+.passage{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:7px 9px;color:var(--text);overflow-wrap:anywhere}
+.passage small{display:block;font-family:var(--font);color:var(--faint);font-size:11.5px;margin-bottom:3px}
+.kindtag{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.kindtag.identity{color:var(--accent)}
+.kindtag.conseq{color:var(--warn)}
+.kindtag.conflict{color:var(--danger)}
+.draft{border:1px solid var(--border);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.draft.stale{border-color:var(--warn);box-shadow:0 0 0 1px var(--warn) inset}
+.doc{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13.5px;line-height:1.6}
+.hl{background:color-mix(in srgb,var(--accent-soft) 80%,transparent);border-radius:4px;padding:0 3px;font-weight:600}
+.grid-t td,.grid-t th{padding:6px 8px;font-size:12.5px}
+.grid-t select{min-height:30px;padding:3px 6px;font-size:12.5px}
+.grid-t .lockcell{color:var(--faint);font-size:12px;white-space:nowrap}
+.preset{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.preset button{text-align:left;border:1.5px solid var(--border);background:var(--surface);border-radius:12px;padding:14px;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.preset button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+.preset b{font-size:15px}
+.preset span{font-size:13px;color:var(--muted)}
+.exlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.exbox{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--surface)}
+.exbox h4{font-size:13px;margin-bottom:6px}
+.exbox ul{margin:0;padding-left:18px;font-size:13px;color:var(--muted)}
+.exbox li{margin:3px 0}
+.chatwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+.chat{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:14px;background:var(--surface);overflow:hidden;min-height:440px}
+.chat-head{padding:12px 14px;border-bottom:1px solid var(--border);font-weight:650;font-size:14px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+.chat-body{flex:1;padding:14px;display:flex;flex-direction:column;gap:10px;overflow:auto;max-height:520px}
+.bub{max-width:88%;padding:9px 12px;border-radius:12px;font-size:13.5px;display:flex;flex-direction:column;gap:6px}
+.bub.firm{background:var(--surface-2);border:1px solid var(--border);align-self:flex-start}
+.bub.lead{background:var(--accent);color:var(--accent-ink);align-self:flex-end}
+.bub .meta{font-size:11px;color:var(--faint)}
+.chat-foot{border-top:1px solid var(--border);padding:10px;display:flex;flex-direction:column;gap:8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1px solid var(--accent);color:var(--accent);background:var(--surface);border-radius:999px;padding:5px 11px;font-size:12.5px;font-weight:600;cursor:pointer}
+.chips button:hover{background:var(--accent-soft)}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--surface);border-left:1px solid var(--border);box-shadow:-10px 0 40px rgba(0,0,0,.18);z-index:60;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:14px}
+@media (max-width: 860px){
+  .jgrid,.tm-grid,.preset,.exlist,.chatwrap{grid-template-columns:minmax(0,1fr)}
+  .vrow{grid-template-columns:minmax(0,1fr)}
+  .hero{padding:22px 16px}
+}
 </style>
 </head>
 <body>
 <div class="app">
   <aside class="side" aria-label="Prototype navigation">
-    <div class="brand"><div class="brand-mark">ER</div><div><div class="brand-name">AI Assistants</div><div class="brand-sub">Firm F · prototype</div></div></div>
+    <div class="brand"><div class="brand-mark">ER</div><div><div class="brand-name">Your AI team</div><div class="brand-sub">Firm F · simulated prototype</div></div></div>
     <nav class="nav" id="nav"></nav>
     <div class="side-foot">
-      <div class="mini-toggle"><span>Requirement tags</span><button class="switch" role="switch" aria-checked="true" data-act="tags" aria-label="Show requirement tags on elements"></button></div>
+      <div class="mini-toggle"><span>Show decision IDs</span><button class="switch" role="switch" aria-checked="true" data-act="tags" aria-label="Show decision IDs on elements"></button></div>
       <div class="mini-toggle" style="flex-direction:column;align-items:flex-start"><span>Theme</span><div class="seg" id="theme-seg-side"></div></div>
     </div>
   </aside>
   <div class="topbar">
     <div class="topbar-row">
-      <div class="brand"><div class="brand-mark">ER</div><div><div class="brand-name">AI Assistants</div><div class="brand-sub">Firm F · prototype</div></div></div>
-      <div class="row" style="gap:8px"><span class="xs muted">IDs</span><button class="switch" role="switch" aria-checked="true" data-act="tags" aria-label="Show requirement tags on elements"></button><div class="seg" id="theme-seg-top"></div></div>
+      <div class="brand"><div class="brand-mark">ER</div><div><div class="brand-name">Your AI team</div><div class="brand-sub">Simulated prototype</div></div></div>
+      <div class="row" style="gap:8px"><span class="xs muted">IDs</span><button class="switch" role="switch" aria-checked="true" data-act="tags" aria-label="Show decision IDs on elements"></button><div class="seg" id="theme-seg-top"></div></div>
     </div>
     <nav class="topnav" id="topnav" aria-label="Screens"></nav>
   </div>
@@ -266,1090 +351,873 @@ body.hide-tags .tag{display:none}
 <script>
 (function(){
 "use strict";
+/* Simulation only. Every value, step and result below is made up and played by this page's own script.
+   Nothing is calculated by a real rules engine, no AI model is called, and no test has been executed. */
 
 /* =============================== helpers =============================== */
 const $ = (s, r=document) => r.querySelector(s);
 const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const tag = t => `<span class="tag">${t}</span>`;
-const ill = (t='illustrative') => `<span class="illus">${t}</span>`;
-const nowStamp = () => { const d=new Date(); return d.toTimeString().slice(0,5); };
-const pct = n => Math.round(n*100) + '%';
-function foot(ids, extra){
-  return `<div class="foot"><b>Traces to:</b> ${ids}${extra?`<br>${extra}`:''}</div>`;
+const nowStamp = () => new Date().toTimeString().slice(0,5);
+const PACK = 3;
+function foot(ids){ return `<div class="foot"><b>Decisions shown:</b> ${ids}</div>`; }
+/* The four class labels (AIW-D92), worded as the Lead asked for the prototype */
+function L(kind, who){
+  if(kind==='rules') return `<span class="cl cl-r">Calculated by the rules, pack v${who||PACK}</span>`;
+  if(kind==='prep')  return `<span class="cl cl-p">Prepared by ${esc(who)}</span>`;
+  if(kind==='draft') return `<span class="cl cl-d">AI draft: check before use</span>`;
+  if(kind==='appr')  return `<span class="cl cl-a">Approved by ${esc(who)}</span>`;
+  return '';
 }
+const labels = (...xs) => `<div class="labels">${xs.join('')}</div>`;
+function head(eyebrow, title, lead){
+  return `<div class="page-head"><div class="eyebrow">${eyebrow}</div><h1>${title}</h1>${lead?`<p class="lead">${lead}</p>`:''}</div>`;
+}
+const SIM = `<div class="simbar">Prototype: simulated data, not the product <span>· Made-up firm, people and files. No AI is called and no test has been run.</span></div>`;
 
 /* =============================== state =============================== */
 const S = {
-  screen: 'needs',
-  tags: true,
-  theme: 'auto',
-  needs: { open:{report:true, paused:false}, opened:{}, srcOpen:null, holdout:'', holdoutResult:null,
-           report:'pending', reportAt:null, rejecting:false, rejectReason:'', someNote:false,
-           alarmSeen:false, viewAs:'approver', paused:'paused', pausedRejecting:false },
-  dl: { assistant:'billing', person:'bookkeeper', keys:null, state:'setup', viewAs:'owner', log:[], waiting:'pending', switchOn:false, confirmEnd:false },
-  pv: { filter:'all', open:null },
-  ex: { q:1, file:'C-2', item:'bio', scope:'all', aiOff:false, untested:false },
-  bi: { amount:'', currency:'CAD', picked:null, modal:false, saved:false, item:'pending', method:'', designation:'', date:'', ref:'', closedUnsaved:false },
-  st: { record:'none', ai:'locked', ack:false, sw:{case:false,intake:false,billing:false,firm:false,expert:false},
-        firm:{conf:'',hidden:'',alarm:'',capMonth:'',capDay:'',capRun:''}, errors:{}, saved:null, log:[] }
+  screen:'start', tags:true, theme:'auto', drawer:null,
+  job:{ i:0, stopped:false, playing:false, ap:{reject:false, date:false} },
+  rv:{ ok:{}, opened:{}, corr:{}, editing:null, spot:'', spotRes:null, rest:false, conflict:null,
+       drafts:{form:'pending', letter:'pending', note:'pending'}, ver:{form:1, letter:1, note:1}, stale:{}, rejecting:null, reason:{} },
+  as:{ ev:'ready', phase:'idle', pack:3, explained:false, reviewed:false },
+  bl:{ inv:'pending', ver:1, changed:false, invAt:null, trust:'none', trustAt:null, rejecting:null },
+  set:{ preset:'each', open:false, over:{}, earned:false },
+  inb:{ msgs:null, guided:0, draft:'none', q:'', edit:false, text:'' }
 };
 
 /* =============================== screens =============================== */
 const SCREENS = [
-  {id:'needs', n:'1', label:'Needs you'},
-  {id:'deleg', n:'2', label:'Delegation'},
-  {id:'prov',  n:'3', label:'AI provenance'},
-  {id:'expert',n:'4', label:'Practice answers'},
-  {id:'bill',  n:'5', label:'Payment match'},
-  {id:'set',   n:'6', label:'AI switch'},
+  {id:'start', n:'★', label:'Start'},
+  {id:'team',  n:'1', label:'AI team'},
+  {id:'file',  n:'2', label:'File preparation'},
+  {id:'assess',n:'3', label:'Assessment'},
+  {id:'bill',  n:'4', label:'Billing'},
+  {id:'set',   n:'5', label:'Settings'},
+  {id:'intake',n:'6', label:'Intake chat'},
   {id:'about', n:'i', label:'About this prototype'}
 ];
-
 function renderNav(){
   $('#nav').innerHTML = `<div class="nav-label">Screens</div>` + SCREENS.map(s =>
     `<button data-go="${s.id}" ${S.screen===s.id?'aria-current="page"':''}><span class="num">${s.n}</span>${s.label}</button>`).join('');
   $('#topnav').innerHTML = SCREENS.map(s =>
-    `<button data-go="${s.id}" ${S.screen===s.id?'aria-current="page"':''}>${s.n==='i'?'About':s.n+'. '+s.label}</button>`).join('');
+    `<button data-go="${s.id}" ${S.screen===s.id?'aria-current="page"':''}>${s.n==='i'?'About':s.label}</button>`).join('');
   const themeSeg = ['auto','light','dark'].map(t=>`<button data-theme-set="${t}" aria-pressed="${S.theme===t}">${t[0].toUpperCase()+t.slice(1)}</button>`).join('');
   $('#theme-seg-side').innerHTML = themeSeg; $('#theme-seg-top').innerHTML = themeSeg;
   document.querySelectorAll('[data-act="tags"]').forEach(b=>b.setAttribute('aria-checked', String(S.tags)));
   document.body.classList.toggle('hide-tags', !S.tags);
 }
-
 function render(){
   renderNav();
-  const fn = {needs:screenNeeds, deleg:screenDeleg, prov:screenProv, expert:screenExpert, bill:screenBill, set:screenSet, about:screenAbout}[S.screen];
-  $('#main').innerHTML = `<div class="screen">${fn()}</div>`;
-  $('#modal-root').innerHTML = (S.screen==='bill' && S.bi.modal) ? billModal() : '';
+  const fn = {start:scStart, team:scTeam, file:scFile, assess:scAssess, bill:scBill, set:scSet, intake:scIntake, about:scAbout}[S.screen];
+  $('#main').innerHTML = `<div class="screen">${SIM}${fn()}</div>`;
+  $('#modal-root').innerHTML = S.drawer ? drawerHtml() : '';
 }
 
 /* ======================================================================
-   SCREEN 1 — NEEDS YOU
+   START
    ====================================================================== */
-const VALUES = [
-  {id:'v1', field:'Date of birth', val:'1991-03-14', src:'Passport, version 1 · machine-readable line 2', conf:.98, ver:'4 Nov'},
-  {id:'v2', field:'Passport expiry', val:'2031-06-30', src:'Passport, version 1 · machine-readable line 2', conf:.97, ver:'4 Nov'},
-  {id:'v3', field:'Passport number', restricted:true, src:'Passport, version 1 · machine-readable line 2', conf:.99, ver:'4 Nov'},
-  {id:'v4', field:'Language test date', val:'2026-07-18', src:'Language test result · page 1', conf:.95, ver:'11 Nov'},
-  {id:'v5', field:'Listening score', val:'8.0', src:'Language test result · page 1, scores box', conf:.62, ver:'11 Nov', low:true},
-  {id:'v6', field:'Writing score', val:'7.0', src:'Language test result · page 1, scores box', conf:.71, ver:'11 Nov', low:true},
-  {id:'v7', field:'Education equivalency (ECA)', val:"Bachelor's degree", src:'ECA report · page 2', conf:.68, ver:'11 Nov', low:true},
-  {id:'v8', field:'Employment start date', val:'2019-04-01', src:'Employment reference letter, version 2 · page 1', conf:.91, ver:'23 Nov', holdout:true}
-];
-const LOW = VALUES.filter(v=>v.low);
-
-function needsGate(){
-  const n = S.needs;
-  const openedCount = LOW.filter(v=>n.opened[v.id]).length;
-  const allOpened = openedCount === LOW.length;
-  const holdoutDone = n.holdoutResult !== null;
-  return {openedCount, allOpened, holdoutDone, ready: allOpened && holdoutDone};
-}
-
-function screenNeeds(){
-  const n = S.needs;
-  const head = `
-  <div class="page-head">
-    <div class="eyebrow">Screen 1 of 6</div>
-    <h1>Needs you</h1>
-    <p class="lead">The approval inbox of one person. An assistant prepares; a named person decides, with the same permission as doing it by hand. ${tag('AW-1-29')}${tag('AW-1-30')}</p>
+function scStart(){
+  return `
+  <div class="card hero">
+    <div class="eyebrow">Expat Ready · for licensed immigration practices</div>
+    <h1>An AI team for your immigration practice.</h1>
+    <p class="sup">Prepare files, organise documents and draft communications—with maintained rules underneath and your team in control.</p>
+    <p class="msg">Rules you can defend. AI that does the legwork. ${tag('AIW-D99')}</p>
   </div>
-  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Signed in as <b>the case officer of Firm F</b>, a licensed user (licence linked), file owner of <b>Case C-1 (Client A)</b>, who accepted a Case Officer delegation for AI assistance ${tag('AW-01 §10 Case Officer delegation')}. Firm F has a published provider record, AI on, and its assistants switched on. The second item below sits in <b>the Owner's</b> Needs you and is shown here only to illustrate a paused item. Wednesday 2 December 2026. All names, dates and values are fictional.</div></div>
-  <div class="row" style="justify-content:space-between">
-    <div class="small muted">Viewing as ${tag('AW-1-33(c)')}${tag('AW1-D38')}</div>
-    <div class="seg" role="group" aria-label="View as">
-      <button data-act="n-view" data-v="approver" aria-pressed="${n.viewAs==='approver'}">The case officer (approver)</button>
-      <button data-act="n-view" data-v="cm" aria-pressed="${n.viewAs==='cm'}">The Case Manager</button>
-    </div>
-  </div>`;
-
-  if(n.viewAs==='cm'){
-    return head + `
-    <div class="card card-pad stack">
-      <h3 style="font-size:16px">The Case Manager's view</h3>
-      <p class="muted">No screen shows another person's agreement alarm, or whose alarm it was. ${tag('AW-1-33(c)')}${tag('US-19')}</p>
-      <div class="notice info"><span class="ic">i</span><div><b>Firm AI measures</b> · Agreement alarms this month: <b>1</b> <span class="muted">(firm-wide count, no names)</span>${tag('AG-14-39')}<div class="illus">Count illustrative.</div></div></div>
-      <p class="small muted">Items in the case officer's and the Owner's Needs you are theirs; they are not listed here.</p>
-    </div>
-    ${foot(needsTraces())}`;
-  }
-
-  const alarm = !n.alarmSeen ? `
-  <div class="notice warn" role="status"><span class="ic">!</span><div style="flex:1">
-    <b>Only you can see this.</b> Over the alarm window, you have agreed with AI proposals more often than the alarm level. Take a closer look before you approve. ${tag('AW-1-33(c)')}${tag('AgreementAlarm')}
-    <div class="small muted" style="margin-top:4px">The firm sees only a count of alarms, with no names. The level and window are Expat Ready's settings (see screen 6). ${ill('Wording illustrative.')}</div>
-  </div><button class="btn sm" data-act="n-alarm">Got it</button></div>` : '';
-
-  return head + alarm + `
-  <div class="row" style="justify-content:space-between"><h2 style="font-size:16px">1 item waiting for you</h2><span class="small muted">Sorted by due date</span></div>
-  ${reportItem()}
-  <div class="row" style="justify-content:space-between;margin-top:6px"><h2 style="font-size:16px">In the Owner's Needs you · 1 item</h2><span class="small muted">A second inbox, shown to illustrate a paused item ${ill('(demo layout)')}</span></div>
-  ${pausedItem()}
-  ${foot(needsTraces())}`;
-}
-function needsTraces(){
-  return 'AW-1-20, AW-1-25, AW-1-26, AW-1-29, AW-1-30, AW-1-31, AW-1-32, AW-1-33 (a)(b)(c), AW-1-56, AW-1-59, AW-1-65, AW-1-72, AW-1-73, AW-1-74, AW-1-75, AW-1-105; AW1-D5, AW1-D25, AW1-D34, AW1-D38; AG-11-112 (CN-AG-11 change 6: item kinds, PAUSED, stopMarker); AG-7-93 (CN-AG-07 change 3); AG-14-39; AG-16-55; SA-12-31, SA-12-32; US-16, US-17, US-18, US-19, US-42, US-52.';
+  <div class="card card-pad stack">
+    <h2 style="font-size:17px">Every output says what made it ${tag('AIW-D92')}</h2>
+    <p class="small muted">Each thing you see carries one of four labels. Rule results are never called AI.</p>
+    <div class="tw"><table>
+      <tbody>
+        <tr><td style="width:300px">${L('rules')}</td><td class="small">The product's fixed rules and the pack worked it out. No AI was used. Same input, same result.</td></tr>
+        <tr><td>${L('prep','Case Officer\'s AI')}</td><td class="small">An AI teammate prepared it for a named person, using rule results and the firm's records, with its sources.</td></tr>
+        <tr><td>${L('draft')}</td><td class="small">AI-written words or values read by AI. Nothing happens with it until a person checks and approves it.</td></tr>
+        <tr><td>${L('appr','the licensed consultant')}</td><td class="small">A named person decided. The record keeps who, when and exactly what they approved.</td></tr>
+      </tbody></table></div>
+  </div>
+  <h2 style="font-size:16px">See it work</h2>
+  <div class="jgrid">
+    <button class="jcard" data-go="team"><b>1 · Your AI team</b><span>Who each AI teammate works for, its skills, and a live view of the job running on a case.</span></button>
+    <button class="jcard" data-go="file"><b>2 · Prepare a client file</b><span>Documents collected and checked, drafts prepared, then one review sitting at the end.</span></button>
+    <button class="jcard" data-go="assess"><b>3 · Run an assessment</b><span>The AI starts it, the rules calculate it, and the AI stops when evidence is missing, stale or conflicting.</span></button>
+    <button class="jcard" data-go="bill"><b>4 · Prepare billing</b><span>An invoice and a proposed trust entry, each approved against an exact preview.</span></button>
+    <button class="jcard" data-go="set"><b>5 · Choose how much to review</b><span>Two presets, a grid under "Customise", and safety floors that never move.</span></button>
+    <button class="jcard" data-go="intake"><b>6 · Intake chat at launch</b><span>Approved answers picked by a rule run on their own; AI-written replies wait for a person.</span></button>
+  </div>
+  <div class="card card-pad stack">
+    <h2 style="font-size:16px">What a person always does</h2>
+    <ul class="small" style="margin:0;padding-left:18px">
+      <li>Approves every AI-written message before it reaches a client or lead ${tag('AIW-D102')}${tag('AIW-D105')}</li>
+      <li>Checks values read from documents; a spot check never counts as checking every value ${tag('AIW-D100')}</li>
+      <li>Approves each invoice, trust entry, export, deletion, settings change or signature workflow exactly as previewed; signs; moves money ${tag('AIW-D103')}</li>
+      <li>Tells a lead or client their eligibility result ${tag('AIW-D96')}${tag('AIW-D41')}</li>
+      <li>Submits to the government ${tag('FD-16')}</li>
+    </ul>
+  </div>
+  ${foot('AIW-D99 (headline, supporting line, supporting message), AIW-D92 (four labels), AIW-D89 (AI teammate, skill, step).')}`;
 }
 
-function reportItem(){
-  const n = S.needs, g = needsGate();
-  const open = n.open.report;
-  let status = '<span class="pill accent"><span class="dot"></span>Pending</span>';
-  if(n.report==='approved') status = '<span class="pill ok"><span class="dot"></span>Accepted</span>';
-  if(n.report==='rejected') status = '<span class="pill danger"><span class="dot"></span>Rejected</span>';
-  const top = `
-  <button class="item-top" data-act="n-toggle" data-k="report" aria-expanded="${open}">
-    <div style="min-width:0">
-      <div class="row" style="gap:6px;margin-bottom:6px"><span class="pill">Readiness report</span><span class="pill ai">AI-prepared</span>${status}</div>
-      <div class="item-title">Case C-1 · Client A is ready for review ${tag('READINESS_REPORT')}</div>
-      <div class="item-meta">Prepared by <b>AI assistance, assistant to the case officer</b>, acting for <b>the case officer</b> · due Fri 4 Dec ${tag('AW-1-65')}${tag('AW-1-72')}</div>
-    </div>
-    <span class="chev">›</span>
-  </button>`;
-  if(!open) return `<div class="item" data-open="false">${top}</div>`;
-
-  if(n.report==='approved'){
-    return `<div class="item" data-open="true">${top}
-    <div class="section"><div class="notice ok"><span class="ic">✓</span><div>
-      <b>Accepted by the case officer today at ${esc(n.reportAt)}.</b> Case C-1 is now <b>submitted for internal review</b>. The reviewer's approval stays a separate act. ${tag('AG-7-93')}${tag('AW-1-74')}
-      <ul class="small" style="margin:8px 0 0 18px;padding:0">
-        <li>Audit: the case officer, mode PERSON (the report was prepared in mode DELEGATED, with the case officer as actor). ${tag('AW-1-21')}</li>
-        <li>Hidden-value check recorded: ${n.holdoutResult==='match'?'matched':'not matched'}; the typed value is not stored. ${tag('HoldoutCheck')}</li>
-        <li>The prepared-file count rises by one. ${tag('AW-1-75')}</li>
-        <li>The AI provenance view (screen 3) now shows this decision. ${tag('AW-1-23')}</li>
-      </ul></div></div></div></div>`;
+/* ======================================================================
+   JOB (shared by AI team and File preparation)
+   ====================================================================== */
+const JOB = [
+  {t:'Job started on Case C-1 (Client A)', d:'The licensed consultant chose the pathway; the retainer is signed.', kind:'person', lab:()=>L('appr','the licensed consultant'),
+   det:{read:'Case C-1 record; signed retainer', src:'Case C-1 · retainer v1', prop:'Nothing: this is a person\'s act', who:'The licensed consultant', fail:'—'}},
+  {t:'Document checklist built from the pack', d:'7 documents needed for this pathway.', kind:'rules', lab:()=>L('rules'),
+   det:{read:'Pathway on Case C-1', src:'Country pack v3 (fictional) · document list for the pathway', prop:'Checklist of 7 documents', who:'No approval needed: rules', fail:'—'}},
+  {t:'Request for documents sent to Client A', d:'Published template "Documents we need" v2, chosen by a rule. Checks passed: recipient, consent, case status, no duplicate.', kind:'rules', lab:()=>L('appr','the Owner (published template v2)')+L('rules'),
+   det:{read:'Checklist; Client A\'s verified email and consent', src:'Template "Documents we need" v2, published by the Owner', prop:'One email, merge fields from verified facts only', who:'The Owner, when the template was published (counts as approval for this send)', fail:'—'}},
+  {t:'7 uploads read; 12 values proposed', d:'Values stay provisional and wait for the end-of-job review.', kind:'held', lab:()=>L('draft'),
+   det:{read:'7 uploads from Client A', src:'Each value keeps its document, page and passage', prop:'12 provisional values', who:'Waiting for the end-of-job review', fail:'—'}},
+  {t:'Passport check: expires before the planned submission date', d:'The client must re-send, so this is asked now, not held.', kind:'ask', ask:'reject', lab:()=>L('rules')+L('prep','Case Officer\'s AI'),
+   det:{read:'Passport, version 1 · data page', src:'Pack v3 rule: passport valid on the planned submission date', prop:'Reject the upload; reason from Firm F template "Please re-send" v1', who:'Asked now', fail:'Upload does not meet the pack rule'}},
+  {t:'Government letter: biometrics requested', d:'Due date read from the letter. Linked to a government deadline, so it is always asked now.', kind:'ask', ask:'date', lab:()=>L('draft'),
+   det:{read:'Government letter (fictional), uploaded by the case officer', src:'Letter page 1: "within 30 days of the date of this letter"', prop:'Due date 2026-12-31 (fictional)', who:'Asked now (locked)', fail:'—'}},
+  {t:'Task created by a rule: "Book biometrics appointment"', d:'Internal task for the licensed consultant, due 2 working days before the deadline.', kind:'rules', lab:()=>L('rules'),
+   det:{read:'Approved due date', src:'Deadline watch', prop:'One task', who:'No approval needed: rules', fail:'—'}},
+  {t:'Client A re-sent the passport; it passes the check', d:'Its values join the review.', kind:'rules', lab:()=>L('rules'),
+   det:{read:'Passport, version 2', src:'Pack v3 passport rule', prop:'Pass', who:'No approval needed: rules', fail:'—'}},
+  {t:'Form draft prepared: work history section', d:'Filled by the rules from the provisional values. Waits for the review.', kind:'held', lab:()=>L('rules')+L('prep','Case Officer\'s AI'),
+   det:{read:'Provisional values: name, date of birth, employment start date, education', src:'Form mapping in pack v3', prop:'Form section draft, version 1', who:'Waiting for the end-of-job review', fail:'—'}},
+  {t:'Letter of explanation drafted', d:'AI-written, with every fact used and its source. Waits for the review.', kind:'held', lab:()=>L('draft'),
+   det:{read:'Provisional values: employment start date, language scores', src:'Reference letter p.1; language test result p.1', prop:'Letter draft, version 1', who:'Waiting for the end-of-job review', fail:'—'}},
+  {t:'Internal note drafted', d:'File summary for the team. Never sent. Waits for the review.', kind:'held', lab:()=>L('draft'),
+   det:{read:'Case C-1 activity', src:'Case C-1 timeline', prop:'Internal note', who:'Waiting for the end-of-job review', fail:'—'}},
+  {t:'End-of-job review ready', d:'One sitting: values first, then the drafts.', kind:'end', lab:()=>L('prep','Case Officer\'s AI'),
+   det:{read:'Everything held during the job', src:'This job', prop:'One review with 12 values and 3 drafts', who:'The licensed consultant', fail:'—'}}
+];
+function jobStatus(k){
+  const j = S.job;
+  if(k < j.i){
+    const s = JOB[k];
+    if(s.kind==='held') return 'held';
+    return 'done';
   }
-  if(n.report==='rejected'){
-    return `<div class="item" data-open="true">${top}
-    <div class="section"><div class="notice danger"><span class="ic">×</span><div><b>Rejected by the case officer.</b> Reason recorded: “${esc(n.rejectReason||'No reason given')}”. Nothing is submitted. ${tag('AG-11-112(a)')}</div></div>
-    <div style="margin-top:10px"><button class="btn sm" data-act="n-reset">Reset this demo</button></div></div></div>`;
+  if(k === j.i){
+    const s = JOB[k];
+    if(s.ask && !j.ap[s.ask]) return 'wait';
+    if(j.stopped) return 'todo';
+    return j.playing ? 'run' : 'todo';
   }
+  return 'todo';
+}
+function jobDone(){ return S.job.i >= JOB.length; }
+function heldCount(){ return JOB.filter((s,k)=>k<S.job.i && s.kind==='held').length; }
+function waitingNow(){ const s = JOB[S.job.i]; return (s && s.ask && !S.job.ap[s.ask]) ? s : null; }
+function stepJob(){
+  const j = S.job; if(j.stopped || jobDone()) { j.playing=false; return false; }
+  const s = JOB[j.i];
+  if(s.ask && !j.ap[s.ask]){ j.playing=false; return false; }
+  j.i++; return true;
+}
+let timer = null;
+function play(){
+  if(timer) return;
+  S.job.playing = true; render();
+  timer = setInterval(()=>{
+    const moved = stepJob();
+    if(!moved){ clearInterval(timer); timer=null; S.job.playing=false; }
+    render();
+  }, 650);
+}
+function stopTimer(){ if(timer){ clearInterval(timer); timer=null; } S.job.playing=false; }
 
-  const valueRows = VALUES.map(v=>{
-    const isOpen = n.srcOpen===v.id;
-    let valueCell;
-    if(v.restricted){
-      valueCell = `<span class="pill">Present</span> <span class="small muted">Restricted, status only</span>${tag('AW-1-59')}`;
-    } else if(v.holdout){
-      if(n.holdoutResult===null){
-        valueCell = `<div class="stack" style="gap:6px"><span class="small muted">Hidden for you. Type the value you see in the source.</span>
-          <div class="row" style="gap:6px"><input type="text" id="holdout-in" placeholder="YYYY-MM-DD" value="${esc(n.holdout)}" aria-label="Type the hidden value" style="width:140px"><button class="btn sm" data-act="n-holdout">Record</button></div></div>${tag('AW-1-33(b)')}`;
-      } else {
-        valueCell = n.holdoutResult==='match'
-          ? `<span class="okmsg" style="margin:0">Match recorded. Your typed value is not stored.</span>${tag('AW-1-33(b)')}`
-          : `<span class="err" style="margin:0">No match recorded. Check the source before you approve.</span> <span class="illus">What follows a mismatch is not specified.</span>${tag('AW-1-33(b)')}`;
-      }
-    } else {
-      valueCell = `<b>${esc(v.val)}</b>`;
-    }
-    let action = '';
-    if(v.low){
-      action = n.opened[v.id] ? `<span class="pill ok">Opened</span>` : `<button class="btn sm" data-act="n-open" data-v="${v.id}">Open</button>`;
-    } else {
-      action = `<button class="btn ghost sm" data-act="n-src" data-v="${v.id}">${isOpen?'Hide':'Source'}</button>`;
-    }
-    const srcBox = isOpen ? `<tr><td colspan="5" style="padding-top:0"><div class="src-box"><b>Source:</b> ${esc(v.src)} · read by the product's Reader; verified ${esc(v.ver)} by the case officer${v.low?'; below the confidence level, so you must open it before Approve all':''}.<div class="src-img">document region ${ill('(placeholder image)')}</div></div></td></tr>` : '';
-    return `<tr class="${v.low?'low':''} ${v.low&&n.opened[v.id]?'opened':''}">
-      <td><b style="font-weight:600">${esc(v.field)}</b>${v.low&&!n.opened[v.id]?'<div class="xs" style="color:var(--warn);font-weight:600">Below the confidence level</div>':''}</td>
-      <td>${valueCell}</td>
-      <td class="small muted" style="min-width:170px">${esc(v.src)}</td>
-      <td><span class="conf ${v.low?'lowc':''}">${pct(v.conf)}</span></td>
-      <td style="white-space:nowrap">${action}</td></tr>${srcBox}`;
+function jobPanel(compact){
+  const j = S.job; const w = waitingNow();
+  const preset = S.set.preset==='each' ? '"Review each step"' : '"Review at checkpoints"';
+  let next = jobDone() ? (reviewComplete() ? 'Nothing: the review is complete' : 'The end-of-job review is waiting for you') :
+             w ? `Waiting for you now: ${esc(w.t)}` : (j.stopped ? 'Stopped by you' : 'Next: '+esc(JOB[j.i].t));
+  const rows = JOB.map((s,k)=>{
+    const st = jobStatus(k);
+    const ic = {done:'✓', held:'⏸', wait:'!', run:'…', todo:String(k+1)}[st];
+    const badge = st==='held' ? '<span class="pill ai">Held for the review</span>' : st==='wait' ? '<span class="pill warn">Asks you now</span>' : st==='run' ? '<span class="pill accent">Running</span>' : '';
+    return `<button class="jstep ${st}" data-act="drawer" data-v="${k}"><span class="ic">${ic}</span><span><div class="st">${esc(s.t)}</div>${compact?'':`<div class="sd">${esc(s.d)}</div>`}${st!=='todo'&&!compact?`<div style="margin-top:6px">${labels(s.lab())}</div>`:''}</span><span>${badge}</span></button>`;
   }).join('');
-
-  const gateList = `
-    <div class="check ${g.allOpened?'done':''}"><span class="box">${g.allOpened?'✓':''}</span><span class="t">Open the ${LOW.length} values below the confidence level (${g.openedCount} of ${LOW.length} opened) ${tag('AW-1-33(a)')}</span></div>
-    <div class="check ${g.holdoutDone?'done':''}"><span class="box">${g.holdoutDone?'✓':''}</span><span class="t">Type the hidden value; a match is recorded without storing the value ${tag('AW-1-33(b)')} ${ill('Illustrative: that approve all waits for the typed value is the prototype\'s reading of AW-1-33 (b).')}</span></div>
-    <div class="check done"><span class="box">✓</span><span class="t">Agreement alarm: shown to you only, never to anyone else ${tag('AW-1-33(c)')}</span></div>`;
-
-  return `<div class="item" data-open="true">${top}
-  <div class="section">
-    <dl class="kv">
-      <dt>What approving does</dt><dd>Accepting this report <b>is</b> your submission of Case C-1 for internal review. The reviewer approves separately. ${tag('AW-1-74')}${tag('AG-7-93')}</dd>
-      <dt>Built how</dt><dd>By rule, from the file's provenance, the Reviewer's state, run history and approval items. One paragraph is AI-written. ${tag('AW-1-72')}${tag('AW-1-73')}</dd>
-      <dt>Delegation</dt><dd>DL-CA-01 · the case officer's delegation (assistant to the case officer) · started by: product alert (case created) ${tag('startedBy')}${tag('AW-1-5')}${ill(' · reference illustrative')}</dd>
-    </dl>
-  </div>
-  <div class="section">
-    <h4>Before you can approve all</h4>
-    <div class="stack" style="gap:8px">${gateList}</div>
-  </div>
-  <div class="section">
-    <h4>Values · 8 of 23 shown ${ill('(counts fictional)')}</h4>
-    <div class="tw"><table>
-      <thead><tr><th>Value</th><th>Proposed</th><th>Source document and region</th><th>Confidence</th><th></th></tr></thead>
-      <tbody>${valueRows}</tbody>
-    </table></div>
-    <p class="xs faint" style="margin-top:8px">Confidence level used: Expat Ready's value or your firm's stricter one, whichever is stricter (screen 6). Percentages ${ill('illustrative')}.</p>
-  </div>
-  <div class="section">
-    <h4>Findings ${tag('lineType FINDING')}</h4>
-    <p class="small muted">No open findings. ${tag('AW-1-72')}</p>
-  </div>
-  <div class="section">
-    <h4>Client-facing sends on this case · 18 ${tag('lineType SEND')}</h4>
-    <div class="tw"><table><tbody>
-      <tr><td class="small muted" style="width:80px">Day 0</td><td class="small">Signing passcode (the product's Signer email)</td></tr>
-      <tr><td class="small muted">Day 0</td><td class="small">Executed copy and certificate (the product's Signer email)</td></tr>
-      <tr><td class="small muted">Day 0</td><td class="small"><i>Welcome to the firm</i> · template v1, published by the Owner</td></tr>
-      <tr><td class="small muted">Day 9</td><td class="small">Approved draft · reply about the ECA translation</td></tr>
-      <tr><td class="small muted">Day 30</td><td class="small"><i>We received your document</i> · template v1, published by the Owner</td></tr>
-    </tbody></table></div>
-    <p class="xs faint" style="margin-top:6px">+ 13 more. Template titles fictional.</p>
-  </div>
-  <div class="section">
-    <h4>Passed warnings ${tag('lineType PASSED_WARNING')}</h4>
-    <p class="small muted">None.</p>
-  </div>
-  <div class="section">
-    <h4>Summary <span class="pill ai" style="margin-left:6px">AI-written</span>${tag('AI_SUMMARY')}${tag('AW-1-25')}${tag('AW-1-73')}</h4>
-    <div class="ai-block small">All seven requested documents are verified; one name-spelling difference was resolved on 24 November; the medical is not yet due.</div>
-    <p class="xs faint" style="margin-top:6px">The only part of this report written by AI. Everything above is built by rule.</p>
-  </div>
-  <div class="section stack">
-    <div class="notice info"><span class="ic">i</span><div class="small">Values on this report came from <b>client content</b> (Client A's uploads). ${tag('AW-1-32')}${tag('fromClientContent')}</div></div>
-    ${n.rejecting ? `
-      <div class="field"><label for="rej">Reason for rejecting</label><textarea id="rej" placeholder="Say what is wrong">${esc(n.rejectReason)}</textarea></div>
-      <div class="row"><button class="btn danger" data-act="n-reject-confirm">Reject report</button><button class="btn" data-act="n-reject-cancel">Cancel</button></div>` : `
-      <div class="row">
-        <button class="btn primary" data-act="n-approve" ${g.ready?'':'disabled'}>Approve all and submit for review</button>
-        <button class="btn" data-act="n-some">Approve some</button>
-        <button class="btn danger" data-act="n-reject">Reject with reason</button>
-      </div>
-      ${g.ready ? '<p class="small" style="color:var(--ok)">All safeguards met. You may approve all.</p>' : `<p class="small muted">Approve all stays off until ${!g.allOpened?`you open ${LOW.length-g.openedCount} more value${LOW.length-g.openedCount===1?'':'s'}`:''}${!g.allOpened&&!g.holdoutDone?' and ':''}${!g.holdoutDone?'you type the hidden value':''}.</p>`}
-      ${n.someNote ? `<p class="small muted">Approve some lets you approve or reject line by line. ${ill('Not built in this prototype.')}</p>`:''}`}
-  </div>
-  </div>`;
-}
-
-function pausedItem(){
-  const n = S.needs, open = n.open.paused, st = n.paused;
-  let pill = '<span class="pill paused"><span class="dot"></span>Paused</span>';
-  if(st==='stale') pill = '<span class="pill warn"><span class="dot"></span>Stale · needs fresh approval</span>';
-  if(st==='reviewed') pill = '<span class="pill accent"><span class="dot"></span>Pending · re-rendered</span>';
-  if(st==='approved') pill = '<span class="pill ok"><span class="dot"></span>Approved</span>';
-  if(st==='rejected') pill = '<span class="pill danger"><span class="dot"></span>Rejected</span>';
-  const top = `
-  <button class="item-top" data-act="n-toggle" data-k="paused" aria-expanded="${open}">
-    <div style="min-width:0">
-      <div class="row" style="gap:6px;margin-bottom:6px"><span class="pill">Draft message</span><span class="pill ai">AI-written</span>${pill}</div>
-      <div class="item-title">Client E · proposed conversation about a next step ${tag('W-14')}</div>
-      <div class="item-meta">Prepared by <b>AI assistance, assistant to the Owner</b>, acting for <b>the Owner</b> · past client</div>
-    </div><span class="chev">›</span>
-  </button>`;
-  if(!open) return `<div class="item" data-open="false">${top}</div>`;
-  let body = '';
-  if(st==='paused'){
-    body = `
-    <div class="notice paused"><span class="ic">ǁ</span><div><b>AI paused by Expat Ready on 1 Dec 2026: routine safety review.</b> ${ill('(reason illustrative)')}
-      <div class="small muted" style="margin-top:4px">Reason code <code>PLATFORM_STOP</code> · one of the four pause reasons. While paused, this item cannot be approved or sent. You may reject it, and Expat Ready may recall it. A pause never ends a delegation. ${tag('AG-11-112(e)')}${tag('AW-1-56')}${tag('SA-12-32')}</div></div></div>`;
-  } else if(st==='stale'){
-    body = `<div class="notice warn"><span class="ic">!</span><div><b>The stop was released.</b> This draft was re-rendered and marked stale. It needs a fresh approval; your earlier view of it does not count. ${tag('AW-1-20(a)')}${tag('AG-11-61')}</div></div>`;
-  } else if(st==='approved'){
-    body = `<div class="notice ok"><span class="ic">✓</span><div><b>Approved by the Owner at ${nowStamp()}.</b> The product's own send rules apply from here; the assistant sends nothing itself. ${tag('AW-1-29')}${tag('AW-1-46')}</div></div>`;
-  } else if(st==='rejected'){
-    body = `<div class="notice danger"><span class="ic">×</span><div><b>Rejected by the Owner.</b> Nothing is sent. ${tag('AG-11-112(e)')}</div></div>`;
-  }
-  const draft = `<div class="ai-block small" style="margin-top:12px">Hello, a date on your file with us is coming up. Would you like to talk about the next step? <span class="illus">(fictional draft; never a promise)</span></div>`;
-  let actions = '';
-  if(st==='paused'){
-    actions = n.pausedRejecting
-      ? `<div class="row"><button class="btn danger" data-act="p-reject-confirm">Confirm reject</button><button class="btn" data-act="p-reject-cancel">Cancel</button></div>`
-      : `<div class="row"><button class="btn primary" disabled>Approve</button><button class="btn danger" data-act="p-reject">Reject</button></div>
-         <div class="demo" style="margin-top:12px"><div class="lbl" style="font-size:12px;font-weight:700;margin-bottom:6px">DEMO CONTROL · Expat Ready side</div>
-         <div class="row" style="justify-content:space-between"><span class="small">Release the emergency stop for this assistant.</span><button class="btn sm" data-act="p-release">Release the stop</button></div></div>`;
-  } else if(st==='stale'){
-    actions = `<div class="row"><button class="btn" data-act="p-review">Review the re-rendered draft</button><button class="btn primary" disabled>Approve</button><button class="btn danger" data-act="p-reject-confirm">Reject</button></div>`;
-  } else if(st==='reviewed'){
-    actions = `<div class="row"><button class="btn primary" data-act="p-approve">Approve</button><button class="btn danger" data-act="p-reject-confirm">Reject</button></div>`;
-  } else {
-    actions = `<button class="btn sm" data-act="p-reset">Reset this demo</button>`;
-  }
-  return `<div class="item" data-open="true">${top}<div class="section stack">${body}${st!=='approved'&&st!=='rejected'?draft:''}${actions}</div></div>`;
-}
-
-/* ======================================================================
-   SCREEN 2 — DELEGATION
-   ====================================================================== */
-const A = {
-  case: { name:'Case assistant', screen:'assistant to the case officer', persons:{officer:{label:'the case officer', role:'Case Officer', licensed:'not linked to a licence'}},
-    scope:'The person\'s own files (OWN_FILES)', waiting:'1 upload verdict on Case C-4',
-    may:[
-      ['Files and clients', [['agent/case:view.own','the officer\'s own files'],['agent/case:show','open a file'],['agent/client:show','open a client']]],
-      ['Documents and questionnaire', [['agent/document:list','list documents'],['agent/document:show','read a document'],['agent/sqr:view','see the questionnaire state']]],
-      ['Work it prepares', [['agent/case:form-prepare','prepare a form draft, once the form route exists'],['agent/task:create','create a task for a finding']]],
-      ['Reading context', [['agent/communication:view','read the message thread'],['agent/timeline:list','read the timeline'],['agent/pack:read','read the pack\'s reasons']]]
-    ],
-    never:[
-      [['agent/case:form-approve','agent/case:review-approve','agent/case:waive-deficiency'],'Professional approvals stay with a person','AW-1-43'],
-      [['agent/sqr:verify'],'Verifying a value stays with a person','AW-1-43'],
-      [['agent/document:change-status','agent/document:waive','agent/case:document-manage'],'Document decisions and requests are the officer\'s own acts','AW-1-76'],
-      [['agent/case:milestone-record','agent/case:submit','agent/case:record-decision','agent/case:review-submit'],'Records a milestone, submission or decision','AW-1-43, AW-1-74'],
-      [['agent/communication:send-email','agent/communication:send-message'],'No assistant sends; a person approves','AW-1-46'],
-      [['agent/retainer:countersign','agent/retainer:approve-for-send'],'No signing, no retainer','AW-1-42'],
-      [['agent/case:export'],'No export','AW-1-40'],
-      [['every settings and automation key'],'Settings, switches and automations','AW-1-41']
-    ]},
-  intake: { name:'Intake assistant', screen:'assistant to the intake role', persons:{rep:{label:'the intake rep', role:'Intake rep (custom role)', licensed:'not linked to a licence'}},
-    scope:'Leads (ALL_LEADS)', waiting:'1 proposed stage move on Lead L-3',
-    may:[
-      ['Leads', [['agent/prospect:view.own','own leads'],['agent/prospect:view.all','all leads'],['agent/prospect:show','open a lead']]],
-      ['Context', [['agent/assessment:view','read the assessment result'],['agent/booking:list','booking state'],['agent/booking-event-type:list','booking types'],['agent/retainer:show','retainer state'],['agent/communication:view','read the thread'],['agent/sqr:view','existing answers'],['agent/pack:read','the pack\'s reason']]],
-      ['Work it prepares', [['agent/task:create','the run-an-assessment task']]]
-    ],
-    never:[
-      [['agent/assessment:run','agent/assessment:override','agent/assessment:share'],'A person runs and shares the assessment','AW-1-88'],
-      [['agent/prospect:convert','agent/prospect:edit','agent/prospect:lose'],'Stage moves are only proposed','AW-1-44'],
-      [['agent/retainer:draft','agent/retainer:approve-for-send','agent/retainer:send','agent/retainer:countersign'],'No retainer, no signing','AW-1-42'],
-      [['send keys'],'No assistant sends','AW-1-46'],
-      [['agent/sqr:verify'],'No verification','AW-1-43'],
-      [['agent/prospect:export'],'No export','AW-1-40'],
-      [['every settings, automation, template and role key'],'Settings and switches','AW-1-41']
-    ]},
-  billing: { name:'Billing assistant', screen:'assistant to Billing / Finance', persons:{bookkeeper:{label:'the bookkeeper', role:'Billing / Finance', licensed:'not linked to a licence'}},
-    scope:'Billing parties (BILLING_PARTIES)', waiting:'1 proposed payment match for Client B',
-    may:[
-      ['Invoices and expenses', [['agent/invoice:list','list invoices'],['agent/invoice:show','open an invoice'],['agent/expense:list','list expenses']]],
-      ['Reports', [['agent/billing-report:view','billing reports'],['agent/report:view-financial','financial reports'],['agent/report:view.own','own reports']]],
-      ['Retainers', [['agent/retainer:list','list retainers'],['agent/retainer:show','fee schedule; signed or not']]],
-      ['Parties, files and clients', [['agent/case:show','open a file'],['agent/case:view.all','all files'],['agent/case:view.own','own files'],['agent/client:show','open a client'],['agent/client:view.all','all clients'],['agent/client:view.own','own clients'],['agent/prospect:show','open a lead'],['agent/prospect:view.all','all leads'],['agent/prospect:view.own','own leads'],['agent/party:view.all','billing parties']]],
-      ['Time, tasks and notes', [['agent/time-entry:view.all','all time entries'],['agent/time-entry:view.own','own time entries'],['agent/task:view.all','all tasks'],['agent/task:view.own','own tasks'],['agent/note:list','notes'],['agent/reminder:list','reminders']]],
-      ['Work it prepares', [['agent/reminder:create','the unbilled list; the reconciliation reminder']]],
-      ['Settings it reads', [['agent/settings:list','payment terms; tax profile'],['agent/pack:read','the designation words the pack supplies']]]
-    ],
-    never:[
-      [['agent/invoice:create','agent/invoice:edit','agent/invoice:issue','agent/invoice:void'],'No invoice entry, not even an unsaved draft','AW-1-39'],
-      [['agent/payment:record','agent/payment:online','agent/refund:create','agent/payment-plan:manage'],'Records or moves money: a person saves it','AW-1-39'],
-      [['agent/expense:create','agent/expense:edit','agent/time-entry:create','agent/time-entry:edit'],'No billing entry of any kind','AW-1-39'],
-      [['agent/trust:move','agent/trust:reconcile'],'Trust keys are never lendable to an AI assistant','AG-6-46'],
-      [['agent/billing:export'],'No export','AW-1-40'],
-      [['agent/retainer:download','agent/reminder:delete','agent/reminder:snooze','agent/notification:manage-preferences'],'Not on this assistant\'s allowed list','§10'],
-      [['every send, communication, document, task-create, settings and automation key, including agent/automation:run'],'No sends, no settings, no manual runs','AW-1-41, AW-1-46']
-    ]},
-  firm: { name:'Firm assistant', screen:'assistant to the Owner and the Case Manager', persons:{owner:{label:'the Owner', role:'Owner', licensed:'linked to a licence'}, cm:{label:'the Case Manager', role:'Case Manager (weekly note only)', licensed:'linked to a licence'}},
-    scope:'Firm-wide (FIRM_WIDE)', waiting:'1 weekly note draft',
-    may:[
-      ['Reads before proposing', [['agent/case:view.all','all files'],['agent/case:show','open a file'],['agent/client:view.all','all clients'],['agent/client:show','open a client'],['agent/document:list','list documents'],['agent/document:show','read a document'],['agent/note:list','notes'],['agent/timeline:list','timeline'],['agent/sqr:view','questionnaire state'],['agent/communication:view','threads']]],
-      ['Weekly note and checks', [['agent/report:view.all','firm reports'],['agent/report:view-compliance','compliance view'],['agent/automation:list','list automations'],['agent/automation:show','open an automation'],['agent/automation:view-history','run history'],['agent/import:view-report','import reports'],['agent/governance:read','consent and privacy-request state'],['agent/pack:read','lead times'],['agent/settings:list','firm timings']]],
-      ['Work it prepares', [['agent/task:create','privacy-request task'],['agent/reminder:create','deadline reminder'],['agent/reminder:list','reminders']]]
-    ],
-    cmMay:[['Weekly note only', [['agent/case:view.all','all files'],['agent/case:show','open a file'],['agent/client:view.all','all clients'],['agent/client:show','open a client'],['agent/report:view.all','firm reports'],['agent/report:view-compliance','compliance view'],['agent/automation:list','list automations'],['agent/automation:show','open an automation'],['agent/automation:view-history','run history'],['agent/settings:list','firm timings']]]],
-    never:[
-      [['the six never-delegable Owner-only keys','agent/document:dispose'],'Owner-only acts and disposal stay with a person','AW-1-38, AW-1-41'],
-      [['agent/import:run','agent/import:undo'],'The Owner confirms an import in its own screen','AW-1-106'],
-      [['agent/dsr:manage','agent/consent:manage','agent/legal-hold:manage','agent/retention-policy:manage','agent/breach:manage'],'Privacy registers stay the Owner\'s acts','AW-1-107'],
-      [['agent/trust:move','agent/trust:reconcile'],'Trust keys are never lendable','AG-6-46'],
-      [['every export'],'No export','AW-1-40'],
-      [['send keys','every agent/portal:* key'],'No assistant sends','AW-1-46'],
-      [['every settings and automation write key'],'Settings and switches','AW-1-41']
-    ]},
-  expert: { name:'Practice expert (summary line)', screen:'AI summary line on practice answers', persons:{officer:{label:'the case officer', role:'any staff the firm allows', licensed:'not linked to a licence'}},
-    scope:'Read-only; stores no keys', waiting:null, may:[], never:[] }
-};
-
-function dlPerson(){ const a=A[S.dl.assistant]; return a.persons[S.dl.person] || Object.values(a.persons)[0]; }
-function dlMay(){ const a=A[S.dl.assistant]; return (S.dl.assistant==='firm' && S.dl.person==='cm') ? a.cmMay : a.may; }
-function dlInitKeys(){ const k={}; dlMay().forEach(g=>g[1].forEach(x=>k[x[0]]=true)); S.dl.keys=k; }
-function dlLog(text){ S.dl.log.unshift({t:nowStamp(), text}); }
-
-function screenDeleg(){
-  const d = S.dl, a = A[d.assistant], p = dlPerson();
-  if(!d.keys) dlInitKeys();
-  const order = ['setup','pending','active','ended'];
-  const labels = {setup:'Set up', pending:'Pending acceptance', active:'Active', ended:'Ended'};
-  const cur = d.state==='paused' ? 'active' : d.state;
-  const ci = order.indexOf(cur);
-  const steps = order.map((s,i)=>`<span class="step ${i<ci?'past':''} ${i===ci?'on':''}"><span class="n">${i<ci?'✓':i+1}</span>${labels[s]}${s==='active'&&d.state==='paused'?' · paused':''}</span>`).join('');
-
-  const head = `
-  <div class="page-head">
-    <div class="eyebrow">Screen 2 of 6</div>
-    <h1>Set up an assistant for a person</h1>
-    <p class="lead">An assistant works for one named person, with a subset of that person's own permissions. It runs only after that person accepts. Only that person can end it. ${tag('AW-1-5')}${tag('AW-1-6')}</p>
-  </div>
-  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Firm F, AI on. The assistant's firm switch is <b>off</b>, its default, so an accepted delegation starts paused until the Owner switches the assistant on. ${tag('AW-1-125')}${tag('AG-16-57')} The Owner opens an assistant's settings page and sets one up for a staff member. Use <b>Viewing as</b> to switch between the Owner and the named person. Fictional.</div></div>
-  <div class="row" style="justify-content:space-between">
-    <div class="steps">${steps}</div>
-    <div class="seg" role="group" aria-label="Viewing as">
-      <button data-act="d-view" data-v="owner" aria-pressed="${d.viewAs==='owner'}">The Owner</button>
-      <button data-act="d-view" data-v="person" aria-pressed="${d.viewAs==='person'}">${esc(p.label[0].toUpperCase()+p.label.slice(1))}</button>
-    </div>
-  </div>`;
-
-  let body = '';
-  if(d.state==='setup'){
-    if(d.viewAs==='person'){
-      body = `<div class="card card-pad"><p class="muted">Nothing has been offered to ${esc(p.label)} yet. A person may also set up their own assistant. ${tag('AW-1-6')}</p></div>`;
-    } else body = setupCard();
-  } else {
-    body = statusCard();
-  }
-
-  const audit = d.log.length ? `
-  <div class="card"><div class="card-head"><h3>Audit trail ${tag('AW-1-6')}${tag('AG-13-68')}</h3><span class="small muted">every act on a delegation is audited</span></div>
-  <div class="card-pad"><div class="audit">${d.log.map(l=>`<div><time>${l.t}</time><span>${l.text}</span></div>`).join('')}</div></div></div>` : '';
-
-  return head + body + audit + foot('AW-1-5, AW-1-6, AW-1-7, AW-1-8, AW-1-9, AW-1-10, AW-1-11, AW-1-12, AW-1-20, AW-1-37, AW-1-47, AW-1-111, AW-1-125; AW1-D2, AW1-D34; AW1-BR-3, AW1-BR-4, AW1-BR-23; §6 Delegation states; §7 Delegation; §10 delegation subsets; SA-6-44 (CN-SA-06 change 1); AG-6-46 (CN-AG-06 change 6); AG-11-112(e)(f); US-1, US-2, US-3, US-111, US-113, US-114.');
-}
-
-function setupCard(){
-  const d = S.dl, a = A[d.assistant], p = dlPerson();
-  const asstOpts = Object.entries(A).map(([k,v])=>`<option value="${k}" ${d.assistant===k?'selected':''}>${esc(v.screen[0].toUpperCase()+v.screen.slice(1))}</option>`).join('');
-  const personOpts = Object.entries(a.persons).map(([k,v])=>`<option value="${k}" ${d.person===k?'selected':''}>${esc(v.label)} · ${esc(v.role)}</option>`).join('');
-  const may = dlMay();
-  const keysHtml = d.assistant==='expert'
-    ? `<div class="notice info"><span class="ic">i</span><div class="small">This delegation stores <b>no permission keys</b>. It only allows the optional AI summary line under practice answers. The answers themselves need no delegation. ${tag('AW-1-111')}${tag('§7 permissionKeys[] empty')}</div></div>`
-    : may.map(g=>`<div style="margin-bottom:10px"><div class="lbl" style="margin:4px 8px">${esc(g[0])}</div><div class="keylist">${g[1].map(k=>`
-        <label class="keyrow"><input type="checkbox" data-act="d-key" data-v="${esc(k[0])}" ${d.keys[k[0]]?'checked':''}><span><span class="k">${esc(k[0])}</span><br><span class="why">${esc(k[1])}</span></span></label>`).join('')}</div></div>`).join('');
-  const neverHtml = a.never.length ? a.never.map(n=>`
-      <div class="keyrow never" aria-disabled="true"><span class="lock">🔒</span><span><span class="k">${n[0].map(esc).join(' · ')}</span><br><span class="why">${esc(n[1])} <span class="faint">(${esc(n[2])})</span></span></span></div>`).join('') : '<p class="small muted">None: nothing is lent.</p>';
-  const count = d.assistant==='expert' ? 0 : Object.values(d.keys).filter(Boolean).length;
-  const total = d.assistant==='expert' ? 0 : Object.keys(d.keys).length;
-  return `
-  <div class="card">
-    <div class="card-head"><h2>New delegation</h2><span class="pill outline">${d.person==='owner'?'Your own delegation':'Owner only, for another person'} ${tag('AW-1-6')}</span></div>
-    <div class="section grid2">
-      <div class="field"><label for="d-asst">1 · Choose the assistant</label><select id="d-asst" data-act="d-asst">${asstOpts}</select><span class="xs faint">Product screens use only this role wording (AI assistance). ${tag('AW-1-65')}${tag('internal name, prototype only: '+a.name)}</span></div>
-      <div class="field"><label for="d-person">For this person</label><select id="d-person" data-act="d-person">${personOpts}</select><span class="xs faint">Licence: ${esc(p.licensed)}. Information only; it never gates a delegation. ${tag('AW-1-7')}</span></div>
-    </div>
-    <div class="section">
-      <dl class="kv">
-        <dt>Scope</dt><dd>${esc(a.scope)} ${tag('§7 scope')}</dd>
-        <dt>Valid from</dt><dd>When ${esc(p.label)} accepts · no end date ${ill('(an optional end date is allowed)')}</dd>
-        <dt>Taken from</dt><dd>The <b>${esc(p.role)}</b> column of the firm's permissions, key by key, lendable keys only. Never more than the person holds at the moment of acting. ${tag('AW-1-8')}${tag('AW-1-10')}</dd>
-      </dl>
-    </div>
-    <div class="section">
-      <h4>2 · Permissions the assistant may use ${d.assistant==='expert'?'':`· ${count} of ${total} ticked`} ${tag('SA-6-44')}</h4>
-      ${d.assistant==='expert'?'':'<p class="small muted" style="margin-bottom:8px">Untick any key to narrow the subset.</p>'}
-      ${keysHtml}
-    </div>
-    <div class="section">
-      <h4>Never lent to an assistant · shown for your information ${tag('AW-1-9')}</h4>
-      <p class="small muted" style="margin-bottom:8px">The server refuses these at set-up and again at every action. They cannot be ticked.</p>
-      <div class="keylist">${neverHtml}</div>
-      <p class="xs faint" style="margin-top:10px">The full list of hard limits is shown on each assistant's settings page. ${tag('AW-1-37')}</p>
-    </div>
-    <div class="section row" style="justify-content:space-between">
-      <span class="small muted">${esc(p.label[0].toUpperCase()+p.label.slice(1))} will be asked to accept. Nothing runs until then.</span>
-      <button class="btn primary" data-act="d-offer">Send offer to ${esc(p.label)}</button>
-    </div>
-  </div>`;
-}
-
-function statusCard(){
-  const d = S.dl, a = A[d.assistant], p = dlPerson();
-  const P = p.label[0].toUpperCase()+p.label.slice(1);
-  const stateMap = {
-    pending:'<span class="pill accent"><span class="dot"></span>PENDING_ACCEPTANCE</span>',
-    active:'<span class="pill ok"><span class="dot"></span>ACTIVE</span>',
-    paused:'<span class="pill paused"><span class="dot"></span>PAUSED · ASSISTANT_SWITCH_OFF</span>',
-    ended:'<span class="pill"><span class="dot"></span>ENDED</span>'
-  };
-  const count = d.assistant==='expert' ? 0 : Object.values(d.keys).filter(Boolean).length;
-  const summary = `
-  <div class="section"><dl class="kv">
-    <dt>Assistant</dt><dd>AI assistance · ${esc(a.screen)} ${tag('internal name, prototype only: '+a.name)}</dd>
-    <dt>Works for</dt><dd>${esc(p.label)} (${esc(p.role)}) · licence ${esc(p.licensed)}, information only</dd>
-    <dt>Permissions</dt><dd>${d.assistant==='expert'?'none stored (summary line only)':count+' lendable keys, listed one by one'}</dd>
-    <dt>Scope</dt><dd>${esc(a.scope)}</dd>
-    <dt>Set up by</dt><dd>the Owner</dd>
-    ${d.endReason?`<dt>End reason</dt><dd><code>${d.endReason}</code></dd>`:''}
-  </dl></div>`;
-
-  let actions = '', note = '';
-  if(d.state==='pending'){
-    if(d.viewAs==='owner'){
-      note = `<div class="notice info"><span class="ic">i</span><div class="small">Waiting for ${esc(p.label)} to accept. While it is still pending, you may withdraw the offer: it never took effect. ${tag('AW-1-6')}${tag('US-114')}</div></div>`;
-      actions = `<button class="btn danger" data-act="d-withdraw">Withdraw offer</button>`;
-    } else {
-      note = `<div class="notice info"><span class="ic">i</span><div class="small">The Owner offered you AI assistance (${esc(a.screen)}). Review the permissions it would use on your behalf. Every act it prepares will name you as the person behind it. ${tag('AW-1-3')}</div></div>`;
-      actions = `<button class="btn primary" data-act="d-accept">Accept</button><button class="btn" data-act="d-decline">Decline</button>`;
-    }
-  } else if(d.state==='active' || d.state==='paused'){
-    const waitingPill = d.waiting==='pending' ? '<span class="pill accent">pending</span>' : d.waiting==='paused' ? '<span class="pill paused">paused</span>' : d.waiting==='stale' ? '<span class="pill warn">stale · needs fresh approval</span>' : '';
-    const waitLine = a.waiting ? `<div class="small" style="margin-top:8px">Waiting from this delegation: ${esc(a.waiting)} ${waitingPill} ${ill('(fictional)')}</div>` : '';
-    if(d.viewAs==='owner'){
-      note = `<div class="notice ${d.state==='paused'?'paused':'ok'}"><span class="ic">${d.state==='paused'?'ǁ':'✓'}</span><div class="small">
-        ${d.state==='paused' ? `Paused because the firm's switch for ${esc(a.screen)} is off (every assistant switch is off by default). It runs, with no new acceptance, when you switch it on. ${tag('AW-1-11(a)')}${tag('AW-1-125')}` : `Accepted by ${esc(p.label)}. The assistant now prepares work for ${esc(p.label)}.`}
-        <div style="margin-top:6px"><b>You have no control to end this.</b> Only ${esc(p.label)} can end it. To halt the assistant at once, use its switch or the AI switch, or deactivate or suspend the person. ${tag('AW-1-6')}${tag('AW-1-125')}${tag('AW1-D34')}</div>${waitLine}</div></div>`;
-      actions = `<div class="row" style="gap:10px"><span class="small muted">Firm switch: ${esc(a.screen)}</span><button class="switch" role="switch" aria-checked="${d.switchOn}" data-act="d-switch" aria-label="Firm switch: ${esc(a.screen)}"></button>${tag('AG-16-57')}</div>`;
-    } else {
-      note = `<div class="notice ${d.state==='paused'?'paused':'ok'}"><span class="ic">${d.state==='paused'?'ǁ':'✓'}</span><div class="small">${d.state==='paused'?'Your assistant is paused by a firm switch. You do not need to accept again.':'Your assistant is active.'}${waitLine}</div></div>`;
-      actions = d.confirmEnd
-        ? `<div class="stack"><p class="small">Ending is final. Anything it has waiting will be cancelled and stay visible in the audit. A later assistant needs a new acceptance.</p><div class="row"><button class="btn danger" data-act="d-end-confirm">End my delegation</button><button class="btn" data-act="d-end-cancel">Keep it</button></div></div>`
-        : `<button class="btn danger" data-act="d-end">End my delegation</button>`;
-    }
-  } else if(d.state==='ended'){
-    const reasonText = {WITHDRAWN:'The Owner withdrew the offer before it was accepted. Nothing ran under it.', DECLINED:`${P} declined. Nothing ran under it.`, PERSON_ENDED:`${P} ended it.`}[d.endReason];
-    const cancelled = d.endReason==='PERSON_ENDED' && a.waiting ? `<div class="small" style="margin-top:6px">${esc(a.waiting)}: <span class="pill">cancelled · DELEGATION_ENDED</span> stays visible in the audit. ${tag('AG-11-112(f)')}</div>` : '';
-    note = `<div class="notice info"><span class="ic">i</span><div class="small">${reasonText} The record is final; a new offer is a new record needing a new acceptance. ${tag('AW-1-11(b)(c)')}${cancelled}</div></div>`;
-    actions = d.viewAs==='owner' ? `<button class="btn primary" data-act="d-restart">Set up a new offer</button>` : '';
-  }
   return `<div class="card">
-    <div class="card-head"><h2>AI assistance · ${esc(a.screen)} · for ${esc(p.label)}</h2>${stateMap[d.state]}</div>
-    ${summary}
-    <div class="section stack">${note}<div class="row">${actions}</div></div>
+    <div class="card-head"><div><h3>AI on this case · Case C-1, Client A ${tag('AIW-D85')}</h3><div class="xs muted">Case Officer's AI, working for the licensed consultant · review setting ${preset}</div></div>
+      <div class="row" style="gap:6px">
+        ${jobDone()?'':(j.stopped?`<button class="btn sm" data-act="j-resume">Resume</button>`:`<button class="btn sm primary" data-act="j-play" ${w||j.playing?'disabled':''}>${j.i===0?'Start the job':'Run to the next stop'}</button><button class="btn sm danger" data-act="j-stop">Stop job</button>`)}
+      </div></div>
+    <div class="section"><div class="counts">
+      <div><b>${JOB.filter((s,k)=>jobStatus(k)==='done').length}</b><span class="muted">steps done</span></div>
+      <div><b>${heldCount()}</b><span class="muted">held for the review</span></div>
+      <div><b>${w?1:0}</b><span class="muted">asking you now</span></div>
+    </div><p class="small" style="margin-top:8px"><b>${next}</b></p>
+    ${j.stopped?`<div class="notice paused" style="margin-top:8px"><span class="ic">■</span><div class="small">Stopped by you. It stops at the next safe point, never in the middle of a send. Nothing held is lost. ${tag('autonomy c.7')}</div></div>`:''}
+    </div>
+    <div class="section" style="padding-top:6px;padding-bottom:6px"><div class="jsteps">${rows}</div>
+    <p class="xs faint" style="margin-top:6px">Click any step for the detail: what was read, the sources, what was proposed, who approved, what failed and why.</p></div>
   </div>`;
 }
-
-/* ======================================================================
-   SCREEN 3 — AI PROVENANCE
-   ====================================================================== */
-function provRows(){
-  const rep = S.needs.report;
-  const repDecision = rep==='approved' ? 'approved' : rep==='rejected' ? 'rejected' : 'pending';
-  return [
-    { id:'r1', what:'Reply to Client A about the ECA translation', kind:'AI draft (client message)', worker:'W-08',
-      run:'CA-C1-01', sources:['Client A\'s message of 10 Nov','Canada pack 2026.3 · documents, ECA (fictional label)'],
-      actor:'the case officer', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (message received)',
-      approver:'the case officer · linked to a licence at decision · setting: licensed users only', decision:'edited', date:'11 Nov',
-      before:'Your ECA report does not need a translation because it is issued in English.',
-      after:'Your ECA report does not need a certified translation because it is issued in English.', marker:'Edited AI draft' },
-    { id:'r2', what:'Upload verdict · Employment reference letter, version 1', kind:'Upload verdict', worker:'W-04',
-      run:'CA-C1-01', sources:['Employment reference letter v1, pages 1–2','Pack acceptable-form rule (fictional)'],
-      actor:'the case officer', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (document read)',
-      approver:'the case officer', decision:'rejected', date:'16 Nov',
-      before:'Status: Received', after:'Status: Rejected · reason: the letter does not state hours per week (fictional). The product re-requested it.', marker:'AI-prepared' },
-    { id:'r3', what:'Upload verdict · Employment reference letter, version 2', kind:'Upload verdict', worker:'W-04',
-      run:'CA-C1-01', sources:['Employment reference letter v2, page 1'],
-      actor:'the case officer', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (document read)',
-      approver:'the case officer', decision:'approved', date:'23 Nov',
-      before:'Status: Received', after:'Status: Verified', marker:'AI-prepared' },
-    { id:'r4', what:'Readiness report for Case C-1', kind:'Readiness report', worker:'W-01',
-      run:'CA-C1-01', sources:['This provenance view','The Reviewer\'s state','Run history','Approval items on the file'],
-      actor:'the case officer', mode:'DELEGATED', deleg:'DL-CA-01', started:'PRODUCT_ALERT', startedPlain:'product alert (case created)',
-      approver: repDecision==='pending' ? '—' : 'the case officer · linked to a licence at decision', decision:repDecision, date: repDecision==='pending' ? 'due 4 Dec' : 'today',
-      before:'Case stage: in preparation', after: repDecision==='approved' ? 'Case stage: submitted for internal review' : repDecision==='rejected' ? 'No change (report rejected)' : 'Waiting in Needs you (screen 1)',
-      marker:'Built by rule · one AI-written paragraph' },
-    { id:'r5', what:'Passport values (3)', kind:'Proposed profile values', worker:'the product\'s Reader',
-      run:'— (firm automation, no assistant)', sources:['Passport, version 1 · machine-readable line 2'],
-      actor:'no person (the product\'s own job)', mode:'AUTOMATION', deleg:'none', started:'—', startedPlain:'not an assistant run',
-      approver:'the case officer · approving verifies the values (a separate PERSON entry)', decision:'approved', date:'4 Nov',
-      before:'Proposed: date of birth, passport expiry, passport number', after:'Verified · passport number shown by status only (present)', marker:'AI-prepared' }
-  ];
-}
-const DEC = {approved:['ok','Approved'], edited:['accent','Edited, then approved'], rejected:['danger','Rejected'], pending:['warn','Pending'], paused:['paused','Paused'], cancelled:['','Cancelled']};
-
-function screenProv(){
-  const p = S.pv;
-  const rows = provRows().filter(r => p.filter==='all' || r.decision===p.filter);
-  const filters = [['all','All'],['approved','Approved'],['edited','Edited'],['rejected','Rejected'],['pending','Pending']]
-    .map(f=>`<button class="btn sm ${p.filter===f[0]?'primary':''}" data-act="pv-filter" data-v="${f[0]}">${f[1]}</button>`).join('');
-  const body = rows.map(r=>{
-    const d = DEC[r.decision]; const open = p.open===r.id;
-    const detail = open ? `<tr><td colspan="6" style="background:var(--surface-2)">
-      <div class="stack" style="gap:12px">
-        <div class="ba"><div><span class="lbl">Before</span>${esc(r.before)}</div><div><span class="lbl">After</span>${esc(r.after)}</div></div>
-        <dl class="kv">
-          <dt>Run</dt><dd><code>${esc(r.run)}</code> ${r.mode==='DELEGATED'?ill('(run reference illustrative)'):''}${tag('personaRunId')}</dd>
-          <dt>Sources</dt><dd>${r.sources.map(esc).join('<br>')}</dd>
-          <dt>Prepared</dt><dd>Actor <b>${esc(r.actor)}</b> · mode <code>${r.mode}</code>${r.mode==='DELEGATED'?` · delegation <code>${r.deleg}</code> · started by <code>${r.started}</code> (${esc(r.startedPlain)})`:' · the product\'s own AI call, not an assistant; no person is the actor; the job reference is recorded'} ${tag('AG-13-68')}${tag('AG-11-113')}</dd>
-          <dt>Decided</dt><dd>${esc(r.approver)} · mode <code>PERSON</code> ${tag('AW-1-26')}</dd>
-          <dt>Marker</dt><dd>${esc(r.marker)} ${tag('AW-1-25')}</dd>
-        </dl>
-      </div></td></tr>` : '';
-    return `<tr class="prov-row" data-act="pv-open" data-v="${r.id}" tabindex="0" aria-expanded="${open}">
-      <td><b style="font-weight:600">${esc(r.what)}</b><div class="xs faint">${esc(r.kind)} · ${esc(r.worker)}</div></td>
-      <td class="small">${esc(r.actor)}<div class="xs faint">${r.mode}${r.mode==='DELEGATED'?' · started by '+r.started:''}</div></td>
-      <td class="small">${r.sources.length} source${r.sources.length>1?'s':''}</td>
-      <td class="small">${esc(r.approver.split(' · ')[0])}</td>
-      <td><span class="pill ${d[0]}">${d[1]}</span><div class="xs faint">${esc(r.date)}</div></td>
-      <td class="faint">${open?'▾':'▸'}</td></tr>${detail}`;
-  }).join('') || `<tr><td colspan="6" class="small muted">No items with this decision.</td></tr>`;
-
-  return `
-  <div class="page-head">
-    <div class="eyebrow">Screen 3 of 6</div>
-    <h1>AI provenance · Case C-1</h1>
-    <p class="lead">One read-only page per file. Every AI-prepared item, its run, its sources, who decided, what they decided, and what changed. ${tag('AW-1-23')}${tag('IMP-2(c)')}</p>
-  </div>
-  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Case C-1 (Client A), Firm F, viewed by the case officer (licensed; the file owner, whose delegation the assistant works under). Every record shown passes the viewer's own permission check; Restricted values show by status only. The readiness report row follows what you did on screen 1. Fictional.</div></div>
-  <div class="card">
-    <div class="card-head"><div class="filters">${filters}</div>
-      <div class="legend"><span><code>DELEGATED</code> an assistant acted for the person</span><span><code>PERSON</code> the person acted</span><span><code>AUTOMATION</code> the product's own automation</span></div></div>
-    <div class="tw"><table>
-      <thead><tr><th>Item</th><th>Actor</th><th>Sources</th><th>Approver</th><th>Decision</th><th></th></tr></thead>
-      <tbody>${body}</tbody>
-    </table></div>
-  </div>
-  <div class="notice info"><span class="ic">i</span><div class="small">On an assistant's entry (mode DELEGATED) the actor is always the named person the assistant worked for, never “system”. A separate <b>started by</b> field says what started the run: the delegating person, another person, the schedule, a product alert or a watcher item. The product's own jobs (mode AUTOMATION, such as the Reader) name no person as actor; a person's decision is its own PERSON entry. ${tag('AW-1-3')}${tag('AW-1-21')}${tag('AG-11-113')}${tag('AG-13-68')}</div></div>
-  ${foot('AW-1-3, AW-1-21, AW-1-22, AW-1-23, AW-1-25, AW-1-26, AW-1-59; AW1-BR-2; AG-13-68 (CN-AG-13 change 2: mode, delegationId, startedBy, personaRunId); AG-11-113 (CN-AG-11 change 7: the five startedBy values); AG-11-112 (decisions); US-10, US-11, US-102, US-103, US-104.', 'Also shown, as the requirement asks: the product\'s own Reader item (mode AUTOMATION), because the view lists every AI-prepared item on the file, not only an assistant\'s.')}`;
+function drawerHtml(){
+  const s = JOB[S.drawer]; if(!s) return '';
+  const st = jobStatus(S.drawer);
+  const stTxt = {done:'Done', held:'Held for the end-of-job review', wait:'Waiting for you now', run:'Running', todo:'Not started'}[st];
+  return `<div class="overlay" data-act="drawer-close" style="place-items:stretch end;padding:0"></div>
+  <aside class="drawer" role="dialog" aria-label="Step detail">
+    <div class="row" style="justify-content:space-between"><div class="eyebrow">Step ${S.drawer+1} of ${JOB.length} · ${stTxt}</div><button class="btn sm" data-act="drawer-close">Close</button></div>
+    <h2 style="font-size:18px">${esc(s.t)}</h2>
+    ${labels(s.lab())}
+    <dl class="kv">
+      <dt>What was read</dt><dd>${esc(s.det.read)}</dd>
+      <dt>Sources</dt><dd>${esc(s.det.src)}</dd>
+      <dt>What was proposed</dt><dd>${esc(s.det.prop)}</dd>
+      <dt>Who approves</dt><dd>${esc(s.det.who)}${s.ask&&S.job.ap[s.ask]?' · approved by the licensed consultant':''}</dd>
+      <dt>What failed, and why</dt><dd>${esc(s.det.fail)}</dd>
+    </dl>
+    <p class="xs faint">Simulated record. In the product this comes from the run records and the provenance view. ${tag('AIW-D85')}</p>
+  </aside>`;
 }
 
 /* ======================================================================
-   SCREEN 4 — PRACTICE EXPERT
+   SCREEN 1 — AI TEAM
    ====================================================================== */
-const QS = [
-  {n:1, label:'At risk this week, and why'},
-  {n:2, label:'What is missing on this file'},
-  {n:3, label:'Which rule is behind this item'},
-  {n:4, label:'What is waiting on me'}
+const TEAM = [
+  {name:'Case Officer\'s AI', for:'the licensed consultant (working as case officer)', skills:['Upload and readiness check (rules only)','Client message drafter','Letter drafter','Internal note drafter','Form preparation (rules fill the form)'], on:true},
+  {name:'Intake AI', for:'the intake person', skills:['Guided intake and templates (rules only)','Assessment start (the rules calculate)','Answer extractor','Client message drafter'], on:true},
+  {name:'Billing AI', for:'the bookkeeper', skills:['Unbilled work list (rules only)','Invoice preparation (rules calculate)','Proposed trust entry (rules calculate)','Reminder drafter'], on:true},
+  {name:'Owner\'s AI', for:'the Owner', skills:['Weekly note','Export and deletion request preparation','Settings change preparation'], on:false}
 ];
-function exAnswer(){
-  const e = S.ex;
-  if(e.q===1){
-    return { shape:1, outcome:'ANSWERED', pack:'2026.3', sources:['Minder watches on Cases C-2 and C-3','Canada pack 2026.3 · deadlines (fictional label)'],
-      lines:[
-        '<b>Overdue · Case C-2 (Client B).</b> Medical results were due Fri 27 Nov; the watch is breached. The pack says: <i>[fictional one-line definition]</i> (Canada pack 2026.3 · deadlines, medical).',
-        '<b>Next seven days · Case C-3 (Client C).</b> Biometrics due Mon 7 Dec; the watch\'s reminder steps have started; next step: the reminder two days before. (Canada pack 2026.3 · deadlines, biometrics).'
-      ], summary:'One deadline is overdue (Client B) and one falls in the next seven days (Client C).', scopeAsk:true };
-  }
-  if(e.q===2){
-    if(e.file==='C-2') return { shape:2, outcome:'ANSWERED', pack:'2026.3', sources:['Open findings on Case C-2','Canada pack 2026.3 · documents (fictional label)'],
-      lines:[
-        '<b>Police certificate outstanding</b> · MAJOR, open. The pack asks for it because <i>[fictional reason]</i> (Canada pack 2026.3 · documents).',
-        '<b>Proof of address</b> · MINOR, open. Your firm\'s own item; the pack carries no rule for it.'
-      ], summary:'Two items are open on this file; one comes from the pack and one is your firm\'s own.', file:true };
-    return { shape:2, outcome:'ANSWERED', pack:'2026.3', sources:[`Open findings on Case ${e.file}`],
-      lines:['<b>No open item on this file.</b>'], summary:null, file:true };
-  }
-  if(e.q===3){
-    if(e.item==='hand') return { shape:3, outcome:'REFUSED_NO_SOURCE', pack:'—', sources:['The watch on Case C-3 (date added by hand)'],
-      lines:['<b>No source in the pack for this date: it was added by hand.</b> <span class="illus">(refusal wording illustrative)</span>'], summary:null, file:true, item:true };
-    return { shape:3, outcome:'ANSWERED', pack:'2026.3', sources:['The biometrics watch on Case C-3','Canada pack 2026.3 · deadlines, biometrics (fictional label)'],
-      lines:['<b>Biometrics deadline on Case C-3:</b> <i>[fictional rule text]</i> (Canada pack 2026.3 · deadlines, biometrics; government source [fictional], checked [fictional date]). Case C-3 is pinned to 2026.3.'], summary:null, file:true, item:true };
-  }
-  return { shape:4, outcome:'ANSWERED', pack:'—', sources:['Your Needs you queue'],
-    lines:[
-      '<b>Draft message to Client E</b> · paused by Expat Ready on 1 Dec; it cannot be approved while paused.'
-    ], summary:null };
-}
-function screenExpert(){
-  const e = S.ex, a = exAnswer();
-  let summaryStatus = 'PRODUCED';
-  if(!a.summary) summaryStatus = a.outcome==='ANSWERED' ? 'NOT_NEEDED' : 'NOT_NEEDED';
-  else if(e.aiOff) summaryStatus = 'SKIPPED_AI_OFF';
-  else if(e.untested && a.pack!=='—') summaryStatus = 'SKIPPED_PACK_UNTESTED';
-  const showSummary = summaryStatus==='PRODUCED';
-  const menu = QS.map(q=>`<button data-act="ex-q" data-v="${q.n}" aria-pressed="${e.q===q.n}"><span class="qn">${q.n}</span>${q.label}</button>`).join('');
-  let pickers = '';
-  if(e.q===1) pickers = `<div class="field"><label for="ex-scope">Scope</label><select id="ex-scope" data-act="ex-scope"><option value="all" ${e.scope==='all'?'selected':''}>All files I may see</option><option value="own" ${e.scope==='own'?'selected':''}>My own files</option></select><span class="xs faint">“All files I may see” is offered only to holders of the see-all reports permission. ${tag('AG-14-36')}</span></div>`;
-  if(e.q===2) pickers = `<div class="field"><label for="ex-file">File</label><select id="ex-file" data-act="ex-file">${['C-1','C-2','C-3'].map(f=>`<option ${e.file===f?'selected':''}>${f}</option>`).join('')}</select><span class="xs faint">Picked with the product's permission-filtered search.</span></div>`;
-  if(e.q===3) pickers = `<div class="field"><label for="ex-item">File and item</label><select id="ex-item" data-act="ex-item"><option value="bio" ${e.item==='bio'?'selected':''}>Case C-3 · biometrics deadline</option><option value="hand" ${e.item==='hand'?'selected':''}>Case C-3 · a date added by hand</option></select></div>`;
-  const scopeLine = e.q===4 ? 'Scope: your own queue.' : (e.q===1 ? (e.scope==='all'?'Scope: all files you may see.':'Scope: your own files.') : 'Scope: all files you may see.');
-  const standing = 'Information for staff, not a message to a client.' + ((e.untested && a.pack!=='—') ? ' <b>This answer cites pack version 2026.3, whose test set has not passed.</b> <span class="illus">(wording illustrative)</span>' : '');
-  return `
-  <div class="page-head">
-    <div class="eyebrow">Screen 4 of 6</div>
-    <h1>Practice answers</h1>
-    <p class="lead">Four fixed questions, answered by rule from the firm's own records and the pack. An optional one-line AI summary may sit on top; everything else works with AI off. ${tag('AG-14-35')}${tag('AW-1-109')}</p>
-  </div>
-  <div class="scenario"><span>◇</span><div><b>Scenario.</b> The Owner of Firm F (licensed) asks on Wed 2 Dec 2026. The Owner holds an accepted read-only delegation for the summary line, and the firm's summary-line switch is on. On product screens this is called <b>Practice answers</b>; the internal name (Practice expert) is never shown on any product screen. ${tag('AW-1-65')}${tag('AW1-D33')} Screen label ${ill('illustrative')}. Fictional.</div></div>
-  <div class="grid2 split-l">
-    <div class="card card-pad stack">
-      <div class="lbl">Pick a question ${tag('AW-1-110')}</div>
-      <div class="menu-q">${menu}</div>
-      <p class="xs faint">No typed questions in version 1. ${tag('US-87')}${tag('AW-1-117')}</p>
-      ${pickers}
-      <div class="sep"></div>
-      <div class="mini-toggle"><span><b>AI off</b> (the firm's AI switch)</span><button class="switch" role="switch" aria-checked="${e.aiOff}" data-act="ex-ai" aria-label="AI off"></button></div>
-      <div class="mini-toggle"><span>Pack version not yet tested</span><button class="switch" role="switch" aria-checked="${e.untested}" data-act="ex-untested" aria-label="Pack version untested"></button></div>
-      <p class="xs faint">Demo toggles. The rule-built answers have no switch of their own. ${tag('AG-14-38')}${tag('AW-1-111')}</p>
-    </div>
-    <div class="card">
-      <div class="card-head"><h3>${esc(QS[e.q-1].label)}</h3><span class="pill outline">Built by rule</span></div>
-      ${showSummary ? `<div class="section"><div class="ai-block"><div class="xs" style="font-weight:700;color:var(--ai);margin-bottom:2px">AI-written summary ${tag('AW-1-112')}</div>${esc(a.summary)}</div></div>` : ''}
-      <div class="section">${a.lines.map(l=>`<div class="answer-line">${l}</div>`).join('')}</div>
-      <div class="section stack" style="gap:6px">
-        <div class="small"><span class="pill outline">Licensed mark</span> Answered to a licensed user. <span class="faint">Information only, never a permission check.</span> ${tag('AG-14-40(a)')}</div>
-        <div class="small"><span class="pill outline">Scope</span> ${scopeLine} ${tag('AG-14-40(b)')}</div>
-        <div class="small"><span class="pill outline">Standing</span> ${standing} ${tag('AG-14-40(c)')}</div>
-      </div>
-      <div class="section">
-        <h4>Sources</h4>
-        <div class="small">${a.sources.map(esc).join('<br>')}</div>
-      </div>
-      <div class="section">
-        <h4>Question record ${tag('ExpertQuestionRecord')}${tag('AW-1-115')}</h4>
-        <dl class="kv small">
-          <dt>Shape</dt><dd>${a.shape} of 4</dd>
-          <dt>Outcome</dt><dd><code>${a.outcome}</code></dd>
-          <dt>Summary status</dt><dd><code>${summaryStatus}</code>${!a.summary?' <span class="faint">(one line or a refusal: no model call)</span>':''}</dd>
-          <dt>Licensed mark</dt><dd><code>LICENSED</code> ${tag('AW-1-126')}</dd>
-          <dt>Readable by</dt><dd>the asker; the Owner only through the whole-firm export</dd>
-        </dl>
-      </div>
-      <div class="section"><p class="xs faint">The answer has no approve, edit, task or send control. You act in Needs you. ${tag('AW-1-118')}${tag('US-95')}</p></div>
-    </div>
-  </div>
-  ${foot('AW-1-109, AW-1-110, AW-1-111, AW-1-112, AW-1-113, AW-1-114, AW-1-115, AW-1-116, AW-1-117, AW-1-118, AW-1-125, AW-1-126; AW1-D10, AW1-D13, AW1-BR-24; AG-14-35 to AG-14-38 (CN-AG-14 change 1); AG-14-40 (CN-AG-14 change 4); AG-16-57 (CN-AG-16 change 4: the expert\'s one switch); §6 question record outcomes; US-87 to US-95, US-112.', 'Not shown: the summary line\'s number-match, forbidden-word and shape checks (AW-1-113) run before any summary appears.')}`;
+function scTeam(){
+  const w = waitingNow();
+  const counts = {
+    'Case Officer\'s AI':[JOB.filter((s,k)=>jobStatus(k)==='done').length, heldCount()+(w?1:0)+(jobDone()&&!reviewComplete()?1:0)],
+    'Intake AI':[S.inb.guided + (S.as.phase==='run'?1:0), (S.inb.draft==='pending'?1:0)+(S.as.phase==='stopped'||S.as.phase==='proposed'?1:0)],
+    'Billing AI':[S.bl.inv==='approved'?1:0, (S.bl.inv==='pending'||S.bl.inv==='voided'?1:0)+(S.bl.trust==='pending'?1:0)],
+    'Owner\'s AI':[0,0]
+  };
+  const cards = TEAM.map(t=>`
+    <div class="card card-pad tm">
+      <div class="row" style="justify-content:space-between"><h3 style="font-size:16px">${esc(t.name)}</h3>${t.on?'<span class="pill ok"><span class="dot"></span>On</span>':'<span class="pill">Off</span>'}</div>
+      <div class="small muted">Works for <b>${esc(t.for)}</b>, with that person's own permissions. It has no login of its own. ${tag('AIW-D13')}</div>
+      <div class="counts"><div><b>${counts[t.name][0]}</b><span class="muted">done today</span></div><div><b>${counts[t.name][1]}</b><span class="muted">waiting for a person</span></div></div>
+      <div><div class="lbl" style="margin-bottom:4px">Skills</div>${t.skills.map(s=>`<div class="skill"><span>${esc(s)}</span><span class="light">Not yet measured</span></div>`).join('')}</div>
+    </div>`).join('');
+  return head('Screen 1 of 6','Your AI team',`Four AI teammates work in Firm F. Each works for one named person. Health lights stay grey until a skill has been measured; nothing here has been measured. ${tag('AIW-D85')}${tag('AIW-D89')}${tag('AIW-D83')}`) + `
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Firm F, a small firm (made up). The licensed consultant also works as the case officer on Case C-1 and holds every approval key, so the end-of-job review is one sitting. All counts on this page are simulated and change as you use the other screens.</div></div>
+  <div class="tm-grid">${cards}</div>
+  ${jobPanel(true)}
+  <div class="row"><button class="btn primary" data-go="file">Open Case C-1 and run the job</button></div>
+  <p class="small muted">Two more AI teammates work at Expat Ready, not in your firm: the Pack author's AI and the Support AI.</p>
+  ${foot('AIW-D85 (AI team page, live job panel, detail on click), AIW-D89 (names), AIW-D90 (six teammates), AIW-D83 (health lights only once measured), AIW-D13.')}`;
 }
 
 /* ======================================================================
-   SCREEN 5 — BILLING: PROPOSED PAYMENT MATCH
+   SCREEN 2 — FILE PREPARATION + END-OF-JOB REVIEW
    ====================================================================== */
-const INV = [
-  {id:'INV-2026-0042', bal:2000.00, cur:'CAD', due:'Sat 7 Nov', what:'Deposit'},
-  {id:'INV-2026-0047', bal:1365.00, cur:'CAD', due:'Mon 30 Nov', what:'Professional fees, stage 2'}
+const VALS = [
+  {id:'name', f:'Full name', v:'CLIENT A', kind:'identity', doc:'Passport, version 2 · data page', p:'Surname: CLIENT  Given names: A', uses:['form']},
+  {id:'dob',  f:'Date of birth', v:'1991-03-14', kind:'identity', doc:'Passport, version 2 · data page', p:'Date of birth: 14 MAR 1991', uses:['form']},
+  {id:'ppn',  f:'Passport number', v:'X••••821', kind:'identity', doc:'Passport, version 2 · data page', p:'Passport No.: X••••821 (masked in this view)', uses:[]},
+  {id:'ppx',  f:'Passport expiry', v:'2031-06-30', kind:'conseq', doc:'Passport, version 2 · data page', p:'Date of expiry: 30 JUN 2031', uses:[]},
+  {id:'lis',  f:'Listening score', v:'8.0', kind:'conseq', low:true, doc:'Language test result · page 1, scores box', p:'Listening 8.0   Reading 7.5   Writing 7.0   Speaking 7.0', uses:['letter']},
+  {id:'wri',  f:'Writing score', v:'7.0', kind:'conseq', low:true, doc:'Language test result · page 1, scores box', p:'Listening 8.0   Reading 7.5   Writing 7.0   Speaking 7.0', uses:['letter']},
+  {id:'eca',  f:'Education equivalency', v:'Bachelor\'s degree', kind:'conseq', doc:'Education assessment report · page 2', p:'Equivalency: completed four-year bachelor\'s degree', uses:['form']},
+  {id:'emp',  f:'Employment start date', kind:'conflict', uses:['form','letter'],
+     a:{v:'2019-04-01', doc:'Employment reference letter · page 1', p:'…has been employed with us since 1 April 2019…'},
+     b:{v:'2019-05-01', doc:'Résumé · page 1, work history', p:'Example Analytics Ltd.   May 2019 – present'}},
+  {id:'city', f:'Current city', v:'Calgary', kind:'other', doc:'Questionnaire, answer 4', p:'City where you live now: Calgary', uses:[]},
+  {id:'mail', f:'Email', v:'client-a@example.test', kind:'other', doc:'Questionnaire, answer 2', p:'Email: client-a@example.test', uses:[]},
+  {id:'job',  f:'Current job title', v:'Data analyst', kind:'other', low:true, doc:'Employment reference letter · page 1', p:'…in the role of Data Analyst (Level II)…', uses:[]},
+  {id:'emr',  f:'Employer name', v:'Example Analytics Ltd.', kind:'other', spot:true, doc:'Employment reference letter · letterhead', p:'EXAMPLE ANALYTICS LTD. · Human Resources', uses:[]}
 ];
-const money = n => n.toLocaleString('en-CA',{minimumFractionDigits:2, maximumFractionDigits:2});
-function parseAmt(s){ const v = parseFloat(String(s).replace(/[, ]/g,'')); return isFinite(v) && v>0 ? Math.round(v*100)/100 : null; }
-function candMark(inv){
-  const amt = parseAmt(S.bi.amount);
-  if(amt===null) return null;
-  if(S.bi.currency!==inv.cur) return 'choice';
-  if(amt===inv.bal) return 'exact';
-  if(amt<inv.bal) return 'partial';
-  return 'choice';
+const KINDNAME = {identity:'Identity detail · check it yourself', conseq:'Consequential value · check it yourself', conflict:'Conflict · choose the right value', other:'Other value'};
+function curVal(v){
+  const r = S.rv;
+  if(r.corr[v.id]) return r.corr[v.id];
+  if(v.kind==='conflict') return r.conflict ? (r.conflict==='a'?v.a.v:v.b.v) : null;
+  return v.v;
 }
-function candHtml(){
-  const amt = parseAmt(S.bi.amount);
-  return INV.map(inv=>{
-    const m = candMark(inv);
-    const mark = m==='exact' ? '<span class="pill ok">Exact</span>' : m==='partial' ? '<span class="pill warn">Partial</span>' : m==='choice' ? '<span class="pill outline">Your choice</span>' : '<span class="pill outline">Candidate</span>';
-    return `<div class="cand ${m==='exact'?'exact':''}">
-      <div style="min-width:0"><div class="row" style="gap:8px"><b>${inv.id}</b>${mark}</div>
-      <div class="small muted">${esc(inv.what)} · due ${esc(inv.due)} · balance <span class="amt">${money(inv.bal)} ${inv.cur}</span></div></div>
-      <button class="btn sm ${m==='exact'?'primary':''}" data-act="b-pick" data-v="${inv.id}" ${amt===null?'disabled':''}>Pick this invoice</button>
-    </div>`;
-  }).join('') + `<p class="xs faint">${amt===null?'No invoice is marked exact until you type the amount received.':'Exact = the balance equals your amount, same currency. Partial = your amount is less than the balance. A larger amount or another currency is your choice.'} ${tag('AW-1-97')}</p>`;
+function explicitVals(){ return VALS.filter(v=>v.kind!=='other'); }
+function otherVals(){ return VALS.filter(v=>v.kind==='other'); }
+function valuesDone(){ return explicitVals().every(v=>S.rv.ok[v.id]) && S.rv.rest; }
+function reviewComplete(){ const d=S.rv.drafts; return valuesDone() && ['form','letter','note'].every(k=>d[k]==='approved'||d[k]==='rejected'); }
+function empInDrafts(){ return S.rv.corr.emp || (S.rv.conflict==='b' ? '2019-05-01' : '2019-04-01'); }
+function markStale(id){
+  const v = VALS.find(x=>x.id===id); if(!v) return;
+  v.uses.forEach(d=>{
+    if(S.rv.drafts[d]==='approved') return;
+    S.rv.stale[d] = true;
+    setTimeout(()=>{ S.rv.stale[d]=false; S.rv.ver[d]++; if(S.screen==='file') render(); }, 1100);
+  });
 }
-function screenBill(){
-  const b = S.bi;
-  const head = `
-  <div class="page-head">
-    <div class="eyebrow">Screen 5 of 6</div>
-    <h1>Reconciliation view · Client B</h1>
-    <p class="lead">The assistant lists candidate invoices. You type the amount, pick the invoice, and save the payment in the product's own screen. The assistant never saves and never fills in an amount. ${tag('AW-1-97')}${tag('AG-6-44')}</p>
-  </div>
-  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Signed in as <b>the bookkeeper</b> (Billing / Finance) of Firm F. You opened a <b>proposed payment match</b> from Needs you; approving it opens this view. Fictional.</div></div>
-  <div class="small muted">Needs you › Proposed payment match <span class="pill ${b.item==='approved'?'ok':'accent'}">${b.item==='approved'?'APPROVED':'PENDING'}</span> ${tag('PAYMENT_MATCH')}${tag('AG-11-112(b)')}</div>`;
-  if(b.saved){
-    return head + `
-    <div class="card card-pad stack">
-      <div class="notice ok"><span class="ic">✓</span><div><b>Payment saved by the bookkeeper.</b> ${money(parseAmt(b.amount))} ${b.currency} recorded against ${esc(b.picked)} under the bookkeeper's own payment permission. ${tag('agent/payment:record')}
-      <ul class="small" style="margin:8px 0 0 18px;padding:0">
-        <li>The proposed match is now <b>APPROVED</b>, linked to the saved payment (PAY-0001 ${ill('illustrative')}). ${tag('resultRef')}</li>
-        <li>Funds designation set by you: <b>${esc(b.designation)}</b>. ${tag('AG-6-24 (FD-17)')}</li>
-        <li>Audit: the bookkeeper, mode PERSON. The assistant's part (listing candidates) is mode DELEGATED.</li>
-        <li>The product recomputes the invoice; the assistant does not.</li>
-      </ul></div></div>
-      <div><button class="btn sm" data-act="b-reset">Reset this demo</button></div>
-    </div>
-    ${foot(billTraces())}`;
-  }
-  return head + `
-  <div class="card">
-    <div class="card-head"><h2>Linked payment notice</h2><span class="pill outline">content not shown</span></div>
-    <div class="section"><p class="small">A payment notice is linked to <b>Client B</b> · linked by <b>the case officer</b> on Mon 9 Nov 2026, 10:30. The notice's content stays in the communication hub; this view never shows it. No model reads an amount, currency, date or reference out of a message. ${tag('AW-1-96')}${tag('Bookkeeper rule')}</p></div>
-  </div>
-  <div class="grid2 split-l">
-    <div class="card card-pad stack">
-      <div class="field"><label for="b-amt">Amount received</label>
-        <div class="row" style="gap:6px;flex-wrap:nowrap"><input type="text" inputmode="decimal" id="b-amt" placeholder="Type the amount" value="${esc(b.amount)}" style="flex:1;min-width:0" aria-describedby="b-amt-h"><select id="b-cur" data-act="b-cur" aria-label="Currency"><option ${b.currency==='CAD'?'selected':''}>CAD</option><option ${b.currency==='USD'?'selected':''}>USD</option></select></div>
-        <span class="xs faint" id="b-amt-h">Empty until you type it. The assistant never fills it in. ${tag('AG-11-112(b)')}</span></div>
-      <div class="sep"></div>
-      <div class="field"><label for="b-search">Your own search</label><input type="text" id="b-search" placeholder="Search invoices for Client B" disabled><span class="xs faint">The product's search, beside the proposals. ${ill('(not built here)')}</span></div>
-      ${b.closedUnsaved ? `<div class="notice info"><span class="ic">i</span><div class="small">You closed Record payment without saving. The match stays <b>PENDING</b>.</div></div>` : ''}
-    </div>
-    <div class="card">
-      <div class="card-head"><h3>Candidate invoices</h3><span class="pill ai">Proposed by AI assistance, assistant to Billing / Finance</span></div>
-      <div class="section stack" id="cands">${candHtml()}</div>
-    </div>
-  </div>
-  <div class="notice info"><span class="ic">i</span><div class="small">The assistant <b>proposes</b>; a person <b>saves</b> in the product's own screen. It never records, edits or refunds a payment, never sets a funds designation, and never creates an invoice. ${tag('AW-1-39')}${tag('AW1-D6')}</div></div>
-  ${foot(billTraces())}`;
+
+function scFile(){
+  const intro = head('Screen 2 of 6','Prepare Client A\'s file',`The Case Officer's AI runs the job end to end. Rules do the fixed steps; the AI reads and drafts. It asks you at once only where something cannot wait. Everything else comes to one review at the end. ${tag('AIW-D95')}${tag('AIW-D100')}${tag('AIW-D105')}`) +
+  `<div class="scenario"><span>◇</span><div><b>Scenario.</b> Case C-1, Client A (made up). This walkthrough uses <b>"Review at checkpoints"</b>. Under the default <b>"Review each step"</b>, each held item would be asked as it arrives. You are the licensed consultant, who holds every key. ${tag('AIW-D101')}</div></div>`;
+  return intro + jobPanel(false) + askNowCard() + (jobDone() ? reviewHtml() : `<div class="card card-pad"><p class="small muted">The end-of-job review appears here when the job reaches its last step.</p>
+    <div class="demo" style="margin-top:10px"><div class="lbl">Demo control</div><p class="small">Play the job without waiting. You still approve the two items that ask you now.</p><button class="btn sm" data-act="j-play" ${waitingNow()||S.job.playing||S.job.stopped?'disabled':''}>Play to the next stop</button></div></div>`) +
+  foot('AIW-D85 (live panel, stop), AIW-D95 (end-to-end job, few checkpoints), AIW-D100 (one review sitting, provisional values beside passages, explicit checks, spot check not counted, corrections refresh drafts, ask earlier when a dependent action needs it), AIW-D101 (preset), AIW-D105 (template send inside the job), AIW-D92 (labels); Lead mechanism M-3 (drafts record the value versions they used).');
 }
-function billTraces(){
-  return 'AW-1-30, AW-1-39, AW-1-96, AW-1-97; AW1-D6, AW1-BR-9; AG-6-44 (CN-AG-06 change 3: the Reconciliation view and the typed amount); AG-11-112(b) (CN-AG-11 change 6: PAYMENT_MATCH opens the view, never fills an amount; APPROVED on save with resultRef); AG-6-24 (CN-AG-06 change 1: funds designation, FD-17); 00-step3-plan.md "Payment match keeps the typed amount" and "Bookkeeper"; US-73, US-113.';
-}
-function billModal(){
-  const b = S.bi, inv = INV.find(i=>i.id===b.picked);
-  const canSave = b.method && b.designation;
-  return `<div class="overlay" role="dialog" aria-modal="true" aria-labelledby="rp-t">
-    <div class="modal">
-      <div class="card-head"><h2 id="rp-t">Record payment</h2><span class="pill outline">the product's own screen</span></div>
-      <div class="section stack">
-        <dl class="kv small">
-          <dt>Party</dt><dd>Client B</dd>
-          <dt>Invoice</dt><dd>${esc(inv.id)} · balance ${money(inv.bal)} ${inv.cur}</dd>
-          <dt>Amount</dt><dd><b>${money(parseAmt(b.amount))} ${b.currency}</b> <span class="faint">· the amount you typed</span> ${tag('AG-6-44')}</dd>
-        </dl>
-        <div class="field"><label for="rp-m">Method</label><select id="rp-m" data-act="rp-m"><option value="">Choose…</option>${['E-transfer','Cheque','Bank transfer','Cash'].map(m=>`<option ${b.method===m?'selected':''}>${m}</option>`).join('')}</select><span class="xs faint">List ${ill('illustrative')}</span></div>
-        <div class="grid2">
-          <div class="field"><label for="rp-d">Date received</label><input type="date" id="rp-d" value="${esc(b.date)}"></div>
-          <div class="field"><label for="rp-r">Reference</label><input type="text" id="rp-r" value="${esc(b.ref)}" placeholder="e.g. ET-48213"></div>
-        </div>
-        <div class="field"><span class="lbl">Funds designation (required) ${tag('AG-6-24 (FD-17)')}</span>
-          <div class="row">${['Trust','Operating'].map(x=>`<label class="row small" style="gap:6px"><input type="radio" name="rp-des" data-act="rp-des" value="${x}" ${b.designation===x?'checked':''}> ${x}</label>`).join('')}</div>
-          <span class="xs faint">Set by you. No assistant sets or moves a designation. ${tag('AW-1-39')}</span></div>
-      </div>
-      <div class="section row" style="justify-content:flex-end">
-        <button class="btn" data-act="rp-cancel">Close without saving</button>
-        <button class="btn primary" data-act="rp-save" ${canSave?'':'disabled'}>Save payment</button>
-      </div>
+function askNowCard(){
+  const w = waitingNow(); if(!w) return '';
+  if(w.ask==='reject') return `<div class="card">
+    <div class="card-head"><h3>Needs you now · Passport upload rejected</h3><span class="pill warn">Asked now: the client must act</span></div>
+    <div class="section stack">
+      ${labels(L('rules'), L('prep','Case Officer\'s AI'))}
+      <div class="passage"><small>Passport, version 1 · data page</small>Date of expiry: 02 FEB 2027</div>
+      <p class="small">Pack v3 rule: the passport must be valid on the planned submission date (made-up date 2027-03-01). It is not. Client A must send a renewed passport, so this cannot wait for the end-of-job review. ${tag('AIW-D100 point 4')}</p>
+      <p class="small">If you approve, Client A gets Firm F's published template <b>"Please re-send"</b> v1. No AI-written text is added.</p>
+      <div class="row"><button class="btn primary" data-act="j-ap" data-v="reject">Approve rejection and send the template</button></div>
+    </div></div>`;
+  return `<div class="card">
+    <div class="card-head"><h3>Needs you now · Government deadline</h3><span class="pill warn">Asked now (locked)</span></div>
+    <div class="section stack">
+      ${labels(L('draft'))}
+      <div class="passage"><small>Government letter (made up) · page 1</small>Please provide your biometrics within 30 days of the date of this letter (1 December 2026).</div>
+      <p class="small">Proposed due date: <b>2026-12-31</b>. Anything linked to a government deadline is always asked at once, in every setting. Once you approve, the deadline watch registers it. ${tag('autonomy row 9')}</p>
+      <div class="row"><button class="btn primary" data-act="j-ap" data-v="date">Approve the due date</button></div>
     </div></div>`;
 }
+function valueRow(v){
+  const r = S.rv, ok = r.ok[v.id], cv = curVal(v);
+  const corrected = !!r.corr[v.id];
+  let body = '';
+  if(v.kind==='conflict'){
+    const opt = (k)=>{ const o=v[k]; const sel = r.conflict===k;
+      return `<div class="passage" style="margin-bottom:6px;${sel?'border-color:var(--accent)':''}"><small>${esc(o.doc)}</small>${esc(o.p)}</div>
+      ${ok?'':`<button class="btn sm ${sel?'primary':''}" data-act="rv-conf" data-v="${k}">Use ${esc(o.v)}</button>`}`; };
+    body = `<div><div class="vf">${esc(v.f)}</div><div class="vv">${cv?esc(cv):'<span class="muted" style="font-weight:400">Two sources disagree</span>'}</div><div class="kindtag conflict">${KINDNAME.conflict}</div></div>
+      <div>${opt('a')}<div style="height:8px"></div>${opt('b')}</div>`;
+  } else {
+    body = `<div><div class="vf">${esc(v.f)}</div><div class="vv">${esc(cv)}${corrected?' <span class="pill accent">Corrected by you</span>':''}</div><div class="kindtag ${v.kind}">${KINDNAME[v.kind]}</div>${v.low?'<div class="xs" style="color:var(--warn);font-weight:600">Below the confidence level: open it first</div>':''}</div>
+      <div><div class="passage"><small>${esc(v.doc)}</small>${esc(v.p)}</div></div>`;
+  }
+  const editing = r.editing===v.id;
+  let act;
+  if(ok) act = `<div class="stack" style="gap:4px;align-items:flex-end">${L('appr','the licensed consultant')}</div>`;
+  else if(editing) act = `<div class="stack" style="gap:6px"><input type="text" id="corr-in" value="${esc(cv||'')}" aria-label="Corrected value" style="width:140px"><div class="row" style="gap:6px"><button class="btn sm primary" data-act="rv-corr-save" data-v="${v.id}">Save</button><button class="btn sm" data-act="rv-corr-cancel">Cancel</button></div></div>`;
+  else {
+    const needOpen = v.low && !r.opened[v.id];
+    const blocked = v.kind==='conflict' && !r.conflict;
+    act = `<div class="stack" style="gap:6px;align-items:flex-end">
+      ${needOpen?`<button class="btn sm" data-act="rv-open" data-v="${v.id}">Open the source</button>`:''}
+      <label class="small" style="display:flex;gap:6px;align-items:center;white-space:nowrap"><input type="checkbox" data-act="rv-check" data-v="${v.id}" ${needOpen||blocked?'disabled':''}> I checked it against the source</label>
+      <button class="btn ghost sm" data-act="rv-corr" data-v="${v.id}">Correct</button></div>`;
+  }
+  return `<div class="vrow ${ok?'okd':''}">${body}${act}</div>`;
+}
+function otherRows(){
+  const r = S.rv;
+  return otherVals().map(v=>{
+    const hide = v.spot && r.spotRes===null && !r.rest;
+    const needOpen = v.low && !r.opened[v.id];
+    return `<div class="vrow ${r.rest?'okd':''}"><div><div class="vf">${esc(v.f)}</div><div class="vv">${hide?'<span class="muted" style="font-weight:400">Hidden: type what the source says</span>':esc(curVal(v))}</div>${needOpen?'<div class="xs" style="color:var(--warn);font-weight:600">Below the confidence level: open it first</div>':''}</div>
+      <div>${hide?`<div class="passage"><small>${esc(v.doc)}</small>(source shown when you open the document)</div>`:`<div class="passage"><small>${esc(v.doc)}</small>${esc(v.p)}</div>`}</div>
+      <div>${r.rest?L('appr','the licensed consultant'):hide?`<div class="stack" style="gap:6px"><input type="text" id="spot-in" placeholder="Type it" value="${esc(r.spot)}" aria-label="Type the hidden value" style="width:150px"><button class="btn sm" data-act="rv-spot">Record</button></div>`:needOpen?`<button class="btn sm" data-act="rv-open" data-v="${v.id}">Open the source</button>`:'<span class="pill">Ready</span>'}</div></div>`;
+  }).join('');
+}
+function draftCard(k){
+  const r = S.rv, st = r.drafts[k], stale = r.stale[k], ver = r.ver[k];
+  const vOk = valuesDone();
+  const emp = empInDrafts();
+  let title, lab, body, uses, who;
+  if(k==='form'){
+    title = 'Form draft · work history section'; lab = labels(L('rules'), L('prep','Case Officer\'s AI'));
+    body = `<div class="doc">Applicant: <span class="hl">CLIENT A</span> · born <span class="hl">1991-03-14</span><br>Employer: Example Analytics Ltd. · from <span class="hl">${esc(emp)}</span> to present<br>Highest education: <span class="hl">${esc(curVal(VALS.find(x=>x.id==='eca')))}</span></div>`;
+    uses = 'Full name, date of birth, employment start date, education equivalency'; who = 'Form approver: the licensed consultant';
+  } else if(k==='letter'){
+    title = 'Letter of explanation'; lab = labels(L('draft'), L('prep','Case Officer\'s AI'));
+    body = `<div class="doc">To the officer reviewing this application: the applicant has worked for Example Analytics Ltd. since <span class="hl">${esc(emp)}</span>. Their language test result shows listening <span class="hl">${esc(curVal(VALS.find(x=>x.id==='lis')))}</span> and writing <span class="hl">${esc(curVal(VALS.find(x=>x.id==='wri')))}</span>. …</div>`;
+    uses = 'Employment start date (reference letter or résumé, as you chose), listening and writing scores (language test result p.1)'; who = 'Licensed representative: the licensed consultant';
+  } else {
+    title = 'Internal note · file summary (never sent)'; lab = labels(L('draft'), L('prep','Case Officer\'s AI'));
+    body = `<div class="doc">Passport re-sent and passing. Biometrics due 2026-12-31; booking task created. Employment dates differed between two documents; resolved in review.</div>`;
+    uses = 'Case C-1 timeline'; who = 'The person it works for';
+  }
+  let status;
+  if(st==='approved') status = L('appr','the licensed consultant');
+  else if(st==='rejected') status = `<span class="pill danger">Sent back: ${esc(r.reason[k]||'')}</span>`;
+  else if(stale) status = `<span class="pill warn">Refreshing with the corrected value…</span>`;
+  else status = `<span class="pill">Version ${ver}${ver>1?' · refreshed after your correction':''}</span>`;
+  const can = vOk && !stale && st==='pending';
+  const rej = r.rejecting===k;
+  return `<div class="draft ${stale?'stale':''}">
+    <div class="row" style="justify-content:space-between"><b>${title}</b>${status}</div>
+    ${lab}
+    ${body}
+    <div class="xs muted"><b>Facts used and their sources:</b> ${uses}. ${who}.</div>
+    ${st==='pending' ? (rej ? `<div class="field"><label for="rej-${k}">Why are you sending it back?</label><textarea id="rej-${k}"></textarea></div><div class="row"><button class="btn danger sm" data-act="rv-rej-ok" data-v="${k}">Send back</button><button class="btn sm" data-act="rv-rej-cancel">Cancel</button></div>` :
+      `<div class="row"><button class="btn primary sm" data-act="rv-dok" data-v="${k}" ${can?'':'disabled'}>Approve this ${k==='form'?'form':k==='letter'?'letter':'note'}</button><button class="btn sm" data-act="rv-rej" data-v="${k}" ${vOk?'':'disabled'}>Send back with a reason</button></div>
+      ${!vOk?'<p class="xs muted">Values first: drafts unlock when every value is approved.</p>':''}`) : ''}
+  </div>`;
+}
+function reviewHtml(){
+  const r = S.rv;
+  const ex = explicitVals(); const exDone = ex.filter(v=>r.ok[v.id]).length;
+  const others = otherVals(); const lowOther = others.filter(v=>v.low && !r.opened[v.id]).length;
+  const canRest = lowOther===0 && r.spotRes!==null && !r.rest;
+  if(reviewComplete()){
+    const rej = ['form','letter','note'].filter(k=>r.drafts[k]==='rejected');
+    return `<div class="card"><div class="card-head"><h2>End-of-job review · complete</h2>${L('appr','the licensed consultant')}</div>
+    <div class="section stack">
+      <div class="notice ok"><span class="ic">✓</span><div><b>Approved at ${nowStamp()} by the licensed consultant.</b> The platform has now done each approved thing once:
+      <ul class="small" style="margin:6px 0 0 18px;padding:0"><li>12 values verified (${Object.keys(r.corr).length+(r.conflict==='b'?1:0)} changed by you)</li>
+      ${['form','letter','note'].filter(k=>r.drafts[k]==='approved').map(k=>`<li>${k==='form'?'Form section placed in the file':k==='letter'?'Letter placed in the file':'Internal note saved'}</li>`).join('')}
+      ${rej.length?`<li>Sent back to the AI teammate: ${rej.join(', ')}</li>`:''}</ul>
+      <p class="small" style="margin-top:6px">Next, when the ready-for-review rule is met, the readiness report arrives as before. Nothing was submitted to the government.</p></div></div>
+      <button class="btn sm" data-act="rv-reset" style="align-self:flex-start">Reset the review</button>
+    </div></div>`;
+  }
+  return `<div class="card">
+    <div class="card-head"><div><h2>End-of-job review · Case C-1</h2><div class="xs muted">One sitting. Nothing below takes effect until you approve it. ${tag('AIW-D100')}${tag('AIW-D101')}</div></div><span class="pill ai">Held during the job: 12 values, 3 drafts</span></div>
+    <div class="section"><h4>What happens if you approve</h4>
+      <ul class="small" style="margin:0;padding-left:18px"><li>12 values become verified on Client A's file</li><li>1 form section placed in the file</li><li>1 letter placed in the file</li><li>1 internal note saved</li><li>Nothing is sent to the client or the government</li></ul></div>
+    <div class="section"><h4>Already done automatically during the job</h4>
+      <div class="stack" style="gap:6px">
+        <div class="row small" style="gap:8px">${L('rules')} Document checklist built</div>
+        <div class="row small" style="gap:8px">${L('appr','the Owner (published template v2)')} Request for documents sent</div>
+        <div class="row small" style="gap:8px">${L('rules')} Task "Book biometrics appointment" created</div>
+        <div class="row small" style="gap:8px">${L('appr','the licensed consultant')} Passport rejection and due date, asked earlier</div>
+      </div></div>
+    <div class="section stack">
+      <h4>1 · Values first · ${exDone} of ${ex.length} checked one by one</h4>
+      <p class="small muted">Every value is provisional until you approve it, and sits beside the passage it came from. Identity details, consequential values and conflicts each need your own check. They can never go through "approve the rest". ${tag('AIW-D100 points 1–3')}</p>
+      ${ex.map(valueRow).join('')}
+    </div>
+    <div class="section stack">
+      <h4>2 · The remaining ${others.length} values</h4>
+      <p class="small muted">Open the uncertain one, and type the hidden one. <b>The hidden value is a spot check of your attention. It does not count as checking every value</b>; approving the rest is your statement that you looked at each. ${tag('AIW-D100 point 3')}</p>
+      ${r.spotRes==='nomatch'?'<div class="notice warn"><span class="ic">!</span><div class="small">What you typed does not match the source. Check the document before you approve the rest.</div></div>':''}
+      ${r.spotRes==='match'&&!r.rest?'<div class="notice ok"><span class="ic">✓</span><div class="small">Match recorded. What you typed is not stored.</div></div>':''}
+      ${otherRows()}
+      ${r.rest?'':`<div class="row"><button class="btn primary" data-act="rv-rest" ${canRest?'':'disabled'}>Approve the remaining ${others.length} values</button>${canRest?'':`<span class="small muted">${lowOther?'Open the uncertain value first. ':''}${r.spotRes===null?'Type the hidden value first.':''}</span>`}</div>`}
+    </div>
+    <div class="section stack">
+      <h4>3 · Drafts · approve each one</h4>
+      <p class="small muted">Each draft records which values it used. Correct a value or choose the other side of a conflict, and every draft that used it is refreshed before you can approve it. ${tag('AIW-D100 point 5')}${tag('M-3')}</p>
+      ${draftCard('form')}${draftCard('letter')}${draftCard('note')}
+    </div>
+  </div>`;
+}
 
 /* ======================================================================
-   SCREEN 6 — AI SWITCH LOCKED
+   SCREEN 3 — ASSESSMENT
    ====================================================================== */
-const PLAT = { conf:85, hidden:5, alarm:95, window:30, capMonth:300, capDay:3, capRun:10 };
-const FIRMVALS = [
-  {k:'conf', label:'Confidence level below which values are opened first', unit:'%', dir:'higher', group:'safe', tagid:'AW-1-33(a)'},
-  {k:'hidden', label:'Share of values hidden for the approver to fill (at least one)', unit:'%', dir:'higher', group:'safe', tagid:'AW-1-33(b)'},
-  {k:'alarm', label:'Agreement alarm level', unit:'%', dir:'lower', group:'safe', tagid:'AW-1-33(c)'},
-  {k:'window', label:'Agreement alarm time window', unit:' days', dir:null, group:'safe', tagid:'AW-1-33(c)'},
-  {k:'capMonth', label:'Spend cap · per firm per month (warning at 80 %, stop at 100 %)', unit:' CAD', dir:'lower', group:'cap', tagid:'AW-1-54'},
-  {k:'capDay', label:'Spend cap · per practice-answers user per day', unit:' CAD', dir:'lower', group:'cap', tagid:'AW-1-54'},
-  {k:'capRun', label:'Spend cap · per assistant run (a runaway run is parked)', unit:' CAD', dir:'lower', group:'cap', tagid:'AW-1-54'}
-];
-function validateFirm(){
-  const errs = {};
-  FIRMVALS.forEach(f=>{
-    if(!f.dir) return;
-    const raw = S.st.firm[f.k]; if(raw==='' || raw==null) return;
-    const v = parseFloat(raw);
-    if(!isFinite(v) || v<0){ errs[f.k]='Enter a number.'; return; }
-    if((f.k==='conf'||f.k==='hidden'||f.k==='alarm') && v>100){ errs[f.k]='Enter 100 or less.'; return; }
-    const p = PLAT[f.k];
-    if(f.dir==='higher' && v<p) errs[f.k]=`Refused: looser than Expat Ready's ${p}${f.unit}. You may only make it stricter (higher).`;
-    if(f.dir==='lower' && v>p) errs[f.k]=`Refused: looser than Expat Ready's ${p}${f.unit}. You may only make it stricter (lower).`;
-  });
-  return errs;
+const EV = {
+  ready:   {label:'Evidence ready'},
+  missing: {label:'Missing', name:'Missing evidence', why:'The language test result has not been given. Program A needs it.', fix:'Send the guided question "Language test" (published template) to the lead'},
+  stale:   {label:'Stale', name:'Stale evidence', why:'The lead\'s answer about work experience was given before pack v3 changed how work experience is counted.', fix:'Ask the lead to confirm their work experience again (published template)'},
+  conflict:{label:'Conflicting', name:'Conflicting evidence', why:'The web form says 3 years of skilled work; the lead\'s message of 2 Dec says 2 years.', fix:'Ask the lead which is right, or open the two answers and choose'}
+};
+function preChecks(){
+  const e = S.as.ev;
+  return [
+    ['Every input the programs need is present', e!=='missing'],
+    ['No input is older than the pack allows or out of date', e!=='stale'],
+    ['No two sources disagree on an input', e!=='conflict'],
+    ['The pack in use is the current published version (v'+S.as.pack+')', true]
+  ];
 }
-/* [key, product label shown on the screen (AW-1-65), note, internal name for the prototype's own tags only] */
-const ASSTS = [
-  ['case','AI assistance · assistant to the case officer','',"Case assistant"],
-  ['intake','AI assistance · assistant to the intake role','',"Intake assistant"],
-  ['billing','AI assistance · assistant to Billing / Finance','',"Billing assistant"],
-  ['firm','AI assistance · assistant to the Owner and the Case Manager','',"Firm assistant"],
-  ['expert','The AI summary line on practice answers','The answers themselves have no switch',"Practice expert"]
-];
-function screenSet(){
-  const st = S.st;
-  const recPill = st.record==='none' ? '<span class="pill">Not published</span>' : st.record==='published' ? '<span class="pill ok">Published</span>' : '<span class="pill danger">Withdrawn</span>';
-  let aiBox;
-  if(st.record==='none'){
-    aiBox = `<div class="locked-box"><div class="lock-ic">🔒</div><div class="stack" style="gap:6px">
-      <div class="row" style="gap:8px"><b>AI is locked</b><span class="pill">Locked</span>${tag('AG-16-35')}</div>
-      <p class="small">Locked because there is <b>no published AI provider record (Canada region, no training, no retention, a passed test call)</b>. ${tag('AW-1-52')}${tag('SA-8-49')}</p>
-      <p class="xs faint">While locked, no AI step runs. Practice answers and the deadline watch still work. Nothing here names a provider; the provider is replaceable. ${tag('AW1-D21')}${tag('AW-2-26')}</p>
-    </div><button class="switch" role="switch" aria-checked="false" disabled aria-label="AI switch (locked)" style="margin-left:auto"></button></div>`;
-  } else if(st.record==='withdrawn'){
-    aiBox = `<div class="notice paused"><span class="ic">ǁ</span><div class="small"><b>AI paused: Expat Ready withdrew the published provider record.</b> Reason code <code>PROVIDER_RECORD_WITHDRAWN</code>. Assistants and their waiting items are paused, not ended; on release, waiting items need a fresh approval. ${tag('AG-16-55')}${tag('SA-8-50')}${tag('AW-1-11(a)')}</div></div>`;
+function scAssess(){
+  const a = S.as;
+  const seg = Object.keys(EV).map(k=>`<button data-act="as-ev" data-v="${k}" aria-pressed="${a.ev===k}">${EV[k].label}</button>`).join('');
+  let body = '';
+  const inputs = `<div class="tw"><table><thead><tr><th>Input</th><th>Value</th><th>Where it came from</th></tr></thead><tbody>
+    <tr><td>Age</td><td>34</td><td class="small muted">Web form, 28 Nov · stated by the lead, not verified</td></tr>
+    <tr><td>Skilled work experience</td><td>${a.ev==='conflict'?'<span style="color:var(--danger);font-weight:600">3 years / 2 years</span>':'3 years'}</td><td class="small muted">${a.ev==='conflict'?'Web form 28 Nov · lead\'s message 2 Dec':a.ev==='stale'?'Web form, 14 months ago · stated by the lead, not verified':'Web form, 28 Nov · stated by the lead, not verified'}</td></tr>
+    <tr><td>Language test result</td><td>${a.ev==='missing'?'<span style="color:var(--danger);font-weight:600">Not given</span>':'CLB 8 equivalent'}</td><td class="small muted">${a.ev==='missing'?'—':'Guided question, 29 Nov · stated by the lead, not verified'}</td></tr>
+    <tr><td>Education</td><td>Bachelor's degree</td><td class="small muted">Web form, 28 Nov · stated by the lead, not verified</td></tr>
+  </tbody></table></div>`;
+  if(a.phase==='idle'){
+    body = `<div class="card"><div class="card-head"><h3>Lead L-1 · eligibility assessment</h3><span class="pill">Not run</span></div>
+      <div class="section">${inputs}</div>
+      <div class="section row"><button class="btn primary" data-act="as-start">Ask Intake AI to run the assessment</button><span class="small muted">It also starts by itself when a rule says the facts are ready. ${tag('AIW-D96')}</span></div></div>`;
+  } else if(a.phase==='stopped'){
+    const e = EV[a.ev];
+    body = `<div class="card"><div class="card-head"><h3>Lead L-1 · eligibility assessment</h3><span class="pill danger">Stopped</span></div>
+      <div class="section">${checksHtml()}</div>
+      <div class="section stack">
+        <div class="notice danger"><span class="ic">■</span><div><b>Stopped: ${e.name}.</b> ${e.why}<div class="small" style="margin-top:4px">Intake AI did not run the assessment and did not guess. This went to the intake person at once (always asked now, in every setting). ${tag('AIW-D98')}${tag('M-2')}</div></div></div>
+        ${labels(L('prep','Intake AI'))}
+        <p class="small"><b>Suggested next step:</b> ${e.fix}.</p>
+        <div class="row"><button class="btn primary" data-act="as-fix">Do the suggested step (simulated: the lead answers)</button><button class="btn" data-act="as-reset">Back</button></div>
+      </div></div>`;
+  } else if(a.phase==='proposed' || a.phase==='voided'){
+    body = `<div class="card"><div class="card-head"><h3>Needs you now · Run the eligibility assessment for Lead L-1</h3><span class="pill warn">Ask now</span></div>
+      <div class="section">${checksHtml()}</div>
+      <div class="section">${inputs}</div>
+      <div class="section stack">
+        ${labels(L('prep','Intake AI'))}
+        ${a.phase==='voided'?'<div class="notice warn"><span class="ic">!</span><div class="small"><b>Your earlier approval no longer applies.</b> Pack v4 was published after you looked, so this is a fresh preview on pack v4. Approve again to run it.</div></div>':''}
+        <p class="small">Approving runs the rules engine once on <b>this input snapshot and pack v${a.pack}</b>. If either changes before it runs, the approval no longer applies. ${tag('M-4')}${tag('AIW-D103')}</p>
+        <div class="row"><button class="btn primary" data-act="as-run">Approve and run on pack v${a.pack}</button><button class="btn" data-act="as-reset">Not now</button></div>
+        ${a.pack===3?`<div class="demo"><div class="lbl">Demo control</div><p class="small">Publish pack v4 before the run, to see the approval stop applying.</p><button class="btn sm" data-act="as-pack">Publish pack v4 (simulated)</button></div>`:''}
+      </div></div>`;
   } else {
-    const on = st.ai==='on';
-    aiBox = `<div class="stack">
-      <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:nowrap;gap:14px">
-        <div class="stack" style="gap:4px"><div class="row" style="gap:8px"><b>AI for Firm F</b><span class="pill ${on?'ok':''}">${on?'On':'Off · record published, not yet switched on'}</span>${tag('AG-16-35')}</div>
-        <p class="small muted">${on?'Switched on by the Owner with an audited acknowledgement. One switch for all four AI Doers.':'The record is published. The Owner switches AI on once, with an audited acknowledgement.'}</p></div>
-        <button class="switch" role="switch" aria-checked="${on}" data-act="s-ai" ${(!on && !st.ack)?'disabled':''} aria-label="AI switch"></button>
+    body = `<div class="card"><div class="card-head"><h3>Lead L-1 · eligibility result</h3><span class="pill ok">Saved</span></div>
+      <div class="section stack">
+        <div class="row" style="gap:8px"><span class="cl cl-r">Run by Intake AI for the intake person; calculated by the rules, pack v${a.pack}</span>${L('appr','the intake person (to run it)')}</div>
+        <div class="tw"><table><thead><tr><th>Program (made up)</th><th>Result</th><th>Why, by rule</th></tr></thead><tbody>
+          <tr><td>Program A</td><td><b>Meets the requirements</b></td><td class="small">Work experience 3 years ≥ 1 year (rule A-2); language CLB 8 ≥ CLB 7 (rule A-4)</td></tr>
+          <tr><td>Program B</td><td><b>Does not meet</b></td><td class="small">Needs a job offer (rule B-1); none stated</td></tr>
+          <tr><td>Points total</td><td><b>412</b></td><td class="small">Points grid in pack v${a.pack} (all values made up)</td></tr>
+        </tbody></table></div>
+        <p class="xs muted">Based on facts stated by the lead, not verified. Saved and stamped with the inputs, pack v${a.pack} and who ran it. Same inputs and pack always give the same result.</p>
       </div>
-      ${on?'':`<label class="check" style="cursor:pointer"><input type="checkbox" data-act="s-ack" ${st.ack?'checked':''} style="margin-top:3px"> <span class="small">I acknowledge that firm data is processed by the published AI provider in Canada, under no-training and no-retention terms. ${ill('(wording illustrative)')}</span></label>`}
+      <div class="section stack">
+        <h4>Explanation for staff</h4>
+        ${a.explained ? `
+          ${labels(L('prep','Intake AI'), a.reviewed?L('appr','the licensed consultant'):L('draft'))}
+          <div class="ai-block small">Lead L-1 meets Program A: three years of skilled work is above the one-year minimum in rule A-2, and the stated language level (CLB 8) is above the CLB 7 minimum in rule A-4. Program B is not met because rule B-1 needs a job offer and the lead has not stated one. The points total of 412 comes from the pack v${a.pack} points grid.</div>
+          <p class="xs muted"><b>Sources:</b> saved assessment of today · pack v${a.pack} rules A-2, A-4, B-1 and the points grid · lead's web form (28 Nov) and guided answer (29 Nov). Every number above was checked by a rule against the saved result. The AI explains the rules' result; it does not check whether a rule itself is right.</p>
+          ${a.reviewed?'':`<div class="row"><button class="btn primary sm" data-act="as-review">Approve explanation as the licensed consultant</button></div>`}
+        ` : `<div class="row"><button class="btn sm" data-act="as-explain">Ask Intake AI to explain it</button></div>`}
+      </div>
+      <div class="section stack">
+        <div class="notice info"><span class="ic">i</span><div class="small"><b>Telling the lead.</b> Only the licensed consultant shares a result, through the audited share. Intake AI never tells a lead their result and never puts it in a message. ${tag('AIW-D41')}${tag('AIW-D96')}</div></div>
+        <button class="btn sm" data-act="as-reset" style="align-self:flex-start">Start again</button>
+      </div></div>`;
+  }
+  return head('Screen 3 of 6','Run an assessment',`Intake AI may start the eligibility assessment. The rules engine calculates every result. Before running, the AI checks the evidence and stops if anything is missing, stale or conflicting. ${tag('AIW-D96')}${tag('AIW-D98')}`) + `
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Lead L-1 (made up) filled in Firm F's web form. Facts come from the lead and are not verified yet. Programs, rules, points and pack versions are all made up.</div></div>
+  <div class="demo"><div class="lbl">Demo control · state of the lead's evidence</div><div class="seg" role="group" aria-label="Evidence state" style="margin-top:6px">${seg}</div></div>
+  ${body}
+  ${foot('AIW-D96 (AI may start it; rules calculate; label "Run by … calculated by the rules, pack v[n]"), AIW-D98 and its note (stop on missing, stale or conflicting evidence; explanation with sources and pack version; licensed review; no claim to detect wrong rules), AIW-D41 (only the consultant tells the lead), AIW-D92; Lead rulings G-2 (lead facts labelled not verified), M-2 (pre-run check), M-4 (approval bound to the input snapshot and pack version).')}`;
+}
+function checksHtml(){
+  return `<h4>Evidence check before running ${tag('M-2')}</h4><div class="stack" style="gap:6px">${preChecks().map(c=>`<div class="check ${c[1]?'done':''}"><span class="box" style="${c[1]?'':'border-color:var(--danger);color:var(--danger)'}">${c[1]?'✓':'×'}</span><span class="t">${esc(c[0])}</span></div>`).join('')}</div><div style="margin-top:8px">${labels(L('rules'))}</div>`;
+}
+
+/* ======================================================================
+   SCREEN 4 — BILLING
+   ====================================================================== */
+function invTotals(){
+  const rate = S.bl.changed ? 15 : 13;
+  const fee = 1500, disb = 45, tax = Math.round(fee*rate)/100;
+  return {rate, fee, disb, tax, total: fee+disb+tax};
+}
+const money = n => 'CAD ' + n.toLocaleString('en-CA',{minimumFractionDigits:2, maximumFractionDigits:2});
+function scBill(){
+  const b = S.bl, t = invTotals();
+  const preview = `<div class="tw"><table><thead><tr><th>Line</th><th>Qty</th><th>Unit price</th><th>Tax</th><th>Funds</th><th style="text-align:right">Amount</th></tr></thead><tbody>
+    <tr><td>Professional fee · milestone 2 "File prepared" (fee schedule, Case C-1)</td><td>1</td><td>${money(t.fee)}</td><td>${t.rate}%${b.changed?' <span class="pill warn">changed</span>':''}</td><td>Operating</td><td style="text-align:right">${money(t.fee)}</td></tr>
+    <tr><td>Disbursement · courier (receipt R-7)</td><td>1</td><td>${money(t.disb)}</td><td>none</td><td>Operating</td><td style="text-align:right">${money(t.disb)}</td></tr>
+    <tr><td colspan="5" style="text-align:right" class="muted">Tax</td><td style="text-align:right">${money(t.tax)}</td></tr>
+    <tr><td colspan="5" style="text-align:right"><b>Total</b></td><td style="text-align:right"><b>${money(t.total)}</b></td></tr>
+  </tbody></table></div>`;
+  let inv;
+  if(b.inv==='approved'){
+    inv = `<div class="section stack"><div class="notice ok"><span class="ic">✓</span><div><b>Created and issued by the platform at ${b.invAt}</b>, exactly as approved. Invoice number INV-0042 (made up) was assigned at issue.</div></div>${labels(L('rules'), L('prep','Billing AI'), L('appr','the bookkeeper'))}</div>`;
+  } else if(b.inv==='rejected'){
+    inv = `<div class="section stack"><div class="notice danger"><span class="ic">×</span><div class="small"><b>Rejected by the bookkeeper.</b> Nothing was created.</div></div><button class="btn sm" data-act="bl-reset" style="align-self:flex-start">Reset</button></div>`;
+  } else {
+    inv = `<div class="section stack">
+      ${b.inv==='voided'?'<div class="notice warn"><span class="ic">!</span><div class="small"><b>The preview changed, so your approval no longer applies.</b> The tax rate in the pack changed before the invoice was issued. This is a fresh preview; nothing was created. Approve again if it is right.</div></div>':''}
+      <div class="row" style="justify-content:space-between"><b>Bill to:</b><span>Client A · CAD · due in 30 days</span></div>
+      ${preview}
+      <p class="small"><b>Approving creates and issues this invoice exactly as shown.</b> Your approval is tied to: who is billed, currency, every line, tax and total, funds per line, and "create and issue". If any of these changes before it runs, it does not run. The number is assigned at issue, so it is not part of the preview. ${tag('AIW-D103')}${tag('M-4')}${tag('G-7')}</p>
+      <div class="row"><button class="btn primary" data-act="bl-inv-ok">Approve: create and issue</button><button class="btn danger" data-act="bl-inv-rej">Reject</button></div>
+      ${b.inv==='pending'&&!b.changed?`<div class="demo"><div class="lbl">Demo control</div><p class="small">Change the tax rate in the pack after you look but before it runs.</p><button class="btn sm" data-act="bl-change">Change the tax rate (simulated)</button></div>`:''}
     </div>`;
   }
-  const aiOn = st.record==='published' && st.ai==='on';
-  const swRows = ASSTS.map(a=>`<div class="setrow"><div><div class="t">${esc(a[1])}</div><div class="d">${a[2]?esc(a[2])+' · ':''}off by default ${tag(a[0]==='expert'?'AG-16-57 expertSummaryLine':'AG-16-57')}${tag('internal name, prototype only: '+a[3])}</div>
-      ${st.sw[a[0]] && !aiOn ? '<div class="xs" style="color:var(--warn);margin-top:3px">On, but no effect while AI is off or locked.</div>' : ''}</div>
-      <button class="switch" role="switch" aria-checked="${st.sw[a[0]]}" data-act="s-sw" data-v="${a[0]}" aria-label="${esc(a[1])}"></button></div>`).join('');
-  const valRow = f => {
-    const p = PLAT[f.k];
-    const editable = !!f.dir;
-    const err = st.errors[f.k];
-    return `<tr><td class="small" style="min-width:200px">${esc(f.label)} ${tag(f.tagid)}</td>
-      <td class="small"><b>${p}${f.unit}</b> <div class="illus">illustrative</div></td>
-      <td>${editable ? `<input type="number" step="any" data-firm="${f.k}" value="${esc(st.firm[f.k])}" placeholder="none set" aria-label="Firm value for ${esc(f.label)}">${err?`<div class="err">${esc(err)}</div>`:''}` : '<span class="small muted">No firm value: which direction is stricter is not settled.</span>'}</td>
-      <td class="small muted">${f.dir==='higher'?'Higher':f.dir==='lower'?'Lower':'—'}</td></tr>`;
-  };
-  return `
-  <div class="page-head">
-    <div class="eyebrow">Screen 6 of 6</div>
-    <h1>Firm settings · AI</h1>
-    <p class="lead">AI stays locked for every firm until Expat Ready publishes a provider record that processes in Canada, with no training, no retention and a passed test call. Each assistant then has its own switch, off by default. ${tag('AW-1-52')}${tag('AW-1-125')}</p>
+  let trust = '';
+  if(b.inv==='approved'){
+    if(b.trust==='none') b.trust='pending';
+    if(b.trust==='approved'){
+      trust = `<div class="section stack"><div class="notice ok"><span class="ic">✓</span><div class="small"><b>Trust entry recorded at ${b.trustAt}</b>, exactly as approved. The platform recorded it; it did not move any money. The Owner makes the bank transfer.</div></div>${labels(L('rules'), L('prep','Billing AI'), L('appr','the Owner (trust key holder)'))}</div>`;
+    } else if(b.trust==='rejected'){
+      trust = `<div class="section"><div class="notice danger"><span class="ic">×</span><div class="small"><b>Rejected by the Owner.</b> Nothing was recorded. The invoice stays issued and unpaid.</div></div></div>`;
+    } else {
+      trust = `<div class="section stack">
+        ${labels(L('rules'), L('prep','Billing AI'))}
+        <dl class="kv"><dt>Client</dt><dd>Client A</dd><dt>Amount</dt><dd><b>${money(t.total)}</b></dd><dt>Direction</dt><dd>Out of trust, to pay invoice INV-0042</dd><dt>Linked to</dt><dd>Invoice INV-0042 · retainer deposit held in trust for Case C-1</dd></dl>
+        <p class="small">Your approval is tied to client, amount, direction and the linked invoice. Approving records the entry; <b>the platform never moves money</b>. ${tag('FD-12')}${tag('FD-17')}</p>
+        <div class="row"><button class="btn primary" data-act="bl-tr-ok">Approve as the Owner (trust key holder)</button><button class="btn danger" data-act="bl-tr-rej">Reject</button></div>
+        <p class="xs faint">Open team question: the team's billing rules keep trust permissions with people only. Whether a proposed trust entry may be prepared for a key holder to approve is asked of the team (autonomy model E16).</p>
+      </div>`;
+    }
+  }
+  return head('Screen 4 of 6','Prepare billing',`Billing AI prepares an invoice and a proposed trust entry through the product's own screens. The rules calculate every amount. An authorised person approves each one against an exact preview. Each is asked on its own, never in an "approve all". ${tag('AIW-D103')}`) + `
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Case C-1 reached milestone 2. The unbilled work list (rules) found one fee line and one disbursement. Amounts, the tax rate and invoice numbers are made up.</div></div>
+  <div class="card"><div class="card-head"><h3>Needs you now · Invoice for Client A</h3>${b.inv==='approved'?'<span class="pill ok">Issued</span>':'<span class="pill warn">Ask now</span>'}</div>
+    ${b.inv==='approved'?'':`<div class="section">${labels(L('rules'), L('prep','Billing AI'))}</div>`}
+    ${inv}</div>
+  ${b.inv==='approved'?`<div class="card"><div class="card-head"><h3>Needs you now · Proposed trust entry</h3>${b.trust==='approved'?'<span class="pill ok">Recorded</span>':'<span class="pill warn">Ask now</span>'}</div>${trust}</div>`:''}
+  ${foot('AIW-D103 (prepare invoices and proposed trust entries; rules calculate; approval before execution, bound to the exact preview; no money moved), FD-12, FD-17; Lead rulings G-7 (one approval covers create and issue only when the preview shows the issued invoice), M-4 (named bound fields); autonomy model row 12 (never Auto, always asked one by one).')}`;
+}
+
+/* ======================================================================
+   SCREEN 5 — SETTINGS
+   ====================================================================== */
+const ROLES = ['Owner','Admin','Case Manager','Case Officer','Billing / Finance','Read-only'];
+/* rows from the autonomy model (Proposal, rev 5). each: base per preset, options, per-role availability */
+const ROWS = [
+  {n:2, a:'Create a task or reminder by a rule; assign work', each:'Auto', cp:'Auto', opts:['Auto','Ask now','At checkpoint','Off'], roles:[1,1,1,1,1,0]},
+  {n:3, a:'Routine internal work: draft internal notes, AI-proposed tasks, filing labels', each:'Ask now', cp:'At checkpoint', opts:['Ask now','At checkpoint','Off'], earn:true, roles:[1,1,1,1,1,0]},
+  {n:4, a:'Start the eligibility assessment (the rules calculate)', each:'Ask now', cp:'Ask now', opts:['Ask now','At checkpoint','Off'], roles:[1,1,1,1,0,0]},
+  {n:5, a:'Client message from a published template, chosen by a rule', each:'Auto', cp:'Auto', opts:['Auto','Ask now','Off'], roles:[1,1,1,1,1,0]},
+  {n:6, a:'AI-written message to a client or lead', each:'Ask now', cp:'Ask now', opts:['Ask now','At checkpoint','Off'], floor:'Never automatic (locked)', roles:[1,1,1,1,1,0]},
+  {n:7, a:'Government form draft', each:'Ask now', cp:'At checkpoint', opts:['Ask now','At checkpoint','Off'], floor:'Always a person\'s approval', roles:[1,0,1,1,0,0]},
+  {n:8, a:'Application letter drafted by AI', each:'Ask now', cp:'At checkpoint', opts:['Ask now','At checkpoint','Off'], floor:'Licensed review', roles:[1,0,1,1,0,0]},
+  {n:9, a:'Anything linked to a government deadline', lock:'Ask now (locked)'},
+  {n:10,a:'Stop on missing, stale or conflicting evidence', lock:'Ask now (locked)'},
+  {n:11,a:'Values read from uploads (while a job runs on the case)', each:'Ask now', cp:'At checkpoint', opts:['Ask now','At checkpoint'], floor:'Always a person\'s check', roles:[1,1,1,1,-1,-1]},
+  {n:12,a:'Invoice or proposed trust entry', each:'Ask now', cp:'Ask now', opts:['Ask now','Off'], floor:'Never Auto; exact preview', roles:[1,1,1,0,1,0]},
+  {n:13,a:'Export, deletion request or settings change', each:'Ask now', cp:'Ask now', opts:['Ask now','Off'], floor:'Never Auto; exact preview', roles:[1,1,0,0,0,0]},
+  {n:14,a:'Signature workflow (the signer signs)', each:'Ask now', cp:'Ask now', opts:['Ask now','Off'], floor:'Never Auto; exact preview', roles:[1,0,1,1,0,0]}
+];
+function cellVal(r, ri){
+  const key = r.n+'-'+ri;
+  if(S.set.over[key]) return S.set.over[key];
+  if(r.roles[ri]===0) return 'Off';
+  let v = S.set.preset==='each' ? r.each : r.cp;
+  if(r.earn && S.set.earned) v = 'Earned Auto';
+  return v;
+}
+function scSet(){
+  const st = S.set;
+  const grid = `<div class="tw"><table class="grid-t"><thead><tr><th>Action</th>${ROLES.map(r=>`<th>${r}</th>`).join('')}</tr></thead><tbody>
+    ${ROWS.map(r=>{
+      if(r.lock) return `<tr><td>${esc(r.a)}</td>${ROLES.map(()=>`<td class="lockcell">🔒 ${r.lock}</td>`).join('')}</tr>`;
+      return `<tr><td>${esc(r.a)}${r.floor?`<div class="xs faint">🔒 ${esc(r.floor)}</div>`:''}</td>${ROLES.map((role,ri)=>{
+        if(r.roles[ri]===-1) return `<td class="lockcell">Not applicable</td>`;
+        if(ROLES[ri]==='Read-only') return `<td class="lockcell">Off</td>`;
+        const v = cellVal(r,ri);
+        const opts = r.opts.slice(); if(r.earn && st.earned) opts.push('Earned Auto');
+        return `<td><select data-act="grid" data-k="${r.n}-${ri}" aria-label="${esc(r.a)} for ${role}">${opts.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('')}</select></td>`;
+      }).join('')}</tr>`;
+    }).join('')}
+  </tbody></table></div>`;
+  const custom = Object.keys(st.over).length;
+  return head('Screen 5 of 6','How much your AI team does on its own',`Choose a preset. Fine-tune under "Customise". Safety floors stay locked whatever you choose, and approval at a checkpoint always comes before anything takes effect. ${tag('AIW-D101')}`) + `
+  <div class="card card-pad stack">
+    <div class="preset" role="group" aria-label="Review preset">
+      <button data-act="preset" data-v="each" aria-pressed="${st.preset==='each'}"><b>Review each step</b><span>Default. The AI asks you about each item as it comes up.</span></button>
+      <button data-act="preset" data-v="cp" aria-pressed="${st.preset==='cp'}"><b>Review at checkpoints</b><span>The AI works the whole job and brings the items that can wait to one review at the end.</span></button>
+    </div>
+    ${custom?`<p class="small"><span class="pill accent">Customised</span> ${custom} cell${custom===1?'':'s'} changed from the preset. <button class="btn ghost sm" data-act="grid-reset">Undo changes</button></p>`:''}
   </div>
-  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Signed in as <b>the Owner of Firm F</b>, before Expat Ready has published its AI provider record. Use the demo control to publish it. Values are illustrative: the real values are set by the team before launch. Fictional.</div></div>
-  <div class="demo">
-    <div class="lbl" style="font-size:12px;font-weight:700;margin-bottom:8px">DEMO CONTROL · Expat Ready side · AI provider record ${recPill} ${tag('SA-8-49')}${tag('SA-8-50')}</div>
-    <div class="row" style="justify-content:space-between">
-      <div class="seg" role="group" aria-label="Provider record state">
-        <button data-act="s-rec" data-v="none" aria-pressed="${st.record==='none'}">Not published</button>
-        <button data-act="s-rec" data-v="published" aria-pressed="${st.record==='published'}">Published</button>
-        <button data-act="s-rec" data-v="withdrawn" aria-pressed="${st.record==='withdrawn'}">Withdrawn</button>
+  <div class="exlist">
+    <div class="exbox"><h4>Runs automatically in both presets</h4><ul>
+      <li>Tasks and reminders a rule creates for you</li><li>A missing-document reminder from your firm's published template</li><li>Guided intake questions and approved templates to a new lead</li><li>Reading documents and checking them against the pack</li></ul></div>
+    <div class="exbox"><h4>${st.preset==='cp'?'Waits for the end-of-job review (your preset)':'Waits for the end-of-job review under "Review at checkpoints"'}</h4><ul>
+      <li>Values read from a clean upload</li><li>Form drafts</li><li>A letter of explanation</li><li>Internal notes, AI-proposed tasks and filing labels, until they earn Auto</li></ul></div>
+    <div class="exbox"><h4>Always asks you at once, whatever you choose</h4><ul>
+      <li>Any AI-written message to a client or lead</li><li>An invoice, proposed trust entry, export, deletion request, settings change or signature workflow</li><li>Anything linked to a government deadline</li><li>An upload the client must re-send</li><li>A stop because evidence is missing, stale or conflicting</li></ul></div>
+    <div class="exbox"><h4>Never done by the AI</h4><ul>
+      <li>Advice, or telling a client their eligibility result</li><li>Signing</li><li>Moving money</li><li>Giving itself permissions or changing these settings</li><li>Submitting to the government</li></ul></div>
+  </div>
+  <div class="card">
+    <button class="item-top" data-act="grid-open" aria-expanded="${st.open}"><div><div class="item-title">Customise</div><div class="item-meta">Role-by-action grid. An AI teammate follows the column of the person it works for.</div></div><span class="chev" style="${st.open?'transform:rotate(90deg)':''}">›</span></button>
+    ${st.open?`<div class="section stack">
+      <div class="notice info"><span class="ic">i</span><div class="small"><b>This grid never grants access.</b> It only sets how much the AI does on its own within what the person may already do. If the person lacks a permission, their AI teammate cannot do that action at all. ${tag('AIW-D101 point 4')}${tag('AIW-D13')}</div></div>
+      ${grid}
+      <p class="xs faint">Cells and wording follow the Lead's proposal (autonomy model rev 5, rows 2–14). Storing and enforcing the grid is the team's to build.</p>
+    </div>`:''}
+  </div>
+  <div class="card">
+    <div class="card-head"><h3>Earned Auto for routine internal work</h3>${st.earned?'<span class="pill ok">On for filing labels, internal notes, ordinary tasks</span>':'<span class="pill">Not earned</span>'}</div>
+    <div class="section stack">
+      <p class="small muted">Draft internal notes, ordinary AI-proposed tasks and filing labels may run without a click once all three conditions are met. Never anything sent outside the firm, consequential, or changing a verified fact. ${tag('AIW-D104')}</p>
+      <div class="check"><span class="box"></span><span class="t">The skill passed its test set <span class="faint">· not run: this is a prototype</span></span></div>
+      <div class="check"><span class="box"></span><span class="t">Checked examples from real use support it (an unchanged-approval rate alone is not enough) <span class="faint">· none yet</span></span></div>
+      <div class="check ${st.earned?'done':''}"><span class="box">${st.earned?'✓':''}</span><span class="t">The Owner approves, with the evidence recorded</span></div>
+      <p class="small muted">Afterwards, sample checks continue at a rate set from the evidence. It returns to approval when quality falls, and is retested after any material change.</p>
+      <div class="demo"><div class="lbl">Demo control</div><p class="small">In the product the Owner's button stays off until the first two conditions are met. Here you can pretend they are, to see the grid change.</p>
+        <button class="btn sm" data-act="earn">${st.earned?'Withdraw earned Auto':'Pretend the conditions are met, and approve as the Owner'}</button></div>
+    </div>
+  </div>
+  ${foot('AIW-D101 (two presets, "Review each step" default, grid under "Customise", floors locked, never grants access, approval before effect, examples), AIW-D104 (earned Auto for routine reversible internal work, its conditions, drop back and retest), AIW-D105 (template sends automatic), AIW-D102 (AI-written replies never automatic), AIW-D103 (rows 12–14 never Auto).')}`;
+}
+
+/* ======================================================================
+   SCREEN 6 — INTAKE CHAT AT LAUNCH
+   ====================================================================== */
+const TPL = {
+  welcome:{name:'Welcome', v:2, text:'Hello, and thank you for contacting Firm F. Choose a topic below, or ask us something.'},
+  book:{name:'Book a consultation', v:3, text:'You can book a 30-minute consultation with a licensed consultant here: [booking link]. The first available times are shown when you open it.'},
+  docs:{name:'Documents overview', v:1, text:'Most applications need identity, education, work and language documents. After you sign up, your file shows the exact list for your situation.'},
+  fees:{name:'Fees', v:2, text:'Our consultation fee and service fees are listed here: [fees page]. We confirm fees in writing before any work starts.'},
+  elig:{name:'Eligibility questions', v:1, text:'Only a licensed consultant can talk with you about eligibility, in a consultation. To prepare, we will ask you a few short questions.'},
+  handoff:{name:'Hand-off to a person', v:1, text:'Thank you. A member of our team will reply to you here.'}
+};
+const GUIDED = [
+  {q:'Which country do you live in now?', a:['Country X','Country Y','Other']},
+  {q:'How many years of skilled work experience do you have?', a:['Less than 1','1 to 2','3 or more']},
+  {q:'Have you taken a language test?', a:['Yes','Not yet']}
+];
+function inbInit(){ if(!S.inb.msgs) S.inb.msgs = [{from:'firm', tpl:'welcome'}]; }
+function bubble(m){
+  if(m.from==='lead') return `<div class="bub lead">${esc(m.text)}</div>`;
+  if(m.tpl){ const t = TPL[m.tpl];
+    return `<div class="bub firm"><div>${esc(t.text)}</div>${labels(L('appr',`the Owner (published template "${t.name}" v${t.v})`))}<div class="meta">Chosen by a rule: ${esc(m.rule||'start of chat')}</div></div>`; }
+  if(m.guided!=null){ const g = GUIDED[m.guided];
+    return `<div class="bub firm"><div>${esc(g.q)}</div>${labels(L('appr','the Owner (published guided intake v1)'))}<div class="meta">Guided intake question ${m.guided+1} of ${GUIDED.length} · chosen by a rule</div></div>`; }
+  if(m.ai) return `<div class="bub firm"><div>${esc(m.text)}</div>${labels(L('prep','Intake AI'), L('appr','the licensed consultant'))}<div class="meta">AI-written, approved before sending</div></div>`;
+  return '';
+}
+function scIntake(){
+  inbInit();
+  const n = S.inb;
+  const last = n.msgs[n.msgs.length-1];
+  let chips = '';
+  if(last && last.guided!=null){
+    chips = GUIDED[last.guided].a.map(a=>`<button data-act="in-g" data-v="${esc(a)}">${esc(a)}</button>`).join('');
+  } else {
+    chips = [['book','Book a consultation'],['docs','What documents will I need?'],['fees','Fees'],['elig','Am I eligible?']].map(c=>`<button data-act="in-menu" data-v="${c[0]}">${c[1]}</button>`).join('');
+  }
+  const staff = (()=>{
+    let item = '';
+    if(n.draft==='pending'){
+      item = `<div class="card"><div class="card-head"><h3>Needs you · Reply to Lead L-2</h3><span class="pill warn">Ask now</span></div>
+        <div class="section stack">
+          <div class="passage"><small>Lead's question in the chat</small>${esc(n.q)}</div>
+          ${labels(L('draft'), L('prep','Intake AI'))}
+          ${n.edit?`<textarea id="in-edit">${esc(n.text)}</textarea>`:`<div class="ai-block small">${esc(n.text)}</div>`}
+          <p class="xs muted">No published template fits this question, so a rule handed it to a person and Intake AI drafted a reply. It is not sent until a licensed person approves it. It contains no eligibility content.</p>
+          <div class="row">${n.edit?`<button class="btn primary sm" data-act="in-edit-save">Save edit</button>`:`<button class="btn primary sm" data-act="in-ap">Approve and send as the licensed consultant</button><button class="btn sm" data-act="in-edit">Edit</button><button class="btn danger sm" data-act="in-rej">Reject</button>`}</div>
+        </div></div>`;
+    } else if(n.draft==='rejected'){
+      item = `<div class="notice danger"><span class="ic">×</span><div class="small">Draft rejected. Nothing was sent. The hand-off task stays open for a person to reply.</div></div>`;
+    }
+    const done = n.msgs.filter(m=>m.tpl||m.guided!=null).length;
+    return `<div class="stack">
+      <div class="card card-pad stack"><h3 style="font-size:15px">Staff view · Intake AI on Lead L-2</h3>
+        <div class="counts"><div><b>${done}</b><span class="muted">approved messages sent automatically</span></div><div><b>${n.draft==='pending'?1:0}</b><span class="muted">AI-written reply waiting</span></div></div>
+        <p class="small muted">Templates and guided questions run on their own: the Owner approved each published template and its automatic use. Which answer is shown is picked by a rule (the menu, the guided flow), never by the AI. ${tag('AIW-D102')}${tag('AIW-D105')}</p>
+        ${n.guided>=GUIDED.length?`<div class="notice ok"><span class="ic">✓</span><div class="small">Guided intake complete. The answers are stored as stated by the lead, not verified. Intake AI may now start the assessment (screen 3).</div></div>`:''}
       </div>
-      ${st.record==='published'?'<span class="small muted">Region: Canada · no training · no retention · test call passed from that region · provider: [name on the record] '+ill('(placeholder)')+'</span>':''}
+      ${item}
+      <div class="card card-pad stack"><div class="row" style="justify-content:space-between"><b class="small">Conversational AI for intake, FAQs and booking</b><button class="switch" role="switch" aria-checked="false" disabled aria-label="Conversational AI (not available)"></button></div>
+        <p class="xs muted">Designed for later. Off until a separate decision with the team. Any AI-written reply sent without approval needs that decision too. ${tag('AIW-D102')}</p></div>
+    </div>`;
+  })();
+  return head('Screen 6 of 6','Intake chat at launch',`A chat on Firm F's website. Approved templates and guided intake questions run automatically. Answers are picked by a rule. Any newly AI-written reply waits for a person's approval before it is sent. ${tag('AIW-D102')}`) + `
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Lead L-2 (made up) opens the chat on Firm F's website. Click the topics, answer the guided questions, or type your own question to see the hand-off.</div></div>
+  <div class="chatwrap">
+    <div class="chat"><div class="chat-head"><span>Firm F · chat</span><span class="xs muted">What the lead sees</span></div>
+      <div class="chat-body" id="chat-body">${n.msgs.map(bubble).join('')}</div>
+      <div class="chat-foot"><div class="chips">${chips}</div>
+        <div class="row" style="gap:6px"><input type="text" id="in-q" placeholder="Ask something else…" style="flex:1;min-width:0" aria-label="Type a question"><button class="btn sm" data-act="in-ask">Send</button></div></div>
     </div>
+    ${staff}
   </div>
-  <div class="card"><div class="card-head"><h2>AI</h2>${tag('AG-16-35')}</div><div class="card-pad">${aiBox}</div></div>
-  <div class="card">
-    <div class="card-head"><h2>Advanced · AI assistants</h2><span class="small muted">The Owner sets these; every change is audited ${tag('AG-16-29')}</span></div>
-    ${swRows}
-    <div class="setrow"><div class="d">Switching an assistant off pauses its work (<code>ASSISTANT_SWITCH_OFF</code>); it never ends anyone's delegation. No switch turns an AI Doer on or off. Assistants are firm settings inside the one AI extra, not plan features. ${tag('AW-1-11')}${tag('AW-1-57')}</div></div>
-  </div>
-  <div class="card">
-    <div class="card-head"><h2>Safeguards and spend caps</h2><span class="small muted">Editable by the Owner and the Admin · audited ${tag('agent/settings:edit')}</span></div>
-    <div class="section">
-      <div class="notice info"><span class="ic">i</span><div class="small"><b>Founder safeguards · approve-all part: On.</b> Expat Ready's values are read-only here. Your firm may set stricter values, never looser. Only Expat Ready's Platform Owner can switch this part off, recording the founder's decision. ${tag('SA-12-33(a)')}${tag('AW1-D25')}</div></div>
-    </div>
-    <div class="section">
-      <h4>Approve-all safeguards ${tag('AW-1-33')}</h4>
-      <div class="tw"><table class="vals"><thead><tr><th>Setting</th><th>Expat Ready</th><th>Your firm (stricter only)</th><th>Stricter is</th></tr></thead>
-      <tbody>${FIRMVALS.filter(f=>f.group==='safe').map(valRow).join('')}</tbody></table></div>
-    </div>
-    <div class="section">
-      <h4>Spend caps · a cost control, not a founder safeguard ${tag('AW-1-54')}</h4>
-      <div class="tw"><table class="vals"><thead><tr><th>Cap</th><th>Expat Ready</th><th>Your firm (lower only)</th><th>Stricter is</th></tr></thead>
-      <tbody>${FIRMVALS.filter(f=>f.group==='cap').map(valRow).join('')}</tbody></table></div>
-      <p class="xs faint" style="margin-top:8px">Reaching a cap stops new model calls only; items already waiting stay approvable. Assistants use the stricter of the two values. ${tag('AW-1-20(c)')}</p>
-    </div>
-    <div class="section row" style="justify-content:space-between">
-      <span class="small ${st.saved==='ok'?'':'muted'}" style="${st.saved==='ok'?'color:var(--ok)':st.saved==='err'?'color:var(--danger)':''}">${st.saved==='ok'?'Saved and audited.':st.saved==='err'?'Not saved: fix the refused values.':'Changes are checked on save.'}</span>
-      <button class="btn primary" data-act="s-save">Save firm values</button>
-    </div>
-  </div>
-  ${foot('AW-1-11, AW-1-20(c), AW-1-33, AW-1-52, AW-1-53, AW-1-54, AW-1-57, AW-1-125; AW1-D21, AW1-D25, AW1-D34, AW1-D37; AG-16-35 (CN-AG-16 change 1: locked until a published record); AG-16-55 (CN-AG-16 change 2); AG-16-57 (CN-AG-16 change 4: per-assistant switches off by default, platform values read-only, firm\'s stricter values); SA-8-49, SA-8-50 (CN-SA-08 change 2); SA-12-33 (CN-SA-12 change 3); AW-2-25, AW-2-26; US-38, US-40, US-106, US-111.', 'Every number on this screen is illustrative: SA-12-33 leaves the values to the team before the first deployment, and AW-01 restates none.')}`;
+  ${foot('AIW-D102 (approved templates and guided intake automatic; chat serves approved content; AI-written replies need approval; future conversational AI off until a separate decision), AIW-D105 (firm-approved template use counts as approval), AIW-D41 (eligibility only from the consultant), AIW-D92; autonomy model c.2 (answer chosen by a rule, never a model).')}`;
 }
 
 /* ======================================================================
    ABOUT
    ====================================================================== */
-function screenAbout(){
-  return `
-  <div class="page-head">
-    <div class="eyebrow">About</div>
-    <h1>About this prototype</h1>
-  </div>
+function scAbout(){
+  return head('About','About this prototype') + `
   <div class="card card-pad about">
-    <p><b>What it is.</b> A clickable walk-through of six moments in Expat Ready's firm AI assistants, for the founder and the product team. Each screen shows one rule working: a person approves, an assistant works for a named person, and every step is recorded.</p>
-    <p><b>What it is not.</b> Illustrative only. It is <b>not</b> the product's design system, not a screen specification, and not a promise of layout or wording. Where the requirements leave a detail open, the screen keeps it generic or marks it <span class="illus">illustrative</span>. All names, dates, amounts and values are fictional. No provider is named.</p>
-    <p><b>Built from.</b> AW-01 Firm AI assistants v0.5 and AW-02 Platform AI assistants v0.6 (both passed; aligned after review S3e to AW-01 v0.6 and AW-02 v0.7), with the change notes they cite and the worked examples in the behaviour documents, on <b>11 October 2026</b>.</p>
+    <p><b>What it is.</b> A clickable simulation of the agreed design for Expat Ready's AI team, for the founder and the product team. <b>Prototype: simulated data, not the product.</b> The firm, people, files, values, programs, rules, amounts and pack versions are made up. Every step is played by this page's own script: no rules engine runs, no AI model is called, and nothing is sent anywhere.</p>
+    <p><b>Nothing has been tested.</b> This page does not show test results. Health lights stay grey ("Not yet measured"), and earned Auto can only be shown with a demo control, because no skill has taken its test.</p>
+    <p><b>Built from</b> (12 Oct 2026): the founder's decisions AIW-D89 and AIW-D92 to AIW-D105 with the AIW-D98 note; the AI autonomy model (Proposal, revision 5: presets, grid, end-of-job review, row table, worked example); the four journey walkthroughs; the Lead's rulings of 12 Oct (G-2, G-7, M-2, M-3, M-4); the AI team profiles. Replaces the 11 Oct version built from AW-01 v0.5, whose words and limits the founder has since changed.</p>
     <p><b>How to read it.</b></p>
     <ul>
-      <li>Each screen ends with a muted <b>Traces to</b> line listing the requirements it shows.</li>
-      <li>Small grey tags beside elements give the exact requirement. Turn them off with <b>Requirement tags</b> in the menu.</li>
-      <li>Dashed purple boxes are <b>demo controls</b>: they play a part the real product leaves to someone else (for example, Expat Ready releasing a stop).</li>
-      <li>Inside the product screens, assistants are called only “AI assistance” or “assistant to the <i>role</i>”, and the expert's screen is “Practice answers” (AW-1-65, AW1-D33). Internal names (for example Case assistant, Practice expert) appear only in this About page, in grey requirement tags marked “internal name, prototype only”, and in the prototype's own source comments.</li>
-      <li>Screens share one story: what you decide on screen 1 appears on screen 3.</li>
+      <li>Every output carries one of four labels: "Calculated by the rules, pack v[n]", "Prepared by [AI teammate]", "AI draft: check before use", "Approved by [person]".</li>
+      <li>Small grey tags show the decision behind an element. Turn them off with <b>Show decision IDs</b>.</li>
+      <li>Dashed purple boxes are <b>demo controls</b>: they play a part the real product leaves to someone else, such as a pack update.</li>
+      <li>People appear only by role. AI teammates appear only by their in-product names.</li>
+      <li>Screens share one story: what you do on screens 2, 3, 4 and 6 changes the counts on screen 1.</li>
     </ul>
-    <p class="small muted" style="margin-top:14px">Every requirement here is still a Proposal until the founder places the modules on Drive. The safety rules are provisional until counsel reads them (AIW-D55 to D58, D64).</p>
+    <p><b>Not shown here.</b> The readiness report screen; two-person review where an officer and a consultant split the sitting; a client message drafted inside a file job; exports, deletion requests, settings changes and signature workflows prepared by the AI; the daily summary; switches and pauses; the Owner's AI, Pack author's AI and Support AI at work; Practice answers.</p>
+    <p class="small muted" style="margin-top:14px">The autonomy model and journey mechanisms are Proposals with Lead rulings; grid storage, the holding state for the review and the screens themselves are the team's to build. The wording here is illustrative, not a screen specification.</p>
   </div>
-  ${foot('AW-01 v0.5 (AW-1-1 to AW-1-126); AW-02 v0.6; 00-step3-plan.md item E; README rule 7 (prototype in prototype/, every screen traced), rule 9 (one word per thing), rule 10 (no personal names).')}`;
+  ${foot('AIW-D89, AIW-D92 to AIW-D105, AIW-D98 note; README §0 rules 7, 9, 10.')}`;
 }
 
 /* =============================== events =============================== */
 document.addEventListener('click', e=>{
   const go = e.target.closest('[data-go]');
-  if(go){ S.screen = go.dataset.go; render(); $('#main').focus({preventScroll:true}); window.scrollTo(0,0); return; }
+  if(go){ S.screen = go.dataset.go; S.drawer=null; render(); $('#main').focus({preventScroll:true}); window.scrollTo(0,0); return; }
   const th = e.target.closest('[data-theme-set]');
   if(th){ S.theme = th.dataset.themeSet; if(S.theme==='auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', S.theme); try{localStorage.setItem('aiw-theme', S.theme);}catch(_){} renderNav(); return; }
   const el = e.target.closest('[data-act]');
   if(!el) return;
   const act = el.dataset.act, v = el.dataset.v;
-  if(el.tagName==='SELECT' || (el.tagName==='INPUT' && el.type!=='checkbox' && el.type!=='radio')) return;
-  const n = S.needs, d = S.dl, b = S.bi, st = S.st;
+  if(el.tagName==='SELECT' || (el.tagName==='INPUT' && el.type==='text')) return;
+  const r = S.rv, a = S.as, b = S.bl, n = S.inb;
   switch(act){
     case 'tags': S.tags = !S.tags; renderNav(); return;
-    /* needs */
-    case 'n-view': n.viewAs = v; break;
-    case 'n-alarm': n.alarmSeen = true; break;
-    case 'n-toggle': n.open[el.dataset.k] = !n.open[el.dataset.k]; break;
-    case 'n-open': n.opened[v] = true; n.srcOpen = v; break;
-    case 'n-src': n.srcOpen = n.srcOpen===v ? null : v; break;
-    case 'n-holdout': {
-      const inp = $('#holdout-in'); const val = (inp?inp.value:n.holdout).trim();
-      if(!val){ inp && inp.focus(); return; }
-      n.holdout = val; n.holdoutResult = (val === VALUES.find(x=>x.holdout).val) ? 'match' : 'nomatch'; break; }
-    case 'n-approve': if(!needsGate().ready) return; n.report='approved'; n.reportAt = nowStamp(); break;
-    case 'n-some': n.someNote = !n.someNote; break;
-    case 'n-reject': n.rejecting = true; break;
-    case 'n-reject-cancel': n.rejecting = false; break;
-    case 'n-reject-confirm': { const t=$('#rej'); n.rejectReason = t?t.value.trim():''; if(!n.rejectReason){ t&&t.focus(); return; } n.rejecting=false; n.report='rejected'; break; }
-    case 'n-reset': Object.assign(n, {opened:{}, srcOpen:null, holdout:'', holdoutResult:null, report:'pending', reportAt:null, rejecting:false, rejectReason:'', someNote:false}); break;
-    case 'p-release': n.paused='stale'; break;
-    case 'p-review': n.paused='reviewed'; break;
-    case 'p-approve': n.paused='approved'; break;
-    case 'p-reject': n.pausedRejecting = true; break;
-    case 'p-reject-cancel': n.pausedRejecting = false; break;
-    case 'p-reject-confirm': n.pausedRejecting=false; n.paused='rejected'; break;
-    case 'p-reset': n.paused='paused'; break;
-    /* delegation */
-    case 'd-view': d.viewAs = v; d.confirmEnd=false; break;
-    case 'd-key': d.keys[v] = el.checked; render(); return;
-    case 'd-offer': {
-      const p = dlPerson();
-      if(d.assistant!=='expert' && !Object.values(d.keys).some(Boolean)){ alert('Tick at least one permission.'); return; }
-      d.state='pending'; d.endReason=null; d.waiting='pending';
-      dlLog(`The Owner set up ${A[d.assistant].screen} for ${p.label} · mode PERSON · ${p.label} notified`); break; }
-    case 'd-withdraw': d.state='ended'; d.endReason='WITHDRAWN'; dlLog('The Owner withdrew the pending offer · endReason WITHDRAWN · nothing ran under it'); break;
-    case 'd-accept': {
-      const p = dlPerson();
-      if(d.switchOn){ d.state='active'; dlLog(`${p.label[0].toUpperCase()+p.label.slice(1)} accepted · ACTIVE · acceptedAt recorded`); }
-      else { d.state='paused'; dlLog(`${p.label[0].toUpperCase()+p.label.slice(1)} accepted · PAUSED (ASSISTANT_SWITCH_OFF)`); }
-      break; }
-    case 'd-decline': { const p=dlPerson(); d.state='ended'; d.endReason='DECLINED'; dlLog(`${p.label[0].toUpperCase()+p.label.slice(1)} declined · endReason DECLINED`); break; }
-    case 'd-switch': {
-      d.switchOn = !d.switchOn;
-      if(!d.switchOn){ d.state='paused'; if(d.waiting==='pending'||d.waiting==='stale') d.waiting='paused'; dlLog(`The Owner switched ${A[d.assistant].screen} off · delegation PAUSED (ASSISTANT_SWITCH_OFF) · waiting items PAUSED`); }
-      else { d.state='active'; if(d.waiting==='paused') d.waiting='stale'; dlLog(`The Owner switched ${A[d.assistant].screen} on · delegation ACTIVE, no new acceptance · waiting items re-rendered stale`); }
-      break; }
-    case 'd-end': d.confirmEnd = true; break;
-    case 'd-end-cancel': d.confirmEnd = false; break;
-    case 'd-end-confirm': { const p=dlPerson(); d.confirmEnd=false; d.state='ended'; d.endReason='PERSON_ENDED'; d.waiting='cancelled';
-      dlLog(`${p.label[0].toUpperCase()+p.label.slice(1)} ended the delegation · endReason PERSON_ENDED${A[d.assistant].waiting?' · waiting item cancelled (DELEGATION_ENDED)':''}`); break; }
-    case 'd-restart': d.state='setup'; d.endReason=null; d.waiting='pending'; dlInitKeys(); break;
-    /* provenance */
-    case 'pv-filter': S.pv.filter = v; S.pv.open=null; break;
-    case 'pv-open': S.pv.open = S.pv.open===v ? null : v; break;
-    /* expert */
-    case 'ex-q': S.ex.q = +v; break;
-    case 'ex-ai': S.ex.aiOff = !S.ex.aiOff; break;
-    case 'ex-untested': S.ex.untested = !S.ex.untested; break;
+    case 'drawer': S.drawer = +v; break;
+    case 'drawer-close': S.drawer = null; break;
+    /* job */
+    case 'j-play': S.job.stopped=false; play(); return;
+    case 'j-stop': stopTimer(); S.job.stopped = true; break;
+    case 'j-resume': S.job.stopped = false; break;
+    case 'j-ap': S.job.ap[v] = true; S.job.i++; play(); return;
+    /* review */
+    case 'rv-open': r.opened[v] = true; break;
+    case 'rv-check': if(el.checked){ r.ok[v] = true; } break;
+    case 'rv-conf': { const prev = empInDrafts(); r.conflict = v; delete r.corr.emp; if(empInDrafts()!==prev) markStale('emp'); break; }
+    case 'rv-corr': r.editing = v; break;
+    case 'rv-corr-cancel': r.editing = null; break;
+    case 'rv-corr-save': { const i=$('#corr-in'); const val = i ? i.value.trim() : ''; if(!val){ i&&i.focus(); return; }
+      const vv = VALS.find(x=>x.id===v); if(val !== curVal(vv)){ r.corr[v] = val; if(v==='emp' && !r.conflict) r.conflict='a'; markStale(v); } r.editing=null; break; }
+    case 'rv-spot': { const i=$('#spot-in'); const val=(i?i.value:r.spot).trim(); if(!val){ i&&i.focus(); return; }
+      r.spot = val; r.spotRes = val.toLowerCase().replace(/[^a-z]/g,'').startsWith('exampleanalytics') ? 'match' : 'nomatch'; break; }
+    case 'rv-rest': r.rest = true; break;
+    case 'rv-dok': r.drafts[v] = 'approved'; break;
+    case 'rv-rej': r.rejecting = v; break;
+    case 'rv-rej-cancel': r.rejecting = null; break;
+    case 'rv-rej-ok': { const t=$('#rej-'+v); const why = t?t.value.trim():''; if(!why){ t&&t.focus(); return; } r.reason[v]=why; r.drafts[v]='rejected'; r.rejecting=null; break; }
+    case 'rv-reset': Object.assign(S.rv, {ok:{}, opened:{}, corr:{}, editing:null, spot:'', spotRes:null, rest:false, conflict:null, drafts:{form:'pending',letter:'pending',note:'pending'}, ver:{form:1,letter:1,note:1}, stale:{}, rejecting:null, reason:{}}); break;
+    /* assessment */
+    case 'as-ev': a.ev = v; a.phase='idle'; a.explained=false; a.reviewed=false; a.pack=3; break;
+    case 'as-start': a.phase = a.ev==='ready' ? 'proposed' : 'stopped'; break;
+    case 'as-fix': a.ev = 'ready'; a.phase = 'proposed'; break;
+    case 'as-pack': a.pack = 4; a.phase = 'voided'; break;
+    case 'as-run': a.phase = 'run'; break;
+    case 'as-explain': a.explained = true; break;
+    case 'as-review': a.reviewed = true; break;
+    case 'as-reset': a.phase='idle'; a.explained=false; a.reviewed=false; a.pack=3; break;
     /* billing */
-    case 'b-pick': if(parseAmt(b.amount)===null) return; b.picked = v; b.modal = true; b.closedUnsaved=false; break;
-    case 'rp-cancel': b.modal=false; b.closedUnsaved=true; break;
-    case 'rp-save': {
-      const dt=$('#rp-d'), rf=$('#rp-r'); b.date = dt?dt.value:''; b.ref = rf?rf.value:'';
-      if(!b.method || !b.designation) return; b.modal=false; b.saved=true; b.item='approved'; break; }
-    case 'b-reset': Object.assign(b,{amount:'', currency:'CAD', picked:null, modal:false, saved:false, item:'pending', method:'', designation:'', date:'', ref:'', closedUnsaved:false}); break;
+    case 'bl-change': b.changed = true; b.inv = 'voided'; break;
+    case 'bl-inv-ok': b.inv = 'approved'; b.invAt = nowStamp(); break;
+    case 'bl-inv-rej': b.inv = 'rejected'; break;
+    case 'bl-tr-ok': b.trust = 'approved'; b.trustAt = nowStamp(); break;
+    case 'bl-tr-rej': b.trust = 'rejected'; break;
+    case 'bl-reset': Object.assign(b, {inv:'pending', ver:1, changed:false, invAt:null, trust:'none', trustAt:null}); break;
     /* settings */
-    case 's-rec': st.record = v; if(v!=='published'){ st.ai = v==='none'?'locked':st.ai; } if(v==='published' && st.ai==='locked') st.ai='off'; if(v==='none'){ st.ai='locked'; st.ack=false; } break;
-    case 's-ack': st.ack = el.checked; render(); return;
-    case 's-ai': st.ai = st.ai==='on' ? 'off' : 'on'; break;
-    case 's-sw': st.sw[v] = !st.sw[v]; break;
-    case 's-save': { document.querySelectorAll('[data-firm]').forEach(i=>st.firm[i.dataset.firm]=i.value); st.errors = validateFirm(); st.saved = Object.keys(st.errors).length ? 'err' : 'ok'; break; }
+    case 'preset': S.set.preset = v; S.set.over = {}; break;
+    case 'grid-open': S.set.open = !S.set.open; break;
+    case 'grid-reset': S.set.over = {}; break;
+    case 'earn': S.set.earned = !S.set.earned; Object.keys(S.set.over).forEach(k=>{ if(k.startsWith('3-')) delete S.set.over[k]; }); break;
+    /* intake */
+    case 'in-menu': {
+      inbInit();
+      const labelsTxt = {book:'Book a consultation', docs:'What documents will I need?', fees:'Fees', elig:'Am I eligible?'};
+      n.msgs.push({from:'lead', text:labelsTxt[v]});
+      n.msgs.push({from:'firm', tpl:v, rule:'menu option "'+labelsTxt[v]+'"'});
+      if(v==='elig' && n.guided < GUIDED.length) n.msgs.push({from:'firm', guided:n.guided});
+      break; }
+    case 'in-g': {
+      n.msgs.push({from:'lead', text:v}); n.guided++;
+      if(n.guided < GUIDED.length) n.msgs.push({from:'firm', guided:n.guided});
+      else n.msgs.push({from:'firm', tpl:'book', rule:'guided intake finished → offer a consultation'});
+      break; }
+    case 'in-ask': {
+      const i = $('#in-q'); const q = i ? i.value.trim() : ''; if(!q){ i&&i.focus(); return; }
+      inbInit(); n.msgs.push({from:'lead', text:q});
+      n.msgs.push({from:'firm', tpl:'handoff', rule:'no published answer matches → hand off to a person'});
+      n.q = q; n.draft = 'pending'; n.edit=false;
+      n.text = 'Thank you for your question. We can help with this. A licensed consultant can go through the details with you in a consultation, which you can book with the link in this chat. If you prefer, reply here with a good time to call you.';
+      break; }
+    case 'in-edit': n.edit = true; break;
+    case 'in-edit-save': { const t=$('#in-edit'); if(t) n.text = t.value; n.edit=false; break; }
+    case 'in-ap': n.msgs.push({from:'firm', ai:true, text:n.text}); n.draft='approved'; break;
+    case 'in-rej': n.draft='rejected'; break;
     default: return;
   }
   render();
+  const cb = $('#chat-body'); if(cb) cb.scrollTop = cb.scrollHeight;
 });
-
 document.addEventListener('change', e=>{
-  const el = e.target, act = el.dataset && el.dataset.act;
-  if(!act) return;
-  const d = S.dl, b = S.bi;
-  switch(act){
-    case 'd-asst': d.assistant = el.value; d.person = Object.keys(A[d.assistant].persons)[0]; dlInitKeys(); break;
-    case 'd-person': d.person = el.value; dlInitKeys(); break;
-    case 'ex-scope': S.ex.scope = el.value; break;
-    case 'ex-file': S.ex.file = el.value; break;
-    case 'ex-item': S.ex.item = el.value; break;
-    case 'b-cur': b.currency = el.value; { const c=$('#cands'); if(c) c.innerHTML = candHtml(); } return;
-    case 'rp-m': b.method = el.value; break;
-    case 'rp-des': b.designation = el.value; break;
-    default: return;
-  }
-  if(act==='rp-m' || act==='rp-des'){ const dt=$('#rp-d'), rf=$('#rp-r'); if(dt) b.date=dt.value; if(rf) b.ref=rf.value; }
-  render();
-});
-
-document.addEventListener('input', e=>{
   const el = e.target;
-  if(el.id==='b-amt'){ S.bi.amount = el.value; const c=$('#cands'); if(c) c.innerHTML = candHtml(); return; }
-  if(el.id==='holdout-in'){ S.needs.holdout = el.value; return; }
-  if(el.dataset && el.dataset.firm){
-    S.st.firm[el.dataset.firm] = el.value;
-    const errs = validateFirm(); const cell = el.parentElement;
-    let m = cell.querySelector('.err'); if(m) m.remove();
-    if(errs[el.dataset.firm]){ m = document.createElement('div'); m.className='err'; m.textContent = errs[el.dataset.firm]; cell.appendChild(m); }
-    S.st.saved = null;
-  }
+  if(el.dataset && el.dataset.act==='grid'){ S.set.over[el.dataset.k] = el.value; render(); }
 });
-
 document.addEventListener('keydown', e=>{
-  if(e.key==='Enter' && e.target.id==='holdout-in'){ e.preventDefault(); const btn=document.querySelector('[data-act="n-holdout"]'); btn && btn.click(); }
-  if((e.key==='Enter' || e.key===' ') && e.target.classList && e.target.classList.contains('prov-row')){ e.preventDefault(); e.target.click(); }
-  if(e.key==='Escape' && S.bi.modal){ S.bi.modal=false; S.bi.closedUnsaved=true; render(); }
+  if(e.key==='Enter' && e.target.id==='spot-in'){ e.preventDefault(); const b=document.querySelector('[data-act="rv-spot"]'); b&&b.click(); }
+  if(e.key==='Enter' && e.target.id==='in-q'){ e.preventDefault(); const b=document.querySelector('[data-act="in-ask"]'); b&&b.click(); }
+  if(e.key==='Enter' && e.target.id==='corr-in'){ e.preventDefault(); const b=document.querySelector('[data-act="rv-corr-save"]'); b&&b.click(); }
+  if(e.key==='Escape' && S.drawer!=null){ S.drawer=null; render(); }
 });
+document.addEventListener('input', e=>{ if(e.target.id==='spot-in') S.rv.spot = e.target.value; });
 
 /* =============================== init =============================== */
 try{ const t = localStorage.getItem('aiw-theme'); if(t==='light'||t==='dark'){ S.theme=t; document.documentElement.setAttribute('data-theme', t); } }catch(_){}
