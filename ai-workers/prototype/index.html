@@ -383,7 +383,7 @@ const S = {
        drafts:{form:'pending', letter:'pending', note:'pending'}, ver:{form:1, letter:1, note:1}, stale:{}, rejecting:null, reason:{} },
   as:{ ev:'ready', phase:'idle', pack:3, explained:false, reviewed:false, newer:false },
   bl:{ inv:'pending', ver:1, changed:false, invAt:null, trust:'none', trustAt:null, rejecting:null },
-  set:{ preset:'each', open:false, over:{}, earned:false },
+  set:{ preset:'each', open:false, over:{}, earned:false, chg:'pending', chgAt:null },
   inb:{ msgs:null, guided:0, draft:'none', q:'', edit:false, text:'' }
 };
 
@@ -577,7 +577,7 @@ const TEAM = [
   {name:'Case Officer\'s AI', for:'the licensed consultant (working as case officer)', skills:['Upload and readiness check (rules only)','Client message drafter','Letter drafter','Internal note drafter','Form preparation (rules fill the form)'], on:true},
   {name:'Intake AI', for:'the intake person', skills:['Guided intake and templates (rules only)','Assessment start (the rules calculate)','Answer extractor','Client message drafter'], on:true},
   {name:'Billing AI', for:'the bookkeeper', skills:['Unbilled work list (rules only)','Invoice preparation (rules calculate)','Proposed trust entry (rules calculate)','Reminder drafter'], on:true},
-  {name:'Owner\'s AI', for:'the Owner', skills:['Weekly note','Export and deletion request preparation','Settings change preparation'], on:false}
+  {name:'Owner\'s AI', for:'the Owner', skills:['Weekly note','Export and deletion request preparation','Settings change preparation'], on:true}
 ];
 function scTeam(){
   const w = waitingNow();
@@ -585,7 +585,7 @@ function scTeam(){
     'Case Officer\'s AI':[JOB.filter((s,k)=>jobStatus(k)==='done').length, heldCount()+(w?1:0)+(jobDone()&&!reviewComplete()?1:0)],
     'Intake AI':[S.inb.guided + (S.as.phase==='run'?1:0), (S.inb.draft==='pending'?1:0)+(S.as.phase==='stopped'?1:0)],
     'Billing AI':[S.bl.inv==='approved'?1:0, (S.bl.inv==='pending'||S.bl.inv==='voided'?1:0)+(S.bl.trust==='pending'?1:0)],
-    'Owner\'s AI':[0,0]
+    'Owner\'s AI':[S.set.chg==='approved'?1:0, (S.set.chg==='pending'||S.set.chg==='voided')?1:0]
   };
   const cards = TEAM.map(t=>`
     <div class="card card-pad tm">
@@ -772,6 +772,7 @@ function reviewHtml(){
         <div class="row small" style="gap:8px">${L('appr','the licensed consultant')} Passport rejection and due date, asked earlier</div>
       </div></div>
     <div class="section stack">
+      <div class="notice info"><span class="ic">i</span><div class="small"><b>If two people split this review</b> (for example a case officer verifies values and a consultant approves forms and letters), it is two sittings: values first, then drafts. Each line goes to the person whose permission it needs. ${tag('G-11')}</div></div>
       <h4>1 · Values first · ${exDone} of ${ex.length} checked one by one</h4>
       <p class="small muted">Every value is provisional until you approve it, and sits beside the passage it came from. Identity details, consequential values and conflicts each need your own check. They can never go through "approve the rest". ${tag('AIW-D100 points 1–3')}</p>
       ${ex.map(valueRow).join('')}
@@ -958,6 +959,22 @@ function cellVal(r, ri){
   if(r.earn && S.set.earned) v = 'Earned Auto';
   return v;
 }
+function chgCard(){
+  const c = S.set.chg, to = S.set.chgTo || 14;
+  let body;
+  if(c==='approved') body = `<div class="notice ok"><span class="ic">✓</span><div class="small"><b>Changed by the platform at ${S.set.chgAt}</b>, exactly as approved: default payment terms are now ${to} days. ${labels(L('prep','Owner\'s AI'), L('appr','the Owner'))}</div></div>`;
+  else if(c==='rejected') body = `<div class="notice danger"><span class="ic">×</span><div class="small"><b>Rejected by the Owner.</b> Nothing changed.</div></div>`;
+  else body = `${labels(L('prep','Owner\'s AI'))}
+    ${c==='voided'?'<div class="notice warn"><span class="ic">!</span><div class="small"><b>The change was edited after it was prepared, so this is a fresh preview.</b> An approval of the earlier preview would not apply. Check it again.</div></div>':''}
+    <div class="tw"><table><thead><tr><th>Setting</th><th>Now</th><th>After you approve</th></tr></thead><tbody>
+      <tr><td>Default invoice payment terms</td><td>30 days</td><td><b>${to} days</b></td></tr></tbody></table></div>
+    <p class="small">Why: the Owner asked for shorter terms in this week's note (made up). Your approval is tied to this exact change. If anything in it changes before it runs, it does not run. The AI cannot change permissions, roles, the AI switches, the safety floors or this grid. ${tag('AIW-D103')}${tag('autonomy rows 13–14')}</p>
+    <div class="row"><button class="btn primary sm" data-act="chg-ok">Approve as the Owner</button><button class="btn danger sm" data-act="chg-rej">Reject</button></div>
+    ${c==='pending'?`<div class="demo"><div class="lbl">Demo control</div><p class="small">Edit the prepared change to 21 days before it runs.</p><button class="btn sm" data-act="chg-edit">Edit the change (simulated)</button></div>`:''}`;
+  return `<div class="card"><div class="card-head"><h3>Needs you now · Settings change prepared by Owner's AI</h3>${c==='approved'?'<span class="pill ok">Done</span>':'<span class="pill warn">Ask now</span>'}</div>
+    <div class="section stack">${body}
+    <p class="xs faint">Exports, deletion requests and signature workflows follow the same pattern: prepared by the AI, approved one by one against the exact preview, never Auto. The signature itself stays with the signer.</p></div></div>`;
+}
 function scSet(){
   const st = S.set;
   const grid = `<div class="tw"><table class="grid-t"><thead><tr><th>Action</th>${ROLES.map(r=>`<th>${r}</th>`).join('')}</tr></thead><tbody>
@@ -999,6 +1016,7 @@ function scSet(){
       <p class="xs faint">Cells and wording follow the Lead's proposal (autonomy model rev 5, rows 2–14). Storing and enforcing the grid is the team's to build.</p>
     </div>`:''}
   </div>
+  ${chgCard()}
   <div class="card">
     <div class="card-head"><h3>Earned Auto for routine internal work</h3>${st.earned?'<span class="pill ok">On for filing labels, internal notes, ordinary tasks</span>':'<span class="pill">Not earned</span>'}</div>
     <div class="section stack">
@@ -1011,7 +1029,7 @@ function scSet(){
         <button class="btn sm" data-act="earn">${st.earned?'Withdraw earned Auto':'Pretend the conditions are met, and approve as the Owner'}</button></div>
     </div>
   </div>
-  ${foot('AIW-D101 (two presets, "Review each step" default, grid under "Customise", floors locked, never grants access, approval before effect, examples), AIW-D104 (earned Auto for routine reversible internal work, its conditions, drop back and retest), AIW-D105 (template sends automatic), AIW-D102 (AI-written replies never automatic), AIW-D103 (rows 12–14 never Auto).')}`;
+  ${foot('AIW-D101 (two presets, "Review each step" default, grid under "Customise", floors locked, never grants access, approval before effect, examples), AIW-D104 (earned Auto for routine reversible internal work, its conditions, drop back and retest), AIW-D105 (template sends automatic), AIW-D102 (AI-written replies never automatic), AIW-D103 (rows 12–14 never Auto; the settings-change card: prepared by the AI, approved against the exact preview), AIW-D106 note (a) (row 4: the assessment starts automatically once the evidence check passes).')}`;
 }
 
 /* ======================================================================
@@ -1106,7 +1124,7 @@ function scAbout(){
       <li>People appear only by role. AI teammates appear only by their in-product names.</li>
       <li>Screens share one story: what you do on screens 2, 3, 4 and 6 changes the counts on screen 1.</li>
     </ul>
-    <p><b>Not shown here.</b> The readiness report screen; two-person review where an officer and a consultant split the sitting; a client message drafted inside a file job; exports, deletion requests, settings changes and signature workflows prepared by the AI; the daily summary; switches and pauses; the Owner's AI, Pack author's AI and Support AI at work; Practice answers.</p>
+    <p><b>Not shown here.</b> The readiness report screen; the two-person review played through (only a note says it is two sittings, values first); a client message drafted inside a file job; exports, deletion requests and signature workflows prepared by the AI (only a settings change is played, on screen 5); the daily summary; switches and pauses; the Pack author's AI and Support AI at work; Practice answers.</p>
     <p class="small muted" style="margin-top:14px">The autonomy model and journey mechanisms are Proposals with Lead rulings; grid storage, the holding state for the review and the screens themselves are the team's to build. The wording here is illustrative, not a screen specification.</p>
   </div>
   ${foot('AIW-D89, AIW-D92 to AIW-D105, AIW-D98 note; README §0 rules 7, 9, 10.')}`;
@@ -1168,6 +1186,9 @@ document.addEventListener('click', e=>{
     case 'preset': S.set.preset = v; S.set.over = {}; break;
     case 'grid-open': S.set.open = !S.set.open; break;
     case 'grid-reset': S.set.over = {}; break;
+    case 'chg-edit': S.set.chg = 'voided'; S.set.chgTo = 21; break;
+    case 'chg-ok': S.set.chg = 'approved'; S.set.chgAt = nowStamp(); break;
+    case 'chg-rej': S.set.chg = 'rejected'; break;
     case 'earn': S.set.earned = !S.set.earned; Object.keys(S.set.over).forEach(k=>{ if(k.startsWith('3-')) delete S.set.over[k]; }); break;
     /* intake */
     case 'in-menu': {

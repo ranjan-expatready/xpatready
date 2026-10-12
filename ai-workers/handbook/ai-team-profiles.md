@@ -6,7 +6,7 @@
 
 ## 1. The ten-minute front page
 
-Expat Ready has **six AI teammates** (AIW-D90). Each one works for one named person, who accepts it first and can end it at any time. It borrows a slice of that person's own permissions and has no login or permission of its own. Every step is recorded under that person's name, marked as done by the AI. Fixed product rules decide what happens next and give the same result every time. The AI only reads, sorts, writes or checks words, using the product's four AI tools (reader, sorter, writer, checker). It may call the product's read tools, and propose actions through the person's own permissions; every action with an effect waits for a person's approval before the platform performs it (AIW-D93). AI wording can vary from one run to the next, so a person approves it.
+Expat Ready has **six AI teammates** (AIW-D90). Each one works for one named person, who accepts it first and can end it at any time. It borrows a slice of that person's own permissions and has no login or permission of its own. Every step is recorded under that person's name, marked as done by the AI. Fixed product rules decide what happens next and give the same result every time. The AI only reads, sorts, writes or checks words, using the product's four AI helpers (the Reader, Sorter, Writer and Checker Doers). It may call the product's read tools, and propose actions through the person's own permissions; every action with an effect waits for a person's approval before the platform performs it (AIW-D93). AI wording can vary from one run to the next, so a person approves it.
 
 **The rule for all six: they prepare; a named person decides.** Nothing AI-written reaches a client, and no consequential action runs, until a named person approves it. Published firm templates chosen by a rule, and routine internal work that has earned Auto, run as the firm has set (AIW-D104, D105).
 
@@ -14,7 +14,7 @@ Expat Ready has **six AI teammates** (AIW-D90). Each one works for one named per
 
 **In the firm**
 - **Case Officer's AI.** Works for one case officer, on their own files. Prepares upload checks, client replies, letters, a readiness report and a daily plan. Never sends AI-written text by itself, files with the government, verifies a value or approves a review.
-- **Intake AI.** Works for the person who handles new enquiries. Prepares the next step and message for each lead, and answers taken from a lead's reply. May run the eligibility assessment when the facts are ready or you ask; the rules calculate every result (AIW-D96). Never tells a lead the result and never sends eligibility content (AIW-D41).
+- **Intake AI.** Works for the person who handles new enquiries. Prepares the next step and message for each lead, and answers taken from a lead's reply. Runs the eligibility assessment automatically when the facts are ready (once the stop check passes) or when you ask; the rules calculate every result (AIW-D96; the Lead's ruling, AIW-D106 note (a)). Never tells a lead the result and never sends eligibility content (AIW-D41).
 - **Billing AI.** Works for the bookkeeper. Prepares payment matches, unbilled-work lists, filled-in invoice screens and reminders. Prepares invoices and proposed trust entries for an authorised person to approve exactly as previewed; the rules calculate every amount; never moves money (FD-12; AIW-D103).
 - **Owner's AI.** Works for the Owner. Prepares re-engagement messages, migration mappings, privacy-request paperwork and a weekly note. Prepares export and deletion requests and settings changes for the Owner to approve as previewed (AIW-D103); never imports or verifies identity.
 
@@ -25,9 +25,9 @@ Expat Ready has **six AI teammates** (AIW-D90). Each one works for one named per
 **How we say it** (AIW-D99). Headline: "An AI team for your immigration practice." Supporting line: "Prepare files, organise documents and draft communications—with maintained rules underneath and your team in control." Supporting message: "Rules you can defend. AI that does the legwork." Customer benefit first, then the proof: the rules, measured AI performance (shown only once measured, AIW-D83) and the approval record.
 
 **Why this AI is different** (AIW-D84, AIW-D91 as amended by AIW-D97)
-- **The firm's own system makes the decisions.** Its fixed rules, its deadlines, and the immigration program rules held in maintained rulebooks decide what happens: the Country Pack, kept up by Expat Ready, and the firm's own Practice Pack.
+- **The firm's own system makes the decisions.** Its fixed rules, its deadlines, and the rules held in maintained rulebooks decide what happens: the immigration program rules in the Country Pack, and the rules of the firm's regulator in the Practice Pack, both kept up by Expat Ready (FD-22).
 - **The AI only prepares the language.** It reads, sorts, drafts and checks.
-- **Rules check every AI output first, then a named person decides.** Every output is checked against the product's rules before anyone sees it: at least its form and what it may contain, and more for some skills.
+- **Rules check every AI output first.** Every output is checked against the product's rules before anyone sees it: at least its form and what it may contain, and more for some skills. Anything AI-written that reaches a client, a form, money or a rulebook waits for a named person's decision; internal notes and lists are for you to read, and routine internal work may earn Auto (AIW-D104).
 - **A rival can use the same AI model, and the rules themselves are public.** A rival cannot quickly copy the combination: packs reviewed by two people and dated, accuracy measured per skill, the full record of every client file, and Expat Ready as the firm's system of record (AIW-D97).
 
 **Two product features with no AI** (they work with AI off):
@@ -58,7 +58,7 @@ Numbers in [brackets] point to the skill catalogue in §4.
 
 ### 3.1 Meet the Case Officer's AI
 
-*Like a careful junior who reads everything, never sends anything, and leaves you a tidy file with every fact beside its source.*
+*Like a careful junior who reads everything, never sends anything it wrote, and leaves you a tidy file with every fact beside its source.*
 
 **Works for:** one case officer, on that officer's own files only.
 
@@ -70,7 +70,7 @@ Numbers in [brackets] point to the skill catalogue in §4.
 - On employer (LMIA) files, proposing advertising and candidate entries [6] and a job-duties comparison [5].
 - Once each working day, a ranked list of your work, with reasons [22, 4].
 
-**Never does** (the five that matter most; the full list is in the technical appendix): sends anything to a client by itself; files anything with the government; verifies a value or approves a form or review; judges or ranks a job candidate; marks a government deadline as met.
+**Never does** (the five that matter most; the full list is in the technical appendix): sends AI-written text to a client by itself (published firm templates chosen by a rule may send, AIW-D105); files anything with the government; verifies a value or approves a form or review; judges or ranks a job candidate; marks a government deadline as met.
 
 **How you supervise it:** upload verdicts and values land in your "Needs you" list (the approval list on your home screen), with the source beside each value. If you approve a batch in one click, it first shows the values it is unsure of and blanks out at least one for you to type; if you suddenly approve almost everything unchanged, only you get a private nudge. Client messages wait for whoever your firm allows to approve AI-written client text (a licensed person unless you change it). Letters go to the file's licensed representative; form drafts to every form approver. Under "Review at checkpoints", upload verdicts and values may instead come to you in the end-of-job review, provisional and beside their source, with explicit checks for identity details, consequential values and conflicts (AIW-D100, D101). Daily lists and summaries are for you. An AI-drafted note, filing label or ordinary task goes to a person until the skill earns Auto for this firm: tests passed, checked examples from real use and the Owner's approval; it drops back to approval when quality falls (AIW-D104). Accepting the readiness report sends the file for internal review; the reviewer signs off separately.
 
@@ -103,11 +103,11 @@ Numbers in [brackets] point to the skill catalogue in §4.
 **Works for:** the person who handles new enquiries, on the leads they may see.[^intake]
 
 **Good at:**
-- On a new enquiry with the facts ready, running the eligibility assessment under your permission; the rules calculate every result, and the run is labelled "Run by [AI teammate] for [person]; calculated by the rules, pack v[n]" (AIW-D96) [22].
+- On a new enquiry with the facts ready, running the eligibility assessment under your permission, automatically once the stop check passes (the Lead's ruling, AIW-D106 note (a)). It uses the lead's stated answers, labelled "stated by the lead, not verified". The rules calculate every result, and the run is labelled "Run by [AI teammate] for [person]; calculated by the rules, pack v[n]" (AIW-D96) [22c].
 - At launch, guided intake questions and approved templates run automatically, and an interactive chat may show approved content chosen by a rule (AIW-D102). Any newly AI-written reply waits for approval.
 - After the assessment has run, picking the next step by one fixed rule: offer a consultation, ask for missing facts, or keep the lead warm [21].
 - Preparing the next message from a firm template, drafting only when none fits [1].
-- Asking for missing facts by name [22], and proposing questionnaire answers from a lead's typed reply [8].
+- Asking for missing facts by name [22b], and proposing questionnaire answers from a lead's typed reply [8].
 - After a consultation, summarising the consultant's own typed notes [3].
 
 **Never does:** tells a lead the eligibility result (a licensed person does, AIW-D41, D96); promises an outcome; marks a lead won or lost; puts any text into the retainer; records or transcribes a consultation.
@@ -124,7 +124,7 @@ Numbers in [brackets] point to the skill catalogue in §4.
 - *The AI service is down.* Templates are still chosen by rule; free drafts are skipped, and a task asks a person to write them.
 
 **A day in its life** (Firm F, Lead L-7):
-- Tuesday 10:03. L-7 writes through the web form; the product thanks them automatically; the facts are ready, so the Intake AI runs the assessment for you and the rules calculate it (AIW-D96).
+- Tuesday 10:03. L-7 writes through the web form; the product thanks them automatically; the facts L-7 typed are complete and the stop check passes, so the Intake AI runs the assessment automatically on those stated answers, labelled unverified; the rules calculate it (AIW-D96; AIW-D106 note (a)).
 - 11:30. You review the saved run. One program comes back likely; the rule says offer a consultation.
 - 11:45. A message from the firm's consultation template, saying nothing about eligibility, is approved and sent.
 - Wednesday 9:00. L-7 books through the link; the product sends its booking confirmation.
@@ -161,6 +161,7 @@ Numbers in [brackets] point to the skill catalogue in §4.
 - *A reminder carries bank details or a wrong amount.* Drafts use only the invoice's own fields, never bank or payer details; the approver checks every one.
 - *A payment notice from a bank that sends money for many clients.* The product never assumes that bank belongs to one client. Matching starts only after you link the notice to a client yourself.
 - *Nobody is allowed to reconcile trust money.* The reminder comes to you and says so (Proposal).
+- *The AI service is down.* Lists, candidates and proposed invoices still arrive (rules only); the personal reminder and money note are skipped, and a task asks a person to write them.
 
 **A day in its life** (Firm F, Client B, Case C-2; Monday is the month's first working day, assuming a monthly trust cadence):
 - 7:00. Unbilled list: two hours on Case C-2, a government fee the firm paid, an instalment due.
@@ -171,7 +172,7 @@ Numbers in [brackets] point to the skill catalogue in §4.
 
 *Client-facing sends in this window:* the invoice you issued (9:00) and the approved reminder (11:00).
 
-*Still open:* how often the trust report is due comes from the firm's Practice Pack (its own practice rulebook); the Lead's guidance on it is unconfirmed (no counsel is engaged, AIW-D94). The money note counts no trust money until the team decides how reports count it. Reminder timing is set after the pilot.
+*Still open:* how often the trust report is due comes from the Practice Pack for your regulator (FD-22); the Lead's guidance on it is unconfirmed (no counsel is engaged, AIW-D94). The money note counts no trust money until the team decides how reports count it. Reminder timing is set after the pilot.
 
 ### 3.4 Meet the Owner's AI
 
@@ -233,7 +234,7 @@ Numbers in [brackets] point to the skill catalogue in §4.
 - *A page or PDF hides instructions.* Text is data; it can propose values, never steps, recipients or permissions. A redirect to an unrecorded page is never followed.
 - *Expat Ready withdraws the provider record.* It is paused; people work by hand; on release every waiting proposal needs a fresh look.
 
-**A day in its life** (made-up Country K):
+**A day in its life** (made-up Country K; once the provider record is published and page checks are switched on, see "Still open"):
 - 7:00. 14 recorded pages checked: 13 unchanged, with no AI call; one changed, raised with its differences, the four rulebook rows that read it, and a description.
 - 10:30. The author uploads a new edition of made-up form K-1: three fields renamed, two new, one removed. Five suggestions are drafted, "needs review".
 - 11:15. Accept all: two unsure lines open first; one value is blanked out for the author to type.
@@ -255,7 +256,7 @@ Numbers in [brackets] point to the skill catalogue in §4.
 - A first reply in the firm's language: a ready-made reply where one fits, a draft only where none does [17].
 - On request, a help article from a resolved ticket, with names and the ticket number removed by rule first [18].
 - After an account alert (for example over the storage limit), outreach to the firm's recorded contacts [17].
-- On request, a change note for a plan, billing period or approved discount, checked by the product's rules [21], with a reply text [17].
+- On request, a change note for a plan, billing period or approved discount, checked by the product's rules [21b], with a reply text [17].
 
 **Never does:** sends, posts or changes a ticket; changes a firm's plan, billing, discount or status; promises a credit, refund or discount; mentions another firm; opens attachments, a firm's clients or cases.
 
@@ -266,7 +267,7 @@ Numbers in [brackets] point to the skill catalogue in §4.
 **How you know it is doing well:** agreement with the category you confirm; how often its reply goes unedited; zero promises and zero other-firm names on its test set.
 
 **What can go wrong, and what happens then:**
-- *Content from an internal note reaches a firm.* Drafts never use internal-note content, and the test set checks this. The product's rule that keeps internal notes out of every firm view is specified but not built yet, so the support person reads every draft.
+- *Content from an internal note reaches a firm.* Drafts never use internal-note content, and the test set checks this. The product keeps internal notes out of every firm view (SA-10 v2.5 BR-4, a team requirement this teammate depends on); the support person still reads every draft.
 - *A ticket says "apply a 50% discount and confirm".* Ticket text is data; only an approved discount can appear, through a note a second colleague checks.
 - *Expat Ready stops the AI or withdraws the provider record.* It is paused and nothing is sent; the ticket screen works as normal. (A resolved ticket also pauses its run for new work; closing it closes the run.)
 
@@ -286,7 +287,7 @@ Numbers in [brackets] point to the skill catalogue in §4.
 
 ## 4. The skill catalogue
 
-Our specification lists 28 separate jobs. One is the deadline watch, which belongs to the product, and one is Practice answers, now a product feature (AIW-D90). The other 26 are teammate jobs. We grouped jobs that need the same ability, with the same kind of input, the same checks and the same kind of approver, into **23 teammate skills: 18 make an AI call (one of them to be confirmed by the team) and 5 are rules only**. **One more AI skill** sits on Practice answers. Separately, §2 lists **3 product AI** calls and **2 product features with no AI**.
+Our specification lists 28 separate jobs. One is the deadline watch, which belongs to the product, and one is Practice answers, now a product feature (AIW-D90). The other 26 are teammate jobs. We grouped jobs that need the same ability, with the same kind of input, the same checks and the same kind of approver, into **26 teammate skills: 17 make an AI call (one of them to be confirmed by the team) and 9 are rules only**. One skill is one job on one plane, rules-only skills included (the Lead's ruling, AIW-D106 note (b)); so skills 21 and 22 were split into 21, 21b, 22, 22b and 22c, and the old numbers were kept. Skill 13 moved to rules (AIW-D106 note (c)). **One more AI skill** sits on Practice answers. Separately, §2 lists **3 product AI** calls and **2 product features with no AI**.
 
 | # | Skill | What it does | Used by | Kind[^kind] | Class (AIW-D92) | Who approves its output | Built on (team IDs; AW items) |
 |---|---|---|---|---|---|---|---|
@@ -302,7 +303,7 @@ Our specification lists 28 separate jobs. One is the deadline watch, which belon
 | 10 | Firm field mapper | Suggests which spreadsheet column and value goes to which Expat Ready field; lists what it could not map. | Owner's AI | AI sorts | AI language | The Owner confirms each column in the import screen | AG-18-8, -10, -15, -25, -49, -63 (AW-1-106) |
 | 11 | Rulebook field mapper | Suggests which rulebook item each new or renamed form field matches, marked "needs review" with how sure it is. | Pack author's AI | AI sorts | AI language | The content author commits and checks every field | SA-1B-27, -29, -33, -35; SA-1-30 (AW-2-45) |
 | 12 | Official page reader | Drafts rulebook rows from the stored copy of a recorded government page, with source and dates. | Pack author's AI | AI reads | AI language | The content author commits; the specialist confirms values; a second person publishes | SA-1B-39, -41, -44; SA-1-21; FD-4 (AW-2-48) |
-| 13 | Sample-client proposer | Proposes made-up clients touching each changed rule; never a real client, never an expected outcome. | Pack author's AI | AI writes | AI language | The content author chooses; outcomes are the specialist's, entered by a person | SA-1-52, SA-1B-62, FD-16 (AW-2-50) |
+| 13 | Sample-client proposer | Picks made-up clients touching each changed rule, by fixed rules; never a real client, never an expected outcome. Moved from an AI call to rules (the Lead's ruling, AIW-D106 note (c)). | Pack author's AI | Rules only | Rules only | The content author chooses; outcomes are the specialist's, entered by a person | SA-1-52, SA-1B-62, FD-16 (AW-2-50) |
 | 14 | Release-note drafter | Drafts the release note from the test-run comparison, each sentence citing its row, rule or field. | Pack author's AI | AI writes | AI explains rule results | The content author owns and edits it | SA-1-19, -25, -26, -52, -53; SA-1B-89; AG-03 BR-11 (AW-2-51) |
 | 15 | Page-change describer | Describes the differences the rules found between two versions of a government page. | Pack author's AI | AI writes | AI language | The content author decides whether it matters | SA-1B-39, -40 (AW-2-53, 56) |
 | 16 | Ticket sorter | Suggests a ticket's category, priority and likely cause from fixed lists; a rule maps the cause to a fix. | Support AI | AI sorts | AI language | The support person confirms | SA-10-6, -7; SA-4-19, -28, -36, -54; SA-2-16 (AW-2-64, 65) |
@@ -310,14 +311,17 @@ Our specification lists 28 separate jobs. One is the deadline watch, which belon
 | 18 | Help-article drafter | Drafts a help article from a resolved ticket after a rule removes names and numbers. | Support AI | AI writes | AI language | The knowledge-base editor confirms and publishes | SA-10-23 (AW-2-68) |
 | 19 | Upload and readiness check | Checks each upload, then the whole file, against the Country Pack's rules; builds the verdict and the readiness report. | Case Officer's AI | Rules only | Rules only | The case officer; acceptance is the submission for review; the reviewer signs off separately | SA-1B-18, -21, -22; AG-9-12, -26, -27, -28, -46; AG-7-16; AG-07 v2.7 §3.6; AG-08 v1.7 §3.11; AG-11-56, -61; AG-5-31; SA-06 v3.3 §10b (AW-1-71, 72, 74, 76) |
 | 20 | Message hand-off | Passes each message the product's sorter labelled to the right skill. | Case Officer's AI | Rules only | Rules only | None: routing only | AG-10-37, AG-11-74 (AW-1-79) |
-| 21 | Ready-to-save proposal | Prepares a change a person saves in the product's own screen: milestone, lead next step or stage, payment candidates, invoice, account change note. | Case Officer's AI; Intake AI; Billing AI; Support AI | Rules only | Rules only | Whoever holds that permission by hand; an account change is first checked by a second Expat Ready colleague | AG-9-51, -52; AG-11-16, -47, -78, -100, -108; AG-13-65; AG-07 v2.7 §3.7; AG-3-10, -13, AG-03 BR-8; AG-2-26, -28a, -37; AG-10-10, -12, -37; AG-6-2, -6, -8, -19, -20, -21, -24, -40, -41, -42, AG-06 BR-7; AG-16-8; SA-4-28, -29, -39, -42, -43, -68, -69, -76, -77; SA-3-58; SA4-D1, SA4-D23; SA7-D4 (AW-1-80, 89, 92, 96, 97, 101; AW-2-71, 72) |
-| 22 | List and reminder maker | Builds tasks, lists and reminders from the firm's records (findings, ranked day, leaver's list, missing facts, assessment task or the run itself (AIW-D96), unbilled work, privacy checklist, trust-report reminder with no figure). | Case Officer's AI; Intake AI; Billing AI; Owner's AI | Rules only | Rules only | None for internal lists; a template asking a lead for facts follows the firm's message settings; its tasks never mark a government deadline met | AG-11-74, -79; AG-13 BR-22, AG-13-10, -14, -50, -67; AG-07 v2.7 §3.6; AG-3-3, -12, -28; AG-6-9, -10, -24, -40, -42, AG-06 v1.7 §9; AG-7-51; SA-11-18, -27, -28 (AW-1-70, 86, 88, 93, 98, 100, 107) |
+| 21 | Ready-to-save proposal (firm) | Prepares a change a person saves in the firm's own screen: milestone, lead next step or stage, payment candidates, invoice. | Case Officer's AI; Intake AI; Billing AI | Rules only | Rules only | Whoever holds that permission by hand | AG-9-51, -52; AG-11-16, -47, -78, -100, -108; AG-13-65; AG-07 v2.7 §3.7; AG-3-10, -13, AG-03 BR-8; AG-2-26, -28a, -37; AG-10-10, -12, -37; AG-6-2, -6, -8, -19, -20, -21, -24, -40, -41, -42, AG-06 BR-7; AG-16-8 (AW-1-80, 89, 92, 96, 97, 101) |
+| 21b | Account change note (Expat Ready; split from 21, AIW-D106 note (b)) | Prepares a change note for a firm's plan, billing period or approved discount, checked by the product's rules. | Support AI | Rules only | Rules only | First checked by a second Expat Ready colleague; then someone allowed to make the change applies it | SA-4-28, -29, -39, -42, -43, -68, -69, -76, -77; SA-3-58; SA4-D1, SA4-D23; SA7-D4 (AW-2-71, 72) |
+| 22 | List and reminder maker (internal, firm) | Builds internal tasks, lists and reminders from the firm's records (findings, ranked day, leaver's list, unbilled work, privacy checklist, trust-report reminder with no figure). | Case Officer's AI; Billing AI; Owner's AI | Rules only | Rules only | None: internal lists; its tasks never mark a government deadline met | AG-11-74, -79; AG-13-10, -14, -50, -67; AG-07 v2.7 §3.6; AG-6-9, -10, -24, -40, -42, AG-06 v1.7 §9; AG-7-51; SA-11-18, -27, -28 (AW-1-70, 86, 93, 98, 100, 107) |
+| 22b | Lead fact request (split from 22, AIW-D106 note (b)) | Asks a lead for the missing facts by name, from a firm template chosen by rule. | Intake AI | Rules only | Rules only | The firm's approval of the template and its automatic use (AIW-D105); its send checks apply | AG-3-3, -12 (AW item to be traced at the appendix trim) |
+| 22c | Assessment run (split from 22, AIW-D106 note (b)) | Starts the eligibility assessment under the person's permission when the facts are ready; the rules calculate and the run is saved and stamped (AIW-D96). Inputs: a lead's stated answers labelled unverified, or a client's verified values. | Intake AI | Rules only | Rules only | None: runs automatically once the stop check passes (the Lead's ruling, AIW-D106 note (a)); telling the result is a licensed person's act (AIW-D41) | AG-3-1, -28 (AW-1-88, to be updated for AIW-D96) |
 | 23 | Rulebook change check | Compares old and new form fields, runs the rulebook's own test run on chosen made-up clients, checks its file as the import will, and compares recorded pages with stored copies. | Pack author's AI | Rules only | Rules only | The content author; a second person opens the test-run report, approves and publishes | SA-1-24, -28, -30, -52, -53, -62; SA-1B-17, -26, -37, -39, -40, -44, -57, -61; AG-11-3; SA-08 v2.4 BR-1 (AW-2-44, 46, 47, 51, 53 to 55) |
 | P | Practice-answer summary line | One optional line restating an answer of two or more lines. Rules check every number against the answer and scan for promise or regulator words; a failing line is dropped. | Practice answers (product feature), for the person asking | AI writes | AI explains rule results | Nobody: shown to staff only. Off by default; needs a read-only arrangement that lends no permissions | AG-11-70, -94; AG-11 v1.12 §11; AG-14-22, AG-14 BR-2 (AW-1-111 to 113); AW-1-109 is NEW |
 
-**Class.** The "Class" column is the AIW-D92 label each output carries, taken from `design/rules-ai-classification-2026-10-12.md` (Table B). "Kind" says what job the skill does; "Class" says how it may be described. Skills 19 to 23 are rules only and are never sold or described as AI (AIW-D92).
+**Class.** The "Class" column is the AIW-D92 label each output carries, taken from `design/rules-ai-classification-2026-10-12.md` (Table B). "Kind" says what job the skill does; "Class" says how it may be described. Skills 13, 19 to 23, 21b, 22b and 22c are rules only and are never sold or described as AI (AIW-D92).
 
-**Most reused:** skills 1, 21 and 22 (four teammates each); 3 and 4 (three each). The skill level itself, one catalogue of versioned skills each with its own test set, cost cap and health light, is **NEW** (AIW-D81, D83, D89): no team requirement, not yet in the specification.
+**Most reused:** skill 1 (four teammates); skills 3, 4, 21 and 22 (three each). The skill level itself, one catalogue of versioned skills each with its own test set, cost cap and health light, is **NEW** (AIW-D81, D83, D89): no team requirement, not yet in the specification.
 
 **Example summary line (made up).** The answer includes "Waiting on you: 6 items (4 document reviews, 2 messages)". The summary reads "You have 6 items waiting: 4 document reviews and 2 messages." Every number is already in the answer.
 
@@ -341,6 +345,8 @@ Every skill that makes an AI call takes a **driving test** before it touches a r
 
 1. Never "AI consultant", "AI that handles your file" or "robot lawyer". We say: it prepares and flags; you decide.
 2. Never "compliant with IRCC or CICC rules". We say: it records what the AI produced, to help you meet your duties; the say/never-say list governs the wording (AIW-D92, AIW-D94).
+
+The say / never-say list has one home: `research/rules-and-ai-positioning-2026-10.md` §(c)2, read with `research/ai-in-regulated-work-2026-10.md` §7 (the Lead's ruling, AIW-D106 note (d)). The five lines above are a short extract; the list wins where they differ.
 3. Never "accurate", "error-free" or "hallucination-free". We say: on our test set of N files it got X% right, and it says "not found" when unsure.
 4. Never hours saved that we have not measured. We found no independent measurement; every figure we found was a vendor's claim or self-reported.
 5. Never "the AI decides", and never "Canadian-hosted AI" until a provider has passed the test and the contract says so.
@@ -354,10 +360,10 @@ Every skill that makes an AI call takes a **driving test** before it touches a r
 - **Product facts** come from AW-01 v0.6 and AW-02 v0.8, and through them from the team's requirements in `sources/drive-snapshot-2026-10-11/`. "Built on" copies the team IDs from Register B. Numbers that exist only in our change notes (Register A.12) are not counted as team IDs.
 - **The 28 jobs** are catalogue entries W-01 to W-24 and W-27, with W-12 split into four as AW-01 does; W-25, W-26 and W-28 named whole teammates. W-02 is the deadline watch; W-24 is Practice answers (AIW-D90).
 - **NEW** (no team requirement): the skill level, health light and drop back (AIW-D81, D83, D89), and the controls Register B marks NEW, such as the record of whom a teammate works for (AW-1-5, AW-1-6), the per-file record of AI work (AW-1-23), evaluation sets (AW-2-39), risk registers (AW-1-122), the incident procedure (AW-1-123) and recall (AW-2-76).
-- **Test sets.** Firm: 1 and 2 E-6; 3 and 4 E-7; 5 E-13; 6 E-12, with no set yet for advert entries (a gap); 7 E-10 (shared with the product's cross-check); 8 E-5; 9 E-3 (imported notes); 10 E-8; P E-9. Expat Ready: 11 EV-1; 12 EV-2; 13 EV-4; 14 EV-5; 15 EV-6; 16 EV-7, EV-8; 17 EV-9, EV-11, EV-12; 18 EV-10. Product AI: E-1, E-2, E-3 (letters), E-4, E-10. Planted instructions (E-11) apply to every skill that reads client or firm text.
+- **Test sets.** Firm: 1 and 2 E-6; 3 and 4 E-7; 5 E-13; 6 E-12, with no set yet for advert entries (a gap); 7 E-10 (shared with the product's cross-check); 8 E-5; 9 E-3 (imported notes); 10 E-8; P E-9. Expat Ready: 11 EV-1; 12 EV-2; 13 EV-4 (now a rules test, AIW-D106 note (c)); 14 EV-5; 15 EV-6; 16 EV-7, EV-8; 17 EV-9, EV-11, EV-12; 18 EV-10. Product AI: E-1, E-2, E-3 (letters), E-4, E-10. Planted instructions (E-11) apply to every skill that reads client or firm text.
 - **Nothing invented:** the examples use made-up data, no time saving is claimed, and nothing of this layer exists in the code today (AW-01 §12).
 
-[^kind]: On Expat Ready's side every AI step is done by the product's writer tool (AW2-D6), even where the job is reading or sorting; "Kind" names the job, not the tool.
+[^kind]: On Expat Ready's side every AI step is done by the product's Writer helper (AW2-D6), even where the job is reading or sorting; "Kind" names the job, not the helper.
 [^intake]: The intake role is a custom role the firm creates by copying a starter role (AW-01 §2, citing AG-01 v1.18 §3.3). In a one-person firm the Owner wears this hat (`design/ai-organisation.md` §1.2).
 [^owner]: The specification's "Firm assistant" has two separate arrangements: the Owner's, and the Case Manager's for the weekly note only. The Admin cannot have one (AW1-D12, AIW-D38).
 [^support]: One teammate covers two Expat Ready roles, Support and Account manager, each with its own arrangement (AW-02 §3.1). The specification's names for the six are "Case assistant", "Intake assistant", "Billing assistant", "Firm assistant", "Pack author's assistant" and "Support and account assistant" (AW-01 §3.8 to §3.11; AW-02 §3.5, §3.6). Client- and regulator-facing wording follows AIW-D89 ("Your AI team"; teammates shown as, for example, "Case Officer's AI") and the say/never-say list (AIW-D92); AW-1-65 ("AI assistance") is to be updated to match.
