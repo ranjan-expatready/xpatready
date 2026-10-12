@@ -4,10 +4,13 @@
 
 **What this is.** This is the single entry point for the AI layer. It consolidates and traces the decisions already made; it redesigns nothing. The detail stays in each topic's one home, and this file points there. It restates no team requirement: those are cited by ID and version from `sources/drive-snapshot-2026-10-11/` (README §0 rule 3, AIW-D22). It names no person, only roles (AIW-D35).
 
-**The three files of this blueprint:**
+**The files of this blueprint:**
 - this file;
-- `traceability.csv`: one row per journey step, 84 rows;
-- `run-next.md`: what each test needs before it can run.
+- `traceability.csv`: one row per journey step, 84 rows, with user stories, register IDs and simulation results;
+- `run-next.md`: what each test needs before it can run;
+- `simulation-run-2026-10-13.csv`: the prototype run of the bucket (a) tests. It is simulation evidence only, never "Executed".
+
+**Specifications cited:** AW-01 v0.8 and AW-02 v1.0 (document control, 13 Oct 2026).
 
 **Decisions it rests on:** AIW-D81 to D117, with the AIW-D98 and AIW-D106 notes (`decisions.md`), and the Lead's rulings in `proposals.md` (rows of 12 Oct).
 
@@ -19,16 +22,20 @@ Every statement in this blueprint carries one of four evidence levels. They are 
 
 | Label | Meaning | Where the proof is |
 |---|---|---|
-| **Specified** | Written in a team requirement (Drive snapshot of 11 Oct) or in our build specifications: AW-01 v0.7, AW-02 v0.9 and the change notes | The cited ID |
-| **Simulated** | Shown in the clickable prototype, `prototype/index.html` (rebuilt 12 Oct; made-up data; no rules engine runs and no AI model is called) | The screen named |
-| **Implemented** | Found in the 10 Oct code copy, `code/ERv2-sanitized@042be70-2026-10-10/` | The file cited |
+| **Specified** | Written in a team requirement (Drive snapshot of 11 Oct) or in our build specifications: AW-01 v0.8, AW-02 v1.0 and the change notes | The cited ID |
+| **Simulated** | Shown in the clickable prototype, `prototype/index.html` (updated 13 Oct for AIW-D107 and D117; made-up data; no rules engine runs and no AI model is called) | The screen named; the result in `simulation-run-2026-10-13.csv` |
+| **Implemented** (or **Partly implemented**) | Found in the 10 Oct code copy, `code/ERv2-sanitized@042be70-2026-10-10/`. "Partly" names what is missing. | The file cited |
 | **Executed** | A test was actually run and has a recorded result | The test result |
 
 **Where we stand today (13 Oct 2026):**
-- **Executed: nothing.** The test file has 494 rows: 486 Not run and 8 Withdrawn (`run-next.md`).
-- **Implemented: none of the AI layer.** Only Workstream 1 pieces that the AI layer depends on exist in the code: the pack assessment engine, the rule-based Filler, the document virus-scan status and an event bus (§5; `run-next.md` (b)).
-- **Simulated:** 39 of the 84 journey steps, many only in part (`traceability.csv`).
-- **Specified:** everything else.
+- **Executed: nothing.** The test file has 500 rows: 492 Not run and 8 Withdrawn (`run-next.md`).
+- **Implemented: none of the AI layer.** Two journey steps are **partly implemented** in Workstream 1 code:
+  - step 3.4, the assessment engine, which has no run type (AG-3-25);
+  - step 2.4, clean-only serving of documents, with a fake scanner.
+
+  The rule-based Filler and an event bus also exist (§5; `run-next.md` (b)).
+- **Simulated:** 40 of the 84 journey steps, some only in part. 27 tests were played on the prototype: 23 passed and 4 failed **in simulation** (`simulation-run-2026-10-13.csv`).
+- **Specified:** the other 42 steps.
 
 **Assumption, labelled (AIW-D98, extending AIW-A1).** Workstream 2 is designed against a Workstream 1 product that is complete and tested, including the rules engine and the packs. **This is assumed, not verified.** Rule correctness belongs to Workstream 1; AI quality belongs to Workstream 2. Three facts sit against the assumption:
 - no Canada pack is authored;
@@ -112,7 +119,7 @@ The six AI teammates are in `handbook/ai-team-profiles.md` §1 (AIW-D90).
 
 **Six teammates and their skills** (handbook §4: 26 teammate skills plus the summary line).
 
-**Added since the handbook was written,** each specified in AW-01 v0.7 or AW-02 v0.9:
+**Added on 12 and 13 Oct,** each specified in AW-01 v0.8 or AW-02 v1.0 (handbook skills 24 to 29 since 13 Oct):
 - **Lead chat with AI topic sorting** (AIW-D107). AW-1-138.
 - **AI-started assessment** (AIW-D96, as amended by AIW-D117). AW-1-131, AW-1-132.
 - **Staff explanation of a stored result** (AIW-D98). AW-1-133.
@@ -133,7 +140,9 @@ The six AI teammates are in `handbook/ai-team-profiles.md` §1 (AIW-D90).
 | Credit notes: never in version 1 | FD-11 |
 | French labels from the Pack author's AI: dropped | AIW-D79 |
 | Support AI reading across firms' client records | AIW-D110 |
-| Pricing per teammate | AIW-D60, D62; workflow pricing instead (AIW-D111) |
+| Pricing per teammate: the AI team is priced by workflow pricing | AIW-D111, D115 |
+| Team-phase dependencies: only the per-teammate emergency switches and the data-residency declaration were pulled into Release 1. Everything else stays in the team's phase, and the AI step that depends on it waits and works without it (for example, pin totals shown as unavailable) | AIW-D78 |
+| Form filling until the team's FD-5 route exists: the pilot runs without form filling and says so; the form duty stays specified | AIW-D43 |
 
 WhatsApp from a teammate waits on the team's SA8-X1. That is a team dependency, not a founder exclusion.
 
@@ -144,7 +153,7 @@ These are never designed, sold or tested as possible:
 - **The AI never tells a lead or client their eligibility,** including "possibly eligible" (AIW-D41, D117).
 - **The AI never signs, never submits to or pays a government authority, and never presses a declaration** (AG-11-54 preserved by AIW-D113).
 - **The platform never moves money** (FD-12).
-- **The AI never grants itself permissions,** and never changes roles, delegations, switches, safeguards or the grid (AIW-D103 point 5).
+- **The AI never grants itself permissions and never bypasses product controls** (AIW-D103 point 5). The list of settings it may never change (roles, delegations, switches, safeguards, presets, the grid) is our AW-1-143.
 - **No claim that the AI detects wrong rules** (AIW-D98).
 - **No "AI-assisted" label** on assessments, scoring or any rules-only capability (AIW-D92).
 - **No time or accuracy figure until measured** (AIW-D99; proposals.md 12 Oct).
@@ -155,12 +164,12 @@ The one home is `commercial/ai-value-map-2026-10-12.md` §c. **No target numbers
 
 | Measure | Records | Gap |
 |---|---|---|
-| Elapsed days from new case to a file ready for review | Run start (AW-1-69); readiness item times (AG-11-112) | — |
-| Person acts per file, with and without a teammate | Audit modes (AG-13-68); step counts (AW-1-28) | — |
-| Approval visits per file, by preset | Approval items (AG-14-39) | — |
+| Elapsed days from new case to a file ready for review | Run start (AW-1-69); readiness item times (AG-11-112, as proposed in CN-AG-11 change 6) | Needs register TC-87 |
+| Person acts per file, with and without a teammate | Audit modes (AG-13-68, as proposed in CN-AG-13 change 2); step counts (AW-1-28) | Needs register TC-20 |
+| Approval visits per file, by preset | Approval items (AG-14-39, as proposed in CN-AG-14 change 2; the number collides with an older Doc 3 ID) | Needs register TC-101 |
 | Share of items approved unchanged, edited or rejected, per skill | `ApprovalItem` status and edits (AG-11 §7) | — |
 | Findings per accepted file; stops per 100 runs, by reason | Reviewer findings (AG-07 §3.6); `AiRunLog` outcomes | — |
-| Hours from client message to reply; age of items in Needs you; deadline items decided in time | AG-10 §7; AG-14-39; AG-11-100 | — |
+| Hours from client message to reply; age of items in Needs you; deadline items decided in time | AG-10 §7; AG-14-39 (as proposed); AG-11-100 | Needs register TC-101 for the AG-14-39 part |
 | Model cost per prepared file, per skill | `AiRunLog` cost fields (CN-AG-11 change 14, closing G1) | — |
 | Review minutes per file | Time an item is first and last opened | **G2, a team need** |
 | Per skill: driving-test accuracy, pass^k, shadow agreement, health light | AW-1-119, AW-1-120; AIW-D83 | — |
@@ -177,18 +186,15 @@ The one home is `commercial/ai-value-map-2026-10-12.md` §c. **No target numbers
 
 No second reuse table is added here.
 
-**The handbook is behind on two counts:**
-1. It was built on AW-01 v0.6 and AW-02 v0.8, before AIW-D107, D113 and D117.
-2. It has no catalogue rows for these specified items:
-   - the lead-chat topic sorting (AW-1-138(b));
-   - the staff explanation (AW-1-133);
-   - payment-notice reading (AW-1-146);
-   - portal filling (AW-1-147);
-   - the export, deletion-request and signature preparations (AW-1-142, AW-1-144).
+**Catalogue updated 13 Oct.** The handbook now carries skills 24 to 29:
+- 24: chat topic sorter (AW-1-138(b));
+- 25: stored-result explainer (AW-1-133);
+- 26: payment-notice reader (AW-1-146);
+- 27: assisted portal filling (AW-1-147);
+- 28: export and deletion request preparation (AW-1-142);
+- 29: signature workflow preparation (AW-1-144).
 
-Skill 22c (the assessment run) also needs its inputs reworded for AIW-D117.
-
-**For the Lead (Proposal):** place each of these in the handbook's §4 at its next edit, either as new skill rows or under existing skills (for example, the chat topic sort beside skill 16's "sorts" kind). This file assigns no skill numbers.
+Skill 22c is reworded for AIW-D117. This blueprint assigns no skill numbers of its own.
 
 ---
 

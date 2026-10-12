@@ -1,19 +1,19 @@
 # Team change register: what Workstream 2 needs from the product team
 
-*Maker draft, 13 Oct 2026, for the Lead. Not yet checked by the adversarial checker. **Nothing here has been sent.** We never write to Drive, GitHub or email (AIW-D10): the founder passes this list to the team. Team documents are cited by ID and version from `sources/drive-snapshot-2026-10-11/`; their text is not restated (AIW-D22). The same rows are in `team-change-register-2026-10-13.csv`.*
+*Maker draft, 13 Oct 2026, for the Lead. Checked in review R11 (`checks/review-R11-2026-10-13.md`): passed with fixes R-M1 to R-M3 and R-m1 to R-m11, applied the same day. **Nothing here has been sent.** We never write to Drive, GitHub or email (AIW-D10): the founder passes this list to the team. Team documents are cited by ID and version from `sources/drive-snapshot-2026-10-11/`; their text is not restated (AIW-D22). The same rows are in `team-change-register-2026-10-13.csv`.*
 
 ## Summary (10 lines)
 
-1. **147 distinct team changes**, one row each after merging duplicates: **83 in part A** (required by the founder's confirmed decisions, AIW-D or Founder Decisions Log FD rows) and **64 in part B** (Lead rulings, our own proposals and needs we inferred).
-2. **By priority:** P1 blocks the Release 1 AI layer: 71 (A 60, B 11); P2 needed before the pilot: 42 (A 16, B 26); P3 improvement: 34 (A 7, B 27).
-3. **By type:** 112 changes to a team document, 27 questions the team must answer, 8 needs (something the team must build or do that no team requirement covers yet). Section 3 separates 17 conflicts: 9 the team must decide (its own subject) and 8 where a founder decision wins and the team brings its document back.
+1. **147 distinct team changes**, one row each after merging duplicates: **80 in part A** (required by the founder's confirmed decisions, AIW-D or Founder Decisions Log FD rows) and **67 in part B** (Lead rulings, our own proposals and needs we inferred). Five A rows also carry labelled Lead-ruling detail (TC-06, TC-10, TC-14, TC-36, TC-72). After review R11, TC-35, TC-63 and TC-74 moved to B and keep their IDs.
+2. **By priority:** P1 blocks the Release 1 AI layer: 69 (A 57, B 12); P2 needed before the pilot: 44 (A 16, B 28); P3 improvement: 34 (A 7, B 27).
+3. **By type:** 112 changes to a team document, 27 questions the team must answer, 8 needs (something the team must build or do that no team requirement covers yet). Section 3 separates 18 conflicts: 8 the team must decide (its own subject; the 8 rows typed "(conflict)") and 10 where a founder decision wins and the team brings its document back.
 4. **Coverage:** every change in our 33 change notes is in a row (153 numbered changes, merged where the same change lands in several documents), except two superseded changes not to be sent (CN-AG-03 change 1, CN-AG-06 change 4). Also covered: workflow pricing T1 to T18 and T6a, framework §8, autonomy conflicts E4, E9, E12 to E16, journey gaps G-1, G-6, G-13, G-19, G2, AW-01 §13 T6 to T18, AW-02 §13 open items, the Charter edits and NEXT.md's team list.
 5. **The four decisions the team must take first** (all P1, all the team's own subject, no change note written): tool access TC-01 (AG-11-94), upload values in one review sitting TC-02 (AG-11-60), untested pack rules TC-03 (SA1B-D18), and whether a lead is a "client" for the AI-text floor TC-04 (AG-11-53).
 6. **Five things the team must build that no team requirement describes yet:** the checkpoint holding state and bundle screen TC-05, the presets and role-by-action grid TC-06, the launch chat surface for leads TC-09, the in-session portal filling component TC-10, and the Canada provider test run by the tech lead TC-11.
 7. **Workflow pricing** is 19 P1 rows (TC-42 to TC-60) in SA-03 and SA-04 v2.17. They are needed to sell any plan at launch (AIW-D115), not for pilot firm one, which is the founder's own practice (AIW-D112).
 8. **Rows the founder places himself** (Founder Decisions Log or Program Charter, not a team module): TC-41, TC-75, TC-80, TC-146. These rows also carry a Founder Decisions Log or Charter line for him to place beside the team's change: TC-70, TC-82, TC-64, TC-77, TC-68, TC-67, TC-39, TC-31, TC-22, TC-66.
 9. **Before sending, the Lead refreshes the wording** of the 11 Oct change notes and the Charter draft: they still say "AI assistant" (now "AI teammate", AIW-D89), "seven assistants" (now six, AIW-D90) and "provisional until counsel" (no counsel, AIW-D94). See section 6.
-10. **Status:** every row is "Not yet sent". Next: adversarial check, then the Lead, then the founder decides how to hand it to the team.
+10. **Status:** every row is "Not yet sent". Review R11 passed it with fixes, now applied. Next: the Lead, then the founder decides how to hand it to the team.
 
 ## 1. How to read the tables
 
@@ -187,12 +187,11 @@
 | Row | Team rule | Against | What we need decided |
 |---|---|---|---|
 | TC-01 | AG-11-94: models have no tool access | AIW-D93 (tools under the person's permission, effects approved first); also blocks AIW-D96 and D113 | Allow read tools and proposed actions, or tell the founder it will not |
-| TC-02 | AG-11-60: Reader values from uploads asked at once | AIW-D100 (one review sitting, provisional until approved) | Allow upload values to wait for the bundle sitting, except when a deadline or dependent action needs them |
+| TC-02 | AG-11-60: Needs you holds Reader-extracted values on client uploads (our reading: asked at once, one item each) | AIW-D100 (one review sitting, provisional until approved) | Allow upload values to wait for the bundle sitting, except when a deadline or dependent action needs them |
 | TC-03 | SA1B-D18: rules publish on second-person approval alone, untested | AIW-D98 (Workstream 2 assumes a complete, tested engine and packs) | Whether pack rules may still publish untested |
 | TC-04 | AG-11-53: the AI-text floor covers text "sent to a client" | AIW-D107 (conversational AI for leads in Release 1) | Whether a lead is a client for the floor |
 | TC-05 | AG11-D2: Needs you holds only what is waiting | AIW-D101 (approval at a checkpoint, before effect) | A holding state for checkpoint items |
-| TC-08 | AG-6-46, AG-6-47 and CN-SA-06 change 6: trust keys never lendable | AIW-D103 (AI prepares proposed trust entries) | Whether a prepared trust entry can wait for a key holder |
-| TC-07 | AG-11-97: merge fields render only from verified values | AIW-D100 point 5 (drafts refresh after corrections) | Whether the Filler may draft from provisional values, marked so |
+| TC-07 | AG-11-97: fields marked immigration-significant render only from verified values | AIW-D100 point 5 (drafts prepared before the review sitting, refreshed after corrections) | Whether the Filler may draft from provisional values, marked so, and re-render after verification |
 | TC-139 | SA8-D19: WhatsApp Phase 2 | AG11-D6, AG11-D18(a): WhatsApp in Release 1 (team against team) | One release for WhatsApp |
 | TC-120 | AG-11-91: seeded templates copied at provisioning | SA-05 L202, SA-5-29: no copy (team against team) | Where seeded templates live |
 
@@ -208,6 +207,8 @@
 | TC-71 | FD-3 | SA-01 v2.2 per-client pinning wording |
 | TC-82 | AIW-D67, D73 | AG17-D38, SA3-D20 timing; Charter "Employer view (read-only)" |
 | TC-41 | AIW-D66 (reaffirms D14, D21) | Program Charter "Not in Release 1: AI-assisted features, AG-11 and its Doers"; the 10 Oct planning rule |
+| TC-31 | AIW-D71 (every proposed type to a person until a threshold is set from measured accuracy) | AG-09 v1.8 AG-9-11: a high-confidence type is applied by default (AUTO) |
+| TC-28 | AIW-D115 (firms can switch an AI teammate off, AW-1-125) | AG-16 v1.13 AG-16-35 ("there SHALL be no per-Doer setting") and AG-11 v1.12 AG-11-93 (one firm switch for the AI Doers) |
 
 ## 4. Questions the team must answer
 
@@ -220,7 +221,7 @@ One line each; the row has the detail. Grouped by priority.
 - **TC-03** (SA-01B v1.2 SA1B-D18 (rules published on second-person approval alone, no test run)): Decide whether pack rules and scoring may still publish untested, given that the AI layer assumes a complete and tested rules engine and packs.
 - **TC-04** (AG-11 v1.12 AG-11-53 (the AI-text floor for text "sent to a client")): Say whether a lead counts as a "client" under this floor.
 - **TC-07** (AG-07 v2.7 (the Filler, form drafts)): Say whether the Filler may draft from provisional values, marked provisional, and re-render after they are verified or corrected.
-- **TC-08** (AG-06 v1.7 AG-6-46, AG-6-47 (as proposed in CN-AG-06 change 6)): Say whether the Billing AI may prepare a proposed trust entry, or a return of trust money, for a key holder to approve, while both trust keys stay never lendable.
+- **TC-08** (AG-06 v1.7 §13 item 11, the team's ledger design): Design the trust ledger so that a proposed trust entry, or a return of trust money, prepared by the Billing AI can wait for a key holder's approval (not a conflict: the never-lendable keys are our own proposal, which the Lead updates to AIW-D103).
 - **TC-39** (AG-07 v2.7 §13 item 22, new item 25): FD-5 stands: the team states the route for filling IRCC's forms and a date.
 - **TC-94** (SA-06 v3.3 §13 new item 13): Name the key that accepts a fact for a lead who has no case, without a new key if possible.
 
@@ -262,11 +263,12 @@ Also asked inside change rows: AG-06 §13 items 10 and 11 (where an automatic in
 ## 6. Before the founder sends anything (for the Lead)
 
 1. The 11 Oct change notes still say "AI assistant" and "persona"; AIW-D89 makes it "AI teammate", "skill", "step" (TC-83).
-2. Several notes say "provisional until counsel" or "counsel confirms" (for example CN-AG-08 change 3, CN-AG-09 change 3, CN-AG-13 change 4, CN-AG-16 change 3). AIW-D94 dropped counsel; CN-FDL change 15 already removes the words from the FDL rows. The Restricted list (B-1) in TC-68 then has no named confirmer: the team and the founder confirm it.
+2. Several notes say "provisional until counsel" or "counsel confirms" (for example CN-AG-08 change 3, CN-AG-09 change 3, CN-AG-13 change 4, CN-AG-16 change 3). AIW-D94 dropped counsel; CN-FDL change 15 already removes the words from the FDL rows. The Restricted list (B-1) in TC-68: the confirmer is not named after AIW-D94; to be agreed when sent.
 3. The Charter draft (`charter-edits.md` §1) says "seven AI assistants" and that the AI switch waits for "counsel has read the safety pack"; both are out of date (AIW-D90, D94). Refresh before the founder pastes it (TC-41).
 4. CN-AG-16 change 4 and CN-AG-14 still speak of the "Practice expert"; AIW-D90 makes it the product feature "Practice answers".
-5. Hand the team one pack: this register, the change notes, `commercial/workflow-pricing-2026-10-12.md` §3.3, and `requirements/provider-test-script.md`.
+5. **AIW-D117** (13 Oct) needs no new team change for missing inputs: AG-3-3 and AG-3-12 already record an incomplete result with explicit gaps. It touches TC-03, TC-17, TC-33, TC-81 and TC-114 (now cited). A search of CN-AG-03 and CN-AG-11 found no "stop on missing inputs" wording to refresh; "possibly eligible" is eligibility content (D117 point 3).
+6. Hand the team one pack: this register, the change notes, `commercial/workflow-pricing-2026-10-12.md` §3.3, and `requirements/provider-test-script.md`.
 
 ## 7. Sources read
 
-`decisions.md` (AIW-D1 to D116 and the notes; D81 to D116 are the newest set); `proposals.md` (Lead rulings of 11 and 12 Oct; open team rows); all 33 files in `requirements/change-notes/`; `design/rules-and-ai-framework-2026-10-12.md` §8; `commercial/workflow-pricing-2026-10-12.md` §1.4, §1.5, §3.3; `design/ai-autonomy-model-2026-10-12.md` c.1 to c.6 and (e) E1 to E16; `design/journey-walkthroughs-2026-10-12.md` §0 G-1 to G-20, §6 M-1 to M-4, §8; `requirements/AW-01-firm-ai-assistants_v0.1.md` §13 and AW-1-131, AW-1-138, AW-1-141, AW-1-147; `requirements/AW-02-platform-ai-assistants_v0.1.md` §13; `charter-edits.md`; `NEXT.md` "For the team". Team documents checked in `sources/drive-snapshot-2026-10-11/` (AG-11 v1.12 AG-11-52, AG-11-53, AG-11-54; SA-01B v1.2 SA1B-D18; AG-03 v1.4 AG-3-29; SA-08 v2.4 SA8-D19; the shared Overview v3.9).
+`decisions.md` (AIW-D1 to D117 and the notes; D81 to D117 are the newest set, including D107 and D117); `proposals.md` (Lead rulings of 11 and 12 Oct; open team rows); all 33 files in `requirements/change-notes/`; `design/rules-and-ai-framework-2026-10-12.md` §8; `commercial/workflow-pricing-2026-10-12.md` §1.4, §1.5, §3.3; `design/ai-autonomy-model-2026-10-12.md` c.1 to c.6 and (e) E1 to E16; `design/journey-walkthroughs-2026-10-12.md` §0 G-1 to G-20, §6 M-1 to M-4, §8; `requirements/AW-01-firm-ai-assistants_v0.1.md` §13 and AW-1-131, AW-1-138, AW-1-141, AW-1-147; `requirements/AW-02-platform-ai-assistants_v0.1.md` §13; `charter-edits.md`; `NEXT.md` "For the team". Team documents checked in `sources/drive-snapshot-2026-10-11/` (AG-11 v1.12 AG-11-52, AG-11-53, AG-11-54; SA-01B v1.2 SA1B-D18; AG-03 v1.4 AG-3-29; SA-08 v2.4 SA8-D19; the shared Overview v3.9).

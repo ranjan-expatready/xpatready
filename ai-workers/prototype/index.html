@@ -382,7 +382,7 @@ const S = {
   rv:{ ok:{}, opened:{}, corr:{}, editing:null, spot:'', spotRes:null, rest:false, conflict:null,
        drafts:{form:'pending', letter:'pending', note:'pending'}, ver:{form:1, letter:1, note:1}, stale:{}, rejecting:null, reason:{} },
   as:{ ev:'ready', phase:'idle', pack:3, explained:false, reviewed:false, newer:false },
-  bl:{ inv:'pending', ver:1, changed:false, invAt:null, trust:'none', trustAt:null, rejecting:null },
+  bl:{ inv:'pending', ver:1, changed:false, invAt:null, trust:'pending', trustAt:null, rejecting:null, trustTry:false },
   set:{ preset:'each', open:false, over:{}, earned:false, chg:'pending', chgAt:null },
   inb:{ msgs:null, guided:0, draft:'none', q:'', edit:false, text:'', ai:true, tasks:[], lastSort:null, booked:null }
 };
@@ -890,6 +890,15 @@ function invTotals(){
   return {rate, fee, disb, tax, total: fee+disb+tax};
 }
 const money = n => 'CAD ' + n.toLocaleString('en-CA',{minimumFractionDigits:2, maximumFractionDigits:2});
+function linkLine(which){
+  const b = S.bl;
+  if(which==='trust'){
+    const st = b.trust==='approved'?'recorded':b.trust==='rejected'?'rejected':'proposed, waiting for the trust key holder';
+    return `<div class="small ${b.trust==='rejected'?'':'muted'}" style="${b.trust==='rejected'?'color:var(--danger);font-weight:600':''}">${b.trust==='rejected'?'Linked item rejected: ':'Linked: '}proposed trust entry to pay this invoice · ${st}</div>`;
+  }
+  const st = b.inv==='approved'?'INV-0042, issued':b.inv==='rejected'?'rejected':'invoice for Client A, waiting for approval (number assigned at issue)';
+  return `<div class="small ${b.inv==='rejected'?'':'muted'}" style="${b.inv==='rejected'?'color:var(--danger);font-weight:600':''}">${b.inv==='rejected'?'Linked item rejected: ':'Linked: '}${st}</div>`;
+}
 function scBill(){
   const b = S.bl, t = invTotals();
   const preview = `<div class="tw"><table><thead><tr><th>Line</th><th>Qty</th><th>Unit price</th><th>Tax</th><th>Funds</th><th style="text-align:right">Amount</th></tr></thead><tbody>
@@ -900,42 +909,48 @@ function scBill(){
   </tbody></table></div>`;
   let inv;
   if(b.inv==='approved'){
-    inv = `<div class="section stack"><div class="notice ok"><span class="ic">✓</span><div><b>Created and issued by the platform at ${b.invAt}</b>, exactly as approved. Invoice number INV-0042 (made up) was assigned at issue.</div></div>${labels(L('rules'), L('prep','Billing AI'), L('appr','the bookkeeper'))}</div>`;
+    inv = `<div class="section stack"><div class="notice ok"><span class="ic">✓</span><div><b>Created and issued by the platform at ${b.invAt}</b>, exactly as approved. Invoice number INV-0042 (made up) was assigned at issue.</div></div>${labels(L('rules'), L('prep','Billing AI'), L('appr','the bookkeeper'))}${linkLine('trust')}</div>`;
   } else if(b.inv==='rejected'){
-    inv = `<div class="section stack"><div class="notice danger"><span class="ic">×</span><div class="small"><b>Rejected by the bookkeeper.</b> Nothing was created.</div></div><button class="btn sm" data-act="bl-reset" style="align-self:flex-start">Reset</button></div>`;
+    inv = `<div class="section stack"><div class="notice danger"><span class="ic">×</span><div class="small"><b>Rejected by the bookkeeper.</b> Nothing was created.</div></div>${linkLine('trust')}<button class="btn sm" data-act="bl-reset" style="align-self:flex-start">Reset</button></div>`;
   } else {
     inv = `<div class="section stack">
       ${b.inv==='voided'?'<div class="notice warn"><span class="ic">!</span><div class="small"><b>The preview changed, so your approval no longer applies.</b> The tax rate in the pack changed before the invoice was issued. This is a fresh preview; nothing was created. Approve again if it is right.</div></div>':''}
       <div class="row" style="justify-content:space-between"><b>Bill to:</b><span>Client A · CAD · due in 30 days</span></div>
       ${preview}
+      ${linkLine('trust')}
       <p class="small"><b>Approving creates and issues this invoice exactly as shown.</b> Your approval is tied to: who is billed, currency, every line, tax and total, funds per line, and "create and issue". If any of these changes before it runs, it does not run. The number is assigned at issue, so it is not part of the preview. ${tag('AIW-D103')}${tag('M-4')}${tag('G-7')}</p>
       <div class="row"><button class="btn primary" data-act="bl-inv-ok">Approve: create and issue</button><button class="btn danger" data-act="bl-inv-rej">Reject</button></div>
       ${b.inv==='pending'&&!b.changed?`<div class="demo"><div class="lbl">Demo control</div><p class="small">Change the tax rate in the pack after you look but before it runs.</p><button class="btn sm" data-act="bl-change">Change the tax rate (simulated)</button></div>`:''}
     </div>`;
   }
-  let trust = '';
-  if(b.inv==='approved'){
-    if(b.trust==='none') b.trust='pending';
-    if(b.trust==='approved'){
-      trust = `<div class="section stack"><div class="notice ok"><span class="ic">✓</span><div class="small"><b>Trust entry recorded at ${b.trustAt}</b>, exactly as approved. The platform recorded it; it did not move any money. The Owner makes the bank transfer.</div></div>${labels(L('rules'), L('prep','Billing AI'), L('appr','the Owner (trust key holder)'))}</div>`;
-    } else if(b.trust==='rejected'){
-      trust = `<div class="section"><div class="notice danger"><span class="ic">×</span><div class="small"><b>Rejected by the Owner.</b> Nothing was recorded. The invoice stays issued and unpaid.</div></div></div>`;
-    } else {
-      trust = `<div class="section stack">
-        ${labels(L('rules'), L('prep','Billing AI'))}
-        <dl class="kv"><dt>Client</dt><dd>Client A</dd><dt>Amount</dt><dd><b>${money(t.total)}</b></dd><dt>Direction</dt><dd>Out of trust, to pay invoice INV-0042</dd><dt>Linked to</dt><dd>Invoice INV-0042 · retainer deposit held in trust for Case C-1</dd></dl>
-        <p class="small">Your approval is tied to client, amount, direction and the linked invoice. Approving records the entry; <b>the platform never moves money</b>. ${tag('FD-12')}${tag('FD-17')}</p>
-        <div class="row"><button class="btn primary" data-act="bl-tr-ok">Approve as the Owner (trust key holder)</button><button class="btn danger" data-act="bl-tr-rej">Reject</button></div>
-        <p class="xs faint">Open team question: the team's billing rules keep trust permissions with people only. Whether a proposed trust entry may be prepared for a key holder to approve is asked of the team (autonomy model E16).</p>
-      </div>`;
-    }
+  let trust;
+  const invRej = b.inv==='rejected', invOk = b.inv==='approved';
+  if(b.trust==='approved'){
+    trust = `<div class="section stack"><div class="notice ok"><span class="ic">✓</span><div class="small"><b>Trust entry recorded at ${b.trustAt}</b>, exactly as approved. The platform recorded it; it did not move any money. The Owner makes the bank transfer.</div></div>${labels(L('rules'), L('prep','Billing AI'), L('appr','the Owner (trust key holder)'))}${linkLine('inv')}</div>`;
+  } else if(b.trust==='rejected'){
+    trust = `<div class="section stack"><div class="notice danger"><span class="ic">×</span><div class="small"><b>Rejected by the Owner.</b> Nothing was recorded.</div></div>${linkLine('inv')}</div>`;
+  } else {
+    trust = `<div class="section stack">
+      ${labels(L('rules'), L('prep','Billing AI'))}
+      ${invRej?'<div class="notice danger"><span class="ic">!</span><div class="small"><b>Linked item rejected:</b> the invoice this entry would pay was rejected, so this entry cannot be approved.</div></div>':''}
+      <dl class="kv"><dt>Client</dt><dd>Client A</dd><dt>Amount</dt><dd><b>${money(t.total)}</b></dd><dt>Direction</dt><dd>Out of trust, to pay the linked invoice</dd>
+        <dt>Delivered milestone</dt><dd>Milestone 2 "File prepared" on Case C-1, delivered 2026-12-04 (made up) ${tag('FD-17 (b)')}</dd>
+        <dt>Funds held</dt><dd>Retainer deposit held in trust for Case C-1</dd></dl>
+      ${linkLine('inv')}
+      <p class="small">Your approval is tied to client, amount, direction, the delivered milestone and the linked invoice. Approving records the entry; <b>the platform never moves money</b>. ${tag('FD-12')}${tag('FD-17')}</p>
+      <div class="row"><button class="btn primary" data-act="bl-tr-ok" ${invOk?'':'disabled'}>Approve as the Owner (trust key holder)</button><button class="btn danger" data-act="bl-tr-rej" ${invRej?'disabled':''}>Reject</button></div>
+      ${!invOk&&!invRej?'<p class="xs muted">It can be approved once the linked invoice is issued; it can be rejected now.</p>':''}
+      ${b.trustTry?'<div class="notice danger"><span class="ic">×</span><div class="small"><b>Refused.</b> The bookkeeper\'s Billing delegation does not include the trust-money permission: it is never lent to an AI teammate, and the bookkeeper does not hold it. Only the trust key holder (the Owner) can approve this entry.</div></div>':''}
+      <div class="demo"><div class="lbl">Demo control</div><p class="small">Try to approve as the bookkeeper, through the Billing AI's delegation.</p><button class="btn sm" data-act="bl-tr-try">Approve as the bookkeeper (simulated)</button></div>
+      <p class="xs faint">Open team question: the team's billing rules keep trust permissions with people only. Whether a proposed trust entry may be prepared for a key holder to approve is asked of the team (autonomy model E16).</p>
+    </div>`;
   }
   return head('Screen 4 of 6','Prepare billing',`Billing AI prepares an invoice and a proposed trust entry through the product's own screens. The rules calculate every amount. An authorised person approves each one against an exact preview. Each is asked on its own, never in an "approve all". ${tag('AIW-D103')}`) + `
   <div class="scenario"><span>◇</span><div><b>Scenario.</b> Case C-1 reached milestone 2. The unbilled work list (rules) found one fee line and one disbursement. Amounts, the tax rate and invoice numbers are made up.</div></div>
   <div class="card"><div class="card-head"><h3>Needs you now · Invoice for Client A</h3>${b.inv==='approved'?'<span class="pill ok">Issued</span>':'<span class="pill warn">Ask now</span>'}</div>
     ${b.inv==='approved'?'':`<div class="section">${labels(L('rules'), L('prep','Billing AI'))}</div>`}
     ${inv}</div>
-  ${b.inv==='approved'?`<div class="card"><div class="card-head"><h3>Needs you now · Proposed trust entry</h3>${b.trust==='approved'?'<span class="pill ok">Recorded</span>':'<span class="pill warn">Ask now</span>'}</div>${trust}</div>`:''}
+  <div class="card"><div class="card-head"><h3>Needs you now · Proposed trust entry</h3>${b.trust==='approved'?'<span class="pill ok">Recorded</span>':b.trust==='rejected'?'<span class="pill danger">Rejected</span>':'<span class="pill warn">Ask now</span>'}</div>${trust}</div>
   ${foot('AIW-D103 (prepare invoices and proposed trust entries; rules calculate; approval before execution, bound to the exact preview; no money moved), FD-12, FD-17; Lead rulings G-7 (one approval covers create and issue only when the preview shows the issued invoice), M-4 (named bound fields); autonomy model row 12 (never Auto, always asked one by one).')}`;
 }
 
@@ -1009,10 +1024,16 @@ function scSet(){
   <div class="exlist">
     <div class="exbox"><h4>Runs automatically in both presets</h4><ul>
       <li>Tasks and reminders a rule creates for you</li><li>A missing-document reminder from your firm's published template</li><li>Guided intake questions, and chat answers to a new lead where the AI sorts the question into an approved topic and a rule picks the published answer</li><li>Reading documents and checking them against the pack</li><li>Starting the eligibility assessment once the evidence check passes (the result is never sent to a lead or client)</li></ul></div>
-    <div class="exbox"><h4>${st.preset==='cp'?'Waits for the end-of-job review (your preset)':'Waits for the end-of-job review under "Review at checkpoints"'}</h4><ul>
-      <li>Values read from a clean upload</li><li>Form drafts</li><li>A letter of explanation</li><li>Internal notes, AI-proposed tasks and filing labels, until they earn Auto</li></ul></div>
+    ${st.preset==='cp'?`<div class="exbox"><h4>Waits for the end-of-job review (your preset: "Review at checkpoints")</h4><ul>
+      <li>Values read from a clean upload</li><li>Form drafts</li><li>A letter of explanation</li><li>Internal notes, AI-proposed tasks and filing labels, until they earn Auto</li></ul></div>`
+    :`<div class="exbox"><h4>Asks you one by one, as each comes up (your preset: "Review each step")</h4><ul>
+      <li>Values read from each upload</li><li>Each form draft</li><li>Each letter of explanation</li><li>Internal notes, AI-proposed tasks and filing labels, until they earn Auto</li></ul></div>`}
     <div class="exbox"><h4>Always asks you at once, whatever you choose</h4><ul>
-      <li>Any AI-written message to a client or lead</li><li>An invoice, proposed trust entry, export, deletion request, settings change or signature workflow</li><li>Anything linked to a government deadline</li><li>An upload the client must re-send</li><li>A stop because evidence is conflicting or stale</li></ul></div>
+      <li>An invoice, proposed trust entry, export, deletion request, settings change or signature workflow</li><li>Anything linked to a government deadline</li><li>An upload the client must re-send</li><li>A stop because evidence is conflicting or stale</li></ul></div>
+    <div class="exbox"><h4>Always needs approval, never automatic</h4><ul>
+      <li>Any AI-written message to a client or lead: asked at once by default; under "Customise" one not linked to a deadline may wait for the checkpoint, but it can never be sent automatically ${tag('AIW-D102')}${tag('AIW-D105')}</li></ul></div>
+    <div class="exbox"><h4>Can earn Auto</h4><ul>
+      <li>Routine internal work only: draft internal notes, ordinary AI-proposed tasks, filing labels</li><li>Only after the skill passes its tests, checked examples from real use support it, and the Owner approves; it returns to approval if quality falls ${tag('AIW-D104')}</li></ul></div>
     <div class="exbox"><h4>Never done by the AI</h4><ul>
       <li>Advice, or telling a client their eligibility result</li><li>Signing</li><li>Moving money</li><li>Giving itself permissions or changing these settings</li><li>Submitting to the government</li></ul></div>
   </div>
@@ -1114,7 +1135,7 @@ function scIntake(){
         <div class="counts"><div><b>${done}</b><span class="muted">approved answers sent automatically</span></div><div><b>${n.tasks.length}</b><span class="muted">handed to a person</span></div><div><b>${n.draft==='pending'?1:0}</b><span class="muted">AI-written reply waiting</span></div></div>
         <p class="small muted">Intake AI only sorts a typed question into one of the firm's approved topics. A rule then picks the published answer, never the AI. Booking goes through the Scheduler. Eligibility, unknown topics and unsure sorting go to a person. ${tag('AIW-D107')}${tag('AIW-D105')}${tag('AIW-D41')}</p>
         ${n.lastSort?`<div class="passage"><small>Last question sorted</small>"${esc(n.lastSort.q)}" → <b>${esc(TOPICS[n.lastSort.t])}</b> · ${n.lastSort.conf==='low'?'unsure: handed to a person':'sure'}</div>${labels(L('prep','Intake AI'))}`:''}
-        ${!n.ai?'<div class="notice paused"><span class="ic">■</span><div class="small">AI is off: the chat falls back to the menu only. Menu answers and guided questions still work, because a rule picks them.</div></div>':''}
+        ${!n.ai?'<div class="notice paused"><span class="ic">■</span><div class="small">AI is off: no AI sorting. Menu answers and guided questions still work, because a rule picks them. A typed question gets "A person will reply" and a task for a person; no AI draft is made.</div></div>':''}
         ${n.guided>=GUIDED.length?`<div class="notice ok"><span class="ic">✓</span><div class="small">Guided intake complete. The answers are stored as stated by the lead, not verified. Intake AI may now start the assessment (screen 3).</div></div>`:''}
         ${n.booked?`<div class="notice ok"><span class="ic">✓</span><div class="small">Booked by the Scheduler: ${esc(n.booked)}.</div></div>`:''}
         ${n.tasks.length?`<div><div class="lbl" style="margin-bottom:4px">Tasks for a person</div><ul class="small" style="margin:0;padding-left:18px">${n.tasks.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`:''}
@@ -1127,7 +1148,7 @@ function scIntake(){
     <div class="chat"><div class="chat-head"><span>Firm F · chat</span><span class="xs muted">What the lead sees</span></div>
       <div class="chat-body" id="chat-body">${n.msgs.map(bubble).join('')}</div>
       <div class="chat-foot"><div class="chips">${chips}</div>
-        ${n.ai?`<div class="row" style="gap:6px"><input type="text" id="in-q" placeholder="Type your question…" style="flex:1;min-width:0" aria-label="Type a question"><button class="btn sm" data-act="in-ask">Send</button></div>`:'<p class="xs muted">Menu only.</p>'}</div>
+        <div class="row" style="gap:6px"><input type="text" id="in-q" placeholder="Type your question…" style="flex:1;min-width:0" aria-label="Type a question"><button class="btn sm" data-act="in-ask">Send</button></div></div>
     </div>
     ${staff}
   </div>
@@ -1209,7 +1230,8 @@ document.addEventListener('click', e=>{
     case 'bl-inv-rej': b.inv = 'rejected'; break;
     case 'bl-tr-ok': b.trust = 'approved'; b.trustAt = nowStamp(); break;
     case 'bl-tr-rej': b.trust = 'rejected'; break;
-    case 'bl-reset': Object.assign(b, {inv:'pending', ver:1, changed:false, invAt:null, trust:'none', trustAt:null}); break;
+    case 'bl-tr-try': b.trustTry = true; break;
+    case 'bl-reset': Object.assign(b, {inv:'pending', ver:1, changed:false, invAt:null, trust:'pending', trustAt:null, trustTry:false}); break;
     /* settings */
     case 'preset': S.set.preset = v; S.set.over = {}; break;
     case 'grid-open': S.set.open = !S.set.open; break;
@@ -1235,6 +1257,7 @@ document.addEventListener('click', e=>{
     case 'in-ask': {
       const i = $('#in-q'); const q = i ? i.value.trim() : ''; if(!q){ i&&i.focus(); return; }
       inbInit(); n.msgs.push({from:'lead', text:q});
+      if(!n.ai){ n.msgs.push({from:'firm', tpl:'handoff', rule:'AI is off: every typed question goes to a person'}); n.tasks.push('Typed question from Lead L-2 (AI off): "'+q+'"'); n.lastSort=null; break; }
       const st = sortTopic(q); n.lastSort = {q, t:st.t, conf:st.conf};
       answerTopic(st.t, 'Intake AI sorted the question into "'+TOPICS[st.t]+'" → '+(st.t==='elig'?'eligibility always goes to a person':st.t==='unknown'?'no approved topic: hand off to a person':'the published answer for that topic'));
       if(st.t==='unknown'){
