@@ -34,14 +34,10 @@
   - resume the interview.
 
 ## Interview (one question at a time, recommendation and one-line why; memory `interview-one-question`)
-Open founder questions, in this order (framework v2 §9):
-1. **AIW-D102 against the full-release direction.** Bring the conversational AI (admin intake, FAQs, booking) into Release 1?
-   - **Option A**, no floor lowered: the AI only sorts the question into an approved topic, a rule picks the approved answer, the Scheduler books, anything else goes to a person. Amends D102, AIW-D11 and AW-1-46.
-   - **Option B**: live AI-written replies. Needs the team's AI-text floor lowered (AG11-D1, AG-11-53) and FD-16 amended.
-   - **Or** keep "later" as an explicit choice.
-2. **AIW-D57 safeguards:** make them final (counsel dropped). Asked once and dismissed.
-3. **README §1 wording:** "Same facts, same rules, same answer; AI answers are stored and replayed."
-4. **Support AI reading across firms:** bring into Release 1, or record as a named exclusion (audit H-14).
+Answered 12 Oct after the pass: AIW-D107 (conversational AI for leads in Release 1, Option A), D108 (safeguards final), D109 (repeatability wording). Still open, in this order (framework v2 §9):
+1. Support AI reading across firms: bring into Release 1, or a named exclusion (audit H-14).
+2. The price unit: per-file charge for the "prepared file" (mostly rules) or AI team inside the plan (value map item 7; AIW-D60 against D92).
+3. Pilot firm one: the founder-consultant's own practice, real client files, no counsel (value map item 8).
 
 ## For the team (we never write to Drive; the founder passes these on)
 Framework v2 §8: AG-11-94 tools; AG-11-60 upload values in the bundle; SA1B-D18 untested packs; AW-1-88 knock-ons; G-6 permission change mid-job; G-13 stale assessment; G2 approval opened-times; grid storage and screens.

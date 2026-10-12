@@ -36,7 +36,7 @@
    - The grid never grants access.
 6. **Autonomy is earned** for routine, reversible internal work (D104). Published templates picked by a rule go out on their own (D105).
 7. **The AI uses only approved rule results.** It cites its sources and the pack version, stops when evidence is missing, out of date or conflicting, and its explanations stay subject to licensed-person review (D98).
-8. **Exact repeatability comes from the platform, not the model.** Rule results are stamped with the pack version (AG-03 v1.4 §1, team specification); storing and replaying AI answers is a Proposal for the build (accuracy research R2).
+8. **Repeatability, as the founder worded it (AIW-D109):** "The rules engine produces the same calculated result from the same verified facts and rule version. AI-generated outputs may vary between fresh calls; they are recorded, can be replayed, and are tested for accuracy and consistency." Storing and replaying an AI output does not establish its correctness. **Exact repeatability comes from the platform, not the model.** Rule results are stamped with the pack version (AG-03 v1.4 §1, team specification); storing and replaying AI answers is a Proposal for the build (accuracy research R2).
 9. **We sell an AI team on top of rules that can be defended** (D99, D97):
    - **Headline:** "An AI team for your immigration practice."
    - **Proof:** the rules, measured AI performance and the approval record.
@@ -48,7 +48,7 @@
 
 | Class | What happens | Called "AI" to buyers? | Share of the 122 capability rows |
 |---|---|---|---|
-| **Rules only** | The rules engine, the Conductor and the rule-based Doers compute. Same input, same answer. | Never | 80 |
+| **Rules only** | The rules engine, the Conductor and the rule-based Doers compute: the same calculated result from the same verified facts and rule version (AIW-D109). | Never | 80 |
 | **AI explains rule results** | The rules compute. The AI may fetch results with read tools (D93) and words or explains them, with sources and the pack version; explanations stay subject to licensed-person review (D98). | Yes, for the wording | 6 (see the classification for which are decided: the assessment explainer by the AIW-D98 note, Practice answers for version 2 by AIW-D39) |
 | **AI language** | The AI reads, sorts, drafts and summarises. Its quality is measured, not guaranteed. | Yes, always disclosed | 11 (one, the future conversational AI, is not live at launch) |
 | **Person only** | Advice, telling a lead or client about eligibility (AIW-D41), signing and submitting | Never | 25 |
@@ -190,11 +190,11 @@ It found 19 gaps. The Lead's rulings and the mechanisms M-2 to M-4 close the AI-
 
 ---
 
-## 9. Founder questions still open (asked one at a time)
+## 9. Founder questions
 
-1. **Live conversational AI at launch, or later (AIW-D102 against AIW-D106 "the full scope in this release"; D106 keeps the founder's explicit deferrals until he amends them).** D102 puts the conversational AI for admin intake, FAQs and booking "later, by a separate decision with the team". Two ways to bring it into Release 1:
-   - **(A) No floor lowered:** the AI only sorts the lead's question into an approved topic; a rule picks the approved answer; booking goes through the Scheduler; anything else goes to a person.
-   - **(B) Live AI-written replies:** the team lowers its AI-text floor (AG11-D1, AG-11-53) and FD-16 is amended.
-2. **The anti-rubber-stamp safeguards (AIW-D57): final now?** They were marked "provisional until counsel", and counsel is dropped (D94).
-3. **README §1 wording.** "The same input gives the same result" holds for rules and stored answers, not for a fresh AI call. Proposed: "Same facts, same rules, same answer; AI answers are stored and replayed."
-4. **Support AI reading across firms.** The handbook says version 1 doesn't read across several firms. Bring it into Release 1, or record it as a named exclusion?
+**Answered since version 2 was written:** the conversational AI for leads is in Release 1, Option A (AIW-D107); the AIW-D57 safeguards are final (AIW-D108); the repeatability promise is worded by the founder (AIW-D109).
+
+**Still open, asked one at a time:**
+1. **Support AI reading across firms.** The handbook says version 1 doesn't read across several firms. Bring it into Release 1, or record it as a named exclusion?
+2. **The price unit** (value map item 7): keep a per-file charge for the "prepared file", which is built mostly by rules, or price the AI team inside the plan?
+3. **Pilot firm one** (value map item 8): may the founder-consultant's own practice be the first pilot firm, on real client files, with no counsel?

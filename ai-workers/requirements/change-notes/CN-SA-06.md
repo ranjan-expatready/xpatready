@@ -4,9 +4,9 @@
 |---|---|
 | **Document changed** | SA-06 RBAC — Roles & Permissions, version 3.3, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-06-rbac_v3.3_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (sixth round, after check S3a-e: trust keys narrowed; `agent/settings:edit` description) |
+| **Date of this note** | **12 Oct 2026 (change 8, AIW-D96)**; earlier 11 Oct 2026 (sixth round, after check S3a-e: trust keys narrowed; `agent/settings:edit` description) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
-| **Changes** | 7 |
+| **Changes** | 8 (change 8 added 12 Oct 2026) |
 
 **How to read this note.** Each numbered change has five parts:
 1. What it changes, by ID, section and line of the 11 Oct snapshot.
@@ -305,3 +305,18 @@ The team designs the mechanics behind both keys under FD-17, with the open quest
 **(4) Why.** Review S3a m-20(c).
 
 **(5) Knock-ons.** None.
+
+---
+
+## 8. `agent/assessment:run` lendable to the Intake assistant's delegation (12 Oct 2026)
+
+**(1) What it changes.** SA-6-44's lendable list (change 1); §10b row `agent/assessment:run`.
+
+**(2) Current words.** Change 1 marks lendable only the keys AW-01 lists in an assistant's subset; AW-01 v0.6 §10 listed `agent/assessment:run` under the Intake assistant's "Never holds".
+
+**(3) Proposed words.** Add to SA-6-44: "`agent/assessment:run` SHALL be marked `assistantLendable = true`; it MAY be part of an Intake assistant delegation (AW-01 §10), and only where the delegating person's role holds it (BR-27). A delegation using it starts the Qualifier only; the run is calculated by the rules engine and stamped with the delegation (AG-3-43, CN-AG-03 change 5). `agent/assessment:override`, `:review`, `:share` and `:pin-version` stay never lendable."
+
+**(4) Why.** AIW-D96 (the founder, 12 Oct 2026: an AI teammate may run the eligibility assessment "under the delegated person's permission (`agent/assessment:run`)"); the Lead's *AIW-D106 note* (a) (the AI-started run is automatic once the stop check passes, so the key is used by the delegation itself, not only prepared). Behaviour: AW-1-131 (AW-01 v0.7). Telling a lead the result stays a licensed person's act (`:share` never lendable; AIW-D41).
+
+**(5) Knock-ons.** AW-01 §10 (moved to "May use"); TC-AW1-283; change 7's version row adds "`agent/assessment:run` lendable to the Intake delegation".
+

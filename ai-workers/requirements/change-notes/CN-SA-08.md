@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-08 Platform Integrations & Infrastructure Rails, version 2.4, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-08-platform-integrations-and-infrastructure-rails_v2.4_2026-10-10.md` |
-| **Date of this note** | 11 Oct 2026 (sixth round: the founder's Step 3 batch, AIW-D74: SA-8-51 covers every Expat Ready AI call; a withdrawal also pauses the Pack author's assistant) |
+| **Date of this note** | **12 Oct 2026 (change 3 amended: the fetch rail's switch-on condition, the Lead's ruling under AIW-D94 and D83)**; earlier 11 Oct 2026 (sixth round: the founder's Step 3 batch, AIW-D74: SA-8-51 covers every Expat Ready AI call; a withdrawal also pauses the Pack author's assistant) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 4 |
 
@@ -136,7 +136,7 @@ New §3.10 "Government source pages, read-only":
 > - **SA-8-52** *(new — proposals row of 10 Oct, Pack author's assistant, outbound fetch)* The platform may fetch **public government web pages** only from the addresses recorded as a content item's government source under SA-1B-39, to compare them with the last stored copy. It never fetches an address found on a fetched page. It sends no client or firm data and carries no credentials. It stores only the page text needed for the next comparison, kept for the period counsel sets (Unknown, counsel question 8). Every fetch is logged with the address, time and outcome; a failing fetch shows on the status page (SA-8-26).
 
 §13 "None open for SA-8." becomes:
-> 1. **Government page fetching (counsel).** *(new)* Confirm the terms of use of the government sites recorded as sources and the Crown copyright position for storing page copies, and set how long stored copies are kept, before SA-8-52 is switched on.
+> 1. ~~**Government page fetching (counsel).** *(new)* Confirm the terms of use of the government sites recorded as sources and the Crown copyright position for storing page copies, and set how long stored copies are kept, before SA-8-52 is switched on.~~ *Superseded 12 Oct 2026 by AIW-D94 (no counsel). The Lead's ruling: SA-8-52 is switched on when the watcher's skill has passed its driving test (AIW-D83) and the Platform Owner switches it on, recorded; no counsel gate. Site terms, Crown copyright and how long stored copies are kept stay the Lead's guidance, "Unconfirmed: no counsel (AIW-D94)"; retention stays Unknown until set.*
 
 **(4) Why.**
 - Proposals row of 10 Oct (Pack author's assistant, outbound fetch).

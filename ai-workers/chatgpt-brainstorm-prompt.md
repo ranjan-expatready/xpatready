@@ -52,7 +52,7 @@ Three levels (AIW-D81, D89):
 
 ### 4. The core principle: the platform is the guardrail (AIW-D84, D91, D92)
 Every capability belongs to one of four classes:
-- **Rules only.** Same input, same answer, never called AI. Examples: eligibility, scoring, deadlines, fees, trust money, booking.
+- **Rules only.** The same calculated result from the same verified facts and rule version (AI outputs may vary between fresh calls; they are recorded, replayable and tested, AIW-D109); never called AI. Examples: eligibility, scoring, deadlines, fees, trust money, booking.
 - **AI explains rule results.** The rules engine computes; the AI words the result.
 - **AI language.** Reading, sorting, drafting, summarising. The wording varies, so its quality is measured.
 - **Person only.** Advice, signing, submitting.
