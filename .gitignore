@@ -3,3 +3,4 @@ node_modules/
 code/
 archive/
 __pycache__/
+.playwright-mcp/
