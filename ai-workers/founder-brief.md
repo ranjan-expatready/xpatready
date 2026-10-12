@@ -17,3 +17,9 @@
 > So I was wondering, can we organize or can we strategize everything around that? What kind of whatever can be deterministic, we, we will be using the deterministic and we will be using the name of the um, uh, basically as an AI, but it is going to be done under the hood for uh, from the uh, deterministic rules. And we will be using AI for basically tool calling and all the rules and determinism is already baked out. Uh, from the from the eligibility and uh, score calculation, eligibility assessment point of view. Rest everything is, I think we can be a little bit more uh, non-deterministic the way we talk, the way we follow up, the way we use the language, the way we book the calendar management, so on and so forth. So think from all the perspective and then uh, let's mark it that it is basically rule engine, but we are sending under the flavor of AI. For easy selling, and then this is pure AI, this is pure determinism, and whatever the combination, so that we have a clear understanding. And I want you to really do the deep research and deep understanding and come up with a framework strategy uh, which is best suitable for our purpose and which make this multi-million dollar product and set us for success.
 
 *Reading notes:* "DDBP search" is read as **deep research**. "sending under the flavor of AI" is read as **selling under the flavour of AI**. Tracked as B27 and B28 in `brief-coverage.md`.
+
+## 12 Oct 2026 (later the same session)
+
+> I want AI to be able to do possibly everything which is possible, right? It should be doing like a human, whatever is possible by human, and it is technologically possible. My AI worker should be able to do those. And our whole proposition should be organized around as a very strong AI
+
+*Reading note:* consistent with B6 (the AI uses the product the way a person does). Read with AIW-D92 (rules are never called AI) and AIW-D93 (tools, with a person's approval before any effect).
