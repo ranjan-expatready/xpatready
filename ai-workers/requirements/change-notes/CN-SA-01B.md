@@ -187,7 +187,7 @@ SA-1-31 (field-map import) and SA-1-41 (reference-table import) carry the same t
 
 **(4) Why.**
 - `pack-authors-assistant.md` §9 G-23 (Proposal; IMP-11): "each drafted map line, scoring row or reference row carries an *AI-drafted* marker and the model's confidence inside the import file and on the line after the author's commit, until the author reviews it".
-- "Low-confidence lines first" is the first of the approve-all safeguards the founder adopted (AIW-D57, provisional until counsel; G-16). The safeguard cannot be switched off while the approve-all part of the *founder safeguards* setting is on (SA-12-33).
+- "Low-confidence lines first" is the first of the approve-all safeguards the founder adopted (AIW-D57, ~~provisional until counsel~~ final by AIW-D108 (12 Oct 2026); G-16). The safeguard cannot be switched off while the approve-all part of the *founder safeguards* setting is on (SA-12-33).
 - **Drafting runs once the provider record is published.** Drafting a map line is a model call; since the founder decided CN-FDL open point 3 (AIW-D74, "Yes, Canada for all AI"), it runs once the one published provider record exists (SA-8-49). Until then, and whenever the record is withdrawn, the two columns stay empty and the author maps by hand. The marker rule applies from the first drafted line.
 
 **(5) Knock-ons.** FD-5 (change 1) decides when box maps return. AW-02 specifies the drafting step.

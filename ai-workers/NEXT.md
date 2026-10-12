@@ -2,7 +2,7 @@
 
 *Replace, don't append. Plan, gates and status: `PROGRESS.md`. Decisions: `decisions.md`. Story, ratings, audits: `REPORT-CARD.md`.*
 
-## State, 12 Oct 2026 (Step R; improvement pass done, final check R10 running)
+## State, 12 Oct 2026 (Step R; improvement pass done; checks R7 to R10 passed with fixes applied)
 - **The founder's standing direction (AIW-D106):**
   - full agreed scope in this release;
   - simplest complete design;
@@ -19,15 +19,15 @@
   - value map;
   - workflow pricing `commercial/workflow-pricing-2026-10-12.md` (billable unit: one per application, meaning per filing; team changes T1 to T18);
   - handbook (26 skills);
-  - AW-01 v0.7 and AW-02 v0.9, change notes, 480 tests (473 Not run, 7 Withdrawn);
+  - AW-01 v0.7 and AW-02 v0.9, change notes, 487 tests (479 Not run, 8 Withdrawn);
   - the prototype (a labelled simulation).
 - **Checks:**
   - passed with fixes applied: R7, R8, R9;
-  - running: R10 (pricing file and the changes after R9).
-  - If R10 is missing next session, re-run it. Then apply its fixes, and refresh REPORT-CARD (design consistency only; accuracy and market fit unchanged without results).
+  - R10 passed with fixes, applied the same day (Lead rulings in `proposals.md`). The R10 fix round itself is not re-checked: a short re-check is the first job next session.
+  - Tell the founder: his example "work permit, then permanent residence" is two cases under AG-07, so two applications (same count as he intended).
 
 ## Next
-1. Finish R10 and apply its fixes.
+1. Short re-check of the R10 fix round (AW-01, AW-02, pricing file, tests).
 2. **Step R deliverables (AIW-D86, D88):** one blueprint as the single source, built on framework v2. It covers:
    - the product map;
    - the PRD;
