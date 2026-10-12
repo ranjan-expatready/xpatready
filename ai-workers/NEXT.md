@@ -8,6 +8,10 @@
 - **Lessons this step** (memory `ws2-step3-scope-lesson`): stay inside AI; decisions.md is append-only; no whole-file rewrites of large files; sweep the Lead's own edits for contradictions; never edit a file twice with a pattern that may match two rows.
 - Sources: `sources/drive-snapshot-2026-10-11/` (CURRENT). Check Drive at the start of the next step.
 
+## 12 Oct session (in progress)
+- Started: review R1-b of the handbook (`checks/review-R1-b-2026-10-12.md`) and the founder's new ask, research on AI accuracy and determinism (`research/ai-accuracy-and-determinism-2026-10.md`; gaps only, builds on `research/ai-architecture-deterministic-2026-10.md`). Each goes to an adversarial check before the founder sees it. If either file is missing, re-run it.
+- Founder question 1 of 2 (moat wording as the combination) asked 12 Oct; answer pending.
+
 ## Step R in progress (11 Oct)
 - Founder's interview so far: AIW-D81 to D87 (see `rethink-plan.md`). Evidence filed: `research/ai-in-regulated-work-2026-10.md`, `research/ai-coverage-vs-competitors-2026-10.md`, `design/ai-carve-out-register-2026-10-11.md`.
 - Handbook part 1 fixed after R1 (`handbook/ai-team-profiles.md`: six teammates, 23 skills, three kinds kept apart, front page). **First job next session: re-check it (review R1-b)**, then move the requirement-ID lists to the appendix if the founder wants it under 6,000 words. The moat research is done (`research/ai-moat-and-positioning-2026-10.md`). **Put two questions to the founder, one at a time:** (1) restate "hard to copy" as the combination (dated two-person-reviewed packs, accuracy measured per skill, the per-file record, the system of record), not "the rules", since IRCC rules are public; (2) ask the team to revisit SA1B-D18 so pack rules are tested before publishing, because the AI's checks rely on them (the team's subject: state the conflict, no change note).
