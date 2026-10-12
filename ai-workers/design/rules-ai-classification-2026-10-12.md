@@ -1,39 +1,64 @@
 # Rules, AI, or both: one map of every capability
 
-*Expat Ready, Workstream 2. Maker's draft, 12 Oct 2026, revised the same day after hostile check R4 (`checks/review-R4-2026-10-12.md`, verdict PASS WITH FIXES) and the Lead's rulings on M-1, M-2, M-3, M-4, M-5 and M-6. Asked by: the Lead, on the founder's ask of 12 Oct 2026 (relayed in the Lead's brief): "eligibility and score calculation are deterministic rules already built; AI is used for tool calling, talking, follow-up wording, language, calendar handling, and so on".*
+*Expat Ready, Workstream 2. Maker's draft, 12 Oct 2026.*
 
-**What this is.** One table that puts every product capability (firm side AG-01 to AG-18, platform side SA-01 to SA-12, client portal CP-1 to CP-9) and every AI skill (the 23 teammate skills, the summary line and the three product AI calls) into one of four classes: rules only, AI teammate using rule tools, AI language, or person only. It tests the founder's examples and lists where his framing conflicts with a ratified decision. It counts each class, and names what is over-AI'd and where an AI layer on top of rules would add real buyer value.
+*Revisions:*
+- *After hostile check R4 (`checks/review-R4-2026-10-12.md`): R4's fixes applied, with the Lead's ruling on M-3 ("Lead ruled T = T-fixed only", `PROGRESS.md`, R4 row of 12 Oct).*
+- *After re-check R4-b (`checks/review-R4-b-2026-10-12.md`): its fixes applied.*
 
-**What it is not.** It restates no requirement. Every capability is named in a few words and cited by ID, file and version; the requirement text stays in the team's documents (README §0 rule 3, AIW-D22). It designs no non-AI mechanics (memory `ws2-step3-scope-lesson`). Where a capability would need one, the need is put to the team as a question. It changes no decision: conflicts are stated, not resolved.
+*Asked by: the Lead, on the founder's ask of 12 Oct 2026 (`founder-brief.md`, "12 Oct 2026", second quote). In the founder's words:*
+> "we will be using AI for basically tool calling and all the rules and determinism is already baked out. Uh, from the from the eligibility and uh, score calculation, eligibility assessment point of view. Rest everything is, I think we can be a little bit more uh, non-deterministic the way we talk, the way we follow up, the way we use the language, the way we book the calendar management, so on and so forth. … let's mark it that it is basically rule engine, but we are sending under the flavor of AI. For easy selling, and then this is pure AI, this is pure determinism, and whatever the combination"
+
+*The brief's reading note takes "sending" to mean "selling".*
+
+**What this is.** One table that puts every product capability and every AI skill into one of four classes:
+- rules only;
+- an AI teammate using rule tools;
+- AI language;
+- person only.
+
+The capabilities cover the firm side (AG-01 to AG-18), the platform side (SA-01 to SA-12) and the client portal (CP-1 to CP-9). The skills are the 23 teammate skills, the summary line and the three product AI calls.
+
+The map tests the founder's examples and lists where his framing conflicts with a ratified decision. It counts each class, and names what is over-AI'd and where an AI layer on top of rules would add real buyer value.
+
+**What it is not.**
+- It restates no requirement. Every capability is named in a few words and cited by ID, file and version; the requirement text stays in the team's documents (README §0 rule 3, AIW-D22).
+- It designs no non-AI mechanics (memory `ws2-step3-scope-lesson`). Where a capability would need one, the need is put to the team as a question.
+- It changes no decision: conflicts are stated, not resolved.
 
 **Sources (newest only).**
 - Team requirements: `sources/drive-snapshot-2026-10-11/02-functional-requirements/`:
   - Agent side: Agent 00-Overview v1.12 "Detailed Scope Index"; AG-01 v1.18, AG-02 v1.9, AG-03 v1.4, AG-04 v1.5, AG-05 v1.9, AG-06 v1.7, AG-07 v2.7, AG-08 v1.7, AG-09 v1.8, AG-10 v1.10, AG-11 v1.12, AG-12 v1.2, AG-13 v1.12, AG-14 v1.11, AG-15 v1.7, AG-16 v1.13, AG-17 v0.6, AG-18 v1.2.
   - Platform side: Shared 00-Overview v3.9 "Detailed Scope Index"; SA-01 v2.2, SA-01B v1.2, SA-02 v2.21, SA-03 v2.17, SA-04 v2.17, SA-05 v2.4, SA-06 v3.3, SA-07 v2.12, SA-08 v2.4, SA-09 v2.2, SA-10 v2.5, SA-11 v2.7, SA-12 v2.7.
-- Newest code copy: `code/ERv2-sanitized@042be70-2026-10-10/` (read only for the assessment engine, M-1).
+- Newest code copy: `code/ERv2-sanitized@042be70-2026-10-10/`, read only for the assessment engine (R4 M-1).
 - Client portal: the October CP-01 file is **not on Drive** (`sources/drive-snapshot-2026-10-11/08-client-portal/NOT-FOUND.md`). CP rows therefore cite the older `01-techno-functional/06-Doc-4-Client-Portal.md`, document version 1.3 (3 Jul 2026), and AG-15 v1.7 for the firm side. Where they differ, AG-15 wins (README §0 rule 11).
 - Founder Decisions Log, document version 1.5 (`01-techno-functional/07-Founder-Decisions-Log.md`).
 - Product Vision v1.0 (team document in `07-team-documents/`, frozen 2 Aug).
 - Our files:
+  - `founder-brief.md` ("12 Oct 2026").
   - `decisions.md`: AIW-D11, D13, D25, D37, D39 to D41, D44, D53 to D55, D71, D72, D77, D79, D81 to D91.
-  - `handbook/ai-team-profiles.md`: §2 (three kinds) and §4 (skill catalogue).
+  - `handbook/ai-team-profiles.md` §2 (three kinds) and §4 (skill catalogue).
   - `design/ai-carve-out-register-2026-10-11.md`: the §1 summary, with Registers A.1 to A.11 used as the ID index.
   - `research/ai-architecture-deterministic-2026-10.md`: §2.1 (the five-question test), §5.1 and §5.3 (pass^k), §9 and part (c).
   - `research/ai-moat-and-positioning-2026-10.md`: §3.1, §3.3 and §6.
-- Web: arXiv 2507.16126v1, "TaxCalcBench", https://arxiv.org/abs/2507.16126v1, as read by the R4 checker on 12 Oct 2026 and cited through the moat research §3.3.
+  - `research/rules-and-ai-positioning-2026-10.md`: the selling answer (K8).
+- Web: arXiv 2507.16126v1, "TaxCalcBench", https://arxiv.org/abs/2507.16126v1. The R4 checker read it on 12 Oct 2026; it is cited here through the moat research §3.3.
 
-**Labels.** [I] = inferred by the maker from the sources, not stated in them. *Proposal — not approved* = a capability that no requirement or decision contains. *Unknown* and *Assumption* as in README §0 rule 5.
+**Labels.**
+- [I]: inferred by the maker from the sources, not stated in them.
+- *Proposal — not approved*: a capability that no requirement or decision contains.
+- *Unknown* and *Assumption*: as in README §0 rule 5.
 
 ---
 
 ## Summary (for the founder)
 
-1. **Product capabilities.** 120 are counted:
+1. **Product capabilities.** Of 120 counted:
    - **79 are rules only (R)**;
    - **25 are a person's act (H)**;
    - **10 use AI for language (A)**;
    - **6 would be an AI teammate using rule tools (T)**. One of these, free questions to Practice answers (A70), is decided for version 2 (AIW-D39). The other five are *Proposals — not approved*.
-   - One further row, submitting to the government, is listed but not counted, because the product never does it (AG-11-54).
+   - One more row, submitting to the government, is listed but not counted: the product never does it (AG-11-54).
 2. **AI skills and calls.** Of the 27:
    - **19 make an AI language call (A)**;
    - **3 are T**: skill 4 (plain-words summary), skill 14 (release note) and the practice-answer summary line. In each, the workflow hands a rule-built result to the AI to word;
@@ -46,17 +71,17 @@
    - Follow-up **wording** is a firm template first (rules). AI writes only when no template fits, and a person approves it before it is sent.
 4. **Calendar.** **Booking is rules** (the Scheduler). AI may at most put Scheduler-computed free times into a drafted reply (T, Proposal). AI booking, moving or cancelling an appointment by itself conflicts with FD-16 and AIW-D13.
 5. **"Talking" with leads.** AI may **draft** replies for a person to approve (A). An AI that chats with leads or clients by itself conflicts with AIW-D11, FD-16 and AIW-D41.
-6. **T here means T-fixed only** (the Lead's ruling on R4 M-3). The workflow (the Conductor) runs the rule engine; the AI only explains or words the engine's output; the model itself calls no tools. This is what the team's AG-11-94 requires ("models SHALL have no tool access").
+6. **T means T-fixed only.** This is the Lead's ruling on R4 M-3 (`PROGRESS.md`, R4 row of 12 Oct: "Lead ruled T = T-fixed only (workflow runs the engine, AI explains; AG-11-94)"). The workflow (the Conductor) runs the rule engine; the AI only explains or words the engine's output; the model itself calls no tools. This is what the team's AG-11-94 requires: "models SHALL have no tool access".
 7. **"Already built" is only partly true.**
    - **The engine exists.** The 10 Oct code has an assessment engine that creates, saves and replays assessments with eligibility and scoring output (`code/ERv2-sanitized@042be70-2026-10-10/apps/api/src/spine/pack-assessment.controller.ts` and `pack-assessment-result.ts`).
    - **Whether it meets AG-03 is a team question.** Its fit with AG-03's four outcomes and per-factor breakdown is *Unknown*.
    - **What is missing for Canada is the Canada rules.** No Canada pack is authored (SA-01 v2.2 BR-15; the only Canada file in the code is a development fixture), and pack rules are not tested before publishing (SA1B-D18).
    - So buyer material may not say Canada eligibility is built.
-8. **Conflicts.** Seven are listed in §6, unresolved, for the founder.
+8. **Conflicts.** Eight are listed in §6, unresolved, for the founder. The new one, K8, is his "rule engine … under the flavor of AI" selling idea. FD-16 lets the product be called "AI-assisted", but the AIW-D37 and AIW-D90 precedent means no rules-only capability is ever called AI. The selling answer is in `research/rules-and-ai-positioning-2026-10.md`. The founder decides.
 9. **Over-AI'd.**
    - **Should be rules:** skill 13 (sample clients).
    - **Rule first, AI only for the rest:** skills 10, 11 and 16. Ticket category and priority already come from a keyword rule (SA-10-7).
-   - **Moved from AI to rules in Table A:** A79 (old program names, an exact-or-near-match rule) and A103 (ticket category and priority).
+   - **Moved from A to R in Table A:** A79 (old program names, an exact-or-near-match rule) and A103 (ticket category and priority).
    - **Now T, not A:** skill 4, skill 14 and the summary line.
    - **Never to be sold as AI:** skills 19 to 23, which are rules only.
 10. **Highest-value AI layers on rules.** Both are Proposals:
@@ -69,14 +94,14 @@
 
 | Class | Plain meaning | Who decides the outcome | Same input, same output? | Where AI is allowed |
 |---|---|---|---|---|
-| **R — Rules only** | The product's fixed rules do it. That means the rule engine, the Conductor (the workflow engine), a Doer, or a country or practice pack. A Doer is an in-house tool such as the Scheduler, Biller, Signer, Filler or Minder. No model is called. | The rules, set by people in advance (pack authors, the firm's settings). | Yes, always. For assessments this is a stated requirement: "identical inputs + version ⇒ identical outputs" (AG-03 v1.4, AG-3-39). | Nowhere. |
-| **T — AI teammate using rule tools (T-fixed only)** | The workflow (the Conductor) runs the rule engine, or reads a rule-built result, as a fixed step. It passes the output to the AI as data. The AI only explains it or words it. **The model itself calls no tools** (AG-11-94). A person's question may start the run, through a fixed menu or the workflow's own matching; the model never chooses the query. | The rules. The AI only words the answer. | The result: yes (it is the engine's). The wording: no, it varies. | Wording or explaining a rule result. |
+| **R — Rules only** | The product's fixed rules do it: the rule engine, the Conductor (the workflow engine), a Doer (an in-house tool such as the Scheduler, Biller, Signer, Filler or Minder), or a country or practice pack. No model is called. | The rules, set by people in advance (pack authors, the firm's settings). | Yes, always. For assessments this is a stated requirement: "identical inputs + version ⇒ identical outputs" (AG-03 v1.4, AG-3-39). | Nowhere. |
+| **T — AI teammate using rule tools (T-fixed only)** | The workflow runs the rule engine, or reads a rule-built result, as a fixed step, and passes the output to the AI as data. The AI only explains it or words it. **The model itself calls no tools** (AG-11-94). A person's question may start the run, through a fixed menu or the workflow's own matching; the model never chooses the query. | The rules. The AI only words the answer. | The result: yes (it is the engine's). The wording: no, it varies. | Wording or explaining a rule result. |
 | **A — AI language** | The AI reads, sorts, drafts, summarises or converses over unstructured input. Output varies from run to run. | A person, for anything with an effect. | No. | Reading, sorting, drafting, summarising. Any effect (send, book, file, sign, money, stage change) needs a person's approval first (FD-16: "every output is human-approved before it has effect"; AIW-D13). |
 | **H — Person only** | Licensed judgement or a legal act. AI may prepare material for it but never does it. | A named person, acting with their own permission. | Not applicable. | Preparing material only, where a skill allows it. |
 
-**What T is not.** A model that decides which tool to call, and with what inputs, is not a class in this map. It conflicts with AG-11-94 as worded and with the reference architecture: "AI output never chooses the next step, tool, recipient or permission" (`research/ai-architecture-deterministic-2026-10.md` part (c)). See §6, K3.
+**What T is not.** A model that decides which tool to call, and with what inputs, is not a class in this map. It conflicts with AG-11-94 as worded, and with the reference architecture: "AI output never chooses the next step, tool, recipient or permission" (`research/ai-architecture-deterministic-2026-10.md` part (c)). See §6, K3.
 
-**T against A.** A skill is T when its only input is a rule-built result and its job is to word it. It is A when it reads unstructured language (a document, a message, a web page) or drafts free text from records [I, the maker's reading of the Lead's ruling].
+**T against A.** A skill is T when its inputs are a rule-built result and, at most, a staff question it does not act on, and its job is to word the result. It is A when it reads unstructured language (a document, a message, a web page) or drafts free text from records [I, the maker's reading of the Lead's ruling].
 
 **How a row gets its class.** A row's class is the class of whoever decides the outcome in that row. A capability can pass through several classes. For example, the Reader reads a value (A), a person verifies it (H), and then the Filler uses it (R). Each row names the class that does the job in that row, and the "AI may / may not" column shows its neighbours. Rules-only skills that sit inside an AI teammate are marked *(rules, not AI)* wherever they appear in that column (R4 M-6).
 
@@ -94,7 +119,11 @@ The five questions are used exactly as worded in `research/ai-architecture-deter
 | Q4 | Can a wrong AI answer be caught cheaply by a rule, a cross-check or the person reviewing? | "AI allowed at APPROVE." If not, off until a test set shows it is reliable |
 | Q5 | Must it behave the same every time? | Measure consistency (pass^k) before going live; otherwise keep to rules |
 
-**How Q1 is shown** (no change to the test). Some rule-run steps reach a client or money. For these, the "Why" column names *which person decides* and in which row: "Q1 → person: … (row Ax, H); mechanism: Q2". The row itself is the rule mechanism that carries out a person's decision. For example, A30 generates the retainer and A32 is the signing; A41 fills the form and A42 is the approval. For template sends and the refund policy, the person's decision is a standing one, taken once (row A121). The test as worded does not say whether a standing decision satisfies Q1. That is put to the Lead as a Proposal to amend §2.1 (PR6), not applied as a rule here.
+**How Q1 is shown** (no change to the test).
+- Some rule-run steps reach a client or money. For these, the "Why" column names *which person decides* and in which row: "Q1 → person: … (row Ax, H); mechanism: Q2".
+- The row itself is the rule mechanism that carries out a person's decision. For example, A30 generates the retainer and A32 is the signing; A41 fills the form and A42 is the approval.
+- For template sends and the refund policy, the person's decision is a standing one (row A121).
+- The test as worded does not say whether a standing decision satisfies Q1. That question is put to the Lead as a Proposal to amend §2.1 (PR6), not applied here.
 
 **What makes a row trustworthy** (the "Check" column):
 - **Rule test.** Ordinary software tests on the rule, plus reproducibility where the requirement asks for it (AG-3-26).
@@ -104,7 +133,7 @@ The five questions are used exactly as worded in `research/ai-architecture-deter
 - **Person approval.** The item waits in Needs you, the staff approval list (AG-11-55 to AG-11-57).
 
 **Buyer labels** (the "Say to buyers" column). FD-16: "Marketing may say 'AI-assisted'; it may not say the AI decides."
-- **R:** "Rules-based: same answer every time" or "Automatic, on your settings". Never called AI; AIW-D37 and AIW-D90 set this precedent.
+- **R:** "Rules-based: same answer every time" or "Automatic, on your settings". Never called AI, following the AIW-D37 and AIW-D90 precedent. This is the map's reading and conflicts with the founder's selling idea (K8).
 - **T:** "AI-explained, rules-decided".
 - **A, client-facing text:** "AI-drafted, approved by you".
 - **A, reading:** "AI-read, rule-checked, verified by you".
@@ -130,12 +159,12 @@ The five questions are used exactly as worded in `research/ai-architecture-deter
   - the firm's own calendar sync (AG-4-40 to AG-4-43);
   - reschedule, cancel and refund (AG-4-36 to AG-4-39, AG-4-46; FD-13);
   - the lead's own booking on the public page (AG-4-16, AG-4-22).
-- **Proposing a slot could be T** (*Proposal — not approved*). The workflow gets free times from the Scheduler, and the AI puts them into a drafted reply with the booking link. The reply waits for approval. The lead books through the link.
+- **Proposing a slot could be T** (*Proposal — not approved*). The workflow gets free times from the Scheduler, and the AI puts them into a drafted reply with the booking link. The reply waits for approval, and the lead books through the link.
 - **Limits.**
   - No AW requirement gives any AI teammate a booking duty. AW-01 v0.6 mentions bookings only as "the Scheduler's messages" (AW-1-87).
   - Booking, moving or cancelling is an effect, so FD-16 and AIW-D13 apply.
   - A cancellation can trigger a refund (AG-4-46), which is money: Q1.
-- **Note on the brief.** The brief cited AIW-D44 for booking, but AIW-D44 is about billing only: "An unsaved draft invoice counts as a billing entry: no assistant creates even a draft". The R4 checker confirmed this. FD-16 and AIW-D13 are the governing decisions; the nearest analogy is AIW-D54 ("money: assistant proposes, person saves in the product's screen").
+- **Note on AIW-D44.** It is about billing only: "An unsaved draft invoice counts as a billing entry: no assistant creates even a draft". The R4 checker confirmed this. FD-16 and AIW-D13 are the governing decisions; the nearest analogy is AIW-D54 ("money: assistant proposes, person saves in the product's screen").
 
 ### 3.3 Eligibility and score
 - **R, confirmed in the requirements.**
@@ -145,7 +174,8 @@ The five questions are used exactly as worded in `research/ai-architecture-deter
   - FD-16: "The eligibility/scoring/workflow engine stays fully deterministic, versioned and explainable — no model output is ever a decision."
   - Models tested in mid-2025 computed rules badly ("less than a third" of simplified US tax returns; TaxCalcBench, via `research/ai-moat-and-positioning-2026-10.md` §3.3). Newer models may do better.
 - **The people and limits around it.**
-  - An assessment is started by staff or by an automatic run; whether it runs automatically is the team's open question (AG-3-1; AG-03 §13 Q10). The AI never starts it (AIW-D40).
+  - An assessment is started by staff or by an automatic run; whether it runs automatically is the team's open question (AG-3-1; AG-03 §13 Q10).
+  - The AI never starts it (AIW-D40).
   - A consultant overrides an outcome (AG-3-33) and decides on sharing it with the client (AG-3-38).
   - No eligibility content goes into any AI-drafted message to a lead (AIW-D41).
 - **How built it is.** See summary item 7 and §6, K6.
@@ -156,7 +186,7 @@ The five questions are used exactly as worded in `research/ai-architecture-deter
 - **Not permitted:** an AI that converses with leads or clients by itself (§6, K1). The portal specification contains no AI (Doc 4 v1.3). Portal messages are sorted on the firm side by the Sorter (AG-11-67; row A56).
 
 ### 3.5 Tool calling
-- Only T-fixed is a class here (§1). It already exists in three skills: skill 4, skill 14 and the summary line P. In each, the workflow passes a rule-built result to the AI to word. A model that picks its own tools has no home (§6, K3).
+- Only T-fixed is a class here (§1). It already exists in skill 4, skill 14 and the summary line P: in each, the workflow passes a rule-built result to the AI to word. A model that picks its own tools has no home (§6, K3).
 
 ### 3.6 Language
 - **R:** choosing the template language (AG-12-23).
@@ -189,7 +219,7 @@ Column key:
 | A9 | **Conversation with a lead**: drafting replies | AG-10-15, AG-10 BR-10 (AG-10 v1.10); AIW-D41; skill [1] | A | Q1 | May draft each reply. May not converse by itself, send, or answer eligibility questions (§6, K1) | Person approval; pass^k; driving test | AI-drafted, approved by you |
 | A10 | Lead marked Won when the retainer is signed | AG-2-28a (AG-02 v1.9) | R | Q2 (follows the signing, A32) | No AI | Rule test | Automatic |
 | A11 | Lead marked Lost, with a reason | AG-2-27 (AG-02 v1.9) | H | Q1 | May not mark won or lost (handbook §3.2) | Person's act, audited | Your decision |
-| A12 | New lead from an unknown WhatsApp number | AG-10-58 (AG-10 v1.10), "always a person's click, never AI" (Register A.2); SA8-D19 (team conflict on WhatsApp timing, not ours) | H | Q1 | No AI | Person's act | Your decision |
+| A12 | New lead from an unknown WhatsApp number | AG-10-58 (AG-10 v1.10): "always a person's click, never AI" (Register A.2); SA8-D19 (team conflict on WhatsApp timing, not ours) | H | Q1 | No AI | Person's act | Your decision |
 | A13 | **Eligibility** outcome per program | AG-3-10 to AG-3-16, AG-3-39 (AG-03 v1.4); FD-16 | R | Q2, Q5 | No AI | Rule test; reproducibility (AG-3-26) | Rules-based: same answer every time |
 | A14 | **Score calculation** (CRS-type grids, language-level conversion) | AG-3-17 to AG-3-20 (AG-03 v1.4) | R | Q2, Q5 | No AI | Rule test; reproducibility | Rules-based |
 | A15 | Score breakdown and plain explanation | AG-3-21 (AG-03 v1.4); FD-20 | R | Q2 | No AI in the built explanation (see A21) | Rule test | Rules-based, explained |
@@ -198,7 +228,7 @@ Column key:
 | A18 | Starting an assessment for a lead (first run) | AG-3-1 (AG-03 v1.4; run type includes `AUTO`); AG-03 §13 Q10 (open: automatic or on request); AIW-D40 | R | Q2 (internal, rule-made) | AI may not start it (AIW-D40). A task asking a person to run it is made by rule [22] *(rules, not AI)* | Rule test | Rules-based |
 | A19 | Consultant override of an outcome | AG-3-33, AG-3-35 (AG-03 v1.4) | H | Q1 | No AI | Person's act, audited | Your decision |
 | A20 | Sharing eligibility with the client | AG-3-38 (AG-03 v1.4); AIW-D41 | H | Q1 | No AI text in it (AIW-D41) | Person's act, audited | Your decision |
-| A21 | Staff explainer of an assessment's breakdown and levers | *Proposal — not approved*; would sit on AG-3-21 and AG-3-22 (the "what-if improvements" already computed) | T | Q2 for the content; the AI only words it | May explain, in answer to staff questions, the breakdown and levers the Qualifier already computed. May not compute a score, start or save a run, or reach a lead (AIW-D41). Questions beyond the computed levers need a run that is not saved: *question for the team* (AG-3-1 says every run creates a new Assessment) | Number check; driving test | AI-explained, rules-decided |
+| A21 | Staff explainer of an assessment's breakdown and levers | *Proposal — not approved*; would sit on AG-3-21 and AG-3-22 (the "what-if improvements" already computed) | T | Q2 for the content; the AI only words it | May explain the breakdown and levers the Qualifier already computed, in answer to staff questions. May not compute a score, start or save a run, or reach a lead (AIW-D41). Questions beyond the computed levers need a run that is not saved: *question for the team* (AG-3-1 says every run creates a new Assessment) | Number check; driving test | AI-explained, rules-decided |
 | A22 | Free slots and clash-proof booking | AG-4-1 to AG-4-8, AG-4-25, AG-4-26 (AG-04 v1.5) | R | Q2 | No AI | Rule test | Rules-based |
 | A23 | Public booking page; the lead books their own slot | AG-4-16, AG-4-22 (AG-04 v1.5) | R | Q1 → person: the lead's own booking; mechanism: Q2 | No AI | Rule test | Automatic |
 | A24 | Confirmations, reminders, calendar files | AG-4-31 to AG-4-35 (AG-04 v1.5) | R | Q1 → person: the firm's standing decisions (A121); mechanism: Q2 | No AI | Rule test | Automatic |
@@ -250,7 +280,7 @@ Column key:
 | A70 | Free questions to Practice answers | **Decided for version 2** (AIW-D39 keeps "the version 2 co-pilot"; limits AIW-D25) | T | Q2 for the answer | The workflow runs fixed, permission-checked queries (AG-14-22); the AI words the answer. How a free-text question reaches a fixed query without the model choosing it is a version 2 design question. May not act (AIW-D25) | Rule test; number check; driving test | AI-explained, rules-decided |
 | A71 | Portal setup, invites, nudges | AG-15-32 (AG-15 v1.7); Agent 00-Overview v1.12 AG-15 row | R | Q1 → person: the staff click, or the firm's standing decisions (A121); mechanism: Q2 | No AI | Rule test | Automatic |
 | A72 | "Done on behalf" of a client | AG-15-44, AG-15-45 (AG-15 v1.7) | H | Q1 | No AI | Person's act, marked and audited | Your decision |
-| A73 | Firm settings, team safeguards, approval routing | AG-16-32, AG-16-35, AG-16-49, AG-16-52 (AG-16 v1.13); AG11-D11 | R | Q2 | No AI | Rule test | Your settings |
+| A73 | Firm settings, team safeguards, approval routing (the settings store; changing them is A121) | AG-16-32, AG-16-35, AG-16-49, AG-16-52 (AG-16 v1.13); AG11-D11 | R | Q2 | No AI | Rule test | Your settings |
 | A74 | Firm data export | AG-16-20, AG-16-21 (AG-16 v1.13) | H | Q1 | No AI exports (handbook §3.4) | Person's act, audited | Your decision |
 | A75 | LMIA steps, recruitment log, automatic wage, hours and location check, dates | AG-17-26, AG-17-32, AG-17-73 (AG-17 v0.6) | R | Q2 | No AI in the automatic checks | Rule test | Rules-based |
 | A76 | Recruitment report; message to the employer | AG-17-28, AG-17-82 (AG-17 v0.6) | R | Q1 → person: the staff member who sends it; mechanism: Q2 | No AI | Rule test | Automatic |
@@ -260,7 +290,7 @@ Column key:
 | A80 | Filing imported documents | AG-18-33 (AG-18 v1.2) | A | Q3, Q4 | May classify and propose a record; unplaced files go to a review list | Driving test; person review | AI-suggested, you confirm |
 | A81 | Data-transfer attestation; verifying imported values | AG-18-49 (AG-18 v1.2); AG18-D10 | H | Q1 | No AI | Person's act | Your decision |
 | A82 | Practice answers: four fixed questions | AIW-D39, AIW-D90; AG-14-22 (AG-14 v1.11) | R | Q2 | One optional summary line [P] (T) | Rule test | Rules-based; works with AI off |
-| A121 | The firm's standing decisions that rules then carry out: approving its standard messages once, turning recipes on, setting its refund policy (*added after R4*) | AG11-D12, AG-11-21 (AG-11 v1.12); FD-13 (platform default where the firm sets none) | H | Q1 | No AI | Person's act (Owner or the firm's chosen role), recorded | Your rules, set once |
+| A121 | The firm's standing decisions that rules then carry out: approving its standard messages once, turning recipes on, setting its refund policy (*added after R4*) | AG11-D12, AG-11-21 (AG-11 v1.12); FD-13 | H | Q1 | No AI | The firm's choice (Owner or the firm's chosen role), recorded; or, where the firm sets no refund policy, the founder's platform default (FD-13, ratified 3 Jul 2026) | Your rules, set once |
 
 ### 4.2 Platform side (SA-01 to SA-12)
 
@@ -333,7 +363,7 @@ Skill numbers, names and approvers are from `handbook/ai-team-profiles.md` §4, 
 | 11 | Rulebook field mapper | SA-1B-27, SA-1B-33 | A, **partly R** (O5) | Q2 for unchanged fields; Q3 for renamed fields | Suggests "needs review" | Author checks each; driving test | Internal |
 | 12 | Official page reader | SA-1B-39 | A | Q3 | Drafts rows from a stored page | Author, specialist and second person | Internal |
 | 13 | Sample-client proposer | SA-1-52, SA-1B-62 | A, **should be R** (O3) | Q2: test cases for a changed rule follow from the rule | Proposes made-up clients; never sets an outcome | Author chooses | Internal |
-| 14 | Release-note drafter | SA-1-25, SA-1-53 | **T** (handbook: AI writes) | Q2: its input is the rule-built test-run comparison; the AI words it | Each sentence cites its row, rule or field | Author edits; number check | Internal |
+| 14 | Release-note drafter | SA-1-25, SA-1-53; AW-2-51 | **T** (handbook: AI writes) | Q2: its input is the rule-built test-run comparison; the AI words it | Each sentence cites its rule, row or box; the author owns, edits and saves it (AW-2-51) | Author edits; each sentence cites its source (AW-2-51, test set EV-5); a live number check is a Proposal | Audience: *Unknown* (whether firms see `releaseNote` is not stated in the team files; SA-1-67 is a Workstream 2 number, CN-SA-01 change 2). If firms see it, the author's approval stays mandatory (AW-2-51) |
 | 15 | Page-change describer | SA-1B-39, SA-1B-40 | A | Q3 (government page text) | Describes differences the rules found in the text | Author decides | Internal |
 | 16 | Ticket sorter | SA-10-6, SA-10-7; AW-2-64, AW-2-65 | A, **partly R** (O10) | Q2 for category and priority (keyword rule, SA-10-7); Q3 for the likely cause | Suggests from fixed lists; a rule maps cause to fix | Support confirms | Internal |
 | 17 | Firm message drafter | SA-10-10; SA-4-43 | A | Q1, Q3 | Ready-made reply first; never sends | Sender approves; pass^k | Internal |
@@ -352,23 +382,24 @@ Skill numbers, names and approvers are from `handbook/ai-team-profiles.md` §4, 
 
 ## 6. Where the founder's framing conflicts with a ratified decision
 
-Stated, not resolved. Each one is for the founder.
+Stated, not resolved. Each one is for the founder. The founder's words are quoted from `founder-brief.md`, "12 Oct 2026", second quote.
 
-| # | The founder's framing (12 Oct) | What it conflicts with | The conflict, in one line |
+| # | The founder's framing (12 Oct, his words) | What it conflicts with | The conflict, in one line |
 |---|---|---|---|
-| K1 | AI is used for **talking** with leads | **AIW-D11**: "No applicant-facing AI Workers in the design or the investor story". **FD-16**: "every output is human-approved before it has effect". **AIW-D41**: no eligibility content in any AI-drafted message to a lead. Team floor in Agent 00-Overview v1.12: AI-written client text is never below "Ask me first" | AI may draft each reply for a person to approve. An AI that converses with leads or clients by itself is ruled out by AIW-D11 and FD-16. |
-| K2 | AI is used for **calendar handling** | **FD-16**; **AIW-D13** ("nothing takes effect until a human approves it") | If "handling" means the AI books, moves or cancels appointments, that is an effect without approval. Proposing Scheduler times in a draft (A27) does not conflict. AIW-D44, cited in the brief, is about draft invoices, not booking. |
-| K3 | AI is used for **tool calling** | **AIW-D25**: "Expert co-pilot, no actions". **AIW-D39**: version 1 is four fixed questions; free questions are version 2. **AIW-D84**: the platform's own rules and workflow do every step whose result must always be the same. Team requirement **AG-11-94**: "models SHALL have no tool access". Product Vision v1.0 line 292: "no model output may trigger or decide an action" | Under the Lead's ruling, T means T-fixed only. A model that picks and calls tools itself conflicts with AG-11-94 (a team requirement; changing it is the team's call) and with the reference architecture. T-fixed already exists (skills 4, 14, P). |
-| K4 | The Lead's brief defines class A as: an effect needs "a person or a deterministic Doer" | **FD-16**; **AIW-D13** | FD-16 needs a person's approval before any AI output has effect. A Doer may act on AI output with no person in between only under two internal carve-outs: AIW-D71 (document labels) and AIW-D80 (internal notes). In the pilot even those go to a person. This map uses the FD-16 reading. |
-| K5 | The Lead's brief defines class T as calling "the rule engine **or product actions** as tools" | **FD-16**; **AIW-D13**; **AIW-D25** | A product action with an effect (stage change, send, booking, money) can only be prepared as a proposal for a person. FD-16: "AI is NOT a first-class actor". |
-| K6 | Eligibility and score calculation are "**already built**" | Not a decision conflict. **AIW-D21** lets design assume it is built; **AIW-D9** (investor-grade) limits what buyer and investor material may say. The evidence is in the next column | **The engine exists.** The 10 Oct code has an assessment engine that creates, saves and replays results with eligibility and scoring output. It is in `code/ERv2-sanitized@042be70-2026-10-10/apps/api/src/spine/`: `pack-assessment.controller.ts` (create, read and replay routes, lines 139, 152, 165), `pack-assessment-result.ts` (eligibility and scoring with factors, lines 24 to 30) and `pack-assessment-persistence.service.ts`. **Fit with AG-03 is *Unknown*.** Whether it meets AG-03's four outcomes (AG-3-10) and per-factor breakdown (AG-3-20, AG-3-21) is a team question. **What is missing for Canada is the Canada rules.** No Canada pack is authored (SA-01 v2.2 BR-15). The only Canada file in the code is `src/pack-authoring/__fixtures__/canada-dev-pack.fixture.ts`, and the engine is guarded by `tools/check-content-neutrality.ts`. Pack rules are not tested before publishing (**SA1B-D18**). Say "the engine is built and deterministic; the Canada rules are being authored", not "Canada eligibility is built". |
-| K7 | AI is used for **language** | **AIW-D79**: no AI French wording for packs in version 1. Team rules AG-12-24 and SA-5-15: legal and consent copy is never machine-translated | Drafting a reply in the client's language is allowed (skill 1). Translating templates, legal wording or pack labels by AI is not. |
+| K1 | "the way we talk" (AI for talking with leads) | **AIW-D11**: "No applicant-facing AI Workers in the design or the investor story". **FD-16**: "every output is human-approved before it has effect". **AIW-D41**: no eligibility content in any AI-drafted message to a lead. Team floor in Agent 00-Overview v1.12: AI-written client text is never below "Ask me first" | AI may draft each reply for a person to approve. An AI that converses with leads or clients by itself is ruled out by AIW-D11 and FD-16. |
+| K2 | "the way we book the calendar management" | **FD-16**; **AIW-D13** ("nothing takes effect until a human approves it") | His words point to AI booking, not only proposing times. If the AI books, moves or cancels appointments, that is an effect without approval. Proposing Scheduler times in a draft (A27) does not conflict. (AIW-D44 is about draft invoices, not booking.) |
+| K3 | "we will be using AI for basically tool calling" | **AIW-D25**: "Expert co-pilot, no actions". **AIW-D39**: version 1 is four fixed questions; free questions are version 2. **AIW-D84**: the platform's own rules and workflow do every step whose result must always be the same. Team requirement **AG-11-94**: "models SHALL have no tool access". Product Vision v1.0 line 292: "no model output may trigger or decide an action" | Under the Lead's ruling (`PROGRESS.md`, R4 row of 12 Oct), T means T-fixed only. A model that picks and calls tools itself conflicts with AG-11-94 and with the reference architecture. Changing AG-11-94 is the team's call. T-fixed already exists (skills 4, 14, P). |
+| K4 | "Rest everything is, I think we can be a little bit more uh, non-deterministic the way we talk, the way we follow up, the way we use the language" | **FD-16**; **AIW-D13** | Non-deterministic wording is allowed (class A), but its effect is not automatic. FD-16 needs a person's approval before any AI output has effect. A Doer may act on AI output with no person in between only under two internal carve-outs: AIW-D71 (document labels) and AIW-D80 (internal notes). In the pilot even those go to a person. Firm-template follow-ups stay rules (A7). |
+| K5 | "we will be using AI for basically tool calling" (read as the AI carrying out product actions) | **FD-16**; **AIW-D13**; **AIW-D25** | A product action with an effect (stage change, send, booking, money) can only be prepared as a proposal for a person. FD-16: "AI is NOT a first-class actor". |
+| K6 | "all the rules and determinism is already baked out … from the eligibility and uh, score calculation, eligibility assessment point of view" | Not a decision conflict. **AIW-D21** lets design assume it is built; **AIW-D9** (investor-grade) limits what buyer and investor material may say. The evidence is in the next column | **An assessment engine exists in the code.** In the 10 Oct copy (`code/ERv2-sanitized@042be70-2026-10-10/apps/api/src/spine/`) it creates, saves and replays results with eligibility and scoring output: `pack-assessment.controller.ts` lines 139, 152, 165; `pack-assessment-result.ts` lines 24 to 30; `pack-assessment-persistence.service.ts`. Only its result shape was read, not its determinism. **Fit with AG-03 is *Unknown*:** whether it meets the four outcomes (AG-3-10) and the per-factor breakdown (AG-3-20, AG-3-21) is a team question. **What is missing for Canada is the Canada rules.** No Canada pack is authored (SA-01 v2.2 BR-15). The only Canada file in the code is `src/pack-authoring/__fixtures__/canada-dev-pack.fixture.ts`, and a code check (`tools/check-content-neutrality.ts`) keeps immigration content out of the code. Pack rules are not tested before publishing (**SA1B-D18**). **Say:** "an assessment engine exists in the code; the Canada rules are being authored". **Not:** "Canada eligibility is built". |
+| K7 | "the way we use the language" | **AIW-D79**: no AI French wording for packs in version 1. Team rules AG-12-24 and SA-5-15: legal and consent copy is never machine-translated | Drafting a reply in the client's language is allowed (skill 1). Translating templates, legal wording or pack labels by AI is not. |
+| K8 | "let's mark it that it is basically rule engine, but we are sending [selling] under the flavor of AI. For easy selling" | **FD-16**: "Marketing may say 'AI-assisted'; it may not say the AI decides". **AIW-D37**: the deadline watch is "described as the product's deadline watching, never as AI". **AIW-D90**: Practice answers is a product feature, for "honesty in a compliance market" | The map reads it this way: the product as a whole may be sold as "AI-assisted", but no rules-only capability (class R) is ever called AI. The two precedents are AIW-D37 and AIW-D90. The founder's idea would present R capabilities as AI. The selling answer is in `research/rules-and-ai-positioning-2026-10.md`. **The founder decides.** |
 
-**About K4 and K5.** The quotes come from the Lead's brief given to the maker on 12 Oct (the session message). The maker checked them against that message. The brief is not filed in `ai-workers/`, so the R4 checker could not verify them (m-5). The Lead files it or confirms.
+**About K4 and K5.** These rows now quote the founder's own words, not the Lead's brief, which closes R4 m-5.
 
-**Related, already pending with the founder.** Organising the strategy around "rules decide, AI writes" rests on AIW-D91, whose exact words are: "a rival can call the same model but not reproduce the rules, packs, audit trail and measured accuracy underneath". The moat research found the rules themselves are public (`research/ai-moat-and-positioning-2026-10.md` §3.1). Founder question 1 (moat as the combination) is open (`NEXT.md`); this map does not answer it.
+**Related, already pending with the founder.** Organising the strategy around "rules decide, AI writes" rests on AIW-D91, whose words are: "a rival can call the same model but not reproduce the rules, packs, audit trail and measured accuracy underneath". The moat research found the rules themselves are public (`research/ai-moat-and-positioning-2026-10.md` §3.1). Founder question 1, moat as the combination, is open (`NEXT.md`); this map does not answer it.
 
-**A caution, not a conflict.** "And so on" could pull in the deadline watch or Practice answers. Both are product features with no AI and are never sold as AI (AIW-D37, AIW-D90).
+**A caution, not a conflict.** "So on and so forth" could pull in the deadline watch or Practice answers. Both are product features with no AI and are never sold as AI (AIW-D37, AIW-D90).
 
 ---
 
@@ -392,11 +423,12 @@ Stated, not resolved. Each one is for the founder.
 | Platform (A83 to A111) | 29 | 18 | 3 | 2 | 6 |
 | Portal (A112 to A120) | 9 | 7 | 0 | 0 | 2 |
 
-**What changed since the first draft:**
-- A79 and A103 moved from A to R (M-4).
-- A18 moved from H to R (m-7).
-- A44 was taken out of the count (m-14).
-- A121 was added as H (M-2).
+**Changes since the first draft:**
+- A79 and A103 moved from A to R (R4 M-4).
+- A18 moved from H to R (R4 m-7).
+- A44 is listed but no longer counted (R4 m-14).
+- A121 was added as H (R4 M-2).
+- R4-b changed no counts.
 
 **Table B (AI skills and calls, 27 rows)**
 
@@ -407,31 +439,34 @@ Stated, not resolved. Each one is for the founder.
 | R — Rules only | 5 | Skills 19 to 23 |
 | H | 0 | — |
 
-Of the 23 teammate skills: 16 A, 2 T (skills 4 and 14), 5 R. The handbook's split "18 make an AI call … and 5 are rules only" still holds; T skills do make an AI call, but only to word a rule result.
+Of the 23 teammate skills: 16 A, 2 T (skills 4 and 14), 5 R. The handbook's split "18 make an AI call … and 5 are rules only" still holds: the T skills do make an AI call, but only to word a rule result.
 
 **Do not add the two tables together.** The A rows in Table A (for example A8, A51, A56) are the same AI work as skill 1, PA1 and PA2, seen from the module side.
 
-**If §8 is accepted** (*Proposal*): skill 13 moves to rules. The teammate skills become 15 A, 2 T and 6 R, and Table B becomes 18 A, 3 T and 6 R. Skills 10, 11 and 16 stay A, with their rule part done first.
+**If §8 is accepted** (*Proposal*): skill 13 moves to rules. The teammate skills become 15 A, 2 T, 6 R, and Table B becomes 18 A, 3 T, 6 R. Skills 10, 11 and 16 stay A, with their rule part done first.
 
-**Plain reading** (*Assumption: a share of rows as cut in this map, not a share of work or effort*). AI language is the deciding class in 10 of 120 rows. The AI also words rule results in 6 T rows. Rules decide in 79 and a person in 25. This supports "rules decide, AI writes", and the AI share is small. It matches the register's finding that "much less is model work than the name suggests" (register §1 item 4: 26 of 202 AW requirements call a model).
+**Plain reading** (*Assumption: a share of rows as cut in this map, not a share of work or effort*).
+- AI language is the deciding class in 10 of 120 rows; the AI also words rule results in 6 T rows. Rules decide in 79 and a person in 25.
+- This supports "rules decide, AI writes", and the AI share is small.
+- It matches the register's finding that "much less is model work than the name suggests" (register §1 item 4: 26 of 202 AW requirements call a model).
 
 ---
 
 ## 8. Marked AI in our files, but should be rules (over-AI'd)
 
-Each change below is the team's subject or a decision for the founder. This map does not design how the rule would work.
+Each change is the team's subject or a decision for the founder; this map does not design how the rule would work.
 
 | # | Item | Where it is marked AI | Why (five-question test) | Suggested change (*Proposal*) |
 |---|---|---|---|---|
-| O1 | Skill 4, plain-words summary | handbook §4 row 4, "AI writes" | Q2: every figure is rule-built already. Under the Lead's ruling it is T, not A | Classed T here. Whether an AI wording earns its place over the product's own rule-built text is a pilot question (as AIW-D62 sets for the summary line) |
+| O1 | Skill 4, plain-words summary | handbook §4 row 4, "AI writes" | Q2: every figure is rule-built already. Under the Lead's ruling it is T, not A | Classed T here. Whether an AI wording earns its place over the product's own rule-built text is a pilot question, as AIW-D62 sets for the summary line |
 | O2 | Practice-answer summary line (P) | handbook §4 row P; AIW-D62 (decide after the pilot) | Q2: it restates an answer that exists. Now T | Classed T here; decide with AIW-D62's pilot data |
 | O3 | Skill 13, sample-client proposer | handbook §4 row 13, "AI writes" | Q2, Q5: test cases for a changed gate or grid follow from the rule itself [I] | Should be rules. *Question for the team*: can the pack's test-run feature (SA-1-52) supply sample clients for a changed rule? |
 | O4 | Skill 10, firm field mapper, for known sources | handbook §4 row 10, "AI sorts" | Q2: known-source adapters and program-name suggestions are already rules in the team's design (A78; AG-18-10, A79) [I] | Rules first; AI only for free-text columns |
-| O5 | Skill 11, rulebook field mapper, for unchanged fields | handbook §4 row 11, "AI sorts" | Q2: an unchanged field maps by exact match [I] | Rules first; AI only for renamed or new fields (team's subject for the rule part) |
-| O6 | Skill 14, release-note drafter | handbook §4 row 14, "AI writes" | Q2: the list of changes comes from the rule comparison (SA-1-53) | Classed T here, not A |
-| O7 | Skills 19 to 23 (rules only), counted inside AI teammates | handbook §4 rows 19 to 23 | Already rules, but they sit under "AI teammates" and could be sold as AI | Describe them as "rules the teammate's workflow runs", on screens and in sales (the AIW-D37 precedent); never under "AI may" |
+| O5 | Skill 11, rulebook field mapper, for unchanged fields | handbook §4 row 11, "AI sorts" | Q2: an unchanged field maps by exact match [I] | Rules first; AI only for renamed or new fields (the rule part is the team's subject) |
+| O6 | Skill 14, release-note drafter | handbook §4 row 14, "AI writes" | Q2: the list of changes comes from the rule comparison (SA-1-53) | Classed T here, not A. The whole note is AI-worded, which is acceptable only because each sentence must cite its source (AW-2-51) |
+| O7 | Skills 19 to 23 (rules only), counted inside AI teammates | handbook §4 rows 19 to 23 | Already rules, but they sit under "AI teammates" and could be sold as AI | Describe them as "rules the teammate's workflow runs" on screens and in sales (the AIW-D37 precedent); never under "AI may"; see K8 |
 | O8 | The Filler listed among the AI Doers | AG-07 v2.7 BR-23 (register §1 item 10) | Q2: filling is rule-based by its own definition and SA1B-D16 | Team's subject: state it, write no change note (README §0 rule 11) |
-| O9 | The name "Drafter" used both for an AI Doer and for the template engine | AG-11 v1.12 AG11-D4: "**Drafter** (AG-10's AI-assist drafter, callable by any recipe; never promises an outcome)"; Agent 00-Overview v1.12 "In-House by Design": "the four **AI Doers** — **Reader**, **Sorter**, **Drafter**, **Checker**"; but Drafter is the template tool in AG-4-50 and AG-5-4 | Buyers may think retainers are AI-written, which AIW-D54 forbids | Already decided for our files (AIW-D53, the AI writer is "Writer"); the team's documents still need the rename (team's subject) |
+| O9 | The name "Drafter" used both for an AI Doer and for the template engine | AG-11 v1.12 AG11-D4: "**Drafter** (AG-10's AI-assist drafter, callable by any recipe; never promises an outcome)". Agent 00-Overview v1.12 "In-House by Design": "the four **AI Doers** — **Reader**, **Sorter**, **Drafter**, **Checker**". But Drafter is the template tool in AG-4-50 and AG-5-4 | Buyers may think retainers are AI-written, which AIW-D54 forbids | Already decided for our files (AIW-D53: the AI writer is "Writer"). The team's documents still need the rename (team's subject) |
 | O10 | Skill 16, ticket sorter: category and priority | handbook §4 row 16, "AI sorts"; AW-2-64 | Q2: the team's SA-10-7 already "suggests category and priority from keywords" | Rules for category and priority; AI only for the likely cause (AW-2-65) and its one-line reason |
 
 **Checked and not over-AI'd.**
@@ -447,17 +482,17 @@ All are *Proposals — not approved* except V3. All are T-fixed (§1), and all s
 
 | # | On top of | What the AI adds | Why a buyer would pay | Limits that keep it safe |
 |---|---|---|---|---|
-| V1 | The Qualifier's breakdown and levers (A15, A16; row A21) | Staff ask "why is this below the cut-off?" or "which lever matters most?" The AI explains the breakdown and the "what-if improvements" the Qualifier already computed (AG-3-21, AG-3-22). The "what if" itself is the team's, not new | Consultants prepare consultations from exactly this. The explanation comes from the firm's own pinned pack version | Staff only (AIW-D41); computes nothing; number check on every figure. Questions beyond the computed levers would need a run that is not saved: *question for the team* (AG-3-1) |
+| V1 | The Qualifier's breakdown and levers (A15, A16; row A21) | Staff ask "why is this below the cut-off?" or "which lever matters most?". The AI explains the breakdown and the "what-if improvements" the Qualifier already computed (AG-3-21, AG-3-22). The "what if" itself is the team's feature, not new | Consultants prepare consultations from exactly this, and the explanation comes from the firm's own pinned pack version | Staff only (AIW-D41); computes nothing; number check on every figure. Questions beyond the computed levers would need a run that is not saved: *question for the team* (AG-3-1) |
 | V2 | The Scheduler (A22; row A27) | Drafted replies carry real free times and the booking link | Speed to consultation is the intake measure firms care about (AG-2-35 seeds speed-to-lead) | The lead books by link; the reply is approved like any AI text; the slots must equal the Scheduler's |
-| V3 | Practice answers (A82; row A70) | Free questions answered from fixed, permission-checked queries, with sources | The "expert co-pilot" shape the founder asked for (AIW-D19), with no model computing anything | **Decided for version 2** (AIW-D39); answers only (AIW-D25); same permissions as the asker (AG-14-22) |
+| V3 | Practice answers (A82; row A70) | Free questions answered from fixed, permission-checked queries, with sources | It is the "expert co-pilot" shape the founder asked for (AIW-D19), with no model computing anything | **Decided for version 2** (AIW-D39); answers only (AIW-D25); same permissions as the asker (AG-14-22) |
 | V4 | Pack change (A85; row A111) | Per affected file, the reason the new rules matter, in plain words | Makes pack upkeep visible; rivals sell policy watch as AI (moat research §3.1, §6 row 10) | Needs a rule-built list of affected files, which does not exist today (AG-3-29 only flags assessments as stale): *question for the team*. Nothing is re-run or re-pinned without a person (FD-3, AG-3-28) |
 | V5 | Plans and limits (A92; row A95) | Support staff get the reason for a downgrade block in plain words | Faster support; not sold to firms (AIW-D61) | Never promises a credit or discount (handbook §3.6) |
 | V6 | Pack test run (A85; row A89) | The author sees why a sample client's result changed, rule by rule | Lowers the cost of keeping packs current (moat research §3.2) | Never sets an expected outcome (AW-2-50) |
 
 **Not recommended for T:**
-- Fees, invoices, trust money and payment matching (Q1; AIW-D44, AIW-D72).
-- Deadlines: the deadline watch is a product feature (AIW-D37), and Practice answers already covers "what is at risk".
-- Form filling (SA-1B-35).
+- fees, invoices, trust money and payment matching (Q1; AIW-D44, AIW-D72);
+- deadlines: AIW-D37 makes the deadline watch a product feature, and Practice answers already covers "what is at risk";
+- form filling (SA-1B-35).
 
 ---
 
@@ -467,30 +502,31 @@ This brief said to write only this file, so nothing was appended to `proposals.m
 
 | # | Type | Proposal |
 |---|---|---|
-| PR1 | Rule | Every capability in the Step R blueprint carries one class letter (R, T, A, H) and the buyer label from §2; an R capability is never described as AI. |
-| PR2 | Decision (founder) | Confirm the Lead's ruling on R4 M-3: T means T-fixed only. A model that calls tools itself would need the founder's decision and the team's change to AG-11-94. |
-| PR3 | Decision (founder) | Move skill 13 to rules (team question, O3). Do the rule part first in skills 10, 11 and 16 (O4, O5, O10). Keep skill 4 and line P as T, pending the pilot (AIW-D62). |
+| PR1 | Rule | Every capability in the Step R blueprint carries one class letter (R, T, A, H) and the buyer label from §2. An R capability is never described as AI, subject to the founder's answer on K8. |
+| PR2 | Decision (founder) | Confirm the Lead's ruling on R4 M-3 (`PROGRESS.md`, R4 row of 12 Oct): T means T-fixed only. A model that calls tools itself would need the founder's decision and the team's change to AG-11-94. |
+| PR3 | Decision (founder) | Move skill 13 to rules (a team question, O3). Do the rule part first in skills 10, 11 and 16 (O4, O5, O10). Keep skill 4 and line P as T, pending the pilot (AIW-D62). |
 | PR4 | Decision (founder) | Add V1 (assessment explainer, staff only) and V2 (slot proposals in drafts) to the blueprint as NEW items, behind the driving test. This adds to Release 1 scope (AIW-D82), so it is the founder's call. |
 | PR5 | Rule | Wherever a Workstream 2 file says an AI output's effect may come from "a person or a Doer", correct it to FD-16's reading: a person's approval, except the AIW-D71 and AIW-D80 internal carve-outs. |
-| PR6 | Rule (amendment to `research/ai-architecture-deterministic-2026-10.md` §2.1, not applied) | State how Q1 is met when a person's decision is standing rather than per item. Examples: the firm's one-time template review (AG11-D12), its refund policy or the platform default (FD-13), its recipe switches (AG-11-21). Proposed wording: "Q1 is met by a recorded standing decision of an authorised person when the requirement says so; the rule then carries it out". Until amended, this map shows the person's act as its own H row (A121). |
+| PR6 | Rule: amend `research/ai-architecture-deterministic-2026-10.md` §2.1 (not applied) | State how Q1 is met when a person's decision is standing rather than made per item. Examples: the firm's one-time template review (AG11-D12), its refund policy or the founder's platform default (FD-13), its recipe switches (AG-11-21). Proposed wording: "Q1 is met by a recorded standing decision of an authorised person when the requirement says so; the rule then carries it out". Until it is amended, this map shows the person's act as its own H row (A121). |
 | PR7 | Rule (from R4) | Any claim about what the code does cites the newest copy in `code/` by folder, file and line, never a team Reference Note older than that copy. |
 | PR8 | Rule (from R4) | A rules-only skill is never listed under "AI may", in any file. |
 
 **Lead's own items.**
-- `research/ai-moat-and-positioning-2026-10.md` §3.1 carries the same stale "No assessment output" claim (R4 M-1).
-- File the 12 Oct brief, so the K4 and K5 quotes can be checked (m-5).
-- Add the 12 Oct ask to `brief-coverage.md`.
+- `research/ai-moat-and-positioning-2026-10.md` §3.1 still carries the stale "No assessment output" claim (R4 M-1).
+- Add the 12 Oct ask to `brief-coverage.md`, if not done.
 
 **Open questions for the founder** (one at a time):
-1. By "calendar handling", do you mean the AI books appointments by itself, or that it proposes times for a person to send? Only the second fits FD-16 (K2).
-2. By "talking", do you mean an AI that chats with leads by itself? AIW-D11 rules that out today (K1).
+1. "The way we book the calendar management": do you mean the AI books appointments by itself, or that it proposes times for a person to send? Only the second fits FD-16 (K2).
+2. "The way we talk": do you mean an AI that chats with leads by itself? AIW-D11 rules that out today (K1).
 3. Do you confirm T-fixed only (K3, PR2)?
+4. "Rule engine … under the flavor of AI": do you accept "AI-assisted" for the product, with no rules-only capability ever called AI (K8)?
 
 **Questions for the team.**
 1. Does the 10 Oct assessment engine meet AG-03's four outcomes (AG-3-10) and per-factor breakdown (AG-3-20, AG-3-21)?
 2. Does the Qualifier offer a run that is not saved (A21, V1)?
 3. Is a rule-built list of files affected by a pack change planned (A111, V4)?
 4. Can the pack test-run supply sample clients for a changed rule (O3)?
+5. Do firms see the pack release note (`releaseNote`) when they adopt a new pack version (skill 14)?
 
 **Unknowns.** The CP-01 client-portal file (not on Drive).
 
@@ -498,18 +534,32 @@ This brief said to write only this file, so nothing was appended to `proposals.m
 
 ## Sources
 
+- `ai-workers/founder-brief.md`, section "12 Oct 2026" (second quote).
+- `ai-workers/PROGRESS.md`, R4 row of 12 Oct ("Lead ruled T = T-fixed only (workflow runs the engine, AI explains; AG-11-94)").
 - `ai-workers/README.md` §0 rules 3, 5, 10, 11; §5.
 - `ai-workers/decisions.md`: AIW-D9, D11, D13, D19, D21, D22, D25, D37, D39, D40, D41, D42, D43, D44, D48, D53, D54, D59, D61, D62, D67, D71, D72 (and corrections), D73, D74, D75, D77, D78, D79, D80, D81 to D91.
-- `ai-workers/checks/review-R4-2026-10-12.md` (findings M-1 to M-6, m-1 to m-22).
+- `ai-workers/checks/review-R4-2026-10-12.md` and `ai-workers/checks/review-R4-b-2026-10-12.md`.
 - `ai-workers/handbook/ai-team-profiles.md` §1 to §4, §7.
 - `ai-workers/design/ai-carve-out-register-2026-10-11.md` §1 items 4 and 10; Registers A.1 to A.11.
 - `ai-workers/research/ai-architecture-deterministic-2026-10.md` §2.1, §2.3, §5.1, §5.3, §9.2, part (c).
 - `ai-workers/research/ai-moat-and-positioning-2026-10.md` §3.1, §3.2, §3.3, §6 row 10.
-- `ai-workers/requirements/AW-01-firm-ai-assistants_v0.1.md` (document v0.6), AW-1-87; `AW-02-platform-ai-assistants_v0.1.md` (document v0.8), AW-2-50, AW-2-64, AW-2-65.
-- `code/ERv2-sanitized@042be70-2026-10-10/apps/api/src/spine/pack-assessment.controller.ts` (lines 139, 152, 165); `pack-assessment-result.ts` (lines 24 to 30); `pack-assessment-persistence.service.ts`; `apps/api/src/pack-authoring/__fixtures__/canada-dev-pack.fixture.ts`; `apps/api/tools/check-content-neutrality.ts`.
+- `ai-workers/research/rules-and-ai-positioning-2026-10.md` (the selling answer for K8).
+- `ai-workers/requirements/AW-01-firm-ai-assistants_v0.1.md` (document v0.6), AW-1-87.
+- `ai-workers/requirements/AW-02-platform-ai-assistants_v0.1.md` (document v0.8), AW-2-50, AW-2-51, AW-2-64, AW-2-65.
+- `ai-workers/requirements/change-notes/CN-SA-01.md` change 2 (SA-1-67).
+- `code/ERv2-sanitized@042be70-2026-10-10/apps/api/`:
+  - `src/spine/pack-assessment.controller.ts` (lines 139, 152, 165);
+  - `src/spine/pack-assessment-result.ts` (lines 12 to 14 and 24 to 30);
+  - `src/spine/pack-assessment-persistence.service.ts`;
+  - `src/pack-authoring/__fixtures__/canada-dev-pack.fixture.ts`;
+  - `tools/check-content-neutrality.ts`.
 - `sources/drive-snapshot-2026-10-11/01-techno-functional/07-Founder-Decisions-Log.md` (v1.5): FD-1, FD-3, FD-4, FD-5, FD-7, FD-9, FD-12, FD-13, FD-16, FD-17, FD-20, FD-21, FD-22.
 - `sources/drive-snapshot-2026-10-11/01-techno-functional/06-Doc-4-Client-Portal.md` (v1.3): CP-1-3, CP-2-1, CP-3 §3.2 and BR-6, CP-4-1, CP-5-1, CP-6-1, CP-7-1, CP-8-1, CP-9-1.
-- `sources/drive-snapshot-2026-10-11/02-functional-requirements/` (`agent/`, `super-admin/`, `shared/`): files and versions as listed at the top. Sections used from Agent 00-Overview v1.12: "Detailed Scope Index", "Agent-native operation", "How Country-Awareness Works", "In-House by Design" and "Agent Console Sub-Roles". AG-03 v1.4 §3 ("what-if improvements"); AG-11 v1.12 AG-11-54, AG-11-67; SA-10 v2.5 SA-10-7.
+- `sources/drive-snapshot-2026-10-11/02-functional-requirements/` (`agent/`, `super-admin/`, `shared/`): files and versions as listed at the top. Also cited:
+  - Agent 00-Overview v1.12 sections "Detailed Scope Index", "Agent-native operation", "How Country-Awareness Works", "In-House by Design" and "Agent Console Sub-Roles";
+  - AG-03 v1.4 §3 ("what-if improvements");
+  - AG-11 v1.12 AG-11-54 and AG-11-67;
+  - SA-10 v2.5 SA-10-7.
 - `sources/drive-snapshot-2026-10-11/08-client-portal/NOT-FOUND.md`.
 - Product Vision v1.0 (team document, `07-team-documents/`, frozen 2 Aug), line 292.
 - arXiv 2507.16126v1, "TaxCalcBench", https://arxiv.org/abs/2507.16126v1 (read by the R4 checker, 12 Oct 2026; cited via the moat research §3.3).
