@@ -47,7 +47,7 @@
 
 Every T row below is written as T-fixed unless it says otherwise.
 
-**How a row gets its class.** A row's class is the class of whoever decides the outcome. Where a capability mixes classes (for example the Reader reads a value (A), a person verifies it (H), then the Filler uses it (R)), the row names the class that does the job in that row. The "AI may / may not" column shows the neighbours.
+**How a row gets its class.** A row's class is the class of whoever decides the outcome. Where a capability mixes classes (for example the Reader reads a value (A), a person verifies it (H), then the Filler uses it (R)), the row names the class that does the job in that row. The "AI may / may not" column shows the neighbours. Where Q1 is yes but the person's decision was taken once in advance (a firm's refund policy, its consent settings), the row is R and says so.
 
 ---
 
@@ -127,7 +127,7 @@ Column key: **Class** R / T / A / H. **Why** = the deciding question from §2. *
 | A4 | Routing a new lead to an owner | AG-2-12 (AG-02 v1.9) | R | Q2 | No AI | Rule test | Automatic, on your settings |
 | A5 | Next-best action on a lead | AG-2-37 (AG-02 v1.9; "rule-based", Register A.11) | R | Q2 | May word the reason in a list [22]; may not choose the action | Rule test | Rules-based |
 | A6 | **Follow-up timing**: speed-to-lead, sequences, going cold, waiting times | AG-2-31, AG-2-35, AG-2-39 (AG-02 v1.9); AG11-D17, AG-11-99 (AG-11 v1.12) | R | Q2 | No AI | Rule test | Automatic, on your settings |
-| A7 | **Follow-up wording** from a firm template | AG-12-1 to AG-12-3 (AG-12 v1.2); AG-11-13, AG11-D12 (AG-11 v1.12) | R | Q2 | No AI. Templates send after the firm's one-time review | Rule test; the firm's one review | Automatic, your templates |
+| A7 | **Follow-up wording** from a firm template | AG-12-1 to AG-12-3 (AG-12 v1.2); AG-11-13, AG11-D12 (AG-11 v1.12) | R | Q1: the firm approved the template once; then Q2 | No AI. Templates send after the firm's one-time review | Rule test; the firm's one review | Automatic, your templates |
 | A8 | Follow-up wording when no template fits | AG-10-15 (AG-10 v1.10); skill [1] | A | Q1 then Q3 | May draft. May not send, promise an outcome (AG-10 BR-10) or include eligibility (AIW-D41) | Person approval; pass^k; driving test | AI-drafted, approved by you |
 | A9 | **Conversation with a lead**: drafting replies | AG-10-15, AG-10 BR-10 (AG-10 v1.10); AIW-D41; skill [1] | A | Q1 | May draft each reply. May not converse by itself, send, or answer eligibility questions (§6, K1) | Person approval; pass^k; driving test | AI-drafted, approved by you |
 | A10 | Lead marked Won when the retainer is signed | AG-2-28a (AG-02 v1.9) | R | Q2 | No AI | Rule test | Automatic |
@@ -146,7 +146,7 @@ Column key: **Class** R / T / A / H. **Why** = the deciding question from §2. *
 | A23 | Public booking page; the lead books their own slot | AG-4-16, AG-4-22 (AG-04 v1.5) | R | Q2 | No AI | Rule test | Automatic |
 | A24 | Confirmations, reminders, calendar files | AG-4-31 to AG-4-35 (AG-04 v1.5) | R | Q2 | No AI | Rule test | Automatic |
 | A25 | Sync with the firm's own calendar | AG-4-40 to AG-4-43 (AG-04 v1.5) | R | Q2 | No AI | Rule test | Automatic |
-| A26 | Reschedule, cancel, no-show, refund policy | AG-4-36 to AG-4-39, AG-4-46 (AG-04 v1.5); FD-13 | R | Q1 (money) answered by a firm-set rule | No AI; may not cancel or refund | Rule test | Rules-based, your policy |
+| A26 | Reschedule, cancel, no-show, refund policy | AG-4-36 to AG-4-39, AG-4-46 (AG-04 v1.5); FD-13 | R | Q1 (money): the firm set the policy once (FD-13); then Q2 | No AI; may not cancel or refund | Rule test | Rules-based, your policy |
 | A27 | **Proposing time slots** inside a drafted reply | *Proposal — not approved*; would sit on AG-4-5, AG-4-16 | T | Q2 for the slots; Q1 for the reply | May place Scheduler-computed slots and the booking link in a draft. May not hold, book, move or cancel (FD-16, AIW-D13) | Number check (slots equal the Scheduler's); person approval; pass^k | AI-drafted with live times from your calendar; approved by you |
 | A28 | Consultation outcome, recommended pathway and fee | AG-4-49 (AG-04 v1.5) | H | Q1 | May summarise the consultant's typed notes [3]. May not record or transcribe (handbook §3.2; AIW-D62) | Person's act | Your decision |
 | A29 | Proposal from a consultation, from a template | AG-4-50 (AG-04 v1.5) | R | Q2 | No AI (the Drafter here is the template tool, AIW-D53) | Rule test | Automatic |
@@ -155,8 +155,8 @@ Column key: **Class** R / T / A / H. **Why** = the deciding question from §2. *
 | A32 | Signing and countersigning | Agent 00-Overview v1.12, permission model (countersign); AG-15-45 (AG-15 v1.7) | H | Q1 | No AI; never "on behalf" for a signature | Person's act | Your decision |
 | A33 | Invoice numbers, balances, partial payments | AG-6-5, AG-6-20, AG-6-21 (AG-06 v1.7) | R | Q2 | No AI | Rule test | Rules-based |
 | A34 | Overdue sweep and dunning sequence | AG-6-11, AG-6-12 (AG-06 v1.7) | R | Q2 | After dunning runs out, may draft one personal reminder [1] | Rule test; person approval for the draft | Automatic, on your settings |
-| A35 | Trust designation, ledger, reconciliation report | FD-17; AIW-D72 and its two corrections | R | Q1 answered by Practice Pack rules | May remind the reconciler that the report is due, with no figure [22]. May not post, move, tag or compute | Rule test; counsel before real money (AIW-D72) | Rules-based |
-| A36 | Saving invoices, recording payments, trust moves, refunds | AG-6-19, AG-6-23 (AG-06 v1.7); AIW-D44, AIW-D72, AIW-D77 | H | Q1 | May open a pre-filled invoice screen [21]. May not create even an unsaved draft invoice (AIW-D44) | Person's act | Your decision |
+| A35 | Trust ledger with running balance; reconciliation report | FD-17 parts (c) and (d); AIW-D72 and its two corrections | R | Q2, with rules from the Practice Pack (FD-17) | May remind the reconciler that the report is due, with no figure [22]. May not post, move, tag or compute | Rule test; counsel before real money (AIW-D72) | Rules-based |
+| A36 | Saving invoices, recording payments, marking each line trust or firm money, trust moves, refunds | AG-6-19, AG-6-23 (AG-06 v1.7); FD-17 parts (a) and (b); AIW-D44, AIW-D72, AIW-D77 | H | Q1 | May open a pre-filled invoice screen [21]. May not create even an unsaved draft invoice (AIW-D44) or set a designation (AIW-D72) | Person's act | Your decision |
 | A37 | Case steps from the pack | AG-7-9 (AG-07 v2.7) | R | Q2 | May propose a milestone after a letter [21] | Rule test | Rules-based |
 | A38 | Document checklist | AG-7-15 (AG-07 v2.7) | R | Q2 | No AI | Rule test | Rules-based |
 | A39 | Deficiencies raised and cleared by rule | AG-7-25, AG-7-30 (AG-07 v2.7) | R | Q2 | No AI | Rule test | Rules-based |
@@ -174,7 +174,7 @@ Column key: **Class** R / T / A / H. **Why** = the deciding question from §2. *
 | A51 | Values read from documents | AG-9-43, AG-9-46, AG-09 BR-19 (AG-09 v1.8) | A | Q3 | May propose with source and confidence. May not guess | Driving test; person approval | AI-read, rule-checked, verified by you |
 | A52 | Dates read from government letters | AG-9-51, AG-09 BR-21 (AG-09 v1.8); AG-11-108 | A | Q3; Q1 for the deadline | May propose. The date reaches the Minder only after a person approves | Driving test; person approval | AI-read, verified by you |
 | A53 | Documents generated from templates | AG-9-22 (AG-09 v1.8) | R | Q2 | No AI | Rule test | Automatic |
-| A54 | One send path; consent; unsubscribe | AG-10-22, AG-10-24, AG-10 BR-1 (AG-10 v1.10) | R | Q1 answered by rule | No AI. Every AI draft passes the same gate | Rule test | Rules-based |
+| A54 | One send path; consent; unsubscribe | AG-10-22, AG-10-24, AG-10 BR-1 (AG-10 v1.10) | R | Q1: the recipient's recorded consent decides; then Q2 | No AI. Every AI draft passes the same gate | Rule test | Rules-based |
 | A55 | Matching inbound messages by reply token, sender, alias | AG-10-10, AG-10-12 (AG-10 v1.10) | R | Q2 | No AI | Rule test | Automatic |
 | A56 | Sorting the messages rules could not match | AG-10-37, AG-10-38 (AG-10 v1.10); AG-11-94 | A | Q3, Q4 | May propose a file from a firm-scoped list. An AI-only match is never filed automatically | Driving test; person approval | AI-suggested, you confirm |
 | A57 | WhatsApp templates, preferred channel, email fallback | AG-10-57, AG-11-105; SA8-D19 (team conflict, not ours) | R | Q2 | No AI | Rule test | Automatic |
@@ -324,7 +324,7 @@ Stated, not resolved. Each one is for the founder.
 | H — Person only | 26 | 0 |
 | **Total** | **120** | 6 |
 
-By side: firm (A1 to A82) R 52, T 3, A 10, H 17; platform (A83 to A111) R 17, T 3, A 3, H 6; portal (A112 to A120) R 7, A 0, H 2.
+By side: firm (A1 to A82) R 52, T 3, A 9, H 18; platform (A83 to A111) R 17, T 3, A 3, H 6; portal (A112 to A120) R 7, T 0, A 0, H 2.
 
 **Table B (AI skills and calls, 27 rows)**
 
@@ -410,6 +410,6 @@ This brief said to write only this file, so nothing was appended to `proposals.m
 - `ai-workers/requirements/AW-01-firm-ai-assistants_v0.1.md` (document v0.6), AW-1-87.
 - `sources/drive-snapshot-2026-10-11/01-techno-functional/07-Founder-Decisions-Log.md` (v1.5): FD-1, FD-3, FD-4, FD-5, FD-7, FD-9, FD-12, FD-13, FD-16, FD-17, FD-20, FD-21, FD-22.
 - `sources/drive-snapshot-2026-10-11/01-techno-functional/06-Doc-4-Client-Portal.md` (v1.3): CP-1-3, CP-2-1, CP-3-5, CP-4-1, CP-5-1, CP-6-1, CP-7-1, CP-8-1, CP-9-1.
-- `sources/drive-snapshot-2026-10-11/02-functional-requirements/agent/` and `super-admin/` and `shared/`: files and versions as listed at the top; the Agent 00-Overview v1.12 sections "Detailed Scope Index", "Agent-native operation", "How Country-Awareness Works", "In-House by Design", "Agent Console Sub-Roles".
+- `sources/drive-snapshot-2026-10-11/02-functional-requirements/` (`agent/`, `super-admin/`, `shared/`): files and versions as listed at the top; the Agent 00-Overview v1.12 sections "Detailed Scope Index", "Agent-native operation", "How Country-Awareness Works", "In-House by Design", "Agent Console Sub-Roles".
 - `sources/drive-snapshot-2026-10-11/08-client-portal/NOT-FOUND.md`.
 - Product Vision v1.0 (team document, `07-team-documents/`, frozen 2 Aug), line 292.

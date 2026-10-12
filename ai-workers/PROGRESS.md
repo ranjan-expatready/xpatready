@@ -375,3 +375,4 @@ Blocking risk across all steps: the Canada-only processing rule (`commercial/pro
 | 12 Oct 2026 | adversarial-reviewer (R2, accuracy research) | Started and Done (appended by the Lead): FAIL (1 blocking, 7 major, 22 minor); maker fix round running |
 | 12 Oct 2026 | commercial-strategist (positioning research) | Started and Done (appended by the Lead): `research/rules-and-ai-positioning-2026-10.md`; Lead corrected one sum (nine years, not eight); review R3 running |
 | 12 Oct 2026 | ai-worker-designer (rules-and-AI classification) | Started (appended by the Lead): `design/rules-ai-classification-2026-10-12.md`, still being written |
+| 12 Oct 2026 | general-purpose (accuracy research, fix round R2) | Done (appended by the Lead): all R2 findings addressed; re-check R2-b started |
