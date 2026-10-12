@@ -1,6 +1,6 @@
 # Rules and AI: the framework for Expat Ready
 
-*Version 2, 12 Oct 2026, by the Lead. It replaces version 1 (the draft checked in review R5), whose questions F1 to F8 the founder has now answered in AIW-D92 to D105. **Status:** decided, except the four open questions in §9. It is the one place that ties the AI layer together. The detail lives in the files it points to; this file does not restate them.*
+*Version 2, 12 Oct 2026, by the Lead. It replaces version 1 (the draft checked in review R5), whose questions F1 to F8 the founder has now answered in AIW-D92 to D105. Revised after review R7. **Status:** the decisions cited are ratified; the build mechanisms in §3 and §4 are Proposals (labelled); four founder questions stay open (§9). Direction for this pass: AIW-D106. It is the one place that ties the AI layer together. The detail lives in the files it points to; this file does not restate them.*
 
 **Points to (one home each):**
 - **Every capability by class:** `design/rules-ai-classification-2026-10-12.md`.
@@ -26,7 +26,7 @@
    - person only.
 3. **The AI teammates can do what a person does in the product** (AIW-D93, D95):
    - They use the product's own screens and tools, under the delegated person's permission.
-   - They can read; draft; run the eligibility assessment (D96); and prepare invoices, proposed trust entries, exports, deletion requests, settings changes and signature workflows (D103).
+   - They can read; draft; run the eligibility assessment automatically once the stop check passes (D96; Lead's reading in the AIW-D106 note); and prepare invoices, proposed trust entries, exports, deletion requests, settings changes and signature workflows (D103).
 4. **Nothing consequential takes effect until an authorised person approves it.** The approval binds to the exact action shown (FD-16; D93, D103).
 5. **Approvals are few and placed where they matter** (D95, D100, D101):
    - The default preset is **"Review each step"**.
@@ -35,8 +35,8 @@
    - The safety floors are locked.
    - The grid never grants access.
 6. **Autonomy is earned** for routine, reversible internal work (D104). Published templates picked by a rule go out on their own (D105).
-7. **The AI uses only approved rule results.** It cites its sources and the pack version, and stops when evidence is missing, out of date or conflicting (D98).
-8. **Exact repeatability comes from the platform, not the model.** Rule results are stamped with the pack version, and AI answers are stored and replayed (accuracy research §2; AG-03 v1.4 §1).
+7. **The AI uses only approved rule results.** It cites its sources and the pack version, stops when evidence is missing, out of date or conflicting, and its explanations stay subject to licensed-person review (D98).
+8. **Exact repeatability comes from the platform, not the model.** Rule results are stamped with the pack version (AG-03 v1.4 §1, team specification); storing and replaying AI answers is a Proposal for the build (accuracy research R2).
 9. **We sell an AI team on top of rules that can be defended** (D99, D97):
    - **Headline:** "An AI team for your immigration practice."
    - **Proof:** the rules, measured AI performance and the approval record.
@@ -49,7 +49,7 @@
 | Class | What happens | Called "AI" to buyers? | Share of the 122 capability rows |
 |---|---|---|---|
 | **Rules only** | The rules engine, the Conductor and the rule-based Doers compute. Same input, same answer. | Never | 80 |
-| **AI explains rule results** | The rules compute. The AI may fetch results with read tools (D93) and words or explains them, with sources and the pack version (D98). | Yes, for the wording | 6 (5 of them are still Proposals; one is version 2) |
+| **AI explains rule results** | The rules compute. The AI may fetch results with read tools (D93) and words or explains them, with sources and the pack version; explanations stay subject to licensed-person review (D98). | Yes, for the wording | 6 (see the classification for which are decided: the assessment explainer by the AIW-D98 note, Practice answers for version 2 by AIW-D39) |
 | **AI language** | The AI reads, sorts, drafts and summarises. Its quality is measured, not guaranteed. | Yes, always disclosed | 11 (one, the future conversational AI, is not live at launch) |
 | **Person only** | Advice, telling a lead or client about eligibility (AIW-D41), signing and submitting | Never | 25 |
 
@@ -73,7 +73,7 @@
 - the run records and health lights (AIW-D83, D85);
 - the AI switches (AIW-D78).
 
-**What is new (all in Workstream 2's own layer):**
+**What is new (all in Workstream 2's own layer; Proposals for the build, ruled by the Lead in `proposals.md` 12 Oct):**
 - "ask now" or "ask at the checkpoint";
 - the end-of-job review sitting;
 - three mechanisms from the journey walkthroughs (Lead rulings, `proposals.md` 12 Oct):
@@ -122,7 +122,7 @@ These are **Proposals for the build**, recommendations R1 to R13 of the accuracy
 **Working rules (`proposals.md`, 12 Oct):**
 - No hours, minutes, "faster" or accuracy figure until measured on our own records.
 - Rules are never called AI.
-- The say and never-say list is in the positioning file §(c)2.
+- The say and never-say list has one home: the positioning file §(c)2, read with `research/ai-in-regulated-work-2026-10.md` §7 (AIW-D106 note).
 
 **Legal readings are unconfirmed.** Counsel is not engaged (AIW-D94), so the legal readings in the positioning file are the Lead's guidance only. The risk sits with the founder.
 
@@ -133,11 +133,11 @@ These are **Proposals for the build**, recommendations R1 to R13 of the accuracy
 The value map (`commercial/ai-value-map-2026-10-12.md`) has the detail. The material points:
 
 - **There's no customer evidence yet.** Problems come from the requirements; savings and willingness to pay are Assumptions.
-- **Only the prepared file has its own price** (AIW-D60). The other firm teammates ride inside the plan.
+- **Pricing is not decided.** The price card offers a per-file price (option a, illustrative CAD 25 to 40, which would need SA-4-44 changed) or an allowance inside the plan (option b); AIW-D60's conversations were dropped by AIW-D94, so the price is set from the money model and pilot measurement (Lead proposal). The other firm teammates ride inside the plan.
 - **Cost to serve** for a typical file is about CAD 1.72 in model cost [I].
   - About CAD 1.54 of it is the product's own reading of uploads, which sits in the base plan (AW-1-15).
   - About CAD 0.18 is the teammates' own calls.
-- **Break-even arithmetic, not a claim:** at CAD 30 a file, a firm needs about 52 minutes of assistant time saved per file, or about 34 minutes of consultant time. That's the number the pilot must measure.
+- **Break-even arithmetic, not a claim:** at an illustrative CAD 30 a file, a firm needs about 52 minutes of assistant time saved per file, or about 34 minutes of consultant time. That's the number the pilot must measure.
 - **Measurement uses records the product already specifies.** There are two gaps:
   - **G1:** cost fields on the AI call record. This is our own change, in the CN-AG-11 update.
   - **G2:** times when an approval item is opened. This is a team need.
@@ -184,12 +184,14 @@ It found 19 gaps. The Lead's rulings and the mechanisms M-2 to M-4 close the AI-
 | Stale assessment after a correction | Assessments marked stale when an input changes (G-13) | AG-03 |
 | Review effort | Opened-time on approval items (G2) | AG-11 |
 | Grid storage and screens | The toggle grid (AIW-D101) | AG-16 / AG-11 |
+| Holding state for "ask at the checkpoint" | Items held for the end-of-job sitting (AIW-D101; autonomy E4) | AG11-D2, AG-11-55, AG-11-60 |
+| Drafts from provisional values | May the Filler draft from provisional values and re-render after verification (AIW-D100 point 5; autonomy E14) | AG-07; AG-11-97 |
 
 ---
 
 ## 9. Founder questions still open (asked one at a time)
 
-1. **Live conversational AI at launch, or later (AIW-D102 against "the full scope in this release").** D102 puts the conversational AI for admin intake, FAQs and booking "later, by a separate decision with the team". Two ways to bring it into Release 1:
+1. **Live conversational AI at launch, or later (AIW-D102 against AIW-D106 "the full scope in this release"; D106 keeps the founder's explicit deferrals until he amends them).** D102 puts the conversational AI for admin intake, FAQs and booking "later, by a separate decision with the team". Two ways to bring it into Release 1:
    - **(A) No floor lowered:** the AI only sorts the lead's question into an approved topic; a rule picks the approved answer; booking goes through the Scheduler; anything else goes to a person.
    - **(B) Live AI-written replies:** the team lowers its AI-text floor (AG11-D1, AG-11-53) and FD-16 is amended.
 2. **The anti-rubber-stamp safeguards (AIW-D57): final now?** They were marked "provisional until counsel", and counsel is dropped (D94).
