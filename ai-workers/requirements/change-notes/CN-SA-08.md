@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-08 Platform Integrations & Infrastructure Rails, version 2.4, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-08-platform-integrations-and-infrastructure-rails_v2.4_2026-10-10.md` |
-| **Date of this note** | **12 Oct 2026 (change 3 amended: the fetch rail's switch-on condition, the Lead's ruling under AIW-D94 and D83)**; earlier 11 Oct 2026 (sixth round: the founder's Step 3 batch, AIW-D74: SA-8-51 covers every Expat Ready AI call; a withdrawal also pauses the Pack author's assistant) |
+| **Date of this note** | **12 Oct 2026 (change 3 amended: the fetch rail's switch-on condition, the Lead's ruling under AIW-D94 and D83)**; earlier 11 Oct 2026 (sixth round: the founder's Step 3 batch, AIW-D74: SA-8-51 covers every Expat Ready AI call; a withdrawal also pauses the Pack author's AI) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 4 |
 
@@ -85,8 +85,8 @@ New §3.9 "AI and OCR provider: the terms record" (summary paragraph). New requi
 >   The record is published only if the processing region is in Canada **and the test call passed**. A record with any other region, or with a test call that failed or is missing, is refused with a clear reason (SA-11-32). The provider's keys are not part of the record; the engineer sets them at deploy like every service key (SA8-D1).
 >
 >   **Replacing the provider.** A new provider is a new record under the same rules. Only one record is published at a time: publishing the new record marks the old one **Superseded** at the same moment, and new model calls move to the new provider with no pause. Only a withdrawal with no published successor pauses work (SA-8-50). Until a published record exists, the AI switch of every firm stays locked (AG-11-93, AG-16-35).
-> - **SA-8-50** *(new)* The Integrations status page shows the AI provider as one line: working or not, processing region, the record's version and the last error. A red line alerts the Owner and engineer (SA-8-27). The Owner may **withdraw** the published record, with a reason, under `system/ai-provider:publish`. Withdrawing it with no published successor stops at once the model calls the record governs, and pauses with the reason `PROVIDER_RECORD_WITHDRAWN` (AG-11-112 (e), CN-AG-11 change 6) only the waiting items of the assistants whose calls it governs: the five firm assistants, the Support and account assistant and the Pack author's assistant (AIW-D74). It pauses no other waiting item.
-> - **SA-8-51** *(new — AIW-D52, AIW-D74)* **Every AI call Expat Ready makes** runs only under the published record: its calls on **support tickets** (AIW-D52) and every other own call, including the Pack author's assistant drafting pack content that holds no client data (AIW-D74). The Pack author's assistant may make model calls once the record is published.
+> - **SA-8-50** *(new)* The Integrations status page shows the AI provider as one line: working or not, processing region, the record's version and the last error. A red line alerts the Owner and engineer (SA-8-27). The Owner may **withdraw** the published record, with a reason, under `system/ai-provider:publish`. Withdrawing it with no published successor stops at once the model calls the record governs, and pauses with the reason `PROVIDER_RECORD_WITHDRAWN` (AG-11-112 (e), CN-AG-11 change 6) only the waiting items of the AI teammates whose calls it governs: the four firm AI teammates (AIW-D90), the Support AI and the Pack author's AI (AIW-D74). It pauses no other waiting item.
+> - **SA-8-51** *(new — AIW-D52, AIW-D74)* **Every AI call Expat Ready makes** runs only under the published record: its calls on **support tickets** (AIW-D52) and every other own call, including the Pack author's AI drafting pack content that holds no client data (AIW-D74). The Pack author's AI may make model calls once the record is published.
 
 §7 gains: "**AI provider record** *(new)* — provider, contract reference, processing region, no-training and no-retention terms with source and date checked, test call (date, model, outcome — passed or failed, who ran it), version, status Draft / Published / Superseded / Withdrawn, entered by, approved by, approved at, superseded by, withdrawn by and reason. At most one record is Published. No keys."
 
@@ -94,7 +94,7 @@ New §3.9 "AI and OCR provider: the terms record" (summary paragraph). New requi
 > | `system/ai-provider:edit` | **new** *(proposal)* | Enter or change the AI provider record (not its keys) — Platform engineer, Owner |
 > | `system/ai-provider:publish` | **new** *(proposal)* | Approve and publish the AI provider record, never one's own entry; withdraw the published record — **Owner only** |
 
-**The platform's other own AI calls: decided.** Whether the same record governs Expat Ready's own platform AI calls that hold no client data, such as the Pack author's assistant drafting pack content, was open point 3 of CN-FDL. The founder decided it on 11 Oct 2026 (AIW-D74, "Yes, Canada for all AI"), and SA-8-51 above now states it, credited to AIW-D74, not to AIW-D52.
+**The platform's other own AI calls: decided.** Whether the same record governs Expat Ready's own platform AI calls that hold no client data, such as the Pack author's AI drafting pack content, was open point 3 of CN-FDL. The founder decided it on 11 Oct 2026 (AIW-D74, "Yes, Canada for all AI"), and SA-8-51 above now states it, credited to AIW-D74, not to AIW-D52.
 
 **(4) Why.**
 - **IMP-6** asks for the record: "provider name, contract reference, processing region, no-training and no-retention terms (both, matching AG-11; AG-16 L577 says only "no-training"), approval date and approver".
@@ -103,7 +103,7 @@ New §3.9 "AI and OCR provider: the terms record" (summary paragraph). New requi
 - **AIW-D69:** the team's tech lead runs the test call; "the result goes into the provider record the product requires before the AI switch unlocks (AG-16-35, AG-11-93)".
 - **The Step 3 shared rule on the provider record:** it requires a *passed* test call (`00-step3-plan.md`, "The provider record"; re-check S3a-b R-2). The open question that rule left to the founder is now decided by AIW-D74.
 - **AIW-D74**, 11 Oct 2026. The founder chose "Yes, Canada for all AI": "AI processing for **every** AI call Expat Ready makes, including pack drafting that holds no client data, happens only in Canada under the one published provider record (SA-8-49). The Pack author's assistant may make model calls once that record is published." The plan rule "Pack calls before the founder answers" is superseded.
-- **What a withdrawal pauses.** It pauses the waiting items of the assistants whose calls the record governs (`00-step3-plan.md`, "Withdrawn provider record, reach"); since AIW-D74 that includes the Pack author's assistant.
+- **What a withdrawal pauses.** It pauses the waiting items of the AI teammates whose calls the record governs (`00-step3-plan.md`, "Withdrawn provider record, reach"); since AIW-D74 that includes the Pack author's AI.
 - **Replacing a provider** needed its own status so that two records are never live at once and a planned change does not stop work (re-check S3a-d m-6).
 - **The pause reason.** CN-AG-11 change 6 (AG-11-112) is the one home of the four pause reasons, `PROVIDER_RECORD_WITHDRAWN` among them.
 - **Owner approval** follows SA8-D22 (L59): e-sign wording is "**approved and published by the Owner**". Withdrawing a live record is the same Owner act in reverse, so it uses the same key (re-check S3a-c m-10).
@@ -121,7 +121,7 @@ New §3.9 "AI and OCR provider: the terms record" (summary paragraph). New requi
 **(1) What it changes.**
 - a new §3.10;
 - a new requirement SA-8-52;
-- §13 (L431, "None open for SA-8"): one counsel question.
+- §13 (L431, "None open for SA-8"): one question, now unconfirmed Lead guidance; no counsel (AIW-D94).
 
 **(2) Current words.**
 
@@ -139,9 +139,9 @@ New §3.10 "Government source pages, read-only":
 > 1. ~~**Government page fetching (counsel).** *(new)* Confirm the terms of use of the government sites recorded as sources and the Crown copyright position for storing page copies, and set how long stored copies are kept, before SA-8-52 is switched on.~~ *Superseded 12 Oct 2026 by AIW-D94 (no counsel). The Lead's ruling (c) after review R9 (`ai-workers/proposals.md`, row after review R9): SA-8-52 is switched on, after the Platform Owner has recorded a check of each recorded government site's current terms of use (who, when, result; the Lead's guidance for consistency with AIW-D113, review R10 m14), when the watcher's skill has passed its driving test (AIW-D83) and the Platform Owner switches it on, recorded; no counsel gate. Site terms, Crown copyright and how long stored copies are kept stay the Lead's guidance, "Unconfirmed: no counsel (AIW-D94)"; retention stays Unknown until set.*
 
 **(4) Why.**
-- Proposals row of 10 Oct (Pack author's assistant, outbound fetch).
+- Proposals row of 10 Oct (Pack author's AI, outbound fetch).
 - `pack-authors-assistant.md` §9 G-3 and G-21.
-- AIW-D54 item 7 keeps the Pack author's assistant read-only.
+- AIW-D54 item 7 keeps the Pack author's AI read-only.
 - The counsel pack's question 8 covers "stored government-page copies".
 - The fetch and its comparison are rule-built steps, not model calls; the Writer's description of a change runs once the provider record is published (AIW-D74).
 
@@ -149,7 +149,7 @@ New §3.10 "Government source pages, read-only":
 - SA-01B SA-1B-39 (CN-SA-01B change 4).
 - AG-11-3 (CN-AG-11).
 - AW-02.
-- The counsel pack (AIW-D68).
+- The counsel pack, now the Lead's unconfirmed guidance (AIW-D94).
 
 ---
 

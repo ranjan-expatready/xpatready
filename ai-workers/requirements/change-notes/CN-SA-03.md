@@ -20,7 +20,7 @@
 
 Plans have **four limits** only (SA3-D14, L74).
 
-**Not proposed: catalogue rows per assistant.** Each firm assistant is a firm setting under Advanced (AG-16-57, CN-AG-16), not a catalogue row. The two earlier versions of this note proposed rows 31–35 and SA-3-63; both are **withdrawn**. SA-3-63 had no job without those rows. Pricing per assistant is decided after the pilot (AIW-D60, D62; `00-step3-plan.md`, "Assistants are firm switches, not plan features").
+**Not proposed: catalogue rows per assistant.** Each firm AI teammate is a firm setting under Advanced (AG-16-57, CN-AG-16), not a catalogue row. The two earlier versions of this note proposed rows 31–35 and SA-3-63; both are **withdrawn**. SA-3-63 had no job without those rows. Pricing per AI teammate is decided after the pilot (AIW-D60, D62; `00-step3-plan.md`, "Assistants are firm switches, not plan features").
 
 **AI usage and spend caps** are not plan limits:
 - usage is counted in platform analytics (CN-SA-09);
@@ -47,7 +47,7 @@ Plans have **four limits** only (SA3-D14, L74).
 
 ---
 
-## 2. An AI assistant's delegation takes no seat
+## 2. An AI teammate's delegation takes no seat
 
 **(1) What it changes.** SA-3-41 (L517); §3.2 "Seat counting" (L296).
 
@@ -56,7 +56,7 @@ Plans have **four limits** only (SA3-D14, L74).
 L517:
 > - **SA-3-41** *(SA3-U2; changed v2.9 — AG1-D3)* Seats count active users, suspended users and pending invitations; deactivated and deleted users do not count. A suspended user keeps the seat until reactivated or deactivated; deactivating frees it, and deleting a deactivated user never takes a seat back. Sending an invitation that would exceed the seat limit is refused; a cancelled or expired invitation frees its seat.
 
-**(3) Proposed words.** SA-3-41 and L296 each gain: "*(changed — AIW-D33; IMP-1)* An AI assistant's delegation is not a user and never counts as a seat."
+**(3) Proposed words.** SA-3-41 and L296 each gain: "*(changed — AIW-D33; IMP-1)* An AI teammate's delegation is not a user and never counts as a seat."
 
 **(4) Why.**
 - AIW-D33: the delegation record has "no identity and no permissions of its own".

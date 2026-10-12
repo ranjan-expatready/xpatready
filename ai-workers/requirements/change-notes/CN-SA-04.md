@@ -15,7 +15,7 @@
 4. Why: the founder's decision (`ai-workers/decisions.md`, AIW-D*n*), the improvement (`ai-workers/design/ws2-improvements.md`, IMP-*n*) or the proposals row (`ai-workers/proposals.md`).
 5. What else must change.
 
-**Why AI touches this document.** Expat Ready's own Support and account assistant works for a support person or an account manager on one firm's account. It reads a firm's billing state, drafts suggestions and proposes account or plan changes that a person applies (`ai-workers/design/behaviours/support-and-account-assistant.md`, specified in AW-02). Changes 1 and 2 are product risks it exposed; they matter with or without AI.
+**Why AI touches this document.** Expat Ready's own Support AI works for a support person or an account manager on one firm's account. It reads a firm's billing state, drafts suggestions and proposes account or plan changes that a person applies (`ai-workers/design/behaviours/support-and-account-assistant.md`, specified in AW-02). Changes 1 and 2 are product risks it exposed; they matter with or without AI.
 
 **Re-base.** The team's v2.15 to v2.17 (10 Oct) added SA-4-75 to SA-4-88. The second-person rule is therefore **SA-4-89**, the next free number (L32: "next: SA-4-89").
 
@@ -45,7 +45,7 @@ SA-4-36:
 > | `system/billing:webhook-rerun` | **new** | Re-run failed processor notifications |
 
 **(4) Why.**
-- Proposals row of 10 Oct (Support and account assistant): "Split `system/billing:webhook-log` into a view key and a re-run key … SA-07 Appendix A already splits them into two rows … With one key, mapping the Support row hands Support a re-run, and no read-only delegation can hold the log".
+- Proposals row of 10 Oct (Support AI): "Split `system/billing:webhook-log` into a view key and a re-run key … SA-07 Appendix A already splits them into two rows … With one key, mapping the Support row hands Support a re-run, and no read-only delegation can hold the log".
 - SA-07 v2.12 Appendix A L738 gives "Payment-processor notification log — view (SA7-D52)" to Platform Owner, Billing, Support and Platform engineer.
 - SA-07 v2.12 Appendix A L739 gives "Payment-processor notification — re-run failed" to Platform Owner, Billing and Platform engineer.
 - SA7-D52 (SA-07 v2.12, L120): "**Support** can view the payment-processor notification log (read-only)."
@@ -85,7 +85,7 @@ SA-4-21, second sentence:
 > After the failure notice of SA-4-20, reminders go on days 7 and 12 to the billing email, the owner and the firm's Admins; no other reminder is sent in the 14 days.
 
 **(4) Why.**
-- Proposals row of 11 Oct (Support and account assistant, reminder days): "one statement in SA-02 §3.4 and SA-4-21, naming the day-1 notice as the failure notice".
+- Proposals row of 11 Oct (Support AI, reminder days): "one statement in SA-02 §3.4 and SA-4-21, naming the day-1 notice as the failure notice".
 - BR-6 (L558) already says "with notices on days 0, 7 and 12".
 - `BillingNotice.type` (L624) lists `failure, reminder-7, reminder-12`.
 - `support-and-account-assistant.md` §9 G-24.
@@ -94,7 +94,7 @@ SA-4-21, second sentence:
 
 ---
 
-## 3. A second person confirms any account or plan change the Support and account assistant proposed, while the second-person part of the founder safeguards setting is on
+## 3. A second person confirms any account or plan change the Support AI proposed, while the second-person part of the founder safeguards setting is on
 
 **(1) What it changes.** SA-4-28 (L473); §3 "Cancellation" (L388); SA-4-43 (L496); a new requirement **SA-4-89**.
 
@@ -112,23 +112,23 @@ L496 (extract):
 **(3) Proposed words.**
 
 New requirement:
-> - **SA-4-89** *(new — AIW-D59)* While the **second-person part** of the **founder safeguards** setting is on (SA-12-33), **any change to a firm's account or plan** that the **Support and account assistant** proposed, working for a Super Admin user, needs a **second Super Admin user** to confirm the assistant's note before the change is applied. This covers a change of **plan** (SA-4-28), of **billing period**, an **approved discount** (SA-4-42, applied under SA-4-43 by a Billing user) and a **cancellation or its undo** made on a firm's behalf (§3 "Cancellation"). The user holding the key then applies it, with a reason. The assistant never makes a discount entry itself and never proposes a refund.
+> - **SA-4-89** *(new — AIW-D59)* While the **second-person part** of the **founder safeguards** setting is on (SA-12-33), **any change to a firm's account or plan** that the **Support AI** proposed, working for a Super Admin user, needs a **second Super Admin user** to confirm the AI teammate's note before the change is applied. This covers a change of **plan** (SA-4-28), of **billing period**, an **approved discount** (SA-4-42, applied under SA-4-43 by a Billing user) and a **cancellation or its undo** made on a firm's behalf (§3 "Cancellation"). The user holding the key then applies it, with a reason. The AI teammate never makes a discount entry itself and never proposes a refund.
 >
-> Acts that change no account need no second person: re-running a failed notification (SA-4-36) and sending an update-card link (SA-4-24). The assistant never proposes a firm status change.
+> Acts that change no account need no second person: re-running a failed notification (SA-4-36) and sending an update-card link (SA-4-24). The AI teammate never proposes a firm status change.
 >
-> The person the assistant worked for, who asked for the change, cannot confirm it (SA7-D4, "Nobody can approve their own request"). The confirmation, the note it confirmed and the reason are audited on the firm record.
+> The person the AI teammate worked for, who asked for the change, cannot confirm it (SA7-D4, "Nobody can approve their own request"). The confirmation, the note it confirmed and the reason are audited on the firm record.
 >
-> Only a recorded founder decision naming this part switches the rule off (SA-12-33). A change a person makes without the assistant's note follows SA-4-28, §3 "Cancellation" and SA-4-43 as today.
+> Only a recorded founder decision naming this part switches the rule off (SA-12-33). A change a person makes without the AI teammate's note follows SA-4-28, §3 "Cancellation" and SA-4-43 as today.
 
-SA-4-28, SA-4-43 and the §3 "Cancellation" paragraph each gain: "A change of this kind proposed by the Support and account assistant also needs a second person's confirmation while the second-person part of the founder safeguards setting is on (SA-4-89)."
+SA-4-28, SA-4-43 and the §3 "Cancellation" paragraph each gain: "A change of this kind proposed by the Support AI also needs a second person's confirmation while the second-person part of the founder safeguards setting is on (SA-4-89)."
 
 **(4) Why.**
 - **AIW-D59**, 11 Oct 2026. The founder chose "Yes, for the pilot": "A second Expat Ready person confirms any account or plan change the Support assistant proposes, during the pilot; reviewed after it."
 - **AIW-D59 in its own words.** The Lead's call of 11 Oct (`00-step3-plan.md`, "AIW-D59 in its own words", after AW-02 re-check S3b-c N-15): the rule covers **any account or plan change** (plan, billing period, discount, cancellation); re-running a failed notification or sending an update-card link changes no account and needs no second person; status changes are never proposed. The earlier version of this change covered plan and billing period only; it is widened to the founder's words.
-- **Discounts.** The Lead's call of 11 Oct (`00-step3-plan.md`, "Discounts"): on the account manager's request the assistant may write an internal note naming an **approved** discount (SA-4-42), confirmed by a second Expat Ready person before a Billing user applies it; it never makes a discount entry and never proposes a refund. The same call says no version 1 recipe drafts a cancellation or its undo; SA-4-89 still covers one if it is ever proposed.
-- **Who may confirm.** SA-07's SA7-D4 already says "Nobody can approve their own request — enforced per action" (SA-07 v2.12, L351). The person the assistant worked for asked for the change, so that person cannot confirm it. No further rule (for example that the confirmer must differ from whoever applies the change) is added.
+- **Discounts.** The Lead's call of 11 Oct (`00-step3-plan.md`, "Discounts"): on the account manager's request the AI teammate may write an internal note naming an **approved** discount (SA-4-42), confirmed by a second Expat Ready person before a Billing user applies it; it never makes a discount entry and never proposes a refund. The same call says no version 1 recipe drafts a cancellation or its undo; SA-4-89 still covers one if it is ever proposed.
+- **Who may confirm.** SA-07's SA7-D4 already says "Nobody can approve their own request — enforced per action" (SA-07 v2.12, L351). The person the AI teammate worked for asked for the change, so that person cannot confirm it. No further rule (for example that the confirmer must differ from whoever applies the change) is added.
 - **A product state, not a period.** A requirement names a part of the *founder safeguards* setting, on from the start and ended only by a recorded founder decision naming that part (`00-step3-plan.md`, "The *founder safeguards* setting" and "No 'during the pilot' in a requirement"). The founder's review after the pilot is where he may end this part by a recorded decision. The setting lives in SA-12-33.
-- **Narrow reading.** AIW-D59 names the Support assistant only, so the rule is not widened to other assistants.
+- **Narrow reading.** AIW-D59 names the Support AI only, so the rule is not widened to other assistants.
 
 **(5) Knock-ons.**
 - SA-07 §3.3 (CN-SA-07 change 3) uses the same words.
@@ -150,7 +150,7 @@ L512:
 **(3) Proposed words.** SA-4-59 gains: "*(changed — events named)* Each event has a stable code name, listed in §7 (names for the team), so the account-manager alerts of SA-2-14a and any platform automation subscribe to them by name."
 
 **(4) Why.**
-- Proposals row of 10 Oct (Support and account assistant, platform tenant rule): the account manager's alerts are billing events "SA-4-59 names in words only (code names Unknown)".
+- Proposals row of 10 Oct (Support AI, platform tenant rule): the account manager's alerts are billing events "SA-4-59 names in words only (code names Unknown)".
 - `support-and-account-assistant.md` §9 G-6.
 - IMP-10: every worker "is specified as triggers → conditions → actions".
 
@@ -191,7 +191,7 @@ L32 (extract):
 > New requirements continue from the highest number (next: SA-4-89).
 
 **(3) Proposed words.**
-- A version row: "| 2.18 | *(date placed)* | Workstream 2 change note CN-SA-04 applied: webhook-log split; one statement of the reminder days; a second person on any account or plan change the Support and account assistant proposes while the second-person part of the founder safeguards setting is on (SA-4-89); billing event code names; `system/billing:view` covers sent notices. | AIW-D59; proposals rows of 10–11 Oct |".
+- A version row: "| 2.18 | *(date placed)* | Workstream 2 change note CN-SA-04 applied: webhook-log split; one statement of the reminder days; a second person on any account or plan change the Support AI proposes while the second-person part of the founder safeguards setting is on (SA-4-89); billing event code names; `system/billing:view` covers sent notices. | AIW-D59; proposals rows of 10–11 Oct |".
 - L32: "(next: SA-4-90)".
 
 **(4) Why.** Review S3a m-20(c).

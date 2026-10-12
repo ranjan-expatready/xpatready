@@ -19,7 +19,7 @@
    - the gap list of the passed behaviour document (`ai-workers/design/behaviours/support-and-account-assistant.md` §9, G-*n*).
 5. What else must change.
 
-**Why AI touches this document.** Expat Ready's Support and account assistant works for one support person on the tickets assigned to them:
+**Why AI touches this document.** Expat Ready's Support AI works for one support person on the tickets assigned to them:
 - It suggests replies, canned responses and knowledge-base articles; the person decides and sends.
 - Suggest-only is its launch posture (AIW-D70).
 - It "never answers an immigration-content question" (behaviour document §0 item 4).
@@ -49,7 +49,7 @@ L613:
 
 L457: `TicketCategory {TECHNICAL, BILLING, FEATURE_REQUEST, BUG_REPORT, GENERAL_INQUIRY, ACCOUNT_ISSUE, CASE_RELATED, DOCUMENTATION, TRAINING, **IMMIGRATION_CONTENT**, OTHER}` *(changed — option (a) of §13 Q1)*.
 
-L613 gains: "**Proposed answer (Workstream 2, for the team to decide when this note is placed):** option (a). `IMMIGRATION_CONTENT` is added to the enum (§7), and SA-10-6 routes it to the content pool. An AI assistant never drafts or suggests an answer on a ticket of this category."
+L613 gains: "**Proposed answer (Workstream 2, for the team to decide when this note is placed):** option (a). `IMMIGRATION_CONTENT` is added to the enum (§7), and SA-10-6 routes it to the content pool. An AI teammate never drafts or suggests an answer on a ticket of this category."
 
 **(4) Why.**
 - SA-10's own recommendation (L613).
@@ -97,13 +97,13 @@ L425 (the `CLOSED` row of the ticket status table):
 > | `CLOSED` | terminal | Reopen window elapsed / firm closed / force-closed | — |
 
 **(3) Proposed words.** SA-10-23 gains:
-> *(changed — IMP-21)* An article drafted from a ticket, by a person or by an AI assistant, may be started only from a ticket that **reached `RESOLVED`**: one still `RESOLVED`, or one that has since moved from `RESOLVED` to `CLOSED`, whether the reopen window elapsed or the firm closed it. It is never started from a ticket that was force-closed or `CANCELLED` without being resolved. The article carries no firm's name, no client's personal data and no ticket content that identifies either. A person confirms this before the article is saved, and again before a firm-facing article is published. The de-identification rule is confirmed with counsel.
+> *(changed — IMP-21)* An article drafted from a ticket, by a person or by an AI teammate, may be started only from a ticket that **reached `RESOLVED`**: one still `RESOLVED`, or one that has since moved from `RESOLVED` to `CLOSED`, whether the reopen window elapsed or the firm closed it. It is never started from a ticket that was force-closed or `CANCELLED` without being resolved. The article carries no firm's name, no client's personal data and no ticket content that identifies either. A person confirms this before the article is saved, and again before a firm-facing article is published. The de-identification rule is unconfirmed Lead guidance; no counsel (AIW-D94).
 
 **(4) Why.**
-- `support-and-account-assistant.md` §9 G-7 (Proposal; counsel; IMP-21). Ticket attachments and messages are client personal data (BR-13, L409).
+- `support-and-account-assistant.md` §9 G-7 (Proposal; unconfirmed Lead guidance; no counsel (AIW-D94); IMP-21). Ticket attachments and messages are client personal data (BR-13, L409).
 - **Only resolved tickets.** The Lead's calls of 11 Oct (`00-step3-plan.md`, "Support run at RESOLVED", answer (2), and "Article runs (S3b-d n-30)"): an article run "may open only on a ticket that reached RESOLVED (whether still RESOLVED or since CLOSED, by the window or by the firm); never on a ticket force-closed or cancelled without being resolved". SA-10's own states make the difference checkable: `CLOSED` covers "Reopen window elapsed / firm closed / force-closed" (L425, quoted above), and the transitions show `IN_PROGRESS → CLOSED` as the force-close and `OPEN → CANCELLED` as a withdrawal (§6, L438), so the product tells them apart by whether the ticket passed through `RESOLVED`.
 
-**(5) Knock-ons.** The counsel pack (AIW-D68). AW-02 (the article run, started by the person).
+**(5) Knock-ons.** The counsel pack, now the Lead's unconfirmed guidance (AIW-D94). AW-02 (the article run, started by the person).
 
 ---
 

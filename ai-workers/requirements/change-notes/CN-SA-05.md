@@ -126,14 +126,14 @@ L422 gains: "the content author, with the immigration specialist, lists the Cana
 - **CN-AG-12 change 2** (AG-12-39) adds the case letter type within the document / letter family, and its knock-ons point to this change for the platform's case letter masters.
 - **Where the list lives.** The Lead's call of 11 Oct (`00-step3-plan.md`, "Case letters (S3a-c N-3)"): the list of case letter masters lives in SA-05, as country masters the content author publishes with the immigration specialist; no new pack content area. SA-01 v2.2 lists the content areas of a country pack (L211–L229) and none is letter types; SA-05 already keeps country wording as its own masters (§3.4, L179, quoted above).
 - **Markers on the copy: Proposal.** AG-12-39 says a firm adopts a master as its own copy like any other master; it does not say the markers stay on the copy. Keeping them is proposed here so that a firm's edit cannot unlock wording the Writer must not touch (re-check S3a-d m-10).
-- **AIW-D34 item 11**, as CN-AG-12 change 2 cites it: the W-06 letters are drafted inside the Case assistant and the representative approves them.
+- **AIW-D34 item 11**, as CN-AG-12 change 2 cites it: the W-06 letters are drafted inside the Case Officer's AI and the representative approves them.
 - **Inside the existing family.** SA-05 already has a letter / document type that "produces a PDF" (L162), so the case letter is a kind of it, not a new type (review S3c m-13, as CN-AG-12 change 2 cites it).
-- **Proposal and phasing.** The Case assistant's letter duty needs these masters, and Release 1 does not launch without the AI assistants (AIW-D66); the phasing row is still Release 1 work for the team, so it is marked for the team to confirm.
+- **Proposal and phasing.** The Case Officer's AI's letter duty needs these masters, and Release 1 does not launch without the AI teammates (AIW-D66); the phasing row is still Release 1 work for the team, so it is marked for the team to confirm.
 - `case-assistant.md` §9 G-14 and G-28.
 
 **(5) Knock-ons.**
 - AG-12-39 (CN-AG-12 change 2); AG-09 files the approved letter (AG-9-22).
-- AW-01 (the Case assistant's letter duty).
+- AW-01 (the Case Officer's AI's letter duty).
 - §13 items 2 and 3 (change 3).
 - Counsel pack question 11 (the court declaration wording).
 
@@ -151,12 +151,12 @@ L420:
 **(3) Proposed words.** "None open for SA-5." becomes:
 > 1. **The mark on a firm's own copy (team).** *(new — SA-5-47)* AG-12-38 lets the firm set the mark. Confirm whether a firm may clear a mark Expat Ready set to yes on a master, and what a firm's edited copy shows when a newer master version changes the mark (SA-5-31 is soon after launch).
 > 2. **Review route for case letters (team, Owner).** *(new — SA-5-48)* SA5-D9 sends retainers and agreements through review with Owner approval and an SME check, and lets the content author publish letters directly. Confirm which route a case letter master with legal-text blocks or the litigation flag follows.
-> 3. **The court declaration wording (counsel, Owner).** *(new — SA-5-48)* AG-12-39 (d) inserts the court's declaration on AI-generated content, with wording counsel fixes (counsel pack question 11). Confirm where that wording is held and who publishes a change to it; SA-5-39's Owner-only legal sentences are the nearest pattern.
+> 3. **The court declaration wording (Owner; unconfirmed Lead guidance; no counsel (AIW-D94)).** *(new — SA-5-48)* AG-12-39 (d) inserts the court's declaration on AI-generated content, with wording that is unconfirmed Lead guidance; no counsel (AIW-D94) (counsel pack question 11). Confirm where that wording is held and who publishes a change to it; SA-5-39's Owner-only legal sentences are the nearest pattern.
 > 4. **Seeded templates: masters or copies (team).** *(new — SA-5-47)* Confirm that the templates of the seeded and ready-made recipes are SA-05 masters, and settle AG-11-91 (copies at provisioning) against L202 and SA-5-29 (no copy at firm creation), through AG-11's pending AG-12 knock-on.
 
 **(4) Why.** Each question is a gap between CN-AG-12, AG-11 and SA-05's current rules that no decision settles. None is decided here.
 
-**(5) Knock-ons.** AG-12 (CN-AG-12); AG-11 (AG-11-91); the counsel pack (AIW-D68).
+**(5) Knock-ons.** AG-12 (CN-AG-12); AG-11 (AG-11-91); the counsel pack, now the Lead's unconfirmed guidance (AIW-D94).
 
 ---
 

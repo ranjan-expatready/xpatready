@@ -15,11 +15,11 @@
 4. Why: the founder's decision (`ai-workers/decisions.md`, AIW-D*n*) or the proposals row (`ai-workers/proposals.md`).
 5. What else must change.
 
-The Support and account assistant that exposed these points is specified in AW-02 and in `ai-workers/design/behaviours/support-and-account-assistant.md`. Nothing of it is restated here.
+The Support AI that exposed these points is specified in AW-02 and in `ai-workers/design/behaviours/support-and-account-assistant.md`. Nothing of it is restated here.
 
 **Re-base.** v2.20 and v2.21 (10 Oct) changed starter-role wording and trials. Neither touches the lines below.
 
-The first version's change 3 (a second person on AI-proposed firm *status* changes) is **withdrawn**. The behaviour document's approval table (§4) says a status change is never proposed by the assistant. AIW-D59 covers **any account or plan change** the Support and account assistant proposes (plan, billing period, discount, cancellation); status changes are never proposed. That rule lives in SA-04 (SA-4-89, CN-SA-04 change 3), not here.
+The first version's change 3 (a second person on AI-proposed firm *status* changes) is **withdrawn**. The behaviour document's approval table (§4) says a status change is never proposed by the assistant. AIW-D59 covers **any account or plan change** the Support AI proposes (plan, billing period, discount, cancellation); status changes are never proposed. That rule lives in SA-04 (SA-4-89, CN-SA-04 change 3), not here.
 
 ---
 
@@ -42,7 +42,7 @@ L315:
 
 L130: "the 14-day overdue period with reminders on days 1, 7 and 12 (SA3-E2)" becomes "the 14-day overdue period with the failure notice at once and reminders on days 7 and 12 (SA3-E2; SA-4-20, SA-4-21)".
 
-**(4) Why.** Proposals row of 11 Oct (Support and account assistant, reminder days):
+**(4) Why.** Proposals row of 11 Oct (Support AI, reminder days):
 - the conflict: "SA-4-21 (SA-04 v2.14): 'Reminders go on days 7 and 12' … SA-02 v2.19 §3.4: 'with reminders on days 1, 7 and 12'";
 - the recommendation: "one statement in SA-02 §3.4 and SA-4-21, naming the day-1 notice as the failure notice".
 
@@ -70,13 +70,13 @@ L345 gains at the end: "; **account-manager messages** (SA-2-42)."
 New requirement:
 > - **SA-2-42** *(new — proposals row of 10 Oct, account-manager outreach)* A firm's account manager can send a message to the firm through the platform's own Mailer. The recipient is fixed to the firm's owner contact and, for money matters, also the billing email (SA-4-53); no other recipient can be entered. The message, its sender and its time are recorded on the firm record and in the audit log. Sending requires `system/firm:message-owner` (name for the team; CN-SA-06 change 4).
 
-**(4) Why.** Proposals row of 10 Oct (Support and account assistant):
+**(4) Why.** Proposals row of 10 Oct (Support AI):
 - the gap: "No platform action sends an account manager's own message to a firm … An outreach to a firm in trouble is therefore sent from the account manager's own mailbox and is outside the platform audit log";
 - the recommendation: "a message type for the account manager through the in-house Mailer, recipient fixed to the firm's owner contact (and billing email for money matters, SA-4-53), recorded on the firm record and the audit log".
 
 Today the only sends are system notices (L345) and the overdue list's "send reminder now" and "send update-card link" (SA-4-24).
 
-`support-and-account-assistant.md` §9 G-8 ("Decision for the team"). The assistant may only draft such a message for the account manager to send (AW-02). Without SA-2-42, that send leaves no platform record.
+`support-and-account-assistant.md` §9 G-8 ("Decision for the team"). The AI teammate may only draft such a message for the account manager to send (AW-02). Without SA-2-42, that send leaves no platform record.
 
 **(5) Knock-ons.**
 - SA-07 Appendix A gains the row (CN-SA-07 change 1).

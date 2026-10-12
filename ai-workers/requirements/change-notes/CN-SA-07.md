@@ -15,7 +15,7 @@
 4. Why: the founder's decision (`ai-workers/decisions.md`, AIW-D*n*), the improvement (`ai-workers/design/ws2-improvements.md`, IMP-*n*), the proposals row (`ai-workers/proposals.md`) or the gap list of a passed behaviour document (`ai-workers/design/behaviours/`, §9 G-*n*).
 5. What else must change.
 
-**Plain words used here.** A *delegation record* says which AI assistant works for which named person, with a subset of that person's permissions, from when until when. It is not an identity and holds no permission of its own (AIW-D33; specified in AW-01 and AW-02). It takes effect only when the person accepts it. It ends only when that person ends it or is deactivated.
+**Plain words used here.** A *delegation record* says which AI teammate works for which named person, with a subset of that person's permissions, from when until when. It is not an identity and holds no permission of its own (AIW-D33; specified in AW-01 and AW-02). It takes effect only when the person accepts it. It ends only when that person ends it or is deactivated.
 
 **Re-base.** v2.11 and v2.12 (10 Oct) changed none of the lines below. SA-7-48 and BR-21 are still free. L29 reads "New requirements continue from SA-7-48"; the last business rule is BR-20 (L507).
 
@@ -59,17 +59,17 @@ New rows after L741. Rows marked *(proposal)* are proposals. The columns are as 
 > | Switch off a part of the founder safeguards setting, recording the founder's decision (SA-12-33; Owner-only setting, SA-12-27 pattern) | ✔ | | | | | | | | |
 > | Change an AI spend-cap default, the platform-wide cap included, with a recorded reason (SA-12-33 (c); Owner-only setting, SA-12-27 pattern; the Platform engineer is refused) | ✔ | | | | | | | | |
 > | AI recall: withdraw waiting AI-prepared items (SA-12-32) *(proposal)* | ✔ | | | | | | | | *(team decides)* |
-> | Set up an AI assistant's delegation for another staff member, or withdraw that offer while it is still pending; it takes effect when that person accepts (`system/ai-delegation:manage`) *(proposal)* | ✔ | | | | | | | | |
-> | AI assistant model instructions — author a new version (`system/ai-instruction:edit`) *(proposal)* | ✔ | | | | | | | | ✔ |
-> | AI assistant model instructions — approve a version; never one's own (`system/ai-instruction:approve`) *(proposal)* | ✔ | | | | | | | | |
+> | Set up an AI teammate's delegation for another staff member, or withdraw that offer while it is still pending; it takes effect when that person accepts (`system/ai-delegation:manage`) *(proposal)* | ✔ | | | | | | | | |
+> | AI teammate model instructions — author a new version (`system/ai-instruction:edit`) *(proposal)* | ✔ | | | | | | | | ✔ |
+> | AI teammate model instructions — approve a version; never one's own (`system/ai-instruction:approve`) *(proposal)* | ✔ | | | | | | | | |
 > | Send an account-manager message to a firm (SA-2-42, `system/firm:message-owner`) | ✔ | | | | ✔ | | | | |
 
-No row gives anyone a key to stop or end another person's delegation. To halt an assistant at once, the Platform Owner or Platform engineer trips the kill switch (SA-12-31, the L741 row).
+No row gives anyone a key to stop or end another person's delegation. To halt an AI teammate at once, the Platform Owner or Platform engineer trips the kill switch (SA-12-31, the L741 row).
 
-L689 gains: "Rows touched by the Workstream 2 change notes (CN-SA-02, CN-SA-04, CN-SA-08, CN-SA-10, CN-SA-12) are mapped first, because an AI assistant's delegation can hold only keys its person holds."
+L689 gains: "Rows touched by the Workstream 2 change notes (CN-SA-02, CN-SA-04, CN-SA-08, CN-SA-10, CN-SA-12) are mapped first, because an AI teammate's delegation can hold only keys its person holds."
 
 **(4) Why.**
-- **The webhook split:** proposals row of 10 Oct (Support and account assistant); `support-and-account-assistant.md` §9 G-18.
+- **The webhook split:** proposals row of 10 Oct (Support AI); `support-and-account-assistant.md` §9 G-18.
 - **The narrower read:** the same document, G-19.
 - **The provider record:** IMP-6; AIW-D52 and AIW-D69 (CN-SA-08 change 2). Owner publication follows SA8-D22 (SA-08 v2.4, L59), where e-sign wording is "**approved and published by the Owner**". Withdrawing sits with publishing (re-check S3a-c m-10).
 - **The founder safeguards switch-off:** `00-step3-plan.md`, "Who switches it off (S3a-c N-2)": SA-12's existing Owner-only settings pattern, no new key; the Platform engineer's config key does not reach it.
@@ -121,7 +121,7 @@ L723:
 
 ---
 
-## 3. An AI assistant working for a staff member is not a staff account
+## 3. An AI teammate working for a staff member is not a staff account
 
 **(1) What it changes.**
 - §3.3 "Several roles per person" (L351);
@@ -145,18 +145,18 @@ L377 (extract, first two sentences):
 **(3) Proposed words.**
 
 New requirement:
-> - **SA-7-48** *(new — AIW-D33; IMP-1)* An AI assistant that works for a staff member is **not a staff account** and is never created through any staff route (SA-7-39 stands). It works under a **delegation record** that names the staff member and holds a subset of that person's `system/*` permissions: never more, never a permission the person lacks, and only keys lendable to an AI assistant (SA-6-44).
+> - **SA-7-48** *(new — AIW-D33; IMP-1)* An AI teammate that works for a staff member is **not a staff account** and is never created through any staff route (SA-7-39 stands). It works under a **delegation record** that names the staff member and holds a subset of that person's `system/*` permissions: never more, never a permission the person lacks, and only keys lendable to an AI teammate (SA-6-44).
 >
 > The record takes effect when the person accepts it. It ends only when the person ends it or is deactivated (SA-7-22). A platform emergency stop pauses it but does not end it (SA-12-31). No staff member can stop or end another person's delegation.
 >
-> The assistant never appears in the staff list and holds no role.
+> The AI teammate never appears in the staff list and holds no role.
 
 New business rule:
-> - **BR-21** *(new — AIW-D33)* **An AI assistant borrows, never holds.** Its actions are recorded against the named staff member it worked for, marked as done under a delegation, with what started the run (SA-11-2), and appear in that person's Activity marked so.
+> - **BR-21** *(new — AIW-D33)* **An AI teammate borrows, never holds.** Its actions are recorded against the named staff member it worked for, marked as done under a delegation, with what started the run (SA-11-2), and appear in that person's Activity marked so.
 
-L351 gains: "While the second-person part of the founder safeguards setting is on (SA-12-33), any account or plan change that the Support and account assistant proposed also needs a second person's confirmation; the person it worked for cannot confirm it (SA-4-89)."
+L351 gains: "While the second-person part of the founder safeguards setting is on (SA-12-33), any account or plan change that the Support AI proposed also needs a second person's confirmation; the person it worked for cannot confirm it (SA-4-89)."
 
-L377 gains: "Entries made under a delegation (an AI assistant working for the person) carry a marker and the delegation reference (SA-11-2)."
+L377 gains: "Entries made under a delegation (an AI teammate working for the person) carry a marker and the delegation reference (SA-11-2)."
 
 **(4) Why.**
 - **FD-16** (Founder Decisions Log v1.5, L52): "no AI principal in the identity spine, no autonomous permissions".
@@ -187,7 +187,7 @@ L29 (extract):
 > New requirements continue from SA-7-48.
 
 **(3) Proposed words.**
-- A version row: "| 2.13 | *(date placed)* | Workstream 2 change note CN-SA-07 applied: Appendix A keys and new rows (AI provider record with withdrawal, founder safeguards switch-off and spend-cap defaults as Owner-only, recall, delegation set-up and instruction keys as proposals; account-manager message); support-ticket rows with `system/support-ticket:*` keys; an AI assistant is not a staff account (SA-7-48, BR-21). | AIW-D33, AIW-D59; IMP-1, IMP-5, IMP-6, IMP-8 |".
+- A version row: "| 2.13 | *(date placed)* | Workstream 2 change note CN-SA-07 applied: Appendix A keys and new rows (AI provider record with withdrawal, founder safeguards switch-off and spend-cap defaults as Owner-only, recall, delegation set-up and instruction keys as proposals; account-manager message); support-ticket rows with `system/support-ticket:*` keys; an AI teammate is not a staff account (SA-7-48, BR-21). | AIW-D33, AIW-D59; IMP-1, IMP-5, IMP-6, IMP-8 |".
 - L29: "continue from SA-7-49".
 
 **(4) Why.** Review S3a m-20(c).

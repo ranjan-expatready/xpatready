@@ -15,18 +15,18 @@
 4. Why: the founder's decision (Founder Decisions Log FD-*n*; `ai-workers/decisions.md`, AIW-D*n*), the improvement (`ai-workers/design/ws2-improvements.md`, IMP-*n*) or the proposals row (`ai-workers/proposals.md`).
 5. What else must change.
 
-The AI assistants are specified in AW-01 and AW-02, which cite these IDs. Other Workstream 2 files (the CN-AG notes, AW-01, AW-02) are cited by change and requirement ID, never by line or in quotation marks (`00-step3-plan.md`, "Point by ID while files can change").
+The AI teammates are specified in AW-01 and AW-02, which cite these IDs. Other Workstream 2 files (the CN-AG notes, AW-01, AW-02) are cited by change and requirement ID, never by line or in quotation marks (`00-step3-plan.md`, "Point by ID while files can change").
 
 **Plain words used here.**
-- *AI processing*: any call to an AI model that reads a client's or a firm's data. This covers the four AI Doers, the AI assistants' model calls, and reading text from images.
-- *Delegation record*: which AI assistant works for which named person, with a subset of that person's permissions (AIW-D33).
-- *Platform-plane run*: a run of one of Expat Ready's own AI assistants.
+- *AI processing*: any call to an AI model that reads a client's or a firm's data. This covers the four AI Doers, the AI teammates' model calls, and reading text from images.
+- *Delegation record*: which AI teammate works for which named person, with a subset of that person's permissions (AIW-D33).
+- *Platform-plane run*: a run of one of Expat Ready's own AI teammates.
 
-**Provisional.** Changes 1, 2, 3, 5 and 6 stay provisional until counsel reads them (AIW-D64; counsel engaged by 31 Oct 2026, AIW-D68). They touch residency wording, retention values, the Restricted-field model or privacy-law rights.
+**Unconfirmed.** Changes 1, 2, 3, 5 and 6 are unconfirmed Lead guidance; no counsel (AIW-D94) (AIW-D64's gate and AIW-D68 superseded). They touch residency wording, retention values, the Restricted-field model or privacy-law rights.
 
 **Newer team files that bear on this note.**
 - SA-08 v2.4 removed the residency generator. SA8-D9 (L41): "**The data-location statement is written once** (subscription terms and a firm-facing Security & privacy page, maintained in SA-11) — no generator". It asks SA-11 to hold that statement (SA8-X6, L98, pending, the team's own knock-on). Change 2 fits either form.
-- The shared 99-Phasing-and-Glossary v2.18 places "Data residency declaration, retention config, PIPEDA DSR register" in SA-11's second phase (L41). **Decided 11 Oct 2026 (AIW-D78, "Only what safety needs"):** the **data-residency declaration** moves into Release 1; everything else on that row (retention configuration, the PIPEDA DSR register), and SA-11's breach register, stays in the team's phase, and the assistant step that depends on it waits and works without it (for example no breach-register link). The phasing row is the team's to change, with this note (not written here).
+- The shared 99-Phasing-and-Glossary v2.18 places "Data residency declaration, retention config, PIPEDA DSR register" in SA-11's second phase (L41). **Decided 11 Oct 2026 (AIW-D78, "Only what safety needs"):** the **data-residency declaration** moves into Release 1; everything else on that row (retention configuration, the PIPEDA DSR register), and SA-11's breach register, stays in the team's phase, and the AI teammate step that depends on it waits and works without it (for example no breach-register link). The phasing row is the team's to change, with this note (not written here).
 
 ---
 
@@ -63,7 +63,7 @@ New requirement:
 - SA-08 SA-8-49 (CN-SA-08 change 2).
 - AG-11 and AG-16 (CN-AG-11, CN-AG-16).
 - The provider test (AIW-D69).
-- Counsel (AIW-D64, D68).
+- Legal points: unconfirmed Lead guidance; no counsel (AIW-D94) (was AIW-D64, D68).
 
 ---
 
@@ -102,12 +102,12 @@ L362:
 > - **SA-11-13.** *(changed v2.4 — AG17-D42)* Super Admin can configure a platform-wide **retention policy**: a period **per data category** (immigration PII/case records, financial records, communications, audit & security logs, consent & DSR records, document files), each with a **legal floor enforced in code**; sub-floor values SHALL be rejected by both UI and API. The **case-file** period also governs LMIA (corporate) files and their candidate (job applicant) data: candidate data is kept as long as its file and deleted only when the whole file is deleted under that period — no separate candidate retention clock or category.
 
 L622 (extract, first sentence):
-> 1. **Retention values (counsel)** *(scope extended v2.4 — AG17-D42)*. Confirm the concrete floors and defaults per data category: financial/financial-linked audit (default **≥ 7 years**), breach records (**≥ 2 years**), other audit/security (**≥ 2 years**), case files (this one period also covers LMIA files and their candidate data, with no separate candidate period), communications, documents, consent/DSR records.
+> 1. **Retention values (unconfirmed Lead guidance; no counsel (AIW-D94))** *(scope extended v2.4 — AG17-D42)*. Confirm the concrete floors and defaults per data category: financial/financial-linked audit (default **≥ 7 years**), breach records (**≥ 2 years**), other audit/security (**≥ 2 years**), case files (this one period also covers LMIA files and their candidate data, with no separate candidate period), communications, documents, consent/DSR records.
 
 **(3) Proposed words.**
 
 The category list in SA-11-13 gains "**AI processing records**". A sentence is added at the end:
-> *(changed — IMP-4, AG-11-98)* **AI processing records** are: the rows of the one AI run log, on both planes; the approval items AI work produced and their decisions; the Practice expert's question records; and the AI assistants' run records and proposals. Until counsel sets the floors and defaults (§13 Q1):
+> *(changed — IMP-4, AG-11-98)* **AI processing records** are: the rows of the one AI run log, on both planes; the approval items AI work produced and their decisions; the Practice expert's question records; and the AI teammates' run records and proposals. Until the floors and defaults are set (§13 Q1; unconfirmed Lead guidance; no counsel (AIW-D94)):
 > - AI run log rows on both planes and approval items follow AG-11-98's interim values (`AiRunLog` 1 year; `ApprovalItem` 2 years after its decision);
 > - question records, run records and proposals have **no interim value: Unknown, counsel question 8**. None is invented or borrowed from another record type.
 >
@@ -144,10 +144,10 @@ L400:
 
 SA-11-2 gains a second paragraph:
 > *(changed — AIW-D33, AIW-D54)* Each entry SHALL also carry the audit fields of **AG-13-68** (`mode`, `delegationId`, `startedBy`, `personaRunId`), under that requirement's rule, which applies to this platform audit chain (CN-AG-13 change 2). On this chain:
-> - the `actorType` of an entry an AI assistant made for a named person is that person's own (`firm_staff` or `super_admin`), never `system`; no actor type is added;
-> - an entry written by a platform-plane AI assistant run SHALL carry as `tenantId` the one firm that run serves, or null (the empty firm) when it serves no firm (CN-AG-11 change 11). A run that serves one firm SHALL NOT read another firm's data; any operation spanning firms remains subject to SA-11-12.
+> - the `actorType` of an entry an AI teammate made for a named person is that person's own (`firm_staff` or `super_admin`), never `system`; no actor type is added;
+> - an entry written by a platform-plane AI teammate run SHALL carry as `tenantId` the one firm that run serves, or null (the empty firm) when it serves no firm (CN-AG-11 change 11). A run that serves one firm SHALL NOT read another firm's data; any operation spanning firms remains subject to SA-11-12.
 
-BR-3 gains: "An entry an AI assistant made for a named person names that person as actor, never `system` (SA-11-2; AG-13-68)."
+BR-3 gains: "An entry an AI teammate made for a named person names that person as actor, never `system` (SA-11-2; AG-13-68)."
 
 §7 `AuditLog` adds "the fields of AG-13-68 (CN-AG-13 change 2)".
 
@@ -162,7 +162,7 @@ BR-3 gains: "An entry an AI assistant made for a named person names that person 
 - Whether SA-11's and AG-13's audit logs are one table or two stays for the Lead and the team (CN-AG-13 change 2 knock-ons).
 - AW-01 and AW-02 cite AG-13-68.
 - SA-07 Activity (CN-SA-07 change 3).
-- Counsel (AIW-D33, D64).
+- Legal points: unconfirmed Lead guidance; no counsel (AIW-D94) (was AIW-D33, D64).
 
 ---
 
@@ -194,7 +194,7 @@ L628:
 The status line: "… AG7-D10 (no masking, no reveal of personal data) applied **except for Restricted fields, which follow FD-15 (kept by the founder, 11 Oct 2026); counsel confirms the Restricted list (B-1) before any Restricted field is stored**".
 
 §3.2 first bullet, replaced:
-> - **Restricted fields are masked, with an audited reveal (FD-15).** *(changed — FD-15 kept, AIW-D58)* Fields in the Restricted list (Founder Decisions Log B-1, set by the founder with counsel) are **masked by default** in every audit view, entry detail, snapshot and export. They are shown in clear only to a holder of the reveal permission (SA-06), and each reveal writes a `PII_REVEAL` event before the value is returned (Doc 1 v1.3 §7.2). Other personal data is shown in full to anyone permitted to read the record. Two rules still hold: **(a)** personal data is never written to system logs or traces; **(b)** passport and financial numbers are never put into the content of emails, WhatsApp messages or notifications (BR-16, BR-17).
+> - **Restricted fields are masked, with an audited reveal (FD-15).** *(changed — FD-15 kept, AIW-D58)* Fields in the Restricted list (Founder Decisions Log B-1, set by the founder; unconfirmed Lead guidance; no counsel (AIW-D94)) are **masked by default** in every audit view, entry detail, snapshot and export. They are shown in clear only to a holder of the reveal permission (SA-06), and each reveal writes a `PII_REVEAL` event before the value is returned (Doc 1 v1.3 §7.2). Other personal data is shown in full to anyone permitted to read the record. Two rules still hold: **(a)** personal data is never written to system logs or traces; **(b)** passport and financial numbers are never put into the content of emails, WhatsApp messages or notifications (BR-16, BR-17).
 
 SA-11-10, reinstated:
 > - **SA-11-10.** *(reinstated — FD-15, AIW-D58)* Every reveal of a Restricted field SHALL emit a `PII_REVEAL` audit event (actor, firm, subject, field, time, reason where required), written **before** the value is returned; if that audit write fails, the reveal SHALL be refused. This is an exception to SA-11-7 and BR-5: the reveal is the sensitive act, so it fails closed.
@@ -202,14 +202,14 @@ SA-11-10, reinstated:
 §11 Security, in the "Most-sensitive data" bullet: "personal data in `before/after` is **not** masked — AG7-D10" becomes "Restricted fields in `before/after` are masked unless revealed under SA-11-10 (FD-15); other personal data is not masked (AG7-D10)".
 
 §13 item 7, reinstated:
-> 7. **Restricted field set (founder + counsel).** *(reinstated — FD-15, AIW-D58)* The Restricted list (B-1) decides which fields are masked and revealed under SA-11-10; it is set before any Restricted field is stored (Founder Decisions Log B-1: "must be fixed before any Restricted field is stored").
+> 7. **Restricted field set (founder; unconfirmed Lead guidance; no counsel (AIW-D94)).** *(reinstated — FD-15, AIW-D58)* The Restricted list (B-1) decides which fields are masked and revealed under SA-11-10; it is set before any Restricted field is stored (Founder Decisions Log B-1: "must be fixed before any Restricted field is stored").
 
 **(4) Why.**
 - FD-15 (FDL v1.5, L40): "metadata fields whose canonical class is in the B-1 Restricted list get envelope-encryption + masked audited reveal".
 - Doc 1 v1.3 §7.2 (L2055): "masked by default in every UI/API surface, and revealable only with an explicit permission whose every use is audited". L2064: "The reveal is recorded *before* the cleartext is returned".
 - README §0 rule 11; AIW-D58 ("Keep FD-15").
 
-**(5) Knock-ons.** AG-07 (CN-AG-07); SA-06 (CN-SA-06 change 2); counsel sets B-1. AI assistants receive a Restricted field's status only (IMP-21; AW-01).
+**(5) Knock-ons.** AG-07 (CN-AG-07); SA-06 (CN-SA-06 change 2); the founder sets B-1 (unconfirmed Lead guidance; no counsel (AIW-D94)). AI teammates receive a Restricted field's status only (IMP-21; AW-01).
 
 ---
 
@@ -232,7 +232,7 @@ SA-11-27: "access/correction/deletion requests" becomes "access/correction/delet
 SA-11-27 gains two sentences:
 > *(changed — FD-20)* A **review of an automated decision** request SHALL be routed to a named person at the firm, who records the outcome on the request.
 >
-> *(changed — portability; confirm with counsel, counsel question 16)* Whether and how a **portability** request is served is confirmed with counsel before it is offered to clients.
+> *(changed — portability; unconfirmed Lead guidance; no counsel (AIW-D94), counsel question 16)* Whether and how a **portability** request is served is decided by the founder on that guidance before it is offered to clients.
 
 New open question:
 > 11. **The firm-side DSR screen (product owners).** *(new)* §3.8 says "the firm executes within their tenant", and SA-06 seeds `agent/dsr:manage` and `agent/governance:read` on Owner and Admin, but no firm screen is specified. Name the firm screen that lists a firm's requests, who records a request raised outside the portal, and who sets HELD and COMPLETED.
@@ -240,9 +240,9 @@ New open question:
 **(4) Why.**
 - **FD-20** (FDL v1.5, L56) requires "a **`REVIEW_OF_AUTOMATED_DECISION`** request type in the DSR machinery routing to a named human reviewer with a recorded outcome". FD-20 is an **architect call** taken under the founder's standing technical delegation and recorded in the Founder Decisions Log for ratification (FDL L46: "FD-20 and FD-21 are architect calls taken under the standing technical delegation and are recorded here for ratification only"); no AIW-D row has ratified it. No module file carries it, and rule 11 covers every FD-n row, so it applies over the team file. FD-20 also says: "Counsel confirms wording, not mechanism."
 - **Portability against rule 11's default.** README §0 rule 11 makes the newer module file (SA-11, 7 Oct) win over Doc 4 (July), which lists PORTABILITY (CP-8-15, L2716). This note sets that default aside for two reasons:
-  - the proposals row of 10 Oct (Firm assistant) asks to "add PORTABILITY to SA-11, which owns the register and clock (CP-8-16)";
+  - the proposals row of 10 Oct (Owner's AI) asks to "add PORTABILITY to SA-11, which owns the register and clock (CP-8-16)";
   - the team's current portal module, CP-01, is not on Drive (`08-client-portal/NOT-FOUND.md`).
-- **Counsel.** The counsel pack's question 16 covers portability and the FD-20 review. The log's own B-4 lists "whether portal DSR erasure/portability is fully self-serve" as a counsel matter (L236).
+- **Legal points (unconfirmed Lead guidance; no counsel (AIW-D94)).** The counsel pack's question 16 covers portability and the FD-20 review. The log's own B-4 lists "whether portal DSR erasure/portability is fully self-serve" as a counsel matter (L236).
 - **Firm keys:** SA-06 v3.3 §10b (L1057–L1058). The firm screen gap is `firm-assistant.md` §9 G-11 and G-12.
 
 **(5) Knock-ons.**
@@ -271,7 +271,7 @@ SA-11-29 gains: "*(changed — events)* A withdrawal SHALL emit a **consent-with
 Both events are delivered once per change to firm modules, including the firm's automation engine.
 
 **(4) Why.**
-- Proposals row of 10 Oct (Firm assistant). Its trigger events include "a data-subject request being opened" and "a consent record being withdrawn".
+- Proposals row of 10 Oct (Owner's AI). Its trigger events include "a data-subject request being opened" and "a consent record being withdrawn".
 - `firm-assistant.md` §9 G-17.
 - The Agent-plane note CN-AG-11 change 4 adds both events to the engine's trigger list as items (e) and (f) of AG-11-110, and names SA-11 as their emitter under SA-11-29 and SA-11-27, pointing to this change. This change is that SA-11 half.
 - "One home per rule": an event lives in the change note of the module that owns the record (`00-step3-plan.md`).
@@ -288,7 +288,7 @@ Both events are delivered once per change to firm modules, including the firm's 
 
 **(2) Current words.** The last row is v2.7 of 2026-10-07.
 
-**(3) Proposed words.** A version row: "| 2.8 | *(date placed)* | Workstream 2 change note CN-SA-11 applied: AI processing only in Canada (SA-11-32); AI provider named in the data-location statement; AI processing records retention category (interim values per AG-11-98, others Unknown); the audit fields of AG-13-68 on the platform audit chain, with the platform's empty firm; Restricted fields under FD-15; FD-20 review request type and portability (counsel); request and consent events; open question 11. | AIW-D33, AIW-D52, AIW-D54, AIW-D58; FD-15, FD-20 |".
+**(3) Proposed words.** A version row: "| 2.8 | *(date placed)* | Workstream 2 change note CN-SA-11 applied: AI processing only in Canada (SA-11-32); AI provider named in the data-location statement; AI processing records retention category (interim values per AG-11-98, others Unknown); the audit fields of AG-13-68 on the platform audit chain, with the platform's empty firm; Restricted fields under FD-15; FD-20 review request type and portability (unconfirmed Lead guidance; no counsel (AIW-D94)); request and consent events; open question 11. | AIW-D33, AIW-D52, AIW-D54, AIW-D58; FD-15, FD-20 |".
 
 **(4) Why.** Review S3a m-20(c).
 

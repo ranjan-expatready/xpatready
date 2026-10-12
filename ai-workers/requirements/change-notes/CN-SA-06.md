@@ -18,11 +18,11 @@
 Other Workstream 2 files (the CN-AG notes, AW-01, AW-02) are cited by change and requirement ID, never by line or in quotation marks (`00-step3-plan.md`, "Point by ID while files can change").
 
 **Plain words used here.**
-- *Delegation record*: which AI assistant works for which named person, with a subset of that person's permissions, on which files, from when until when.
+- *Delegation record*: which AI teammate works for which named person, with a subset of that person's permissions, on which files, from when until when.
   - It is not an identity and holds no permission of its own; the person it works for counts as the preparer (AIW-D33).
   - It takes effect only when the person accepts it. Only the person ends it, or deactivation or suspension does.
   - The record is specified in AW-01 (firm plane) and AW-02 (platform plane).
-- *Lendable to an AI assistant*: a key that a delegation may include. SA-06 already uses "delegable" to mean "may go on a custom role" (Appendix C, L1378), so this note uses another word.
+- *Lendable to an AI teammate*: a key that a delegation may include. SA-06 already uses "delegable" to mean "may go on a custom role" (Appendix C, L1378), so this note uses another word.
 
 **Re-base and numbering.** v3.2 (10 Oct) added SA-6-34 to SA-6-43 and BR-24 to BR-26, and v3.3 changed two key descriptions. The new IDs here are therefore **SA-6-44**, **BR-27** and open question **13**: the highest in use are SA-6-43 (L505), BR-26 (L536) and Q12 (L1189).
 
@@ -30,11 +30,11 @@ Other Workstream 2 files (the CN-AG notes, AW-01, AW-02) are cited by change and
 - SA-06's key descriptions that name "Drafter" (L790, L816, L905) mean the template engine, which keeps that name (AIW-D53).
 - The Billing / Finance starter role keeps its keys (AIW-D47).
 - No key opens a per-person screen of the Practice expert's question records: they are read by the asker and by the Owner through the firm data export (AIW-D70).
-- **No key lets an Owner stop or end another person's delegation.** To halt an assistant at once, an Owner uses the switches: the firm's per-assistant switch (AG-16-57), the firm's AI switch (AG-16-35), or the platform kill switch (SA-12-31). Deactivation also ends it (`00-step3-plan.md`, "No one stops another person's delegation").
+- **No key lets an Owner stop or end another person's delegation.** To halt an AI teammate at once, an Owner uses the switches: the firm's per-assistant switch (AG-16-57), the firm's AI switch (AG-16-35), or the platform kill switch (SA-12-31). Deactivation also ends it (`00-step3-plan.md`, "No one stops another person's delegation").
 
 ---
 
-## 1. Which keys can be lent to an AI assistant; the pause switch-off is Owner-only; who sets a firm's stricter AI values
+## 1. Which keys can be lent to an AI teammate; the pause switch-off is Owner-only; who sets a firm's stricter AI values
 
 **(1) What it changes.**
 - §7 `PermissionCatalog` (L587);
@@ -56,10 +56,10 @@ L745:
 
 **(3) Proposed words.**
 
-§7 `PermissionCatalog` gains a field: "`assistantLendable` (bool, required, default **false**) *(new — AIW-D33, AIW-D55)* — whether the key may be part of an AI assistant's delegation; a release sets it true only for keys AW-01 or AW-02 lists in an assistant's subset."
+§7 `PermissionCatalog` gains a field: "`assistantLendable` (bool, required, default **false**) *(new — AIW-D33, AIW-D55)* — whether the key may be part of an AI teammate's delegation; a release sets it true only for keys AW-01 or AW-02 lists in an AI teammate's subset."
 
 New requirement:
-> - **SA-6-44** *(new — AIW-D33, AIW-D36, AIW-D55; IMP-1, IMP-22, IMP-23)* — **Keys an AI assistant may borrow.** A delegation record (AW-01, AW-02) holds only keys that both:
+> - **SA-6-44** *(new — AIW-D33, AIW-D36, AIW-D55; IMP-1, IMP-22, IMP-23)* — **Keys an AI teammate may borrow.** A delegation record (AW-01, AW-02) holds only keys that both:
 >   - (a) the named person holds at that moment, re-checked at every action; and
 >   - (b) are marked `assistantLendable`.
 >
@@ -74,9 +74,9 @@ New requirement:
 >   The server refuses a delegation that includes a key not marked lendable, with 403, nothing written and a security audit event (the SA-6-13 pattern).
 
 New business rule:
-> - **BR-27 (An AI assistant borrows, never holds)** *(new — AIW-D33)*. An AI assistant has no role, no `PlatformUserRole` or `FirmUserRole` row and no key of its own. What it may do is the overlap of its delegation and the named person's current keys, limited to lendable keys (SA-6-44). Removing a key from the person removes it from the delegation at once.
+> - **BR-27 (An AI teammate borrows, never holds)** *(new — AIW-D33)*. An AI teammate has no role, no `PlatformUserRole` or `FirmUserRole` row and no key of its own. What it may do is the overlap of its delegation and the named person's current keys, limited to lendable keys (SA-6-44). Removing a key from the person removes it from the delegation at once.
 
-Appendix C, after "first AI switch-on", add: "; **switching off the pause on client-facing AI preparation while the firm has no active licensed user**, with a recorded reason *(new — AIW-D56, provisional until counsel)*."
+Appendix C, after "first AI switch-on", add: "; **switching off the pause on client-facing AI preparation while the firm has no active licensed user**, with a recorded reason *(new — AIW-D56; unconfirmed Lead guidance; no counsel (AIW-D94))*."
 
 L745's meaning gains: "; **the firm's stricter values for the AI approve-all safeguards and its AI spend caps** (AG-16; SA-12-33), audited *(changed — CN-AG-16 change 4)*". Holders are unchanged (Owner, Admin); no Owner-only check is added.
 
@@ -87,9 +87,9 @@ L745's meaning gains: "; **the firm's stricter values for the AI approve-all saf
 - **IMP-1 rule 5:** "the worker can **never hold an approval permission**: every approval is made by a person".
 - **IMP-22:** "The permission subset is the role's starter permissions minus the blocked list (IMP-23), never more than the person holds" and "The permission is re-checked at every action".
 - **IMP-23:** the blocked list is "enforced on the server like the floors … and never delegable".
-- **AIW-D55** adopted the hard limits and blocked list, provisional until counsel.
+- **AIW-D55** adopted the hard limits and blocked list; unconfirmed Lead guidance; no counsel (AIW-D94).
 - **AIW-D56:** "the Owner may switch it off with a recorded reason". AW-01 §0.2 names the pause switch-off among SA-06's Owner-only role checks.
-- **AIW-D72, with its correction rows.** AIW-D72 records that "The Billing assistant never posts a trust entry, moves a designation or computes a balance"; the *AIW-D72 correction* rows in `decisions.md` supersede the rest of that sentence: the assistant keeps no list of its own, quotes no figure, and only reminds the person who holds the reconciliation, at the Practice Pack's cadence, that the product's report is due. Hence the trust keys in the never-lendable list.
+- **AIW-D72, with its correction rows.** AIW-D72 records that "The Billing assistant never posts a trust entry, moves a designation or computes a balance"; the *AIW-D72 correction* rows in `decisions.md` supersede the rest of that sentence: the AI teammate keeps no list of its own, quotes no figure, and only reminds the person who holds the reconciliation, at the Practice Pack's cadence, that the product's report is due. Hence the trust keys in the never-lendable list.
 - **Who sets a firm's stricter values.** `00-step3-plan.md`, "Who sets a firm's stricter values (S3a-e n-6)": "every holder of `agent/settings:edit` (Owner and Admin, SA-06 v3.3), audited; stricter values only raise safety, so no Owner-only check is added." Under "Key descriptions follow their owning change" (`00-step3-plan.md`), the key's description gains the new act.
 - **No Owner-only check for delegation set-up.** The earlier version also listed "setting up an AI assistant's delegation for another staff member" as an Owner-only check with no key. That line is **withdrawn**, because it duplicated what AW-01 already specifies: the firm side is AW-1-6, and the platform side has its own key (change 4).
 
@@ -97,7 +97,7 @@ L745's meaning gains: "; **the firm's stricter values for the AI approve-all saf
 - SA-07 SA-7-48 (CN-SA-07 change 3).
 - AG-16 hosts the firm's set-up screen, the pause switch-off and the firm's stricter AI values (CN-AG-16 change 4).
 - SA-12-33 (CN-SA-12 change 3) names the same key for firm values.
-- Counsel reads the blocked list before the pilot (AIW-D55, D64).
+- The blocked list is unconfirmed Lead guidance; no counsel (AIW-D94) (AIW-D55; AIW-D64's gate superseded by AIW-D94).
 
 ---
 
@@ -129,7 +129,7 @@ L1096:
 **(3) Proposed words.**
 
 L1113:
-> - **Restricted fields: masked, with an audited reveal (FD-15).** *(changed — FD-15 kept, AIW-D58)* Fields on the Restricted list (Founder Decisions Log B-1, set with counsel) are masked by default and revealed only with `agent/pii:reveal` (staff) or `portal/pii:reveal-own` (a client's own data), each use audited (Doc 1 v1.3 §7.2). All other personal data is not masked (AG7-D10). Exports are governed by export permissions and audited.
+> - **Restricted fields: masked, with an audited reveal (FD-15).** *(changed — FD-15 kept, AIW-D58)* Fields on the Restricted list (Founder Decisions Log B-1; unconfirmed Lead guidance; no counsel (AIW-D94)) are masked by default and revealed only with `agent/pii:reveal` (staff) or `portal/pii:reveal-own` (a client's own data), each use audited (Doc 1 v1.3 §7.2). All other personal data is not masked (AG7-D10). Exports are governed by export permissions and audited.
 
 L1148, last sentence:
 > **Hold** *(changed — FD-15 kept, AIW-D58)*: do not remove the `agent/pii:reveal` and `portal/pii:reveal-own` routes or keys until the Restricted list (B-1) is set; they then apply to Restricted fields only. `agent/audit-ip:reveal` and the per-module `*:reveal-pii` keys stay withdrawn.
@@ -195,7 +195,7 @@ L912:
 **(4) Why.**
 - **The Keys rule** (`00-step3-plan.md`, "Keys (S3c M-3)"): "retainer *generate* and *approve for send* are split …; document status acts including waive and not-applicable sit under AG-09's keys …; Binder request and add sit under `agent/case:document-manage`."
 - **The document-requests key** (`00-step3-plan.md`, re-check S3a-b R-5): "every document request, on the Binder or not, sits under `agent/case:document-manage` …; `agent/document:request` is not kept. CN-AG-09 aligns to CN-SA-06." This note matches that rule; the L856 wording says "on the Binder or not" outright.
-- **Proposals rows of 10 Oct:** Case assistant, fix round (two keys overlap on an upload verdict); Intake assistant, retainer draft, item (2).
+- **Proposals rows of 10 Oct:** Case Officer's AI, fix round (two keys overlap on an upload verdict); Intake AI, retainer draft, item (2).
 - **AIW-D54 item 6** ("no AI text in the retainer").
 - **Gaps:** `case-assistant.md` §9 G-29; `intake-assistant.md` §9 GI-19.
 
@@ -220,8 +220,8 @@ L912:
 | `system/ai-recall:withdraw` | SA-12 | Withdraw waiting AI-prepared items for a safety recall | Platform Owner | CN-SA-12 change 2; IMP-8(c) |
 | `system/ai-provider:edit` | SA-08 | Enter or change the AI provider record (not its keys) | Platform engineer, Platform Owner | CN-SA-08 change 2; IMP-6 |
 | `system/ai-provider:publish` | SA-08 | Approve and publish the AI provider record, never one's own entry; **withdraw** the published record (SA-8-50) | Platform Owner | CN-SA-08 change 2; SA8-D22 pattern |
-| `system/ai-delegation:manage` (§10a) | SA-06 | **Set up** an AI assistant's delegation for another staff member, or withdraw a still-pending offer; it takes effect only when that person accepts. A person sets up, accepts and ends their own with no key. **No key stops or ends someone else's delegation.** | Platform Owner | AW-02 §10 table E; IMP-1 rule 1 |
-| `system/ai-instruction:edit` | AW-02 | Author a new version of an assistant's model instructions and evaluation set | Platform engineer, Platform Owner | AW-02 §10 table E; IMP-5; `00-step3-plan.md`, "AW-02 calls" (b) |
+| `system/ai-delegation:manage` (§10a) | SA-06 | **Set up** an AI teammate's delegation for another staff member, or withdraw a still-pending offer; it takes effect only when that person accepts. A person sets up, accepts and ends their own with no key. **No key stops or ends someone else's delegation.** | Platform Owner | AW-02 §10 table E; IMP-1 rule 1 |
+| `system/ai-instruction:edit` | AW-02 | Author a new version of an AI teammate's model instructions and evaluation set | Platform engineer, Platform Owner | AW-02 §10 table E; IMP-5; `00-step3-plan.md`, "AW-02 calls" (b) |
 | `system/ai-instruction:approve` | AW-02 | Approve an instruction version for live use; never one's own | Platform Owner | AW-02 §10 table E; IMP-5; SA7-D4 |
 | `system/firm:message-owner` | SA-02 | Send an account-manager message to a firm (SA-2-42) | Firm onboarding / Account manager | CN-SA-02 change 2 |
 
@@ -233,7 +233,7 @@ No key is added for switching off the *founder safeguards* setting or for changi
 - **Withdrawing the provider record** sits with publishing it, Owner only, so the record has one owner of its live state (re-check S3a-c m-10).
 - **IMP-1 rule 1:** the delegation "is **granted by the named person it works for**; the Owner may set one up for that person, but it takes effect only when the person accepts it, and the person can end it at any time".
 - **IMP-5:** "only a named platform role may change them; a second person approves before a version goes live".
-- **No stop key** (`00-step3-plan.md`, "No one stops another person's delegation"): "No key lets an Owner stop or end someone else's delegation". The earlier "Set up or stop" wording is withdrawn. To halt an assistant at once, the Platform Owner trips the platform kill switch (SA-12-31).
+- **No stop key** (`00-step3-plan.md`, "No one stops another person's delegation"): "No key lets an Owner stop or end someone else's delegation". The earlier "Set up or stop" wording is withdrawn. To halt an AI teammate at once, the Platform Owner trips the platform kill switch (SA-12-31).
 - **No switch-off or spend-cap key** (`00-step3-plan.md`, "Who switches it off (S3a-c N-2)" and "Who changes a spend-cap default (S3a-e n-1)").
 - The other rows are the keys the sibling notes create.
 
@@ -253,7 +253,7 @@ No key is added for switching off the *founder safeguards* setting or for changi
 > 13. **Accepting a fact for a lead who has no case** *(new — Workstream 2)*. "Done on behalf of client" uses the item's own permission (AG17-D74; SA-6-22), which for a case is `agent/case:edit`. For a lead with no case no key is named; AG-03 says running the Qualifier "today rides on `agent/prospect:edit`". Name the key, without a new key if possible.
 
 **(4) Why.**
-- Proposals row of 10 Oct (Intake assistant).
+- Proposals row of 10 Oct (Intake AI).
 - `intake-assistant.md` §9 GI-4, GI-5.
 - SA-6-22 (L484) records "'Done on behalf of client' = the item's own permission (AG17-D74)".
 
@@ -261,7 +261,7 @@ No key is added for switching off the *founder safeguards* setting or for changi
 
 ---
 
-## 6. Proposal: two firm keys for trust money, never lendable to an AI assistant
+## 6. Proposal: two firm keys for trust money, never lendable to an AI teammate
 
 **(1) What it changes.** §10b, the billing block (after L845, `agent/payment:record`); Appendix B gains two rows.
 
@@ -272,25 +272,25 @@ L845:
 
 **(3) Proposed words.** *Proposal.* Two rows in §10b, written in §10b's columns once their default holders are set:
 
-| Key | Meaning | Default holders | Lendable to an AI assistant | Code status |
+| Key | Meaning | Default holders | Lendable to an AI teammate | Code status |
 |---|---|---|---|---|
 | `agent/trust:move` *(new — CN-AG-06 change 6, AG-6-46)* | Record a trust-to-operating move (FD-17 (b)) | The Owner only until Super Admin ticks it onto other starter roles (SA-6-41); then the published starter roles (SA6-D12), as CN-AG-06 change 6 proposes | **Never** (SA-6-44) | NEW |
 | `agent/trust:reconcile` *(new — CN-AG-06 change 6, AG-6-46)* | Record the trust bank position and run the trust reconciliation report (FD-17 (d)) | The Owner only until Super Admin ticks it onto other starter roles (SA-6-41); then the published starter roles (SA6-D12), as CN-AG-06 change 6 proposes | **Never** (SA-6-44) | NEW |
 
-The team designs the mechanics behind both keys under FD-17, with the open questions of AG-06 §13 (CN-AG-06 change 6) and ~~counsel question 9~~ the Lead's unconfirmed guidance (AIW-D94); these rows say nothing about how a move or a reconciliation works. *Added 13 Oct 2026 (AIW-D103; AG-6-47 as amended in CN-AG-06 change 6):* "never lendable" means the AI never holds or uses either key; an AI assistant MAY still **prepare** a proposed trust entry (for example a move to operating) as an approval item, which executes only when a person holding `agent/trust:move` approves the exact preview (AW-1-141, AW-1-129).
+The team designs the mechanics behind both keys under FD-17, with the open questions of AG-06 §13 (CN-AG-06 change 6) and ~~counsel question 9~~ the Lead's unconfirmed guidance (AIW-D94); these rows say nothing about how a move or a reconciliation works. *Added 13 Oct 2026 (AIW-D103; AG-6-47 as amended in CN-AG-06 change 6):* "never lendable" means the AI never holds or uses either key; an AI teammate MAY still **prepare** a proposed trust entry (for example a move to operating) as an approval item, which executes only when a person holding `agent/trust:move` approves the exact preview (AW-1-141, AW-1-129).
 
 **(4) Why.**
-- **CN-AG-06 change 6** (AG-6-46) names the two keys, makes both never lendable to an AI assistant, and leaves the default roles to the published starter roles (SA6-D12). Its knock-ons name this change as the SA-06 half; the key descriptions follow AG-6-46 (`00-step3-plan.md`, "Key descriptions follow their owning change").
-- **Trust accounting belongs to the team.** `00-step3-plan.md`, "Trust accounting belongs to the team": how the trust ledger works is the team's billing design under FD-17 (Workstream 1), with counsel question 9. Workstream 2 adds only the two keys, never lendable. The earlier descriptions here (a reason code, a required link, an export key) followed calls that are now superseded, so they are removed.
+- **CN-AG-06 change 6** (AG-6-46) names the two keys, makes both never lendable to an AI teammate, and leaves the default roles to the published starter roles (SA6-D12). Its knock-ons name this change as the SA-06 half; the key descriptions follow AG-6-46 (`00-step3-plan.md`, "Key descriptions follow their owning change").
+- **Trust accounting belongs to the team.** `00-step3-plan.md`, "Trust accounting belongs to the team": how the trust ledger works is the team's billing design under FD-17 (Workstream 1); counsel question 9 is unconfirmed Lead guidance; no counsel (AIW-D94). Workstream 2 adds only the two keys, never lendable. The earlier descriptions here (a reason code, a required link, an export key) followed calls that are now superseded, so they are removed.
 - **SA-6-41** (L503): "A new firm permission is held only by Owner until Super Admin ticks it onto other starter roles and publishes".
-- **AIW-D72, with its correction rows** ("Keep FD-17 in full"): Release 1 carries the trust ledger, the recorded move and the reconciliation report; "The Billing assistant never posts a trust entry, moves a designation or computes a balance"; per the correction rows, it keeps no list, quotes no figure, and only reminds the reconciliation holder at the Practice Pack's cadence. *Amended by AIW-D103 (12 Oct 2026):* the Billing assistant may prepare proposed trust entries for the trust-key holder's approval; it still never posts one itself, moves money, computes a balance or keeps a list.
+- **AIW-D72, with its correction rows** ("Keep FD-17 in full"): Release 1 carries the trust ledger, the recorded move and the reconciliation report; "The Billing assistant never posts a trust entry, moves a designation or computes a balance"; per the correction rows, it keeps no list, quotes no figure, and only reminds the reconciliation holder at the Practice Pack's cadence. *Amended by AIW-D103 (12 Oct 2026):* the Billing AI may prepare proposed trust entries for the trust-key holder's approval; it still never posts one itself, moves money, computes a balance or keeps a list.
 - **Never lendable:** a move records money, and reconciling records the bank position the report relies on; both are on the blocked list of change 1 (keys that record money).
 - **Proposal — not approved.** CN-AG-06 change 6 labels its trust requirements Proposals; ~~counsel reads the trust rules before any pilot on real client money (counsel pack question 9)~~ *superseded by AIW-D94: no counsel; question 9 is the Lead's unconfirmed guidance*.
 
 **(5) Knock-ons.**
 - AG-06 §10 and §13 (CN-AG-06 change 6).
 - SA-6-44's never-lendable list names both keys (change 1).
-- The published starter roles (SA6-D12) set the default holders; the Billing assistant reminds whoever holds `agent/trust:reconcile` (AW-01) and may prepare proposed trust entries for a holder of `agent/trust:move` to approve (AW-1-141; AIW-D103).
+- The published starter roles (SA6-D12) set the default holders; the Billing AI reminds whoever holds `agent/trust:reconcile` (AW-01) and may prepare proposed trust entries for a holder of `agent/trust:move` to approve (AW-1-141; AIW-D103).
 
 ---
 
@@ -300,7 +300,7 @@ The team designs the mechanics behind both keys under FD-17, with the open quest
 
 **(2) Current words.** The last row is v3.3 of 2026-10-10.
 
-**(3) Proposed words.** A version row: "| 3.4 | *(date placed)* | Workstream 2 change note CN-SA-06 applied: keys lendable to an AI assistant (SA-6-44, BR-27); the pause switch-off among the Owner-only checks; `agent/settings:edit` covers the firm's stricter AI values; reveal keys held under FD-15; keys split by act, every document request under `agent/case:document-manage`; new platform keys (proposal); trust keys `agent/trust:move` and `agent/trust:reconcile`, never lendable, mechanics for the team (proposal); open question 13. | AIW-D33, AIW-D55, AIW-D56, AIW-D58, AIW-D72; FD-15, FD-17 |".
+**(3) Proposed words.** A version row: "| 3.4 | *(date placed)* | Workstream 2 change note CN-SA-06 applied: keys lendable to an AI teammate (SA-6-44, BR-27); the pause switch-off among the Owner-only checks; `agent/settings:edit` covers the firm's stricter AI values; reveal keys held under FD-15; keys split by act, every document request under `agent/case:document-manage`; new platform keys (proposal); trust keys `agent/trust:move` and `agent/trust:reconcile`, never lendable, mechanics for the team (proposal); open question 13. | AIW-D33, AIW-D55, AIW-D56, AIW-D58, AIW-D72; FD-15, FD-17 |".
 
 **(4) Why.** Review S3a m-20(c).
 
@@ -308,13 +308,13 @@ The team designs the mechanics behind both keys under FD-17, with the open quest
 
 ---
 
-## 8. `agent/assessment:run` lendable to the Intake and Case assistants' delegations (12 Oct 2026; Case added after review R9)
+## 8. `agent/assessment:run` lendable to the Intake AI and Case Officer's AI' delegations (12 Oct 2026; Case added after review R9)
 
 **(1) What it changes.** SA-6-44's lendable list (change 1); §10b row `agent/assessment:run`.
 
-**(2) Current words.** Change 1 marks lendable only the keys AW-01 lists in an assistant's subset; AW-01 v0.6 §10 listed `agent/assessment:run` under the Intake assistant's "Never holds".
+**(2) Current words.** Change 1 marks lendable only the keys AW-01 lists in an AI teammate's subset; AW-01 v0.6 §10 listed `agent/assessment:run` under the Intake AI's "Never holds".
 
-**(3) Proposed words.** Add to SA-6-44: "`agent/assessment:run` SHALL be marked `assistantLendable = true`; it MAY be part of an Intake assistant delegation or a Case assistant delegation (AW-01 §10), and only where the delegating person's role holds it (BR-27; SA-06 v3.3 §10b already gives the Case Officer "Y"). A delegation using it starts the Qualifier only; the run is calculated by the rules engine and stamped with the delegation (AG-3-43, CN-AG-03 change 5). `agent/assessment:override`, `:review`, `:share` and `:pin-version` stay never lendable."
+**(3) Proposed words.** Add to SA-6-44: "`agent/assessment:run` SHALL be marked `assistantLendable = true`; it MAY be part of an Intake AI delegation or a Case Officer's AI delegation (AW-01 §10), and only where the delegating person's role holds it (BR-27; SA-06 v3.3 §10b already gives the Case Officer "Y"). A delegation using it starts the Qualifier only; the run is calculated by the rules engine and stamped with the delegation (AG-3-43, CN-AG-03 change 5). `agent/assessment:override`, `:review`, `:share` and `:pin-version` stay never lendable."
 
 **(4) Why.** AIW-D96 (the founder, 12 Oct 2026: an AI teammate may run the eligibility assessment "under the delegated person's permission (`agent/assessment:run`)"); the Lead's *AIW-D106 note* (a) (the AI-started run is automatic once the stop check passes, so the key is used by the delegation itself, not only prepared). Behaviour: AW-1-131 (AW-01 v0.7). The Case delegation is added by the Lead's ruling (d) after review R9 (`ai-workers/proposals.md`, row after review R9): AIW-D96 covers leads and clients. Telling a lead the result stays a licensed person's act (`:share` never lendable; AIW-D41).
 

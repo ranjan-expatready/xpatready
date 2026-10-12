@@ -99,8 +99,8 @@ SA-1-19, SA-1-26 and SA-1B-62 each gain: "The sample client (or family) is alway
 
 **(4) Why.**
 - AIW-D49, 11 Oct 2026. The founder chose "Attach a rehearsal report": "Every production pack submission carries the report of the product's rehearsal on sample clients; the second person reads it before approving. No new blocking test gate."
-- Proposals row 112 (approval waits until the report is opened). Proposals row of 10 Oct (Pack author's assistant, test gate). `pack-authors-assistant.md` §9 G-11.
-- The synthetic rule: proposals row of 10 Oct (Pack author's assistant, Rule, naming SA-1-52 and SA-1B-62); G-7.
+- Proposals row 112 (approval waits until the report is opened). Proposals row of 10 Oct (Pack author's AI, test gate). `pack-authors-assistant.md` §9 G-11.
+- The synthetic rule: proposals row of 10 Oct (Pack author's AI, Rule, naming SA-1-52 and SA-1B-62); G-7.
 
 **(5) Knock-ons.** SA-01 SA-1-66 (CN-SA-01 change 1). AG-03 BR-18 (CN-AG-03).
 
@@ -128,7 +128,7 @@ SA1B-D17 gains: "*(changed — AIW-D48)* Rows in a production pack also need sec
 **(4) Why.**
 - FD-4 (Founder Decisions Log v1.5, L29) read: "**Dual-control for rule/scoring/eligibility artifacts; platform-config toggle for reference data**".
 - The founder amended its second clause (AIW-D48, "Two people for all"): "reference data in a published country pack (fees, wage tables) also needs two people, matching SA-01 v2.2 §3.12."
-- Proposals row of 10 Oct (Pack author's assistant, test gate, part 2). `pack-authors-assistant.md` §9 G-25.
+- Proposals row of 10 Oct (Pack author's AI, test gate, part 2). `pack-authors-assistant.md` §9 G-25.
 
 **(5) Knock-ons.** The Founder Decisions Log carries the amendment (CN-FDL change 1).
 
@@ -145,7 +145,7 @@ L207:
 
 **(3) Proposed words.** SA-1B-39 gains: "*(changed — read-only source rail)* Where the government source is a web page, it is recorded as the page's **full official web address**. Only addresses recorded here may be fetched by the read-only government source rail (SA-8-52)."
 
-**(4) Why.** Proposals row of 10 Oct (Pack author's assistant, outbound fetch): the rail is "limited to the addresses recorded as sources under SA-1B-39, never an address found on a page". See also `pack-authors-assistant.md` §9 G-3.
+**(4) Why.** Proposals row of 10 Oct (Pack author's AI, outbound fetch): the rail is "limited to the addresses recorded as sources under SA-1B-39, never an address found on a page". See also `pack-authors-assistant.md` §9 G-3.
 
 **(5) Knock-ons.** SA-08 SA-8-52 (CN-SA-08 change 3). The Canada pack content the specialist authors (AIW-D50) records addresses in this form.
 
@@ -162,9 +162,9 @@ L208:
 
 **(3) Proposed words.**
 
-> - **SA-1B-40** *(changed — G-4)* Overdue items appear on a work queue and warn at publish. Content never expires silently. The same queue also carries a **"source page changed"** item when the government page recorded under SA-1B-39 has changed since it was last checked. The item lists the content items that cite the page and, where the Pack author's assistant drafted one, a proposed change file for the author to review. Dismissing the item records who dismissed it and why.
+> - **SA-1B-40** *(changed — G-4)* Overdue items appear on a work queue and warn at publish. Content never expires silently. The same queue also carries a **"source page changed"** item when the government page recorded under SA-1B-39 has changed since it was last checked. The item lists the content items that cite the page and, where the Pack author's AI drafted one, a proposed change file for the author to review. Dismissing the item records who dismissed it and why.
 
-**(4) Why.** `pack-authors-assistant.md` §9 G-4 (Proposal; SA-1B-40): "The work queue of SA-1B-40 carries overdue reviews only; a *changed source* item kind with the proposed change file is needed." The assistant never writes into the pack (AIW-D54 item 7). The comparison and the list of citing items are rule-built and run now; a drafted change file is a model call and waits for CN-FDL open point 3 (`00-step3-plan.md`, "Pack calls before the founder answers").
+**(4) Why.** `pack-authors-assistant.md` §9 G-4 (Proposal; SA-1B-40): "The work queue of SA-1B-40 carries overdue reviews only; a *changed source* item kind with the proposed change file is needed." The AI teammate never writes into the pack (AIW-D54 item 7). The comparison and the list of citing items are rule-built and run now; a drafted change file is a model call and waits for CN-FDL open point 3 (`00-step3-plan.md`, "Pack calls before the founder answers").
 
 **(5) Knock-ons.** AW-02 (the watcher, `pack-authors-assistant.md` §9 G-21).
 
