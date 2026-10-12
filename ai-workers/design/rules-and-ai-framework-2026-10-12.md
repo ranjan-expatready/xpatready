@@ -164,6 +164,8 @@ Each covers the normal path and the failures:
 
 It found 19 gaps. The Lead's rulings and the mechanisms M-2 to M-4 close the AI-layer gaps (`proposals.md`). G-6 (permission changes mid-job) and G-13 (a stale assessment after a correction) go to the team.
 
+**Our own update, not the team's:** the trust-key wording AG-6-46/47 is our proposed text in CN-AG-06 change 6; we amend it for AIW-D103 ourselves (review R8 JW-M3).
+
 **Not proven:**
 - nothing has been executed; all 435 live test cases are "Not run";
 - the prototype is a simulation;
@@ -179,7 +181,6 @@ It found 19 gaps. The Lead's rulings and the mechanisms M-2 to M-4 close the AI-
 | Upload values in the bundle | Reader values may wait for the end-of-job review sitting (AIW-D100) | AG-11-60 |
 | Untested pack rules | Packs complete and tested before publishing (AIW-D98 dependency) | SA1B-D18 |
 | AI runs the assessment | Knock-ons from AIW-D96 | AW-1-88 (ours); AG-03 automatic-run question |
-| Trust keys | Whether a proposed trust entry may be prepared for a key holder to approve (AIW-D103) | AG-6-46, AG-6-47; CN-SA-06 change 6 |
 | Permission change mid-job | Re-routing pending items (G-6) | AG-11 / AG-01 |
 | Stale assessment after a correction | Assessments marked stale when an input changes (G-13) | AG-03 |
 | Review effort | Opened-time on approval items (G2) | AG-11 |

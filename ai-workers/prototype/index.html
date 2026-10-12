@@ -381,7 +381,7 @@ const S = {
   job:{ i:0, stopped:false, playing:false, ap:{reject:false, date:false} },
   rv:{ ok:{}, opened:{}, corr:{}, editing:null, spot:'', spotRes:null, rest:false, conflict:null,
        drafts:{form:'pending', letter:'pending', note:'pending'}, ver:{form:1, letter:1, note:1}, stale:{}, rejecting:null, reason:{} },
-  as:{ ev:'ready', phase:'idle', pack:3, explained:false, reviewed:false },
+  as:{ ev:'ready', phase:'idle', pack:3, explained:false, reviewed:false, newer:false },
   bl:{ inv:'pending', ver:1, changed:false, invAt:null, trust:'none', trustAt:null, rejecting:null },
   set:{ preset:'each', open:false, over:{}, earned:false },
   inb:{ msgs:null, guided:0, draft:'none', q:'', edit:false, text:'' }
@@ -583,7 +583,7 @@ function scTeam(){
   const w = waitingNow();
   const counts = {
     'Case Officer\'s AI':[JOB.filter((s,k)=>jobStatus(k)==='done').length, heldCount()+(w?1:0)+(jobDone()&&!reviewComplete()?1:0)],
-    'Intake AI':[S.inb.guided + (S.as.phase==='run'?1:0), (S.inb.draft==='pending'?1:0)+(S.as.phase==='stopped'||S.as.phase==='proposed'?1:0)],
+    'Intake AI':[S.inb.guided + (S.as.phase==='run'?1:0), (S.inb.draft==='pending'?1:0)+(S.as.phase==='stopped'?1:0)],
     'Billing AI':[S.bl.inv==='approved'?1:0, (S.bl.inv==='pending'||S.bl.inv==='voided'?1:0)+(S.bl.trust==='pending'?1:0)],
     'Owner\'s AI':[0,0]
   };
@@ -834,27 +834,19 @@ function scAssess(){
         <p class="small"><b>Suggested next step:</b> ${e.fix}.</p>
         <div class="row"><button class="btn primary" data-act="as-fix">Do the suggested step (simulated: the lead answers)</button><button class="btn" data-act="as-reset">Back</button></div>
       </div></div>`;
-  } else if(a.phase==='proposed' || a.phase==='voided'){
-    body = `<div class="card"><div class="card-head"><h3>Needs you now · Run the eligibility assessment for Lead L-1</h3><span class="pill warn">Ask now</span></div>
-      <div class="section">${checksHtml()}</div>
-      <div class="section">${inputs}</div>
-      <div class="section stack">
-        ${labels(L('prep','Intake AI'))}
-        ${a.phase==='voided'?'<div class="notice warn"><span class="ic">!</span><div class="small"><b>Your earlier approval no longer applies.</b> Pack v4 was published after you looked, so this is a fresh preview on pack v4. Approve again to run it.</div></div>':''}
-        <p class="small">Approving runs the rules engine once on <b>this input snapshot and pack v${a.pack}</b>. If either changes before it runs, the approval no longer applies. ${tag('M-4')}${tag('AIW-D103')}</p>
-        <div class="row"><button class="btn primary" data-act="as-run">Approve and run on pack v${a.pack}</button><button class="btn" data-act="as-reset">Not now</button></div>
-        ${a.pack===3?`<div class="demo"><div class="lbl">Demo control</div><p class="small">Publish pack v4 before the run, to see the approval stop applying.</p><button class="btn sm" data-act="as-pack">Publish pack v4 (simulated)</button></div>`:''}
-      </div></div>`;
   } else {
-    body = `<div class="card"><div class="card-head"><h3>Lead L-1 · eligibility result</h3><span class="pill ok">Saved</span></div>
+    body = `<div class="card"><div class="card-head"><h3>Lead L-1 · eligibility result</h3>${a.newer?'<span class="pill warn">Out of date</span>':'<span class="pill ok">Saved</span>'}</div>
+      <div class="section">${checksHtml()}<p class="small" style="margin-top:8px">The check passed, so Intake AI started the run automatically. No approval is needed to run it: the result stays inside the firm, is saved, and is calculated by the rules. ${tag('AIW-D106 note (a)')}</p></div>
       <div class="section stack">
-        <div class="row" style="gap:8px"><span class="cl cl-r">Run by Intake AI for the intake person; calculated by the rules, pack v${a.pack}</span>${L('appr','the intake person (to run it)')}</div>
+        <div class="row" style="gap:8px"><span class="cl cl-r">Run by Intake AI for the intake person; calculated by the rules, pack v${a.pack}</span></div>
+        ${a.newer?`<div class="notice warn"><span class="ic">!</span><div class="small"><b>Out of date:</b> pack v4 was published after this run. The saved result stays as it was, tied to its inputs and pack v${a.pack}. <button class="btn sm" data-act="as-rerun" style="margin-left:6px">Re-run on pack v4</button> <span class="faint">(runs automatically again once the evidence check passes)</span></div></div>`:''}
         <div class="tw"><table><thead><tr><th>Program (made up)</th><th>Result</th><th>Why, by rule</th></tr></thead><tbody>
           <tr><td>Program A</td><td><b>Meets the requirements</b></td><td class="small">Work experience 3 years ≥ 1 year (rule A-2); language CLB 8 ≥ CLB 7 (rule A-4)</td></tr>
           <tr><td>Program B</td><td><b>Does not meet</b></td><td class="small">Needs a job offer (rule B-1); none stated</td></tr>
           <tr><td>Points total</td><td><b>412</b></td><td class="small">Points grid in pack v${a.pack} (all values made up)</td></tr>
         </tbody></table></div>
-        <p class="xs muted">Based on facts stated by the lead, not verified. Saved and stamped with the inputs, pack v${a.pack} and who ran it. Same inputs and pack always give the same result.</p>
+        <p class="xs muted">Based on facts stated by the lead, not verified. Saved and stamped with the input snapshot, pack v${a.pack} and who ran it. Same inputs and pack always give the same result. ${tag('M-4')}</p>
+        ${!a.newer&&a.pack===3?`<div class="demo"><div class="lbl">Demo control</div><p class="small">Publish a newer pack after the run, to see the result marked out of date.</p><button class="btn sm" data-act="as-pack">Publish pack v4 (simulated)</button></div>`:''}
       </div>
       <div class="section stack">
         <h4>Explanation for staff</h4>
@@ -870,11 +862,11 @@ function scAssess(){
         <button class="btn sm" data-act="as-reset" style="align-self:flex-start">Start again</button>
       </div></div>`;
   }
-  return head('Screen 3 of 6','Run an assessment',`Intake AI may start the eligibility assessment. The rules engine calculates every result. Before running, the AI checks the evidence and stops if anything is missing, stale or conflicting. ${tag('AIW-D96')}${tag('AIW-D98')}`) + `
+  return head('Screen 3 of 6','Run an assessment',`Intake AI may start the eligibility assessment. The rules engine calculates every result. Before running, the AI checks the evidence and stops if anything is missing, stale or conflicting. If the check passes, the run starts automatically. ${tag('AIW-D96')}${tag('AIW-D98')}`) + `
   <div class="scenario"><span>◇</span><div><b>Scenario.</b> Lead L-1 (made up) filled in Firm F's web form. Facts come from the lead and are not verified yet. Programs, rules, points and pack versions are all made up.</div></div>
   <div class="demo"><div class="lbl">Demo control · state of the lead's evidence</div><div class="seg" role="group" aria-label="Evidence state" style="margin-top:6px">${seg}</div></div>
   ${body}
-  ${foot('AIW-D96 (AI may start it; rules calculate; label "Run by … calculated by the rules, pack v[n]"), AIW-D98 and its note (stop on missing, stale or conflicting evidence; explanation with sources and pack version; licensed review; no claim to detect wrong rules), AIW-D41 (only the consultant tells the lead), AIW-D92; Lead rulings G-2 (lead facts labelled not verified), M-2 (pre-run check), M-4 (approval bound to the input snapshot and pack version).')}`;
+  ${foot('AIW-D96 (AI may start it; rules calculate; label "Run by … calculated by the rules, pack v[n]"), AIW-D98 and its note (stop on missing, stale or conflicting evidence; explanation with sources and pack version; licensed review; no claim to detect wrong rules), AIW-D41 (only the consultant tells the lead), AIW-D92; Lead rulings G-2 (lead facts labelled not verified), M-2 (pre-run check), M-4 (record bound to the input snapshot and pack version); AIW-D106 note (a) (runs automatically once the stop check passes).')}`;
 }
 function checksHtml(){
   return `<h4>Evidence check before running ${tag('M-2')}</h4><div class="stack" style="gap:6px">${preChecks().map(c=>`<div class="check ${c[1]?'done':''}"><span class="box" style="${c[1]?'':'border-color:var(--danger);color:var(--danger)'}">${c[1]?'✓':'×'}</span><span class="t">${esc(c[0])}</span></div>`).join('')}</div><div style="margin-top:8px">${labels(L('rules'))}</div>`;
@@ -946,7 +938,7 @@ const ROLES = ['Owner','Admin','Case Manager','Case Officer','Billing / Finance'
 const ROWS = [
   {n:2, a:'Create a task or reminder by a rule; assign work', each:'Auto', cp:'Auto', opts:['Auto','Ask now','At checkpoint','Off'], roles:[1,1,1,1,1,0]},
   {n:3, a:'Routine internal work: draft internal notes, AI-proposed tasks, filing labels', each:'Ask now', cp:'At checkpoint', opts:['Ask now','At checkpoint','Off'], earn:true, roles:[1,1,1,1,1,0]},
-  {n:4, a:'Start the eligibility assessment (the rules calculate)', each:'Ask now', cp:'Ask now', opts:['Ask now','At checkpoint','Off'], roles:[1,1,1,1,0,0]},
+  {n:4, a:'Start the eligibility assessment once the evidence check passes (the rules calculate)', each:'Auto', cp:'Auto', opts:['Auto','Off'], roles:[1,1,1,1,0,0]},
   {n:5, a:'Client message from a published template, chosen by a rule', each:'Auto', cp:'Auto', opts:['Auto','Ask now','Off'], roles:[1,1,1,1,1,0]},
   {n:6, a:'AI-written message to a client or lead', each:'Ask now', cp:'Ask now', opts:['Ask now','At checkpoint','Off'], floor:'Never automatic (locked)', roles:[1,1,1,1,1,0]},
   {n:7, a:'Government form draft', each:'Ask now', cp:'At checkpoint', opts:['Ask now','At checkpoint','Off'], floor:'Always a person\'s approval', roles:[1,0,1,1,0,0]},
@@ -991,7 +983,7 @@ function scSet(){
   </div>
   <div class="exlist">
     <div class="exbox"><h4>Runs automatically in both presets</h4><ul>
-      <li>Tasks and reminders a rule creates for you</li><li>A missing-document reminder from your firm's published template</li><li>Guided intake questions and approved templates to a new lead</li><li>Reading documents and checking them against the pack</li></ul></div>
+      <li>Tasks and reminders a rule creates for you</li><li>A missing-document reminder from your firm's published template</li><li>Guided intake questions and approved templates to a new lead</li><li>Reading documents and checking them against the pack</li><li>Starting the eligibility assessment once the evidence check passes (the result is never sent to a lead or client)</li></ul></div>
     <div class="exbox"><h4>${st.preset==='cp'?'Waits for the end-of-job review (your preset)':'Waits for the end-of-job review under "Review at checkpoints"'}</h4><ul>
       <li>Values read from a clean upload</li><li>Form drafts</li><li>A letter of explanation</li><li>Internal notes, AI-proposed tasks and filing labels, until they earn Auto</li></ul></div>
     <div class="exbox"><h4>Always asks you at once, whatever you choose</h4><ul>
@@ -1157,14 +1149,14 @@ document.addEventListener('click', e=>{
     case 'rv-rej-ok': { const t=$('#rej-'+v); const why = t?t.value.trim():''; if(!why){ t&&t.focus(); return; } r.reason[v]=why; r.drafts[v]='rejected'; r.rejecting=null; break; }
     case 'rv-reset': Object.assign(S.rv, {ok:{}, opened:{}, corr:{}, editing:null, spot:'', spotRes:null, rest:false, conflict:null, drafts:{form:'pending',letter:'pending',note:'pending'}, ver:{form:1,letter:1,note:1}, stale:{}, rejecting:null, reason:{}}); break;
     /* assessment */
-    case 'as-ev': a.ev = v; a.phase='idle'; a.explained=false; a.reviewed=false; a.pack=3; break;
-    case 'as-start': a.phase = a.ev==='ready' ? 'proposed' : 'stopped'; break;
-    case 'as-fix': a.ev = 'ready'; a.phase = 'proposed'; break;
-    case 'as-pack': a.pack = 4; a.phase = 'voided'; break;
-    case 'as-run': a.phase = 'run'; break;
+    case 'as-ev': a.ev = v; a.phase='idle'; a.explained=false; a.reviewed=false; a.pack=3; a.newer=false; break;
+    case 'as-start': a.phase = a.ev==='ready' ? 'run' : 'stopped'; break;
+    case 'as-fix': a.ev = 'ready'; a.phase = 'run'; break;
+    case 'as-pack': a.newer = true; break;
+    case 'as-rerun': a.pack = 4; a.newer = false; a.explained = false; a.reviewed = false; break;
     case 'as-explain': a.explained = true; break;
     case 'as-review': a.reviewed = true; break;
-    case 'as-reset': a.phase='idle'; a.explained=false; a.reviewed=false; a.pack=3; break;
+    case 'as-reset': a.phase='idle'; a.explained=false; a.reviewed=false; a.pack=3; a.newer=false; break;
     /* billing */
     case 'bl-change': b.changed = true; b.inv = 'voided'; break;
     case 'bl-inv-ok': b.inv = 'approved'; b.invAt = nowStamp(); break;

@@ -44,7 +44,7 @@ Open founder questions, in this order (framework v2 §9):
 4. **Support AI reading across firms:** bring into Release 1, or record as a named exclusion (audit H-14).
 
 ## For the team (we never write to Drive; the founder passes these on)
-Framework v2 §8: AG-11-94 tools; AG-11-60 upload values in the bundle; SA1B-D18 untested packs; AW-1-88 knock-ons; AG-6-46/47 trust keys; G-6 permission change mid-job; G-13 stale assessment; G2 approval opened-times; grid storage and screens.
+Framework v2 §8: AG-11-94 tools; AG-11-60 upload values in the bundle; SA1B-D18 untested packs; AW-1-88 knock-ons; G-6 permission change mid-job; G-13 stale assessment; G2 approval opened-times; grid storage and screens.
 
 ## Founder actions still standing (no question pending)
 - Paste the Charter edits (`charter-edits.md`).
