@@ -23,3 +23,9 @@
 > I want AI to be able to do possibly everything which is possible, right? It should be doing like a human, whatever is possible by human, and it is technologically possible. My AI worker should be able to do those. And our whole proposition should be organized around as a very strong AI
 
 *Reading note:* consistent with B6 (the AI uses the product the way a person does). Read with AIW-D92 (rules are never called AI) and AIW-D93 (tools, with a person's approval before any effect).
+
+## 12 Oct 2026 (autonomy answer, same session)
+
+> For this one, right, uh, on autonomy, right, I, I like the idea of on autonomy, but why every action, right? Wherever we can basically um, ask only approvals at the critical points, right, which makes sense. Otherwise, let, let them do end-to-end job and approve it at the end. Best best-in-class, safest autonomy possible. So think from that perspective, right? And, and, and research and think that what is the most innovative, most simple, effective, reliable, stable, scalable way. But not blind autonomy that he's doing what he's doing, nobody knowing. So human approval is required, but minimal human approval or maybe there are various without over-engineering, if you can keep toggle what kind of permissions are required. I don't know. If you want to go the giving the permissions, if it is easy, let's do it. That who can do what and what not, but I want the maximum level of autonomy possible. Also, not blind autonomy where humans are completely removed from the loop. All the key
+
+*Tracked as B29 (autonomy) and B30 (AI does everything a person can) in `brief-coverage.md`; decisions AIW-D95, D93.*

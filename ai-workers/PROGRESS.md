@@ -390,3 +390,4 @@ Blocking risk across all steps: the Canada-only processing rule (`commercial/pro
 | 12 Oct 2026 | Founder | AIW-D92 (four classes), D93 (tools with approval), D94 (no counsel, no consultant conversations), D95 (maximum autonomy with checkpoints) |
 | 12 Oct 2026 | general-purpose (autonomy model) | Started: `design/ai-autonomy-model-2026-10-12.md` |
 | 12 Oct 2026 | general-purpose (autonomy model) | Done (appended by the Lead): one job in draft, one bundle approval at the end, risk tiers 0 to 6, toggle grid with presets, earned Auto for internal reversible actions only; est. 25-35 approvals per file down to 6-10 [I]; six founder decisions; review R6 started |
+| 12 Oct 2026 | adversarial-reviewer (R6, autonomy model) | Started and Done (appended by the Lead): FAIL (1 blocking: deadline dates held for the bundle; 13 major). Maker fix round with Lead rulings. Founder decided AIW-D96, D97, D98 meanwhile |
