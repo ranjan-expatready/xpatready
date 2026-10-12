@@ -29,3 +29,14 @@
 > For this one, right, uh, on autonomy, right, I, I like the idea of on autonomy, but why every action, right? Wherever we can basically um, ask only approvals at the critical points, right, which makes sense. Otherwise, let, let them do end-to-end job and approve it at the end. Best best-in-class, safest autonomy possible. So think from that perspective, right? And, and, and research and think that what is the most innovative, most simple, effective, reliable, stable, scalable way. But not blind autonomy that he's doing what he's doing, nobody knowing. So human approval is required, but minimal human approval or maybe there are various without over-engineering, if you can keep toggle what kind of permissions are required. I don't know. If you want to go the giving the permissions, if it is easy, let's do it. That who can do what and what not, but I want the maximum level of autonomy possible. Also, not blind autonomy where humans are completely removed from the loop. All the key
 
 *Tracked as B29 (autonomy) and B30 (AI does everything a person can) in `brief-coverage.md`; decisions AIW-D95, D93.*
+
+## 12 Oct 2026 (improvement-pass direction, same session)
+
+> Your outcome is a consistent, simpler working framework and workflow that delivers our full agreed scope in this release. Improve the substance wherever evidence supports it. Do not optimise for a numerical rating or force changes where the current approach works.
+> * Deliver the full agreed scope in this release. Do not use later releases as the default answer to difficult work.
+> * Use the simplest complete implementation, with high quality, efficient operation and straightforward user experience.
+> * Design Workstream 2 against the completed and tested Workstream 1 product, as a labelled design assumption. Record dependencies; do not present assumed readiness as verified implementation.
+> * Keep safeguards proportionate and enforced through the existing product. Do not turn every concern into another approval, setting or subsystem.
+> * Challenge both your own reasoning and ChatGPT's recommendations. Adopt improvements because they solve a material problem.
+
+*Recorded as AIW-D106. The full message (reconcile instructions, improve the framework only where necessary, check journeys, strengthen the commercial connection, simplify the interview) is the brief for the 12 Oct improvement pass, tracked as B31.*
