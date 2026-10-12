@@ -11,7 +11,7 @@ with
 > Advanced engagement scoring. Earlier exclusions: Appendix A. *AI assistants, the automation engine (AG-11) and its Doers are in Release 1, specified by Workstream 2; Release 1 does not launch without them (founder decision, 11 Oct 2026).*
 
 **V1, line 121, speaker note "NOT IN RELEASE 1".** Replace the whole paragraph with
-> NOT IN RELEASE 1. Advanced engagement scoring. IN RELEASE 1, specified by Workstream 2: the AG-11 automation engine and its Doers (Minder watches dates; Reminder sends nudges; Tasker, Messenger and the others), the four AI Doers (Reader, Sorter, Writer, Checker) and the six AI teammates (AIW-D89, D90). Case deadlines and document expiry are watched by the Minder on every plan, with no AI. The AI switch stays locked for every firm until a Canada-region AI provider is recorded, counsel has read the safety pack, and the pilot has passed; the launch waits for all three.
+> NOT IN RELEASE 1. Advanced engagement scoring. IN RELEASE 1, specified by Workstream 2: the AG-11 automation engine and its Doers (Minder watches dates; Reminder sends nudges; Tasker, Messenger and the others), the four AI Doers (Reader, Sorter, Writer, Checker) and the six AI teammates (AIW-D89, D90). Case deadlines and document expiry are watched by the Minder on every plan, with no AI. The AI switch stays locked for every firm until a Canada-region AI provider is recorded and has passed its test (AIW-D69, D74), each skill has passed its driving test (AIW-D83), and the pilot at pilot firm one has passed (AIW-D112); the launch waits for all three. No counsel gate (AIW-D94).
 
 **V1, Appendix "Deferred scope", lines 325–326.** Delete the two lines
 > - AI-assisted features
