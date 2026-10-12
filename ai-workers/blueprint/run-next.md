@@ -61,7 +61,7 @@ All of them are included below, so the five buckets add up to 492.
 
 **The run on 13 Oct:** 27 played, 23 passed and 4 failed, all **in simulation** (detail in `simulation-run-2026-10-13.csv`). The prototype had already been updated for AIW-D107 and D117, so TC-AW1-308, -309 and -287, which were expected to fail, passed.
 
-The four failures are the **prototype update list**: TC-AW1-271, -294, -320 and -324.
+The four failures were the prototype update list: TC-AW1-271, -294, -320 and -324. **Run 2 (prototype a146be4, 13 Oct): all 27 pass in simulation** (15 partly, steps without a control named in the CSV). Simulation evidence only; the catalogue Status stays "Not run".
 
 ---
 
