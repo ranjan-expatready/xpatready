@@ -6,7 +6,7 @@ input=$(cat)
 active=$(printf '%s' "$input" | jq -r '.stop_hook_active // false' 2>/dev/null)
 [[ "$active" == "true" ]] && exit 0
 cd "$ROOT" || exit 0
-changes=$(git status --porcelain -- ai-workers .claude AGENTS.md CLAUDE.md sources commercial company-planning 2>/dev/null | head -30)
+changes=$(git status --porcelain -- ai-workers .claude AGENTS.md CLAUDE.md sources commercial 2>/dev/null | head -30)
 [[ -z "$changes" ]] && exit 0
 jq -n --arg r "Workstream 2 bookkeeping (README §0 rule 7) before you stop. Uncommitted changes:
 $changes
