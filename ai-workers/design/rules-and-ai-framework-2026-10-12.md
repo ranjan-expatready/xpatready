@@ -1,6 +1,6 @@
 # Rules and AI: the framework for Expat Ready
 
-*Version 2, 12 Oct 2026, by the Lead. It replaces version 1 (the draft checked in review R5), whose questions F1 to F8 the founder has now answered in AIW-D92 to D105. Revised after review R7. **Status:** the decisions cited are ratified; the build mechanisms in §3 and §4 are Proposals (labelled); four founder questions stay open (§9). Direction for this pass: AIW-D106. It is the one place that ties the AI layer together. The detail lives in the files it points to; this file does not restate them.*
+*Version 2, 12 Oct 2026, by the Lead. It replaces version 1 (the draft checked in review R5), whose questions F1 to F8 the founder has now answered in AIW-D92 to D105. Revised after review R7; points 7 and the "True to our rules" row aligned to AIW-D117 on 13 Oct 2026 (re-check R10-b N3). **Status:** the decisions cited are ratified; the build mechanisms in §3 and §4 are Proposals (labelled); four founder questions stay open (§9). Direction for this pass: AIW-D106. It is the one place that ties the AI layer together. The detail lives in the files it points to; this file does not restate them.*
 
 **Points to (one home each):**
 - **Every capability by class:** `design/rules-ai-classification-2026-10-12.md`.
@@ -35,7 +35,7 @@
    - The safety floors are locked.
    - The grid never grants access.
 6. **Autonomy is earned** for routine, reversible internal work (D104). Published templates picked by a rule go out on their own (D105).
-7. **The AI uses only approved rule results.** It cites its sources and the pack version, stops when evidence is missing, out of date or conflicting, and its explanations stay subject to licensed-person review (D98).
+7. **The AI uses only approved rule results.** It cites its sources and the pack version, stops when evidence is ~~missing,~~ out of date or conflicting, and its explanations stay subject to licensed-person review (D98). *Amended by AIW-D117 (13 Oct 2026):* expected missing inputs do not stop the rules engine, which records an incomplete result with explicit gaps and invents nothing; the AI keeps collecting the facts through approved questions or templates and pauses any explanation or action that needs a complete result; a newer pack version is a reason to re-run, not out-of-date evidence; unrelated work is never stopped (AW-1-132(b)).
 8. **Repeatability, as the founder worded it (AIW-D109):** "The rules engine produces the same calculated result from the same verified facts and rule version. AI-generated outputs may vary between fresh calls; they are recorded, can be replayed, and are tested for accuracy and consistency." Storing and replaying an AI output does not establish its correctness. **Exact repeatability comes from the platform, not the model.** Rule results are stamped with the pack version (AG-03 v1.4 §1, team specification); storing and replaying AI answers is a Proposal for the build (accuracy research R2).
 9. **We sell an AI team on top of rules that can be defended** (D99, D97):
    - **Headline:** "An AI team for your immigration practice."
@@ -97,7 +97,7 @@ These are **Proposals for the build**, recommendations R1 to R13 of the accuracy
 | What | Mechanism | Research |
 |---|---|---|
 | Repeatable | Store each AI answer with a fingerprint of its inputs and replay it. A re-run happens only on a change, and becomes a new record. | R2 |
-| True to our rules | The rules compute and the AI explains. Code checks every number, date and rule ID against the engine's output; a mismatch stops with `explanation_mismatch`. The AI stops on missing, stale or conflicting evidence (D98, M-2). | R7 |
+| True to our rules | The rules compute and the AI explains. Code checks every number, date and rule ID against the engine's output; a mismatch stops with `explanation_mismatch`. The AI stops on ~~missing,~~ stale or conflicting evidence (D98, M-2); missing inputs give an incomplete result with named gaps and pause only the work that needs a complete result (D117). | R7 |
 | Accurate reading | Every value carries its source words, checked by code. Choices are taken from the pack. Calls are small. | R5, R8 |
 | Consistent | The driving test runs each case several times and reports consistency. For a few high-stakes fields, the value is read more than once and must agree. | R6, R11 |
 | Trusted signals | We never use the model's own confidence; we use our own signals. A person approves every value (D100). | R9 |

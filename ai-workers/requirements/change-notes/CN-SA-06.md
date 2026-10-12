@@ -4,7 +4,7 @@
 |---|---|
 | **Document changed** | SA-06 RBAC — Roles & Permissions, version 3.3, dated 2026-10-10 |
 | **File (11 Oct 2026 snapshot)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-06-rbac_v3.3_2026-10-10.md` |
-| **Date of this note** | **12 Oct 2026 (change 8, AIW-D96)**; earlier 11 Oct 2026 (sixth round, after check S3a-e: trust keys narrowed; `agent/settings:edit` description) |
+| **Date of this note** | **13 Oct 2026 (fix after re-check R10-b n5: change 8's knock-ons cite TC-AW1-308 and 309; TC-AW1-282 withdrawn)**; 12 Oct 2026 (change 8, AIW-D96); earlier 11 Oct 2026 (sixth round, after check S3a-e: trust keys narrowed; `agent/settings:edit` description) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | 8 (change 8 added 12 Oct 2026) |
 
