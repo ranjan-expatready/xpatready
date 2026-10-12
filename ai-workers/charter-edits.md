@@ -11,7 +11,7 @@ with
 > Advanced engagement scoring. Earlier exclusions: Appendix A. *AI assistants, the automation engine (AG-11) and its Doers are in Release 1, specified by Workstream 2; Release 1 does not launch without them (founder decision, 11 Oct 2026).*
 
 **V1, line 121, speaker note "NOT IN RELEASE 1".** Replace the whole paragraph with
-> NOT IN RELEASE 1. Advanced engagement scoring. IN RELEASE 1, specified by Workstream 2: the AG-11 automation engine and its Doers (Minder watches dates; Reminder sends nudges; Tasker, Messenger and the others), the four AI Doers (Reader, Sorter, Writer, Checker) and the seven AI assistants. Case deadlines and document expiry are watched by the Minder on every plan, with no AI. The AI switch stays locked for every firm until a Canada-region AI provider is recorded, counsel has read the safety pack, and the pilot has passed; the launch waits for all three.
+> NOT IN RELEASE 1. Advanced engagement scoring. IN RELEASE 1, specified by Workstream 2: the AG-11 automation engine and its Doers (Minder watches dates; Reminder sends nudges; Tasker, Messenger and the others), the four AI Doers (Reader, Sorter, Writer, Checker) and the six AI teammates (AIW-D89, D90). Case deadlines and document expiry are watched by the Minder on every plan, with no AI. The AI switch stays locked for every firm until a Canada-region AI provider is recorded, counsel has read the safety pack, and the pilot has passed; the launch waits for all three.
 
 **V1, Appendix "Deferred scope", lines 325–326.** Delete the two lines
 > - AI-assisted features
@@ -44,6 +44,6 @@ with
 ## 6. Worth checking while the file is open (not decided today; the Lead's notes)
 
 - **SMS and WhatsApp** are in the Charter's deferred list, but AG-10 and the agent phasing file put WhatsApp in Release 1, and the Case and Intake assistants chase on the client's preferred channel. If WhatsApp stays deferred, every chase in the pilot is email; the documents already fall back to email.
-- **Quebec programs** are deferred; the assistants still draft French client text for any client whose language is French (Quebec language duties: counsel).
-- **Dates.** V1 and V2 both say market launch 12 March 2027 (Go/No-Go 3 March). After AIW-D66 the launch also waits on counsel, the Canada provider test, the specialist's pack content and the pilot; none of these has a date yet.
+- **Quebec programs** are deferred; the assistants still draft French client text for any client whose language is French (Quebec language duties: unconfirmed; no counsel, AIW-D94).
+- **Dates.** V1 and V2 both say market launch 12 March 2027 (Go/No-Go 3 March). After AIW-D66 the launch also waits on the Canada provider test, the specialist's pack content and the pilot; none of these has a date yet.
 - **Tell the co-founder** before the team sees the edited Charter: AIW-D66 reverses the 10 Oct planning rule that put AI in a separate Release 2 stream.
