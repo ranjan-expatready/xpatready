@@ -557,3 +557,10 @@ All accessed 11 Oct 2026. Labels refer to how each was used above.
 77. Semantic Kernel and its successor (secondary). https://atlan.com/know/ai-agent/microsoft/semantic-kernel/ ; Microsoft Agent Framework blog https://devblogs.microsoft.com/agent-framework/
 
 **Internal files referred to (not restated):** `ai-in-regulated-work-2026-10.md`; `../commercial/provider-and-cost.md` (§2.6, §3.3 to §3.5); `../design/ai-organisation.md`; `../design/ai-carve-out-register-2026-10-11.md`; `../design/workers/catalogue.md`; `../requirements/provider-test-script.md`; `../decisions.md` (AIW-D13, D35, D44, D69, D71, D80 to D84).
+
+---
+
+**Correction notes (appended by the Lead, 12 Oct 2026).**
+1. §5.3 item 1 ("real-file cases (de-identified)") is superseded: test cases are made up (AW-1-119, AW2-BR-9); real files are used only in the pilot after the driving test and shadow (AIW-D112).
+2. §8.3 item 5 (Claude or OpenAI acceptable for work with no client data) is superseded by AIW-D74: every AI call Expat Ready makes is processed in Canada.
+3. Class 2 "the workflow hands the rule result to the AI" is widened by AIW-D93: the AI may call read tools itself; the rules engine still computes every rule result. The repeatability promise is worded by the founder in AIW-D109.

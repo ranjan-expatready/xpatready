@@ -342,3 +342,7 @@ All web sources accessed **11 Oct 2026**. Labels as defined at the top.
 - `ai-workers/decisions.md`: AIW-D13, D26, D37, D52, D60, D61, D63, D66, D68 to D70, D74, D75, D83 to D91.
 - `commercial/plan.md` v1.1: §1, §2, §3, §6, §8. `ai-workers/commercial/price-card.md` pages 1 to 3; `provider-and-cost.md` §3.5.
 - `ai-workers/research/`: `ai-architecture-deterministic-2026-10.md` §4.5, §5.3, §8; `ai-in-regulated-work-2026-10.md` §2.4, §3.2, §3.3, §7; `ai-coverage-vs-competitors-2026-10.md` §1, §2.1, §2.2, §5; `visaflo.md` §16.
+
+---
+
+**Correction note (appended by the Lead, 12 Oct 2026).** §3.1's statement that the code has "no assessment output" is stale: it came from a team note dated 22 Sep (SA-01B v1.2 §12). The 10 Oct code copy (`code/ERv2-sanitized@042be70-2026-10-10/apps/api/src/spine/pack-assessment.controller.ts`, `pack-assessment-result.ts`) creates, saves and replays assessments with eligibility and scoring output. What is missing for Canada is the Canada rules. Workstream 2 now designs against a completed and tested Workstream 1 as a labelled assumption (AIW-D98). The moat is restated as the combination (AIW-D97). Pricing wording in this file is superseded by workflow pricing (AIW-D111, D114 to D116).
