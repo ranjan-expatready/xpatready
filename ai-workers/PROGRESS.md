@@ -377,3 +377,4 @@ Blocking risk across all steps: the Canada-only processing rule (`commercial/pro
 | 12 Oct 2026 | ai-worker-designer (rules-and-AI classification) | Started (appended by the Lead): `design/rules-ai-classification-2026-10-12.md`, still being written |
 | 12 Oct 2026 | general-purpose (accuracy research, fix round R2) | Done (appended by the Lead): all R2 findings addressed; re-check R2-b started |
 | 12 Oct 2026 | ai-worker-designer (rules-and-AI classification) | Done (appended by the Lead): 120 capabilities (R 76, T 6, A 12, H 26) and 27 skills (R 5, A 22); conflicts K1 to K7; proposals PR1 to PR5 in its §10; review R4 started. Lead's brief mis-cited AIW-D44 for booking (it is draft invoices); FD-16 and AIW-D13 govern |
+| 12 Oct 2026 | adversarial-reviewer (R2-b re-check) | Started and Done (appended by the Lead): PASS WITH FIXES; Lead applied the four fixes (AG-9-49 removed, job title, 'specification', five words added). Accuracy research PASSED |
