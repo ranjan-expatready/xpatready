@@ -36,7 +36,7 @@
 ## Interview (one question at a time, recommendation and one-line why; memory `interview-one-question`)
 Answered 12 Oct after the pass: AIW-D107 (conversational AI for leads in Release 1, Option A), D108 (safeguards final), D109 (repeatability wording). Still open, in this order (framework v2 §9):
 1. (Answered: AIW-D110, aggregates only.)
-2. The price unit: per-file charge for the "prepared file" (mostly rules) or AI team inside the plan (value map item 7; AIW-D60 against D92).
+2. (Answered: AIW-D111, workflow pricing; SA-3/SA-4 compatibility check owed.)
 3. Pilot firm one: the founder-consultant's own practice, real client files, no counsel (value map item 8).
 
 ## For the team (we never write to Drive; the founder passes these on)
