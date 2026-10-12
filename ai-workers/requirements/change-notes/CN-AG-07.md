@@ -4,7 +4,7 @@
 |---|---|
 | Module changed | AG-07 Case Core & Delivery |
 | Version and file | v2.7 of 7 Oct 2026, `02-functional-requirements/agent/AG-07-case-core-and-delivery_v2.7_2026-10-07.md` (Drive snapshot of 11 Oct 2026, `sources/drive-snapshot-2026-10-11/`, unchanged since 9 Oct; line numbers below are that file's) |
-| Date of this note | 11 Oct 2026 (third fix round, after re-check S3c-c) |
+| Date of this note | 11 Oct 2026 (third fix round, after re-check S3c-c); **12 Oct 2026:** change 3 worded per filing and its meter knock-on updated (AIW-D111, D114) |
 | Status | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | Next free numbers used | AG-7-93 (highest AG-7-92, L722); decision **AG7-D28** (the decision table runs from AG7-D1 at L213 to AG7-D27 at L239; a search of the whole file finds no AG7-D28); §13 item 25 (highest item 24, L1190) |
 | Companion files | AW-01 (firm AI assistants); CN-AG-08, CN-AG-09, CN-AG-11, CN-AG-13 |
@@ -56,11 +56,11 @@
    >
    > L1047: "| `agent/case:review-submit` | **NEW** | Submit a case for internal review |"
 3. **Proposed words.**
-   > **AG-7-93 (readiness report accepted = submitted for review).** When a case officer accepts a readiness report prepared for the case (AG-11 item kind `READINESS_REPORT`, CN-AG-11 change 6) under `agent/case:review-submit`, that acceptance SHALL be the case's submit-for-internal-review (§3.6): one act, recorded once. The reviewer's approval or rejection of the review round under `agent/case:review-approve` SHALL stay a separate act. Value lines inside the report SHALL still need `agent/sqr:verify` (AG-7-60). In a firm where one person holds both keys, that person accepts the report (submits) and then approves the round: two different acts, each recorded.
+   > **AG-7-93 (readiness report accepted = submitted for review).** When a case officer accepts a readiness report prepared for the case, **or for each filing when the case has several** (*added 12 Oct 2026*; the item carries the `filingId`, AG-7-45; AG-11 item kind `READINESS_REPORT`, CN-AG-11 changes 6 and 16) under `agent/case:review-submit`, that acceptance SHALL be the case's (or that filing's) submit-for-internal-review (§3.6): one act, recorded once. The reviewer's approval or rejection of the review round under `agent/case:review-approve` SHALL stay a separate act. Value lines inside the report SHALL still need `agent/sqr:verify` (AG-7-60). In a firm where one person holds both keys, that person accepts the report (submits) and then approves the round: two different acts, each recorded.
 
    How the report is built and who it goes to is the assistant's behaviour (AW-1-71 to AW-1-74).
 4. **Why.** AIW-D54 (the founder confirmed the Lead's call: "readiness report by rule, the officer's acceptance is the submission for review"); `proposals.md` row of 10 Oct (Case assistant, readiness report approval); IMP-34 (one item per file); `case-assistant.md` §9 G-4, G-25.
-5. **Knock-ons.** AG-11-112 (CN-AG-11 change 6); the approve-all safeguards (AIW-D57, provisional until counsel) are AW-01's (AW-1-33), with their values in SA-12-33 (CN-SA-12); whether a prepared-file meter ticks on this acceptance is decided after the Step 5 conversations (AIW-D60), so no plan change is made now.
+5. **Knock-ons.** AG-11-112 (CN-AG-11 change 6); the approve-all safeguards (AIW-D57, provisional until counsel) are AW-01's (AW-1-33), with their values in SA-12-33 (CN-SA-12); ~~whether a prepared-file meter ticks on this acceptance is decided after the Step 5 conversations (AIW-D60), so no plan change is made now~~ *(stale, 12 Oct 2026)*. **The billable prepared file ticks on the first acceptance per filing** (AIW-D111, D114; AW-1-75): one per application, never again on a re-run of the same filing, and not when an AI step fell back to the manual path for a reason on our side. The meter, the usage record and the overage line are the team's billing changes, listed for the team in `ai-workers/commercial/workflow-pricing-2026-10-12.md` §3.3; no change to SA-03 or SA-04 is proposed here.
 
 ## 4. FD-5 stands: the team gives the form-filling route for IRCC forms and a date
 

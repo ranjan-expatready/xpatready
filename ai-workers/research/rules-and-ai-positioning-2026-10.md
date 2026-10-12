@@ -159,7 +159,7 @@ Today's design (cited, not restated): a person runs the assessment ("The assista
 | Volume of rule calculations | Avalara by transactions, states, modules [39] | [S] |
 | Immigration niche | `price-card.md` page 2 (not restated) | [VC] |
 
-This evidence supports, and does not change, the moat file §4.5 split (rules and upkeep in the subscription; AI on a unit of finished work). Which AI price shape is used is **not decided**: AIW-D60 decides only what the ten conversations test (option (a) per prepared file and option (b) an allowance, with (c) shown last).
+This evidence supports, and does not change, the moat file §4.5 split (rules and upkeep in the subscription; AI on a unit of finished work). Which AI price shape is used is **not decided**: AIW-D60 decides only what the ten conversations test (option (a) per prepared file and option (b) an allowance, with (c) shown last). *Superseded 12 Oct 2026: the shape is decided as workflow pricing (AIW-D111, D114 to D116); the conversations were dropped (AIW-D94).*
 
 ---
 
@@ -167,10 +167,10 @@ This evidence supports, and does not change, the moat file §4.5 split (rules an
 
 ### 1. Four classes, each with one honest name (Proposal)
 
-| Class | What it is | Examples (cited) | Call it | On-screen label | "AI"? | Priced in (Proposal, pending the ten conversations, AIW-D60) |
+| Class | What it is | Examples (cited) | Call it | On-screen label | "AI"? | Priced in *(superseded 12 Oct 2026: workflow pricing, AIW-D111, D114 to D116; every plan includes the AI team with a prepared-file allowance and extra prepared files, one per application; see `../commercial/workflow-pricing-2026-10-12.md`)* |
 |---|---|---|---|---|---|---|
 | **1. Rules only** | Fixed rules compute; no model | Assessment and scoring (AG-3-39) with its factor breakdown (AG-3-21; FD-20); checklists; deadline watching (AIW-D37); Practice answers (AIW-D90) | "rules", "calculated", "checked against the rules" | "Calculated from Canada pack v[n], rules reviewed [date]" (once SA-1B-39 is built) | **No** | Subscription |
-| **2. AI working with rule results** (the founder's "AI using rule tools") | The AI prepares and words; the platform runs the rules on a person's act; the AI never computes or runs a rule result | For leads, the Intake AI proposing the assessment task to the lead's owner (AW-1-88; CN-AG-03 change 1); for clients, preparing the file (File Builder). *Proposal, not approved:* the AI explaining a stored per-factor result to staff (sibling file row A21, which is being corrected to drop any unsaved preview run; such a run would also meet AG-11-94). | "the AI prepares; you run it; the rules decide" | Two parts: "Prepared by [AI teammate] (approve)" and "Result: from the rules, pack v[n], run by [person]" | **Yes, for the preparing and wording only** | File Builder work: the AI price being tested; other class 2 work rides in the plan for the pilot (AIW-D60) |
+| **2. AI working with rule results** (the founder's "AI using rule tools") | The AI prepares and words; the platform runs the rules on a person's act; the AI never computes or runs a rule result | For leads, the Intake AI proposing the assessment task to the lead's owner (AW-1-88; CN-AG-03 change 1); for clients, preparing the file (File Builder). *Proposal, not approved:* the AI explaining a stored per-factor result to staff (sibling file row A21, which is being corrected to drop any unsaved preview run; such a run would also meet AG-11-94). | "the AI prepares; you run it; the rules decide" | Two parts: "Prepared by [AI teammate] (approve)" and "Result: from the rules, pack v[n], run by [person]" | **Yes, for the preparing and wording only** | The plan's prepared-file allowance and extra prepared files (workflow pricing, AIW-D111, D114); other class 2 work rides in the plan |
 | **3. AI language work** | A model reads or writes | Document reader, cross-checker, drafter (`ai-in-regulated-work-2026-10.md` §7) | "AI", "AI teammate", "AI draft" | "AI draft – check before use", source page shown (AW-1-23) | **Yes, always disclosed** | As class 2 |
 | **4. Person only** | A person's act; advice and signing by a licensed person | Running the assessment, a person's act under the `agent/assessment:run` permission (AW-1-88); advice and sharing eligibility with a lead (AIW-D41) by a licensed person; signing and submitting by a licensed person (Code s. 22(2), reading for counsel) | "your decision", "approved by [role]" | "Approved by [named person], [date]" | **Never** | Not priced |
 
@@ -183,10 +183,10 @@ This evidence supports, and does not change, the moat file §4.5 split (rules an
 
 ### 2. New phrases (adds to `ai-in-regulated-work-2026-10.md` §7 and moat file §4.3, which still apply)
 
-| Use (Proposal; counsel reads first) | Never use | Why |
+| Use (unconfirmed Lead guidance; no counsel, AIW-D94) | Never use | Why |
 |---|---|---|
 | "Scores and checklists are calculated by fixed rules. Your AI team prepares the file around them." | "AI-powered assessment", "AI eligibility check", "AI scoring" | General impression [2]; FD-16 "may not say the AI decides" |
-| "For your leads, the Intake AI tells you when an assessment is due; you run it, and the rules show every factor." | "Ask the AI to assess your client", "the AI runs the assessment" | AW-1-88; AIW-D40 |
+| "When a lead's facts are ready and the evidence check passes, your Intake AI starts the assessment; the rules calculate every result and show every factor; a licensed person shares the result." | "Ask the AI to assess your client", "AI eligibility", "the AI decides eligibility" | AIW-D96 (amends AIW-D40), the AIW-D106 note (a), AIW-D41, AIW-D92. *Updated 12 Oct 2026; the earlier "you run it" wording (AW-1-88, AIW-D40) is superseded* |
 | Only once built and true: "Every rule shows its government source and the date it was last checked." | "AI that always knows the latest rules" | SA-1B-39, SA-1B-40 not built (SA-01B §12) |
 | Only once built and true: "Rules reviewed by two people before release." Later, once tested: "Rules tested against [N] client profiles before release." | "Rules verified", "AI-verified", "100% accurate" | SA1B-D18; Pega's "100% accuracy" is a vendor's own claim [21] |
 | "We use AI for language: reading and drafting. We use rules where the answer must be exact." | "AI-native" (meaning "built around AI from the start") as a claim over the rules | Overall impression; investor risk [13][41] |
@@ -218,15 +218,17 @@ Two alternatives for the founder: *"Exact where it must be. AI where it helps."*
 - **Proof:** moat file §4.3 proof points 1 to 3, then rules tested before publishing (moat file P2).
 - **Expansion (Proposal, input to Step 5):** more AI duties per file, more Country Packs (FD-22), lawyers as a second segment (size **Unknown**).
 
-**Revenue per firm.** **Assumption, no source: about 10 prepared files per firm per month.** Base plan Practice CAD 229 a firm a month (plan default; per seat vs per firm still open, FD-18 and `plan.md` §8 action 3). AI price CAD 30 a file (the price card's illustrative figure inside its CAD 25 to 40 range; the midpoint would be 32.50).
+*Superseded in part, 12 Oct 2026: pricing is workflow pricing (AIW-D111, D114 to D116), an allowance in every plan plus extra prepared files at a listed price, with discounts on the plan price only. Option (b) below is the chosen shape; option (a) was considered, not chosen. Every figure is illustrative only; allowances and prices are set from total cost to serve and measured benefit (`../commercial/workflow-pricing-2026-10-12.md` §4).*
 
-| Per firm, per year | Option (a) per file: 229 + 10 × 30 = 529 a month | Option (b) allowance of 10 inside Practice: 229 a month |
+**Revenue per firm.** **Assumption, no source: about 10 prepared files per firm per month.** Base plan Practice CAD 229 a firm a month (plan default; per seat vs per firm still open, FD-18 and `plan.md` §8 action 3). Extra-prepared-file price CAD 30 (the price card's illustrative figure inside its CAD 25 to 40 range; the midpoint would be 32.50).
+
+| Per firm, per year | Option (a) per file (not chosen, AIW-D111): 229 + 10 × 30 = 529 a month | Option (b) allowance of 10 inside Practice (chosen shape, AIW-D111): 229 a month |
 |---|---|---|
 | List, monthly billing | about CAD 6,350 | about CAD 2,750 |
 | Annual prepayment ("12 months for the price of 10", plan §3), applied to the plan only (Assumption) | about CAD 5,890 | about CAD 2,290 |
 | Founding firm (first 50, "30% off list for 24 months", plan §3), applied to the plan only (Assumption), monthly billing | about CAD 5,520 | about CAD 1,920 |
 
-Option (a) cannot be sold under today's rules: "Nothing is sold outside a plan: there are no add-on prices in Release 1" (SA-04 v2.14 SA-4-44, via `price-card.md` page 1); it needs SA-4-44 amended.
+Option (a), not chosen (AIW-D111), could not be sold under today's rules either: "Nothing is sold outside a plan: there are no add-on prices in Release 1" (SA-04 v2.14 SA-4-44, via `price-card.md` page 1); it needs SA-4-44 amended.
 
 | Firms | Revenue a year: low end (b; first 50 firms at the founding rate, the rest prepaid) to high end (a, list) |
 |---|---|
