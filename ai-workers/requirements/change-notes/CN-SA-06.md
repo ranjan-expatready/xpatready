@@ -308,15 +308,15 @@ The team designs the mechanics behind both keys under FD-17, with the open quest
 
 ---
 
-## 8. `agent/assessment:run` lendable to the Intake assistant's delegation (12 Oct 2026)
+## 8. `agent/assessment:run` lendable to the Intake and Case assistants' delegations (12 Oct 2026; Case added after review R9)
 
 **(1) What it changes.** SA-6-44's lendable list (change 1); §10b row `agent/assessment:run`.
 
 **(2) Current words.** Change 1 marks lendable only the keys AW-01 lists in an assistant's subset; AW-01 v0.6 §10 listed `agent/assessment:run` under the Intake assistant's "Never holds".
 
-**(3) Proposed words.** Add to SA-6-44: "`agent/assessment:run` SHALL be marked `assistantLendable = true`; it MAY be part of an Intake assistant delegation (AW-01 §10), and only where the delegating person's role holds it (BR-27). A delegation using it starts the Qualifier only; the run is calculated by the rules engine and stamped with the delegation (AG-3-43, CN-AG-03 change 5). `agent/assessment:override`, `:review`, `:share` and `:pin-version` stay never lendable."
+**(3) Proposed words.** Add to SA-6-44: "`agent/assessment:run` SHALL be marked `assistantLendable = true`; it MAY be part of an Intake assistant delegation or a Case assistant delegation (AW-01 §10), and only where the delegating person's role holds it (BR-27; SA-06 v3.3 §10b already gives the Case Officer "Y"). A delegation using it starts the Qualifier only; the run is calculated by the rules engine and stamped with the delegation (AG-3-43, CN-AG-03 change 5). `agent/assessment:override`, `:review`, `:share` and `:pin-version` stay never lendable."
 
-**(4) Why.** AIW-D96 (the founder, 12 Oct 2026: an AI teammate may run the eligibility assessment "under the delegated person's permission (`agent/assessment:run`)"); the Lead's *AIW-D106 note* (a) (the AI-started run is automatic once the stop check passes, so the key is used by the delegation itself, not only prepared). Behaviour: AW-1-131 (AW-01 v0.7). Telling a lead the result stays a licensed person's act (`:share` never lendable; AIW-D41).
+**(4) Why.** AIW-D96 (the founder, 12 Oct 2026: an AI teammate may run the eligibility assessment "under the delegated person's permission (`agent/assessment:run`)"); the Lead's *AIW-D106 note* (a) (the AI-started run is automatic once the stop check passes, so the key is used by the delegation itself, not only prepared). Behaviour: AW-1-131 (AW-01 v0.7). The Case delegation is added by the Lead's ruling (d) after review R9 (`ai-workers/proposals.md`, row after review R9): AIW-D96 covers leads and clients. Telling a lead the result stays a licensed person's act (`:share` never lendable; AIW-D41).
 
-**(5) Knock-ons.** AW-01 §10 (moved to "May use"); TC-AW1-283; change 7's version row adds "`agent/assessment:run` lendable to the Intake delegation".
+**(5) Knock-ons.** AW-01 §10 (moved to "May use" for Intake; added to "May use" for Case); TC-AW1-283, TC-AW1-282; change 7's version row adds "`agent/assessment:run` lendable to the Intake and Case delegations".
 
