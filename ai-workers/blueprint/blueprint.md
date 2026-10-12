@@ -200,7 +200,7 @@ Skill 22c is reworded for AIW-D117. This blueprint assigns no skill numbers of i
 
 ## 4. The agreed journeys
 
-Each journey below is summarised in numbered steps. For every step, `traceability.csv` holds its class, the team IDs, our IDs, the team change, one acceptance criterion, the tests and the evidence level. The full failure analysis of journeys 1 to 4 (seven failure kinds each) is in `design/journey-walkthroughs-2026-10-12.md` §2 to §5. That paper predates AIW-D107, D113 and D117, so read its steps through this section. Journeys 5 and 6 have no walkthrough there; their edge cases are listed here, taken from AW-1-147 and AW-1-128 and the autonomy model.
+Each journey below is summarised in numbered steps. For every step, `traceability.csv` holds its class, the team IDs, our IDs, the team change and its register ID, one acceptance criterion, the AW-01 user stories (AIW-D86: "user stories linked to acceptance tests"), the tests, the evidence level and the simulation result. The full failure analysis of journeys 1 to 4 (seven failure kinds each) is in `design/journey-walkthroughs-2026-10-12.md` §2 to §5. That paper predates AIW-D107, D113 and D117, so read its steps through this section. Journeys 5 and 6 have no walkthrough there; their edge cases are listed here, taken from AW-1-147 and AW-1-128 and the autonomy model.
 
 ### Journey 1: intake and booking, with the conversational AI for leads (AIW-D102 as amended by AIW-D107)
 
@@ -281,7 +281,7 @@ Each journey below is summarised in numbered steps. For every step, `traceabilit
 - **Pack version changes between approval and run:** the run pins the version it loaded (M-4).
 - **Qualifier failure:** retried, then dead-lettered (AG-11-26, AG-11-27).
 
-**AIW-D117 supersedes** the Lead's ruling M6 and the AIW-D106 note's wording on missing inputs. AW-01 and the tests are being updated in parallel; the rows touched are marked in `traceability.csv`.
+**AIW-D117 supersedes** the Lead's ruling M6 and the AIW-D106 note's wording on missing inputs. Its tests are TC-AW1-314 to -318; the rows touched are marked in `traceability.csv`. The prototype was updated for it, and TC-AW1-308 and -309 pass in simulation.
 
 ### Journey 4: billing preparation and workflow pricing (AIW-D103, D111, D114 to D116)
 
@@ -430,13 +430,13 @@ The detail stays where it is. Main pointers:
 - Kill switches, spend caps and recall: SA-12 (CN-SA-12).
 - Lendable keys: CN-SA-06 changes 1 and 8.
 
-**All change notes:** `requirements/change-notes/` (33 files). **The team change list** (workflow pricing T1 to T18, and E4, E9, E14, E16, G-6, G-13, G2, AG-11-94, AG-11-60, SA1B-D18) is in framework §8 and in `commercial/workflow-pricing-2026-10-12.md` §3.3. `team-change-register-2026-10-13.csv` did not exist when this was written, so `traceability.csv` cites change-note IDs. The Lead swaps in register IDs when the register lands.
+**All change notes:** `requirements/change-notes/` (33 files). **The team change list** (workflow pricing T1 to T18, and E4, E9, E14, E16, G-6, G-13, G2, AG-11-94, AG-11-60, SA1B-D18) now has one home: `team-change-register-2026-10-13.md` and `.csv` (147 rows). `traceability.csv` gives both the change-note ID and the register ID (TC-nn) for each step. The register is being fixed in parallel (review R11); if its IDs move, the register IDs in the CSV are re-linked.
 
-**What exists in the 10 Oct code copy.** None of the AI layer. Workstream 1 pieces it depends on (**Implemented**, not run by us):
-- the pack assessment engine (`apps/api/src/spine/pack-assessment-*.ts`, `pack-policy-interpreter.ts`; model `PackAssessment` with input hash, result hash, engine version and pack version);
-- the rule-based Filler (`apps/api/src/spine/filler.service.ts`);
-- an event bus named Conductor (`apps/api/src/events/conductor-bus.ts`);
-- the document virus-scan status (`apps/api/src/documents/document-av-status.schema.ts`; the scanner is a fake for now).
+**What exists in the 10 Oct code copy.** None of the AI layer. Workstream 1 pieces it depends on (none run by us):
+- **The pack assessment engine, partly implemented.** Files: `apps/api/src/spine/pack-assessment-*.ts`, `pack-policy-interpreter.ts`, and model `PackAssessment` (`client-spine.prisma` L514–541: input hash, result hash, engine version, pack version, `createdBy`). It has **no run type**, which AG-3-25 requires and AIW-D96's label depends on (no `runType` or `run_type` in `apps/api`, our search).
+- **The rule-based Filler.** File: `apps/api/src/spine/filler.service.ts`.
+- **An event bus named Conductor.** File: `apps/api/src/events/conductor-bus.ts`.
+- **Document serving, partly implemented.** Only CLEAN documents are served (`apps/api/src/documents/documents.service.ts` L115); the status values are in `document-av-status.schema.ts`, whose comment says the scanner is a fake for now. Storing every upload as a new version is not evidenced.
 
 **What our search did not find** (detail in `run-next.md` (b)):
 - an AI provider client;
@@ -452,7 +452,7 @@ The detail stays where it is. Main pointers:
 
 | What | Rule | Home |
 |---|---|---|
-| Driving test per AI skill | A test set of made-up cases written by the immigration specialist and graded by a licensed expert. The skill switches on only above its bar, then spends 2 to 4 weeks in **shadow** (it prepares on real files, nobody sees it, accuracy is measured), then goes **live** with approval. The health light drops it back automatically. A failing skill stays off without holding the others. | AIW-D83; handbook §5; AW-1-119, AW-1-120; AW-2-39 |
+| Driving test per AI skill | A test set of made-up cases, graded by a licensed expert (AIW-D83). That the immigration specialist writes the cases is a Proposal (handbook §5); AIW-D83 says only that the bars are set with the specialist. The skill switches on only above its bar, then spends 2 to 4 weeks in **shadow** (it prepares on real files, nobody sees it, accuracy is measured), then goes **live** with approval. The health light drops it back automatically. A failing skill stays off without holding the others. | AIW-D83; handbook §5; AW-1-119, AW-1-120; AW-2-39 |
 | Rules-only skills | Tested like any product feature; they keep a health light | rethink-plan "Lead's calls" |
 | Evaluation sets | E-1 to E-13 (firm), EV-1 to EV-12 (platform); E-11 planted instructions apply to every skill that reads client or firm text | handbook §7; AW-01 §11; AW-02 |
 | Spread, not one run | Each case run k = 5 times (Proposal); report field accuracy, correct "not found" rate, **pass^k** and error rates per bucket | Accuracy research R11 |
@@ -475,17 +475,20 @@ The detail is in `run-next.md`.
 
 | Bucket | Count |
 |---|---|
-| (a) Prototype simulation, now | 25 |
+| (a) Prototype simulation, now | 27 |
 | (b) The 10 Oct code copy | 0 |
 | (c) Driving-test harness after the provider test | 20 |
-| (d) Workstream 1 build | 440 |
+| (d) Workstream 1 build | 444 |
 | (e) Pilot | 1 |
-| **Total Not run** | **486** |
+| **Total Not run** | **492** |
 
-The first 20 to run are all in bucket (a) and give simulation evidence only. Three are expected to fail and make up the prototype update list:
-- AIW-D117: missing inputs do not stop the run;
-- AIW-D107: the conversational AI is in Release 1;
-- an eligibility question is handed off, not answered.
+**The bucket (a) tests were played on the prototype on 13 Oct** (`simulation-run-2026-10-13.csv`): 27 run, 23 passed and 4 failed. This is **simulation evidence only**; the tests' status for the product stays "Not run". The four failures make up the prototype update list:
+- TC-AW1-271: the trust item does not show its linked milestone;
+- TC-AW1-294: linked items do not show each other;
+- TC-AW1-320: with AI off, a typed chat question is not handed off;
+- TC-AW1-324: both presets show the same example lists.
+
+The earlier expected failures (AIW-D117, AIW-D107, the eligibility hand-off) were fixed in the prototype before the run, and those tests passed.
 
 ---
 
@@ -496,17 +499,17 @@ The first 20 to run are all in bucket (a) and give simulation evidence only. Thr
 | `design/rules-and-ai-framework-2026-10-12.md` (v2) | Superseded as "the one place that ties the AI layer together" | "Superseded by `blueprint/blueprint.md` (13 Oct 2026). §8's team list moves to the team change register." |
 | `design/journey-walkthroughs-2026-10-12.md` | Keep as the failure-analysis appendix; its step tables are superseded | Header note: "Steps and test mapping now in `blueprint/traceability.csv`; read through AIW-D107, D113, D117." |
 | `design/ai-carve-out-register-2026-10-11.md` | Superseded (built from the 9–11 Oct state) | "Team AI requirements by class: `design/rules-ai-classification-2026-10-12.md` Table A; step-level trace: `blueprint/traceability.csv`." |
-| `design/ai-organisation.md` (Step 1 personas) | Superseded by AIW-D81, D89, D90 | "See `handbook/ai-team-profiles.md`." |
-| `design/workers/catalogue.md`, `module-map.md` (W-nn) | Superseded by AIW-D89 (retired terms) | "Skills: handbook §4; product map: `blueprint/blueprint.md` §1." |
+| `design/ai-organisation.md` (Step 1; uses terms retired by AIW-D89) | Superseded by AIW-D81, D89, D90 | "See `handbook/ai-team-profiles.md`." |
+| `design/workers/catalogue.md`, `module-map.md` (old catalogue numbering) | Superseded by AIW-D89 (retired terms) | "Skills: handbook §4; product map: `blueprint/blueprint.md` §1." |
 | `design/inventory/` | Superseded as a working file (9 Oct snapshot) | "Capabilities by module: classification Table A." |
 | `design/ws2-baseline/` | Superseded as a working file (9 Oct snapshot) | "Reference index only; current trace: classification and `blueprint/traceability.csv`." |
-| `design/ws2-improvements.md` | Superseded (9 Oct; its proposals are built into AW-01/AW-02 or decided) | "See AW-01 v0.7, AW-02 v0.9 and `decisions.md`." |
+| `design/ws2-improvements.md` | Superseded (9 Oct; its proposals are built into AW-01/AW-02 or decided) | "See AW-01 v0.8, AW-02 v1.0 and `decisions.md`." |
 | `design/direction-review-2026-10-09.md` | History | "History. See `rethink-plan.md` and this blueprint." |
 | `design/behaviours/` (Step 2) | **Keep for now.** AW-01 and AW-02 cite them as "[Spec: CA §…]" and moving them breaks those citations | Archive only with a path note in AW-01/AW-02 |
-| `design/ai-autonomy-model-2026-10-12.md` (rev 5) | **Keep:** the one home for rows, presets and the grid | Needs an AIW-D117 note on row 10 and row 4 |
-| `design/rules-ai-classification-2026-10-12.md` | **Keep:** the one home for classes | Summary items 4 and 5 still say the conversational AI is "later"; needs an AIW-D107 update |
-| `handbook/ai-team-profiles.md` | **Keep:** the one home for teammates and skills | Needs the catalogue update in §3 |
-| `prototype/index.html` | **Keep:** the simulation | Needs the three updates in §7 |
+| `design/ai-autonomy-model-2026-10-12.md` (rev 5) | **Keep:** the one home for rows, presets and the grid | Row 10 carries AIW-D117 (13 Oct); no further note needed |
+| `design/rules-ai-classification-2026-10-12.md` | **Keep:** the one home for classes | Updated for AIW-D107 on 13 Oct; it has no AIW-D117 mention yet (the assessment class is unchanged: rules only) |
+| `handbook/ai-team-profiles.md` | **Keep:** the one home for teammates and skills | Catalogue updated 13 Oct (skills 24 to 29; 22c for AIW-D117) |
+| `prototype/index.html` | **Keep:** the simulation | Updated 13 Oct for AIW-D107 and D117; the four simulation failures in §7 are open |
 
 ---
 
@@ -518,14 +521,12 @@ The first 20 to run are all in bucket (a) and give simulation evidence only. Thr
 - **One external founder decision:** FD-18, per-firm or per-seat pricing, due 30 Oct. It sets the plan price that workflow pricing sits on.
 
 **Lead items:**
-- the handbook catalogue update (§3);
-- notes on the autonomy model and classification (§8);
-- the prototype update list (§7);
-- four tests to add (§4 gap list);
+- the prototype update list from the simulation run (§7);
+- tests to add for the partial-coverage items (1.3, 4.3) and a user story for AW-1-139 (§4);
 - the spend-cap ruling K6, which is open with the Lead.
 
 **Team items:**
-- the team change register; this blueprint uses change-note IDs until it exists;
+- the team change register fixes from review R11 (re-link register IDs here if they move);
 - E4, E9, E14, E16, G-6, G-13, G2;
 - AG-11-94, AG-11-60, SA1B-D18;
 - T1 to T18;
