@@ -12,7 +12,7 @@
 
 ## 0. Gaps first (short summary)
 
-Twenty gaps were found: 8 major (they block a journey or break a founder decision), 12 minor. Nothing in this document has been executed. **All 435 live test cases in `requirements/tests/AW-test-cases.csv` have status "Not run"** (one more, TC-AW2-029, is Withdrawn). The prototype predates the 12 Oct decisions (its About page says it was "Built from AW-01 Firm AI assistants v0.5"). So every journey below is a **paper walkthrough**, and no item is proven by a test or by the prototype.
+Nineteen gaps were found (8 major: they block a journey or break a founder decision; 11 minor), plus one bookkeeping item (G-20). Nothing in this document has been executed. **All 435 live test cases in `requirements/tests/AW-test-cases.csv` have status "Not run"** (one more, TC-AW2-029, is Withdrawn). The prototype predates the 12 Oct decisions (its About page says it was "Built from AW-01 Firm AI assistants v0.5"). So every journey below is a **paper walkthrough**, and no item is proven by a test or by the prototype.
 
 | # | Gap | Journey | Size | Fix proposed (built on) | Who decides |
 |---|---|---|---|---|---|
@@ -69,7 +69,7 @@ A mapped test means the test case **exists** and would check the step if run. It
 | 1.1 | An enquiry arrives: web form, inbound API or public booking page | Rules [WS1 assumed] | AG-2-5, AG-2-6, AG-2-10 (AG-02 v1.9); `source` mandatory AG-2-11; duplicates matched on email and phone AG-2-14, AG-2-15 ("never silently create a duplicate or silently merge") | no test (WS1) | Not shown |
 | 1.2 | Speed-to-lead: thank-you to the lead and a call task for the owner | Rules: seeded recipe, a template message at AUTO once the firm confirmed its standard messages | AG-2-35; AG11-D1, AG11-D12 (AG-11 v1.12); AW-1-15 (stays a firm automation) | no test | Not shown |
 | 1.3 | The Intake AI's run opens on the lead | Rules: the delegation must be accepted and active, and the switches on | AW-1-87; AW-1-6, AW-1-11, AW-1-125; AW-1-52 (AI switch locked until a provider record exists) | TC-AW1-002, -003 (case assistant pattern); none for intake | S: screen 2 (delegation set-up, accept, pause) |
-| 1.4 | Guided intake questions: the facts the programs need, asked through a template whose merge field lists them | Rules pick the facts (union of the assessment's missing inputs, AG-3-3, AG-3-12) and the template (AW-1-93; AW-1-46 "chosen by a rule, never by a model") | AW-1-93; AIW-D102; AIW-D105 (template send inside a job = approved by the firm's template approval) | TC-AW1-131 | Not shown |
+| 1.4 | Guided intake questions: the facts the programs need, asked through a template whose merge field lists them | Rules pick the facts (union of the assessment's missing inputs, AG-3-3, AG-3-12) and the template (AW-1-46 "chosen by a rule, never by a model") | AW-1-93; AIW-D102; AIW-D105 (template send inside a job = approved by the firm's template approval) | TC-AW1-131 | Not shown |
 | 1.5 | The lead uses a chat on the firm's site and gets approved answers | **Nothing specified.** Autonomy model c.2 assumes a rule picks each answer (E15) | AIW-D102 only. **GAP G-1** | no test | Not shown |
 | 1.6 | The lead replies with facts; the Reader reads the message and proposes answers | AI (Reader `read_text`), then Person (accepts each, stored unverified) | AW-1-94; AW-1-61 (unverified sender → ask first only); AW-1-33 (approve-all safeguards) | TC-AW1-132, -230, -087, -088 | Not shown |
 | 1.7 | The eligibility assessment runs | Rules calculate (Qualifier, AG-3-39 "deterministic pure function", stamped AG-3-25). **Who starts it:** by AIW-D96 the Intake AI may, under `agent/assessment:run`, "Ask now" (autonomy row 4, the Lead's reading) | AIW-D96, D98; AG-3-1, AG-3-25, AG-3-26 (AG-03 v1.4). AW-1-88 still says the AI "SHALL NOT run" it (a knock-on of D96, not yet edited). **GAP G-2** on "verified values only" | TC-AW1-124 **contradicts AIW-D96** | Not shown |
@@ -254,10 +254,10 @@ Each is *Proposal — not approved*. Each reuses existing controls; none designs
 
 | Journey | Steps | Steps with at least one existing test case | Steps whose tests contradict a 12 Oct decision | Steps shown in the prototype (S) | Steps executed (E) |
 |---|---|---|---|---|---|
-| 1 Intake and booking | 15 | 11 | 2 (1.7, 1.8: TC-AW1-124, -125 rest on "a person ran it") | 1 (1.3, delegation only) | 0 |
+| 1 Intake and booking | 15 | 11 | 1 (1.7: TC-AW1-124) | 1 (1.3, delegation only) | 0 |
 | 2 Documents and file preparation | 17 | 14 | 0 | 4 (2.2, 2.5, 2.15 partly, 2.17) | 0 |
-| 3 Assessment and review | 10 | 4 | 1 (3.3 against TC-AW1-124) | 1 (3.9), plus 3.6 nearest only | 0 |
-| 4 Billing preparation | 12 | 9 | 4 (4.2, 4.6, 4.7, 4.11) | 2 (4.6, 4.8) | 0 |
+| 3 Assessment and review | 10 | 4 (3.6 nearest only) | 0 directly; TC-AW1-124 contradicts the decision behind 3.3 | 1 (3.9), plus 3.6 nearest only | 0 |
+| 4 Billing preparation | 12 | 8 | 4 (4.2, 4.6, 4.7, 4.11) | 2 (4.6, 4.8) | 0 |
 
 ### 7.2 What the prototype actually demonstrates (S)
 
