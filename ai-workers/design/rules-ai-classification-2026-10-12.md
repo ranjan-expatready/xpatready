@@ -60,7 +60,7 @@ The capabilities cover the firm side (AG-01 to AG-18), the platform side (SA-01 
    |---|---|---|
    | Rules only (R) | 80 | — |
    | Person only (H) | 25 | — |
-   | AI language (A) | 11 | One is the future conversational intake AI, designed now and switched on by a separate decision (AIW-D102) |
+   | AI language (A) | 11 | One is the conversational AI for leads, in Release 1 by AIW-D107: the AI sorts a question into a topic and a rule picks the approved answer (A123) |
    | AI explains rule results (T) | 6 | Free questions to Practice answers are decided for version 2 (AIW-D39); the staff explainer (A21) is decided by the AIW-D98 note; time slots in drafted replies (A27) are in scope by the Lead's ruling (AIW-D106 note (c)); the other three are *Proposals — not approved* |
 
    One more row, submitting to the government, is listed but not counted: the product never does it (AG-11-54).
@@ -72,7 +72,7 @@ The capabilities cover the firm side (AG-01 to AG-18), the platform side (SA-01 
    - Eligibility and scoring are rules (AG-3-39, FD-16). An AI teammate may *run* the assessment, and the rules calculate it (AIW-D96). An AI-started run is automatic once the stop check passes (the Lead's ruling, AIW-D106 note (a)).
    - Follow-up timing is rules.
    - Follow-up wording comes from published templates, which send automatically, also inside an AI job (AIW-D105). Any AI-written or AI-edited text is approved before it is sent.
-4. **Calendar.** Booking is rules (the Scheduler). An AI teammate may prepare a booking, move or cancellation through the product's own actions; a person approves it before it takes effect (AIW-D93). A conversational AI for booking is designed now and switched on later by a separate decision (AIW-D102).
+4. **Calendar.** Booking is rules (the Scheduler). An AI teammate may prepare a booking, move or cancellation through the product's own actions; a person approves it before it takes effect (AIW-D93). A conversational AI for booking is in Release 1 (AIW-D107, amending AIW-D102): the AI sorts the lead's question into a topic, a rule picks the approved answer, and booking goes through the Scheduler.
 5. **Talking with leads** (AIW-D102):
    - At launch, templates and guided intake questions run automatically, and a chat interface may serve that approved content.
    - Newly AI-written replies need approval.
@@ -191,7 +191,7 @@ The "Say to buyers" column in Tables A and B and the older wording ("AI-drafted,
 - **Booking is R:** the Scheduler (AG-4-1 to AG-4-8, AG-4-25, AG-4-26, AG-4-31 to AG-4-43; AG-4-36 to AG-4-39 and AG-4-46 for rescheduling, cancelling and refunds, FD-13). A lead books on the public page (AG-4-16, AG-4-22).
 - **AI may prepare a booking action** (AIW-D93): a booking, a move or a cancellation, through the Scheduler's own action and under the person's permission. It waits in Needs you; the approval binds to the exact action (AIW-D103). A refund on cancellation is money (Q1) and needs approval.
 - **Proposing slots in a draft** (A27) stays a *Proposal* for T.
-- **Conversational booking** is designed now and switched on by a separate decision with the team (AIW-D102).
+- **Conversational booking** is in Release 1 (AIW-D107, amending AIW-D102): the AI sorts the request into the booking topic; the Scheduler books (A123).
 - **Note on AIW-D44:** it was about draft invoices, not booking, and is now superseded by AIW-D103.
 
 ### 3.3 Eligibility and score
@@ -205,11 +205,11 @@ The "Say to buyers" column in Tables A and B and the older wording ("AI-drafted,
 - **Telling a lead or client the result** stays with a licensed person (AIW-D41, AIW-D96). A consultant overrides an outcome (AG-3-33).
 - **How built it is:** see K6 and AIW-D98.
 
-### 3.4 Conversation with leads (AIW-D102)
+### 3.4 Conversation with leads (AIW-D102, amended by AIW-D107)
 - **At launch:** approved templates and guided intake questions run automatically, and an interactive chat interface may serve that approved content (row A122, R).
 - **Newly AI-written replies** need approval before sending (A9).
-- **Later:** a conversational AI for administrative intake, FAQs and booking, with clear boundaries and a human handoff. It is designed now and switched on by a separate decision with the team (row A123, A).
-- **Limits:** eligibility is shared only by the consultant (AIW-D41), and any automatic AI-written reply needs a separate decision with the team.
+- **In Release 1 (AIW-D107, amending AIW-D102's "later"):** a conversational AI for administrative intake, FAQs and booking. The AI only sorts the lead's question into one approved topic; **a rule, never a model, picks the firm's published answer**; booking goes through the Scheduler; anything else, including eligibility, hands off to a person (row A123, A). No floor is lowered.
+- **Limits:** eligibility is shared only by the consultant (AIW-D41); nothing the AI writes reaches a lead unapproved (AG11-D1; FD-16), and any automatic AI-written reply would still need a separate decision with the team.
 
 ### 3.5 Tool calling (AIW-D93)
 - AI teammates may call read and action tools under the delegated person's permission.
@@ -320,7 +320,7 @@ Column key:
 | A82 | Practice answers: four fixed questions | AIW-D39, AIW-D90; AG-14-22 | R | Q2 | One optional summary line [P] (T) | Rule test | Rules only; works with AI off |
 | A121 | The firm's standing decisions that rules then carry out: approving its standard messages and their automatic use, turning recipes on, setting its refund policy | AG11-D12, AG-11-21 (AG-11 v1.12); FD-13; AIW-D105 | H | Q1 | No AI | The firm's choice (Owner or its chosen role), recorded; where it sets no refund policy, the founder's platform default (FD-13, ratified 3 Jul 2026) | Your rules, set once |
 | A122 | Interactive chat interface at launch, serving approved templates and guided intake questions (*added for AIW-D102*) | AIW-D102; AG11-D1 template sends; AG-8-5 conditional questions | R | Q1 → person: the firm's approval of the content (A121; AIW-D105); mechanism: Q2 | No newly AI-written text in automatic replies (AIW-D102). R assumes a rule picks the answer (guided flow or menu), as the autonomy model does; a model picking among approved answers is open (autonomy E15; framework §9 question 1) | Rule test | Approved answers from your firm |
-| A123 | Conversational AI for administrative intake, FAQs and booking (*added for AIW-D102; designed now, switched on later*) | AIW-D102 | A | Q1, Q3 | Clear boundaries and human handoff; no eligibility (AIW-D41). Switching on, and any automatic AI-written reply, needs a separate decision with the team | Driving test; pass^k; boundaries tested | Not live at launch |
+| A123 | Conversational AI for administrative intake, FAQs and booking (*added for AIW-D102; in Release 1 by AIW-D107*) | AIW-D102 as amended by AIW-D107; AW-1-46 (amended), AW-1-138; handbook skill 24 | A | Q1, Q3 | The AI only sorts the lead's question into one approved topic or *no topic*; **a rule picks the published answer** (AIW-D105); booking through the Scheduler; anything else, including eligibility (AIW-D41), hands off to a person. Any automatic AI-written reply still needs a separate decision with the team | Driving test; pass^k; boundaries tested | AI-sorted; approved answers from your firm |
 
 ### 4.2 Platform side (SA-01 to SA-12)
 
@@ -419,8 +419,8 @@ The founder's words are from `founder-brief.md`, "12 Oct 2026", second quote. Ev
 
 | # | The founder's framing (his words) | What it conflicted with | **Answered by** | The answer, in one line |
 |---|---|---|---|---|
-| K1 | "the way we talk" | AIW-D11; FD-16; AIW-D41; the team's AI-text floor | **AIW-D102** | At launch, templates and guided questions run automatically and a chat interface serves approved content (A122). Newly AI-written replies are approved first (A9). A conversational AI for intake, FAQs and booking is designed now and switched on by a separate decision (A123). Eligibility stays with the consultant. |
-| K2 | "the way we book the calendar management" | FD-16; AIW-D13 | **AIW-D93**, **AIW-D102** | AI may prepare bookings, moves and cancellations through the Scheduler's actions, approved before they take effect (A22). Conversational booking comes later by a separate decision. |
+| K1 | "the way we talk" | AIW-D11; FD-16; AIW-D41; the team's AI-text floor | **AIW-D102**, amended by **AIW-D107** | At launch, templates and guided questions run automatically and a chat interface serves approved content (A122). Newly AI-written replies are approved first (A9). A conversational AI for intake, FAQs and booking is in Release 1 (AIW-D107): the AI sorts into a topic and a rule picks the approved answer (A123). Eligibility stays with the consultant. |
+| K2 | "the way we book the calendar management" | FD-16; AIW-D13 | **AIW-D93**, **AIW-D102** | AI may prepare bookings, moves and cancellations through the Scheduler's actions, approved before they take effect (A22). Conversational booking is in Release 1 by AIW-D107 (A123). |
 | K3 | "we will be using AI for basically tool calling" | AIW-D25; AIW-D39; AIW-D84; team AG-11-94; Product Vision line 292 | **AIW-D93** | Read and action tools under the person's permission; effects approved first; the rules engine computes. AG-11-94 is the team's to revisit (no change note). The earlier "T-fixed only" ruling is widened. |
 | K4 | "Rest everything is, I think we can be a little bit more uh, non-deterministic the way we talk, the way we follow up, the way we use the language" | FD-16; AIW-D13 | **AIW-D105**, **AIW-D104** (FD-16 unchanged) | Template sends count as approved, also inside AI jobs (AIW-D105). Routine, reversible internal work may earn Auto (AIW-D104). Any AI-written client text is still approved first. |
 | K5 | "tool calling" read as carrying out product actions | FD-16; AIW-D13; AIW-D25 | **AIW-D93**, **AIW-D103** | Actions are prepared and approved, with approval bound to the exact action. Invoices, proposed trust entries, exports, deletion requests, settings changes and signature workflows may be prepared (AIW-D103). Signatures stay with the signer. |
@@ -446,7 +446,7 @@ The founder's words are from `founder-brief.md`, "12 Oct 2026", second quote. Ev
 |---|---|---|
 | R — Rules only | 80 | — |
 | T — AI explains rule results | 6 | A70 is decided for version 2 (AIW-D39). A21 is decided by the AIW-D98 note. A27 is in scope by the Lead's ruling (AIW-D106 note (c)). A89, A95 and A111 are *Proposals — not approved* |
-| A — AI language | 11 | A123 is designed now, not live at launch (AIW-D102) |
+| A — AI language | 11 | A123 is in Release 1 by AIW-D107 (AI sorts, a rule picks the answer) |
 | H — Person only | 25 | — |
 | **Counted** | **122** | A44 is listed but not counted (AG-11-54) |
 
@@ -460,7 +460,7 @@ The founder's words are from `founder-brief.md`, "12 Oct 2026", second quote. Ev
 
 **Changes in this revision (AIW-D92 to D105):**
 - A122 added as R (the AIW-D102 launch chat interface).
-- A123 added as A (the AIW-D102 future conversational AI).
+- A123 added as A (the conversational AI; in Release 1 by AIW-D107).
 - No existing row changed class. AIW-D93, D96, D100, D101, D103, D104 and D105 changed what the AI may do, not who decides.
 
 **Table B (AI skills and calls, 30 rows):** changed after R7: skill 13 moved from A to R, and three rules-only rows added by splitting skills 21 and 22 (AIW-D106 note (b), (c)). Old numbers are kept; the new rows are 21b, 22b and 22c.

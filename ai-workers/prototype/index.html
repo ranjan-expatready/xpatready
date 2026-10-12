@@ -384,7 +384,7 @@ const S = {
   as:{ ev:'ready', phase:'idle', pack:3, explained:false, reviewed:false, newer:false },
   bl:{ inv:'pending', ver:1, changed:false, invAt:null, trust:'none', trustAt:null, rejecting:null },
   set:{ preset:'each', open:false, over:{}, earned:false, chg:'pending', chgAt:null },
-  inb:{ msgs:null, guided:0, draft:'none', q:'', edit:false, text:'' }
+  inb:{ msgs:null, guided:0, draft:'none', q:'', edit:false, text:'', ai:true, tasks:[], lastSort:null, booked:null }
 };
 
 /* =============================== screens =============================== */
@@ -583,7 +583,7 @@ function scTeam(){
   const w = waitingNow();
   const counts = {
     'Case Officer\'s AI':[JOB.filter((s,k)=>jobStatus(k)==='done').length, heldCount()+(w?1:0)+(jobDone()&&!reviewComplete()?1:0)],
-    'Intake AI':[S.inb.guided + (S.as.phase==='run'?1:0), (S.inb.draft==='pending'?1:0)+(S.as.phase==='stopped'?1:0)],
+    'Intake AI':[S.inb.guided + (S.as.phase==='run'?1:0), (S.inb.draft==='pending'?1:0)+S.inb.tasks.length+(S.as.phase==='stopped'?1:0)],
     'Billing AI':[S.bl.inv==='approved'?1:0, (S.bl.inv==='pending'||S.bl.inv==='voided'?1:0)+(S.bl.trust==='pending'?1:0)],
     'Owner\'s AI':[S.set.chg==='approved'?1:0, (S.set.chg==='pending'||S.set.chg==='voided')?1:0]
   };
@@ -1033,30 +1033,53 @@ function scSet(){
 }
 
 /* ======================================================================
-   SCREEN 6 — INTAKE CHAT AT LAUNCH
+   SCREEN 6 — INTAKE CHAT (conversational AI for leads, Release 1)
    ====================================================================== */
 const TPL = {
-  welcome:{name:'Welcome', v:2, text:'Hello, and thank you for contacting Firm F. Choose a topic below, or ask us something.'},
-  book:{name:'Book a consultation', v:3, text:'You can book a 30-minute consultation with a licensed consultant here: [booking link]. The first available times are shown when you open it.'},
+  welcome:{name:'Welcome', v:2, text:'Hello, and thank you for contacting Firm F. Choose a topic below, or type your question.'},
+  book:{name:'Book a consultation', v:3, text:'You can book a 30-minute consultation with a licensed consultant. Here are the next free times:'},
   docs:{name:'Documents overview', v:1, text:'Most applications need identity, education, work and language documents. After you sign up, your file shows the exact list for your situation.'},
   fees:{name:'Fees', v:2, text:'Our consultation fee and service fees are listed here: [fees page]. We confirm fees in writing before any work starts.'},
-  elig:{name:'Eligibility questions', v:1, text:'Only a licensed consultant can talk with you about eligibility, in a consultation. To prepare, we will ask you a few short questions.'},
-  handoff:{name:'Hand-off to a person', v:1, text:'Thank you. A member of our team will reply to you here.'}
+  about:{name:'Tell us about yourself', v:1, text:'To prepare for a consultation, we will ask you a few short questions.'},
+  handoff:{name:'A person will reply', v:1, text:'Thank you. A person from our team will reply to you here.'},
+  booked:{name:'Booking confirmed', v:1, text:'Your consultation is booked. You will get a confirmation email with the details.'}
 };
+const TOPICS = {book:'Booking', docs:'Documents', fees:'Fees', about:'Tell us about yourself', elig:'Eligibility (always a person)', unknown:'No approved topic'};
+const SLOTS = ['Tue 15 Dec, 10:00','Wed 16 Dec, 14:30'];
 const GUIDED = [
   {q:'Which country do you live in now?', a:['Country X','Country Y','Other']},
   {q:'How many years of skilled work experience do you have?', a:['Less than 1','1 to 2','3 or more']},
   {q:'Have you taken a language test?', a:['Yes','Not yet']}
 ];
+/* Simulated topic sorting: a keyword stand-in for the AI's sorting, made up for this page */
+function sortTopic(q){
+  const s = q.toLowerCase();
+  if(/eligib|qualif|chance|express entry|can i (get|apply|immigrat)|am i able|points|crs/.test(s)) return {t:'elig', conf:'high'};
+  if(/book|appointment|consult|meet|call me|slot/.test(s)) return {t:'book', conf:'high'};
+  if(/fee|cost|price|how much|pay/.test(s)) return {t:'fees', conf:'high'};
+  if(/document|paper|passport|certificate/.test(s)) return {t:'docs', conf:'high'};
+  return {t:'unknown', conf:'low'};
+}
 function inbInit(){ if(!S.inb.msgs) S.inb.msgs = [{from:'firm', tpl:'welcome'}]; }
 function bubble(m){
   if(m.from==='lead') return `<div class="bub lead">${esc(m.text)}</div>`;
   if(m.tpl){ const t = TPL[m.tpl];
-    return `<div class="bub firm"><div>${esc(t.text)}</div>${labels(L('appr',`the Owner (published template "${t.name}" v${t.v})`))}<div class="meta">Chosen by a rule: ${esc(m.rule||'start of chat')}</div></div>`; }
+    return `<div class="bub firm"><div>${esc(t.text)}</div>${m.slots?`<div class="chips">${m.slots.map(x=>`<button data-act="in-slot" data-v="${esc(x)}" ${S.inb.booked?'disabled':''}>${esc(x)}</button>`).join('')}</div><div class="meta">Free times from the Scheduler (made up)</div>`:''}${labels(L('appr',`the Owner (published template "${t.name}" v${t.v})`))}<div class="meta">Answer picked by a rule: ${esc(m.rule||'start of chat')}</div></div>`; }
   if(m.guided!=null){ const g = GUIDED[m.guided];
     return `<div class="bub firm"><div>${esc(g.q)}</div>${labels(L('appr','the Owner (published guided intake v1)'))}<div class="meta">Guided intake question ${m.guided+1} of ${GUIDED.length} · chosen by a rule</div></div>`; }
   if(m.ai) return `<div class="bub firm"><div>${esc(m.text)}</div>${labels(L('prep','Intake AI'), L('appr','the licensed consultant'))}<div class="meta">AI-written, approved before sending</div></div>`;
   return '';
+}
+function answerTopic(t, rule){
+  const n = S.inb;
+  if(t==='elig' || t==='unknown'){
+    n.msgs.push({from:'firm', tpl:'handoff', rule});
+    n.tasks.push(t==='elig' ? 'Eligibility question from Lead L-2: for the licensed consultant (no eligibility content sent)' : 'Question with no approved topic from Lead L-2');
+    return;
+  }
+  if(t==='book'){ n.msgs.push({from:'firm', tpl:'book', rule, slots:SLOTS}); return; }
+  if(t==='about'){ n.msgs.push({from:'firm', tpl:'about', rule}); if(n.guided < GUIDED.length) n.msgs.push({from:'firm', guided:n.guided}); return; }
+  n.msgs.push({from:'firm', tpl:t, rule});
 }
 function scIntake(){
   inbInit();
@@ -1066,45 +1089,41 @@ function scIntake(){
   if(last && last.guided!=null){
     chips = GUIDED[last.guided].a.map(a=>`<button data-act="in-g" data-v="${esc(a)}">${esc(a)}</button>`).join('');
   } else {
-    chips = [['book','Book a consultation'],['docs','What documents will I need?'],['fees','Fees'],['elig','Am I eligible?']].map(c=>`<button data-act="in-menu" data-v="${c[0]}">${c[1]}</button>`).join('');
+    chips = [['book','Book a consultation'],['docs','What documents will I need?'],['fees','Fees'],['about','Tell us about yourself'],['elig','Am I eligible?']].map(c=>`<button data-act="in-menu" data-v="${c[0]}">${c[1]}</button>`).join('');
   }
-  const staff = (()=>{
-    let item = '';
-    if(n.draft==='pending'){
-      item = `<div class="card"><div class="card-head"><h3>Needs you · Reply to Lead L-2</h3><span class="pill warn">Ask now</span></div>
+  const item = n.draft==='pending' ? `<div class="card"><div class="card-head"><h3>Needs you · Reply to Lead L-2</h3><span class="pill warn">Ask now</span></div>
         <div class="section stack">
           <div class="passage"><small>Lead's question in the chat</small>${esc(n.q)}</div>
           ${labels(L('draft'), L('prep','Intake AI'))}
           ${n.edit?`<textarea id="in-edit">${esc(n.text)}</textarea>`:`<div class="ai-block small">${esc(n.text)}</div>`}
-          <p class="xs muted">No published template fits this question, so a rule handed it to a person and Intake AI drafted a reply. It is not sent until a licensed person approves it. It contains no eligibility content.</p>
+          <p class="xs muted">No approved topic fits, so the lead got "A person will reply" and Intake AI drafted a reply for a person. It is not sent until a licensed person approves it. It contains no eligibility content.</p>
           <div class="row">${n.edit?`<button class="btn primary sm" data-act="in-edit-save">Save edit</button>`:`<button class="btn primary sm" data-act="in-ap">Approve and send as the licensed consultant</button><button class="btn sm" data-act="in-edit">Edit</button><button class="btn danger sm" data-act="in-rej">Reject</button>`}</div>
-        </div></div>`;
-    } else if(n.draft==='rejected'){
-      item = `<div class="notice danger"><span class="ic">×</span><div class="small">Draft rejected. Nothing was sent. The hand-off task stays open for a person to reply.</div></div>`;
-    }
-    const done = n.msgs.filter(m=>m.tpl||m.guided!=null).length;
-    return `<div class="stack">
-      <div class="card card-pad stack"><h3 style="font-size:15px">Staff view · Intake AI on Lead L-2</h3>
-        <div class="counts"><div><b>${done}</b><span class="muted">approved messages sent automatically</span></div><div><b>${n.draft==='pending'?1:0}</b><span class="muted">AI-written reply waiting</span></div></div>
-        <p class="small muted">Templates and guided questions run on their own: the Owner approved each published template and its automatic use. Which answer is shown is picked by a rule (the menu, the guided flow), never by the AI. ${tag('AIW-D102')}${tag('AIW-D105')}</p>
+        </div></div>` : n.draft==='rejected' ? `<div class="notice danger"><span class="ic">×</span><div class="small">Draft rejected. Nothing was sent. The hand-off task stays open for a person to reply.</div></div>` : '';
+  const done = n.msgs.filter(m=>m.tpl||m.guided!=null).length;
+  const staff = `<div class="stack">
+      <div class="card card-pad stack"><div class="row" style="justify-content:space-between"><h3 style="font-size:15px">Staff view · Intake AI on Lead L-2</h3>
+        <div class="row" style="gap:6px"><span class="xs muted">Firm AI switch (demo)</span><button class="switch" role="switch" aria-checked="${n.ai}" data-act="in-ai" aria-label="Firm AI switch"></button></div></div>
+        <div class="counts"><div><b>${done}</b><span class="muted">approved answers sent automatically</span></div><div><b>${n.tasks.length}</b><span class="muted">handed to a person</span></div><div><b>${n.draft==='pending'?1:0}</b><span class="muted">AI-written reply waiting</span></div></div>
+        <p class="small muted">Intake AI only sorts a typed question into one of the firm's approved topics. A rule then picks the published answer, never the AI. Booking goes through the Scheduler. Eligibility, unknown topics and unsure sorting go to a person. ${tag('AIW-D107')}${tag('AIW-D105')}${tag('AIW-D41')}</p>
+        ${n.lastSort?`<div class="passage"><small>Last question sorted</small>"${esc(n.lastSort.q)}" → <b>${esc(TOPICS[n.lastSort.t])}</b> · ${n.lastSort.conf==='low'?'unsure: handed to a person':'sure'}</div>${labels(L('prep','Intake AI'))}`:''}
+        ${!n.ai?'<div class="notice paused"><span class="ic">■</span><div class="small">AI is off: the chat falls back to the menu only. Menu answers and guided questions still work, because a rule picks them.</div></div>':''}
         ${n.guided>=GUIDED.length?`<div class="notice ok"><span class="ic">✓</span><div class="small">Guided intake complete. The answers are stored as stated by the lead, not verified. Intake AI may now start the assessment (screen 3).</div></div>`:''}
+        ${n.booked?`<div class="notice ok"><span class="ic">✓</span><div class="small">Booked by the Scheduler: ${esc(n.booked)}.</div></div>`:''}
+        ${n.tasks.length?`<div><div class="lbl" style="margin-bottom:4px">Tasks for a person</div><ul class="small" style="margin:0;padding-left:18px">${n.tasks.map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`:''}
       </div>
       ${item}
-      <div class="card card-pad stack"><div class="row" style="justify-content:space-between"><b class="small">Conversational AI for intake, FAQs and booking</b><button class="switch" role="switch" aria-checked="false" disabled aria-label="Conversational AI (not available)"></button></div>
-        <p class="xs muted">Designed for later. Off until a separate decision with the team. Any AI-written reply sent without approval needs that decision too. ${tag('AIW-D102')}</p></div>
     </div>`;
-  })();
-  return head('Screen 6 of 6','Intake chat at launch',`A chat on Firm F's website. Approved templates and guided intake questions run automatically. Answers are picked by a rule. Any newly AI-written reply waits for a person's approval before it is sent. ${tag('AIW-D102')}`) + `
-  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Lead L-2 (made up) opens the chat on Firm F's website. Click the topics, answer the guided questions, or type your own question to see the hand-off.</div></div>
+  return head('Screen 6 of 6','Intake chat',`A chat on Firm F's website, in Release 1. Intake AI sorts each question into an approved topic; a rule picks the firm's published answer. Booking goes to the Scheduler. Eligibility and anything unclear go to a person. Any AI-written reply waits for approval. ${tag('AIW-D107')}${tag('AIW-D102')}`) + `
+  <div class="scenario"><span>◇</span><div><b>Scenario.</b> Lead L-2 (made up) opens the chat. Try the menu, or type a question such as "How much do you charge?", "Can I book a call?", "Am I eligible for Express Entry?" or something unusual. The topic sorting here is a keyword stand-in for the AI.</div></div>
   <div class="chatwrap">
     <div class="chat"><div class="chat-head"><span>Firm F · chat</span><span class="xs muted">What the lead sees</span></div>
       <div class="chat-body" id="chat-body">${n.msgs.map(bubble).join('')}</div>
       <div class="chat-foot"><div class="chips">${chips}</div>
-        <div class="row" style="gap:6px"><input type="text" id="in-q" placeholder="Ask something else…" style="flex:1;min-width:0" aria-label="Type a question"><button class="btn sm" data-act="in-ask">Send</button></div></div>
+        ${n.ai?`<div class="row" style="gap:6px"><input type="text" id="in-q" placeholder="Type your question…" style="flex:1;min-width:0" aria-label="Type a question"><button class="btn sm" data-act="in-ask">Send</button></div>`:'<p class="xs muted">Menu only.</p>'}</div>
     </div>
     ${staff}
   </div>
-  ${foot('AIW-D102 (approved templates and guided intake automatic; chat serves approved content; AI-written replies need approval; future conversational AI off until a separate decision), AIW-D105 (firm-approved template use counts as approval), AIW-D41 (eligibility only from the consultant), AIW-D92; autonomy model c.2 (answer chosen by a rule, never a model).')}`;
+  ${foot('AIW-D107 (conversational AI for leads in Release 1: AI sorts into an approved topic, a rule picks the published answer, booking through the Scheduler, eligibility and anything else to a person), AIW-D102 as amended (AI-written replies need approval; menu works with AI off), AIW-D105, AIW-D41 (eligibility only from the consultant; TC-AW1-287), AIW-D92.')}`;
 }
 
 /* ======================================================================
@@ -1193,22 +1212,26 @@ document.addEventListener('click', e=>{
     /* intake */
     case 'in-menu': {
       inbInit();
-      const labelsTxt = {book:'Book a consultation', docs:'What documents will I need?', fees:'Fees', elig:'Am I eligible?'};
-      n.msgs.push({from:'lead', text:labelsTxt[v]});
-      n.msgs.push({from:'firm', tpl:v, rule:'menu option "'+labelsTxt[v]+'"'});
-      if(v==='elig' && n.guided < GUIDED.length) n.msgs.push({from:'firm', guided:n.guided});
+      const lt = {book:'Book a consultation', docs:'What documents will I need?', fees:'Fees', about:'Tell us about yourself', elig:'Am I eligible?'};
+      n.msgs.push({from:'lead', text:lt[v]});
+      answerTopic(v, v==='elig' ? 'menu option "Am I eligible?" → eligibility always goes to a person' : 'menu option "'+lt[v]+'"');
       break; }
     case 'in-g': {
       n.msgs.push({from:'lead', text:v}); n.guided++;
       if(n.guided < GUIDED.length) n.msgs.push({from:'firm', guided:n.guided});
-      else n.msgs.push({from:'firm', tpl:'book', rule:'guided intake finished → offer a consultation'});
+      else answerTopic('book', 'guided intake finished → offer a consultation');
       break; }
+    case 'in-slot': { if(n.booked) return; n.msgs.push({from:'lead', text:v}); n.booked = v; n.msgs.push({from:'firm', tpl:'booked', rule:'Scheduler confirmed the booking'}); break; }
+    case 'in-ai': n.ai = !n.ai; break;
     case 'in-ask': {
       const i = $('#in-q'); const q = i ? i.value.trim() : ''; if(!q){ i&&i.focus(); return; }
       inbInit(); n.msgs.push({from:'lead', text:q});
-      n.msgs.push({from:'firm', tpl:'handoff', rule:'no published answer matches → hand off to a person'});
-      n.q = q; n.draft = 'pending'; n.edit=false;
-      n.text = 'Thank you for your question. We can help with this. A licensed consultant can go through the details with you in a consultation, which you can book with the link in this chat. If you prefer, reply here with a good time to call you.';
+      const st = sortTopic(q); n.lastSort = {q, t:st.t, conf:st.conf};
+      answerTopic(st.t, 'Intake AI sorted the question into "'+TOPICS[st.t]+'" → '+(st.t==='elig'?'eligibility always goes to a person':st.t==='unknown'?'no approved topic: hand off to a person':'the published answer for that topic'));
+      if(st.t==='unknown'){
+        n.q = q; n.draft = 'pending'; n.edit=false;
+        n.text = 'Thank you for your question. We can help with this. A licensed consultant can go through the details with you in a consultation, which you can book in this chat. If you prefer, reply here with a good time to call you.';
+      }
       break; }
     case 'in-edit': n.edit = true; break;
     case 'in-edit-save': { const t=$('#in-edit'); if(t) n.text = t.value; n.edit=false; break; }
