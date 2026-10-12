@@ -1,6 +1,6 @@
 # Workflow pricing: the billable prepared file, usage and warnings, the SA-3 and SA-4 check, and how the numbers are set
 
-**Date:** 12 Oct 2026. **Author:** commercial-strategist (maker) for the Lead. **Status:** draft for the adversarial checker and the Lead. Nothing here changes `../../commercial/plan.md`, `model.xlsx`, any other Workstream 2 file or any team document on its own (README §2 D4; README §0 rule 12a). **Implements:** AIW-D111 (the founder, 12 Oct 2026), read with AIW-D60 (superseded in part by D111), AIW-D92 (four classes; no "AI price"), AIW-D94 (no counsel, no consultant conversations, nothing waits on validation) and AIW-D106 (simplest complete design, proportionate safeguards through the existing product).
+**Date:** 12 Oct 2026. **Author:** commercial-strategist (maker) for the Lead. **Status:** draft for the adversarial checker and the Lead. Nothing here changes `../../commercial/plan.md`, `model.xlsx`, any other Workstream 2 file or any team document on its own (README §2 D4; README §0 rule 12a). **Implements:** AIW-D111 (the founder, 12 Oct 2026), with the founder's answers AIW-D114 (unit once per application), AIW-D115 (every plan includes the AI team) and AIW-D116 (discounts on the plan price only), read with AIW-D60 (superseded in part by D111), AIW-D92 (four classes; no "AI price"), AIW-D94 (no counsel, no consultant conversations, nothing waits on validation) and AIW-D106 (simplest complete design, proportionate safeguards through the existing product).
 
 **Sources.** Team documents from the newest snapshot only: `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-03-subscription-plans-and-entitlements_v2.17_2026-10-10.md` ("SA-03 v2.17") and `SA-04-saas-billing_v2.17_2026-10-10.md` ("SA-04 v2.17"); L-numbers are lines in those files. Founder Decisions Log v1.5 (`01-techno-functional/07-Founder-Decisions-Log.md`). Our own: `../requirements/AW-01-firm-ai-assistants_v0.1.md` (document version 0.7), the change notes in `../requirements/change-notes/`, `price-card.md`, `ai-value-map-2026-10-12.md`, `../research/rules-and-ai-positioning-2026-10.md`, `../../commercial/plan.md` v1.1. One web source, cited where used.
 
@@ -12,7 +12,7 @@
 
 ## Summary (10 lines)
 
-1. **The unit:** a billable prepared file is counted **once per case, ever**, at one event: the case officer's acceptance of the Case Officer's AI readiness report on that case (AG-7-93). Re-runs on the same case never count again, so retries, duplicates and re-work after our own errors cannot consume units, and nobody has to judge whose error it was.
+1. **The unit (AIW-D114):** a billable prepared file is counted **once per application**, at one event: the case officer's acceptance of the Case Officer's AI readiness report for that application (AG-7-93). In AG-07 an application is a **filing** (AG-7-45; a simple case has one filing, and a different program is a new case, §3.0). Re-runs on the same application never count again, so retries, duplicates and re-work after our own errors cannot consume units, and nobody has to judge whose error it was.
 2. **It counts only if the AI team did the work:** a file whose AI steps fell back to the manual path because of a provider error, a safety check, a spend cap or an Expat Ready stop is not billable. Abandoned, failed, rejected and duplicate runs never reach the counting event.
 3. **This closes our open question F3** (how many days before a re-run counts again): no window is needed (Proposal).
 4. **Usage is shown where the firm already looks:** the billing screen (SA-4 §3.13), the readiness report itself, and the firm's AI reports (AG-14-39). Warnings go at 80 % of the allowance and when it is used up, before any paid extra file, through the billing notices SA-4 already keeps.
@@ -27,16 +27,23 @@
 
 ## Plain words used below
 
-- **Readiness report:** the one item per case that lists every value, source, finding and client-facing send when a file reaches "ready for review", built by rules (AW-1-72), with at most one AI-written summary paragraph (AW-1-73).
-- **Acceptance:** the case officer accepting that report; it is also the case's submission for internal review, "one act, recorded once" (AG-7-93, CN-AG-07 change 3).
+- **Readiness report:** the one item per application (filing) that lists every value, source, finding and client-facing send when a file reaches "ready for review", built by rules (AW-1-72), with at most one AI-written summary paragraph (AW-1-73).
+- **Acceptance:** the case officer accepting that report; it is also the submission for internal review, "one act, recorded once" (AG-7-93, CN-AG-07 change 3).
 - **Allowance:** the number of prepared files a plan includes each month.
 - **Extra prepared files (overage):** prepared files above the allowance in a month, each charged at the plan's overage price. On screens we say "extra prepared files", not "overage".
 - **Manual path:** what happens when an AI step does not run: the person does that step by hand (AW1-BR-16; AG-11-71).
 - **Run record:** the Case Officer's AI's own record of one job on one case (`PersonaRun`, AW-01 §7).
+- **Application:** the product's own application record. In AG-07 v2.7 a **case** is "one application, for one destination and program" (§3.0, L309–311) and "holds one or more **filings** — each one application to one authority with its own pack row, questionnaire, checklist, forms, fees, deadlines and decision" (AG-7-45, L671; §3.0, L317). So the billable unit is one **filing** (`filingId`). A simple case has one filing; a multi-level route (for example a provincial nomination, then the federal application) has two filings in one case; a different program (for example a work permit, then permanent residence) is a new case with its own filing (§3.0, L311).
 
 ---
 
 ## 1. The billable prepared file, defined exactly
+
+### 1.0 What an application is, confirmed against AG-07 (AIW-D114)
+
+- **The record.** The application is the **filing** (AG-7-45): "Every filing-owned record SHALL carry its `filingId`". AG-07 also says "where this document says 'the case', it applies per filing when a case has several" (§3.0, L317).
+- **How the readiness report attaches.** AG-7-93 (CN-AG-07 change 3, our wording) attaches acceptance to "a readiness report prepared for the case". Under L317 that reads per filing when a case has several, but the requirement does not say so explicitly. **Our knock-on (Proposal):** the `READINESS_REPORT` item (AG-11-112, CN-AG-11 change 6) and the run's usage record carry the `filingId`, and AG-7-93's wording says "for the case, or for each filing when it has several". This is our subject (CN-AG-07, CN-AG-11), not a team change.
+- **Re-runs.** Any re-run on the same filing is never billed (AIW-D114).
 
 ### 1.1 The one event that counts
 
@@ -44,19 +51,20 @@
 
 | # | Condition | Record that shows it (cited) |
 |---|---|---|
-| C1 | A case officer **accepts a readiness report** under `agent/case:review-submit`. This is the single counting event. | AG-7-93 (CN-AG-07 change 3): "that acceptance SHALL be the case's submit-for-internal-review (§3.6): one act, recorded once"; the approval item of kind `READINESS_REPORT` (AG-11-112, CN-AG-11 change 6) and its audit entry |
+| C1 | A case officer **accepts a readiness report for one application (filing)** under `agent/case:review-submit`. This is the single counting event. | AG-7-93 (CN-AG-07 change 3): "that acceptance SHALL be the case's submit-for-internal-review (§3.6): one act, recorded once"; the approval item of kind `READINESS_REPORT` (AG-11-112, CN-AG-11 change 6) and its audit entry |
 | C2 | The report was **prepared by the Case Officer's AI**: the item carries a `personaRunId` whose run is a Case run of the Case Officer's AI. A report a person prepared by hand never counts. | `ApprovalItem.personaRunId` (AW-01 §7 changed-fields table, AG-11-112); `PersonaRun.personaKey` CASE, `runType` CASE (AW-01 §7) |
-| C3 | **No earlier prepared file has been counted on the same case.** Each case is billable at most once. | `PersonaRun.usage.preparedFileCounted` (AW-01 §7) on every earlier run with the same `scopeRef`; Proposal: a unique count per firm and case (see 1.5 for the record) |
+| C3 | **No earlier prepared file has been counted on the same application (filing).** Each application is billable at most once (AIW-D114). | `PersonaRun.usage.preparedFileCounted` (AW-01 §7) on every earlier run with the same `scopeRef` and `filingId`; Proposal: a unique count per firm and filing (see 1.5 for the record) |
 | C4 | **Every AI step the run attempted for this case finished with a usable result** (or the document itself was unreadable). See 1.2 for the exact test. | `AiRunLog` rows of the run (`personaRunId`, `actionId`, `outcome`; AG-11 v1.12 §7 as amended by CN-AG-11 changes 7, 11, 14); `PersonaRun.pauseReasons[]` |
 | C5 | The firm's subscription is **not in Trial and not on a $0 Internal plan** for the *charge*. The file is still counted and shown in those states; it is never charged as an extra file (see 1.4). | Subscription status `TRIAL` (SA-4-11, SA-04 v2.17 L448); Internal plans "receive no invoices" (SA-4-46, L499) |
 
 The count belongs to the **usage month** in which the acceptance is recorded (the audit entry's time). Proposal: usage months run from the subscription's billing day, monthly, for monthly and yearly plans alike, so a yearly firm also has a monthly allowance; unused allowance does not carry over (simplest; it matches the shape of the nearest competitor, "plans … sized by applications per month (10 / 25 / 55). Extra application CAD 29", Visto, vendor claim, `price-card.md` page 2).
 
-**Why acceptance, and why once per case [I].**
+**Why acceptance, and why once per application [I].**
 - It is the moment the firm says the AI team's work is usable: the officer submits the file for review on the strength of it (AG-7-93). Nothing earlier (a run starting, a model call, a draft) is a finished piece of work.
 - It is already "recorded once" by the team's own rule (AG-7-93), so a double click or a repeated request cannot create two counts.
-- **Once per case** means a re-run on the same case is never billed, whatever caused it. That removes every argument about retries, duplicates and "whose error was it". It also closes AW-01 §13 F3 ("within how many days a re-run on the same case is not a new prepared file") with no window to set.
-- **What we give up:** genuine second preparations of the same case (for example after the client changes everything) are not billed. A new application is a new case anyway: the team already treats "opening another case (including a re-application)" as a new case (SA-03 v2.17 §3.2, L294).
+- **Once per application** (AIW-D114) means a re-run on the same application is never billed, whatever caused it. That removes every argument about retries, duplicates and "whose error was it". It also closes AW-01 §13 F3 ("within how many days a re-run on the same case is not a new prepared file") with no window to set.
+- **Several applications, several units.** A case with two filings (for example a provincial nomination, then the federal application) counts twice, once per filing; a new program is a new case and counts again (AIW-D114).
+- **What we give up:** genuine second preparations of the same application (for example after the client changes everything) are not billed. A re-application is a new case and a new application (AG-7-13, *re-application of* link; SA-03 v2.17 §3.2, L294), so it counts once.
 
 ### 1.2 What never counts, and how the records show it
 
@@ -64,16 +72,16 @@ The founder's list (AIW-D111: "system retries, failed runs and corrections of ou
 
 | Never counts | Why it cannot reach the count | How the existing records recognise it |
 |---|---|---|
-| **System retries** (a model call or an automation step tried again) | Counting is tied to acceptance per case, not to calls or runs | Repeated `AiRunLog` rows for the same `runId` and `actionId`; `AutomationRun` attempts (AG-11-34). None is an acceptance |
+| **System retries** (a model call or an automation step tried again) | Counting is tied to acceptance per application, not to calls or runs | Repeated `AiRunLog` rows for the same `runId` and `actionId`; `AutomationRun` attempts (AG-11-34). None is an acceptance |
 | **Failed runs** | A run that stops never produces an accepted report | `PersonaRun.state` STOPPED with `stopReason`; runs parked on the dead-letter pattern (AG-11-27, AW-1-54) |
 | **Provider outages** | Condition C4: if any AI step for the case ended on the manual path because the provider failed, the file is not billable even if a person finished it and accepted the report | The **last** `AiRunLog` row for a given run and `actionId` has outcome `PROVIDER_ERROR` (no later `OK` for the same action). A transient error that a retry fixed does not void the file |
 | **Expat Ready stops** (emergency stop, provider record withdrawn) | Condition C4 | `PersonaRun.pauseReasons[]` held `PLATFORM_STOP` or `PROVIDER_RECORD_WITHDRAWN` during the run (AW-1-11; CN-AG-11 change 6; AW-1-56) |
 | **Our safety check dropped an AI output** | Condition C4: the AI's output was unusable, which is our error | `AiRunLog.outcome` `DROPPED_FAILED_CHECK` (CN-AG-11 change 11; AW-1-113) as the last row for that action |
 | **A spend cap stopped an AI step** (Expat Ready's platform cap or the firm's own stricter cap) | Condition C4: the person did that step by hand (AW1-BR-16) | **Gap:** no `AiRunLog` outcome records a call skipped for a cap; the expert's question record has `SKIPPED_CAP` but a run does not. Knock-on K7 (our subject, CN-AG-11) |
-| **Duplicate runs** (two runs on the same case, a double trigger) | Condition C3: only the first accepted report on a case counts; the double-run guard already skips repeated acts | `PersonaRun.guardSkips[]` (`actGuardKey`, `matchedRunId`; AW-01 §7; AG-11-114); C3's check on earlier runs with the same `scopeRef` |
+| **Duplicate runs** (two runs on the same application, a double trigger) | Condition C3: only the first accepted report on an application counts; the double-run guard already skips repeated acts | `PersonaRun.guardSkips[]` (`actGuardKey`, `matchedRunId`; AW-01 §7; AG-11-114); C3's check on earlier runs with the same `scopeRef` |
 | **Abandoned jobs** (case withdrawn or closed, client paused, retainer ended, delegation ended, item never decided) | No acceptance happens | Case run "Ends or stops when … client paused; case closed or withdrawn; retainer ended" (AW-01 §6, run-type table); readiness item cancelled with `DELEGATION_ENDED` (CN-AG-11 change 6) or still waiting |
 | **A rejected report** | Rejection is not acceptance | Item status `REJECTED` with `rejectReason` (AG-11 v1.12 §7); "Given the officer rejects it, Then nothing is counted" (US-53) |
-| **Corrections of our own errors** (re-work after the reviewer or the officer finds an AI mistake) | Condition C3: the re-run is on a case already counted | See 1.3 |
+| **Corrections of our own errors** (re-work after the reviewer or the officer finds an AI mistake) | Condition C3: the re-run is on an application already counted | See 1.3 |
 | **A file prepared without the Case Officer's AI** | Condition C2 | No `personaRunId` on the item; "no prepared-file count or persona run exists" (AW-01 US on the seeded chase, L694) |
 
 **Not voiding (Proposal, with reasons):**
@@ -84,7 +92,7 @@ The founder's list (AIW-D111: "system retries, failed runs and corrections of ou
 
 Because no re-run on a counted case is ever billed, billing never depends on telling the cause apart. The product should still recognise correction-caused re-runs, so the firm's usage view can show "re-runs: 2, not charged" and so Expat Ready can measure quality (value map c.3). From existing records:
 
-A run on a case is a **re-run** if an earlier run on the same case (`scopeRef`) has `preparedFileCounted` true. It is **correction-caused** if, between that earlier acceptance and the new run's start, any of these is recorded:
+A run is a **re-run** if an earlier run on the same application (`scopeRef` and `filingId`) has `preparedFileCounted` true. It is **correction-caused** if, between that earlier acceptance and the new run's start, any of these is recorded:
 1. **The reviewer rejected the review round** "back to in-process with reasons" (AG-07 v2.7 §3.6, L498, quoted in CN-AG-07 change 3);
 2. **A value from the accepted report was corrected**: a new value version on a field the report listed, which makes dependent drafts stale and refreshes them (AG-11-61; AIW-D100 point 5; `valueVersionsUsed[]`, CN-AG-11 change 16);
 3. **A finding was raised on the accepted file** by the reviewer or the Checker (AG-07 v2.7 §3.6; AG-7-61);
@@ -102,15 +110,15 @@ Whether the error was the AI's, the firm's or the client's stays in the free-tex
 | $0 Internal plan | Counted and shown; never charged ("receives no invoices", SA-4-46) |
 | Upgrade in the month | The higher plan's allowance applies to the current usage month from the moment the upgrade takes effect (at once, SA4-D24); files already counted stay counted; no proration of the allowance |
 | Move to a lower plan | Its allowance applies from the renewal when the move takes effect (SA-3-60); the month's count never blocks the move (team change T5) |
-| Case passed to another case officer | Still one case: C3 applies; the new officer's run is never a second unit |
-| Change of stream (old file closes, a linked new file opens) | Not a new unit if the old case was already counted, mirroring the team's own limit rule: "Change stream … the count is unchanged (AG17-D47)" (SA-03 v2.17 L294). Needs the link between the two cases, which AG17-D47 already makes |
+| Case passed to another case officer | Still the same application: C3 applies; the new officer's run is never a second unit |
+| Change of stream (old file closes, a linked new file opens) | A new case with its own filing is a new application, so it counts once when its report is accepted (AIW-D114; AG-7-53 *stream changed* link). *Superseded:* the earlier "not a new unit" reading (12 Oct, before AIW-D114) |
 | Case withdrawn after the count | The unit stays: the work was done |
 | Acceptance by someone other than the delegating officer | AW-1-75 names the delegating officer. **Unknown** whether another holder of `agent/case:review-submit` can accept the item; if so, the acceptance still counts once (the work is the same) |
-| Acceptance undone | **Unknown** whether AG-07 allows a submission for review to be withdrawn. If it does, the count stays (the next acceptance on the case is a re-run) |
+| Acceptance undone | **Unknown** whether AG-07 allows a submission for review to be withdrawn. If it does, the count stays (the next acceptance on the same application is a re-run) |
 
 ### 1.5 The record that holds the count (a need for the team)
 
-The count must be one row per firm and case, linked to the run, the acceptance and the usage month, and later to the invoice line. Our run record already carries `usage.preparedFileCounted` (AW-01 §7, `PersonaRun`); the billing side needs a usage record per firm per usage month (team change T7). Proposal for our side: add to `PersonaRun.usage` the reason a file was not counted (`notCountedReason`: RE_RUN / MANUAL_PATH_PROVIDER / SAFETY_DROP / CAP / PLATFORM_STOP / NOT_ACCEPTED) so the firm's view can show it (knock-on K3).
+The count must be one row per firm and application (filing), linked to the run, the acceptance and the usage month, and later to the invoice line. Our run record already carries `usage.preparedFileCounted` (AW-01 §7, `PersonaRun`); the billing side needs a usage record per firm per usage month (team change T7). Proposal for our side: add to `PersonaRun.usage` the reason a file was not counted (`notCountedReason`: RE_RUN / MANUAL_PATH_PROVIDER / SAFETY_DROP / CAP / PLATFORM_STOP / NOT_ACCEPTED) so the firm's view can show it (knock-on K3).
 
 ---
 
@@ -160,13 +168,13 @@ Each usage month with extra prepared files produces one line: *"Extra prepared f
 | S3-3 | SA3-D15 (L75); SA-3-5 (L465); SA-3-39 (L515); BR-5 | "**Limit modes are fixed for the whole platform** … seats, active individual cases and active corporate cases are hard … storage is warn" | **Conflicts.** The allowance must never refuse anything; it counts and charges | **T2.** Add a third fixed mode, *metered*: the action is never refused; the count is kept per usage month; the count above the quantity is billed at the plan's overage price |
 | S3-4 | §11 Scalability (L757) | "**Limits as rows:** a new metered metric is a new row and a fixed mode, not a plan schema change." | **Fits; the team anticipated this.** | T1 and T2 follow this pattern |
 | S3-5 | SA-3-6 (L466) | "Every limited action is checked on the server at the moment of the action … No limit may be stored but unenforced." | **Needs wording.** A metered quantity is counted, not refused | **T3.** State that for a metered metric, "enforced" means counted exactly once per event and billed, never refused |
-| S3-6 | SA-3-7 (L467); §7 `UsageCounter` (L613) | "A `UsageCounterService` maintains per-(firm, metric) counts, updated on create and delete/deactivate"; `UsageCounter` "firmId, metric, currentValue, updatedAt" | **Gap.** The counter holds a current value; a metered metric needs a count per usage month that resets, fed by one event (AG-7-93 acceptance meeting §1.1) and never decreased by deletion | **T4.** A per-month count for the metered metric, written once per case from the counting event (§1.1, §1.5) |
+| S3-6 | SA-3-7 (L467); §7 `UsageCounter` (L613) | "A `UsageCounterService` maintains per-(firm, metric) counts, updated on create and delete/deactivate"; `UsageCounter` "firmId, metric, currentValue, updatedAt" | **Gap.** The counter holds a current value; a metered metric needs a count per usage month that resets, fed by one event (AG-7-93 acceptance meeting §1.1) and never decreased by deletion | **T4.** A per-month count for the metered metric, written once per application (filing) from the counting event (§1.1, §1.5; AIW-D114) |
 | S3-7 | SA-3-54 (L534) | "the higher one MUST have every feature that is on for the lower one and, for every metric, a limit at least as high" | **Fits.** Higher plans get an allowance at least as high | None |
 | S3-8 | SA3-D8 (L54); SA-3-43 (L523) | "**additions** take effect immediately; **removals** take effect at each firm's first renewal at least **30 days** after approval" | **Fits.** Raising an allowance applies at once; lowering it waits for renewal with notice | None. Consequence for setting values in §4.5 |
 | S3-9 | SA-3-58 (L540); SA3-D17 (L77) | "`checkDowngrade(firm, targetPlan)` returns every limit on which the firm's current usage is over the target plan's limit … SA-4 MUST NOT book a move to a lower plan … while any conflict remains" | **Conflicts.** A busy month's prepared-file count would block an Owner from moving down | **T5.** Exclude metered metrics from the downgrade check |
 | S3-10 | SA-3-59 (L541) | "every limit check for the firm uses the lower of the current and the target plan's limit" from booking | **Conflicts in effect.** Applying the lower allowance from booking would charge extra files before the firm has moved | **T5** (same change): metered metrics keep the current plan's allowance until the move takes effect |
 | S3-11 | SA-3-20 (L490); §3.7 (L390–395) | "an **over-limit firms list** … and (b) per firm: usage vs limit and mode per metric" | **Fits, with one row.** A firm using extra files is not "over limit" | **T6.** The per-firm panel shows the metered metric's month count and allowance; the over-limit list does not list metered metrics |
-| S3-12 | §3.3 catalogue row 30 (L345); AW-1-57 | "AI Doers (Reader, Sorter, Drafter, Checker — one switch, AG-16-35) | extra · Company settings … | Sellable — locked off until the provider terms are recorded (AG11-D13)" | **Fits as configuration, with a reading.** AIW-D111 says "subscription plans with the AI team included". *Assumption (for the Lead to confirm):* every plan sold includes the AI team. Then row 30 is placed on every plan at launch configuration ("the product owners place features on each plan when the launch plans are configured", L312) and keeps its lock until the provider record exists | **T6a (configuration, not a document change).** Row 30 on every Active Public plan; every plan carries an allowance above zero. If the founder means "some plans only", nothing changes in SA-3 |
+| S3-12 | §3.3 catalogue row 30 (L345); AW-1-57 | "AI Doers (Reader, Sorter, Drafter, Checker — one switch, AG-16-35) | extra · Company settings … | Sellable — locked off until the provider terms are recorded (AG11-D13)" | **Fits as configuration, with a reading.** AIW-D111 says "subscription plans with the AI team included". *Decided by AIW-D115:* every plan sold includes the AI team. Then row 30 is placed on every plan at launch configuration ("the product owners place features on each plan when the launch plans are configured", L312) and keeps its lock until the provider record exists | **T6a (configuration, not a document change; AIW-D115).** Row 30 on every Active Public plan; every plan carries an allowance above zero, higher plans a larger one |
 | S3-13 | SA-3-35 (L511) | "the Minder's standard deadline and expiry reminders … always on" | **Fits.** The product's deadline watching is never priced (AIW-D37) | None |
 | S3-14 | SA-3-34 (L510); SA3-D16 (L76) | "An excluded feature is always shown to the firm **locked**, with an upgrade prompt naming the lowest plan on the ladder that includes it." | **Fits as a pattern.** The 80 % and used-up warnings name the next plan up with its allowance | None beyond T11 |
 | S3-15 | SA-3-41 seats (L517), with CN-SA-03 change 2 | "An AI assistant's delegation is not a user and never counts as a seat" (proposed by us) | **Fits.** Workflow pricing tracks files, not seats | None |
@@ -187,7 +195,7 @@ Each usage month with extra prepared files produces one line: *"Extra prepared f
 | S4-10 | §3.3; SA-4-11 (L448) | "Each firm has one current subscription with: plan, billing period, price, discount, status …" | **Gap.** No usage record | **T7.** A usage record per firm per usage month: allowance, count, extra count, unit price, invoice reference; written from the counting event (§1.1) |
 | S4-11 | SA4-D24; SA-4-29 (L474) | "A change that **increases what the firm pays now** takes effect at once … a change that **keeps it the same or reduces it** takes effect at the next renewal" | **Fits.** | State the allowance rule on upgrade and downgrade (§1.4) in §3.7 (part of T12) |
 | S4-12 | SA4-D28; **SA-4-76** (L529) | "A move to a lower plan … MUST NOT be booked while SA-3's downgrade check reports any limit the firm is over on the lower plan" | **Conflicts** (as S3-9) | **T5** |
-| S4-13 | SA-4-43 (L496); SA4-D30; BR-18 | "Discounts appear on invoices and in the billing screen and never change entitlements." | **Silent.** Does a discount apply to extra files? | **T13.** Proposal: discounts apply to the plan price only, never to extra prepared files (extra files track cost to serve; founding-firm offers are on the plan, `plan.md` §3). Includes 100 % free months (SA-4-87) |
+| S4-13 | SA-4-43 (L496); SA4-D30; BR-18 | "Discounts appear on invoices and in the billing screen and never change entitlements." | **Silent.** Does a discount apply to extra files? | **T13 (AIW-D116).** Discounts apply to the plan price only, never to extra prepared files (extra files track cost to serve; founding-firm offers are on the plan, `plan.md` §3). Includes 100 % free months (SA-4-87) |
 | S4-14 | §3.8; SA-4-30 (L475) | "A plan's trial days start the firm in Trial with full access and no card." | **Silent.** | **T12.** In Trial, prepared files are counted and shown; no extra file is charged (§1.4) |
 | S4-15 | SA-4-46 (L499) | "a firm on it is never asked for a card, receives no invoices and has no overdue timeline" | **Fits.** Internal plans never pay extra files | None |
 | S4-16 | §3.5; SA-4-20, SA-4-21 (L461–462) | "A failed charge sets the subscription to Overdue …" | **Fits.** A failed charge for extra files follows the same 14-day timeline | None |
@@ -209,20 +217,20 @@ Each usage month with extra prepared files produces one line: *"Extra prepared f
 1. **T1 (SA-03):** a fifth plan quantity, *prepared files per usage month*, per plan version (amends SA3-D14, SA-3-4).
 2. **T2 (SA-03):** a third fixed mode, *metered*: never refused, counted per usage month, billed above the quantity (amends SA3-D15, SA-3-5, SA-3-39, BR-5; uses §11 "a new metered metric is a new row and a fixed mode").
 3. **T3 (SA-03):** SA-3-6 reads "counted exactly once per event and billed" for a metered metric.
-4. **T4 (SA-03):** a per-month count for the metered metric, written once per case from the counting event (SA-3-7, `UsageCounter`).
+4. **T4 (SA-03):** a per-month count for the metered metric, written once per application (filing) from the counting event (SA-3-7, `UsageCounter`; AIW-D114).
 5. **T5 (SA-03, SA-04):** metered metrics are excluded from the downgrade check and from the "lower of the two plans" rule (SA-3-58, SA-3-59, SA3-D17, SA-4-76).
-6. **T6 (SA-03):** the per-firm panel shows the month's count against the allowance; metered metrics are not on the over-limit list (SA-3-20). **T6a (configuration):** row 30 on every plan sold, each with an allowance above zero, if the Lead confirms that reading of AIW-D111.
-7. **T7 (SA-04):** a usage record per firm per usage month (allowance, count, extra count, unit price, invoice reference).
+6. **T6 (SA-03):** the per-firm panel shows the month's count against the allowance; metered metrics are not on the over-limit list (SA-3-20). **T6a (configuration):** row 30 on every plan sold, each with an allowance above zero (AIW-D115).
+7. **T7 (SA-04):** a usage record per firm per usage month (allowance, count, extra count, unit price, invoice reference), each counted file identified by its application (`filingId`).
 8. **T8 (SA-04):** SA-4-44 and SA4-D1 say the allowance and overage price are part of the plan, not an add-on; the §0.1 add-ons row is split (prepared files leave it; SMS and WhatsApp stay).
 9. **T9 (SA-04):** a plan with an allowance has one overage price per extra prepared file in CAD (amends SA-4-1); SA-4-48 covers it; a higher plan's overage price is never higher than the plan below (beside SA-4-75).
 10. **T10 (SA-04, SA-08 rail):** the overage price is pushed to the processor as a usage price; extra files are charged monthly in arrears on every plan; mixed monthly usage on yearly plans is proven in test mode with test clocks (as SA4-X12).
 11. **T11 (SA-04):** the invoice gains a usage line and its description (SA-4-16, SA-4-61, §7 `Invoice`).
 12. **T12 (SA-04):** §3.7 and §3.8 state the allowance on upgrade (at once), on a move down (at renewal), and in Trial (counted, never charged).
-13. **T13 (SA-04):** discounts, including 100 % free months, apply to the plan price only (SA-4-43, SA4-D30).
+13. **T13 (SA-04):** discounts, including the founding-firm discount, annual prepayment and 100 % free months, apply to the plan price only (SA-4-43, SA4-D30; AIW-D116).
 14. **T14 (SA-04):** two billing notice types, allowance at 80 % and allowance used, once per usage month, to billing email, Owner and Admins (SA-4-53, `BillingNotice`).
 15. **T15 (SA-04):** the billing screen shows the usage line and the counted and not-counted files (SA-4-54, §3.13).
 16. **T16 (SA-04):** plan display shows allowance and overage price beside the price (SA-4-88).
-17. **T17 (SA-04):** the subscription terms state the unit, allowance, overage price, monthly reset, Trial rule and refund of wrong counts (SA-4-65).
+17. **T17 (SA-04):** the subscription terms state the unit (one prepared file per application, AIW-D114), allowance, overage price, monthly reset, Trial rule and refund of wrong counts (SA-4-65).
 18. **T18 (SA-04, SA-09):** usage recorded from day one; revenue split plan against extra files (SA-4-37, SA4-X5); a usage-and-extra-files slice in §0.3.
 
 Two needs carried from earlier work, unchanged and still open: **G2**, the first and last time an approval item is opened, firm-wide only (value map c.6), without which the benefit side of §4 cannot be measured; and the AG-07 answer on whether a submission for review can be withdrawn (§1.4, Unknown).
@@ -310,8 +318,8 @@ On the website's per-seat base (CAD 199 per seat, billed annually), a three-seat
 |---|---|---|
 | "workflow pricing"; "your plan includes your AI team" | "AI price", "AI fee", "AI surcharge", "AI add-on" | AIW-D92, D111: the prepared file is mostly rules work (AW-1-71, AW-1-72), AI only in parts (AW-1-73); and the AI team is in the plan, not sold beside it (SA-4-44 as amended by T8) |
 | "prepared files", "extra prepared files" | "AI files", "per AI file", "AI-prepared files" as a price unit, "AI usage", "AI credits", "AI tokens", "pay per AI" | The unit is a finished piece of work, not AI consumption; tokens and credits make the firm think about our cost, not its benefit |
-| "counted once per case, when your case officer accepts the readiness report" | "pay per approval", "pay when the file is approved", "pay only for approved files" | Acceptance is the submission for internal review (AG-7-93), not a licensed person's approval or the government's decision |
-| "retries, failures, our own errors and re-runs on the same case are never counted" | "pay only for results", "pay only when it works", "pay for outcomes" | An accepted file is not a promise that the file is correct or will succeed; implying an outcome guarantee is a performance claim with no test behind it (Competition Act s. 74.01(1)(b), positioning file §(b)1.1) |
+| "counted once per application, when your case officer accepts the readiness report" | "pay per approval", "pay when the file is approved", "pay only for approved files" | Acceptance is the submission for internal review (AG-7-93), not a licensed person's approval or the government's decision |
+| "retries, failures, our own errors and re-runs on the same application are never counted" | "pay only for results", "pay only when it works", "pay for outcomes" | An accepted file is not a promise that the file is correct or will succeed; implying an outcome guarantee is a performance claim with no test behind it (Competition Act s. 74.01(1)(b), positioning file §(b)1.1) |
 | "we warn you at 80 % and before your first extra file" | "unlimited AI", "unlimited prepared files" | There is an allowance |
 | "included in your plan" | "free AI" | The AI team is paid for by the plan price |
 | "the product's deadline watching" (never priced) | any price on rules, accuracy, "Canada", deadline watching | AIW-D37; moat file §4.5 item 5, via positioning file §(c)2 rule 9 |
@@ -330,7 +338,7 @@ It is fair. What answers it today, honestly:
 - **"I still check everything":** the review time is not recorded until the team adds G2; until it is measured, no saving is claimed (§5) and the overage price stays in the lower half of the corridor (4.5).
 - **Competitors include AI for less:** vendor claims of "CAD 15 a case or CAD 29 a month" (value map, strongest objection) are cheaper headline numbers; the difference we can show is the counted, reviewable file and the record behind it, not a lower price.
 
-Our own objection to the design: **once per case leaves money on the table** when a case genuinely needs a second preparation. We accept it, because it makes the unit impossible to dispute and removes the F3 window (§1.1).
+Our own objection to the design: **once per application leaves money on the table** when an application genuinely needs a second preparation. We accept it, because it makes the unit impossible to dispute and removes the F3 window (§1.1).
 
 ---
 
@@ -340,22 +348,22 @@ Our own objection to the design: **once per case leaves money on the table** whe
 
 ---
 
-## 8. Knock-ons in our own files, for the Lead (this maker changed none of them)
+## 8. Knock-ons in our own files, for the Lead (status updated 12 Oct; unmarked rows are still open)
 
 | # | File and place | What is stale or needed |
 |---|---|---|
-| K1 | `../requirements/AW-01-firm-ai-assistants_v0.1.md` **AW-1-75** | Replace "whether a re-run on the same case within a set number of days counts again is open (§13 F3)" with the rule of §1.1 (counted once per case; C1 to C5) and §1.2 (not counted when an AI step ended on the manual path for a reason on our side); cite AIW-D111 |
+| K1 | `../requirements/AW-01-firm-ai-assistants_v0.1.md` **AW-1-75** | Replace "whether a re-run on the same case within a set number of days counts again is open (§13 F3)" with the rule of §1.1 (counted once per application, AIW-D114; C1 to C5) and §1.2 (not counted when an AI step ended on the manual path for a reason on our side); cite AIW-D111 |
 | K2 | AW-01 **AW-1-55** | "the Case assistant's prepared-file count (AW-1-75) SHALL be the costed unit" becomes "the billable unit under workflow pricing (AIW-D111)"; cost per prepared file is reported against total cost to serve (§4.1) |
 | K3 | AW-01 §7 `PersonaRun.usage` | Add `notCountedReason` (§1.5) and a link to the usage month; **US-53** gains the re-run, provider-error, safety-drop and cap cases; new user stories for the readiness-report line (§2.1) |
 | K4 | AW-01 §13 **F3** and **A9**; **AW1-D27**; **AW-1-57** ("Pricing per assistant is §13 A9") | F3 closed by §1.1 (no window); A9 closed by AIW-D111 (only the prepared file is metered; the other teammates are in the plan); AW1-D27's "pricing per assistant is decided after the pilot" superseded |
-| K5 | `../requirements/change-notes/CN-AG-07.md` change 3, knock-ons | "whether a prepared-file meter ticks on this acceptance is decided after the Step 5 conversations (AIW-D60), so no plan change is made now" is stale: it ticks on the first acceptance per case (AIW-D111) |
-| K6 | `CN-SA-12.md` change 3, SA-12-33(c); AW-1-54 | The per-firm monthly spend cap must not stop paid extra files: set it from total cost to serve at the allowance plus realistic extra files (§2.2) |
+| K5 | `../requirements/change-notes/CN-AG-07.md` change 3, knock-ons | "whether a prepared-file meter ticks on this acceptance is decided after the Step 5 conversations (AIW-D60), so no plan change is made now" is stale: it ticks on the first acceptance per application (AIW-D111, D114); AG-7-93 also gains the per-filing wording (§1.0) |
+| K6 | `CN-SA-12.md` change 3, SA-12-33(c); AW-1-54 | The per-firm monthly spend cap must not stop paid extra files: set it from total cost to serve at the allowance plus realistic extra files (§2.2) **Appended to `proposals.md` as a Lead proposal (12 Oct).** |
 | K7 | `CN-AG-11.md` (`AiRunLog` outcomes) | Record a model call skipped for a spend cap (for example outcome `SKIPPED_CAP`), so §1.2 can recognise it; our subject (README rule 11) |
 | K8 | `CN-SA-03.md` header ("Not changed. SA-4-44 and plan prices (AIW-D60)"; "AI usage and spend caps are not plan limits") and `CN-SA-04.md` header ("Not changed. SA-4-44 stands: the charge unit is decided in Step 5 (AIW-D60)") | Both stale. Proposal: replace each with a pointer to this file §3 ("the team changes for workflow pricing, AIW-D111, are listed for the team in `ai-workers/commercial/workflow-pricing-2026-10-12.md` §3.3; billing is the team's subject, so no change is proposed here"). No new change rows (brief; README rule 11) |
 | K9 | `CN-SA-09.md` change 1 | Add, aggregated across firms: share of firms using extra files per month and files not counted by reason |
-| K10 | `price-card.md` | Page 1 unit definition (IMP-18's "re-run … within N days") and "meter silently during the pilot" (IMP-18 (d)) superseded; SA-04 and SA-03 cited at v2.14 should be v2.17; the "ten conversations" framing dropped by AIW-D94; options (a) and (c) become "considered, not chosen (AIW-D111)"; the five "AI price" phrasings reworded (§5) |
-| K11 | `ai-value-map-2026-10-12.md` | Plain-word "Prepared file" points to §1 here; row 1 "How it is priced" and the pricing-models table read AIW-D111; (e) U2's "two order forms side by side" becomes one shape with recorded extra-file incidence; open item 7 answered by AIW-D111; the six "AI price" phrasings reworded |
-| K12 | `../research/rules-and-ai-positioning-2026-10.md` §(c)1 "Priced in" column ("the AI price being tested", "pending the ten conversations, AIW-D60"); §(c)2; §(c)4 revenue table | Column reads "Workflow pricing: plan allowance and extra prepared files (AIW-D111)"; merge §5's rows into §(c)2; §(c)4 options (a)/(b) become the chosen shape |
+| K10 | `price-card.md` | Page 1 unit definition (IMP-18's "re-run … within N days") and "meter silently during the pilot" (IMP-18 (d)) superseded; SA-04 and SA-03 cited at v2.14 should be v2.17; the "ten conversations" framing dropped by AIW-D94; options (a) and (c) become "considered, not chosen (AIW-D111)"; the five "AI price" phrasings reworded (§5) **Applied 12 Oct (superseded banner, unit, options marked, wording).** |
+| K11 | `ai-value-map-2026-10-12.md` | Plain-word "Prepared file" points to §1 here; row 1 "How it is priced" and the pricing-models table read AIW-D111; (e) U2's "two order forms side by side" becomes one shape with recorded extra-file incidence; open item 7 answered by AIW-D111; the six "AI price" phrasings reworded **Applied 12 Oct (prepared file, row 1, U2, pricing table, items 7 and 8 answered, wording).** |
+| K12 | `../research/rules-and-ai-positioning-2026-10.md` §(c)1 "Priced in" column ("the AI price being tested", "pending the ten conversations, AIW-D60"); §(c)2; §(c)4 revenue table | Column reads "Workflow pricing: plan allowance and extra prepared files (AIW-D111)"; merge §5's rows into §(c)2; §(c)4 options (a)/(b) become the chosen shape **§(c)2 rows applied 12 Oct; §(c)1 "Priced in" column and §(c)4 table still for the Lead.** |
 | K13 | `../research/ai-moat-and-positioning-2026-10.md` §4.5 and other files using "AI price" (`field-scan.md`, `ai-coverage-vs-competitors-2026-10.md`, `provider-and-cost.md`, `design/workers/catalogue.md`) | Sweep for "AI price" as our own wording (competitor quotes stay as quoted); a text search found 41 occurrences in 15 non-archive files, most in competitor descriptions and checks |
 | K14 | `../../commercial/plan.md` §3 row "Not at launch: Add-ons" and §8 action 3; `model.xlsx` | For the Lead's merge into `commercial/`: a row "Workflow pricing: plans include the AI team with a monthly prepared-file allowance and a per-file price for extra files (AIW-D111); values set from total cost to serve and measured benefit"; an AI input block in `model.xlsx` (allowance per plan, overage price, files per firm per month, model cost per file) |
 | K15 | `../PROGRESS.md` Step 5 row; `../NEXT.md` interview item 2 ("SA-3/SA-4 compatibility check owed") | Mark the check done (this file); the per-firm against per-seat decision (`plan.md` §8 action 3) stays the founder's |
@@ -364,12 +372,12 @@ Our own objection to the design: **once per case leaves money on the table** whe
 
 ## 9. Proposals and questions for the Lead (for `../proposals.md`; this maker has no edit tool for shared files)
 
-1. **Decision (founder, one line):** may a prepared file be counted once per case, ever, so that no re-run on the same case is billed and AW-01 §13 F3 closes with no day window? *Recommendation: yes; it is the simplest rule that meets "must not consume additional units" without judging whose error it was.*
-2. **Decision (founder, one line):** does "subscription plans with the AI team included" mean every plan sold includes the AI team (row 30 on every plan, each with an allowance above zero)? *Recommendation: yes; otherwise the lowest plan reverts to per-file pricing from the first file.*
-3. **Decision (founder, one line):** do discounts, including founding-firm discounts and 100 % free months, apply to the plan price only, never to extra prepared files (T13)? *Recommendation: yes.*
+1. ~~Decision (founder): may a prepared file be counted once per case, ever?~~ **Decided: AIW-D114** (once per application; re-runs on the same application never billed).
+2. ~~Decision (founder): does every plan sold include the AI team?~~ **Decided: AIW-D115** (every plan; higher plans a larger allowance).
+3. ~~Decision (founder): do discounts apply to the plan price only?~~ **Decided: AIW-D116** (plan price only; extra files always at list price).
 4. **Rule:** no pricing text, internal or external, uses "AI price", "AI credits" or "pay per AI"; the unit is "prepared file" (§5), merged into the positioning file §(c)2.
-5. **Plan:** the platform per-firm spend cap value is set from total cost to serve, after the allowance and overage price are set (K6).
+5. **Plan:** the platform per-firm spend cap value is set from total cost to serve, after the allowance and overage price are set (K6). *Appended to `proposals.md` as a Lead proposal, 12 Oct.*
 
-**Agent log lines for `../PROGRESS.md`** (this maker cannot append without an edit tool; the Lead appends):
+**Status after the founder's answers (12 Oct):** no founder question in this file is open. **Agent log lines for `../PROGRESS.md`** (this maker cannot append without an edit tool; the Lead appends):
 - `| 12 Oct 2026 | commercial-strategist (maker) | Started: AIW-D111 workflow pricing, unit definition and SA-3/SA-4 compatibility |`
 - `| 12 Oct 2026 | commercial-strategist (maker) | Done: commercial/workflow-pricing-2026-10-12.md (unit once per case at AG-7-93 acceptance; usage and warnings via billing screen and notices; 18 team changes T1–T18; 15 knock-ons K1–K15) |`

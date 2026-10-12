@@ -191,6 +191,12 @@ This evidence supports, and does not change, the moat file §4.5 split (rules an
 | Only once built and true: "Rules reviewed by two people before release." Later, once tested: "Rules tested against [N] client profiles before release." | "Rules verified", "AI-verified", "100% accurate" | SA1B-D18; Pega's "100% accuracy" is a vendor's own claim [21] |
 | "We use AI for language: reading and drafting. We use rules where the answer must be exact." | "AI-native" (meaning "built around AI from the start") as a claim over the rules | Overall impression; investor risk [13][41] |
 | Investor line: "AI does the language work; a maintained rules engine does the exact calculations; a licensed person runs the assessment and approves." | Any automation rate not measured; "our AI assesses eligibility" | [13][14][41]; moat file P3 |
+| *Pricing rows, added 12 Oct 2026 (AIW-D111, D114; merged from `../commercial/workflow-pricing-2026-10-12.md` §5; Unconfirmed: no counsel, AIW-D94):* "Workflow pricing"; "your plan includes your AI team" | "AI price", "AI fee", "AI surcharge", "AI add-on" | AIW-D92, D111: the prepared file is mostly rules work (AW-1-71, AW-1-72), AI only in parts (AW-1-73); the AI team is in the plan |
+| "Prepared files", "extra prepared files" | "AI files", "per AI file", "AI usage", "AI credits", "AI tokens", "pay per AI" | The unit is a finished piece of work (one per application, AIW-D114), not AI consumption |
+| "Counted once per application, when your case officer accepts the readiness report" | "Pay per approval", "pay only for approved files" | Acceptance is the submission for internal review (AG-7-93), not a licensed approval or a government decision |
+| "Retries, failures, our own errors and re-runs on the same application are never counted" | "Pay only for results", "pay only when it works", "pay for outcomes" | An accepted file is not a promise the file is correct or will succeed; an outcome claim needs an adequate test (Competition Act s. 74.01(1)(b), §(b)1.1) |
+| "We warn you at 80 % and before your first extra file"; "included in your plan" | "Unlimited AI", "unlimited prepared files", "free AI" | There is an allowance; the AI team is paid for by the plan price |
+| On the invoice: "Extra prepared files, [month]: n × CAD [price]" | "Overage fee", "AI usage charge", "penalty" | Plain words; "overage" stays an internal word |
 
 ### 3. Headline and the selling argument on today's design
 

@@ -133,7 +133,7 @@ These are **Proposals for the build**, recommendations R1 to R13 of the accuracy
 The value map (`commercial/ai-value-map-2026-10-12.md`) has the detail. The material points:
 
 - **There's no customer evidence yet.** Problems come from the requirements; savings and willingness to pay are Assumptions.
-- **Pricing is not decided.** The price card offers a per-file price (option a, illustrative CAD 25 to 40, which would need SA-4-44 changed) or an allowance inside the plan (option b); AIW-D60's conversations were dropped by AIW-D94, so the price is set from the money model and pilot measurement (Lead proposal). The other firm teammates ride inside the plan.
+- **Pricing is decided: workflow pricing.** Every plan includes the AI team with a prepared-file allowance and clearly priced extra prepared files (AIW-D111, D115); one prepared file per application (AIW-D114); discounts on the plan price only (AIW-D116); CAD 25 to 40 stays illustrative. The unit, usage, warnings, the SA-3/SA-4 check and how the numbers are set: `commercial/workflow-pricing-2026-10-12.md`. The other firm teammates ride inside the plan.
 - **Cost to serve** for a typical file is about CAD 1.72 in model cost [I].
   - About CAD 1.54 of it is the product's own reading of uploads, which sits in the base plan (AW-1-15).
   - About CAD 0.18 is the teammates' own calls.
@@ -187,6 +187,7 @@ It found 19 gaps. The Lead's rulings and the mechanisms M-2 to M-4 close the AI-
 | Grid storage and screens | The toggle grid (AIW-D101) | AG-16 / AG-11 |
 | Holding state for "ask at the checkpoint" | Items held for the end-of-job sitting (AIW-D101; autonomy E4) | AG11-D2, AG-11-55, AG-11-60 |
 | Drafts from provisional values | May the Filler draft from provisional values and re-render after verification (AIW-D100 point 5; autonomy E14) | AG-07; AG-11-97 |
+| Workflow pricing in plans and billing | A fifth, metered plan quantity (prepared files per month), an extra-file price on each plan, usage records, notices, invoice line and terms: team changes T1 to T18 (AIW-D111, D114 to D116), listed in `commercial/workflow-pricing-2026-10-12.md` §3.3 | SA-03 v2.17; SA-04 v2.17 (SA-4-44, SA-4-1) |
 
 ---
 
@@ -194,7 +195,6 @@ It found 19 gaps. The Lead's rulings and the mechanisms M-2 to M-4 close the AI-
 
 **Answered since version 2 was written:** the conversational AI for leads is in Release 1, Option A (AIW-D107); the AIW-D57 safeguards are final (AIW-D108); the repeatability promise is worded by the founder (AIW-D109).
 
-**Still open, asked one at a time:**
-1. **Support AI reading across firms.** The handbook says version 1 doesn't read across several firms. Bring it into Release 1, or record it as a named exclusion?
-2. **The price unit** (value map item 7): keep a per-file charge for the "prepared file", which is built mostly by rules, or price the AI team inside the plan?
-3. **Pilot firm one** (value map item 8): may the founder-consultant's own practice be the first pilot firm, on real client files, with no counsel?
+**Answered since:** Support AI reading across firms, aggregates only (AIW-D110); the price unit, workflow pricing (AIW-D111); pilot firm one, the founder-consultant's practice after tests and shadow (AIW-D112); assisted portal filling (AIW-D113); one prepared file per application (AIW-D114); the AI team on every plan (AIW-D115); discounts on the plan price only (AIW-D116).
+
+**No founder questions open.**
