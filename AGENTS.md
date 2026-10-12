@@ -11,7 +11,7 @@
 
 **Sources of truth, in order:** Drive requirement documents (newest snapshot) → GitHub code → the founder's decisions (`ai-workers/decisions.md`). Anything else is Proposal, Assumption or Unknown. A conflict between a source and a founder decision is recorded and goes to the founder; it is never settled by this order (`ai-workers/README.md` §0 rules 2 and 11).
 
-**Access rule (the co-founders, 9 Oct 2026; this is its one home):** read anything connected (Drive, email, GitHub, calendar). **Never change anything outside this folder**: no commits, pushes, pull requests or issues in any repository; no create, edit, copy, share or delete on Drive; no email. Enforced by `permissions.deny` in `.claude/settings.json`.
+**Access rule (the co-founders, 9 Oct 2026; this is its one home):** read anything connected (Drive, email, GitHub, calendar). **Never change anything outside this folder**: no commits, pushes, pull requests or issues in any other repository (the team's GitHub repositories and the read-only copies in `code/`); no create, edit, copy, share or delete on Drive; no email. *Clarified 13 Oct 2026:* this project folder's own local git history (no remote) is inside this folder; the Lead commits there at each step and checkpoint (`ai-workers/README.md` §0 rules 7 and 13). It is never pushed. Enforced by `permissions.deny` in `.claude/settings.json`.
 
 **Boundaries:** cite file, version, section and exact words; changing a ratified founder decision needs the founder's yes; legal points are labelled "Unconfirmed: no counsel (AIW-D94)"; immigration values come from the immigration specialist (AIW-D50); plain business language; one writer of shared files (the Lead); publish outside only when the founder says so.
 
