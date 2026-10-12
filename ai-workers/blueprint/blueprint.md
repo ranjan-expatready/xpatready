@@ -337,6 +337,19 @@ Each journey below is summarised in numbered steps. For every step, `traceabilit
 - **The in-session filling component:** a team need.
 - **AG-11-94** ("models SHALL have no tool access"): the conflict is cited, not resolved (AIW-D93).
 
+**Outages (AIW-D87):**
+- **Firm AI switch off, provider record withdrawn, or an Expat Ready stop:** the teammate is paused and no filling starts or continues. The person fills by hand or uses the field sheet (AW-1-53, AW-1-56, AW-1-11; pattern tests TC-AW1-071, -081, -209; none specific to portal filling).
+- **Portal unreachable or slow mid-fill:** the step stops with a named failure and hands control to the person (AW-1-147(e), AW-1-132). No test: our reading of (e), Proposal.
+
+**Wrong output:**
+- **A value lands wrongly in the portal:** caught by the read-back, which stops the fill (TC-AW1-298).
+
+**Misuse:**
+- **Instructions planted in a client document** can never become a field value or an action (AW-1-60, AW-1-127; TC-AW1-291).
+- **Entering an unverified, proposed or AI-written value** is refused (AW-1-147(a); TC-AW1-297).
+- **A crafted request to submit, pay or sign** is refused on the server (AW-1-48; TC-AW1-256, -300).
+- **Approval by someone without `agent/case:form-approve`** is refused (AG-11-58).
+
 ### Journey 6: AI settings: presets, grid, earned Auto, switches (AIW-D101, D104, D103)
 
 **Steps:**
@@ -359,25 +372,34 @@ Each journey below is summarised in numbered steps. For every step, `traceabilit
 - **A firm value looser than the platform's:** refused.
 - **Grid storage and screens:** team need E9.
 
-**Steps with no acceptance test (gap list).** Each has an acceptance criterion in `traceability.csv` but no AW test:
+**Outages (AIW-D87):**
+- **Firm AI switch off, provider record withdrawn, or an Expat Ready stop:** every teammate pauses whatever the preset. Rules-based automation and the manual paths carry on, and waiting items go stale on release (AW-1-53, AW-1-56, AW-1-20; TC-AW1-071, -072, -081, -084, -209).
+- **A skill that has earned Auto meets a provider outage:** its step is skipped and listed with the reason in the review (AW-1-134(d)). The skill never runs without its checks.
+
+**Wrong output:**
+- **A sample check fails after Auto is earned:** the skill drops back to approval (AW-1-136; TC-AW1-279).
+
+**Misuse:**
+- **The AI prepares a change to the grid, presets, safeguards, roles or switches:** refused (AW-1-143; TC-AW1-274, -249).
+- **A person without `agent/automation:set-autonomy` changes a preset:** refused (TC-AW1-310).
+- **A crafted request adds a never-lendable key, or a cell is set beyond the person's keys:** refused (AW-1-9, AW-1-129; TC-AW1-007, -292).
+- **A firm sets a looser safeguard or a higher spend cap than the platform allows:** refused (TC-AW1-078, -214, -215).
+
+**Steps with no acceptance test (gap list), recounted 13 Oct.** Five gaps are now closed: TC-AW1-320 (1.7), -321 (3.7), -322 (5.2), -323 (5.10) and -324 (6.6). Six steps still have no AW test:
 
 | Step | What has no test | Owner of the test |
 |---|---|---|
 | 1.1 | Lead capture and duplicates | Team (Workstream 1) |
 | 1.2 | Speed-to-lead seed | Team |
-| 1.7 | Chat with AI off (AW-1-138(d)) | **Us: add a test** |
-| 2.4 | Upload virus scan | Team; code exists |
+| 2.4 | Upload virus scan | Team; partly in code |
 | 3.4 | Stamped assessment | Team; their unit tests exist in the code copy, not run by us |
-| 3.7 | Licensed review of an explanation; override | **Us** for the review marker; team for AG-3-33 |
 | 4.10 | Processor events once | Team |
 | 4.17 | Extra files billed at the listed price; discounts on plan price only | Team, after T1 to T18 |
-| 5.2 | Untested mapping refused | **Us: add a test** |
-| 5.10 | DELEGATED audit for portal filling | **Us: add a test** |
-| 6.6 | Examples on the settings screen | **Us: add a test** (wording is the team's) |
 
 **Partial coverage, also noted in the CSV:**
-- 1.3: no test opens an Intake run directly.
-- 4.3: no test checks that an invoice is excluded from approve-all.
+- 1.3: no test opens an Intake run directly. Owner: us.
+- 4.3: no test checks that an invoice is excluded from approve-all. Owner: us.
+- 4.8: AW-1-139 has no AW-01 user story. Owner: us.
 
 ---
 

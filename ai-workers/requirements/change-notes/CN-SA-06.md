@@ -277,20 +277,20 @@ L845:
 | `agent/trust:move` *(new — CN-AG-06 change 6, AG-6-46)* | Record a trust-to-operating move (FD-17 (b)) | The Owner only until Super Admin ticks it onto other starter roles (SA-6-41); then the published starter roles (SA6-D12), as CN-AG-06 change 6 proposes | **Never** (SA-6-44) | NEW |
 | `agent/trust:reconcile` *(new — CN-AG-06 change 6, AG-6-46)* | Record the trust bank position and run the trust reconciliation report (FD-17 (d)) | The Owner only until Super Admin ticks it onto other starter roles (SA-6-41); then the published starter roles (SA6-D12), as CN-AG-06 change 6 proposes | **Never** (SA-6-44) | NEW |
 
-The team designs the mechanics behind both keys under FD-17, with the open questions of AG-06 §13 (CN-AG-06 change 6) and counsel question 9; these rows say nothing about how a move or a reconciliation works.
+The team designs the mechanics behind both keys under FD-17, with the open questions of AG-06 §13 (CN-AG-06 change 6) and ~~counsel question 9~~ the Lead's unconfirmed guidance (AIW-D94); these rows say nothing about how a move or a reconciliation works. *Added 13 Oct 2026 (AIW-D103; AG-6-47 as amended in CN-AG-06 change 6):* "never lendable" means the AI never holds or uses either key; an AI assistant MAY still **prepare** a proposed trust entry (for example a move to operating) as an approval item, which executes only when a person holding `agent/trust:move` approves the exact preview (AW-1-141, AW-1-129).
 
 **(4) Why.**
 - **CN-AG-06 change 6** (AG-6-46) names the two keys, makes both never lendable to an AI assistant, and leaves the default roles to the published starter roles (SA6-D12). Its knock-ons name this change as the SA-06 half; the key descriptions follow AG-6-46 (`00-step3-plan.md`, "Key descriptions follow their owning change").
 - **Trust accounting belongs to the team.** `00-step3-plan.md`, "Trust accounting belongs to the team": how the trust ledger works is the team's billing design under FD-17 (Workstream 1), with counsel question 9. Workstream 2 adds only the two keys, never lendable. The earlier descriptions here (a reason code, a required link, an export key) followed calls that are now superseded, so they are removed.
 - **SA-6-41** (L503): "A new firm permission is held only by Owner until Super Admin ticks it onto other starter roles and publishes".
-- **AIW-D72, with its correction rows** ("Keep FD-17 in full"): Release 1 carries the trust ledger, the recorded move and the reconciliation report; "The Billing assistant never posts a trust entry, moves a designation or computes a balance"; per the correction rows, it keeps no list, quotes no figure, and only reminds the reconciliation holder at the Practice Pack's cadence.
+- **AIW-D72, with its correction rows** ("Keep FD-17 in full"): Release 1 carries the trust ledger, the recorded move and the reconciliation report; "The Billing assistant never posts a trust entry, moves a designation or computes a balance"; per the correction rows, it keeps no list, quotes no figure, and only reminds the reconciliation holder at the Practice Pack's cadence. *Amended by AIW-D103 (12 Oct 2026):* the Billing assistant may prepare proposed trust entries for the trust-key holder's approval; it still never posts one itself, moves money, computes a balance or keeps a list.
 - **Never lendable:** a move records money, and reconciling records the bank position the report relies on; both are on the blocked list of change 1 (keys that record money).
-- **Proposal — not approved.** CN-AG-06 change 6 labels its trust requirements Proposals; counsel reads the trust rules before any pilot on real client money (counsel pack question 9).
+- **Proposal — not approved.** CN-AG-06 change 6 labels its trust requirements Proposals; ~~counsel reads the trust rules before any pilot on real client money (counsel pack question 9)~~ *superseded by AIW-D94: no counsel; question 9 is the Lead's unconfirmed guidance*.
 
 **(5) Knock-ons.**
 - AG-06 §10 and §13 (CN-AG-06 change 6).
 - SA-6-44's never-lendable list names both keys (change 1).
-- The published starter roles (SA6-D12) set the default holders; the Billing assistant reminds whoever holds `agent/trust:reconcile` (AW-01).
+- The published starter roles (SA6-D12) set the default holders; the Billing assistant reminds whoever holds `agent/trust:reconcile` (AW-01) and may prepare proposed trust entries for a holder of `agent/trust:move` to approve (AW-1-141; AIW-D103).
 
 ---
 

@@ -525,7 +525,7 @@ function stopTimer(){ if(timer){ clearInterval(timer); timer=null; } S.job.playi
 
 function jobPanel(compact){
   const j = S.job; const w = waitingNow();
-  const preset = S.set.preset==='each' ? '"Review each step"' : '"Review at checkpoints"';
+  const preset = '"Review at checkpoints" (the setting used in this walkthrough)';
   let next = jobDone() ? (reviewComplete() ? 'Nothing: the review is complete' : 'The end-of-job review is waiting for you') :
              w ? `Waiting for you now: ${esc(w.t)}` : (j.stopped ? 'Stopped by you' : 'Next: '+esc(JOB[j.i].t));
   const rows = JOB.map((s,k)=>{
@@ -720,7 +720,8 @@ function draftCard(k){
   } else if(k==='letter'){
     title = 'Letter of explanation'; lab = labels(L('draft'), L('prep','Case Officer\'s AI'));
     body = `<div class="doc">To the officer reviewing this application: the applicant has worked for Example Analytics Ltd. since <span class="hl">${esc(emp)}</span>. Their language test result shows listening <span class="hl">${esc(curVal(VALS.find(x=>x.id==='lis')))}</span> and writing <span class="hl">${esc(curVal(VALS.find(x=>x.id==='wri')))}</span>. …</div>`;
-    uses = 'Employment start date (reference letter or résumé, as you chose), listening and writing scores (language test result p.1)'; who = 'Licensed representative: the licensed consultant';
+    const empSrc = r.corr.emp ? 'value corrected by you' : r.conflict==='b' ? 'Résumé p.1, as you chose' : r.conflict==='a' ? 'Employment reference letter p.1, as you chose' : 'Employment reference letter p.1; conflict not yet resolved';
+    uses = 'Employment start date ('+empSrc+'), listening and writing scores (language test result p.1)'; who = 'Licensed representative: the licensed consultant';
   } else {
     title = 'Internal note · file summary (never sent)'; lab = labels(L('draft'), L('prep','Case Officer\'s AI'));
     body = `<div class="doc">Passport re-sent and passing. Biometrics due 2026-12-31; booking task created. Employment dates differed between two documents; resolved in review.</div>`;
@@ -747,7 +748,7 @@ function reviewHtml(){
   const r = S.rv;
   const ex = explicitVals(); const exDone = ex.filter(v=>r.ok[v.id]).length;
   const others = otherVals(); const lowOther = others.filter(v=>v.low && !r.opened[v.id]).length;
-  const canRest = lowOther===0 && r.spotRes!==null && !r.rest;
+  const canRest = lowOther===0 && (r.spotRes==='match' || (r.spotRes==='nomatch' && r.rechecked)) && !r.rest;
   if(reviewComplete()){
     const rej = ['form','letter','note'].filter(k=>r.drafts[k]==='rejected');
     return `<div class="card"><div class="card-head"><h2>End-of-job review · complete</h2>${L('appr','the licensed consultant')}</div>
@@ -780,10 +781,10 @@ function reviewHtml(){
     <div class="section stack">
       <h4>2 · The remaining ${others.length} values</h4>
       <p class="small muted">Open the uncertain one, and type the hidden one. <b>The hidden value is a spot check of your attention. It does not count as checking every value</b>; approving the rest is your statement that you looked at each. ${tag('AIW-D100 point 3')}</p>
-      ${r.spotRes==='nomatch'?'<div class="notice warn"><span class="ic">!</span><div class="small">What you typed does not match the source. Check the document before you approve the rest.</div></div>':''}
+      ${r.spotRes==='nomatch'?(r.rechecked?'<div class="notice ok"><span class="ic">✓</span><div class="small">You re-checked the value against the source. The mismatch stays on the record.</div></div>':`<div class="notice warn"><span class="ic">!</span><div class="small" style="flex:1"><b>What you typed does not match the source.</b> "Approve the rest" stays off until you re-check this value against its source. ${tag('AIW-D108')}<div style="margin-top:6px"><button class="btn sm" data-act="rv-recheck">I have re-checked the employer name against the source</button></div></div></div>`):''}
       ${r.spotRes==='match'&&!r.rest?'<div class="notice ok"><span class="ic">✓</span><div class="small">Match recorded. What you typed is not stored.</div></div>':''}
       ${otherRows()}
-      ${r.rest?'':`<div class="row"><button class="btn primary" data-act="rv-rest" ${canRest?'':'disabled'}>Approve the remaining ${others.length} values</button>${canRest?'':`<span class="small muted">${lowOther?'Open the uncertain value first. ':''}${r.spotRes===null?'Type the hidden value first.':''}</span>`}</div>`}
+      ${r.rest?'':`<div class="row"><button class="btn primary" data-act="rv-rest" ${canRest?'':'disabled'}>Approve the remaining ${others.length} values</button>${canRest?'':`<span class="small muted">${lowOther?'Open the uncertain value first. ':''}${r.spotRes===null?'Type the hidden value first.':(r.spotRes==='nomatch'&&!r.rechecked)?'Re-check the hidden value first.':''}</span>`}</div>`}
     </div>
     <div class="section stack">
       <h4>3 · Drafts · approve each one</h4>
@@ -878,7 +879,7 @@ function scAssess(){
   ${foot('AIW-D96 (AI may start it; rules calculate; label "Run by … calculated by the rules, pack v[n]"), AIW-D98 as amended by AIW-D117 and its note (stop on conflicting or stale evidence; explanation with sources and pack version; licensed review; no claim to detect wrong rules), AIW-D41 (only the consultant tells the lead), AIW-D92; Lead rulings G-2 (lead facts labelled not verified), M-2 (pre-run check), M-4 (record bound to the input snapshot and pack version); AIW-D106 note (a) (runs automatically once the stop check passes), AIW-D117 (missing inputs: incomplete result with named gaps, explanation and dependent actions paused, missing-facts template; conflicting or stale evidence stops; newer pack re-runs; "possibly eligible" only through the share).')}`;
 }
 function checksHtml(){
-  return `<h4>Evidence check before running ${tag('M-2')}</h4><div class="stack" style="gap:6px">${preChecks().map(c=>c[1]==='gap'?`<div class="check"><span class="box" style="border-color:var(--warn);color:var(--warn)">–</span><span class="t">${esc(c[0])} <span style="color:var(--warn);font-weight:600">· gap recorded: the rules still run</span></span></div>`:`<div class="check ${c[1]?'done':''}"><span class="box" style="${c[1]?'':'border-color:var(--danger);color:var(--danger)'}">${c[1]?'✓':'×'}</span><span class="t">${esc(c[0])}</span></div>`).join('')}</div><div style="margin-top:8px">${labels(L('rules'))}</div>`;
+  return `<h4>Evidence check before running ${tag('M-2')}</h4><div class="stack" style="gap:6px">${preChecks().map(c=>c[1]==='gap'?`<div class="check"><span class="box" style="border-color:var(--warn);color:var(--warn)">–</span><span class="t">${esc(c[0])} <span style="color:var(--warn);font-weight:600">· gap recorded: the rules still run</span></span></div>`:`<div class="check ${c[1]?'done':''}"><span class="box" style="${c[1]?'':'border-color:var(--danger);color:var(--danger)'}">${c[1]?'✓':'×'}</span><span class="t">${esc(c[0])}</span></div>`).join('')}</div><div style="margin-top:8px">${labels(L('rules', S.as.pack))}</div>`;
 }
 
 /* ======================================================================
@@ -1209,11 +1210,12 @@ document.addEventListener('click', e=>{
     case 'rv-spot': { const i=$('#spot-in'); const val=(i?i.value:r.spot).trim(); if(!val){ i&&i.focus(); return; }
       r.spot = val; r.spotRes = val.toLowerCase().replace(/[^a-z]/g,'').startsWith('exampleanalytics') ? 'match' : 'nomatch'; break; }
     case 'rv-rest': r.rest = true; break;
+    case 'rv-recheck': r.rechecked = true; break;
     case 'rv-dok': r.drafts[v] = 'approved'; break;
     case 'rv-rej': r.rejecting = v; break;
     case 'rv-rej-cancel': r.rejecting = null; break;
     case 'rv-rej-ok': { const t=$('#rej-'+v); const why = t?t.value.trim():''; if(!why){ t&&t.focus(); return; } r.reason[v]=why; r.drafts[v]='rejected'; r.rejecting=null; break; }
-    case 'rv-reset': Object.assign(S.rv, {ok:{}, opened:{}, corr:{}, editing:null, spot:'', spotRes:null, rest:false, conflict:null, drafts:{form:'pending',letter:'pending',note:'pending'}, ver:{form:1,letter:1,note:1}, stale:{}, rejecting:null, reason:{}}); break;
+    case 'rv-reset': Object.assign(S.rv, {ok:{}, opened:{}, corr:{}, editing:null, spot:'', spotRes:null, rechecked:false, rest:false, conflict:null, drafts:{form:'pending',letter:'pending',note:'pending'}, ver:{form:1,letter:1,note:1}, stale:{}, rejecting:null, reason:{}}); break;
     /* assessment */
     case 'as-ev': a.ev = v; a.phase='idle'; a.explained=false; a.reviewed=false; a.pack=3; a.newer=false; a.shared=null; break;
     case 'as-start': a.phase = (a.ev==='stale'||a.ev==='conflict') ? 'stopped' : 'run'; break;
