@@ -440,10 +440,10 @@ function scStart(){
   <div class="jgrid">
     <button class="jcard" data-go="team"><b>1 · Your AI team</b><span>Who each AI teammate works for, its skills, and a live view of the job running on a case.</span></button>
     <button class="jcard" data-go="file"><b>2 · Prepare a client file</b><span>Documents collected and checked, drafts prepared, then one review sitting at the end.</span></button>
-    <button class="jcard" data-go="assess"><b>3 · Run an assessment</b><span>The AI starts it, the rules calculate it, and the AI stops when evidence is missing, stale or conflicting.</span></button>
+    <button class="jcard" data-go="assess"><b>3 · Run an assessment</b><span>The AI starts it and the rules calculate it. Missing facts give an incomplete result; conflicting or stale evidence stops it.</span></button>
     <button class="jcard" data-go="bill"><b>4 · Prepare billing</b><span>An invoice and a proposed trust entry, each approved against an exact preview.</span></button>
     <button class="jcard" data-go="set"><b>5 · Choose how much to review</b><span>Two presets, a grid under "Customise", and safety floors that never move.</span></button>
-    <button class="jcard" data-go="intake"><b>6 · Intake chat at launch</b><span>Approved answers picked by a rule run on their own; AI-written replies wait for a person.</span></button>
+    <button class="jcard" data-go="intake"><b>6 · Intake chat</b><span>The AI sorts each question into an approved topic and a rule picks the answer; eligibility goes to a person; AI-written replies wait for approval.</span></button>
   </div>
   <div class="card card-pad stack">
     <h2 style="font-size:16px">What a person always does</h2>
@@ -798,15 +798,15 @@ function reviewHtml(){
    ====================================================================== */
 const EV = {
   ready:   {label:'Evidence ready'},
-  missing: {label:'Missing', name:'Missing evidence', why:'The language test result has not been given. Program A needs it.', fix:'Send the guided question "Language test" (published template) to the lead'},
-  stale:   {label:'Stale', name:'Stale evidence', why:'The lead\'s answer about work experience was given before pack v3 changed how work experience is counted.', fix:'Ask the lead to confirm their work experience again (published template)'},
+  missing: {label:'Missing input'},
+  stale:   {label:'Stale (expired document)', name:'Stale evidence', why:'The language test result the assessment needs expired on 2026-10-01 (made-up validity period in pack v3).', fix:'Ask the lead for a current language test result (published template)'},
   conflict:{label:'Conflicting', name:'Conflicting evidence', why:'The web form says 3 years of skilled work; the lead\'s message of 2 Dec says 2 years.', fix:'Ask the lead which is right, or open the two answers and choose'}
 };
 function preChecks(){
   const e = S.as.ev;
   return [
-    ['Every input the programs need is present', e!=='missing'],
-    ['No input is older than the pack allows or out of date', e!=='stale'],
+    ['Every input the programs need is present', e==='missing'?'gap':true],
+    ['No evidence the assessment needs has expired or gone out of date', e!=='stale'],
     ['No two sources disagree on an input', e!=='conflict'],
     ['The pack in use is the current published version (v'+S.as.pack+')', true]
   ];
@@ -817,10 +817,11 @@ function scAssess(){
   let body = '';
   const inputs = `<div class="tw"><table><thead><tr><th>Input</th><th>Value</th><th>Where it came from</th></tr></thead><tbody>
     <tr><td>Age</td><td>34</td><td class="small muted">Web form, 28 Nov · stated by the lead, not verified</td></tr>
-    <tr><td>Skilled work experience</td><td>${a.ev==='conflict'?'<span style="color:var(--danger);font-weight:600">3 years / 2 years</span>':'3 years'}</td><td class="small muted">${a.ev==='conflict'?'Web form 28 Nov · lead\'s message 2 Dec':a.ev==='stale'?'Web form, 14 months ago · stated by the lead, not verified':'Web form, 28 Nov · stated by the lead, not verified'}</td></tr>
-    <tr><td>Language test result</td><td>${a.ev==='missing'?'<span style="color:var(--danger);font-weight:600">Not given</span>':'CLB 8 equivalent'}</td><td class="small muted">${a.ev==='missing'?'—':'Guided question, 29 Nov · stated by the lead, not verified'}</td></tr>
+    <tr><td>Skilled work experience</td><td>${a.ev==='conflict'?'<span style="color:var(--danger);font-weight:600">3 years / 2 years</span>':'3 years'}</td><td class="small muted">${a.ev==='conflict'?'Web form 28 Nov · lead\'s message 2 Dec':'Web form, 28 Nov · stated by the lead, not verified'}</td></tr>
+    <tr><td>Language test result</td><td>${a.ev==='missing'?'<span style="color:var(--warn);font-weight:600">Not given</span>':a.ev==='stale'?'<span style="color:var(--danger);font-weight:600">CLB 8 equivalent · expired</span>':'CLB 8 equivalent'}</td><td class="small muted">${a.ev==='missing'?'—':a.ev==='stale'?'Test taken Oct 2024 · valid until 2026-10-01 (made up)':'Guided question, 29 Nov · stated by the lead, not verified'}</td></tr>
     <tr><td>Education</td><td>Bachelor's degree</td><td class="small muted">Web form, 28 Nov · stated by the lead, not verified</td></tr>
   </tbody></table></div>`;
+  const inc = a.ev==='missing';
   if(a.phase==='idle'){
     body = `<div class="card"><div class="card-head"><h3>Lead L-1 · eligibility assessment</h3><span class="pill">Not run</span></div>
       <div class="section">${inputs}</div>
@@ -830,28 +831,34 @@ function scAssess(){
     body = `<div class="card"><div class="card-head"><h3>Lead L-1 · eligibility assessment</h3><span class="pill danger">Stopped</span></div>
       <div class="section">${checksHtml()}</div>
       <div class="section stack">
-        <div class="notice danger"><span class="ic">■</span><div><b>Stopped: ${e.name}.</b> ${e.why}<div class="small" style="margin-top:4px">Intake AI did not run the assessment and did not guess. This went to the intake person at once (always asked now, in every setting). ${tag('AIW-D98')}${tag('M-2')}</div></div></div>
+        <div class="notice danger"><span class="ic">■</span><div><b>Stopped: ${e.name}.</b> ${e.why}<div class="small" style="margin-top:4px">Intake AI did not run the assessment and did not guess. A person is flagged at once (always asked now, in every setting). Unrelated work on this lead carries on. ${tag('AIW-D98')}${tag('M-2')}</div></div></div>
         ${labels(L('prep','Intake AI'))}
         <p class="small"><b>Suggested next step:</b> ${e.fix}.</p>
         <div class="row"><button class="btn primary" data-act="as-fix">Do the suggested step (simulated: the lead answers)</button><button class="btn" data-act="as-reset">Back</button></div>
       </div></div>`;
   } else {
-    body = `<div class="card"><div class="card-head"><h3>Lead L-1 · eligibility result</h3>${a.newer?'<span class="pill warn">Out of date</span>':'<span class="pill ok">Saved</span>'}</div>
-      <div class="section">${checksHtml()}<p class="small" style="margin-top:8px">The check passed, so Intake AI started the run automatically. No approval is needed to run it: the result stays inside the firm, is saved, and is calculated by the rules. ${tag('AIW-D106 note (a)')}</p></div>
+    body = `<div class="card"><div class="card-head"><h3>Lead L-1 · eligibility result</h3>${inc?'<span class="pill warn">Incomplete: gaps named</span>':'<span class="pill ok">Saved</span>'}</div>
+      <div class="section">${checksHtml()}<p class="small" style="margin-top:8px">${inc?'A missing input never stops the rules: they ran and recorded an incomplete result with the gap named, inventing no value.':'The check passed, so Intake AI started the run automatically.'} No approval is needed to run it: the result stays inside the firm, is saved, and is calculated by the rules. ${tag('AIW-D106 note (a)')}</p></div>
       <div class="section stack">
         <div class="row" style="gap:8px"><span class="cl cl-r">Run by Intake AI for the intake person; calculated by the rules, pack v${a.pack}</span></div>
-        ${a.newer?`<div class="notice warn"><span class="ic">!</span><div class="small"><b>Out of date:</b> pack v4 was published after this run. The saved result stays as it was, tied to its inputs and pack v${a.pack}. <button class="btn sm" data-act="as-rerun" style="margin-left:6px">Re-run on pack v4</button> <span class="faint">(runs automatically again once the evidence check passes)</span></div></div>`:''}
+        ${a.pack===4?`<div class="notice info"><span class="ic">↻</span><div class="small"><b>Re-run on pack v4.</b> Pack v4 was published, so the pack v3 result is kept, marked out of date, and the assessment re-ran automatically. A newer pack is a reason to re-run, not a stop. ${tag('AIW-D117 point 2')}</div></div>`:''}
         <div class="tw"><table><thead><tr><th>Program (made up)</th><th>Result</th><th>Why, by rule</th></tr></thead><tbody>
-          <tr><td>Program A</td><td><b>Meets the requirements</b></td><td class="small">Work experience 3 years ≥ 1 year (rule A-2); language CLB 8 ≥ CLB 7 (rule A-4)</td></tr>
+          ${inc?`<tr><td>Program A</td><td><b>Possibly eligible</b></td><td class="small">Work experience 3 years ≥ 1 year (rule A-2). <b style="color:var(--warn)">Gap: language test result missing</b> (rule A-4); not scored as zero</td></tr>`:`<tr><td>Program A</td><td><b>Meets the requirements</b></td><td class="small">Work experience 3 years ≥ 1 year (rule A-2); language CLB 8 ≥ CLB 7 (rule A-4)</td></tr>`}
           <tr><td>Program B</td><td><b>Does not meet</b></td><td class="small">Needs a job offer (rule B-1); none stated</td></tr>
-          <tr><td>Points total</td><td><b>412</b></td><td class="small">Points grid in pack v${a.pack} (all values made up)</td></tr>
+          <tr><td>Points total</td><td><b>${inc?'Incomplete':'412'}</b></td><td class="small">${inc?'Language points not counted until the gap is filled':'Points grid in pack v'+a.pack+' (all values made up)'}</td></tr>
         </tbody></table></div>
         <p class="xs muted">Based on facts stated by the lead, not verified. Saved and stamped with the input snapshot, pack v${a.pack} and who ran it. Same inputs and pack always give the same result. ${tag('M-4')}</p>
-        ${!a.newer&&a.pack===3?`<div class="demo"><div class="lbl">Demo control</div><p class="small">Publish a newer pack after the run, to see the result marked out of date.</p><button class="btn sm" data-act="as-pack">Publish pack v4 (simulated)</button></div>`:''}
+        ${inc?`<div class="card card-pad stack" style="box-shadow:none">
+          <b class="small">Missing-facts request sent automatically</b>
+          ${labels(L('appr','the Owner (published template "Information we still need" v1)'))}
+          <div class="doc">Thank you for your answers. To prepare for your consultation, we still need: <b>Language test result</b>.</div>
+          <p class="xs muted">Template chosen by a rule; it names the missing field only and carries no eligibility content. Sent after the recipient, consent, status and duplicate checks. A booking reminder for this lead also still runs: unrelated work never stops. ${tag('AIW-D117 point 1')}${tag('AIW-D105')}</p>
+          <div class="demo"><div class="lbl">Demo control</div><button class="btn sm" data-act="as-fill">The lead answers: CLB 8 (simulated)</button></div></div>`:''}
+        ${!inc&&a.pack===3?`<div class="demo"><div class="lbl">Demo control</div><p class="small">Publish a newer pack after the run.</p><button class="btn sm" data-act="as-pack">Publish pack v4 (simulated)</button></div>`:''}
       </div>
       <div class="section stack">
         <h4>Explanation for staff</h4>
-        ${a.explained ? `
+        ${inc ? `<div class="notice paused"><span class="ic">⏸</span><div class="small"><b>Explanation paused: result incomplete, gaps named.</b> So is the next step that needs a complete result (offering a consultation on this result). Both continue once the gap is filled. ${tag('AIW-D117 point 1')}</div></div>` : a.explained ? `
           ${labels(L('prep','Intake AI'), a.reviewed?L('appr','the licensed consultant'):L('draft'))}
           <div class="ai-block small">Lead L-1 meets Program A: three years of skilled work is above the one-year minimum in rule A-2, and the stated language level (CLB 8) is above the CLB 7 minimum in rule A-4. Program B is not met because rule B-1 needs a job offer and the lead has not stated one. The points total of 412 comes from the pack v${a.pack} points grid.</div>
           <p class="xs muted"><b>Sources:</b> saved assessment of today · pack v${a.pack} rules A-2, A-4, B-1 and the points grid · lead's web form (28 Nov) and guided answer (29 Nov). Every number above was checked by a rule against the saved result. The AI explains the rules' result; it does not check whether a rule itself is right.</p>
@@ -859,18 +866,19 @@ function scAssess(){
         ` : `<div class="row"><button class="btn sm" data-act="as-explain">Ask Intake AI to explain it</button></div>`}
       </div>
       <div class="section stack">
-        <div class="notice info"><span class="ic">i</span><div class="small"><b>Telling the lead.</b> Only the licensed consultant shares a result, through the audited share. Intake AI never tells a lead their result and never puts it in a message. ${tag('AIW-D41')}${tag('AIW-D96')}</div></div>
+        <div class="notice info"><span class="ic">i</span><div class="small"><b>Telling the lead.</b> Only the licensed consultant shares a result, through the audited share. No message or chat answer to the lead carries any result, "possibly eligible" included. ${tag('AIW-D41')}${tag('AIW-D117 point 3')}</div></div>
+        ${a.shared?`<div class="notice ok"><span class="ic">✓</span><div class="small"><b>Shared by the licensed consultant at ${a.shared}</b> through the audited share. The audit record keeps who shared what, and when.</div></div>${labels(L('appr','the licensed consultant'))}`:`<button class="btn sm" data-act="as-share" style="align-self:flex-start">Share through the audited share (as the licensed consultant)</button>`}
         <button class="btn sm" data-act="as-reset" style="align-self:flex-start">Start again</button>
       </div></div>`;
   }
-  return head('Screen 3 of 6','Run an assessment',`Intake AI may start the eligibility assessment. The rules engine calculates every result. Before running, the AI checks the evidence and stops if anything is missing, stale or conflicting. If the check passes, the run starts automatically. ${tag('AIW-D96')}${tag('AIW-D98')}`) + `
+  return head('Screen 3 of 6','Run an assessment',`Intake AI may start the eligibility assessment. The rules engine calculates every result. Before running, the AI checks the evidence. Conflicting or stale evidence stops the run and flags a person. A missing input does not: the rules run and record an incomplete result with the gap named. ${tag('AIW-D96')}${tag('AIW-D98')}`) + `
   <div class="scenario"><span>◇</span><div><b>Scenario.</b> Lead L-1 (made up) filled in Firm F's web form. Facts come from the lead and are not verified yet. Programs, rules, points and pack versions are all made up.</div></div>
   <div class="demo"><div class="lbl">Demo control · state of the lead's evidence</div><div class="seg" role="group" aria-label="Evidence state" style="margin-top:6px">${seg}</div></div>
   ${body}
-  ${foot('AIW-D96 (AI may start it; rules calculate; label "Run by … calculated by the rules, pack v[n]"), AIW-D98 and its note (stop on missing, stale or conflicting evidence; explanation with sources and pack version; licensed review; no claim to detect wrong rules), AIW-D41 (only the consultant tells the lead), AIW-D92; Lead rulings G-2 (lead facts labelled not verified), M-2 (pre-run check), M-4 (record bound to the input snapshot and pack version); AIW-D106 note (a) (runs automatically once the stop check passes).')}`;
+  ${foot('AIW-D96 (AI may start it; rules calculate; label "Run by … calculated by the rules, pack v[n]"), AIW-D98 as amended by AIW-D117 and its note (stop on conflicting or stale evidence; explanation with sources and pack version; licensed review; no claim to detect wrong rules), AIW-D41 (only the consultant tells the lead), AIW-D92; Lead rulings G-2 (lead facts labelled not verified), M-2 (pre-run check), M-4 (record bound to the input snapshot and pack version); AIW-D106 note (a) (runs automatically once the stop check passes), AIW-D117 (missing inputs: incomplete result with named gaps, explanation and dependent actions paused, missing-facts template; conflicting or stale evidence stops; newer pack re-runs; "possibly eligible" only through the share).')}`;
 }
 function checksHtml(){
-  return `<h4>Evidence check before running ${tag('M-2')}</h4><div class="stack" style="gap:6px">${preChecks().map(c=>`<div class="check ${c[1]?'done':''}"><span class="box" style="${c[1]?'':'border-color:var(--danger);color:var(--danger)'}">${c[1]?'✓':'×'}</span><span class="t">${esc(c[0])}</span></div>`).join('')}</div><div style="margin-top:8px">${labels(L('rules'))}</div>`;
+  return `<h4>Evidence check before running ${tag('M-2')}</h4><div class="stack" style="gap:6px">${preChecks().map(c=>c[1]==='gap'?`<div class="check"><span class="box" style="border-color:var(--warn);color:var(--warn)">–</span><span class="t">${esc(c[0])} <span style="color:var(--warn);font-weight:600">· gap recorded: the rules still run</span></span></div>`:`<div class="check ${c[1]?'done':''}"><span class="box" style="${c[1]?'':'border-color:var(--danger);color:var(--danger)'}">${c[1]?'✓':'×'}</span><span class="t">${esc(c[0])}</span></div>`).join('')}</div><div style="margin-top:8px">${labels(L('rules'))}</div>`;
 }
 
 /* ======================================================================
@@ -945,7 +953,7 @@ const ROWS = [
   {n:7, a:'Government form draft', each:'Ask now', cp:'At checkpoint', opts:['Ask now','At checkpoint','Off'], floor:'Always a person\'s approval', roles:[1,0,1,1,0,0]},
   {n:8, a:'Application letter drafted by AI', each:'Ask now', cp:'At checkpoint', opts:['Ask now','At checkpoint','Off'], floor:'Licensed review', roles:[1,0,1,1,0,0]},
   {n:9, a:'Anything linked to a government deadline', lock:'Ask now (locked)'},
-  {n:10,a:'Stop on missing, stale or conflicting evidence', lock:'Ask now (locked)'},
+  {n:10,a:'Stop on conflicting or stale evidence (a missing input gives an incomplete result instead)', lock:'Ask now (locked)'},
   {n:11,a:'Values read from uploads (while a job runs on the case)', each:'Ask now', cp:'At checkpoint', opts:['Ask now','At checkpoint'], floor:'Always a person\'s check', roles:[1,1,1,1,-1,-1]},
   {n:12,a:'Invoice or proposed trust entry', each:'Ask now', cp:'Ask now', opts:['Ask now','Off'], floor:'Never Auto; exact preview', roles:[1,1,1,0,1,0]},
   {n:13,a:'Export, deletion request or settings change', each:'Ask now', cp:'Ask now', opts:['Ask now','Off'], floor:'Never Auto; exact preview', roles:[1,1,0,0,0,0]},
@@ -1000,11 +1008,11 @@ function scSet(){
   </div>
   <div class="exlist">
     <div class="exbox"><h4>Runs automatically in both presets</h4><ul>
-      <li>Tasks and reminders a rule creates for you</li><li>A missing-document reminder from your firm's published template</li><li>Guided intake questions and approved templates to a new lead</li><li>Reading documents and checking them against the pack</li><li>Starting the eligibility assessment once the evidence check passes (the result is never sent to a lead or client)</li></ul></div>
+      <li>Tasks and reminders a rule creates for you</li><li>A missing-document reminder from your firm's published template</li><li>Guided intake questions, and chat answers to a new lead where the AI sorts the question into an approved topic and a rule picks the published answer</li><li>Reading documents and checking them against the pack</li><li>Starting the eligibility assessment once the evidence check passes (the result is never sent to a lead or client)</li></ul></div>
     <div class="exbox"><h4>${st.preset==='cp'?'Waits for the end-of-job review (your preset)':'Waits for the end-of-job review under "Review at checkpoints"'}</h4><ul>
       <li>Values read from a clean upload</li><li>Form drafts</li><li>A letter of explanation</li><li>Internal notes, AI-proposed tasks and filing labels, until they earn Auto</li></ul></div>
     <div class="exbox"><h4>Always asks you at once, whatever you choose</h4><ul>
-      <li>Any AI-written message to a client or lead</li><li>An invoice, proposed trust entry, export, deletion request, settings change or signature workflow</li><li>Anything linked to a government deadline</li><li>An upload the client must re-send</li><li>A stop because evidence is missing, stale or conflicting</li></ul></div>
+      <li>Any AI-written message to a client or lead</li><li>An invoice, proposed trust entry, export, deletion request, settings change or signature workflow</li><li>Anything linked to a government deadline</li><li>An upload the client must re-send</li><li>A stop because evidence is conflicting or stale</li></ul></div>
     <div class="exbox"><h4>Never done by the AI</h4><ul>
       <li>Advice, or telling a client their eligibility result</li><li>Signing</li><li>Moving money</li><li>Giving itself permissions or changing these settings</li><li>Submitting to the government</li></ul></div>
   </div>
@@ -1143,7 +1151,7 @@ function scAbout(){
       <li>People appear only by role. AI teammates appear only by their in-product names.</li>
       <li>Screens share one story: what you do on screens 2, 3, 4 and 6 changes the counts on screen 1.</li>
     </ul>
-    <p><b>Not shown here.</b> The readiness report screen; the two-person review played through (only a note says it is two sittings, values first); a client message drafted inside a file job; exports, deletion requests and signature workflows prepared by the AI (only a settings change is played, on screen 5); the daily summary; switches and pauses; the Pack author's AI and Support AI at work; Practice answers.</p>
+    <p><b>Not shown here.</b> Real AI topic sorting in the chat (a keyword stand-in plays it, including the unsure case); a real Scheduler; the readiness report screen; the two-person review played through (only a note says it is two sittings, values first); a client message drafted inside a file job; exports, deletion requests and signature workflows prepared by the AI (only a settings change is played, on screen 5); the daily summary; switches and pauses; the Pack author's AI and Support AI at work; Practice answers.</p>
     <p class="small muted" style="margin-top:14px">The autonomy model and journey mechanisms are Proposals with Lead rulings; grid storage, the holding state for the review and the screens themselves are the team's to build. The wording here is illustrative, not a screen specification.</p>
   </div>
   ${foot('AIW-D89, AIW-D92 to AIW-D105, AIW-D98 note; README §0 rules 7, 9, 10.')}`;
@@ -1186,14 +1194,15 @@ document.addEventListener('click', e=>{
     case 'rv-rej-ok': { const t=$('#rej-'+v); const why = t?t.value.trim():''; if(!why){ t&&t.focus(); return; } r.reason[v]=why; r.drafts[v]='rejected'; r.rejecting=null; break; }
     case 'rv-reset': Object.assign(S.rv, {ok:{}, opened:{}, corr:{}, editing:null, spot:'', spotRes:null, rest:false, conflict:null, drafts:{form:'pending',letter:'pending',note:'pending'}, ver:{form:1,letter:1,note:1}, stale:{}, rejecting:null, reason:{}}); break;
     /* assessment */
-    case 'as-ev': a.ev = v; a.phase='idle'; a.explained=false; a.reviewed=false; a.pack=3; a.newer=false; break;
-    case 'as-start': a.phase = a.ev==='ready' ? 'run' : 'stopped'; break;
+    case 'as-ev': a.ev = v; a.phase='idle'; a.explained=false; a.reviewed=false; a.pack=3; a.newer=false; a.shared=null; break;
+    case 'as-start': a.phase = (a.ev==='stale'||a.ev==='conflict') ? 'stopped' : 'run'; break;
+    case 'as-fill': a.ev = 'ready'; break;
+    case 'as-share': a.shared = nowStamp(); break;
     case 'as-fix': a.ev = 'ready'; a.phase = 'run'; break;
-    case 'as-pack': a.newer = true; break;
-    case 'as-rerun': a.pack = 4; a.newer = false; a.explained = false; a.reviewed = false; break;
+    case 'as-pack': a.pack = 4; a.explained = false; a.reviewed = false; break;
     case 'as-explain': a.explained = true; break;
     case 'as-review': a.reviewed = true; break;
-    case 'as-reset': a.phase='idle'; a.explained=false; a.reviewed=false; a.pack=3; a.newer=false; break;
+    case 'as-reset': a.phase='idle'; a.explained=false; a.reviewed=false; a.pack=3; a.newer=false; a.shared=null; break;
     /* billing */
     case 'bl-change': b.changed = true; b.inv = 'voided'; break;
     case 'bl-inv-ok': b.inv = 'approved'; b.invAt = nowStamp(); break;
