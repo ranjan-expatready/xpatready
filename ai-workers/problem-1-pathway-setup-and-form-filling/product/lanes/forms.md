@@ -8,7 +8,7 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 current_item: F1-forms-channels
 stage: FIX
 owner: Builder
-next_action: slice 2 fixes in; rerunning the slice 2 suite (test server needs STUDIO_PART_PAUSE_MS=3000 for the cancel check); then CHECK, owner Lead.
+next_action: rerunning slice 2 and launch suites after narrowing the screen exemption to the approved screens' own words; then CHECK, owner Lead.
 blocked_by: none
 updated: 2026-10-23
 

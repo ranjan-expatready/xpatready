@@ -164,10 +164,10 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   // Break M2: a cancel stops the parts not yet started (each would be a paid call in live mode).
   r = await call("POST", `/attachments/${att(sv, "imm5257e.pdf")}/draft`, { mode: "stub" });
   const cj = r.body; await until(async () => ((await call("GET", `/jobs/${cj.id}`)).body.detail?.a4?.parts ?? []).some((p: { status: string }) => p.status !== "queued"), 120_000);
-  const cancel = await call("POST", `/ai/batches/${cj.batchId}/cancel`, {});
+  const cancel = await call("POST", `/ai/batches/${sql(`select batch_id from drafting_job where id='${cj.id}'`)}/cancel`, {});
   const stopped = await finished(cj.id);
   const notStarted = (stopped.detail?.a4?.parts ?? []).filter((p: { status: string }) => p.status === "not started").length;
-  ok("A4 cancel (break M2): parts not yet started are not sent after a cancel", cancel.status === 201 && stopped.status === "CANCELLED" && notStarted >= 1 && /were not sent|Cancelled/.test(stopped.message), { status: stopped.status, notStarted, message: stopped.message?.slice(0, 160) });
+  ok("A4 cancel (break M2): parts not yet started are not sent after a cancel", cancel.status === 201 && stopped.status === "CANCELLED" && notStarted >= 1 && /were not sent|Cancelled/.test(stopped.message), { cancel: cancel.status, status: stopped.status, notStarted, message: stopped.message?.slice(0, 160) });
 
   // ──────────────────────────────────────────── A4 reuse first, through the API
   const replayAtt = att(vv, "imm5257e.pdf");
