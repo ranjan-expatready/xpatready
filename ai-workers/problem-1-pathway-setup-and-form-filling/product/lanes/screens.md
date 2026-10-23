@@ -1,7 +1,7 @@
 # Lane: screens — Milestone 2 screens
 
 ## From the Lead
-2026-10-23 (Lead): stage stays DEMO (founder walkthrough). The next FIX pass, after the walkthrough, carries: QA-1 the shared Release page must not bypass submission and expert sign-off (`api/src/studio.ts:527-547`); QA-3 restart script stops only its own port; the forms lane's request to call `defaultChannelFor` in "+ Add line" (`api/src/programs.ts`) once F1 slice 1 is on main. See `qa/BUGS.md`.
+2026-10-23 (Lead): stage stays DEMO while the founder decides how to close Screen 01. The next FIX pass carries: QA-1 the shared Release page must not bypass submission and expert sign-off (`api/src/studio.ts:527-547`); **QA-13 (Major, Lead walk 23 Oct):** "Add 1 form from the library" on Visitor visa returns 409 "the database refused a duplicate" because a RETIRED IMM 5707 line (version 1) exists and `addLine` creates version 1 again (`api/src/programs.ts:291-305`, unique `combinationId, lineageKey, version`): reuse or re-version the retired line, test pass and fail; P-63 words on the combination page ("Boxes mapped", "mapped boxes", "data boxes" → form fields); the next step repeated under both missing items; the tester's QA-3, QA-5, QA-6, QA-7, QA-10, QA-11, QA-12 (`qa/BUGS.md` on the qa branch); the forms lane's request to call `defaultChannelFor` in "+ Add line" once F1 slice 1 is on main.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
