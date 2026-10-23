@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F2 · Browser extension side panel — draft board (screen-designer, not agreed)</title>
+<style>
+/* Team tokens (code/ERv2-frontend@5ccd9fa-2026-10-20/src/styles/tokens.css), copied as values so the board is self-contained. */
+:root{
+  --blue:#0862c5; --primary-50:#e6f4ff; --primary-100:#cce9ff; --primary-700:#054e9c;
+  --orange-50:#fff3e0; --orange-500:#ff8500; --orange-900:#663200;
+  --n50:#f7f7f7; --n100:#eeeeee; --n200:#d9d9d9; --n300:#bfbfbf; --n600:#737373; --n900:#2d2d2d;
+  --danger:#dc2626; --danger-t:#991b1b; --danger-50:#fdecec; --ok:#16a34a; --ok-t:#0f5c2e; --ok-50:#eaf7ef;
+  --surface:var(--n50); --raised:#fff; --text:var(--n900); --muted:var(--n600); --link:var(--primary-700);
+  --border:var(--n200); --border-strong:var(--n300);
+  --font:Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --head:"Proxima Nova", Inter, system-ui, sans-serif;
+  --r:6px;
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 var(--font);color:var(--text);background:var(--surface)}
+h1,h2,h3{font-family:var(--head);margin:0;font-weight:600}
+h1{font-size:24px} h2{font-size:20px;margin:32px 0 4px} h3{font-size:16px}
+p{margin:4px 0}
+.wrap{max-width:1500px;margin:0 auto;padding:24px}
+.muted{color:var(--muted)} .small{font-size:12px}
+a{color:var(--link)}
+/* Labels on the board (P-33, P-26) and decision marks */
+.tag{display:inline-block;font-size:12px;line-height:16px;padding:1px 6px;border-radius:10px;border:1px solid;white-space:nowrap;vertical-align:middle;font-weight:500}
+.cap{background:var(--primary-50);border-color:var(--primary-100);color:var(--primary-700)}
+.scaf{background:var(--n100);border-color:var(--n300);color:var(--n900);border-style:dashed}
+.nb{background:#fff;border-color:var(--n300);color:var(--muted);text-decoration:line-through}
+.dec{background:var(--ok-50);border-color:#bfe5cc;color:var(--ok-t)}
+.miss{background:var(--orange-50);border-color:#ffc773;color:var(--orange-900)}
+.sample{background:#fff;border-color:var(--orange-500);color:var(--orange-900)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:12px 0;padding:12px;background:#fff;border:1px solid var(--border);border-radius:var(--r)}
+.note{background:#fff;border:1px solid var(--border);border-left:4px solid var(--blue);border-radius:var(--r);padding:8px 12px;margin:8px 0}
+/* Browser frame */
+.browser{border:1px solid var(--border-strong);border-radius:8px;background:#fff;overflow:hidden;box-shadow:0 2px 6px #0000001a}
+.bar{display:flex;gap:8px;align-items:center;padding:6px 10px;background:var(--n100);border-bottom:1px solid var(--border)}
+.dots span{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--n300);margin-right:4px}
+.url{flex:1;background:#fff;border:1px solid var(--border);border-radius:14px;padding:3px 12px;font-size:12px;color:var(--muted)}
+.split{display:grid;grid-template-columns:1fr 360px}
+.portal{padding:20px 28px;border-right:1px solid var(--border);background:#fff;font-family:Arial, sans-serif}
+.portal .ptop{background:#26374a;color:#fff;padding:8px 12px;margin:-20px -28px 16px;font-size:14px}
+.portal h3{font-family:Arial,sans-serif;font-size:20px;margin-bottom:12px}
+.pf{margin:0 0 10px}
+.pf label{display:block;font-size:14px;margin-bottom:2px}
+.pf .in{border:1px solid #888;border-radius:3px;padding:4px 8px;min-height:30px;width:320px;background:#fff;font-size:14px}
+.pf .in.filled{outline:2px solid var(--blue);outline-offset:1px;background:var(--primary-50)}
+.pf .in.bad{outline:2px solid var(--danger);outline-offset:1px;background:var(--danger-50)}
+.pf .in.need{outline:2px dashed var(--orange-500);outline-offset:1px}
+.pf .mark{font-size:12px;margin-left:6px}
+.row3{display:flex;gap:8px} .row3 .in{width:96px}
+fieldset{border:1px solid #ccc;border-radius:3px;margin:0 0 10px;padding:6px 10px}
+legend{font-size:14px;font-weight:bold}
+.btnp{display:inline-block;background:#26374a;color:#fff;padding:6px 14px;border-radius:3px;font-size:14px}
+/* Side panel */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:20px;margin-top:12px}
+.state{display:flex;flex-direction:column;gap:6px}
+.state .cap-line{font-size:12px;color:var(--muted)}
+.state h3{font-size:16px}
+.sp{width:360px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;display:flex;flex-direction:column;min-height:520px;box-shadow:0 1px 3px #00000014}
+.split .sp{border:0;border-radius:0;box-shadow:none;width:auto}
+.sph{padding:10px 14px;border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.logo{color:var(--blue);font-family:var(--head);font-weight:700;font-size:16px}
+.seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:6px;overflow:hidden;font-size:12px}
+.seg span{padding:3px 10px}
+.seg .on{background:var(--blue);color:#fff}
+.ctx{margin-top:6px;font-size:12px;color:var(--muted)}
+.ctx b{color:var(--text);font-weight:600;font-size:14px}
+.spb{padding:12px 14px;flex:1;overflow:auto}
+.spf{padding:10px 14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:8px}
+.btn{font:inherit;font-size:14px;border-radius:6px;padding:7px 14px;border:1px solid var(--border-strong);background:#fff;color:var(--text);cursor:default}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.btn.link{border:0;background:none;color:var(--link);padding:7px 0}
+.btn[disabled]{opacity:.5}
+.stat{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:6px;margin:0 0 10px;font-size:14px}
+.stat.ok{background:var(--ok-50);color:var(--ok-t)} .stat.warn{background:var(--orange-50);color:var(--orange-900)}
+.stat.err{background:var(--danger-50);color:var(--danger-t)} .stat.info{background:var(--primary-50);color:var(--primary-700)}
+.stat .ic{font-weight:700;min-width:16px}
+ul.items{list-style:none;margin:0;padding:0}
+ul.items li{display:grid;grid-template-columns:20px 1fr;gap:4px 6px;padding:7px 0;border-bottom:1px solid var(--n100)}
+ul.items .ic{font-weight:700;text-align:center}
+ul.items .lbl{font-weight:500}
+ul.items .val{grid-column:2;font-size:14px}
+ul.items .src{grid-column:2;font-size:12px;color:var(--muted)}
+.i-ok{color:var(--ok-t)} .i-warn{color:var(--orange-900)} .i-err{color:var(--danger-t)} .i-me{color:var(--primary-700)}
+.field{margin:0 0 10px}
+.field label{display:block;font-size:14px;font-weight:500;margin-bottom:3px}
+.field .in{border:1px solid var(--border-strong);border-radius:6px;padding:6px 10px;font-size:14px;background:#fff}
+.field .help{font-size:12px;color:var(--muted);margin-top:2px}
+.field .error{font-size:12px;color:var(--danger-t);margin-top:2px}
+.skel{height:14px;background:linear-gradient(90deg,var(--n100),var(--n50),var(--n100));border-radius:4px;margin:8px 0}
+.prog{display:flex;gap:4px;margin:6px 0 10px}
+.prog span{flex:1;height:6px;border-radius:3px;background:var(--n200)} .prog .d{background:var(--blue)}
+.code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--n50);border:1px solid var(--border);border-radius:4px;padding:1px 4px}
+.pair{font-family:ui-monospace,Menlo,monospace;font-size:24px;letter-spacing:4px;text-align:center;border:1px dashed var(--border-strong);border-radius:6px;padding:12px;margin:12px 0}
+.studio{width:520px;background:#fff;border:1px solid var(--border-strong);border-radius:8px;min-height:420px;display:flex;flex-direction:column}
+table.t{border-collapse:collapse;width:100%;background:#fff;font-size:14px}
+table.t th,table.t td{border-bottom:1px solid var(--border);padding:8px;text-align:left;vertical-align:top}
+table.t th{font-weight:600;background:var(--n50)}
+.tags{display:flex;flex-wrap:wrap;gap:4px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>F2 · Browser extension: capture and fill (side panel, both modes)</h1>
+<p class="muted">Draft board by the screen-designer for the Lead, 23 Oct. Not agreed. The board shows intent, not pixels (P-44): flow, words and behaviour are fixed here; the builder uses the team's components for details. Concept: <span class="code">screens/F2-extension/concept-draft.md</span>.</p>
+
+<div class="legend" aria-label="Legend">
+  <span><span class="tag cap">Capability</span> what the product does in production</span>
+  <span><span class="tag scaf">Scaffolding</span> local fixtures, dev build, Sample data, demo chrome</span>
+  <span><span class="tag cap">Needed</span> needed for the proof</span>
+  <span><span class="tag nb">Not built</span> shown for orientation only (milestone named)</span>
+  <span><span class="tag dec">Follows …</span> decision followed</span>
+  <span><span class="tag miss">Decision missing → Qn</span> a question for the Lead</span>
+  <span><span class="tag sample">Sample</span> invented data; not an IRCC screen or a real client</span>
+</div>
+<div class="note small">All portal screens shown are the forms lane's F1 fixtures (Sample visitor-visa screens, IMM 5257 online), <b>not real IRCC screens</b>. Client A, the filing reference, dates and codes are Sample. Portal names come from the Sample portal list until the immigration expert confirms them. Unconfirmed: no counsel on using automation on IRCC or ESDC portals.</div>
+
+<!-- ─────────────────────────────── A. In context ─────────────────────────────── -->
+<h2>A. In context: fill mode after "Fill this screen"</h2>
+<p class="muted">The representative is signed in to the portal in their own browser (the extension never signs in). The side panel opens beside the portal screen. <span class="tag dec">Follows decision 16 · P-62 §8</span></p>
+<div class="browser" role="img" aria-label="Browser with a Sample portal screen on the left and the ExpatReady side panel on the right">
+  <div class="bar"><span class="dots"><span></span><span></span><span></span></span><span class="url">localhost:4459/portal/visitor/personal — local copy of a Sample screen</span><span class="tag scaf">Scaffolding · Needed (fixture server, dev build)</span></div>
+  <div class="split">
+    <div class="portal">
+      <div class="ptop">Portal (Sample) · Application for a visitor visa</div>
+      <h3>Personal details</h3>
+      <fieldset><legend>Full name</legend>
+        <div class="pf"><label>Family name (as shown on your passport or travel document) (required)</label><div class="in filled">SAMPLE-FAMILY</div></div>
+        <div class="pf"><label>Given name(s) (as shown on your passport or travel document)</label><div class="in filled">SAMPLE-GIVEN</div></div>
+      </fieldset>
+      <div class="pf"><label>UCI</label><div class="in need"></div><span class="mark i-warn">! not filled: not confirmed</span></div>
+      <div class="pf"><label>Sex</label><div class="in filled">Female</div></div>
+      <fieldset><legend>Date of birth</legend>
+        <div class="row3"><div class="pf"><label>Year</label><div class="in filled">1990</div></div><div class="pf"><label>Month</label><div class="in filled">04</div></div><div class="pf"><label>Day</label><div class="in filled">12</div></div></div>
+      </fieldset>
+      <fieldset><legend>Place of birth</legend>
+        <div class="pf"><label>City or town</label><div class="in filled">Sample City</div></div>
+        <div class="pf"><label>Country or territory</label><div class="in filled">India</div></div>
+      </fieldset>
+      <span class="btnp">Save and continue</span> <span class="small muted">← the extension never clicks this</span>
+      <p class="small muted" style="margin-top:12px">Highlights: solid blue = filled by the extension, read back equal · dashed orange = needs you · red = not accepted by the screen. Each highlight carries text, not colour alone. <span class="tag cap">Capability · Needed</span></p>
+    </div>
+    <div class="sp">
+      <div class="sph">
+        <div class="brand"><span class="logo">ExpatReady</span><span class="seg" aria-label="Mode"><span class="on">Fill</span><span>Capture</span></span></div>
+        <div class="ctx"><b>Client A · Visitor visa</b><br>Filing ER-F-0142 · IMM 5257 online · Personal details <span class="tag sample">Sample</span></div>
+      </div>
+      <div class="spb">
+        <div class="stat ok"><span class="ic">✓</span><span><b>Filled 8 of 9 · 1 needs you.</b> Every value was read back from the screen. Check them, then use the portal's own Save and continue.</span></div>
+        <ul class="items">
+          <li><span class="ic i-ok">✓</span><span class="lbl">Family name</span><span class="val">SAMPLE-FAMILY</span><span class="src">Passport · confirmed by the officer, 21 Oct</span></li>
+          <li><span class="ic i-ok">✓</span><span class="lbl">Given name(s)</span><span class="val">SAMPLE-GIVEN</span><span class="src">Passport · confirmed by the officer, 21 Oct</span></li>
+          <li><span class="ic i-warn">!</span><span class="lbl">UCI</span><span class="val">Not filled: confirm <a href="#">Identity</a> in the case first</span><span class="src">Client's earlier letter · read by AI, not yet confirmed <span class="tag dec">Follows P-72</span></span></li>
+          <li><span class="ic i-ok">✓</span><span class="lbl">Sex</span><span class="val">Female <span class="code">FEMALE</span></span><span class="src">Client's answer · questionnaire, 19 Oct</span></li>
+          <li><span class="ic i-ok">✓</span><span class="lbl">Date of birth › Year, Month, Day</span><span class="val">1990 · 04 · 12</span><span class="src">Passport · confirmed by the officer, 21 Oct</span></li>
+          <li><span class="ic i-ok">✓</span><span class="lbl">Place of birth › City or town</span><span class="val">Sample City</span><span class="src">Client's answer · questionnaire, 19 Oct</span></li>
+          <li><span class="ic i-ok">✓</span><span class="lbl">Place of birth › Country or territory</span><span class="val">India <span class="code">IND</span></span><span class="src">Passport · confirmed by the officer, 21 Oct</span></li>
+        </ul>
+        <p class="small muted" style="margin-top:8px">These values are kept only while this screen is open; nothing is saved in the browser. <span class="tag dec">Follows decision 16</span></p>
+        <p class="small"><span class="tag nb">Not built (M4): Report a mapping problem</span> <span class="tag nb">Not built (M3): Mark screen entered</span></p>
+      </div>
+      <div class="spf"><button class="btn link">Open the case</button><button class="btn primary">Fill this screen</button></div>
+    </div>
+  </div>
+</div>
+<p class="small"><span class="tag cap">Capability · Needed</span> side panel, content-script filler, read-back, fill-plan endpoint, outcome event (no values). <span class="tag scaf">Scaffolding · Needed</span> fixture server on port 4459, dev manifest with a localhost host, Sample case facts from the runtime lane (R1).</p>
+
+<!-- ─────────────────────────────── B. Fill mode states ─────────────────────────────── -->
+<h2>B. Fill mode: every state</h2>
+<p class="muted">One primary action per state. The plan for a screen is fetched on click, used, and dropped. <span class="tag dec">Follows decision 16, P-66 §2, P-72</span></p>
+<div class="grid">
+
+  <div class="state"><h3>F0 · Not connected</h3><span class="cap-line">First open, or after the browser restarts (the session lives in memory only). <span class="tag cap">Capability · Needed</span> <span class="tag miss">Decision missing → Q1</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span></div></div>
+      <div class="spb"><h3>Connect to ExpatReady</h3><p class="muted">In ExpatReady, open your name menu and choose <b>Connect the browser extension</b>. Enter the code it shows.</p>
+        <div class="field" style="margin-top:12px"><label for="c0">Connection code</label><div class="in" id="c0">K7Q-4MZP</div><div class="help">8 characters, valid for 5 minutes, works once.</div></div>
+        <p class="small muted">The extension never asks for your portal password and never signs in to the portal.</p></div>
+      <div class="spf"><span></span><button class="btn primary">Connect</button></div></div></div>
+
+  <div class="state"><h3>F0b · Code refused</h3><span class="cap-line">Error on the field, with the fix. <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span></div></div>
+      <div class="spb"><h3>Connect to ExpatReady</h3>
+        <div class="field" style="margin-top:12px"><label for="c0b">Connection code</label><div class="in" id="c0b" style="border-color:var(--danger)">K7Q-4MZP</div><div class="error">✕ This code has expired. Get a new code in ExpatReady and enter it within 5 minutes.</div></div></div>
+      <div class="spf"><span></span><button class="btn primary">Connect</button></div></div></div>
+
+  <div class="state"><h3>F1 · Choose the filing</h3><span class="cap-line">Lists only online filings the person may open (server checks). <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span class="on">Fill</span><span>Capture</span></span></div><div class="ctx">Connected as Case officer <span class="tag sample">Sample</span></div></div>
+      <div class="spb"><div class="field"><label for="f1s">Find a filing</label><div class="in" id="f1s">Search by client or filing reference</div></div>
+        <ul class="items">
+          <li><span class="ic">○</span><span class="lbl">Client A · Visitor visa</span><span class="src">ER-F-0142 · IMM 5257 online · IRCC Portal <span class="tag sample">Sample</span></span></li>
+          <li><span class="ic">○</span><span class="lbl">Client B · Spousal sponsorship</span><span class="src">ER-F-0139 · IMM 0008, IMM 5669, IMM 5406 online · Representative PR Portal <span class="tag sample">Sample</span></span></li>
+        </ul>
+        <p class="small muted">Tip: type the filing reference into the portal's "case ID" box so the two stay linked. <span class="tag dec">Follows P-65</span></p></div>
+      <div class="spf"><span></span><button class="btn primary">Use this filing</button></div></div></div>
+
+  <div class="state"><h3>F1b · No online filings</h3><span class="cap-line">Empty state that teaches the first step. <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span class="on">Fill</span><span>Capture</span></span></div></div>
+      <div class="spb"><h3>No online filings for you yet</h3><p class="muted">A filing appears here when one of your cases has a form filed online and its approved online version exists. Paper and signed PDF forms are prepared in ExpatReady, not here.</p></div>
+      <div class="spf"><span></span><button class="btn primary">Open ExpatReady</button></div></div></div>
+
+  <div class="state"><h3>F2 · Ready</h3><span class="cap-line">The extension has not read anything yet; it reads the screen's structure only when the button is clicked. <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span class="on">Fill</span><span>Capture</span></span></div><div class="ctx"><b>Client A · Visitor visa</b><br>Filing ER-F-0142 · IMM 5257 online <span class="tag sample">Sample</span></div></div>
+      <div class="spb"><div class="stat info"><span class="ic">i</span><span>Open the portal screen you want to fill, then click <b>Fill this screen</b>. One screen per click; you check it and use the portal's own buttons.</span></div>
+        <p class="small muted">Never filled: sign-in, passwords, declarations and background questions. Never clicked: Next, Save, Submit.</p></div>
+      <div class="spf"><button class="btn link">Change filing</button><button class="btn primary">Fill this screen</button></div></div></div>
+
+  <div class="state"><h3>F3 · Loading</h3><span class="cap-line">Comparing with the approved version and fetching this screen's answers. Skeleton plus a screen-reader status. <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span class="on">Fill</span><span>Capture</span></span></div><div class="ctx"><b>Client A · Visitor visa</b><br>Personal details</div></div>
+      <div class="spb"><p class="muted" role="status">Checking this screen against the approved version…</p><div class="skel" style="width:90%"></div><div class="skel" style="width:70%"></div><div class="skel" style="width:80%"></div><div class="skel" style="width:60%"></div></div>
+      <div class="spf"><span></span><button class="btn primary" disabled>Fill this screen</button></div></div></div>
+
+  <div class="state"><h3>F4 · Read-back problem</h3><span class="cap-line">A value the screen did not keep. Reported as an outcome without the value. <span class="tag cap">Capability · Needed</span> <span class="tag dec">Follows decision 16 · P-66 §2.1</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span class="on">Fill</span><span>Capture</span></span></div><div class="ctx"><b>Client A · Visitor visa</b><br>Personal details</div></div>
+      <div class="spb"><div class="stat err"><span class="ic">✕</span><span><b>Filled 7 of 9 · 1 not accepted by the screen · 1 needs you.</b> Choose the country on the screen yourself; the content team has been told.</span></div>
+        <ul class="items">
+          <li><span class="ic i-err">✕</span><span class="lbl">Place of birth › Country or territory</span><span class="val">Not accepted: the screen has no choice <span class="code">IND</span></span><span class="src">The screen kept an empty choice after filling</span></li>
+          <li><span class="ic i-warn">!</span><span class="lbl">UCI</span><span class="val">Not filled: confirm Identity in the case first</span></li>
+          <li><span class="ic i-ok">✓</span><span class="lbl">7 more filled and read back equal</span><span class="src"><a href="#">Show them</a></span></li>
+        </ul></div>
+      <div class="spf"><button class="btn link">Open the case</button><button class="btn primary">Fill this screen</button></div></div></div>
+
+  <div class="state"><h3>F5 · An answer is already on the screen</h3><span class="cap-line">Fills empty inputs only; a different answer the representative typed is left alone. <span class="tag cap">Capability · Needed</span> <span class="tag miss">Decision missing: Lead's default (BR-12)</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span class="on">Fill</span><span>Capture</span></span></div><div class="ctx"><b>Client A · Visitor visa</b><br>Personal details</div></div>
+      <div class="spb"><div class="stat warn"><span class="ic">!</span><span><b>Filled 7 of 9 · 2 left as they were.</b> These inputs already held a different answer. Nothing was changed.</span></div>
+        <ul class="items">
+          <li><span class="ic i-warn">!</span><span class="lbl">Place of birth › City or town</span><span class="val">Left as it was. The case says: Sample City</span><span class="src">Client's answer · questionnaire, 19 Oct</span></li>
+          <li><span class="ic i-warn">!</span><span class="lbl">Sex</span><span class="val">Left as it was. The case says: Female</span></li>
+        </ul></div>
+      <div class="spf"><button class="btn link">Open the case</button><button class="btn primary">Fill this screen</button></div></div></div>
+
+  <div class="state"><h3>F6 · Declaration or background screen</h3><span class="cap-line">Inputs marked "You answer this on screen" are never filled. <span class="tag cap">Capability · Needed</span> <span class="tag dec">Follows decision 16</span> <span class="tag miss">Decision missing → Q3 (who marks)</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span class="on">Fill</span><span>Capture</span></span></div><div class="ctx"><b>Client A · Visitor visa</b><br>Background information <span class="tag sample">Sample screen</span></div></div>
+      <div class="spb"><div class="stat info"><span class="ic">◌</span><span><b>Nothing to fill on this screen.</b> Its 3 questions are answered by you on screen, with the client.</span></div>
+        <ul class="items">
+          <li><span class="ic i-me">◌</span><span class="lbl">Refused a visa or permit before? <span class="tag sample">Sample wording</span></span><span class="val">You answer this on screen</span><span class="src">The case's answer, for reference: <a href="#">open in the case</a></span></li>
+          <li><span class="ic i-me">◌</span><span class="lbl">Criminal offence in any country? <span class="tag sample">Sample wording</span></span><span class="val">You answer this on screen</span></li>
+          <li><span class="ic i-me">◌</span><span class="lbl">Declaration <span class="tag sample">Sample wording</span></span><span class="val">The client signs this in the portal</span></li>
+        </ul></div>
+      <div class="spf"><button class="btn link">Open the case</button><button class="btn primary">Fill this screen</button></div></div></div>
+
+  <div class="state"><h3>F7 · Screen looks different</h3><span class="cap-line">The <span class="code">s1-reworded</span> fixture: nothing filled; one "Re-capture needed" task opened or updated (no client values). <span class="tag cap">Capability · Needed</span> <span class="tag dec">Follows P-66 §2</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span class="on">Fill</span><span>Capture</span></span></div><div class="ctx"><b>Client A · Visitor visa</b><br>Personal details</div></div>
+      <div class="spb"><div class="stat err"><span class="ic">✕</span><span><b>This screen looks different from the approved version. Nothing was filled.</b> Re-capture needed is open for the content team. Fill this screen by hand from the portal sheet.</span></div>
+        <ul class="items">
+          <li><span class="ic i-err">≠</span><span class="lbl">Reworded</span><span class="val">"Family name (as shown on your passport or travel document)" → "Surname (as shown on your passport)"</span></li>
+          <li><span class="ic i-err">+</span><span class="lbl">New choice in Sex</span><span class="val">Prefer not to say <span class="code">UNSPECIFIED</span></span></li>
+        </ul>
+        <p class="small muted">Also affects: 2 combinations, 3 open filings <span class="tag sample">Sample</span></p></div>
+      <div class="spf"><span class="tag nb">Not built (M3): portal sheet link</span><button class="btn primary">Fill this screen</button></div></div></div>
+
+  <div class="state"><h3>F8 · Screen not captured yet</h3><span class="cap-line">A screen the approved version has never seen (a branch). Fills nothing. <span class="tag cap">Capability · Needed</span> <span class="tag miss">Decision missing → Q2</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span class="on">Fill</span><span>Capture</span></span></div><div class="ctx"><b>Client A · Visitor visa</b><br>Previous marriage <span class="tag sample">Sample screen</span></div></div>
+      <div class="spb"><div class="stat warn"><span class="ic">!</span><span><b>This screen is not in the approved version yet.</b> Nothing was filled. The content team has been asked to capture it; fill it by hand for now.</span></div></div>
+      <div class="spf"><span></span><button class="btn primary">Fill this screen</button></div></div></div>
+
+  <div class="state"><h3>F9 · Not a portal page</h3><span class="cap-line">The extension works only on the listed portal hosts; anywhere else it can do nothing. <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span class="on">Fill</span><span>Capture</span></span></div><div class="ctx"><b>Client A · Visitor visa</b></div></div>
+      <div class="spb"><h3>Open a portal screen</h3><p class="muted">This tab is not an IRCC or ESDC portal screen the extension can work on. Sign in to the portal yourself and open the application.</p></div>
+      <div class="spf"><span></span><button class="btn primary" disabled>Fill this screen</button></div></div></div>
+
+  <div class="state"><h3>F10 · Error</h3><span class="cap-line">ExpatReady could not be reached. Nothing was filled; a real Retry. <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span class="on">Fill</span><span>Capture</span></span></div><div class="ctx"><b>Client A · Visitor visa</b><br>Personal details</div></div>
+      <div class="spb"><div class="stat err"><span class="ic">✕</span><span><b>ExpatReady did not answer, so nothing was filled.</b> Check your connection and try again.</span></div></div>
+      <div class="spf"><span></span><button class="btn primary">Try again</button></div></div></div>
+
+  <div class="state"><h3>F11 · Session ended or no access</h3><span class="cap-line">Expired, revoked or a filing the person may not open (401 or 403). <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span></div></div>
+      <div class="spb"><div class="stat warn"><span class="ic">!</span><span><b>Your connection to ExpatReady has ended.</b> Connect again with a new code. Nothing was filled.</span></div></div>
+      <div class="spf"><span></span><button class="btn primary">Connect again</button></div></div></div>
+</div>
+
+<!-- ─────────────────────────────── C. Capture mode states ─────────────────────────────── -->
+<h2>C. Capture mode: every state</h2>
+<p class="muted">Content team, run by a licensed representative during real work. The extension reads <b>structure only</b>: labels, element ids, types, required, rules, help and choices. It never reads what is typed or chosen. <span class="tag dec">Follows P-66 §0–§1, P-65</span></p>
+<div class="grid">
+
+  <div class="state"><h3>C0 · Start a capture</h3><span class="cap-line">Picks from the portal list and the library; a new form code goes through the library's own path. <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span>Fill</span><span class="on">Capture</span></span></div><div class="ctx">Connected as Immigration expert · capture duty <span class="tag sample">Sample</span></div></div>
+      <div class="spb"><h3>Capture a portal application</h3>
+        <div class="field" style="margin-top:8px"><label>Portal</label><div class="in">IRCC Portal ▾</div><div class="help">Sample list until the immigration expert confirms it.</div></div>
+        <div class="field"><label>Form</label><div class="in">IMM 5257 · Application for a visitor visa ▾</div></div>
+        <div class="field"><label>Application type (optional)</label><div class="in">Visitor visa, outside Canada</div></div>
+        <p class="small muted">Go through the application screen by screen. Nothing you or your client type is read.</p></div>
+      <div class="spf"><span></span><button class="btn primary">Start capture</button></div></div></div>
+
+  <div class="state"><h3>C1 · Check before sending</h3><span class="cap-line">Everything that will be sent, as text. A label holding a client's detail can be marked. <span class="tag cap">Capability · Needed</span> <span class="tag miss">Decision missing: client-detail marking (BR-3)</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span>Fill</span><span class="on">Capture</span></span></div><div class="ctx"><b>IMM 5257 · IRCC Portal</b><br>Screen 1 · Personal details</div></div>
+      <div class="spb"><div class="prog" aria-label="Screens captured: 0"><span></span><span></span><span></span></div>
+        <div class="stat info"><span class="ic">i</span><span>9 questions read. No answers are included. Check that no text below is about your client.</span></div>
+        <ul class="items">
+          <li><span class="ic">1</span><span class="lbl">Full name › Family name (as shown on your passport or travel document)</span><span class="src">Text · required · up to 100 characters · <span class="code">familyName</span></span></li>
+          <li><span class="ic">3</span><span class="lbl">UCI</span><span class="src">Text · 8–10 digits · help: "Your unique client identifier, if you have one…"</span></li>
+          <li><span class="ic">4</span><span class="lbl">Sex</span><span class="src">Choice · required · 4 choices: Female <span class="code">FEMALE</span>, Male <span class="code">MALE</span>, Another gender <span class="code">ANOTHER</span>, Unknown <span class="code">UNKNOWN</span></span></li>
+          <li><span class="ic">5</span><span class="lbl">Date of birth › Year · Month · Day</span><span class="src">Three form fields · required</span></li>
+          <li><span class="ic">…</span><span class="lbl">5 more</span><span class="src"><a href="#">Show all</a> · <a href="#">Mark a text as a client's detail</a></span></li>
+        </ul></div>
+      <div class="spf"><button class="btn link">Cancel</button><button class="btn primary">Send this screen</button></div></div></div>
+
+  <div class="state"><h3>C2 · Refused: looks like a client's detail</h3><span class="cap-line">The <span class="code">hostile-label-answer</span> or <span class="code">-option-passport</span> fixture. Same patterns as the saved-page reader; checked again by the server. <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span>Fill</span><span class="on">Capture</span></span></div><div class="ctx"><b>IMM 5257 · IRCC Portal</b><br>Screen 2 · Personal details</div></div>
+      <div class="spb"><div class="stat err"><span class="ic">✕</span><span><b>Refused: this screen shows text that looks like a client's detail. Nothing was sent.</b></span></div>
+        <ul class="items"><li><span class="ic i-err">✕</span><span class="lbl">Family name: SAMPLE</span><span class="src">A label with text after its colon</span></li>
+          <li><span class="ic i-err">✕</span><span class="lbl">Choice "AB1234567"</span><span class="src">A passport-like code</span></li></ul>
+        <p class="small muted">Mark the text as a client's detail, or capture this screen from another application.</p></div>
+      <div class="spf"><button class="btn link">Mark as client's detail</button><button class="btn primary">Capture this screen</button></div></div></div>
+
+  <div class="state"><h3>C3 · Screen 3 captured</h3><span class="cap-line">Guided, one screen at a time, in portal order. <span class="tag cap">Capability · Needed</span> <span class="tag dec">Follows P-66 §0</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span>Fill</span><span class="on">Capture</span></span></div><div class="ctx"><b>IMM 5257 · IRCC Portal</b><br>3 screens so far</div></div>
+      <div class="spb"><div class="prog" aria-label="Screens captured: 3"><span class="d"></span><span class="d"></span><span class="d"></span><span></span></div>
+        <div class="stat ok"><span class="ic">✓</span><span><b>Screen 3 captured · go to the next screen in the portal.</b> Use the portal's own Save and continue.</span></div>
+        <ul class="items">
+          <li><span class="ic i-ok">1</span><span class="lbl">Personal details</span><span class="src">9 questions</span></li>
+          <li><span class="ic i-ok">2</span><span class="lbl">Marital status</span><span class="src">2 questions</span></li>
+          <li><span class="ic i-ok">3</span><span class="lbl">Language</span><span class="src">2 questions · <a href="#">Remove this screen</a></span></li>
+        </ul></div>
+      <div class="spf"><button class="btn">Finish capture</button><button class="btn primary">Capture this screen</button></div></div></div>
+
+  <div class="state"><h3>C4 · Already captured</h3><span class="cap-line">The same screen again (same title and ids): nothing added. <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span>Fill</span><span class="on">Capture</span></span></div><div class="ctx"><b>IMM 5257 · IRCC Portal</b><br>3 screens so far</div></div>
+      <div class="spb"><div class="stat info"><span class="ic">=</span><span><b>This screen is already screen 1 ("Personal details"). Nothing was added.</b> To replace it, remove screen 1 first.</span></div></div>
+      <div class="spf"><button class="btn">Finish capture</button><button class="btn primary">Capture this screen</button></div></div></div>
+
+  <div class="state"><h3>C5 · Not read: unreadable control</h3><span class="cap-line">The <span class="code">hostile-aria-unread</span> fixture: a custom control the reader cannot read. Not half-read. <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span>Fill</span><span class="on">Capture</span></span></div><div class="ctx"><b>IMM 5257 · IRCC Portal</b><br>Screen 4</div></div>
+      <div class="spb"><div class="stat warn"><span class="ic">!</span><span><b>Not read: "Sex" uses a control the extension cannot read.</b> Nothing was sent, so no question goes missing. Add this screen with the spreadsheet template instead.</span></div></div>
+      <div class="spf"><button class="btn">Finish capture</button><button class="btn primary">Capture this screen</button></div></div></div>
+
+  <div class="state"><h3>C6 · Held for a second person</h3><span class="cap-line">"Finish capture" builds the portal twin and the review document. A different person approves in the Studio. <span class="tag cap">Capability · Needed</span> <span class="tag dec">Follows P-57 as amended by P-66</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span>Fill</span><span class="on">Capture</span></span></div><div class="ctx"><b>IMM 5257 · IRCC Portal</b><br>Finished · 3 screens · 13 questions</div></div>
+      <div class="spb"><div class="stat ok"><span class="ic">✓</span><span><b>Held for a second person.</b> It is not used until approved. The person who captured it cannot approve it.</span></div>
+        <p class="muted">Compared with the approved version: 1 reworded, 1 new choice. <span class="tag miss">Decision missing → Q2 (screens not seen this time)</span></p></div>
+      <div class="spf"><button class="btn link">Open the review in ExpatReady</button><button class="btn primary">Start another capture</button></div></div></div>
+
+  <div class="state"><h3>C7 · No capture duty</h3><span class="cap-line">A person without the capture duty (403). Capture is not offered in the mode switch at all; this is the direct-link case. <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span></div></div>
+      <div class="spb"><h3>Capture is for the content team</h3><p class="muted">Ask ExpatReady's content team for the capture duty. You can still fill screens for your own filings.</p></div>
+      <div class="spf"><span></span><button class="btn primary">Go to Fill</button></div></div></div>
+
+  <div class="state"><h3>C8 · Error while sending</h3><span class="cap-line">The screen is kept in the panel until it is sent; a real Retry; a 409 conflict shows what changed. <span class="tag cap">Capability · Needed</span></span>
+    <div class="sp"><div class="sph"><div class="brand"><span class="logo">ExpatReady</span><span class="seg"><span>Fill</span><span class="on">Capture</span></span></div><div class="ctx"><b>IMM 5257 · IRCC Portal</b><br>Screen 4 · Visit details <span class="tag sample">Sample</span></div></div>
+      <div class="spb"><div class="stat err"><span class="ic">✕</span><span><b>ExpatReady did not answer. Screen 4 was not sent.</b> Stay on this screen and try again.</span></div></div>
+      <div class="spf"><button class="btn link">Cancel</button><button class="btn primary">Try again</button></div></div></div>
+</div>
+
+<!-- ─────────────────────────────── D. Studio pairing ─────────────────────────────── -->
+<h2>D. In ExpatReady: connect the browser extension</h2>
+<p class="muted">A right panel (team pattern). The page owner is still to be settled between the forms and screens lanes. <span class="tag cap">Capability · Needed</span> <span class="tag miss">Decision missing → Q1</span></p>
+<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+  <div class="studio"><div class="sph"><div class="brand"><h3>Connect the browser extension</h3><span class="muted small">Esc</span></div></div>
+    <div class="spb"><p>Open the ExpatReady extension in your browser and enter this code within 5 minutes.</p>
+      <div class="pair" aria-label="Connection code">K7Q-4MZP</div>
+      <p class="small muted">The code works once. The connection lasts 8 hours (Sample), or until you close the browser or disconnect it here.</p>
+      <table class="t" style="margin-top:12px"><thead><tr><th>Connected browsers</th><th>Since</th><th></th></tr></thead>
+        <tbody><tr><td>Chrome on this computer · Fill</td><td>Today 09:12 <span class="tag sample">Sample</span></td><td><a href="#">Disconnect</a></td></tr></tbody></table></div>
+    <div class="spf"><button class="btn">Close</button><button class="btn primary">New code</button></div></div>
+  <div class="note" style="max-width:520px"><b>Prototype only:</b> the Studio's "Acting as" switch chooses who requests the code <span class="tag scaf">Scaffolding</span>. In production the person is signed in with MFA, and pairing may require step-up (the team's auth). <span class="tag nb">Not built (team): store publishing, managed install</span></div>
+</div>
+
+<!-- ─────────────────────────────── E. Element register ─────────────────────────────── -->
+<h2>E. Element register (P-33 and P-26)</h2>
+<table class="t">
+<thead><tr><th>Element</th><th>Labels</th><th>Note</th></tr></thead>
+<tbody>
+<tr><td>Side panel, Fill and Capture modes; mode switch only for people with both duties</td><td class="tags"><span class="tag cap">Capability</span><span class="tag cap">Needed</span></td><td>Chrome side panel, 360 px, team tokens</td></tr>
+<tr><td>Content script: structure reader (no values), filler, read-back, on-page highlights</td><td class="tags"><span class="tag cap">Capability</span><span class="tag cap">Needed</span></td><td>Isolated world; portal hosts only</td></tr>
+<tr><td>Pairing code, session token, connected browsers</td><td class="tags"><span class="tag cap">Capability</span><span class="tag cap">Needed</span><span class="tag miss">Q1</span></td><td>Token in memory only</td></tr>
+<tr><td>Endpoints: extension-screens, fill-plans, outcomes, recapture-tasks</td><td class="tags"><span class="tag cap">Capability</span><span class="tag cap">Needed</span></td><td>Server compares each screen</td></tr>
+<tr><td>"Re-capture needed" / "Capture needed" task (data and API)</td><td class="tags"><span class="tag cap">Capability</span><span class="tag cap">Needed</span><span class="tag miss">Q2</span></td><td>Its page comes with Form health (M3)</td></tr>
+<tr><td>"You answer this on screen" map outcome</td><td class="tags"><span class="tag cap">Capability</span><span class="tag cap">Needed</span><span class="tag miss">Q3</span></td><td>Declaration and background inputs</td></tr>
+<tr><td>Local fixture server (port 4459), dev manifest with a localhost host, unpacked load in Playwright</td><td class="tags"><span class="tag scaf">Scaffolding</span><span class="tag cap">Needed</span></td><td>Never in the production build (tested)</td></tr>
+<tr><td>Sample portal screens (F1 fixtures), Client A and the case facts from R1, Acting-as</td><td class="tags"><span class="tag scaf">Scaffolding</span><span class="tag sample">Sample</span></td><td>Not real IRCC screens</td></tr>
+<tr><td>Form health view and failure-rate rule; "This screen looks different" button; changed-screen marks; per-screen "entered" tick; portal sheet link</td><td class="tags"><span class="tag nb">Not built</span></td><td>M3 (P-66 §4, C8.1, C7.3)</td></tr>
+<tr><td>"Report a mapping problem"</td><td class="tags"><span class="tag nb">Not built</span></td><td>M4 (P-73)</td></tr>
+<tr><td>Store publishing, signing, managed install; Firefox and Safari; a real-portal capture</td><td class="tags"><span class="tag nb">Not built</span></td><td>Team at M3; a real capture needs a representative's account</td></tr>
+</tbody></table>
+
+</div>
+</body>
+</html>

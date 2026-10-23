@@ -1,0 +1,104 @@
+{
+ "note": "IMM 5257 (09-2023) barcode rules. Each rule names its source in the official template (imm5257e.pdf, sha256 0dc03b24…562e). Rules are added only from the template or the Adobe evidence, never to make a mismatch pass.",
+ "form_file": "imm5257e.pdf",
+ "inventory": "evidence-lane/E1/imm5257/imm5257e.inventory.json",
+ "manifests": [
+  "barcode1",
+  "barcode2",
+  "barcode3",
+  "barcode4",
+  "barcode5"
+ ],
+ "manifests_note": "encodeAll() pairs Barcodes.PaperFormsBarcode1-5 with manifests barcode1-barcode5 (the template lists the manifests out of order). This form's barcodes carry no checksum slot. One manifest ref (Page3.PageWrapper.BackgroundInfo3[0].details) has no final index; the tool reads it as [0] (XFA SOM).",
+ "derived": [
+  {
+   "rule": "date of marriage split into hidden year/month/day boxes (template: DateOfMarriage validate calls validateDateWithHiddenFields(this, '<=', today, MarriageDate.FromYr, MarriageDate.FromMM, MarriageDate.FromDD))",
+   "kind": "date_split",
+   "from": [
+    "form1[0].Page1[0].MaritalStatus[0].SectionA[0].DateOfMarriage[0]"
+   ],
+   "to": [
+    "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromYr[0]",
+    "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromMM[0]",
+    "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromDD[0]"
+   ]
+  },
+  {
+   "rule": "passport issue date split (template: IssueDate validate, hidden IssueYYYY/IssueMM/IssueDD)",
+   "kind": "date_split",
+   "from": [
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDate[0].IssueDate[0]"
+   ],
+   "to": [
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueYYYY[0]",
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueMM[0]",
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDD[0]"
+   ]
+  },
+  {
+   "rule": "passport expiry date split (template: ExpiryDate validate, hidden expiryYYYY/expiryMM/expiryDD)",
+   "kind": "date_split",
+   "from": [
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].ExpiryDate[0]"
+   ],
+   "to": [
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryYYYY[0]",
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryMM[0]",
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryDD[0]"
+   ]
+  },
+  {
+   "rule": "stay start date split (template: HowLongStay.FromDate validate, hidden StayDates.FromYr/FromMM/FromDD)",
+   "kind": "date_split",
+   "from": [
+    "form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].HowLongStay[0].FromDate[0]"
+   ],
+   "to": [
+    "form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].HowLongStay[0].StayDates[0].FromYr[0]",
+    "form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].HowLongStay[0].StayDates[0].FromMM[0]",
+    "form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].HowLongStay[0].StayDates[0].FromDD[0]"
+   ]
+  },
+  {
+   "rule": "stay end date split (template: HowLongStay.ToDate validate, hidden StayDates.ToYr/ToMM/ToDD)",
+   "kind": "date_split",
+   "from": [
+    "form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].HowLongStay[0].ToDate[0]"
+   ],
+   "to": [
+    "form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].HowLongStay[0].StayDates[0].ToYr[0]",
+    "form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].HowLongStay[0].StayDates[0].ToMM[0]",
+    "form1[0].Page3[0].DetailsOfVisit[0].PurposeRow1[0].HowLongStay[0].StayDates[0].ToDD[0]"
+   ]
+  },
+  {
+   "rule": "full telephone number calculated into the hidden, read-only ActualNumber field (template: ActualNumber calculate script; Other: \"+\" + country code + number)",
+   "kind": "phone_join",
+   "from": [
+    "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NumberCountry[0]",
+    "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].IntlNumber[0].IntlNumber[0]"
+   ],
+   "to": [
+    "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].ActualNumber[0]"
+   ]
+  }
+ ],
+ "cleared": {},
+ "not_encoded": {
+  "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].Other[0]": [
+   "control_not_encoded",
+   "telephone format switch (Other: the international number box); the number itself is encoded through ActualNumber"
+  ],
+  "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]": [
+   "answer_not_in_manifest",
+   "Question 2 (other names used?): the form's barcode1 manifest lists the alias name boxes but not this yes/no answer (as on IMM 1295 in P1)"
+  ],
+  "form1[0].Page3[0].Consent1[0].Signature[0].Consent0[0].Choice[0]": [
+   "answer_not_in_manifest",
+   "consent to future contact for research: not listed in any of the form's barcode1-5 manifests; the answer stays in the saved form data only"
+  ]
+ },
+ "leading_zero_boxes": {
+  "PersonalDetails[0].DOBDay[0]": "day of birth: the template gives DOBDay the picture num{99}, so Adobe holds 8 and the barcode encodes 8 while the saved data keeps 08 (same rule as the month boxes)"
+ }
+}

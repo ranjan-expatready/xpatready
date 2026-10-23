@@ -24,6 +24,9 @@ sys.path.insert(0, str(PROTO / "p1"))
 import barcode_positions as B  # noqa: E402  (helpers only: data_values, same, split_payload, local)
 import e5_roundtrip as E  # noqa: E402
 
+MONTH_BOXES = B.MONTH_BOXES  # P1's list; a form's rules may add its own under "month_boxes"
+SAME = B.same  # P1's comparison, kept unchanged underneath the per-form number-box rule
+
 KINDS = {  # how a derived rule turns the written source values into the derived slots
     "date_split": lambda d: d.split("-"),
     "phone_join": lambda cc, n: ["+" + cc + n],
@@ -45,6 +48,38 @@ def manifests(template_xml, names):
     return out
 
 
+def captions(template_xml):
+    """B.captions reads PaperFormsBarcode1-5 only; IMM 0008 has ten. Same rule (last text of the field), any N."""
+    out = {}
+    for f in ET.fromstring(template_xml).iter():
+        m = re.fullmatch(r"PaperFormsBarcode(\d+)", f.get("name", "")) if B.local(f.tag) == "field" else None
+        if m:
+            txt = [t.text for t in f.iter() if B.local(t.tag) == "text" and t.text]
+            out["barcode" + m.group(1)] = txt[-1] if txt else ""
+    return out
+
+
+def bind_repeats(som_to_data, inv):
+    """A repeating group's later rows (e.g. dependants[1..3]) are not in the inventory, which lists row 0 only.
+    Row k binds like row 0 with the group's index set to k (XFA normal binding of the k-th instance)."""
+    groups = [(g["som"][:-3], g["data_path"][:-3], int(g["occur"]["max"])) for g in inv.get("groups", [])
+              if not g.get("fixed_row") and g["som"].endswith("[0]") and g.get("data_path", "").endswith("[0]")]
+
+    def find(som):
+        if som in som_to_data:
+            return som_to_data[som]
+        if not som.endswith("]") and som + "[0]" in som_to_data:  # a ref without its last index means [0] (XFA SOM)
+            return som_to_data[som + "[0]"]
+        for gs, gd, top in groups:
+            m = re.match(re.escape(gs) + r"\[(\d+)\]", som)
+            if m and 0 < int(m.group(1)) < top:
+                base = som_to_data.get(gs + "[0]" + som[m.end():])
+                if base and base.startswith(gd + "[0]"):
+                    return gd + f"[{m.group(1)}]" + base[len(gd) + 3:]
+        return None
+    return find
+
+
 def run(rules, saved_pdf, written_pdf, decoded, values_file):
     names = rules["manifests"]  # in barcode order 1..n, as the form's encodeAll() pairs them
     official = E.official(rules["form_file"])
@@ -53,19 +88,29 @@ def run(rules, saved_pdf, written_pdf, decoded, values_file):
     inv = json.loads(inv_path.read_text())
     som_to_data = {f["som"]: f["data_path"] for f in inv["fields"] if f.get("som")}
     man = manifests(tpl, names)
-    caps = B.captions(tpl)  # keyed barcode1..barcode5 from PaperFormsBarcodeN
+    caps = captions(tpl)  # keyed barcode1..barcodeN from PaperFormsBarcodeN
     labels = {n: caps.get(f"barcode{i + 1}", "") for i, n in enumerate(names)}
-    unknown = [s for n in names for s in man.get(n, [None]) if s is None or not som_to_data.get(s)]
-    slots = {n: [(s, som_to_data.get(s) or "") for s in man.get(n, [])] for n in names}
+    bind = bind_repeats(som_to_data, inv)
+    unknown = [s for n in names for s in man.get(n, [None]) if s is None or not bind(s)]
+    slots = {n: [(s, bind(s) or "") for s in man.get(n, [])] for n in names}
     payloads = {}
     for line in Path(decoded).read_text().splitlines():
         rec = json.loads(line)
-        m = re.search(r"-barcode-([1-9])\.[a-z]+$", rec["image"])
+        m = re.search(r"-barcode-([0-9]+)\.[a-z]+$", rec["image"])
         if m and rec["results"]:
             payloads[names[int(m.group(1)) - 1]] = rec["results"][0]["text"]
     missing = [n for n in names if n not in payloads]
     saved = B.data_values(Path(saved_pdf))
     B.BARCODES = [n for n in names if n in payloads]  # B.compare iterates this list
+    B.MONTH_BOXES = MONTH_BOXES + tuple(rules.get("month_boxes", {}))  # form-specific month fields, each with its evidence
+    number_boxes = tuple(rules.get("leading_zero_boxes", {}))  # other num{99} boxes (e.g. a day), each with its evidence
+
+    def same(barcode, value, box=""):
+        how = SAME(barcode, value, box)
+        if how is None and box.endswith(number_boxes or ("\0",)) and re.fullmatch(r"[1-9]", barcode or "") and value == "0" + barcode:
+            return "number_leading_zero"
+        return how
+    B.same = same  # B.compare and B.account call it
     rows, slot_problems = B.compare(slots, payloads, labels, saved)
     slot_problems += [{"barcode": n, "problem": "not decoded"} for n in missing]
 

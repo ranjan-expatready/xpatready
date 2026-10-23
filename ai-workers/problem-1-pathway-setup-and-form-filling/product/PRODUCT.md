@@ -57,6 +57,7 @@ Reference app `../prototype/studio/`: NestJS + Prisma + PostgreSQL (`api/`, `pri
 | `DECISIONS.md` · `decisions/` | product decisions | Lead (founder decides) |
 | `REQUESTS.md` | every founder request | Lead |
 | `BACKLOG.md` | requirements not yet scheduled (from the SA-01B and one-pager trace) | Lead |
+| `PLAN.md` | dated plan from measured pace, re-planned every Friday | Lead |
 | `LANES.md` · `lanes/<lane>.md` · `STATE.md` | lanes and file ownership · each lane's stage (the lane; the Lead writes only its "From the Lead" note) · generated overview (`lane.sh state`) | Lead · lane · Lead |
 | `SCREENS.md` | register of screens and slices | Lead |
 | `qa/` (CAPABILITIES, BUGS, reports) | what works, open bugs, test runs | qa lane |
