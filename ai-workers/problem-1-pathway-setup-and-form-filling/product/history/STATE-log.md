@@ -15,3 +15,4 @@ WITHDRAWN 23 Oct by the founder (P-60): - 2026-10-23 · 01 · CHECK · Founder r
 - 2026-10-23 · evidence · DESIGN → BUILD · Lead agreed the E1 plan (order 1344 → 0008 → 5257; check which IMM 5669 is IRCC's validated eIMM 5669); E1a started. P-65 independent review proposed; one-chat operating model (founder uses /lead only).
 - 2026-10-23 · all · Hooks read the session's own folder from the hook input (lane sessions were checking the main copy; forms lane report). Founder gave a standing OK to merge lanes after the Lead check.
 - 2026-10-23 · forms · DESIGN → BUILD · Lead merged the F1 challenge into main (b0e96158), answered all five objections; founder decided P-66 (extension for capture and fill, structure only, portal twin, form health).
+- 2026-10-23 · Merged forms "Report to Lead" wording (23d4eeef, founder request) and evidence E1a scoring set (self-check 16/16). Evidence → E1b with computer use (founder).

@@ -16,6 +16,7 @@ updated: 2026-10-23
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-23 · Lead · :4400 restarted on main 13629dfc with the forms database update (founder OK); backup taken; data unchanged; lane apps untouched.
 - 2026-10-23 · Lead · Founder decided P-80 (held PDF approved in the product by a second person; amends P-57); Screen 02 draft updated.
 - 2026-10-23 · Lead · Founder decided P-79 (one To review page under Configure); menu, SCREENS 02, Screen 02 draft updated.
 - 2026-10-23 · runtime · Founder decided P-78 (family answers confirmed by who answered; adult's answers given by the principal wait for that adult or the officer); R1 builds as planned.
@@ -25,4 +26,3 @@ updated: 2026-10-23
 - 2026-10-23 17:45 · all · Founder go for the parallel plan (`PLAN.md`, dated). Merged: QA-0 (a983e7b4), forms F1 slice 1 (d795b019, Lead rerun 106/106), evidence IMM 0008 (86dbcde6, 462/462 reproduced). Lead walk found QA-13. P-74: every decision gets capability rows the same day (`tools/decision-impact.sh`). Running: screens 01 fix (+ channels, online sources, words), forms slice 2, runtime plan→build, evidence IMM 5257, qa after-merge; design helper drafting Prepare application, Screens 02–03, extension.
 - 2026-10-23 · all · New Lead chat: independent audit (`history/AUDIT-2026-10-23.md`). Founder agreed P-65, turned on Computer use for the evidence lane, chose a runtime lane after forms slice 1 (P-67), asked for an independent tester (qa lane, P-68) and approved c8 coverage (P-69). Merged the forms naming fix (a449e50c) and evidence E1b fill (ca7fc03d). Fresh evidence session started.
 - 2026-10-23 · Handover to a fresh Lead chat: main committed; forms slice 1 running in its session; evidence E1b waits on Computer use; Screen 01 waits on the founder walkthrough; P-65 and US$12 PDF-twin spend await the founder.
-- 2026-10-23 · Merged forms "Report to Lead" wording (23d4eeef, founder request) and evidence E1a scoring set (self-check 16/16). Evidence → E1b with computer use (founder).
