@@ -29,6 +29,11 @@ export const RUNS_DIR = join(PROTOTYPE, "p2", "runs");
  *  which screens its own template, schema, draft inputs and request with it (R4-M1). Not writable by the child. */
 export const SCREENING_DIR = join(PROTOTYPE, "p2", "screening");
 export const DIGEST_FILE = join(SCREENING_DIR, "canary-digest.json");
+/** F1 slice 2: each launch's ticket is also written under its own run id, and the drafting process reads only that one,
+ *  so two launches at the same moment (the parts of one form, two forms in the queue) no longer overwrite each other's
+ *  ticket ("launch ticket is for another start"). Still single-use, bound to the run, and not writable by the child. */
+export const TICKETS_DIR = join(SCREENING_DIR, "tickets");
+export const ticketFile = (runId: string) => join(TICKETS_DIR, `${runId}.json`);
 /** R4-R2-M1: the digest is also a single-use launch ticket for one run. The drafting process refuses a ticket
  *  older than this, or one already used; it records each used ticket here (inside the ledger folder, the only
  *  place it may write). A digest left behind by an earlier launch therefore cannot screen a later start. */

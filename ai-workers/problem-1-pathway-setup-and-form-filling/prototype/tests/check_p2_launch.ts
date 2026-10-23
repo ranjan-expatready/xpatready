@@ -4,7 +4,7 @@
 // own isolation and the screened hashes, and uses the one experiment ledger at its fixed cap. No network,
 // no key, no AI. Runs in a temporary copy of the solution folder, so the project's own experiment ledger
 // and run records are not touched; every path below is the copy's own fixed path.
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, renameSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -159,12 +159,13 @@ t("draft.ts started directly for a live call without a stub pass of this exact p
 // No digest, or an empty one: refuse rather than screen against nothing.
 const DIG = join(P2, "screening", "canary-digest.json");
 ticket("c1-fieldmap-imm5707", "stub", "direct-emptydigest");
-const digestBytes = readFileSync(DIG);
+const RUNDIG = join(P2, "screening", "tickets", "direct-emptydigest.json"); // the drafting process reads its own run's ticket
+const digestBytes = readFileSync(RUNDIG);
 renameSync(DIG, DIG + ".away");
 const noDig = parse(iso([], directArgs("c1-fieldmap-imm5707", "stub", "direct-nodigest")));
 t("draft.ts with no screening digest refuses", noDig.ok === false && /no screening digest/.test(noDig.error ?? ""));
 const emptyDig = JSON.parse(digestBytes.toString("utf8")); emptyDig.family_values = { lengths: [], prefixes: [], hashes: [], count: 0 };
-writeFileSync(DIG, JSON.stringify(emptyDig));
+writeFileSync(RUNDIG, JSON.stringify(emptyDig));
 const eDig = parse(iso([], directArgs("c1-fieldmap-imm5707", "stub", "direct-emptydigest")));
 t("draft.ts with an emptied digest refuses rather than screening against nothing", eDig.ok === false && /no family_values/.test(eDig.error ?? "") && ledgerLines().length === l8);
 renameSync(DIG + ".away", DIG);
@@ -182,6 +183,18 @@ t("clean control: the launcher path completes and its record carries the in-proc
 t("... the digest the launcher writes holds salted hashes only: no family value or box path in plain text",
   (() => { const d = readFileSync(DIG, "utf8"); return !d.includes("client.a@example.com") && !d.includes(keyPath); })());
 
+// 8b. F1 slice 2: each launch writes and reads its own ticket, so two launches at the same moment both run (the parts of
+// one form, or two forms in the queue); before, the second launch overwrote the first one's ticket ("another start").
+{
+  const start = () => new Promise<{ code: number | null; out: string }>((res) => { const p = spawn(process.execPath, [join(P2, "launch.ts"), "--job", "c1-fieldmap-imm5707", "--stub"], { env }); let out = ""; p.stdout.on("data", (d) => (out += d)); p.on("close", (code) => res({ code, out })); });
+  const both = await Promise.all([start(), start(), start()]);
+  const recs = both.map((x) => { try { return JSON.parse(x.out.trim().split("\n").pop() ?? "{}"); } catch { return {}; } });
+  t("three launches of the same job at the same moment all pass, each with its own ticket", both.every((x) => x.code === 0) && new Set(recs.map((r) => r.run_file)).size === 3);
+  ticket("c1-fieldmap-imm5707", "stub", "direct-own-ticket"); // writes the shared file too
+  const noOwn = parse(iso([], directArgs("c1-fieldmap-imm5707", "stub", "direct-without-ticket")));
+  t("a drafting process never takes the shared digest in place of its own run's ticket", noOwn.ok === false && /no screening digest/.test(noOwn.error ?? ""));
+}
+
 // 9. R4-R2-M1 (Codex 15:36Z): current screening and launch eligibility on every supported entry.
 // (a) The reviewer's exact sequence: a clean template passes; then its example email is added to the family
 // values; the launcher refuses it; the unchanged draft.ts started directly with the matching hashes and the
@@ -197,8 +210,9 @@ const fam = JSON.parse(famOriginal); (fam.values ?? fam.forms).reviewer_added_em
 t("after the email is added to the family values the launcher refuses the template", /stale\.v1\.md contains "reviewer\.pending@example\.invalid"/.test(launch("stale", "--stub").refused ?? ""));
 const l9 = ledgerLines().length;
 const leftover = parse(iso([], directArgs("stale", "stub", "reviewer-stale")));
+// Since F1 slice 2 a run reads only its own ticket, so the digest an earlier launch left is never even read.
 t("R4-R2-M1 exact case: draft.ts started directly with matching hashes and the digest an earlier launch left is refused",
-  leftover.ok === false && leftover.refused === true && /launch ticket/.test(leftover.error ?? "") && leftover.stub_calls === undefined && ledgerLines().length === l9);
+  leftover.ok === false && leftover.refused === true && /launch ticket|no screening digest/.test(leftover.error ?? "") && leftover.stub_calls === undefined && ledgerLines().length === l9);
 const reuse = parse(iso([], directArgs("c1-fieldmap-imm5707", "stub", (env8.drafting_run?.run_id as string) ?? "x")));
 t("... and so is a direct start that reuses the run id of a ticket the launcher already used", reuse.ok === false && /launch ticket (already used|is for another start)/.test(reuse.error ?? ""));
 // (b) With a ticket that is current for this start, the screen inside the process sees the new family value.
@@ -210,14 +224,16 @@ ticket("c1-fieldmap-imm5707", "stub", "direct-once");
 const once1 = parse(iso([], directArgs("c1-fieldmap-imm5707", "stub", "direct-once")));
 const once2 = parse(iso([], directArgs("c1-fieldmap-imm5707", "stub", "direct-once")));
 t("a ticket runs once (clean control) and its second use is refused", once1.ok === true && once2.ok === false && /already used/.test(once2.error ?? ""));
+const TK = (run: string) => join(P2, "screening", "tickets", `${run}.json`);
 ticket("c1-fieldmap-imm5707", "stub", "direct-for-a");
+writeFileSync(TK("direct-for-b"), readFileSync(TK("direct-for-a"))); // a's ticket put where b's would be
 t("a ticket issued for another run id is refused", /another start \(run_id differs\)/.test(parse(iso([], directArgs("c1-fieldmap-imm5707", "stub", "direct-for-b"))).error ?? ""));
 ticket("c1-fieldmap-imm5707", "stub", "direct-mode");
 t("a stub ticket cannot start a live call", /another start \(mode differs\)/.test(parse(iso([], directArgs("c1-fieldmap-imm5707", "live", "direct-mode"))).error ?? ""));
 ticket("c1-fieldmap-imm5707", "stub", "direct-old");
-const oldD = JSON.parse(readFileSync(DIG, "utf8")); oldD.ticket.issued_at = new Date(Date.now() - 600_000).toISOString(); oldD.ticket.expires_at = new Date(Date.now() - 480_000).toISOString(); writeFileSync(DIG, JSON.stringify(oldD));
+const oldD = JSON.parse(readFileSync(TK("direct-old"), "utf8")); oldD.ticket.issued_at = new Date(Date.now() - 600_000).toISOString(); oldD.ticket.expires_at = new Date(Date.now() - 480_000).toISOString(); writeFileSync(TK("direct-old"), JSON.stringify(oldD));
 t("a ticket past its two-minute lifetime is refused", /expired/.test(parse(iso([], directArgs("c1-fieldmap-imm5707", "stub", "direct-old"))).error ?? ""));
-const noTicket = JSON.parse(readFileSync(DIG, "utf8")); delete noTicket.ticket; writeFileSync(DIG, JSON.stringify(noTicket));
+const noTicket = JSON.parse(readFileSync(TK("direct-old"), "utf8")); delete noTicket.ticket; writeFileSync(TK("direct-old"), JSON.stringify(noTicket));
 t("a digest without a ticket is refused", /no launch ticket/.test(parse(iso([], directArgs("c1-fieldmap-imm5707", "stub", "direct-old"))).error ?? "") && ledgerLines().length === l9 + 2);
 // (d) The live gate follows the screening sources: the stub pass made before the change no longer opens it.
 writeFileSync(join(P2, "gate_helper.ts"), `import { readFileSync } from "node:fs"; import { join } from "node:path"; import { canaryStrings } from "./guard.ts"; import { hasStubPass } from "./pathcode.ts"; import { JOBS_DIR } from "./policy.ts";

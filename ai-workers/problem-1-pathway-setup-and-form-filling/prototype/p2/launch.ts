@@ -16,7 +16,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { idempotencyKey } from "../contracts/rules.ts";
 import { admitRun, canaryStrings, isolatedNodeArgs, loadKey, PolicyRefusal, screenMakerText } from "./guard.ts";
-import { DIGEST_FILE, DRAFT_ENTRY, JOBS_DIR, LABEL, LEDGER_DIR, PROMPTS_DIR, PROTOTYPE, RUNS_DIR, SCREENING_DIR } from "./policy.ts";
+import { DIGEST_FILE, DRAFT_ENTRY, JOBS_DIR, LABEL, LEDGER_DIR, PROMPTS_DIR, PROTOTYPE, RUNS_DIR, SCREENING_DIR, ticketFile, TICKETS_DIR } from "./policy.ts";
 import { hasStubPass, pathCodeSha, stubPassFile } from "./pathcode.ts";
 import { buildDigest, jobScreenItems, type Digest } from "./screen.ts";
 import { convertFieldMap } from "./convert.ts";
@@ -34,8 +34,9 @@ export type LaunchResult = { exit: number; run_file?: string; record?: Record<st
 export function issueTicket(canary: ReturnType<typeof canaryStrings>, job: Job, mode: "stub" | "live", runId: string, template: Buffer, schema: Buffer): { digest: Digest; digestSha: string } {
   const digest = buildDigest(canary, { run_id: runId, job_id: job.job_id, mode, template_sha256: sha(template), schema_sha256: sha(schema) });
   const bytes = JSON.stringify(digest) + "\n";
-  mkdirSync(SCREENING_DIR, { recursive: true });
-  writeFileSync(DIGEST_FILE, bytes);
+  mkdirSync(SCREENING_DIR, { recursive: true }); mkdirSync(TICKETS_DIR, { recursive: true });
+  writeFileSync(ticketFile(runId), bytes); // the one this run's drafting process reads
+  writeFileSync(DIGEST_FILE, bytes); // the latest, kept as evidence of what the screen looks like
   return { digest, digestSha: sha(bytes) };
 }
 

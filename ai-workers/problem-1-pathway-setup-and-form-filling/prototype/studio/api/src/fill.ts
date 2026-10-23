@@ -9,7 +9,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { runTransform } from "../../../p5/transforms.ts";
-import { codeForValue, type ListValue, type OptionMap } from "../../engine/options.ts";
+import { codeForValue, hasCodes, labelForText, type ListValue, type OptionMap } from "../../engine/options.ts";
 import { inFormFormat, isSignatureBox, personSteps } from "../../engine/form-steps.ts";
 import { Audit, Db, fail, PROTOTYPE, PY, ROOT, SOLUTION, VAR, type Actor } from "./core.ts";
 import { Studio } from "./studio.ts";
@@ -47,7 +47,7 @@ export class Fill {
       // A form field on an answer list takes its own code from its option map (the team's ENUM map, onMissing REFUSE).
       const e = entryOf.get(r.box), list = e?.fact ? listOf.get(e.fact) : undefined;
       if (e?.option_map && list) { const code = codeForValue(r.value, e.option_map, list); if (code === null) return { ...r, result: "by hand", why: `"${r.value}" has no code in this form field's option map` }; write(r.box, code); return { ...r, result: "written", written: values[r.box] }; }
-      const o = runTransform(r.transform ?? "as_is", r.value, box.get(r.box) ?? {});
+      const o = runTransform(r.transform ?? "as_is", list && !hasCodes(r.transform) ? labelForText(r.value, list) : r.value, box.get(r.box) ?? {});
       if (o.ok) { write(r.box, o.value); return { ...r, result: "written", written: values[r.box] }; }
       return { ...r, result: "hand" in o ? "by hand" : "blank", why: o.reason };
     });

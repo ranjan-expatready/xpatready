@@ -1,0 +1,117 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "stub",
+ "drafting_run": {
+  "run_id": "studio-screenmap-imm-5257-ircc-portal-d6375ca38c3b-stub-20261023t121812862z",
+  "idempotency_key": "31fdce8f829edfb70e0ad0ee5a51381c3832c58511c02feb08bae95042d68b96",
+  "contract_version": "drafting-run/v0",
+  "kind": "screen_map",
+  "output_sha256": "d6492883a0999d80e6d39e420d421464805383d693a29c9ee04ceafa31dffc03",
+  "inputs": {
+   "combination": "studio",
+   "official_files": [
+    {
+     "file": "prototype/p2/parts/imm-5257-ircc_portal-d6375ca38c3b.open-2b5137bf3928.part.json",
+     "sha256": "42b1c823a3be54cc89e9ef11a401b08fbf512341a1d9ecace071331d4dfcb7fb"
+    }
+   ],
+   "configuration_version": "studio-screen-map"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 600000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 5200,
+   "prompt_version": "screen-map.v1.md",
+   "prompt_sha256": "ffd2126e1a5a37570492d0d653d135df029965433248b8fbe01f093e0c7dd946"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "duration_ms": 1
+   }
+  ],
+  "usage": {
+   "input_tokens": 0,
+   "output_tokens": 0,
+   "cost_usd": 0,
+   "duration_ms": 1
+  },
+  "started_at": "2026-10-23T12:18:12.880Z",
+  "ended_at": "2026-10-23T12:18:15.584Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "a43a35f47bacb76bf6304465c22bfdd6bfce8fb0ccb510f917230043a3fbb690",
+  "template_sha256": "7adf8c506a2b363a35e253d4a0ef91ef267f5328488bdb4a31462d57c93673f9",
+  "schema_file": "screen-map-output.v1.schema.json",
+  "schema_sha256": "d2c9264431f892d1ecc01f5cc95fb65e8ef8dc183763d7844161fc205670f2d2",
+  "known": null,
+  "screened": true,
+  "output_sha256": "d6492883a0999d80e6d39e420d421464805383d693a29c9ee04ceafa31dffc03",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/.claude/worktrees/forms-f1-check-f6e7f2/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "165a9abd3237216939ef61008cf36ae49881624b703fc513920f734ec42ec75b",
+  "request_bytes": 5835,
+  "stub_calls": 1,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/.claude/worktrees/forms-f1-check-f6e7f2/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 100,
+   "committed_usd": 35.767584
+  },
+  "admitted": [
+   {
+    "file": "prototype/p2/parts/imm-5257-ircc_portal-d6375ca38c3b.open-2b5137bf3928.part.json",
+    "sha256": "42b1c823a3be54cc89e9ef11a401b08fbf512341a1d9ecace071331d4dfcb7fb",
+    "kind": "inventory_part"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "b6284d20a560dea6706ac3bba4e19802c2878acefb9cf7405e408e4cbc4d0dbf",
+   "digest_made_at": "2026-10-23T12:18:12.878Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "4f7a2c2263ee6997eb42a342fde86d42",
+   "ticket_expires_at": "2026-10-23T12:20:12.878Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": false
+  }
+ },
+ "raw_output": "{\"canonical_fields\": [{\"id\": \"person.stub_field\", \"meaning\": \"stub caller output; no model was called\", \"value_type\": \"text\"}], \"entries\": [{\"input\": \"STUB-no-model-called\", \"outcome\": \"unresolved\", \"person\": \"none\", \"fact\": null, \"transform\": null, \"confidence\": \"low\", \"unresolved_reason\": \"stub caller: no model was called, so nothing was drafted\", \"evidence_quote\": \"stub\"}]}"
+}

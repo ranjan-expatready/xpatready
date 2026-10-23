@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { PolicyRefusal } from "./guard.ts";
 import { assertIsolated } from "./isolation.ts";
 import { SpendLedger } from "./ledger.ts";
-import { JOBS_DIR, LEDGER_DIR, PROMPTS_DIR } from "./policy.ts";
+import { JOBS_DIR, LEDGER_DIR, PROMPTS_DIR, ticketFile } from "./policy.ts";
 import { hasStubPass } from "./pathcode.ts";
 import { buildRequest, requestSha256, type Job } from "./prompt.ts";
 import { admittedPublicText, jobScreenItems, loadDigest, screenWithDigest, useTicket } from "./screen.ts";
@@ -43,7 +43,7 @@ try {
   if (sha(template) !== arg("template-sha") || sha(schemaBytes) !== arg("schema-sha")) throw new PolicyRefusal("template or schema differs from the text the launcher screened");
   if (job.job_id !== jobId) throw new PolicyRefusal("job file names a different job id");
   // R4-M1: the screen happens here, on the bytes this process will send, whoever started it.
-  const { digest, sha256: digestSha } = loadDigest();
+  const { digest, sha256: digestSha } = loadDigest(ticketFile(runId)); // this run's own ticket (two launches never share one)
   // R4-R2-M1: and only with the screening that is current for this start: the digest must be the single-use
   // ticket the launcher issued for exactly this run, job, mode and bytes, within its lifetime. Used up here.
   const ticket = useTicket(digest, { run_id: runId, job_id: jobId, mode, template_sha256: sha(template), schema_sha256: sha(schemaBytes) });

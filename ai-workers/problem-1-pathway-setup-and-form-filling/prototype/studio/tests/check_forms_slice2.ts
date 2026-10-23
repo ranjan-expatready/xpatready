@@ -8,7 +8,10 @@ import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { factKeyProblem } from "../../contracts/fact-key.ts";
+import { channelProblems } from "../engine/channels.ts";
 import { inFormFormat, isSignatureBox, personSteps } from "../engine/form-steps.ts";
+import { hasCodes, labelForText } from "../engine/options.ts";
+import type { Snapshot } from "../engine/snapshot.ts";
 import { mergeParts, planDraft, type Prior } from "../engine/parts.ts";
 import { screenMapProposals } from "../engine/twin.ts";
 
@@ -82,6 +85,13 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   const empty = personSteps(dep.fields, {}, dep.groups), filled = personSteps(dep.fields, { "form1[0].Page1[0].depPrime[0].q1[0].FamilyName[0]": "SAMPLE" }, dep.groups);
   ok("F4: IMM 0008's empty first dependant block (shown by default, mandatory boxes) gives 'Remove Dependant' as a person step; the repeating block that starts with no rows does not", empty.length === 1 && empty[0].finding === "F4" && empty[0].boxes[0].includes("depPrime[0]"), empty.map((s) => s.say.slice(0, 90)));
   ok("F4 fail: a dependant block that receives values is kept (no step)", filled.length === 0);
+
+  // ──────────────────────────────────────────── runtime lane defect: option maps only for form fields with codes
+  const listSnap = (transform: string, option_map?: unknown) => ({ combination: {}, forms: [], canonical_fields: [{ id: "person.country_of_birth", answer_list: { key: "country", values: [{ key: "india", label: "India" }] } }],
+    field_maps: [{ form_number: "IMM 5707", form_edition: "IMM 5707 (01-2023)", entries: [{ data_path: "x", caption: "Country of birth", outcome: "mapped", fact: "person.country_of_birth", transform, ...(option_map ? { option_map } : {}) }] }] }) as unknown as Snapshot;
+  ok("option maps: a text form field (country_name_text) and a derived yes/no field (derive:Y if …) on a field with an answer list need none", channelProblems(listSnap("country_name_text")).length === 0 && channelProblems(listSnap("derive:Y if country where applying equals current residence country, else N")).length === 0 && channelProblems(listSnap("select primary phone; derive")).length === 0);
+  ok("option maps fail: a form field with codes of its own (code_list, also after a 'select …' step) still needs one", channelProblems(listSnap("code_list:imm5707.country")).some((p) => /no option map yet/.test(p.message)) && channelProblems(listSnap("select primary phone; code_list")).length === 1 && hasCodes("yes_no_code:Y/N") && !hasCodes("as_is"));
+  ok("fill: a text form field fed by a field on an answer list writes the value's label, never its key", labelForText("india", [{ key: "india", label: "India" }]) === "India" && labelForText("India", [{ key: "india", label: "India" }]) === "India" && labelForText(7, []) === 7);
 
   // ──────────────────────────────────────────── setup (sample rows, US$0)
   await call("POST", "/demo/load");

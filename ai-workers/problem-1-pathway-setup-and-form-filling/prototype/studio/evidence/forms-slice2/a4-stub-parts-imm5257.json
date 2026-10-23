@@ -1,0 +1,164 @@
+{
+ "plan": {
+  "combinationId": "82653601-96bc-43a3-8d4f-92a6a4d6c501",
+  "combination": "Visitor visa",
+  "program": "Visitor visa",
+  "attachmentId": "1faec122-f02d-4bd5-9ee2-17f7ec09624e",
+  "source": "IMM 5257 (09-2023)",
+  "expected_usd": 0,
+  "worst_usd": 0,
+  "action": "draft",
+  "read_first": false,
+  "fingerprint": "4329aa4458378811d2a4bbc11b25513da6dd4e39e6bef52efceb572e1b311494",
+  "a4": {
+   "total": 242,
+   "reused": 0,
+   "reused_from": [],
+   "to_ai": 242,
+   "parts": [
+    {
+     "index": 1,
+     "sections": [
+      "Page1.Header",
+      "Page1.ButtonsHeader",
+      "Page1.PersonalDetails"
+     ],
+     "fields": 60,
+     "worst_usd": 1.87
+    },
+    {
+     "index": 2,
+     "sections": [
+      "Page1.PersonalDetails",
+      "Page1.MaritalStatus",
+      "Page2.MaritalStatus"
+     ],
+     "fields": 49,
+     "worst_usd": 1.41
+    },
+    {
+     "index": 3,
+     "sections": [
+      "Page2.natID",
+      "Page2.USCard",
+      "Page2.ContactInformation"
+     ],
+     "fields": 56,
+     "worst_usd": 1.58
+    },
+    {
+     "index": 4,
+     "sections": [
+      "Page3.DetailsOfVisit",
+      "Page3.Contacts_Row2",
+      "Page3.Education",
+      "Page3.Occupation"
+     ],
+     "fields": 54,
+     "worst_usd": 1.64
+    },
+    {
+     "index": 5,
+     "sections": [
+      "Page3.BackgroundInfo",
+      "Page3.BackgroundInfo2",
+      "Page3.PageWrapper",
+      "Page3.Consent1",
+      "Page3.ButtonsFooter",
+      "Page5.TextField1"
+     ],
+     "fields": 23,
+     "worst_usd": 0.73
+    }
+   ]
+  },
+  "why": "The guarded stub pass in 5 parts (242 of 242 form fields): no network, no cost, no AI content.",
+  "action_label": "Draft field map"
+ },
+ "job": {
+  "status": "FAILED",
+  "message": "2 of 5 parts did not finish (part 2: stub pass failed: launch ticket is for another start (run_id differs); the digest was not issued for this run; part 3: stub pass failed: launch ticket is for another start (run_id differs); the digest was not issued for this run). Nothing was applied. Cost US$0.00.",
+  "a4": {
+   "parts": [
+    {
+     "error": null,
+     "index": 1,
+     "fields": 60,
+     "job_id": "studio-fieldmap-imm5257e-p1of5",
+     "status": "done",
+     "cost_usd": 0,
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p1of5-stub-20261023t121746288z.json",
+     "sections": [
+      "Page1.Header",
+      "Page1.ButtonsHeader",
+      "Page1.PersonalDetails"
+     ]
+    },
+    {
+     "error": "stub pass failed: launch ticket is for another start (run_id differs); the digest was not issued for this run",
+     "index": 2,
+     "fields": 49,
+     "job_id": "studio-fieldmap-imm5257e-p2of5",
+     "status": "failed",
+     "cost_usd": 0,
+     "run_file": null,
+     "sections": [
+      "Page1.PersonalDetails",
+      "Page1.MaritalStatus",
+      "Page2.MaritalStatus"
+     ]
+    },
+    {
+     "error": "stub pass failed: launch ticket is for another start (run_id differs); the digest was not issued for this run",
+     "index": 3,
+     "fields": 56,
+     "job_id": "studio-fieldmap-imm5257e-p3of5",
+     "status": "failed",
+     "cost_usd": 0,
+     "run_file": null,
+     "sections": [
+      "Page2.natID",
+      "Page2.USCard",
+      "Page2.ContactInformation"
+     ]
+    },
+    {
+     "error": null,
+     "index": 4,
+     "fields": 54,
+     "job_id": "studio-fieldmap-imm5257e-p4of5",
+     "status": "done",
+     "cost_usd": 0,
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p4of5-stub-20261023t121751762z.json",
+     "sections": [
+      "Page3.DetailsOfVisit",
+      "Page3.Contacts_Row2",
+      "Page3.Education",
+      "Page3.Occupation"
+     ]
+    },
+    {
+     "error": null,
+     "index": 5,
+     "fields": 23,
+     "job_id": "studio-fieldmap-imm5257e-p5of5",
+     "status": "done",
+     "cost_usd": 0,
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p5of5-stub-20261023t121753442z.json",
+     "sections": [
+      "Page3.BackgroundInfo",
+      "Page3.BackgroundInfo2",
+      "Page3.PageWrapper",
+      "Page3.Consent1",
+      "Page3.ButtonsFooter",
+      "Page5.TextField1"
+     ]
+    }
+   ],
+   "total": 242,
+   "reused": 0,
+   "leftover": 242,
+   "reused_from": []
+  }
+ }
+}
