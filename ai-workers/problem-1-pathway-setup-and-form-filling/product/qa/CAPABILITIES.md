@@ -49,6 +49,9 @@ Rows: the Lead (every product decision becomes a row or a backlog item the same 
 | C6.5 | 6 Runtime | AI reads uploaded documents and proposes facts for a person to confirm (SA-1B-34, one-pager 7.3) | M3 | Not built | — | BACKLOG, Lead note |
 | C6.6 | 6 Runtime | Officer confirms facts section by section; only confirmed facts fill forms; AI-read values stay proposed (P-72) | T | Not built | — | Runtime R1 |
 | C6.4 | 6 Runtime | Dynamic document checklist per person | M3 | Not built | — | |
+| C6.7 | 6 Runtime | A prospect answers the combination's PQR on the shared renderer; no verdict is shown to the prospect, only the firm's next step (P-76, P-77) | M3 | Not built | — | Runtime lane after R1 |
+| C6.8 | 6 Runtime | PQR answers appear in the SQR already filled and marked "please confirm"; nothing is asked twice (P-77) | M3 | Not built | — | Runtime lane after R1 |
+| C6.9 | 6 Runtime | Staff eligibility page: each gate met, not met or not answered, what is missing, "rules as at", disclaimer; gates are rules as data on the R1 engine, Sample values (P-77) | M3 | Not built | — | Runtime lane after R1; scoring grids stay B16 |
 | C7.1 | 7 Fill | Fill an IRCC PDF from case facts with the append-only writer; read back equal; signatures intact | T | Partial | 141194dc 23 Oct | Studio suite A4: IMM 1295 filled, every value reads back; the download answers 404 in lane copies (QA-4); still from sample facts |
 | C7.2 | 7 Fill | Form passes Adobe Validate; barcodes match the facts (fill-trial gate, P-65) | T | Not tested | — | evidence lane E1b |
 | C7.5 | 7 Fill | Independent AI review of a filled form before it goes out (one-pager 8.3) | M3 | Not built | — | BACKLOG, Lead note |

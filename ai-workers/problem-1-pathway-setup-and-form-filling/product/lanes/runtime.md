@@ -3,6 +3,8 @@
 ## From the Lead
 2026-10-23 18:00 (Lead): plan agreed (Lead response in `screens/R1-thin-slice/plan.md`). **BUILD R1a** (backend path): configure and release the visitor visa in your copy through the product's own endpoints, complete the questionnaire (B1), then case, people, answers with DECLARED/VERIFIED, "Confirm section". S-1 granted (`actorOf` in `api/src/core.ts`). Then CHECK (reviewer + breaker) → owner Lead. No paid AI.
 
+2026-10-23 18:10 (Lead): no change to R1a. **After R1, next item R2 prospect slice (P-76, P-77):** PQR on the shared renderer for the visitor visa, staff eligibility page with Sample gates as rules on your R1 engine (no separate dummy engine; scoring grids stay B16), PQR answers into the SQR marked "please confirm". Capabilities C6.7–C6.9. Plan it when R1 is DONE.
+
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: R1-thin-slice

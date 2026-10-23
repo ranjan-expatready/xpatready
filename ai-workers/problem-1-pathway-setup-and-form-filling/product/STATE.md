@@ -16,6 +16,7 @@ updated: 2026-10-23
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-23 · Lead · P-77: prototype PQR answers flow into the SQR; staff eligibility page on the R1 rules engine with Sample gates; runtime lane R2 after R1.
 - 2026-10-23 · Lead · Founder decided P-76 (PQR model, option C with AI-drafted picks, approved in the combination's release). Prepare application designer draft committed; all four design drafts ready for walkthrough.
 - 2026-10-23 18:25 · Lead · Design helper drafts arriving: Screen 02 and extension done; Prepare application board and Screen 03 still being written (committed as work in progress). P-75: no dates, counted progress (M2 5/37).
 - 2026-10-23 17:45 · all · Founder go for the parallel plan (`PLAN.md`, dated). Merged: QA-0 (a983e7b4), forms F1 slice 1 (d795b019, Lead rerun 106/106), evidence IMM 0008 (86dbcde6, 462/462 reproduced). Lead walk found QA-13. P-74: every decision gets capability rows the same day (`tools/decision-impact.sh`). Running: screens 01 fix (+ channels, online sources, words), forms slice 2, runtime plan→build, evidence IMM 5257, qa after-merge; design helper drafting Prepare application, Screens 02–03, extension.
@@ -25,4 +26,3 @@ updated: 2026-10-23
 - 2026-10-23 · forms · DESIGN → BUILD · Lead merged the F1 challenge into main (b0e96158), answered all five objections; founder decided P-66 (extension for capture and fill, structure only, portal twin, form health).
 - 2026-10-23 · all · Hooks read the session's own folder from the hook input (lane sessions were checking the main copy; forms lane report). Founder gave a standing OK to merge lanes after the Lead check.
 - 2026-10-23 · evidence · DESIGN → BUILD · Lead agreed the E1 plan (order 1344 → 0008 → 5257; check which IMM 5669 is IRCC's validated eIMM 5669); E1a started. P-65 independent review proposed; one-chat operating model (founder uses /lead only).
-- 2026-10-23 · screens · CHECK → DEMO · Lead recheck passed; :4400 restarted on the repaired build (data unchanged); A4 accepted and placed (forms lane + Screen 02).
