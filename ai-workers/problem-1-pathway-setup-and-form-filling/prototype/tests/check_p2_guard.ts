@@ -1,7 +1,7 @@
 // P2 runner guard tests (AIW-D260, AIW-D261, D254 aside). No AI call: the caller is a stub that records
 // how often it was invoked. The ledger used here is a temporary one, never the experiment ledger.
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, symlinkSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { admitInput, admitRun, answerKeyFiles, assertRoute, canaryStrings, isolatedNodeArgs, PolicyRefusal, screenMakerText } from "../p2/guard.ts";
@@ -113,6 +113,28 @@ t("isolated process cannot read other project records", seen[targets.decisions] 
 const load = spawnSync(process.execPath, [...isolatedNodeArgs(ledgerDir), "--input-type=module", "-e",
   `const r = await import(${JSON.stringify(join(PROTOTYPE, "p2/runner.ts"))}); console.log(typeof r.runDrafting + "," + typeof r.sdkCaller)`], { encoding: "utf8" });
 t("isolated process can still load the runner and the SDK", load.stdout.trim().endsWith("function,function"));
+
+// 5b. QA-8: in a lane copy node_modules is a link whose target runs through a second link (the copy's .tools). The
+// module loader's realpath stats that middle link, which the read allowance does not (and must not) cover; the drafting
+// process therefore keeps symlinked paths as found (--preserve-symlinks) and needs no wider allowance.
+{
+  const tmp = realpathSync(mkdtempSync(join(tmpdir(), "p2-links-")));
+  const dep = join(tmp, "main", "tools", "pkg", "node_modules", "dep");
+  mkdirSync(dep, { recursive: true });
+  writeFileSync(join(dep, "package.json"), JSON.stringify({ name: "dep", type: "module", main: "index.js" }));
+  writeFileSync(join(dep, "index.js"), "export const ok = 'loaded';\n");
+  writeFileSync(join(tmp, "main", "tools", "secret.txt"), "not allowed");
+  mkdirSync(join(tmp, "lane", "app"), { recursive: true });
+  symlinkSync(join(tmp, "main", "tools"), join(tmp, "lane", "tools"));                               // the lane's .tools link
+  symlinkSync(join("..", "tools", "pkg", "node_modules"), join(tmp, "lane", "app", "node_modules"));   // relative, through it
+  writeFileSync(join(tmp, "lane", "app", "entry.mjs"), "import { ok } from 'dep'; import { readFileSync } from 'node:fs';\nlet beside = 'read'; try { readFileSync(process.argv[2]); } catch (e) { beside = e.code; }\nconsole.log(ok + ',' + beside);\n");
+  const app = join(tmp, "lane", "app");
+  const start = (flags: string[]) => spawnSync(process.execPath, ["--permission", ...flags, `--allow-fs-read=${app}`, join(app, "entry.mjs"), join(tmp, "main", "tools", "secret.txt")], { encoding: "utf8" });
+  const before = start([]), after = start(["--preserve-symlinks"]);
+  t("QA-8 fail (as before the fix): a package reached through a second link is refused (the loader stats the middle link)", before.status !== 0 && /ERR_ACCESS_DENIED/.test(before.stderr) && before.stderr.includes(join(tmp, "lane", "tools")), before.stderr.split("\n").find((l) => /resource/.test(l)));
+  t("QA-8 pass: with --preserve-symlinks it loads, with the same allowance, and still cannot read beside it", after.stdout.trim() === "loaded,ERR_ACCESS_DENIED", after.stdout.trim() || after.stderr.slice(0, 300));
+  t("the drafting process is started with --preserve-symlinks and no allowance for a link's parent folder", isolatedNodeArgs(ledgerDir).includes("--preserve-symlinks") && !isolatedNodeArgs(ledgerDir).some((a) => /\/\.tools$/.test(a)));
+}
 
 // 9. R4-M1: the drafting process's hashed screen (screen.ts) finds exactly what the launcher's plain screen finds.
 {

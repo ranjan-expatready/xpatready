@@ -150,11 +150,15 @@ export function screenMakerText(texts: { name: string; text: string }[], opts: {
 
 /** Node permission-model arguments for the drafting process: it can read the official files, their
  *  inventories, the runner code, the contracts, the SDK and the key file, write only the spend ledger,
- *  and read nothing else (no answer key, no family values). */
+ *  and read nothing else (no answer key, no family values).
+ *  `--preserve-symlinks` (QA-8): the module loader keeps a package's path as found instead of resolving it with
+ *  realpath, which stats every link on the way. In a lane copy `node_modules` is a link whose target runs through a
+ *  second link (the copy's `.tools`); resolving it needed read access to that link, which would grant the whole tools
+ *  folder. With the flag the allowances below suffice everywhere, and none is widened. */
 export function isolatedNodeArgs(ledgerDir: string): string[] {
   const nodeModules = realpathSync(join(PROTOTYPE, "node_modules"));
   const reads = [OFFICIAL, INVENTORY, join(PROTOTYPE, "p2"), join(PROTOTYPE, "contracts"), join(PROTOTYPE, "package.json"), join(PROTOTYPE, "node_modules"), nodeModules, dirname(KEY_FILE), ledgerDir];
-  return ["--permission", ...reads.map((r) => `--allow-fs-read=${r}`), `--allow-fs-write=${ledgerDir}`];
+  return ["--permission", "--preserve-symlinks", ...reads.map((r) => `--allow-fs-read=${r}`), `--allow-fs-write=${ledgerDir}`];
 }
 
 /** Reads the founder's key file (AIW-D261); refuses unsafe permissions; never prints the key. */

@@ -6,13 +6,14 @@
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: F1-forms-channels
-stage: CHECK
-owner: Lead
-next_action: Lead check of the fixes on the exact commit: `build-notes.md` "Fixes" (finding → fix → test), `review.md`, `break-report.md`; rerun `zsh studio/tools/isolated.sh <name> <port> start && tsx studio/tests/check_forms_channels.ts <port> xr_studio_<name>` (106 checks, US$0) and the other suites. Decide: `id@screen-title` for reused element ids (F2 extension splits at "@"). Then merge (with `prisma generate` + `migrate deploy` of both F1 migrations on main) and set slice 2.
+stage: BUILD
+owner: Builder
+next_action: slice 2 (backend path): guard link-hop fix first (QA-8), A4 backend, guarded admission of screen inventories + screen_map job for leftovers, evidence findings F1–F3 and IMM 0008's empty dependant block; pass + fail test per rule; US$0 only; then CHECK (reviewer + breaker).
 blocked_by: none
 updated: 2026-10-23
 
 ## Log (last 10 lines)
+- 2026-10-23 · F1 · CHECK → BUILD (slice 2) · applied Lead note 2026-10-23 17:05 (slice 1 merged d795b019).
 - 2026-10-23 · F1 · FIX → CHECK · all review (1 Must, 10 Major) and break (9 Major) findings fixed with a test each, most minors too; F1 106/106, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 19/22 (lane guard, slice 2); second migration (revision, checks, one pending merge) proven on a demo copy with its rollback. Owner → Lead.
 - 2026-10-23 · F1 · CHECK → FIX · reviewer: ship after fixes, journey 5.5/10, 1 Must + 10 Major; breaker: 0 Blocker, 9 Major, 16 Minor (`review.md`, `break-report.md`).
 - 2026-10-23 · F1 · EARLY-LOOK → CHECK · applied Lead note 2026-10-23 (backend path P-68; fresh lane copy bound to forms, own studio packages; reviewer :4451, breaker :4452).
