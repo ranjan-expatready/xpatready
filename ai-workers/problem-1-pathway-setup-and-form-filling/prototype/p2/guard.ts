@@ -4,7 +4,7 @@
 import { Ajv } from "ajv";
 import { createHash } from "node:crypto";
 import { lstatSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { captureSchemaErrors, fingerprint, noAnswers, type CaptureRecord } from "../contracts/portal-capture.ts";
 import { canonical } from "../contracts/rules.ts";
 import {
@@ -48,19 +48,35 @@ export function admitInput(file: string, expectedSha?: string, opts: AdmitOption
     return { file: rel, sha256: h, kind: "inventory", bytes };
   }
   if (dirname(abs) === RUNS_DIR && abs.endsWith(".json")) return admitDraft(rel, bytes, h, expectedSha, opts);
-  if (dirname(abs) === SCREEN_INVENTORIES && abs.endsWith(".screens.json")) return admitScreens(rel, bytes, h);
-  if (dirname(abs) === PARTS_DIR && abs.endsWith(".part.json")) return admitPart(rel, bytes, h, expectedSha, opts);
+  // F1 slice 2: plain names only (a name is sent in the prompt), checked again by the parts' own rules.
+  if (dirname(abs) === SCREEN_INVENTORIES && /^[a-z0-9][a-z0-9._-]*\.screens\.json$/.test(basename(abs))) return admitScreens(rel, bytes, h);
+  if (dirname(abs) === PARTS_DIR && /^[a-z0-9][a-z0-9._-]*\.part\.json$/.test(basename(abs))) return admitPart(rel, bytes, h, expectedSha, opts);
   return refuse(`not on the drafting allowlist (official files, their P1 inventories, parts of them, approved screen inventories, and guarded drafts under AIW-D263): ${file}`);
 }
 
 const json = (bytes: Buffer, no: (m: string) => never) => { try { return JSON.parse(bytes.toString("utf8")); } catch { return no("not JSON"); } };
+/** A record with exactly these keys (some optional): an unknown key could carry text past the checks into a prompt. */
+const closed = (o: unknown, required: string[], optional: string[], what: string, no: (m: string) => never) => {
+  if (!o || typeof o !== "object" || Array.isArray(o)) return no(`${what} is not an object`);
+  const keys = Object.keys(o);
+  const extra = keys.filter((k) => !required.includes(k) && !optional.includes(k));
+  if (extra.length) no(`${what} has keys a ${what} does not have (${extra.slice(0, 3).join(", ")})`);
+  const missing = required.filter((k) => !keys.includes(k));
+  if (missing.length) no(`${what} lacks ${missing.join(", ")}`);
+};
 
 /** F1 slice 2: an approved portal screen inventory (P-66). Admitted only when it meets the capture contract, holds no
  *  answer, its fingerprint is the one recomputed from its structure, and a second person approved it. */
 function admitScreens(rel: string, bytes: Buffer, h: string): AdmittedInput {
   const no = (m: string): never => refuse(`screen inventory ${rel} not admitted: ${m}`);
   const env = json(bytes, no);
+  closed(env, ["contract", "fingerprint", "record", "approval"], [], "screen inventory", no);
   if (env.contract !== "screen-inventory/v1") no("not a screen-inventory/v1 record");
+  closed(env.approval, ["capture_id", "captured_by", "approved_by", "approved_at", "edition"], [], "approval", no);
+  if (Object.values(env.approval).some((v) => typeof v !== "string" || v.length > 200)) no("an approval entry is not a short text");
+  const person = /^[A-Za-z0-9_-]{1,64}$/;
+  if (!person.test(env.approval.captured_by) || !person.test(env.approval.approved_by)) no("the people named are not plain ids");
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(env.approval.approved_at) || Date.parse(env.approval.approved_at) > Date.now() + 300_000) no("the approval time is not a past date and time");
   const r = env.record as CaptureRecord;
   if (captureSchemaErrors(r).length) no("its record does not meet the capture contract");
   if (noAnswers(r).length) no(`it carries an answer (${noAnswers(r).slice(0, 2).join(", ")})`);
@@ -69,7 +85,9 @@ function admitScreens(rel: string, bytes: Buffer, h: string): AdmittedInput {
   if (fingerprint(r) !== env.fingerprint) no("its fingerprint is not the one its structure gives (changed after approval)");
   const a = env.approval ?? {};
   if (typeof a.captured_by !== "string" || typeof a.approved_by !== "string" || !a.captured_by || !a.approved_by) no("no approval recorded");
-  if (a.captured_by === a.approved_by) no("approved by the person who captured it (a second person approves, P-66)");
+  if (a.captured_by.toLowerCase() === a.approved_by.toLowerCase()) no("approved by the person who captured it (a second person approves, P-66)");
+  // A screen's key is its place in the order (s01, s02 …): the key is sent, the order is in the fingerprint.
+  if (r.screens.some((s) => s.key !== `s${String(s.order).padStart(2, "0")}`)) no("a screen's key does not follow its order");
   if (typeof a.approved_at !== "string" || Number.isNaN(Date.parse(a.approved_at))) no("no approval time");
   return { file: rel, sha256: h, kind: "screen_inventory", bytes };
 }
@@ -83,21 +101,36 @@ function admitPart(rel: string, bytes: Buffer, h: string, expectedSha: string | 
   const env = json(bytes, no);
   if (env.contract !== "inventory-part/v1") no("not an inventory-part/v1 record");
   const p = env.part ?? {};
+  closed(p, ["index", "count"], ["section"], "part number", no);
   if (!(Number.isInteger(p.index) && Number.isInteger(p.count) && p.index >= 1 && p.index <= p.count)) no("its part number is not n of m");
+  closed(env.parent, ["file", "sha256"], [], "parent", no);
   if (typeof env.parent?.file !== "string" || typeof env.parent?.sha256 !== "string") no("no parent named");
   const parent = admitInput(env.parent.file, env.parent.sha256, { ...opts, depth: (opts.depth ?? 0) + 1 });
-  const pj = JSON.parse(parent.bytes.toString("utf8"));
+  if (parent.file !== env.parent.file) no("its parent is named by another path than the parent's own");
+  if (parent.kind !== "inventory" && parent.kind !== "screen_inventory") no(`its parent is a ${parent.kind}, not an inventory or a screen inventory`);
+  const pj = json(parent.bytes, no);
   const same = (a: unknown, b: unknown) => canonical((a ?? null) as never) === canonical((b ?? null) as never);
   if (parent.kind === "inventory") {
+    closed(env, ["contract", "parent", "part", "fields"], ["summary", "groups", "presence_scripts"], "part", no);
     for (const k of ["summary", "groups", "presence_scripts"]) if (!same(env[k], pj[k])) no(`its ${k} differs from the parent's`);
     const known = new Set((pj.fields ?? []).map((f: unknown) => canonical(f as never)));
     const mine = (env.fields ?? []).map((f: unknown) => canonical(f as never));
     if (!mine.length) no("it holds no form field");
     if (new Set(mine).size !== mine.length) no("a form field appears twice");
     if (mine.some((f: string) => !known.has(f))) no("a form field is not in the parent inventory as it is there");
+    // The section names it gives (sent with the part) are its own fields' sections, nothing else.
+    if (p.section !== undefined) {
+      const own = (env.fields as { section?: string; data_path?: string }[]).flatMap((f) => [f.section ?? "", f.data_path ?? ""]).filter(Boolean);
+      const ok = typeof p.section === "string" && p.section.length <= 500 && p.section.split(", ").every((s: string) => s && own.some((o) => o === s || o.startsWith(`${s}.`)));
+      if (!ok) no("its section names are not the sections of its form fields");
+    }
   } else if (parent.kind === "screen_inventory") {
+    closed(env, ["contract", "parent", "part", "inputs"], [], "part", no);
+    if (p.section !== undefined && p.section !== "inputs left open") no("a screen part names no section");
     const screens = new Map((pj.record.screens as { key: string; title: string; inputs: unknown[] }[]).map((s) => [s.key, s]));
     const mine = (env.inputs ?? []) as { screen: string; title: string; input: { id: string } }[];
+    if (!Array.isArray(mine)) no("its inputs are not a list");
+    for (const x of mine) closed(x, ["screen", "title", "input"], [], "input entry", no);
     if (!mine.length) no("it holds no input");
     if (new Set(mine.map((x) => x.input?.id)).size !== mine.length) no("an input appears twice");
     for (const x of mine) {
@@ -206,6 +239,20 @@ export function screenMakerText(texts: { name: string; text: string }[], opts: {
   // first live chain, 20 Oct 2026 (discovery D16). Maker-written text gets no such exemption.
   const exempt = (c: string) => !!opts.publicText && opts.publicText.includes(c);
   for (const t of texts) for (const c of canaries) if (t.text.includes(c) && !exempt(c)) refuse(`${t.name} contains "${c}" from the answer key or the family values`);
+}
+
+/** F1 slice 2 (break m5): the drafting process may read all of p2, and Node follows a link, so a link planted under p2
+ *  (say p2/parts/x.json → the answer key) would be readable there even though admitInput refuses links. The launcher
+ *  refuses to start while any link sits under p2 (node_modules lives outside it). */
+export function assertNoLinksUnder(dir: string): void {
+  const walk = (d: string): void => {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const p = join(d, e.name);
+      if (e.isSymbolicLink()) refuse(`a link sits under ${relative(SOLUTION, dir)} (${relative(SOLUTION, p)}); the drafting process could read through it. Remove it first.`);
+      if (e.isDirectory()) walk(p);
+    }
+  };
+  walk(dir);
 }
 
 /** Node permission-model arguments for the drafting process: it can read the official files, their

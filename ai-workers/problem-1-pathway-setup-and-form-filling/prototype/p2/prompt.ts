@@ -55,9 +55,12 @@ export function buildRequest(templateText: string, outputSchema: Record<string, 
     }
     if (a.kind === "screen_inventory" || a.kind === "inventory_part") {
       // F1 slice 2: a part of an inventory (A4) or an approved portal screen inventory, sent like an inventory.
+      // The guard closed these records (no unknown key) and checked every part against its parent; what is sent is
+      // chosen by what the parent is, never by which keys a file happens to carry.
       const env = JSON.parse(a.bytes.toString("utf8"));
-      const part = env.contract === "inventory-part/v1" ? ` part="${env.part.index} of ${env.part.count}"${env.part.section ? ` sections="${String(env.part.section).replace(/"/g, "'")}"` : ""} parent="${env.parent.file}@${env.parent.sha256}"` : "";
-      const body = env.inputs || env.record ? compactScreens(env) : compactInventory(a.bytes.toString("utf8"));
+      const isPart = a.kind === "inventory_part", ofScreens = a.kind === "screen_inventory" || (isPart && String(env.parent.file).startsWith("prototype/p2/screen-inventories/"));
+      const part = isPart ? ` part="${env.part.index} of ${env.part.count}"${env.part.section ? ` sections="${String(env.part.section).replace(/["<>]/g, "'")}"` : ""} parent="${env.parent.file}@${env.parent.sha256}"` : "";
+      const body = ofScreens ? compactScreens(isPart ? { inputs: env.inputs } : { record: env.record, fingerprint: env.fingerprint }) : compactInventory(a.bytes.toString("utf8"));
       return `<input file="${a.file}" sha256="${a.sha256}" kind="${a.kind}"${part}>\n${body}\n</input>`;
     }
     if (a.kind !== "inventory") throw new Error(`${a.file}: only inventories (derived from an official file) are sent as text; raw official files are not`);

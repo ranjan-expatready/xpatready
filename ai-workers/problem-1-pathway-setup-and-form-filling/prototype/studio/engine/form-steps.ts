@@ -17,14 +17,16 @@ const last = (p: string) => p.split(".").pop()!.replace(/\[\d+\]$/, "");
 
 /** F2: a box that holds a signature (a typed name the form treats as signing), never a date or a button. */
 export function isSignatureBox(b: Box): boolean {
-  if (b.ui && !["textEdit", "signature"].includes(b.ui)) return false;
-  return /sig(nature)?(lbl|label)?$/i.test(last(pathOf(b))) || /\bsignature\b/i.test(b.caption ?? "");
+  if (b.ui === "signature") return true; // a signature field, captioned or not (SignatureField1)
+  if (b.ui && b.ui !== "textEdit") return false;
+  if (/\bdate\b/i.test(b.caption ?? "") || /date$/i.test(last(pathOf(b)))) return false; // "Date of signature" is a date
+  return /sig(nature)?(lbl|label)?$/i.test(last(pathOf(b))) || /sign$/i.test(last(pathOf(b))) || /\bsignature\b|\bsign here\b/i.test(b.caption ?? "");
 }
 
 /** F3: the value as the form itself stores it, when the form has its own format; otherwise unchanged. */
 export function inFormFormat(b: Box, value: string): string {
-  if (/postal\s*code/i.test(b.caption ?? "") || /PostalCode$/i.test(last(pathOf(b)))) {
-    const m = /^\s*([A-Za-z]\d[A-Za-z])\s*-?\s*(\d[A-Za-z]\d)\s*$/.exec(value);
+  if (/post(al)?\s*code|postal\s*\/\s*zip/i.test(b.caption ?? "") || /Post(al)?Code$/i.test(last(pathOf(b)))) {
+    const m = /^\s*([A-Za-z]\d[A-Za-z])[\s_\-\u2010-\u2015]*(\d[A-Za-z]\d)\s*$/.exec(value.normalize("NFKC"));
     if (m) return `${m[1]} ${m[2]}`.toUpperCase();
   }
   return value;
@@ -39,8 +41,13 @@ export function personSteps(fields: Box[], written: Record<string, string>, grou
   // F1: a phone block (a subform with a Canada/US switch and North American number boxes) that received a number.
   for (const sw of fields.filter((f) => last(pathOf(f)) === "CanadaUS" && f.ui === "checkButton")) {
     const block = parent(pathOf(sw));
-    const na = paths.filter((p) => p.startsWith(`${block}.NANumber`) || (p.startsWith(`${block}.`) && /NumberCountry/.test(p) && written[p] === "1"));
-    if (na.length) steps.push({ finding: "F1", kind: "tick_canada_us", boxes: [pathOf(sw), ...na], say: `Tick "Canada/US" for ${fields.find((f) => pathOf(f).startsWith(`${block}.NANumber`) && f.caption)?.caption ?? "this telephone number"}: the form shows its number boxes only after that click (the number is already written), and its Validate clears the switch otherwise.` });
+    // Only when the writer actually filed the number as Canada/US: the switch written ticked, or the North American
+    // boxes written. A country code alone is not enough ("+1" left as an international number; break M4).
+    const na = paths.filter((p) => p.startsWith(`${block}.NANumber`));
+    const filedNA = written[pathOf(sw)] === "1" || na.length > 0;
+    // Name the question by its telephone caption ("Question 3 Telephone number"), not the first box's ("No.").
+    const question = fields.find((f) => pathOf(f).startsWith(`${block}.`) && /telephone|phone|fax/i.test(f.caption ?? ""))?.caption ?? "this telephone number";
+    if (filedNA) steps.push({ finding: "F1", kind: "tick_canada_us", boxes: [pathOf(sw), ...na], say: `${question}: after the form's first Validate, tick "Canada/US" again. The number is already written and the switch is written ticked, but Validate clears the switch while the number boxes are hidden; the click shows them with the number in place.` });
   }
   // F2: every required signature box: the person types their own name, then validates.
   const sigs = fields.filter((f) => isSignatureBox(f) && f.required);

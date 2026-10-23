@@ -6,13 +6,14 @@
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: F1-forms-channels
-stage: CHECK
+stage: FIX
 owner: Builder
-next_action: reviewer (:4452) and breaker (:4454) running on slice 2 (their runs rewrite slice 2 evidence and the ledger; restored when they finish); then fix every Must/Blocker/Major; then owner Lead.
+next_action: slice 2 fixes written (review 1 Must + 5 Major, break 3 Blocker + 4 Major, most minors); full suite run in progress; then CHECK, owner Lead.
 blocked_by: none
 updated: 2026-10-23
 
 ## Log (last 10 lines)
+- 2026-10-23 · F1 · CHECK → FIX (slice 2) · reviewer: ship after fixes, journey 6/10, 1 Must + 5 Major; breaker: 3 Blocker + 4 Major + 13 Minor; fixes written with tests (guard 75/75); suites running. US$0.
 - 2026-10-23 · F1 · CHECK (slice 2) · F1 suite rerun 106/106 after the test-client fix; waiting on reviewer and breaker.
 - 2026-10-23 · F1 · BUILD → CHECK (slice 2) · suites: guard 64/64, launch 53/53, slice 2 38/38, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 22/22 (QA-8 fixed); F1 rerun after a test-client keep-alive fix; reviewer and breaker launched. US$0.
 - 2026-10-23 · F1 · BUILD (slice 2) · built QA-8 (--preserve-symlinks), per-run launch tickets (two launches at once collided), guarded parts and screen inventories, A4 reuse-first parts with progress and merge flags, screen_map job, evidence F1–F4 in the filler, runtime-lane option-map defect; guard 64/64, launch 53/53, slice 2 34/35 before the ticket fix; full run in progress. US$0.
@@ -22,4 +23,3 @@ updated: 2026-10-23
 - 2026-10-23 · F1 · EARLY-LOOK → CHECK · applied Lead note 2026-10-23 (backend path P-68; fresh lane copy bound to forms, own studio packages; reviewer :4451, breaker :4452).
 - 2026-10-23 · F1 · BUILD → EARLY-LOOK · Slice 1 built (no UI, AI US$0): migration (additive; proven on a copy of today's data), capture contract, page and template readers, refusal of answers, second-person approval, fingerprint identity + difference, portal twin + review PDF, screen map without AI (PDF twin, aliases), channels + portal + derived filing method, validator rules, answer list `sex` end to end, aliases and reviewed merges, intake guard, check_ai_drafting fix. Tests: F1 66/66, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 19/22 (lane double-link, not slice), browser 100/101 (200 ms budget under load). Owner → Lead.
 - 2026-10-23 · Lead: challenge answered (all five accepted; P-65 aliases and merges added; A4 backend into slice 2); founder decided P-66 (extension both modes, structure-only capture, portal twin, form health). Set BUILD slice 1, owner Builder. F2 (working extension on saved screens) follows.
-- 2026-10-23 · F1 · DESIGN · Founder asked (in this session) to fix the repeated hand-back block: renamed "Paste to Lead" → "Report to Lead", once per stage (CLAUDE.md, next, lead, screen-build, LANES, WORKFLOW); stop and session-start hooks now check the session's own copy (hook input cwd), so lane sessions no longer get the main copy's reminders. Lead files: merge needed to take effect. No stage change.

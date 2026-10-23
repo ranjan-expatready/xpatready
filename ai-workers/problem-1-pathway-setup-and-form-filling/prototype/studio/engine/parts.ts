@@ -1,19 +1,22 @@
 // A4 (Lead check, accepted 23 Oct; F1 slice 2): a form's field map is drafted reuse first, in parts, and merged. Rules,
 // no AI, no database:
-//  1. reuse first: a form field an earlier edition of the same form already maps (same data path, same caption) takes
-//     that mapping, and the AI never sees it;
+//  1. reuse first: a form field a released earlier edition of the same form already maps (same data path, same caption,
+//     and for a choice field the same codes) takes that mapping, and the AI never sees it;
 //  2. split: the form fields left are grouped by form section ("Part1.SponsorDetails") and packed into parts of at most
 //     `maxFields`, so each AI call is small and the parts run side by side (the bounded queue); a repeating row group is
 //     never split, so one person's row stays in one call;
 //  3. merge: the parts' answers and the reused entries become one answer; the same meaning proposed under two names in
 //     different parts is flagged as a near-duplicate for a person (never merged silently).
+import { canonical } from "../../contracts/rules.ts";
 import { normLabel } from "./twin.ts";
-import type { FieldMapAnswer, FieldMapEntry } from "./ai-run.ts";
+import { checkedOutput, type FieldMapAnswer, type FieldMapEntry, type RunEnvelope } from "./ai-run.ts";
 
 export type InvField = { data_path?: string | null; caption?: string | null; section?: string | null; in_row?: string | null; [k: string]: unknown };
 export type InvGroup = { data_path?: string | null; occur?: unknown; fixed_row?: boolean | null };
 /** A mapping an earlier edition of the same form holds (its newest version). */
-export type Prior = { data_path: string; caption: string | null; outcome: string; fact: string | null; person: string | null; transform: string | null; row: number | null; condition: string | null; edition: string };
+export type Prior = { data_path: string; caption: string | null; outcome: string; fact: string | null; person: string | null; transform: string | null; row: number | null; condition: string | null; confidence?: string | null; edition: string;
+  /** The earlier edition's own choices for this form field (its inventory), so codes are reused only where they are the same. */
+  options?: unknown };
 export type Reused = FieldMapEntry & { reused_from: string };
 export type Part = { index: number; count: number; sections: string[]; fields: InvField[] };
 export type DraftPlan = { total: number; reused: Reused[]; leftover: number; parts: Part[] };
@@ -32,9 +35,12 @@ export function planDraft(inv: { fields: InvField[]; groups?: InvGroup[] }, prio
   const reused: Reused[] = [], left: InvField[] = [];
   for (const f of fields) {
     const p = byPath.get(f.data_path!);
-    const fact = p?.fact ? (opts.redirect?.(p.fact) ?? p.fact) : null;
-    if (p && ["mapped", "not_a_fact", "never_filled"].includes(p.outcome) && normLabel(p.caption) === normLabel(f.caption) && (p.outcome !== "mapped" || fact)) {
-      reused.push({ data_path: f.data_path!, outcome: p.outcome, person: p.person, row: p.row, fact, transform: p.transform, condition: p.condition, confidence: "high",
+    const fact = p?.fact ? (opts.redirect ? opts.redirect(p.fact) : p.fact) : null; // null: retired or gone, never reused
+    // A choice field keeps its mapping only when its codes are the earlier edition's own (an inline code list in the
+    // transform would otherwise copy old codes onto a new list; review 4).
+    const sameChoices = canonical((f.options_resolved ?? f.options ?? null) as never) === canonical((p?.options ?? null) as never);
+    if (p && ["mapped", "not_a_fact", "never_filled"].includes(p.outcome) && normLabel(p.caption) === normLabel(f.caption) && sameChoices && (p.outcome !== "mapped" || fact)) {
+      reused.push({ data_path: f.data_path!, outcome: p.outcome, person: p.person, row: p.row, fact, transform: p.transform, condition: p.condition, confidence: p.confidence ?? "medium",
         unresolved_reason: p.outcome === "mapped" ? null : `as in ${p.edition}`, evidence_quote: f.caption ?? f.data_path!, reused_from: p.edition });
     } else left.push(f);
   }
@@ -65,8 +71,10 @@ export type NearDuplicate = { a: string; b: string; parts: [number, number]; why
 const words = (id: string) => id.split(".").slice(1).join("_").split("_").filter((w) => w && !["of", "the", "a", "an"].includes(w));
 const normMeaning = (m: string) => m.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
 
-/** One answer from the parts' answers (in part order) and the reused entries, with near-duplicate proposals flagged. */
-export function mergeParts(answers: { part: number; answer: FieldMapAnswer }[], reused: Reused[]): { answer: FieldMapAnswer & { entries: (FieldMapEntry & { reused_from?: string; part?: number })[] }; near_duplicates: NearDuplicate[] } {
+/** One answer from the parts' answers (in part order) and the reused entries, with near-duplicate proposals flagged. A
+ *  part's answer counts only for that part's own form fields (an entry for another part's field is set aside and
+ *  listed); a form field its part did not answer stays open with the reason, never silently dropped. */
+export function mergeParts(answers: { part: number; answer: FieldMapAnswer; fields: string[] }[], reused: Reused[]): { answer: FieldMapAnswer & { entries: (FieldMapEntry & { reused_from?: string; part?: number })[] }; near_duplicates: NearDuplicate[]; set_aside: { part: number; data_path: string }[]; unanswered: string[] } {
   const fields = new Map<string, { id: string; meaning: string; value_type: string; part: number }>();
   const near: NearDuplicate[] = [];
   for (const { part, answer } of answers) for (const c of answer.canonical_fields ?? []) {
@@ -85,7 +93,54 @@ export function mergeParts(answers: { part: number; answer: FieldMapAnswer }[], 
   }
   const seen = new Set<string>();
   const entries: (FieldMapEntry & { reused_from?: string; part?: number })[] = [];
+  const setAside: { part: number; data_path: string }[] = [], unanswered: string[] = [];
   for (const e of reused) { seen.add(e.data_path); entries.push(e); }
-  for (const { part, answer } of answers) for (const e of answer.entries ?? []) if (!seen.has(e.data_path)) { seen.add(e.data_path); entries.push({ ...e, part }); }
-  return { answer: { form_edition: answers[0]?.answer.form_edition, canonical_fields: [...fields.values()].map(({ part: _p, ...c }) => c), entries }, near_duplicates: near };
+  for (const { part, answer, fields: own } of answers) {
+    const mine = new Set(own);
+    for (const e of answer.entries ?? []) {
+      if (!mine.has(e.data_path) || seen.has(e.data_path)) { setAside.push({ part, data_path: e.data_path }); continue; }
+      seen.add(e.data_path); entries.push({ ...e, part });
+    }
+    for (const d of own) if (!seen.has(d)) {
+      seen.add(d); unanswered.push(d);
+      entries.push({ data_path: d, outcome: "unresolved", person: "none", row: null, fact: null, transform: null, condition: null, confidence: "low", unresolved_reason: `Part ${part} gave no answer for this form field: a person maps it.`, evidence_quote: d, part });
+    }
+  }
+  return { answer: { form_edition: answers[0]?.answer.form_edition, canonical_fields: [...fields.values()].map(({ part: _p, ...c }) => c), entries }, near_duplicates: near, set_aside: setAside, unanswered };
+}
+
+type PartRun = { part: number; sections: string[]; fields: string[]; run_file: string | null; rec: RunEnvelope };
+/** The one record a draft in parts leaves for review (written beside the parts' own run records, which only the
+ *  launcher writes): the merged answer, every part's needs-person entries (re-numbered to the merged answer), the
+ *  entries set aside or left unanswered, usage summed (duration: the longest part, as they run side by side), and a
+ *  label that says when no AI was used at all. Pure, so it is tested at US$0 with saved answers (review 6). */
+export function assembleMerged(runs: PartRun[], reused: Reused[], meta: { runId: string; reusedFrom: string[]; inventoryFile: string; inventorySha: string; label: string; library: Map<string, { meaning: string; valueType: string }> }) {
+  const merged = mergeParts(runs.map((r) => ({ part: r.part, answer: checkedOutput(r.rec), fields: r.fields })), reused);
+  for (const f of new Set(reused.map((r) => r.fact).filter(Boolean) as string[])) {
+    const d = meta.library.get(f);
+    if (d && !merged.answer.canonical_fields.some((c) => c.id === f)) merged.answer.canonical_fields.push({ id: f, meaning: d.meaning, value_type: d.valueType });
+  }
+  const index = new Map(merged.answer.entries.map((e, i) => [e.data_path, i]));
+  const needs = runs.flatMap((r) => (r.rec.conversion?.needs_person ?? []).filter((n) => r.fields.includes(n.data_path) && index.has(n.data_path)).map((n) => ({ ...n, entry: index.get(n.data_path)!, part: r.part })));
+  const u = runs.map((r) => r.rec.drafting_run?.usage ?? {});
+  const usage = { input_tokens: 0, output_tokens: 0, cost_usd: u.reduce((x, y) => x + (y.cost_usd ?? 0), 0), duration_ms: Math.max(0, ...u.map((y) => y.duration_ms ?? 0)) };
+  for (const r of runs) { const x = r.rec.drafting_run?.usage as { input_tokens?: number; output_tokens?: number } | undefined; usage.input_tokens += x?.input_tokens ?? 0; usage.output_tokens += x?.output_tokens ?? 0; }
+  const ai = runs.length > 0;
+  return {
+    label: ai ? meta.label : "Reused from earlier editions of the same form in the library; no AI was used", caller: ai ? "live" : "reuse", contract_valid: true, raw_output: JSON.stringify(merged.answer),
+    conversion: { needs_person: needs },
+    merged: { parts: runs.map((r) => ({ index: r.part, sections: r.sections, fields: r.fields.length, run_file: r.run_file })), reused: reused.length, reused_from: meta.reusedFrom, near_duplicates: merged.near_duplicates, set_aside: merged.set_aside, unanswered: merged.unanswered },
+    drafting_run: { run_id: meta.runId, status: "completed", usage, settings: { ...(runs[0]?.rec.drafting_run?.settings ?? {}), prompt_version: ai ? "field-map-part.v1.md" : null }, inputs: { official_files: [{ file: meta.inventoryFile, sha256: meta.inventorySha }] }, ended_at: new Date().toISOString() },
+  };
+}
+
+/** The proposals of a merged draft that are flagged near-duplicates of a name another part proposed: the reason says
+ *  so and the evidence names the other one; nothing is merged (review 6: this was inline and untested). */
+export function flagNearDuplicates<T extends { proposedKey: string; outcome: string; reason: string; evidence: object }>(items: T[], near: NearDuplicate[]): T[] {
+  for (const n of near) for (const it of items.filter((x) => (x.proposedKey === n.b || x.proposedKey === n.a) && x.outcome !== "REUSE")) {
+    const other = it.proposedKey === n.a ? n.b : n.a;
+    it.reason = other === it.proposedKey ? `Proposed twice with different meanings or types by different parts of this form (${n.why}): decide the one meaning. ${it.reason}` : `Near-duplicate of ${other}, proposed by another part of this form (${n.why}): decide whether they are one field. ${it.reason}`;
+    (it.evidence as Record<string, unknown>).near_duplicate_of = other;
+  }
+  return items;
 }

@@ -11,11 +11,11 @@
 // then validates the output against the contracts and writes the run record to p2/runs/.
 import { Ajv } from "ajv";
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { idempotencyKey } from "../contracts/rules.ts";
-import { admitRun, canaryStrings, isolatedNodeArgs, loadKey, PolicyRefusal, screenMakerText } from "./guard.ts";
+import { admitRun, assertNoLinksUnder, canaryStrings, isolatedNodeArgs, loadKey, PolicyRefusal, screenMakerText } from "./guard.ts";
 import { DIGEST_FILE, DRAFT_ENTRY, JOBS_DIR, LABEL, LEDGER_DIR, PROMPTS_DIR, PROTOTYPE, RUNS_DIR, SCREENING_DIR, ticketFile, TICKETS_DIR } from "./policy.ts";
 import { hasStubPass, pathCodeSha, stubPassFile } from "./pathcode.ts";
 import { buildDigest, jobScreenItems, type Digest } from "./screen.ts";
@@ -49,6 +49,7 @@ export function launch(jobId: string, mode: "stub" | "live"): LaunchResult {
   if (job.known && (Object.keys(job.known).some((k) => k !== "form_edition") || !/^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(job.known.form_edition ?? ""))) throw new PolicyRefusal("a job's known facts may hold only a printed form edition such as IMM 0000 (MM-YYYY)");
   const settings = job.settings as Parameters<typeof admitRun>[0]["settings"];
   admitRun({ inputs: { official_files: job.inputs }, settings }, { allowStubDrafts: mode === "stub" }); // (1) route and inputs
+  assertNoLinksUnder(join(PROTOTYPE, "p2")); // nothing the drafting process may read can lead elsewhere
   const template = readFileSync(join(PROMPTS_DIR, job.template));
   const schema = readFileSync(join(PROMPTS_DIR, job.output_schema));
   // (2) Plain-text screen of everything maker- or AI-written that goes into the prompt: template and schema
@@ -65,7 +66,8 @@ export function launch(jobId: string, mode: "stub" | "live"): LaunchResult {
       : `no stub pass of this exact launch path for ${jobId} against the current screening sources (answer key or family values changed since the stub pass); run --stub first`);
     loadKey(); // refuses a missing or unsafe key file here, before the child starts; the value is discarded
   }
-  const runId = `${jobId}-${mode}-${new Date().toISOString().replace(/[-:.]/g, "").toLowerCase()}`;
+  // A random tail keeps two launches in the same millisecond apart (one run record and one ticket each; F1 slice 2).
+  const runId = `${jobId}-${mode}-${new Date().toISOString().replace(/[-:.]/g, "").toLowerCase()}-${randomBytes(3).toString("hex")}`;
   // R4-M1 and R4-R2-M1: a fresh salted digest of the same strings, issued as the single-use ticket for this run
   // only, immediately before the drafting process starts. The process repeats the screen itself on the exact
   // bytes it sends (it can never read the plain strings) and refuses any other, older or used ticket.
@@ -77,6 +79,7 @@ export function launch(jobId: string, mode: "stub" | "live"): LaunchResult {
   const timeout = Number(job.settings.timeout_ms ?? 600_000) * Number(job.settings.max_attempts ?? 1) + 60_000;
   const child = spawnSync(process.execPath, [...isolatedNodeArgs(LEDGER_DIR), DRAFT_ENTRY, "--job", jobId, "--run-id", runId, "--caller", mode,
     "--template-sha", sha(template), "--schema-sha", sha(schema)], { encoding: "utf8", env, timeout, maxBuffer: 64 * 1024 * 1024 }); // (3)
+  rmSync(ticketFile(runId), { force: true }); // used or not, this run's ticket is done (its use is recorded in the ledger folder)
   const endedAt = new Date().toISOString();
   let out: Record<string, any>;
   try { out = JSON.parse(child.stdout.trim().split("\n").pop() ?? ""); } catch { out = { ok: false, error: `no result from the drafting process (exit ${child.status}): ${child.stderr.slice(0, 400)}` }; }

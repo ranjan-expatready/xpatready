@@ -45,8 +45,7 @@ export function optionMapProblems(values: string[], m: OptionMap | null | undefi
  *  last step of its transform ("select primary phone; code_list:…" → code_list). A derived field ("derive:Y if …") or
  *  a text field (as_is, country_name_text, date …) has no codes, so it needs no option map (runtime lane defect, 23 Oct). */
 export function hasCodes(transform: string | null | undefined): boolean {
-  const step = (transform ?? "").split(";").pop()!.trim();
-  return /^(code_list\b|option_map$|yes_no_code\b)/.test(step);
+  return (transform ?? "").split(";").some((s) => /^(code_list\b|option_map$|yes_no_code\b)/.test(s.trim()));
 }
 
 /** A text form field fed by a field on an answer list writes the value's label, never its key ("india" → "India"). */

@@ -26,7 +26,7 @@ import { buildRecord, contractProblems, difference, fingerprint, noAnswers, revi
 import { channelProblems, channelsView } from "../../engine/channels.ts";
 import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
-import { compatible, draftScreenMap, normLabel, screenMapProposals, transformFor, type AiProposal, type PdfEntry, type Proposal, type ScreenMapAnswer } from "../../engine/twin.ts";
+import { compatible, draftScreenMap, normLabel, readScreenRun, transformFor, type AiProposal, type PdfEntry, type Proposal } from "../../engine/twin.ts";
 import { partOutputTokens } from "../../engine/parts.ts";
 import { factKeyProblem } from "../../../contracts/fact-key.ts";
 import { costUsd } from "../../../p2/ledger.ts";
@@ -465,12 +465,23 @@ export class Forms {
     if (ed.channel !== "ONLINE") fail("The screen_map job drafts an online version's inputs; a PDF edition's form fields are drafted from its file.");
     const comb = await this.db.combination.findUniqueOrThrow({ where: { id: b.combinationId } });
     if (comb.workspaceId !== ed.workspaceId || !(await this.db.combinationForm.findFirst({ where: { combinationId: comb.id, lineageKey: ed.form.formKey } }))) fail(`${comb.label} does not file ${ed.form.formKey}.`, HttpStatus.NOT_FOUND);
-    const plan = await this.leftoverJob(ed, false);
-    if (b.mode === "LIVE" && b.confirmWorstUsd !== plan.worst) conflict(`A live screen-map draft costs at most US$${plan.worst.toFixed(2)} (${plan.leftovers.length} inputs, up to 2 attempts): send that amount as confirmWorstUsd to go ahead.`);
-    const active = await this.db.draftingJob.findFirst({ where: { workspaceId: ed.workspaceId, kind: "screen_map", status: { in: ["QUEUED", "RUNNING"] }, detail: { path: ["edition_id"], equals: ed.id } } });
-    if (active) conflict("A screen-map draft of this online version is already running.");
-    const { jobId, leftovers } = await this.leftoverJob(ed, true);
-    const j = await this.db.draftingJob.create({ data: { workspaceId: ed.workspaceId, combinationId: comb.id, kind: "screen_map", mode: b.mode, status: "RUNNING", message: `${b.mode === "LIVE" ? "Stub pass, then the AI call" : "Stub pass of the guarded path (no network, no cost)"} for ${leftovers.length} open input${leftovers.length === 1 ? "" : "s"} of ${ed.editionLabel}`, startedBy: actor.id, detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, worst_usd: b.mode === "LIVE" ? plan.worst : 0 }) } });
+    const first = await this.leftoverJob(ed, false);
+    if (b.mode === "LIVE" && b.confirmWorstUsd !== first.worst) conflict(`A live screen-map draft costs at most US$${first.worst.toFixed(2)} (${first.leftovers.length} inputs, up to 2 attempts): send that amount as confirmWorstUsd to go ahead.`);
+    let plan = first;
+    // One draft per online version at a time, decided under a lock on the version: two starts at the same moment make
+    // one job, never two (break/review: both answered 201 and, live, would have paid twice).
+    const j = await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`screen_map:${ed.id}`}))`;
+      const active = await tx.draftingJob.findFirst({ where: { workspaceId: ed.workspaceId, kind: "screen_map", status: { in: ["QUEUED", "RUNNING"] }, detail: { path: ["edition_id"], equals: ed.id } } });
+      if (active) conflict("A screen-map draft of this online version is already running.");
+      // The job files are written here, under the lock, and the worst case confirmed is the one of exactly these files
+      // (review 11: it was checked against a plan made before the files were rewritten).
+      plan = await this.leftoverJob(ed, true);
+      if (b.mode === "LIVE" && b.confirmWorstUsd !== plan.worst) conflict(`The open inputs changed: a live screen-map draft now costs at most US$${plan.worst.toFixed(2)}; confirm that amount.`);
+      const { jobId, leftovers } = plan;
+      return tx.draftingJob.create({ data: { workspaceId: ed.workspaceId, combinationId: comb.id, kind: "screen_map", mode: b.mode, status: "RUNNING", message: `${b.mode === "LIVE" ? "Stub pass, then the AI call" : "Stub pass of the guarded path (no network, no cost)"} for ${leftovers.length} open input${leftovers.length === 1 ? "" : "s"} of ${ed.editionLabel}`, startedBy: actor.id, detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, worst_usd: b.mode === "LIVE" ? plan.worst : 0 }) } });
+    });
+    const { jobId, leftovers } = plan;
     await this.audit.log(ed.workspaceId, actor.id, "started", "screen-map draft", ed.editionLabel, `${actor.name} started the ${b.mode === "LIVE" ? `live (worst case US$${plan.worst.toFixed(2)})` : "stub (US$0)"} screen-map draft of ${leftovers.length} open inputs of ${ed.editionLabel}`, undefined, comb.id);
     void this.runLeftovers(j.id, ed, jobId, leftovers, b.mode === "LIVE" ? "live" : "stub");
     return this.sources.job(j.id);
@@ -481,18 +492,16 @@ export class Forms {
     const done = (data: Prisma.DraftingJobUpdateInput) => this.db.draftingJob.update({ where: { id }, data: { finishedAt: new Date(), ...data } });
     try {
       const stub = await this.sources.launchOnce(jobId, "stub"), sj = lastJson(stub.out);
-      if (stub.code !== 0) { await done({ status: "FAILED", message: `Stub pass failed: ${String(sj?.refused ?? stub.err).slice(-400)}. Nothing was drafted.` }); return; }
+      if (stub.code !== 0) { await done({ status: "FAILED", message: `Stub pass failed: ${this.sources.plainRefusal(String(sj?.refused ?? stub.err).slice(-400))}. Nothing was drafted.` }); return; }
       if (mode === "stub") { await done({ status: "COMPLETED", costUsd: 0, message: `Stub pass completed: the guarded path admitted the approved screens and the ${leftovers.length} open inputs. A stub has no AI content, so there is nothing to accept.` }); return; }
       const live = await this.sources.launchOnce(jobId, "live"), lj = lastJson(live.out);
       if (!lj?.run_file) { await done({ status: "FAILED", message: `The AI step did not run: ${String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).slice(0, 400)}. Nothing was drafted.` }); return; }
       const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
-      const cost = rec.drafting_run?.usage?.cost_usd ?? 0;
-      if (!/^completed/.test(rec.drafting_run?.status ?? "") || rec.contract_valid !== true) { await done({ status: "FAILED", costUsd: cost, runId: rec.drafting_run?.run_id, message: explainScreenRun(rec) }); return; }
       const library = (await this.libraryRows(ed.workspaceId)).filter((r) => r.status !== "RETIRED" || r.mergedIntoKey).map((r) => ({ key: r.canonicalFieldKey, valueType: r.valueType, aliases: r.aliases, mergedIntoKey: r.mergedIntoKey, answerListKey: r.answerListKey }));
-      const out = screenMapProposals(JSON.parse(rec.raw_output) as ScreenMapAnswer, leftovers, library, factKeyProblem);
-      const mapped = out.proposals.filter((p) => p.outcome !== "unresolved").length;
-      await done({ status: "COMPLETED", costUsd: cost, runId: rec.drafting_run?.run_id, runFile: String(lj.run_file).replace(`${SOLUTION}/`, ""), detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, ...out }),
-        message: `AI draft ${rec.drafting_run?.run_id}: ${mapped} of ${leftovers.length} open inputs have a proposal a person can accept (${out.proposals.length - mapped} stay open${out.ignored.length ? `; ${out.ignored.length} answers for inputs that were not asked were ignored` : ""}). Cost US$${Number(cost).toFixed(2)}.` });
+      const r = readScreenRun(rec, leftovers, library, factKeyProblem);
+      if (!r.ok) { await done({ status: "FAILED", costUsd: r.cost, runId: rec.drafting_run?.run_id, message: r.message }); return; }
+      const { ok: _ok, cost, message, ...out } = r;
+      await done({ status: "COMPLETED", costUsd: cost, runId: rec.drafting_run?.run_id, runFile: String(lj.run_file).replace(`${SOLUTION}/`, ""), detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, ...out }), message });
     } catch (e) {
       await done({ status: "FAILED", message: (e as Error).message.slice(0, 400) });
     }
@@ -514,15 +523,25 @@ export class Forms {
     const inputOf = new Map(this.twinOf(ed.inventoryFile!).record.screens.flatMap((s) => s.inputs.map((i) => [i.id, i] as const)));
     let accepted = 0; const kept: string[] = [];
     await this.db.$transaction(async (tx) => {
-      const claimed = await tx.draftingJob.updateMany({ where: { id: j.id, status: "COMPLETED" }, data: { status: "APPLIED", message: `${j.message} Accepted by ${actor.name}.` } });
-      if (!claimed.count) conflict("Accepted at the same moment by someone else.");
-      for (const p of d.proposals!.filter((x) => x.outcome !== "unresolved" && (!pick || pick.has(x.input)))) {
+      // Accepted under a lock on the job: a part of the proposals may be accepted now and the rest later (break m13);
+      // each proposal is applied once.
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`screen_map_accept:${j.id}`}))`;
+      const now = await tx.draftingJob.findUniqueOrThrow({ where: { id: j.id } });
+      const done = new Set(((now.detail ?? {}) as { accepted_inputs?: string[] }).accepted_inputs ?? []);
+      if (now.status !== "COMPLETED") conflict("Already accepted.");
+      const take = d.proposals!.filter((x) => x.outcome !== "unresolved" && !done.has(x.input) && (!pick || pick.has(x.input)));
+      if (!take.length) conflict(pick ? "Those proposals are already accepted, or there is none for those inputs." : "Already accepted.");
+      for (const p of take) done.add(p.input);
+      const rest = d.proposals!.filter((x) => x.outcome !== "unresolved" && !done.has(x.input)).length;
+      await tx.draftingJob.update({ where: { id: j.id }, data: { status: rest ? "COMPLETED" : "APPLIED", detail: json({ ...(now.detail as object), accepted_inputs: [...done] }), message: rest ? now.message : `${now.message} Accepted by ${actor.name}.` } });
+      for (const p of take) {
         const rows = await tx.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: p.input } });
         const now = [...rows].sort((x, y) => y.version - x.version)[0];
         if (!now || now.outcome !== "unresolved") { kept.push(p.input); continue; }
         const field = p.fact ? lib.get(p.fact) : undefined;
-        if (p.outcome === "mapped" && (!field || field.status === "RETIRED" || field.mergedIntoKey)) { kept.push(p.input); continue; }
         const input = inputOf.get(p.input);
+        // Checked again now: the field may have been retired, merged or changed type since the draft (break m8).
+        if (p.outcome === "mapped" && (!field || field.status === "RETIRED" || field.mergedIntoKey || !input || !compatible(input.type, input.part ?? null, field.valueType))) { kept.push(p.input); continue; }
         const list = field?.answerListKey ? await tx.answerList.findFirst({ where: { workspaceId: ed.workspaceId, answerListKey: field.answerListKey }, include: { values: { orderBy: { sortOrder: "asc" } } }, orderBy: { version: "desc" } }) : null;
         const om = list && input?.options?.length ? draftOptionMap(list.values.map((v) => ({ key: v.valueKey, label: v.label })), input.options) : null;
         await revise(tx.formFieldMap, rows, p.outcome === "mapped"
@@ -798,14 +817,6 @@ export class Forms {
 
 type H = string | undefined;
 const canonicalIds = (inputs: { input: { id: string } }[]) => inputs.map((x) => x.input.id).join("|");
-/** A screen-map run that did not give a usable answer, in plain words (never blank). */
-function explainScreenRun(rec: { drafting_run?: { status?: string; usage?: { cost_usd?: number } }; output_errors?: unknown; contract_valid?: boolean }) {
-  const cost = `US$${Number(rec.drafting_run?.usage?.cost_usd ?? 0).toFixed(2)}`;
-  const s = rec.drafting_run?.status;
-  if (s === "invalid_output") return `The AI answered, but not in the agreed shape (${String(typeof rec.output_errors === "string" ? rec.output_errors : JSON.stringify(rec.output_errors)).slice(0, 160)}). Nothing was proposed. Cost ${cost}.`;
-  if (s === "refused") return `The AI declined to draft these inputs. Nothing was proposed. Cost ${cost}.`;
-  return `The AI step ended without a usable draft (status ${s ?? "unknown"}${rec.contract_valid === false ? ", the run record failed our check" : ""}). Nothing was proposed. Cost ${cost}.`;
-}
 // dotfiles "allow": lane copies live under .claude/worktrees/, and a hidden folder in the path made the download a 404.
 const send = async (res: Response, file: { path: string; name: string }) => { if (!existsSync(file.path)) throw new HttpException("Not found", HttpStatus.NOT_FOUND); res.download(file.path, file.name, { dotfiles: "allow" }); };
 

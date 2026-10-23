@@ -12,8 +12,8 @@ import { channelProblems } from "../engine/channels.ts";
 import { inFormFormat, isSignatureBox, personSteps } from "../engine/form-steps.ts";
 import { hasCodes, labelForText } from "../engine/options.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
-import { mergeParts, planDraft, type Prior } from "../engine/parts.ts";
-import { screenMapProposals } from "../engine/twin.ts";
+import { assembleMerged, flagNearDuplicates, mergeParts, planDraft, type Prior } from "../engine/parts.ts";
+import { readScreenRun, screenMapProposals } from "../engine/twin.ts";
 
 const PORT = Number(process.argv[2] ?? 4451), DB = process.argv[3] ?? "xr_studio_forms_s2";
 const STUDIO = join(import.meta.dirname, "..");
@@ -24,7 +24,7 @@ const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++
 type Res = { status: number; body: any };
 /** fetch, sent again once when the kept-alive connection was already closed before any reply (EPIPE, reset): under heavy
  *  machine load the server closes an idle connection while a slow step runs, and the next request finds it closed. */
-const send = async (url: string, init: RequestInit): Promise<Response> => {
+const send = async (url: string, init: RequestInit = {}): Promise<Response> => {
   try { return await fetch(url, init); } catch (e) {
     const code = (e as { cause?: { code?: string } }).cause?.code ?? "";
     if (!/EPIPE|ECONNRESET|UND_ERR_SOCKET/.test(code)) throw e;
@@ -62,10 +62,28 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   ok("A4 reuse: a form field an earlier edition maps (same data path, same caption) is reused without AI, through merges", reused.reused.length === 1 && reused.reused[0].fact === "person.surname" && reused.reused[0].reused_from === "IMM 1344 (01-2020)" && reused.leftover === data1344.length - 1);
   ok("A4 reuse fail: a changed caption, or an earlier entry left open, is not reused", planDraft(inv1344, [prior({ caption: "Another caption" })]).reused.length === 0 && planDraft(inv1344, [prior({ outcome: "unresolved", fact: null })]).reused.length === 0);
   const ans = (fields: [string, string][], entries: string[]) => ({ form_edition: "IMM 1344 (09-2024)", canonical_fields: fields.map(([id, meaning]) => ({ id, meaning, value_type: "text" })), entries: entries.map((d) => ({ data_path: d, outcome: "mapped", person: "form_subject", row: null, fact: fields[0][0], transform: "as_is", condition: null, confidence: "high", unresolved_reason: null, evidence_quote: d })) });
-  const merged = mergeParts([{ part: 1, answer: ans([["person.city_of_birth", "City where the person was born"]], ["a"]) }, { part: 2, answer: ans([["person.birth_city", "Town of birth"], ["person.phone_type", "Kind of telephone"]], ["b"]) }], [{ ...reused.reused[0] }]);
+  const merged = mergeParts([{ part: 1, answer: ans([["person.city_of_birth", "City where the person was born"]], ["a"]), fields: ["a"] }, { part: 2, answer: ans([["person.birth_city", "Town of birth"], ["person.phone_type", "Kind of telephone"]], ["b"]), fields: ["b"] }], [{ ...reused.reused[0] }]);
   ok("A4 merge: reused entries and every part's entries in one answer; a meaning named twice in different parts is flagged", merged.answer.entries.length === 3 && merged.answer.entries[0].reused_from === "IMM 1344 (01-2020)" && merged.near_duplicates.length === 1 && merged.near_duplicates[0].a === "person.city_of_birth" && merged.near_duplicates[0].b === "person.birth_city", merged.near_duplicates);
-  const same = mergeParts([{ part: 1, answer: ans([["person.city_of_birth", "x"], ["person.birth_city", "y"]], ["a"]) }, { part: 2, answer: ans([["person.phone_type", "Kind of telephone"]], ["b"]) }], []);
+  const same = mergeParts([{ part: 1, answer: ans([["person.city_of_birth", "x"], ["person.birth_city", "y"]], ["a"]), fields: ["a"] }, { part: 2, answer: ans([["person.phone_type", "Kind of telephone"]], ["b"]), fields: ["b"] }], []);
   ok("A4 merge fail: two names inside one part, or unrelated names, are not flagged (each part is reviewed as drafted)", same.near_duplicates.length === 0);
+  const stray = mergeParts([{ part: 1, answer: ans([["person.family_name", "Family name"]], ["a", "b"]), fields: ["a"] }, { part: 2, answer: ans([["person.given_names", "Given names"]], []), fields: ["b", "c"] }], []);
+  ok("A4 merge fail (review 3): part 1's answer for part 2's form field is set aside; a form field its part did not answer stays open with the reason", stray.set_aside.some((x) => x.part === 1 && x.data_path === "b") && stray.unanswered.join() === "b,c" && stray.answer.entries.filter((e) => ["b", "c"].includes(e.data_path)).every((e) => e.outcome === "unresolved" && /Part 2 gave no answer/.test(e.unresolved_reason ?? "")), { set_aside: stray.set_aside, unanswered: stray.unanswered });
+  const coded = { ...data1344.find((f: { options_resolved?: unknown }) => Array.isArray(f.options_resolved) && (f.options_resolved as unknown[]).length) };
+  const codedPrior = prior({ data_path: coded.data_path, caption: coded.caption, transform: "code_list:old (A=1, B=2)", options: [["A", "1"], ["B", "2"]], confidence: "medium" });
+  ok("A4 reuse fail (review 4): a choice field whose codes differ from the earlier edition's is not reused; with the same codes it is, at the earlier row's own confidence", planDraft(inv1344, [codedPrior]).reused.length === 0 && planDraft(inv1344, [{ ...codedPrior, options: coded.options_resolved }]).reused[0]?.confidence === "medium");
+  // The paid-only steps of A4 and screen_map, run at US$0 on saved and hand-written records (review 6).
+  const saved5257 = JSON.parse(readFileSync(join(PROTOTYPE, "p2", "runs", readdirSync(join(PROTOTYPE, "p2", "runs")).filter((f) => f.startsWith("studio-fieldmap-imm5257e-live-") && !f.includes("reconverted")).sort().find((f) => JSON.parse(readFileSync(join(PROTOTYPE, "p2", "runs", f), "utf8")).contract_valid === true)!), "utf8"));
+  const whole5257 = JSON.parse(saved5257.raw_output) as { form_edition: string; canonical_fields: { id: string; meaning: string; value_type: string }[]; entries: { data_path: string }[] };
+  const inv5257 = JSON.parse(readFileSync(join(PROTOTYPE, "p1", "inventory", "imm5257e.inventory.json"), "utf8"));
+  const split5257 = planDraft(inv5257, []);
+  const asPart = (paths: string[], drop: string[] = []) => ({ ...saved5257, conversion: { needs_person: (saved5257.conversion?.needs_person ?? []).filter((n: { data_path: string }) => paths.includes(n.data_path)) }, raw_output: JSON.stringify({ ...whole5257, entries: whole5257.entries.filter((e) => paths.includes(e.data_path) && !drop.includes(e.data_path)) }) });
+  const runs = split5257.parts.map((p) => ({ part: p.index, sections: p.sections, fields: p.fields.map((f) => f.data_path!), run_file: null, rec: asPart(p.fields.map((f) => f.data_path!), p.index === 2 ? [p.fields[0].data_path!] : []) }));
+  const mergedEnv = assembleMerged(runs, [], { runId: "check-merge", reusedFrom: [], inventoryFile: "prototype/p1/inventory/imm5257e.inventory.json", inventorySha: "0".repeat(64), label: "AI-drafted (saved answer, sliced by part for this check)", library: new Map() });
+  const mergedOut = JSON.parse(mergedEnv.raw_output) as { entries: { data_path: string; outcome: string }[] };
+  ok("A4 merge on a saved real answer (IMM 5257, sliced into its 5 parts, no model call): every form field once, the one a part left out stays open, needs-person entries kept", mergedOut.entries.length === split5257.total && new Set(mergedOut.entries.map((e) => e.data_path)).size === split5257.total && mergedEnv.merged.unanswered.length === 1 && mergedOut.entries.find((e) => e.data_path === mergedEnv.merged.unanswered[0])?.outcome === "unresolved" && mergedEnv.conversion.needs_person.length === (saved5257.conversion?.needs_person ?? []).filter((n: { data_path: string }) => n.data_path !== mergedEnv.merged.unanswered[0]).length, { parts: mergedEnv.merged.parts.length, unanswered: mergedEnv.merged.unanswered, needs_person: mergedEnv.conversion.needs_person.length });
+  const items = [{ proposedKey: "person.birth_city", outcome: "NEW", reason: "New.", evidence: {} as Record<string, unknown> }, { proposedKey: "person.family_name", outcome: "REUSE", reason: "Reuse.", evidence: {} as Record<string, unknown> }];
+  flagNearDuplicates(items, merged.near_duplicates);
+  ok("A4 ingest: a near-duplicate proposal is flagged for a person (reason and evidence); a reused field is not", /Near-duplicate of person\.city_of_birth/.test(items[0].reason) && items[0].evidence.near_duplicate_of === "person.city_of_birth" && items[1].reason === "Reuse.");
 
   // ──────────────────────────────────────────── screen_map proposals (no server)
   const left = [{ input: "birthCity", type: "text", part: null, label: "Place of birth › City or town" }, { input: "dobYear", type: "text", part: "YYYY", label: "Date of birth › Year" }, { input: "consent", type: "checkbox", part: null, label: "I agree" }];
@@ -78,6 +96,11 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   const bad = screenMapProposals({ canonical_fields: [], entries: [entry("birthCity", "person.unknown_field"), entry("dobYear", "person.family_name"), entry("consent", "Person.Bad Name")] }, left, libE, factKeyProblem);
   ok("screen_map fail: a field not in the library, a field that does not suit the input (text for a year), and a bad name all stay open with the reason", bad.proposals.every((p) => p.outcome === "unresolved") && /not in the library/.test(bad.proposals[0].why) && /date part/.test(bad.proposals[1].why) && /names the field/.test(bad.proposals[2].why), bad.proposals.map((p) => p.why));
   ok("screen_map fail: a person outside the agreed list is not accepted", screenMapProposals({ canonical_fields: [], entries: [entry("birthCity", "person.place_of_birth_city", "mapped", "neighbour")] }, left, libE, factKeyProblem).proposals[0].outcome === "unresolved");
+  const leftE = [{ input: "birthCity", type: "text", part: null, label: "City or town" }];
+  const runOk = readScreenRun({ contract_valid: true, raw_output: JSON.stringify({ canonical_fields: [], entries: [entry("birthCity", "person.place_of_birth_city")] }), drafting_run: { run_id: "hand-written", status: "completed", usage: { cost_usd: 0 } } }, leftE, libE, factKeyProblem);
+  const runBad = readScreenRun({ contract_valid: true, raw_output: "{not json", drafting_run: { status: "completed" } }, leftE, libE, factKeyProblem);
+  const runRefused = readScreenRun({ contract_valid: false, raw_output: null, drafting_run: { status: "refused", usage: { cost_usd: 0.12 } } }, leftE, libE, factKeyProblem);
+  ok("screen_map live branch (hand-written records, no model call): a usable answer gives proposals; unreadable or refused answers give a plain message and no proposal", runOk.ok && runOk.proposals[0].fact === "person.place_of_birth_city" && !runBad.ok && /not in the agreed shape/.test(runBad.message) && !runRefused.ok && /declined/.test(runRefused.message) && runRefused.cost === 0.12);
 
   // ──────────────────────────────────────────── evidence findings F1–F4 (no server)
   const f1344 = inv1344.fields as { data_path?: string; som?: string; ui?: string; caption?: string; required?: boolean }[];
@@ -87,6 +110,10 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   const stepsNA = personSteps(f1344, { [`${phone}.NumberCountry[0]`]: "1", [`${phone}.NANumber[0].AreaCode[0]`]: "416" }, inv1344.groups);
   ok("F1: a Canada/US telephone written to IMM 1344 gives the person step 'tick Canada/US' (its number boxes show only after that click)", stepsNA.some((s) => s.finding === "F1" && s.boxes[0] === `${phone}.CanadaUS[0]`), stepsNA.map((s) => s.say.slice(0, 80)));
   ok("F1 fail: an international number (country code 91, 'Other') needs no such step", !personSteps(f1344, { [`${phone}.NumberCountry[0]`]: "91", [`${phone}.IntlNumber[0].IntlNumber[0]`]: "9800000000" }, inv1344.groups).some((s) => s.finding === "F1"));
+  ok("F1 fail (break M4): a '+1' number the writer left as international (switch 0, country code 1, international box) needs no step; the switch written ticked does", !personSteps(f1344, { [`${phone}.CanadaUS[0]`]: "0", [`${phone}.Other[0]`]: "1", [`${phone}.NumberCountry[0]`]: "1", [`${phone}.IntlNumber[0].IntlNumber[0]`]: "4165550142" }, inv1344.groups).some((s) => s.finding === "F1") && personSteps(f1344, { [`${phone}.CanadaUS[0]`]: "1" }, inv1344.groups).some((s) => s.finding === "F1" && /Question 3 Telephone number: after the form's first Validate/.test(s.say)));
+  ok("F2 (break m9): a signature field with no caption is a signature; 'Date of signature' is a date, written as usual", isSignatureBox({ ui: "signature", data_path: "form1[0].SignatureField1[0]" }) && isSignatureBox({ ui: "textEdit", caption: "Sign here" }) && !isSignatureBox({ ui: "textEdit", caption: "Date of signature" }));
+  ok("F3 (break m10): postal codes with an en dash, an underscore or full-width letters, under 'Post code', are written A1A 1A1", inFormFormat({ caption: "Post code" }, "M5V\u20130A1") === "M5V 0A1" && inFormFormat({ caption: "Postal/ZIP code" }, "m5v_0a1") === "M5V 0A1" && inFormFormat({ caption: "Postal code" }, "\uFF2D5V0A1") === "M5V 0A1");
+  ok("option maps (break m11): a code list in any step of a transform ('code_list:…; uppercase') counts as codes", hasCodes("code_list:imm1295.sex; uppercase") && !hasCodes("derive:Y if …; as_is"));
   ok("F2: IMM 1344's mandatory signatures give the step 'each signer types their name, then Validate'; IMM 1295's optional signature box gives none", stepsNA.some((s) => s.finding === "F2" && s.boxes.length === 2) && !personSteps(JSON.parse(readFileSync(join(PROTOTYPE, "p1", "inventory", "imm1295e.inventory.json"), "utf8")).fields, {}, []).some((s) => s.finding === "F2"));
   ok("F3: a Canadian postal code is written in the form's own format (M5V0A1 → M5V 0A1)", inFormFormat({ caption: "Postal code" }, "m5v0a1") === "M5V 0A1" && inFormFormat({ data_path: "x[0].PostalCode[0]" }, "M5V-0A1") === "M5V 0A1");
   ok("F3 fail: other values, and postal codes of other countries, are written unchanged", inFormFormat({ caption: "Postal code" }, "110001") === "110001" && inFormFormat({ caption: "Family name" }, "m5v0a1") === "m5v0a1");
@@ -112,9 +139,12 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   const t = r.body.targets?.[0];
   ok("A4 plan: IMM 5257 (242 form fields) is planned in parts by section group, none reused yet, US$0 in stub mode", t?.action === "draft" && t.a4?.parts.length > 1 && t.a4.reused === 0 && t.a4.to_ai === t.a4.total && t.worst_usd === 0 && /parts/.test(t.why), t?.a4 && { parts: t.a4.parts.map((p: { fields: number }) => p.fields), why: t.why });
   r = await call("POST", `/attachments/${att(vv, "imm5257e.pdf")}/draft`, { mode: "stub" });
-  const stubJob = await finished(r.body.id);
+  const other = await call("POST", `/attachments/${att(sv, "imm5707e.pdf")}/draft`, { mode: "stub" }); // a second draft at the same time (break B3)
+  const stubJob = await finished(r.body.id), otherJob = await finished(other.body.id);
+  ok("A4 (break B3): two drafts at the same moment both finish: launches take turns, none is refused 'ledger locked'", otherJob.status === "COMPLETED" && !/ledger locked/.test(JSON.stringify(stubJob) + JSON.stringify(otherJob)), [stubJob.status, otherJob.status, otherJob.message?.slice(0, 120)]);
+  ok("A4 (break M1): the part jobs that ran name their content (…-p1of5-<12 hex>)", (stubJob.detail?.a4?.parts ?? []).every((p: { job_id: string }) => /-p\d+of\d+-[0-9a-f]{12}$/.test(p.job_id)), stubJob.detail?.a4?.parts?.map((p: { job_id: string }) => p.job_id.slice(-22)));
   const parts = stubJob.detail?.a4?.parts ?? [];
-  ok("A4 run: every part passes the guarded stub path, two at a time, each recorded with its sections and form fields", stubJob.status === "COMPLETED" && parts.length === t.a4.parts.length && parts.every((p: { status: string }) => p.status === "done") && /Stub pass completed for all/.test(stubJob.message), stubJob.message);
+  ok("A4 run: every part passes the guarded stub path, one at a time, each recorded with its sections and form fields", stubJob.status === "COMPLETED" && parts.length === t.a4.parts.length && parts.every((p: { status: string }) => p.status === "done") && /Stub pass completed for all/.test(stubJob.message), stubJob.message);
   const partRun = readJson(parts[0].run_file);
   ok("A4 guard: each part reached the AI step only as an admitted part of the official inventory (inventory_part, parent named)", partRun.launch_evidence?.admitted?.[0]?.kind === "inventory_part" && partRun.drafting_run?.inputs?.official_files?.[0]?.file.startsWith("prototype/p2/parts/"), partRun.launch_evidence?.admitted);
   const partJob = parts[0].job_id as string;
@@ -130,6 +160,14 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   writeFileSync(partFile, saved); writeFileSync(join(PROTOTYPE, "p2", "jobs", `${partJob}.json`), jobSaved);
   ok("A4 guard fail: a part whose form field was changed (a planted instruction) is refused before any prompt exists", launched.status !== 0 && /not in the parent inventory as it is there/.test(launched.stdout), launched.stdout.trim().slice(0, 200));
 
+  // Break M2: a cancel stops the parts not yet started (each would be a paid call in live mode).
+  r = await call("POST", `/attachments/${att(sv, "imm5257e.pdf")}/draft`, { mode: "stub" });
+  const cj = r.body; await until(async () => ((await call("GET", `/jobs/${cj.id}`)).body.detail?.a4?.parts ?? []).some((p: { status: string }) => p.status !== "queued"), 120_000);
+  const cancel = await call("POST", `/ai/batches/${cj.batchId}/cancel`, {});
+  const stopped = await finished(cj.id);
+  const notStarted = (stopped.detail?.a4?.parts ?? []).filter((p: { status: string }) => p.status === "not started").length;
+  ok("A4 cancel (break M2): parts not yet started are not sent after a cancel", cancel.status === 201 && stopped.status === "CANCELLED" && notStarted >= 1 && /were not sent|Cancelled/.test(stopped.message), { status: stopped.status, notStarted, message: stopped.message?.slice(0, 160) });
+
   // ──────────────────────────────────────────── A4 reuse first, through the API
   const replayAtt = att(vv, "imm5257e.pdf");
   r = await call("POST", `/attachments/${replayAtt}/draft`, { mode: "replay" });
@@ -140,6 +178,9 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   ok("setup: IMM 5257's field map is in the library from the saved real answer (replayed, US$0)", r.status === 201, r.body?.message);
   // The library's IMM 5257 map stands in for an earlier edition (the official list holds one edition of each form).
   sql("update form_edition set sha256 = repeat('0', 64), edition_label = 'IMM 5257 (01-2020)' where edition_label = 'IMM 5257 (09-2023)'");
+  r = await call("POST", "/ai/plan", { scope: { kind: "source", ids: [att(sv, "imm5257e.pdf")] }, mode: "LIVE", draftAgain: true });
+  ok("A4 reuse fail (review 4): mappings nobody has released yet are never reused", r.body.targets?.[0]?.a4?.reused === 0, r.body.targets?.[0]?.a4 && { reused: r.body.targets[0].a4.reused });
+  sql("update form_field_map set status = 'PUBLISHED' where form_edition_id = (select id from form_edition where edition_label = 'IMM 5257 (01-2020)')"); // released (the release path is Screen 01's)
   const openRows = Number(sql("select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 5257 (01-2020)' and m.outcome = 'unresolved'"));
   r = await call("POST", "/ai/plan", { scope: { kind: "source", ids: [att(sv, "imm5257e.pdf")] }, mode: "LIVE", draftAgain: true });
   const t2 = r.body.targets?.[0];
@@ -171,7 +212,9 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   ok("screen_map fail: a live draft is refused until its worst case is confirmed to the cent (nothing spent unseen)", r.status === 409 && /costs at most US\$[0-9.]+/.test(r.body.message), r.body.message);
   r = await call("POST", `/online-versions/${ed}/screen-map/ai`, { combinationId: vv, mode: "STUB" }, "user-C");
   ok("screen_map fail: the reviewer (no author duty) cannot start it", r.status === 403);
-  r = await call("POST", `/online-versions/${ed}/screen-map/ai`, { combinationId: vv, mode: "STUB" });
+  const [d1, d2] = await Promise.all([1, 2].map(() => call("POST", `/online-versions/${ed}/screen-map/ai`, { combinationId: vv, mode: "STUB" })));
+  ok("screen_map fail (review 2): two starts at the same moment make one job; the other is refused", [d1.status, d2.status].sort().join() === "201,409" && sql(`select count(*) from drafting_job where kind='screen_map'`) === "1", [d1.status, d2.status]);
+  r = d1.status === 201 ? d1 : d2;
   const sm = await finished(r.body.id);
   const smRun = readdirSync(join(PROTOTYPE, "p2", "runs")).filter((f) => f.startsWith(sm.detail.job_id) && f.includes("-stub-")).sort().pop()!;
   const smEnv = JSON.parse(readFileSync(join(PROTOTYPE, "p2", "runs", smRun), "utf8"));
@@ -180,13 +223,15 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   ok("screen_map fail: a stub pass has nothing to accept", r.status === 409, r.body.message);
   // A completed answer, hand-written for this check (no model call): the rule that reads it is the one a live run uses.
   const lib = sql("select canonical_field_key from canonical_field where canonical_field_key = 'person.place_of_birth_city' limit 1");
-  const answer = { canonical_fields: [], entries: [{ input: open[0], outcome: "not_a_fact", person: "none", fact: null, transform: null, confidence: "medium", unresolved_reason: "asked only by the portal", evidence_quote: open[0] }] };
+  const answer = { canonical_fields: [], entries: [open[0], open[1]].map((i) => ({ input: i, outcome: "not_a_fact", person: "none", fact: null, transform: null, confidence: "medium", unresolved_reason: "asked only by the portal", evidence_quote: i })) };
   const proposals = screenMapProposals(answer, open.map((i) => ({ input: i, type: "text", part: null, label: i })), lib ? [{ key: lib, valueType: "text", aliases: [], mergedIntoKey: null }] : [], factKeyProblem);
   sql(`update drafting_job set run_id = 'hand-written-check-answer', detail = detail || '${JSON.stringify(proposals).replace(/'/g, "''")}'::jsonb where id = '${sm.id}'`);
-  r = await call("POST", `/online-versions/${ed}/screen-map/ai/accept`, { jobId: sm.id }, "user-C");
+  r = await call("POST", `/online-versions/${ed}/screen-map/ai/accept`, { jobId: sm.id, inputs: [open[0]] }, "user-C");
+  const firstStatus = sql(`select status from drafting_job where id='${sm.id}'`);
   const accepted = sql(`select outcome || ':' || origin from form_field_map where form_edition_id='${ed}' and data_path='${open[0]}' order by version desc limit 1`);
+  const rest = await call("POST", `/online-versions/${ed}/screen-map/ai/accept`, { jobId: sm.id }, "user-C");
   const again = await call("POST", `/online-versions/${ed}/screen-map/ai/accept`, { jobId: sm.id }, "user-C");
-  ok("screen_map accept: a person accepts the proposal (a new draft version, origin AI_PROPOSAL, with the run named); accepting again is refused", r.status === 201 && r.body.accepted === 1 && accepted === "not_a_fact:AI_PROPOSAL" && again.status === 409, { accepted, body: r.body });
+  ok("screen_map accept: a person accepts one proposal now (a new draft version, origin AI_PROPOSAL) and the rest later (break m13); then nothing is left to accept", r.status === 201 && r.body.accepted === 1 && accepted === "not_a_fact:AI_PROPOSAL" && firstStatus === "COMPLETED" && rest.status === 201 && rest.body.accepted === 1 && again.status === 409, { accepted, firstStatus, rest: rest.body, again: again.status });
 
   // ──────────────────────────────────────────── the filler: F1–F3 through the API (wp.family, IMM 1295, US$0)
   const fill = async () => (await call("POST", `/combinations/${wp}/fill`, { form: "IMM 1295", person: "principal", mode: "draft" })).body;

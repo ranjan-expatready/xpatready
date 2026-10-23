@@ -20,7 +20,7 @@ const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++
 type Res = { status: number; body: any };
 /** fetch, sent again once when the kept-alive connection was already closed before any reply (EPIPE, reset): under heavy
  *  machine load the server closes an idle connection while a slow step runs, and the next request finds it closed. */
-const send = async (url: string, init: RequestInit): Promise<Response> => {
+const send = async (url: string, init: RequestInit = {}): Promise<Response> => {
   try { return await fetch(url, init); } catch (e) {
     const code = (e as { cause?: { code?: string } }).cause?.code ?? "";
     if (!/EPIPE|ECONNRESET|UND_ERR_SOCKET/.test(code)) throw e;

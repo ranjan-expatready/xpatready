@@ -161,3 +161,24 @@ export function screenMapProposals(answer: ScreenMapAnswer, leftovers: Leftover[
   }
   return { proposals, ignored, not_answered: leftovers.filter((l) => !seen.has(l.input)).map((l) => l.input) };
 }
+
+/** A screen-map run that did not give a usable answer, in plain words (never blank). */
+function explainScreenRun(rec: { drafting_run?: { status?: string; usage?: { cost_usd?: number } }; output_errors?: unknown; contract_valid?: boolean }) {
+  const cost = `US$${Number(rec.drafting_run?.usage?.cost_usd ?? 0).toFixed(2)}`;
+  const s = rec.drafting_run?.status;
+  if (s === "invalid_output") return `The AI answered, but not in the agreed shape (${String(typeof rec.output_errors === "string" ? rec.output_errors : JSON.stringify(rec.output_errors)).slice(0, 160)}). Nothing was proposed. Cost ${cost}.`;
+  if (s === "refused") return `The AI declined to draft these inputs. Nothing was proposed. Cost ${cost}.`;
+  return `The AI step ended without a usable draft (status ${s ?? "unknown"}${rec.contract_valid === false ? ", the run record failed our check" : ""}). Nothing was proposed. Cost ${cost}.`;
+}
+
+/** What a finished guarded screen_map run means (the live branch of the job, review 6: it is tested at US$0 with
+ *  hand-written records): a usable answer becomes proposals by screenMapProposals, anything else a plain message. */
+export function readScreenRun(rec: { drafting_run?: { run_id?: string; status?: string; usage?: { cost_usd?: number } }; contract_valid?: boolean; output_errors?: unknown; raw_output?: string | null }, leftovers: Leftover[], library: LibraryEntry[], keyProblem: (k: string) => string | null) {
+  const cost = rec.drafting_run?.usage?.cost_usd ?? 0;
+  if (!/^completed/.test(rec.drafting_run?.status ?? "") || rec.contract_valid !== true || !rec.raw_output) return { ok: false as const, cost, message: explainScreenRun(rec) };
+  let answer: ScreenMapAnswer;
+  try { answer = JSON.parse(rec.raw_output) as ScreenMapAnswer; } catch { return { ok: false as const, cost, message: explainScreenRun({ ...rec, drafting_run: { ...rec.drafting_run, status: "invalid_output" }, output_errors: "not JSON" }) }; }
+  const out = screenMapProposals(answer, leftovers, library, keyProblem);
+  const mapped = out.proposals.filter((p) => p.outcome !== "unresolved").length;
+  return { ok: true as const, cost, ...out, message: `AI draft ${rec.drafting_run?.run_id}: ${mapped} of ${leftovers.length} open inputs have a proposal a person can accept (${out.proposals.length - mapped} stay open${out.ignored.length ? `; ${out.ignored.length} answers for inputs that were not asked were ignored` : ""}). Cost US$${Number(cost).toFixed(2)}.` };
+}
