@@ -377,7 +377,7 @@ function page(){
   const s=sc();
   const head=`<div class="pagehead"><div style="flex:1;min-width:0"><h1>Prepare application ${CN}</h1>
     <p class="sub">Everything to file for this application. Answers come from the agent view; only confirmed facts fill a form.</p></div>
-    <button class="btn" data-a="panel" data-k="record"${S.view==='loading'||S.view==='error'?' disabled':''}>Edit filing record</button></div>
+    <button class="btn" data-a="panel" data-k="record"${S.view==='loading'||S.view==='error'?' disabled':''}>${ro()?'View filing record':'Edit filing record'}</button></div>
     <nav class="tabs" aria-label="Case"><a href="#">Overview</a><a href="#">Agent view</a><a href="#">Documents</a><a href="#" class="on" aria-current="page">Prepare application</a>${L('x','Other tabs: not on this board')}</nav>`;
   if(S.view==='loading') return `<div class="card">${head}<div class="work"><div class="items" aria-busy="true"><span class="sr-only">Loading the filing</span>${'<div class="skel"></div>'.repeat(9)}</div><div class="detail">${'<div class="skel" style="height:22px"></div>'.repeat(6)}</div></div></div>`;
   if(S.view==='error') return `<div class="card">${head}<div style="padding:48px 20px;text-align:center"><h2 style="font-size:18px;margin:0">This filing could not be loaded</h2><p class="sub">Nothing was changed. Check your connection and try again.</p><p><button class="btn" data-a="view" data-k="working">Try again</button></p></div></div>`;
