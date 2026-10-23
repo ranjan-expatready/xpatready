@@ -9,8 +9,8 @@ updated: 2026-10-23
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
 | screens | 01-programs-catalogue | FIX | Builder | Lead note waiting for sync · One fix pass closing Screen 01 (Lead note 17:05): QA-1, QA-13, QA-7, QA-9, QA-3/5/6/10/11/12, P-63 field wo… |
-| forms | F1-forms-channels | BUILD | Builder | slice 2 (backend path): guard link-hop fix first (QA-8), A4 backend, guarded admission of screen inventorie… |
-| evidence | E1-form-acceptance (E1b) | BUILD | Builder | IMM 5257: Sample values in the form's own formats → fill a copy → Adobe by computer use (Validate, record e… |
+| forms | F1-forms-channels | BUILD | Builder | Lead note waiting for sync · slice 2 (backend path): guard link-hop fix first (QA-8), A4 backend, guarded admission of screen inventorie… |
+| evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check E1b IMM 5257 (prototype/evidence-lane/E1/imm5257/STATUS.md) and decide the P-65 gate for R1; se… |
 | runtime | R1-thin-slice | PLAN | Lead | Lead checks screens/R1-thin-slice/plan.md and challenge.md (verdict Build after these changes; no open Bloc… |
 | qa | QA-0 baseline | WAITING | Lead | Lead reads qa/reports/2026-10-23-milestone.md, assigns QA-4 to QA-12 to lanes, answers the three questions;… |
 <!-- lanes:end -->

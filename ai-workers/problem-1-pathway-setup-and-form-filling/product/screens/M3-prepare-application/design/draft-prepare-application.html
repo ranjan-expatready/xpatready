@@ -68,11 +68,11 @@ main{flex:1;min-width:0;padding:20px 24px 48px}
 .items{border-right:1px solid var(--border);padding:8px 0}
 .group h2{margin:12px 16px 4px;font-size:12px;font-weight:600;color:var(--muted);display:flex;gap:6px}
 .group .none{margin:0 16px 4px;font-size:12px;color:var(--muted)}
-.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;padding:8px 12px 8px 13px;cursor:pointer;min-height:44px}
+.item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;padding:8px 12px 8px 13px;cursor:pointer;min-height:44px}
 .item:hover{background:var(--surface)}
 .item[aria-current=true]{background:var(--primary-50);border-left-color:var(--primary)}
-.item .t1{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.item .t2{grid-column:1/-1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .t1{font-weight:600;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .t2{max-width:100%;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .detail{padding:16px 20px;min-width:0}
 .dhead{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
 .dhead h2{margin:0;font-family:var(--head);font-size:18px}
@@ -418,7 +418,7 @@ function list(){
     const its=items().filter(i=>i.group===g);
     const body=its.length?its.map(it=>{const st=status(it);const cur=S.sel[S.scen]===it.id;
       return `<div role="listitem"><button class="item" aria-current="${cur}" data-a="sel" data-k="${it.id}">
-        <span class="t1">${esc(itemName(it))} · ${PEOPLE[it.person]}</span>${chip(st)}
+        <span class="t1" title="${esc(itemName(it))} · ${PEOPLE[it.person]}">${esc(itemName(it))} · ${PEOPLE[it.person]}</span>${chip(st)}
         <span class="t2" title="${esc(it.title)}">${esc(it.group==='docs'?roleOf(it.person):it.title)}${st.prog?' · '+st.prog:''}${it.filled&&it.group!=='online'?` · ${it.filled[0]} of ${it.filled[1]} filled`:''}</span></button></div>`;}).join('')
       :`<p class="none">None in this filing</p>`;
     const extra=(g==='docs'&&s.docsNote)?`<p class="none">${esc(s.docsNote)}</p>`:'';
