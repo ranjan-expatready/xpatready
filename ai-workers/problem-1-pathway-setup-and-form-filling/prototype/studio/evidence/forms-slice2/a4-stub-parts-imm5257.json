@@ -1,9 +1,9 @@
 {
  "plan": {
-  "combinationId": "82653601-96bc-43a3-8d4f-92a6a4d6c501",
+  "combinationId": "0bb07a87-5990-4a3d-ad1e-5fca9eed9161",
   "combination": "Visitor visa",
   "program": "Visitor visa",
-  "attachmentId": "1faec122-f02d-4bd5-9ee2-17f7ec09624e",
+  "attachmentId": "d2085a02-83c8-4e3e-8deb-485d5c29feee",
   "source": "IMM 5257 (09-2023)",
   "expected_usd": 0,
   "worst_usd": 0,
@@ -76,8 +76,8 @@
   "action_label": "Draft field map"
  },
  "job": {
-  "status": "FAILED",
-  "message": "2 of 5 parts did not finish (part 2: stub pass failed: launch ticket is for another start (run_id differs); the digest was not issued for this run; part 3: stub pass failed: launch ticket is for another start (run_id differs); the digest was not issued for this run). Nothing was applied. Cost US$0.00.",
+  "status": "COMPLETED",
+  "message": "Stub pass completed for all 5 parts: the guarded path works for each part. a stub has no AI content, so there is nothing to compare.",
   "a4": {
    "parts": [
     {
@@ -87,7 +87,7 @@
      "job_id": "studio-fieldmap-imm5257e-p1of5",
      "status": "done",
      "cost_usd": 0,
-     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p1of5-stub-20261023t121746288z.json",
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p1of5-stub-20261023t122730839z.json",
      "sections": [
       "Page1.Header",
       "Page1.ButtonsHeader",
@@ -95,13 +95,13 @@
      ]
     },
     {
-     "error": "stub pass failed: launch ticket is for another start (run_id differs); the digest was not issued for this run",
+     "error": null,
      "index": 2,
      "fields": 49,
      "job_id": "studio-fieldmap-imm5257e-p2of5",
-     "status": "failed",
+     "status": "done",
      "cost_usd": 0,
-     "run_file": null,
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p2of5-stub-20261023t122730846z.json",
      "sections": [
       "Page1.PersonalDetails",
       "Page1.MaritalStatus",
@@ -109,13 +109,13 @@
      ]
     },
     {
-     "error": "stub pass failed: launch ticket is for another start (run_id differs); the digest was not issued for this run",
+     "error": null,
      "index": 3,
      "fields": 56,
      "job_id": "studio-fieldmap-imm5257e-p3of5",
-     "status": "failed",
+     "status": "done",
      "cost_usd": 0,
-     "run_file": null,
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p3of5-stub-20261023t122733123z.json",
      "sections": [
       "Page2.natID",
       "Page2.USCard",
@@ -129,7 +129,7 @@
      "job_id": "studio-fieldmap-imm5257e-p4of5",
      "status": "done",
      "cost_usd": 0,
-     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p4of5-stub-20261023t121751762z.json",
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p4of5-stub-20261023t122733396z.json",
      "sections": [
       "Page3.DetailsOfVisit",
       "Page3.Contacts_Row2",
@@ -144,7 +144,7 @@
      "job_id": "studio-fieldmap-imm5257e-p5of5",
      "status": "done",
      "cost_usd": 0,
-     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p5of5-stub-20261023t121753442z.json",
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p5of5-stub-20261023t122735183z.json",
      "sections": [
       "Page3.BackgroundInfo",
       "Page3.BackgroundInfo2",

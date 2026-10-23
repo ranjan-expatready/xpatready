@@ -1,10 +1,10 @@
 {
- "at": "2026-10-23T12:18:42.160Z",
+ "at": "2026-10-23T12:28:03.533Z",
  "port": 4451,
  "database": "xr_studio_forms_s2",
  "paid_calls": 0,
- "pass": 34,
- "fail": 1,
+ "pass": 38,
+ "fail": 0,
  "log": [
   {
    "name": "A4 split: IMM 1344's 233 form fields go to parts of at most 60, by section group, each field exactly once",
@@ -135,6 +135,18 @@
    "ok": true
   },
   {
+   "name": "option maps: a text form field (country_name_text) and a derived yes/no field (derive:Y if …) on a field with an answer list need none",
+   "ok": true
+  },
+  {
+   "name": "option maps fail: a form field with codes of its own (code_list, also after a 'select …' step) still needs one",
+   "ok": true
+  },
+  {
+   "name": "fill: a text form field fed by a field on an answer list writes the value's label, never its key",
+   "ok": true
+  },
+  {
    "name": "A4 plan: IMM 5257 (242 form fields) is planned in parts by section group, none reused yet, US$0 in stub mode",
    "ok": true,
    "detail": {
@@ -150,8 +162,8 @@
   },
   {
    "name": "A4 run: every part passes the guarded stub path, two at a time, each recorded with its sections and form fields",
-   "ok": false,
-   "detail": "2 of 5 parts did not finish (part 2: stub pass failed: launch ticket is for another start (run_id differs); the digest was not issued for this run; part 3: stub pass failed: launch ticket is for another start (run_id differs); the digest was not issued for this run). Nothing was applied. Cost US$0.00."
+   "ok": true,
+   "detail": "Stub pass completed for all 5 parts: the guarded path works for each part. a stub has no AI content, so there is nothing to compare."
   },
   {
    "name": "A4 guard: each part reached the AI step only as an admitted part of the official inventory (inventory_part, parent named)",
@@ -191,7 +203,7 @@
   {
    "name": "A4 reuse run: completed without any AI call or cost, the record labelled as reuse (not AI), compared with the library for a person",
    "ok": true,
-   "detail": "Every form field reused from IMM 5257 (01-2020) without AI (US$0) as studio-fieldmap-imm5257e-reused-20261023t121803302z. 161 of 242 boxes mapped; 84 fields: 84 reuse, 0 new, 0 ambiguous, 0 conflicting."
+   "detail": "Every form field reused from IMM 5257 (01-2020) without AI (US$0) as studio-fieldmap-imm5257e-reused-20261023t122743404z. 161 of 242 boxes mapped; 84 fields: 84 reuse, 0 new, 0 ambiguous, 0 conflicting."
   },
   {
    "name": "A4 reuse apply: the reused form fields enter the library as code matches (origin CODE_MATCH, 'as mapped in IMM 5257 (01-2020)'), never as AI",
@@ -223,7 +235,7 @@
     "admitted": [
      {
       "file": "prototype/p2/parts/imm-5257-ircc_portal-d6375ca38c3b.open-2b5137bf3928.part.json",
-      "sha256": "42b1c823a3be54cc89e9ef11a401b08fbf512341a1d9ecace071331d4dfcb7fb",
+      "sha256": "b1d8deacdf9d9afc7c6832047d7ad8a0de1980fc05cc53bd19e2361bdcf1c080",
       "kind": "inventory_part"
      }
     ]
