@@ -6,13 +6,14 @@
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: F1-forms-channels
-stage: BUILD
+stage: CHECK
 owner: Builder
-next_action: slice 2 built (QA-8, per-run launch tickets, guarded parts and screen inventories, A4, screen_map job, F1–F4, option-map defect); full suite run in progress, then reviewer + breaker (CHECK) → owner Lead.
+next_action: reviewer (:4452) and breaker (:4454) on slice 2; fix every Must/Blocker/Major; then owner Lead.
 blocked_by: none
 updated: 2026-10-23
 
 ## Log (last 10 lines)
+- 2026-10-23 · F1 · BUILD → CHECK (slice 2) · suites: guard 64/64, launch 53/53, slice 2 38/38, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 22/22 (QA-8 fixed); F1 rerun after a test-client keep-alive fix; reviewer and breaker launched. US$0.
 - 2026-10-23 · F1 · BUILD (slice 2) · built QA-8 (--preserve-symlinks), per-run launch tickets (two launches at once collided), guarded parts and screen inventories, A4 reuse-first parts with progress and merge flags, screen_map job, evidence F1–F4 in the filler, runtime-lane option-map defect; guard 64/64, launch 53/53, slice 2 34/35 before the ticket fix; full run in progress. US$0.
 - 2026-10-23 · F1 · CHECK → BUILD (slice 2) · applied Lead note 2026-10-23 17:05 (slice 1 merged d795b019).
 - 2026-10-23 · F1 · FIX → CHECK · all review (1 Must, 10 Major) and break (9 Major) findings fixed with a test each, most minors too; F1 106/106, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 19/22 (lane guard, slice 2); second migration (revision, checks, one pending merge) proven on a demo copy with its rollback. Owner → Lead.
@@ -22,4 +23,3 @@ updated: 2026-10-23
 - 2026-10-23 · Lead: challenge answered (all five accepted; P-65 aliases and merges added; A4 backend into slice 2); founder decided P-66 (extension both modes, structure-only capture, portal twin, form health). Set BUILD slice 1, owner Builder. F2 (working extension on saved screens) follows.
 - 2026-10-23 · F1 · DESIGN · Founder asked (in this session) to fix the repeated hand-back block: renamed "Paste to Lead" → "Report to Lead", once per stage (CLAUDE.md, next, lead, screen-build, LANES, WORKFLOW); stop and session-start hooks now check the session's own copy (hook input cwd), so lane sessions no longer get the main copy's reminders. Lead files: merge needed to take effect. No stage change.
 - 2026-10-23 · F1 · DESIGN · Builder challenge written: P-57 blocks captured portal screens (Blocker); online version = FormEdition with channel ONLINE and identity by content fingerprint; answer lists missing (mirror the team's EnumSet + ENUM map); portal per combination and a validator rule for each line's channel; PDF twins for IMM 0008/5669/5406 do not exist yet; ownership table and 3 slices. Owner → Lead. No code; AI US$0.
-- 2026-10-23 · Lead: two items added for F1 after the AI repair recheck: (a) A4 speed and progress backend (reuse first, split by section groups, per-part progress, merge with near-duplicate flags; measured paid run needs the founder's go); (b) make `check_ai_drafting.ts` select the four refused IMM 1344 runs by name (it crashes when newer valid runs exist).

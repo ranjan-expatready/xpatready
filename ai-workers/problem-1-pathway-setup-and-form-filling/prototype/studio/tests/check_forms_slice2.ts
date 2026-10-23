@@ -21,15 +21,24 @@ const PROTOTYPE = join(STUDIO, "..");
 const FIX = join(STUDIO, "tests", "fixtures");
 const log: { name: string; ok: boolean; detail?: unknown }[] = []; let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 240)}` : ""}`); };
-type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
+type Res = { status: number; body: any };
+/** fetch, sent again once when the kept-alive connection was already closed before any reply (EPIPE, reset): under heavy
+ *  machine load the server closes an idle connection while a slow step runs, and the next request finds it closed. */
+const send = async (url: string, init: RequestInit): Promise<Response> => {
+  try { return await fetch(url, init); } catch (e) {
+    const code = (e as { cause?: { code?: string } }).cause?.code ?? "";
+    if (!/EPIPE|ECONNRESET|UND_ERR_SOCKET/.test(code)) throw e;
+    return fetch(url, init);
+  }
+}; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
 const call = async (method: string, path: string, body?: unknown, actor = "user-A"): Promise<Res> => {
-  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const r = await send(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
   return { status: r.status, body: j };
 };
 const upload = async (path: string, names: string[], actor = "user-A"): Promise<Res> => {
   const fd = new FormData(); for (const n of names) fd.append("files", new Blob([new Uint8Array(readFileSync(join(FIX, "portal", n)))]), n);
-  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd });
+  const r = await send(`http://localhost:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd });
   return { status: r.status, body: await r.json() };
 };
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();

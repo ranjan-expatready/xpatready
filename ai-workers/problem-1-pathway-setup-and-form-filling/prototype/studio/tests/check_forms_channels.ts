@@ -17,15 +17,24 @@ const FIX = join(STUDIO, "tests", "fixtures", "portal");
 const OFFICIAL = join(STUDIO, "..", "..", "official-sources", "ircc");
 const log: { name: string; ok: boolean; detail?: unknown }[] = []; let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 220)}` : ""}`); };
-type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
+type Res = { status: number; body: any };
+/** fetch, sent again once when the kept-alive connection was already closed before any reply (EPIPE, reset): under heavy
+ *  machine load the server closes an idle connection while a slow step runs, and the next request finds it closed. */
+const send = async (url: string, init: RequestInit): Promise<Response> => {
+  try { return await fetch(url, init); } catch (e) {
+    const code = (e as { cause?: { code?: string } }).cause?.code ?? "";
+    if (!/EPIPE|ECONNRESET|UND_ERR_SOCKET/.test(code)) throw e;
+    return fetch(url, init);
+  }
+}; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
 const call = async (method: string, path: string, body?: unknown, actor = "user-A"): Promise<Res> => {
-  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const r = await send(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
   return { status: r.status, body: j };
 };
 const upload = async (path: string, names: string[], actor = "user-A", dir = FIX): Promise<Res> => {
   const fd = new FormData(); for (const n of names) fd.append("files", new Blob([new Uint8Array(readFileSync(join(dir, n)))]), n);
-  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd });
+  const r = await send(`http://localhost:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd });
   return { status: r.status, body: await r.json() };
 };
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
@@ -107,12 +116,12 @@ const capture = async (screens: string[], title = "Application for a visitor vis
 
   // ──────────────────────────────────────────── intake: a saved portal screen is never a guide
   const fd = new FormData(); fd.append("files", new Blob([new Uint8Array(readFileSync(join(FIX, S1)))]), S1); fd.append("combinationId", vv);
-  const intake = await (await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json();
+  const intake = await (await send(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json();
   ok("intake: a saved portal screen is refused as a source and pointed to a portal capture; nothing attached", intake.results[0].outcome === "refused" && /portal capture/.test(intake.results[0].message) && sql(`select count(*) from source_attachment where file_name='${S1}'`) === "0", intake.results[0].message);
   const kinds14 = readdirSync(OFFICIAL, { recursive: true }).map(String).filter((f) => /\.html?$/.test(f)).map((f) => JSON.parse(execFileSync(PYTHON, ["-I", join(STUDIO, "tools", "read_form_identity.py"), join(OFFICIAL, f)], { encoding: "utf8" }).trim().split("\n").pop()!).kind as string);
   ok("intake pass: every IRCC public page in the official library still reads as a guide or checklist (none as a portal screen)", kinds14.length >= 10 && kinds14.every((k) => k === "guide" || k === "checklist"), kinds14);
   const fd1 = new FormData(); fd1.append("files", new Blob([new Uint8Array(readFileSync(join(FIX, "intake-one-question-answered.html")))]), "intake-one-question-answered.html"); fd1.append("combinationId", vv);
-  const one = (await (await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd1 })).json()).results[0];
+  const one = (await (await send(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd1 })).json()).results[0];
   ok("intake fail: a saved portal screen with one answered question is refused too, and not stored", one.outcome === "refused" && sql("select count(*) from source_attachment where file_name='intake-one-question-answered.html'") === "0" && sql("select coalesce(max(stored_path),'') from intake_item where file_name='intake-one-question-answered.html'") === "", one.message);
 
   // ──────────────────────────────────────────── captures: refusal, contract, second person, identity
@@ -130,7 +139,7 @@ const capture = async (screens: string[], title = "Application for a visitor vis
   ok("finish answers before the review document is printed (printed in the background; HTML until the PDF exists)", fin.status === "HELD" && fin.review_file?.endsWith(".html"), { ms: answered, review_file: fin.review_file });
   await until(async () => ((await call("GET", `/captures/${c1.id}`)).body.review_file ?? "").endsWith(".pdf"), 180_000);
   fin.review_file = (await call("GET", `/captures/${c1.id}`)).body.review_file;
-  const dl = await fetch(`http://localhost:${PORT}/api/captures/${c1.id}/review`);
+  const dl = await send(`http://localhost:${PORT}/api/captures/${c1.id}/review`);
   ok("review document: downloaded through the API as a PDF", dl.status === 200 && Buffer.from(await dl.arrayBuffer()).subarray(0, 5).toString() === "%PDF-", dl.status);
   ok("finish: held for a second person, with fingerprint, portal twin and a review document (PDF)", fin.status === "HELD" && /^[0-9a-f]{64}$/.test(fin.fingerprint) && fin.review_file?.endsWith(".pdf") && readFileSync(join(STUDIO, "..", "..", fin.review_file)).subarray(0, 5).toString() === "%PDF-", fin.status_detail);
   const twin = JSON.parse(readFileSync(join(STUDIO, "..", "..", sql(`select twin_file from portal_capture where id='${c1.id}'`)), "utf8"));
