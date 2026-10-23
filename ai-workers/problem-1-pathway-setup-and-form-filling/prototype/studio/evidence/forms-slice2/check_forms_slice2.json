@@ -1,9 +1,9 @@
 {
- "at": "2026-10-23T12:28:03.533Z",
+ "at": "2026-10-23T13:20:42.200Z",
  "port": 4451,
  "database": "xr_studio_forms_s2",
  "paid_calls": 0,
- "pass": 38,
+ "pass": 52,
  "fail": 0,
  "log": [
   {
@@ -53,6 +53,41 @@
    "ok": true
   },
   {
+   "name": "A4 merge fail (review 3): part 1's answer for part 2's form field is set aside; a form field its part did not answer stays open with the reason",
+   "ok": true,
+   "detail": {
+    "set_aside": [
+     {
+      "part": 1,
+      "data_path": "b"
+     }
+    ],
+    "unanswered": [
+     "b",
+     "c"
+    ]
+   }
+  },
+  {
+   "name": "A4 reuse fail (review 4): a choice field whose codes differ from the earlier edition's is not reused; with the same codes it is, at the earlier row's own confidence",
+   "ok": true
+  },
+  {
+   "name": "A4 merge on a saved real answer (IMM 5257, sliced into its 5 parts, no model call): every form field once, the one a part left out stays open, needs-person entries kept",
+   "ok": true,
+   "detail": {
+    "parts": 5,
+    "unanswered": [
+     "form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromYr[0]"
+    ],
+    "needs_person": 0
+   }
+  },
+  {
+   "name": "A4 ingest: a near-duplicate proposal is flagged for a person (reason and evidence); a reused field is not",
+   "ok": true
+  },
+  {
    "name": "screen_map: a proposal for an open input names a library field (merged ids redirect), with our own transform, never the AI's",
    "ok": true,
    "detail": [
@@ -96,6 +131,10 @@
    "ok": true
   },
   {
+   "name": "screen_map live branch (hand-written records, no model call): a usable answer gives proposals; unreadable or refused answers give a plain message and no proposal",
+   "ok": true
+  },
+  {
    "name": "F2: a signature box is recognised (IMM 1344 sponsor's and principal's signatures; a typed-name box elsewhere); its date and buttons are not",
    "ok": true
   },
@@ -103,12 +142,28 @@
    "name": "F1: a Canada/US telephone written to IMM 1344 gives the person step 'tick Canada/US' (its number boxes show only after that click)",
    "ok": true,
    "detail": [
-    "Tick \"Canada/US\" for No.: the form shows its number boxes only after that click ",
+    "Question 3 Telephone number: after the form's first Validate, tick \"Canada/US\" a",
     "Sign: each signer types their own name in \"Sponsor's signature\" and \"Signature o"
    ]
   },
   {
    "name": "F1 fail: an international number (country code 91, 'Other') needs no such step",
+   "ok": true
+  },
+  {
+   "name": "F1 fail (break M4): a '+1' number the writer left as international (switch 0, country code 1, international box) needs no step; the switch written ticked does",
+   "ok": true
+  },
+  {
+   "name": "F2 (break m9): a signature field with no caption is a signature; 'Date of signature' is a date, written as usual",
+   "ok": true
+  },
+  {
+   "name": "F3 (break m10): postal codes with an en dash, an underscore or full-width letters, under 'Post code', are written A1A 1A1",
+   "ok": true
+  },
+  {
+   "name": "option maps (break m11): a code list in any step of a transform ('code_list:…; uppercase') counts as codes",
    "ok": true
   },
   {
@@ -161,9 +216,29 @@
    }
   },
   {
-   "name": "A4 run: every part passes the guarded stub path, two at a time, each recorded with its sections and form fields",
+   "name": "A4 (break B3): two drafts in parts at the same moment both finish: launches take turns, none is refused 'ledger locked'",
    "ok": true,
-   "detail": "Stub pass completed for all 5 parts: the guarded path works for each part. a stub has no AI content, so there is nothing to compare."
+   "detail": [
+    "COMPLETED",
+    "COMPLETED",
+    "Stub pass completed for all 5 parts: the guarded path works for each part. A stub has no AI content, so there is nothing"
+   ]
+  },
+  {
+   "name": "A4 (break M1): the part jobs that ran name their content (…-p1of5-<12 hex>)",
+   "ok": true,
+   "detail": [
+    "57e-p1of5-c205b8760b33",
+    "57e-p2of5-9bf0d1004385",
+    "57e-p3of5-3e05ddcac0a8",
+    "57e-p4of5-e4a3cc59505f",
+    "57e-p5of5-e46e25b85b7e"
+   ]
+  },
+  {
+   "name": "A4 run: every part passes the guarded stub path, one at a time, each recorded with its sections and form fields",
+   "ok": true,
+   "detail": "Stub pass completed for all 5 parts: the guarded path works for each part. A stub has no AI content, so there is nothing to compare."
   },
   {
    "name": "A4 guard: each part reached the AI step only as an admitted part of the official inventory (inventory_part, parent named)",
@@ -182,8 +257,25 @@
    "detail": "{\"exit\":2,\"refused\":\"inventory part prototype/p2/parts/imm5257e.p1of5-c205b8760b33.part.json not admitted: a form field is not in the parent inventory as it is there\"}"
   },
   {
+   "name": "A4 cancel (break M2): parts not yet started are not sent after a cancel",
+   "ok": true,
+   "detail": {
+    "cancel": 201,
+    "status": "CANCELLED",
+    "notStarted": 4,
+    "message": "Cancelled: 1 of 5 parts ran before the cancel; the rest were not sent. Nothing was applied. Cost US$0.00."
+   }
+  },
+  {
    "name": "setup: IMM 5257's field map is in the library from the saved real answer (replayed, US$0)",
    "ok": true
+  },
+  {
+   "name": "A4 reuse fail (review 4): mappings nobody has released yet are never reused",
+   "ok": true,
+   "detail": {
+    "reused": 0
+   }
   },
   {
    "name": "A4 reuse (API): the Super visa's IMM 5257 reuses every field the earlier edition maps; only the fields it left open go to the AI, with a smaller worst case",
@@ -203,10 +295,10 @@
   {
    "name": "A4 reuse run: completed without any AI call or cost, the record labelled as reuse (not AI), compared with the library for a person",
    "ok": true,
-   "detail": "Every form field reused from IMM 5257 (01-2020) without AI (US$0) as studio-fieldmap-imm5257e-reused-20261023t122743404z. 161 of 242 boxes mapped; 84 fields: 84 reuse, 0 new, 0 ambiguous, 0 conflicting."
+   "detail": "Every form field reused from IMM 5257 (01-2020) without AI (US$0) as studio-fieldmap-imm5257e-reused-20261023t132038491z-3e65f0. 161 of 242 boxes mapped; 84 fields: 84 reuse, 0 new, 0 ambiguous, 0 conflicting."
   },
   {
-   "name": "A4 reuse apply: the reused form fields enter the library as code matches (origin CODE_MATCH, 'as mapped in IMM 5257 (01-2020)'), never as AI",
+   "name": "A4 reuse apply: the reused form fields enter the library as code matches (origin CODE_MATCH, 'as released in IMM 5257 (01-2020)'), never as AI",
    "ok": true,
    "detail": {
     "status": 201,
@@ -228,6 +320,14 @@
    "ok": true
   },
   {
+   "name": "screen_map fail (review 2): two starts at the same moment make one job; the other is refused",
+   "ok": true,
+   "detail": [
+    201,
+    409
+   ]
+  },
+  {
    "name": "screen_map: the stub pass admits the approved screens and only the open inputs (an admitted part of the screen inventory), US$0",
    "ok": true,
    "detail": {
@@ -235,7 +335,7 @@
     "admitted": [
      {
       "file": "prototype/p2/parts/imm-5257-ircc_portal-d6375ca38c3b.open-2b5137bf3928.part.json",
-      "sha256": "b1d8deacdf9d9afc7c6832047d7ad8a0de1980fc05cc53bd19e2361bdcf1c080",
+      "sha256": "e015a8dcc87de1427fbc6eba47cd48804eb41114af73a7f6de7e1d5582cdb777",
       "kind": "inventory_part"
      }
     ]
@@ -247,14 +347,16 @@
    "detail": "This draft has no proposals to accept (a stub pass, or it did not finish)."
   },
   {
-   "name": "screen_map accept: a person accepts the proposal (a new draft version, origin AI_PROPOSAL, with the run named); accepting again is refused",
+   "name": "screen_map accept: a person accepts one proposal now (a new draft version, origin AI_PROPOSAL) and the rest later (break m13); then nothing is left to accept",
    "ok": true,
    "detail": {
     "accepted": "not_a_fact:AI_PROPOSAL",
-    "body": {
+    "firstStatus": "COMPLETED",
+    "rest": {
      "accepted": 1,
      "left_as_they_were": []
-    }
+    },
+    "again": 409
    }
   },
   {
@@ -271,7 +373,7 @@
    "detail": {
     "postal": "M5V 0A1",
     "steps": [
-     "Tick \"Canada/US\" for No.: the form shows its number boxes only after that click "
+     "this telephone number: after the form's first Validate, tick \"Canada/US\" again. "
     ]
    }
   }

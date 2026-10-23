@@ -1,9 +1,9 @@
 {
  "plan": {
-  "combinationId": "0bb07a87-5990-4a3d-ad1e-5fca9eed9161",
+  "combinationId": "bcd780a1-2fcc-4836-a741-76f21a95808e",
   "combination": "Visitor visa",
   "program": "Visitor visa",
-  "attachmentId": "d2085a02-83c8-4e3e-8deb-485d5c29feee",
+  "attachmentId": "1eeaffb6-9b8c-45f8-91c6-96427e70bb4d",
   "source": "IMM 5257 (09-2023)",
   "expected_usd": 0,
   "worst_usd": 0,
@@ -24,7 +24,9 @@
       "Page1.PersonalDetails"
      ],
      "fields": 60,
-     "worst_usd": 1.87
+     "worst_usd": 1.87,
+     "saved_answer": false,
+     "repeats_failed_run": null
     },
     {
      "index": 2,
@@ -34,7 +36,9 @@
       "Page2.MaritalStatus"
      ],
      "fields": 49,
-     "worst_usd": 1.41
+     "worst_usd": 1.41,
+     "saved_answer": false,
+     "repeats_failed_run": null
     },
     {
      "index": 3,
@@ -44,7 +48,9 @@
       "Page2.ContactInformation"
      ],
      "fields": 56,
-     "worst_usd": 1.58
+     "worst_usd": 1.58,
+     "saved_answer": false,
+     "repeats_failed_run": null
     },
     {
      "index": 4,
@@ -55,7 +61,9 @@
       "Page3.Occupation"
      ],
      "fields": 54,
-     "worst_usd": 1.64
+     "worst_usd": 1.64,
+     "saved_answer": false,
+     "repeats_failed_run": null
     },
     {
      "index": 5,
@@ -68,7 +76,9 @@
       "Page5.TextField1"
      ],
      "fields": 23,
-     "worst_usd": 0.73
+     "worst_usd": 0.73,
+     "saved_answer": false,
+     "repeats_failed_run": null
     }
    ]
   },
@@ -77,17 +87,18 @@
  },
  "job": {
   "status": "COMPLETED",
-  "message": "Stub pass completed for all 5 parts: the guarded path works for each part. a stub has no AI content, so there is nothing to compare.",
+  "message": "Stub pass completed for all 5 parts: the guarded path works for each part. A stub has no AI content, so there is nothing to compare.",
   "a4": {
    "parts": [
     {
      "error": null,
      "index": 1,
+     "saved": false,
      "fields": 60,
-     "job_id": "studio-fieldmap-imm5257e-p1of5",
+     "job_id": "studio-fieldmap-imm5257e-p1of5-c205b8760b33",
      "status": "done",
      "cost_usd": 0,
-     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p1of5-stub-20261023t122730839z.json",
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p1of5-c205b8760b33-stub-20261023t132005410z-b8544d.json",
      "sections": [
       "Page1.Header",
       "Page1.ButtonsHeader",
@@ -97,11 +108,12 @@
     {
      "error": null,
      "index": 2,
+     "saved": false,
      "fields": 49,
-     "job_id": "studio-fieldmap-imm5257e-p2of5",
+     "job_id": "studio-fieldmap-imm5257e-p2of5-9bf0d1004385",
      "status": "done",
      "cost_usd": 0,
-     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p2of5-stub-20261023t122730846z.json",
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p2of5-9bf0d1004385-stub-20261023t132008902z-a99c11.json",
      "sections": [
       "Page1.PersonalDetails",
       "Page1.MaritalStatus",
@@ -111,11 +123,12 @@
     {
      "error": null,
      "index": 3,
+     "saved": false,
      "fields": 56,
-     "job_id": "studio-fieldmap-imm5257e-p3of5",
+     "job_id": "studio-fieldmap-imm5257e-p3of5-3e05ddcac0a8",
      "status": "done",
      "cost_usd": 0,
-     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p3of5-stub-20261023t122733123z.json",
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p3of5-3e05ddcac0a8-stub-20261023t132012358z-74289b.json",
      "sections": [
       "Page2.natID",
       "Page2.USCard",
@@ -125,11 +138,12 @@
     {
      "error": null,
      "index": 4,
+     "saved": false,
      "fields": 54,
-     "job_id": "studio-fieldmap-imm5257e-p4of5",
+     "job_id": "studio-fieldmap-imm5257e-p4of5-e4a3cc59505f",
      "status": "done",
      "cost_usd": 0,
-     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p4of5-stub-20261023t122733396z.json",
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p4of5-e4a3cc59505f-stub-20261023t132015755z-864cc4.json",
      "sections": [
       "Page3.DetailsOfVisit",
       "Page3.Contacts_Row2",
@@ -140,11 +154,12 @@
     {
      "error": null,
      "index": 5,
+     "saved": false,
      "fields": 23,
-     "job_id": "studio-fieldmap-imm5257e-p5of5",
+     "job_id": "studio-fieldmap-imm5257e-p5of5-e46e25b85b7e",
      "status": "done",
      "cost_usd": 0,
-     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p5of5-stub-20261023t122735183z.json",
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p5of5-e46e25b85b7e-stub-20261023t132019159z-a0d7eb.json",
      "sections": [
       "Page3.BackgroundInfo",
       "Page3.BackgroundInfo2",
