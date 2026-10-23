@@ -1,0 +1,152 @@
+<header class="dochead">
+<div class="kick">Expat Ready · Solution 1 · Pathway Setup to Form Filling · October 2026</div>
+<h1>The configuration engine</h1>
+<p class="sub">Part A: seven slides for the founder, CPO and CTO. Part B: the detailed solution and requirements for the build team and an implementation partner.</p>
+<nav class="topnav"><a href="#partA">A · Executive slides</a><a href="#partB">B · Detailed solution and requirements</a><a href="solution-1-requirements.xlsx">Requirements workbook (Excel)</a></nav>
+</header>
+
+<div id="partA" class="part-label">Part A · Executive slides</div>
+
+<section class="slide" id="s1">
+<div class="sl-top"><span class="sl-tag">Executive summary</span><span class="sl-n">1</span></div>
+<h2 class="sl-title">An AI configuration engine reads the government's own forms, checklists and guides, and builds each combination's setup for people to approve</h2>
+<div class="sl-body g3">
+<div class="pill-col"><div class="pc-h"><span class="dot r"></span>The problem</div><p>Every immigration combination is configured by hand: the document list, the fields, the sections, the form mappings, and the rules that add fields, documents and forms when a client's answer requires them.</p><p>It is slow, it repeats with every new combination and every new form edition, and each mistake reaches a client's form.</p></div>
+<div class="pill-col"><div class="pc-h"><span class="dot b"></span>The solution</div><p>An engine reads the same sources a person reads and produces the whole configuration as one package: documents, fields, sections, rules, questionnaires and form maps.</p><p>Plain code does the reading and checking. AI does the judgement. A person approves only what is new or uncertain; a second person releases.</p></div>
+<div class="pill-col"><div class="pc-h"><span class="dot g"></span>The result</div><p>A combination is configured in a review session, not built from scratch. Form changes touch only changed boxes.</p><p>Clients are asked each fact once, and every form and portal screen fills from the same confirmed facts.</p></div>
+</div>
+<div class="sl-foot"><b>Next:</b> build a hand-verified test set · prove the engine on one combination · connect review and import · scale to all combinations</div>
+</section>
+
+<section class="slide" id="s2">
+<div class="sl-top"><span class="sl-tag">The problem</span><span class="sl-n">2</span></div>
+<h2 class="sl-title">Nine setup artefacts are built by hand for every combination, and an error in any of them reaches a client's form</h2>
+<div class="sl-body g2w">
+<div class="stack">
+<div class="st"><b>1</b><span>Master list of documents</span><i>wrong: client never asked for a document</i></div>
+<div class="st"><b>2</b><span>Master fields (one name per fact)</span><i>wrong: the same fact stored twice</i></div>
+<div class="st"><b>3</b><span>Sections and field placement</span><i>wrong: questions scattered, asked twice</i></div>
+<div class="st"><b>4</b><span>Same section, different name and fields per form</span><i>wrong: agent cannot match screen to form</i></div>
+<div class="st"><b>5</b><span>Box-to-field map, including spouse and child boxes</span><i>wrong: right value in the wrong box</i></div>
+<div class="st"><b>6</b><span>Rules that add fields</span><i>wrong: spouse details never asked</i></div>
+<div class="st"><b>7</b><span>Rules that add documents and forms</span><i>wrong: IMM 5409 missing for common-law</i></div>
+<div class="st"><b>8</b><span>PQR and SQR question sets</span><i>wrong: too many or missing questions</i></div>
+<div class="st"><b>9</b><span>Rework at every form edition</span><i>wrong: open cases filed on stale forms</i></div>
+</div>
+<div class="side">
+<h3>Why people cannot simply write it</h3>
+<ul class="ticks">
+<li>Each combination draws on several forms, a checklist and a guide; every box must be read.</li>
+<li>Rules hide in guide prose ("fill out only if…") and inside barcode forms' own scripts.</li>
+<li>Business staff know the outcomes, not a rule language; asking them to write rules adds errors.</li>
+<li>The work repeats for every new combination and every form edition, forever.</li>
+</ul>
+<div class="ex"><b>Example combination:</b> individual · work · work permit · employer-specific. Base forms IMM 1295 and IMM 5707; IMM 5409 only if common-law; IMM 5476 only if a representative acts; the official checklist; the instruction guide.</div>
+</div>
+</div>
+</section>
+
+<section class="slide" id="s3">
+<div class="sl-top"><span class="sl-tag">The solution</span><span class="sl-n">3</span></div>
+<h2 class="sl-title">The engine works like a careful analyst: it reads, builds and checks, then a person approves</h2>
+<div class="sl-body">
+<svg viewBox="0 0 1120 300" class="exsvg" role="img" aria-label="Engine pipeline">
+<defs><marker id="ea" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
+<g font-family="var(--body)" font-size="12.5">
+<g class="stg"><rect x="0" y="10" width="200" height="230" rx="12"/><text x="16" y="36" class="sh">1 · Read</text><text x="16" y="62">forms: every box,</text><text x="16" y="80">type, length, order</text><text x="16" y="104">barcode forms' scripts</text><text x="16" y="128">checklist items</text><text x="16" y="152">guide "only if" passages</text><text x="16" y="176">portal screen fields</text><text x="16" y="222" class="cd">code</text></g>
+<g class="stg ai"><rect x="230" y="10" width="300" height="230" rx="12"/><text x="246" y="36" class="sh">2 · Build</text><text x="246" y="62">fields: reuse first, new only if none fits</text><text x="246" y="86">documents: base and conditional</text><text x="246" y="110">sections: one library, form names kept</text><text x="246" y="134">rules: fields, documents, forms, blocks</text><text x="246" y="158">PQR and SQR question sets</text><text x="246" y="182">form and portal maps per box</text><text x="246" y="222" class="ai">AI for judgement · code for known labels</text></g>
+<g class="stg"><rect x="560" y="10" width="200" height="230" rx="12"/><text x="576" y="36" class="sh">3 · Check</text><text x="576" y="62">every box mapped</text><text x="576" y="86">no duplicate fields</text><text x="576" y="110">every rule can be true</text><text x="576" y="134">test family per branch</text><text x="576" y="158">score vs. test set</text><text x="576" y="222" class="cd">code</text></g>
+<g class="stg p"><rect x="790" y="10" width="160" height="230" rx="12"/><text x="806" y="36" class="sh">4 · Review</text><text x="806" y="62">only new or</text><text x="806" y="80">uncertain items</text><text x="806" y="104">each beside its</text><text x="806" y="122">source snippet</text><text x="806" y="146">second person</text><text x="806" y="164">releases</text><text x="806" y="222" class="pp">people</text></g>
+<g class="stg s"><rect x="980" y="10" width="140" height="230" rx="12"/><text x="996" y="36" class="sh">5 · Publish</text><text x="996" y="62">versioned</text><text x="996" y="80">package</text><text x="996" y="104">imported into</text><text x="996" y="122">the platform</text><text x="996" y="146">change watch</text><text x="996" y="164">re-runs on edits</text></g>
+<g stroke="var(--muted)" stroke-width="1.6" marker-end="url(#ea)"><path d="M200 125 L230 125"/><path d="M530 125 L560 125"/><path d="M760 125 L790 125"/><path d="M950 125 L980 125"/></g>
+<text x="0" y="280" fill="var(--muted)" font-size="12.5">Sources in: the combination, the base forms and documents a person selects, the official checklist PDF, the instruction guide, portal screen captures.</text>
+</g></svg>
+<div class="g4 small">
+<div><b>Code where possible.</b> Reading boxes, matching known labels and checking are exact and repeatable.</div>
+<div><b>AI where judgement is needed.</b> New labels, guide prose, document meaning, section placement.</div>
+<div><b>Every item cites its source.</b> A reviewer sees the page or box it came from.</div>
+<div><b>Proven before trusted.</b> Each AI step is scored against combinations the specialist verified by hand.</div>
+</div>
+</div>
+</section>
+
+<section class="slide" id="s4">
+<div class="sl-top"><span class="sl-tag">What it produces</span><span class="sl-n">4</span></div>
+<h2 class="sl-title">One approved package drives every questionnaire, every screen and every form</h2>
+<div class="sl-body">
+<svg viewBox="0 0 1120 330" class="exsvg" role="img" aria-label="Package outputs and where they are used">
+<g font-family="var(--body)" font-size="12.5">
+<g class="stg s"><rect x="0" y="10" width="300" height="300" rx="12"/><text x="16" y="38" class="sh">Released package, per combination</text>
+<text x="16" y="70">• document list, base and conditional</text><text x="16" y="96">• master fields with validation and tier</text><text x="16" y="122">• sections, and each form's own layout</text><text x="16" y="148">• rules for fields, documents, forms</text><text x="16" y="174">• PQR blocks and the SQR</text><text x="16" y="200">• form maps and portal maps</text><text x="16" y="226">• screen layouts for agents</text><text x="16" y="252">• test families and their results</text><text x="16" y="290" class="cd">every item versioned; a case keeps its version</text></g>
+<g class="stg st"><rect x="370" y="120" width="250" height="90" rx="12"/><text x="386" y="150" class="sh">Fact store</text><text x="386" y="174">one value per person per fact</text><text x="386" y="194">source · confirmed by · history</text></g>
+<g class="cons"><rect x="700" y="10" width="420" height="40" rx="8"/><text x="716" y="35"><tspan class="b">PQR</tspan> · prospect, before the combination is known</text></g>
+<g class="cons"><rect x="700" y="60" width="420" height="40" rx="8"/><text x="716" y="85"><tspan class="b">Client portal SQR</tspan> · per person, only missing facts</text></g>
+<g class="cons"><rect x="700" y="110" width="420" height="40" rx="8"/><text x="716" y="135"><tspan class="b">Agent working view</tspan> · every fact once, confirm, decide</text></g>
+<g class="cons"><rect x="700" y="160" width="420" height="40" rx="8"/><text x="716" y="185"><tspan class="b">Form check view</tspan> · each form, each applicant, read-only</text></g>
+<g class="cons"><rect x="700" y="210" width="420" height="40" rx="8"/><text x="716" y="235"><tspan class="b">PDF and barcode forms</tspan> · filled by rules; a person validates</text></g>
+<g class="cons"><rect x="700" y="260" width="420" height="40" rx="8"/><text x="716" y="285"><tspan class="b">Government portal</tspan> · extension types and reads back</text></g>
+<g stroke="var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#ea)"><path d="M300 100 C340 100 650 30 700 30"/><path d="M300 130 C340 130 650 80 700 80"/><path d="M300 165 L370 165"/><path d="M620 150 C660 150 670 130 700 130"/><path d="M620 165 C660 165 670 180 700 180"/><path d="M620 180 C660 180 670 230 700 230"/><path d="M620 195 C660 195 670 280 700 280"/></g>
+</g></svg>
+<div class="g3 small">
+<div><b>Ask once.</b> A fact from the PQR, the SQR, a document or the agent is stored once and never asked again.</div>
+<div><b>Fill everywhere.</b> Each form box knows whose fact it shows; one fix re-fills every form.</div>
+<div><b>No AI at fill time.</b> Filling is rules over approved maps, so the same facts always give the same form.</div>
+</div>
+</div>
+</section>
+
+<section class="slide" id="s5">
+<div class="sl-top"><span class="sl-tag">Case types</span><span class="sl-n">5</span></div>
+<h2 class="sl-title">Individual, family and corporate cases run on the same engine; only the subjects, roles and copies change</h2>
+<div class="sl-body">
+<table class="cmp">
+<thead><tr><th></th><th>Individual</th><th>Family</th><th>Corporate</th></tr></thead>
+<tbody>
+<tr><td>Whose facts</td><td>One person</td><td>Each person; shared household facts once, linked to both spouses</td><td>The employer as an organisation; each worker separately</td></tr>
+<tr><td>Rules the engine writes</td><td>Marital status, refusals, location, representative</td><td>Per role and age: spouse applying or not, each child, 18 or over</td><td>Stream, occupation, location, positions</td></tr>
+<tr><td>Questionnaires</td><td>PQR, then one SQR</td><td>One SQR per person; a parent answers for a child; shared answers given once</td><td>Employer questionnaire; each worker answers in their own case</td></tr>
+<tr><td>Form copies</td><td>One per form</td><td>One per person who must complete it; boxes about others filled by the box address</td><td>Employer forms; worker forms in linked cases</td></tr>
+<tr><td>Documents</td><td>Base plus conditional</td><td>One upload serves every person it applies to</td><td>Business documents reused across the employer's cases</td></tr>
+<tr><td>Case structure</td><td>One case, one role</td><td>One case, a role per person</td><td>One case per assessment, occupation and location; positions link to worker cases</td></tr>
+</tbody></table>
+</div>
+</section>
+
+<section class="slide" id="s6">
+<div class="sl-top"><span class="sl-tag">What changes</span><span class="sl-n">6</span></div>
+<h2 class="sl-title">People move from building and typing to checking and deciding</h2>
+<div class="sl-body g2w">
+<table class="cmp">
+<thead><tr><th>Who</th><th>Today</th><th>With the engine</th></tr></thead>
+<tbody>
+<tr><td>Content team</td><td>Builds every artefact of every combination by hand</td><td>Selects base forms and documents; reviews new or uncertain items</td></tr>
+<tr><td>Specialist</td><td>Writes or explains rules for others to encode</td><td>Confirms or corrects drafted rules and values</td></tr>
+<tr><td>Client</td><td>Repeats facts across questionnaires and forms</td><td>Answers each fact once; sees why each question is asked</td></tr>
+<tr><td>Agent</td><td>Retypes facts into every form and the portal</td><td>Confirms facts once; checks filled forms</td></tr>
+<tr><td>Licensed representative</td><td>Checks forms typed by hand</td><td>Approves forms filled from confirmed facts, each value traceable</td></tr>
+</tbody></table>
+<div class="side">
+<h3>What we will measure</h3>
+<ul class="ticks">
+<li>Hours to configure one combination, by hand and with the engine</li>
+<li>Items a person reviews per combination</li>
+<li>Boxes typed by hand per family file</li>
+<li>Wrong values on filed forms (target: zero)</li>
+<li>Hours to absorb one form edition</li>
+</ul>
+<p class="note">Today's figures are not yet measured; the first combination produces the baseline.</p>
+</div>
+</div>
+</section>
+
+<section class="slide" id="s7">
+<div class="sl-top"><span class="sl-tag">Next steps</span><span class="sl-n">7</span></div>
+<h2 class="sl-title">Four steps take the engine from one proven combination to every pathway</h2>
+<div class="sl-body g4">
+<div class="step"><div class="sn">1</div><h3>Build the test set</h3><p>Configure two to three combinations by hand; the specialist verifies every document, field, rule and map.</p><p class="ow">Owner: content team and specialist</p><p class="ex2">Done when: the answer key exists</p></div>
+<div class="step"><div class="sn">2</div><h3>Prove the engine on one combination</h3><p>Run read, build and check on the work-permit combination outside the product; score each step.</p><p class="ow">Owner: build team</p><p class="ex2">Done when: each step meets its score</p></div>
+<div class="step"><div class="sn">3</div><h3>Connect review and import</h3><p>Review workbench, second-person release, package import, versions, and the platform additions below.</p><p class="ow">Owner: build team</p><p class="ex2">Done when: a released package runs a test case end to end</p></div>
+<div class="step"><div class="sn">4</div><h3>Scale and embed</h3><p>All combinations; change watch on form editions; the engine runs from the configurator's "run" button.</p><p class="ow">Owner: build team and content team</p><p class="ex2">Done when: new combinations need review only</p></div>
+</div>
+<div class="sl-foot"><b>Platform additions the engine needs:</b> box address on form maps · staff-only fields · each form's own section layout · conflict state on facts · barcode-form filler · portal extension · review workbench</div>
+</section>

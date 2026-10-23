@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Questionnaire kit</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0;background:#f7f7f7}
+a{color:#054e9c}a:hover{color:#043a73}
+button{font-family:inherit}
+.k-lab{font-size:14px;font-weight:600;color:#2d2d2d;display:block}
+.k-help{font-size:13px;color:#595959;margin:2px 0 6px}
+.k-in{font:inherit;font-size:15px;padding:10px 12px;border:1px solid #8c8c8c;border-radius:6px;background:#ffffff;color:#2d2d2d;box-sizing:border-box}
+.k-err{border:2px solid #dc2626}
+.k-msg{display:flex;gap:6px;align-items:flex-start;color:#991b1b;font-size:13px;font-weight:600;margin-top:6px}
+.k-card{background:#ffffff;border:1px solid #d9d9d9;border-radius:12px}
+.k-btn{min-height:44px;padding:0 18px;border-radius:6px;font-weight:600;font-size:15px;border:1px solid #bfbfbf;background:#ffffff;color:#2d2d2d;cursor:pointer}
+.k-pri{background:#0862c5;border-color:#0862c5;color:#ffffff}
+.k-chip{display:inline-flex;gap:4px;align-items:center;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600}
+.k-ok{background:#e7f6ec;color:#0f5c2e}.k-warn{background:#fff3e0;color:#663200}.k-ai{background:#e6f4ff;color:#043a73}.k-no{background:#fdecec;color:#991b1b}
+.k-h{font-family:Figtree,Inter,sans-serif;font-weight:700;margin:0}
+.k-cap{font-size:12px;font-weight:600;letter-spacing:.04em;color:#595959}
+.k-radio{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #bfbfbf;border-radius:6px;font-size:15px;cursor:pointer;background:#ffffff}
+.k-radio-on{border:2px solid #0862c5;background:#f5faff}
+</style>
+</helmet>
+<div style="font-family: Inter, system-ui, sans-serif; color: #2d2d2d; line-height: 1.45; padding: 32px; display: flex; flex-direction: column; gap: 28px; max-width: 1440px; box-sizing: border-box">
+
+  <div style="display: flex; flex-direction: column; gap: 6px">
+    <span class="k-cap">QUESTIONNAIRE RENDERER · ONE COMPONENT, THREE MODES · P-47</span>
+    <h1 class="k-h" style="font-size: 28px">Family sponsorship › Spouse or partner › Outside Canada</h1>
+    <span style="color: #595959; font-size: 14px">Everything below is drawn from the released configuration: sections, questions, rules, validations and documents are data. The same renderer serves every combination.</span>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+
+    <!-- PQR -->
+    <section aria-label="PQR mode" style="flex: 1 1 340px; max-width: 420px; display: flex; flex-direction: column; gap: 10px">
+      <span class="k-cap">1 · PQR · PRE-QUALIFICATION · PROSPECT OR SALESPERSON</span>
+      <div class="k-card" style="padding: 22px; display: flex; flex-direction: column; gap: 16px">
+        <h2 class="k-h" style="font-size: 20px">Can you sponsor your spouse?</h2>
+        <span style="font-size: 13px; color: #595959">6 questions · about 2 minutes · nothing is asked twice later</span>
+        <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px"><legend class="k-lab" style="padding: 0; margin-bottom: 6px">Is the sponsor a Canadian citizen or permanent resident?</legend>
+          <label class="k-radio k-radio-on"><input type="radio" name="p1" checked> Canadian citizen</label>
+          <label class="k-radio"><input type="radio" name="p1"> Permanent resident</label>
+          <label class="k-radio"><input type="radio" name="p1"> Neither</label>
+        </fieldset>
+        <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px"><legend class="k-lab" style="padding: 0; margin-bottom: 6px">How are you related?</legend>
+          <label class="k-radio k-radio-on"><input type="radio" name="p2" checked> Married</label>
+          <label class="k-radio"><input type="radio" name="p2"> Common-law (lived together 12 months or more)</label>
+          <label class="k-radio"><input type="radio" name="p2"> Conjugal</label>
+        </fieldset>
+        <div style="background: #e7f6ec; color: #0f5c2e; border-radius: 8px; padding: 12px 14px; font-size: 14px"><b>Looks eligible.</b> Next: book a consultation. Your answers are saved for your case.</div>
+        <button type="button" class="k-btn k-pri">Book a consultation</button>
+      </div>
+    </section>
+
+    <!-- SQR phone -->
+    <section aria-label="SQR mode" style="flex: 0 1 390px; display: flex; flex-direction: column; gap: 10px">
+      <span class="k-cap">2 · SQR · CLIENT ON A PHONE</span>
+      <div style="width: 390px; max-width: 100%; border: 1px solid #d9d9d9; border-radius: 30px; background: #ffffff; padding: 20px 18px 18px; display: flex; flex-direction: column; gap: 14px; box-sizing: border-box">
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 14px"><button type="button" style="border: 0; background: transparent; color: #054e9c; font-weight: 600; font-size: 14px; padding: 0">← Back</button><span style="color: #0f5c2e; font-size: 13px">✓ Saved</span></div>
+        <div style="display: flex; flex-direction: column; gap: 6px"><span style="font-size: 13px; color: #595959">Section 4 of 8 · Marriage</span><div style="height: 6px; background: #eeeeee; border-radius: 3px"><div style="width: 50%; height: 6px; background: #0862c5; border-radius: 3px"></div></div></div>
+        <sc-if value="{{showSummary}}" hint-placeholder-val="{{ false }}">
+          <div role="alert" style="border: 2px solid #dc2626; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px"><b style="font-size: 15px; color: #991b1b">There is a problem</b><a href="#d-day" style="font-size: 14px; color: #991b1b; font-weight: 600">Date of marriage must be after both of your birth dates</a></div>
+        </sc-if>
+        <h2 class="k-h" style="font-size: 22px">Your marriage</h2>
+        <fieldset style="border: 0; padding: 0; margin: 0"><legend class="k-lab" style="padding: 0">Date of marriage</legend><p class="k-help">As shown on your marriage certificate. For example, 14 6 2019</p>
+          <sc-if value="{{showSummary}}" hint-placeholder-val="{{ false }}"><div class="k-msg"><span aria-hidden="true">!</span><span>Date of marriage must be after both of your birth dates</span></div></sc-if>
+          <div style="display: flex; gap: 10px; margin-top: 6px"><label style="font-size: 13px; display: flex; flex-direction: column; gap: 4px">Day<input id="d-day" class="{{dateCls}}" value="{{day}}" onChange="{{setDay}}" inputmode="numeric" style="width: 60px"></label><label style="font-size: 13px; display: flex; flex-direction: column; gap: 4px">Month<input class="{{dateCls}}" value="6" inputmode="numeric" style="width: 60px"></label><label style="font-size: 13px; display: flex; flex-direction: column; gap: 4px">Year<input class="{{dateCls}}" value="{{year}}" onChange="{{setYear}}" inputmode="numeric" style="width: 86px"></label></div>
+        </fieldset>
+        <div><label class="k-lab" for="city">City or town where you married</label><input id="city" class="k-in" value="Ludhiana" style="width: 100%; margin-top: 6px"></div>
+        <div><label class="k-lab" for="cty">Country</label><select id="cty" class="k-in" style="width: 100%; margin-top: 6px"><option>India</option><option>Canada</option></select></div>
+        <div style="border: 1px dashed #5cb8ff; background: #f5faff; border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+          <span style="font-size: 14px; font-weight: 600">Marriage certificate</span>
+          <span style="font-size: 13px; color: #595959">Needed because you are married. Take a photo or upload a file; we read the details for you.</span>
+          <div style="display: flex; gap: 8px"><button type="button" class="k-btn" style="flex: 1">Take photo</button><button type="button" class="k-btn" style="flex: 1">Upload file</button></div>
+        </div>
+        <button type="button" class="k-btn k-pri" onClick="{{cont}}">Save and continue</button>
+        <span style="font-size: 12.5px; color: #595959; text-align: center">Try it: make the year 1990 and press Save and continue.</span>
+      </div>
+    </section>
+
+    <!-- Agent view -->
+    <section aria-label="Agent view mode" style="flex: 2 1 460px; display: flex; flex-direction: column; gap: 10px">
+      <span class="k-cap">3 · AGENT VIEW · CASE OFFICER, DESKTOP</span>
+      <div class="k-card" style="overflow: hidden">
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 14px 18px; border-bottom: 1px solid #eeeeee"><b style="font-size: 16px">Marriage and relationship</b><span style="font-size: 12.5px; color: #595959">once for the couple</span><span style="flex: 1"></span><span class="k-chip k-warn">1 to check</span></div>
+        <div style="display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 0">
+          <div style="padding: 12px 18px; border-bottom: 1px solid #f0f0f0; font-size: 13.5px; color: #595959">Relationship <span class="k-chip k-ai" style="margin-left: 4px">PQR</span></div><div style="padding: 10px 18px; border-bottom: 1px solid #f0f0f0; font-size: 14px">Married <span style="font-size: 12px; color: #595959">· Priya, lead form</span></div>
+          <div style="padding: 12px 18px; border-bottom: 1px solid #f0f0f0; font-size: 13.5px; color: #595959">Date of marriage</div><div style="padding: 10px 18px; border-bottom: 1px solid #f0f0f0; background: #fffaf2; display: flex; flex-direction: column; gap: 4px"><span style="font-size: 14px"><b>14 Jun {{year}}</b> <span style="font-size: 12px; color: #595959">· Priya, questionnaire · fills IMM 5532 b3, IMM 0008 b9, IMM 5406 b4</span></span><span style="font-size: 12.5px; color: #8c4600">Certificate (AI, High) says 16 Jun 2019 · <a href="#">Use it</a></span></div>
+          <div style="padding: 12px 18px; border-bottom: 1px solid #f0f0f0; font-size: 13.5px; color: #595959">Place of marriage</div><div style="padding: 10px 18px; border-bottom: 1px solid #f0f0f0; font-size: 14px">Ludhiana, India <span style="font-size: 12px; color: #595959">· questionnaire</span></div>
+          <div style="padding: 12px 18px; border-bottom: 1px solid #f0f0f0; font-size: 13.5px; color: #595959">Lived together since</div><div style="padding: 10px 18px; border-bottom: 1px solid #f0f0f0; font-size: 14px">Jul 2019 <span style="font-size: 12px; color: #595959">· questionnaire</span></div>
+          <div style="padding: 12px 18px; font-size: 13.5px; color: #595959">Addresses, 10 years</div><div style="padding: 10px 18px; font-size: 14px; display: flex; flex-direction: column; gap: 4px"><span>3 addresses · Jan 2016 – today</span><span style="font-size: 12.5px; color: #8c4600">Gap: Mar 2018 – May 2018 (2 months). Ask the client or add an address.</span></div>
+        </div>
+        <div style="padding: 10px 18px; background: #fbfbfb; border-top: 1px solid #eeeeee; font-size: 12.5px; color: #595959">Click any value to edit it. A change updates every form that uses it, with a message.</div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Gallery -->
+  <section aria-label="Question types" style="display: flex; flex-direction: column; gap: 12px">
+    <span class="k-cap">QUESTION TYPES · EACH WITH ITS VALIDATION BUILT IN</span>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px">
+      <div class="k-card" style="padding: 18px"><label class="k-lab" for="g1">Family name</label><p class="k-help">As shown in your passport</p><input id="g1" class="k-in" value="GILL" style="width: 100%"><label style="display: flex; gap: 8px; font-size: 13px; margin-top: 8px"><input type="checkbox"> I have no family name</label></div>
+      <div class="k-card" style="padding: 18px"><label class="k-lab" for="g2">Passport number</label><p class="k-help">Letters and numbers, no spaces</p><input id="g2" class="k-in k-err" value="Z12 34567" style="width: 100%"><div class="k-msg"><span aria-hidden="true">!</span><span>Remove the space: Z1234567</span></div></div>
+      <div class="k-card" style="padding: 18px"><label class="k-lab" for="g3">Phone</label><div style="display: flex; gap: 8px; margin-top: 6px"><select id="g3c" aria-label="Country code" class="k-in" style="width: 110px"><option>+1 Canada</option><option>+91 India</option></select><input id="g3" class="k-in" value="647 395 3471" style="flex: 1; min-width: 0"></div></div>
+      <div class="k-card" style="padding: 18px"><span class="k-lab">Current address</span><div style="display: flex; flex-direction: column; gap: 8px; margin-top: 6px"><input aria-label="Street" class="k-in" value="21 Model Town"><div style="display: flex; gap: 8px"><input aria-label="City" class="k-in" value="Ludhiana" style="flex: 1; min-width: 0"><input aria-label="Postal code" class="k-in" value="141002" style="width: 110px"></div><select aria-label="Country" class="k-in"><option>India</option></select></div></div>
+      <div class="k-card" style="padding: 18px; display: flex; flex-direction: column; gap: 8px"><span class="k-lab">Work history · last 10 years</span><span class="k-help" style="margin: 0">Add every job and every gap</span>
+        <div style="border: 1px solid #d9d9d9; border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; font-size: 14px"><span><b>Nurse</b> · DMC Hospital<br><span style="color: #595959; font-size: 13px">Sep 2018 – today</span></span><a href="#">Change</a></div>
+        <div style="border: 1px solid #d9d9d9; border-radius: 8px; padding: 10px 12px; display: flex; justify-content: space-between; gap: 8px; font-size: 14px"><span><b>Student</b> · Punjab University<br><span style="color: #595959; font-size: 13px">Aug 2014 – May 2018</span></span><a href="#">Change</a></div>
+        <div style="background: #fff3e0; color: #663200; border-radius: 6px; padding: 8px 10px; font-size: 13px">Gap: Jun 2018 – Aug 2018 (3 months). Add what you were doing.</div>
+        <button type="button" class="k-btn" style="align-self: flex-start">+ Add another</button></div>
+      <div class="k-card" style="padding: 18px; display: flex; flex-direction: column; gap: 8px"><span class="k-lab">Documents for Priya</span>
+        <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px; padding: 6px 0; border-bottom: 1px solid #eeeeee"><span>Passport</span><span class="k-chip k-ok">✓ Read · 6 facts confirmed</span></div>
+        <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px; padding: 6px 0; border-bottom: 1px solid #eeeeee"><span>Police certificate (India)</span><span class="k-chip k-no">Needed</span></div>
+        <div style="display: flex; justify-content: space-between; gap: 8px; font-size: 14px; padding: 6px 0"><span>Divorce certificate<br><span style="font-size: 12.5px; color: #595959">Because: married before = Yes</span></span><span class="k-chip k-warn">Added just now</span></div></div>
+      <div class="k-card" style="padding: 18px"><fieldset style="border: 0; padding: 0; margin: 0"><legend class="k-lab" style="padding: 0">Have you ever been refused a visa or permit to any country?</legend><div style="display: flex; gap: 8px; margin-top: 8px"><label class="k-radio" style="flex: 1"><input type="radio" name="g7"> Yes</label><label class="k-radio k-radio-on" style="flex: 1"><input type="radio" name="g7" checked> No</label></div><p class="k-help" style="margin-top: 8px">If Yes, 3 more questions appear: country, year and reason.</p></fieldset></div>
+      <div class="k-card" style="padding: 18px; display: flex; flex-direction: column; gap: 8px"><span class="k-lab">Declaration</span><span style="font-size: 13.5px; color: #404040">I declare that the information I have given is truthful, complete and correct.</span><label style="display: flex; gap: 8px; font-size: 14px"><input type="checkbox"> I agree</label></div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1500}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { day: '14', year: '2019', tried: false }; }
+  renderVals() {
+    const st = this.state;
+    const bad = Number(st.year) < 1994;
+    const showSummary = st.tried && bad;
+    return {
+      day: st.day, year: st.year, showSummary,
+      dateCls: showSummary ? 'k-in k-err' : 'k-in',
+      setDay: (e) => this.setState({ day: e.target.value }),
+      setYear: (e) => this.setState({ year: e.target.value, tried: false }),
+      cont: () => this.setState({ tried: true })
+    };
+  }
+}
+</script>
+</body>
+</html>

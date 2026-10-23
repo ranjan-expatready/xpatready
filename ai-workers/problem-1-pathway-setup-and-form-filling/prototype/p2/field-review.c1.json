@@ -1,0 +1,302 @@
+{
+ "schema": "field-review/v1",
+ "label": "Maker-reviewed canonical-field reconciliation for combination 1 (P2-M2). A deterministic repair applied by p2/assemble.ts v2, listed separately from model output; every reference is rewritten. Prototype only. Prepared and reviewed by the maker (the Lead); not formally approved. The formal checker's verdict on it is PASS WITH FIXES with P2-M2 partly closed (PROGRESS.md 2026-10-20T15:36:18Z); label corrected 20 Oct (P2-R2-m1). 20 Oct: D30 re-scope added (Lead, from official citations; for the reviewer's check).",
+ "prepared": "2026-10-20, Claude Code (the Lead), from the drafts' own field definitions (meaning text and value type) and where each field is placed; never from the answer key",
+ "merges": [
+  {
+   "from": "person.place_of_birth_country",
+   "to": "person.country_of_birth",
+   "reason": "'Country or territory of birth' (IMM 1295) and 'the country or territory where the person was born' (IMM 5707): one meaning, one country type; each form keeps its own transform (IMM 1295 code list, IMM 5707 country name as text)"
+  },
+  {
+   "from": "person.uci_number",
+   "to": "person.uci",
+   "reason": "both the IRCC Unique Client Identifier; the value-type difference already recorded on person.uci stays a decide item"
+  },
+  {
+   "from": "person.present_address",
+   "to": "person.residential_address",
+   "reason": "'the address where the person currently lives' (IMM 5707) and 'current residential (home) address' (IMM 1295): one meaning; IMM 1295 writes it in parts, IMM 5707 on one line"
+  },
+  {
+   "from": "person.has_military_or_security_service",
+   "to": "person.military_service",
+   "reason": "both 'ever served in any military, militia, civil defence, security organisation or police'; IMM 5257 Schedule 1 derives it from the service periods, IMM 1295 asks yes/no"
+  },
+  {
+   "from": "person.address_apt_unit",
+   "to": "person.mailing_address_unit",
+   "reason": "both the apartment or unit of the person's mailing address (IMM 5476 and IMM 5475 drafts named them differently); same section and source"
+  },
+  {
+   "from": "person.address_street_number",
+   "to": "person.mailing_address_street_number",
+   "reason": "as above"
+  },
+  {
+   "from": "person.address_street_name",
+   "to": "person.mailing_address_street_name",
+   "reason": "as above"
+  },
+  {
+   "from": "person.address_city",
+   "to": "person.mailing_address_city",
+   "reason": "as above"
+  },
+  {
+   "from": "person.address_province_state",
+   "to": "person.mailing_address_province_state",
+   "reason": "as above"
+  },
+  {
+   "from": "person.address_country",
+   "to": "person.mailing_address_country",
+   "reason": "as above"
+  },
+  {
+   "from": "person.address_postal_code",
+   "to": "person.mailing_address_postal_code",
+   "reason": "as above"
+  }
+ ],
+ "splits": [
+  {
+   "id": "person.occupation",
+   "job": "c1-fieldmap-imm1295",
+   "new_id": "person.employment_activity",
+   "keep_meaning_from": "c1-fieldmap-imm5707",
+   "reason": "One id, two meanings: IMM 1295 defined it as 'activity or occupation during a period' (history rows), IMM 5707 as 'the person's present occupation'. The v1 assembler kept the first definition, so IMM 5707's present-occupation boxes pointed at a history field. Split by meaning; the history rows get their own field"
+  },
+  {
+   "id": "person.residence_country",
+   "job": "c1-fieldmap-imm5409",
+   "new_id": "person.current_residence_country",
+   "keep_meaning_from": "c1-fieldmap-imm1295",
+   "reason": "One id, two meanings: IMM 1295 'country or territory of a period of residence or presence' (previous-residence rows), IMM 5409 'country where the person currently lives'. Split by time meaning"
+  }
+ ],
+ "same_id_reviewed": [
+  {
+   "id": "person.family_name",
+   "decision": "same",
+   "reason": "wording only"
+  },
+  {
+   "id": "person.given_names",
+   "decision": "same",
+   "reason": "wording only"
+  },
+  {
+   "id": "person.date_of_birth",
+   "decision": "same",
+   "reason": "wording only"
+  },
+  {
+   "id": "person.marital_status",
+   "decision": "same",
+   "reason": "wording only"
+  },
+  {
+   "id": "person.fax_number",
+   "decision": "same",
+   "reason": "wording only"
+  },
+  {
+   "id": "person.email_address",
+   "decision": "same",
+   "reason": "wording only"
+  },
+  {
+   "id": "organisation.name",
+   "decision": "same",
+   "reason": "the name of an organisation; which organisation comes from the person/role on each map entry"
+  },
+  {
+   "id": "case.application_type",
+   "decision": "same",
+   "reason": "wording only"
+  },
+  {
+   "id": "person.uci",
+   "decision": "same",
+   "reason": "same identifier; the value-type difference stays a decide item"
+  },
+  {
+   "id": "person.phone_number",
+   "decision": "same",
+   "reason": "a telephone number; IMM 5475's definition describes the part its box takes, which is a form-specific transform (flagged below)"
+  }
+ ],
+ "flags": [
+  {
+   "ids": [
+    "relationship.cohabitation_start_date",
+    "relationship.start_date"
+   ],
+   "reason": "Uncertain match: the date partners began living together equals the start of a common-law relationship but not the date of a marriage. Kept distinct; a person decides"
+  },
+  {
+   "ids": [
+    "person.email",
+    "person.email_address"
+   ],
+   "reason": "Same meaning (an e-mail address) but placed differently by whose value it is: the representative's from the profile record, the client's from the questionnaire. Placements are per fact, so merging would ask one way for both; kept distinct until placement can be per person (contract gap); a person decides"
+  },
+  {
+   "ids": [
+    "person.telephone_number",
+    "person.phone_number"
+   ],
+   "reason": "As for e-mail: same meaning, placed differently for the representative (profile record) and the client (questionnaire); kept distinct; a person decides"
+  },
+  {
+   "ids": [
+    "person.phone_number"
+   ],
+   "reason": "IMM 5475 writes the representative's number 'as_is (area code and number)': if the stored number includes the country code, the box needs the local part only (a form-specific transform); a person checks"
+  }
+ ],
+ "distinct_reviewed": [
+  {
+   "ids": [
+    "person.mailing_address",
+    "person.residential_address"
+   ],
+   "reason": "different addresses"
+  },
+  {
+   "ids": [
+    "person.official_language_ability",
+    "person.preferred_official_language"
+   ],
+   "reason": "ability versus preference"
+  },
+  {
+   "ids": [
+    "case.service_language",
+    "person.preferred_official_language"
+   ],
+   "reason": "service language of the application versus the person's ease"
+  },
+  {
+   "ids": [
+    "person.full_name",
+    "person.family_name"
+   ],
+   "reason": "a composed full name versus its part"
+  },
+  {
+   "ids": [
+    "person.full_name",
+    "person.given_names"
+   ],
+   "reason": "a composed full name versus its part"
+  },
+  {
+   "ids": [
+    "person.residence_city",
+    "person.current_residence_country"
+   ],
+   "reason": "different parts of where the person lives"
+  },
+  {
+   "ids": [
+    "person.passport_number",
+    "person.national_id_number"
+   ],
+   "reason": "different documents"
+  },
+  {
+   "ids": [
+    "person.current_residence_country",
+    "person.residence_country"
+   ],
+   "reason": "split by time meaning (current versus a past residence period)"
+  },
+  {
+   "ids": [
+    "person.military_service_country",
+    "person.residence_country"
+   ],
+   "reason": "where the person served versus where the person resided"
+  },
+  {
+   "ids": [
+    "person.education_location",
+    "person.employment_location"
+   ],
+   "reason": "a school's location versus a workplace's"
+  },
+  {
+   "ids": [
+    "person.plans_to_study_in_canada",
+    "person.plans_to_work_in_canada"
+   ],
+   "reason": "two different plans"
+  }
+ ],
+ "rescopes": [
+  {
+   "ids": {
+    "case.work_permit_type": "person.work_permit_type",
+    "case.is_employer_specific_work_permit": "person.is_employer_specific_work_permit",
+    "case.intended_work_location": "person.intended_work_location",
+    "case.intended_job_title": "person.intended_job_title",
+    "case.intended_job_duties": "person.intended_job_duties",
+    "case.intended_employment_start_date": "person.intended_employment_start_date",
+    "case.intended_employment_end_date": "person.intended_employment_end_date",
+    "case.lmia_or_offer_number": "person.lmia_or_offer_number",
+    "case.caregiver_care_types": "person.caregiver_care_types",
+    "case.caregiver_persons_requiring_care": "person.caregiver_persons_requiring_care",
+    "case.intended_employment_duration_days": "person.intended_employment_duration_days",
+    "case.intended_employment_start_days_from_application": "person.intended_employment_start_days_from_application",
+    "case.intended_work_province": "person.intended_work_province",
+    "case.intended_occupation_requires_medical": "person.intended_occupation_requires_medical"
+   },
+   "repeats": "per_person",
+   "condition_subject_kind": "EACH_APPLICANT",
+   "reason": "D30 (P3P4-R1-M1, Codex 17:57:23Z): IMM 1295 is completed by each applicant (D20), and its work section is in the applicant's own words, so the work-permit type, the job offer, the intended work and the caregiver details are each applicant's own, not one value per case. One case value would have put the principal's job on the partner's form. Includes the intended work province (from the applicant's offer; drives the Quebec rule) and whether the intended occupation needs a medical exam, which depend on the same per-applicant work details",
+   "citations": [
+    {
+     "file": "official-sources/ircc/forms/imm1295e.pdf",
+     "quote": "My occupation in Canada will be:",
+     "where": "IMM 1295 page 3, above Job title, Brief description of duties and the LMIA or offer of employment number"
+    },
+    {
+     "file": "official-sources/ircc/forms/imm1295e.pdf",
+     "quote": "*What type of work permit are you applying for?",
+     "where": "IMM 1295, Details of intended work in Canada"
+    },
+    {
+     "file": "official-sources/ircc/forms/imm1295e.pdf",
+     "quote": "Details of my prospective employer",
+     "where": "IMM 1295, Details of intended work in Canada"
+    },
+    {
+     "file": "official-sources/ircc/instructions/guide-5487.html",
+     "quote": "To work in Canada, your spouse or common-law partner and your dependent children must apply for their own work permits. Each person must meet the requirements to get a work permit, including the LMIA requirement.",
+     "where": "Guide 5487, May my spouse or common-law partner and children work in Canada?"
+    },
+    {
+     "file": "official-sources/ircc/forms/imm1295e.pdf",
+     "quote": "Intended location of employment in Canada?",
+     "where": "IMM 1295 page 3, Province, City/Town, Address"
+    }
+   ],
+   "kept_case_wide": [
+    {
+     "id": "case.service_language",
+     "reason": "one service language for a family filing together; an applicant who wants another language is not modelled in the prototype (stated limit)"
+    },
+    {
+     "id": "case.country_where_applying",
+     "reason": "the family applies together from one country (India) in combination 1; a different country per applicant is not modelled (stated limit)"
+    },
+    {
+     "id": "relationship.start_date",
+     "reason": "one fact of the couple's relationship (D11); both applicants' forms read the same date"
+    }
+   ]
+  }
+ ]
+}

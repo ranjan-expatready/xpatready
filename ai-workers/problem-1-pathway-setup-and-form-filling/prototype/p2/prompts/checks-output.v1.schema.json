@@ -1,0 +1,170 @@
+{
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "checks",
+  "derived_fields"
+ ],
+ "properties": {
+  "checks": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "group",
+     "applies_to",
+     "inputs",
+     "condition",
+     "severity",
+     "source_file",
+     "source_quote",
+     "runs_when",
+     "user_action",
+     "expressible",
+     "gap_reason",
+     "condition_plain"
+    ],
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "group": {
+      "enum": [
+       "form_native",
+       "official_rule",
+       "cross_record",
+       "readiness_warning",
+       "read_back"
+      ]
+     },
+     "applies_to": {
+      "type": "string"
+     },
+     "inputs": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "condition": {
+      "$ref": "#/$defs/condition"
+     },
+     "severity": {
+      "enum": [
+       "block",
+       "warn",
+       "advise",
+       "sme_pending"
+      ]
+     },
+     "source_file": {
+      "type": "string"
+     },
+     "source_quote": {
+      "type": "string"
+     },
+     "runs_when": {
+      "type": "array",
+      "items": {
+       "enum": [
+        "fact_verified",
+        "form_rendered",
+        "before_signing",
+        "before_submission"
+       ]
+      }
+     },
+     "user_action": {
+      "type": "string"
+     },
+     "expressible": {
+      "type": "boolean"
+     },
+     "gap_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "condition_plain": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "derived_fields": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/derived_field"
+   }
+  }
+ },
+ "$defs": {
+  "condition": {
+   "anyOf": [
+    {
+     "type": "null"
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "subject_kind",
+      "tree_json"
+     ],
+     "properties": {
+      "subject_kind": {
+       "type": "string"
+      },
+      "tree_json": {
+       "type": "string",
+       "description": "the condition tree as JSON text, in the 11-operator vocabulary"
+      }
+     }
+    }
+   ]
+  },
+  "derived_field": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "id",
+    "calculation",
+    "inputs",
+    "reference",
+    "plain"
+   ],
+   "properties": {
+    "id": {
+     "type": "string"
+    },
+    "calculation": {
+     "enum": [
+      "age_in_years",
+      "days_until",
+      "count_people_in_role",
+      "other"
+     ]
+    },
+    "inputs": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "reference": {
+     "type": "string"
+    },
+    "plain": {
+     "type": "string"
+    }
+   }
+  }
+ }
+}

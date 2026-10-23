@@ -1,0 +1,810 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "c1-fieldmap-imm5707-live-20261020t061028166z",
+  "idempotency_key": "c6a571a430e9ee28bb8918e6a6f8fb1f51d2e1cb3c89f53233e12cd1a6016c3d",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "e01a7da61b501f7930c0628930e00fc12504e27d1e6c4edff8241bd294d6f1e1",
+  "inputs": {
+   "combination": "1",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5707e.inventory.json",
+     "sha256": "70ac3a608fe3695a2909e9fccb66a43935d1a2ead559ed2c146578d12618188e"
+    }
+   ],
+   "configuration_version": "c1-draft-1"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 32000,
+   "prompt_version": "field-map.v1.md",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 15852,
+    "output_tokens": 13294,
+    "duration_ms": 95877
+   }
+  ],
+  "usage": {
+   "input_tokens": 15852,
+   "output_tokens": 13294,
+   "cost_usd": 0.329288,
+   "duration_ms": 95877
+  },
+  "started_at": "2026-10-20T06:10:28.170Z",
+  "ended_at": "2026-10-20T06:12:04.209Z",
+  "entries": [
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "APPLICANT"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Given name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].NativeName[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Asks for the name written in the native language/script (e.g. Arabic, Cyrillic, Chinese); an ordinary case record does not hold this, so it must be supplied by the person.",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Name in native language"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].COB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Country or territory of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5707.marital_status_with_conjugal (Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Conjugal=9, Unknown=8)",
+    "condition": "Drives presence scripts that show or hide the Spouse block and MarriageInPerson boxes",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Marital status"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.present_occupation",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Present occupation"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles MarriageInPerson)",
+    "unresolved_reason": "Whether the applicant was physically present at the marriage ceremony is not a fact an ordinary case record holds; must be confirmed with the person. Options on form: YES=1, NO=2.",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "I was physically present at the marriage ceremony"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "relationship.accompanies_subject_to_canada",
+    "transform": "yes_no_code:1/2",
+    "condition": "Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Will accompany you to Canada?"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "condition": "Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Family name"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "condition": "Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Given name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].NativeName[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)",
+    "unresolved_reason": "Asks for the spouse's name written in the native language/script; an ordinary case record does not hold this.",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Name in native language"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "condition": "Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].COB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "condition": "Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Country or territory of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Address[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "condition": "Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Present address"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5707.marital_status_with_conjugal (Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Conjugal=9, Unknown=8)",
+    "condition": "Spouse block shown only when the applicant's marital status calls for it; this box also drives the spouse MarriageInPerson presence script",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Marital status"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.present_occupation",
+    "transform": "as_is",
+    "condition": "Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Present occupation"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Shown only when marital status calls for it (presence scripts on Applicant and Spouse MaritalStatus toggle MarriageInPerson)",
+    "unresolved_reason": "Whether the spouse was physically present at the marriage ceremony is not a fact an ordinary case record holds; must be confirmed with the person. Options on form: YES=1, NO=2.",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "My spouse was physically present at the marriage ceremony"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "relationship.accompanies_subject_to_canada",
+    "transform": "yes_no_code:1/2",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Will accompany you to Canada?"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].COB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Address[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5707.marital_status (Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8); no Conjugal option on this list: a stored conjugal value must go to review, not be guessed",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_1",
+    "fact": "person.present_occupation",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 1 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "relationship.accompanies_subject_to_canada",
+    "transform": "yes_no_code:1/2",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Will accompany you to Canada?"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].COB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Address[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5707.marital_status (Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8); no Conjugal option on this list: a stored conjugal value must go to review, not be guessed",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_parent_2",
+    "fact": "person.present_occupation",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "YOUR PARENT 2 (MOTHER OR FATHER)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].PaddedEntry[0].SectionAsignature[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "condition": "Applies only when no spouse, common-law or conjugal partner is listed in Section A",
+    "unresolved_reason": "Signature certifying no spouse or partner; signed by the person by hand, never by the system.",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "NOTE 1: If no spouse, common-law or conjugal partner is listed in Section A, read and sign below. I certify that I do no"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionA[0].PaddedEntry[0].SectionAdate[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "condition": "Applies only when no spouse, common-law or conjugal partner is listed in Section A",
+    "unresolved_reason": "Date of signing the Note 1 certification; entered by the person when signing, not a stored case fact.",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "condition": "Presence script on this box hides or shows the Child rows and shim",
+    "unresolved_reason": "Check box (on=1, off=0) with no caption; its script hides the child rows. It may mean 'no children' (derivable from whether any child exists) or may be only a display toggle. Reviewer must check the printed form before deriving it; setting it wrongly would hide listed children.",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "SECTION B - CHILDREN"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "relationship.accompanies_subject_to_canada",
+    "transform": "yes_no_code:1/2",
+    "row": 0,
+    "condition": "Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Will accompany you to Canada?"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].Relationship[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "relationship.child_relationship_to_subject",
+    "transform": "code_list:imm5707.child_relationship (Son=1, Daughter=2, Step-daughter=3, Step-son=4, Adopted daughter=5, Adopted son=6)",
+    "row": 0,
+    "condition": "Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Relationship"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.family_name",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "SECTION B - CHILDREN"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.given_names",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Given name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "row": 0,
+    "condition": "Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].COB[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.country_of_birth",
+    "transform": "country_name_text",
+    "row": 0,
+    "condition": "Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Country or territory of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Address[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.present_address",
+    "transform": "address_single_line",
+    "row": 0,
+    "condition": "Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Present address"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm5707.marital_status (Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8); no Conjugal option on this list: a stored conjugal value must go to review, not be guessed",
+    "row": 0,
+    "condition": "Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Marital status"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_child",
+    "fact": "person.present_occupation",
+    "transform": "as_is",
+    "row": 0,
+    "condition": "Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Present occupation"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionB[0].Note2[0].subNote2[0].SectionBsignature[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "condition": "Applies only when no children are listed in Section B",
+    "unresolved_reason": "Signature certifying no children; signed by the person by hand, never by the system.",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "NOTE 2: If no children are listed in Section B, read and sign below. I certify that I do not have any natural, adopted n"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionB[0].Note2[0].subNote2[0].SectionBdate[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "condition": "Applies only when no children are listed in Section B",
+    "unresolved_reason": "Date of signing the Note 2 certification; entered by the person when signing, not a stored case fact.",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionC[0].SectionCsignature[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Declaration signature; signed by the person by hand, never by the system.",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "I certify that the information contained in this document is complete, accurate and factual. I also realize that once th"
+    }
+   },
+   {
+    "form_edition": "IMM 5707 (01-2023)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "IMM_5707[0].page1[0].SectionC[0].SectionCdate[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Date of signing the declaration; entered by the person when signing, not a stored case fact.",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": {
+   "manifest": "IMM 5707 (01-2023)",
+   "drafted": "IMM 5707 (edition date not given in inventory; reviewer to confirm from printed form)"
+  }
+ },
+ "launch_evidence": {
+  "path_code_sha256": "1ca5698617186c1271cd6a3a5c8af7d3800ec8213a1b6ad5968a62a512de0ef9",
+  "template_sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+  "schema_file": "field-map-output.v1.schema.json",
+  "schema_sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+  "screened": true,
+  "output_sha256": "e01a7da61b501f7930c0628930e00fc12504e27d1e6c4edff8241bd294d6f1e1",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "223f03f0d5253c3c0ac8c3a776333f846a3dc3a8c00f596e8cad1ea08c05a516",
+  "request_bytes": 33972,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 40,
+   "committed_usd": 18.452436
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5707e.inventory.json",
+    "sha256": "70ac3a608fe3695a2909e9fccb66a43935d1a2ead559ed2c146578d12618188e",
+    "kind": "inventory"
+   }
+  ]
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5707 (edition date not given in inventory; reviewer to confirm from printed form)\",\"canonical_fields\":[{\"id\":\"person.family_name\",\"meaning\":\"The person's family name (surname)\",\"value_type\":\"text\"},{\"id\":\"person.given_names\",\"meaning\":\"The person's given name or names\",\"value_type\":\"text\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"The date the person was born\",\"value_type\":\"date\"},{\"id\":\"person.country_of_birth\",\"meaning\":\"The country or territory where the person was born\",\"value_type\":\"country\"},{\"id\":\"person.marital_status\",\"meaning\":\"The person's current marital status\",\"value_type\":\"code\"},{\"id\":\"person.present_occupation\",\"meaning\":\"The person's current occupation\",\"value_type\":\"text\"},{\"id\":\"person.present_address\",\"meaning\":\"The address where the person currently lives\",\"value_type\":\"address\"},{\"id\":\"relationship.accompanies_subject_to_canada\",\"meaning\":\"Whether this family member will accompany the form subject to Canada\",\"value_type\":\"yes_no\"},{\"id\":\"relationship.child_relationship_to_subject\",\"meaning\":\"How a child is related to the form subject (natural, step or adopted son or daughter)\",\"value_type\":\"code\"}],\"entries\":[{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"APPLICANT\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].NativeName[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Asks for the name written in the native language/script (e.g. Arabic, Cyrillic, Chinese); an ordinary case record does not hold this, so it must be supplied by the person.\",\"evidence_quote\":\"Name in native language\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].DOB[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].COB[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country or territory of birth\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5707.marital_status_with_conjugal (Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Conjugal=9, Unknown=8)\",\"condition\":\"Drives presence scripts that show or hide the Spouse block and MarriageInPerson boxes\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Marital status\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].Occupation[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.present_occupation\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present occupation\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles MarriageInPerson)\",\"confidence\":\"medium\",\"unresolved_reason\":\"Whether the applicant was physically present at the marriage ceremony is not a fact an ordinary case record holds; must be confirmed with the person. Options on form: YES=1, NO=2.\",\"evidence_quote\":\"I was physically present at the marriage ceremony\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].Accompanying[0].yesno[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"relationship.accompanies_subject_to_canada\",\"transform\":\"yes_no_code:1/2\",\"condition\":\"Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Will accompany you to Canada?\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":\"Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Family name\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":\"Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].NativeName[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)\",\"confidence\":\"medium\",\"unresolved_reason\":\"Asks for the spouse's name written in the native language/script; an ordinary case record does not hold this.\",\"evidence_quote\":\"Name in native language\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].DOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].COB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":\"Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country or territory of birth\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Address[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":\"Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present address\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5707.marital_status_with_conjugal (Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Conjugal=9, Unknown=8)\",\"condition\":\"Spouse block shown only when the applicant's marital status calls for it; this box also drives the spouse MarriageInPerson presence script\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Marital status\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Occupation[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.present_occupation\",\"transform\":\"as_is\",\"condition\":\"Spouse block shown only when the applicant's marital status calls for it (presence script on Applicant MaritalStatus toggles Spouse)\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present occupation\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Shown only when marital status calls for it (presence scripts on Applicant and Spouse MaritalStatus toggle MarriageInPerson)\",\"confidence\":\"medium\",\"unresolved_reason\":\"Whether the spouse was physically present at the marriage ceremony is not a fact an ordinary case record holds; must be confirmed with the person. Options on form: YES=1, NO=2.\",\"evidence_quote\":\"My spouse was physically present at the marriage ceremony\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].Accompanying[0].yesno[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"relationship.accompanies_subject_to_canada\",\"transform\":\"yes_no_code:1/2\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Will accompany you to Canada?\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].DOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].COB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Address[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5707.marital_status (Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8); no Conjugal option on this list: a stored conjugal value must go to review, not be guessed\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Occupation[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_1\",\"row\":null,\"fact\":\"person.present_occupation\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 1 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].Accompanying[0].yesno[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"relationship.accompanies_subject_to_canada\",\"transform\":\"yes_no_code:1/2\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Will accompany you to Canada?\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].DOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].COB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Address[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5707.marital_status (Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8); no Conjugal option on this list: a stored conjugal value must go to review, not be guessed\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Occupation[0]\",\"outcome\":\"mapped\",\"person\":\"subject_parent_2\",\"row\":null,\"fact\":\"person.present_occupation\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"YOUR PARENT 2 (MOTHER OR FATHER)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].PaddedEntry[0].SectionAsignature[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Applies only when no spouse, common-law or conjugal partner is listed in Section A\",\"confidence\":\"high\",\"unresolved_reason\":\"Signature certifying no spouse or partner; signed by the person by hand, never by the system.\",\"evidence_quote\":\"NOTE 1: If no spouse, common-law or conjugal partner is listed in Section A, read and sign below. I certify that I do no\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionA[0].PaddedEntry[0].SectionAdate[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Applies only when no spouse, common-law or conjugal partner is listed in Section A\",\"confidence\":\"high\",\"unresolved_reason\":\"Date of signing the Note 1 certification; entered by the person when signing, not a stored case fact.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionB[0].hideChildren[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Presence script on this box hides or shows the Child rows and shim\",\"confidence\":\"low\",\"unresolved_reason\":\"Check box (on=1, off=0) with no caption; its script hides the child rows. It may mean 'no children' (derivable from whether any child exists) or may be only a display toggle. Reviewer must check the printed form before deriving it; setting it wrongly would hide listed children.\",\"evidence_quote\":\"SECTION B - CHILDREN\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].Accompanying[0].yesno[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"relationship.accompanies_subject_to_canada\",\"transform\":\"yes_no_code:1/2\",\"condition\":\"Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Will accompany you to Canada?\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].Relationship[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"relationship.child_relationship_to_subject\",\"transform\":\"code_list:imm5707.child_relationship (Son=1, Daughter=2, Step-daughter=3, Step-son=4, Adopted daughter=5, Adopted son=6)\",\"condition\":\"Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Relationship\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.family_name\",\"transform\":\"as_is\",\"condition\":\"Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"SECTION B - CHILDREN\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].GivenNames[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.given_names\",\"transform\":\"as_is\",\"condition\":\"Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].DOB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Date of birth\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].COB[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.country_of_birth\",\"transform\":\"country_name_text\",\"condition\":\"Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Country or territory of birth\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Address[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.present_address\",\"transform\":\"address_single_line\",\"condition\":\"Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present address\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm5707.marital_status (Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8); no Conjugal option on this list: a stored conjugal value must go to review, not be guessed\",\"condition\":\"Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Marital status\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Occupation[0]\",\"outcome\":\"mapped\",\"person\":\"subject_child\",\"row\":0,\"fact\":\"person.present_occupation\",\"transform\":\"as_is\",\"condition\":\"Repeating Child row group (initial 4, no maximum); each further child adds a row; rows hidden when hideChildren is set\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Present occupation\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionB[0].Note2[0].subNote2[0].SectionBsignature[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Applies only when no children are listed in Section B\",\"confidence\":\"high\",\"unresolved_reason\":\"Signature certifying no children; signed by the person by hand, never by the system.\",\"evidence_quote\":\"NOTE 2: If no children are listed in Section B, read and sign below. I certify that I do not have any natural, adopted n\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionB[0].Note2[0].subNote2[0].SectionBdate[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Applies only when no children are listed in Section B\",\"confidence\":\"high\",\"unresolved_reason\":\"Date of signing the Note 2 certification; entered by the person when signing, not a stored case fact.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionC[0].SectionCsignature[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Declaration signature; signed by the person by hand, never by the system.\",\"evidence_quote\":\"I certify that the information contained in this document is complete, accurate and factual. I also realize that once th\"},{\"data_path\":\"IMM_5707[0].page1[0].SectionC[0].SectionCdate[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Date of signing the declaration; entered by the person when signing, not a stored case fact.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"}]}"
+}

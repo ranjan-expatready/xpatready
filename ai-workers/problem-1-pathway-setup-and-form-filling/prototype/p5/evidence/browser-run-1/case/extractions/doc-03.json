@@ -1,0 +1,166 @@
+{
+ "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+ "method": "local",
+ "cached": false,
+ "cost_usd": 0,
+ "ms": 1825,
+ "refused": "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally",
+ "checks": null,
+ "run_file": null,
+ "output": {
+  "document": {
+   "kind_seen": "job_offer",
+   "matches_claimed_kind": true,
+   "readable": "yes",
+   "issues": [],
+   "issued_or_written_on": "2026-10-01"
+  },
+  "people_seen": [
+   {
+    "role": "employee the offer is addressed to",
+    "name_as_printed": "CLIENTA EXAMPLE"
+   }
+  ],
+  "fields": [
+   {
+    "fact": "person.intended_job_title",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "Software engineer",
+    "as_printed": "Software engineer",
+    "page": 1,
+    "where": "page 1, PDF text layer, row \"Position  Software engineer\"",
+    "confidence": "high",
+    "reason": null,
+    "box": null,
+    "method": "PDF text layer + label rule"
+   },
+   {
+    "fact": "person.intended_job_duties",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "Designs and builds software",
+    "as_printed": "Designs and builds software",
+    "page": 1,
+    "where": "page 1, PDF text layer, row \"Main duties  Designs and builds software\"",
+    "confidence": "high",
+    "reason": null,
+    "box": null,
+    "method": "PDF text layer + label rule"
+   },
+   {
+    "fact": "person.intended_work_location",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "100 Example Street, Toronto, ON M5V 1A1",
+    "as_printed": "100 Example Street, Toronto, ON M5V 1A1",
+    "page": 1,
+    "where": "page 1, Tesseract on the rendered page, row \"Work location 100 Example Street, Toront\"",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     259,
+     1572,
+     1834,
+     1615
+    ],
+    "method": "Tesseract on the rendered page + label rule (text layer unreadable here)"
+   },
+   {
+    "fact": "person.intended_employment_start_date",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "2027-01-04",
+    "as_printed": "January 4, 2027  T E",
+    "page": 1,
+    "where": "page 1, PDF text layer, row \"Start date  January 4, 2027  T E\"",
+    "confidence": "high",
+    "reason": null,
+    "box": null,
+    "method": "PDF text layer + label rule"
+   },
+   {
+    "fact": "person.intended_employment_end_date",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "2029-01-03",
+    "as_printed": "January 3, 2029",
+    "page": 1,
+    "where": "page 1, Tesseract on the rendered page, row \"End date January 3, 2029\"",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     262,
+     1800,
+     1282,
+     1844
+    ],
+    "method": "Tesseract on the rendered page + label rule (text layer unreadable here)"
+   },
+   {
+    "fact": "person.lmia_or_offer_number",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "A1234567",
+    "as_printed": "A1234567",
+    "page": 1,
+    "where": "page 1, Tesseract on the rendered page, row \"LMIA number A1234567\"",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     262,
+     1912,
+     1159,
+     1947
+    ],
+    "method": "Tesseract on the rendered page + label rule (text layer unreadable here)"
+   },
+   {
+    "fact": "organisation.name",
+    "about": "employer making the offer",
+    "status": "proposed",
+    "value": "Example Employer Ltd",
+    "as_printed": "Example Employer Ltd",
+    "page": 1,
+    "where": "page 1, letterhead / offer sentence",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "PDF text layer + offer sentence rule"
+   },
+   {
+    "fact": "person.intended_work_province",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "ON",
+    "as_printed": "ON",
+    "page": 1,
+    "where": "derived from the work location",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "rule on the work location (text layer unreadable here)"
+   },
+   {
+    "fact": "person.full_name",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "CLIENTA EXAMPLE",
+    "as_printed": "CLIENTA EXAMPLE",
+    "page": 1,
+    "where": "page 1, addressee block",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "PDF text layer + addressee rule"
+   }
+  ],
+  "internal_conflicts": [],
+  "reader": {
+   "name": "local OCR/MRZ + rules",
+   "tesseract": "5.5.0 (eng)",
+   "version": "local-reader/v1"
+  },
+  "ms": 1825
+ }
+}

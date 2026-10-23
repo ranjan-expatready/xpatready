@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>New combination</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@600;700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#054e9c}a:hover{color:#043a73}
+</style>
+</helmet>
+<div style="width: 1440px; height: 900px; box-sizing: border-box; padding: 48px; background: #5f6b78; font-family: Inter, system-ui, sans-serif; color: #2d2d2d; font-size: 14px; line-height: 1.45; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px; align-items: start">
+
+  <div role="dialog" aria-labelledby="d1" style="background: #ffffff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.25); display: flex; flex-direction: column">
+    <div style="padding: 20px 24px 14px; border-bottom: 1px solid #eeeeee; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; gap: 8px; font-size: 12.5px; font-weight: 600">
+        <span style="color: #054e9c">1 Path</span><span style="color: #bfbfbf">›</span><span style="color: #8c8c8c">2 Official sources</span><span style="color: #bfbfbf">›</span><span style="color: #8c8c8c">3 Who and where</span>
+      </div>
+      <h2 id="d1" style="margin: 0; font-family: Figtree, Inter, sans-serif; font-size: 21px">New combination</h2>
+      <p style="margin: 0; color: #595959; font-size: 13.5px">Choose an existing program, category and sub-category. Missing one? Add it to the masters first.</p>
+    </div>
+    <div style="padding: 18px 24px; display: flex; flex-direction: column; gap: 14px">
+      <div style="display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px; align-items: center">
+        <label for="pw" style="font-weight: 600">Pathway</label>
+        <div id="pw" style="height: 38px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid #eeeeee; background: #f7f7f7; border-radius: 6px; color: #404040">Individual <span style="font-size: 12px; color: #737373">from your workspace</span></div>
+        <label for="pg" style="font-weight: 600">Program</label>
+        <div id="pg" style="height: 38px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border: 1px solid #bfbfbf; border-radius: 6px">Work permits <span style="color: #8c8c8c">▾</span></div>
+        <label for="ct" style="font-weight: 600">Category</label>
+        <div id="ct" style="height: 38px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border: 2px solid #0862c5; border-radius: 6px">Open work permit <span style="color: #8c8c8c">▾</span></div>
+      </div>
+      <div style="margin-left: 142px; border: 1px solid #d9d9d9; border-radius: 8px; overflow: hidden">
+        <div style="padding: 8px 12px; font-size: 12px; color: #737373; background: #f7f7f7">Categories under Work permits</div>
+        <div style="padding: 8px 12px; display: flex; justify-content: space-between"><span>Employer-specific work permit</span><span style="font-size: 12px; color: #737373">2 sub-categories</span></div>
+        <div style="padding: 8px 12px; display: flex; justify-content: space-between; background: #e6f4ff; color: #054e9c; font-weight: 600"><span>Open work permit</span><span style="font-size: 12px; font-weight: 500">2 sub-categories</span></div>
+        <div style="padding: 8px 12px; display: flex; justify-content: space-between"><span>International Experience Canada</span><span style="font-size: 12px; color: #737373">no sub-categories</span></div>
+        <div style="padding: 8px 12px; border-top: 1px solid #eeeeee"><a href="#" style="font-weight: 500">+ Add a category to Work permits</a></div>
+      </div>
+      <fieldset style="border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px">
+        <legend style="float: left; width: 130px; font-weight: 600; padding: 0">Sub-category</legend>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <label style="display: flex; gap: 8px; align-items: center"><input type="radio" name="sub" checked> Spouse of a skilled worker</label>
+          <label style="display: flex; gap: 8px; align-items: center"><input type="radio" name="sub"> Post-graduation</label>
+          <label style="display: flex; gap: 8px; align-items: center; color: #8c8c8c"><input type="radio" name="sub" disabled> None — not available: this category already has sub-categories</label>
+          <a href="#" style="font-size: 13px; font-weight: 500">+ Add a sub-category</a>
+        </div>
+      </fieldset>
+      <div role="alert" style="display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; background: #fff3e0; border: 1px solid #ffc773; border-radius: 8px">
+        <div aria-hidden="true" style="width: 22px; height: 22px; border-radius: 50%; background: #ff8500; color: #ffffff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex: none">!</div>
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <b style="font-weight: 600; color: #663200">This combination already exists</b>
+          <span style="color: #402000; font-size: 13.5px">Work permits › Open work permit › Spouse of a skilled worker is Release 2 with 2 draft changes.</span>
+          <a href="CombinationPanel.dc.html" style="font-weight: 600; color: #8c4600">Open the existing combination →</a>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #f7f7f7; border-radius: 6px; font-size: 13px">
+        <span style="color: #737373">Will be created as</span>
+        <b style="font-weight: 600">Individual › Work permits › Open work permit › Spouse of a skilled worker</b>
+      </div>
+    </div>
+    <div style="padding: 14px 24px; border-top: 1px solid #eeeeee; display: flex; justify-content: flex-end; gap: 8px">
+      <button type="button" style="height: 36px; padding: 0 14px; border: 1px solid #bfbfbf; background: #ffffff; border-radius: 6px; font: inherit; font-weight: 500">Cancel</button>
+      <button type="button" disabled style="height: 36px; padding: 0 16px; border: 0; background: #99d2ff; color: #ffffff; border-radius: 6px; font: inherit; font-weight: 600">Next: official sources</button>
+    </div>
+  </div>
+
+  <div role="dialog" aria-labelledby="d2" style="background: #ffffff; border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.25); display: flex; flex-direction: column">
+    <div style="padding: 20px 24px 14px; border-bottom: 1px solid #eeeeee; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; gap: 8px; font-size: 12.5px; font-weight: 600">
+        <span style="color: #0f5c2e">✓ Path</span><span style="color: #bfbfbf">›</span><span style="color: #054e9c">2 Official sources</span><span style="color: #bfbfbf">›</span><span style="color: #8c8c8c">3 Who and where</span>
+      </div>
+      <h2 id="d2" style="margin: 0; font-family: Figtree, Inter, sans-serif; font-size: 21px">Add the official sources</h2>
+      <p style="margin: 0; color: #595959; font-size: 13.5px"><b style="font-weight: 600">Individual › Study permits › Study permit extension</b>. Attach the IRCC forms and the document checklist. AI can read them in the next step.</p>
+    </div>
+    <div style="padding: 18px 24px; display: flex; flex-direction: column; gap: 16px">
+      <section aria-labelledby="fh" style="display: flex; flex-direction: column; gap: 8px">
+        <h3 id="fh" style="margin: 0; font-size: 14.5px">Forms</h3>
+        <label for="fs" style="position: absolute; left: -9999px">Search forms in the library</label>
+        <input id="fs" type="search" value="5709" style="height: 36px; border: 1px solid #bfbfbf; border-radius: 6px; padding: 0 12px; font: inherit">
+        <div style="border: 1px solid #d9d9d9; border-radius: 8px">
+          <div style="display: grid; grid-template-columns: 96px minmax(0, 1fr) 150px 80px; gap: 10px; align-items: center; padding: 9px 12px">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #054e9c">IMM 5709</span>
+            <span>Change conditions or extend stay as a student</span>
+            <span style="font-size: 12px; color: #737373">Current edition · used in 3 rows</span>
+            <button type="button" style="height: 28px; border: 1px solid #0862c5; color: #0862c5; background: #ffffff; border-radius: 6px; font: inherit; font-size: 12.5px; font-weight: 600">Attach</button>
+          </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <span style="display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; padding: 4px 8px; background: #e6f4ff; color: #054e9c; border-radius: 6px"><b style="font-family: 'JetBrains Mono', monospace; font-weight: 500">IMM 5476</b> Use of a representative · attached <span aria-hidden="true">×</span></span>
+        </div>
+        <div style="border: 2px dashed #99d2ff; border-radius: 8px; padding: 16px; display: flex; align-items: center; gap: 14px; background: #f5faff">
+          <div aria-hidden="true" style="width: 36px; height: 36px; border-radius: 8px; background: #cce9ff; color: #054e9c; display: flex; align-items: center; justify-content: center; font-weight: 700">↑</div>
+          <div style="display: flex; flex-direction: column"><b style="font-weight: 600">Not in the library? Drop the IRCC PDF here</b><span style="font-size: 12.5px; color: #595959">We read its code and edition. Same code as an existing form becomes a new edition, never a duplicate.</span></div>
+        </div>
+      </section>
+      <section aria-labelledby="ch" style="display: flex; flex-direction: column; gap: 8px">
+        <h3 id="ch" style="margin: 0; font-size: 14.5px">Official checklist and guides</h3>
+        <div style="display: grid; grid-template-columns: 26px minmax(0, 1fr) 120px; gap: 10px; align-items: center; padding: 9px 12px; border: 1px solid #d9d9d9; border-radius: 8px">
+          <span aria-hidden="true" style="color: #16a34a; font-weight: 700">✓</span>
+          <span><b style="font-weight: 600">Document checklist</b> student, inside Canada <span style="font-size: 12px; color: #737373">· PDF · uploaded now</span></span>
+          <span style="font-size: 12px; color: #0f5c2e; font-weight: 600">Read: 14 items</span>
+        </div>
+        <p style="margin: 0; font-size: 12.5px; color: #737373">The checklist is a setup source, not a client document. It tells AI which documents to propose and when.</p>
+      </section>
+      <div style="display: flex; gap: 12px; align-items: center; padding: 12px 14px; background: #e6f4ff; border-radius: 8px">
+        <div style="flex: 1; display: flex; flex-direction: column"><b style="font-weight: 600; color: #054e9c">Next: Draft setup with AI</b><span style="font-size: 13px; color: #043a73">Reads 2 forms and 1 checklist. Reuses 96 existing library fields where they match; proposes the rest. About US$1.40, at most US$3.00.</span></div>
+      </div>
+    </div>
+    <div style="padding: 14px 24px; border-top: 1px solid #eeeeee; display: flex; justify-content: space-between; gap: 8px">
+      <button type="button" style="height: 36px; padding: 0 14px; border: 1px solid #bfbfbf; background: #ffffff; border-radius: 6px; font: inherit; font-weight: 500">Back</button>
+      <div style="display: flex; gap: 8px">
+        <button type="button" style="height: 36px; padding: 0 14px; border: 1px solid #bfbfbf; background: #ffffff; border-radius: 6px; font: inherit; font-weight: 500">Save and set up by hand</button>
+        <button type="button" style="height: 36px; padding: 0 16px; border: 0; background: #0862c5; color: #ffffff; border-radius: 6px; font: inherit; font-weight: 600">Next: who and where</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

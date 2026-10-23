@@ -1,0 +1,56 @@
+{
+ "at": "2026-10-20T18:17:02.105Z",
+ "release": {
+  "version": 3,
+  "configuration_sha256": "2c66472f37585338c9c21bbf221833baa7ef77f6fa0f9531edc92e43072d06af",
+  "supersedes": "e6c7487bd369e399687a23750659307852587d0df3f564ad0ba3c745a2a5a7a9"
+ },
+ "reopened": 63,
+ "reused": 909,
+ "sme_signed": 20,
+ "steps": [
+  {
+   "name": "draft 3 against c1-v2: 63 changed items reopen, 909 reused with their c1-v2 decision",
+   "ok": true,
+   "detail": "map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].TypeofWork[0].WorkPermitType[0]:0, map:IMM 1295 (09-2023):form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].ProvinceState[0].ProvinceState[0]:0, map:IMM 1295 (09-2023):form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].Address[0]:0, map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfWorkCont[0].details[0].jobTitle[0]:0, map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfWorkCont[0].details[0].posDesc[0]:0, map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfWorkCont[0].details[0].HowLongStudy[0].FromDate[0]:0"
+  },
+  {
+   "name": "every reopened item is decided with the D30 reason (author A)",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "name": "the SME duty signs off the reopened rules, conditions and values (20)",
+   "ok": true
+  },
+  {
+   "name": "ready to submit",
+   "ok": true,
+   "detail": "[]"
+  },
+  {
+   "name": "author A submits",
+   "ok": true,
+   "detail": "{\"ok\":true,\"submission\":{\"hash\":\"2c66472f37585338c9c21bbf221833baa7ef77f6fa0f9531edc92e43072d06af\",\"by\":\"user-A\",\"at\":\"2026-10-20T18:17:02.031Z\",\"version\":3,\"de"
+  },
+  {
+   "name": "the author cannot approve (D254)",
+   "ok": true,
+   "detail": "self-approval refused: approver is the author"
+  },
+  {
+   "name": "B approves: release c1-v3 published",
+   "ok": true,
+   "detail": "{\"ok\":true,\"version\":3,\"hash\":\"2c66472f37585338c9c21bbf221833baa7ef77f6fa0f9531edc92e43072d06af\"}"
+  },
+  {
+   "name": "c1-v3 supersedes c1-v2 by its hash",
+   "ok": true
+  },
+  {
+   "name": "the released c1-v3 holds no structured reference to any of the 14 re-scoped case ids",
+   "ok": true,
+   "detail": ""
+  }
+ ]
+}

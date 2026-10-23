@@ -1,0 +1,1794 @@
+{
+  "checkedAt": "2026-10-18T07:10:55.855Z",
+  "files": [
+    {
+      "expected": {
+        "drive_id": "1ONZBEre6wRLwd_ldgQ7rmVoG9dzO2gRy",
+        "drive_name": "01-RFP-Build-Proposal.md",
+        "modified_time": "2026-08-16T16:52:14.821Z",
+        "sha256": "1bc3debb29429ac47ddb15b567ff65668081bc27c97f991d58b487148f7b9e1d",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/01-RFP-Build-Proposal.md",
+        "path": null,
+        "size": null,
+        "bytes": 59685
+      },
+      "actual": {
+        "id": "1ONZBEre6wRLwd_ldgQ7rmVoG9dzO2gRy",
+        "title": "01-RFP-Build-Proposal.md",
+        "mime_type": "text/markdown",
+        "size": "59685",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-08-16T16:52:14.821Z",
+        "parent_ids": [
+          "1KmMZABfoZfU54gHgN7yYc7KOsB7-GcuO"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1Dzl1VbcXCF25hjIoyx2RN_T5oxu8iqE1",
+        "drive_name": "02-Architecture-Decision-Record.md",
+        "modified_time": "2026-08-16T16:52:14.612Z",
+        "sha256": "fafe383627a062b6a4c6e6026594de906fb4c9aeba320d876ba14faf1607bb3a",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/02-Architecture-Decision-Record.md",
+        "path": null,
+        "size": null,
+        "bytes": 77089
+      },
+      "actual": {
+        "id": "1Dzl1VbcXCF25hjIoyx2RN_T5oxu8iqE1",
+        "title": "02-Architecture-Decision-Record.md",
+        "mime_type": "text/markdown",
+        "size": "77089",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-08-16T16:52:14.612Z",
+        "parent_ids": [
+          "1KmMZABfoZfU54gHgN7yYc7KOsB7-GcuO"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "10SKuNviDS2ToCANkkPi1kGPbsSOEe-xa",
+        "drive_name": "03-Doc-1-Platform-Foundation.md",
+        "modified_time": "2026-08-16T16:52:14.684Z",
+        "sha256": "ed29730c7129f16060991c1a3999167dbbac10963d39c224aaff04962d1940ce",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/03-Doc-1-Platform-Foundation.md",
+        "path": null,
+        "size": null,
+        "bytes": 409776
+      },
+      "actual": {
+        "id": "10SKuNviDS2ToCANkkPi1kGPbsSOEe-xa",
+        "title": "03-Doc-1-Platform-Foundation.md",
+        "mime_type": "text/markdown",
+        "size": "409776",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-08-16T16:52:14.684Z",
+        "parent_ids": [
+          "1KmMZABfoZfU54gHgN7yYc7KOsB7-GcuO"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1KyM_Wv3WGNqCkSAgMxi9KYMw8xsM5KDJ",
+        "drive_name": "04-Doc-2-SuperAdmin-Console.md",
+        "modified_time": "2026-08-16T16:52:15.322Z",
+        "sha256": "f23741675149b4ffeec1d5dc69366f726ba822bdad0955c9cc3afffcf53d415e",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/04-Doc-2-SuperAdmin-Console.md",
+        "path": null,
+        "size": null,
+        "bytes": 869804
+      },
+      "actual": {
+        "id": "1KyM_Wv3WGNqCkSAgMxi9KYMw8xsM5KDJ",
+        "title": "04-Doc-2-SuperAdmin-Console.md",
+        "mime_type": "text/markdown",
+        "size": "869804",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-08-16T16:52:15.322Z",
+        "parent_ids": [
+          "1KmMZABfoZfU54gHgN7yYc7KOsB7-GcuO"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1mdyonkfEr6fZWfJl229_1fo6EVWnz7xp",
+        "drive_name": "05-Doc-3-Agent-Console.md",
+        "modified_time": "2026-08-16T16:52:15.829Z",
+        "sha256": "5c07d4b8aa6637b85f56a0d4cc1f7986afb0515953725b54a658eb4b627af051",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/05-Doc-3-Agent-Console.md",
+        "path": null,
+        "size": null,
+        "bytes": 1315366
+      },
+      "actual": {
+        "id": "1mdyonkfEr6fZWfJl229_1fo6EVWnz7xp",
+        "title": "05-Doc-3-Agent-Console.md",
+        "mime_type": "text/markdown",
+        "size": "1315366",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-08-16T16:52:15.829Z",
+        "parent_ids": [
+          "1KmMZABfoZfU54gHgN7yYc7KOsB7-GcuO"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1W5ygfYnoEevN97WlmOOVZEYPiTWXHLbT",
+        "drive_name": "06-Doc-4-Client-Portal.md",
+        "modified_time": "2026-08-16T16:52:15.187Z",
+        "sha256": "1666192382d501eac8f53c491def946face8be654d971f41c74545b9b7f01c2d",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/06-Doc-4-Client-Portal.md",
+        "path": null,
+        "size": null,
+        "bytes": 502724
+      },
+      "actual": {
+        "id": "1W5ygfYnoEevN97WlmOOVZEYPiTWXHLbT",
+        "title": "06-Doc-4-Client-Portal.md",
+        "mime_type": "text/markdown",
+        "size": "502724",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-08-16T16:52:15.187Z",
+        "parent_ids": [
+          "1KmMZABfoZfU54gHgN7yYc7KOsB7-GcuO"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1sP--yKthjxjjYsopOQIweuS0js_w1qr2",
+        "drive_name": "07-Founder-Decisions-Log.md",
+        "modified_time": "2026-08-16T16:52:14.828Z",
+        "sha256": "50e783215c2dd054a7f49740a431b7899342358d6d01b8cb3e7994ab417b4f66",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/07-Founder-Decisions-Log.md",
+        "path": null,
+        "size": null,
+        "bytes": 58056
+      },
+      "actual": {
+        "id": "1sP--yKthjxjjYsopOQIweuS0js_w1qr2",
+        "title": "07-Founder-Decisions-Log.md",
+        "mime_type": "text/markdown",
+        "size": "58056",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-08-16T16:52:14.828Z",
+        "parent_ids": [
+          "1KmMZABfoZfU54gHgN7yYc7KOsB7-GcuO"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1bYitutpf01llPOJRekNMD9GgnpX7wu-D",
+        "drive_name": "00-Overview_v1.13_2026-10-12.md",
+        "modified_time": "2026-10-12T20:04:01.932Z",
+        "sha256": "05446f12172b92825b616d00a61fa5c070114275a8d0fc81b5976bd23b69f739",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/00-Overview_v1.13_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 48746
+      },
+      "actual": {
+        "id": "1bYitutpf01llPOJRekNMD9GgnpX7wu-D",
+        "title": "00-Overview_v1.13_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "48746",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-12T20:04:01.932Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "17hXLFGzmqWQmAEkDhB-yD-OiQEabF90X",
+        "drive_name": "99-Phasing-and-Glossary_v1.5_2026-10-12.md",
+        "modified_time": "2026-10-12T20:04:12.177Z",
+        "sha256": "e27ae146774178a5b9016798128c56aac1090aff47e176b56d859e6c7c1f6b07",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/99-Phasing-and-Glossary_v1.5_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 32294
+      },
+      "actual": {
+        "id": "17hXLFGzmqWQmAEkDhB-yD-OiQEabF90X",
+        "title": "99-Phasing-and-Glossary_v1.5_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "32294",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-12T20:04:12.177Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1RxrZ3dDQzhz-dP2K-FLRONzcgyyhIvzq",
+        "drive_name": "AG-01-firm-setup-and-onboarding_v1.19_2026-10-13.md",
+        "modified_time": "2026-10-13T06:29:49.326Z",
+        "sha256": "0e07e41a37be90c2e78c183e392a9c9e89e8be7134779184391a2ecbb9b7e069",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-01-firm-setup-and-onboarding_v1.19_2026-10-13.md",
+        "path": null,
+        "size": null,
+        "bytes": 231931
+      },
+      "actual": {
+        "id": "1RxrZ3dDQzhz-dP2K-FLRONzcgyyhIvzq",
+        "title": "AG-01-firm-setup-and-onboarding_v1.19_2026-10-13.md",
+        "mime_type": "text/markdown",
+        "size": "231931",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T06:29:49.326Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1tmvs4QuWM8KsI9in_egKgnax6Oi9ENEe",
+        "drive_name": "AG-02-decisions_2026-10-11.md",
+        "modified_time": "2026-10-11T16:15:58.136Z",
+        "sha256": "e74877f972b0963a0393ca6953a2528ddd5cc8b4bef6383ec33e9e34574a5043",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-02-decisions_2026-10-11.md",
+        "path": null,
+        "size": null,
+        "bytes": 10001
+      },
+      "actual": {
+        "id": "1tmvs4QuWM8KsI9in_egKgnax6Oi9ENEe",
+        "title": "AG-02-decisions_2026-10-11.md",
+        "mime_type": "text/markdown",
+        "size": "10001",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-11T16:15:58.136Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1nDNJSI_C0U8nECEAVBp7vd3Koh9qGVpE",
+        "drive_name": "AG-02-prospect-lead-sales-crm_v1.10_2026-10-12.md",
+        "modified_time": "2026-10-12T20:13:08.455Z",
+        "sha256": "903a62be6eee570eeab5fa6e99ffc92b3096ee94d74467fae99dd571dd58db5f",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-02-prospect-lead-sales-crm_v1.10_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 216785
+      },
+      "actual": {
+        "id": "1nDNJSI_C0U8nECEAVBp7vd3Koh9qGVpE",
+        "title": "AG-02-prospect-lead-sales-crm_v1.10_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "216785",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-12T20:13:08.455Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1ctVRWXXfzGXhjJf_5Z0DKM_A5wxnJUnB",
+        "drive_name": "AG-03-pathway-assessment_v1.4_2026-10-07.md",
+        "modified_time": "2026-10-07T17:50:27.317Z",
+        "sha256": "1c6b222de1774cec9baed8f559b116f2cc487e8e88e51f42c868f0917d0a37d2",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-03-pathway-assessment_v1.4_2026-10-07.md",
+        "path": null,
+        "size": null,
+        "bytes": 93800
+      },
+      "actual": {
+        "id": "1ctVRWXXfzGXhjJf_5Z0DKM_A5wxnJUnB",
+        "title": "AG-03-pathway-assessment_v1.4_2026-10-07.md",
+        "mime_type": "text/markdown",
+        "size": "93800",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-07T17:50:27.317Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1Rp-SiJEdjmdV9HqOSAT02k6kARMpCKPL",
+        "drive_name": "AG-04-consultation-and-booking_v1.5_2026-10-07.md",
+        "modified_time": "2026-10-07T14:29:51.647Z",
+        "sha256": "7aaddd05bbf349016497d1a6ff1cd04407744c79873649e6b2a7d75f68ba6f62",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-04-consultation-and-booking_v1.5_2026-10-07.md",
+        "path": null,
+        "size": null,
+        "bytes": 112240
+      },
+      "actual": {
+        "id": "1Rp-SiJEdjmdV9HqOSAT02k6kARMpCKPL",
+        "title": "AG-04-consultation-and-booking_v1.5_2026-10-07.md",
+        "mime_type": "text/markdown",
+        "size": "112240",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-07T14:29:51.647Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1gFOWo89uyOjWFBcU4swM-H_TjqgUQUsq",
+        "drive_name": "AG-05-retainer-and-agreements_v1.10_2026-10-10.md",
+        "modified_time": "2026-10-11T02:17:46.340Z",
+        "sha256": "e4fc95bf83c400e5f9d097a60e2b5990589e7b5bda49f1dccf98577591ebddeb",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-05-retainer-and-agreements_v1.10_2026-10-10.md",
+        "path": null,
+        "size": null,
+        "bytes": 123268
+      },
+      "actual": {
+        "id": "1gFOWo89uyOjWFBcU4swM-H_TjqgUQUsq",
+        "title": "AG-05-retainer-and-agreements_v1.10_2026-10-10.md",
+        "mime_type": "text/markdown",
+        "size": "123268",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-11T02:17:46.340Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "18z1uHD514Ebr8noP94m9CGnNS5lfHiSG",
+        "drive_name": "AG-06-billing-and-payments_v1.7_2026-10-07.md",
+        "modified_time": "2026-10-07T17:51:07.124Z",
+        "sha256": "7d4ed2d878d43f0df1610eedde090964f1dde8afaffa506dab7e5a27b2fa5934",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-06-billing-and-payments_v1.7_2026-10-07.md",
+        "path": null,
+        "size": null,
+        "bytes": 118322
+      },
+      "actual": {
+        "id": "18z1uHD514Ebr8noP94m9CGnNS5lfHiSG",
+        "title": "AG-06-billing-and-payments_v1.7_2026-10-07.md",
+        "mime_type": "text/markdown",
+        "size": "118322",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-07T17:51:07.124Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1lLUuP-mWer5Ehq04k2CarOBkOozfDJTA",
+        "drive_name": "AG-07-case-core-and-delivery_v2.9_2026-10-12.md",
+        "modified_time": "2026-10-12T20:04:27.384Z",
+        "sha256": "cc2fbd07bbfebb2f704181f2d916cd042418d98e68b2726cc90d9e5ae8e575da",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-07-case-core-and-delivery_v2.9_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 315255
+      },
+      "actual": {
+        "id": "1lLUuP-mWer5Ehq04k2CarOBkOozfDJTA",
+        "title": "AG-07-case-core-and-delivery_v2.9_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "315255",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-12T20:04:27.384Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1ALlqYmt1jMivU_sS-Je2NGE6ZwdBaP52",
+        "drive_name": "AG-08-smart-questionnaire_v1.7_2026-10-07.md",
+        "modified_time": "2026-10-07T14:29:40.089Z",
+        "sha256": "f915795b6abd3e14fa6ea5592ffffc7691589085eb68879d85005fe3c72101a9",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-08-smart-questionnaire_v1.7_2026-10-07.md",
+        "path": null,
+        "size": null,
+        "bytes": 128854
+      },
+      "actual": {
+        "id": "1ALlqYmt1jMivU_sS-Je2NGE6ZwdBaP52",
+        "title": "AG-08-smart-questionnaire_v1.7_2026-10-07.md",
+        "mime_type": "text/markdown",
+        "size": "128854",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-07T14:29:40.089Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1RRwHkS1V1CiSDGOAQL4aB7TLXCzfvTTA",
+        "drive_name": "AG-09-document-management_v1.9_2026-10-10.md",
+        "modified_time": "2026-10-11T02:16:40.661Z",
+        "sha256": "b077b5f180df4acdab014b758e948afb3f68bbf76bce1b6f0df6f1c361c8fa5b",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-09-document-management_v1.9_2026-10-10.md",
+        "path": null,
+        "size": null,
+        "bytes": 153251
+      },
+      "actual": {
+        "id": "1RRwHkS1V1CiSDGOAQL4aB7TLXCzfvTTA",
+        "title": "AG-09-document-management_v1.9_2026-10-10.md",
+        "mime_type": "text/markdown",
+        "size": "153251",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-11T02:16:40.661Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1ILSs9_bkj11rNaOUhZboXlxcgR9L4shT",
+        "drive_name": "AG-10-communication-hub_v1.12_2026-10-12.md",
+        "modified_time": "2026-10-12T20:12:13.821Z",
+        "sha256": "4389059c299a9005d9ffdb93cfa96b66cd040bf19375eb2e83f5fc2f6ecb0a53",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-10-communication-hub_v1.12_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 184088
+      },
+      "actual": {
+        "id": "1ILSs9_bkj11rNaOUhZboXlxcgR9L4shT",
+        "title": "AG-10-communication-hub_v1.12_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "184088",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-12T20:12:13.821Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1QCGImL-CfeTES_snoK6SGrV-bejktE6q",
+        "drive_name": "AG-11-automation_v1.13_2026-10-12.md",
+        "modified_time": "2026-10-12T20:13:01.827Z",
+        "sha256": "037bf91225c62f7922ea6e89fbfd0d5f7851db0085352b772456ae537a832952",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-11-automation_v1.13_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 323341
+      },
+      "actual": {
+        "id": "1QCGImL-CfeTES_snoK6SGrV-bejktE6q",
+        "title": "AG-11-automation_v1.13_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "323341",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-12T20:13:01.827Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1CDi6i6azsCRMk9qH4XSQf4VZ4gQnf-Of",
+        "drive_name": "AG-12-templates_v2.2_2026-10-12.md",
+        "modified_time": "2026-10-12T20:13:55.492Z",
+        "sha256": "e123a19d21b38de0186d9da9c3cfb685a319e64f246aca12657c234e6df2768d",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-12-templates_v2.2_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 85504
+      },
+      "actual": {
+        "id": "1CDi6i6azsCRMk9qH4XSQf4VZ4gQnf-Of",
+        "title": "AG-12-templates_v2.2_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "85504",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-12T20:13:55.492Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1coBTGIExRaUyUnPyWUv0wNPywPYDDunU",
+        "drive_name": "AG-13-tasks-reminders-notes-and-activity-audit_v1.12_2026-10-07.md",
+        "modified_time": "2026-10-07T17:50:31.849Z",
+        "sha256": "66ff859dfe9b0234e82a7fc3b0a3d775b98e5873a2bdece6bff3984fe75555f9",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-13-tasks-reminders-notes-and-activity-audit_v1.12_2026-10-07.md",
+        "path": null,
+        "size": null,
+        "bytes": 117678
+      },
+      "actual": {
+        "id": "1coBTGIExRaUyUnPyWUv0wNPywPYDDunU",
+        "title": "AG-13-tasks-reminders-notes-and-activity-audit_v1.12_2026-10-07.md",
+        "mime_type": "text/markdown",
+        "size": "117678",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-07T17:50:31.849Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "106af6X16wlkgsNAtb-cYlq5wbrVNBB26",
+        "drive_name": "AG-14-reporting-and-analytics_v1.11_2026-10-10.md",
+        "modified_time": "2026-10-10T08:20:55.756Z",
+        "sha256": "3865703a2dc823e2d9ba01edabcc98373409c2b6c31fcf365487e4f33a10919c",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-14-reporting-and-analytics_v1.11_2026-10-10.md",
+        "path": null,
+        "size": null,
+        "bytes": 99668
+      },
+      "actual": {
+        "id": "106af6X16wlkgsNAtb-cYlq5wbrVNBB26",
+        "title": "AG-14-reporting-and-analytics_v1.11_2026-10-10.md",
+        "mime_type": "text/markdown",
+        "size": "99668",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-10T08:20:55.756Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1inhxxc7UOeEjWCnrV8hod3PdO3kPSoeI",
+        "drive_name": "AG-15-client-portal-management_v1.7_2026-10-10.md",
+        "modified_time": "2026-10-10T07:22:55.960Z",
+        "sha256": "b722188e6725bbacd2fefa7d4c68a3053432728361c25da0a0a932ed121a7b11",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-15-client-portal-management_v1.7_2026-10-10.md",
+        "path": null,
+        "size": null,
+        "bytes": 105980
+      },
+      "actual": {
+        "id": "1inhxxc7UOeEjWCnrV8hod3PdO3kPSoeI",
+        "title": "AG-15-client-portal-management_v1.7_2026-10-10.md",
+        "mime_type": "text/markdown",
+        "size": "105980",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-10T07:22:55.960Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1Pbzq0RQ7uTym9jVm3rijPxAlMKpi-rUZ",
+        "drive_name": "AG-16-firm-settings-and-integrations_v1.15_2026-10-12.md",
+        "modified_time": "2026-10-12T20:13:01.828Z",
+        "sha256": "0a44acc70875de45265184a1927da699075fbc227d8c747671e5a49f5fd57f8b",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-16-firm-settings-and-integrations_v1.15_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 185644
+      },
+      "actual": {
+        "id": "1Pbzq0RQ7uTym9jVm3rijPxAlMKpi-rUZ",
+        "title": "AG-16-firm-settings-and-integrations_v1.15_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "185644",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-12T20:13:01.828Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1T_1gr5EPovQRDmQ6cgJeD-gE5Es99I5C",
+        "drive_name": "AG-17-corporate-cases-and-lmia_v0.6_2026-10-10.md",
+        "modified_time": "2026-10-10T08:23:58.244Z",
+        "sha256": "828238ad90bc00ea6834ae582e2081c3525f6eab45ff3a229c67b6ecd7169640",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-17-corporate-cases-and-lmia_v0.6_2026-10-10.md",
+        "path": null,
+        "size": null,
+        "bytes": 225337
+      },
+      "actual": {
+        "id": "1T_1gr5EPovQRDmQ6cgJeD-gE5Es99I5C",
+        "title": "AG-17-corporate-cases-and-lmia_v0.6_2026-10-10.md",
+        "mime_type": "text/markdown",
+        "size": "225337",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-10T08:23:58.244Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1OCnaa_Xeshn688sblwlXh88H-VQj94H5",
+        "drive_name": "AG-18-data-import-and-migration_v1.3_2026-10-12.md",
+        "modified_time": "2026-10-12T20:13:01.828Z",
+        "sha256": "8fa11485f7cb25e4ef054f538ecab779c0cd95b3352d071a766b72b5fe04b07c",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-18-data-import-and-migration_v1.3_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 178165
+      },
+      "actual": {
+        "id": "1OCnaa_Xeshn688sblwlXh88H-VQj94H5",
+        "title": "AG-18-data-import-and-migration_v1.3_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "178165",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-12T20:13:01.828Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1oLOMgqOJ-RXlZ4n01tuImDOTAiNtXkVi",
+        "drive_name": "SCOPE-TRIAGE_2026-10-05.md",
+        "modified_time": "2026-10-08T06:36:02.213Z",
+        "sha256": "7a602262b23b2133d6f10831f726256cff2097102b259234542b4f6691230f28",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/SCOPE-TRIAGE_2026-10-05.md",
+        "path": null,
+        "size": null,
+        "bytes": 20030
+      },
+      "actual": {
+        "id": "1oLOMgqOJ-RXlZ4n01tuImDOTAiNtXkVi",
+        "title": "SCOPE-TRIAGE_2026-10-05.md",
+        "mime_type": "text/markdown",
+        "size": "20030",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-08T06:36:02.213Z",
+        "parent_ids": [
+          "1ygYUV6Jd5D1pC6wKX3Z0c6b_vi-12zMR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1RGKxrd-kfujzGV_QYXSA1YDlXXVSSimO",
+        "drive_name": "00-Overview_v3.11_2026-10-12.md",
+        "modified_time": "2026-10-13T03:47:55.940Z",
+        "sha256": "131da8a7e614bacf9ee48c7a701f08ea4cf0dd21f5f4ebe23886bdd85b2a2b4a",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/shared/00-Overview_v3.11_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 42540
+      },
+      "actual": {
+        "id": "1RGKxrd-kfujzGV_QYXSA1YDlXXVSSimO",
+        "title": "00-Overview_v3.11_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "42540",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:47:55.940Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1YyqVw39-izR-ah0t1wHtcDRN_FuHP3sp",
+        "drive_name": "99-Phasing-and-Glossary_v2.20_2026-10-12.md",
+        "modified_time": "2026-10-13T03:47:47.330Z",
+        "sha256": "c02bb746f7e494b11734dc9c7418c4f95624f95d7dae97013de05558269e7c1d",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/shared/99-Phasing-and-Glossary_v2.20_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 47921
+      },
+      "actual": {
+        "id": "1YyqVw39-izR-ah0t1wHtcDRN_FuHP3sp",
+        "title": "99-Phasing-and-Glossary_v2.20_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "47921",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:47:47.330Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1V-3rYG8eSoBHZs7NhHpj3ZWPWq7UD4ze",
+        "drive_name": "COMPLEXITY-REGISTER_2026-10-12.md",
+        "modified_time": "2026-10-12T18:45:35.443Z",
+        "sha256": "a80b9f15374ce4bfbe6339d3029435ef6c1bb712ff4ed7c45f63fef9f52b71b9",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/COMPLEXITY-REGISTER_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 256422
+      },
+      "actual": {
+        "id": "1V-3rYG8eSoBHZs7NhHpj3ZWPWq7UD4ze",
+        "title": "COMPLEXITY-REGISTER_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "256422",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-12T18:45:35.443Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1SYDKY6U4Bpl-KH8k0x1THA-MIRhNszyt",
+        "drive_name": "DEV-HANDOVER_2026-10-12.md",
+        "modified_time": "2026-10-13T03:48:47.791Z",
+        "sha256": "ffa481649889ad0c653541fbfc4bf14883f18bff75bcd3068fcd561688ed4b4f",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/DEV-HANDOVER_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 8555
+      },
+      "actual": {
+        "id": "1SYDKY6U4Bpl-KH8k0x1THA-MIRhNszyt",
+        "title": "DEV-HANDOVER_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "8555",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:48:47.791Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "19wLGJrhq33oeyHFvoA2gg940I6SVG6bo",
+        "drive_name": "DEV-TASKS_2026-10-12.md",
+        "modified_time": "2026-10-13T05:58:30.103Z",
+        "sha256": "2ce5e05dc2ecda4bfee9c13164ec93eae115a506f1d4b82c660bc45d0a096e77",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/DEV-TASKS_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 10557
+      },
+      "actual": {
+        "id": "19wLGJrhq33oeyHFvoA2gg940I6SVG6bo",
+        "title": "DEV-TASKS_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "10557",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T05:58:30.103Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1PYhNq1EnGPXpOEyJyO_GiF89BMK8Bo8e",
+        "drive_name": "SA-01-country-and-immigration-pack-management_v2.4_2026-10-12.md",
+        "modified_time": "2026-10-13T03:01:05.803Z",
+        "sha256": "d157b7246bae1896d6a0a1ea119c6766188a93bb2b3ccdf679dab31d7c1e03d4",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-01-country-and-immigration-pack-management_v2.4_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 83780
+      },
+      "actual": {
+        "id": "1PYhNq1EnGPXpOEyJyO_GiF89BMK8Bo8e",
+        "title": "SA-01-country-and-immigration-pack-management_v2.4_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "83780",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:01:05.803Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1ANsr4SYnJK09cAgikOtuHl8_zJWHuJ8L",
+        "drive_name": "SA-01B-content-pack-configurator_v1.4_2026-10-12.md",
+        "modified_time": "2026-10-13T03:01:48.348Z",
+        "sha256": "f2caf4ef767a8fb09d15747468ee52d0d0d219320d4703d574ddb71b0d395878",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-01B-content-pack-configurator_v1.4_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 92328
+      },
+      "actual": {
+        "id": "1ANsr4SYnJK09cAgikOtuHl8_zJWHuJ8L",
+        "title": "SA-01B-content-pack-configurator_v1.4_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "92328",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:01:48.348Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "18Pm3JyjlDiZ_lX-M2LLAFjW9Ja2qgDkK",
+        "drive_name": "SA-02-tenant-firm-management_v2.24_2026-10-12.md",
+        "modified_time": "2026-10-13T03:03:07.241Z",
+        "sha256": "45d1c389dff7553f0cab636e9ff86aa8cf3b7bb736edcda83ba237a8add3208a",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-02-tenant-firm-management_v2.24_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 132441
+      },
+      "actual": {
+        "id": "18Pm3JyjlDiZ_lX-M2LLAFjW9Ja2qgDkK",
+        "title": "SA-02-tenant-firm-management_v2.24_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "132441",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:03:07.241Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1gftVVCpQCMGoMbcV_LMYM62O9gwmNCHX",
+        "drive_name": "SA-03-subscription-plans-and-entitlements_v2.20_2026-10-12.md",
+        "modified_time": "2026-10-13T03:03:49.894Z",
+        "sha256": "24caf309d46ab384d8052b2ae8f65f75273fcbd01bbe34c4b698f2ddeb9b5e84",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-03-subscription-plans-and-entitlements_v2.20_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 164762
+      },
+      "actual": {
+        "id": "1gftVVCpQCMGoMbcV_LMYM62O9gwmNCHX",
+        "title": "SA-03-subscription-plans-and-entitlements_v2.20_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "164762",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:03:49.894Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1Wn6hA7XDaGfmh9OnneQZdM3G4gPt-Ink",
+        "drive_name": "SA-04-saas-billing_v2.21_2026-10-12.md",
+        "modified_time": "2026-10-13T03:09:38.199Z",
+        "sha256": "8c751bb632f428bc30d2837626dd9f8dca403a9fd2b1856ba7e383bf9ddc7bc0",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-04-saas-billing_v2.21_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 193586
+      },
+      "actual": {
+        "id": "1Wn6hA7XDaGfmh9OnneQZdM3G4gPt-Ink",
+        "title": "SA-04-saas-billing_v2.21_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "193586",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:09:38.199Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1D-qsQ32TfDRJaNek5fHNoTBi8t9uhCO3",
+        "drive_name": "SA-05-global-templates_v3.4_2026-10-12.md",
+        "modified_time": "2026-10-13T03:37:02.608Z",
+        "sha256": "2220f06994d532a5abde66953b409d1154853b22f5285499bbdfb4aef29b5ffd",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-05-global-templates_v3.4_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 288523
+      },
+      "actual": {
+        "id": "1D-qsQ32TfDRJaNek5fHNoTBi8t9uhCO3",
+        "title": "SA-05-global-templates_v3.4_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "288523",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:37:02.608Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1g9aad-WWTadPOKnPljJEYrepUZtBPP-n",
+        "drive_name": "SA-06-CHANGE-NOTE_2026-10-07.md",
+        "modified_time": "2026-10-12T18:50:02.179Z",
+        "sha256": "ff9392ed70967a31525e3ee4e95639a66b554f1b5c9e2f73a78bb526bb5f9759",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-06-CHANGE-NOTE_2026-10-07.md",
+        "path": null,
+        "size": null,
+        "bytes": 20507
+      },
+      "actual": {
+        "id": "1g9aad-WWTadPOKnPljJEYrepUZtBPP-n",
+        "title": "SA-06-CHANGE-NOTE_2026-10-07.md",
+        "mime_type": "text/markdown",
+        "size": "20507",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-12T18:50:02.179Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1MauAFAz7z0sdkbNhOEsU0MJdQEmn7nyb",
+        "drive_name": "SA-06-rbac_v3.6_2026-10-12.md",
+        "modified_time": "2026-10-13T03:06:11.110Z",
+        "sha256": "78e9732f6da306640eec1277375e3e6b141c6fc628fb9c226a91169f8f93e457",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-06-rbac_v3.6_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 310311
+      },
+      "actual": {
+        "id": "1MauAFAz7z0sdkbNhOEsU0MJdQEmn7nyb",
+        "title": "SA-06-rbac_v3.6_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "310311",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:06:11.110Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1FPcfnYDYRnVyJqUFQVisYqSsQ6dHHUlV",
+        "drive_name": "SA-07-platform-users_v2.15_2026-10-12.md",
+        "modified_time": "2026-10-13T03:01:19.200Z",
+        "sha256": "280a71b9e45132968795e24fb4c3683cfcec39e1d43f0f4583994be010440fed",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-07-platform-users_v2.15_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 132303
+      },
+      "actual": {
+        "id": "1FPcfnYDYRnVyJqUFQVisYqSsQ6dHHUlV",
+        "title": "SA-07-platform-users_v2.15_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "132303",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:01:19.200Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1BDSqurTJfAi3XRpLI7HXqfOLDjrMwhVS",
+        "drive_name": "SA-08-platform-integrations-and-infrastructure-rails_v2.7_2026-10-12.md",
+        "modified_time": "2026-10-13T03:37:31.333Z",
+        "sha256": "03f8425c4f4d48f5723e163afdcba378d959b5ce9f0af3bbe16eb5cfe7e134b5",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-08-platform-integrations-and-infrastructure-rails_v2.7_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 92022
+      },
+      "actual": {
+        "id": "1BDSqurTJfAi3XRpLI7HXqfOLDjrMwhVS",
+        "title": "SA-08-platform-integrations-and-infrastructure-rails_v2.7_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "92022",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:37:31.333Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "13B0FgI5ORbW5D0QzsgnH5EpkBOAQLCWl",
+        "drive_name": "SA-09-platform-analytics-and-observability_v2.4_2026-10-12.md",
+        "modified_time": "2026-10-13T03:01:56.410Z",
+        "sha256": "ee557a40730afdf991b1c6c77ac0500eaf01d1786fcf0893b24933cb8a260f15",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-09-platform-analytics-and-observability_v2.4_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 49530
+      },
+      "actual": {
+        "id": "13B0FgI5ORbW5D0QzsgnH5EpkBOAQLCWl",
+        "title": "SA-09-platform-analytics-and-observability_v2.4_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "49530",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:01:56.410Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1qqUIzDI8XdQ6MN6uhjAOrOay23EIqrGh",
+        "drive_name": "SA-10-support_v2.7_2026-10-12.md",
+        "modified_time": "2026-10-13T03:02:23.454Z",
+        "sha256": "f6a823f09817897bab4f0d95f458e901648e3aad892411928c50a4101f2c5e3c",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-10-support_v2.7_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 69287
+      },
+      "actual": {
+        "id": "1qqUIzDI8XdQ6MN6uhjAOrOay23EIqrGh",
+        "title": "SA-10-support_v2.7_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "69287",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:02:23.454Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1_rcpNXUJzbMfj56Yb2m102YtM5VXi2gy",
+        "drive_name": "SA-11-audit-compliance-and-data-governance_v2.10_2026-10-12.md",
+        "modified_time": "2026-10-13T03:03:15.171Z",
+        "sha256": "6a0e4549274791fe3901d2036cfc1edf71d383a65de37e0b760dc6dde00bddf4",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-11-audit-compliance-and-data-governance_v2.10_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 128279
+      },
+      "actual": {
+        "id": "1_rcpNXUJzbMfj56Yb2m102YtM5VXi2gy",
+        "title": "SA-11-audit-compliance-and-data-governance_v2.10_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "128279",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:03:15.171Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "197iz1r2f7iuLMwq-jAp8LZHMgHUzk8uu",
+        "drive_name": "SA-12-feature-flags-and-platform-configuration_v2.9_2026-10-12.md",
+        "modified_time": "2026-10-13T03:04:05.446Z",
+        "sha256": "f09f117d53dc93b92e16efe32fde09e3a77e3e857b3d6402f37887fbf75b827c",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-12-feature-flags-and-platform-configuration_v2.9_2026-10-12.md",
+        "path": null,
+        "size": null,
+        "bytes": 114740
+      },
+      "actual": {
+        "id": "197iz1r2f7iuLMwq-jAp8LZHMgHUzk8uu",
+        "title": "SA-12-feature-flags-and-platform-configuration_v2.9_2026-10-12.md",
+        "mime_type": "text/markdown",
+        "size": "114740",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T03:04:05.446Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "137zAMIGXL-6o4OXLuJfjRpks6EfodHi4",
+        "drive_name": "TEMPLATE-MAP-working_2026-10-10.md",
+        "modified_time": "2026-10-13T06:29:36.838Z",
+        "sha256": "0705e49422fddf16b388b0ae2667e732d407581af93d2ab918dae61019eb8246",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/TEMPLATE-MAP-working_2026-10-10.md",
+        "path": null,
+        "size": null,
+        "bytes": 150888
+      },
+      "actual": {
+        "id": "137zAMIGXL-6o4OXLuJfjRpks6EfodHi4",
+        "title": "TEMPLATE-MAP-working_2026-10-10.md",
+        "mime_type": "text/markdown",
+        "size": "150888",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T06:29:36.838Z",
+        "parent_ids": [
+          "17a711IE8UrFxBTODnY3jOjs6b3CmA_SR"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1ynAcnhcyRSfm0gznOl-qaZnDPms3MnTr",
+        "drive_name": "Program Charter V1 - G1 expanded.md",
+        "modified_time": "2026-10-02T12:59:36.437Z",
+        "sha256": "eeece522c156eb183fcb24c2e6e6528418e492dd44b5011c7dce0ebc76a3d159",
+        "local_path": "drive-snapshot-2026-10-13-1535/06-program-management/Program Charter V1 - G1 expanded.md",
+        "path": null,
+        "size": null,
+        "bytes": 34960
+      },
+      "actual": {
+        "id": "1ynAcnhcyRSfm0gznOl-qaZnDPms3MnTr",
+        "title": "Program Charter V1 - G1 expanded.md",
+        "mime_type": "text/markdown",
+        "size": "34960",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-02T12:59:36.437Z",
+        "parent_ids": [
+          "1T3GRrvwDmPRbBChvGCrnmENgcYhwAfQr"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    },
+    {
+      "expected": {
+        "drive_id": "1r1JHDV-mNb3UbtZtytQcCuh-k9276tsC",
+        "drive_name": "Program Charter_V2.pptx",
+        "modified_time": "2026-10-13T12:38:46.219Z",
+        "sha256": "ac09208441e26cca402a1ad95205efc27e6deae9f2ed0ec51ce0fd4854598877",
+        "local_path": "drive-snapshot-2026-10-13-1535/06-program-management/Program Charter_V2.pptx",
+        "path": null,
+        "size": null,
+        "bytes": 67371
+      },
+      "actual": {
+        "id": "1r1JHDV-mNb3UbtZtytQcCuh-k9276tsC",
+        "title": "Program Charter_V2.pptx",
+        "mime_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "size": "67371",
+        "url": null,
+        "file_or_folder": "file",
+        "created_time": null,
+        "modified_time": "2026-10-13T12:38:46.219Z",
+        "parent_ids": [
+          "1T3GRrvwDmPRbBChvGCrnmENgcYhwAfQr"
+        ],
+        "drive_id": null,
+        "current_user_can_share": null,
+        "has_augmented_permissions": null,
+        "shared": null,
+        "permissions": null,
+        "source_visibility_status": "access_not_verified"
+      },
+      "isError": false
+    }
+  ],
+  "modifiedQuery": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Action completed."
+      }
+    ],
+    "structuredContent": {
+      "results": [
+        {
+          "url": "https://docs.google.com/document/d/1R-Y1Aw6rlCvDBMvTGBw8XRBcTegavYkFPbO6mK4MOPY/edit?usp=drivesdk",
+          "title": "Expatready - SAModules",
+          "id": "1R-Y1Aw6rlCvDBMvTGBw8XRBcTegavYkFPbO6mK4MOPY",
+          "mime_type": "application/vnd.google-apps.document",
+          "size": "154700",
+          "file_or_folder": "file",
+          "created_at": "2026-09-08T17:23:59.772Z",
+          "updated_at": "2026-10-17T16:56:20.894Z",
+          "viewedByMeTime": null,
+          "display_title": "Expatready - SAModules",
+          "display_url": "https://docs.google.com/document/d/1R-Y1Aw6rlCvDBMvTGBw8XRBcTegavYkFPbO6mK4MOPY/edit?usp=drivesdk",
+          "shared": true,
+          "shared_with_me_time": "2026-09-10T13:57:06.973Z"
+        },
+        {
+          "url": "https://docs.google.com/spreadsheets/d/1dp69GvOFxAhqQ6MV9sUTCfVCwl3z-xxyXy4gWJsNFGk/edit?usp=drivesdk",
+          "title": "ExpatReady — Full Build in Two Sprints",
+          "id": "1dp69GvOFxAhqQ6MV9sUTCfVCwl3z-xxyXy4gWJsNFGk",
+          "mime_type": "application/vnd.google-apps.spreadsheet",
+          "size": "20212",
+          "file_or_folder": "file",
+          "created_at": "2026-08-21T11:10:22.190Z",
+          "updated_at": "2026-10-17T14:34:33.380Z",
+          "viewedByMeTime": "2026-10-17T03:55:29.656Z",
+          "display_title": "ExpatReady — Full Build in Two Sprints",
+          "display_url": "https://docs.google.com/spreadsheets/d/1dp69GvOFxAhqQ6MV9sUTCfVCwl3z-xxyXy4gWJsNFGk/edit?usp=drivesdk",
+          "shared": true,
+          "shared_with_me_time": "2026-08-21T15:43:25.982Z"
+        },
+        {
+          "url": "https://docs.google.com/spreadsheets/d/1oLtljoBYy89skAovSLP-KW50NQTs3j5B/edit?usp=drivesdk&ouid=109506685750945764611&rtpof=true&sd=true",
+          "title": "Action_Item_Tracker.xlsx",
+          "id": "1oLtljoBYy89skAovSLP-KW50NQTs3j5B",
+          "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          "size": "86024",
+          "file_or_folder": "file",
+          "created_at": "2026-08-14T20:36:31.357Z",
+          "updated_at": "2026-10-16T14:03:11.506Z",
+          "viewedByMeTime": "2026-10-12T03:47:44.714Z",
+          "display_title": "Action_Item_Tracker.xlsx",
+          "display_url": "https://docs.google.com/spreadsheets/d/1oLtljoBYy89skAovSLP-KW50NQTs3j5B/edit?usp=drivesdk&ouid=109506685750945764611&rtpof=true&sd=true",
+          "parent_ids": [
+            "1RwxfKuNez_Ul_-RRPO-2C94xOvppxz61"
+          ],
+          "shared": true
+        },
+        {
+          "url": "https://docs.google.com/presentation/d/1r1JHDV-mNb3UbtZtytQcCuh-k9276tsC/edit?usp=drivesdk&ouid=109506685750945764611&rtpof=true&sd=true",
+          "title": "Program Charter_V2.pptx",
+          "id": "1r1JHDV-mNb3UbtZtytQcCuh-k9276tsC",
+          "mime_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+          "size": "67371",
+          "file_or_folder": "file",
+          "created_at": "2026-10-01T05:20:28.741Z",
+          "updated_at": "2026-10-13T12:38:46.219Z",
+          "viewedByMeTime": "2026-10-14T03:06:11.369Z",
+          "display_title": "Program Charter_V2.pptx",
+          "display_url": "https://docs.google.com/presentation/d/1r1JHDV-mNb3UbtZtytQcCuh-k9276tsC/edit?usp=drivesdk&ouid=109506685750945764611&rtpof=true&sd=true",
+          "parent_ids": [
+            "1T3GRrvwDmPRbBChvGCrnmENgcYhwAfQr"
+          ],
+          "shared": true
+        }
+      ]
+    },
+    "isError": false
+  },
+  "masterFolderQueries": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "results": []
+        },
+        "isError": false
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "results": []
+        },
+        "isError": false
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "results": []
+        },
+        "isError": false
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "content": [
+          {
+            "type": "text",
+            "text": "Action completed."
+          }
+        ],
+        "structuredContent": {
+          "results": [
+            {
+              "url": "https://docs.google.com/presentation/d/1r1JHDV-mNb3UbtZtytQcCuh-k9276tsC/edit?usp=drivesdk&ouid=109506685750945764611&rtpof=true&sd=true",
+              "title": "Program Charter_V2.pptx",
+              "id": "1r1JHDV-mNb3UbtZtytQcCuh-k9276tsC",
+              "mime_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+              "size": "67371",
+              "file_or_folder": "file",
+              "created_at": "2026-10-01T05:20:28.741Z",
+              "updated_at": "2026-10-13T12:38:46.219Z",
+              "viewedByMeTime": "2026-10-14T03:06:11.369Z",
+              "display_title": "Program Charter_V2.pptx",
+              "display_url": "https://docs.google.com/presentation/d/1r1JHDV-mNb3UbtZtytQcCuh-k9276tsC/edit?usp=drivesdk&ouid=109506685750945764611&rtpof=true&sd=true",
+              "parent_ids": [
+                "1T3GRrvwDmPRbBChvGCrnmENgcYhwAfQr"
+              ],
+              "shared": true
+            }
+          ]
+        },
+        "isError": false
+      }
+    }
+  ]
+}

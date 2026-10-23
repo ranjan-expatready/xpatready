@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Pathway Configurator journey v3</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@600;700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0;background:#f7f7f7}
+a{color:#054e9c}a:hover{color:#043a73}
+button{font-family:inherit}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;border:0}
+.ok{background:#e7f6ec;color:#0f5c2e}.no{background:#fdecec;color:#991b1b}.su{background:#eeeeee;color:#404040}.ai{background:#e6f4ff;color:#043a73}.warn{background:#fff3e0;color:#663200}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:0 14px;border-radius:6px;font-weight:600;font-size:13.5px;border:1px solid #bfbfbf;background:#ffffff;color:#2d2d2d;cursor:pointer;text-decoration:none}
+.pri{background:#0862c5;border-color:#0862c5;color:#ffffff}
+.btn[disabled]{background:#eeeeee;border-color:#d9d9d9;color:#595959;cursor:not-allowed}
+.lnk{border:0;background:transparent;padding:0;color:#054e9c;font-weight:600;font-size:13px;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:2px}
+.crumb{border:0;background:transparent;padding:0;color:#054e9c;font-size:12.5px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.card{background:#ffffff;border:1px solid #d9d9d9;border-radius:8px}
+.mut{color:#595959;font-size:12.5px}
+.code{font-family:'JetBrains Mono',monospace;font-size:12px;color:#043a73}
+.h1{font-family:Figtree,Inter,sans-serif;font-size:22px;font-weight:700;margin:0}
+.h3{font-size:14.5px;font-weight:600;margin:0}
+.tabb{border:0;background:transparent;padding:10px 12px;font-size:13.5px;color:#404040;border-bottom:2px solid transparent;cursor:pointer}
+.tabon{color:#043a73;border-bottom-color:#0862c5;font-weight:600}
+.step{border:1px solid #d9d9d9;background:#ffffff;border-radius:999px;padding:5px 11px;font-size:12.5px;color:#404040;cursor:pointer;white-space:nowrap}
+.stepon{background:#0862c5;border-color:#0862c5;color:#ffffff;font-weight:600}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 120px 220px;gap:12px;align-items:center;padding:10px 16px;border-bottom:1px solid #eeeeee;background:#ffffff}
+.rowon{background:#eef6ff;box-shadow:inset 3px 0 0 #0862c5}
+.rname{border:0;background:transparent;padding:0;text-align:left;font-size:14px;color:#2d2d2d;cursor:pointer}
+.menu{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;color:#404040;font-size:13.5px;border:0;background:transparent;text-align:left;cursor:pointer}
+.menuon{background:#e6f4ff;color:#043a73;font-weight:600}
+.box{display:grid;grid-template-columns:96px 150px minmax(0,1fr);gap:8px;align-items:center;padding:7px 10px;border:1px solid #e3e3e3;border-radius:4px;font-size:12.5px;cursor:pointer;background:#ffffff;text-align:left;width:100%}
+.boxon{outline:2px solid #0862c5;outline-offset:1px}
+.drawer{position:relative;background:#ffffff;border-left:1px solid #d9d9d9;padding:18px;display:flex;flex-direction:column;gap:12px}
+.toast{display:flex;gap:14px;align-items:center;background:#2d2d2d;color:#ffffff;border-radius:8px;padding:10px 14px;font-size:13.5px;align-self:flex-start}
+.ailine{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12px;color:#404040;background:#f5faff;border:1px solid #cce9ff;border-radius:6px;padding:6px 10px}
+input,select,textarea{font:inherit;padding:9px 10px;border:1px solid #8c8c8c;border-radius:6px;background:#ffffff;color:#2d2d2d}
+</style>
+</helmet>
+<div style="font-family: Inter, system-ui, sans-serif; color: #2d2d2d; font-size: 14px; line-height: 1.45; display: flex; flex-direction: column; min-height: 900px">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 10px 20px; background: #ffffff; border-bottom: 1px solid #d9d9d9">
+  <span style="font-family: Figtree, Inter, sans-serif; font-weight: 700; font-size: 18px; color: #0862c5">ExpatReady</span>
+  <span style="display: flex; flex-direction: column; line-height: 1.2"><b style="font-size: 13px">{{persona.title}}</b><span class="mut">{{persona.sub}}</span></span>
+  <span style="flex: 1"></span>
+  <span class="mut">Demo · viewing as</span>
+  <span style="display: inline-flex; border: 1px solid #bfbfbf; border-radius: 6px; overflow: hidden">
+    <sc-for list="{{personas}}" as="p" hint-placeholder-count="3"><button type="button" onClick="{{p.pick}}" class="{{p.cls}}" style="border: 0; padding: 6px 12px; font-size: 12.5px; cursor: pointer">{{p.label}}</button></sc-for>
+  </span>
+</header>
+
+<nav aria-label="Demo journey steps" style="display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 20px; background: #fbfbfb; border-bottom: 1px solid #eeeeee; align-items: center">
+  <span class="mut" style="margin-right: 4px">Demo journey</span>
+  <sc-for list="{{steps}}" as="s" hint-placeholder-count="12"><button type="button" class="{{s.cls}}" onClick="{{s.pick}}">{{s.n}} · {{s.label}}</button></sc-for>
+</nav>
+
+<div style="display: flex; flex-wrap: wrap; flex: 1">
+  <sc-if value="{{showMenu}}" hint-placeholder-val="{{ true }}">
+  <nav aria-label="Product menu" style="flex: 1 1 200px; max-width: 220px; padding: 16px 12px; background: #ffffff; border-right: 1px solid #d9d9d9; display: flex; flex-direction: column; gap: 2px">
+    <span class="mut" style="padding: 4px 10px; font-size: 11.5px; font-weight: 600; letter-spacing: .04em">CONFIGURE</span>
+    <button type="button" class="{{m.programs}}" onClick="{{go.s1}}">Programs <span class="chip warn" style="margin-left: auto">3</span></button>
+    <span class="mut" style="padding: 10px 10px 4px; font-size: 11.5px; font-weight: 600; letter-spacing: .04em">SHARED LIBRARY</span>
+    <button type="button" class="{{m.fields}}" onClick="{{go.s8}}">Fields</button>
+    <button type="button" class="menu" onClick="{{go.s8}}">Sections</button>
+    <button type="button" class="menu" onClick="{{go.s8}}">Document types</button>
+    <button type="button" class="{{m.forms}}" onClick="{{go.s7}}">Forms <span class="chip warn" style="margin-left: auto">1 new edition</span></button>
+    <button type="button" class="menu" onClick="{{go.s8}}">Checks</button>
+    <button type="button" class="menu" onClick="{{go.s8}}">Rules</button>
+    <span class="mut" style="padding: 10px 10px 4px; font-size: 11.5px; font-weight: 600; letter-spacing: .04em">HISTORY</span>
+    <button type="button" class="{{m.ai}}" onClick="{{go.s4}}">AI work</button>
+    <button type="button" class="{{m.rel}}" onClick="{{go.s9}}">Releases <span class="chip su" style="margin-left: auto">47</span></button>
+    <button type="button" class="menu">Activity</button>
+  </nav>
+  </sc-if>
+
+  <main style="flex: 999 1 560px; min-width: 0; padding: 22px 26px; display: flex; flex-direction: column; gap: 16px">
+
+  <sc-if value="{{hasToast}}" hint-placeholder-val="{{ false }}">
+    <div class="toast" role="status"><span>{{toast.text}}</span><sc-if value="{{toast.undo}}" hint-placeholder-val="{{ false }}"><button type="button" class="lnk" style="color: #99d2ff" onClick="{{clearToast}}">Undo</button></sc-if><button type="button" aria-label="Dismiss" class="lnk" style="color: #ffffff; text-decoration: none" onClick="{{clearToast}}">×</button></div>
+  </sc-if>
+
+  <!-- 1 PROGRAMS -->
+  <sc-if value="{{v.s1}}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+      <h1 class="h1">Programs</h1>
+      <span class="mut">Each row is one combination a firm can open. Status is calculated.</span>
+      <span style="flex: 1"></span>
+      <label for="q1" style="position: absolute; left: -9999px">Search combinations, form codes and documents</label>
+      <input id="q1" placeholder="Search combinations, IMM codes, documents" style="min-width: 280px">
+      <button type="button" class="btn pri" onClick="{{go.s2}}">+ New combination</button>
+    </div>
+    <div role="tablist" aria-label="Pathway" style="display: flex; flex-wrap: wrap; gap: 4px; border-bottom: 1px solid #d9d9d9">
+      <sc-for list="{{ptabs}}" as="t" hint-placeholder-count="2"><button type="button" role="tab" class="{{t.cls}}" onClick="{{t.pick}}">{{t.label}} <span class="chip su" style="margin-left: 4px">{{t.count}}</span></button></sc-for>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+      <sc-for list="{{filters}}" as="f" hint-placeholder-count="2"><button type="button" class="{{f.cls}}" onClick="{{f.pick}}">{{f.label}}</button></sc-for>
+      <label for="pf" class="mut">Program</label>
+      <select id="pf" style="padding: 5px 8px; font-size: 13px"><option>All programs</option><option>Economic immigration</option><option>Family sponsorship</option><option>Study permits</option><option>Visitors</option><option>Work permits</option></select>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 0; align-items: stretch" class="card">
+      <div style="flex: 3 1 560px; min-width: 0; overflow: hidden">
+        <div class="row" style="background: #fbfbfb; font-size: 12px; font-weight: 600; color: #595959"><span>Combination</span><button type="button" class="lnk" style="color: #595959; text-decoration: none; font-size: 12px">Status ↕</button><span>Next step</span></div>
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+          <div class="{{r.cls}}">
+            <span style="display: flex; flex-direction: column; min-width: 0"><button type="button" class="rname" onClick="{{r.pick}}" aria-label="{{r.aria}}"><span class="mut" style="font-size: 13px">{{r.path}}</span><b style="font-weight: 600">{{r.leaf}}</b></button><span class="mut">{{r.note}}</span></span>
+            <span><span class="{{r.chip}}">{{r.status}}</span></span>
+            <button type="button" class="lnk" onClick="{{r.goNext}}">{{r.next}} →</button>
+          </div>
+        </sc-for>
+      </div>
+      <sc-if value="{{hasSel}}" hint-placeholder-val="{{ true }}">
+      <aside aria-label="Selected combination" class="drawer" style="flex: 1 1 320px; max-width: 400px">
+        <div style="display: flex; justify-content: space-between; gap: 8px"><span class="mut">{{selRow.crumb}}</span><button type="button" class="lnk" aria-label="Close panel" style="text-decoration: none; color: #404040" onClick="{{closeSel}}">×</button></div>
+        <h2 style="margin: 0; font-family: Figtree, Inter, sans-serif; font-size: 19px">{{selRow.leaf}}</h2>
+        <span><span class="{{selRow.chip}}">{{selRow.status}}</span> <span class="mut">{{selRow.note}}</span></span>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+          <div style="background: #f7f7f7; border-radius: 8px; padding: 10px"><span class="mut">Forms</span><br><b style="font-size: 18px">{{selRow.forms}}</b></div>
+          <div style="background: #f7f7f7; border-radius: 8px; padding: 10px"><span class="mut">Questions</span><br><b style="font-size: 18px">{{selRow.q}}</b></div>
+          <div style="background: #f7f7f7; border-radius: 8px; padding: 10px"><span class="mut">Documents</span><br><b style="font-size: 18px">{{selRow.d}}</b></div>
+          <div style="background: #f7f7f7; border-radius: 8px; padding: 10px"><span class="mut">Rules</span><br><b style="font-size: 18px">{{selRow.r}}</b></div>
+        </div>
+        <div><span class="mut">Forms</span><br><span class="code">{{selRow.codes}}</span></div>
+        <div><span class="mut">Checked against IRCC</span><br>{{selRow.checked}}</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto"><button type="button" class="btn pri" onClick="{{go.s5}}">Open combination</button><button type="button" class="btn" onClick="{{go.s3}}">Add sources</button></div>
+      </aside>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- 2 NEW COMBINATION -->
+  <sc-if value="{{v.s2}}" hint-placeholder-val="{{ true }}">
+    <nav aria-label="Breadcrumb"><button type="button" class="crumb" onClick="{{go.s1}}">Programs</button> <span class="mut">› New combination</span></nav>
+    <h1 class="h1">New combination</h1>
+    <div class="card" style="padding: 20px; display: flex; flex-direction: column; gap: 14px; max-width: 880px">
+      <label for="desc" class="h3">Describe the application</label>
+      <textarea id="desc" rows="2">Super visa for parents and grandparents of a Canadian citizen or permanent resident</textarea>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><button type="button" class="btn pri" onClick="{{propose}}">Propose with AI</button><button type="button" class="btn" onClick="{{propose}}">Build the path by hand</button><span class="mut">about US$0.02 · a few seconds</span></div>
+      <sc-if value="{{proposed}}" hint-placeholder-val="{{ true }}">
+      <div style="border-top: 1px solid #eeeeee; padding-top: 14px; display: flex; flex-direction: column; gap: 12px">
+        <div class="ailine"><b>AI proposal</b><span>Source: your description + the current program list</span><span>Confidence: High</span><span>Cost: US$0.02</span><span>Nothing is created until you confirm</span></div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px">
+          <div><label for="pw" class="mut">Pathway</label><select id="pw" style="width: 100%"><option>Individual</option><option>Corporate and employers</option></select><span class="mut">exists</span></div>
+          <div><label for="pg" class="mut">Program</label><select id="pg" style="width: 100%"><option>Visitors</option><option>Family sponsorship</option><option>+ Create new program</option></select><span class="mut">exists · 2 combinations</span></div>
+          <div><label for="ct" class="mut">Category</label><input id="ct" value="Super visa" style="width: 100%; box-sizing: border-box; border-color: #0862c5"><span class="mut" style="color: #0f5c2e">✓ new · no duplicate</span></div>
+          <div><label for="sc" class="mut">Sub-category</label><select id="sc" style="width: 100%"><option>None</option><option>+ Create new</option></select><span class="mut">see note</span></div>
+        </div>
+        <div class="warn" style="padding: 10px 12px; border-radius: 8px; font-size: 13px">Parents and grandparents apply on the same form and checklist, so this is one combination. The relationship becomes a condition on the documents, not a sub-category.</div>
+        <div><span class="h3">Forms found in the library</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px"><span class="chip ok">✓ IMM 5257 · reuse existing</span><span class="chip ok">✓ IMM 5257 Schedule 1</span><span class="chip ok">✓ IMM 5707</span><span class="chip ok">✓ IMM 5476</span><span class="chip warn">! Super visa checklist · upload next</span></div></div>
+        <div><label for="lk" class="h3">Linked to</label> <span class="mut">optional</span><br><select id="lk" style="margin-top: 6px; min-width: 320px"><option>None</option><option>Next step of… (pick a combination)</option><option>Supported by… (pick a combination)</option></select></div>
+        <div style="background: #f7f7f7; border-radius: 8px; padding: 10px 12px">Will be created as <b>Individual › Visitors › Super visa</b></div>
+        <div style="display: flex; gap: 8px"><button type="button" class="btn pri" onClick="{{createSv}}">Create combination</button><button type="button" class="btn" onClick="{{go.s1}}">Cancel</button></div>
+      </div>
+      </sc-if>
+    </div>
+  </sc-if>
+
+  <!-- 3 SOURCES -->
+  <sc-if value="{{v.s3}}" hint-placeholder-val="{{ true }}">
+    <nav aria-label="Breadcrumb"><button type="button" class="crumb" onClick="{{go.s1}}">Programs</button> <span class="mut">›</span> <button type="button" class="crumb" onClick="{{go.s5}}">Family sponsorship › Spouse or partner › Outside Canada</button> <span class="mut">› Sources</span></nav>
+    <h1 class="h1">Sources</h1>
+    <div style="border: 2px dashed #5cb8ff; background: #f5faff; border-radius: 8px; padding: 18px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+      <span aria-hidden="true" style="font-size: 22px; color: #043a73">↑</span>
+      <span style="flex: 1 1 300px"><b>Drop IRCC forms, checklists or saved guide pages.</b> Form code, edition and file are read without AI. An identical file is recognised; the same form with a new edition starts an impact review.</span>
+      <button type="button" class="btn">Choose files</button>
+    </div>
+    <div class="card" style="overflow: hidden">
+      <sc-for list="{{sources}}" as="x" hint-placeholder-count="7">
+        <div style="display: grid; grid-template-columns: 110px minmax(0, 1fr) 210px 130px; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid #eeeeee">
+          <span class="code">{{x.code}}</span><span>{{x.title}} <span class="mut">· edition {{x.ed}}</span></span><span><span class="{{x.chip}}">{{x.state}}</span></span><span style="display: flex; gap: 10px"><button type="button" class="lnk">Replace</button><button type="button" class="lnk">Remove</button></span>
+        </div>
+      </sc-for>
+    </div>
+    <sc-if value="{{notDrafting}}" hint-placeholder-val="{{ true }}">
+    <div class="card" style="padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center">
+      <span style="flex: 1 1 320px">AI will map <b>5 new forms</b> and read the checklist. <b>IMM 5476</b> is already mapped in the library and is reused without AI.</span>
+      <span class="mut">about US$7 · about 25 min · runs in the background</span>
+      <button type="button" class="btn pri" onClick="{{startDraft}}">Start AI draft</button>
+    </div>
+    </sc-if>
+    <sc-if value="{{drafting}}" hint-placeholder-val="{{ false }}">
+    <div class="card" style="padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+      <span><b>AI draft running</b> · 3 of 6 sources read · you can leave this page; Programs shows "Needs you" when it is ready</span>
+      <div style="height: 6px; background: #eeeeee; border-radius: 3px"><div style="width: 50%; height: 6px; background: #0862c5; border-radius: 3px"></div></div>
+      <span style="display: flex; gap: 8px"><button type="button" class="btn">Cancel draft</button><button type="button" class="btn pri" onClick="{{go.s4}}">Demo: jump to the finished proposals</button></span>
+    </div>
+    </sc-if>
+  </sc-if>
+
+  <!-- 4 AI PROPOSALS -->
+  <sc-if value="{{v.s4}}" hint-placeholder-val="{{ true }}">
+    <nav aria-label="Breadcrumb"><button type="button" class="crumb" onClick="{{go.s1}}">Programs</button> <span class="mut">›</span> <button type="button" class="crumb" onClick="{{go.s5}}">Family sponsorship › Spouse or partner › Outside Canada</button> <span class="mut">› AI proposals</span></nav>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center"><h1 class="h1">Review AI proposals</h1><span class="mut">{{left}} left to decide</span></div>
+    <div class="ailine"><b>AI draft · 21 Oct 10:42</b><span>Sources: IMM 1344, 0008, 5532, 5669, 5406, checklist IMM 5533</span><span>Cost: US$6.80</span><span>Nothing changes until you accept</span></div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center">
+      <sc-for list="{{ptabsAI}}" as="t" hint-placeholder-count="4"><button type="button" class="{{t.cls}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for>
+      <span style="flex: 1"></span>
+      <sc-if value="{{aiReuseTab}}" hint-placeholder-val="{{ false }}"><button type="button" class="btn" onClick="{{acceptReuse}}">Accept all 128 exact reuses</button></sc-if>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 0" class="card">
+      <div style="flex: 1 1 260px; max-width: 320px; border-right: 1px solid #eeeeee">
+        <sc-for list="{{props}}" as="p" hint-placeholder-count="4"><button type="button" onClick="{{p.pick}}" class="menu" style="{{p.st}}; width: 100%; border-radius: 0; border-bottom: 1px solid #eeeeee; padding: 10px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px"><span>{{p.t}}</span><span class="mut">{{p.src}} · confidence {{p.conf}}</span></button></sc-for>
+      </div>
+      <div style="flex: 3 1 480px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; padding: 16px">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <span class="h3">Source · {{prop.src}}</span>
+          <div style="background: #fafafa; border: 1px solid #eeeeee; border-radius: 6px; padding: 12px; font-size: 12.5px; display: flex; flex-direction: column; gap: 6px">
+            <span>{{prop.before}}</span>
+            <span style="background: #fff3e0; padding: 4px 6px; border-radius: 4px">{{prop.box}}</span>
+            <span>{{prop.after}}</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px">
+          <span class="h3">AI proposes</span>
+          <span><span class="{{prop.chip}}">{{prop.kind}}</span> <b>{{prop.t}}</b></span>
+          <span class="mut">{{prop.why}}</span>
+          <span class="mut">Confidence: {{prop.conf}}</span>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px"><button type="button" class="btn pri" onClick="{{decide}}">{{prop.yes}}</button><button type="button" class="btn" onClick="{{decide}}">{{prop.no}}</button><button type="button" class="btn">Edit</button></div>
+          <span class="mut">Keys: J / K next and previous · A accept · N make new</span>
+        </div>
+      </div>
+    </div>
+    <div style="display: flex; justify-content: flex-end; gap: 8px"><button type="button" class="btn" onClick="{{go.s5}}">Save and continue later ({{left}} left)</button></div>
+  </sc-if>
+
+  <!-- 5 WORKSPACE -->
+  <sc-if value="{{v.s5}}" hint-placeholder-val="{{ true }}">
+    <nav aria-label="Breadcrumb"><button type="button" class="crumb" onClick="{{go.s1}}">Programs</button> <span class="mut">›</span> <button type="button" class="crumb" onClick="{{go.s1}}">Individual</button> <span class="mut">›</span> <button type="button" class="crumb" onClick="{{go.s1}}">Family sponsorship</button> <span class="mut">›</span> <button type="button" class="crumb" onClick="{{go.s1}}">Spouse or partner</button> <span class="mut">› Outside Canada</span></nav>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center"><h1 class="h1">Outside Canada</h1><button type="button" class="chip no" onClick="{{wsOverview}}" style="cursor: pointer">Not ready · 3 missing</button><button type="button" class="chip ai" onClick="{{go.s4}}" style="cursor: pointer">9 AI proposals →</button><span style="flex: 1"></span><button type="button" class="lnk" onClick="{{go.s9}}">38 changes in draft →</button></div>
+    <div role="tablist" aria-label="Combination sections" style="display: flex; flex-wrap: wrap; border-bottom: 1px solid #d9d9d9">
+      <sc-for list="{{wtabs}}" as="t" hint-placeholder-count="8"><button type="button" role="tab" class="{{t.cls}}" onClick="{{t.pick}}">{{t.label}}</button></sc-for>
+    </div>
+    <sc-if value="{{w.overview}}" hint-placeholder-val="{{ true }}">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px">
+        <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 10px">
+          <span class="h3">Before firms can use it · 3 missing</span>
+          <div style="display: flex; justify-content: space-between; gap: 10px"><span>! 9 AI proposals not decided</span><button type="button" class="lnk" onClick="{{go.s4}}">Review →</button></div>
+          <div style="display: flex; justify-content: space-between; gap: 10px"><span>! IMM 0008: 9 boxes not mapped</span><button type="button" class="lnk" onClick="{{wsForms}}">Open →</button></div>
+          <div style="display: flex; justify-content: space-between; gap: 10px"><span>! Not released yet</span><button type="button" class="lnk" onClick="{{go.s9}}">Review and release →</button></div>
+        </div>
+        <div class="card" style="padding: 16px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+          <div><span class="mut">Forms</span><br><b style="font-size: 18px">6</b></div><div><span class="mut">Questions</span><br><b style="font-size: 18px">212</b></div>
+          <div><span class="mut">Documents</span><br><b style="font-size: 18px">24</b></div><div><span class="mut">Rules</span><br><b style="font-size: 18px">31</b></div>
+          <div style="grid-column: span 2" class="mut">People: Sponsor · Principal applicant · Dependent child · Representative</div>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{w.forms}}" hint-placeholder-val="{{ true }}">
+      <div class="card" style="overflow: hidden">
+        <sc-for list="{{wsFormsList}}" as="f" hint-placeholder-count="6"><div style="display: grid; grid-template-columns: 100px minmax(0, 1fr) 170px 150px 70px; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid #eeeeee"><span class="code">{{f.code}}</span><span>{{f.title}}<br><span class="mut">{{f.who}}</span></span><span class="mut">edition {{f.ed}}</span><span><span class="{{f.chip}}">{{f.map}}</span></span><button type="button" class="lnk" onClick="{{go.s6}}">Open</button></div></sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{w.pqr}}" hint-placeholder-val="{{ true }}">
+      <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 8px">
+        <span class="mut">Asked at lead stage, before a case exists. A subset of the full questionnaire: answers carry into the case and are never asked twice.</span>
+        <sc-for list="{{pqr}}" as="q" hint-placeholder-count="6"><div style="display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #eeeeee"><span>{{q.t}}</span><span class="mut">{{q.who}}</span></div></sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{w.sqr}}" hint-placeholder-val="{{ true }}">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px">
+        <sc-for list="{{sqr}}" as="s" hint-placeholder-count="6"><button type="button" class="card" style="padding: 12px; text-align: left; cursor: pointer"><b>{{s.t}}</b><br><span class="mut">{{s.n}}</span></button></sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{w.docs}}" hint-placeholder-val="{{ true }}">
+      <div class="card" style="overflow: hidden">
+        <sc-for list="{{docs}}" as="d" hint-placeholder-count="6"><div style="display: grid; grid-template-columns: minmax(0, 1fr) 180px 240px; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #eeeeee"><span>{{d.t}}</span><span class="mut">{{d.who}}</span><span class="mut">{{d.when}}</span></div></sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{w.rules}}" hint-placeholder-val="{{ true }}">
+      <div class="card" style="overflow: hidden">
+        <sc-for list="{{rules}}" as="r" hint-placeholder-count="5"><div style="display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 12px; padding: 10px 16px; border-bottom: 1px solid #eeeeee"><span>{{r.t}}</span><span class="mut">{{r.src}}</span></div></sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{w.preview}}" hint-placeholder-val="{{ true }}">
+      <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px">
+        <div role="radiogroup" aria-label="Sample family" style="display: flex; flex-wrap: wrap; gap: 8px"><sc-for list="{{presets}}" as="p" hint-placeholder-count="4"><button type="button" role="radio" class="{{p.cls}}" onClick="{{p.pick}}">{{p.label}}</button></sc-for></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 18px; font-size: 13px">
+          <label><input type="checkbox" style="padding: 0"> Child is 18 or older</label>
+          <label><input type="checkbox" checked style="padding: 0"> Uses a representative</label>
+          <label><input type="checkbox" style="padding: 0"> Previously married</label>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px">
+          <sc-for list="{{previewPeople}}" as="p" hint-placeholder-count="3"><div style="background: #f7f7f7; border-radius: 8px; padding: 10px"><span class="mut">{{p.who}}</span><br>{{p.q}} questions · {{p.d}} documents · {{p.f}} forms</div></sc-for>
+        </div>
+      </div>
+    </sc-if>
+    <sc-if value="{{w.agent}}" hint-placeholder-val="{{ true }}">
+      <div class="card" style="overflow: hidden">
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 16px; background: #fbfbfb; border-bottom: 1px solid #eeeeee"><b>Agent view · sample family "{{presetName}}"</b><span class="mut">one value per fact, per person; every form fills from these</span><span style="flex: 1"></span><button type="button" class="btn pri" onClick="{{go.s6}}">Fill all forms</button></div>
+        <sc-for list="{{facts}}" as="f" hint-placeholder-count="6"><div style="display: grid; grid-template-columns: 150px minmax(0, 1fr) 170px 210px; gap: 12px; padding: 9px 16px; border-bottom: 1px solid #eeeeee; font-size: 13px"><span class="mut">{{f.who}}</span><span>{{f.fact}} = <b>{{f.val}}</b></span><span class="mut">{{f.src}}</span><span class="code">{{f.boxes}}</span></div></sc-for>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <!-- 6 SAMPLE PDFS -->
+  <sc-if value="{{v.s6}}" hint-placeholder-val="{{ true }}">
+    <nav aria-label="Breadcrumb"><button type="button" class="crumb" onClick="{{go.s1}}">Programs</button> <span class="mut">›</span> <button type="button" class="crumb" onClick="{{go.s5}}">Spouse or partner › Outside Canada</button> <span class="mut">› Sample filled forms</span></nav>
+    <h1 class="h1">Sample filled forms</h1>
+    <span class="mut">Every form of this combination, filled from the sample family "Married + 1 child". Use it to check the box mapping before release. Case officers validate real cases on the case's Forms tab.</span>
+    <div class="card" style="overflow: hidden">
+      <sc-for list="{{wsFormsList}}" as="f" hint-placeholder-count="6"><div style="display: grid; grid-template-columns: 100px minmax(0, 1fr) 190px 260px; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid #eeeeee"><span class="code">{{f.code}}</span><span>{{f.title}}<br><span class="mut">{{f.who}}</span></span><span><span class="{{f.chip}}">{{f.map}}</span></span><span style="display: flex; gap: 12px"><button type="button" class="lnk">Open filled PDF</button><button type="button" class="lnk">Unmapped boxes</button></span></div></sc-for>
+    </div>
+  </sc-if>
+
+  <!-- 12 CASE FORMS -->
+  <sc-if value="{{v.s12}}" hint-placeholder-val="{{ true }}">
+    <nav aria-label="Breadcrumb"><span class="mut">Cases ›</span> <button type="button" class="crumb" onClick="{{go.s10}}">Gill family</button> <span class="mut">› Forms</span></nav>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center"><h1 class="h1">Gill family</h1><span class="mut">Family sponsorship › Spouse or partner › Outside Canada</span><span class="chip su">Release 14</span></div>
+    <div role="tablist" aria-label="Case sections" style="display: flex; flex-wrap: wrap; border-bottom: 1px solid #d9d9d9"><button type="button" role="tab" class="tabb" onClick="{{go.s10}}">Agent view</button><button type="button" role="tab" class="tabb tabon">Forms</button></div>
+    <div style="display: flex; flex-wrap: wrap; gap: 0; align-items: stretch" class="card">
+      <div style="flex: 1 1 200px; max-width: 240px; border-right: 1px solid #eeeeee">
+        <sc-for list="{{caseForms}}" as="f" hint-placeholder-count="6"><button type="button" onClick="{{f.pick}}" class="menu" style="{{f.st}}; width: 100%; border-radius: 0; border-bottom: 1px solid #eeeeee; padding: 10px 14px; display: flex; flex-direction: column; align-items: flex-start; gap: 3px"><span><span class="code">{{f.code}}</span> <span class="mut">{{f.who}}</span></span><span class="{{f.chip}}">{{f.state}}</span></button></sc-for>
+      </div>
+      <div style="flex: 3 1 460px; min-width: 0; padding: 14px; background: #525659; display: flex; flex-direction: column; gap: 10px">
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: #ffffff; font-size: 12.5px"><b>imm5532e.pdf</b><span>· the IRCC form filled from the agent view, shown in ExpatReady (the file is written by the server, never by the browser)</span><span style="flex: 1"></span><span>Page 1 of 6</span><button type="button" class="btn" style="min-height: 28px; font-size: 12px">Download</button></div>
+        <div style="background: #ffffff; padding: 22px 26px; display: flex; flex-direction: column; gap: 10px; font-size: 12.5px">
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2d2d2d; padding-bottom: 6px; gap: 8px"><b style="font-size: 13px">RELATIONSHIP INFORMATION AND SPONSORSHIP EVALUATION</b><span style="display: flex; gap: 8px; align-items: center">IMM 5532 (02-2021) E<button type="button" onClick="{{pdfValidate}}" class="btn pri" style="min-height: 28px; font-size: 12px">Check this form</button></span></div>
+          <sc-if value="{{pv.fail}}" hint-placeholder-val="{{ false }}"><div style="background: #fdecec; color: #991b1b; padding: 8px 10px; font-size: 12.5px">ExpatReady's form checks (the same rules as the form's Validate) found {{pv.n}} field(s) to correct. They are marked below.</div></sc-if>
+          <sc-if value="{{pv.pass}}" hint-placeholder-val="{{ false }}"><div style="background: #e7f6ec; color: #0f5c2e; padding: 8px 10px; font-size: 12.5px">Form checks pass. Next: validate in Adobe Reader to generate the barcodes.</div></sc-if>
+          <b>PART B · Relationship information</b>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+            <label style="display: flex; flex-direction: column; gap: 3px">1. Sponsor family name<input value="GILL" style="font-size: 12.5px; padding: 5px 7px; border-radius: 0"></label>
+            <label style="display: flex; flex-direction: column; gap: 3px">2. Applicant family name<input value="GILL" style="font-size: 12.5px; padding: 5px 7px; border-radius: 0"></label>
+            <label style="display: flex; flex-direction: column; gap: 3px">3. Date of marriage (YYYY-MM-DD)<input value="{{dm}}" onChange="{{setDm}}" style="font-size: 12.5px; padding: 5px 7px; border-radius: 0"><sc-if value="{{rv.dmFlag}}" hint-placeholder-val="{{ false }}"><span style="color: #8c4600; font-size: 12px">Independent review: certificate says 2019-06-16</span></sc-if></label>
+            <label style="display: flex; flex-direction: column; gap: 3px">4. Place of marriage<input value="Ludhiana, India" style="font-size: 12.5px; padding: 5px 7px; border-radius: 0"></label>
+            <label style="display: flex; flex-direction: column; gap: 3px">12. Number of children together<input value="{{kids}}" onChange="{{setKids}}" style="font-size: 12.5px; padding: 5px 7px; border-radius: 0; {{pv.kidsStyle}}"><sc-if value="{{pv.kidsErr}}" hint-placeholder-val="{{ false }}"><span style="color: #991b1b; font-size: 12px">Required on this form.</span></sc-if></label>
+            <label style="display: flex; flex-direction: column; gap: 3px">13. Have you lived together? (Y/N)<input value="Y" style="font-size: 12.5px; padding: 5px 7px; border-radius: 0"></label>
+          </div>
+          <span class="mut">Type in any box: it changes the fact, so the agent view and every other form update, and a message says where.</span>
+        </div>
+      </div>
+      <aside aria-label="Independent review" class="drawer" style="flex: 1 1 280px; max-width: 340px">
+        <span class="h3">Independent review</span>
+        <span class="mut">AI checks every form and document against the answers, a different method from the form's own validation. Never changes data. Run it as often as you like.</span>
+        <div class="ailine"><span>Checks: data entry, documents vs answers, consistency across forms</span><span>about US$0.05 a run</span></div>
+        <button type="button" class="btn pri" onClick="{{runReview}}">Run review</button>
+        <sc-for list="{{runs}}" as="r" hint-placeholder-count="2"><div style="border-top: 1px solid #eeeeee; padding-top: 8px; display: flex; flex-direction: column; gap: 4px"><span style="display: flex; justify-content: space-between"><b style="font-size: 13px">{{r.label}}</b><span class="{{r.chip}}">{{r.result}}</span></span><span class="mut">{{r.detail}}</span></div></sc-for>
+        <div style="border-top: 1px solid #eeeeee; padding-top: 10px; display: flex; flex-direction: column; gap: 6px">
+          <b style="font-size: 13px">Validate with IRCC's barcodes</b>
+          <span class="mut">Form checks pass and the latest review is clean → download, open in Adobe Reader, click Validate, save, upload it back. We read the barcodes and compare every value with the facts.</span>
+          <span style="display: flex; flex-wrap: wrap; gap: 8px"><button type="button" class="btn" onClick="{{download}}">Download for Adobe</button><button type="button" class="btn" onClick="{{uploadBack}}">Upload validated copy</button></span>
+          <sc-if value="{{f12.done}}" hint-placeholder-val="{{ false }}"><span class="chip ok" style="align-self: flex-start">✓ Barcodes read · 0 differences · ready to file</span></sc-if>
+        </div>
+      </aside>
+    </div>
+  </sc-if>
+
+  <!-- 7 NEW EDITION -->
+  <sc-if value="{{v.s7}}" hint-placeholder-val="{{ true }}">
+    <nav aria-label="Breadcrumb"><button type="button" class="crumb" onClick="{{go.s8}}">Shared library</button> <span class="mut">› Forms › IMM 5476 Use of a representative</span></nav>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center"><h1 class="h1">New edition: review impact</h1><span class="chip warn">Needs you</span></div>
+    <div class="card" style="padding: 14px 16px">Edition <b>05-2021</b> (3 pages) → <b>11-2025</b> (4 pages). Uploaded by S. Kumar in Work permits › Employer-specific work permit › With an LMIA, replacing the old file. Compared box by box without AI; AI mapped only the new and reworded boxes.</div>
+    <div class="ailine"><b>AI mapping of 13 boxes</b><span>Source: IMM 5476 (11-2025), pages 1–4</span><span>Confidence: 11 High · 2 Medium</span><span>Cost: US$0.40</span></div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px">
+      <div class="card" style="padding: 12px"><span class="mut">Unchanged · carried over</span><br><b style="font-size: 20px">38</b></div>
+      <div class="card" style="padding: 12px"><span class="mut">Reworded</span><br><b style="font-size: 20px">4</b></div>
+      <div class="card" style="padding: 12px; border-color: #ffc773"><span class="mut">New boxes</span><br><b style="font-size: 20px">9</b><br><span class="mut">7 reuse existing · 2 new fields</span></div>
+      <div class="card" style="padding: 12px"><span class="mut">Removed</span><br><b style="font-size: 20px">1</b><br><span class="mut">field kept, marked unused</span></div>
+    </div>
+    <div class="card" style="overflow: hidden">
+      <div style="padding: 10px 16px; background: #fbfbfb; font-weight: 600; font-size: 13px">13 proposals to review</div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 160px 150px; gap: 12px; padding: 10px 16px; border-top: 1px solid #eeeeee"><span>Box 7 · Representative's email (new)</span><span class="chip ok" style="justify-self: start">Reuse existing</span><span class="mut">High</span></div>
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 160px 150px; gap: 12px; padding: 10px 16px; border-top: 1px solid #eeeeee"><span>Box 11 · Consent to communicate electronically (new)</span><span class="chip ai" style="justify-self: start">New field</span><span class="mut">Medium</span></div>
+      <div style="padding: 10px 16px; border-top: 1px solid #eeeeee" class="mut">+ 11 more</div>
+    </div>
+    <div class="card" style="overflow: hidden">
+      <div style="padding: 10px 16px; background: #fbfbfb; font-weight: 600; font-size: 13px">Combinations using IMM 5476 · 5 · they update by reference after release; open cases stay on their release</div>
+      <sc-for list="{{usedBy}}" as="u" hint-placeholder-count="3"><div style="padding: 10px 16px; border-top: 1px solid #eeeeee"><button type="button" class="lnk" onClick="{{go.s5}}">{{u}}</button></div></sc-for>
+    </div>
+    <div style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" class="btn" onClick="{{acceptHigh}}">Accept the 11 high-confidence</button><button type="button" class="btn pri" onClick="{{go.s4}}">Review all 13</button></div>
+  </sc-if>
+
+  <!-- 8 LIBRARY -->
+  <sc-if value="{{v.s8}}" hint-placeholder-val="{{ true }}">
+    <nav aria-label="Breadcrumb"><span class="mut">Shared library › Fields</span></nav>
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center"><h1 class="h1">Fields</h1><span class="mut">812 fields in 24 sections</span><span style="flex: 1"></span><label for="q8" style="position: absolute; left: -9999px">Search fields</label><input id="q8" placeholder="Search fields" style="min-width: 240px"></div>
+    <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 10px">
+      <label for="need" class="h3">Describe what you need</label>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px"><input id="need" value="the relative's relationship to the applicant" style="flex: 1 1 320px"><button type="button" class="btn pri">Draft with AI</button></div>
+      <div class="ailine"><b>AI draft</b><span>Source: your description + the whole library</span><span>Confidence: High</span><span>Cost: US$0.01</span></div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px">
+        <div style="background: #f7f7f7; border-radius: 8px; padding: 12px"><b>Relationship to applicant</b><br><span class="mut">Answer list: Parent, Grandparent, Sibling, Child, Other · about a family member · section Family</span></div>
+        <div class="warn" style="border-radius: 8px; padding: 12px"><b>Looks the same as an existing field</b><br>Relationship to principal applicant · used by 4 combinations · same answer list</div>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><button type="button" class="btn pri">Reuse existing</button><button type="button" class="btn">Add new, with a reason…</button><span class="mut">A different person approves new fields.</span></div>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 0" class="card">
+      <div style="flex: 3 1 480px; min-width: 0">
+        <sc-for list="{{lib}}" as="g" hint-placeholder-count="2">
+          <div style="padding: 10px 16px; background: #fbfbfb; font-weight: 600; border-bottom: 1px solid #eeeeee">{{g.sec}} <span class="mut">· {{g.n}}</span></div>
+          <sc-for list="{{g.items}}" as="i" hint-placeholder-count="3"><div style="display: grid; grid-template-columns: minmax(0, 1fr) 150px 200px; gap: 12px; padding: 9px 16px; border-bottom: 1px solid #eeeeee"><button type="button" class="rname" onClick="{{i.pick}}">{{i.t}}</button><span class="mut">{{i.used}}</span><span class="mut">{{i.origin}}</span></div></sc-for>
+        </sc-for>
+      </div>
+      <aside aria-label="Selected field" class="drawer" style="flex: 1 1 280px; max-width: 360px">
+        <span class="h3">{{field.t}}</span>
+        <span class="mut">{{field.origin}}</span>
+        <div><span class="mut">Used by</span><br>{{field.used}}</div>
+        <div><span class="mut">Form boxes</span><br><span class="code">{{field.boxes}}</span></div>
+        <div><span class="mut">Rules on this field</span><br>{{field.rules}}</div>
+        <span class="mut">Details for the team: key {{field.key}}</span>
+      </aside>
+    </div>
+  </sc-if>
+
+  <!-- 9 RELEASE -->
+  <sc-if value="{{v.s9}}" hint-placeholder-val="{{ true }}">
+    <nav aria-label="Breadcrumb"><span class="mut">Releases › Shared draft</span></nav>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center"><h1 class="h1">Review and release</h1><span class="chip su">Next: Release 14</span><span style="flex: 1"></span><span class="mut">Demo role:</span><sc-for list="{{roles}}" as="r" hint-placeholder-count="2"><button type="button" class="{{r.cls}}" onClick="{{r.pick}}">{{r.label}}</button></sc-for></div>
+    <div class="card" style="padding: 14px 16px">Shared draft: <b>47 changes</b> across 3 combinations, 1 form edition and 1 library field. Author: S. Kumar. A different person approves.</div>
+    <div style="display: flex; flex-wrap: wrap; gap: 0" class="card">
+      <div style="flex: 3 1 480px; min-width: 0">
+        <sc-for list="{{changes}}" as="c" hint-placeholder-count="4"><div style="display: grid; grid-template-columns: minmax(0, 1fr) 110px 190px; gap: 12px; align-items: center; padding: 11px 16px; border-bottom: 1px solid #eeeeee"><span><button type="button" class="rname" onClick="{{c.pick}}"><b style="font-weight: 600">{{c.t}}</b></button><br><span class="mut">{{c.d}}</span></span><span class="mut">{{c.n}}</span><span><span class="{{c.chip}}">{{c.s}}</span></span></div></sc-for>
+      </div>
+      <aside aria-label="Change detail" class="drawer" style="flex: 1 1 280px; max-width: 360px">
+        <span class="h3">{{chg.t}}</span>
+        <span class="mut">{{chg.d}}</span>
+        <div style="background: #f7f7f7; border-radius: 6px; padding: 10px; font-size: 12.5px; display: flex; flex-direction: column; gap: 4px"><span style="color: #991b1b">− {{chg.before}}</span><span style="color: #0f5c2e">+ {{chg.after}}</span></div>
+        <sc-if value="{{chg.expert}}" hint-placeholder-val="{{ false }}"><label style="display: flex; gap: 8px; align-items: center; font-size: 13px"><input type="checkbox" checked="{{chg.ticked}}" onChange="{{chg.tick}}" style="padding: 0"> RCIC confirms this change (expert tick)</label></sc-if>
+      </aside>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; align-items: center">
+      <sc-if value="{{isAuthor}}" hint-placeholder-val="{{ true }}"><button type="button" class="btn pri" onClick="{{submitRel}}">Submit for approval</button></sc-if>
+      <sc-if value="{{approverBlocked}}" hint-placeholder-val="{{ false }}"><span class="mut">{{ticksLeft}} expert tick(s) left before release.</span><button type="button" class="btn" disabled>Approve and release</button></sc-if>
+      <sc-if value="{{approverReady}}" hint-placeholder-val="{{ false }}"><button type="button" class="btn pri" onClick="{{openConfirm}}">Approve and release…</button></sc-if>
+    </div>
+    <sc-if value="{{confirming}}" hint-placeholder-val="{{ false }}">
+      <div style="background: rgba(0,0,0,.45); border-radius: 8px; padding: 28px; display: flex; justify-content: center">
+        <div role="dialog" aria-label="Confirm release" class="card" style="max-width: 520px; padding: 20px; display: flex; flex-direction: column; gap: 12px">
+          <span class="h3">Publish Release 14?</span>
+          <span>3 combinations change and 5 combinations pick up the new IMM 5476. New cases use Release 14; open cases stay on their release.</span>
+          <span style="display: flex; gap: 8px; justify-content: flex-end"><button type="button" class="btn" onClick="{{closeConfirm}}">Cancel</button><button type="button" class="btn pri" onClick="{{publish}}">Publish Release 14</button></span>
+        </div>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <!-- 10 CASE · AGENT VIEW -->
+  <sc-if value="{{v.s10}}" hint-placeholder-val="{{ true }}">
+    <nav aria-label="Breadcrumb"><span class="mut">Cases › Gill family</span></nav>
+    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center"><h1 class="h1">Gill family</h1><span class="mut">Family sponsorship › Spouse or partner › Outside Canada</span><span class="chip su">Release 14</span><span style="flex: 1"></span><span class="mut">Answers 214 of 230 · documents 15 of 18 · forms 1 of 6 validated</span></div>
+    <div role="tablist" aria-label="Case sections" style="display: flex; flex-wrap: wrap; border-bottom: 1px solid #d9d9d9"><button type="button" role="tab" class="tabb tabon">Agent view</button><button type="button" role="tab" class="tabb" onClick="{{go.s12}}">Forms</button></div>
+    <div style="display: flex; flex-wrap: wrap; gap: 0; align-items: stretch" class="card">
+      <nav aria-label="Sections" style="flex: 1 1 200px; max-width: 230px; border-right: 1px solid #eeeeee; padding: 8px 0">
+        <sc-for list="{{sections}}" as="x" hint-placeholder-count="7"><button type="button" class="menu" style="{{x.st}}; width: 100%; border-radius: 0; padding: 9px 14px; justify-content: space-between"><span>{{x.t}}</span><span style="color: {{x.ink}}; font-size: 12px; font-weight: 600">{{x.s}}</span></button></sc-for>
+      </nav>
+      <div style="flex: 3 1 420px; min-width: 0; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"><b style="font-size: 16px">Marriage and relationship</b><span class="mut">asked once for the couple</span><span style="flex: 1"></span><span class="chip ok">✓ checks pass</span></div>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600">Married, common-law or conjugal? <span class="chip ai" style="align-self: flex-start; font-weight: 600">Pre-qualification</span><select style="max-width: 280px"><option>Married</option><option>Common-law</option><option>Conjugal</option></select></label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600">Date of marriage<input value="{{dm}}" onChange="{{setDm}}" style="max-width: 280px"><span class="mut" style="font-weight: 400">Source: Priya's answer · fills IMM 5532 box 3, IMM 0008 box 9, IMM 5406 box 4</span></label>
+        <sc-if value="{{dmConflict}}" hint-placeholder-val="{{ true }}"><div class="warn" style="padding: 10px 12px; border-radius: 8px; font-size: 13px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center"><span style="flex: 1 1 260px">The marriage certificate (read by AI, confidence High) says <b>2019-06-16</b>.</span><button type="button" class="btn" onClick="{{useCert}}">Use 2019-06-16</button></div></sc-if>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600">Place of marriage<input value="Ludhiana, India" style="max-width: 280px"></label>
+        <label style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600">Was Priya married before? <select onChange="{{setPm}}" style="max-width: 280px"><option>No</option><option>Yes</option></select><span class="mut" style="font-weight: 400">Changing this adds or removes questions and documents.</span></label>
+        <sc-if value="{{pmYes}}" hint-placeholder-val="{{ false }}"><div style="border-left: 3px solid #0862c5; border-radius: 0; padding: 6px 12px; display: flex; flex-direction: column; gap: 6px"><b style="font-size: 13px">Previous marriage · 4 new questions</b><label style="font-size: 13px">Former spouse's full name<br><input style="max-width: 280px"></label><label style="font-size: 13px">Date the marriage ended<br><input style="max-width: 280px"></label></div></sc-if>
+      </div>
+      <aside aria-label="Document checklist" class="drawer" style="flex: 1 1 280px; max-width: 340px">
+        <div style="display: flex; justify-content: space-between; align-items: center"><span class="h3">Documents · {{docCount}}</span><button type="button" class="btn" style="min-height: 30px">↑ Upload</button></div>
+        <span class="mut">Built from the answers. It changes when an answer changes.</span>
+        <sc-for list="{{caseDocs}}" as="d" hint-placeholder-count="6"><div style="display: flex; flex-direction: column; gap: 3px; padding: 8px 0; border-bottom: 1px solid #eeeeee"><span style="display: flex; justify-content: space-between; gap: 8px"><span>{{d.t}}</span><span class="{{d.chip}}">{{d.s}}</span></span><span class="mut">{{d.why}}</span></div></sc-for>
+      </aside>
+    </div>
+  </sc-if>
+
+  <!-- 11 CLIENT -->
+  <sc-if value="{{v.s11}}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; justify-content: center">
+      <div style="width: 390px; max-width: 100%; border: 1px solid #d9d9d9; border-radius: 28px; background: #ffffff; padding: 22px 18px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; justify-content: space-between; align-items: center"><button type="button" class="lnk">← Back</button><span class="mut">✓ Saved</span></div>
+        <span style="font-family: Figtree, Inter, sans-serif; font-weight: 700; color: #0862c5">Visa Master Canada</span>
+        <span class="mut">Section 4 of 7 · Your marriage</span>
+        <div style="height: 6px; background: #eeeeee; border-radius: 3px"><div style="width: 57%; height: 6px; background: #0862c5; border-radius: 3px"></div></div>
+        <div role="radiogroup" aria-label="Answering for" style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center"><span class="mut">Answering for</span><button type="button" role="radio" class="step stepon">Priya</button><button type="button" role="radio" class="step">Arjun (son)</button></div>
+        <span class="mut">Harpreet answers on his own link.</span>
+        <h2 style="margin: 0; font-size: 18px">Your marriage</h2>
+        <fieldset style="border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px"><legend style="font-size: 13px; font-weight: 600; padding: 0">Date of marriage</legend>
+          <div style="display: flex; gap: 8px"><label class="mut" style="display: flex; flex-direction: column">Day<input value="14" inputmode="numeric" style="width: 52px"></label><label class="mut" style="display: flex; flex-direction: column">Month<input value="06" inputmode="numeric" style="width: 52px"></label><label class="mut" style="display: flex; flex-direction: column">Year<input value="2019" inputmode="numeric" style="width: 78px"></label></div>
+        </fieldset>
+        <label for="pm" style="font-size: 13px; font-weight: 600">City where you married</label><input id="pm" value="Ludhiana">
+        <span class="mut">Upload your marriage certificate and we read the details for you. If it shows something different, your consultant checks with you.</span>
+        <button type="button" class="btn" style="min-height: 44px">↑ Upload marriage certificate</button>
+        <button type="button" class="btn pri" style="min-height: 44px">Save and continue</button>
+      </div>
+    </div>
+  </sc-if>
+
+  </main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { step: 1, tab: 'ind', filter: 'needs', sel: 'fs', wt: 'overview', preset: 'm1', box: 'dm', resolved: {}, dm: '2019-06-14', pmar: 'No', cform: 1, fst: {}, kids: '', pvRun: 0, runsN: [], aiTab: 'amb', prop: 0, decided: 0, toast: null, proposed: false, drafting: false, role: 'author', ticks: { a: false, c: false }, chg: 0, confirm: false, caseFixed: false, form: 1, field: 0, svMade: false }; }
+  renderVals() {
+    const st = this.state, set = (o) => () => this.setState(o);
+    const S = [['Programs',1],['New combination',1],['Sources',1],['AI proposals',1],['Combination',1],['Sample PDFs',1],['New edition',1],['Library',1],['Review and release',1],['Case · agent view',2],['Client link',3],['Case · forms',2]];
+    const steps = S.map((s, i) => ({ n: i + 1, label: s[0], cls: st.step === i + 1 ? 'step stepon' : 'step', pick: set({ step: i + 1, toast: null }) }));
+    const persona = S[st.step - 1][1];
+    const personas = [['Super Admin', 1, 1], ['Case officer', 2, 10], ['Client', 3, 11]].map(p => ({ label: p[0], cls: persona === p[1] ? 'stepon' : '', pick: set({ step: p[2], toast: null }) }));
+    const go = {}; for (let i = 1; i <= 12; i++) go['s' + i] = set({ step: i, toast: null });
+    const v = { s1: st.step === 1, s2: st.step === 2, s3: st.step === 3, s4: st.step === 4, s5: st.step === 5, s6: st.step === 6, s12: st.step === 12, s7: st.step === 7, s8: st.step === 8, s9: st.step === 9, s10: st.step === 10, s11: st.step === 11 };
+    const toRow = (o) => o;
+    const R = {
+      ind: [
+        { id: 'ee1', path: 'Economic immigration › Express Entry › ', leaf: 'Profile', note: 'Step 1 of 2', status: 'In setup', chip: 'chip su', next: 'Review 12 AI proposals', to: 4, needs: true, forms: 0, q: 74, d: 9, r: 18, codes: 'online only · answer sheet', checked: 'Oct 2026 · next Oct 2027' },
+        { id: 'ee2', path: 'Economic immigration › Express Entry › ', leaf: 'Permanent residence application', note: 'Step 2 of 2', status: 'In setup', chip: 'chip su', next: 'Add sources', to: 3, needs: false, forms: 0, q: 0, d: 0, r: 0, codes: 'none yet', checked: 'not checked yet' },
+        { id: 'fs', path: 'Family sponsorship › Spouse or partner › ', leaf: 'Outside Canada', note: '9 AI proposals to decide', status: 'Not ready', chip: 'chip no', next: 'See 3 missing', to: 5, needs: true, forms: 6, q: 212, d: 24, r: 31, codes: 'IMM 1344 · IMM 0008 · IMM 5532 · IMM 5669 · IMM 5406 · IMM 5476', checked: 'Oct 2026 · next Oct 2027' },
+        { id: 'sp', path: 'Study permits › ', leaf: 'Study permit', note: '', status: 'In setup', chip: 'chip su', next: 'Add sources', to: 3, needs: false, forms: 3, q: 0, d: 0, r: 0, codes: 'IMM 1294 · IMM 5707 · IMM 5476', checked: 'not checked yet' },
+        { id: 'sv', path: 'Visitors › ', leaf: 'Super visa', note: st.svMade ? 'Created just now' : 'New today', status: 'In setup', chip: 'chip su', next: 'Add sources', to: 3, needs: st.svMade, forms: 4, q: 0, d: 0, r: 0, codes: 'IMM 5257 · Schedule 1 · IMM 5707 · IMM 5476', checked: 'not checked yet' },
+        { id: 'vv', path: 'Visitors › ', leaf: 'Visitor visa', note: '', status: 'Live', chip: 'chip ok', next: 'Open', to: 5, needs: false, forms: 4, q: 151, d: 16, r: 22, codes: 'IMM 5257 · Schedule 1 · IMM 5707 · IMM 5476', checked: 'Oct 2026 · next Oct 2027' },
+        { id: 'wp', path: 'Work permits › Employer-specific work permit › ', leaf: 'With an LMIA', note: 'Supported by Corporate › LMIA · new edition of IMM 5476 to review', status: 'Live', chip: 'chip ok', next: 'Review new edition', to: 7, needs: true, forms: 3, q: 164, d: 18, r: 27, codes: 'IMM 1295 · IMM 5707 · IMM 5476', checked: 'Oct 2026 · next Oct 2027' }
+      ],
+      corp: [
+        { id: 'hw', path: 'LMIA › ', leaf: 'High-wage position', note: 'Supports Work permits › With an LMIA', status: 'Live', chip: 'chip ok', next: 'Open', to: 5, needs: false, forms: 1, q: 61, d: 8, r: 12, codes: 'EMP5711 · LMIA Online answer sheet', checked: 'Oct 2026 · next Oct 2027' },
+        { id: 'lw', path: 'LMIA › ', leaf: 'Low-wage position', note: '', status: 'In setup', chip: 'chip su', next: 'Review 6 AI proposals', to: 4, needs: true, forms: 1, q: 0, d: 0, r: 0, codes: 'EMP5712 · LMIA Online answer sheet', checked: 'not checked yet' }
+      ]
+    };
+    const all = R[st.tab];
+    const shown = st.filter === 'needs' && all.some(r => r.needs) ? all.filter(r => r.needs) : st.filter === 'live' ? all.filter(r => r.status === 'Live') : all;
+    const rows = shown.map(r => ({ ...r, aria: r.path + r.leaf, cls: st.sel === r.id ? 'row rowon' : 'row', pick: set({ sel: r.id, step: 5, wt: 'overview', toast: null }), goNext: set({ step: r.to, sel: r.id, toast: null }) }));
+    const selRow0 = all.find(r => r.id === st.sel);
+    const selRow = selRow0 ? { ...selRow0, crumb: (st.tab === 'ind' ? 'Individual › ' : 'Corporate › ') + selRow0.path } : null;
+    const nNeeds = all.filter(r => r.needs).length;
+    const ptabs = [['ind', 'Individual', 7], ['corp', 'Corporate and employers', 2]].map(t => ({ label: t[1], count: t[2], cls: st.tab === t[0] ? 'tabb tabon' : 'tabb', pick: set({ tab: t[0], sel: t[0] === 'ind' ? 'fs' : 'lw' }) }));
+    const nLive = all.filter(r => r.status === 'Live').length;
+    const filters = [['needs', 'Needs work · ' + nNeeds], ['live', 'Live · ' + nLive], ['all', 'All · ' + all.length]].map(f => ({ label: f[1], cls: st.filter === f[0] ? 'step stepon' : 'step', pick: set({ filter: f[0] }) }));
+    const P = {
+      amb: [
+        { t: 'Date of marriage', src: 'IMM 5532 · box 3', conf: 'Medium', kind: 'Reuse existing', chip: 'chip ok', why: 'The library field is per person; this box holds one date per couple. Reuse it as a couple fact?', before: '2. Relationship information', box: '3. Date of marriage (YYYY-MM-DD) [ __________ ]', after: '4. Place of marriage: City / Country', yes: 'Reuse as couple fact', no: 'Make a new field' },
+        { t: 'Relationship start date', src: 'IMM 5532 · box 6', conf: 'Medium', kind: 'Reuse existing', chip: 'chip ok', why: 'Close to "Date relationship began" (common-law) but asked of married couples too.', before: '5. How did you meet?', box: '6. When did your relationship begin? [ __________ ]', after: '7. Did you live together?', yes: 'Reuse existing', no: 'Make a new field' },
+        { t: 'Previous spouse name', src: 'IMM 5406 · box 2b', conf: 'Low', kind: 'New field', chip: 'chip ai', why: 'No library field holds a former spouse; nearest is "Spouse name" (current only).', before: 'Section A · Applicant', box: '2b. Former spouse or partner: name [ __________ ]', after: '2c. Date of birth', yes: 'Create new field', no: 'Reuse "Spouse name"' }
+      ],
+      new: [
+        { t: 'Sponsor undertaking length', src: 'IMM 1344 · box 18', conf: 'High', kind: 'New field', chip: 'chip ai', why: 'Not in the library; appears only on sponsorship forms.', before: 'Undertaking', box: '18. Length of undertaking [ 3 years ]', after: '19. Signature', yes: 'Create new field', no: 'Reject' },
+        { t: 'Sponsor income last tax year', src: 'IMM 1344 · box 22', conf: 'High', kind: 'New field', chip: 'chip ai', why: 'New money field; validation copied from the form (whole dollars).', before: 'Financial', box: '22. Total income [ ________ ]', after: '23. Source', yes: 'Create new field', no: 'Reject' }
+      ],
+      reuse: [
+        { t: 'Family name', src: 'IMM 1344 · box 1', conf: 'High', kind: 'Reuse existing', chip: 'chip ok', why: 'Exact match: same meaning, type and box pattern. One of 128.', before: 'Sponsor', box: '1. Family name [ __________ ]', after: '2. Given name', yes: 'Accept', no: 'Make a new field' }
+      ]
+    };
+    const list = P[st.aiTab] || P.amb;
+    const pi = Math.min(st.prop, list.length - 1);
+    const props = list.map((p, i) => ({ ...p, st: i === pi ? 'background: #eef6ff; box-shadow: inset 3px 0 0 #0862c5' : '', pick: set({ prop: i }) }));
+    const left = Math.max(0, 9 - st.decided);
+    const ptabsAI = [['amb', 'Ambiguous · ' + left], ['new', 'New · 41'], ['reuse', 'Exact reuse · 128'], ['con', 'Conflicts · 0']].map(t => ({ label: t[1], cls: st.aiTab === t[0] ? 'step stepon' : 'step', pick: set({ aiTab: t[0] === 'con' ? 'amb' : t[0], prop: 0 }) }));
+    const WT = [['overview', 'Overview'], ['forms', 'Forms'], ['pqr', 'Pre-qualification (PQR)'], ['sqr', 'Questionnaire (SQR)'], ['docs', 'Documents'], ['rules', 'Rules'], ['preview', 'Preview by person'], ['agent', 'Agent view']];
+    const wtabs = WT.map(t => ({ label: t[1], cls: st.wt === t[0] ? 'tabb tabon' : 'tabb', pick: set({ wt: t[0] }) }));
+    const w = {}; WT.forEach(t => { w[t[0]] = st.wt === t[0]; });
+    const PR = { m1: ['Married + 1 child', [['Sponsor', 58, 7, 2], ['Principal applicant', 96, 9, 4], ['Dependent child', 22, 3, 1]]], s: ['Single, no children', [['Sponsor', 58, 7, 2], ['Principal applicant', 88, 7, 4]]], cl: ['Common-law', [['Sponsor', 61, 8, 3], ['Principal applicant', 99, 10, 5]]], pm: ['Previously married', [['Sponsor', 58, 7, 2], ['Principal applicant', 104, 11, 4]]] };
+    const presets = Object.keys(PR).map(k => ({ label: PR[k][0], cls: st.preset === k ? 'step stepon' : 'step', pick: set({ preset: k }) }));
+    const previewPeople = PR[st.preset][1].map(x => ({ who: x[0], q: x[1], d: x[2], f: x[3] }));
+    const isCase = st.step === 12;
+    const who = isCase ? { sp: 'Harpreet Gill (sponsor)', pa: 'Priya Gill', src1: 'Questionnaire, Priya', src2: 'Marriage certificate, read by AI' } : { sp: 'Sample sponsor', pa: 'Sample applicant', src1: 'Sample answer', src2: 'Sample marriage certificate' };
+    const B = {
+      nm: { label: 'Box 1 · Sponsor family name', val: isCase ? 'GILL' : 'SAMPLE', fact: 'Family name', who: who.sp, src: 'Passport, confirmed', conf: 'Exact fact', chip: 'chip ok', issue: false },
+      dm: { label: 'Box 3 · Date of marriage', val: '2019-06-14', fact: 'Date of marriage (couple)', who: 'Couple', src: who.src1, conf: 'Conflict · needs your decision', chip: 'chip warn', issue: true, findingText: 'The marriage certificate reads 2019-06-16.', optA: 'Use the certificate (16 Jun)', optB: 'Keep the answer (14 Jun)', fixed: '2019-06-16' },
+      pl: { label: 'Box 4 · Place of marriage', val: 'Ludhiana, India', fact: 'Place of marriage (city + country)', who: 'Couple', src: who.src1, conf: 'Derived · two facts joined', chip: 'chip ai', issue: false },
+      pm: { label: 'Box 9 · Previously married', val: 'No', fact: 'Previously married', who: who.pa, src: who.src1, conf: 'Conflict · needs your decision', chip: 'chip warn', issue: true, findingText: 'IMM 5406 lists a former spouse for this person.', optA: 'Change to Yes', optB: 'Keep No and note why', fixed: 'Yes' },
+      ch: { label: 'Box 12 · Children together', val: '', fact: 'Number of children of the couple', who: 'Couple', src: 'Not answered yet', conf: 'Empty · needs a person', chip: 'chip su', issue: false }
+    };
+    const res = st.resolved;
+    const openKeys = ['dm', 'pm'].filter(k => !res[k]);
+    const pdfBoxes = ['nm', 'dm', 'pl', 'pm', 'ch'].map(k => {
+      const b = B[k]; const open = b.issue && !res[k]; const empty = !b.val;
+      return { label: b.label, shown: res[k] ? b.fixed : (b.val || 'empty'), mark: open ? '! Check' : empty ? '○ Empty' : '✓ Filled', ink: open ? '#8c4600' : empty ? '#595959' : '#0f5c2e', st: open ? 'background: #fffaf2; border-color: #ffc773' : empty ? 'background: #fafafa' : '', cls: st.box === k ? 'box boxon' : 'box', pick: set({ box: k }) };
+    });
+    const b0 = B[st.box];
+    const box = { ...b0, shown: res[st.box] ? b0.fixed : (b0.val || 'empty'), open: b0.issue && !res[st.box], conf: res[st.box] ? 'Decided by officer' : b0.conf, chip: res[st.box] ? 'chip ok' : b0.chip };
+    const resolve = () => { const r = { ...st.resolved }; r[st.box] = true; this.setState({ resolved: r, toast: { text: 'Fact updated · every form using it changed', undo: true } }); };
+    const fillForms = [['IMM 1344', 'Sponsor', '112 of 112 filled', 'Validated', 'chip ok'], ['IMM 5532', 'Couple', '41 filled · ' + openKeys.length + ' to check · 3 empty', openKeys.length ? 'Needs review' : 'Ready to validate', openKeys.length ? 'chip warn' : 'chip su'], ['IMM 0008', isCase ? 'Priya' : 'Applicant', '128 filled · 1 to check', 'Needs review', 'chip warn'], ['IMM 5669', isCase ? 'Priya' : 'Applicant', '58 of 58 filled', 'Ready to validate', 'chip su'], ['IMM 5406', isCase ? 'Priya' : 'Applicant', '70 filled · 4 empty', 'Needs review', 'chip warn']].map((f, i) => ({ code: f[0], who: f[1], score: f[2], state: f[3], chip: f[4], st: i === st.form ? 'background: #eef6ff; box-shadow: inset 3px 0 0 #0862c5' : '', pick: set({ form: i }) }));
+    const fillCtx = isCase ? { crumbs: [{ t: 'Cases', go: set({ step: 10 }) }, { t: 'Gill family', go: set({ step: 10 }) }], here: 'Forms', title: 'Fill and validate forms' } : { crumbs: [{ t: 'Programs', go: set({ step: 1 }) }, { t: 'Spouse or partner › Outside Canada', go: set({ step: 5 }) }], here: 'Filled forms · sample family', title: 'Filled forms preview' };
+
+    const where = 'agent view, IMM 5532 box 3, IMM 0008 box 9, IMM 5406 box 4';
+    const setDm = (e) => this.setState({ dm: e.target.value, toast: { text: 'Date of marriage updated in 4 places: ' + where, undo: true } });
+    const useCert = () => this.setState({ dm: '2019-06-16', toast: { text: 'Date of marriage set to 2019-06-16 in 4 places: ' + where, undo: true } });
+    const setPm = (e) => this.setState({ pmar: e.target.value, toast: { text: e.target.value === 'Yes' ? 'Previously married = Yes: 4 questions and 1 document added; IMM 5532 box 9 and IMM 0008 box 8 updated' : 'Previously married = No: previous-marriage questions and divorce certificate removed', undo: true } });
+    const baseDocs = [
+      { t: 'Passport · Priya', s: '✓ Confirmed', chip: 'chip ok', why: 'Everyone' },
+      { t: 'Passport · Harpreet', s: '✓ Confirmed', chip: 'chip ok', why: 'Everyone' },
+      { t: 'Marriage certificate', s: 'AI read · 1 difference', chip: 'chip warn', why: 'Because: married' },
+      { t: 'Proof of relationship', s: 'Missing', chip: 'chip no', why: 'Always, once per couple' },
+      { t: 'Police certificate · Priya', s: 'Missing', chip: 'chip no', why: 'Because: 18 or older · lived in India 6+ months' }
+    ];
+    const caseDocs = st.pmar === 'Yes' ? baseDocs.concat([{ t: 'Divorce certificate · Priya', s: 'New · missing', chip: 'chip no', why: 'Because: previously married = Yes' }]) : baseDocs;
+    const sections = [['Personal details', '✓', '#0f5c2e'], ['Passport and identity', '✓', '#0f5c2e'], ['Marriage and relationship', st.dm === '2019-06-16' ? '✓' : '1 to check', st.dm === '2019-06-16' ? '#0f5c2e' : '#8c4600'], ['Previous relationships', st.pmar === 'Yes' ? '4 to answer' : 'not needed', st.pmar === 'Yes' ? '#8c4600' : '#595959'], ['Family members', '3 to answer', '#8c4600'], ['Education and work', '✓', '#0f5c2e'], ['Background declarations', '✓', '#0f5c2e'], ['Sponsor finances', '2 to answer', '#8c4600']].map((x, i) => ({ t: x[0], s: x[1], ink: x[2], st: i === 2 ? 'background: #eef6ff; box-shadow: inset 3px 0 0 #0862c5; font-weight: 600' : '' }));
+    const fs = st.fst[st.cform] || 'draft';
+    const CF = [['IMM 1344', 'Harpreet'], ['IMM 5532', 'Couple'], ['IMM 0008', 'Priya'], ['IMM 5669', 'Priya'], ['IMM 5406', 'Priya'], ['IMM 5476', 'Representative']];
+    const stateOf = (i) => { const x = st.fst[i] || (i === 0 ? 'validated' : 'draft'); return x === 'validated' ? ['✓ Validated', 'chip ok'] : x === 'downloaded' ? ['In Adobe · upload back', 'chip ai'] : x === 'checked' ? ['Checks pass · ready for Adobe', 'chip su'] : ['Draft · run checks', 'chip warn']; };
+    const caseForms = CF.map((f, i) => ({ code: f[0], who: f[1], state: stateOf(i)[0], chip: stateOf(i)[1], st: i === st.cform ? 'background: #eef6ff; box-shadow: inset 3px 0 0 #0862c5' : '', pick: set({ cform: i }) }));
+    const conflict = st.dm !== '2019-06-16';
+    const setF = (val, toast) => () => { const f = { ...st.fst }; f[st.cform] = val; this.setState({ fst: f, toast: toast }); };
+    const f12 = { notChecked: fs === 'draft', checked: fs !== 'draft', done: fs === 'validated', result: conflict ? '! 1 issue' : '✓ All checks pass', chip: conflict ? 'chip warn' : 'chip ok', detail: conflict ? 'Box 3: certificate says 2019-06-16. Fix it in the agent view or right here in the form.' : 'Complete, consistent with documents, formats correct.' };
+
+    const kidsEmpty = !st.kids;
+    const pvErrors = kidsEmpty ? 1 : 0;
+    const pv = { fail: st.pvRun > 0 && pvErrors > 0, pass: st.pvRun > 0 && pvErrors === 0, n: pvErrors, kidsErr: st.pvRun > 0 && kidsEmpty, kidsStyle: st.pvRun > 0 && kidsEmpty ? 'border-color: #dc2626; background: #fdecec' : '' };
+    const issuesNow = (st.dm !== '2019-06-16' ? 1 : 0) + (st.pmar === 'Yes' ? 1 : 0);
+    const runs = st.runsN.slice().reverse().map((n, i, arr) => ({ label: 'Run ' + (arr.length - i) + (i === 0 ? ' · latest' : ''), result: n === 0 ? '✓ No issues' : n + ' issue(s)', chip: n === 0 ? 'chip ok' : 'chip warn', detail: n === 0 ? 'All forms and documents agree with the answers.' : 'Date of marriage: answer 2019-06-14, certificate 2019-06-16 (IMM 5532 box 3, IMM 0008 box 9).' + (st.pmar === 'Yes' ? ' Divorce certificate not uploaded.' : '') }));
+    const lastRun = st.runsN.length ? st.runsN[st.runsN.length - 1] : null;
+    const rv = { dmFlag: lastRun !== null && lastRun > 0 && st.dm !== '2019-06-16' };
+    const LIB = [
+      { sec: 'Marriage and relationship', n: '24 fields', items: [{ t: 'Date of marriage', used: 'used by 3', origin: 'AI from IMM 5532 · accepted', boxes: 'IMM 5532 b3 · IMM 0008 b9 · IMM 5406 b4', rules: 'Asked when married', key: 'couple.marriage.date' }, { t: 'Place of marriage', used: 'used by 3', origin: 'AI from IMM 5532 · accepted', boxes: 'IMM 5532 b4', rules: 'Asked when married', key: 'couple.marriage.place' }, { t: 'Relationship to principal applicant', used: 'used by 4', origin: 'Added by a person · approved', boxes: 'IMM 5406 b7 · IMM 5707 b3', rules: 'None', key: 'person.relative.relationship' }] },
+      { sec: 'Passport and identity', n: '9 fields', items: [{ t: 'Passport number', used: 'used by 7', origin: 'AI from IMM 5257 · accepted', boxes: 'IMM 5257 b12 · IMM 0008 b14 · IMM 1295 b10', rules: 'Format check', key: 'person.passport.number' }, { t: 'Passport expiry date', used: 'used by 7', origin: 'AI from IMM 5257 · accepted', boxes: 'IMM 5257 b15 · IMM 0008 b17', rules: 'Must be after issue date', key: 'person.passport.expiry' }] }
+    ];
+    let fi = 0; const flat = [];
+    const lib = LIB.map(g => ({ ...g, items: g.items.map(it => { const idx = fi++; flat.push(it); return { ...it, pick: set({ field: idx }) }; }) }));
+    const f0 = flat[st.field] || flat[0];
+    const field = { ...f0, used: f0.used.replace('used by', 'Used by') + ' combinations' };
+    const CH = [
+      { t: 'Family sponsorship › Spouse or partner › Outside Canada', d: '6 forms, 41 new fields, 31 rules', n: '38 changes', s: st.ticks.a ? '✓ Expert ticked' : 'Needs expert tick', chip: st.ticks.a ? 'chip ok' : 'chip warn', expert: 'a', before: 'not offered to firms', after: '6 forms · 212 questions · 24 documents' },
+      { t: 'IMM 5476 new edition (11-2025)', d: 'Used by 5 combinations · 13 box changes', n: '5 changes', s: 'Ready', chip: 'chip ok', expert: null, before: 'edition 05-2021 · 3 pages', after: 'edition 11-2025 · 4 pages · 9 new boxes' },
+      { t: 'Visitors › Super visa', d: 'New combination · path and 4 forms', n: '3 changes', s: st.ticks.c ? '✓ Expert ticked' : 'Needs expert tick', chip: st.ticks.c ? 'chip ok' : 'chip warn', expert: 'c', before: 'did not exist', after: 'Individual › Visitors › Super visa · 4 forms' },
+      { t: 'Library · Relationship to applicant', d: 'Reused existing field', n: '1 change', s: 'Ready', chip: 'chip ok', expert: null, before: '—', after: 'used by 5 combinations' }
+    ];
+    const changes = CH.map((c, i) => ({ ...c, pick: set({ chg: i }) }));
+    const c0 = CH[st.chg];
+    const chg = { ...c0, expert: !!c0.expert, ticked: c0.expert ? st.ticks[c0.expert] : false, tick: () => { const t = { ...st.ticks }; t[c0.expert] = !t[c0.expert]; this.setState({ ticks: t }); } };
+    const ticksLeft = (st.ticks.a ? 0 : 1) + (st.ticks.c ? 0 : 1);
+    const roles = [['author', 'Author · S. Kumar'], ['approver', 'Approver · M. Singh']].map(r => ({ label: r[1], cls: st.role === r[0] ? 'step stepon' : 'step', pick: set({ role: r[0] }) }));
+    return {
+      steps, personas, go, v, pv, runs, rv, kids: st.kids, readyToFile: pv.pass && lastRun === 0,
+      setKids: (e) => this.setState({ kids: e.target.value, toast: { text: 'Children together updated in 3 places: agent view, IMM 5532 box 12, IMM 0008 box 21', undo: true } }),
+      pdfValidate: () => this.setState({ pvRun: st.pvRun + 1 }),
+      runReview: () => this.setState({ runsN: st.runsN.concat([issuesNow]), toast: { text: 'Review finished: ' + (issuesNow ? issuesNow + ' issue(s)' : 'no issues'), undo: false } }),
+      setDm, useCert, setPm, caseDocs, docCount: caseDocs.length, sections, caseForms, f12, dm: st.dm, pmar: st.pmar, pmYes: st.pmar === 'Yes', dmConflict: conflict,
+      runChecks: setF('checked', { text: conflict ? 'Checks found 1 issue' : 'All checks pass', undo: false }), download: setF('downloaded', { text: 'IMM 5532 downloaded · open it in Adobe Reader and click Validate', undo: false }), uploadBack: setF('validated', { text: 'Validated copy read back · barcodes found · no differences', undo: false }), rows, ptabs, filters, wtabs, w, presets, previewPeople, presetName: PR[st.preset][0], pdfBoxes, box, fillForms, fillCtx, lib, field, changes, chg, roles, ticksLeft,
+      props, prop: props[pi], ptabsAI, left, aiReuseTab: st.aiTab === 'reuse',
+      hasSel: false, selRow: selRow || {}, closeSel: set({ sel: null }),
+      hasToast: !!st.toast, toast: st.toast || {}, clearToast: set({ toast: null }),
+      persona: persona === 1 ? { title: 'Product Studio · Pathway Configurator', sub: 'Super Admin' } : persona === 2 ? { title: 'Case workspace', sub: 'Case officer' } : { title: 'Family link', sub: 'Client, on a phone' },
+      showMenu: persona === 1,
+      m: { programs: [1, 2, 3, 5, 6].includes(st.step) ? 'menu menuon' : 'menu', fields: st.step === 8 ? 'menu menuon' : 'menu', forms: st.step === 7 ? 'menu menuon' : 'menu', ai: st.step === 4 ? 'menu menuon' : 'menu', rel: st.step === 9 ? 'menu menuon' : 'menu' },
+      proposed: st.proposed, propose: set({ proposed: true }),
+      createSv: set({ step: 1, tab: 'ind', filter: 'all', sel: 'sv', svMade: true, proposed: false, toast: { text: 'Super visa created · next: add its sources', undo: true } }),
+      drafting: st.drafting, notDrafting: !st.drafting, startDraft: set({ drafting: true }),
+      decide: () => this.setState({ decided: Math.min(9, st.decided + 1), prop: pi + 1 < list.length ? pi + 1 : pi, toast: { text: 'Decision saved', undo: true } }),
+      acceptReuse: set({ toast: { text: '128 exact reuses accepted', undo: true } }),
+      wsOverview: set({ wt: 'overview' }), wsForms: set({ wt: 'forms' }),
+      issueText: openKeys.length ? 'Issue ' + (2 - openKeys.length + 1) + ' of 2 to check' : 'No open issues', issueChip: openKeys.length ? 'chip warn' : 'chip ok', openCount: openKeys.length,
+      nextIssue: set({ box: openKeys[0] || st.box }), resolveA: resolve, resolveB: resolve,
+      canValidate: openKeys.length === 0, cannotValidate: openKeys.length > 0, validate: set({ toast: { text: 'IMM 5532 validated · locked until a fact it uses changes', undo: true } }),
+      acceptHigh: set({ toast: { text: '11 high-confidence proposals accepted · 2 left', undo: true } }),
+      usedBy: ['Visitors › Visitor visa', 'Work permits › Employer-specific work permit › With an LMIA', 'Family sponsorship › Spouse or partner › Outside Canada'],
+      isAuthor: st.role === 'author', approverBlocked: st.role === 'approver' && ticksLeft > 0, approverReady: st.role === 'approver' && ticksLeft === 0,
+      submitRel: set({ toast: { text: 'Submitted · M. Singh asked to approve', undo: true } }),
+      confirming: st.confirm, openConfirm: set({ confirm: true }), closeConfirm: set({ confirm: false }),
+      publish: set({ confirm: false, toast: { text: 'Release 14 published · new cases use it', undo: false } }),
+      confirmPassport: set({ toast: { text: '6 passport facts confirmed', undo: true } }),
+      caseUnresolved: !st.caseFixed, caseResolved: st.caseFixed, caseResolve: set({ caseFixed: true, toast: { text: 'Date of marriage set to 16 Jun 2019 · every form updated', undo: true } }),
+      sources: [
+        { code: 'IMM 1344', title: 'Application to sponsor', ed: '09-2024', state: 'New to library · 112 boxes', chip: 'chip ai' },
+        { code: 'IMM 0008', title: 'Generic application form', ed: '05-2026', state: 'New to library · 140 boxes', chip: 'chip ai' },
+        { code: 'IMM 5532', title: 'Relationship information', ed: '02-2021', state: 'New to library · 96 boxes', chip: 'chip ai' },
+        { code: 'IMM 5669', title: 'Schedule A: background', ed: '05-2021', state: 'New to library · 58 boxes', chip: 'chip ai' },
+        { code: 'IMM 5406', title: 'Additional family information', ed: '05-2026', state: 'New to library · 74 boxes', chip: 'chip ai' },
+        { code: 'IMM 5476', title: 'Use of a representative', ed: '11-2025', state: '✓ Already mapped · reuse existing', chip: 'chip ok' },
+        { code: 'IMM 5533', title: 'Document checklist: spouse', ed: '09-2022', state: 'Checklist · AI reads it', chip: 'chip su' }
+      ],
+      wsFormsList: [
+        { code: 'IMM 1344', title: 'Application to sponsor', who: 'Sponsor', ed: '09-2024', map: '✓ 112 of 112 mapped', chip: 'chip ok' },
+        { code: 'IMM 0008', title: 'Generic application form', who: 'Principal applicant; each dependant', ed: '05-2026', map: '! 131 of 140 mapped', chip: 'chip warn' },
+        { code: 'IMM 5532', title: 'Relationship information', who: 'Sponsor and principal, once per couple', ed: '02-2021', map: '✓ 96 of 96 mapped', chip: 'chip ok' },
+        { code: 'IMM 5669', title: 'Schedule A: background', who: 'Each person 18 or older', ed: '05-2021', map: '✓ 58 of 58 mapped', chip: 'chip ok' },
+        { code: 'IMM 5406', title: 'Additional family information', who: 'Each person 18 or older', ed: '05-2026', map: '✓ 74 of 74 mapped', chip: 'chip ok' },
+        { code: 'IMM 5476', title: 'Use of a representative', who: 'Only if a representative is used', ed: '11-2025', map: '✓ 51 of 51 mapped', chip: 'chip ok' }
+      ],
+      pqr: [
+        { t: 'Is the sponsor a Canadian citizen or permanent resident?', who: 'Sponsor' }, { t: 'Does the sponsor live in Canada?', who: 'Sponsor' },
+        { t: 'Married, common-law or conjugal?', who: 'Couple' }, { t: 'Has the sponsor sponsored a partner in the last 5 years?', who: 'Sponsor' },
+        { t: 'Where does the applicant live now?', who: 'Principal applicant' }, { t: 'Any dependent children?', who: 'Principal applicant' }
+      ],
+      sqr: [
+        { t: 'Personal details', n: '18 questions · everyone' }, { t: 'Passport and identity', n: '9 · everyone' }, { t: 'Marriage and relationship', n: '24 · couple, asked once' },
+        { t: 'Previous relationships', n: '8 · only if previously married' }, { t: 'Family members', n: '31 · each adult' }, { t: 'Education and work history', n: '22 · each adult, 10 years' },
+        { t: 'Addresses and travel', n: '19 · each adult' }, { t: 'Background declarations', n: '14 · each adult' }, { t: 'Sponsor finances and undertaking', n: '17 · sponsor' }
+      ],
+      docs: [
+        { t: 'Passport (all pages with stamps)', who: 'Everyone', when: 'Always' }, { t: 'Marriage certificate', who: 'Couple, once', when: 'Only if married' },
+        { t: 'Proof of relationship: photos, messages', who: 'Couple, once', when: 'Always' }, { t: 'Divorce certificate', who: 'Each adult', when: 'Only if previously married' },
+        { t: 'Police certificate', who: 'Each person 18 or older', when: 'Always · each country lived in 6+ months' }, { t: 'Proof of sponsor status in Canada', who: 'Sponsor', when: 'Always' }
+      ],
+      rules: [
+        { t: 'Ask previous marriage details when Previously married is Yes', src: 'Library · on the Previous relationships section' },
+        { t: 'Marriage certificate is required, once per couple, when married', src: 'This combination · from checklist IMM 5533' },
+        { t: 'IMM 5669 for each person 18 or older', src: 'This combination · from checklist IMM 5533' },
+        { t: 'Passport must be valid on the application date', src: 'Library check · on Passport expiry date' },
+        { t: 'Police certificate issued within 6 months of submission', src: 'Shared check · 6 months set for this combination' }
+      ],
+      facts: [
+        { who: 'Sponsor', fact: 'Family name', val: 'SAMPLE', src: 'Passport · confirmed', boxes: '1344 b1 · 5532 b1 · 5669 b1' },
+        { who: 'Principal applicant', fact: 'Date of birth', val: '1993-02-11', src: 'Passport · confirmed', boxes: '0008 b4 · 5669 b3 · 5406 b2' },
+        { who: 'Couple', fact: 'Date of marriage', val: '2019-06-14', src: 'Sample answer', boxes: '5532 b3 · 0008 b9' },
+        { who: 'Couple', fact: 'Place of marriage', val: 'Ludhiana, India', src: 'Sample answer', boxes: '5532 b4' },
+        { who: 'Principal applicant', fact: 'Previously married', val: 'No', src: 'Sample answer', boxes: '0008 b8 · 5532 b9' },
+        { who: 'Dependent child', fact: 'Given name', val: 'SAMPLE CHILD', src: 'Birth certificate · confirmed', boxes: '0008 dep b2 · 5406 b7' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

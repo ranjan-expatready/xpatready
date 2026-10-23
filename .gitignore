@@ -4,3 +4,15 @@ code/
 archive/
 __pycache__/
 .playwright-mcp/
+# Lanes setup (P-64, 23 Oct): never commit secrets, local tools, databases, logs, installed packages or generated runs
+.tools/
+/*.zip
+**/studio/var/
+**/web/dist/
+**/test-results/
+*.log
+ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p1/runs/
+ai-workers/problem-1-pathway-setup-and-form-filling/inputs/meeting-*/
+.claude/lane
+.claude/worktrees/
+*.lock

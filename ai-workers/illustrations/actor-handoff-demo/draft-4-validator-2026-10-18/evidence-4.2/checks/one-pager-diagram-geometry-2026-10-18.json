@@ -1,0 +1,55 @@
+{
+  "page": "file:///Users/ranjansingh/Desktop/Xpatready/ai-workers/illustrations/actor-handoff-demo/draft-4-validator-2026-10-18/inputs-4.2/solution-1-one-pager.html",
+  "checked_at": "2026-10-18T13:52:58.075Z",
+  "total": 0,
+  "views": [
+    {
+      "view": "v0",
+      "labels": 17,
+      "connectors": 61,
+      "issues": []
+    },
+    {
+      "view": "v1",
+      "labels": 9,
+      "connectors": 48,
+      "issues": []
+    },
+    {
+      "view": "v2",
+      "labels": 4,
+      "connectors": 35,
+      "issues": []
+    },
+    {
+      "view": "v3",
+      "labels": 18,
+      "connectors": 70,
+      "issues": []
+    },
+    {
+      "view": "v4",
+      "labels": 14,
+      "connectors": 77,
+      "issues": []
+    },
+    {
+      "view": "v5",
+      "labels": 30,
+      "connectors": 110,
+      "issues": []
+    },
+    {
+      "view": "v6",
+      "labels": 24,
+      "connectors": 76,
+      "issues": []
+    },
+    {
+      "view": "v7",
+      "labels": 17,
+      "connectors": 28,
+      "issues": []
+    }
+  ]
+}

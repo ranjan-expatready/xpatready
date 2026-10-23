@@ -1,0 +1,257 @@
+[
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/01-techno-functional/01-RFP-Build-Proposal.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/01-techno-functional/02-Architecture-Decision-Record.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/01-techno-functional/03-Doc-1-Platform-Foundation.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/01-techno-functional/04-Doc-2-SuperAdmin-Console.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/01-techno-functional/05-Doc-3-Agent-Console.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/01-techno-functional/06-Doc-4-Client-Portal.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/01-techno-functional/07-Founder-Decisions-Log.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/00-Overview_v1.13_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/99-Phasing-and-Glossary_v1.5_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-01-firm-setup-and-onboarding_v1.19_2026-10-13.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-02-decisions_2026-10-11.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-02-prospect-lead-sales-crm_v1.10_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-03-pathway-assessment_v1.4_2026-10-07.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-04-consultation-and-booking_v1.5_2026-10-07.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-05-retainer-and-agreements_v1.10_2026-10-10.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-06-billing-and-payments_v1.7_2026-10-07.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-07-case-core-and-delivery_v2.9_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-08-smart-questionnaire_v1.7_2026-10-07.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-09-document-management_v1.9_2026-10-10.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-10-communication-hub_v1.12_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-11-automation_v1.13_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-12-templates_v2.2_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-13-tasks-reminders-notes-and-activity-audit_v1.12_2026-10-07.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-14-reporting-and-analytics_v1.11_2026-10-10.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-15-client-portal-management_v1.7_2026-10-10.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-16-firm-settings-and-integrations_v1.15_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-17-corporate-cases-and-lmia_v0.6_2026-10-10.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-18-data-import-and-migration_v1.3_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/SCOPE-TRIAGE_2026-10-05.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/shared/00-Overview_v3.11_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/shared/99-Phasing-and-Glossary_v2.20_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/COMPLEXITY-REGISTER_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/DEV-HANDOVER_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/DEV-TASKS_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-01-country-and-immigration-pack-management_v2.4_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-01B-content-pack-configurator_v1.4_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-02-tenant-firm-management_v2.24_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-03-subscription-plans-and-entitlements_v2.20_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-04-saas-billing_v2.21_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-05-global-templates_v3.4_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-06-CHANGE-NOTE_2026-10-07.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-06-rbac_v3.6_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-07-platform-users_v2.15_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-08-platform-integrations-and-infrastructure-rails_v2.7_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-09-platform-analytics-and-observability_v2.4_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-10-support_v2.7_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-11-audit-compliance-and-data-governance_v2.10_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-12-feature-flags-and-platform-configuration_v2.9_2026-10-12.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/TEMPLATE-MAP-working_2026-10-10.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/06-program-management/Program Charter V1 - G1 expanded.md",
+    "hash_match": true,
+    "bytes_match": true
+  },
+  {
+    "path": "sources/drive-snapshot-2026-10-13-1535/06-program-management/Program Charter_V2.pptx",
+    "hash_match": true,
+    "bytes_match": true
+  }
+]

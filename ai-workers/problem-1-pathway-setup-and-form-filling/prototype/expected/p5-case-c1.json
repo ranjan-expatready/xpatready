@@ -1,0 +1,1018 @@
+{
+ "schema": "case-scenario/v1",
+ "label": "Made-up family for the P5 journey (prototype only). The scripted client types these answers into the generated questionnaire; staff and firm-profile facts are entered by the simulated agent. Not an answer key for the reader; never readable by the reader process.",
+ "prepared": "2026-10-21, Claude Code (the Lead); consistent with p1/adobe-complete-1295-values.json and expected/reader-c1.json",
+ "people": [
+  {
+   "id": "client-a",
+   "role": "principal",
+   "label": "Client A (principal applicant)"
+  },
+  {
+   "id": "partner",
+   "role": "partner",
+   "label": "Partner (common-law, also applying)"
+  },
+  {
+   "id": "child",
+   "role": "child",
+   "label": "Child (accompanying)"
+  }
+ ],
+ "answers": [
+  {
+   "about": "client-a",
+   "fact": "person.family_name",
+   "value": "EXAMPLE",
+   "step": "lead"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.given_names",
+   "value": "CLIENTA",
+   "step": "lead"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.date_of_birth",
+   "value": "1990-12-04",
+   "step": "lead"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.email_address",
+   "value": "client.a@example.com",
+   "step": "lead"
+  },
+  {
+   "about": "case",
+   "fact": "case.service_language",
+   "value": "English",
+   "step": "pqr"
+  },
+  {
+   "about": "case",
+   "fact": "case.country_where_applying",
+   "value": "India",
+   "step": "pqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.marital_status",
+   "value": "married",
+   "step": "pqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.current_residence_country",
+   "value": "India",
+   "step": "pqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.has_children",
+   "value": true,
+   "step": "pqr"
+  },
+  {
+   "about": "partner",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "value": true,
+   "step": "pqr"
+  },
+  {
+   "about": "child",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "value": true,
+   "step": "pqr"
+  },
+  {
+   "about": "child",
+   "fact": "person.travelling_alone_to_canada",
+   "value": false,
+   "step": "pqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.family_name",
+   "value": "EXAMPLEP",
+   "step": "pqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.given_names",
+   "value": "PARTNER",
+   "step": "pqr"
+  },
+  {
+   "about": "child",
+   "fact": "person.given_names",
+   "value": "CHILD",
+   "step": "pqr"
+  },
+  {
+   "about": "child",
+   "fact": "person.family_name",
+   "value": "EXAMPLE",
+   "step": "pqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.previous_marriage_or_common_law",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.native_language",
+   "value": "Hindi",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.official_language_ability",
+   "value": "English",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.preferred_official_language",
+   "value": "English",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.language_test_taken",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.us_lawful_permanent_resident",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.phone_type",
+   "value": "Cellular",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.phone_number",
+   "value": [
+    {
+     "role": "primary",
+     "type": "Cellular",
+     "country_code": "91",
+     "number": "9800000000"
+    }
+   ],
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.email_address",
+   "value": "client.a@example.com",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.mailing_address",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.residential_address",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.criminal_history",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.refused_visa_or_entry",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.status_violation_canada",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.military_service",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.violent_organisation_association",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.has_held_government_position",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.tb_history_or_contact",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.disorder_requiring_services",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.life_insurance_names_partner_as_beneficiary",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.residence_city",
+   "value": "New Delhi",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.residence_province_state",
+   "value": "Delhi",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_from_date",
+   "value": "2021-06-01",
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_activity",
+   "value": "Software engineer",
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_employer_name",
+   "value": "Employer Three",
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_location",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_from_date",
+   "value": "2016-08-01",
+   "step": "sqr",
+   "row": 1
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_to_date",
+   "value": "2021-05-31",
+   "step": "sqr",
+   "row": 1
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_activity",
+   "value": "Software developer",
+   "step": "sqr",
+   "row": 1
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_employer_name",
+   "value": "Employer Two",
+   "step": "sqr",
+   "row": 1
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_location",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "step": "sqr",
+   "row": 1
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_from_date",
+   "value": "2013-07-01",
+   "step": "sqr",
+   "row": 2
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_to_date",
+   "value": "2016-07-31",
+   "step": "sqr",
+   "row": 2
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_activity",
+   "value": "Graduate trainee",
+   "step": "sqr",
+   "row": 2
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_employer_name",
+   "value": "Employer One",
+   "step": "sqr",
+   "row": 2
+  },
+  {
+   "about": "client-a",
+   "fact": "person.employment_location",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "step": "sqr",
+   "row": 2
+  },
+  {
+   "about": "client-a",
+   "fact": "person.occupation",
+   "value": "Software engineer",
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "partner",
+   "fact": "person.previous_marriage_or_common_law",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.native_language",
+   "value": "Hindi",
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.official_language_ability",
+   "value": "English",
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.preferred_official_language",
+   "value": "English",
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.language_test_taken",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.us_lawful_permanent_resident",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.phone_type",
+   "value": "Cellular",
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.phone_number",
+   "value": [
+    {
+     "role": "primary",
+     "type": "Cellular",
+     "country_code": "91",
+     "number": "9800000001"
+    }
+   ],
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.email_address",
+   "value": "partner@example.com",
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.mailing_address",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.residential_address",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.criminal_history",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.refused_visa_or_entry",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.status_violation_canada",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.military_service",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.violent_organisation_association",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.has_held_government_position",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.tb_history_or_contact",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.disorder_requiring_services",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.life_insurance_names_partner_as_beneficiary",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.residence_city",
+   "value": "New Delhi",
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.residence_province_state",
+   "value": "Delhi",
+   "step": "sqr"
+  },
+  {
+   "about": "partner",
+   "fact": "person.employment_from_date",
+   "value": "2018-04-01",
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "partner",
+   "fact": "person.employment_activity",
+   "value": "Teacher",
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "partner",
+   "fact": "person.employment_employer_name",
+   "value": "Example School",
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "partner",
+   "fact": "person.employment_location",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "partner",
+   "fact": "person.employment_from_date",
+   "value": "2014-06-01",
+   "step": "sqr",
+   "row": 1
+  },
+  {
+   "about": "partner",
+   "fact": "person.employment_to_date",
+   "value": "2018-03-31",
+   "step": "sqr",
+   "row": 1
+  },
+  {
+   "about": "partner",
+   "fact": "person.employment_activity",
+   "value": "Teaching assistant",
+   "step": "sqr",
+   "row": 1
+  },
+  {
+   "about": "partner",
+   "fact": "person.employment_employer_name",
+   "value": "Example Academy",
+   "step": "sqr",
+   "row": 1
+  },
+  {
+   "about": "partner",
+   "fact": "person.employment_location",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "step": "sqr",
+   "row": 1
+  },
+  {
+   "about": "partner",
+   "fact": "person.occupation",
+   "value": "Teacher",
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "partner",
+   "fact": "person.date_of_birth",
+   "value": "1991-09-03",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_1",
+   "fact": "person.family_name",
+   "value": "EXAMPLE",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_1",
+   "fact": "person.given_names",
+   "value": "MOTHER",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_1",
+   "fact": "person.date_of_birth",
+   "value": "1962-06-15",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_1",
+   "fact": "person.country_of_birth",
+   "value": "India",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_1",
+   "fact": "person.marital_status",
+   "value": "married",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_1",
+   "fact": "person.residential_address",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_1",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_1",
+   "fact": "person.occupation",
+   "value": "Retired",
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "client-a/parent_2",
+   "fact": "person.family_name",
+   "value": "EXAMPLE",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_2",
+   "fact": "person.given_names",
+   "value": "FATHER",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_2",
+   "fact": "person.date_of_birth",
+   "value": "1960-02-01",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_2",
+   "fact": "person.country_of_birth",
+   "value": "India",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_2",
+   "fact": "person.marital_status",
+   "value": "married",
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_2",
+   "fact": "person.residential_address",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_2",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "client-a/parent_2",
+   "fact": "person.occupation",
+   "value": "Retired",
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "partner/parent_1",
+   "fact": "person.family_name",
+   "value": "EXAMPLEP",
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_1",
+   "fact": "person.given_names",
+   "value": "PMOTHER",
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_1",
+   "fact": "person.date_of_birth",
+   "value": "1964-03-11",
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_1",
+   "fact": "person.country_of_birth",
+   "value": "India",
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_1",
+   "fact": "person.marital_status",
+   "value": "married",
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_1",
+   "fact": "person.residential_address",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_1",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_1",
+   "fact": "person.occupation",
+   "value": "Retired",
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "partner/parent_2",
+   "fact": "person.family_name",
+   "value": "EXAMPLEP",
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_2",
+   "fact": "person.given_names",
+   "value": "PFATHER",
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_2",
+   "fact": "person.date_of_birth",
+   "value": "1961-11-23",
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_2",
+   "fact": "person.country_of_birth",
+   "value": "India",
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_2",
+   "fact": "person.marital_status",
+   "value": "married",
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_2",
+   "fact": "person.residential_address",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_2",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "value": false,
+   "step": "sqr"
+  },
+  {
+   "about": "partner/parent_2",
+   "fact": "person.occupation",
+   "value": "Retired",
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "child",
+   "fact": "person.marital_status",
+   "value": "single",
+   "step": "sqr"
+  },
+  {
+   "about": "child",
+   "fact": "relationship.child_relationship_type",
+   "value": "daughter",
+   "step": "sqr"
+  },
+  {
+   "about": "child",
+   "fact": "person.residential_address",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "step": "sqr"
+  },
+  {
+   "about": "child",
+   "fact": "person.occupation",
+   "value": "Student",
+   "step": "sqr",
+   "row": 0
+  },
+  {
+   "about": "case",
+   "fact": "relationship.cohabitation_start_date",
+   "value": "2015-06-01",
+   "step": "sqr_conditional"
+  },
+  {
+   "about": "case",
+   "fact": "relationship.joint_residence_lease_mortgage_or_purchase",
+   "value": true,
+   "step": "sqr_conditional"
+  },
+  {
+   "about": "case",
+   "fact": "relationship.joint_property_other_than_residence",
+   "value": false,
+   "step": "sqr_conditional"
+  },
+  {
+   "about": "case",
+   "fact": "relationship.joint_financial_accounts",
+   "value": true,
+   "step": "sqr_conditional"
+  },
+  {
+   "about": "case",
+   "fact": "relationship.common_law_declared_for_canadian_income_tax",
+   "value": false,
+   "step": "sqr_conditional"
+  },
+  {
+   "about": "case",
+   "fact": "relationship.other_documentary_evidence",
+   "value": "Joint lease and joint bank statements",
+   "step": "sqr_conditional"
+  }
+ ],
+ "staff_facts": [
+  {
+   "about": "client-a",
+   "fact": "person.work_permit_type",
+   "value": "LMOS"
+  },
+  {
+   "about": "partner",
+   "fact": "person.work_permit_type",
+   "value": "ELMO"
+  },
+  {
+   "about": "client-a",
+   "fact": "person.is_employer_specific_work_permit",
+   "value": true
+  },
+  {
+   "about": "partner",
+   "fact": "person.is_employer_specific_work_permit",
+   "value": true
+  },
+  {
+   "about": "case",
+   "fact": "case.employer_obtained_lmia",
+   "value": true
+  },
+  {
+   "about": "case",
+   "fact": "case.offer_lmia_exempt",
+   "value": true
+  },
+  {
+   "about": "case",
+   "fact": "case.uses_representative",
+   "value": true
+  },
+  {
+   "about": "case",
+   "fact": "case.application_date",
+   "value": "2026-11-02"
+  },
+  {
+   "about": "client-a",
+   "fact": "organisation.name",
+   "value": "Example Employer Ltd"
+  },
+  {
+   "about": "partner",
+   "fact": "organisation.name",
+   "value": "Example Learning Centre Inc."
+  },
+  {
+   "about": "client-a",
+   "fact": "organisation.address",
+   "value": "100 Example Street, Toronto, ON M5V 1A1"
+  },
+  {
+   "about": "partner",
+   "fact": "organisation.address",
+   "value": "25 Sample Avenue, Vancouver, BC V6B 1A1"
+  },
+  {
+   "about": "partner",
+   "fact": "person.intended_occupation_requires_medical",
+   "value": true
+  },
+  {
+   "about": "client-a",
+   "fact": "person.intended_occupation_requires_medical",
+   "value": false
+  }
+ ],
+ "profile_facts": [
+  {
+   "about": "representative",
+   "fact": "person.family_name",
+   "value": "SAMPLE"
+  },
+  {
+   "about": "representative",
+   "fact": "person.given_names",
+   "value": "AVERY"
+  },
+  {
+   "about": "representative",
+   "fact": "organisation.name",
+   "value": "Example Immigration Firm"
+  },
+  {
+   "about": "representative",
+   "fact": "person.email_address",
+   "value": "avery.sample@example.com"
+  },
+  {
+   "about": "case",
+   "fact": "representative.representative_category",
+   "value": "paid"
+  },
+  {
+   "about": "case",
+   "fact": "representative.membership_id",
+   "value": "R000000"
+  },
+  {
+   "about": "case",
+   "fact": "representative.licensing_province",
+   "value": "ON"
+  }
+ ],
+ "changes": {
+  "marital_status_correction": {
+   "about": "client-a",
+   "fact": "person.marital_status",
+   "from": "married",
+   "to": "common_law",
+   "why": "changed-answer demonstration: the client corrects the relationship type; the marriage certificate stops being needed and the common-law form and evidence start"
+  },
+  "lead_dob_typo": {
+   "about": "client-a",
+   "fact": "person.date_of_birth",
+   "lead_value": "1990-12-04",
+   "document_value": "1990-04-12",
+   "why": "discrepancy demonstration: the lead form's date of birth disagrees with the passport"
+  }
+ }
+}

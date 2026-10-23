@@ -3,6 +3,11 @@
 | | |
 |---|---|
 | **Document changed** | SA-11 Audit, Compliance & Data Governance, version 2.7, dated 2026-10-07 |
+| **Current base (15 Oct 2026, snapshot 1535; scrum 4b outcome 0 (e))** | **SA-11 v2.10**, `sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-11-audit-compliance-and-data-governance_v2.10_2026-10-12.md` (identical to the 13 Oct 09:26 copy the re-base row checked). The re-base row says what stands, is withdrawn or is re-aimed; a quote or line number marked re-pointed, corrected or "v2.10" is the current file's; any other is the older version's and is history. |
+| **Re-based 13 Oct 2026 (source reconciliation, `decisions.md` rows "Reconciliation renumbering" and "Lead rulings, source reconciliation")** | Checked against **SA-11 v2.10** (12 Oct 2026). **ID collision:** our SA-11-32 was taken (the written data-location statement: client data in Canada (Montreal), sub-processors listed, backups 35 days); renumbered **SA-11-32 → SA-11-37**; version row 2.8 → **2.11**. **Change 1 re-based:** SA-11-21 (compliance warning) is withdrawn and the generated declaration is parked; the rule "AI processing of client data only in Canada, no safeguards route" is proposed as a line in the written statement (SA-11-32) plus SA-11-37; "RES2" no longer occurs. **Change 2** points to the written statement (SA-11-32), not a generated declaration. **Change 3 withdrawn:** SA-11-13 (per-category retention policy with legal floors) is replaced by SA-11-33 (the whole activity log is kept **7 years, one number**; no per-category policy); the AI-processing-records retention question moves to repair stage R2b. **Change 5 re-based** on the new SA-11-27 (a register only of requests made to ExpatReady itself; the firm's requests are the firm's). Legal holds are placed by the **Platform Owner only** (`system/compliance:legal-hold`); erasure runs only on an approved request with a 7-day grace and a Cancel, stopped by the "Data erasure" kill flag (SA-11-16, SA-12-33); the breach register is a plain record kept by the Platform Owner, Auditor read-only, Release 1 (SA-11-24, P-3); regulator wording never appears on a screen. **Now met:** the hash chain, verify job and WORM anchor are built (§12). Line numbers and quotes below are v2.7's. |
+| **Changed 14 Oct 2026 (the founder's AIW-D147)** | Change 1 rewritten: AI processing in **Canada or the United States** under no-training and zero-retention terms, with client notice (was "only in Canada", AIW-D52). Change 2 states the processing region as Canada or the US. |
+| **Changed 14 Oct 2026 (the founder's AIW-D148)** | Change 1 (4): the client notice and Quebec's privacy impact assessment are the one bounded counsel check of AIW-D148 (counsel pack Q4, Q5), not "no counsel"; the cross-border transfer stays Unconfirmed: no counsel (AIW-D94). The checker's acceptance review of the technical solution 0.4, M3. |
+| **Re-worded 15 Oct 2026 (scrum 4 close-out; review batch 3 findings)** | Against SA-11 v2.10 (snapshot 1535). Changes 1 and 2 ask only of the written data-location statement (SA-11-32), since the generated declaration is parked (SA11-D6); SA-11-37 no longer adds a data category. Changes 6 and 7: a client's data request is the firm's AG-13 task (SA11-D4; SA-05 v3.4 SA5-D58), so FD-20's review, portability and the request event move there (CN-AG-11 change 4 (f) re-pointed); open question 11 withdrawn; the consent-withdrawn event stays on SA-11-29. Old line anchors kept as history. |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/02-functional-requirements/super-admin/SA-11-audit-compliance-and-data-governance_v2.7_2026-10-07.md` |
 | **Date of this note** | 11 Oct 2026 (sixth round: the founder's Step 3 batch, AIW-D74 (Canada for every AI call) and AIW-D78 (the residency declaration in Release 1)) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
@@ -12,55 +17,55 @@
 1. What it changes, by ID, section and line of the snapshot.
 2. The current words, quoted exactly.
 3. The proposed words, in SA-11's own style (SHALL wording, as SA-11 uses).
-4. Why: the founder's decision (Founder Decisions Log FD-*n*; `ai-workers/decisions.md`, AIW-D*n*), the improvement (`ai-workers/design/ws2-improvements.md`, IMP-*n*) or the proposals row (`ai-workers/proposals.md`).
+4. Why: the founder decision, improvement or gap behind the change.
 5. What else must change.
 
-The AI teammates are specified in AW-01 and AW-02, which cite these IDs. Other Workstream 2 files (the CN-AG notes, AW-01, AW-02) are cited by change and requirement ID, never by line or in quotation marks (`00-step3-plan.md`, "Point by ID while files can change").
+The assistants are specified in AW-01 and AW-02, which cite these IDs. Other Workstream 2 files are cited by change and requirement ID only.
 
 **Plain words used here.**
-- *AI processing*: any call to an AI model that reads a client's or a firm's data. This covers the four AI Doers, the AI teammates' model calls, and reading text from images.
-- *Delegation record*: which AI teammate works for which named person, with a subset of that person's permissions (AIW-D33).
-- *Platform-plane run*: a run of one of Expat Ready's own AI teammates.
+- *AI processing*: any call to an AI model that reads a client's or a firm's data. This covers the four AI Doers, the assistants' model calls, and reading text from images.
+- *Delegation record*: which assistant works for which named person, with a subset of that person's permissions (AIW-D33).
+- *Platform-plane run*: a run of one of Expat Ready's own assistants.
 
-**Unconfirmed.** Changes 1, 2, 3, 5 and 6 are unconfirmed Lead guidance; no counsel (AIW-D94) (AIW-D64's gate and AIW-D68 superseded). They touch residency wording, retention values, the Restricted-field model or privacy-law rights.
+**Unconfirmed.** Changes 1, 2, 3, 5 and 6 (6 is now an AG-13 knock-on) are unconfirmed Lead guidance; no counsel (AIW-D94) (AIW-D64's gate and AIW-D68 superseded). They touch residency wording, retention values, the Restricted-field model or privacy-law rights.
 
 **Newer team files that bear on this note.**
-- SA-08 v2.4 removed the residency generator. SA8-D9 (L41): "**The data-location statement is written once** (subscription terms and a firm-facing Security & privacy page, maintained in SA-11) — no generator". It asks SA-11 to hold that statement (SA8-X6, L98, pending, the team's own knock-on). Change 2 fits either form.
-- The shared 99-Phasing-and-Glossary v2.18 places "Data residency declaration, retention config, PIPEDA DSR register" in SA-11's second phase (L41). **Decided 11 Oct 2026 (AIW-D78, "Only what safety needs"):** the **data-residency declaration** moves into Release 1; everything else on that row (retention configuration, the PIPEDA DSR register), and SA-11's breach register, stays in the team's phase, and the AI teammate step that depends on it waits and works without it (for example no breach-register link). The phasing row is the team's to change, with this note (not written here).
+- SA-08 removed the residency generator: SA-08 v2.7 SA8-D9 (L48): "**The data-location statement is written once** (subscription terms and a firm-facing Security & privacy page, maintained in SA-11) — no generator". Its knock-on SA8-X6 (L142) is applied in SA-11 as the written statement SA-11-32 (SA-11 v2.10), so change 2 is written against that statement.
+- The shared 99-Phasing-and-Glossary v2.18 places "Data residency declaration, retention config, PIPEDA DSR register" in SA-11's second phase (L41). **Decided 11 Oct 2026 (AIW-D78, "Only what safety needs"):** the **data-residency declaration** moves into Release 1; everything else on that row (retention configuration, the PIPEDA DSR register), and SA-11's breach register, stays in the team's phase, and the assistant step that depends on it waits and works without it (for example no breach-register link). The phasing row is the team's to change, with this note (not written here). *Since 12 Oct (SA-11 v2.10, snapshot 1535):* the generated declaration is parked and not built (SA11-D6, L43; SA-11-20, L437); the written data-location statement (SA-11-32, L458) stands in for it in Release 1. Changes 1 and 2 are therefore asked of the written statement only, as TC-22 is (re-worded 15 Oct 2026).
 
 ---
 
-## 1. AI processing of client data happens only in Canada: no "documented safeguards" route for it
+## 1. AI processing of client data happens in Canada or the United States only: an AI processing category with that rule
 
-**(1) What it changes.** §3.6 "Enforcement & flagging", first bullet (L269); SA-11-21 (L373); a new requirement after SA-11-31 (L392).
+> **Changed 14 Oct 2026 (the founder's AIW-D147).** The founder replaced "only in Canada" (AIW-D52) with: client data stored in Canada; AI and OCR processing in **Canada or the United States**, under written no-training and zero-retention terms, with client notice; no global routing. SA-11 §3.6 RES2's "explicitly approved with documented safeguards" (SA-11 v2.7 wording; withdrawn in v2.10, which has the written data-location statement SA-11-32 instead; AIW-D147 correction) now fits the AI provider; AIW-D52's planned tightening of it is withdrawn (AIW-D52 correction). The earlier "only in Canada, no safeguard route" proposal (11 and 13 Oct) is replaced by the words below.
+>
+> **Re-based 13 Oct 2026 (source reconciliation).** SA-11 v2.10 withdrew SA-11-21 (the compliance warning), parked the generated declaration and reworded SA-11-20 and SA-11-22 around a **written data-location statement** (SA-11-32 v2.10: client data stored in Canada (Montreal), sub-processors listed, backups 35 days); "RES2" no longer occurs.
+
+**(1) What it changes.** The written data-location statement (SA-11-32, L458 of SA-11 v2.10; §3.6 "How it works", L319); a new requirement, **SA-11-37**.
 
 **(2) Current words.**
 
-L269:
-> - **Automatic compliance warnings.** If any rail/sub-processor for a category is **Non-Canadian without a confirmed safeguard**, SA-11 raises a **compliance warning** on the dashboard (3.10) with a link to the offending SA-8 integration — surfaced *before* an auditor finds it (per §3.6 RES2: sub-processors must be Canadian-resident or explicitly approved with documented safeguards; a maintained sub-processor list is delivered).
+L458:
+> - **SA-11-32.** *(NEW v2.8 — SA8-D9, SA8-X6)* SA-11 SHALL hold a **written data-location statement**: all client data is stored in Canada (Montréal), encrypted; Stripe and the mailbox, calendar and WhatsApp providers are listed sub-processors; backups are kept 35 days (SA2-D12). …
 
-L373:
-> - **SA-11-21.** Any category whose rail/sub-processor is **Non-Canadian without a confirmed safeguard** SHALL raise a **compliance warning** on the dashboard, linked to the offending SA-8 integration.
+Nothing in SA-11 v2.10 says where AI processing may run.
 
 **(3) Proposed words.**
 
-L269 keeps its text and gains a second bullet:
-> - **AI processing: only in Canada, with no safeguard route.** *(new — AIW-D52, AG11-D15)* For the **AI processing** category (SA-11-32), the RES2 route "explicitly approved with documented safeguards" does **not** apply. AI and OCR processing of client data happens **only in Canada**, for firms' data and for Expat Ready's own support tickets. A provider whose processing region is outside Canada cannot be recorded (SA-8-49); until a Canadian provider record with a passed test call is published, the AI switch stays locked for every firm (AG-11-93). Every other category keeps RES2 as written.
-
-SA-11-21 gains:
-> The AI processing category is excluded from this warning route: a non-Canadian AI processing region is refused at entry (SA-11-32, SA-8-49), never recorded with a safeguard.
+The written data-location statement gains one line:
+> AI and OCR processing of client data runs in Canada or the United States, never elsewhere and never through global routing, under the published AI provider record (SA-8-66), with written no-training and zero-retention terms; client data stays stored in Canada. *(new — AIW-D147)*
 
 New requirement:
-> - **SA-11-32.** *(new — AIW-D52, AG11-D15)* The data categories SHALL include **AI processing**. For it, the only acceptable location SHALL be Canada; the statuses `Non-Canadian` and `Non-Canadian with confirmed safeguard` SHALL NOT be recordable for it.
+> - **SA-11-37.** *(new — AIW-D147, AG11-D15 as changed by CN-AG-11 change 19; re-worded 15 Oct 2026 to the written statement)* AI and OCR processing of client data SHALL run only in Canada or the United States, each under the no-training and zero-retention terms recorded in the published AI provider record (SA-8-66); a provider record whose processing region, or any destination of its routing, is outside Canada and the United States, or that uses global routing, SHALL NOT be publishable. The written data-location statement (SA-11-32) SHALL say so, for firms' client data and for support-ticket text (AW-2-25). The rule covers firms' data and Expat Ready's own AI calls (AIW-D74 as corrected). *If the generated per-category declaration returns with multi-region routing (SA-11-20, parked), AI processing is one of its categories under this rule.*
 
 **(4) Why.**
-- AIW-D52. The founder chose "Only in Canada": "AI processing of client data happens only in Canada (AG11-D15 wording, for firms' data and Expat Ready's own support tickets) … SA-11 §3.6's *with safeguards* wording gets a change note."
-- The scope is the founder's, word for word. Whether Expat Ready's other own AI calls that hold no client data also fall under the Canada rule was CN-FDL open point 3; the founder decided it on 11 Oct 2026 (AIW-D74, "Yes, Canada for all AI"): every AI call Expat Ready makes, including pack drafting, happens only in Canada under the one published provider record (SA-8-49, SA-8-51 as CN-SA-08 change 2 now words it).
-- AG-11 v1.12 AG11-D15 (L45): "Super Admin may record only a provider and region that process in Canada (SA-08 / SA-11)". §0.2 (L55) lists this as a pending knock-on.
-- IMP-7.
+- AIW-D147. The founder chose "Canada or US (Recommended)" on 14 Oct 2026, replacing AIW-D52's "only in Canada" (AIW-D52 correction); the reach to every AI call Expat Ready makes is AIW-D74's (AIW-D74 correction 2).
+- AG-11 v1.13 AG11-D15 (L46) still says "only in Canada"; CN-AG-11 change 19 changes it.
+- IMP-7 (an AI processing category, now with the Canada-or-US rule).
+- Legal points: cross-border transfer: Unconfirmed: no counsel (AIW-D94); client notice and Quebec's privacy impact assessment: the one bounded counsel check of AIW-D148 (`../counsel-pack.md` Q4, Q5), before real client files go to US processing.
 
 **(5) Knock-ons.**
-- SA-08 SA-8-49 (CN-SA-08 change 2).
+- SA-08 SA-8-66 (CN-SA-08 change 2).
 - AG-11 and AG-16 (CN-AG-11, CN-AG-16).
 - The provider test (AIW-D69).
 - Legal points: unconfirmed Lead guidance; no counsel (AIW-D94) (was AIW-D64, D68).
@@ -69,30 +74,31 @@ New requirement:
 
 ## 2. The data-location statement names the AI provider and where its processing runs
 
-**(1) What it changes.** §3.6 "How it works" (L266); SA-11-20 (L372); SA-11-22 (L374); §7 `ResidencyDeclaration` (L469).
+**(1) What it changes** *(re-pointed 15 Oct 2026 to SA-11 v2.10, snapshot 1535)*. §3.6 "How it works" (L319); SA-11-22 (L439); SA-11-32 (L458). *History: drafted against v2.7's generated declaration (SA-11-20 L372, SA-11-22 L374, §7 `ResidencyDeclaration` L469); v2.9 replaced SA-11-20 with the written statement (L437) and withdrew `ResidencyDeclaration` (L523).*
 
 **(2) Current words.**
 
-L372:
-> - **SA-11-20.** Super Admin can view a **data residency declaration**: per data category, the storage location (DB region, object-storage region, cache region, IdP region) and residency status (`Canadian` / `Non-Canadian` / `Non-Canadian with confirmed safeguard`), **generated from SA-8 rail configuration** (not hand-entered).
+L439:
+> - **SA-11-22.** *(changed v2.8; v2.9 wording)* The written data-location statement (SA-11-32) and a maintained **sub-processor list** SHALL be **exportable** for inclusion in a firm's data-processing terms.
 
-L374:
-> - **SA-11-22.** The residency declaration and a maintained **sub-processor list** SHALL be **exportable** for inclusion in a firm's DPA (per §3.6 RES2).
+L319 (extract): "Stripe and the mailbox, calendar and WhatsApp providers are the listed sub-processors".
 
-**(3) Proposed words.** SA-11-20 and SA-11-22 each gain:
-> *(changed — AIW-D52, IMP-7)* For the AI processing category, the declaration (or the written data-location statement of SA8-D9, whichever SA-11 holds) SHALL name the AI provider as a sub-processor and state the **processing region where each model call runs** (Canada), taken from the published AI provider record (SA-8-49), not only the storage location.
+**(3) Proposed words.** SA-11-32 gains:
+> *(changed — AIW-D52, IMP-7, AIW-D147)* The statement and its sub-processor list SHALL name the AI provider as a sub-processor and state the **processing region where each model call runs** (Canada or the United States), taken from the published AI provider record (SA-8-66), not only where data is stored. Publishing or withdrawing that record is an infrastructure or sub-processor change under SA-11-32, so it makes a new audited version of the statement.
 
-§7 `ResidencyDeclaration` `rail` gains `ai-processing`.
+§3.6 "How it works" (L319) adds the AI provider to the listed sub-processors. SA-11-22 needs no change: it exports the statement and list as they stand.
 
 **(4) Why.**
-- IMP-7: "SA-11 gets an "AI processing" category with the stricter rule … and the declaration shows the AI processing region". Adopted by AIW-D52.
-- SA-08 v2.4 SA8-X6 (L98) lists only "Stripe and the mailbox providers as listed sub-processors".
+- IMP-7: "SA-11 gets an "AI processing" category with the stricter rule … and the declaration shows the AI processing region". Adopted by AIW-D52; carried by the written statement while the declaration is parked (SA11-D6).
+- SA-08 v2.7 SA8-X6 (L142) lists only "Stripe and the mailbox providers as listed sub-processors".
 
-**(5) Knock-ons.** SA-08 SA8-X6 (the team's) and SA-8-49 (CN-SA-08 change 2).
+**(5) Knock-ons.** SA-08 SA8-X6 (the team's) and SA-8-66 (CN-SA-08 change 2).
 
 ---
 
 ## 3. Retention: a data category for AI processing records, with interim values only where AG-11-98 gives them
+
+> **Withdrawn 13 Oct 2026 (source reconciliation).** SA-11-13 (a platform-wide retention policy per data category with legal floors) is replaced in v2.10 by SA-11-33: the whole activity log is kept **7 years, one number**; no per-category policy, no legal floors; the firm keep-period is a reminder, not a lock (Q19). An "AI processing records" category therefore has nowhere to go. The question of how long AI run records are kept moves to repair stage R2b (retention owner, a founder question). **Settled 15 Oct 2026 by AIW-D166:** AI records (run log, approval items, run, delegation, question and check records) are part of the audit trail and keep the activity log's one number, 7 years (SA11-D3 (2)); this note asks nothing new of SA-11; the storage rule inside that number is the team's, under register TC-172 (asked of AG-11-98). Kept for the record.
 
 **(1) What it changes.** SA-11-13 (L362); §13 open question 1 (L622).
 
@@ -107,7 +113,7 @@ L622 (extract, first sentence):
 **(3) Proposed words.**
 
 The category list in SA-11-13 gains "**AI processing records**". A sentence is added at the end:
-> *(changed — IMP-4, AG-11-98)* **AI processing records** are: the rows of the one AI run log, on both planes; the approval items AI work produced and their decisions; the Practice expert's question records; and the AI teammates' run records and proposals. Until the floors and defaults are set (§13 Q1; unconfirmed Lead guidance; no counsel (AIW-D94)):
+> *(changed — IMP-4, AG-11-98)* **AI processing records** are: the rows of the one AI run log, on both planes; the approval items AI work produced and their decisions; the Practice expert's question records; and the assistants' run records and proposals. Until the floors and defaults are set (§13 Q1; unconfirmed Lead guidance; no counsel (AIW-D94)):
 > - AI run log rows on both planes and approval items follow AG-11-98's interim values (`AiRunLog` 1 year; `ApprovalItem` 2 years after its decision);
 > - question records, run records and proposals have **no interim value: Unknown, counsel question 8**. None is invented or borrowed from another record type.
 >
@@ -116,11 +122,11 @@ The category list in SA-11-13 gains "**AI processing records**". A sentence is a
 §13 Q1 adds "AI processing records (interim values for the AI run log and approval items: AG-11-98; others: Unknown)".
 
 **(4) Why.**
-- AG-11 v1.12 §0.2 (L55): "retention of the model-call audit log (interim 1 year) and of approval items (interim 2 years after decision) — AG-11-98 … Pending".
+- AG-11 v1.13 §0.2 (L56): "retention of the model-call audit log (interim 1 year) and of approval items (interim 2 years after decision) — AG-11-98 … Pending".
 - The Step 3 shared rules on retention (`00-step3-plan.md`):
   - "Interim retention": "AI log rows on both planes follow AG-11-98's interim values until counsel answers; no new value is invented".
   - "No retention value is invented": "a record type with no interim value in AG-11-98 or CN-SA-11 change 3 (run records, proposals, question records) shows *Unknown, counsel question 8*; no value is borrowed from another record type".
-- IMP-4; `support-and-account-assistant.md` §9 G-3; AIW-D70.
+- IMP-4; AW-2-21; AIW-D70.
 
 **(5) Knock-ons.**
 - AG-11-98 and AG-16-39 (CN-AG-11, CN-AG-16).
@@ -144,10 +150,10 @@ L400:
 
 SA-11-2 gains a second paragraph:
 > *(changed — AIW-D33, AIW-D54)* Each entry SHALL also carry the audit fields of **AG-13-68** (`mode`, `delegationId`, `startedBy`, `personaRunId`), under that requirement's rule, which applies to this platform audit chain (CN-AG-13 change 2). On this chain:
-> - the `actorType` of an entry an AI teammate made for a named person is that person's own (`firm_staff` or `super_admin`), never `system`; no actor type is added;
-> - an entry written by a platform-plane AI teammate run SHALL carry as `tenantId` the one firm that run serves, or null (the empty firm) when it serves no firm (CN-AG-11 change 11). A run that serves one firm SHALL NOT read another firm's data; any operation spanning firms remains subject to SA-11-12.
+> - the `actorType` of an entry an assistant made for a named person is that person's own (`firm_staff` or `super_admin`), never `system`; no actor type is added;
+> - an entry written by a platform-plane assistant run SHALL carry as `tenantId` the one firm that run serves, or null (the empty firm) when it serves no firm (CN-AG-11 change 11). A run that serves one firm SHALL NOT read another firm's data; any operation spanning firms remains subject to SA-11-12.
 
-BR-3 gains: "An entry an AI teammate made for a named person names that person as actor, never `system` (SA-11-2; AG-13-68)."
+BR-3 gains: "An entry an assistant made for a named person names that person as actor, never `system` (SA-11-2; AG-13-68)."
 
 §7 `AuditLog` adds "the fields of AG-13-68 (CN-AG-13 change 2)".
 
@@ -155,10 +161,10 @@ BR-3 gains: "An entry an AI teammate made for a named person names that person a
 - **One home.** The Lead's call of 11 Oct, `00-step3-plan.md`, "Audit fields, one home": "the rule for `mode`, `delegationId`, `startedBy` on audit entries lives in CN-AG-13 change 2; CN-SA-11 change 4 applies it to the platform audit chain by pointer, with the platform's empty firm (as the one AI log shape)". AG-13-68 itself applies the same rule to Expat Ready's platform audit chain and points here (CN-AG-13 change 2). This change is that pointer; it restates none of the rule.
 - **FD-16** (Founder Decisions Log v1.5, L52): "AI is NOT a first-class actor — no AI principal in the identity spine, no autonomous permissions, no new plane." SA-11's own `actorType` list is the only SA-11-specific part, so it is stated here.
 - **AIW-D33** (the delegation record is consistent with FD-16) and **AIW-D54 item 8** (platform runs are stamped with one firm, with no cross-firm sweep in version 1).
-- The `startedBy` values are AG-11-113's (CN-AG-11 change 7; `00-step3-plan.md`, "Started by, one list").
+- The `startedBy` values are AG-11-114's (CN-AG-11 change 7; `00-step3-plan.md`, "Started by, one list").
 
 **(5) Knock-ons.**
-- AG-13-68 (CN-AG-13 change 2), the one home of the rule; AG-11-113 (CN-AG-11 change 7), the one home of the `startedBy` values; CN-AG-11 change 11, the platform's empty firm.
+- AG-13-68 (CN-AG-13 change 2), the one home of the rule; AG-11-114 (CN-AG-11 change 7), the one home of the `startedBy` values; CN-AG-11 change 11, the platform's empty firm.
 - Whether SA-11's and AG-13's audit logs are one table or two stays for the Lead and the team (CN-AG-13 change 2 knock-ons).
 - AW-01 and AW-02 cite AG-13-68.
 - SA-07 Activity (CN-SA-07 change 3).
@@ -209,75 +215,69 @@ SA-11-10, reinstated:
 - Doc 1 v1.3 §7.2 (L2055): "masked by default in every UI/API surface, and revealable only with an explicit permission whose every use is audited". L2064: "The reveal is recorded *before* the cleartext is returned".
 - README §0 rule 11; AIW-D58 ("Keep FD-15").
 
-**(5) Knock-ons.** AG-07 (CN-AG-07); SA-06 (CN-SA-06 change 2); the founder sets B-1 (unconfirmed Lead guidance; no counsel (AIW-D94)). AI teammates receive a Restricted field's status only (IMP-21; AW-01).
+**(5) Knock-ons.** AG-07 (CN-AG-07); SA-06 (CN-SA-06 change 2); the founder sets B-1 (unconfirmed Lead guidance; no counsel (AIW-D94)). assistants receive a Restricted field's status only (IMP-21; AW-01).
 
 ---
 
-## 6. Data-subject requests: FD-20's automated-decision review type, portability (counsel question 16), and the firm-side screen
+## 6. Clients' data requests: FD-20's automated-decision review and portability, as AG-13 client-request tasks
 
-**(1) What it changes.** SA-11-27 (L385); §3.8 "How it works" (L299); §7 `DsrRequest` (L472); §13, a new open question after item 10 (L631).
+> **Re-worded 15 Oct 2026 (scrum 4 close-out; review batch 3 finding).** SA-11 v2.10 makes a client's personal-data request the **firm's** (SA11-D4, L41): SA-11's register (SA-11-27, L450) tracks only requests made to ExpatReady itself, and the firm handles its clients' requests as **AG-13 tasks** with a category (SA-05 v3.4 SA5-D58, L78; no new firm-side request list, SA5-X37 (a), L269). The 11 Oct proposal (two new types on SA-11's DSR register, `DsrRequest.type`, and open question 11 on a firm screen) therefore has no home in SA-11; it moves to the AG-13 task. Open question 11 is answered by SA5-D58 (the client screen, AG-7-84, and My Tasks) and is withdrawn. *History: drafted against v2.7 SA-11-27 (L385), §3.8 (L299) and §7 `DsrRequest` (L472).*
+
+**(1) What it changes.** No SA-11 text. The ask goes to the team as a knock-on on AG-13's task categories (AG-13-1; AG-13 v1.12 §3.1) and SA5-D58, through the register (TC-85).
 
 **(2) Current words.**
 
-L385:
-> - **SA-11-27.** Super Admin can view a **DSR register** of access/correction/deletion requests: requester, firm, type, date received, response deadline, status (`PENDING/IN_PROGRESS/COMPLETED/OVERDUE/HELD`), and fulfilment actions; the register SHALL highlight requests approaching/past their statutory deadline.
+SA-05 v3.4 L78 (SA5-D58, extract):
+> It is an **AG-13 task** on the client or lead with a category: Client request · Complaint · Regulator enquiry · Other (AG-13-1; AG-13 §3.1) … **Copy of my file** and **Delete my data** are the same task plus the built engine action (`dsr.controller.ts`, `dsr-export.job.ts`); default due date 30 days.
 
-L472:
-> - **DsrRequest** *(NEW):* `dsrId`, `firmId` (tenant), `requesterRef`, `type` (access/correction/deletion), `receivedAt`, `deadline`, `status` (pending/in-progress/completed/overdue/held), `holdBlocked` (bool), `disclosureNote` (what deleted / what retained & why).
-
-**(3) Proposed words.**
-
-SA-11-27: "access/correction/deletion requests" becomes "access/correction/deletion/**review of an automated decision**/**portability** requests". §3.8's request-type list and §7 `DsrRequest.type` gain `review_of_automated_decision` and `portability`.
-
-SA-11-27 gains two sentences:
-> *(changed — FD-20)* A **review of an automated decision** request SHALL be routed to a named person at the firm, who records the outcome on the request.
+**(3) Proposed words (for SA5-D58 and AG-13-1, the team's to place).**
+> *(changed — FD-20)* A client's request for **review of an automated decision** SHALL be a Client request task of its own kind, assigned to a named person at the firm, who records the outcome on the task before it can be closed.
 >
-> *(changed — portability; unconfirmed Lead guidance; no counsel (AIW-D94), counsel question 16)* Whether and how a **portability** request is served is decided by the founder on that guidance before it is offered to clients.
-
-New open question:
-> 11. **The firm-side DSR screen (product owners).** *(new)* §3.8 says "the firm executes within their tenant", and SA-06 seeds `agent/dsr:manage` and `agent/governance:read` on Owner and Admin, but no firm screen is specified. Name the firm screen that lists a firm's requests, who records a request raised outside the portal, and who sets HELD and COMPLETED.
+> *(changed — portability; unconfirmed Lead guidance; no counsel (AIW-D94), counsel question 16)* Whether a **portability** request is served by the built "Copy of my file" export, or needs a machine-readable format of its own, is decided by the founder on that guidance before it is offered to clients.
 
 **(4) Why.**
-- **FD-20** (FDL v1.5, L56) requires "a **`REVIEW_OF_AUTOMATED_DECISION`** request type in the DSR machinery routing to a named human reviewer with a recorded outcome". FD-20 is an **architect call** taken under the founder's standing technical delegation and recorded in the Founder Decisions Log for ratification (FDL L46: "FD-20 and FD-21 are architect calls taken under the standing technical delegation and are recorded here for ratification only"); no AIW-D row has ratified it. No module file carries it, and rule 11 covers every FD-n row, so it applies over the team file. FD-20 also says: "Counsel confirms wording, not mechanism."
-- **Portability against rule 11's default.** README §0 rule 11 makes the newer module file (SA-11, 7 Oct) win over Doc 4 (July), which lists PORTABILITY (CP-8-15, L2716). This note sets that default aside for two reasons:
-  - the proposals row of 10 Oct (Owner's AI) asks to "add PORTABILITY to SA-11, which owns the register and clock (CP-8-16)";
-  - the team's current portal module, CP-01, is not on Drive (`08-client-portal/NOT-FOUND.md`).
-- **Legal points (unconfirmed Lead guidance; no counsel (AIW-D94)).** The counsel pack's question 16 covers portability and the FD-20 review. The log's own B-4 lists "whether portal DSR erasure/portability is fully self-serve" as a counsel matter (L236).
-- **Firm keys:** SA-06 v3.3 §10b (L1057–L1058). The firm screen gap is `firm-assistant.md` §9 G-11 and G-12.
+- **FD-20** (FDL v1.5, L56) requires "a **`REVIEW_OF_AUTOMATED_DECISION`** request type in the DSR machinery routing to a named human reviewer with a recorded outcome". FD-20 is an **architect call** taken under the founder's standing technical delegation and recorded in the Founder Decisions Log for ratification (FDL L46); no AIW-D row has ratified it. Rule 11 covers every FD-n row, so it applies over the team file; this re-wording changes only where the request type lives (the firm's AG-13 task, where the team now keeps clients' requests), not what FD-20 requires. FD-20 also says: "Counsel confirms wording, not mechanism."
+- **Portability.** Doc 4 lists PORTABILITY (CP-8-15, L2716); the proposals row of 10 Oct (Owner's AI) asked for it. The built "Copy of my file" export (SA5-D58) is the nearest existing mechanism.
+- **Legal points (unconfirmed Lead guidance; no counsel (AIW-D94)).** Counsel pack question 16 covers portability and the FD-20 review; the log's B-4 lists "whether portal DSR erasure/portability is fully self-serve" as a counsel matter (L236).
+- **Firm keys:** SA-06 v3.6 §10b L1160 `agent/dsr:manage` ("Manage the firm's list of clients' personal-data requests", Owner and Admin); bundle 26 (L1541). The firm screen gap (AW-1-107) is closed by SA5-D58.
 
 **(5) Knock-ons.**
+- AG-13 (AG-13-1 task categories) and SA-05 (SA5-D58), the team's; register TC-85.
 - Counsel question 16.
-- CP-01, once on Drive.
-- AG-16 for the firm screen (CN-AG-16, if the Agent-plane note takes it).
 - AG-03 for FD-20's assessment marker (CN-AG-03, if the Agent-plane note takes it).
+- AW-01 cites the client-request task (AW-1-19, AW-1-142).
 
 ---
 
-## 7. SA-11 emits an event when a data-subject request is opened and when consent is withdrawn
+## 7. An event when a client-request task is opened (AG-13) and when consent is withdrawn (SA-11)
 
-**(1) What it changes.** §3.8 "Data flow" (L313); SA-11-27 (L385); SA-11-29 (L387).
+> **Re-worded 15 Oct 2026 (scrum 4 close-out; review batch 3 finding).** The "request opened" event no longer belongs to SA-11: a client's request is the firm's AG-13 task (SA11-D4, L41; SA5-D58), and SA-11-27 (L450) tracks only requests made to ExpatReady itself, which are not firm events. The consent-withdrawn event stays on SA-11-29. *History: drafted against v2.7 §3.8 "Data flow" (L313), SA-11-27 (L385) and SA-11-29 (L387).*
+
+**(1) What it changes.** §3.8 "Data flow" (L358); SA-11-29 (L452). The request event is proposed on the AG-13 task through CN-AG-11 change 4 (f).
 
 **(2) Current words.**
 
-L387:
-> - **SA-11-29.** **Consent records** (express marketing consent, data-processing consent, withdrawals) SHALL be recorded with timestamp, scope, **locale**, and capturing **form/version**; withdrawals SHALL be first-class and halt downstream processing; firm modules SHALL read **live** consent state.
+L452 (SA-11-29, extract):
+> Withdrawals and unsubscribe / STOP are first-class and always block sending on every route (…); firm modules read the **live** state (BR-13).
+
+L358:
+> **Data flow.** Request received → register entry + audit entry. Consent captured or withdrawn → consent record + audit entry; firm modules read the current state at the moment of sending.
 
 **(3) Proposed words.**
 
-SA-11-27 gains: "*(changed — events)* Opening a request SHALL emit a **request-opened** event (code name for the team), carrying the firm, the request id and the type, never the subject's personal data."
+SA-11-29 gains: "*(changed — events)* A withdrawal SHALL emit a **consent-withdrawn** event (code name for the team), carrying the firm, the consent id and its purpose, never the subject's personal data; it is delivered once per change to firm modules, including the firm's automation engine."
 
-SA-11-29 gains: "*(changed — events)* A withdrawal SHALL emit a **consent-withdrawn** event (code name for the team), carrying the firm, the consent id and its scope, never the subject's personal data."
+§3.8 "Data flow" gains, after "consent record + audit entry": "→ consent-withdrawn event".
 
-Both events are delivered once per change to firm modules, including the firm's automation engine.
+For the request: when an AG-13 task with the category Client request is created (Copy of my file, Delete my data and FD-20's review included), a **client-request-opened** event (code name for the team) carries the firm, the task id and the request kind, never the subject's personal data. Its home is AG-13, proposed in CN-AG-11 change 4 (f); nothing is added to SA-11-27.
 
 **(4) Why.**
-- Proposals row of 10 Oct (Owner's AI). Its trigger events include "a data-subject request being opened" and "a consent record being withdrawn".
-- `firm-assistant.md` §9 G-17.
-- The Agent-plane note CN-AG-11 change 4 adds both events to the engine's trigger list as items (e) and (f) of AG-11-110, and names SA-11 as their emitter under SA-11-29 and SA-11-27, pointing to this change. This change is that SA-11 half.
-- "One home per rule": an event lives in the change note of the module that owns the record (`00-step3-plan.md`).
+- Proposals row of 10 Oct (Owner's AI): its trigger events include "a data-subject request being opened" and "a consent record being withdrawn".
+- AW-1-4; AW-1-106; AW-1-107.
+- "One home per rule": an event lives in the change note of the module that owns the record (`00-step3-plan.md`). The consent record is SA-11's; the client's request is now AG-13's task (SA5-D58).
 
 **(5) Knock-ons.**
-- CN-AG-11 change 4 (AG-11-110, the engine's trigger list).
+- CN-AG-11 change 4 (AG-11-111 (e) and (f), the engine's trigger list; (f) re-pointed to the AG-13 task the same day) and change 5 (AG-11-112's on-demand run against a chosen client-request task).
 - AG-10 BR-4 reads the same live consent state.
 
 ---
@@ -288,7 +288,7 @@ Both events are delivered once per change to firm modules, including the firm's 
 
 **(2) Current words.** The last row is v2.7 of 2026-10-07.
 
-**(3) Proposed words.** A version row: "| 2.8 | *(date placed)* | Workstream 2 change note CN-SA-11 applied: AI processing only in Canada (SA-11-32); AI provider named in the data-location statement; AI processing records retention category (interim values per AG-11-98, others Unknown); the audit fields of AG-13-68 on the platform audit chain, with the platform's empty firm; Restricted fields under FD-15; FD-20 review request type and portability (unconfirmed Lead guidance; no counsel (AIW-D94)); request and consent events; open question 11. | AIW-D33, AIW-D52, AIW-D54, AIW-D58; FD-15, FD-20 |".
+**(3) Proposed words.** A version row (renumbered 13 Oct 2026; 2.8 to 2.10 are the team's; change 3 withdrawn): "| 2.11 | *(date placed)* | Workstream 2 change note CN-SA-11 applied: AI processing in Canada or the US only (SA-11-37, AIW-D147); AI provider named in the written data-location statement (SA-11-32); AI processing records retention category (interim values per AG-11-98, others Unknown); the audit fields of AG-13-68 on the platform audit chain, with the platform's empty firm; Restricted fields under FD-15; the consent-withdrawn event (FD-20's review, portability and the client-request event go to AG-13 and SA-05: changes 6 and 7). | AIW-D33, AIW-D52, AIW-D54, AIW-D58; FD-15, FD-20 |".
 
 **(4) Why.** Review S3a m-20(c).
 

@@ -1,0 +1,455 @@
+// Product Studio application service: programs and compositions, the shared library (versioned edits), the
+// composition's own configuration, previews through the common renderer, validation, review and release.
+import { HttpStatus, Inject, Injectable } from "@nestjs/common";
+import { canRelease } from "../../../contracts/rules.ts";
+import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
+import { buildSnapshot, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
+import { slug } from "../../engine/import.ts";
+import { checkCondition, diff, validate } from "../../engine/validate.ts";
+import { ACTORS, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
+
+const KEY = /^(person|relationship|case|organisation|representative)\.[a-z][a-z0-9_]{1,60}$/;
+const VALUE_TYPES = Object.keys(VALUE_TYPE_TO_DATA_TYPE);
+const COLLECTED = ["client_questionnaire", "verified_document", "staff_working_view", "profile_record", "existing_record"];
+const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative"];
+
+@Injectable()
+export class Studio {
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
+
+  // ------------------------------------------------------------------ session and programs
+  async session(actor: Actor) {
+    const workspaceId = await this.ws.id();
+    const [programs, fields, releases, jobs] = await Promise.all([this.db.programDef.count({ where: { workspaceId } }), this.db.canonicalField.count({ where: { workspaceId } }), this.db.configRelease.count({ where: { workspaceId } }), this.db.draftingJob.count({ where: { workspaceId } })]);
+    return { actor, actors: ACTORS, workspace: { key: "demo", label: "Demo workspace (disposable)", id: workspaceId }, counts: { programs, fields, releases, jobs } };
+  }
+
+  async tree() {
+    const workspaceId = await this.ws.id();
+    const nodes = await this.db.programDef.findMany({ where: { workspaceId }, orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }], include: { compositions: { orderBy: { createdAt: "asc" }, include: { releases: { orderBy: { version: "desc" }, take: 1 }, attachments: { select: { id: true } }, forms: { select: { id: true, status: true } } } } } });
+    const subs = await this.db.reviewSubmission.findMany({ where: { workspaceId, status: "SUBMITTED" } });
+    const pathways = nodes.filter((n) => n.nodeKind === "PATHWAY");
+    const card = (p: (typeof nodes)[number]) => ({ key: p.programNodeKey, label: p.label, description: p.description, kind: p.nodeKind, source_basis: p.sourceBasis,
+      compositions: p.compositions.map((c) => ({ id: c.id, key: c.compositionKey, label: c.label, description: c.description, participants: c.participants, source_basis: c.sourceBasis, basis_note: c.basisNote,
+        release: c.releases[0] ? { version: c.releases[0].version, sha256: c.releases[0].sha256, at: c.releases[0].releasedAt } : null, attachments: c.attachments.length, forms: c.forms.filter((f) => f.status !== "RETIRED").length,
+        in_review: subs.some((s) => s.compositionId === c.id) })) });
+    return { pathways: pathways.map((pw) => ({ ...card(pw), programs: nodes.filter((n) => n.parentNodeKey === pw.programNodeKey).map(card) })), orphans: nodes.filter((n) => n.nodeKind !== "PATHWAY" && !nodes.some((x) => x.programNodeKey === n.parentNodeKey)).map(card) };
+  }
+
+  async createNode(actor: Actor, b: { kind: "PATHWAY" | "PROGRAM" | "STREAM" | "CATEGORY"; label: string; parentKey?: string; description?: string; sourceBasis?: "SOURCE_BACKED" | "ILLUSTRATIVE"; key?: string }) {
+    need(actor, "author");
+    const workspaceId = await this.ws.id();
+    if (!b.label?.trim()) fail("Give the pathway or program a name.");
+    if (!["PATHWAY", "PROGRAM", "STREAM", "CATEGORY"].includes(b.kind)) fail("Unknown level.");
+    if (b.kind !== "PATHWAY") { if (!b.parentKey) fail("Choose the pathway it belongs to."); if (!(await this.db.programDef.findFirst({ where: { workspaceId, programNodeKey: b.parentKey } }))) fail("That pathway does not exist."); }
+    const key = b.key ?? `${b.parentKey ? `${b.parentKey}.` : ""}${slug(b.label)}`;
+    if (await this.db.programDef.findFirst({ where: { workspaceId, programNodeKey: key } })) fail(`"${b.label}" already exists here.`, HttpStatus.CONFLICT);
+    const n = await this.db.programDef.create({ data: { workspaceId, programNodeKey: key, parentNodeKey: b.kind === "PATHWAY" ? null : b.parentKey, nodeKind: b.kind, label: b.label.trim(), description: b.description ?? null, sourceBasis: b.sourceBasis ?? "SOURCE_BACKED", createdBy: actor.id, displayOrder: await this.db.programDef.count({ where: { workspaceId } }) } });
+    await this.audit.log(workspaceId, actor.id, "created", b.kind.toLowerCase(), key, `${actor.name} created ${b.kind.toLowerCase()} "${n.label}"`);
+    return n;
+  }
+
+  async createComposition(actor: Actor, b: { programKey: string; label: string; participants: any[]; description?: string; sourceBasis?: "SOURCE_BACKED" | "ILLUSTRATIVE"; basisNote?: string; key?: string }) {
+    need(actor, "author");
+    const workspaceId = await this.ws.id();
+    const program = await this.db.programDef.findFirst({ where: { workspaceId, programNodeKey: b.programKey } });
+    if (!program) fail("Choose the program this composition belongs to.");
+    if (!b.label?.trim()) fail("Give the composition a name.");
+    const participants = this.checkParticipants(b.participants);
+    const key = b.key ?? `${program!.programNodeKey}.${slug(b.label)}`;
+    if (await this.db.composition.findFirst({ where: { workspaceId, compositionKey: key } })) fail(`"${b.label}" already exists for this program.`, HttpStatus.CONFLICT);
+    const c = await this.db.composition.create({ data: { workspaceId, programDefId: program!.id, compositionKey: key, label: b.label.trim(), description: b.description ?? null, participants, sourceBasis: b.sourceBasis ?? program!.sourceBasis, basisNote: b.basisNote ?? null, createdBy: actor.id } });
+    await this.audit.log(workspaceId, actor.id, "created", "composition", key, `${actor.name} created composition "${c.label}" for ${program!.label}`, { participants });
+    return c;
+  }
+
+  checkParticipants(list: any[]) {
+    if (!Array.isArray(list) || !list.length) fail("Add at least the principal applicant.");
+    const roles = new Set(["principal", "spouse_or_partner", "child", "representative", "parent"]);
+    if (!list.some((p) => p.role === "principal")) fail("A composition needs a principal applicant.");
+    return list.map((p) => {
+      if (!roles.has(p.role)) fail(`Unknown participant role ${p.role}.`);
+      const min = Number(p.min ?? 0), max = Number(p.max ?? 1);
+      if (min < 0 || max < min || max > 9) fail(`${p.label ?? p.role}: the number of people must be between 0 and 9, minimum no more than maximum.`);
+      return { role: p.role, label: String(p.label ?? p.role).slice(0, 60), min, max, preview: Math.max(min, Math.min(max, Number(p.preview ?? (min || 1)))), applies: p.role === "representative" ? false : p.applies !== false };
+    });
+  }
+
+  async updateComposition(actor: Actor, id: string, b: { label?: string; description?: string; participants?: any[] }) {
+    need(actor, "author");
+    const c = await this.db.composition.findUniqueOrThrow({ where: { id } });
+    const data: any = {};
+    if (b.label !== undefined) data.label = b.label.trim() || fail("The name cannot be empty.");
+    if (b.description !== undefined) data.description = b.description;
+    if (b.participants) data.participants = this.checkParticipants(b.participants);
+    const u = await this.db.composition.update({ where: { id }, data });
+    await this.audit.log(c.workspaceId, actor.id, "updated", "composition", c.compositionKey, `${actor.name} updated composition "${u.label}"`, data);
+    return u;
+  }
+
+  // ------------------------------------------------------------------ composition overview
+  async composition(id: string) {
+    const c = await this.db.composition.findUniqueOrThrow({ where: { id }, include: { program: true, attachments: { orderBy: { createdAt: "asc" } }, releases: { orderBy: { version: "desc" } }, jobs: { orderBy: { startedAt: "desc" }, take: 20 } } });
+    const parent = c.program.parentNodeKey ? await this.db.programDef.findFirst({ where: { workspaceId: c.workspaceId, programNodeKey: c.program.parentNodeKey } }) : null;
+    const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
+    const last = c.releases[0];
+    const changes = diff((last?.snapshot as any) ?? null, snapshot);
+    const problems = await this.problems(c.workspaceId, snapshot);
+    const sub = await this.db.reviewSubmission.findFirst({ where: { compositionId: id }, orderBy: { submittedAt: "desc" } });
+    return {
+      composition: { id: c.id, key: c.compositionKey, label: c.label, description: c.description, participants: c.participants, source_basis: c.sourceBasis, basis_note: c.basisNote, created_by: c.createdBy },
+      program: { key: c.program.programNodeKey, label: c.program.label, kind: c.program.nodeKind, source_basis: c.program.sourceBasis }, pathway: parent ? { key: parent.programNodeKey, label: parent.label } : null,
+      attachments: c.attachments, jobs: c.jobs.map((j) => ({ ...j, detail: undefined })),
+      releases: c.releases.map((r) => ({ id: r.id, version: r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: r.approverId, summary: r.summary, basis: r.basis })),
+      draft: { sha256, matches_release: !!last && last.sha256 === sha256, changes, problems, counts: this.counts(snapshot) },
+      submission: sub ? { ...sub, stale: sub.status === "SUBMITTED" && sub.draftSha256 !== sha256 } : null,
+    };
+  }
+
+  counts(s: Snapshot) {
+    return { fields: s.canonical_fields.length, sections: s.sections.length, placements: s.placements.length, forms: s.forms.length, map_boxes: s.field_maps.reduce((a, m) => a + m.entries.length, 0), document_requirements: s.document_requirements.length, rules: s.rules.length, checks: s.checks.length };
+  }
+
+  async problems(workspaceId: string, s: Snapshot) {
+    const lib = (await this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
+    return validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })));
+  }
+
+  async config(id: string, mode: Mode) {
+    const c = await this.db.composition.findUniqueOrThrow({ where: { id } });
+    if (mode === "published") {
+      const r = await this.db.configRelease.findFirst({ where: { compositionId: id }, orderBy: { version: "desc" } });
+      if (r) return { mode, release: { version: r.version, sha256: r.sha256 }, snapshot: r.snapshot };
+    }
+    const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, mode);
+    return { mode, sha256, snapshot };
+  }
+
+  // ------------------------------------------------------------------ preview through the common renderer
+  async preview(id: string, q: { mode?: Mode | "release"; profile?: string; answers?: string; people?: string }) {
+    const c = await this.db.composition.findUniqueOrThrow({ where: { id } });
+    let snapshot: Snapshot, label: string, sha: string;
+    if (q.mode === "release" || q.mode === "published") {
+      const r = await this.db.configRelease.findFirst({ where: { compositionId: id }, orderBy: { version: "desc" } });
+      if (!r) fail("This composition has no released version yet; preview the draft instead.", HttpStatus.NOT_FOUND);
+      snapshot = r!.snapshot as any; sha = r!.sha256; label = `Released version ${r!.version}`;
+    } else { const b = await buildSnapshot(this.db, c.workspaceId, id, "draft"); snapshot = b.snapshot; sha = b.sha256; label = "Draft preview (not released)"; }
+    const participants = (c.participants as any[]).map((p) => ({ ...p }));
+    if (q.people) { const want = JSON.parse(q.people) as Record<string, number>; for (const p of participants) if (want[p.role] !== undefined) p.preview = Math.max(p.min, Math.min(p.max, Number(want[p.role]))); }
+    const people = peopleFor(participants);
+    const known: Known = new Map();
+    if (q.profile && q.profile !== "none") {
+      const prof = await this.db.sampleProfile.findFirst({ where: { workspaceId: c.workspaceId, profileKey: q.profile }, include: { facts: true } });
+      if (prof) for (const f of prof.facts) if (f.personId === "case" || f.personId.split("/")[0] === "representative" || people.some((p) => p.id === f.personId.split("/")[0])) known.set(kkey(f.personId, f.canonicalFieldKey, f.row), { value: f.value, status: "confirmed", source: f.source });
+    }
+    if (q.answers) for (const [k, v] of Object.entries<any>(JSON.parse(q.answers))) { if (v === "" || v === null) known.delete(k); else known.set(k, { value: v, status: "answered", source: "answered on this preview screen (not saved, not confirmed)" }); }
+    const out = render(snapshot, people, known);
+    return { label, mode: q.mode === "release" || q.mode === "published" ? "release" : "draft", sha256: sha, composition: snapshot.composition, participants, ...out };
+  }
+
+  // ------------------------------------------------------------------ the shared library
+  async fields(q: { q?: string }) {
+    const workspaceId = await this.ws.id();
+    const rows = await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: [{ canonicalFieldKey: "asc" }, { version: "desc" }] });
+    const usage = await this.db.formFieldMap.groupBy({ by: ["canonicalFieldKey", "formEditionId"], where: { workspaceId, outcome: "mapped", status: { in: ["PUBLISHED", "DRAFT"] } }, _count: { _all: true } });
+    const editions = new Map((await this.db.formEdition.findMany({ where: { workspaceId }, include: { form: true } })).map((e) => [e.id, e.form.formKey]));
+    const placements = new Map((await this.db.sectionQuestion.findMany({ where: { workspaceId }, orderBy: { version: "desc" } })).map((p) => [p.canonicalFieldKey, p]));
+    const latest = new Map<string, (typeof rows)[number]>();
+    for (const r of rows) if (!latest.has(r.canonicalFieldKey)) latest.set(r.canonicalFieldKey, r);
+    const needle = (q.q ?? "").toLowerCase();
+    return [...latest.values()].filter((f) => !needle || f.canonicalFieldKey.includes(needle) || f.meaning.toLowerCase().includes(needle)).map((f) => {
+      const u = usage.filter((x) => x.canonicalFieldKey === f.canonicalFieldKey);
+      const forms = [...new Set(u.map((x) => editions.get(x.formEditionId)))].filter(Boolean);
+      const p = placements.get(f.canonicalFieldKey);
+      return { key: f.canonicalFieldKey, meaning: f.meaning, value_type: f.valueType, scope: f.scope, version: f.version, status: f.status, origin: f.origin, has_draft: f.status === "DRAFT", boxes: u.reduce((a, x) => a + x._count._all, 0), forms, placement: p ? { section: p.sectionKey, collected_from: p.collectedFrom } : null };
+    });
+  }
+
+  async field(key: string) {
+    const workspaceId = await this.ws.id();
+    const versions = await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" } });
+    if (!versions.length) fail(`No field ${key}.`, HttpStatus.NOT_FOUND);
+    const boxes = await this.db.formFieldMap.findMany({ where: { workspaceId, canonicalFieldKey: key, status: { in: ["PUBLISHED", "DRAFT"] } }, include: { edition: { include: { form: true } } }, orderBy: [{ formEditionId: "asc" }, { dataPath: "asc" }] });
+    const placements = await this.db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" } });
+    const sections = await this.db.logicalSection.findMany({ where: { workspaceId } });
+    const needle = `"field":"${key}"`;
+    const has = (j: unknown) => !!j && JSON.stringify(j).replace(/\s/g, "").includes(needle);
+    const [forms, reqs, rules, checks, comps] = await Promise.all([this.db.compositionForm.findMany({ where: { workspaceId }, include: { form: true } }), this.db.documentRequirement.findMany({ where: { workspaceId } }), this.db.predicate.findMany({ where: { workspaceId } }), this.db.check.findMany({ where: { workspaceId } }), this.db.composition.findMany({ where: { workspaceId } })]);
+    const compLabel = new Map(comps.map((c) => [c.id, c.label]));
+    const types = await this.db.documentType.findMany({ where: { workspaceId } });
+    return {
+      versions: versions.map((v) => ({ ...v })), current: versions[0],
+      used_by: Object.values(boxes.reduce((a: any, b) => { const k = b.edition.editionLabel; a[k] ??= { form: b.edition.form.formKey, edition: k, boxes: [] as any[] }; a[k].boxes.push({ data_path: b.dataPath, caption: b.caption, person: b.person, row: b.row, transform: b.transform, status: b.status, origin: b.origin }); return a; }, {})),
+      placements: placements.map((p) => ({ ...p, section_title: sections.find((s) => s.sectionKey === p.sectionKey)?.title ?? p.sectionKey })),
+      conditions: [
+        ...forms.filter((f) => has(f.predicateJson)).map((f) => ({ kind: "Form", item: f.form.formKey, composition: compLabel.get(f.compositionId), plain: f.conditionPlain })),
+        ...reqs.filter((r) => has(r.predicateJson)).map((r) => ({ kind: "Document requirement", item: types.find((t) => t.documentTypeKey === r.documentTypeKey)?.name ?? r.documentTypeKey, composition: compLabel.get(r.compositionId), plain: r.conditionPlain })),
+        ...rules.filter((r) => has(r.predicateJson)).map((r) => ({ kind: "Rule", item: r.thenPlain, composition: compLabel.get(r.compositionId), plain: r.whenPlain })),
+        ...checks.filter((r) => has(r.predicateJson)).map((r) => ({ kind: "Check", item: r.checkKey, composition: compLabel.get(r.compositionId), plain: r.message })),
+      ],
+      supplied_by_documents: types.filter((t) => t.suppliesFacts.includes(key)).map((t) => t.name),
+    };
+  }
+
+  async createField(actor: Actor, b: { key: string; meaning: string; valueType: string }) {
+    const workspaceId = await this.ws.id();
+    if (!KEY.test(b.key ?? "")) fail("A field key is area.name in lower case, for example person.previous_visa_refusal_country (areas: person, relationship, case, organisation, representative).");
+    if (!b.meaning?.trim() || b.meaning.trim().length < 8) fail("Describe the meaning in a short sentence (it is what reviewers and the AI compare).");
+    if (!VALUE_TYPES.includes(b.valueType)) fail(`Value type must be one of ${VALUE_TYPES.join(", ")}.`);
+    if (await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: b.key } })) fail(`${b.key} already exists: edit it instead, so every form keeps one definition.`, HttpStatus.CONFLICT);
+    const f = await this.db.canonicalField.create({ data: { workspaceId, canonicalFieldKey: b.key, version: 1, status: "DRAFT", meaning: b.meaning.trim(), valueType: b.valueType, dataType: VALUE_TYPE_TO_DATA_TYPE[b.valueType], scope: b.key.startsWith("case.") ? "CASE_LEVEL" : "CLIENT_LEVEL", subjectKind: subjectKindOf(b.key), origin: "HUMAN", updatedBy: actor.id } });
+    await this.audit.log(workspaceId, actor.id, "created", "field", b.key, `${actor.name} added field ${b.key} (draft)`);
+    return f;
+  }
+
+  async updateField(actor: Actor, key: string, b: { meaning?: string; valueType?: string; note?: string; retire?: boolean }) {
+    const workspaceId = await this.ws.id();
+    const rows = await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } });
+    const changes: any = {};
+    if (b.meaning !== undefined) { if (b.meaning.trim().length < 8) fail("Describe the meaning in a short sentence."); changes.meaning = b.meaning.trim(); }
+    if (b.valueType !== undefined) { if (!VALUE_TYPES.includes(b.valueType)) fail("Unknown value type."); changes.valueType = b.valueType; changes.dataType = VALUE_TYPE_TO_DATA_TYPE[b.valueType]; }
+    if (b.note !== undefined) changes.note = b.note;
+    if (b.retire) changes.status = "RETIRED";
+    const { row, created } = await revise(this.db.canonicalField, rows, changes, actor.id, (r) => ({ ...strip(r), origin: "HUMAN" }));
+    if (b.retire && !created) await this.db.canonicalField.update({ where: { id: row.id }, data: { status: "RETIRED" } });
+    await this.audit.log(workspaceId, actor.id, "updated", "field", key, `${actor.name} ${b.retire ? "retired" : "changed"} field ${key} (draft v${row.version})`, changes);
+    return row;
+  }
+
+  async placeField(actor: Actor, key: string, b: { sectionKey: string; collectedFrom: string; repeats: string; tier?: string; questionText?: string; helpText?: string; condition?: any; conditionEffect?: string | null; conditionPlain?: string; ruleOnly?: boolean }) {
+    const workspaceId = await this.ws.id();
+    if (!(await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: key } }))) fail(`No field ${key}.`, HttpStatus.NOT_FOUND);
+    if (!(await this.db.logicalSection.findFirst({ where: { workspaceId, sectionKey: b.sectionKey } }))) fail("Choose an existing section (or create one first).");
+    if (!COLLECTED.includes(b.collectedFrom)) fail(`Collected from must be one of: ${COLLECTED.join(", ")}.`);
+    if (!["once_per_case", "per_person", "per_row"].includes(b.repeats)) fail("Repeats must be once per case, per person or per row.");
+    const types = await this.libraryTypes(workspaceId);
+    if (b.condition) { const errs = checkCondition(b.condition, types.fields, types.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); if (!b.conditionEffect) fail("Choose what the condition does (show, hide, require or optional)."); }
+    const data = { sectionKey: b.sectionKey, collectedFrom: b.collectedFrom, repeats: b.repeats, tier: b.tier ?? "case", questionText: b.questionText?.trim() || null, helpText: b.helpText?.trim() || null, predicateJson: b.condition ?? null, conditionEffect: (b.conditionEffect as any) ?? null, conditionPlain: b.conditionPlain ?? null, ruleOnly: !!b.ruleOnly };
+    const rows = await this.db.sectionQuestion.findMany({ where: { workspaceId, lineageKey: key } });
+    let row;
+    if (!rows.length) {
+      const order = await this.db.sectionQuestion.count({ where: { workspaceId, sectionKey: b.sectionKey } });
+      row = await this.db.sectionQuestion.create({ data: { workspaceId, lineageKey: key, canonicalFieldKey: key, displayOrder: order + 1, ...data, version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
+    } else row = (await revise(this.db.sectionQuestion, rows, { ...data, origin: "HUMAN" }, actor.id, strip)).row;
+    await this.audit.log(workspaceId, actor.id, "updated", "placement", key, `${actor.name} placed ${key} in ${b.sectionKey} (${b.collectedFrom}${b.condition ? ", conditional" : ""}; draft v${row.version})`, data);
+    return row;
+  }
+
+  async sections() {
+    const workspaceId = await this.ws.id();
+    const rows = await this.db.logicalSection.findMany({ where: { workspaceId }, orderBy: [{ displayOrder: "asc" }, { version: "desc" }] });
+    const seen = new Set<string>();
+    const qs = await this.db.sectionQuestion.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
+    const sel = await this.db.sqrSectionSelection.groupBy({ by: ["sectionKey"], where: { workspaceId }, _count: { _all: true } });
+    return rows.filter((r) => !seen.has(r.sectionKey) && seen.add(r.sectionKey)).map((r) => ({ key: r.sectionKey, title: r.title, meaning: r.meaning, version: r.version, status: r.status, origin: r.origin, questions: qs.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0, compositions: sel.find((x) => x.sectionKey === r.sectionKey)?._count._all ?? 0 }));
+  }
+
+  async createSection(actor: Actor, b: { title: string; meaning?: string }) {
+    const workspaceId = await this.ws.id();
+    if (!b.title?.trim()) fail("Give the section a title.");
+    const key = slug(b.title);
+    if (await this.db.logicalSection.findFirst({ where: { workspaceId, sectionKey: key } })) fail("A section with this title already exists; reuse it.", HttpStatus.CONFLICT);
+    const s = await this.db.logicalSection.create({ data: { workspaceId, sectionKey: key, version: 1, status: "DRAFT", title: b.title.trim(), meaning: b.meaning ?? null, displayOrder: 100 + (await this.db.logicalSection.count({ where: { workspaceId } })), origin: "HUMAN", updatedBy: actor.id } });
+    await this.audit.log(workspaceId, actor.id, "created", "section", key, `${actor.name} added section "${s.title}" (draft)`);
+    return s;
+  }
+
+  async selectSection(actor: Actor, compositionId: string, sectionKey: string, on: boolean) {
+    const c = await this.db.composition.findUniqueOrThrow({ where: { id: compositionId } });
+    if (on) { const n = await this.db.sqrSectionSelection.count({ where: { compositionId } }); await this.db.sqrSectionSelection.upsert({ where: { compositionId_sectionKey: { compositionId, sectionKey } }, update: {}, create: { workspaceId: c.workspaceId, compositionId, sectionKey, sectionOrder: n } }); }
+    else await this.db.sqrSectionSelection.deleteMany({ where: { compositionId, sectionKey } });
+    await this.audit.log(c.workspaceId, actor.id, "updated", "section selection", sectionKey, `${actor.name} ${on ? "added" : "removed"} section ${sectionKey} ${on ? "to" : "from"} "${c.label}"`);
+    return { ok: true };
+  }
+
+  async documentTypes() {
+    const workspaceId = await this.ws.id();
+    const rows = await this.db.documentType.findMany({ where: { workspaceId }, orderBy: [{ name: "asc" }, { version: "desc" }] });
+    const seen = new Set<string>();
+    return rows.filter((r) => !seen.has(r.documentTypeKey) && seen.add(r.documentTypeKey));
+  }
+
+  async libraryTypes(workspaceId: string) {
+    const fields = new Map((await this.db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "asc" } })).map((f) => [f.canonicalFieldKey, f.valueType]));
+    const derived = new Set((await this.db.derivedField.findMany({ where: { workspaceId } })).map((d) => d.derivedKey));
+    return { fields, derived };
+  }
+
+  async checkCondition(b: { condition: any }) {
+    const workspaceId = await this.ws.id();
+    const t = await this.libraryTypes(workspaceId);
+    return { errors: checkCondition(b.condition, t.fields, t.derived) };
+  }
+
+  // ------------------------------------------------------------------ the composition's own configuration
+  async saveRequirement(actor: Actor, compositionId: string, lineage: string | null, b: { documentTypeKey?: string; newTypeName?: string; attachMode: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; appliesToRoles: string; providedBy?: string; sourceQuote?: string; sourceFile?: string; note?: string; retire?: boolean }) {
+    const c = await this.db.composition.findUniqueOrThrow({ where: { id: compositionId } });
+    const workspaceId = c.workspaceId;
+    if (b.retire && lineage) {
+      const rows = await this.db.documentRequirement.findMany({ where: { compositionId, lineageKey: lineage } });
+      const { row } = await revise(this.db.documentRequirement, rows, { status: "RETIRED" }, actor.id, strip);
+      await this.db.documentRequirement.update({ where: { id: row.id }, data: { status: "RETIRED" } });
+      await this.audit.log(workspaceId, actor.id, "retired", "document requirement", lineage, `${actor.name} removed document requirement ${lineage} from "${c.label}" (draft)`);
+      return row;
+    }
+    let typeKey = b.documentTypeKey;
+    if (!typeKey && b.newTypeName?.trim()) {
+      typeKey = slug(b.newTypeName);
+      if (!(await this.db.documentType.findFirst({ where: { workspaceId, documentTypeKey: typeKey } }))) await this.db.documentType.create({ data: { workspaceId, documentTypeKey: typeKey, name: b.newTypeName.trim(), category: b.providedBy ?? "client", version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
+    }
+    if (!typeKey || !(await this.db.documentType.findFirst({ where: { workspaceId, documentTypeKey: typeKey } }))) fail("Choose a document type, or name a new one.");
+    if (!WHO.includes(b.appliesToRoles)) fail("Choose whose document it is.");
+    if (b.attachMode === "ANSWER_CONDITIONAL" && !b.condition) fail("A conditional requirement needs its condition.");
+    if (b.condition) { const t = await this.libraryTypes(workspaceId); const errs = checkCondition(b.condition, t.fields, t.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); }
+    const data = { documentTypeKey: typeKey!, attachMode: b.attachMode, predicateJson: b.attachMode === "ANSWER_CONDITIONAL" ? b.condition : null, conditionPlain: b.attachMode === "ANSWER_CONDITIONAL" ? (b.conditionPlain ?? null) : null, appliesToRoles: b.appliesToRoles, providedBy: b.providedBy ?? "client", sourceQuote: b.sourceQuote ?? null, sourceFile: b.sourceFile ?? null, note: b.note ?? null, origin: "HUMAN" as const };
+    let row;
+    if (!lineage) {
+      let key = `${typeKey}:${b.appliesToRoles}`;
+      if (await this.db.documentRequirement.findFirst({ where: { compositionId, lineageKey: key } })) key = `${key}:${Date.now().toString(36)}`;
+      row = await this.db.documentRequirement.create({ data: { workspaceId, compositionId, lineageKey: key, ...data, version: 1, status: "DRAFT", updatedBy: actor.id } });
+    } else row = (await revise(this.db.documentRequirement, await this.db.documentRequirement.findMany({ where: { compositionId, lineageKey: lineage } }), data, actor.id, strip)).row;
+    await this.audit.log(workspaceId, actor.id, lineage ? "updated" : "created", "document requirement", row.lineageKey, `${actor.name} ${lineage ? "changed" : "added"} a ${b.attachMode === "ANSWER_CONDITIONAL" ? "conditional" : "base"} document requirement in "${c.label}" (draft v${row.version})`, data);
+    return row;
+  }
+
+  async saveRule(actor: Actor, compositionId: string, key: string | null, b: { condition: any; whenPlain?: string; thenPlain: string; forWhom: string; sourceQuote?: string; retire?: boolean }) {
+    const c = await this.db.composition.findUniqueOrThrow({ where: { id: compositionId } });
+    if (b.retire && key) { const { row } = await revise(this.db.predicate, await this.db.predicate.findMany({ where: { compositionId, predicateKey: key } }), { status: "RETIRED" }, actor.id, strip); await this.db.predicate.update({ where: { id: row.id }, data: { status: "RETIRED" } }); return row; }
+    if (!b.thenPlain?.trim()) fail("Say what the rule does, in plain words.");
+    if (!WHO.includes(b.forWhom)) fail("Choose whom the rule is evaluated for.");
+    const t = await this.libraryTypes(c.workspaceId);
+    const errs = checkCondition(b.condition, t.fields, t.derived);
+    if (!b.condition || errs.length) fail(`Condition: ${errs.join("; ") || "missing"}.`);
+    const data = { predicateJson: b.condition, whenPlain: b.whenPlain ?? null, thenPlain: b.thenPlain.trim(), forWhom: b.forWhom, sourceQuote: b.sourceQuote ?? null, origin: "HUMAN" as const };
+    let row;
+    if (!key) { const n = await this.db.predicate.count({ where: { compositionId } }); row = await this.db.predicate.create({ data: { workspaceId: c.workspaceId, compositionId, predicateKey: `R-${String(n + 1).padStart(2, "0")}-${Date.now().toString(36).slice(-3)}`, ...data, version: 1, status: "DRAFT", updatedBy: actor.id } }); }
+    else row = (await revise(this.db.predicate, await this.db.predicate.findMany({ where: { compositionId, predicateKey: key } }), data, actor.id, strip)).row;
+    await this.audit.log(c.workspaceId, actor.id, key ? "updated" : "created", "rule", row.predicateKey, `${actor.name} ${key ? "changed" : "added"} rule "${b.thenPlain.slice(0, 80)}" in "${c.label}" (draft v${row.version})`, data);
+    return row;
+  }
+
+  async saveForm(actor: Actor, compositionId: string, formKey: string, b: { who?: string; attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; retire?: boolean }) {
+    const c = await this.db.composition.findUniqueOrThrow({ where: { id: compositionId } });
+    const rows = await this.db.compositionForm.findMany({ where: { compositionId, lineageKey: formKey } });
+    if (!rows.length) fail(`${formKey} is not part of this composition.`, HttpStatus.NOT_FOUND);
+    const changes: any = {};
+    if (b.retire) changes.status = "RETIRED";
+    if (b.who) { if (!WHO.includes(b.who)) fail("Choose whose form it is."); changes.who = b.who; }
+    if (b.attachMode) { changes.attachMode = b.attachMode; if (b.attachMode === "COMBINATION_MANDATORY") { changes.predicateJson = null; changes.conditionPlain = null; } }
+    if (b.condition !== undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") { const t = await this.libraryTypes(c.workspaceId); const errs = checkCondition(b.condition, t.fields, t.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); changes.predicateJson = b.condition; changes.conditionPlain = b.conditionPlain ?? null; }
+    const { row, created } = await revise(this.db.compositionForm, rows, { ...changes, origin: "HUMAN" }, actor.id, strip);
+    if (b.retire && !created) await this.db.compositionForm.update({ where: { id: row.id }, data: { status: "RETIRED" } });
+    await this.audit.log(c.workspaceId, actor.id, "updated", "form", formKey, `${actor.name} ${b.retire ? "removed" : "changed"} ${formKey} in "${c.label}" (draft v${row.version})`, changes);
+    return row;
+  }
+
+  // ------------------------------------------------------------------ review and release (D254 duties)
+  private async draftAuthors(compositionId: string, s: Snapshot, workspaceId: string): Promise<string[]> {
+    const ids = new Set<string>();
+    const draftRows = await Promise.all([
+      this.db.canonicalField.findMany({ where: { workspaceId, status: "DRAFT", canonicalFieldKey: { in: s.canonical_fields.map((f) => f.id) } }, select: { updatedBy: true } }),
+      this.db.sectionQuestion.findMany({ where: { workspaceId, status: "DRAFT", lineageKey: { in: s.placements.map((p) => p.lineage) } }, select: { updatedBy: true } }),
+      this.db.documentRequirement.findMany({ where: { compositionId, status: { in: ["DRAFT", "RETIRED"] } }, select: { updatedBy: true } }),
+      this.db.predicate.findMany({ where: { compositionId, status: { in: ["DRAFT", "RETIRED"] } }, select: { updatedBy: true } }),
+      this.db.compositionForm.findMany({ where: { compositionId, status: { in: ["DRAFT", "RETIRED"] } }, select: { updatedBy: true } }),
+      this.db.formFieldMap.findMany({ where: { workspaceId, status: "DRAFT", edition: { form: { usedBy: { some: { compositionId } } } } }, select: { updatedBy: true }, distinct: ["updatedBy"] }),
+      this.db.draftingJob.findMany({ where: { compositionId, kind: "field_map" }, select: { startedBy: true } }),
+    ]);
+    for (const list of draftRows) for (const r of list as any[]) ids.add(r.updatedBy ?? r.startedBy);
+    return [...ids];
+  }
+
+  async review(id: string) {
+    const o = await this.composition(id);
+    const sub = o.submission;
+    const signoffs = sub ? await this.db.reviewSignoff.findMany({ where: { submissionId: sub.id }, orderBy: { at: "asc" } }) : [];
+    return { ...o, signoffs };
+  }
+
+  async submit(actor: Actor, id: string, note?: string) {
+    need(actor, "review");
+    const c = await this.db.composition.findUniqueOrThrow({ where: { id } });
+    const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
+    const last = await this.db.configRelease.findFirst({ where: { compositionId: id }, orderBy: { version: "desc" } });
+    if (last?.sha256 === sha256) fail("Nothing has changed since the released version.");
+    const errors = (await this.problems(c.workspaceId, snapshot)).filter((p) => p.level === "error");
+    if (errors.length) fail(`Fix ${errors.length} problem${errors.length > 1 ? "s" : ""} before submitting: ${errors.slice(0, 3).map((e) => `${e.item}: ${e.message}`).join(" · ")}`);
+    await this.db.reviewSubmission.updateMany({ where: { compositionId: id, status: "SUBMITTED" }, data: { status: "WITHDRAWN", decisionNote: "replaced by a newer submission" } });
+    const changes = diff((last?.snapshot as any) ?? null, snapshot);
+    const s = await this.db.reviewSubmission.create({ data: { workspaceId: c.workspaceId, compositionId: id, draftSha256: sha256, submittedBy: actor.id, status: "SUBMITTED", changeSummary: changes as any, decisionNote: note ?? null } });
+    await this.audit.log(c.workspaceId, actor.id, "submitted", "configuration", c.compositionKey, `${actor.name} submitted "${c.label}" for review: ${changes.length} change${changes.length === 1 ? "" : "s"} (${changes.filter((x) => x.needs_sme).length} need the SME duty)`, { sha256 });
+    return s;
+  }
+
+  async signoff(actor: Actor, id: string, b: { items: string[]; action: "signed" | "returned"; note?: string }) {
+    const c = await this.db.composition.findUniqueOrThrow({ where: { id } });
+    const sub = await this.db.reviewSubmission.findFirst({ where: { compositionId: id, status: "SUBMITTED" }, orderBy: { submittedAt: "desc" } });
+    if (!sub) fail("Nothing is waiting for review.");
+    const changes = sub!.changeSummary as any[];
+    const needsSme = (ref: string) => changes.find((x) => `${x.kind}|${x.key}` === ref)?.needs_sme;
+    for (const ref of b.items) {
+      if (!changes.some((x) => `${x.kind}|${x.key}` === ref)) fail(`${ref} is not in this submission.`);
+      need(actor, needsSme(ref) ? "sme" : "review");
+    }
+    if (b.action === "returned" && !b.note?.trim()) fail("Say why you are returning it, so the author can correct it.");
+    await this.db.reviewSignoff.createMany({ data: b.items.map((itemRef) => ({ workspaceId: c.workspaceId, submissionId: sub!.id, itemRef, duty: needsSme(itemRef) ? "sme" : "review", actorId: actor.id, action: b.action, note: b.note ?? null })) });
+    if (b.action === "returned") await this.db.reviewSubmission.update({ where: { id: sub!.id }, data: { status: "RETURNED", decidedBy: actor.id, decidedAt: new Date(), decisionNote: b.note } });
+    await this.audit.log(c.workspaceId, actor.id, b.action, "configuration", c.compositionKey, `${actor.name} ${b.action === "signed" ? "signed" : "returned"} ${b.items.length} item${b.items.length > 1 ? "s" : ""} of "${c.label}"${b.note ? `: ${b.note}` : ""}`);
+    return { ok: true };
+  }
+
+  async approve(actor: Actor, id: string) {
+    need(actor, "approve");
+    const c = await this.db.composition.findUniqueOrThrow({ where: { id }, include: { program: true } });
+    const sub = await this.db.reviewSubmission.findFirst({ where: { compositionId: id, status: "SUBMITTED" }, orderBy: { submittedAt: "desc" } });
+    if (!sub) fail("Nothing has been submitted for approval.");
+    const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
+    const authors = await this.draftAuthors(id, snapshot, c.workspaceId);
+    for (const author of authors) {
+      const check = canRelease({ author: { user_id: author, role: "content_publisher" }, submitter: { user_id: sub!.submittedBy, role: "content_publisher" }, approver: { user_id: actor.id, role: "content_publisher" }, configuration_sha256: sha256 }, sub!.draftSha256);
+      if (!check.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.compositionKey, `Release refused: ${check.reason}`); fail(`Release refused: ${check.reason}${check.reason.includes("hash") ? " (the draft changed after it was submitted; submit it again)" : ""}.`, HttpStatus.CONFLICT); }
+    }
+    const changes = sub!.changeSummary as any[];
+    const signed = new Set((await this.db.reviewSignoff.findMany({ where: { submissionId: sub!.id, action: "signed" } })).map((s) => s.itemRef));
+    const missing = changes.filter((x) => x.needs_sme && !signed.has(`${x.kind}|${x.key}`));
+    if (missing.length) fail(`${missing.length} change${missing.length > 1 ? "s need" : " needs"} the content reviewer's SME sign-off first (for example ${missing[0].kind} ${missing[0].key}).`, HttpStatus.CONFLICT);
+    const last = await this.db.configRelease.findFirst({ where: { compositionId: id }, orderBy: { version: "desc" } });
+    const version = (last?.version ?? 0) + 1;
+    const release = await this.db.$transaction(async (tx) => {
+      if (last) await tx.configRelease.update({ where: { id: last.id }, data: { status: "SUPERSEDED" } });
+      const r = await tx.configRelease.create({ data: { workspaceId: c.workspaceId, compositionId: id, version, status: "RELEASED", snapshot: snapshot as any, sha256, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(snapshot) }, authorId: authors.join(","), submitterId: sub!.submittedBy, approverId: actor.id, basis: c.sourceBasis === "ILLUSTRATIVE" ? "Illustrative composition: not source-verified for this program; prototype only" : "Source-backed configuration; prototype only, not specialist-confirmed for production" } });
+      await tx.reviewSubmission.update({ where: { id: sub!.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
+      // Draft rows in this release become the published versions; what they replace is superseded.
+      const ws = c.workspaceId;
+      const publish = async (delegate: any, where: any) => {
+        const drafts = await delegate.findMany({ where: { ...where, status: "DRAFT" } });
+        for (const d of drafts) { if (d.supersedesId) await delegate.update({ where: { id: d.supersedesId }, data: { status: "SUPERSEDED" } }); await delegate.update({ where: { id: d.id }, data: { status: "PUBLISHED" } }); }
+        return drafts.length;
+      };
+      const n = {
+        fields: await publish(tx.canonicalField, { workspaceId: ws, canonicalFieldKey: { in: snapshot.canonical_fields.map((f) => f.id) } }),
+        placements: await publish(tx.sectionQuestion, { workspaceId: ws, lineageKey: { in: snapshot.placements.map((p) => p.lineage) } }),
+        sections: await publish(tx.logicalSection, { workspaceId: ws, sectionKey: { in: snapshot.sections.map((x) => x.id) } }),
+        documentTypes: await publish(tx.documentType, { workspaceId: ws, documentTypeKey: { in: snapshot.document_requirements.map((d) => d.document_type_key) } }),
+        requirements: await publish(tx.documentRequirement, { compositionId: id }), rules: await publish(tx.predicate, { compositionId: id }), forms: await publish(tx.compositionForm, { compositionId: id }), checks: await publish(tx.check, { compositionId: id }),
+        boxes: await publish(tx.formFieldMap, { workspaceId: ws, edition: { form: { usedBy: { some: { compositionId: id } } } } }),
+      };
+      // A retired row released: the lineage it ends stays retired; its predecessor is superseded.
+      for (const delegate of [tx.documentRequirement, tx.predicate, tx.compositionForm] as any[]) for (const r of await delegate.findMany({ where: { compositionId: id, status: "RETIRED", supersedesId: { not: null } } })) await delegate.update({ where: { id: r.supersedesId }, data: { status: "SUPERSEDED" } });
+      return { r, n };
+    });
+    await this.audit.log(c.workspaceId, actor.id, "released", "configuration", c.compositionKey, `${actor.name} approved and released "${c.label}" version ${version} (${sha256.slice(0, 12)}); ${Object.entries(release.n).filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(", ") || "no draft rows"} published`, { sha256, published: release.n });
+    return { version, sha256, published: release.n };
+  }
+
+  async releases(compositionId?: string) {
+    const workspaceId = await this.ws.id();
+    const rows = await this.db.configRelease.findMany({ where: { workspaceId, ...(compositionId ? { compositionId } : {}) }, orderBy: { releasedAt: "desc" }, include: { composition: true } });
+    return rows.map((r) => ({ id: r.id, composition: r.composition.label, composition_id: r.compositionId, version: r.version, sha256: r.sha256, status: r.status, released_at: r.releasedAt, author: r.authorId, submitter: r.submitterId, approver: r.approverId, summary: r.summary, basis: r.basis }));
+  }
+
+  async activity(limit = 200) {
+    const workspaceId = await this.ws.id();
+    return this.db.auditEvent.findMany({ where: { workspaceId }, orderBy: { at: "desc" }, take: limit });
+  }
+}

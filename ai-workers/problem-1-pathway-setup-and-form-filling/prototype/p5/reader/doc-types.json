@@ -1,0 +1,173 @@
+{
+ "label": "Reader document-type profiles (maker-written Proposal for the P5 prototype): which configured facts each supported document type can supply. Fact ids and meanings come from release c1-v3; the configuration does not yet record which facts a document type supplies (a contract gap for the team).",
+ "release": "c1-v3 2c66472f37585338c9c21bbf221833baa7ef77f6fa0f9531edc92e43072d06af",
+ "formats": {
+  "date": "YYYY-MM-DD",
+  "sex": "F, M or X as printed",
+  "country": "as printed (code or name)",
+  "province": "two-letter Canadian code (for example ON)"
+ },
+ "kinds": {
+  "passport": {
+   "label": "Passport information page",
+   "configuration_document_types": [
+    "Passport or travel document information page photocopy"
+   ],
+   "facts": [
+    {
+     "fact": "person.family_name",
+     "meaning": "Family name (surname) as shown on passport or travel document",
+     "about": "document holder"
+    },
+    {
+     "fact": "person.given_names",
+     "meaning": "Given name(s) as shown on passport or travel document",
+     "about": "document holder"
+    },
+    {
+     "fact": "person.sex",
+     "meaning": "Sex or gender marker of the person",
+     "about": "document holder"
+    },
+    {
+     "fact": "person.date_of_birth",
+     "meaning": "Date of birth",
+     "about": "document holder"
+    },
+    {
+     "fact": "person.place_of_birth_city",
+     "meaning": "City or town of birth",
+     "about": "document holder"
+    },
+    {
+     "fact": "person.citizenship",
+     "meaning": "Country of citizenship",
+     "about": "document holder"
+    },
+    {
+     "fact": "person.passport_number",
+     "meaning": "Number of the passport or travel document used",
+     "about": "document holder"
+    },
+    {
+     "fact": "person.passport_country_of_issue",
+     "meaning": "Country or territory that issued the passport",
+     "about": "document holder"
+    },
+    {
+     "fact": "person.passport_issue_date",
+     "meaning": "Issue date of the passport",
+     "about": "document holder"
+    },
+    {
+     "fact": "person.passport_expiry_date",
+     "meaning": "Expiry date of the passport",
+     "about": "document holder"
+    }
+   ]
+  },
+  "job_offer": {
+   "label": "Job offer letter",
+   "configuration_document_types": [
+    "Employment contract (LMIA-exempt job)",
+    "Copy of LMIA and copy of employment contract from prospective employer",
+    "Job offer letter"
+   ],
+   "facts": [
+    {
+     "fact": "person.full_name",
+     "meaning": "The person's full name exactly as shown on their passport or travel document",
+     "about": "employee the offer is addressed to"
+    },
+    {
+     "fact": "organisation.name",
+     "meaning": "Legal or operating name of an organisation (here the prospective employer)",
+     "about": "employer making the offer"
+    },
+    {
+     "fact": "person.intended_job_title",
+     "meaning": "Job title of the intended employment",
+     "about": "employee the offer is addressed to"
+    },
+    {
+     "fact": "person.intended_job_duties",
+     "meaning": "Brief description of duties of the intended employment",
+     "about": "employee the offer is addressed to"
+    },
+    {
+     "fact": "person.intended_employment_start_date",
+     "meaning": "Expected start date of the intended employment",
+     "about": "employee the offer is addressed to"
+    },
+    {
+     "fact": "person.intended_employment_end_date",
+     "meaning": "Expected end date of the intended employment",
+     "about": "employee the offer is addressed to"
+    },
+    {
+     "fact": "person.intended_work_location",
+     "meaning": "Intended location of employment in Canada",
+     "about": "employee the offer is addressed to"
+    },
+    {
+     "fact": "person.intended_work_province",
+     "meaning": "Canadian province or territory of the intended employment",
+     "about": "employee the offer is addressed to"
+    },
+    {
+     "fact": "person.lmia_or_offer_number",
+     "meaning": "Labour Market Impact Assessment number or LMIA-exempt offer of employment number",
+     "about": "employee the offer is addressed to"
+    }
+   ]
+  },
+  "birth_certificate": {
+   "label": "Birth certificate",
+   "configuration_document_types": [
+    "Birth certificate of accompanying dependent child"
+   ],
+   "facts": [
+    {
+     "fact": "person.family_name",
+     "meaning": "Family name (surname) as shown on passport or travel document",
+     "about": "the child whose birth is recorded"
+    },
+    {
+     "fact": "person.given_names",
+     "meaning": "Given name(s) as shown on passport or travel document",
+     "about": "the child whose birth is recorded"
+    },
+    {
+     "fact": "person.sex",
+     "meaning": "Sex or gender marker of the person",
+     "about": "the child whose birth is recorded"
+    },
+    {
+     "fact": "person.date_of_birth",
+     "meaning": "Date of birth",
+     "about": "the child whose birth is recorded"
+    },
+    {
+     "fact": "person.place_of_birth_city",
+     "meaning": "City or town of birth",
+     "about": "the child whose birth is recorded"
+    },
+    {
+     "fact": "person.country_of_birth",
+     "meaning": "The country or territory where the person was born",
+     "about": "the child whose birth is recorded"
+    },
+    {
+     "fact": "mother.full_name",
+     "meaning": "Full name of the child's mother as printed",
+     "about": "mother"
+    },
+    {
+     "fact": "father.full_name",
+     "meaning": "Full name of the child's father as printed",
+     "about": "father"
+    }
+   ]
+  }
+ }
+}

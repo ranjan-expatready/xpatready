@@ -1,0 +1,191 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "stub",
+ "drafting_run": {
+  "run_id": "c1-requirements-stub-20261020t140101885z",
+  "idempotency_key": "b9e57e8cd260d53d0ef4f6ad3ff53732d69c33827f11645b126c40619205f71d",
+  "contract_version": "drafting-run/v0",
+  "kind": "requirements",
+  "output_sha256": "d04d5442d9fed0ed78756e98b77f590cb8eb83818383bc969957089e17cd9c06",
+  "inputs": {
+   "combination": "1",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5488e.text.inventory.json",
+     "sha256": "c9815877f0a37faaff7ecc40f0f91f544c7a9d6842b646fc3c9ff693c07fded3"
+    },
+    {
+     "file": "prototype/p1/inventory/imm5905e.text.inventory.json",
+     "sha256": "16594660c379864da2968739adf21760cd14c188c1d095d1face0b26e85b0902"
+    },
+    {
+     "file": "prototype/p1/inventory/guide-5487.text.inventory.json",
+     "sha256": "28e33a17e0766873b97be51477b4ccadedaf86c9239e28655a26a1829ea83264"
+    },
+    {
+     "file": "prototype/p1/inventory/work-permit-outside-forms-documents.text.inventory.json",
+     "sha256": "3ba7004dde7815d2ab5d8a5f5625ed9e277e580c1ef0a9d8b259957e7d5fd23a"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t051558106z.json",
+     "sha256": "c9dcb09e9db45d58d984bd23f5ca35db182c6d2f345aed72735f7e456dbbc462"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5707-live-20261020t052222731z.json",
+     "sha256": "1ca6d86cf4d59013b0c5cbd8c5430fd778de428f7ef38211e99320cbc367d346"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5409-live-20261020t052401212z.json",
+     "sha256": "ac5214c4c2d34a5169c63a3a2550eecadd9c2a2a3824abdd5071a400719552de"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5476-live-20261020t052508977z.json",
+     "sha256": "a9947dc48e86dc62b07a2a13160743e89decd61f820b6e8a279baffb478e2dc5"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5475-live-20261020t052706509z.json",
+     "sha256": "962495eab1d4b7bd5d6e7c4aebabe6146d486c16518a5b66614e9319ca6f6db0"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5257-1-live-20261020t052757177z.json",
+     "sha256": "37e84da8bd5a47d576e7afa802dfe88856fc2a87046f01bac1554a55cab21086"
+    }
+   ],
+   "configuration_version": "c1-draft-1"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 64000,
+   "prompt_version": "requirements.v1.md",
+   "prompt_sha256": "1b20dd4394619b3ac7e616f4da6348b27d8f729a61a537e4c87b1b0445475977"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "duration_ms": 0
+   }
+  ],
+  "usage": {
+   "input_tokens": 0,
+   "output_tokens": 0,
+   "cost_usd": 0,
+   "duration_ms": 0
+  },
+  "started_at": "2026-10-20T14:01:01.885Z",
+  "ended_at": "2026-10-20T14:01:02.495Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "86c61ac3359379b46f4c7ab32360cb931a7606d779d21e62bd333e61bb15105d",
+  "template_sha256": "5826ceae187f6d651ffabd78fd94404885f76e3e5107c2b0e32eb632ae029a04",
+  "schema_file": "requirements-output.v1.schema.json",
+  "schema_sha256": "ea87d66a22a07642e2f0f9786c6a3395714765a4b99ec8915c70f78fc2eeaf91",
+  "screened": true,
+  "output_sha256": "d04d5442d9fed0ed78756e98b77f590cb8eb83818383bc969957089e17cd9c06",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "2920f491dd58d933ff7a0df6f24bb0ca894d0e9309d7539ad5001517a81047cf",
+  "request_bytes": 291337,
+  "stub_calls": 1,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 40,
+   "committed_usd": 24.125092
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5488e.text.inventory.json",
+    "sha256": "c9815877f0a37faaff7ecc40f0f91f544c7a9d6842b646fc3c9ff693c07fded3",
+    "kind": "inventory"
+   },
+   {
+    "file": "prototype/p1/inventory/imm5905e.text.inventory.json",
+    "sha256": "16594660c379864da2968739adf21760cd14c188c1d095d1face0b26e85b0902",
+    "kind": "inventory"
+   },
+   {
+    "file": "prototype/p1/inventory/guide-5487.text.inventory.json",
+    "sha256": "28e33a17e0766873b97be51477b4ccadedaf86c9239e28655a26a1829ea83264",
+    "kind": "inventory"
+   },
+   {
+    "file": "prototype/p1/inventory/work-permit-outside-forms-documents.text.inventory.json",
+    "sha256": "3ba7004dde7815d2ab5d8a5f5625ed9e277e580c1ef0a9d8b259957e7d5fd23a",
+    "kind": "inventory"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t051558106z.json",
+    "sha256": "c9dcb09e9db45d58d984bd23f5ca35db182c6d2f345aed72735f7e456dbbc462",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5707-live-20261020t052222731z.json",
+    "sha256": "1ca6d86cf4d59013b0c5cbd8c5430fd778de428f7ef38211e99320cbc367d346",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5409-live-20261020t052401212z.json",
+    "sha256": "ac5214c4c2d34a5169c63a3a2550eecadd9c2a2a3824abdd5071a400719552de",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5476-live-20261020t052508977z.json",
+    "sha256": "a9947dc48e86dc62b07a2a13160743e89decd61f820b6e8a279baffb478e2dc5",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5475-live-20261020t052706509z.json",
+    "sha256": "962495eab1d4b7bd5d6e7c4aebabe6146d486c16518a5b66614e9319ca6f6db0",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5257-1-live-20261020t052757177z.json",
+    "sha256": "37e84da8bd5a47d576e7afa802dfe88856fc2a87046f01bac1554a55cab21086",
+    "kind": "draft"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "24ab10a3b4b4d848e0dcbe2e90be741e98892a488966a0f6ea41c65aed538fae",
+   "digest_made_at": "2026-10-20T14:01:01.883Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "items_screened": 8,
+   "request_screened": true,
+   "stub_gate_checked": false
+  }
+ },
+ "raw_output": "{\"combination\": \"stub\", \"forms\": [], \"documents\": [], \"rules\": [], \"proposed_fields\": [], \"unresolved\": [{\"source_file\": \"stub\", \"passage_quote\": \"stub\", \"reason\": \"stub caller: no model was called, so nothing was drafted\"}], \"derived_fields\": []}\n"
+}

@@ -1,0 +1,168 @@
+{
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "document",
+  "people_seen",
+  "fields",
+  "internal_conflicts"
+ ],
+ "properties": {
+  "document": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "kind_seen",
+    "matches_claimed_kind",
+    "readable",
+    "issues",
+    "issued_or_written_on"
+   ],
+   "properties": {
+    "kind_seen": {
+     "type": "string",
+     "enum": [
+      "passport",
+      "job_offer",
+      "birth_certificate",
+      "other",
+      "cannot_tell"
+     ]
+    },
+    "matches_claimed_kind": {
+     "type": "boolean"
+    },
+    "readable": {
+     "type": "string",
+     "enum": [
+      "yes",
+      "partly",
+      "no"
+     ]
+    },
+    "issues": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "issued_or_written_on": {
+     "type": [
+      "string",
+      "null"
+     ]
+    }
+   }
+  },
+  "people_seen": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "role",
+     "name_as_printed"
+    ],
+    "properties": {
+     "role": {
+      "type": "string"
+     },
+     "name_as_printed": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "fields": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "fact",
+     "about",
+     "status",
+     "value",
+     "as_printed",
+     "page",
+     "where",
+     "confidence",
+     "reason"
+    ],
+    "properties": {
+     "fact": {
+      "type": "string"
+     },
+     "about": {
+      "type": "string"
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "proposed",
+       "unresolved"
+      ]
+     },
+     "value": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "as_printed": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "page": {
+      "type": "integer"
+     },
+     "where": {
+      "type": "string"
+     },
+     "confidence": {
+      "type": "string",
+      "enum": [
+       "high",
+       "medium",
+       "low"
+      ]
+     },
+     "reason": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    }
+   }
+  },
+  "internal_conflicts": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "fact",
+     "values",
+     "where"
+    ],
+    "properties": {
+     "fact": {
+      "type": "string"
+     },
+     "values": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "where": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}

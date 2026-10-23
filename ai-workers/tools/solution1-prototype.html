@@ -1,0 +1,253 @@
+<section id="try" class="s1">
+<h2><span class="n">8</span>Try it</h2>
+<p class="lead">The logic runs in your browser: matching, versioning, conditional rules, rendering and change impact. A fixed answer key stands in for the AI; the box lists are a small sample, not the real inventory.</p>
+<div class="ptabs" role="tablist"><button role="tab" aria-selected="true" data-t="p1">① Configure rows</button><button role="tab" aria-selected="false" data-t="p2">② PQR · SQR · views</button><button role="tab" aria-selected="false" data-t="pc">③ Conditional rules</button><button role="tab" aria-selected="false" data-t="p3">④ Case: enter once, fill everywhere</button><button role="tab" aria-selected="false" data-t="p4">⑤ A form changes</button></div>
+
+<div class="ppane" id="p1">
+<div class="pbar"><button type="button" id="cfg-next" class="pbtn">Run AI on row 1</button><button type="button" id="cfg-all" class="pbtn ghost">Run and release all ten (checks simulated)</button><button type="button" id="cfg-reset" class="pbtn ghost">Reset</button><span id="cfg-status" class="pstat">0 of 10 rows released</span></div>
+<h4>Pathway Configurator grid <small>one line per full combination (SA-1B-55); draft list, to confirm by the founder and the specialist</small></h4>
+<div class="tbl"><table class="cfg"><thead><tr><th>#</th><th>Pathway</th><th>Program</th><th>Category</th><th>Sub-category</th><th>Official checklist (input)</th><th>Form lines (solid: base, by a person · dashed: conditional, drafted by AI)</th><th>Run · version</th></tr></thead><tbody id="row-list"></tbody></table></div>
+<div class="grid2">
+<div><h4>Last run <small>(steps A2–A3)</small></h4><div id="run-out" class="runout"><p class="note">Press "Configure next row". Row 1 is the meeting's example: work permit, employer-specific.</p></div></div>
+<div class="card h"><h4>Base by a person, conditional by AI</h4>
+<table class="mini"><thead><tr><th></th><th>Dropdown only</th><th>Proposed</th></tr></thead><tbody>
+<tr><td>Base forms and documents</td><td>A person picks each from a dropdown</td><td>A person picks; the AI pre-suggests from the checklist so nothing is missed</td></tr>
+<tr><td>Conditional forms</td><td>Easy to miss; no "only if"</td><td>Each line carries its "only if" (SA-1B-57); dashed chips below</td></tr>
+<tr><td>Ten rows sharing a form</td><td>Ten edits</td><td>"Copy from row" and "add to many rows", affected rows listed first (SA-1B-61)</td></tr>
+<tr><td>New combination</td><td>Retype four cells</td><td>Pick from the four-level tree (SA-1B-50); the team's 13 Oct screen already shows the tree</td></tr>
+</tbody></table></div>
+</div>
+<h4>Normalisation across rows <small>boxes read vs master fields in the library</small></h4>
+<div id="chart" class="pchart"></div>
+<details class="more"><summary>Open the master library (<span id="lib-count">0</span> fields)</summary><div class="tbl"><table id="lib-table"><thead><tr><th>Master field</th><th>Section</th><th>Tier</th><th>Type · validation</th><th>Approved labels</th><th>Used by</th></tr></thead><tbody></tbody></table></div></details>
+</div>
+
+<div class="ppane" id="p2" hidden>
+<div class="pbar"><label>Row <select id="qs-row"></select></label><span class="pstat" id="qs-note">Configure at least one row first.</span></div>
+<div class="grid3" id="qs-cols"></div>
+<p class="note">PQR blocks are one per country (D217): block 0 for everyone, then the qualifier block this row reads. The SQR drops fields a document supplies while that document is received and confirmed, and fields the PQR already holds (D177). Staff-tier fields appear only in the working view (D180).</p>
+</div>
+
+<div class="ppane" id="pc" hidden>
+<div class="pbar"><span class="pstat">Row 1, work permit, employer-specific. Base items were entered by a person; every other item appears only when a rule fires. Change the answers.</span></div>
+<div class="pans">
+<label>Marital status<select id="ca-ms"><option>Single</option><option selected>Married</option><option>Common-law</option></select></label>
+<label>Children<select id="ca-kids"><option>0</option><option selected>1</option><option>2</option></select></label>
+<label>Oldest child's age<select id="ca-age"><option selected>9</option><option>19</option></select></label>
+<label>Spouse applies too<select id="ca-sp"><option>No</option><option selected>Yes</option></select></label>
+<label>Applying from<select id="ca-loc"><option selected>Outside Canada</option><option>Inside Canada</option></select></label>
+<label>Representative acts<select id="ca-rep"><option>No</option><option selected>Yes</option></select></label>
+<label>Ever refused a visa<select id="ca-ref"><option selected>No</option><option>Yes</option></select></label>
+<label>Passport received<select id="ca-pp"><option selected>Yes, confirmed</option><option>No</option></select></label>
+</div>
+<div class="persons" id="ca-out"></div>
+<p class="note" id="ca-sum"></p>
+</div>
+<div class="ppane" id="p3" hidden>
+<div class="pbar"><span class="pstat">Row 1, a married couple and one child. Edit any value on the left; every form copy on the right that reads it re-renders.</span><button type="button" id="doc-read" class="pbtn ghost">Simulate passport read</button></div>
+<div class="case">
+<div class="wv"><h4>Working view <small>normalised, enter each fact once</small></h4><div id="wv"></div></div>
+<div class="fc"><h4>Form check views <small>read-only, one copy per applicant, in form order</small></h4><div class="fctabs" id="fc-tabs"></div><div id="fc"></div></div>
+</div>
+</div>
+
+<div class="ppane" id="p4" hidden>
+<div class="pbar"><button type="button" id="ed-release" class="pbtn">Draft new IMM 5707 edition (AI diff)</button><label class="pchk"><input type="checkbox" id="ed-cutoff"> IRCC cut-off date passed</label><span class="pstat" id="ed-status">Current IMM 5707 edition: v1</span></div>
+<div class="grid2"><div><h4>Changed boxes <small>(A10: only these go to a person)</small></h4><div id="ed-diff" class="runout"><p class="note">Release the new edition to see the diff.</p></div></div><div><h4>Impact <small>rows and pinned cases</small></h4><div id="ed-impact" class="runout"></div></div></div>
+</div>
+
+
+</div>
+<p class="src">Logic follows D169, D170 (b), D177, D180 (as corrected), D181, D185, D197, D217–D221 and SA-1B-26, 33, 61. Form numbers per row: section 8, ten combinations. Personal values are made up.</p>
+</section>
+<script>
+(function(){
+'use strict';
+// ---- the answer key the AI would propose (master fields) ----
+var F={
+ family_name:['Family name','Personal details','prospect','text, max 100'],given_name:['Given name(s)','Personal details','prospect','text, max 100'],
+ dob:['Date of birth','Personal details','prospect','date, past'],birth_country:['Country of birth','Personal details','case','list: countries'],
+ citizenship:['Citizenship','Personal details','prospect','list: countries'],marital_status:['Marital status','Family','prospect','list: 6 values'],
+ passport_no:['Passport number','Passport and identity','case','text, max 20'],passport_expiry:['Passport expiry','Passport and identity','case','date, future'],
+ uci:['UCI','Immigration history','case','digits, 8 or 10'],address:['Current address','Contact','case','address group'],
+ email:['Email','Contact','lead','email'],phone:['Telephone','Contact','lead','phone'],
+ refused_before:['Ever refused a visa or permit','Immigration history','case','yes/no'],education_level:['Highest education','Education','prospect','list: 8 levels'],
+ occupation:['Current occupation','Work history','prospect','text'],job_title:['Intended job title','Job offer','case','text'],
+ employer_name:['Employer in Canada','Job offer','case','text'],lmia_no:['Labour market assessment number','Job offer','case','digits, 7–9'],
+ rep_name:['Representative name','Representative','staff','text'],rep_licence:['Representative licence number','Representative','staff','format per body'],
+ partner_since:['Living together since','Family','case','date, past'],status_canada:['Current status in Canada','Immigration history','case','list'],
+ status_expiry:['Status expiry','Immigration history','case','date'],institution:['Institution','Study','case','text'],dli_no:['Institution number','Study','case','O + 11 digits'],
+ program:['Program of study','Study','case','text'],visit_purpose:['Purpose of visit','Travel','case','list'],host_name:['Host in Canada','Travel','case','text'],
+ funds:['Funds available (CAD)','Funds','prospect','number ≥ 0'],language_test:['Language test','Education','prospect','list: tests'],
+ address_history:['Address history','Contact','case','dated list'],work_history:['Work history','Work history','case','dated list'],travel_history:['Travel history','Travel','case','dated list'],
+ sponsor_status:['Sponsor status in Canada','Sponsor','case','list: PR, citizen'],relationship_start:['Relationship start date','Family','case','date, past'],
+ business_no:['Employer business number','Employer','case','9 digits'],wage:['Offered wage','Employer','case','money / hour'],work_location:['Work location','Employer','case','address group'],
+ recruitment:['Recruitment efforts','Employer','case','dated list']
+};
+// ---- illustrative boxes per form: [label as printed, field, whose (relative to copy owner)] ----
+var P=[['Family name','family_name','self'],['Given name(s)','given_name','self'],['Date of birth','dob','self']];
+var FORMS={
+ 'IMM 1295':P.concat([['Country of birth','birth_country','self'],['Citizenship','citizenship','self'],['Current marital status','marital_status','self'],['Passport number','passport_no','self'],['Expiry date','passport_expiry','self'],['UCI (if known)','uci','self'],['Current mailing address','address','self'],['E-mail address','email','self'],['Intended job','job_title','self'],['Name of employer','employer_name','self'],['LMIA number','lmia_no','self'],['Refused a visa or permit?','refused_before','self']]),
+ 'IMM 5707':[['Applicant family name','family_name','self'],['Applicant given name(s)','given_name','self'],['Applicant date of birth','dob','self'],['Marital status','marital_status','self'],['Spouse family name','family_name','spouse'],['Spouse date of birth','dob','spouse'],['Child family name','family_name','child'],['Child date of birth','dob','child'],['Present address','address','self']],
+ 'IMM 5409':P.concat([['Partner family name','family_name','partner'],['Partner date of birth','dob','partner'],['We have lived together since','partner_since','self']]),
+ 'IMM 5476':P.concat([['Representative name','rep_name','self'],['Membership ID number','rep_licence','self']]),
+ 'IMM 5710':P.concat([['Citizenship','citizenship','self'],['Passport number','passport_no','self'],['Current status in Canada','status_canada','self'],['Status expiry date','status_expiry','self'],['UCI','uci','self'],['Mailing address','address','self']]),
+ 'IMM 1294':P.concat([['Citizenship','citizenship','self'],['Passport number','passport_no','self'],['Name of school','institution','self'],['DLI number','dli_no','self'],['Field of study','program','self'],['Funds available','funds','self']]),
+ 'IMM 5257':P.concat([['Country of citizenship','citizenship','self'],['Passport No.','passport_no','self'],['Purpose of my visit','visit_purpose','self'],['Name of host','host_name','self'],['Funds available for my stay','funds','self']]),
+ 'IMM 0008':P.concat([['Country of birth','birth_country','self'],['Citizenship','citizenship','self'],['Marital status','marital_status','self'],['Passport/travel document number','passport_no','self'],['Level of education','education_level','self'],['Language test','language_test','self'],['Current occupation','occupation','self'],['UCI','uci','self'],['Telephone','phone','self'],['Email','email','self']]),
+ 'IMM 5406':[['Applicant name','family_name','self'],['Applicant date of birth','dob','self'],['Spouse name','family_name','spouse'],['Spouse date of birth','dob','spouse'],['Child name','family_name','child'],['Child date of birth','dob','child']],
+ 'IMM 5669':P.concat([['Addresses since age 18','address_history','self'],['Personal history','work_history','self'],['Travel history','travel_history','self']]),
+ 'IMM 1344':[['Sponsor family name','family_name','sponsor'],['Sponsor date of birth','dob','sponsor'],['Sponsor status in Canada','sponsor_status','sponsor'],['Sponsor address','address','sponsor']],
+ 'IMM 5532':P.concat([['Relationship began on','relationship_start','self'],['Spouse family name','family_name','spouse']]),
+ 'EMP5626':[['Business legal name','employer_name','self'],['CRA business number','business_no','self'],['Job title','job_title','self'],['Wage offered','wage','self'],['Work location','work_location','self'],['Recruitment activities','recruitment','self']]
+};
+// [label, qualifier, forms, conditional forms {form: condition}, [pathway, program, category, sub-category], checklist]
+var ROWS=[
+ ['Work permit · employer-specific','work',['IMM 1295','IMM 5707','IMM 5409','IMM 5476'],{'IMM 5409':'common-law','IMM 5476':'a representative acts'},['Individual','Work','Work permit','Employer-specific'],'IMM 5488 (Guide 5487)'],
+ ['Work permit · open, spouse or partner','work',['IMM 1295','IMM 5707','IMM 5409'],{'IMM 5409':'common-law'},['Individual','Work','Work permit','Open, spouse or partner'],'IMM 5488 outside · IMM 5556 inside'],
+ ['Work permit · post-graduation','work',['IMM 5710'],{},['Individual','Work','Work permit','Post-graduation'],'IMM 5556 (Guide 5553)'],
+ ['Study permit','study',['IMM 1294','IMM 5707'],{},['Individual','Study','Study permit','—'],'IMM 5483 (Guide 5269)'],
+ ['Visitor visa','visit',['IMM 5257','IMM 5707'],{},['Individual','Visit','Visitor visa','—'],'IMM 5484 (Guide 5256)'],
+ ['Express Entry · Federal Skilled Worker','pr',['IMM 0008','IMM 5406','IMM 5669'],{},['Individual','Permanent residence','Express Entry','Federal Skilled Worker'],'Generated online by IRCC (to confirm)'],
+ ['Express Entry · Canadian Experience Class','pr',['IMM 0008','IMM 5406','IMM 5669'],{},['Individual','Permanent residence','Express Entry','Canadian Experience Class'],'Generated online by IRCC (to confirm)'],
+ ['Express Entry · Federal Skilled Trades','pr',['IMM 0008','IMM 5406','IMM 5669'],{},['Individual','Permanent residence','Express Entry','Federal Skilled Trades'],'Generated online by IRCC (to confirm)'],
+ ['Family sponsorship · spouse or partner','family',['IMM 1344','IMM 0008','IMM 5406','IMM 5669','IMM 5532'],{},['Individual','Permanent residence','Family sponsorship','Spouse or partner'],'Official checklist (to confirm)'],
+ ['Employer · labour market assessment, high wage','employer',['EMP5626'],{},['Corporate','Employer','Labour market assessment','High-wage stream'],'Employer guide (to confirm)']
+];
+var BLOCK0=['family_name','given_name','dob','citizenship','marital_status','email','phone'];
+var QBLOCK={work:['occupation','education_level','funds'],study:['education_level','funds','program'],visit:['funds','visit_purpose'],pr:['education_level','language_test','occupation','funds'],family:['sponsor_status','relationship_start'],employer:['employer_name','business_no','wage']};
+var DOCSUPPLIED={passport:['family_name','given_name','dob','citizenship','passport_no','passport_expiry','birth_country']};
+var esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
+var $=function(id){return document.getElementById(id);};
+// ---- state ----
+var lib,aliases,done,hist,rel,chk;
+function reset(){lib={};aliases={};done=[];hist=[];rel={};chk={};render1();renderQS();}
+function configure(i){
+ var r=ROWS[i],res={boxes:0,rule:0,ai:0,nw:0,newList:[],aiList:[]};
+ r[2].forEach(function(f){FORMS[f].forEach(function(b){
+  res.boxes++;var label=b[0],key=b[1];
+  if(aliases[label]&&aliases[label]===key){res.rule++;}
+  else if(lib[key]){res.ai++;res.aiList.push(f+': "'+label+'" → '+F[key][0]);aliases[label]=key;lib[key].labels.push(label);}
+  else{res.nw++;res.newList.push(F[key][0]+' ('+F[key][1]+')');lib[key]={labels:[label],used:{}};aliases[label]=key;}
+  lib[key].used['Row '+(i+1)]=1;
+ });});
+ done.push(i);chk[i]=res.ai+res.nw;hist.push({row:i,boxes:res.boxes,lib:Object.keys(lib).length});
+ return res;
+}
+function render1(res){
+ var ol=$('row-list');ol.innerHTML=ROWS.map(function(r,i){var ok=done.indexOf(i)>=0;var st=rel[i]?'<span class="chip ok">released v1</span>':(ok?'<span class="chip warn">drafted · '+chk[i]+' to check · awaiting second person</span>':(i===done.length?'<span class="chip">next</span>':'<span class="note">not run</span>'));
+ var forms=ok?r[2].map(function(f){return r[3][f]?'<span class="fchip cond" title="only if '+esc(r[3][f])+'">'+f+' <small>only if '+esc(r[3][f])+'</small></span>':'<span class="fchip">'+f+'</span>';}).join(''):'<span class="note">drafted on run</span>';
+ return '<tr class="'+(i===done.length?'nextrow':'')+'"><td>'+(i+1)+'</td>'+r[4].map(function(c){return '<td>'+esc(c)+'</td>';}).join('')+'<td><small>'+esc(r[5])+'</small></td><td>'+forms+'</td><td>'+st+'</td></tr>';}).join('');
+ $('cfg-status').textContent=done.length+' of 10 rows released';
+ if(res){var i=done[done.length-1];
+  $('run-out').innerHTML='<p><b>Row '+(i+1)+' · '+esc(ROWS[i][0])+'</b></p>'+
+  '<div class="kpis"><div><b>'+res.boxes+'</b><small>boxes read</small></div><div><b>'+res.rule+'</b><small>matched by rule, no AI</small></div><div><b>'+res.ai+'</b><small>new label, AI matched to an existing field</small></div><div><b>'+res.nw+'</b><small>new master fields proposed</small></div></div>'+
+  '<p class="note">Drafted. A person checks <b>'+(res.ai+res.nw)+' of '+res.boxes+'</b> items; then a second person releases row '+(i+1)+' v1. Matching here is exact by printed label; a real form repeats labels for different people, so real matching also uses the box\'s position and context, and the first real run measures its error rate.</p>'+
+  (res.newList.length?'<details class="more"><summary>New master fields ('+res.nw+')</summary><p>'+res.newList.map(esc).join(' · ')+'</p></details>':'')+
+  (res.aiList.length?'<details class="more"><summary>AI matches to check ('+res.ai+')</summary><p>'+res.aiList.map(esc).join('<br>')+'</p></details>':'');}
+ // chart: cumulative boxes vs library size
+ var cum=0,pts=hist.map(function(h){cum+=h.boxes;return{b:cum,l:h.lib,row:h.row};});
+ var W=640,H=170,max=Math.max(80,cum),bw=W/10;
+ var s='<svg viewBox="0 0 '+(W+60)+' '+(H+40)+'" role="img" aria-label="Cumulative boxes read against master fields"><g font-size="11" font-family="var(--body)">';
+ s+='<line x1="40" y1="'+(H+5)+'" x2="'+(W+50)+'" y2="'+(H+5)+'" stroke="var(--line)"/>';
+ pts.forEach(function(p,k){var x=45+k*bw,hb=H*p.b/max,hl=H*p.l/max;
+  s+='<rect x="'+x+'" y="'+(H+5-hb)+'" width="'+(bw*0.38)+'" height="'+hb+'" fill="var(--rules)" opacity=".55"/><rect x="'+(x+bw*0.4)+'" y="'+(H+5-hl)+'" width="'+(bw*0.38)+'" height="'+hl+'" fill="var(--flow)"/>';
+  s+='<text x="'+(x+bw*0.39)+'" y="'+(H+20)+'" text-anchor="middle" fill="var(--muted)">R'+(p.row+1)+'</text><text x="'+(x+bw*0.59)+'" y="'+(H+1-hl)+'" text-anchor="middle" fill="var(--flow)">'+p.l+'</text>';});
+ s+='<text x="45" y="12" fill="var(--muted)"><tspan fill="var(--rules)">■</tspan> boxes read, cumulative   <tspan fill="var(--flow)">■</tspan> master fields in the library</text></g></svg>';
+ $('chart').innerHTML=pts.length?s:'<p class="note">The chart fills as rows are configured.</p>';
+ var keys=Object.keys(lib);$('lib-count').textContent=keys.length;
+ $('lib-table').tBodies[0].innerHTML=keys.map(function(k){var f=F[k];return '<tr><td>'+esc(f[0])+'</td><td>'+esc(f[1])+'</td><td><span class="chip t-'+f[2]+'">'+f[2]+'</span></td><td>'+esc(f[3])+'</td><td>'+lib[k].labels.map(esc).join('; ')+'</td><td>'+Object.keys(lib[k].used).join(', ')+'</td></tr>';}).join('');
+ var pend=done.filter(function(i){return !rel[i];});$('cfg-next').textContent=pend.length?'Check and release row '+(pend[0]+1)+' (second person)':(done.length<10?'Run AI on row '+(done.length+1):'All rows released');
+ $('cfg-status').textContent=Object.keys(rel).length+' of 10 rows released';
+ renderQS();
+}
+$('cfg-next').addEventListener('click',function(){var pend=done.filter(function(i){return !rel[i];});if(pend.length){rel[pend[0]]=1;render1();}else if(done.length<10)render1(configure(done.length));});
+$('cfg-all').addEventListener('click',function(){var r;while(done.length<10)r=configure(done.length);done.forEach(function(i){rel[i]=1;});render1(r);});
+$('cfg-reset').addEventListener('click',reset);
+// ---- tab 2: question sets ----
+function rowFields(i){var s={};ROWS[i][2].forEach(function(f){FORMS[f].forEach(function(b){s[b[1]]=1;});});return Object.keys(s);}
+function renderQS(){
+ var sel=$('qs-row'),cur=sel.value;sel.innerHTML=done.map(function(i){return '<option value="'+i+'">Row '+(i+1)+' · '+esc(ROWS[i][0])+'</option>';}).join('');
+ if(cur&&done.indexOf(+cur)>=0)sel.value=cur;
+ if(!done.length){$('qs-cols').innerHTML='';$('qs-note').textContent='Configure at least one row first.';return;}
+ $('qs-note').textContent='';var i=+sel.value,fs=rowFields(i),q=ROWS[i][1];
+ var pqr=BLOCK0.concat(QBLOCK[q]||[]).filter(function(k,j,a){return a.indexOf(k)===j;});
+ var sqr=fs.filter(function(k){return F[k][2]!=='staff'&&DOCSUPPLIED.passport.indexOf(k)<0&&pqr.indexOf(k)<0;});
+ function list(t,arr,note){var by={};arr.forEach(function(k){(by[F[k][1]]=by[F[k][1]]||[]).push(k);});
+  return '<div class="card"><h4>'+t+' <small>'+arr.length+' fields</small></h4><p class="note">'+note+'</p>'+Object.keys(by).map(function(sec){return '<div class="qsec"><b>'+esc(sec)+'</b>'+by[sec].map(function(k){return '<span class="qf">'+esc(F[k][0])+' <span class="chip t-'+F[k][2]+'">'+F[k][2]+'</span></span>';}).join('')+'</div>';}).join('')+'</div>';}
+ $('qs-cols').innerHTML=list('This row\'s PQR (derived)',pqr,'Block 0 plus the '+q+' block of the one country PQR, in full. Some of these no form prints; rules read them.')+list('SQR, asked of the client',sqr,'Minus the PQR, minus passport-supplied fields, minus staff fields.')+list('Working view, agent',fs,'The row\'s full field set, every tier.');
+}
+$('qs-row').addEventListener('change',renderQS);
+// ---- tab 3: the case ----
+var people={self:'Principal applicant',spouse:'Spouse',child:'Child'};
+var vals={self:{family_name:'Mehra',given_name:'Asha',dob:'1990-04-18',citizenship:'India',marital_status:'Married',passport_no:'Z1234567',passport_expiry:'2031-02-01',uci:'',address:'12 Lake Rd, Pune',email:'a.mehra@example.com',job_title:'Data analyst',employer_name:'Northwind Ltd',lmia_no:'1234567',refused_before:'No',birth_country:'India',partner_since:'',rep_name:'(firm) Licensed reviewer',rep_licence:'R000000'},spouse:{family_name:'Mehra',given_name:'Ravi',dob:'1988-11-02'},child:{family_name:'Mehra',given_name:'Isha',dob:'2016-06-09'}};
+var src={};var conflict=null;var flash={};
+var CASEFORMS=[['IMM 1295','self'],['IMM 5707','self'],['IMM 1295','spouse'],['IMM 5409','self'],['IMM 5476','self']];
+function resolveWhose(owner,whose){if(whose==='self')return owner;if(whose==='partner')return 'spouse';return whose;}
+function visible(f,owner){if(f==='IMM 5409')return vals.self.marital_status==='Common-law';if(f==='IMM 5476')return !!vals.self.rep_name;if(owner==='spouse')return vals.self.marital_status!=='Single';return true;}
+var curTab=0;
+function renderCase(){
+ var keys=['family_name','given_name','dob','marital_status','citizenship','passport_no','uci','address','job_title','employer_name','partner_since','rep_name','rep_licence'];
+ var h='';Object.keys(people).forEach(function(p){if(p!=='self'&&vals.self.marital_status==='Single'&&p==='spouse')return;
+  h+='<div class="wvp"><b>'+people[p]+'</b>';var ks=p==='self'?keys:['family_name','given_name','dob'];
+  ks.forEach(function(k){if(k==='partner_since'&&vals.self.marital_status!=='Common-law')return;var f=F[k],v=(vals[p][k]||''),c=conflict&&conflict.p===p&&conflict.k===k;
+   var input=k==='marital_status'?'<select data-p="'+p+'" data-k="'+k+'">'+['Single','Married','Common-law'].map(function(o){return '<option'+(o===v?' selected':'')+'>'+o+'</option>';}).join('')+'</select>':'<input data-p="'+p+'" data-k="'+k+'" value="'+esc(v)+'">';
+   h+='<label class="wvr'+(c?' conf':'')+'"><span>'+esc(f[0])+' <span class="chip t-'+f[2]+'">'+f[2]+'</span></span>'+input+'<small>'+(c?'Conflict: passport says '+esc(conflict.doc)+' · <button type="button" data-res="doc">use passport</button> <button type="button" data-res="keep">keep typed</button>':(src[p+k]||(f[2]==='staff'?'staff, typed once':'client, SQR')))+'</small></label>';});
+  h+='</div>';});
+ $('wv').innerHTML=h;
+ var tabs=CASEFORMS.filter(function(c){return visible(c[0],c[1]);});if(curTab>=tabs.length)curTab=0;
+ $('fc-tabs').innerHTML=tabs.map(function(c,i){return '<button type="button" data-i="'+i+'" aria-pressed="'+(i===curTab)+'">'+c[0]+' · '+people[c[1]]+(c[1]==='spouse'?' (if applying)':'')+'</button>';}).join('');
+ var c=tabs[curTab],rows=FORMS[c[0]].map(function(b,n){var who=resolveWhose(c[1],b[2]);if(c[1]==='spouse'&&who==='spouse'&&b[2]!=='self')return '';
+   var whoReal=(c[1]==='spouse'&&b[2]==='self')?'spouse':who;var na=whoReal==='spouse'&&vals.self.marital_status==='Single';var pv=vals[whoReal]||{},v=na?'':(pv[b[1]]||'');
+   var blocked=conflict&&conflict.p===whoReal&&conflict.k===b[1];var st=na?'<span class="note">not applicable</span>':(blocked?'<span class="stop">blocked by a conflict</span>':(v?'<span class="ok">filled</span>':'<span class="warn">needs a fact</span>'));
+   return '<tr class="'+(flash[whoReal+b[1]]?'flash':'')+'"><td>'+(n+1)+'</td><td>'+esc(b[0])+'</td><td>'+(blocked?'—':esc(v))+'</td><td><small>'+people[whoReal]+' · '+esc(F[b[1]][0])+'</small></td><td>'+st+'</td></tr>';}).join('');
+ $('fc').innerHTML='<div class="tbl"><table><thead><tr><th>#</th><th>Box as printed</th><th>Value</th><th>Map entry: whose fact · master field</th><th>Status</th></tr></thead><tbody>'+rows+'</tbody></table></div><p class="note">'+(c[0]==='IMM 5707'?'This copy belongs to the principal applicant but holds boxes about the spouse and the child: the box address (whose fact) resolves them.':'Change a value on the left: this copy re-renders, earlier approvals of it are withdrawn (D181).')+'</p>';
+ flash={};
+}
+$('wv').addEventListener('input',function(e){var t=e.target;if(!t.dataset.k)return;vals[t.dataset.p][t.dataset.k]=t.value;src[t.dataset.p+t.dataset.k]='agent, working view';flash[t.dataset.p+t.dataset.k]=1;
+ if(t.tagName==='SELECT'){renderCase();}else{var fc=$('fc');var tmp=document.activeElement;renderFCOnly();}});
+function renderFCOnly(){var keepFocus=document.activeElement&&document.activeElement.dataset?{p:document.activeElement.dataset.p,k:document.activeElement.dataset.k}:null;var wvHtml=$('wv').innerHTML;renderCase();if(keepFocus&&keepFocus.k){var el=document.querySelector('#wv [data-p="'+keepFocus.p+'"][data-k="'+keepFocus.k+'"]');if(el){el.focus();var l=el.value.length;try{el.setSelectionRange(l,l);}catch(x){}}}}
+$('wv').addEventListener('click',function(e){var r=e.target.dataset.res;if(!r||!conflict)return;e.preventDefault();if(r==='doc'){vals[conflict.p][conflict.k]=conflict.doc;src[conflict.p+conflict.k]='document, passport p.1, confirmed';}else{src[conflict.p+conflict.k]='client, kept after review';}flash[conflict.p+conflict.k]=1;conflict=null;renderCase();});
+$('fc-tabs').addEventListener('click',function(e){if(e.target.dataset.i){curTab=+e.target.dataset.i;renderCase();}});
+$('doc-read').addEventListener('click',function(){var typed=vals.self.dob;var d=typed==='1990-04-19'?'1990-04-18':'1990-04-19';conflict={p:'self',k:'dob',doc:d};renderCase();});
+// ---- tab 4: edition change ----
+var edStage=0;
+function renderEd(){
+ if(edStage===0){$('ed-impact').innerHTML='<p class="note">Rows using IMM 5707 today: '+(done.filter(function(i){return ROWS[i][2].indexOf('IMM 5707')>=0;}).map(function(i){return 'Row '+(i+1);}).join(', ')||'none configured yet')+'.</p>';return;}
+ var rows=done.filter(function(i){return ROWS[i][2].indexOf('IMM 5707')>=0;});var cut=$('ed-cutoff').checked;if(edStage===1){$('ed-impact').innerHTML='<p class="note">Impact appears once v2 is released. Until then every case keeps v1.</p>';}
+ $('ed-status').textContent=edStage===1?'IMM 5707 v2 drafted: 2 boxes to check, awaiting second person':'Current IMM 5707 edition: v2 (released)';$('ed-release').textContent=edStage===1?'Release v2 (second person)':'Released';
+ $('ed-diff').innerHTML='<div class="kpis"><div><b>8</b><small>boxes unchanged, map carried over</small></div><div><b>1</b><small>label changed, matched by AI to an existing field</small></div><div><b>1</b><small>new box: existing field, new whose-fact</small></div></div><p>"Present address" → "Current residential address": <b>Current address</b> (to check)<br>New box "Mother\'s date of birth": existing field <b>Date of birth</b>, whose fact <b>mother</b>: a new box address, no new master field (to check)</p><p class="note">Rows are untouched: a row points at the form, never at an edition (SA-1B-26). The edition and its map get new versions.</p>';
+ if(edStage===1)return;var cases=rows.map(function(i,k){return{row:i,n:[18,6,9,4][k%4]};});var total=cases.reduce(function(a,c){return a+c.n;},0);
+ $('ed-impact').innerHTML='<p><b>'+rows.length+' rows</b> read IMM 5707: '+rows.map(function(i){return 'Row '+(i+1);}).join(', ')+'.</p><div class="tbl"><table><thead><tr><th>Row</th><th>Open cases pinned to v1</th><th>Status</th></tr></thead><tbody>'+cases.map(function(c){return '<tr><td>Row '+(c.row+1)+'</td><td>'+c.n+'</td><td>'+(cut?'<span class="stop">required: filing on v1 blocked</span>':'<span class="warn">offered: "what changes for this file"</span>')+'</td></tr>';}).join('')+'</tbody></table></div><p class="note">'+total+' illustrative open cases. Adopting re-renders their forms from the same facts and withdraws old previews; it is not an approval (D185).</p>';
+}
+$('ed-release').addEventListener('click',function(){if(edStage<2)edStage++;renderEd();});
+$('ed-cutoff').addEventListener('change',renderEd);
+// ---- conditional rules (D225; rules R1-R10 of section 7; immigration values to confirm by the specialist) ----
+function ev(){var a={ms:$('ca-ms').value,kids:+$('ca-kids').value,age:+$('ca-age').value,sp:$('ca-sp').value==='Yes',loc:$('ca-loc').value,rep:$('ca-rep').value==='Yes',ref:$('ca-ref').value==='Yes',pp:$('ca-pp').value!=='No'};
+ var P=[{who:'Principal applicant',items:[]}];var add=function(p,kind,name,why){p.items.push({kind:kind,name:name,why:why});};
+ var pr=P[0],inside=a.loc==='Inside Canada';
+ add(pr,'base','IMM 1295 (form)',inside?'Base form; replaced below by IMM 5710 under R7':'Base form entered by the content publisher');if(inside)add(pr,'cond','IMM 5710 (form, replaces IMM 1295)','R7: asked because you apply from inside Canada');
+ add(pr,'base','IMM 5707 (form)',inside?'Base form; not listed in Guide 5553 for inside Canada: the specialist confirms':'Base form entered by the content publisher');
+ ['Passport','Digital photo','Job offer letter','Labour market assessment copy'].forEach(function(d){add(pr,'base',d+' (document)','Base document from the checklist (to confirm)');});
+ if(inside)add(pr,'cond','Proof of current status (document)','R7: asked because you apply from inside Canada');
+ if(a.ms==='Married'){add(pr,'cond','Spouse boxes on IMM 5707','R1: asked because you said you are married');add(pr,'cond','Marriage certificate (document)','R1: asked because you said you are married');}
+ if(a.ms==='Common-law'){add(pr,'cond','IMM 5409 (form)','R2: asked because you said you live common-law');add(pr,'cond','Proof of living together (document)','R2: asked because you said you live common-law');add(pr,'cond','Partner boxes on IMM 5707','R2');}
+ if(a.rep){add(pr,'cond','IMM 5476 (form)','R5: a representative acts for you');add(pr,'cond','Representative details (staff fields)','R5: typed once by staff, never asked of you');}
+ if(a.ref)add(pr,'cond','Refusal details and refusal letter','R8: asked because you said you were refused before');
+ if(!a.pp)add(pr,'cond','Name, date of birth, citizenship, passport number questions','R10: asked because no confirmed passport is on file');
+ if(a.ms!=='Single'){var spn=a.ms==='Married'?'Spouse':'Partner',sp={who:spn,items:[]};P.push(sp);
+  add(sp,'cond','Personal facts block',(a.ms==='Married'?'R1':'R2')+': '+spn.toLowerCase()+' added to the case');
+  if(a.sp){add(sp,'cond','Own application: '+(inside?'IMM 5710':'IMM 1295'),'The '+spn.toLowerCase()+' applies too: their own row and role (SA-1B-74)');add(sp,'cond','IMM 5707 (own copy)','R4: aged 18 or over and applying');add(sp,'cond','Passport (document)','R4: the '+spn.toLowerCase()+' applies too');}
+  else add(sp,'note','No forms of their own',"Their facts appear on the principal's IMM 5707 through the box address");}
+ for(var k=0;k<a.kids;k++){var age=k===0?a.age:7,c={who:'Child '+(k+1)+' · age '+age,items:[]};P.push(c);
+  add(c,'cond','Child block (repeat '+(k+1)+')','R3: asked once per child');add(c,'cond','Birth certificate (document)','R3: asked once per child (to confirm)');
+  if(age>=18)add(c,'cond','IMM 5707 (own copy)','R4: aged 18 or over (to confirm for work permits, the specialist)');
+  else add(c,'note','Answered by a parent','SA-1B-76: nothing is sent to anyone under 18');}
+ var nb=0,nc=0;$('ca-out').innerHTML=P.map(function(p){return '<div class="pcard"><h5>'+esc(p.who)+'</h5>'+p.items.map(function(i){if(i.kind==='base')nb++;else if(i.kind==='cond')nc++;return '<div class="li"><span class="'+(i.kind==='base'?'tagb">BASE':(i.kind==='note'?'tagb">NOTE':'tagc">IF'))+'</span><span>'+esc(i.name)+'</span><small>'+esc(i.why)+'</small></div>';}).join('')+'</div>';}).join('');
+ $('ca-sum').textContent=nb+' base items entered by a person; '+nc+' conditional items produced by rules for this family. The same rules run on the server for every firm and every case (Doc-1 §5.5).';}
+['ca-ms','ca-kids','ca-age','ca-sp','ca-loc','ca-rep','ca-ref','ca-pp'].forEach(function(id){$(id).addEventListener('change',ev);});
+// ---- tabs ----
+document.querySelectorAll('.ptabs button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.ptabs button').forEach(function(x){x.setAttribute('aria-selected',String(x===b));});document.querySelectorAll('.ppane').forEach(function(p){p.hidden=p.id!==b.dataset.t;});if(b.dataset.t==='p3')renderCase();if(b.dataset.t==='pc')ev();if(b.dataset.t==='p4')renderEd();if(b.dataset.t==='p2')renderQS();});});
+reset();renderCase();
+})();
+</script>

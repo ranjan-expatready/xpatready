@@ -1,0 +1,125 @@
+{
+ "from_release": "c1-v2",
+ "change": "D30 re-scope (field review, official citations)",
+ "results": [
+  {
+   "reason": "D30 (P3P4-R1-M1, Codex 17:57:23Z): IMM 1295 is completed by each applicant (D20), and its work section is in the applicant's own words, so the work-permit type, the job offer, the intended work and the caregiver details are each applicant's own, not one value per case. One case value would have put the principal's job on the partner's form. Includes the intended work province (from the applicant's offer; drives the Quebec rule) and whether the intended occupation needs a medical exam, which depend on the same per-applicant work details",
+   "citations": [
+    {
+     "file": "official-sources/ircc/forms/imm1295e.pdf",
+     "quote": "My occupation in Canada will be:",
+     "where": "IMM 1295 page 3, above Job title, Brief description of duties and the LMIA or offer of employment number"
+    },
+    {
+     "file": "official-sources/ircc/forms/imm1295e.pdf",
+     "quote": "*What type of work permit are you applying for?",
+     "where": "IMM 1295, Details of intended work in Canada"
+    },
+    {
+     "file": "official-sources/ircc/forms/imm1295e.pdf",
+     "quote": "Details of my prospective employer",
+     "where": "IMM 1295, Details of intended work in Canada"
+    },
+    {
+     "file": "official-sources/ircc/instructions/guide-5487.html",
+     "quote": "To work in Canada, your spouse or common-law partner and your dependent children must apply for their own work permits. Each person must meet the requirements to get a work permit, including the LMIA requirement.",
+     "where": "Guide 5487, May my spouse or common-law partner and children work in Canada?"
+    },
+    {
+     "file": "official-sources/ircc/forms/imm1295e.pdf",
+     "quote": "Intended location of employment in Canada?",
+     "where": "IMM 1295 page 3, Province, City/Town, Address"
+    }
+   ],
+   "kept_case_wide": [
+    {
+     "id": "case.service_language",
+     "reason": "one service language for a family filing together; an applicant who wants another language is not modelled in the prototype (stated limit)"
+    },
+    {
+     "id": "case.country_where_applying",
+     "reason": "the family applies together from one country (India) in combination 1; a different country per applicant is not modelled (stated limit)"
+    },
+    {
+     "id": "relationship.start_date",
+     "reason": "one fact of the couple's relationship (D11); both applicants' forms read the same date"
+    }
+   ],
+   "moved": [
+    {
+     "from": "case.work_permit_type",
+     "to": "person.work_permit_type",
+     "references_rewritten": 11
+    },
+    {
+     "from": "case.is_employer_specific_work_permit",
+     "to": "person.is_employer_specific_work_permit",
+     "references_rewritten": 13
+    },
+    {
+     "from": "case.intended_work_location",
+     "to": "person.intended_work_location",
+     "references_rewritten": 7
+    },
+    {
+     "from": "case.intended_job_title",
+     "to": "person.intended_job_title",
+     "references_rewritten": 5
+    },
+    {
+     "from": "case.intended_job_duties",
+     "to": "person.intended_job_duties",
+     "references_rewritten": 5
+    },
+    {
+     "from": "case.intended_employment_start_date",
+     "to": "person.intended_employment_start_date",
+     "references_rewritten": 9
+    },
+    {
+     "from": "case.intended_employment_end_date",
+     "to": "person.intended_employment_end_date",
+     "references_rewritten": 7
+    },
+    {
+     "from": "case.lmia_or_offer_number",
+     "to": "person.lmia_or_offer_number",
+     "references_rewritten": 8
+    },
+    {
+     "from": "case.caregiver_care_types",
+     "to": "person.caregiver_care_types",
+     "references_rewritten": 10
+    },
+    {
+     "from": "case.caregiver_persons_requiring_care",
+     "to": "person.caregiver_persons_requiring_care",
+     "references_rewritten": 4
+    },
+    {
+     "from": "case.intended_employment_duration_days",
+     "to": "person.intended_employment_duration_days",
+     "references_rewritten": 3
+    },
+    {
+     "from": "case.intended_employment_start_days_from_application",
+     "to": "person.intended_employment_start_days_from_application",
+     "references_rewritten": 3
+    },
+    {
+     "from": "case.intended_work_province",
+     "to": "person.intended_work_province",
+     "references_rewritten": 5
+    },
+    {
+     "from": "case.intended_occupation_requires_medical",
+     "to": "person.intended_occupation_requires_medical",
+     "references_rewritten": 5
+    }
+   ],
+   "conditions": 18,
+   "missing": []
+  }
+ ],
+ "purpose": "P5 entry: distinct principal and partner job values before any IMM 1295 is filled"
+}

@@ -1,0 +1,125 @@
+{
+  "scope": "Offline probes on frozen current working source, no database/browser/model calls",
+  "probes": [
+    {
+      "id": "selected-section-question",
+      "observed": {
+        "configured": 1,
+        "returned": 0
+      },
+      "expected": "Reconcile configured-section intent with unused-question pruning; this observation alone is not a confirmed material defect",
+      "defect": false
+    },
+    {
+      "id": "mapped-question-control",
+      "observed": {
+        "returned": [
+          "person.field_a"
+        ]
+      },
+      "expected": "The same question is returned when a form map reads it",
+      "defect": false
+    },
+    {
+      "id": "question-condition-dependency",
+      "observed": {
+        "waiting_questions": [
+          {
+            "fact": "person.field_a",
+            "status": "hidden by a condition"
+          }
+        ],
+        "deciders": [],
+        "after_external_answer": [
+          {
+            "fact": "person.field_a",
+            "status": "needs an answer"
+          }
+        ]
+      },
+      "expected": "The configured deciding question is available before its dependent question needs it",
+      "defect": true
+    },
+    {
+      "id": "publish-hide-required-form-input",
+      "observed": {
+        "form_applies": true,
+        "question_status": "hidden by a condition",
+        "validation_problems": []
+      },
+      "expected": "W1 3.4 blocks publishing a placement that hides a field read by an applicable form; this offline probe tests the publication validator, not a database release",
+      "defect": true
+    },
+    {
+      "id": "participant-change",
+      "observed": {
+        "content_hash_changed": true,
+        "review_change_items": []
+      },
+      "expected": "A behavior-bearing configuration change appears in the review change set",
+      "defect": true
+    },
+    {
+      "id": "document-supply-change",
+      "observed": {
+        "content_hash_changed": true,
+        "review_change_items": []
+      },
+      "expected": "A behavior-bearing configuration change appears in the review change set",
+      "defect": true
+    },
+    {
+      "id": "derived-definition-change",
+      "observed": {
+        "content_hash_changed": true,
+        "review_change_items": []
+      },
+      "expected": "A behavior-bearing configuration change appears in the review change set",
+      "defect": true
+    },
+    {
+      "id": "ordinary-change-control",
+      "observed": {
+        "review_change_items": [
+          {
+            "kind": "Document requirement",
+            "key": "requirement-a",
+            "change": "added",
+            "needs_sme": true,
+            "label": "Document type A"
+          }
+        ]
+      },
+      "expected": "A document requirement appears in the review change set",
+      "defect": false
+    },
+    {
+      "id": "five-program-fixture",
+      "observed": {
+        "programs": 3,
+        "compositions": 5
+      },
+      "expected": "D274/D275 require five sample programs; family variants are not extra programs",
+      "defect": true
+    },
+    {
+      "id": "declared-questions-validation",
+      "observed": {
+        "problems": [
+          {
+            "level": "warning",
+            "where": "Forms",
+            "item": "-",
+            "message": "This composition files no forms yet."
+          }
+        ]
+      },
+      "expected": "No invalid source reference is necessary to reproduce the missing selected-section question",
+      "defect": false
+    }
+  ],
+  "summary": {
+    "probes": 10,
+    "defect_observations": 6
+  }
+}

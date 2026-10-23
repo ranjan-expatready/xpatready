@@ -1,0 +1,239 @@
+/* Copied unchanged from ERv2-frontend@5ccd9fa-2026-10-20 src/styles/tokens.css (D276 reuse). */
+/**
+ * ERv2 brand design tokens — §8b W0 D3.
+ *
+ * Three layers, in this order:
+ *   1. Raw brand palette anchors (--erv2-palette-*)        — exact brand hex from the brand guideline. Never
+ *      consumed directly by components.
+ *   2. Tonal ramps 50-900 (--erv2-{primary,orange,neutral,danger,ok}-*) — perceptually-ordered, on-hue steps
+ *      hand-derived from the anchors (plain hex; no color-math dependency — see file header rationale in the
+ *      W0 task report for exact derivation).
+ *   3. Semantic tokens (--color-*)                          — the ONLY layer components should consume. Declared
+ *      inside `@theme` so Tailwind generates matching utility classes (bg-surface, text-text-muted, bg-danger,
+ *      etc.) and so var() chains resolve against the ramp/anchor custom properties declared below in `:root`.
+ *      Deliberately NOT `@theme inline`: inline bakes each light value into the utility itself
+ *      (`.bg-surface-sunken{background-color:var(--erv2-neutral-50)}`), so the dark sheet's overrides of
+ *      `--color-*` below were never read and every semantic utility stayed light in dark mode. Without inline,
+ *      utilities read `var(--color-*)`, and the unlayered dark sheet beats Tailwind's `@layer theme` values.
+ *
+ * WCAG 2.2 AA — LIGHT sheet only (compliance-class, see apps/web/src/styles/__tests__/token-contrast.test.ts):
+ *   - Every --color-text* × --color-surface* pair is >= 4.5:1 (verified: worst case 4.96:1, text-muted on
+ *     surface-sunken — see test file for the computed matrix).
+ *   - Raw Electric Blue (#0694FF) measures ~3.1:1 on white — FAILS AA — so it is NEVER assigned to a text token.
+ *     Only the darker brand anchor (#0862C5, primary-600, ~5.9:1 on white) or darker clears the floor. --color-
+ *     text-link goes one step darker still (primary-700, #054E9C) so it also clears the WORST-CASE surface
+ *     (surface-sunken): #0862C5 itself would only be ~4.2:1 there, short of 4.5.
+ *   - Raw Orange (#FF8500) measures ~2.4:1 on white — FAILS AA — so it is fill/badge/CTA-background ONLY, never a
+ *     text color. orange-800 is derived for --color-text-warn (passes with margin, ~4.97:1 worst case).
+ *   - --color-primary-contrast (white, for text/icons atop the --color-primary fill) is deliberately NOT named
+ *     --color-text-* / --color-surface-* and is NOT part of the automated matrix: its only sanctioned context is
+ *     atop the saturated --color-primary fill, not atop the neutral --color-surface* family — a fixed white token
+ *     would trivially fail (~1:1) if tested against surface/surface-raised, which would defeat the point of the
+ *     matrix. Same reasoning applies to --color-danger / --color-warn / --color-ok (fill colors, not text).
+ *
+ * Colour unification (2026-10): this file is the ONLY colour source. The shadcn placeholder layer that used to live
+ * in ../index.css is gone, except `--primary-foreground` (text on primary fills), kept until the dark-mode
+ * text-on-primary decision. __tests__/single-colour-source.test.ts keeps index.css from declaring colours again.
+ */
+
+:root {
+  /* ── Layer 1: raw brand palette anchors ─────────────────────────────── */
+  --erv2-palette-electric-blue: #0694ff;
+  --erv2-palette-blue: #0862c5;
+  --erv2-palette-off-white: #eeeeee;
+  --erv2-palette-orange: #ff8500;
+  --erv2-palette-iron: #2d2d2d;
+  /* Secondary anchors — raw only, not ramped this wave. Decorative/accent use (charts, illustration, dark-sheet
+     base); never assigned to a --color-text-* or --color-surface-* token. */
+  --erv2-palette-cyan: #60fffc;
+  --erv2-palette-sky: #50d0ff;
+  --erv2-palette-turquoise: #40e0d0;
+  --erv2-palette-slate: #37506e;
+
+  /* ── Layer 2a: primary (blue) ramp — 500 anchors Electric Blue, 600 anchors Blue ──
+     500/600 are the two brand anchors verbatim; 700-900 are derived darker steps (700 is the --color-text-link
+     source: darker than the 600 anchor so it also clears the surface-sunken worst case). */
+  --erv2-primary-50: #e6f4ff;
+  --erv2-primary-100: #cce9ff;
+  --erv2-primary-200: #99d2ff;
+  --erv2-primary-300: #5cb8ff;
+  --erv2-primary-400: #2aa1ff;
+  --erv2-primary-500: #0694ff;
+  /* anchor: Electric Blue — ~3.1:1 on white, TEXT-BANNED, fill/accent only */
+  --erv2-primary-600: #0862c5;
+  /* anchor: Blue — ~5.9:1 on white, the text-blue floor */
+  --erv2-primary-700: #054e9c;
+  /* derived, darker than the floor — used for --color-text-link */
+  --erv2-primary-800: #043a73;
+  --erv2-primary-900: #02253f;
+
+  /* ── Layer 2b: orange ramp — 500 anchors raw Orange (fill/badge/CTA-background ONLY, never text) ── */
+  --erv2-orange-50: #fff3e0;
+  --erv2-orange-100: #ffe0b3;
+  --erv2-orange-200: #ffc773;
+  --erv2-orange-300: #ffad3d;
+  --erv2-orange-400: #ff9814;
+  --erv2-orange-500: #ff8500;
+  /* anchor: Orange — ~2.4:1 on white, TEXT-BANNED, fill/badge/CTA-background only */
+  --erv2-orange-600: #d96f00;
+  --erv2-orange-700: #b35a00;
+  --erv2-orange-800: #8c4600;
+  /* derived — used for --color-text-warn (passes 4.5:1, ~4.97:1 worst case) */
+  --erv2-orange-900: #663200;
+
+  /* ── Layer 2c: neutral ramp — 100 anchors Off-White, 900 anchors Iron ── */
+  --erv2-neutral-50: #f7f7f7;
+  --erv2-neutral-100: #eeeeee;
+  /* anchor: Off-White */
+  --erv2-neutral-200: #d9d9d9;
+  --erv2-neutral-300: #bfbfbf;
+  --erv2-neutral-400: #a6a6a6;
+  --erv2-neutral-500: #8c8c8c;
+  --erv2-neutral-600: #737373;
+  --erv2-neutral-700: #595959;
+  /* used for --color-text-muted (~4.96:1 worst case) */
+  --erv2-neutral-800: #404040;
+  --erv2-neutral-900: #2d2d2d;
+  /* anchor: Iron */
+
+  /* ── Layer 2d: status ramps — no brand anchor exists for danger/ok, so these two are independently derived
+     (danger: accessible red; ok: accessible green). warn reuses the orange ramp above (no separate ramp needed). */
+  --erv2-danger-500: #dc2626;
+  /* fill/badge */
+  --erv2-danger-700: #991b1b;
+  /* used for --color-text-danger (~5.89:1 worst case) */
+  --erv2-ok-500: #16a34a;
+  /* fill/badge */
+  --erv2-ok-800: #0f5c2e;
+  /* used for --color-text-ok (~5.74:1 worst case) */
+}
+
+@theme {
+  /* ── Layer 3: semantic tokens — LIGHT sheet (the only sheet the W0 automated contrast gate checks) ── */
+  --color-primary: var(--erv2-primary-600);
+  --color-primary-contrast: #ffffff;
+
+  --color-surface: var(--erv2-neutral-50);
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: var(--erv2-neutral-50);
+
+  --color-text: var(--erv2-neutral-900);
+  --color-text-muted: var(--erv2-neutral-600);
+  --color-text-link: var(--erv2-primary-700);
+
+  --color-danger: var(--erv2-danger-500);
+  --color-text-danger: var(--erv2-danger-700);
+  --color-warn: var(--erv2-orange-500);
+  --color-text-warn: var(--erv2-orange-900);
+  --color-ok: var(--erv2-ok-500);
+  --color-text-ok: var(--erv2-ok-800);
+
+  /* Lines and focus. `border` = hairlines, dividers, card and table rules; `border-strong` = form-control outlines
+     (input, select, textarea, checkbox, radio, switch track); `ring` = focus indicator (drawn at /50). These names
+     match the utilities every primitive already uses (`border-border`, `ring-ring/50`). */
+  --color-border: var(--erv2-neutral-200);
+  --color-border-strong: var(--erv2-neutral-300);
+  --color-ring: var(--color-primary);
+  /* Text / icon on a `bg-danger` fill (destructive button, badge, toast). */
+  --color-danger-contrast: #ffffff;
+  /* Raised bevel on a filled button (`shadow-bevel`, the destructive variant): a light top-left inner highlight plus a
+     soft bottom-right drop. Kept here so no component carries raw colour. */
+  --shadow-bevel: inset 2px 2px 1px #ffffff5e, 2px 2px 1px #00000026;
+
+  /* Inter self-host (§8b W0 D4) — see @font-face rules + provenance below and in
+     apps/web/public/fonts/inter/README.md. */
+  --font-sans:
+    'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/**
+ * Dark sheet — set by `applyThemeToDocument` (src/lib/theme.ts) as `[data-theme='dark']` on <html>; Tailwind's
+ * `dark:` variant is keyed on the same attribute. Every token here is contrast-checked by
+ * __tests__/token-contrast.test.ts (text × surface, text-on-fill), and every light-sheet colour must have a value here.
+ */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-surface: #14202c;
+  --color-surface-raised: #182634;
+  --color-surface-sunken: #15202d;
+
+  --color-text: var(--erv2-palette-off-white);
+  --color-text-muted: #a9b7c4;
+  --color-text-link: var(--erv2-primary-400);
+
+--color-primary: #0694ff38;
+  --color-primary-contrast: #062038;
+
+  --color-danger: var(--erv2-danger-500);
+  --color-text-danger: #f87171;
+  --color-warn: var(--erv2-orange-500);
+  --color-text-warn: #ffb454;
+  --color-ok: var(--erv2-ok-500);
+  --color-text-ok: #4ade80;
+
+  --color-border: #2c3a48;
+  --color-border-strong: #46586c;
+  --color-ring: var(--erv2-primary-400);
+  --color-danger-contrast: #ffffff;
+}
+
+/**
+ * Inter self-host (§8b W0 D4). Family "Inter Variable" per fontsource's own naming (matches --font-sans above).
+ * Two subsets copied from @fontsource-variable/inter 5.2.8 (latin + latin-ext — fr-CA diacritics need latin-ext;
+ * see apps/web/public/fonts/inter/README.md for full provenance). unicode-range values copied verbatim from the
+ * package's wght.css. Single variable-font axis (wght 100-900), upright style only — no italic, no opsz axis.
+ */
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/inter/inter-latin-wght-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0000-00FF,
+    U+0131,
+    U+0152-0153,
+    U+02BB-02BC,
+    U+02C6,
+    U+02DA,
+    U+02DC,
+    U+0304,
+    U+0308,
+    U+0329,
+    U+2000-206F,
+    U+20AC,
+    U+2122,
+    U+2191,
+    U+2193,
+    U+2212,
+    U+2215,
+    U+FEFF,
+    U+FFFD;
+}
+
+@font-face {
+  font-family: 'Inter Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('/fonts/inter/inter-latin-ext-wght-normal.woff2') format('woff2-variations');
+  unicode-range:
+    U+0100-02BA,
+    U+02BD-02C5,
+    U+02C7-02CC,
+    U+02CE-02D7,
+    U+02DD-02FF,
+    U+0304,
+    U+0308,
+    U+0329,
+    U+1D00-1DBF,
+    U+1E00-1E9F,
+    U+1EF2-1EFF,
+    U+2020,
+    U+20A0-20AB,
+    U+20AD-20C0,
+    U+2113,
+    U+2C60-2C7F,
+    U+A720-A7FF;
+}

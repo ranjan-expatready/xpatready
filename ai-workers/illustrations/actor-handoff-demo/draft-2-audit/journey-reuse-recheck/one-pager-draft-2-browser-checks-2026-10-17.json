@@ -1,0 +1,934 @@
+{
+ "page": "file:///Users/ranjansingh/Desktop/Xpatready/ai-workers/illustrations/actor-handoff-demo/draft-2-audit/journey-reuse-recheck/solution-1-one-pager.html",
+ "run": "2026-10-17T16:13:06.033Z",
+ "passed": 123,
+ "failed": 0,
+ "results": [
+  {
+   "name": "1440px light: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px light: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "78px of 900px"
+  },
+  {
+   "name": "1440px light: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 98.96875
+   }
+  },
+  {
+   "name": "1440px light: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 99.46875
+   }
+  },
+  {
+   "name": "1440px light: no sideways page scroll",
+   "ok": true,
+   "detail": "1440 vs 1440"
+  },
+  {
+   "name": "1440px light: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px light: diagrams shown at natural size",
+   "ok": true,
+   "detail": "8 visible"
+  },
+  {
+   "name": "1440px: every diagram at 100% (container = drawing width, at most 1,240px)",
+   "ok": true,
+   "detail": [
+    {
+     "k": "v0",
+     "w": 1036,
+     "cw": 1036
+    },
+    {
+     "k": "v1",
+     "w": 952,
+     "cw": 952
+    },
+    {
+     "k": "v2",
+     "w": 1162,
+     "cw": 1162
+    },
+    {
+     "k": "v3",
+     "w": 1232,
+     "cw": 1232
+    },
+    {
+     "k": "v4",
+     "w": 1212,
+     "cw": 1212
+    },
+    {
+     "k": "v5",
+     "w": 1232,
+     "cw": 1232
+    },
+    {
+     "k": "v6",
+     "w": 1202,
+     "cw": 1202
+    },
+    {
+     "k": "v7",
+     "w": 802,
+     "cw": 802
+    }
+   ]
+  },
+  {
+   "name": "one eye button per activity (41)",
+   "ok": true,
+   "detail": 41
+  },
+  {
+   "name": "eye opens the inspector with the activity card",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Generate form field mappings",
+    "focusIn": true,
+    "hash": "#a=3.2",
+    "dt": 10,
+    "io": 4
+   }
+  },
+  {
+   "name": "card has ten groups and the Input → Action → Output → Receiving owner line",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Generate form field mappings",
+    "focusIn": true,
+    "hash": "#a=3.2",
+    "dt": 10,
+    "io": 4
+   }
+  },
+  {
+   "name": "location hash updated without navigation",
+   "ok": true,
+   "detail": "#a=3.2"
+  },
+  {
+   "name": "opening does not scroll the page or the map",
+   "ok": true,
+   "detail": {
+    "y": 5074,
+    "x": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "name": "Example opens in the same card by keyboard",
+   "ok": true,
+   "detail": {
+    "exp": "true",
+    "vis": true,
+    "label": true
+   }
+  },
+  {
+   "name": "another selection replaces the card in the same inspector",
+   "ok": true,
+   "detail": {
+    "h": "Check the copy's meaning",
+    "n": 1,
+    "exp": "true",
+    "sel": 1
+   }
+  },
+  {
+   "name": "Example stays open across selections",
+   "ok": true,
+   "detail": "true"
+  },
+  {
+   "name": "selected activity is outlined on the map",
+   "ok": true,
+   "detail": 1
+  },
+  {
+   "name": "clicking the shape opens its card",
+   "ok": true
+  },
+  {
+   "name": "Escape closes and returns focus to the eye button",
+   "ok": true,
+   "detail": {
+    "hidden": true,
+    "f": "1.2",
+    "hash": ""
+   }
+  },
+  {
+   "name": "closing leaves the page and map where they were",
+   "ok": true,
+   "detail": {
+    "y": 4427,
+    "x": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "name": "hover preview shows title and Input → Output only",
+   "ok": true,
+   "detail": "5.1 Review every new or changed itemNew and changed fields, sections, document types, mappings and 'collected from' settings, with findings and recheck flags → Reviewed structure, or corrections sent back"
+  },
+  {
+   "name": "Close button closes and returns focus",
+   "ok": true
+  },
+  {
+   "name": "overview phase box jumps to its view, heading below the navigation",
+   "ok": true,
+   "detail": {
+    "t": 99,
+    "nav": 78
+   }
+  },
+  {
+   "name": "who-does-what matrix opens the card",
+   "ok": true
+  },
+  {
+   "name": "all 41 cards complete (ten groups, flow line, person line, example or reason)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "deep link #a=5.1 opens that card on load",
+   "ok": true
+  },
+  {
+   "name": "1440px: selected shape stays visible beside the open card (3.8, 9.3, 5.3, 9.6)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px: another shape can be selected without closing the card",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Resolve read-back results, type refused fields, validate"
+   }
+  },
+  {
+   "name": "hover preview stays while the pointer is on it, and Escape closes it",
+   "ok": true,
+   "detail": {
+    "tb": {
+     "vis": true,
+     "x": 769,
+     "y": 463.46875
+    },
+    "stays": true,
+    "gone": true
+   }
+  },
+  {
+   "name": "journey: plain cards come before the BPMN overview and need no symbols legend",
+   "ok": true,
+   "detail": {
+    "first": "journey",
+    "order": [
+     "1",
+     "2",
+     "3",
+     "A",
+     "B",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8",
+     "9",
+     "10",
+     "11",
+     "12"
+    ],
+    "bands": 3,
+    "full": true,
+    "arrows": 10,
+    "svgInJourney": 0,
+    "legendBefore": false,
+    "symbolsClosed": true,
+    "overflow": [],
+    "links": [
+     "Released package",
+     "New version"
+    ]
+   }
+  },
+  {
+   "name": "journey: three bands; ways in A and B, then stages 1–12 in reading order",
+   "ok": true,
+   "detail": [
+    "1",
+    "2",
+    "3",
+    "A",
+    "B",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "10",
+    "11",
+    "12"
+   ]
+  },
+  {
+   "name": "journey: every stage card shows who, receives, does and hands over; every arrow is labelled",
+   "ok": true,
+   "detail": {
+    "first": "journey",
+    "order": [
+     "1",
+     "2",
+     "3",
+     "A",
+     "B",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8",
+     "9",
+     "10",
+     "11",
+     "12"
+    ],
+    "bands": 3,
+    "full": true,
+    "arrows": 10,
+    "svgInJourney": 0,
+    "legendBefore": false,
+    "symbolsClosed": true,
+    "overflow": [],
+    "links": [
+     "Released package",
+     "New version"
+    ]
+   }
+  },
+  {
+   "name": "journey: setup is joined to cases by the released package; change by a new version",
+   "ok": true,
+   "detail": [
+    "Released package",
+    "New version"
+   ]
+  },
+  {
+   "name": "journey: no card text overflows at 1440px",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "journey: stage eye opens its card in the side panel without moving the page",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Reuse confirmed information",
+    "focus": "insp-h",
+    "hash": "#c=st-5",
+    "bar": "Stage 5 · business journey",
+    "on": true,
+    "y": 1008,
+    "rules": [
+     "Team requirement One record per person or organisation inside one firm, shared by all their cases; a case reaches it through the person's resolved identity, never by matching a name or an email",
+     "Founder decision Facts belong to the person and are reused across that person's cases inside the same firm only, never across firms; the firm's and the role's permissions apply to every reuse",
+     "Team requirement Facts that belong to one application (a job offer, a case-only answer) stay on that case and are never reused as the person's value",
+     "Founder decision Household facts (marriage date, children, a shared address) are entered once and linked to both partners; each partner's personal and restricted values stay their own",
+     "Team requirement A replaced value is kept as history with its source and dates, never overwritten",
+     "Proposal Each required fact is resolved on its own: same person or organisation, same field meaning and purpose, and the right date or context; never by copying the latest case",
+     "Proposal The selected value is the current confirmed one: confirmed by a person, with a known source, and not replaced by a later confirmed value",
+     "Proposal A later case-open date, upload time or edit time does not by itself make a value more authoritative",
+     "Proposal A newer declared or document-read value that differs from a confirmed one waits as 'to review'; it never silently replaces the confirmed value",
+     "Proposal A value correctly replaced by a later confirmed one is history, not a conflict",
+     "Proposal Two current values with no recorded replacement between them (for example after two records are merged) are a conflict: both are shown with their sources and a person confirms one; nothing is guessed",
+     "Proposal A question about a past date (an address at an earlier application) is answered from the value true at that date; today's value never replaces it",
+     "Founder decision Each field's re-confirmation rule applies on every new case: identity facts are not re-asked unless a new document differs; addresses, jobs and travel are shown pre-filled with 'still true? add anything new'",
+     "Team requirement Each case keeps the set of facts it was assessed and filed on; a later change to the shared record never rewrites a submitted copy",
+     "Proposal Choosing among values already confirmed is rules, not AI; AI only proposes values read from new documents (7.3)"
+    ]
+   }
+  },
+  {
+   "name": "journey: stage 5 carries the shared-record selection rules in context",
+   "ok": true,
+   "detail": 15
+  },
+  {
+   "name": "journey: stage 5 example shows the field-by-field table (invented values) and the scenario matrix",
+   "ok": true,
+   "detail": [
+    {
+     "head": [
+      "Field",
+      "Available information",
+      "Selected value · status",
+      "Reason",
+      "Human action"
+     ],
+     "rows": 6,
+     "cap": "Reusing facts on a new case (Example: every value, case and date is invented)"
+    },
+    {
+     "head": [
+      "Starting point",
+      "How the case starts",
+      "Pre-filled",
+      "Asked",
+      "Never carried over"
+     ],
+     "rows": 5,
+     "cap": "Who starts where, and what carries over (Example)"
+    }
+   ]
+  },
+  {
+   "name": "journey: an activity link in the stage card opens that activity card in the same panel",
+   "ok": true,
+   "detail": {
+    "h": "Convert the lead and open the case",
+    "hash": "#a=7.1",
+    "sel": 1,
+    "tables": [
+     "Who gets what (Example)",
+     "Reusing facts on a new case (Example: every value, case and date is invented)",
+     "Who starts where, and what carries over (Example)",
+     "A corporate case (Example)"
+    ],
+    "exOpen": true
+   }
+  },
+  {
+   "name": "case creation card 7.1 carries the reuse example and the scenario matrix",
+   "ok": true,
+   "detail": [
+    "Who gets what (Example)",
+    "Reusing facts on a new case (Example: every value, case and date is invented)",
+    "Who starts where, and what carries over (Example)",
+    "A corporate case (Example)"
+   ]
+  },
+  {
+   "name": "journey: way in B is an existing client opening a new case without a new lead",
+   "ok": true,
+   "detail": "Existing client, new service"
+  },
+  {
+   "name": "journey: Escape closes the stage card and returns focus to its eye",
+   "ok": true,
+   "detail": {
+    "hidden": true,
+    "f": "st-B"
+   }
+  },
+  {
+   "name": "every view has a \"Diagram symbols\" button that opens the legend in the side panel",
+   "ok": true,
+   "detail": {
+    "h": "Diagram symbols (BPMN 2.0)",
+    "keys": 15,
+    "lanes": 9
+   }
+  },
+  {
+   "name": "BPMN: view 4 and the overview start an existing client's new case at 7.1, not at the lead form",
+   "ok": true,
+   "detail": {
+    "v4": true,
+    "v0": true
+   }
+  },
+  {
+   "name": "reuse walk: no prior case: a new client goes through the lead form, PQR and duplicate check",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: profile but no case: started from the record; only missing, re-confirmation and needed eligibility questions",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: one prior case: shared facts reused; that case's approvals, signatures, receipts and decision not carried",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: several cases: each fact resolved on its own, never the latest case",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: stable confirmed fact reused and correctable",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: current address supersedes a historical one; history is not a conflict; past dates keep past values",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: newer unconfirmed passport waits for review",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: genuine disagreement: no value selected, a person confirms",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: timestamps alone never decide authority",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: identity: names or email never merge people; resolved identifier used",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: permissions and firm boundary apply to every reuse",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: documents re-checked against the new case; expiry warnings unchanged",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: nothing approved or submitted is copied or silently rewritten",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: no AI selects among confirmed values",
+   "ok": true
+  },
+  {
+   "name": "reuse walk: same person links the record and still asks gaps and differences",
+   "ok": true
+  },
+  {
+   "name": "1440px dark: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px dark: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "78px of 900px"
+  },
+  {
+   "name": "1440px dark: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 98.96875
+   }
+  },
+  {
+   "name": "1440px dark: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 99.46875
+   }
+  },
+  {
+   "name": "1440px dark: no sideways page scroll",
+   "ok": true,
+   "detail": "1440 vs 1440"
+  },
+  {
+   "name": "1440px dark: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px dark: diagrams shown at natural size",
+   "ok": true,
+   "detail": "8 visible"
+  },
+  {
+   "name": "1440px dark: page dark, diagram panel stays light",
+   "ok": true,
+   "detail": "rgb(18, 19, 20) / rgb(255, 255, 255)"
+  },
+  {
+   "name": "1280px light: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px light: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "78px of 800px"
+  },
+  {
+   "name": "1280px light: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 98.96875
+   }
+  },
+  {
+   "name": "1280px light: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 99.46875
+   }
+  },
+  {
+   "name": "1280px light: no sideways page scroll",
+   "ok": true,
+   "detail": "1280 vs 1280"
+  },
+  {
+   "name": "1280px light: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px light: diagrams shown at natural size",
+   "ok": true,
+   "detail": "8 visible"
+  },
+  {
+   "name": "1280px: selected shape stays visible beside the open card (3.8, 9.3, 5.3, 9.6)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px: another shape can be selected without closing the card",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Resolve read-back results, type refused fields, validate"
+   }
+  },
+  {
+   "name": "1280px dark: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px dark: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "78px of 800px"
+  },
+  {
+   "name": "1280px dark: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 98.96875
+   }
+  },
+  {
+   "name": "1280px dark: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 99.46875
+   }
+  },
+  {
+   "name": "1280px dark: no sideways page scroll",
+   "ok": true,
+   "detail": "1280 vs 1280"
+  },
+  {
+   "name": "1280px dark: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px dark: diagrams shown at natural size",
+   "ok": true,
+   "detail": "8 visible"
+  },
+  {
+   "name": "1280px dark: page dark, diagram panel stays light",
+   "ok": true,
+   "detail": "rgb(18, 19, 20) / rgb(255, 255, 255)"
+  },
+  {
+   "name": "768px light: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "768px light: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "48px of 1024px"
+  },
+  {
+   "name": "768px light: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 69.34375
+   }
+  },
+  {
+   "name": "768px light: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 68.84375
+   }
+  },
+  {
+   "name": "768px light: no sideways page scroll",
+   "ok": true,
+   "detail": "768 vs 768"
+  },
+  {
+   "name": "768px light: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "768px light: lists shown instead of diagrams",
+   "ok": true,
+   "detail": "0 diagrams, 8 lists"
+  },
+  {
+   "name": "768px dark: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "768px dark: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "48px of 1024px"
+  },
+  {
+   "name": "768px dark: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 69.34375
+   }
+  },
+  {
+   "name": "768px dark: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 68.84375
+   }
+  },
+  {
+   "name": "768px dark: no sideways page scroll",
+   "ok": true,
+   "detail": "768 vs 768"
+  },
+  {
+   "name": "768px dark: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "768px dark: lists shown instead of diagrams",
+   "ok": true,
+   "detail": "0 diagrams, 8 lists"
+  },
+  {
+   "name": "768px dark: page dark, diagram panel stays light",
+   "ok": true,
+   "detail": "rgb(18, 19, 20) / rgb(255, 255, 255)"
+  },
+  {
+   "name": "375px light: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px light: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "48px of 812px"
+  },
+  {
+   "name": "375px light: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 109.15625
+   }
+  },
+  {
+   "name": "375px light: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 69.15625
+   }
+  },
+  {
+   "name": "375px light: no sideways page scroll",
+   "ok": true,
+   "detail": "375 vs 375"
+  },
+  {
+   "name": "375px light: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px light: lists shown instead of diagrams",
+   "ok": true,
+   "detail": "0 diagrams, 8 lists"
+  },
+  {
+   "name": "phone: list item opens a full-width bottom sheet",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "modal": "true",
+    "left": 0,
+    "w": 375,
+    "iw": 375
+   }
+  },
+  {
+   "name": "phone: Example opens by touch",
+   "ok": true
+  },
+  {
+   "name": "phone: keyboard focus stays inside the sheet",
+   "ok": true
+  },
+  {
+   "name": "phone: clicking the page behind the sheet does nothing; focus stays in the sheet",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "inside": true,
+    "inert": true
+   }
+  },
+  {
+   "name": "phone: Close returns focus to the list item",
+   "ok": true,
+   "detail": {
+    "hidden": true,
+    "act": "8.4"
+   }
+  },
+  {
+   "name": "phone: closing makes the page usable again",
+   "ok": true
+  },
+  {
+   "name": "phone: \"Diagram\" shows the full-size diagram in a sideways-scrolling frame",
+   "ok": true,
+   "detail": {
+    "vis": true,
+    "sw": 1232,
+    "cw": 341,
+    "page": 375,
+    "iw": 375
+   }
+  },
+  {
+   "name": "phone: journey stages stack top to bottom, none wider than the screen",
+   "ok": true,
+   "detail": {
+    "col": true,
+    "wide": 0
+   }
+  },
+  {
+   "name": "phone: a stage card opens as the full-width bottom sheet",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "modal": "true",
+    "w": 375,
+    "iw": 375
+   }
+  },
+  {
+   "name": "375px dark: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px dark: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "48px of 812px"
+  },
+  {
+   "name": "375px dark: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 109.15625
+   }
+  },
+  {
+   "name": "375px dark: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 69.15625
+   }
+  },
+  {
+   "name": "375px dark: no sideways page scroll",
+   "ok": true,
+   "detail": "375 vs 375"
+  },
+  {
+   "name": "375px dark: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px dark: lists shown instead of diagrams",
+   "ok": true,
+   "detail": "0 diagrams, 8 lists"
+  },
+  {
+   "name": "375px dark: page dark, diagram panel stays light",
+   "ok": true,
+   "detail": "rgb(18, 19, 20) / rgb(255, 255, 255)"
+  },
+  {
+   "name": "deep link #c=st-5 opens that stage card on load",
+   "ok": true
+  }
+ ]
+}

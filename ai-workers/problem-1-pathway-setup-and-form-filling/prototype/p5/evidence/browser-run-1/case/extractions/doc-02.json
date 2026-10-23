@@ -1,0 +1,164 @@
+{
+ "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+ "method": "local",
+ "cached": false,
+ "cost_usd": 0,
+ "ms": 1148,
+ "refused": "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally",
+ "checks": null,
+ "run_file": null,
+ "output": {
+  "document": {
+   "kind_seen": "passport",
+   "matches_claimed_kind": true,
+   "readable": "yes",
+   "issues": [],
+   "issued_or_written_on": null
+  },
+  "people_seen": [
+   {
+    "role": "document holder",
+    "name_as_printed": "PARTNER EXAMPLEP"
+   }
+  ],
+  "fields": [
+   {
+    "fact": "person.family_name",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "EXAMPLEP",
+    "as_printed": "EXAMPLEP",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits"
+   },
+   {
+    "fact": "person.given_names",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "PARTNER",
+    "as_printed": "PARTNER",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits"
+   },
+   {
+    "fact": "person.sex",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "M",
+    "as_printed": "M",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits"
+   },
+   {
+    "fact": "person.date_of_birth",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "1991-09-03",
+    "as_printed": "1991-09-03",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits"
+   },
+   {
+    "fact": "person.passport_number",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "Z7654321",
+    "as_printed": "Z7654321",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits"
+   },
+   {
+    "fact": "person.passport_expiry_date",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "2029-03-09",
+    "as_printed": "2029-03-09",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits"
+   },
+   {
+    "fact": "person.citizenship",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "IND",
+    "as_printed": "IND",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits"
+   },
+   {
+    "fact": "person.passport_country_of_issue",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "IND",
+    "as_printed": "IND",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits"
+   },
+   {
+    "fact": "person.place_of_birth_city",
+    "about": "document holder",
+    "status": "unresolved",
+    "value": null,
+    "as_printed": null,
+    "page": 1,
+    "where": "",
+    "confidence": "low",
+    "reason": "not found by the label rules",
+    "box": null,
+    "method": "printed label (no machine-readable equivalent)"
+   },
+   {
+    "fact": "person.passport_issue_date",
+    "about": "document holder",
+    "status": "unresolved",
+    "value": null,
+    "as_printed": null,
+    "page": 1,
+    "where": "",
+    "confidence": "low",
+    "reason": "not found by the label rules",
+    "box": null,
+    "method": "printed label (no machine-readable equivalent)"
+   }
+  ],
+  "internal_conflicts": [],
+  "reader": {
+   "name": "local OCR/MRZ + rules",
+   "tesseract": "5.5.0 (eng)",
+   "version": "local-reader/v1"
+  },
+  "ms": 1148
+ }
+}

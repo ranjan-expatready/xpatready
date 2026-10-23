@@ -1,0 +1,540 @@
+{
+ "run": "2026-10-18T13:52:41.756Z",
+ "passed": 35,
+ "failed": 0,
+ "results": [
+  {
+   "name": "3.2 automatic mapping: runs automatically with its result location, AI performs, the publisher reviews in 5.1, uncertain person or meaning held with its snippet",
+   "ok": true,
+   "detail": "What this achievesRecords for each form field whose fact fills it and how, so forms are later filled by rules with no manual mapping. Who actsAI in the productdrafts, reads documents, checks meaning; "
+  },
+  {
+   "name": "5.1 review: the reviewer's choices and the no-self-publication limit are in the first view",
+   "ok": true,
+   "detail": "What this achievesA person decides every new or changed item beside its source before anything can be published. Who actsContent publisher Super AdminExpat Ready · Super Admin roleAuthority. May appro"
+  },
+  {
+   "name": "7.1 case creation: new and existing entry in the first view; family, reuse and corporate examples behind one Example control, closed",
+   "ok": true,
+   "detail": {
+    "first": "What this achievesOpens the case on the current pack version with every person in their role, pre-filled from what the firm has already verified. Who actsAgent ",
+    "ex": false
+   }
+  },
+  {
+   "name": "8.3 meaning check: decides nothing; flags go to the agent (8.4); approval stays with the representative",
+   "ok": true,
+   "detail": "What this achievesAn independent AI check of whether each important field holds the right person's right fact; it decides nothing. Who actsAI in the productdrafts, reads documents, checks meaning; nev"
+  },
+  {
+   "name": "9.3 approval: performer is the form-approve holder (Owner and Case Manager by default); unmatched signed file comes back here; next is signing, not \"the case\"",
+   "ok": true,
+   "detail": "What this achievesThe representative approves the exact final file that will be signed and filed. Who actsLead representative FirmA holder of the firm's form-approve permission on the case: by default"
+  },
+  {
+   "name": "9.4 signing: each signatory signs their own part; the representative never signs for the client; three causes, two return routes",
+   "ok": true,
+   "detail": "What this achievesEach required signatory signs or declares their own part of the approved forms. Who actsProspect, then client Client portalEach required signatory: Client A, the partner, or an emplo"
+  },
+  {
+   "name": "9.5 submit and pay: authorised submitter (submit permission) and fee payer (client, or the firm on the client's behalf) named separately; no implication that the representative pays",
+   "ok": true,
+   "detail": "What this achievesFiles the application with the government and pays the fee: people do both, never the product. Who actsLead representative FirmAuthorised submitter: a person who holds the firm's submit permission on the case (normally the lead representative"
+  },
+  {
+   "name": "10.2 composite: coordinator, AI and platform, SME and a second-person approver who is never the drafter or coordinator; no empty Example button; links to real examples",
+   "ok": true,
+   "detail": [
+    "Content publisher Super AdminStarts and coordinates the run on the changed items; once they are re-drafted and checked, reviews each changed item beside its old and new source (as in 5.1).",
+    "AI and platformRe-read and re-draft the changed items, then check and test them (as in 2.1–4.4).",
+    "Immigration SME Super AdminSigns off changed rules, gates and values (as in 5.2).",
+    "Second-person approver Super AdminPublishes the reviewed version, or rejects it (as in 5.3). Never the change's author or submitter, nor the person who drafted or coordinated it."
+   ]
+  },
+  {
+   "name": "10.2 → example link opens 3.2 with Back to 10.2",
+   "ok": true,
+   "detail": "← Back to Activity 10.2 · Re-run and publish the change"
+  },
+  {
+   "name": "Back from 3.2 returns to 10.2",
+   "ok": true,
+   "detail": "Re-run and publish the change"
+  },
+  {
+   "name": "New client: client → platform → agent story with results, next step, the two decisions and the no-automatic-merge rule visible",
+   "ok": true,
+   "detail": [
+    "Client and family Client portal",
+    "Platform",
+    "Agent Firm"
+   ]
+  },
+  {
+   "name": "Reuse verified information: field-by-field selection and the pending-state hold are visible; the 15 rules are closed until opened",
+   "ok": true,
+   "detail": "What this achievesUse what the firm has already verified, one fact at a time, so nobody is asked twice. Who does what, in orderWhoWhat happensResultPlatformSelects each required fact's current verifie"
+  },
+  {
+   "name": "Stage 3: blocking failures go back to drafting; items marked 'decide' are decided by the reviewer with no re-draft; corrections are a separate decision",
+   "ok": true,
+   "detail": "What this achievesPublish only a draft that is checked, reviewed and signed off. Who does what, in orderWhoWhat happensR"
+  },
+  {
+   "name": "Stage 8: approver, signatories, authorised submitter and fee payer separate; the signing problem has its own decision",
+   "ok": true,
+   "detail": "What this achievesApprove, sign and file each filing, with people taking every legal step. Who does what, in orderWhoWhat happensResultLead representative FirmA"
+  },
+  {
+   "name": "Who is who (reference): role, side and limits; payment wording aligned; no activity fields forced in",
+   "ok": true,
+   "detail": "Who is whoRole names follow the team's design: six Expat Ready staff roles in the Super Admin console; firm roles Case M"
+  },
+  {
+   "name": "Diagram symbols (reference): symbols and their meaning only",
+   "ok": true,
+   "detail": "Diagram symbols (BPMN 2.0)User taskSystem or AI taskRuns for each itemCalls anot"
+  },
+  {
+   "name": "every one of the 57 panels shows the parts its type needs and no filler",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "activity first views: median 196 words (range 100–373); expanded median 544 (recorded, not a limit)",
+   "ok": true,
+   "detail": [
+    {
+     "id": "1.1",
+     "first": 247,
+     "expanded": 575
+    },
+    {
+     "id": "1.2",
+     "first": 230,
+     "expanded": 463
+    },
+    {
+     "id": "1.3",
+     "first": 159,
+     "expanded": 405
+    },
+    {
+     "id": "2.1",
+     "first": 243,
+     "expanded": 554
+    },
+    {
+     "id": "2.2",
+     "first": 183,
+     "expanded": 363
+    },
+    {
+     "id": "3.1",
+     "first": 183,
+     "expanded": 501
+    },
+    {
+     "id": "3.2",
+     "first": 249,
+     "expanded": 619
+    },
+    {
+     "id": "3.3",
+     "first": 180,
+     "expanded": 398
+    },
+    {
+     "id": "3.4",
+     "first": 176,
+     "expanded": 481
+    },
+    {
+     "id": "3.5",
+     "first": 179,
+     "expanded": 480
+    },
+    {
+     "id": "3.6",
+     "first": 162,
+     "expanded": 333
+    },
+    {
+     "id": "3.7",
+     "first": 263,
+     "expanded": 674
+    },
+    {
+     "id": "3.8",
+     "first": 284,
+     "expanded": 627
+    },
+    {
+     "id": "4.1",
+     "first": 148,
+     "expanded": 363
+    },
+    {
+     "id": "4.2",
+     "first": 175,
+     "expanded": 361
+    },
+    {
+     "id": "4.3",
+     "first": 180,
+     "expanded": 829
+    },
+    {
+     "id": "4.4",
+     "first": 217,
+     "expanded": 415
+    },
+    {
+     "id": "5.1",
+     "first": 277,
+     "expanded": 635
+    },
+    {
+     "id": "5.2",
+     "first": 196,
+     "expanded": 423
+    },
+    {
+     "id": "5.3",
+     "first": 211,
+     "expanded": 413
+    },
+    {
+     "id": "6.1",
+     "first": 142,
+     "expanded": 337
+    },
+    {
+     "id": "6.2",
+     "first": 100,
+     "expanded": 233
+    },
+    {
+     "id": "6.3",
+     "first": 113,
+     "expanded": 269
+    },
+    {
+     "id": "7.1",
+     "first": 301,
+     "expanded": 1720
+    },
+    {
+     "id": "7.2",
+     "first": 241,
+     "expanded": 671
+    },
+    {
+     "id": "7.3",
+     "first": 150,
+     "expanded": 550
+    },
+    {
+     "id": "8.1",
+     "first": 264,
+     "expanded": 907
+    },
+    {
+     "id": "8.2",
+     "first": 280,
+     "expanded": 706
+    },
+    {
+     "id": "8.3",
+     "first": 196,
+     "expanded": 490
+    },
+    {
+     "id": "8.4",
+     "first": 354,
+     "expanded": 885
+    },
+    {
+     "id": "8.5",
+     "first": 164,
+     "expanded": 398
+    },
+    {
+     "id": "9.1",
+     "first": 252,
+     "expanded": 660
+    },
+    {
+     "id": "9.2",
+     "first": 373,
+     "expanded": 713
+    },
+    {
+     "id": "9.3",
+     "first": 323,
+     "expanded": 833
+    },
+    {
+     "id": "9.4",
+     "first": 187,
+     "expanded": 590
+    },
+    {
+     "id": "9.5",
+     "first": 187,
+     "expanded": 599
+    },
+    {
+     "id": "9.6",
+     "first": 177,
+     "expanded": 828
+    },
+    {
+     "id": "10.1",
+     "first": 148,
+     "expanded": 331
+    },
+    {
+     "id": "10.2",
+     "first": 280,
+     "expanded": 494
+    },
+    {
+     "id": "10.3",
+     "first": 233,
+     "expanded": 544
+    },
+    {
+     "id": "10.4",
+     "first": 351,
+     "expanded": 918
+    },
+    {
+     "id": "st-1",
+     "first": 156,
+     "expanded": 367
+    },
+    {
+     "id": "st-2",
+     "first": 178,
+     "expanded": 382
+    },
+    {
+     "id": "st-3",
+     "first": 237,
+     "expanded": 419
+    },
+    {
+     "id": "st-4",
+     "first": 131,
+     "expanded": 293
+    },
+    {
+     "id": "st-5",
+     "first": 139,
+     "expanded": 1372
+    },
+    {
+     "id": "st-6",
+     "first": 181,
+     "expanded": 325
+    },
+    {
+     "id": "st-7",
+     "first": 177,
+     "expanded": 311
+    },
+    {
+     "id": "st-8",
+     "first": 196,
+     "expanded": 292
+    },
+    {
+     "id": "st-9",
+     "first": 273,
+     "expanded": 443
+    },
+    {
+     "id": "st-10",
+     "first": 146,
+     "expanded": 224
+    },
+    {
+     "id": "st-11",
+     "first": 137,
+     "expanded": 168
+    },
+    {
+     "id": "st-12",
+     "first": 133,
+     "expanded": 164
+    },
+    {
+     "id": "st-A",
+     "first": 169,
+     "expanded": 234
+    },
+    {
+     "id": "st-B",
+     "first": 130,
+     "expanded": 172
+    },
+    {
+     "id": "symbols",
+     "first": 0,
+     "expanded": 218
+    },
+    {
+     "id": "actors",
+     "first": 0,
+     "expanded": 427
+    }
+   ]
+  },
+  {
+   "name": "keyboard drill-down: 4A New client → 6.1 shows \"Back to 4A · New client · start a new case\"; the selected map element stays visible and selected; the page does not move",
+   "ok": true,
+   "detail": {
+    "back": "← Back to 4A · New client · start a new case · Review the enquiry and establish identity",
+    "vis": {
+     "covered": false,
+     "sel": true,
+     "y": 2205
+    }
+   }
+  },
+  {
+   "name": "keyboard Back returns to New client with focus on the 6.1 link",
+   "ok": true,
+   "detail": {
+    "h": "Review the enquiry and establish identity",
+    "f": "6.1"
+   }
+  },
+  {
+   "name": "switching: a new selection on a diagram replaces the drill-down; no stale Back; the old stage is no longer selected",
+   "ok": true,
+   "detail": {
+    "back": "",
+    "selA": false
+   }
+  },
+  {
+   "name": "Escape closes and returns focus to the element that opened the panel",
+   "ok": true,
+   "detail": {
+    "hidden": true,
+    "f": "3.4"
+   }
+  },
+  {
+   "name": "Escape after a drill-down closes the panel, clears every selection and returns focus to the stage's eye",
+   "ok": true,
+   "detail": {
+    "hidden": true,
+    "f": "st-5",
+    "sel": 0
+   }
+  },
+  {
+   "name": "examples: opening one panel's example does not open another's; returning to it shows it as the reader left it",
+   "ok": true,
+   "detail": {
+    "e1": false,
+    "e2": true
+   }
+  },
+  {
+   "name": "no page errors at 1280px",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px light: stage 5's example comparisons and the story table fit the panel (no sideways scroll)",
+   "ok": true,
+   "detail": {
+    "over": 0,
+    "page": true,
+    "bg": "rgb(255, 255, 255)",
+    "ink": "rgb(37, 49, 59)"
+   }
+  },
+  {
+   "name": "375px light: drill-down and Back work inside the sheet; the page behind stays inactive; focus stays in the sheet",
+   "ok": true,
+   "detail": {
+    "s": {
+     "h": "Complete the SQR and upload documents",
+     "back": true,
+     "inert": true,
+     "modal": "true"
+    },
+    "s2": {
+     "h": "Pre-fill from each person's verified facts",
+     "inert": true
+    },
+    "inside": true
+   }
+  },
+  {
+   "name": "375px light: closing re-activates the page",
+   "ok": true
+  },
+  {
+   "name": "375px light: no page errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px dark: stage 5's example comparisons and the story table fit the panel (no sideways scroll)",
+   "ok": true,
+   "detail": {
+    "over": 0,
+    "page": true,
+    "bg": "rgb(27, 31, 35)",
+    "ink": "rgb(230, 233, 236)"
+   }
+  },
+  {
+   "name": "375px dark: drill-down and Back work inside the sheet; the page behind stays inactive; focus stays in the sheet",
+   "ok": true,
+   "detail": {
+    "s": {
+     "h": "Complete the SQR and upload documents",
+     "back": true,
+     "inert": true,
+     "modal": "true"
+    },
+    "s2": {
+     "h": "Pre-fill from each person's verified facts",
+     "inert": true
+    },
+    "inside": true
+   }
+  },
+  {
+   "name": "375px dark: closing re-activates the page",
+   "ok": true
+  },
+  {
+   "name": "375px dark: no page errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "768px light: stage 5's example comparisons and the story table fit the panel (no sideways scroll)",
+   "ok": true,
+   "detail": {
+    "over": 0,
+    "page": true,
+    "bg": "rgb(255, 255, 255)",
+    "ink": "rgb(37, 49, 59)"
+   }
+  },
+  {
+   "name": "768px light: no page errors",
+   "ok": true,
+   "detail": []
+  }
+ ]
+}

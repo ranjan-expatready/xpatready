@@ -1,0 +1,11 @@
+Read-only GitHub freshness check, 18 October 2026 local date.
+The first sandboxed network attempt failed; the authorised read-only network retry completed successfully.
+
+ERv2-frontend@85623d4-2026-10-14 | dev: 85623d4 | MATCH
+ERv2-sanitized@b48e4ce-2026-10-15 | dev: b48e4ce | MATCH
+expat-ready-api@c4117a3-2026-10-09 | main: c4117a3 | MATCH
+expat-ready-ui@6d7f636-2026-10-09 | main: 6d7f636 | MATCH
+
+The ERv2 main branches differ from dev; dev is the tracked reference for these two captures. A different reference branch is not a stale tracked capture.
+Newest Drive snapshot: drive-snapshot-2026-10-13-1535. Live metadata and local source hashes were checked separately.
+This is source freshness evidence, not a run of the product or a verification of all code paths.

@@ -1,5 +1,7 @@
 # Rules and AI: how to name, sell and price them honestly (founder ask, 12 Oct 2026)
 
+> **Version pointer notice (13 Oct 2026):** this file was written on 11 or 12 Oct and cites AW-01 at v0.6 to v0.9, AW-02 at v0.8 to v1.1 and `sources/drive-snapshot-2026-10-11/` as its source. The current files are AW-01 v0.10, AW-02 v1.1 and `sources/drive-snapshot-2026-10-13/` (51 files; for example AG-07 v2.9). Where a citation here conflicts with a current file, the current file governs.
+
 **Date:** 12 Oct 2026, revised the same day after review R3 (`../checks/review-R3-2026-10-12.md`) with the Lead's rulings, and after re-check R3-b (`../checks/review-R3-b-2026-10-12.md` §5, fixes 1 to 8). **Updated 13 Oct 2026 after re-check R10-b** (n12, m15: two say/never-say rows merged from the pricing file §5; the Lead's note K12: summary point 7, the class 2 and class 4 rows, the old "you run it" statement and the selling argument reworded to AIW-D96 and AIW-D117: the AI team starts the assessment once the evidence check passes, the rules calculate, a licensed person shares the result). **Author:** research maker for the Lead. **Status:** research input; nothing here is a decision. **Asked by:** the founder, through the Lead, 12 Oct 2026.
 
 **The ask, as the Lead relayed it.** Build eligibility, scoring and assessments as fixed (deterministic) rules, but present them to buyers "under the flavour of AI" for easy selling; use real AI for conversation, follow-ups, language and tool calling; and give a framework that makes this a multi-million-dollar product.
@@ -10,7 +12,7 @@
 - `ai-coverage-vs-competitors-2026-10.md` (§1, §2.1, §2.2); `visaflo.md` (§3.1, §12);
 - `../commercial/price-card.md` and `../../commercial/plan.md` v1.1;
 - the design as specified: AW-01 (document version 0.6) AW-1-88; `../requirements/change-notes/CN-AG-03.md` change 1; `../decisions.md` AIW-D11, D37, D40, D41, D60, D61, D89, D90; Founder Decisions Log v1.5 FD-16, FD-18, FD-20 (`sources/drive-snapshot-2026-10-11/`);
-- the sibling maker file `../design/rules-ai-classification-2026-10-12.md` (rows A15, A18, A21), for consistency.
+- the sibling maker file's rows A15, A18, A21 (the rules-AI classification, folded on 15 Oct 2026 into the story map's rows 3.3, 3.4 and 3.6, `../requirements/traceability.csv`), for consistency.
 
 **Evidence labels.** **[V]** verified primary (statute, regulator, or the company's own legal page read directly). **[S]** secondary (law-firm note, press, third-party price tracker). **[VC]** vendor claim. **[Survey]** self-reported answers. **[I]** our inference. **Proposal / Assumption / Unknown** as in README §5. **Every legal reading in this file is the maker's or the Lead's, not legal advice: for counsel to confirm** (README §5; AIW-D68). Web sources accessed **12 Oct 2026**. No person is named (README rule 10).
 
@@ -193,7 +195,7 @@ This evidence supports, and does not change, the moat file §4.5 split (rules an
 | Investor line: "AI does the language work; a maintained rules engine does the exact calculations; the AI team starts the assessment once the evidence check passes, the rules calculate, and a licensed person shares the result and approves (AIW-D96, AIW-D106 note)." | Any automation rate not measured; "our AI assesses eligibility" | [13][14][41]; moat file P3 |
 | *Pricing rows, added 12 Oct 2026 (AIW-D111, D114; merged from `../commercial/workflow-pricing-2026-10-12.md` §5; Unconfirmed: no counsel, AIW-D94):* "Workflow pricing"; "your plan includes your AI team" | "AI price", "AI fee", "AI surcharge", "AI add-on" | AIW-D92, D111: the prepared file is mostly rules work (AW-1-71, AW-1-72), AI only in parts (AW-1-73); the AI team is in the plan |
 | "Prepared files", "extra prepared files" | "AI files", "per AI file", "AI usage", "AI credits", "AI tokens", "pay per AI" | The unit is a finished piece of work (one per application, AIW-D114), not AI consumption |
-| "Counted once per application, when your case officer accepts the readiness report" | "Pay per approval", "pay only for approved files" | Acceptance is the submission for internal review (AG-7-93), not a licensed approval or a government decision |
+| "Counted once per application, when your case officer accepts the readiness report" | "Pay per approval", "pay only for approved files" | Acceptance is the submission for internal review (AG-7-94), not a licensed approval or a government decision |
 | "Retries, failures, our own errors and re-runs on the same application are never counted" | "Pay only for results", "pay only when it works", "pay for outcomes" | An accepted file is not a promise the file is correct or will succeed; an outcome claim needs an adequate test (Competition Act s. 74.01(1)(b), §(b)1.1) |
 | "We warn you at 80 % and before your first extra file"; "included in your plan" | "Unlimited AI", "unlimited prepared files", "free AI" | There is an allowance; the AI team is paid for by the plan price |
 | On the invoice: "Extra prepared files, [month]: n × CAD [price]" | "Overage fee", "AI usage charge", "penalty" | Plain words; "overage" stays an internal word |
@@ -338,4 +340,4 @@ All web sources accessed **12 Oct 2026**.
 - AW-01 document version 0.6: AW-1-23, AW-1-88; test R-I4. `requirements/change-notes/CN-AG-03.md` change 1.
 - `ai-workers/decisions.md`: AIW-D11, D13, D26, D37, D40, D41, D52, D60, D61, D63, D68, D74, D83, D85, D89, D90, D91.
 - `commercial/plan.md` v1.1: §2, §3, §4, §5, §8. `ai-workers/commercial/price-card.md` pages 1 to 3.
-- `ai-workers/research/`: moat file §1.3, §2.1, §2.3, §4.1 to §4.5, §5, §7 (and its source [28]); `ai-in-regulated-work-2026-10.md` §2.4, §7; `ai-coverage-vs-competitors-2026-10.md` §2.1. `ai-workers/design/rules-ai-classification-2026-10-12.md` rows A15, A18, A21.
+- `ai-workers/research/`: moat file §1.3, §2.1, §2.3, §4.1 to §4.5, §5, §7 (and its source [28]); `ai-in-regulated-work-2026-10.md` §2.4, §7; `ai-coverage-vs-competitors-2026-10.md` §2.1. the rules-AI classification's rows A15, A18, A21 (now story-map rows 3.3, 3.4, 3.6 in `ai-workers/requirements/traceability.csv`).

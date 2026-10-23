@@ -1,0 +1,1265 @@
+{
+  "automationId": "expat-ready-scrum-updates",
+  "schema": "post-reset-monitor-only",
+  "checkedAtUTC": "2026-10-18T05:31:07Z",
+  "ownership": "Scheduled saved-file monitoring only under current user heartbeat. ClaudeCode soleLead, separateClaude/Cowork formalchecker; local Codexreviewer stopped at12:05 perAGENTS, not a request tostop this explicitmonitor. No duplicatechecker/makerwork.",
+  "continuity": "Old state remains archived, never restored or treated current. This file contains only the monitor reporting and freshness state.",
+  "heartbeatCheckpoint": {
+    "checkedAtUTC": "2026-10-18T05:31:07Z",
+    "latestLeadCheckpointUTC": "2026-10-17T21:14:05Z",
+    "latestSavedReview": "Integrated independent audit saved: retain and correct; not ready for unconditional acceptance/9claim. Six material findings; explicitly not formal checker verdict.",
+    "result": "Draft4 maker completion/response saved07580481; all6Material corrections claimed with evidence. Independent maker-session lens7 read/recheck, final leftovers fixed but not reread. Formal separate checker pending, no acceptance. NEXT D246/sevenlenses corrected. Two teamquestions and new nonblocking founder8.5scope question explicit.",
+    "nextOutcome": "Founder launches separatechecker using savedprompt; exactrevision7lens recheck, Leadmaterialfixes ifneeded, founder preciseacceptance/belownineexception in same decision, then realread.",
+    "lastCheckDisposition": "Quiet: all tracked saved files unchanged; draft4 separatechecker verdict/founderacceptance pending. No new decision, changed blocker or checkpoint issue; prior action notification remains applicable.",
+    "latestReviewUTC": "2026-10-17T13:56:22Z"
+  },
+  "currentMilestone": {
+    "id": "M0",
+    "artifact": "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html",
+    "status": "Solution1 draft4 correction pass complete by maker; exact-revision separatechecker and founderacceptance pending. Programme remains atonepagergate.",
+    "improvementPlan": "ai-workers/NEXT.md",
+    "owners": {
+      "maker": "Claude Code underD204",
+      "checker": "Separate Claude/Cowork reviewer"
+    },
+    "next": "Separatechecker7lenses on07580481, confirmedfixes/recheck, founderacceptance, realread."
+  },
+  "founderAction": "Paste saved draft4 checkerprompt into existing separatechecker session. Later answer8.5scopequestion whenLead presentsit; no repeatD244/D245. Do not accept before exactrevisionrecheck; anybelow9exception recorded withacceptance. OfficialPDFs/specialist/teamdependencies unchanged.",
+  "knownDependencies": {
+    "UCI": "Resolved, no repeated question",
+    "teamMessage": "Founder sendpending; Lead mustupdateTC177/CNSA1Bchange9 toD235three-tiers/collectionresponsibility and D234rareform centralrelease before sending. Not yet sent.",
+    "XFA": "Team builds/tests D211 adapter peredition/date; Chrome extension also team-owned",
+    "Q13": "M1 coordination comparison still open; M0D211 design not execution proof",
+    "professional": "AWS written confirmations/counsel; pilot baseline not measured",
+    "EEFieldInventory": "Specialist supplies actual combination inventory and immigration values",
+    "visual": "Earlier v5 browser tests Lead-reported; no monitor independent visual pass.",
+    "pastCaseProof": "Founder/pilot firm to supply authorised filed cases and consent; no proof run",
+    "AIUnavailableConfigurator": "Founder decision still open in enginepage/NEXT",
+    "versioningShape": "Lead asks founder own question before local setup; permission itself D213 settled",
+    "officialPDFs": "New: Lead downloadfailure, inputsircc-forms empty; founderprovides filesifpersists. Review/source freshness itselfverified."
+  },
+  "freshness": {
+    "snapshot": "drive-snapshot-2026-10-13-1535",
+    "sourceChecksAtUTC": "2026-10-18T05:31:07Z",
+    "codeCheckedAtUTC": "2026-10-18T05:31:07Z",
+    "status": "Current:51 live metadata/bytes and local SHA/read-only matches; master identities unchanged. freshness.sh four tracked captures MATCH exit0; full exact hashes retained from lastExactCommitCheckAtUTC.",
+    "sources": [
+      {
+        "id": "1ONZBEre6wRLwd_ldgQ7rmVoG9dzO2gRy",
+        "name": "01-RFP-Build-Proposal.md",
+        "version": "2.0",
+        "modifiedTime": "2026-08-16T16:52:14.821Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/01-RFP-Build-Proposal.md",
+        "sha256": "1bc3debb29429ac47ddb15b567ff65668081bc27c97f991d58b487148f7b9e1d",
+        "matches": true
+      },
+      {
+        "id": "1Dzl1VbcXCF25hjIoyx2RN_T5oxu8iqE1",
+        "name": "02-Architecture-Decision-Record.md",
+        "version": "1.0",
+        "modifiedTime": "2026-08-16T16:52:14.612Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/02-Architecture-Decision-Record.md",
+        "sha256": "fafe383627a062b6a4c6e6026594de906fb4c9aeba320d876ba14faf1607bb3a",
+        "matches": true
+      },
+      {
+        "id": "10SKuNviDS2ToCANkkPi1kGPbsSOEe-xa",
+        "name": "03-Doc-1-Platform-Foundation.md",
+        "version": "1.3",
+        "modifiedTime": "2026-08-16T16:52:14.684Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/03-Doc-1-Platform-Foundation.md",
+        "sha256": "ed29730c7129f16060991c1a3999167dbbac10963d39c224aaff04962d1940ce",
+        "matches": true
+      },
+      {
+        "id": "1KyM_Wv3WGNqCkSAgMxi9KYMw8xsM5KDJ",
+        "name": "04-Doc-2-SuperAdmin-Console.md",
+        "version": "1.4",
+        "modifiedTime": "2026-08-16T16:52:15.322Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/04-Doc-2-SuperAdmin-Console.md",
+        "sha256": "f23741675149b4ffeec1d5dc69366f726ba822bdad0955c9cc3afffcf53d415e",
+        "matches": true
+      },
+      {
+        "id": "1mdyonkfEr6fZWfJl229_1fo6EVWnz7xp",
+        "name": "05-Doc-3-Agent-Console.md",
+        "version": "1.4",
+        "modifiedTime": "2026-08-16T16:52:15.829Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/05-Doc-3-Agent-Console.md",
+        "sha256": "5c07d4b8aa6637b85f56a0d4cc1f7986afb0515953725b54a658eb4b627af051",
+        "matches": true
+      },
+      {
+        "id": "1W5ygfYnoEevN97WlmOOVZEYPiTWXHLbT",
+        "name": "06-Doc-4-Client-Portal.md",
+        "version": "1.3",
+        "modifiedTime": "2026-08-16T16:52:15.187Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/06-Doc-4-Client-Portal.md",
+        "sha256": "1666192382d501eac8f53c491def946face8be654d971f41c74545b9b7f01c2d",
+        "matches": true
+      },
+      {
+        "id": "1sP--yKthjxjjYsopOQIweuS0js_w1qr2",
+        "name": "07-Founder-Decisions-Log.md",
+        "version": "1.5",
+        "modifiedTime": "2026-08-16T16:52:14.828Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/01-techno-functional/07-Founder-Decisions-Log.md",
+        "sha256": "50e783215c2dd054a7f49740a431b7899342358d6d01b8cb3e7994ab417b4f66",
+        "matches": true
+      },
+      {
+        "id": "1bYitutpf01llPOJRekNMD9GgnpX7wu-D",
+        "name": "00-Overview_v1.13_2026-10-12.md",
+        "version": "1.13",
+        "modifiedTime": "2026-10-12T20:04:01.932Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/00-Overview_v1.13_2026-10-12.md",
+        "sha256": "05446f12172b92825b616d00a61fa5c070114275a8d0fc81b5976bd23b69f739",
+        "matches": true
+      },
+      {
+        "id": "17hXLFGzmqWQmAEkDhB-yD-OiQEabF90X",
+        "name": "99-Phasing-and-Glossary_v1.5_2026-10-12.md",
+        "version": "1.5",
+        "modifiedTime": "2026-10-12T20:04:12.177Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/99-Phasing-and-Glossary_v1.5_2026-10-12.md",
+        "sha256": "e27ae146774178a5b9016798128c56aac1090aff47e176b56d859e6c7c1f6b07",
+        "matches": true
+      },
+      {
+        "id": "1RxrZ3dDQzhz-dP2K-FLRONzcgyyhIvzq",
+        "name": "AG-01-firm-setup-and-onboarding_v1.19_2026-10-13.md",
+        "version": "1.19",
+        "modifiedTime": "2026-10-13T06:29:49.326Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-01-firm-setup-and-onboarding_v1.19_2026-10-13.md",
+        "sha256": "0e07e41a37be90c2e78c183e392a9c9e89e8be7134779184391a2ecbb9b7e069",
+        "matches": true
+      },
+      {
+        "id": "1tmvs4QuWM8KsI9in_egKgnax6Oi9ENEe",
+        "name": "AG-02-decisions_2026-10-11.md",
+        "version": "Dated supporting document",
+        "modifiedTime": "2026-10-11T16:15:58.136Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-02-decisions_2026-10-11.md",
+        "sha256": "e74877f972b0963a0393ca6953a2528ddd5cc8b4bef6383ec33e9e34574a5043",
+        "matches": true
+      },
+      {
+        "id": "1nDNJSI_C0U8nECEAVBp7vd3Koh9qGVpE",
+        "name": "AG-02-prospect-lead-sales-crm_v1.10_2026-10-12.md",
+        "version": "1.10",
+        "modifiedTime": "2026-10-12T20:13:08.455Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-02-prospect-lead-sales-crm_v1.10_2026-10-12.md",
+        "sha256": "903a62be6eee570eeab5fa6e99ffc92b3096ee94d74467fae99dd571dd58db5f",
+        "matches": true
+      },
+      {
+        "id": "1ctVRWXXfzGXhjJf_5Z0DKM_A5wxnJUnB",
+        "name": "AG-03-pathway-assessment_v1.4_2026-10-07.md",
+        "version": "1.4",
+        "modifiedTime": "2026-10-07T17:50:27.317Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-03-pathway-assessment_v1.4_2026-10-07.md",
+        "sha256": "1c6b222de1774cec9baed8f559b116f2cc487e8e88e51f42c868f0917d0a37d2",
+        "matches": true
+      },
+      {
+        "id": "1Rp-SiJEdjmdV9HqOSAT02k6kARMpCKPL",
+        "name": "AG-04-consultation-and-booking_v1.5_2026-10-07.md",
+        "version": "1.5",
+        "modifiedTime": "2026-10-07T14:29:51.647Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-04-consultation-and-booking_v1.5_2026-10-07.md",
+        "sha256": "7aaddd05bbf349016497d1a6ff1cd04407744c79873649e6b2a7d75f68ba6f62",
+        "matches": true
+      },
+      {
+        "id": "1gFOWo89uyOjWFBcU4swM-H_TjqgUQUsq",
+        "name": "AG-05-retainer-and-agreements_v1.10_2026-10-10.md",
+        "version": "1.10",
+        "modifiedTime": "2026-10-11T02:17:46.340Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-05-retainer-and-agreements_v1.10_2026-10-10.md",
+        "sha256": "e4fc95bf83c400e5f9d097a60e2b5990589e7b5bda49f1dccf98577591ebddeb",
+        "matches": true
+      },
+      {
+        "id": "18z1uHD514Ebr8noP94m9CGnNS5lfHiSG",
+        "name": "AG-06-billing-and-payments_v1.7_2026-10-07.md",
+        "version": "1.7",
+        "modifiedTime": "2026-10-07T17:51:07.124Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-06-billing-and-payments_v1.7_2026-10-07.md",
+        "sha256": "7d4ed2d878d43f0df1610eedde090964f1dde8afaffa506dab7e5a27b2fa5934",
+        "matches": true
+      },
+      {
+        "id": "1lLUuP-mWer5Ehq04k2CarOBkOozfDJTA",
+        "name": "AG-07-case-core-and-delivery_v2.9_2026-10-12.md",
+        "version": "2.9",
+        "modifiedTime": "2026-10-12T20:04:27.384Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-07-case-core-and-delivery_v2.9_2026-10-12.md",
+        "sha256": "cc2fbd07bbfebb2f704181f2d916cd042418d98e68b2726cc90d9e5ae8e575da",
+        "matches": true
+      },
+      {
+        "id": "1ALlqYmt1jMivU_sS-Je2NGE6ZwdBaP52",
+        "name": "AG-08-smart-questionnaire_v1.7_2026-10-07.md",
+        "version": "1.7",
+        "modifiedTime": "2026-10-07T14:29:40.089Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-08-smart-questionnaire_v1.7_2026-10-07.md",
+        "sha256": "f915795b6abd3e14fa6ea5592ffffc7691589085eb68879d85005fe3c72101a9",
+        "matches": true
+      },
+      {
+        "id": "1RRwHkS1V1CiSDGOAQL4aB7TLXCzfvTTA",
+        "name": "AG-09-document-management_v1.9_2026-10-10.md",
+        "version": "1.9",
+        "modifiedTime": "2026-10-11T02:16:40.661Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-09-document-management_v1.9_2026-10-10.md",
+        "sha256": "b077b5f180df4acdab014b758e948afb3f68bbf76bce1b6f0df6f1c361c8fa5b",
+        "matches": true
+      },
+      {
+        "id": "1ILSs9_bkj11rNaOUhZboXlxcgR9L4shT",
+        "name": "AG-10-communication-hub_v1.12_2026-10-12.md",
+        "version": "1.12",
+        "modifiedTime": "2026-10-12T20:12:13.821Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-10-communication-hub_v1.12_2026-10-12.md",
+        "sha256": "4389059c299a9005d9ffdb93cfa96b66cd040bf19375eb2e83f5fc2f6ecb0a53",
+        "matches": true
+      },
+      {
+        "id": "1QCGImL-CfeTES_snoK6SGrV-bejktE6q",
+        "name": "AG-11-automation_v1.13_2026-10-12.md",
+        "version": "1.13",
+        "modifiedTime": "2026-10-12T20:13:01.827Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-11-automation_v1.13_2026-10-12.md",
+        "sha256": "037bf91225c62f7922ea6e89fbfd0d5f7851db0085352b772456ae537a832952",
+        "matches": true
+      },
+      {
+        "id": "1CDi6i6azsCRMk9qH4XSQf4VZ4gQnf-Of",
+        "name": "AG-12-templates_v2.2_2026-10-12.md",
+        "version": "2.2",
+        "modifiedTime": "2026-10-12T20:13:55.492Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-12-templates_v2.2_2026-10-12.md",
+        "sha256": "e123a19d21b38de0186d9da9c3cfb685a319e64f246aca12657c234e6df2768d",
+        "matches": true
+      },
+      {
+        "id": "1coBTGIExRaUyUnPyWUv0wNPywPYDDunU",
+        "name": "AG-13-tasks-reminders-notes-and-activity-audit_v1.12_2026-10-07.md",
+        "version": "1.12",
+        "modifiedTime": "2026-10-07T17:50:31.849Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-13-tasks-reminders-notes-and-activity-audit_v1.12_2026-10-07.md",
+        "sha256": "66ff859dfe9b0234e82a7fc3b0a3d775b98e5873a2bdece6bff3984fe75555f9",
+        "matches": true
+      },
+      {
+        "id": "106af6X16wlkgsNAtb-cYlq5wbrVNBB26",
+        "name": "AG-14-reporting-and-analytics_v1.11_2026-10-10.md",
+        "version": "1.11",
+        "modifiedTime": "2026-10-10T08:20:55.756Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-14-reporting-and-analytics_v1.11_2026-10-10.md",
+        "sha256": "3865703a2dc823e2d9ba01edabcc98373409c2b6c31fcf365487e4f33a10919c",
+        "matches": true
+      },
+      {
+        "id": "1inhxxc7UOeEjWCnrV8hod3PdO3kPSoeI",
+        "name": "AG-15-client-portal-management_v1.7_2026-10-10.md",
+        "version": "1.7",
+        "modifiedTime": "2026-10-10T07:22:55.960Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-15-client-portal-management_v1.7_2026-10-10.md",
+        "sha256": "b722188e6725bbacd2fefa7d4c68a3053432728361c25da0a0a932ed121a7b11",
+        "matches": true
+      },
+      {
+        "id": "1Pbzq0RQ7uTym9jVm3rijPxAlMKpi-rUZ",
+        "name": "AG-16-firm-settings-and-integrations_v1.15_2026-10-12.md",
+        "version": "1.15",
+        "modifiedTime": "2026-10-12T20:13:01.828Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-16-firm-settings-and-integrations_v1.15_2026-10-12.md",
+        "sha256": "0a44acc70875de45265184a1927da699075fbc227d8c747671e5a49f5fd57f8b",
+        "matches": true
+      },
+      {
+        "id": "1T_1gr5EPovQRDmQ6cgJeD-gE5Es99I5C",
+        "name": "AG-17-corporate-cases-and-lmia_v0.6_2026-10-10.md",
+        "version": "0.6",
+        "modifiedTime": "2026-10-10T08:23:58.244Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-17-corporate-cases-and-lmia_v0.6_2026-10-10.md",
+        "sha256": "828238ad90bc00ea6834ae582e2081c3525f6eab45ff3a229c67b6ecd7169640",
+        "matches": true
+      },
+      {
+        "id": "1OCnaa_Xeshn688sblwlXh88H-VQj94H5",
+        "name": "AG-18-data-import-and-migration_v1.3_2026-10-12.md",
+        "version": "1.3",
+        "modifiedTime": "2026-10-12T20:13:01.828Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-18-data-import-and-migration_v1.3_2026-10-12.md",
+        "sha256": "8fa11485f7cb25e4ef054f538ecab779c0cd95b3352d071a766b72b5fe04b07c",
+        "matches": true
+      },
+      {
+        "id": "1oLOMgqOJ-RXlZ4n01tuImDOTAiNtXkVi",
+        "name": "SCOPE-TRIAGE_2026-10-05.md",
+        "version": "Dated supporting document",
+        "modifiedTime": "2026-10-08T06:36:02.213Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/SCOPE-TRIAGE_2026-10-05.md",
+        "sha256": "7a602262b23b2133d6f10831f726256cff2097102b259234542b4f6691230f28",
+        "matches": true
+      },
+      {
+        "id": "1RGKxrd-kfujzGV_QYXSA1YDlXXVSSimO",
+        "name": "00-Overview_v3.11_2026-10-12.md",
+        "version": "3.11",
+        "modifiedTime": "2026-10-13T03:47:55.940Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/shared/00-Overview_v3.11_2026-10-12.md",
+        "sha256": "131da8a7e614bacf9ee48c7a701f08ea4cf0dd21f5f4ebe23886bdd85b2a2b4a",
+        "matches": true
+      },
+      {
+        "id": "1YyqVw39-izR-ah0t1wHtcDRN_FuHP3sp",
+        "name": "99-Phasing-and-Glossary_v2.20_2026-10-12.md",
+        "version": "2.20",
+        "modifiedTime": "2026-10-13T03:47:47.330Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/shared/99-Phasing-and-Glossary_v2.20_2026-10-12.md",
+        "sha256": "c02bb746f7e494b11734dc9c7418c4f95624f95d7dae97013de05558269e7c1d",
+        "matches": true
+      },
+      {
+        "id": "1V-3rYG8eSoBHZs7NhHpj3ZWPWq7UD4ze",
+        "name": "COMPLEXITY-REGISTER_2026-10-12.md",
+        "version": "Dated supporting document",
+        "modifiedTime": "2026-10-12T18:45:35.443Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/COMPLEXITY-REGISTER_2026-10-12.md",
+        "sha256": "a80b9f15374ce4bfbe6339d3029435ef6c1bb712ff4ed7c45f63fef9f52b71b9",
+        "matches": true
+      },
+      {
+        "id": "1SYDKY6U4Bpl-KH8k0x1THA-MIRhNszyt",
+        "name": "DEV-HANDOVER_2026-10-12.md",
+        "version": "Dated supporting document",
+        "modifiedTime": "2026-10-13T03:48:47.791Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/DEV-HANDOVER_2026-10-12.md",
+        "sha256": "ffa481649889ad0c653541fbfc4bf14883f18bff75bcd3068fcd561688ed4b4f",
+        "matches": true
+      },
+      {
+        "id": "19wLGJrhq33oeyHFvoA2gg940I6SVG6bo",
+        "name": "DEV-TASKS_2026-10-12.md",
+        "version": "Dated supporting document",
+        "modifiedTime": "2026-10-13T05:58:30.103Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/DEV-TASKS_2026-10-12.md",
+        "sha256": "2ce5e05dc2ecda4bfee9c13164ec93eae115a506f1d4b82c660bc45d0a096e77",
+        "matches": true
+      },
+      {
+        "id": "1PYhNq1EnGPXpOEyJyO_GiF89BMK8Bo8e",
+        "name": "SA-01-country-and-immigration-pack-management_v2.4_2026-10-12.md",
+        "version": "2.4",
+        "modifiedTime": "2026-10-13T03:01:05.803Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-01-country-and-immigration-pack-management_v2.4_2026-10-12.md",
+        "sha256": "d157b7246bae1896d6a0a1ea119c6766188a93bb2b3ccdf679dab31d7c1e03d4",
+        "matches": true
+      },
+      {
+        "id": "1ANsr4SYnJK09cAgikOtuHl8_zJWHuJ8L",
+        "name": "SA-01B-content-pack-configurator_v1.4_2026-10-12.md",
+        "version": "1.4",
+        "modifiedTime": "2026-10-13T03:01:48.348Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-01B-content-pack-configurator_v1.4_2026-10-12.md",
+        "sha256": "f2caf4ef767a8fb09d15747468ee52d0d0d219320d4703d574ddb71b0d395878",
+        "matches": true
+      },
+      {
+        "id": "18Pm3JyjlDiZ_lX-M2LLAFjW9Ja2qgDkK",
+        "name": "SA-02-tenant-firm-management_v2.24_2026-10-12.md",
+        "version": "2.24",
+        "modifiedTime": "2026-10-13T03:03:07.241Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-02-tenant-firm-management_v2.24_2026-10-12.md",
+        "sha256": "45d1c389dff7553f0cab636e9ff86aa8cf3b7bb736edcda83ba237a8add3208a",
+        "matches": true
+      },
+      {
+        "id": "1gftVVCpQCMGoMbcV_LMYM62O9gwmNCHX",
+        "name": "SA-03-subscription-plans-and-entitlements_v2.20_2026-10-12.md",
+        "version": "2.20",
+        "modifiedTime": "2026-10-13T03:03:49.894Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-03-subscription-plans-and-entitlements_v2.20_2026-10-12.md",
+        "sha256": "24caf309d46ab384d8052b2ae8f65f75273fcbd01bbe34c4b698f2ddeb9b5e84",
+        "matches": true
+      },
+      {
+        "id": "1Wn6hA7XDaGfmh9OnneQZdM3G4gPt-Ink",
+        "name": "SA-04-saas-billing_v2.21_2026-10-12.md",
+        "version": "2.21",
+        "modifiedTime": "2026-10-13T03:09:38.199Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-04-saas-billing_v2.21_2026-10-12.md",
+        "sha256": "8c751bb632f428bc30d2837626dd9f8dca403a9fd2b1856ba7e383bf9ddc7bc0",
+        "matches": true
+      },
+      {
+        "id": "1D-qsQ32TfDRJaNek5fHNoTBi8t9uhCO3",
+        "name": "SA-05-global-templates_v3.4_2026-10-12.md",
+        "version": "3.4",
+        "modifiedTime": "2026-10-13T03:37:02.608Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-05-global-templates_v3.4_2026-10-12.md",
+        "sha256": "2220f06994d532a5abde66953b409d1154853b22f5285499bbdfb4aef29b5ffd",
+        "matches": true
+      },
+      {
+        "id": "1g9aad-WWTadPOKnPljJEYrepUZtBPP-n",
+        "name": "SA-06-CHANGE-NOTE_2026-10-07.md",
+        "version": "Dated supporting document",
+        "modifiedTime": "2026-10-12T18:50:02.179Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-06-CHANGE-NOTE_2026-10-07.md",
+        "sha256": "ff9392ed70967a31525e3ee4e95639a66b554f1b5c9e2f73a78bb526bb5f9759",
+        "matches": true
+      },
+      {
+        "id": "1MauAFAz7z0sdkbNhOEsU0MJdQEmn7nyb",
+        "name": "SA-06-rbac_v3.6_2026-10-12.md",
+        "version": "3.6",
+        "modifiedTime": "2026-10-13T03:06:11.110Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-06-rbac_v3.6_2026-10-12.md",
+        "sha256": "78e9732f6da306640eec1277375e3e6b141c6fc628fb9c226a91169f8f93e457",
+        "matches": true
+      },
+      {
+        "id": "1FPcfnYDYRnVyJqUFQVisYqSsQ6dHHUlV",
+        "name": "SA-07-platform-users_v2.15_2026-10-12.md",
+        "version": "2.15",
+        "modifiedTime": "2026-10-13T03:01:19.200Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-07-platform-users_v2.15_2026-10-12.md",
+        "sha256": "280a71b9e45132968795e24fb4c3683cfcec39e1d43f0f4583994be010440fed",
+        "matches": true
+      },
+      {
+        "id": "1BDSqurTJfAi3XRpLI7HXqfOLDjrMwhVS",
+        "name": "SA-08-platform-integrations-and-infrastructure-rails_v2.7_2026-10-12.md",
+        "version": "2.7",
+        "modifiedTime": "2026-10-13T03:37:31.333Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-08-platform-integrations-and-infrastructure-rails_v2.7_2026-10-12.md",
+        "sha256": "03f8425c4f4d48f5723e163afdcba378d959b5ce9f0af3bbe16eb5cfe7e134b5",
+        "matches": true
+      },
+      {
+        "id": "13B0FgI5ORbW5D0QzsgnH5EpkBOAQLCWl",
+        "name": "SA-09-platform-analytics-and-observability_v2.4_2026-10-12.md",
+        "version": "2.4",
+        "modifiedTime": "2026-10-13T03:01:56.410Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-09-platform-analytics-and-observability_v2.4_2026-10-12.md",
+        "sha256": "ee557a40730afdf991b1c6c77ac0500eaf01d1786fcf0893b24933cb8a260f15",
+        "matches": true
+      },
+      {
+        "id": "1qqUIzDI8XdQ6MN6uhjAOrOay23EIqrGh",
+        "name": "SA-10-support_v2.7_2026-10-12.md",
+        "version": "2.7",
+        "modifiedTime": "2026-10-13T03:02:23.454Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-10-support_v2.7_2026-10-12.md",
+        "sha256": "f6a823f09817897bab4f0d95f458e901648e3aad892411928c50a4101f2c5e3c",
+        "matches": true
+      },
+      {
+        "id": "1_rcpNXUJzbMfj56Yb2m102YtM5VXi2gy",
+        "name": "SA-11-audit-compliance-and-data-governance_v2.10_2026-10-12.md",
+        "version": "2.10",
+        "modifiedTime": "2026-10-13T03:03:15.171Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-11-audit-compliance-and-data-governance_v2.10_2026-10-12.md",
+        "sha256": "6a0e4549274791fe3901d2036cfc1edf71d383a65de37e0b760dc6dde00bddf4",
+        "matches": true
+      },
+      {
+        "id": "197iz1r2f7iuLMwq-jAp8LZHMgHUzk8uu",
+        "name": "SA-12-feature-flags-and-platform-configuration_v2.9_2026-10-12.md",
+        "version": "2.9",
+        "modifiedTime": "2026-10-13T03:04:05.446Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/SA-12-feature-flags-and-platform-configuration_v2.9_2026-10-12.md",
+        "sha256": "f09f117d53dc93b92e16efe32fde09e3a77e3e857b3d6402f37887fbf75b827c",
+        "matches": true
+      },
+      {
+        "id": "137zAMIGXL-6o4OXLuJfjRpks6EfodHi4",
+        "name": "TEMPLATE-MAP-working_2026-10-10.md",
+        "version": "Dated supporting document",
+        "modifiedTime": "2026-10-13T06:29:36.838Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/02-functional-requirements/super-admin/TEMPLATE-MAP-working_2026-10-10.md",
+        "sha256": "0705e49422fddf16b388b0ae2667e732d407581af93d2ab918dae61019eb8246",
+        "matches": true
+      },
+      {
+        "id": "1ynAcnhcyRSfm0gznOl-qaZnDPms3MnTr",
+        "name": "Program Charter V1 - G1 expanded.md",
+        "version": "1",
+        "modifiedTime": "2026-10-02T12:59:36.437Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/06-program-management/Program Charter V1 - G1 expanded.md",
+        "sha256": "eeece522c156eb183fcb24c2e6e6528418e492dd44b5011c7dce0ebc76a3d159",
+        "matches": true
+      },
+      {
+        "id": "1r1JHDV-mNb3UbtZtytQcCuh-k9276tsC",
+        "name": "Program Charter_V2.pptx",
+        "version": "2",
+        "modifiedTime": "2026-10-13T12:38:46.219Z",
+        "local_path": "drive-snapshot-2026-10-13-1535/06-program-management/Program Charter_V2.pptx",
+        "sha256": "ac09208441e26cca402a1ad95205efc27e6deae9f2ed0ec51ce0fd4854598877",
+        "matches": true
+      }
+    ],
+    "code": [
+      {
+        "repository": "ExpatReady-EROS/ERv2-frontend",
+        "branch": "dev",
+        "fullCommit": "85623d47645265967e7cb95f6f90689b0c8ff431",
+        "error": null,
+        "capture": "code/ERv2-frontend@85623d4-2026-10-14",
+        "capturedCommit": "85623d47645265967e7cb95f6f90689b0c8ff431",
+        "matches": true
+      },
+      {
+        "repository": "ExpatReady-EROS/ERv2-sanitized",
+        "branch": "dev",
+        "fullCommit": "b48e4cea8ba77cd894a252ab168b0823d3cdefc2",
+        "error": null,
+        "capture": "code/ERv2-sanitized@b48e4ce-2026-10-15",
+        "capturedCommit": "b48e4cea8ba77cd894a252ab168b0823d3cdefc2",
+        "matches": true
+      },
+      {
+        "repository": "sanjaysingh2103/expat-ready-api",
+        "branch": "main",
+        "fullCommit": "c4117a37327999f9353fd1c46217a7b3dbe0da76",
+        "error": null,
+        "capture": "code/expat-ready-api@c4117a3-2026-10-09",
+        "capturedCommit": "c4117a37327999f9353fd1c46217a7b3dbe0da76",
+        "matches": true
+      },
+      {
+        "repository": "sanjaysingh2103/expat-ready-ui",
+        "branch": "main",
+        "fullCommit": "6d7f6361118b0dd59e44b1a834d59ba7c76c1e32",
+        "error": null,
+        "capture": "code/expat-ready-ui@6d7f636-2026-10-09",
+        "capturedCommit": "6d7f6361118b0dd59e44b1a834d59ba7c76c1e32",
+        "matches": true
+      }
+    ],
+    "limitation": "No fresh remote binary download; metadata/byte continuity plus local integrity. Legacy CharterV1 extra not used.",
+    "lastExactCommitCheckAtUTC": "2026-10-17T16:58:09Z",
+    "codeCheckMethod": "Repository freshness.sh live tracked-branch SHA prefix comparisons; all four MATCH, exit0. Reference main differences expected for two dev captures."
+  },
+  "heartbeatInputHashes": {
+    "AGENTS.md": "516a7a05fa8c79512de4c189e1808786c5a7782d825734310cf3ec5af1553993",
+    "ai-workers/README.md": "68a8e19a2406b665bce428719ad837e927a2d9bc491a32b51d90a92621ec298b",
+    "ai-workers/NEXT.md": "a85cf25e65edf903ede45529d115abea6ece1f197446a7db664518f1f501c973",
+    "ai-workers/PROGRESS.md": "82b01d3f8b55493216dca0ae3e376be04c64cead25d093e5184bf68890317041",
+    "ai-workers/decisions.md": "211bf59a9633fcd29d9bcdb3f4ab000b64d9984b9a17cb45dc46638703e3c645",
+    "ai-workers/assumptions.md": "350facd431c6dfa48bfd3eee3958cfb554d252701835ebeb1ca1464ab13c17ef",
+    "ai-workers/START-HERE.md": "ba6eb0b18d32ffec0567c338967dc321d267d09c1248ec56638b8a32770387bc",
+    "ai-workers/expat-ready-ai-concept.html": null,
+    "ai-workers/m0-improvement-plan.md": null,
+    "sources/README.md": "4e154a7b557dd61fb41e279cc75c2102bca070715d38aba9ff2abccce1c86aeb",
+    "code/README-copies.md": "fcafb0463df7aaada675e6ae0575eceabbe619e8a9db52c8e83ad940960d2bff",
+    "ai-workers/requirements/change-notes/CN-SA-01B.md": "4bb645f08095e1f64bc213749d8e964ce794321da0416079e18fd9f28132d39c",
+    "ai-workers/requirements/team-change-register-2026-10-13.md": "8be85fd21e8a06d932aad7f83bd951f6ff6bcac2f94954267a8d5e2cfdc5362c",
+    "ai-workers/tools/build_concept_page.py": null,
+    "ai-workers/tools/concept-page.css": null,
+    "ai-workers/checks/m0-v3-audit-2026-10-16.md": "f3dc6f47a9b40857f6f16be5fc003e081a9ec2fdaa30ff93379b013c9e474ea2",
+    "ai-workers/checks/m0-v3-verification-2026-10-16.json": "ec87641999e868b6573053772868a081121fc39f099758cc03cff7d17239bc1f",
+    "ai-workers/checks/m0-v3-freshness-2026-10-16.json": "2d1dd19cc27f02aab9c25d2ed98218f149c540738db27641437b4b544004c868",
+    "ai-workers/research/m0-v3-evidence-2026-10-16.md": "0516e73d008ed1e3f128f13dc03c6c458024cdae04ce139476bf8c750c8305c6",
+    "ai-workers/checks/concept-content-preservation-2026-10-17.md": "f04c7026b332a67e6c84f2fce53bf4809ba06d853014538bd4d1abb492b20770",
+    "ai-workers/checks/m0-v4-verification-2026-10-17.json": "eb74d71831eccda96c29cc3e25aace9446eeefc2025081868d1d831e304a5034",
+    "ai-workers/terminology-register.md": "45ce2683c35acdc37f3e93b8688e2e5aca8b585afa65f071d521dab0139c8cad",
+    "ai-workers/research/xfa-filling-route-2026-10-17.md": "a780b2079b46094c1089e96d4084c508b40400c6d85de33f1b5d87818777a01f",
+    "ai-workers/checks/v5-preservation-ledger-2026-10-17.md": "45507b278d2c9dd08867ff9a330ec259f56f093ef9128f474c951786fb18154b",
+    "ai-workers/pitch-plan.md": null,
+    "ai-workers/form-filling-engine.html": null,
+    "playbook/README.md": "116118f795e22ade8ea340351c2ad53bd77c653de9c2920ae0349e19529f3823",
+    "ai-workers/tools/split_check.py": "927042ccdde3d0fda0649e405ef8ff129385e525c83b661e8aa020c9677a4d9a",
+    "ai-workers/checks/v6-split-check-2026-10-17.json": "a0284b1c7eb3569868ed93488d2b231c87483215ccb8e64014a21351bb996766",
+    "ai-workers/problem-1-pathway-setup-and-form-filling/pathway-setup-and-form-filling.html": null,
+    "ai-workers/problem-1-pathway-setup-and-form-filling/README.md": "608a30542ce425df66bd13f0f9be8a54d7dec8d6930500f98f2f1eb0a3aef037",
+    "ai-workers/problem-1-pathway-setup-and-form-filling/CLAUDE.md": "4d4bd9a1e59f6382576c67b5720d00b2c0fd7f7f3f1bb8072cff3f7647cb6c20",
+    "ai-workers/problem-1-pathway-setup-and-form-filling/inputs/meeting-2026-10-17/digest.md": "5729e93414cb0526e32f201807e19be0a5212f186a27f6f008151450b46e82b5",
+    "ai-workers/problem-2-ai-across-case-and-business/ai-across-case-and-business.html": "e0238a6d4a496db3e40625ecc107e56f8a877348e3b2680939f5b7c4d6289482",
+    "ai-workers/problem-2-ai-across-case-and-business/README.md": "8c35c4bf1eb69bd6cc0c1375af921b8a9f19e5b07b4710a48f3db85d19058226",
+    "ai-workers/problem-2-ai-across-case-and-business/CLAUDE.md": "de851323369b70322ec355490550faf8f384159142ba63155690d8a48540b017",
+    "ai-workers/problem-1-pathway-setup-and-form-filling/truth-review-2026-10-17.md": "ac45893c69b991dd01ca9a2b2bb11c23df2fd655d84e596c7005f1002936f6f9",
+    "code/ERv2-frontend@85623d4-2026-10-14/src/features/case-management/form-review-page.tsx": "27fdc3e57ca95968f9ae371f76a4bdb49ac9915492ea7c5269acc61e62f0f628",
+    "ai-workers/checks/v7-adversarial-review-2026-10-17.md": "0648beec79cd5dace8675cc6b4b95a9438f080035c3bc5e7b4f55219900967ae",
+    "ai-workers/checks/v7-preservation-2026-10-17.md": "866f7f7f2f8815ed46d9dddbafc5c1c70fa86b302b671cbe9c0d3efd3804f387",
+    "ai-workers/checks/v7-preservation-2026-10-17.json": "9de4f34d1890726ed3e1bf6eeadc4167557e7f3c411d4bb12db5c034c91d4fdc",
+    "ai-workers/tools/problem1-v7-main.html": "58403a14b00b1bd5e6e7ffbe4a73c6056f374218c6f24c2d9eeb292bdccd0ed1",
+    "ai-workers/tools/build_problem1_v7.py": "97d0bb73471f803051c659b967b268daf3a5bf13779c8efe7c63d36e914e2014",
+    "ai-workers/tools/preservation_check_v7.py": "08c766ac79854518523c0189be0f3966213779b33f340213d533584b3033a5da",
+    "ai-workers/checks/v8-adversarial-review-2026-10-17.md": "139cee2d714001ebea5c3d984b26fc154ee1d96bd979d2ebc60e95e341ba8de5",
+    "ai-workers/checks/v8-preservation-2026-10-17.md": "13d9fe5ef1a99fc1da9af4147c93a0dcd1ae3917f20ce579d2a6c7f642556c2c",
+    "ai-workers/checks/v8-preservation-2026-10-17.json": "761ace2779d8f3ff6a456bff2eeaa78f8c17efe9e008a258d4ba26baa74b721a",
+    "ai-workers/tools/problem1-v8-main.html": "5f793ca616c10d3e8d485e77e48276d6990bd0eae2fc5620a35af24ba80312cd",
+    "ai-workers/tools/problem1-v8-prototype.html": "8a8e9dd2bae08e34bddc5a56342389d0823d50e2bd26f98faa256ce16bb88d2e",
+    "ai-workers/tools/build_problem1_v8.py": "6f7248a179aa83e5d3f1c3d2d1f353d8b4bde9f0de10b6c37c26a4f51881a178",
+    "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-pathway-setup-to-form-filling.html": "f69178cfe4a57088d8fe44466d6fff643f812d5eb4d01b4ef90b5bff465ac3d5",
+    "ai-workers/tools/build_solution1.py": "18bac076ae7ed6effdaac97c8eec8dff045e9f34bd2a2c6c5a44c2bff66d616e",
+    "ai-workers/tools/solution1-main.html": "c4c75071cdd8051868c22c8aeabc8ff588c7403a81a64ddf3bbff518e0421cc8",
+    "ai-workers/tools/solution1-prototype.html": "f034b58221ed0f1870a77f705a729e6c30549a7617b73683533db580f2bce238",
+    "ai-workers/tools/solution1-open.html": "9a1d11eabacdc8ee6552f4d8b650eb7151d1ee5f481eef93872cd9e763893756",
+    "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-requirements.xlsx": "56b4c7c5f4391098a4b3064e29e5beb3dc0181c14c517834f3e97b133e10d95e",
+    "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-prototype.html": "3577803200c7a68c19de6e7db081e2db5d65f110114c53dbf1dc503265183c98",
+    "fresh-start-prompt.md": "6102eb1d90a699a4f92e50151f5f28b32865987b4ba2e56a89dbbd15d1efaac6",
+    "ai-workers/tools/s2/s2.css": "5c589ef5c153bd6f0841a750a796599c365e0aa4bc8ec3af89987207c39d32b1",
+    "ai-workers/tools/s2/journey.html": "9a36c4876bf5b7b21178663fd342b2ed9610fbf91675e7257cf4a1085c993144",
+    "ai-workers/tools/s2/build_s2.py": "35d5dcc7ec1409397f03e02e2bf711c77a0883b91e1cb856552792af6c4541be",
+    "ai-workers/tools/s2/s2_data.py": "07348a905a874b2bf7b3ae3f239b20292185ce9ebcc85959f23f670d36dae2db",
+    "ai-workers/tools/s2/s2_exec.html": "d02d9450da4bf49b244577466ed178ea67f8e94fa2923bd17421133df00ffda3",
+    "ai-workers/tools/s2/s2_detail.html": "022663239a4ba8c0f4e52fd711496f78cb66495224a015787605ad41896c68fb",
+    "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html": "0758048127c34deace6ab78e7c729e8d3ffabf719d0da43bd091b48597a4f9ef",
+    "ai-workers/checks/s1-v2-adversarial-review-2026-10-17.md": "4493162c44f3ad2c7bc4d6ffe6d389727fedb770a72294e6379314b7ea4d3fb4",
+    "ai-workers/tools/s3/s3_data.py": "86fbdc4d3b16c2f85249604de7ca793c576a82635e6b1a8a8d3c3d103c7daaa0",
+    "ai-workers/tools/s3/build_one_pager.py": "3c0f0e40a2deeadd164e374fa848581ea1e84319859564b484c6c4a1b02bf7d4",
+    "ai-workers/illustrations/actor-handoff-demo/first-usable-pager.html": "7920c7b845037976e5a1826295d4ef08c9a897af0d78f013a79381dbd2ab92a5",
+    "ai-workers/illustrations/actor-handoff-demo/first-usable-data.json": "3387e74cd2f4a821127b94616c65104adc94600dc88bc8b62367388e9ea1ef46",
+    "ai-workers/illustrations/actor-handoff-demo/first-pager-checks.json": "df301a48264925f087a6e4b1d9a59a1aa6c343d3490aab41e4153b2070f32cf8",
+    "ai-workers/illustrations/actor-handoff-demo/review-and-tool-selection.md": "09a941b5159e14bfa0313f5c70477dd28204b95161f34b16c45e4e2985d2198d",
+    "ai-workers/illustrations/actor-handoff-demo/claude-validation-prompt.md": "91967e9bfa4aa0a06c84524af54422e45db98bb0f384b7d7e51aca05868ec8a9",
+    "ai-workers/illustrations/actor-handoff-demo/claude-maker-prompt.md": "a7f5ae8ddbba9073605e17fe1f7868d161b0b43a821c2eef943704e69c5dbd9c",
+    "ai-workers/illustrations/actor-handoff-demo/claude-checker-prompt.md": "e314b1507e0839263f2253a90f088a4b7d62b61934b746eaccbb7797cce07384",
+    "ai-workers/illustrations/actor-handoff-demo/claude-validation-response-2026-10-17.md": "1580f294fcd28b61651805be520c8e2a5c5a4c4970896afe06e03ecce70268b6",
+    "ai-workers/illustrations/actor-handoff-demo/alignment-addendum.md": "3fccc173881f2b51ced112ef6eebb1124f32d625ac4b0090df2b8ec14b178015",
+    "ai-workers/tools/s3/one-pager-draft-2-plan.md": "1224da94c4c4b4d4e890e8cd26e7d039e247608a4f77d4c4a5aee1b2c80b2611",
+    "ai-workers/tools/s3/s3_views.py": "ffd62db86d45c29a403c99f4415339cdfab0bb6ed05c96bda2e9a3291772d030",
+    "ai-workers/illustrations/actor-handoff-demo/draft-2-independent-audit-2026-10-17.md": "e53e26c8b01a0a1d227f029163e1eb8ef29ad44d78720d5f66feddb3e127c196",
+    "ai-workers/checks/one-pager-draft-2-browser-checks-2026-10-17.json": "aa8c4887aaaa503848cfdec6a854c3bdc0c4d40fcaa50a860ee7f5dc51d1644d",
+    "ai-workers/checks/one-pager-draft-2-preservation-2026-10-17.md": "9e6d18639aa253ae3048c8191ceba6566264e04be39c730609d79132150fca42",
+    "ai-workers/tools/s3/check_one_pager.cjs": "cb01a10befd69336cd1e810f69422ad3f52a608e83521f6b135bde11d35e86f6",
+    "ai-workers/tools/s3/s3_ledger.py": "9af60b287435f7448f824eca70c5a1b4d8fe2f0d3df8fc55dc2405086260428b",
+    "ai-workers/checks/one-pager-draft-2-lead-response-2026-10-17.md": "cdb0582bbc3d7dac54b4badc5f9660e7da482cb7e7587319d4efa7c5f298b7fe",
+    "ai-workers/illustrations/actor-handoff-demo/draft-2-audit/consolidated-audit.md": "cc7836e10251222d4922e89cf2f4384fab84e54ac39eefaa03988e8b0c1ff08e",
+    "ai-workers/illustrations/actor-handoff-demo/draft-2-audit/claude-audit-validation-response-2026-10-17.md": "8fa434bf17f0b30927a5deea2d2acc5678c691d2717319d6de191e61f9b47b59",
+    "ai-workers/illustrations/actor-handoff-demo/draft-2-audit/input-manifest.json": "6b6c5d90457bbd0795998346311aa9ed72a36bca8f2235e1763a272c44f9db6f",
+    "ai-workers/checks/one-pager-draft-2-consolidated-audit-fixes-2026-10-17.md": "0c8a3adda0089c7bc8b8c07cf1af131dff866a228ca9dfedcf8e30bfcfe83fac",
+    "ai-workers/checks/one-pager-journey-and-reuse-2026-10-17.md": "474648d42c8404f92982e9c1e3d1135fe3930b6d6fbea394b83d8302c8c2430d",
+    "ai-workers/illustrations/actor-handoff-demo/draft-2-audit/journey-reuse-recheck/review.md": "46d977721d5323bcefe2bbc1997a24bf899e902716de49dde35459eabce1094b",
+    "ai-workers/illustrations/actor-handoff-demo/draft-2-audit/recheck-after-fixes/recheck-verdict.md": "a9c999b774e6e2599047198f3a5e4db2f3c424be207caa74c618cc3af36ce8d8",
+    "ai-workers/illustrations/actor-handoff-demo/evaluation-framework-2026-10-17.md": "a1ebc903ee3729d0e83cc33fc06c55f39c83b5b9c882e58ef9184f9cfcf9f721",
+    "ai-workers/checks/one-pager-draft-3-annotated-map-2026-10-17.md": "76ebf4bd27a7ba09a7e9d77569273d24581b87520810e7d5c79faf199a4b9302",
+    "ai-workers/checks/one-pager-draft-3-browser-checks-2026-10-17.json": "72c49fbd4cb8918de25a80773713585ccc4edcde67d5586c35b26d7c18ace4fc",
+    "ai-workers/checks/one-pager-nomenclature-2026-10-17.md": "aa00ae581852487243857e43ac8313ee747fb99ed59abb7e74f68d0ba52eeeb7",
+    "ai-workers/tools/s3/s3_terms.py": "317cbfbb3ce05ad04d4db40e8d3efd3404628b17411568d1f157fd688a4a0420",
+    "ai-workers/illustrations/actor-handoff-demo/consolidated-annotated-flow-prompt-2026-10-17.md": "f6998f823a41bed6dad28e217877a69948e897dcb5946b0f25acd74bbf222031",
+    "ai-workers/illustrations/actor-handoff-demo/draft-3-review/review.md": "4b8ca72f675969594dd5d6109e944d44c7f6317980dfc8888cc793b82d5deb16",
+    "ai-workers/checks/one-pager-draft-3-checker-fixes-2026-10-18.md": "44a68ec096164ea91360ef7f0fbb4f1fa764492d1ae915bdfbd7f9190fc9efef",
+    "ai-workers/problem-1-pathway-setup-and-form-filling/delivery-control.md": "f093b3bc19bd59ab6c35650f336ad718c8c1786f2d93ea148dbec51cbeb2eff4",
+    "playbook/solution-delivery.md": "b7d1edc0adf850251c251dff903cab899dbcace0585263b67ebdcb305e37e04a",
+    "ai-workers/checks/one-pager-detail-panels-2026-10-18.md": "a2b3836174dd601e6269ce930904a7a9fabe0990c69528db4aab7855a2d385fe",
+    "ai-workers/checks/one-pager-detail-panels-preservation-2026-10-18.md": "1df33f8847af5cd8fcc21c211e3be8843705af3fcaf9b051f4b58b19767ad265",
+    "ai-workers/checks/one-pager-detail-panels-browser-checks-2026-10-18.json": "6b01a608066409b8fd751947a050b9c5bff76f7eb071e56313bde6d32f2c0772",
+    "ai-workers/tools/s3/s3_panels.py": "07c0c05f94b9f66dea0e34274b2471255ab0b2f416e121e8b4339e9f0dc9702b",
+    "ai-workers/tools/s3/check_panels.cjs": "15ddf5b754c9d88961ba82e5bbfe33bfa6bcabc575caba7c5a95310ec55d2271",
+    "ai-workers/illustrations/actor-handoff-demo/integrated-audit-2026-10-18/report.md": "7fc5564915e4b658ddc93313310ae881efaaa71fa19752c2a0e4e4ae8f0e1ae2",
+    "ai-workers/illustrations/actor-handoff-demo/integrated-audit-2026-10-18/intent-and-source-coverage.md": "72cb6f27da38d36176e106a96e6cde408c0a82563bb62ed89e9af9245dd4ced7",
+    "ai-workers/illustrations/actor-handoff-demo/integrated-audit-2026-10-18/claude-validation-and-fix-prompt.md": "1cff2c394aab2c5ea850c6f38505b191d015fccf19ee8b1a6423770c85b02d5f",
+    "ai-workers/illustrations/actor-handoff-demo/integrated-audit-2026-10-18/review-quality-check.md": "bf9e1eccc9f6f822b1558d717d3a94c1338534e5b20c82e2b4cc7b42bb468a8b",
+    "ai-workers/illustrations/actor-handoff-demo/integrated-audit-2026-10-18/panel-review.md": "f762ebdee1ab621dc07322590ccb72bfc2b42d4ac225d02018a04692766aa894",
+    "ai-workers/checks/one-pager-draft-4-content-ledger-2026-10-18.md": "7574df44321094393a1b7087aa8a3f8698f5cea3df820550971aef357f8588c3",
+    "ai-workers/checks/one-pager-draft-4-cohesion-checks-2026-10-18.json": "4b7eeb706ba94ab6c5c45a71c54a1836eb5b14e13c4b70b0e8898c776e630170",
+    "ai-workers/checks/one-pager-draft-4-maker-response-2026-10-18.md": "049240964f187c368f30e754919bc78363abbccbf5eceb8b8ac3571254a985bd",
+    "ai-workers/checks/one-pager-draft-4-checker-prompt-2026-10-18.md": "cf422464601c1e4228bf2d0f40bd8a15413e5e21c0bac8037ed4e074e187b8e4",
+    "ai-workers/tools/s3/check_cohesion.cjs": "3bf035b448582cff847a646152632291804619661031e16f6b7ce5922d8291a2",
+    "ai-workers/tools/s3/check_diagram_geometry.cjs": "25dadf1362909d504e72f2966b3769d3665827c0b8fc5665a7f0976361989730"
+  },
+  "m0QualityReview": {
+    "observedAtUTC": "2026-10-16T17:28:13Z",
+    "secondRound": {
+      "savedAtUTC": "2026-10-16T17:07:24Z",
+      "verdict": "FAIL",
+      "material": 8,
+      "leadSaysFixed": true,
+      "independentlyAccepted": false
+    },
+    "latestBuildAtUTC": "2026-10-16T17:23:16Z",
+    "latestBuild": "v2.1, four disclosure levels; persona use-case sweep and eight mechanisms, matching diagram, source fixes/proposals",
+    "buyerReScores": "Running per Lead",
+    "reviewLimitation": "Advisory check predates D200/D201 edits; monitor verifies saved evidence scope, does not rerun formal milestone review.",
+    "current": "v3 advisory repair/recheck supersedes old v2 round status; separate milestone verdict pending",
+    "v3Advisory": {
+      "material": 5,
+      "minor": 4,
+      "leadSaysFixed": true,
+      "targetedRecheckMaterialResolved": true,
+      "source": "checks/m0-v3-audit-2026-10-16.md"
+    }
+  },
+  "latestFounderDecision": {
+    "id": "AIW-D238",
+    "meaning": "New/corrected mapping reaches pinnedcase through agentadoption only; affectedcopy rerenders/approvalwithdrawn, restunchanged; waitingagevisible, noSLA."
+  },
+  "m0V3Observed": {
+    "leadHandover": "2026-10-16T17:54:26Z",
+    "decision": "AIW-D198",
+    "plan": "ai-workers/m0-improvement-plan.md",
+    "scope": "Two problems/options/choice/outcomes, consolidated verified pricing model, skills map/categories/name, simpler matrix, full content preservation, reading indexes and bounded readiness call.",
+    "status": "Built, not accepted or published",
+    "researchBeforeQuestions": true,
+    "questions": [
+      "Pricing basis",
+      "Pathway Studio vs Product Studio name",
+      "Any category change"
+    ],
+    "founderAction": "Only when researched options presented; ratified current names/pricing stand meanwhile.",
+    "questionsResolved": [
+      "D199 pricing allowance + prepared application",
+      "D200 Product Studio -> Pathway Configurator",
+      "D201 Expat Ready AI heading/five areas/common controls"
+    ],
+    "remaining": [
+      "Actual de-identified EE field inventory, specialist/content team",
+      "Approved rendering review or founder local review",
+      "Separate Cowork checker including D200–201 edits"
+    ],
+    "brandExploration": "Miglo by Expat Ready preliminary Proposal only; D201 unchanged."
+  },
+  "resumeDecisionIdConflict": {
+    "status": "Resolved: D199–201 used without collision; NEXT next-freeD202",
+    "observedAtUTC": "2026-10-16T17:58:12Z",
+    "used": "AIW-D198 maker handover",
+    "stale": [
+      "NEXT next-freeD198 and Q1–Q3 recording instruction",
+      "m0-improvement-plan.md §7 record fromD198"
+    ],
+    "owner": "Codex Lead",
+    "fix": "Advance to next actually free ID, currentlyD199; never overwrite D198",
+    "founderDecisionRequired": false,
+    "resolvedObservedUTC": "2026-10-16T18:28:32Z"
+  },
+  "m0V3Verification": {
+    "observedAtUTC": "2026-10-16T18:28:32Z",
+    "artifact": "ai-workers/checks/m0-v3-verification-2026-10-16.json",
+    "currentPageSha256Matches": false,
+    "pageSha256": "65ae27ee0e7284db087b0424e3e480a2d3bbe5456e926ed0cb72d07f692bfc40",
+    "static": "Lead saved PASS for syntax, HTML, anchors, keys and scenario arithmetic",
+    "visual": "Unverified: browser executable absent, IAB local-file restriction; no bypass",
+    "execution": "No model/provider/product execution; costs hypothetical workloads, real EE counts Unknown",
+    "note": "Saved v3 static verification covers prior page; current v4 revision differs and has no new saved verification/acceptance yet. Do not carry v3 PASS onto current page."
+  },
+  "inProgressArtifactObservation": {
+    "firstObservedAtUTC": "2026-10-16T18:58:09Z",
+    "status": "v4 completed/frozen; D203 preservation repair requires plannedv5",
+    "source": "m0-improvement-plan.md §10 founder-led revision17Oct",
+    "scope": "Connected configuration -> reusable functions -> organisation choice -> case flow; complete structured configuration distinct from output map; naming parked, no proven performance claim.",
+    "currentPageSha256": "c0752acf21569e602ad081021f1818e66d57e420342c967e4dea0028ddf1bb15",
+    "lastSavedCheckpointUnchanged": false,
+    "NEXTStillV3": false,
+    "await": "Resume/lean pitch checkpoint completion, then v5 rewrite and formal checker.",
+    "notification": "No report: in-progress/non-actionable change."
+  },
+  "m0PreservationAudit": {
+    "observedAtUTC": "2026-10-16T19:28:27Z",
+    "decision": "AIW-D203",
+    "artifact": "ai-workers/checks/concept-content-preservation-2026-10-17.md",
+    "finding": "Earlier all-good-content-retained claim too broad. Detailed workflows retained but buried; Engine/Status/catalogue rows/family cards/legend/funnel/reading routes reduced or removed.",
+    "repairOwner": "Codex Lead",
+    "requiredRepair": "v5 same HTML, two independent propositions, visible AI/rules/person workflows, restored functions/definition/build status and reading aids, content-level ledger; retain factual corrections.",
+    "references": "Restored v1/v2.1 are historical references only; no standalone v2 found.",
+    "accepted": false,
+    "currentCheckpoint": "In progress: resume files/lean pitch plan before HTML edits; no completion inferred.",
+    "founderAction": "No new decision needed before reviewable revised artifact.",
+    "status": "v5 restoration/ledger and source corrections integrated, corecheckerPASS; D210 authorised deletions recorded, earlier omissions no longer sole next task."
+  },
+  "m0V4Verification": {
+    "artifact": "ai-workers/checks/m0-v4-verification-2026-10-17.json",
+    "currentPageSha256": "35484154a87bc576802c15238010d147f638a09c00cb0cf8454eaf01eb323c97",
+    "matchesCurrentPage": true,
+    "savedChecks": "Static and mock-DOM source-logic/navigation tests PASS per Lead",
+    "limits": "No browser rendering or live interaction verification; no preservation acceptance, formal checker or runtime proof.",
+    "currentPageStatus": "Historical v4 evidence only; current artifactv5. Do not carry v4hash/static results forward."
+  },
+  "m0V5Review": {
+    "observedAtUTC": "2026-10-17T03:58:27Z",
+    "coreAcceptedByCheckerAtUTC": "2026-10-16T21:25:23Z",
+    "coreVerdict": "PASS after Material recheck; previous Minors Lead-fixed but not independently re-reviewed",
+    "latestDeltaDecision": "AIW-D211",
+    "deltaReviewAtUTC": "2026-10-16T21:35:37Z",
+    "deltaVerdict": "PASS WITH FIXES",
+    "material": "Step20 old route-open wording; current page no longer contains it, matching Lead21:35:39 self-check. Formal recheck not saved.",
+    "remaining": [
+      "Founder read/comments/share permission",
+      "Optional independent Material1 recheck per NEXT"
+    ],
+    "minor2FallbackPhraseFixed": true,
+    "currentPageStatus": "No later completed delta verdict; no publication",
+    "browserEvidence": "Lead20:48/20:55 reports desktop/mobile390/1280 overflow/navigation/console checks. Monitor did not rerun; later D211 edit checks are link/ledger reports only.",
+    "preservation": "Saved ledger with unit-level reasons and D210 authorised removals; word overlap is not semantic or runtime proof.",
+    "leadClosedDeltaAtUTC": "2026-10-17T03:30:31Z",
+    "deltaStatus": "All4 findings applied and locally evidenced; latest independent verdict remainsPASSWITHFIXES, no later one-lineMaterial1 recheck.",
+    "fixEvidence": "Removed route-open/proposal-route stale wording; FAQ13 explains Adobe edit does not return to facts, D181 fix/refill and manual field recording as Proposal; source note Reader wording corrected.",
+    "latestBrowserEvidence": "Lead03:30 reports154links/0broken/no console errors/no overflow. Monitor verified saved source corrections only, not independent browser run."
+  },
+  "handoffDeltaReviewInconsistency": {
+    "status": "Resolved: NEXT consumes21:35verdict, records Lead03:30closure, founder read/share next.",
+    "owner": "Claude Code Lead",
+    "finding": "NEXT next outcome asks for D211 first checker pass, but PASS WITH FIXES already saved21:35:37Z. Consume verdict/fix/recheck rather than duplicate initial pass.",
+    "observedAtUTC": "2026-10-16T23:28:34Z",
+    "resolvedObservedUTC": "2026-10-17T03:58:27Z"
+  },
+  "correctedParallelStatusObservation": {
+    "observedAtUTC": "2026-10-17T03:27:42Z",
+    "obsoleteLineUTC": "2026-10-17T03:02:29Z",
+    "correctionUTC": "2026-10-17T03:04:36Z",
+    "status": "Corrected in saved log; stopped session acknowledges confirmed Lead work and says no post-adoption file edits. Monitor hashes confirm tracked artifacts unchanged. No active ownership conflict inferred.",
+    "currentConfirmedLeadCheckpointUTC": "2026-10-16T21:35:39Z"
+  },
+  "threeDocumentDirection": {
+    "decision": "AIW-D212",
+    "documents": [
+      "Concept/strategy",
+      "Solution design, mechanisms/matrices/options/architecture/status",
+      "Module1 PRD with traced journeys/stories/rules/data/tests"
+    ],
+    "firstPiece": "ai-workers/form-filling-engine.html",
+    "newArtifactStatus": "Written draft, separate checker pending",
+    "phoneWidthCheck": "Lead-reported no overflow, not monitor rerun or fact acceptance",
+    "GTM": "Out of scope per founder",
+    "status": "D212 presentation superseded by D216: one document per problem, PRD later per problem. Prior three-document chain and old engine path are historical."
+  },
+  "pastCaseMapProofDecision": {
+    "id": "AIW-D215",
+    "status": "Ratified/Specified, not executed",
+    "meaning": "Saved maps only place values; past filled forms migrate into staff-confirmed person facts and provide before-release map accuracy comparison. Same person/same firm/reconfirmation retained.",
+    "owners": {
+      "pilotCaseSourceAndConsent": "Founder with pilot firm",
+      "factsConfirmation": "Firm staff",
+      "mapBuildProof": "Content/build team; exact execution pending"
+    },
+    "professionalLimit": "Unconfirmed: no counsel (D94) for testing past files; consent in migration terms.",
+    "measuredAccuracyAvailable": false
+  },
+  "localVersioningDecision": {
+    "id": "AIW-D213",
+    "permission": "Local commits only allowed for Lead; remote/code changes remain blocked",
+    "shape": "Proposal, founder question still needed before setup",
+    "implemented": false,
+    "monitor": "No commits; current heartbeat prohibits them for monitoring."
+  },
+  "namingDecision": {
+    "id": "AIW-D214",
+    "meaning": "Every AI job called a skill, functional name/type/ID; agent means firm staff. New ID scheme belongs solution design, no new keys by monitor."
+  },
+  "monitorAcknowledgement": {
+    "atUTC": "2026-10-17T06:14:23Z",
+    "meaning": "Lead explicitly identifies monitor-only state changes; later checkpoint says stop-check ignores own reporting file. No broader review acceptance inferred."
+  },
+  "problemOrganisationDecision": {
+    "id": "AIW-D216",
+    "status": "Ratified and saved reorganisation integrated; no new quality PASS",
+    "active": "ai-workers/problem-1-pathway-setup-and-form-filling/pathway-setup-and-form-filling.html",
+    "parked": "ai-workers/problem-2-ai-across-case-and-business/ai-across-case-and-business.html",
+    "meetingDigest": "ai-workers/problem-1-pathway-setup-and-form-filling/inputs/meeting-2026-10-17/digest.md",
+    "scope": "Truth review against meeting claims/team sources/code before compressed executive/CTO v7; no GTM; PRD later per problem.",
+    "preservationCheck": "Independent read-only comparison: all 473 engine units preserved; v5 4658/4661 units match, three exclusions are two replaced header strings plus enclosing aggregate. Text comparison only, not semantic/functional review.",
+    "browserChecks": "Lead-reported both load, no broken in-page links/console errors; Problem1 fits375px. Monitor did not rerun browser.",
+    "splitScript": "New folder paths corrected while monitoring; initial stale paths resolved."
+  },
+  "checkpointInconsistency": {
+    "status": "Prior ID/rubric drift resolved",
+    "owner": "Claude Code Lead",
+    "observedAtUTC": "2026-10-17T20:28:23Z",
+    "finding": "NEXT nowD246 and7lenses; TC177/CNSA1B9marked superseded. Maker auditcorrectionshandover nowrecorded. No new checkpointmisdirection identified.",
+    "additionalFindings": [
+      "AGENTS/READMEformalcheckercontinuity clarified; scheduledmonitor remainsunderexplicitheartbeat",
+      "No newindependentPASSor acceptance"
+    ]
+  },
+  "truthReviewObservation": {
+    "observedAtUTC": "2026-10-17T06:58:15Z",
+    "artifact": "ai-workers/problem-1-pathway-setup-and-form-filling/truth-review-2026-10-17.md",
+    "status": "Written with adversarial corrections reported/applied; decide outcomesD217–224 appended. No standalone independentPASS inferred.",
+    "planApproval": "Lead06:46:13Z records founder approved; NEXT still plan-go.",
+    "uci": "Latest row24 correctly keeps asked/read/staff-confirmed underD180correction; Lead06:46log saying v6UCIwrong is superseded.",
+    "frontendEvidenceGap": {
+      "owner": "Claude Code Lead",
+      "reviewRows": [
+        6,
+        29
+      ],
+      "finding": "Review says frontend absent from backend15Oct capture and cannot recheck; code index has separate current frontend14Oct capture matching live dev fullSHA.",
+      "file": "code/ERv2-frontend@85623d4-2026-10-14/src/features/case-management/form-review-page.tsx",
+      "sha256": "27fdc3e57ca95968f9ae371f76a4bdb49ac9915492ea7c5269acc61e62f0f628",
+      "evidence": "Lines35-40 explicitly Mock UI: generating makes no real PDF.; table has value/source/override. Source inspection only, no execution."
+    },
+    "next": "Lead uses outcomes to build v7; consumes available current frontend before claims, as flagged previously."
+  },
+  "sessionADecisions": {
+    "closedAtUTC": "2026-10-17T07:21:13Z",
+    "status": "Ratified in decisions, outcomes and NEXT; specified not executed",
+    "D217": "D177 countryPQR blocks stand; derived per-row view",
+    "D218": "Reusable section library; AI proposes placements once; person release",
+    "D219": "Current value per person/field with conflicts/overrides/dated history; no recency alone",
+    "D220": "Best fit per capability; product-language skills/SDK typed tools/evals/prompts; PDF/XFA strongest library possibly service; D139/147 stand",
+    "D221": "Normalised working view enters/fixes fact once; read-only form check view fix-fact link",
+    "D222": "No proof-of-concept framing; full scope; at least ten setup combinations Lead drafts then founder/specialist confirm",
+    "D223": "Configuration drafted automatically from row save/rerun; new/unsure review/second publisher stay; per-tool difficulty/provenness evidence in v7",
+    "D224": "Pathway Setup to Form Filling; journey-linked business/technical/high-level requirements; folder slug stays",
+    "readiness": "Specification decisions only; no executed AI/PDF/XFA/portal/pilot evidence",
+    "currentStanding": "Recorded prior inputs underD228; may be challenged, actualrecordchange requires founder selectable answer. Do not mechanically enforce as design constraints."
+  },
+  "v7Outcome": {
+    "observedAtUTC": "2026-10-17T07:57:56Z",
+    "artifact": "ai-workers/problem-1-pathway-setup-and-form-filling/pathway-setup-and-form-filling.html",
+    "status": "Written, retained as evidence base; founder not accepted",
+    "reviewArtifact": "ai-workers/checks/v7-adversarial-review-2026-10-17.md",
+    "reviewVerdict": "PASS WITH FIXES",
+    "findings": {
+      "material": 3,
+      "minor": 19
+    },
+    "fixStatus": "Lead disposition says all applied; no independent recheck saved",
+    "reviewScope": "Adversarial mainpath/citations review; Lead says separate final checker not run. Do not conflate.",
+    "preservationArtifact": "ai-workers/checks/v7-preservation-2026-10-17.md",
+    "preservation": "Saved check3194/3194 v6 units retained; text comparison only, not semantic/functional/readability acceptance",
+    "wordMeasurement": "Saved preservation report3595 open text vs about2000 word mainpath; prose1982 excludes visible tables. Explains founder verbosity objection; not readiness score.",
+    "browser": "Lead-reported desktop/phone screenshots; not independently rerun",
+    "rejection": "Too verbose for hands-on founder/CPO/CTO; forced visuals; does not follow leaders reasoning in minutes; AI-made feel. Saved inLead07:55/NEXT.",
+    "next": "One-page framework before another presentation rewrite; gates inNEXT.",
+    "behaviourEvidence": "Specified only; no AI/XFA/portal/provider execution or pilot readiness established"
+  },
+  "v8Outcome": {
+    "observedAtUTC": "2026-10-17T08:28:13Z",
+    "artifact": "ai-workers/problem-1-pathway-setup-and-form-filling/pathway-setup-and-form-filling.html",
+    "status": "Rejected by founder; replaced byD226Solution1, archived unchanged. FAILremains historical; no PASS inferred.",
+    "prototype": "Interactive browser simulation; illustrative box lists/fixed answer key, no provider/real-form execution proof",
+    "reviewArtifact": "ai-workers/checks/v8-adversarial-review-2026-10-17.md",
+    "verdict": "FAIL",
+    "material": 20,
+    "blocking": 5,
+    "minor": 30,
+    "fixStatus": "Lead disposition saved forSolution1: removal/fixes claimed, Material15 row re-version/bulk still notdone; realform proof pending. No independent recheck.",
+    "blockingFindings": [
+      "Claims of tests exceed implemented simulation",
+      "Rule matching checks against answer key; no realistic label-context collision",
+      "Draft goes straight to released without two people",
+      "Ratings unsupported and no saved founder framework/weights approval",
+      "Portal capture/map/version/change setup omitted"
+    ],
+    "otherMaterial": "Rule-runtime/component built claims overstate code; wrong/stale illustrative form applicability; family/shared-fact display defects; row/bulk/version/impact claims; inaccurate meeting history; team Release1 conflict omitted. Specialist handles immigration values.",
+    "preservation": "Saved reportv6retained,11v7structural differences; not readability,correctness,execution acceptance",
+    "browser": "Lead-reported desktop/wide/phone checks, no monitor rerun",
+    "next": "Lead fixesmaterial+recheck; no automatic maker work by monitor",
+    "futureExecution": "NEXT recommends real inventory/matching/evaluation spike after acceptance; no execution authorisation/readiness inferred"
+  },
+  "solution1Outcome": {
+    "observedAtUTC": "2026-10-17T08:58:22Z",
+    "artifact": "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-pathway-setup-to-form-filling.html",
+    "decision": "AIW-D226",
+    "status": "Written, no hostile/separate verdict or founder read/acceptance; D228revalidation required",
+    "readyAtUTC": null,
+    "archive": "archive/ai-workers/pathway-setup-and-form-filling-v8-2026-10-17.html",
+    "archiveMatchesPreviouslyReviewedV8Hash": true,
+    "reviewStatus": "v2hostilereview nowfiled; materialgaps. v3onepagerdraftpendingverification; no finalseparatechecker.",
+    "staticObservation": "Sample/fixed answer key disclosed. Prototype draft/check/second-release states added; oracle comparison still present, matching accuracy unproven. No browser rerun by monitor.",
+    "remaining": "Row re-versioning and bulk change not demonstrated; actual inventory/matching/evaluation needed; specialist confirms example forms/values.",
+    "sources": "Todaytable still frontend13Oct citation; currentfrontendcapture available as previouslyflagged; no blankettechnicalacceptance",
+    "readOrder": "CurrentNEXT: hostile review/rethink/headline approval/buildv3/check; old v1checker launch superseded",
+    "version": "v2 underD227",
+    "archiveV1": "archive/ai-workers/solution-1-pathway-setup-to-form-filling-v1-2026-10-17.html",
+    "archiveV1MatchesPreviousHash": true,
+    "workbook": "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-requirements.xlsx",
+    "prototype": "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-prototype.html",
+    "verification": "Artifact presence/HTMLoutline/fixed-answer-key disclosure checked bymonitor; no workbook functional test, visual pass or fullrequirementsaudit inferred"
+  },
+  "freshSolutionFrame": {
+    "decision": "AIW-D228",
+    "whatChanges": "Design no longer constrained by previous decisions/team architecture; retain/change with reasons, recommend changes to founder before recording. External read-only/soleLead/monitor limits persist.",
+    "threeTests": [
+      "Best practical solution: component necessity, real alternatives, failure modes",
+      "Best communication: founder/CPO/CTO understand walkthrough in10minutes",
+      "Best requirements: stranger developer/partner canbuild, acceptance/edge/NFR/gaps/testplan"
+    ],
+    "scores": "Founder asks Lead/reviewer1–10 with reasons; monitor assigns no unsupported score or readiness",
+    "manualMapping": "No person creates section/field maps; AI selects library sections/fields, newonlywhenneeded, writes boxmaps; people approve new/uncertain. Maps exist as data.",
+    "delivery": "Short executive walkthrough, separate detailed developer/partner pack; fullscope individual/family/corporate and alloutputtypes"
+  },
+  "sessionCState": {
+    "observedAtUTC": "2026-10-17T09:58:35Z",
+    "reviewArtifact": "ai-workers/checks/s1-v2-adversarial-review-2026-10-17.md",
+    "reviewStatus": "Written hostile review,30findings18Material; no explicit PASS/FAIL label, no monitor duplicate scoring",
+    "reviewGaps": "No alternatives, duplicated form-edition work, circular rulecheck, omitted OCRcomponent, weakportaldesign, untestablethresholds/contract/testplan, false specialistconfirmation",
+    "D229": "Real inventories/scripts and matchingmeasurements required; provider-API scripted run remains teamstep",
+    "D230": "Engine drafts eligibilitygates/loadsgrids; source/date, specialistapproves allvalues; indicative only",
+    "D231": "Only ExpatReadycontent team runs/releases; firms onlyconsume, no firm-side requestfeature",
+    "D232": "Onepager first approvedplan/storyline; draft1requires verification, downstream artifacts same s3data",
+    "artifact": "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html",
+    "evidence": "Static savedcontent includes allactors/flow, measuresallpending and specialistconfirmationpending; browserdesktopLeadreported only",
+    "actualRun": "No realread inventory/matchresults in tools/s3/real-read; existingprototype fixed-answerkey remains simulation",
+    "blocker": {
+      "firstObservedUTC": "2026-10-17T09:58:35Z",
+      "owner": "Lead download; founder supplies officialPDFs if failure persists",
+      "status": "New materialblocker",
+      "reportedCause": "canada.ca refuses downloads in ClaudeCode sandbox, HTTP2error then noresponse; not a global availability claim",
+      "inputsFolder": "ai-workers/problem-1-pathway-setup-and-form-filling/inputs/ircc-forms",
+      "inputFilesObserved": []
+    },
+    "next": "Founderverifydraft1, realread/match then downstreambuild/check, no count-based readiness"
+  },
+  "coordinationObservation": {
+    "observedAtUTC": "2026-10-17T10:59:18Z",
+    "leadLogUTC": "2026-10-17T10:51:11Z",
+    "leadConcern": "Other session writing isolated actor-handoff-demo; Lead asks founder which session continues Solution1.",
+    "authority": "Current user heartbeat explicitly ClaudeCode sole deliveryLead; no reassignment requested here.",
+    "savedEvidence": {
+      "review": "ai-workers/illustrations/actor-handoff-demo/review-and-tool-selection.md",
+      "label": "Independent advice and isolated illustration; Proposal, not an approved product specification",
+      "makerBrief": "ai-workers/illustrations/actor-handoff-demo/claude-maker-prompt.md",
+      "executionStatus": "DEFERRED EXECUTION BRIEF. Founder authorisation after validation required; monitor does not execute.",
+      "checkerBrief": "ai-workers/illustrations/actor-handoff-demo/claude-checker-prompt.md",
+      "checkerStatus": "Future brief, not saved independent verdict or acceptance"
+    },
+    "disposition": "Treat as proposal input to existing Lead; preserve active unconsumed outputs. Do not spawn/message/copyintegrate/delete. No extra Lead-selection approval needed from current authorised reviewer.",
+    "scopeLimit": "Read saved briefs/artifacts only; no privatechat/source prompts or authorship/approval inferred. Technical recommendations not independently endorsed.",
+    "mainArtifacts": "Tracked product files unchanged; originalonepagerdraft1verification and missingPDFblocker stillcurrent.",
+    "status": "Lead11:17savedvalidationresponse consumes independentproposal; soleClaudeLeadunchanged. Earlier ownership ambiguity no longer primary blocker."
+  },
+  "validationChoices": {
+    "observedAtUTC": "2026-10-17T11:29:08Z",
+    "ids": [
+      "AIW-D233",
+      "AIW-D234",
+      "AIW-D235",
+      "AIW-D236"
+    ],
+    "response": "ai-workers/illustrations/actor-handoff-demo/claude-validation-response-2026-10-17.md",
+    "status": "Ratified/Specified, notimplemented; Leadvalidatedandincorporatedproposalintosavedplan",
+    "D233": "ReusableAIgeneratedformedition/portalversionmaps; person/relationship/purpose/rowcontext; runtimetestedonceaschallenger, sameindependentkey; routechange requiresfounderyes",
+    "D234": "ReplacesD174rareformfirst-useexception; unsupportedformcentralExpatReadyrelease; unaffectedcaseactivitiescontinue; urgentauthorisedmanualfill; alertProposed/noSLA",
+    "D235": "Three lifecycletiers; collectionresponsibility separatefromvisibility/editpermissions; nofourthstafftier. Smallestplacementsettingcollectedfromproposed, profileviaresolvedsubject. CN9/TC177mustcorrectbefore send.",
+    "D236": "Consequencebasedacceptance, independentcases, reviewnew/changedinitially, modelconfidenceneverexemptsnewproposal; target/result/criterionseparate; onlyaffectedworkheld. SA1B38changeProposedtoteam.",
+    "buildAuthorisation": "LatestLeadexplicitnextfoundergo; makerbriefstilldeferred, no build inferredfrompolicyanswers",
+    "proof": "Noactualforminventories/matches; inputsPDFfolderempty/realreaddirectoryabsent atcheck"
+  },
+  "draft2BuildObservation": {
+    "observedAtUTC": "2026-10-17T11:58:46Z",
+    "plan": "ai-workers/tools/s3/one-pager-draft-2-plan.md",
+    "planStatement": "Founder sixcorrections/buildinstruction foldedin; nothing belowopenfounderquestion",
+    "evidence": "Draft2version in s3_data.py, generatedonepagerupdated, builder/s3_viewsactivelymodified; no newLeadcompletionline or draft2checkreport",
+    "status": "Completed12:02Leadcheckpoint, then separatechecker13:56PF; currentlyfixesinprogress.",
+    "approval": "EarlierLead11:17awaitgo supersededby11:28savedconsolidatedplan; do notaskagain",
+    "scope": "Read-only monitor; no rebuild/tests/editorchanges/spawning"
+  },
+  "draft2Review": {
+    "observedAtUTC": "2026-10-17T14:30:04Z",
+    "verdictAtUTC": "2026-10-17T13:56:22Z",
+    "verdict": "PASS WITH FIXES",
+    "material": 7,
+    "minor": 11,
+    "artifact": "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html",
+    "reviewedHash": "c69c11168d73025193a914a59a6019317b5d32bb27a008ff42c4a201d33304ba",
+    "currentHash": "0758048127c34deace6ab78e7c729e8d3ffabf719d0da43bd091b48597a4f9ef",
+    "audit": "ai-workers/illustrations/actor-handoff-demo/draft-2-independent-audit-2026-10-17.md",
+    "scope": "Blueprintquality/behaviour/Chromiuminteraction, notdetailedpack/runtimeperformance",
+    "materialFindings": {
+      "M1": "Outofpackageformroute/setupformeditionentry",
+      "M2": "Releasedmapreachespinnedcase/adoption",
+      "M3": "No setupreceiverwrongmappingflag",
+      "M4": "Validationdraftingowner/crossrecordchecks absent",
+      "M5": "Readbackmismatchowner/branch",
+      "M6": "Signatoryerrorreturnpath",
+      "M7": "Stickyphone nav/jumpheadingobstruction"
+    },
+    "checkedByReviewer": "OwnChromium1440/1280/768/375; inspectors/examples/focus/list/nohorizontaloverflow; foundnav defect missedbyLead60pass. No Safari/Firefox/realphone/screenreader/print/readertrials. Preservationonlyspotchecked.",
+    "scoreHandling": "Reviewqualitativejudgements, not measurements/readypercentages; monitor assignsnone",
+    "fixStatus": "Earlier A-fixes partly closed by advisory recheck; R1 document authority and R2 signing lifecycle remain material, R3 filing repetition/8.3-8.4 wording open. New J1/J2 material findings unaddressed on current page. Formal recheck not saved.",
+    "proof": "No realread/matchingresult, PDFinputsempty; diagraminteractionnotAIexecution",
+    "leadResponse": "ai-workers/checks/one-pager-draft-2-lead-response-2026-10-17.md",
+    "leadChecks": "16:02:22 report123passed0failed; independent advisory rerun also123passed but additional stage probes reproduce panel regression. Reuse walks check rendered documentation, not runtime selection."
+  },
+  "newPolicyAnswers": {
+    "D237": "No add-form casefeature. Neweditionmappingunsupporteduntilcentralrelease; officeroneoff manualexistingprocess+upload; recurringgaps viafirmcontactsupport. ReplacesD234autoalertproposal.",
+    "D238": "Mappingreleaseonlythroughadoptiononpinnedcase, affectedcopyonly, waitingagevisible/noSLA",
+    "integration": "Ratified/Specified; activebuild observed, integrationchecks/reviewpending."
+  },
+  "consolidatedAuditObservation": {
+    "observedAtUTC": "2026-10-17T15:30:26Z",
+    "audit": "ai-workers/illustrations/actor-handoff-demo/draft-2-audit/consolidated-audit.md",
+    "validation": "ai-workers/illustrations/actor-handoff-demo/draft-2-audit/claude-audit-validation-response-2026-10-17.md",
+    "fixRecord": "ai-workers/checks/one-pager-draft-2-consolidated-audit-fixes-2026-10-17.md",
+    "status": "Independent advice explicitly not formal checker verdict; Lead validation15:03 and authorised fixes15:17 saved. Awaiting formal recheck.",
+    "findings": "A1 document readiness; A2 filing boundaries; A3 failure cause and blocked/flagged split; A4 final-file approval; A5 human-review finding route; A6 selected shape visibility; A7 phone background inert.",
+    "scope": "Blueprint/card/diagram/Chromium behaviour. No real model/PDF/XFA/portal execution; no additional browser-family/device/reader trials.",
+    "b6": "Checker unavailable remains grey/not checked, human important-field review and approval records omission; Lead ruling founder may overrule, no new founder question."
+  },
+  "activeRevisionObservation": {
+    "atUTC": "2026-10-17T17:58:16Z",
+    "pageHash": "2f23654f995147ba4632d74424c21549d6f0f8a3365cd970141965f79a59c1fc",
+    "changedFiles": [
+      "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html",
+      "ai-workers/tools/s3/s3_data.py",
+      "ai-workers/tools/s3/build_one_pager.py",
+      "ai-workers/tools/s3/s3_views.py"
+    ],
+    "status": "In progress; completion and review not inferred",
+    "staticObservation": "Stage panel placement now handles overview mnode bounds; document lines require accepted evidence or authorised disposition;8.1 readiness explicitly excludes unresolved replacement/reconfirmation. Not independently executed or closed.",
+    "latestSavedBrowserRun": "2026-10-17T16:02:22.039Z",
+    "browserReportAppliesToCurrentRevision": false
+  },
+  "journeyReuseReview": {
+    "observedAtUTC": "2026-10-17T16:28:38Z",
+    "leadRecord": "ai-workers/checks/one-pager-journey-and-reuse-2026-10-17.md",
+    "review": "ai-workers/illustrations/actor-handoff-demo/draft-2-audit/journey-reuse-recheck/review.md",
+    "reviewedHash": "e1016dea6aeb7e33506b4049fe9df8077d00c97fd974269852715ea7eb3d7731",
+    "status": "Independent advice, not formal verdict; unaccepted blueprint",
+    "J1": "Material: new stage cards obscured by contextual panel at1280/1440; activity-only placement does not handle stages.",
+    "J2": "Material: proposed replacement/reconfirmation readiness unspecified; keeping old confirmed value must not silently clear affected output.",
+    "J3": "Minor: scenario prefill states conflict and earlier-case immutability wording needs narrowing.",
+    "previousResiduals": "R1 document disposition authority; R2 signing-only transition; R3 detailed per-filing repetition; unavailable-checker trigger.",
+    "scope": "Saved browser observations and documentation checks, no monitor rerun, no product behaviour execution.",
+    "currentDisposition": "Separate checker confirms J1–J3 fixed in draft3. Superseded by draft3 conditional verdict/new C-M1/VM1/VM2."
+  },
+  "lastNotificationUTC": "2026-10-17T21:28:36Z",
+  "lastNotificationReason": "Draft4 checker launch required and manualfallbackscope founderquestion explicit",
+  "draft3Observation": {
+    "observedAtUTC": "2026-10-17T18:28:22Z",
+    "record": "ai-workers/checks/one-pager-draft-3-annotated-map-2026-10-17.md",
+    "artifact": "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html",
+    "currentHash": "65da8c0bcc7af1fc4bd8ce7d4d8bd6612aaa5aed408c2faeebfec33b5e06d250",
+    "status": "Ready for separate checker per Lead18:26:48, not passed",
+    "decisions": {
+      "D239": "Actors show product side and role; Immigration SME proposed SuperAdmin role with build gap/team change.",
+      "D240": "Highlighted eye with tooltip/accessibility name retained; unfamiliar marks explain on hover/focus.",
+      "D241": "Team nomenclature applied; proposed words labelled, Critical-warning conflict remains proposed team change."
+    },
+    "leadDisposition": "J1–J3, R1–R3 and unavailable-checker wording fixed as blueprint; no independent closure inferred.",
+    "browserReport": "ai-workers/checks/one-pager-draft-3-browser-checks-2026-10-17.json",
+    "leadBrowserChecks": {
+      "run": "2026-10-17T18:26:07.390Z",
+      "passed": 148,
+      "failed": 0
+    },
+    "archiveManifest": "archive/ai-workers/manifest-v3-draft2-before-annotated-2026-10-17.sha256",
+    "archiveHashesVerified": 19,
+    "verificationRecordLimitation": "Resolved: verification/scorecard sections now saved, history of partial M10/M13 claims corrected in later fix record.",
+    "scope": "Interactive explanation and documented behaviour, no real forms/models/portal/pilot proof."
+  },
+  "draft3Review": {
+    "observedAtUTC": "2026-10-17T18:58:30Z",
+    "review": "ai-workers/illustrations/actor-handoff-demo/draft-3-review/review.md",
+    "reviewHash": "4b8ca72f675969594dd5d6109e944d44c7f6317980dfc8888cc793b82d5deb16",
+    "reviewedPage": "f351d479…0394 (also92974d81…c6b2)",
+    "currentPageHash": "9fc94c3585706e869c3b83c727b9df26ce61bf09b0aab08fadd274c5000c3390",
+    "verdictExact": "Accepted for high/medium solution alignment once three local fixes are made: one on content (C-M1) and two visual (VM-1, VM-2).",
+    "acceptance": "Conditional only; no formal unconditional PASS or founder acceptance",
+    "closed": "J1 J2 J3 R1 R3 unavailable-checker alignment and coreR2 confirmed by checker",
+    "remaining": {
+      "C-M1": "Closed by integrated audit on401457aa as documentation contradiction only.",
+      "VM-1": "Material: BPMN views3–7/technical overview lines cross labels. Label layout pass and collision checks requested.",
+      "VM-2": "Material D243 regression: phone Shared records fixed-width columns crush/overlap text; responsive cards or corrected layout requested."
+    },
+    "leadResponse": "ai-workers/checks/one-pager-draft-3-checker-fixes-2026-10-18.md",
+    "timing": "Review visual expansion updated18:57; latest Lead response18:54 addresses earlier C-M1/minors only. Consume newest saved review before acceptance.",
+    "checks": "Checker independently reproduced148/149 suites and tested all14stagecontrols at8widths on2hashes; extra visual probes expose regressions missed by suite. CurrentLead149pass0fail applies9fc94c35.",
+    "scope": "Interactive blueprint/documentation coverage only. No real AI/form/PDF/Adobe/portal workflow execution or reader/device/screen-reader proof."
+  },
+  "newDraft3Decisions": {
+    "D242": "Symbol explanations move to legend/tooltips; business-rule notes and filing boundary retained, smaller secondary labels.",
+    "D243": "Actor-type brackets and plain Shared records with tag explanations/activity links."
+  },
+  "integratedGateObservation": {
+    "observedAtUTC": "2026-10-17T19:58:30Z",
+    "control": "ai-workers/problem-1-pathway-setup-and-form-filling/delivery-control.md",
+    "process": "playbook/solution-delivery.md",
+    "panelRecord": "ai-workers/checks/one-pager-detail-panels-2026-10-18.md",
+    "currentHash": "401457aab0f301fa80bae7f52d84859b6f507d1e329d63e07b1ec6ec6ca471af",
+    "auditFolder": "ai-workers/illustrations/actor-handoff-demo/integrated-audit-2026-10-18",
+    "auditFrozenAt": "2026-10-17T19:18:58.602550+00:00",
+    "currentAndFrozenModelHashesVerified": 10,
+    "verdict": "Audit finalised20:08, six Material findings; maker validation/corrected revision/formal recheck/founder acceptance pending. Current rubric amended to seven for next revision underD244.",
+    "acceptance": "None recorded; target9per lens is a target, not achieved score",
+    "requiredClosure": "M1 case closure/sequential routes; M2 staff-owned gaps/per-form holds; M3 D215 historical migration/proof reconciliation; M4 phone records; M5 diagram labels; M6 scope of real-read evidence.",
+    "downstream": "Real read/match then walkthrough/detail/workbook, required sketches/expected-behaviour prototype; old v2 outputs not certified to v3. Solution2 remains parked.",
+    "sharing": "Lead19:15 records user-authorised private claude.ai publication at existing artifact URL; sharing setup by user pending. Monitor neither opens private chats nor changes publication/access.",
+    "report": "ai-workers/illustrations/actor-handoff-demo/integrated-audit-2026-10-18/report.md",
+    "coverage": "ai-workers/illustrations/actor-handoff-demo/integrated-audit-2026-10-18/intent-and-source-coverage.md",
+    "closed": "C-M1 unmatched signed-file documentation contradiction closed; implementation unproven.",
+    "scopeLimits": "All57panels inspected,185browser checks independently repeated; no actual AI/PDF/XFA/portal/productworkflow/human-reader/screenreader/device trial."
+  },
+  "reviewCompletion": {
+    "atUTC": "2026-10-17T19:34:58Z",
+    "scope": "Saved-file programme/status review requested by proceed and complete",
+    "status": "Complete for this check; delivery and formal integrated audit remain pending with their owners.",
+    "productFilesModified": false,
+    "messagesSent": false,
+    "remoteChanges": false
+  },
+  "integratedAuditVerdict": {
+    "observedAtUTC": "2026-10-17T19:58:30Z",
+    "report": "ai-workers/illustrations/actor-handoff-demo/integrated-audit-2026-10-18/report.md",
+    "reportHash": "b3b3c91070439745705636966092fd77b99b191cbd10797da757fb586e21bb00",
+    "reviewedPageHash": "401457aab0f301fa80bae7f52d84859b6f507d1e329d63e07b1ec6ec6ca471af",
+    "exactVerdict": "retain and correct; not ready for unconditional acceptance or a 9/10 claim",
+    "formalCheckerVerdict": false,
+    "materialFindings": {
+      "M1": "Premature case closure and missing next sequential filing; AG07BR20/31 andSA1B67 spot-checked by monitor.",
+      "M2": "View4 pre-staff fact gate routes missing staff-only gaps back to clientSQR and can hold entire case.",
+      "M3": "D215 migration and before-release historical mapping proof reduced to optional past-case reading; reconcile later amendments before founder escalation.",
+      "M4": "Shared records phone table overlaps; VM2 persists.",
+      "M5": "Diagram connector/label collisions; VM1 persists.",
+      "M6": "Inventory/matching real read described as answering XFA writing/Validate/finalreadback proof; distinguish evidence steps."
+    },
+    "strategicEvidence": "AI authoring benefit versus manual authoring using same reusablemaps unmeasured; deterministic view assembly AI ownership challenged. No new route/decision inferred.",
+    "monitorScope": "Read saved report/coverage only; no raw conversation exports/private chats read, no duplicate product audit or tests performed.",
+    "linkedFixPromptExistsAtCheck": true
+  },
+  "evaluationDecisionD244": {
+    "observedAtUTC": "2026-10-17T20:28:23Z",
+    "status": "Ratified and handoff/control aligned for7lenses; earlier6scoreshistorical",
+    "decision": "AIW-D244",
+    "lens": "Functional language and consistency",
+    "effect": "Seven lenses for corrected/future revision, precise actors/actions/conditions/results and consistency across artifact; earlier six scores remain historical with no invented seventh.",
+    "inconsistency": "NEXT nextfreeD244 alreadyused; NEXT/control/makerprompt futureassessment sayssix. Lead shouldsetD245 and align future instructions.",
+    "owner": "Claude Code Lead",
+    "founderAnswerNeeded": false
+  },
+  "cohesionDraft4Observation": {
+    "observedAtUTC": "2026-10-17T20:58:22Z",
+    "pageHash": "c575a308769d3ca4cd53378dc76e739ada35b5bb42ef544bd3d19ff945992079",
+    "contentLedger": "ai-workers/checks/one-pager-draft-4-content-ledger-2026-10-18.md",
+    "contentClaims": "83 changed strings:53 clarified28 corrected2layout;195new;none removed withoutreplacement. Lead generated coverage evidence, not independent semantic preservation pass.",
+    "checks": {
+      "main": "150/150 at20:51:56",
+      "panels": "35/35 at20:51:16",
+      "cohesion": "34/34 at20:52:01 documentation/diagram assertions"
+    },
+    "status": "In progress: no saved Lead completion line/AgreeRefineDisagree response or formal recheck; do not close audit from passing counts.",
+    "legacyTierCorrection": "TC177 and CNSA1B9 explicitly superseded underD235/do not send; replacement collected-from setting onplacement,3tiers retained. Written only, no team transmission."
+  },
+  "historicalProofDecisionD245": {
+    "observedAtUTC": "2026-10-17T20:58:22Z",
+    "status": "Ratified/Specified, active integration; no repeated founder question",
+    "amends": "D215; both migration and historical map-validation purposes retained",
+    "rule": "Use consented staff-checked same-edition historicalexamples whenavailable before release; if none, required independentexpectedanswers/review/secondrelease remain, recordHistoricalcomparisonunavailable. Comparelater onceexamplesavailable; classifydifferences; suspectedmaterialmappingerror holdsaffected/dependants only.",
+    "legal": "Unconfirmed: no counsel (AIW-D94)",
+    "proof": "No actual migration/historical comparison run observed."
+  },
+  "draft4ReadyObservation": {
+    "observedAtUTC": "2026-10-17T21:28:27Z",
+    "readyAtUTC": "2026-10-17T21:14:05Z",
+    "pageHash": "0758048127c34deace6ab78e7c729e8d3ffabf719d0da43bd091b48597a4f9ef",
+    "makerResponse": "ai-workers/checks/one-pager-draft-4-maker-response-2026-10-18.md",
+    "checkerPrompt": "ai-workers/checks/one-pager-draft-4-checker-prompt-2026-10-18.md",
+    "status": "Written/Lead-reviewed/tested; formal independent verdict and founder acceptance pending",
+    "evidence": "Lead150/150 main35/35panels41/41cohesion,0geometrycollisions,57panels,155changedstringsnone removed. Documentation/UI checks, not product workflow.",
+    "independentLanguageScope": "Separate maker-session reader21Material19Minor atfirst;24closed13partial1open+newconflict atrecheck; Leadfixedremaining but no further reader pass. No formal closure inferred.",
+    "scores": "Sevenmakerjudgments; onlyhonesty9. No nine-target achievement or readypercentages inferred.",
+    "teamQuestions": [
+      "Which packversion nextfilinguses",
+      "Canstaffclosecasewithopenfiling"
+    ],
+    "founderQuestion": "Does8.5manualroutealsoapply tourgent unresolvedReader/editionissues atValidate and unsupportedportals? Explicit proposal awaitingconfirmation, Lead says nonblocking acceptance.",
+    "publication": "Currentdraft4unpublished; hosted401457aa isolder. Republication needsfounderyes+hostsmokecheck."
+  },
+  "monitoringStatus": {
+    "status": "Stopped at founder request",
+    "atUTC": "2026-10-18T13:47:17Z",
+    "automationId": "expat-ready-scrum-updates",
+    "deletion": "Automation tool confirmed deleted",
+    "remainingLocalAutomations": [],
+    "otherProducts": "ChatGPT scheduled page requires sign-in; Cowork UI could not be reliably operated. No claim of account-wide deletion."
+  }
+}

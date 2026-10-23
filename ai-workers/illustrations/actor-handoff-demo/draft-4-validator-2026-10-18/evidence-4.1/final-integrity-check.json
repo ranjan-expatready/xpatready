@@ -1,0 +1,26 @@
+{
+  "checked_at": "2026-10-18T07:38:18.859768+00:00",
+  "frozen": {
+    "manifest.json": {
+      "files": 16,
+      "hash_errors": []
+    },
+    "manifest-4.1.json": {
+      "files": 15,
+      "hash_errors": []
+    }
+  },
+  "current_live_mismatches": [],
+  "missing_local_links": [],
+  "live_html_sha256": "bee3a7a31635663926ce914aca7561a1bdbeebe772564af06fa34c84ee8d01b4",
+  "evidence_summary": {
+    "panel_openings": 57,
+    "main_browser_checks": 150,
+    "panel_checks": 35,
+    "cohesion_checks": 41,
+    "geometry_collisions": 0,
+    "master_metadata_and_local_hashes_checked": 51,
+    "tracked_code_branches_checked": 4,
+    "production_workflow_tested": false
+  }
+}

@@ -1,0 +1,9 @@
+{"run_id":"run-0001-example","idempotency_key":"filled-by-test","contract_version":"drafting-run/v0",
+ "inputs":{"combination":"1","official_files":[{"file":"official-sources/ircc/forms/imm5707e.pdf","sha256":"6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef"}],"configuration_version":"c1-draft-0"},
+ "settings":{"provider_route":"anthropic-api/aiw-d261-prototype-exception-aiw-d260","model":"claude-opus-5-5","effort":"high","prompt_version":"draft-map-v0","prompt_sha256":"0000000000000000000000000000000000000000000000000000000000000000","max_output_tokens":16000,"timeout_ms":600000,"max_attempts":2,"budget_usd":5},
+ "status":"completed_with_unresolved","started_at":"2026-10-19T00:00:00Z","ended_at":"2026-10-19T00:01:00Z",
+ "usage":{"input_tokens":1,"output_tokens":1,"cost_usd":0.01,"duration_ms":60000},
+ "entries":[
+  {"form_edition":"IMM 5707 (01-2023)","form_sha256":"6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef","data_path":"IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].FamilyName[0]","outcome":"mapped","person":"subject","fact":"person.family_name","evidence":{"file_sha256":"6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef","quote":"APPLICANT Family name"}},
+  {"form_edition":"IMM 5707 (01-2023)","form_sha256":"6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef","data_path":"IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].NativeName[0]","outcome":"unresolved","unresolved_reason":"no case fact for name in native language"}
+ ]}

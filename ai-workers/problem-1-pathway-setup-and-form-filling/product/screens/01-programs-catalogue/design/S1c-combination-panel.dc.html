@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Selected combination panel</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@600;700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#054e9c}a:hover{color:#043a73}
+</style>
+</helmet>
+<div style="width: 1440px; height: 1000px; box-sizing: border-box; display: flex; font-family: Inter, system-ui, sans-serif; color: #2d2d2d; font-size: 14px; line-height: 1.45; background: #f7f7f7">
+
+  <div aria-hidden="true" style="flex: 1; min-width: 0; padding: 28px; display: flex; flex-direction: column; gap: 10px; opacity: .55">
+    <div style="font-family: Figtree, Inter, sans-serif; font-size: 22px; font-weight: 700">Individual combinations</div>
+    <div style="background: #ffffff; border: 1px solid #d9d9d9; border-radius: 8px">
+      <div style="padding: 10px 16px; background: #fbfbfb; font-weight: 700; border-bottom: 1px solid #eeeeee">Work permits</div>
+      <div style="padding: 12px 16px; border-bottom: 1px solid #eeeeee">Employer-specific work permit · With an LMIA</div>
+      <div style="padding: 12px 16px; border-bottom: 1px solid #eeeeee; background: #e6f4ff; box-shadow: inset 3px 0 0 #0862c5; font-weight: 600">Employer-specific work permit · LMIA-exempt (employer offer)</div>
+      <div style="padding: 12px 16px; border-bottom: 1px solid #eeeeee">Open work permit · Spouse of a skilled worker</div>
+      <div style="padding: 12px 16px; border-bottom: 1px solid #eeeeee">Open work permit · Post-graduation</div>
+      <div style="padding: 12px 16px">International Experience Canada</div>
+    </div>
+  </div>
+
+  <aside aria-labelledby="ph" style="width: 560px; background: #ffffff; border-left: 1px solid #d9d9d9; box-shadow: -8px 0 24px rgba(0,0,0,.06); display: flex; flex-direction: column">
+    <div style="padding: 20px 24px 16px; border-bottom: 1px solid #eeeeee; display: flex; flex-direction: column; gap: 6px">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span style="font-size: 12.5px; color: #737373">Individual › Work permits › Employer-specific work permit</span>
+        <button type="button" aria-label="Close panel" style="width: 32px; height: 32px; border: 0; background: transparent; font-size: 18px; color: #595959">×</button>
+      </div>
+      <h2 id="ph" style="margin: 0; font-family: Figtree, Inter, sans-serif; font-size: 21px">LMIA-exempt (employer offer)</h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 12.5px">
+        <span style="padding: 2px 9px; border-radius: 999px; background: #fff3e0; color: #663200; font-weight: 600">23 AI proposals to review</span>
+        <span style="padding: 2px 9px; border-radius: 999px; background: #eeeeee; color: #404040">Not released yet</span>
+        <span style="padding: 2px 9px; border-radius: 999px; background: #eeeeee; color: #404040">Outside or inside Canada</span>
+        <span style="padding: 2px 9px; border-radius: 999px; background: #eeeeee; color: #404040">Filed online + PDF</span>
+        <span style="padding: 2px 9px; border-radius: 999px; background: #e6f4ff; color: #054e9c">↔ Supported by Corporate › Employer offer</span>
+      </div>
+    </div>
+
+    <div style="padding: 18px 24px; display: flex; flex-direction: column; gap: 20px; overflow: hidden">
+      <section aria-labelledby="sp" style="display: flex; flex-direction: column; gap: 10px">
+        <h3 id="sp" style="margin: 0; font-size: 14.5px">Setup progress</h3>
+        <ol style="list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+          <li style="display: flex; flex-direction: column; gap: 4px"><span style="height: 4px; border-radius: 2px; background: #16a34a"></span><span style="font-size: 12.5px; font-weight: 600; color: #0f5c2e">1 Sources</span><span style="font-size: 12px; color: #737373">2 forms, 1 checklist</span></li>
+          <li style="display: flex; flex-direction: column; gap: 4px"><span style="height: 4px; border-radius: 2px; background: #16a34a"></span><span style="font-size: 12.5px; font-weight: 600; color: #0f5c2e">2 AI draft</span><span style="font-size: 12px; color: #737373">done 20 Oct, US$1.32</span></li>
+          <li style="display: flex; flex-direction: column; gap: 4px"><span style="height: 4px; border-radius: 2px; background: #ff8500"></span><span style="font-size: 12.5px; font-weight: 600; color: #8c4600">3 Your review</span><span style="font-size: 12px; color: #737373">23 of 61 left</span></li>
+          <li style="display: flex; flex-direction: column; gap: 4px"><span style="height: 4px; border-radius: 2px; background: #d9d9d9"></span><span style="font-size: 12.5px; font-weight: 600; color: #737373">4 Release</span><span style="font-size: 12px; color: #737373">needs an approver</span></li>
+        </ol>
+        <div style="display: flex; gap: 12px; align-items: center; padding: 12px 14px; border: 1px solid #ffc773; background: #fff8ee; border-radius: 8px">
+          <div style="flex: 1; display: flex; flex-direction: column">
+            <b style="font-weight: 600">AI proposed 61 items; 38 accepted so far</b>
+            <span style="font-size: 13px; color: #595959">Left: 9 new fields, 4 reused with a different meaning, 6 document rules, 4 question rules.</span>
+          </div>
+          <a href="#" style="display: inline-flex; align-items: center; height: 34px; padding: 0 14px; background: #0862c5; color: #ffffff; border-radius: 6px; font-weight: 600; font-size: 13.5px; text-decoration: none">Review 23</a>
+        </div>
+      </section>
+
+      <section aria-labelledby="sf" style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <h3 id="sf" style="margin: 0; font-size: 14.5px">Forms (2)</h3>
+          <a href="#" style="font-size: 13px; font-weight: 600">+ Attach from library</a>
+        </div>
+        <div style="border: 1px solid #d9d9d9; border-radius: 8px">
+          <div style="display: grid; grid-template-columns: 82px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px; border-bottom: 1px solid #eeeeee">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #054e9c">IMM 1295</span>
+            <div style="display: flex; flex-direction: column"><span>Work permit made outside Canada</span><span style="font-size: 12px; color: #737373">Each: principal, spouse · current edition · 165 of 242 boxes mapped</span></div>
+            <a href="#" style="font-size: 12.5px">Open</a>
+          </div>
+          <div style="display: grid; grid-template-columns: 82px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 10px 12px">
+            <span style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #054e9c">IMM 5645</span>
+            <div style="display: flex; flex-direction: column"><span>Family information</span><span style="font-size: 12px; color: #737373">Each adult · only if outside Canada · 27 boxes mapped</span></div>
+            <a href="#" style="font-size: 12.5px">Open</a>
+          </div>
+        </div>
+        <div style="border: 2px dashed #99d2ff; border-radius: 8px; padding: 12px 14px; display: flex; gap: 12px; align-items: center; background: #f5faff">
+          <span aria-hidden="true" style="width: 30px; height: 30px; border-radius: 7px; background: #cce9ff; color: #054e9c; display: flex; align-items: center; justify-content: center; font-weight: 700">↑</span>
+          <span style="font-size: 13px"><b style="font-weight: 600">Upload an IRCC form or checklist here.</b> It joins the library and this combination; AI can read it as part of the setup.</span>
+        </div>
+      </section>
+
+      <section aria-labelledby="sa" style="display: flex; flex-direction: column; gap: 8px">
+        <h3 id="sa" style="margin: 0; font-size: 14.5px">What it asks for (draft)</h3>
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px">
+          <a href="#" style="display: flex; flex-direction: column; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 8px; text-decoration: none; color: #2d2d2d"><b style="font-size: 18px; font-weight: 700">151</b><span style="font-size: 12.5px; color: #595959">questions in 17 sections</span></a>
+          <a href="#" style="display: flex; flex-direction: column; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 8px; text-decoration: none; color: #2d2d2d"><b style="font-size: 18px; font-weight: 700">16</b><span style="font-size: 12.5px; color: #595959">documents · 5 always, 11 if</span></a>
+          <a href="#" style="display: flex; flex-direction: column; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 8px; text-decoration: none; color: #2d2d2d"><b style="font-size: 18px; font-weight: 700">34</b><span style="font-size: 12.5px; color: #595959">rules that show questions or add documents</span></a>
+        </div>
+      </section>
+
+      <section aria-labelledby="sw" style="display: flex; flex-direction: column; gap: 8px">
+        <h3 id="sw" style="margin: 0; font-size: 14.5px">Who it applies to</h3>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px">
+          <span style="padding: 4px 10px; border: 1px solid #d9d9d9; border-radius: 6px">Principal applicant · 1</span>
+          <span style="padding: 4px 10px; border: 1px solid #d9d9d9; border-radius: 6px">Spouse or partner · 0–1</span>
+          <span style="padding: 4px 10px; border: 1px solid #d9d9d9; border-radius: 6px">Dependent child · 0–6</span>
+          <span style="padding: 4px 10px; border: 1px solid #d9d9d9; border-radius: 6px">Representative · 0–1</span>
+        </div>
+      </section>
+
+      <section aria-labelledby="sx" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; font-size: 13px">
+        <h3 id="sx" style="position: absolute; left: -9999px">Freshness and access</h3>
+        <div style="padding: 10px 12px; background: #f7f7f7; border-radius: 8px"><b style="font-weight: 600">Sources checked</b><br>20 Oct 2026 · next review Oct 2027</div>
+        <div style="padding: 10px 12px; background: #f7f7f7; border-radius: 8px"><b style="font-weight: 600">You can edit the draft</b><br>A different person approves the release</div>
+      </section>
+    </div>
+
+    <div style="margin-top: auto; padding: 14px 24px; border-top: 1px solid #eeeeee; display: flex; justify-content: space-between; align-items: center">
+      <a href="#" style="font-size: 13px; color: #595959">More: copy, disable, history</a>
+      <a href="#" style="display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border: 1px solid #0862c5; color: #0862c5; border-radius: 6px; font-weight: 600; text-decoration: none">Open full configuration →</a>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

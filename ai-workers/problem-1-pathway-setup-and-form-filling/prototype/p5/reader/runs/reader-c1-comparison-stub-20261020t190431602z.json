@@ -1,0 +1,568 @@
+{
+ "label": "AI-read proposal from a made-up synthetic document under AIW-D271 (prototype only); staff confirm every value",
+ "run_id": "reader-c1-comparison-stub-20261020t190431602z",
+ "job_id": "reader-c1-comparison",
+ "caller": "stub",
+ "settings": {
+  "provider_route": "anthropic-api/aiw-d261-route/aiw-d271-synthetic-reader",
+  "model": "claude-opus-5-5",
+  "max_attempts": 1,
+  "budget_usd": 5,
+  "max_output_tokens": 12000,
+  "timeout_ms": 300000,
+  "effort": "high"
+ },
+ "template_sha256": "0bbe99c447c1df4f7f8df1f51db651b6df293d7cd1c952013aba4b3394740545",
+ "schema_sha256": "40c6abbe97046f85839675c5d0fc6842fbfdb85829274474a179cfe402e32586",
+ "doc_types_sha256": "1b09f1cbafabfe3aa4c944b87722a5cd59bdde4ba05c6e5320ceae82c13aecb1",
+ "path_code_sha256": "b8bf5bc2fd7f33d98f459ccd7bc18d8262af01446b28ce5f0d16980c747310ac",
+ "started_at": "2026-10-20T19:04:31.611Z",
+ "ended_at": "2026-10-20T19:04:31.863Z",
+ "usage": {
+  "input_tokens": 0,
+  "output_tokens": 0,
+  "cost_usd": 0,
+  "duration_ms": 1
+ },
+ "isolation": {
+  "permission_model": true,
+  "entry_is_read_ts": true,
+  "forbidden_readable": [],
+  "docs_readable": true,
+  "writable_outside_ledger": [],
+  "ledger_writable": true,
+  "child_process_allowed": false,
+  "worker_allowed": false
+ },
+ "screening": {
+  "digest_sha256": "2abd379cd72fdd4ad8d25cc5d030df49bf0123079ca677e1b8b38c3102361b2d",
+  "ticket_nonce": "d101a5ed5d59c0f46c5351e41a7e48f8",
+  "digest_sources": [
+   {
+    "file": "prototype/expected/combination-1.json",
+    "sha256": "c836c51333dd9af52980b5b7c0b777379effbfbae498be6f47ecdd1ef4f38bf7"
+   },
+   {
+    "file": "prototype/expected/combination-1.v2.json",
+    "sha256": "d50ffca95569171f46c30621682df09db49d734b40098ba3c9dff4b6d60c1a59"
+   },
+   {
+    "file": "prototype/expected/combination-2.json",
+    "sha256": "163bb1da34a37d48c3139bb732844dbb50a92c6beb8e7b6159a5765c2bce642a"
+   },
+   {
+    "file": "prototype/expected/fact-aliases-c1.json",
+    "sha256": "17b22eae9e0efe341d30f2c33112b9d9ae83c9aafcb2013ee01590cd13124d91"
+   },
+   {
+    "file": "prototype/expected/reader-c1.json",
+    "sha256": "64aa8887f60df99d30f478004c7315471794185a93b1cde44043cd0e361ff413"
+   },
+   {
+    "file": "prototype/expected/slice-1-field-map.json",
+    "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+   },
+   {
+    "file": "prototype/expected/slice-1-field-map.v2.json",
+    "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+   },
+   {
+    "file": "prototype/p1/e5-family-values.json",
+    "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+   },
+   {
+    "file": "prototype/p1/adobe-complete-1295-values.json",
+    "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+   }
+  ],
+  "stub_gate_checked": false
+ },
+ "ledger": {
+  "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+  "cap_usd": 40,
+  "committed_usd": 24.125092
+ },
+ "stub_calls": 10,
+ "results": [
+  {
+   "trial": "T1",
+   "file": "D1-passport-principal-scan.png",
+   "sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+   "claimed_type": "passport",
+   "request_sha256": "6276f44e51fc7e8f88e001233b29258a61d5efd04b9268940a1d8ca2322b6723",
+   "input_token_bound": 9432,
+   "worst_usd": 0.277728,
+   "attempts": [
+    {
+     "n": 1,
+     "outcome": "ok",
+     "stop_reason": "end_turn",
+     "cost_usd": 0,
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "duration_ms": 0
+    }
+   ],
+   "status": "completed",
+   "output": {
+    "document": {
+     "kind_seen": "other",
+     "matches_claimed_kind": false,
+     "readable": "yes",
+     "issues": [
+      "stub output: the launch path ran with a stub caller; nothing was read"
+     ]
+    },
+    "people_seen": [],
+    "fields": [
+     {
+      "fact": "stub.not_read",
+      "about": "none",
+      "status": "unresolved",
+      "value": null,
+      "as_printed": null,
+      "page": 1,
+      "where": "none",
+      "confidence": "low",
+      "reason": "stub caller"
+     }
+    ],
+    "internal_conflicts": []
+   },
+   "output_errors": null,
+   "output_sha256": "2d74d5d3642a7f35b44a0265e537fbb35091fc630f5ad6cdea7e2a1045bfb385"
+  },
+  {
+   "trial": "T2",
+   "file": "D2-passport-partner-photo.jpg",
+   "sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+   "claimed_type": "passport",
+   "request_sha256": "de0e8165c1cefbf93d42caf086d37dfa3170f53b3c62e4522e0c0cab88105720",
+   "input_token_bound": 10125,
+   "worst_usd": 0.2805,
+   "attempts": [
+    {
+     "n": 1,
+     "outcome": "ok",
+     "stop_reason": "end_turn",
+     "cost_usd": 0,
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "duration_ms": 0
+    }
+   ],
+   "status": "completed",
+   "output": {
+    "document": {
+     "kind_seen": "other",
+     "matches_claimed_kind": false,
+     "readable": "yes",
+     "issues": [
+      "stub output: the launch path ran with a stub caller; nothing was read"
+     ]
+    },
+    "people_seen": [],
+    "fields": [
+     {
+      "fact": "stub.not_read",
+      "about": "none",
+      "status": "unresolved",
+      "value": null,
+      "as_printed": null,
+      "page": 1,
+      "where": "none",
+      "confidence": "low",
+      "reason": "stub caller"
+     }
+    ],
+    "internal_conflicts": []
+   },
+   "output_errors": null,
+   "output_sha256": "2d74d5d3642a7f35b44a0265e537fbb35091fc630f5ad6cdea7e2a1045bfb385"
+  },
+  {
+   "trial": "T3",
+   "file": "D3-job-offer-principal.pdf",
+   "sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+   "claimed_type": "job_offer",
+   "request_sha256": "9f400cc2ecdfc48bfd6cd248be07087ceae03db912d913d30e4ff1cbd0f963c2",
+   "input_token_bound": 71421,
+   "worst_usd": 0.525684,
+   "attempts": [
+    {
+     "n": 1,
+     "outcome": "ok",
+     "stop_reason": "end_turn",
+     "cost_usd": 0,
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "duration_ms": 0
+    }
+   ],
+   "status": "completed",
+   "output": {
+    "document": {
+     "kind_seen": "other",
+     "matches_claimed_kind": false,
+     "readable": "yes",
+     "issues": [
+      "stub output: the launch path ran with a stub caller; nothing was read"
+     ]
+    },
+    "people_seen": [],
+    "fields": [
+     {
+      "fact": "stub.not_read",
+      "about": "none",
+      "status": "unresolved",
+      "value": null,
+      "as_printed": null,
+      "page": 1,
+      "where": "none",
+      "confidence": "low",
+      "reason": "stub caller"
+     }
+    ],
+    "internal_conflicts": []
+   },
+   "output_errors": null,
+   "output_sha256": "2d74d5d3642a7f35b44a0265e537fbb35091fc630f5ad6cdea7e2a1045bfb385"
+  },
+  {
+   "trial": "T4",
+   "file": "D4-job-offer-partner-scan.jpg",
+   "sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+   "claimed_type": "job_offer",
+   "request_sha256": "e6b4ff52f7c9a93830d8d2589cbf5101a9e6c15d9035d979f79ee96709ccc212",
+   "input_token_bound": 10677,
+   "worst_usd": 0.282708,
+   "attempts": [
+    {
+     "n": 1,
+     "outcome": "ok",
+     "stop_reason": "end_turn",
+     "cost_usd": 0,
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "duration_ms": 0
+    }
+   ],
+   "status": "completed",
+   "output": {
+    "document": {
+     "kind_seen": "other",
+     "matches_claimed_kind": false,
+     "readable": "yes",
+     "issues": [
+      "stub output: the launch path ran with a stub caller; nothing was read"
+     ]
+    },
+    "people_seen": [],
+    "fields": [
+     {
+      "fact": "stub.not_read",
+      "about": "none",
+      "status": "unresolved",
+      "value": null,
+      "as_printed": null,
+      "page": 1,
+      "where": "none",
+      "confidence": "low",
+      "reason": "stub caller"
+     }
+    ],
+    "internal_conflicts": []
+   },
+   "output_errors": null,
+   "output_sha256": "2d74d5d3642a7f35b44a0265e537fbb35091fc630f5ad6cdea7e2a1045bfb385"
+  },
+  {
+   "trial": "T5",
+   "file": "D5-birth-certificate-child.png",
+   "sha256": "f61eddf4b6258aff1d08ed425ba48aecfa40c20a81769301e6f9bd8e8da82a1f",
+   "claimed_type": "birth_certificate",
+   "request_sha256": "6cd7522910d878c55dd60a244251f1ad4ca201c7ce4a7f47ce488f9b70cc6ca0",
+   "input_token_bound": 9969,
+   "worst_usd": 0.279876,
+   "attempts": [
+    {
+     "n": 1,
+     "outcome": "ok",
+     "stop_reason": "end_turn",
+     "cost_usd": 0,
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "duration_ms": 0
+    }
+   ],
+   "status": "completed",
+   "output": {
+    "document": {
+     "kind_seen": "other",
+     "matches_claimed_kind": false,
+     "readable": "yes",
+     "issues": [
+      "stub output: the launch path ran with a stub caller; nothing was read"
+     ]
+    },
+    "people_seen": [],
+    "fields": [
+     {
+      "fact": "stub.not_read",
+      "about": "none",
+      "status": "unresolved",
+      "value": null,
+      "as_printed": null,
+      "page": 1,
+      "where": "none",
+      "confidence": "low",
+      "reason": "stub caller"
+     }
+    ],
+    "internal_conflicts": []
+   },
+   "output_errors": null,
+   "output_sha256": "2d74d5d3642a7f35b44a0265e537fbb35091fc630f5ad6cdea7e2a1045bfb385"
+  },
+  {
+   "trial": "T6",
+   "file": "D6-passport-principal-unreadable.jpg",
+   "sha256": "b6b07b034a2cc319f10cbaff34cba34e2fb8a0916d13472bef9fb1bd808b8e2c",
+   "claimed_type": "passport",
+   "request_sha256": "52f729dd2342aa0a056aedc132da874a27f3e0bdbedc5e7b3d84ac56710fbcfa",
+   "input_token_bound": 7443,
+   "worst_usd": 0.269772,
+   "attempts": [
+    {
+     "n": 1,
+     "outcome": "ok",
+     "stop_reason": "end_turn",
+     "cost_usd": 0,
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "duration_ms": 0
+    }
+   ],
+   "status": "completed",
+   "output": {
+    "document": {
+     "kind_seen": "other",
+     "matches_claimed_kind": false,
+     "readable": "yes",
+     "issues": [
+      "stub output: the launch path ran with a stub caller; nothing was read"
+     ]
+    },
+    "people_seen": [],
+    "fields": [
+     {
+      "fact": "stub.not_read",
+      "about": "none",
+      "status": "unresolved",
+      "value": null,
+      "as_printed": null,
+      "page": 1,
+      "where": "none",
+      "confidence": "low",
+      "reason": "stub caller"
+     }
+    ],
+    "internal_conflicts": []
+   },
+   "output_errors": null,
+   "output_sha256": "2d74d5d3642a7f35b44a0265e537fbb35091fc630f5ad6cdea7e2a1045bfb385"
+  },
+  {
+   "trial": "T7",
+   "file": "D7-passport-principal-mrz-conflict.png",
+   "sha256": "054390ed46b652cdb3c4c4e499c88aa31522e47c3ac7fc72ee94be711e4975b4",
+   "claimed_type": "passport",
+   "request_sha256": "8f8ac876d63919f848afe74ce0aa4ef58918cd26b503fd17ef11457b534843c2",
+   "input_token_bound": 9432,
+   "worst_usd": 0.277728,
+   "attempts": [
+    {
+     "n": 1,
+     "outcome": "ok",
+     "stop_reason": "end_turn",
+     "cost_usd": 0,
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "duration_ms": 1
+    }
+   ],
+   "status": "completed",
+   "output": {
+    "document": {
+     "kind_seen": "other",
+     "matches_claimed_kind": false,
+     "readable": "yes",
+     "issues": [
+      "stub output: the launch path ran with a stub caller; nothing was read"
+     ]
+    },
+    "people_seen": [],
+    "fields": [
+     {
+      "fact": "stub.not_read",
+      "about": "none",
+      "status": "unresolved",
+      "value": null,
+      "as_printed": null,
+      "page": 1,
+      "where": "none",
+      "confidence": "low",
+      "reason": "stub caller"
+     }
+    ],
+    "internal_conflicts": []
+   },
+   "output_errors": null,
+   "output_sha256": "2d74d5d3642a7f35b44a0265e537fbb35091fc630f5ad6cdea7e2a1045bfb385"
+  },
+  {
+   "trial": "T8",
+   "file": "D3-job-offer-principal.pdf",
+   "sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+   "claimed_type": "passport",
+   "request_sha256": "52e30526724b3750daeb6f939c2144dde88692c4c0f7942e39baa33dfff2427f",
+   "input_token_bound": 71114,
+   "worst_usd": 0.524456,
+   "attempts": [
+    {
+     "n": 1,
+     "outcome": "ok",
+     "stop_reason": "end_turn",
+     "cost_usd": 0,
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "duration_ms": 0
+    }
+   ],
+   "status": "completed",
+   "output": {
+    "document": {
+     "kind_seen": "other",
+     "matches_claimed_kind": false,
+     "readable": "yes",
+     "issues": [
+      "stub output: the launch path ran with a stub caller; nothing was read"
+     ]
+    },
+    "people_seen": [],
+    "fields": [
+     {
+      "fact": "stub.not_read",
+      "about": "none",
+      "status": "unresolved",
+      "value": null,
+      "as_printed": null,
+      "page": 1,
+      "where": "none",
+      "confidence": "low",
+      "reason": "stub caller"
+     }
+    ],
+    "internal_conflicts": []
+   },
+   "output_errors": null,
+   "output_sha256": "2d74d5d3642a7f35b44a0265e537fbb35091fc630f5ad6cdea7e2a1045bfb385"
+  },
+  {
+   "trial": "T9",
+   "file": "D5-birth-certificate-child.png",
+   "sha256": "f61eddf4b6258aff1d08ed425ba48aecfa40c20a81769301e6f9bd8e8da82a1f",
+   "claimed_type": "unknown",
+   "request_sha256": "4dbeb4498b3b975c25c5cee787019d89d67319b034d85d550950724150e5a6af",
+   "input_token_bound": 12132,
+   "worst_usd": 0.288528,
+   "attempts": [
+    {
+     "n": 1,
+     "outcome": "ok",
+     "stop_reason": "end_turn",
+     "cost_usd": 0,
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "duration_ms": 0
+    }
+   ],
+   "status": "completed",
+   "output": {
+    "document": {
+     "kind_seen": "other",
+     "matches_claimed_kind": false,
+     "readable": "yes",
+     "issues": [
+      "stub output: the launch path ran with a stub caller; nothing was read"
+     ]
+    },
+    "people_seen": [],
+    "fields": [
+     {
+      "fact": "stub.not_read",
+      "about": "none",
+      "status": "unresolved",
+      "value": null,
+      "as_printed": null,
+      "page": 1,
+      "where": "none",
+      "confidence": "low",
+      "reason": "stub caller"
+     }
+    ],
+    "internal_conflicts": []
+   },
+   "output_errors": null,
+   "output_sha256": "2d74d5d3642a7f35b44a0265e537fbb35091fc630f5ad6cdea7e2a1045bfb385"
+  },
+  {
+   "trial": "T10",
+   "file": "D8-job-offer-partner-revised.pdf",
+   "sha256": "07622861ea51eaa45c25c1b20efeeabc535e94938fbfbc430a558c0279e777fe",
+   "claimed_type": "job_offer",
+   "request_sha256": "42785624d0ca2b899169d40d734e4a7e8e40c69e8986eb9ca2c20922d7759963",
+   "input_token_bound": 72695,
+   "worst_usd": 0.53078,
+   "attempts": [
+    {
+     "n": 1,
+     "outcome": "ok",
+     "stop_reason": "end_turn",
+     "cost_usd": 0,
+     "input_tokens": 0,
+     "output_tokens": 0,
+     "duration_ms": 0
+    }
+   ],
+   "status": "completed",
+   "output": {
+    "document": {
+     "kind_seen": "other",
+     "matches_claimed_kind": false,
+     "readable": "yes",
+     "issues": [
+      "stub output: the launch path ran with a stub caller; nothing was read"
+     ]
+    },
+    "people_seen": [],
+    "fields": [
+     {
+      "fact": "stub.not_read",
+      "about": "none",
+      "status": "unresolved",
+      "value": null,
+      "as_printed": null,
+      "page": 1,
+      "where": "none",
+      "confidence": "low",
+      "reason": "stub caller"
+     }
+    ],
+    "internal_conflicts": []
+   },
+   "output_errors": null,
+   "output_sha256": "2d74d5d3642a7f35b44a0265e537fbb35091fc630f5ad6cdea7e2a1045bfb385"
+  }
+ ]
+}

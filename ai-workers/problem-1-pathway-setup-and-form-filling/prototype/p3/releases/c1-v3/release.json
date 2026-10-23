@@ -1,0 +1,4937 @@
+{
+ "configuration_sha256": "2c66472f37585338c9c21bbf221833baa7ef77f6fa0f9531edc92e43072d06af",
+ "revision": 3,
+ "source_files": [
+  {
+   "file": "official-sources/ircc/forms/imm1295e.pdf",
+   "sha256": "57fc256eef7d9d856e4ae85ebf8bfe80da41833ebde7a8c7ed78f2483470d7bb"
+  },
+  {
+   "file": "official-sources/ircc/forms/imm5707e.pdf",
+   "sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef"
+  },
+  {
+   "file": "official-sources/ircc/forms/imm5409e.pdf",
+   "sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3"
+  },
+  {
+   "file": "official-sources/ircc/forms/imm5476e.pdf",
+   "sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4"
+  },
+  {
+   "file": "official-sources/ircc/forms/imm5475e.pdf",
+   "sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83"
+  },
+  {
+   "file": "official-sources/ircc/forms/imm5257_1e.pdf",
+   "sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93"
+  },
+  {
+   "file": "official-sources/ircc/checklists/imm5488e.pdf",
+   "sha256": "0c8fa194789eb5f7840737c96d3120d81e2a7504663b2ebef457538168d24ec8"
+  },
+  {
+   "file": "official-sources/ircc/instructions/IMM5905E.pdf",
+   "sha256": "e2b7142f519c152f1573ab028c59f23bb79194f9e345fd328b733ca63b4ea4c4"
+  },
+  {
+   "file": "official-sources/ircc/instructions/guide-5487.html",
+   "sha256": "1b8f76d79832ca36dd4f38e3a21e4096248b369136ddcd6408180b6eb972edfb"
+  },
+  {
+   "file": "official-sources/ircc/web-pages/work-permit-outside-forms-documents.html",
+   "sha256": "d533682979fa8ae92a43315b07528dfe5070e143da76abb0435a81e4a457d84c"
+  }
+ ],
+ "drafting_run_ids": [
+  "c1-fieldmap-imm1295-live-20261020t051558106z",
+  "c1-fieldmap-imm5707-live-20261020t052222731z",
+  "c1-fieldmap-imm5409-live-20261020t052401212z",
+  "c1-fieldmap-imm5476-live-20261020t052508977z",
+  "c1-fieldmap-imm5475-live-20261020t052706509z",
+  "c1-fieldmap-imm5257-1-live-20261020t052757177z",
+  "c1-requirements-live-20261020t053544388z",
+  "c1-sections-live-20261020t054254821z",
+  "c1-checks-live-20261020t054958915z"
+ ],
+ "author": {
+  "user_id": "user-A",
+  "role": "content_publisher"
+ },
+ "submitter": {
+  "user_id": "user-A",
+  "role": "content_publisher"
+ },
+ "approver": {
+  "user_id": "user-B",
+  "role": "content_publisher"
+ },
+ "publisher": {
+  "user_id": "user-B",
+  "role": "content_publisher"
+ },
+ "decisions": [
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].Header[0].CRCNum[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].Age[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].AdultFlag[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].FormVersion[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PrevSpouseAge[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].ServiceIn[0].ServiceIn[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].VisaType[0].VisaType[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].UCIClientID[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].Name[0].FamilyName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].Name[0].GivenName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasFamilyName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasGivenName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].Sex[0].Sex[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].DOBYear[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].DOBMonth[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].DOBDay[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PlaceBirthCity[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PlaceBirthCountry[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].Citizenship[0].Citizenship[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Country[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].FromDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].ToDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromYr[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromMM[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromDD[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToYr[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToMM[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToDD[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Country[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Status[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Other[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].FromDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].ToDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Country[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Status[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Other[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].FromDate[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].ToDate[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].FromYr[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].FromMM[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].FromDD[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].ToYr[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].ToMM[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].ToDD[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].FromYr[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].FromMM[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].FromDD[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].ToYr[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].ToMM[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].ToDD[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].SameAsCORIndicator[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Country[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Status[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Other[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].FromDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].ToDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromYr[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromMM[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromDD[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToYr[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToMM[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToDD[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].ApplicationValidatedFlag[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].DateOfMarriage[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromYr[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromMM[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromDD[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].FamilyName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].GivenName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevMarriedIndicator[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].DateCalc[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].Year[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].Month[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].Day[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PMFamilyName[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].GivenName[0].PMGivenName[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBYear[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBMonth[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBDay[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].TypeOfRelationship[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].FromDate[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].ToDate[0].ToDate[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromYr[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromMM[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromDD[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToYr[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToMM[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToDD[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].nativeLang[0].nativeLang[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].ableToCommunicate[0].ableToCommunicate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].lov[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].LanguageTest[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].PassportNum[0].PassportNum[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].CountryofIssue[0].CountryofIssue[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDate[0].IssueDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].ExpiryDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueYYYY[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueMM[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDD[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryYYYY[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryMM[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryDD[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].natID[0].natIDdocs[0].DocNum[0].DocNum[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].natID[0].natIDdocs[0].CountryofIssue[0].CountryofIssue[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].natID[0].natIDdocs[0].IssueDate[0].IssueDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].natID[0].natIDdocs[0].ExpiryDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].USCard[0].usCarddocs[0].DocNum[0].DocNum[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].USCard[0].usCarddocs[0].ExpiryDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].POBox[0].POBox[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].Apt[0].AptUnit[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].StreetNum[0].StreetNum[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].Streetname[0].Streetname[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].CityTow[0].CityTown[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].Country[0].Country[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].ProvinceState[0].ProvinceState[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].PostalCode[0].PostalCode[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].District[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].SameAsMailingIndicator[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].AptUnit[0].AptUnit[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].StreetName[0].Streetname[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].CityTown[0].CityTown[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].Country[0].Country[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].ProvinceState[0].ProvinceState[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].PostalCode[0].PostalCode[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].District[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].Type[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].CanadaUS[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].Other[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NumberExt[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NumberCountry[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].ActualNumber[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NANumber[0].AreaCode[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NANumber[0].FirstThree[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NANumber[0].LastFive[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].IntlNumber[0].IntlNumber[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].Type[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].CanadaUS[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].Other[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].NumberExt[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].NumberCountry[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].ActualNumber[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].NANumber[0].AreaCode[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].NANumber[0].FirstThree[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].NANumber[0].LastFive[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].IntlNumber[0].IntlNumber[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].CanadaUS[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].Other[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].NumberExt[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].NumberCountry[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].ActualNumber[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].NANumber[0].AreaCode[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].NANumber[0].FirstThree[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].NANumber[0].LastFive[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].IntlNumber[0].IntlNumber[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Email[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].PurposeRow1[0].EmployerName[0].EmployerName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].PurposeRow1[0].Address[0].Address[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].CityTown[0].CityTown[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].LCP[0].Caregiver[0].checkBoxCalcField[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].EducationIndicator[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].FromYear[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].FromMonth[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].ToYear[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].ToMonth[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].FieldOfStudy[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].School[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].CityTown[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].Country[0].Country[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].ProvState[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].FromYear[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].FromMonth[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].ToYear[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].ToMonth[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Occupation[0].Occupation[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Employer[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].CityTown[0].CityTown[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Country[0].Country[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].ProvState[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].FromYear[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].FromMonth[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ToYear[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ToMonth[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Occupation[0].Occupation[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Employer[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].CityTown[0].CityTown[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Country[0].Country[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ProvState[0]:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].FromYear[0]:2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].FromMonth[0]:2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ToYear[0]:2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ToMonth[0]:2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Occupation[0].Occupation[0]:2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Employer[0]:2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].CityTown[0].CityTown[0]:2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Country[0].Country[0]:2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ProvState[0]:2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo[0].Details[0].MedicalDetails[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo[0].Choice[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo[0].Choice[1]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo[0].backgroundInfoCalc[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo2[0].VisaChoice1[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo2[0].VisaChoice2[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo2[0].Details[0].refusedDetails[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo2[0].VisaChoice3[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].PageWrapper[0].BackgroundInfo3[0].militaryServiceDetails[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].PageWrapper[0].Military[0].Choice[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].PageWrapper[0].Military[0].militaryServiceDetails[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].PageWrapper[0].Occupation[0].Choice[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].PageWrapper[0].GovPosition[0].Choice[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].Consent0[0].Choice[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].Consent0[0].TextField2[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].Consent0[0].C1CertificateIssueDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page4[0].ReaderInfo[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page5[0].TextField1[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page5[0].TextField1[1]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page5[0].TextField1[2]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page5[0].TextField1[3]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page5[0].TextField1[4]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].FamilyName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].GivenNames[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].NativeName[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].DOB[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].COB[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].Occupation[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].Accompanying[0].yesno[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].FamilyName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].GivenNames[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].NativeName[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].DOB[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].COB[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Address[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Occupation[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].Accompanying[0].yesno[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].FamilyName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].GivenNames[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].DOB[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].COB[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Address[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Occupation[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].Accompanying[0].yesno[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].FamilyName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].GivenNames[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].DOB[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].COB[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Address[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Occupation[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].PaddedEntry[0].SectionAsignature[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].PaddedEntry[0].SectionAdate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].hideChildren[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].Accompanying[0].yesno[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].Relationship[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].FamilyName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].GivenNames[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].DOB[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].COB[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Address[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Occupation[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Note2[0].subNote2[0].SectionBsignature[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Note2[0].subNote2[0].SectionBdate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionC[0].SectionCsignature[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionC[0].SectionCdate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].Jurisdiction[0].Country[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].Jurisdiction[0].Province[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].FirstName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].SecondName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].City[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].County[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].Province[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].Country[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].YearsTogether[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].startDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].endDate[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[0].yesno[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[1].yesno[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[2].yesno[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[3].yesno[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section2[0].yesno[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section3[0].yesno[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section4[0].TextField2[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].NameDecl[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].SignatureDecl[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].NamePartner[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].SignaturePartner[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].City[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].AdminDecl[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].County[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].Province[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].Country[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].Title[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].Day[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].Month[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].Year[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].SignatureAdminDecl[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].RadioButtonList[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].familyName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].givenName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].DOB[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].office[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].office[1]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].office[2]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].application[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].UCI[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].familyName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].givenName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].province2[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership2[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].uncompensated[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].otherRep[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership[1]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].compensated[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].ICCRCMember[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].province[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].membership[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].quebecLaw[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].organization[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].lawyer[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].membershipID[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].unit[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].streetNo[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].streetName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].city[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].province[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].country[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].postalcode[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].phoneCountryCode[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].phoneNumber[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].faxCountryCode[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].faxNumber[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].email[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question8[0].dateSigned[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[1]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question8[0].dateSigned[1]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionC[0].familyName[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionC[0].givenName[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionC[0].organization[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionD[0].familyName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionD[0].givenName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionD[0].organization[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionD[0].signatrureApplicant[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionD[0].dateApplicantSigned[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionE[0].signatrureApplicant[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionE[0].dateApplicantSigned[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionE[0].signatrureApplicant[1]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionE[0].dateSpouseSigned[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Choice[0].RadioButtonList[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].AppFamily[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].AppGiven[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].DOB[0].currentDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].TextField2[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].TextField2[1]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].TextField2[2]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].TextField2[3]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].AppFamily[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].AppGiven[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].TextField2[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].apt[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].Number[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].homeAddress[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].city[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].province[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].city[1]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].postalCode[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].Rextension[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].Rphone[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].Rextension[1]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].Rphone[1]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].TextField2[1]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Seven[0].TextField2[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Seven[0].currentDate[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Seven[0].TextField2[1]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Seven[0].currentDate[1]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].FormVersion[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].FormName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].ReaderInfo[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].ApplicationValidationDate[0].Year[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].ApplicationValidationDate[0].Month[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].ApplicationValidationDate[0].Day[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].PrincipalApplicant[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].FormValidated[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].FamilyName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].GivenName[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].ApplicantBirthDate[0].Year[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].ApplicantBirthDate[0].Month[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].ApplicantBirthDate[0].Day[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].UCI[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].ServedInMilitary[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Year[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Month[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Year[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Month[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Location[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Province[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].CountryCode[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].HaveWitnessedParticipated[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Year[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Month[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Year[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Month[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Location[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Province[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].CountryCode[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Details[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].BeenMemberAssociated[0]:0",
+   "decision": "left_unresolved",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Year[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Month[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Year[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Month[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].NameOfOrganization[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].ActivitiesPositionHeld[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].Province[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].CountryCode[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].HeldGovernmentPositions[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Year[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Month[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Year[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Month[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].CountryCode[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].LevelOfJurisdiction[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].DepartmentBranch[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].ActivitiesPositionHeld[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].TraveledOtherCountry[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Year[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Month[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Year[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Month[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].CountryCode[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].Location[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].PurposeOfTravel[0]:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.service_language",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.uci",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.family_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.given_names",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.other_family_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.other_given_names",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.sex",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.date_of_birth",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.place_of_birth_city",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.citizenship",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.residence_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.residence_immigration_status",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.residence_status_other_details",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.residence_status_from_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.residence_status_to_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.country_where_applying",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.marital_status",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:relationship.start_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.previous_marriage_or_common_law",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.native_language",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.official_language_ability",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.preferred_official_language",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.language_test_taken",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.passport_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.passport_country_of_issue",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.passport_issue_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.passport_expiry_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.national_id_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.national_id_country_of_issue",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.national_id_issue_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.national_id_expiry_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.us_lawful_permanent_resident",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.uscis_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.us_pr_card_expiry_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.mailing_address",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.residential_address",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.phone_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.phone_type",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.fax_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.email_address",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:organisation.name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:organisation.address",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.education_from_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.education_to_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.education_field_and_level",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.education_institution",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.education_location",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.employment_from_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.employment_to_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.occupation",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.employment_employer_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.employment_location",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.tb_history_or_contact",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.disorder_requiring_services",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.medical_details",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.status_violation_canada",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.refused_visa_or_entry",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.immigration_history_details",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.criminal_history",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.criminal_history_details",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.military_service",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.military_service_details",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.violent_organisation_association",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.country_of_birth",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.has_children",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:relationship.accompanies_subject_to_canada",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:relationship.child_relationship_type",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.full_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.residence_city",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.residence_province_state",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:relationship.cohabitation_start_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:relationship.joint_residence_lease_mortgage_or_purchase",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:relationship.joint_property_other_than_residence",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:relationship.joint_financial_accounts",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:relationship.common_law_declared_for_canadian_income_tax",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.life_insurance_names_partner_as_beneficiary",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:relationship.other_documentary_evidence",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.application_type",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.application_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.representative_form_action",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:representative.is_compensated",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:representative.representative_category",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:representative.representative_category_other",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:representative.membership_id",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:representative.licensing_province",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:representative.supervising_lawyer_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:representative.supervising_lawyer_membership_id",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.mailing_address_unit",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.mailing_address_street_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.mailing_address_street_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.mailing_address_city",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.mailing_address_province_state",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.mailing_address_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.mailing_address_postal_code",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.telephone_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.release_authorization_action",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.submission_office_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.submission_office_location",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.phone_country_code",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.email",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.subject_is_principal_applicant",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.military_service_start_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.military_service_end_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.military_service_location",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.military_service_province",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.military_service_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.organization_membership_start_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.organization_membership_end_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.organization_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.organization_activities_positions",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.organization_province",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.organization_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.has_held_government_position",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.government_position_start_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.government_position_end_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.government_position_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.government_position_jurisdiction_level",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.government_position_department",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.government_position_activities",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.travel_start_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.travel_end_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.travel_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.travel_location",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.travel_purpose",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.application_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.travelling_alone_to_canada",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.uses_representative",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.representative_acts_for_person",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.authorizes_release_to_designated_individual",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.witnessed_ill_treatment",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.fee_exempt",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.biometrics_required",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.requires_trv",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.employer_obtained_lmia",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.offer_lmia_exempt",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.offer_submitted_via_imm5802",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.employer_exempt_from_compliance_regime",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.is_provincial_nominee",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.offer_from_nominating_province_employer",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.nomination_expiry_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.applying_for_pgwp",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.flight_school_graduate",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.upfront_medical_completed",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:document.in_english_or_french",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:document.translator_is_canadian_certified",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.passport_requires_reentry_permit",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.exceptional_situation_no_valid_passport",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.plans_to_study_in_canada",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.plans_to_work_in_canada",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:case.job_requires_licence_or_certification",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.employment_activity",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "field:person.current_residence_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "form:0:IMM 1295",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "form:1:IMM 5488",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "form:2:IMM 5905",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "form:3:IMM 5707",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "form:4:IMM 5409",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "form:5:IMM 5476",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "form:6:IMM 5475",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "form:7:IMM 5257 SCH1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "form:8:IMM 5802",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:3",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:4",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:5",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:7",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:8",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:10",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:11",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:12",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:14",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:15",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:16",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:17",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:18",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:19",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:20",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:21",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:22",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:23",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:28",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:29",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:30",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:31",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "doc:32",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:0",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:1",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:3",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:4",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:5",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:6",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:7",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:8",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:9",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:10",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:12",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:13",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:14",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:15",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:16",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:17",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:18",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:19",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:20",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:22",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:23",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:24",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:25",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:28",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:29",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:30",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:32",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:33",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:34",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:35",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:36",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:37",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "rule:38",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.age_years:age_in_years",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.residence_differs_from_citizenship:other",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:case.applying_country_differs_from_citizenship:other",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.nomination_days_until_expiry:days_until",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.passport_days_until_expiry:days_until",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.passport_years_since_expiry:other",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.venezuelan_extended_passport_expiry:other",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.passport_days_until_expiry:days_until#2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.passport_years_since_expiry:other#2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.national_id_days_until_expiry:days_until",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.us_pr_card_days_until_expiry:days_until",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.residence_status_days_until_expiry:days_until",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.nomination_days_until_expiry:days_until#2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.residence_differs_from_citizenship:other#2",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.passport_validity_days:days_until",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.passport_issue_days_after_birth:days_until",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:relationship.cohabitation_years:other",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:relationship.start_vs_cohabitation_days:days_until",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:case.spouse_or_partner_count:count_people_in_role",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.employment_row_duration_days:days_until",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.education_row_duration_days:days_until",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.residence_status_row_duration_days:days_until",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.travel_row_duration_days:days_until",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "derived:person.employment_history_gap_months:other",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:application_details",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:personal_details",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:languages",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:travel_document",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:contact",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:residence_history",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:relationship",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:family_members",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:intended_work",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:education_history",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:employment_history",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:background_medical",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:background_declarations",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:security_history",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:travel_history",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:representative",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:processing_requirements",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "section:submitted_documents",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.service_language",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.uci",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.family_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.given_names",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.full_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.other_family_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.other_given_names",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.sex",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.date_of_birth",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.place_of_birth_city",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.country_of_birth",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.citizenship",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.marital_status",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.subject_is_principal_applicant",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.residence_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.residence_immigration_status",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.residence_status_other_details",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.residence_status_from_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.residence_status_to_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.country_where_applying",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:relationship.start_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:relationship.cohabitation_start_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.previous_marriage_or_common_law",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:relationship.joint_residence_lease_mortgage_or_purchase",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:relationship.joint_property_other_than_residence",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:relationship.joint_financial_accounts",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:relationship.common_law_declared_for_canadian_income_tax",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.life_insurance_names_partner_as_beneficiary",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:relationship.other_documentary_evidence",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.native_language",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.official_language_ability",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.preferred_official_language",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.language_test_taken",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.passport_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.passport_country_of_issue",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.passport_issue_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.passport_expiry_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.national_id_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.national_id_country_of_issue",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.national_id_issue_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.national_id_expiry_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.us_lawful_permanent_resident",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.uscis_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.us_pr_card_expiry_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.passport_requires_reentry_permit",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.exceptional_situation_no_valid_passport",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.mailing_address",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.residential_address",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.residence_city",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.residence_province_state",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.phone_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.phone_type",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.fax_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.email_address",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:organisation.name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:organisation.address",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.employer_obtained_lmia",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.offer_lmia_exempt",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.offer_submitted_via_imm5802",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.employer_exempt_from_compliance_regime",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.is_provincial_nominee",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.offer_from_nominating_province_employer",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.nomination_expiry_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.applying_for_pgwp",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.job_requires_licence_or_certification",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.education_from_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.education_to_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.education_field_and_level",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.education_institution",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.education_location",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.flight_school_graduate",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.employment_from_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.employment_to_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.occupation",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.employment_employer_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.employment_location",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.tb_history_or_contact",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.disorder_requiring_services",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.medical_details",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.status_violation_canada",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.refused_visa_or_entry",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.immigration_history_details",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.criminal_history",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.criminal_history_details",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.military_service",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.military_service_details",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.violent_organisation_association",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.witnessed_ill_treatment",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.has_held_government_position",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.military_service_start_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.military_service_end_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.military_service_location",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.military_service_province",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.military_service_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.organization_membership_start_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.organization_membership_end_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.organization_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.organization_activities_positions",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.organization_province",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.organization_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.government_position_start_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.government_position_end_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.government_position_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.government_position_jurisdiction_level",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.government_position_department",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.government_position_activities",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.travel_start_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.travel_end_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.travel_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.travel_location",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.travel_purpose",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.has_children",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:relationship.accompanies_subject_to_canada",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:relationship.child_relationship_type",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.travelling_alone_to_canada",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.plans_to_study_in_canada",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.plans_to_work_in_canada",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.application_type",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.application_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.submission_office_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.submission_office_location",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.application_date",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.uses_representative",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.representative_form_action",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.representative_acts_for_person",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:representative.is_compensated",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:representative.representative_category",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:representative.representative_category_other",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:representative.membership_id",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:representative.licensing_province",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:representative.supervising_lawyer_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:representative.supervising_lawyer_membership_id",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.mailing_address_unit",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.mailing_address_street_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.mailing_address_street_name",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.mailing_address_city",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.mailing_address_province_state",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.mailing_address_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.mailing_address_postal_code",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.telephone_number",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.authorizes_release_to_designated_individual",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:case.release_authorization_action",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.phone_country_code",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.email",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.fee_exempt",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.biometrics_required",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.requires_trv",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.upfront_medical_completed",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:document.in_english_or_french",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:document.translator_is_canadian_certified",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.employment_activity",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "place:person.current_residence_country",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_PASSPORT_EXPIRED",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_PASSPORT_PAGE_FACTS",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:RW_PASSPORT_EXPIRY_90",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:RW_PASSPORT_EXPIRY_30",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:RW_NATIONAL_ID_EXPIRY_90",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:RW_NATIONAL_ID_EXPIRY_30",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:RW_US_PR_CARD_EXPIRY_90",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:RW_US_PR_CARD_EXPIRY_30",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:RW_RESIDENCE_STATUS_EXPIRY_90",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:RW_RESIDENCE_STATUS_EXPIRY_30",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_NOMINATION_EXPIRED",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:RW_NOMINATION_EXPIRY_90",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_STATUS_CITIZEN_BUT_RESIDENCE_DIFFERS",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_NAME_NOT_NA",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_FORMS_SIGNED_DATED",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_IMM1295_VALIDATED_BARCODE",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_LMIA_AND_EXEMPT",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_PGWP_EMPLOYER_TEXT",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:RW_PGWP_180_DAYS",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_PGWP_LANGUAGE_PROOF",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_COMMON_LAW_ONE_YEAR",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_COMMON_LAW_START_DATES",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_COMMON_LAW_EVIDENCE",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_COMMON_LAW_SAME_HOME",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_MARRIAGE_IN_PERSON",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_SPOUSE_RECORD_WITHOUT_STATUS",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_STATUS_WITHOUT_SPOUSE_RECORD",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_SPOUSE_MARITAL_STATUS_MATCH",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_NAME_SAME_EVERYWHERE",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_DUPLICATE_FACT_IDS",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_MILITARY_ANSWERS_MATCH",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_MEDICAL_DETAILS",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_IMMIGRATION_HISTORY_DETAILS",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_CRIMINAL_DETAILS",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_MILITARY_DETAILS",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_PASSPORT_ISSUE_BEFORE_EXPIRY",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_PASSPORT_ISSUED_AFTER_BIRTH",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_HISTORY_ROW_DATES_ORDER",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:RW_EMPLOYMENT_HISTORY_GAP",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_TRANSLATION_REQUIRED",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_TRANSLATOR_AFFIDAVIT",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_TRANSLATOR_NOT_FAMILY",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:CR_LANGUAGE_ANSWERS_MATCH",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:OR_PAID_REPRESENTATIVE_MEMBERSHIP",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:RW_VENEZUELA_PASSPORT_POST_2019_EXPIRED",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "check:RW_VENEZUELA_PASSPORT_EXPIRED_5_YEARS",
+   "decision": "accepted",
+   "reason": "approved unchanged in c1-v2"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].TypeofWork[0].WorkPermitType[0]:0",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].ProvinceState[0].ProvinceState[0]:0",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].Address[0]:0",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfWorkCont[0].details[0].jobTitle[0]:0",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfWorkCont[0].details[0].posDesc[0]:0",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfWorkCont[0].details[0].HowLongStudy[0].FromDate[0]:0",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfWorkCont[0].details[0].HowLongStudy[0].ToDate[0]:0",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfWorkCont[0].details[0].LMO[0].LMO[0]:0",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].LCP[0].Caregiver[0].ChildCare[0]:0",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].LCP[0].Caregiver[0].Disabled[0]:0",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].LCP[0].Caregiver[0].Elderly[0]:0",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].LCP[0].Caregiver[0].Other[0]:0",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "map:IMM 1295 (09-2023):form1[0].Page3[0].LCP[0].Caregiver[0].personsCare[0].noPersons[0]:0",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "field:person.work_permit_type",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "field:person.intended_work_location",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "field:person.intended_job_title",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "field:person.intended_job_duties",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "field:person.intended_employment_start_date",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "field:person.intended_employment_end_date",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "field:person.lmia_or_offer_number",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "field:person.caregiver_care_types",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "field:person.caregiver_persons_requiring_care",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "field:person.is_employer_specific_work_permit",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "field:person.intended_work_province",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "field:person.intended_occupation_requires_medical",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "doc:6",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "doc:9",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "doc:13",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "doc:24",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "doc:25",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "doc:26",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "doc:27",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "rule:11",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "rule:21",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "rule:26",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "rule:27",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "rule:31",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "derived:person.intended_employment_duration_days:days_until",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "derived:person.intended_employment_start_days_from_application:days_until",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "place:person.work_permit_type",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "place:person.intended_work_location",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "place:person.intended_job_title",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "place:person.intended_job_duties",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "place:person.intended_employment_start_date",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "place:person.intended_employment_end_date",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "place:person.lmia_or_offer_number",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "place:person.caregiver_care_types",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "place:person.caregiver_persons_requiring_care",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "place:person.intended_work_province",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "place:person.is_employer_specific_work_permit",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "place:person.intended_occupation_requires_medical",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "check:OR_OFFER_NUMBER_PRESENT",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "check:OR_OFFER_NUMBER_FORMAT",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "check:OR_LMIA_NUMBER_PRESENT",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "check:CR_OWP_VS_EMPLOYER_SPECIFIC",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "check:OR_PGWP_TYPE_OPEN",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "check:OR_MEDICAL_DESIGNATED_OCCUPATION",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "check:OR_MEDICAL_COUNTRY_RESIDENCE",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "check:CR_QC_PROVINCE_MATCH",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "check:CR_INTENDED_EMPLOYMENT_DATES",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "check:RW_EMPLOYMENT_START_PASSED",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "check:OR_REFERENCE_LETTER_CONTENT",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  },
+  {
+   "data_path": "check:OR_FEE_AMOUNT",
+   "decision": "accepted",
+   "reason": "D30: each applicant's own work details and permit type (IMM 1295 'My occupation in Canada will be'; guide 5487 'Each person must meet the requirements')"
+  }
+ ],
+ "supersedes": "e6c7487bd369e399687a23750659307852587d0df3f564ad0ba3c745a2a5a7a9",
+ "released_at": "2026-10-20T18:17:02.089Z"
+}

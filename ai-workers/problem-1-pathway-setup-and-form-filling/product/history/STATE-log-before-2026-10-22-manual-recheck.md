@@ -1,0 +1,8 @@
+# Older state log entries
+
+- 2026-10-21 · 01 · FIX · Lead checked the data layer (P-41): accepted; FIX = regression, Layout v2 as in the clickable journey, browser pass. Waits for founder to agree journey steps 1–2.
+- 2026-10-21 · 01 · EARLY-LOOK · Founder agreed journey 1–2 (R-49, board = intent). Regression fixed; Layout v2 slice 1 built (flat list, Needs you, Program filter, ⌘K, panel/sheet, path builder by hand, POST /combinations/path); 16 screenshots in slice1/; rules 32/32; US$0. Top 5 improvements + 5 proposals in build-notes.
+- 2026-10-21 · 01 · EARLY-LOOK → FINISH · Lead: Go with 8 changes (review.md), incl. founder's Lead update (P-49, P-50); P1–P5 decided; P-43/P-44 already in DECISIONS.
+- 2026-10-21 · 01 · FINISH → CHECK · Items 1–9 built: no panel (row opens the combination page, clickable path, Back keeps place), Needs work · Live · All + status sort, two-line path, sentence case, one Super visa, short draft bar, page clean-up, new-edition hold, one form intake (POST /intake, intake_item table). 5 bugs fixed. Rules 44/44, API 75/75, browser 83/83 (19 states × 2 widths, axe clean), engine 38/38, grounding 29/29, AI orchestration 22/22; old studio suite 17 then A8 (unchanged). US$0.
+- 2026-10-21 · 01 · CHECK · Builder launched screen-reviewer and screen-breaker in parallel (review.md backed up to history/; Lead text kept). Official forms fetch: 0 fetched, 9 failed (canada.ca refuses this machine).
+- 2026-10-21 · 01 · CHECK · Lead fetched the 9 official forms by command (R-59/R-61); builder fetch check now "nothing pending". Script fix (drop fake browser header) queued for after CHECK; checksum-mismatch wording already says "possible new edition".

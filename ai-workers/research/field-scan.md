@@ -1,5 +1,7 @@
 # Field scan: immigration practice software and AI workers in professional services
 
+**Current-comparison notice, 12 Oct independent audit:** this is the historical 9 Oct scan. Its CaseEasy AI and Migrawise pricing summaries are superseded by the dated primary-source table in [commercial audit §3](../checks/audit-commercial-2026-10-12.md). Do not cite the old table as current: CaseEasy publishes document scanning/CRS insight capabilities while agentic work remains a vendor roadmap; Migrawise's published CAD 29 firm base and optional CAD 15 once per AI-enabled case are separate charges. All competitor capabilities remain vendor claims until tested; no demand, savings or accuracy is established here.
+
 **Wave W1, AI Workers workstream (ask B14 in `../brief-coverage.md`).** Writer: competitor-analyst (b), Claude. Date: 9 Oct 2026. Status: research input only. Nothing here is a decision.
 **Companion file:** [`field-scan.csv`](field-scan.csv), one row per competitor and AI capability.
 **Out of scope here:** VisaFlo itself (covered in [`visaflo.md`](visaflo.md)). It appears only as a pointer.

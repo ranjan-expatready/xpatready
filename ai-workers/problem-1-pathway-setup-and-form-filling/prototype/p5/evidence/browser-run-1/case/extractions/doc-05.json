@@ -1,0 +1,153 @@
+{
+ "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+ "method": "local",
+ "cached": false,
+ "cost_usd": 0,
+ "ms": 3695,
+ "refused": "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally",
+ "checks": null,
+ "run_file": null,
+ "output": {
+  "document": {
+   "kind_seen": "birth_certificate",
+   "matches_claimed_kind": true,
+   "readable": "yes",
+   "issues": [],
+   "issued_or_written_on": null
+  },
+  "people_seen": [],
+  "fields": [
+   {
+    "fact": "person.date_of_birth",
+    "about": "the child whose birth is recorded",
+    "status": "proposed",
+    "value": "2017-01-20",
+    "as_printed": "January 20, 2017",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Date of birth January 20, 2017\"",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     104,
+     367,
+     728,
+     390
+    ],
+    "method": "Tesseract + label rule"
+   },
+   {
+    "fact": "person.sex",
+    "about": "the child whose birth is recorded",
+    "status": "proposed",
+    "value": "F",
+    "as_printed": "Female",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Sex Female\"",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     103,
+     309,
+     622,
+     327
+    ],
+    "method": "Tesseract + label rule"
+   },
+   {
+    "fact": "mother.full_name",
+    "about": "mother",
+    "status": "proposed",
+    "value": "CLIENTA EXAMPLE",
+    "as_printed": "CLIENTA EXAMPLE",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Name of mother CLIENTA EXAMPLE\"",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     104,
+     483,
+     755,
+     501
+    ],
+    "method": "Tesseract + label rule"
+   },
+   {
+    "fact": "father.full_name",
+    "about": "father",
+    "status": "proposed",
+    "value": "PARTNER EXAMPLEP",
+    "as_printed": "PARTNER EXAMPLEP",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Name of father PARTNER EXAMPLEP\"",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     104,
+     599,
+     782,
+     617
+    ],
+    "method": "Tesseract + label rule"
+   },
+   {
+    "fact": "person.given_names",
+    "about": "the child whose birth is recorded",
+    "status": "proposed",
+    "value": "CHILD",
+    "as_printed": "CHILD EXAMPLE",
+    "page": 1,
+    "where": "",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "label rule; family name taken as the last word (an assumption)"
+   },
+   {
+    "fact": "person.family_name",
+    "about": "the child whose birth is recorded",
+    "status": "proposed",
+    "value": "EXAMPLE",
+    "as_printed": "CHILD EXAMPLE",
+    "page": 1,
+    "where": "",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "label rule; family name taken as the last word (an assumption)"
+   },
+   {
+    "fact": "person.place_of_birth_city",
+    "about": "the child whose birth is recorded",
+    "status": "proposed",
+    "value": "NEW DELHI",
+    "as_printed": "City Hospital, NEW DELHI, INDIA",
+    "page": 1,
+    "where": "",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "label rule; city = second-last part"
+   },
+   {
+    "fact": "person.country_of_birth",
+    "about": "the child whose birth is recorded",
+    "status": "proposed",
+    "value": "INDIA",
+    "as_printed": "City Hospital, NEW DELHI, INDIA",
+    "page": 1,
+    "where": "",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "label rule; country = last part"
+   }
+  ],
+  "internal_conflicts": [],
+  "reader": {
+   "name": "local OCR/MRZ + rules",
+   "tesseract": "5.5.0 (eng)",
+   "version": "local-reader/v1"
+  },
+  "ms": 3694
+ }
+}

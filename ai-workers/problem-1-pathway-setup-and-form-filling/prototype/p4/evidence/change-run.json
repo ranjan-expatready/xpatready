@@ -1,0 +1,267 @@
+{
+ "at": "2026-10-20T16:58:39.013Z",
+ "url": "http://localhost:4318/",
+ "release": {
+  "version": 2,
+  "configuration_sha256": "e6c7487bd369e399687a23750659307852587d0df3f564ad0ba3c745a2a5a7a9",
+  "supersedes": "8cb7411723b51710f1b755c77e71e8af089ca26c9f375b6089de75667b0a9608"
+ },
+ "view_code_sha256": "7987a2bd8469c625e3f6e1cda8c09d6febdd8d8c5ba80930fb8f82f0e001c300",
+ "configuration_diff": [
+  {
+   "path": ".configuration_version",
+   "from": "c1-v1",
+   "to": "c1-v2"
+  },
+  {
+   "path": ".placements[0].tier",
+   "from": "case",
+   "to": "prospect"
+  },
+  {
+   "path": ".placements[0].item_version",
+   "from": 1,
+   "to": 2
+  },
+  {
+   "path": ".review.decisions",
+   "from": 1076,
+   "to": 1075
+  }
+ ],
+ "view_changes": [
+  {
+   "key": "sqr:principal|The application (once per case)|case.service_language",
+   "fields": [
+    {
+     "field": ".tier",
+     "from": "case",
+     "to": "prospect"
+    },
+    {
+     "field": ".status",
+     "from": "asked",
+     "to": "pre-filled from the PQR"
+    }
+   ]
+  },
+  {
+   "key": "sqr:principal|counts",
+   "fields": [
+    {
+     "field": ".asked",
+     "from": 79,
+     "to": 78
+    },
+    {
+     "field": ".prefilled",
+     "from": 9,
+     "to": 10
+    }
+   ]
+  },
+  {
+   "key": "staff|case.service_language",
+   "fields": [
+    {
+     "field": ".tier",
+     "from": "case",
+     "to": "prospect"
+    }
+   ]
+  },
+  {
+   "key": "pqr|count",
+   "fields": [
+    {
+     "field": "",
+     "from": 9,
+     "to": 10
+    }
+   ]
+  },
+  {
+   "key": "generated_from",
+   "fields": [
+    {
+     "field": ".configuration_version",
+     "from": "c1-v1",
+     "to": "c1-v2"
+    }
+   ]
+  },
+  {
+   "key": "pqr|The application (once per case)|case.service_language",
+   "fields": "added"
+  }
+ ],
+ "pages_identical_apart_from_release_line": {
+  "index.html": false,
+  "pqr.html": false,
+  "sqr-principal.html": false,
+  "sqr-partner.html": true,
+  "staff.html": false
+ },
+ "steps": [
+  {
+   "name": "the screen loads draft 2 against release c1-v1",
+   "ok": true,
+   "detail": "c1-draft-2 · 972 items · 971 unchanged since c1-v1, reused without review"
+  },
+  {
+   "name": "972 items: 971 reused with their c1-v1 decision, one open",
+   "ok": true,
+   "detail": "place:case.service_language"
+  },
+  {
+   "name": "reused SME sign-offs carried over (103 of 103)",
+   "ok": true,
+   "detail": "{\"items\":972,\"decided\":971,\"returned\":0,\"sme_needed\":103,\"sme_signed\":103}"
+  },
+  {
+   "name": "the 53 hand-route boxes keep their v1 decision (left unresolved), not \"accepted\"",
+   "ok": true
+  },
+  {
+   "name": "not ready: the one open item blocks publishing",
+   "ok": true,
+   "detail": "1 items have no decision (5.1 ready)"
+  },
+  {
+   "name": "the open item is the service-language placement, shown with tier prospect",
+   "ok": true
+  },
+  {
+   "name": "A approves the changed placement with a recorded reason",
+   "ok": true,
+   "detail": "Recorded"
+  },
+  {
+   "name": "ready once the one item is decided",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "A submits version 2 (hash frozen)",
+   "ok": true,
+   "detail": "Submitted version 2 by user-A: SHA-256 e6c7487bd369e399687a23750659307852587d0df3f564ad0ba3c745a2a5a7a9"
+  },
+  {
+   "name": "A cannot approve its own submission (D254)",
+   "ok": true,
+   "detail": "Refused: self-approval refused: approver is the author"
+  },
+  {
+   "name": "B approves the submitted hash: version 2 published",
+   "ok": true,
+   "detail": "Published version 2: SHA-256 e6c7487bd369e399687a23750659307852587d0df3f564ad0ba3c745a2a5a7a9"
+  },
+  {
+   "name": "release c1-v2 supersedes c1-v1 by its hash",
+   "ok": true,
+   "detail": "8cb7411723b51710f1b755c77e71e8af089ca26c9f375b6089de75667b0a9608"
+  },
+  {
+   "name": "release record: author A, submitter A, approver B",
+   "ok": true
+  },
+  {
+   "name": "files.json hash matches configuration.json",
+   "ok": true
+  },
+  {
+   "name": "the service-language placement is at item_version 2; all 1319 other items stay at 1",
+   "ok": true,
+   "detail": "placements:case.service_language"
+  },
+  {
+   "name": "configuration v1 → v2: only the version label, the review count, and that placement's tier and item version differ",
+   "ok": true,
+   "detail": ".configuration_version: \"c1-v1\" → \"c1-v2\"; .placements[0].tier: \"case\" → \"prospect\"; .placements[0].item_version: 1 → 2; .review.decisions: 1076 → 1075"
+  },
+  {
+   "name": "the 53 hand-route boxes are released as they were in v1",
+   "ok": true
+  },
+  {
+   "name": "regenerating v1 reproduces the stored v1 views byte for byte",
+   "ok": true
+  },
+  {
+   "name": "the view code SHA-256 is identical for v1 and v2 (no code change)",
+   "ok": true,
+   "detail": "7987a2bd8469c625e3f6e1cda8c09d6febdd8d8c5ba80930fb8f82f0e001c300"
+  },
+  {
+   "name": "the service language is newly in the PQR, in its own block, asked",
+   "ok": true,
+   "detail": "9 → 10"
+  },
+  {
+   "name": "in the principal's SQR it is pre-filled from the PQR instead of asked (tier shown as prospect)",
+   "ok": true,
+   "detail": "[{\"field\":\".tier\",\"from\":\"case\",\"to\":\"prospect\"},{\"field\":\".status\",\"from\":\"asked\",\"to\":\"pre-filled from the PQR\"}]"
+  },
+  {
+   "name": "principal SQR counts: one fewer asked, one more pre-filled, documents unchanged",
+   "ok": true,
+   "detail": "{\"asked\":79,\"prefilled\":9,\"from_documents\":36} → {\"asked\":78,\"prefilled\":10,\"from_documents\":36}"
+  },
+  {
+   "name": "in the staff working view its tier reads prospect",
+   "ok": true,
+   "detail": "[{\"field\":\".tier\",\"from\":\"case\",\"to\":\"prospect\"}]"
+  },
+  {
+   "name": "nothing else in any view changed (partner SQR, hand route, every other question and fact identical)",
+   "ok": true,
+   "detail": "sqr:principal|The application (once per case)|case.service_language, sqr:principal|counts, staff|case.service_language, pqr|count, generated_from, pqr|The application (once per case)|case.service_language"
+  },
+  {
+   "name": "the views name the release they came from (c1-v1 → c1-v2)",
+   "ok": true,
+   "detail": "[{\"field\":\".configuration_version\",\"from\":\"c1-v1\",\"to\":\"c1-v2\"}]"
+  },
+  {
+   "name": "pages: the partner's SQR is identical apart from the release line; the overview, PQR, principal SQR and staff pages change",
+   "ok": true,
+   "detail": "[[\"index.html\",false],[\"pqr.html\",false],[\"sqr-principal.html\",false],[\"sqr-partner.html\",true],[\"staff.html\",false]]"
+  },
+  {
+   "name": "PQR v2 page shows the service-language question",
+   "ok": true
+  },
+  {
+   "name": "principal SQR v2 page shows it tagged \"pre-filled from the PQR\"",
+   "ok": true
+  },
+  {
+   "name": "staff view v2 shows the fact in tier prospect",
+   "ok": true,
+   "detail": "Official language (English or French) in which the person wants to receive servicecase.service_languageThe application (once per case)prospectclient questionnai"
+  },
+  {
+   "name": "no sideways page scroll at 375px (PQR and staff view; wide tables scroll inside their box)",
+   "ok": true
+  },
+  {
+   "name": "at 375px the staff table keeps readable columns (at least 720px wide, scrolling inside its box; run 4 found it squeezed)",
+   "ok": true,
+   "detail": "table 720px"
+  },
+  {
+   "name": "dark scheme renders without sideways scroll",
+   "ok": true
+  },
+  {
+   "name": "every page uses the Expat Ready kit: logo shown, Inter and Proxima Nova loaded (AIW-D265)",
+   "ok": true,
+   "detail": "{\"logo\":true,\"fonts\":[\"Proxima\",\"Inter Variable\"]}"
+  },
+  {
+   "name": "no page errors",
+   "ok": true,
+   "detail": ""
+  }
+ ]
+}

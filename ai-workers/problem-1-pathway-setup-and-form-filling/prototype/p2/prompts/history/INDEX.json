@@ -1,0 +1,412 @@
+{
+ "note": "Exact prompt bytes each live run used (P2-m1). Runs whose template or schema has since changed point to an immutable historical copy recovered from the project backup snapshots and hash-verified; the changed v1 files are never presented as the prompts those runs used.",
+ "runs_with_historical_prompts": 5,
+ "runs": [
+  {
+   "run": "c1-checks-live-20261020t054958915z.json",
+   "status": "completed",
+   "prompt_sha256": "2528e464680e9eb5f9ec9260d2a682a489df4d3ee1cab47be39536cc104af0a8",
+   "template": {
+    "file": "p2/prompts/history/checks.v1@54f095ed25.md",
+    "sha256": "54f095ed2508a60e11fb18b501e3a1283004157176acf20c0bb23a0b400a4ba6",
+    "current": false,
+    "recovered_from": "archive/ai-workers/snapshots/ai-workers__problem-1-pathway-setup-and-form-filling__prototype__p2__prompts__checks.v1@54f095ed25-2026-10-20T1102.md"
+   },
+   "schema": {
+    "file": "p2/prompts/checks-output.v1.schema.json",
+    "sha256": "da7da777cb8170077e9255b3ebcc28718d07e9875a101e99d8ee262840f1981f",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm1295-live-20261020t044724062z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm1295-live-20261020t051558106z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm1295-live-20261020t060259023z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm1295-live-20261020t061204350z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm1295-live-20261020t062024995z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm5257-1-live-20261020t045947461z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm5257-1-live-20261020t052757177z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm5409-live-20261020t045545548z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm5409-live-20261020t052401212z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm5475-live-20261020t045857613z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm5475-live-20261020t052706509z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm5476-live-20261020t045654878z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm5476-live-20261020t052508977z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm5707-live-20261020t045405509z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm5707-live-20261020t052222731z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm5707-live-20261020t060116285z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm5707-live-20261020t061028166z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-fieldmap-imm5707-live-20261020t061844836z.json",
+   "status": "completed_with_unresolved",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba",
+   "template": {
+    "file": "p2/prompts/field-map.v1.md",
+    "sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/field-map-output.v1.schema.json",
+    "sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-requirements-live-20261020t053007880z.json",
+   "status": "provider_error",
+   "prompt_sha256": "efccbf0a3842d145a806fcd6da3897f636bd60a493349011f2d96365c93919a1",
+   "template": {
+    "file": "p2/prompts/history/requirements.v1@346b0e5a10.md",
+    "sha256": "346b0e5a1060f1fd90a151e7da349ce9701cd3f4b3aeedf08f8d9b1fab32024c",
+    "current": false,
+    "recovered_from": "archive/ai-workers/snapshots/ai-workers__problem-1-pathway-setup-and-form-filling__prototype__p2__prompts__requirements.v1@346b0e5a10-2026-10-20T0924.md"
+   },
+   "schema": {
+    "file": "p2/prompts/history/requirements-output.v1.schema@10b0419568.json",
+    "sha256": "10b04195689e3e81d23a4ea2f0ead603f5780ab79a299c4c6d8674f1ff6c90f0",
+    "current": false,
+    "recovered_from": "archive/ai-workers/snapshots/ai-workers__problem-1-pathway-setup-and-form-filling__prototype__p2__prompts__requirements-output.v1.schema@10b0419568-2026-10-20T0924.json"
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-requirements-live-20261020t053544388z.json",
+   "status": "completed",
+   "prompt_sha256": "a8fc3bf1c575b273618db9bdfe4a1d01fbce17373b918b949bc09454c389d8cd",
+   "template": {
+    "file": "p2/prompts/history/requirements.v1@2b6c6bc395.md",
+    "sha256": "2b6c6bc395a911255c3cabeabf59b12ddc9f0571f2b8e3726c903cad5964dd67",
+    "current": false,
+    "recovered_from": "archive/ai-workers/snapshots/ai-workers__problem-1-pathway-setup-and-form-filling__prototype__p2__prompts__requirements.v1@2b6c6bc395-2026-10-20T1102.md"
+   },
+   "schema": {
+    "file": "p2/prompts/requirements-output.v1.schema.json",
+    "sha256": "ea87d66a22a07642e2f0f9786c6a3395714765a4b99ec8915c70f78fc2eeaf91",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "c1-sections-live-20261020t054254821z.json",
+   "status": "completed",
+   "prompt_sha256": "a6b20bd6e5a77c61219984f128cf05221584f9db95c530e5d5561bc37d4dd9e9",
+   "template": {
+    "file": "p2/prompts/sections.v1.md",
+    "sha256": "693db885c8894aff68c96752e68a8ea34390a6a6978e6fedd3a4229be0b03504",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/sections-output.v1.schema.json",
+    "sha256": "7e9babd42b48973abb4d6574fa8fe0525601eaa854b08b9e902ebf8eaa1f3dd4",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "probe-checks-live-20261020t053429940z.json",
+   "status": "completed",
+   "prompt_sha256": "2528e464680e9eb5f9ec9260d2a682a489df4d3ee1cab47be39536cc104af0a8",
+   "template": {
+    "file": "p2/prompts/history/checks.v1@54f095ed25.md",
+    "sha256": "54f095ed2508a60e11fb18b501e3a1283004157176acf20c0bb23a0b400a4ba6",
+    "current": false,
+    "recovered_from": "archive/ai-workers/snapshots/ai-workers__problem-1-pathway-setup-and-form-filling__prototype__p2__prompts__checks.v1@54f095ed25-2026-10-20T1102.md"
+   },
+   "schema": {
+    "file": "p2/prompts/checks-output.v1.schema.json",
+    "sha256": "da7da777cb8170077e9255b3ebcc28718d07e9875a101e99d8ee262840f1981f",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "probe-requirements-live-20261020t053328686z.json",
+   "status": "completed",
+   "prompt_sha256": "a8fc3bf1c575b273618db9bdfe4a1d01fbce17373b918b949bc09454c389d8cd",
+   "template": {
+    "file": "p2/prompts/history/requirements.v1@2b6c6bc395.md",
+    "sha256": "2b6c6bc395a911255c3cabeabf59b12ddc9f0571f2b8e3726c903cad5964dd67",
+    "current": false,
+    "recovered_from": "archive/ai-workers/snapshots/ai-workers__problem-1-pathway-setup-and-form-filling__prototype__p2__prompts__requirements.v1@2b6c6bc395-2026-10-20T1102.md"
+   },
+   "schema": {
+    "file": "p2/prompts/requirements-output.v1.schema.json",
+    "sha256": "ea87d66a22a07642e2f0f9786c6a3395714765a4b99ec8915c70f78fc2eeaf91",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  },
+  {
+   "run": "probe-sections-live-20261020t053405655z.json",
+   "status": "completed",
+   "prompt_sha256": "a6b20bd6e5a77c61219984f128cf05221584f9db95c530e5d5561bc37d4dd9e9",
+   "template": {
+    "file": "p2/prompts/sections.v1.md",
+    "sha256": "693db885c8894aff68c96752e68a8ea34390a6a6978e6fedd3a4229be0b03504",
+    "current": true
+   },
+   "schema": {
+    "file": "p2/prompts/sections-output.v1.schema.json",
+    "sha256": "7e9babd42b48973abb4d6574fa8fe0525601eaa854b08b9e902ebf8eaa1f3dd4",
+    "current": true
+   },
+   "prompt_sha256_verified": true
+  }
+ ]
+}

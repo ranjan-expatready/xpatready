@@ -1,0 +1,60 @@
+{
+ "values_written": 91,
+ "exact_in_barcode": 80,
+ "present_after_form_normalisation": [
+  [
+   "DOBMonth[0]",
+   "04",
+   "4"
+  ],
+  [
+   "FromMonth[0]",
+   "08",
+   "8"
+  ],
+  [
+   "ToMonth[0]",
+   "05",
+   "5"
+  ],
+  [
+   "FromMonth[0]",
+   "07",
+   "7"
+  ],
+  [
+   "ToMonth[0]",
+   "07",
+   "7"
+  ],
+  [
+   "Other[0]",
+   "1",
+   "IMM1295_06-2018_1"
+  ],
+  [
+   "NumberCountry[0]",
+   "91",
+   "+919800000000"
+  ],
+  [
+   "IntlNumber[0]",
+   "9800000000",
+   "+919800000000"
+  ]
+ ],
+ "not_in_barcode": [
+  [
+   "Page1[0].MaritalStatus[0].SectionA[0].DateOfMarriage[0]",
+   "2015-06-01"
+  ],
+  [
+   "Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDate[0].IssueDate[0]",
+   "2020-01-15"
+  ],
+  [
+   "Page2[0].MaritalStatus[0].SectionA[0].Passport[0].ExpiryDate[0]",
+   "2030-01-14"
+  ]
+ ]
+}

@@ -1,0 +1,7 @@
+{
+ "from_release": "c1-v1",
+ "changed": [
+  "placements[case.service_language].tier: case -> prospect"
+ ],
+ "purpose": "P4 acceptance: a configuration change changes the views with no code change"
+}

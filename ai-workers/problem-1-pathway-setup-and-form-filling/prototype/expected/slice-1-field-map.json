@@ -1,0 +1,610 @@
+{
+ "schema": "expected-field-map/v0",
+ "label": "Lead-verified from official sources (prototype only); not specialist-confirmed",
+ "legal": "Unconfirmed: no counsel (AIW-D94)",
+ "prepared": "2026-10-19, Claude Code (the Lead), from the official form templates only (via the read-only P1 inventory); before and without any drafting run",
+ "independence": [
+  "Never on a drafting run's input list (expected/README.md rule 2).",
+  "Drafting runs are separate processes with an explicit input list; they inherit no context from the session that wrote this key.",
+  "Prompts and tool descriptions for the drafting runs must not restate any mapping in this file; the reviewer checks this."
+ ],
+ "slice": "Comparison slice 1: IMM 5707 for two people of combination 1 (Client A, and the partner who is also 18+), plus the IMM 1295 marital block for Client A",
+ "people": {
+  "client-a": "principal applicant",
+  "partner": "common-law partner of client-a, accompanying",
+  "child": "child of client-a and partner (scenario setting), aged 9, accompanying",
+  "client-a.mother": "not accompanying",
+  "client-a.father": "not accompanying",
+  "partner.mother": "not accompanying",
+  "partner.father": "not accompanying"
+ },
+ "rules": {
+  "parent_blocks": "Parent1 and Parent2 each hold exactly one parent of the form's subject; every field in one block belongs to the same parent; the two blocks hold different parents. The form does not fix which parent goes first (both headings read 'MOTHER OR FATHER'), so either order passes. Mixing one parent's name with the other's date of birth fails (wrong person).",
+  "date_of_birth_position": "Applicant and spouse date of birth sit in PersonalData[1]; parents' and children's in PersonalData[0]. A map that puts every date of birth in the same row position is wrong for one of the groups.",
+  "children_rows": "One Child row per child of the form's subject, in date-of-birth order (oldest first: Assumption, the form states no order). The shipped data holds no Child rows; the filler creates them.",
+  "conditional": "The spouse block shows only when the applicant's marital status is common-law, married or conjugal (form script on MaritalStatus). 'I was physically present at the marriage ceremony' applies only when married: blank for the base case (common-law); in variant V1 (married) its value is not in the scenario and must be reported unresolved.",
+  "never_filled": "Signature fields (SectionA, SectionB, SectionC signature) are signed by the person; the system never fills them. Their date fields are completed at signing, not by the map.",
+  "codes_differ_by_form": "The same fact uses different codes per form: common-law is 1 on IMM 5707 but 03 on IMM 1295 (LOV MaritalStatusList). Country of birth is free text on IMM 5707 and a coded list on IMM 1295 (India = 205).",
+  "unresolved": "A field whose fact the case cannot supply (e.g. name in native language) must be returned as unresolved with a reason, not filled with a guess."
+ },
+ "instances": [
+  {
+   "form": "IMM 5707",
+   "subject": "client-a",
+   "source": {
+    "file": "official-sources/ircc/forms/imm5707e.pdf",
+    "sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "edition": "IMM 5707 (01-2023)",
+    "where": "XFA template and shipped data skeleton; headings APPLICANT, YOUR SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER, YOUR PARENT 1 (MOTHER OR FATHER), YOUR PARENT 2 (MOTHER OR FATHER), SECTION B - CHILDREN; option lists as in p1/inventory/imm5707e.inventory.json"
+   },
+   "entries": [
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+     "person": "client-a",
+     "fact": "person.family_name",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+     "person": "client-a",
+     "fact": "person.given_names",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+     "person": "client-a",
+     "fact": "person.date_of_birth",
+     "rule": "YYYY-MM-DD"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].COB[0]",
+     "person": "client-a",
+     "fact": "person.country_of_birth",
+     "rule": "country name as text (free text field, no code list)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+     "person": "client-a",
+     "fact": "person.marital_status",
+     "rule": "IMM 5707 code list: Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8 (Conjugal=9 on applicant and spouse only)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+     "person": "client-a",
+     "fact": "person.occupation",
+     "rule": "text"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].NativeName[0]",
+     "person": "client-a",
+     "fact": "person.name_native_language",
+     "rule": "only if applicable; scenario holds no value -> must be reported unresolved, never invented"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+     "person": "partner",
+     "fact": "case.accompanies_principal",
+     "rule": "yes_no_code: YES=1, NO=2"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+     "person": "partner",
+     "fact": "person.family_name",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+     "person": "partner",
+     "fact": "person.given_names",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+     "person": "partner",
+     "fact": "person.date_of_birth",
+     "rule": "YYYY-MM-DD"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].COB[0]",
+     "person": "partner",
+     "fact": "person.country_of_birth",
+     "rule": "country name as text (free text field, no code list)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+     "person": "partner",
+     "fact": "person.marital_status",
+     "rule": "IMM 5707 code list: Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8 (Conjugal=9 on applicant and spouse only)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+     "person": "partner",
+     "fact": "person.occupation",
+     "rule": "text"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Address[0]",
+     "person": "partner",
+     "fact": "person.residential_address",
+     "rule": "single text line"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].NativeName[0]",
+     "person": "partner",
+     "fact": "person.name_native_language",
+     "rule": "only if applicable; unresolved in the scenario"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "case.accompanies_principal",
+     "rule": "yes_no_code: YES=1, NO=2"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.family_name",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.given_names",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.date_of_birth",
+     "rule": "YYYY-MM-DD"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].COB[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.country_of_birth",
+     "rule": "country name as text (free text field, no code list)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.marital_status",
+     "rule": "IMM 5707 code list: Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8 (Conjugal=9 on applicant and spouse only)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.occupation",
+     "rule": "text"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Address[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.residential_address",
+     "rule": "single text line"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "case.accompanies_principal",
+     "rule": "yes_no_code: YES=1, NO=2"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.family_name",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.given_names",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.date_of_birth",
+     "rule": "YYYY-MM-DD"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].COB[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.country_of_birth",
+     "rule": "country name as text (free text field, no code list)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.marital_status",
+     "rule": "IMM 5707 code list: Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8 (Conjugal=9 on applicant and spouse only)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.occupation",
+     "rule": "text"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Address[0]",
+     "person": "client-a.mother|client-a.father",
+     "fact": "person.residential_address",
+     "rule": "single text line"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+     "person": "child",
+     "fact": "case.accompanies_principal",
+     "rule": "yes_no_code: YES=1, NO=2"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+     "person": "child",
+     "fact": "person.family_name",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+     "person": "child",
+     "fact": "person.given_names",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+     "person": "child",
+     "fact": "person.date_of_birth",
+     "rule": "YYYY-MM-DD"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].COB[0]",
+     "person": "child",
+     "fact": "person.country_of_birth",
+     "rule": "country name as text (free text field, no code list)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+     "person": "child",
+     "fact": "person.marital_status",
+     "rule": "IMM 5707 code list: Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8 (Conjugal=9 on applicant and spouse only)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+     "person": "child",
+     "fact": "person.occupation",
+     "rule": "text"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Address[0]",
+     "person": "child",
+     "fact": "person.residential_address",
+     "rule": "single text line"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].Relationship[0]",
+     "person": "child",
+     "fact": "relationship.to_form_subject",
+     "rule": "IMM 5707 child code list: Son=1, Daughter=2, Step-daughter=3, Step-son=4, Adopted daughter=5, Adopted son=6"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+     "person": "client-a",
+     "fact": "derived: subject has no children",
+     "rule": "\"I do not have any children\": 1 when ticked; base case has a child -> not ticked"
+    }
+   ]
+  },
+  {
+   "form": "IMM 5707",
+   "subject": "partner",
+   "source": {
+    "file": "official-sources/ircc/forms/imm5707e.pdf",
+    "sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "edition": "IMM 5707 (01-2023)",
+    "where": "XFA template and shipped data skeleton; headings APPLICANT, YOUR SPOUSE, COMMON-LAW PARTNER OR CONJUGAL PARTNER, YOUR PARENT 1 (MOTHER OR FATHER), YOUR PARENT 2 (MOTHER OR FATHER), SECTION B - CHILDREN; option lists as in p1/inventory/imm5707e.inventory.json"
+   },
+   "note": "Same template, other perspective: the spouse block now describes client-a, and the parent blocks describe the partner's parents.",
+   "entries": [
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+     "person": "partner",
+     "fact": "person.family_name",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+     "person": "partner",
+     "fact": "person.given_names",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+     "person": "partner",
+     "fact": "person.date_of_birth",
+     "rule": "YYYY-MM-DD"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].COB[0]",
+     "person": "partner",
+     "fact": "person.country_of_birth",
+     "rule": "country name as text (free text field, no code list)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+     "person": "partner",
+     "fact": "person.marital_status",
+     "rule": "IMM 5707 code list: Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8 (Conjugal=9 on applicant and spouse only)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+     "person": "partner",
+     "fact": "person.occupation",
+     "rule": "text"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].NativeName[0]",
+     "person": "partner",
+     "fact": "person.name_native_language",
+     "rule": "only if applicable; scenario holds no value -> must be reported unresolved, never invented"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+     "person": "client-a",
+     "fact": "case.accompanies_principal",
+     "rule": "yes_no_code: YES=1, NO=2"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+     "person": "client-a",
+     "fact": "person.family_name",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+     "person": "client-a",
+     "fact": "person.given_names",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+     "person": "client-a",
+     "fact": "person.date_of_birth",
+     "rule": "YYYY-MM-DD"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].COB[0]",
+     "person": "client-a",
+     "fact": "person.country_of_birth",
+     "rule": "country name as text (free text field, no code list)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+     "person": "client-a",
+     "fact": "person.marital_status",
+     "rule": "IMM 5707 code list: Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8 (Conjugal=9 on applicant and spouse only)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+     "person": "client-a",
+     "fact": "person.occupation",
+     "rule": "text"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Address[0]",
+     "person": "client-a",
+     "fact": "person.residential_address",
+     "rule": "single text line"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].NativeName[0]",
+     "person": "client-a",
+     "fact": "person.name_native_language",
+     "rule": "only if applicable; unresolved in the scenario"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "case.accompanies_principal",
+     "rule": "yes_no_code: YES=1, NO=2"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.family_name",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.given_names",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.date_of_birth",
+     "rule": "YYYY-MM-DD"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].COB[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.country_of_birth",
+     "rule": "country name as text (free text field, no code list)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.marital_status",
+     "rule": "IMM 5707 code list: Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8 (Conjugal=9 on applicant and spouse only)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.occupation",
+     "rule": "text"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Address[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.residential_address",
+     "rule": "single text line"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "case.accompanies_principal",
+     "rule": "yes_no_code: YES=1, NO=2"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.family_name",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.given_names",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.date_of_birth",
+     "rule": "YYYY-MM-DD"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].COB[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.country_of_birth",
+     "rule": "country name as text (free text field, no code list)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.marital_status",
+     "rule": "IMM 5707 code list: Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8 (Conjugal=9 on applicant and spouse only)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.occupation",
+     "rule": "text"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Address[0]",
+     "person": "partner.mother|partner.father",
+     "fact": "person.residential_address",
+     "rule": "single text line"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+     "person": "child",
+     "fact": "case.accompanies_principal",
+     "rule": "yes_no_code: YES=1, NO=2"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+     "person": "child",
+     "fact": "person.family_name",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+     "person": "child",
+     "fact": "person.given_names",
+     "rule": "as on passport"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+     "person": "child",
+     "fact": "person.date_of_birth",
+     "rule": "YYYY-MM-DD"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].COB[0]",
+     "person": "child",
+     "fact": "person.country_of_birth",
+     "rule": "country name as text (free text field, no code list)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+     "person": "child",
+     "fact": "person.marital_status",
+     "rule": "IMM 5707 code list: Common-law=1, Single=2, Divorced=3, Annulled marriage=4, Married=5, Legally separated=6, Widowed=7, Unknown=8 (Conjugal=9 on applicant and spouse only)"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+     "person": "child",
+     "fact": "person.occupation",
+     "rule": "text"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Address[0]",
+     "person": "child",
+     "fact": "person.residential_address",
+     "rule": "single text line"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].Relationship[0]",
+     "person": "child",
+     "fact": "relationship.to_form_subject",
+     "rule": "IMM 5707 child code list: Son=1, Daughter=2, Step-daughter=3, Step-son=4, Adopted daughter=5, Adopted son=6"
+    },
+    {
+     "data_path": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+     "person": "partner",
+     "fact": "derived: subject has no children",
+     "rule": "\"I do not have any children\": 1 when ticked; base case has a child -> not ticked"
+    }
+   ]
+  },
+  {
+   "form": "IMM 1295",
+   "subject": "client-a",
+   "source": {
+    "file": "official-sources/ircc/forms/imm1295e.pdf",
+    "sha256": "57fc256eef7d9d856e4ae85ebf8bfe80da41833ebde7a8c7ed78f2483470d7bb",
+    "edition": "IMM 1295 (09-2023)",
+    "where": "Page1 MaritalStatus SectionA: '*a) Your current marital status' (LOV MaritalStatusList), 'b) (If you are married or in a common-law relationship) Provide the date…', current spouse or common-law partner's name"
+   },
+   "entries": [
+    {
+     "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]",
+     "person": "client-a",
+     "fact": "person.marital_status",
+     "rule": "IMM 1295 LOV code: Common-Law=03, Married=01 (see inventory)"
+    },
+    {
+     "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromYr[0]",
+     "person": "client-a",
+     "fact": "relationship.start_date",
+     "rule": "year part, YYYY"
+    },
+    {
+     "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromMM[0]",
+     "person": "client-a",
+     "fact": "relationship.start_date",
+     "rule": "month part, MM"
+    },
+    {
+     "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromDD[0]",
+     "person": "client-a",
+     "fact": "relationship.start_date",
+     "rule": "day part, DD"
+    },
+    {
+     "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].FamilyName[0]",
+     "person": "partner",
+     "fact": "person.family_name",
+     "rule": "the current partner's name, not the applicant's"
+    },
+    {
+     "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].GivenName[0]",
+     "person": "partner",
+     "fact": "person.given_names",
+     "rule": "the current partner's name, not the applicant's"
+    }
+   ]
+  }
+ ],
+ "not_in_slice": "Field values for the made-up family (they come from case facts, not from the map); IMM 1295 history rows (P5); the other combination-1 forms."
+}

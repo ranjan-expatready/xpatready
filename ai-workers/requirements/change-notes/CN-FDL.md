@@ -3,9 +3,12 @@
 | | |
 |---|---|
 | **Document changed** | ExpatReady — Founder Decisions Log (consolidated sign-off), document version 1.5, last updated 2026-08-02 |
+| **Current base (15 Oct 2026, snapshot 1535; scrum 4b outcome 0 (e))** | `sources/drive-snapshot-2026-10-13-1535/01-techno-functional/07-Founder-Decisions-Log.md` is byte-identical to the 11 Oct copy quoted here, so every quote and line number below stands. |
 | **File (11 Oct 2026 snapshot; unchanged since 9 Oct)** | `sources/drive-snapshot-2026-10-11/01-techno-functional/07-Founder-Decisions-Log.md` |
 | **Date of this note** | **13 Oct 2026 (fix after re-check R10-b: FD-30 row final by AIW-D108, n9; FD-35 row aligned to AIW-D117, which amends AIW-D98 point 3)**; 12 Oct 2026 (eighth round: change 15, the founder's decisions of 12 Oct, AIW-D92 to D105); earlier 11 Oct 2026 (seventh round: the founder's Step 3 batch, AIW-D73 to AIW-D77, applied to open points 1 and 3 to 6; changes 10 to 14 added) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
+| **Changed 14 Oct 2026 (the founder's AIW-D147)** | Change 8's FD-26 row and change 11 now read: client data stored in Canada; AI processing in **Canada or the United States** only, under no-training and zero-retention terms, with client notice (was "only in Canada", AIW-D52). |
+| **Changed 14 Oct 2026 (the founder's AIW-D146)** | Change 3 reaffirmed again: full form and portal filling in Release 1, for all forms and portals; no top-forms list (portal filling as AIW-D113, AIW-D135). |
 | **Changes** | 15 (change 15 added 12 Oct 2026):  3 amendments (FD-4, FD-8, FD-7), 5 reaffirmations, 1 new section, 1 reading of FD-16, and 4 further lines from the founder's Step 3 batch (AIW-D52's reach, FD-4 for Practice Pack reference data, FD-11's reach, money returned from trust). The 6 open points (below, not changes) are all settled: five decided by the founder on 11 Oct (AIW-D73 to AIW-D77), one recorded as applied. |
 
 **What this note is.** The Founder Decisions Log is the founder's own record; only the founder changes it. On 11 Oct 2026 the founder answered the Workstream 2 decisions one by one (`ai-workers/decisions.md`, AIW-D36 to AIW-D72, with the appended rows *AIW-D72 correction* and *AIW-D72 correction 2*). This note does four things:
@@ -56,7 +59,7 @@ These are conflicts or gaps the fix rounds found. Points 1, 3, 4, 5 and 6 were p
    - **Question:** do such calls also use only the Canada provider record?
    - **The Lead recommends yes:** one provider record, one contract and one test for every AI call Expat Ready makes, so no exception has to be policed; pack drafting holds no client data, so the only cost is using the Canada route the firms' calls already need. Until the founder answers, the Pack author's AI makes no model call. *(Recommendation added by the Lead, 11 Oct 2026.)*
    - *(Before the answer)* The Super Admin notes kept D52's literal scope and did not state the wider reach as a requirement (CN-SA-08 change 2, CN-SA-11 change 1; review S3a M-2; re-check S3a-b R-2), and the Pack author's assistant made no model call (`00-step3-plan.md`, "Pack calls before the founder answers", now superseded).
-   - **Decided 11 Oct 2026 (AIW-D74, "Yes, Canada for all AI"):** AI processing for every AI call Expat Ready makes, including pack drafting that holds no client data, happens only in Canada under the one published provider record (SA-8-49); the Pack author's AI may make model calls once that record is published. Proposed log words: change 11.
+   - **Decided 11 Oct 2026 (AIW-D74, "Yes, Canada for all AI"):** AI processing for every AI call Expat Ready makes, including pack drafting that holds no client data, happens only in Canada under the one published provider record (SA-8-66); the Pack author's AI may make model calls once that record is published. Proposed log words: change 11.
 4. **FD-4 as amended, and Practice Pack reference data.**
    - FD-22 applies FD-4 to the Practice Pack ("dual control on rule-bearing artifacts (FD-4)", A22-6.6, L142).
    - AIW-D48 speaks of "a published country pack".
@@ -65,7 +68,7 @@ These are conflicts or gaps the fix rounds found. Points 1, 3, 4, 5 and 6 were p
    - **Decided 11 Oct 2026 (AIW-D75, "Yes, two people for all packs"):** reference data in a published Practice Pack also needs two people before publishing, as for country packs (AIW-D48; FD-22 A22-6.6). Proposed log words: change 12.
 5. **FD-11 and the platform's own SaaS billing.**
    - FD-11 names AG-6 ("AG-6 mentions scrubbed", L36).
-   - SA-04 v2.17 §10 lists "credit notes" under `system/billing:view` (L752), and SA-08 v2.4 keeps "invoice and credit-note copies" (SA-8-44, L301).
+   - SA-04 v2.21 §10 lists "credit notes" under `system/billing:view` (L832), and SA-08 v2.7 keeps "invoice and credit-note copies" (SA-8-44, L408).
    - **Question:** does FD-11 reach Expat Ready's own billing to firms?
    - **The Lead recommends no:** FD-11's words name AG-6 (the firms' billing of their clients); Expat Ready's own subscription billing (SA-04, SA-08) is a different system that keeps the copies the team specified. Not AI. *(Recommendation added by the Lead, 11 Oct 2026.)*
    - **Decided 11 Oct 2026 (AIW-D76, "No, FD-11 is about firms' billing only"):** FD-11 applies to the firms' billing of their clients (AG-06) only; Expat Ready's own subscription billing (SA-04, SA-08) keeps the team's design, including processor credit notes. Proposed log words: change 13.
@@ -75,7 +78,7 @@ These are conflicts or gaps the fix rounds found. Points 1, 3, 4, 5 and 6 were p
    - FD-13 (L38) already decides consultation refunds: "**Firm-configurable refunds with platform defaults**", and AG-04 v1.5 refunds a cancelled paid consultation in Release 1 ("**AG-4-46** Refund-on-cancel per policy via Biller", L515).
    - **Question:** must Release 1 also record money returned to a client from trust (for example an unused retainer)?
    - **The Lead recommends yes**, with the mechanics designed by the team under FD-17 (`00-step3-plan.md`, "Refunds and FD-13"; "Trust accounting belongs to the team"). This note proposes no refund rule.
-   - **Decided 11 Oct 2026 (AIW-D77, "Yes, team designs how"):** Release 1 records money returned to a client from trust (for example an unused retainer), so the trust ledger stays right; the team designs the mechanics under FD-17 (AG-06 §13 item 11); the platform never moves money (FD-12); consultation refunds stay as FD-13 and AG-4-46 have them; no AI teammate records a refund. Proposed log words: change 14 (a decision line only; still no refund mechanics).
+   - **Decided 11 Oct 2026 (AIW-D77, "Yes, team designs how"):** Release 1 records money returned to a client from trust (for example an unused retainer), so the trust ledger stays right; the team designs the mechanics under FD-17 (AG-06 §13 item 11); the platform never moves money (FD-12); consultation refunds stay as FD-13 and AG-4-46 have them; no assistant records a refund. Proposed log words: change 14 (a decision line only; still no refund mechanics).
 
 ---
 
@@ -90,11 +93,11 @@ L29:
 
 **(3) Proposed words.**
 
-> | FD-4 | Pack review gate | **Dual-control for rule/scoring/eligibility artifacts**; ~~**platform-config toggle for reference data**~~ **AMENDED 2026-10-11:** reference data in a published country pack (fees, wage tables) also needs two people, matching SA-01 v2.2 §3.12 (AIW-D48) |
+> | FD-4 | Pack review gate | **Dual-control for rule/scoring/eligibility artifacts**; ~~**platform-config toggle for reference data**~~ **AMENDED 2026-10-11:** reference data in a published country pack (fees, wage tables) also needs two people, matching SA-01 v2.4 §3.12 (AIW-D48) |
 
 **(4) Why.** AIW-D48, 11 Oct 2026. The founder chose "Two people for all": "**Amends FD-4's second clause:** reference data in a published country pack (fees, wage tables) also needs two people, matching SA-01 v2.2 §3.12. The founder places the amendment in the Founder Decisions Log on Drive." The conflict was raised in two places:
 - the proposals row of 10 Oct (Pack author's AI, test gate, part 2);
-- `ai-workers/design/behaviours/pack-authors-assistant.md` §9 G-25. SA-01 v2.2 §3.12 put the whole production pack under two people, while SA-01B v1.2 SA-1B-44 named no second person for reference rows.
+- AIW-D48 (the 10 Oct design gap on FD-4's reference-data clause). SA-01 v2.4 §3.12 puts the whole production pack under two people, while SA-01B v1.4 SA-1B-44 names no second person for reference rows.
 
 **(5) Knock-ons.** SA-01B SA-1B-44 and SA1B-D17 (CN-SA-01B change 3). Practice Pack reference data: decided by AIW-D75 (change 12).
 
@@ -121,10 +124,10 @@ L33:
 **(5) Knock-ons.**
 - AG-13 uses "Timer" where FD-8 says Clocker (CN-AG-13).
 - AG-11's AI run log value `DRAFTER` becomes `WRITER` (CN-AG-11).
-- SA-03 v2.17's feature catalogue row 30 names the four AI Doers "Reader, Sorter, Drafter, Checker" (CN-SA-03 change 1).
+- SA-03 v2.20's feature catalogue row 30 names the four AI Doers "Reader, Sorter, Drafter, Checker" (CN-SA-03 change 1).
 - The agent glossary (99-Phasing-and-Glossary v1.4) follows.
 - Doc 4 already uses Minder and Reminder as two Doers (for example L1240).
-- The Program Charter's mention of FD-8 is in `ai-workers/charter-edits.md` §5.
+- The Program Charter's mention of FD-8 is in `ai-workers/requirements/charter-edits-2026-10-14.md` §1, row 1.2 (V1 L121).
 
 ---
 
@@ -138,11 +141,11 @@ L30:
 > | FD-5 | XFA/flattened IRCC forms | **Flattened-overlay support in v1** (coordinate-mapped fill + FormFieldMap visual editor), unit-priced per form edition; XFA runtime = named later-wave stub |
 
 **(3) Proposed words.** The row is unchanged; the decision cell ends with:
-> *Reaffirmed 2026-10-11 (AIW-D43) against SA-01B v1.2 SA1B-D28 ("Form autofill is parked for Release 1"): the team states the overlay route for IRCC's forms and a date; as recorded in AIW-D43, until it exists the pilot runs without form filling and says so.*
+> *Reaffirmed 2026-10-11 (AIW-D43) against SA-01B v1.2 SA1B-D28 ("Form autofill is parked for Release 1"): the team states the overlay route for IRCC's forms and a date; as recorded in AIW-D43, until it exists the pilot runs without form filling and says so.* *Reaffirmed again 2026-10-14 (AIW-D146, "Full form filling in R1") against SA-01B v1.4 SA1B-D28 and 99-Phasing v2.20 row 2.6: full form and portal filling is in Release 1, for all forms and portals; no top-forms list (portal filling as AIW-D113, AIW-D135).*
 
-**(4) Why.** AIW-D43. The founder chose "Keep FD-5, ask the team". As recorded in AIW-D43: "FD-5 (form filling in version 1) stands; Step 3 asks the team for the overlay route and a date. Until it exists the pilot runs without form filling and says so; the Form Preparer duty (W-05) stays specified." SA-01B v1.2 (L53) parked filling. A module file never overrides a founder decision by date (README §0 rule 11). The product rule that applies this in SA-01B names a state the product can check (CN-SA-01B change 1).
+**(4) Why.** AIW-D43. The founder chose "Keep FD-5, ask the team". As recorded in AIW-D43: "FD-5 (form filling in version 1) stands; Step 3 asks the team for the overlay route and a date. Until it exists the pilot runs without form filling and says so; the Form Preparer duty (W-05) stays specified." SA-01B v1.4 SA1B-D28 (L54) parks filling. A module file never overrides a founder decision by date (README §0 rule 11). The product rule that applies this in SA-01B names a state the product can check (CN-SA-01B change 1).
 
-**(5) Knock-ons.** SA-01B SA1B-D28 and P1 (CN-SA-01B change 1). AG-07 (CN-AG-07).
+**(5) Knock-ons.** SA-01B SA1B-D28 and P1 (CN-SA-01B change 1, rewritten 14 Oct 2026 for AIW-D146). AG-07 (CN-AG-07 change 4, new item 26). Launch risk: `assumptions.md` R-1 (AIW-D146, under AIW-D66).
 
 ---
 
@@ -174,12 +177,12 @@ L40:
 > | FD-15 | AG-9 doc-metadata encryption | **B-1-derived rule** — metadata fields whose canonical class is in the B-1 Restricted list get envelope-encryption + masked audited reveal; binaries SSE + signed-URL |
 
 **(3) Proposed words.** The row is unchanged; the decision cell ends with:
-> *Reaffirmed 2026-10-11 (AIW-D58) against AG-07 v2.7 AG7-D10 and AG-7-88 ("Personal data SHALL NOT be masked on the client screen, list, search or export; no reveal step exists") and SA-11 v2.7 and SA-06, which applied AG7-D10: they come back to FD-15 for Restricted fields. The Restricted list (B-1) is unconfirmed Lead guidance; no counsel (AIW-D94). The AI sees status only, either way.*
+> *Reaffirmed 2026-10-11 (AIW-D58) against AG-07 v2.9 AG7-D10 and AG-7-88 ("Personal data SHALL NOT be masked on the client screen, list, search or export; no reveal step exists") and SA-11 v2.10 and SA-06, which applied AG7-D10: they come back to FD-15 for Restricted fields. The Restricted list (B-1) is unconfirmed Lead guidance; no counsel (AIW-D94). The AI sees status only, either way.*
 
 **(4) Why.** AIW-D58. The founder chose "Keep FD-15": "FD-15 stands: Restricted fields (passport and financial numbers) encrypted and masked with an audited reveal; the team brings AG-07 (AG7-D10) back to it (change note in Step 3); counsel confirms the Restricted list (B-1) before any is stored. The AI sees status only, either way." The drifted wording is in:
-- AG-07 v2.7 L718;
-- SA-11 v2.7 L1;
-- SA-06 v3.3 L55.
+- AG-07 v2.9 L721 (AG-7-88) and L223 (AG7-D10);
+- SA-11 v2.10 L10 (its v2.6 row, which applied AG7-D10);
+- SA-06 v3.6 L66.
 
 Proposals row of 10 Oct (Practice expert, two Restricted-field models).
 
@@ -246,21 +249,21 @@ L57 (extract, first sentence):
 
 **(3) Proposed words.** Each row keeps to the founder's decision; where a word comes from a source rather than the decision, the source is in brackets.
 
-> ## RESOLVED 2026-10-11 — Workstream 2 (AI teammates) batch
+> ## RESOLVED 2026-10-11 — Workstream 2 (assistants) batch
 >
 > > **Origin:** the founder's answers of 11 Oct 2026 to the Workstream 2 decision list, one by one, recorded with his words in Workstream 2's decision record (AIW-D36 to AIW-D72). FD-16 keeps its words; its reading on document typing is on its own row. Rows marked *provisional* stay provisional until counsel has read them (AIW-D64; counsel engaged by 31 Oct 2026, AIW-D68). Numbers FD-23 onward are proposed; the founder assigns them.
 >
 > | # | Decision | Category | RESOLVED as |
 > |---|----------|----------|-------------|
-> | FD-23 *(to assign)* | Whose AI teammate | D | AIW-D13 is read as **a named person**: any named staff member may have an AI teammate; the licence sits with the approver (AIW-D36, AIW-D26). The **delegation record** (which AI teammate works for which named person, with a subset of that person's permissions, on which files, from when until when; no identity and no permissions of its own) is consistent with FD-16, and the named person counts as the preparer for four-eyes; the delegation record stays a proposal until written into the requirement documents (AIW-D33; legal reading: unconfirmed Lead guidance; no counsel (AIW-D94)). |
+> | FD-23 *(to assign)* | Whose assistant | D | AIW-D13 is read as **a named person**: any named staff member may have an assistant; the licence sits with the approver (AIW-D36, AIW-D26). The **delegation record** (which assistant works for which named person, with a subset of that person's permissions, on which files, from when until when; no identity and no permissions of its own) is consistent with FD-16, and the named person counts as the preparer for four-eyes; the delegation record stays a proposal until written into the requirement documents (AIW-D33; legal reading: unconfirmed Lead guidance; no counsel (AIW-D94)). |
 > | FD-24 *(to assign)* | The deadline watch | D | **The deadline watch is the product's own Minder**, sold as the free hook, described as the product's deadline watching, never as AI. The managers' at-risk list is the product's own two views. (AIW-D37) |
 > | FD-25 *(to assign)* | Practice expert, version 1 | D | **Four fixed questions from a menu, answers built by rule from four sources, one optional AI summary line**; free questions are version 2. The rule-built answers go to the team as a change to AG-14. (AIW-D39) The expert's answers work with AI off (AIW-D54). |
-> | FD-26 *(to assign)* | Where AI processing happens | B | **AI processing of client data happens only in Canada** (AG11-D15 wording, for firms' data and Expat Ready's own support tickets). The provider is chosen from Canada-region options, confirmed by one test call; if no capable option passes, the question returns to the founder. *Wording provisional until counsel.* (AIW-D52, AIW-D69) |
-> | FD-27 *(to assign)* | Ten standing calls on the AI layer | D | (1) seeds and the product's own AI reading stay firm automations, unmetered; (2) the readiness report is built by rule, and the officer's acceptance is the submission for review; (3) money: the AI teammate proposes, a person saves in the product's screen; (4) the expert's line is display-only; (5) no AI teammate task can close a deadline; (6) no AI text in the retainer; (7) the Pack author's AI is read-only; (8) platform runs are stamped with one firm, with no cross-firm sweep in version 1; (9) team documents never override founder decisions by date; (10) the expert's answers work with AI off. (AIW-D54) |
+> | FD-26 *(to assign)* | Where AI processing happens | B | **Client data is stored in Canada; AI and OCR processing of client data happens in Canada or the United States only**, under written no-training and zero-retention terms, never through global routing, with client notice (for firms' data and Expat Ready's own support tickets). The provider is chosen from qualifying options, confirmed by one test call; if no capable option passes, the question returns to the founder. *Wording provisional until counsel.* (AIW-D52 as changed by AIW-D147 on 14 Oct 2026; AIW-D69) |
+> | FD-27 *(to assign)* | Ten standing calls on the AI layer | D | (1) seeds and the product's own AI reading stay firm automations, unmetered; (2) the readiness report is built by rule, and the officer's acceptance is the submission for review; (3) money: the assistant proposes, a person saves in the product's screen; (4) the expert's line is display-only; (5) no assistant task can close a deadline; (6) no AI text in the retainer; (7) the Pack author's AI is read-only; (8) platform runs are stamped with one firm, with no cross-firm sweep in version 1; (9) team documents never override founder decisions by date; (10) the expert's answers work with AI off. (AIW-D54) |
 > | FD-28 *(to assign)* | Hard limits and the blocked list | B | **Adopted, provisional until counsel reads them**, with one exception: the Lifecycle Keeper may draft a consented message to a past client for a person to approve after the file closes. (AIW-D55) |
 > | FD-29 *(to assign)* | No active licensed user in the firm | B | Client-facing preparation **pauses while a firm has no active licensed user**; on by default; the Owner may switch it off with a recorded reason. *Provisional until counsel.* (AIW-D56) |
 > | FD-30 *(to assign)* | Approving many items at once | B | Anti-rubber-stamp safeguards on every *approve all*: low-confidence values opened first; a few values hidden for the approver to fill, match rate recorded; an alarm when a person's agreement rate climbs suddenly. ~~*Provisional until counsel.*~~ *Final by AIW-D108 (12 Oct 2026); see change 15.* (AIW-D57) |
-> | FD-31 *(to assign)* | Release scope | C/D | **Release 1 does not launch without the AI teammates** (reaffirms AIW-D14 and AIW-D21). (AIW-D66) |
+> | FD-31 *(to assign)* | Release scope | C/D | **Release 1 does not launch without the assistants** (reaffirms AIW-D14 and AIW-D21). (AIW-D66) |
 
 The log's version line moves from 1.5 to 1.6 when the founder places it.
 
@@ -268,7 +271,7 @@ The log's version line moves from 1.5 to 1.6 when the founder places it.
 - AIW-D36 "Yes, a named person";
 - AIW-D37 "Product feature, sold honestly";
 - AIW-D39 "Accept; answers go to the team";
-- AIW-D52 "Only in Canada";
+- AIW-D52 "Only in Canada"; region part replaced by AIW-D147 "Canada or US (Recommended)" (14 Oct 2026; the region part of FD-26);
 - AIW-D54 "Confirm all ten";
 - AIW-D55 "Adopt, with the one exception";
 - AIW-D56 "Yes, pause by default";
@@ -285,7 +288,7 @@ AIW-D71 and AIW-D72 are not rows here: AIW-D72 is FD-17 kept in full (change 6),
 
 The log is "the single sign-off artifact" (L12), so a decision the team must follow belongs here. IMP-32 made the same point for the co-founder's AG11-D rows; this note does not ratify those.
 
-**(5) Knock-ons.** AG-11 §0: where they touch these founder decisions, the AG11-D rows sit below them (CN-AG-11). The Program Charter's release-scope text is in `ai-workers/charter-edits.md` §1. The counsel pack (`ai-workers/requirements/counsel-pack.md`, written by the Lead) holds the Lead's unconfirmed guidance on the rows once marked provisional (AIW-D94). The platform values of the approve-all safeguards (FD-30) are platform settings in SA-12-33, held on by the approve-all part of the *founder safeguards* setting until a recorded founder decision ends that part (CN-SA-12 change 3).
+**(5) Knock-ons.** AG-11 §0: where they touch these founder decisions, the AG11-D rows sit below them (CN-AG-11). The Program Charter's release-scope text is in `ai-workers/requirements/charter-edits-2026-10-14.md` §1 and §2. The counsel pack (`ai-workers/requirements/counsel-pack.md`, written by the Lead) holds the Lead's unconfirmed guidance on the rows once marked provisional (AIW-D94). The platform values of the approve-all safeguards (FD-30) are platform settings in SA-12-37, held on by the approve-all part of the *founder safeguards* setting until a recorded founder decision ends that part (CN-SA-12 change 3).
 
 ---
 
@@ -303,7 +306,7 @@ L52 (extract, third and fourth sentences):
 
 **(4) Why.**
 - **AIW-D71**, 11 Oct 2026. The founder chose "Not an effect, but after the pilot": "An internal, reversible, audited filing label (the Reader's proposed document type) is not an "effect" under FD-16, so high-confidence types may later be applied without a person's click; **in the pilot every type still goes to a person**, and the pilot's accuracy figures set the threshold (IMP-30). Values read from documents always need a person (AG11-D10)."
-- The reading closes `case-assistant.md` §11 decision 8 and assumption AIW-A10 (AIW-D71).
+- The reading closes the 10 Oct case design's open decision on automatic document typing (now AW-1-78) and assumption AIW-A10 (AIW-D71).
 - FD-16's "human-approved before it has effect" is what the reading interprets, so the reading belongs on FD-16's row, where the team will look for it.
 
 **(5) Knock-ons.**
@@ -333,18 +336,18 @@ L32:
 
 ---
 
-## 11. The reach of AIW-D52: Canada for every Expat Ready AI call
+## 11. The reach of AIW-D52: the same rule for every Expat Ready AI call (Canada or the US since AIW-D147)
 
 **(1) What it changes.** The proposed row FD-26 of change 8 ("Where AI processing happens").
 
-**(2) Current words.** Change 8's proposed FD-26 row: "**AI processing of client data happens only in Canada** (AG11-D15 wording, for firms' data and Expat Ready's own support tickets)."
+**(2) Current words.** Change 8's proposed FD-26 row (as changed 14 Oct 2026): "**Client data is stored in Canada; AI and OCR processing of client data happens in Canada or the United States only**, under written no-training and zero-retention terms, never through global routing, with client notice (for firms' data and Expat Ready's own support tickets)."
 
 **(3) Proposed words.** FD-26's row gains, after its first sentence:
-> **Every AI call Expat Ready makes**, including pack drafting that holds no client data, happens only in Canada under the one published provider record (SA-8-49) (AIW-D74).
+> **Every AI call Expat Ready makes**, including pack drafting that holds no client data, follows FD-26: processing in Canada or the United States only, under no-training and zero-retention terms, never through global routing, under the one published provider record (SA-8-66) (AIW-D74, as corrected after AIW-D147).
 
-**(4) Why.** AIW-D74, 11 Oct 2026 (open point 3). The founder chose "Yes, Canada for all AI": "AI processing for **every** AI call Expat Ready makes, including pack drafting that holds no client data, happens only in Canada under the one published provider record (SA-8-49). The Pack author's assistant may make model calls once that record is published."
+**(4) Why.** AIW-D74, 11 Oct 2026 (open point 3). The founder chose "Yes, Canada for all AI": "AI processing for **every** AI call Expat Ready makes, including pack drafting that holds no client data, happens only in Canada under the one published provider record (SA-8-66). The Pack author's assistant may make model calls once that record is published."
 
-**(5) Knock-ons.** SA-08 SA-8-51 (CN-SA-08 change 2); SA-01 and SA-01B drafting steps (CN-SA-01, CN-SA-01B); AW-02 (the Pack author's AI).
+**(5) Knock-ons.** SA-08 SA-8-68 (CN-SA-08 change 2); SA-01 and SA-01B drafting steps (CN-SA-01, CN-SA-01B); AW-02 (the Pack author's AI).
 
 ---
 
@@ -352,7 +355,7 @@ L32:
 
 **(1) What it changes.** FD-4, Wave-0 table (L29), the amendment of change 1.
 
-**(2) Current words.** Change 1's proposed amendment: "reference data in a published country pack (fees, wage tables) also needs two people, matching SA-01 v2.2 §3.12 (AIW-D48)".
+**(2) Current words.** Change 1's proposed amendment: "reference data in a published country pack (fees, wage tables) also needs two people, matching SA-01 v2.4 §3.12 (AIW-D48)".
 
 **(3) Proposed words.** The amendment of change 1 ends with:
 > ; **and in a published Practice Pack**, as for country packs (FD-22 A22-6.6) (AIW-D75)
@@ -385,11 +388,11 @@ L32:
 **(2) Current words.** As change 6.
 
 **(3) Proposed words.** The decision cell also ends with:
-> *Decided 2026-10-11 (AIW-D77): Release 1 records money returned to a client from trust (for example an unused retainer), so the trust ledger stays right; the team designs the mechanics under FD-17; the platform never moves money (FD-12); consultation refunds stay as FD-13 and AG-4-46 have them. No AI teammate records a refund.*
+> *Decided 2026-10-11 (AIW-D77): Release 1 records money returned to a client from trust (for example an unused retainer), so the trust ledger stays right; the team designs the mechanics under FD-17; the platform never moves money (FD-12); consultation refunds stay as FD-13 and AG-4-46 have them. No assistant records a refund.*
 
 **(4) Why.** AIW-D77, 11 Oct 2026 (open point 6). The founder chose "Yes, team designs how": "Release 1 records **money returned to a client from trust** (for example an unused retainer), so the trust ledger stays right; the team designs the mechanics under FD-17 (AG-06 §13 item 11); the platform never moves money (FD-12); consultation refunds stay as FD-13 and AG-4-46 have them. No assistant records a refund."
 
-**(5) Knock-ons.** AG-06 §13 item 11 (h) (CN-AG-06 change 6): refunds of trust money are decided for Release 1; the mechanics stay the team's. AW-01 AW-1-39 (no AI teammate records a refund).
+**(5) Knock-ons.** AG-06 §13 item 11 (h) (CN-AG-06 change 6): refunds of trust money are decided for Release 1; the mechanics stay the team's. AW-01 AW-1-39 (no assistant records a refund).
 
 ## 15. The Workstream 2 (AI) decisions of 12 Oct 2026, and what they change in this note's earlier rows
 
@@ -398,16 +401,16 @@ L32:
 **(2) Current words.** FD-16 (L52) as change 9 leaves it. Change 8, FD-27 call (3): "money: the assistant proposes, a person saves in the product's screen"; FD-28: "**Adopted, provisional until counsel reads them**, with one exception …"; the block's origin line: "Rows marked *provisional* stay provisional until counsel has read them (AIW-D64; counsel engaged by 31 Oct 2026, AIW-D68)." Change 14: "No assistant records a refund."
 
 **(3) Proposed words.**
-- (a) FD-16 adds: *Narrowed 2026-10-12 (AIW-D92): every capability and output belongs to one of four classes (rules only, AI explains rule results, AI language, person only); the phrase "AI-assisted" is not used for assessments, scoring or any rules-only capability. Read 2026-10-12 (AIW-D93, D103): AI teammates may call read tools and action tools under the delegated person's permission and may prepare consequential acts, but every act with an effect is approved by an authorised person before it takes effect, bound to the exact preview; "no model output is ever a decision" stands.*
-- (b) FD-27 call (3) becomes: "money: the AI teammate prepares invoices and proposed trust entries; an authorised person approves the exact preview before the product executes; a payment is still recorded by a person; the platform never moves money (AIW-D103; FD-12)". FD-28 becomes: "**Adopted** (AIW-D55), with one exception …; **for invoices, proposed trust entries, exports, deletion requests, settings changes and signature workflows, replaced by action-specific controls** (AIW-D103): the AI prepares, an authorised person approves the exact preview before execution, signatures stay with the signer, and the AI never grants itself permissions or bypasses product controls." The origin line becomes: "No counsel is engaged (AIW-D94, 12 Oct 2026); rows once marked *provisional* are the Lead's guidance, unconfirmed: no counsel; FD-30 is final (AIW-D108)." **FD-30** becomes: "Anti-rubber-stamp safeguards on every *approve all*: low-confidence values opened first; a few values hidden for the approver to fill, match rate recorded; an alarm when a person's agreement rate climbs suddenly; identity details, consequential values and conflicts each checked explicitly, and a spot check never counts as checking every value. **Final** (AIW-D108, 12 Oct 2026; AIW-D100); tuned later only from pilot evidence."
-- (c) Change 14's last sentence becomes: "An AI teammate may prepare the return of trust money for an authorised person's approval; it never executes it (AIW-D103)."
+- (a) FD-16 adds: *Narrowed 2026-10-12 (AIW-D92): every capability and output belongs to one of four classes (rules only, AI explains rule results, AI language, person only); the phrase "AI-assisted" is not used for assessments, scoring or any rules-only capability. Read 2026-10-12 (AIW-D93, D103): assistants may call read tools and action tools under the delegated person's permission and may prepare consequential acts, but every act with an effect is approved by an authorised person before it takes effect, bound to the exact preview; "no model output is ever a decision" stands.*
+- (b) FD-27 call (3) becomes: "money: the assistant prepares invoices and proposed trust entries; an authorised person approves the exact preview before the product executes; a payment is still recorded by a person; the platform never moves money (AIW-D103; FD-12)". FD-28 becomes: "**Adopted** (AIW-D55), with one exception …; **for invoices, proposed trust entries, exports, deletion requests, settings changes and signature workflows, replaced by action-specific controls** (AIW-D103): the AI prepares, an authorised person approves the exact preview before execution, signatures stay with the signer, and the AI never grants itself permissions or bypasses product controls." The origin line becomes: "No counsel is engaged (AIW-D94, 12 Oct 2026); rows once marked *provisional* are the Lead's guidance, unconfirmed: no counsel; FD-30 is final (AIW-D108)." **FD-30** becomes: "Anti-rubber-stamp safeguards on every *approve all*: low-confidence values opened first; a few values hidden for the approver to fill, match rate recorded; an alarm when a person's agreement rate climbs suddenly; identity details, consequential values and conflicts each checked explicitly, and a spot check never counts as checking every value. **Final** (AIW-D108, 12 Oct 2026; AIW-D100); tuned later only from pilot evidence."
+- (c) Change 14's last sentence becomes: "An assistant may prepare the return of trust money for an authorised person's approval; it never executes it (AIW-D103)."
 - (d) New rows (numbers to assign by the founder):
 
 > | # | Decision | Category | RESOLVED as |
 > |---|----------|----------|-------------|
-> | FD-32 *(to assign)* | AI tools | D | AI teammates may call read tools and write or action tools, always under the delegated person's own permission; every action with an effect waits for a person's approval, then the platform performs it; text inside client documents never chooses a tool. (AIW-D93) |
+> | FD-32 *(to assign)* | AI tools | D | assistants may call read tools and write or action tools, always under the delegated person's own permission; every action with an effect waits for a person's approval, then the platform performs it; text inside client documents never chooses a tool. (AIW-D93) |
 > | FD-33 *(to assign)* | No external validation | C | No counsel and no consultant conversations; building never waits on validation; legal points are the Lead's guidance, unconfirmed. (AIW-D94; supersedes AIW-D64's counsel gate and AIW-D68) |
-> | FD-34 *(to assign)* | Who runs the assessment | D | An AI teammate may run the eligibility assessment under the delegated person's permission; the rules engine calculates every result; telling a lead or client stays with a licensed person. (AIW-D96; reopens AIW-D40) |
+> | FD-34 *(to assign)* | Who runs the assessment | D | An assistant may run the eligibility assessment under the delegated person's permission; the rules engine calculates every result; telling a lead or client stays with a licensed person. (AIW-D96; reopens AIW-D40) |
 > | FD-35 *(to assign)* | Rules under the AI | D | Workstream 2 assumes the rules engine and packs are complete and tested (Workstream 1's); the AI uses only approved engine results, explains them with sources and the pack version, stops on ~~missing,~~ stale or conflicting evidence needed for the step (a newer pack is a reason to re-run, not a stop); expected missing inputs do not stop the rules engine, which records an incomplete result with explicit gaps and invents no value, while the AI keeps collecting the facts through approved questions or templates and pauses any explanation or action that needs a complete result; unrelated work is never stopped; eligibility content, "possibly eligible" included, reaches a lead only through the consultant's audited share; explanations are reviewed by a licensed person; no claim that the AI detects incorrect rules. (AIW-D98, point 3 amended by AIW-D117, 13 Oct 2026; AIW-D41) |
 > | FD-36 *(to assign)* | Autonomy | D | Values from uploads reviewed in one sitting, provisional until approved, explicit checks where it matters (AIW-D100); two presets, "Review each step" (default) and "Review at checkpoints", and a grid that never grants access (AIW-D101); earned Auto for routine internal work only (AIW-D104); published templates' automatic use counts as approval inside AI jobs, AI-written text still approved (AIW-D105). |
 > | FD-37 *(to assign)* | Leads at launch | D | Approved templates and guided intake questions automatically; AI-written replies approved; **a conversational AI for leads in Release 1** (administrative intake, FAQs, booking): the AI only sorts the question into an approved topic, a rule picks the firm's published answer, the Scheduler books, anything else, eligibility included, goes to a person; nothing AI-written reaches a lead unapproved. (AIW-D102 as amended by AIW-D107) |

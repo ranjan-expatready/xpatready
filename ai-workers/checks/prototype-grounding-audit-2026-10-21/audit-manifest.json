@@ -1,0 +1,638 @@
+{
+  "revision": "grounding-audit-frozen-2026-10-21T063943Z",
+  "finalized_utc": "2026-10-21T06:49:07.534840+00:00",
+  "session": "01a1598d-8aa1-7ea3-b353-5c5b5e1a9a18",
+  "scope": "Grounding/alignment audit of current saved prototype; frozen working snapshot, not silently the earlier handoff",
+  "maker_manifest_sha256": "eafdd3de28b1f1acdfb188f94fd866506c707d86c7f264a11ea9b5088f18d965",
+  "maker_manifest_match_count": 83,
+  "maker_manifest_total": 90,
+  "original_frozen_inputs_verified_unchanged": 118,
+  "files": [
+    {
+      "path": "alignment-probe-results.json",
+      "sha256": "6b199523137e37a646bedb7cd4155a1c1b4f4b824c919eb47140815a19513551",
+      "kind": "reviewer evidence"
+    },
+    {
+      "path": "alignment-probes.mts",
+      "sha256": "25bc98bfe6216d2fa5263d7039a98b2869f5ea1c91df072a91540fff51fc0852",
+      "kind": "reviewer evidence"
+    },
+    {
+      "path": "engine-baseline-output.txt",
+      "sha256": "dd7e5b090f26c1db3e8aca33f31fb037dc36d67ef3dc2f06e044a045dd655b61",
+      "kind": "reviewer evidence"
+    },
+    {
+      "path": "freeze-manifest.json",
+      "sha256": "90075d31b942a715d7703d17bfbad99a07f129fb01f0f3880a93938e55fc287c",
+      "kind": "reviewer evidence"
+    },
+    {
+      "path": "prototype/contracts/combination-config.v0.schema.json",
+      "sha256": "41bc272f40a7014fc799db8a7c5f3751b4848a48c7f252835915f980eca80f1b",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/contracts/drafting-run.v0.schema.json",
+      "sha256": "8af4bed576beb31d2e8b1f5b5c0822b86b7a1bd615bc3bc6a09614b5338f89fc",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/contracts/field-map-entry.v0.schema.json",
+      "sha256": "571484bcec9623134eaa3bb0ca4f44f78943986f63f4216f72823878d40ad27b",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/contracts/fixtures/drafting-run.valid.json",
+      "sha256": "2964d345772420619a3097f0c218316310183b7a77fec6bb933d7b2c272ce846",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/contracts/predicate.v0.schema.json",
+      "sha256": "be8a6f5490e511ba38ae2aff5cc6babbce3134c0c60254eb555b24a5811ac63f",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/contracts/release-record.v0.schema.json",
+      "sha256": "36736064541872682248792982d1f83f5c7f0edba45968817af62900d4e720da",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/contracts/released-configuration.v0.schema.json",
+      "sha256": "8c2c7072c5459479f95cf3028155c581d072a3220bfa1f0908bc578d947172fb",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/contracts/rules.ts",
+      "sha256": "1106d6ab8aea6b5e06f0492dd140743b806244bd9aa47db202de78e240f86093",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/expected/p5-case-c1.json",
+      "sha256": "bc03b207137a2e0c2c2c9e773886abf76530d606a9f2afd612bd83a8e9c9361d",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/p1/inventory/imm5257e.inventory.json",
+      "sha256": "004fc9fb8b3162a12ae626a3b666fb65a4ceb7dd537679ccc47114d3aa31208b",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/p2/jobs/studio-fieldmap-imm5257e.json",
+      "sha256": "b66aaed8fea313f215272002b4a2afd54a8b15aeac3d9fae6cf8f47a17996e81",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/p2/policy.ts",
+      "sha256": "4856a1fa9e16d4b7b7fef2afde4f047d96ee185e272f26c51346ec4e8b2b048f",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/p2/runs/studio-fieldmap-imm5257e-live-20261021t043621474z.json",
+      "sha256": "83717305340dbc27ceb9e08f8b07b49b7bd3c881ac2ba650dca41256e51779cb",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/p2/runs/studio-fieldmap-imm5257e-live-20261021t053359528z.json",
+      "sha256": "b0e1fb986beb2f29e040321fd7f72ab7e0e3b4e19d97cab9869e0b473b69a38c",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/p3/releases/c1-v3/configuration.json",
+      "sha256": "577de9e27851c2d6edc468231834460d64a184ec25f512689285b34ddd3e2459",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/p5/reader/doc-types.json",
+      "sha256": "1b09f1cbafabfe3aa4c944b87722a5cd59bdde4ba05c6e5320ceae82c13aecb1",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/p5/transforms.ts",
+      "sha256": "ad55f31542d44f68061db2e889d9c069f89795eacf0394355d52df65f318c494",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/requirement-coverage-2026-10-20.md",
+      "sha256": "e22d040f25729d5f834f0d7de912d3a1ac15b886b14db3f78f452941e12ff4a9",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/PLAN-2026-10-21.md",
+      "sha256": "0869dd34da41989eec6ce6b51da047290930318a4111d3559f08ebe925518ebf",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/api/src/ai.ts",
+      "sha256": "d03b07d04b0beca7fabf6b89b27307602ef49287377509546adb393b871789a7",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/api/src/catalogue.ts",
+      "sha256": "baf56a226963ae77bdc7148d1c681db5e25d7fd7dbc30bb590c84c84fb7e32ec",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/api/src/core.ts",
+      "sha256": "53dfc70d7e93eb9690480ddfee8a1d5881c4802c01f8204717ffd811e0e06aea",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/api/src/demo.ts",
+      "sha256": "8bb64f0e82dd2002aaa83c5fc93fcbe0f0d9622b23e62b80d21a706f4ddf1f80",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/api/src/fill.ts",
+      "sha256": "dfe769056ff2265e762be3b2158a164e92660a1e38d8f80ad948a5a998ce7c91",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/api/src/main.ts",
+      "sha256": "a70c75f9e597ed80a03b56eb759c3a130d2f2fff57e8bbec5cf6d7c40e4fc21d",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/api/src/sources.ts",
+      "sha256": "b944ea1a9100ffa025ec6b87f4ed0c33dbcc5c8c930325567fa3ce69cd7e7367",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/api/src/studio.ts",
+      "sha256": "5bd62f5ef185e29f92561a057ee204a03941d27e0f788ea132087fa5251f2873",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/api/tsconfig.json",
+      "sha256": "90e6fbca21705c107db27f9abb98ed78731688cdaa303a97e5b98b6fafa5c014",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/engine/import.ts",
+      "sha256": "c9cb756fc6fdd4d4422628bd20b924a0251abd701508e459ca623368992e1530",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/engine/normalize.ts",
+      "sha256": "907c31b92c18fb6134eaab8e0e903d444be2dc71e7fda6784d694a62c396c84a",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/engine/render.ts",
+      "sha256": "ea487704313a2e7b370dcfc111dbb31221ed754f06e71ac3c5834f336ec960dc",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/engine/snapshot.ts",
+      "sha256": "6ef2e288b2fea9212e877a1b67280d1f0c45edb906a99769b250651fce85dac1",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/engine/validate.ts",
+      "sha256": "ad77a472c1989d9da0d483798bb0a744a32bb38426b5889383a32b2f6a00cff4",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/A0-reset.png",
+      "sha256": "37d5234cfc3967b0f74b77284e1bc86520facecf9548b535f42f0530e760443e",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/A1-empty.png",
+      "sha256": "4ab0840ae5e87c98f3205a0dc268b32df05cc7637deb4e8c3026c75afe809179",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/A1-programs.png",
+      "sha256": "36c7c9ab1675f23318d5d8b055e77feeb7389471f8a54b0683d08549e250890e",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/A2-overview.png",
+      "sha256": "acb76dd63c468992a3d1ffd04bd36ab2e1252c380910a6119b70ea2c873d450d",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/A3-preview-forms.png",
+      "sha256": "d66c7ddfb11519fe5fa5eb09ba25399f295c01c31633064996478800b23c411d",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/A4-pdf-fill.png",
+      "sha256": "8e3667f310354a8f792b296feb7c909544b2c2c0a9a0a7d132c12fc5d38daa01",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/A5-configuration-documents.png",
+      "sha256": "8158a2765575343152ab065d6ffd1bbb4376f95fd510d0c740cccf04c6f3114e",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/A6-draft-preview-checklist.png",
+      "sha256": "ed1009b41769ff95c72bb9e1bfd913244c77d7d125a3bfb68a228b8e69c24e43",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/A7-review-released.png",
+      "sha256": "1052a5f8efff6071fe8b33250d94639ec942fd306c85fae49119feafd162a589",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/A8-imm5257-guarded-path.png",
+      "sha256": "a13bf990617bac2bbc5926932beccfae731518b94e9085828f49c7fbd1254869",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/A9-field-reuse.png",
+      "sha256": "c24f2a400b98e8ddc442b0b08d5651c9e03515be68d695026a4506c810b46175",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/B0-reset.png",
+      "sha256": "dc2268954c46e85ce4eef98ee32180294c46bcbead54f9eca5c33a9233d80625",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/B2-sources.png",
+      "sha256": "abc2977f549f277522fb37ce8d78fdd421d9292cccece971d764dadb12484654",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/B3-imm1295-proposals.png",
+      "sha256": "39c571a1c3cc0d77eefee3f5d2ef80a97e93baf902fbae111957e6632a8cd75c",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/B4-imm5476-normalisation.png",
+      "sha256": "ef97027b553892f7406c951a5a9814f892f361fa6f9d1639868746d65c830b9a",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/B5-coverage-before-placement.png",
+      "sha256": "8fea17dd1c8ebbacbfdcdfd140e35229c7e54ec6be85e26dafdf63ee7525cd48",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/B7-scratch-released.png",
+      "sha256": "a4718d28d216b545e1d57e03e949385418c2b01b4ec7285fb079aa536f841c22",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/C0-reset.png",
+      "sha256": "f9f4bbfd21d7ea3bdb8b4f2486371f66afd37bfefaccdfd01c1ff18d2310f128",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/C1-programs-after-rerun.png",
+      "sha256": "848a1c671c1468c69e71b243b3b17c2c0139a5020e9cc3453d158c37c0597cfd",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/downloaded-IMM1295-principal-2026-10-21T0522.pdf",
+      "sha256": "529d8d463fccbbe953a2090bb04980d0c43b9ec300b32d60dd0b537e66b565bf",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/not-an-official-form.pdf",
+      "sha256": "8f6fd1bbe3f84cdc46286be9a7a8dcb130cfc49907dd5315fefe0befa0c7613a",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/evidence/browser-run-1/studio-browser-run.json",
+      "sha256": "bf2dcd5b5b95a512482cb628c51997072f1abc1c49c936bc607b69f0b3e71d4d",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/package.json",
+      "sha256": "7ed8dc6265d38f7c42535b91d3904b0ebb5b80c4a8416f965e0621c1af7be8c9",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/prisma/migrations/20261021033241_studio_init/migration.sql",
+      "sha256": "70a7e1a1e2c92450685ac3b856e663bb52c088bf9f38c7cae3ac169c75c7193a",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/prisma/migrations/20261021034814_document_type_supplies/migration.sql",
+      "sha256": "55bce34ee6c9efa1a31c90faed7b347b1b769559d8eb68c49eab81703efb8e34",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/prisma/migrations/20261021035653_normalization_edition_optional/migration.sql",
+      "sha256": "c30bc608cf9da560f97a355c1c9600ddfc8352eca1fbb2fc9c3a81fb5e9edf5a",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/prisma/migrations/20261021070000_ai_batches/migration.sql",
+      "sha256": "0f9df3357ca1d0c76e57ab8153168dad298a0c13c4e301abbd34528042692cb0",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/prisma/migrations/migration_lock.toml",
+      "sha256": "99836963713b4f5b269ad49af0ed3d7b0b2e336115c2f92dc9ac683d139d0900",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/prisma/schema.prisma",
+      "sha256": "fea896597a5b63dd78eb919fc6c2b9a97566b5d6e411cbde0791b59e40776c1e",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/prisma.config.ts",
+      "sha256": "feec9fa13b2c2d9624bb8bd1ae855361d0c6691f4994d3681dc8812f8195952a",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/start.sh",
+      "sha256": "320aa2eabbd37b79df79233da1bb7283ef2cb8569e2e315ed90051a08c53c1f3",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/stop.sh",
+      "sha256": "b824555d21df433ff99620f20c7347211515304ef5b2851c53b76aa33dfa151f",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/tests/check_engine.ts",
+      "sha256": "81e13b486c3519ff195733f69a6e4ececa2597ec859b1a03fc922aa5be437ea9",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/tests/check_studio_browser.cjs",
+      "sha256": "47b464a6c2e870224e4e80fb483a0e18610b714ce2c945933d4147ed806b68f4",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/tools/correct_unbilled_p2.py",
+      "sha256": "8917a897826e43c995061b8253f80b76f67acfa8c275bdbee4d16435bd0ea97d",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/tools/read_form.py",
+      "sha256": "e9c3c39b6359f105048feb13a8083748452d4959808acc525c260964b64673ab",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/tools/restart-api.sh",
+      "sha256": "ead2297fea4e883160fc08cb06c0c1a9c3972b47b171a3832f1bebc3057c3b90",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/index.html",
+      "sha256": "4c49aea7b052404d4e23f4071805ede5e7456d61c75b1f4f2af4ed25443601db",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/public/brand/expat-ready-notagline-dark.svg",
+      "sha256": "cbbdd1473e369790195b5e188897cab0631b32cde694cca7e8afa5be5a235036",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/public/brand/expat-ready-notagline.svg",
+      "sha256": "2c98222d2e2f6145ce77210cc633254d813bd9a60c4c163f30534a355d7e5e02",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/public/brand/favicon-dark.svg",
+      "sha256": "3eeaec7f9e13bd0e0e4c7a31056bdc11d01c2d8b1f5d201160e9aab3f9c8349f",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/public/brand/favicon-white.svg",
+      "sha256": "8e602056c992455e2c3e2f10b93e001643df7585f95722c627893c6b6b87a71f",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/public/fonts/inter/OFL.txt",
+      "sha256": "3b0a5fca3d17942cde889069889dedbbbd075e9b599968c82a95f4d944e9b345",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/public/fonts/inter/README.md",
+      "sha256": "852a873e1ee7c644c8d857a1430c3d9641eb3e69d75a25a823ce5d11033fc012",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/public/fonts/inter/inter-latin-ext-wght-normal.woff2",
+      "sha256": "34b9c504cab7a73e37b746343a449132e56cf7b5481af2cb81dc74dcff25c956",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/public/fonts/inter/inter-latin-wght-normal.woff2",
+      "sha256": "3100e775e8616cd2611beecfa23a4263d7037586789b43f035236a2e6fbd4c62",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/App.tsx",
+      "sha256": "3174212caa4ac2d9ac07dd95500e3ccbccd1fff12eff61490642000368769cd4",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/components/conditions.tsx",
+      "sha256": "a5b52fe52499afceec8d31ed8520968586f29034c3afa2fe4b1e0d0bec12b64b",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/components/participants.tsx",
+      "sha256": "d871ab1b4c24d91d6af8f86e41c53761821d330b1a4c3d2c91ea9d4c6e3dae5c",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/components/ui/badge.tsx",
+      "sha256": "c62c192e77b03971a4dd69944cc27f26ca040ea9f4ad3485646ba0b448e19393",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/components/ui/card.tsx",
+      "sha256": "98bfbaa726ea2a73090bf05a3839bf9964ecc2110616c9888b2db98008fbc52c",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/components/ui/controls.tsx",
+      "sha256": "7a0477f79c3b38bdb77ef0dc9f44b97953ae61cd067ed75c727f21adbbd5ee57",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/components/ui/empty-state.tsx",
+      "sha256": "fd2aa29a24a8b9e2790518e789dbbff4ab71d1ddb734602ac6edfce9c2275fd9",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/components/ui/error-state.tsx",
+      "sha256": "ffccf44305cef082b1e27655ef8d5144241faf7f91f688e7426620dd9bef0bcf",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/components/ui/spinner.tsx",
+      "sha256": "18ea058ecc396c4e037768089a479ce239da34cb1184847429a9a6d752a81391",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/components/ui/tabs.tsx",
+      "sha256": "fb05a602c471068092f66770d4882ae6ebbf69548a2b8fb211e4d9f8caa8285d",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/env.d.ts",
+      "sha256": "35d26ea66c86da9701e4f4b467913481ffeae910761cea34c775c5dacb7f8eaa",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/lib/api.ts",
+      "sha256": "3041c31f21cf6f55d8433b066a585a8ebc4f3788b18384bc43becd12c593ea18",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/lib/utils.ts",
+      "sha256": "b729874baee6cbee06813e93a6d9c4152ddedd2c96fa418ef9c35d36f27fff15",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/main.tsx",
+      "sha256": "6d45e2bd16e1160760a5e895c19af07ca0f0496ae6ad20073cafdee8867e6fd6",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/pages/composition.tsx",
+      "sha256": "b2009f757a3e5342c32b2233c0946391e5014ee94ba3908902fe9df3ca21a39d",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/pages/configuration.tsx",
+      "sha256": "5c269f1275e2a2fb5e4f98ed1d086a6abbfbc149e496b9df79ed8eddbf03996e",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/pages/history.tsx",
+      "sha256": "6d7e66f59fd0cf5de91dcc7b2359dc1f1ff34b1d607abd376978e4fce0321ec4",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/pages/job.tsx",
+      "sha256": "b29651754fab362d846f961f37442a8dcfd21db6668028ff1323a2952cbb56bb",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/pages/library.tsx",
+      "sha256": "b7e034556b2a709674c2b3011cf8456a33c9e1fe51f2a3abdcecef52958210a7",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/pages/preview.tsx",
+      "sha256": "017eea9340254ccb2b79b43f2171ecadb785f9e52c8c3fdacf81508263d7cdfc",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/pages/programs.tsx",
+      "sha256": "a35ff4947d0b09e38b1b3bf8b8a70f0814e33784f5898da7d4ab30375c50f6de",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/pages/review.tsx",
+      "sha256": "f9d838459eb43ad671dcc7e4c63468d1fdb6ecb1e3e3d200185c4137d10d0d9d",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/pages/sources.tsx",
+      "sha256": "210fce0c9a33fdfeb4d17c8ca7172dcdb0b7e155e38fc0e8d40bb496ec02c6ff",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/styles/index.css",
+      "sha256": "3db62e5d391c6164c8bb966b799121f3511f52ddbca2ed87519b9c7d2146469f",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/src/styles/tokens.css",
+      "sha256": "1c2eb3cd6aad24a74d8dae792d565288c706d80a91b192382a90fa9a4006d590",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/tsconfig.json",
+      "sha256": "253148612a257247ede4837254386bda3d3ca9c2b775441779977fd3d86c94b9",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio/web/vite.config.ts",
+      "sha256": "b1052a72ad1742bf029d5b368a01a045303bad89922c683677ddddddfef6a86c",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio-config-mvp-handoff-2026-10-21.md",
+      "sha256": "645b6894dd4ef4a0de7cc7fd7cbdb8aaec66e956681f3d56fe6ed0eb51825b84",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/studio-config-mvp-manifest-2026-10-21.sha256",
+      "sha256": "eafdd3de28b1f1acdfb188f94fd866506c707d86c7f264a11ea9b5088f18d965",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/tests/check_p2_launch.ts",
+      "sha256": "da45b5d95808d127d18620e824a5adb37257ac1bfb41d0d891783f96ef06aeec",
+      "kind": "frozen input"
+    },
+    {
+      "path": "prototype/trace.csv",
+      "sha256": "db2dd93498edb49a1846232653c07b797c5fa0d1117772071593555380ece29e",
+      "kind": "frozen input"
+    },
+    {
+      "path": "sources/AGENTS.md",
+      "sha256": "9221861f323e2cc2b8aff8ba52752ad1d8879fcbd8cc486ed54bef98b8a6eab0",
+      "kind": "frozen input"
+    },
+    {
+      "path": "sources/ai-workers/NEXT.md",
+      "sha256": "90ceece7dff1f72f22150fc560761862e3b2563e89a0ca3705f6be59af754240",
+      "kind": "frozen input"
+    },
+    {
+      "path": "sources/ai-workers/PROGRESS.md",
+      "sha256": "a325ea62f9a784cad7e3d5c240d421acfb15d6164c585ee2a13b1ce84d60fbd0",
+      "kind": "frozen input"
+    },
+    {
+      "path": "sources/ai-workers/decisions.md",
+      "sha256": "069bb749175f66274beb15954b16b64b2b454de4c13b607ad4699dbf59823262",
+      "kind": "frozen input"
+    },
+    {
+      "path": "sources/ai-workers/problem-1-pathway-setup-and-form-filling/conflict-table-2026-10-19.md",
+      "sha256": "abb9d93e69fe685208d50fd3b121623ffd3b376c8a9996e65b8ea0fb78b51f9f",
+      "kind": "frozen input"
+    },
+    {
+      "path": "sources/ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager-working.html",
+      "sha256": "0cdb934e26bec4512f2b99d299d068a444d39c517d22fa86e005633ac9c75576",
+      "kind": "frozen input"
+    },
+    {
+      "path": "sources/ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html",
+      "sha256": "124df0a2b6ddafe23310f53db713d1705bc3ab33ed08d386d226400937728445",
+      "kind": "frozen input"
+    },
+    {
+      "path": "sources/ai-workers/tools/s3-working/s3_data.py",
+      "sha256": "5da45a8572e28928ab58370f5dc22187fdab6eb4bdf26fc21108b4fcf5f112c2",
+      "kind": "frozen input"
+    },
+    {
+      "path": "sources/code/ERv2-sanitized@22f1d12-2026-10-19/apps/api/prisma/models/country-pack-questionnaire.prisma",
+      "sha256": "b48ccc9fd0eecced1dbc25065ae0274935fa32abbadc2c0cc8d43905d34d6069",
+      "kind": "frozen input"
+    },
+    {
+      "path": "sources/sources/drive-snapshot-2026-10-19-1233/02-functional-requirements/super-admin/SA-01B-REDESIGN-DECISIONS_2026-10-18.md",
+      "sha256": "a49105d494a681874fee5b5d4180a5f22a9484313e8d0172f410daf874a08c2b",
+      "kind": "frozen input"
+    },
+    {
+      "path": "sources/sources/drive-snapshot-2026-10-19-1233/02-functional-requirements/super-admin/SA-01B-content-pack-configurator_v1.5_2026-10-18.md",
+      "sha256": "bad14de11f923946b5936a6e07bef6e6b3a56bfab4cdbd08843a102ad4c5e933",
+      "kind": "frozen input"
+    }
+  ],
+  "runtime": "Existing Node v24.21.0 and preinstalled prototype/studio dependencies via local symlinks; dependency trees are not copied or independently audited."
+}

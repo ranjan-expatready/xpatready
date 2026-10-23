@@ -1,0 +1,285 @@
+{
+ "note": "every live trial, in run order; no best-of",
+ "trials": [
+  {
+   "trial": 1,
+   "runs": [
+    {
+     "file": "c1-fieldmap-imm5707-live-20261020t045405509z.reconverted.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 0.333348,
+     "input_tokens": 15852,
+     "output_tokens": 13497,
+     "seconds": 100
+    },
+    {
+     "file": "c1-fieldmap-imm1295-live-20261020t044724062z.reconverted.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 1.52788,
+     "input_tokens": 102660,
+     "output_tokens": 55862,
+     "seconds": 401
+    }
+   ],
+   "instances": [
+    {
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 42,
+     "of": 42,
+     "outcome_ok": 42,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    },
+    {
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 42,
+     "of": 42,
+     "outcome_ok": 42,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    },
+    {
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 3,
+     "of": 6,
+     "outcome_ok": 3,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    }
+   ],
+   "merged_meanings": 0
+  },
+  {
+   "trial": 2,
+   "runs": [
+    {
+     "file": "c1-fieldmap-imm5707-live-20261020t052222731z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 0.333188,
+     "input_tokens": 15852,
+     "output_tokens": 13489,
+     "seconds": 98
+    },
+    {
+     "file": "c1-fieldmap-imm1295-live-20261020t051558106z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 1.48,
+     "input_tokens": 102660,
+     "output_tokens": 53468,
+     "seconds": 384
+    }
+   ],
+   "instances": [
+    {
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 42,
+     "of": 42,
+     "outcome_ok": 42,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    },
+    {
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 42,
+     "of": 42,
+     "outcome_ok": 42,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    },
+    {
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 3,
+     "of": 6,
+     "outcome_ok": 3,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    }
+   ],
+   "merged_meanings": 0
+  },
+  {
+   "trial": 3,
+   "runs": [
+    {
+     "file": "c1-fieldmap-imm5707-live-20261020t060116285z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 0.338608,
+     "input_tokens": 15852,
+     "output_tokens": 13760,
+     "seconds": 102
+    },
+    {
+     "file": "c1-fieldmap-imm1295-live-20261020t060259023z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 1.67108,
+     "input_tokens": 102660,
+     "output_tokens": 63022,
+     "seconds": 449
+    }
+   ],
+   "instances": [
+    {
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    },
+    {
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    },
+    {
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 3,
+     "of": 6,
+     "outcome_ok": 3,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    }
+   ],
+   "merged_meanings": 0
+  },
+  {
+   "trial": 4,
+   "runs": [
+    {
+     "file": "c1-fieldmap-imm5707-live-20261020t061028166z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 0.329288,
+     "input_tokens": 15852,
+     "output_tokens": 13294,
+     "seconds": 96
+    },
+    {
+     "file": "c1-fieldmap-imm1295-live-20261020t061204350z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 1.53454,
+     "input_tokens": 102660,
+     "output_tokens": 56195,
+     "seconds": 400
+    }
+   ],
+   "instances": [
+    {
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    },
+    {
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    },
+    {
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 3,
+     "of": 6,
+     "outcome_ok": 3,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    }
+   ],
+   "merged_meanings": 0
+  },
+  {
+   "trial": 5,
+   "runs": [
+    {
+     "file": "c1-fieldmap-imm5707-live-20261020t061844836z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 0.331868,
+     "input_tokens": 15852,
+     "output_tokens": 13423,
+     "seconds": 100
+    },
+    {
+     "file": "c1-fieldmap-imm1295-live-20261020t062024995z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 3.806248,
+     "input_tokens": 102660,
+     "output_tokens": 59146,
+     "seconds": 426
+    }
+   ],
+   "instances": [
+    {
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    },
+    {
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    },
+    {
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 3,
+     "of": 6,
+     "outcome_ok": 3,
+     "wrong_person": 0,
+     "invented": 0,
+     "parent_blocks_ok": true
+    }
+   ],
+   "merged_meanings": 0
+  }
+ ]
+}

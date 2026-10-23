@@ -1,0 +1,89 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "probe-requirements-live-20261020t053328686z",
+  "idempotency_key": "d3766555bf579f20509b74a2a24f6c3b38cd8c8036ddf24858442540b98f7b08",
+  "contract_version": "drafting-run/v0",
+  "kind": "requirements",
+  "output_sha256": "1bb833c539176aefd3a692015326011db03b42528c3df8b01b44c16bcd4bb0e7",
+  "inputs": {
+   "combination": "1",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5905e.text.inventory.json",
+     "sha256": "16594660c379864da2968739adf21760cd14c188c1d095d1face0b26e85b0902"
+    }
+   ],
+   "configuration_version": "c1-probe"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 1,
+   "budget_usd": 5,
+   "max_output_tokens": 8000,
+   "prompt_version": "requirements.v1.md",
+   "prompt_sha256": "a8fc3bf1c575b273618db9bdfe4a1d01fbce17373b918b949bc09454c389d8cd"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 4958,
+    "output_tokens": 3939,
+    "duration_ms": 36353
+   }
+  ],
+  "usage": {
+   "input_tokens": 4958,
+   "output_tokens": 3939,
+   "cost_usd": 0.098612,
+   "duration_ms": 36353
+  },
+  "started_at": "2026-10-20T05:33:28.691Z",
+  "ended_at": "2026-10-20T05:34:05.260Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "07bc0a68d7aa0da2797aa41224e6f2c19b785e2c77753cbc21851b2416a8f125",
+  "template_sha256": "2b6c6bc395a911255c3cabeabf59b12ddc9f0571f2b8e3726c903cad5964dd67",
+  "schema_file": "requirements-output.v1.schema.json",
+  "schema_sha256": "ea87d66a22a07642e2f0f9786c6a3395714765a4b99ec8915c70f78fc2eeaf91",
+  "screened": true,
+  "output_sha256": "1bb833c539176aefd3a692015326011db03b42528c3df8b01b44c16bcd4bb0e7",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "15b76fef096de84feab61b33f1aec24c2eced60e9c4a980a16d4b3c20abcb303",
+  "request_bytes": 11608,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 40,
+   "committed_usd": 11.934427999999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5905e.text.inventory.json",
+    "sha256": "16594660c379864da2968739adf21760cd14c188c1d095d1face0b26e85b0902",
+    "kind": "inventory"
+   }
+  ]
+ },
+ "raw_output": "{\"combination\":\"Work Permit – New Delhi Visa Office (IMM 5905 additional checklist with IMM 5488)\",\"forms\":[{\"form_number\":\"IMM 5905\",\"edition\":\"03-2026\",\"title\":\"New Delhi Visa Office Additional Document Checklist – Work Permit\",\"who\":\"each_applicant\",\"status\":\"always\",\"condition\":null,\"condition_plain\":null,\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"This additional document checklist is one of the forms that you need to submit with your application\",\"confidence\":\"high\",\"reason\":\"Who completes it per person is not stated; specialist to confirm each_applicant.\"},{\"form_number\":\"IMM 5488\",\"edition\":null,\"title\":\"Document Checklist for a Work Permit\",\"who\":\"each_applicant\",\"status\":\"always\",\"condition\":null,\"condition_plain\":null,\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"in\\nconjunction with the IMM 5488 Document Checklist for a Work Permit.\",\"confidence\":\"medium\",\"reason\":\"Named as companion checklist; its own content is not in the inputs.\"},{\"form_number\":\"IMM 5257 SCH1\",\"edition\":null,\"title\":\"Schedule 1 – Application for Temporary Resident Visa\",\"who\":\"each_applicant\",\"status\":\"conditional\",\"condition\":{\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"op\\\": \\\"eq\\\", \\\"field\\\": \\\"person.background_any_yes\\\", \\\"value\\\": true}\"},\"condition_plain\":\"The person answered yes to any background information question on the application form.\",\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"If you have answered “yes” to any of the background information questions on the application\\n        form, provide a completed and signed Schedule 1 form (Application for Temporary Resident Visa –\\n        IMM 5257 SCH1) and include it with your application.\",\"confidence\":\"high\",\"reason\":null},{\"form_number\":\"IMM 5707\",\"edition\":null,\"title\":\"Family Information Form\",\"who\":\"each_applicant\",\"status\":\"always\",\"condition\":null,\"condition_plain\":null,\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"You must provide the Family Information Form (IMM 5707) fully completed, signed and dated.\",\"confidence\":\"medium\",\"reason\":\"Text does not say whether each family member or only principal completes it; specialist to confirm.\"}],\"documents\":[{\"document_type\":\"education_credentials_with_mark_sheets\",\"new_type\":true,\"provided_by\":\"client\",\"who\":\"principal_applicant\",\"base_or_conditional\":\"base\",\"status\":\"requirement_line\",\"condition\":null,\"condition_plain\":null,\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"Proof of Education: Certificate, Diploma or Degrees including mark sheets;\",\"confidence\":\"high\",\"reason\":\"Under job requirements; applies to the work permit applicant holding the job offer.\"},{\"document_type\":\"employment_appointment_and_relieving_letters\",\"new_type\":true,\"provided_by\":\"client\",\"who\":\"principal_applicant\",\"base_or_conditional\":\"base\",\"status\":\"requirement_line\",\"condition\":null,\"condition_plain\":null,\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"Copies of appointment letters and relieving letters from your current and previous\\n                           employers, copies of salary slips and form 16;\",\"confidence\":\"high\",\"reason\":\"Covers appointment/relieving letters, salary slips and Form 16 as one checklist entry.\"},{\"document_type\":\"bank_statements\",\"new_type\":false,\"provided_by\":\"client\",\"who\":\"principal_applicant\",\"base_or_conditional\":\"base\",\"status\":\"requirement_line\",\"condition\":null,\"condition_plain\":null,\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"Bank statements;\",\"confidence\":\"medium\",\"reason\":\"Listed as proof of work experience; period not stated.\"},{\"document_type\":\"employment_reference_letters\",\"new_type\":false,\"provided_by\":\"employer\",\"who\":\"principal_applicant\",\"base_or_conditional\":\"base\",\"status\":\"requirement_line\",\"condition\":null,\"condition_plain\":null,\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"Letters of reference must outline the duration and specific nature of your\\n                           employment, including your exact duties on the job\",\"confidence\":\"high\",\"reason\":null},{\"document_type\":\"birth_certificate\",\"new_type\":false,\"provided_by\":\"client\",\"who\":\"each_dependent_child\",\"base_or_conditional\":\"conditional\",\"status\":\"requirement_line\",\"condition\":{\"subject_kind\":\"DEPENDENT\",\"tree_json\":\"{\\\"op\\\": \\\"eq\\\", \\\"field\\\": \\\"person.is_accompanying\\\", \\\"value\\\": true}\"},\"condition_plain\":\"The child is an accompanying dependent.\",\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"You must provide children’s birth certificates for accompanying dependents.\",\"confidence\":\"high\",\"reason\":null},{\"document_type\":\"marriage_certificate\",\"new_type\":false,\"provided_by\":\"client\",\"who\":\"couple_once\",\"base_or_conditional\":\"conditional\",\"status\":\"uncertain\",\"condition\":{\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\": \\\"eq\\\", \\\"field\\\": \\\"principal.marital_status\\\", \\\"value\\\": \\\"married\\\"}\"},\"condition_plain\":\"Drafted: the principal applicant is married. 'As applicable' is not defined.\",\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"Marriage Certificate, as applicable.\",\"confidence\":\"low\",\"reason\":\"Could mean whenever married, or only when a spouse accompanies; specialist to decide.\"},{\"document_type\":\"certified_translation\",\"new_type\":false,\"provided_by\":\"other\",\"who\":\"each_applicant\",\"base_or_conditional\":\"conditional\",\"status\":\"requirement_line\",\"condition\":{\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"op\\\": \\\"eq\\\", \\\"field\\\": \\\"document.language_not_en_fr\\\", \\\"value\\\": true}\"},\"condition_plain\":\"A submitted document is in a language other than English or French.\",\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"If your documents are in a language other than English or French, you must include a certified\\ntranslation.\",\"confidence\":\"high\",\"reason\":\"Applies per document.\"},{\"document_type\":\"apply_online_notice\",\"new_type\":false,\"provided_by\":\"other\",\"who\":\"each_applicant\",\"base_or_conditional\":\"base\",\"status\":\"dismissed\",\"condition\":null,\"condition_plain\":null,\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"Apply online - Save time and get case updates online!\",\"confidence\":\"high\",\"reason\":\"Promotional information, not a document requirement.\"}],\"rules\":[{\"kind\":\"rule\",\"when\":{\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"op\\\": \\\"in\\\", \\\"field\\\": \\\"person.role\\\", \\\"value\\\": [\\\"spouse\\\", \\\"dependent_child\\\"]}\"},\"then\":\"Add a separate set of application forms for each accompanying spouse and child.\",\"for_whom\":\"each_person\",\"why_shown\":\"Accompanying family members must each submit their own application forms.\",\"readings\":[],\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"Accompanying spouse and children of all ages must submit their own application forms.\",\"when_plain\":\"The person is an accompanying spouse or child of any age.\"},{\"kind\":\"rule\",\"when\":{\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"op\\\": \\\"eq\\\", \\\"field\\\": \\\"person.background_any_yes\\\", \\\"value\\\": true}\"},\"then\":\"Add form IMM 5257 SCH1.\",\"for_whom\":\"each_applicant\",\"why_shown\":\"A yes answer to a background question requires Schedule 1.\",\"readings\":[],\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"If you have answered “yes” to any of the background information questions on the application\\n        form, provide a completed and signed Schedule 1 form\",\"when_plain\":\"Yes to any background question.\"},{\"kind\":\"rule\",\"when\":{\"subject_kind\":\"DEPENDENT\",\"tree_json\":\"{\\\"op\\\": \\\"eq\\\", \\\"field\\\": \\\"person.is_accompanying\\\", \\\"value\\\": true}\"},\"then\":\"Add birth certificate document for the child.\",\"for_whom\":\"each_dependent_child\",\"why_shown\":\"Accompanying children need birth certificates.\",\"readings\":[],\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"You must provide children’s birth certificates for accompanying dependents.\",\"when_plain\":\"Child is accompanying.\"},{\"kind\":\"uncertain\",\"when\":{\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\": \\\"eq\\\", \\\"field\\\": \\\"principal.marital_status\\\", \\\"value\\\": \\\"married\\\"}\"},\"then\":\"Add marriage certificate.\",\"for_whom\":\"couple_once\",\"why_shown\":\"The checklist asks for a marriage certificate as applicable.\",\"readings\":[\"Required whenever the principal applicant is married.\",\"Required only when a spouse accompanies the applicant.\"],\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"Marriage Certificate, as applicable.\",\"when_plain\":\"Principal is married (reading to be confirmed).\"},{\"kind\":\"rule\",\"when\":{\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"op\\\": \\\"eq\\\", \\\"field\\\": \\\"document.language_not_en_fr\\\", \\\"value\\\": true}\"},\"then\":\"Add certified translation for that document.\",\"for_whom\":\"each_applicant\",\"why_shown\":\"Non-English/French documents need certified translations.\",\"readings\":[],\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"If your documents are in a language other than English or French, you must include a certified\\ntranslation.\",\"when_plain\":\"Document not in English or French.\"}],\"proposed_fields\":[{\"id\":\"person.background_any_yes\",\"meaning\":\"Person answered yes to any background information question on the application form\",\"value_type\":\"yes_no\"},{\"id\":\"person.is_accompanying\",\"meaning\":\"Family member accompanies the applicant\",\"value_type\":\"yes_no\"},{\"id\":\"person.role\",\"meaning\":\"Role in the case (principal, spouse, dependent_child)\",\"value_type\":\"code\"},{\"id\":\"principal.marital_status\",\"meaning\":\"Marital status of the principal applicant\",\"value_type\":\"code\"},{\"id\":\"document.language_not_en_fr\",\"meaning\":\"Submitted document is in a language other than English or French\",\"value_type\":\"yes_no\"}],\"unresolved\":[{\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"passage_quote\":\"(Contact name, address and\\n                           phone numbers should be provided).\",\"reason\":\"Content requirement for reference letters, not a separate document; kept for specialist review.\"},{\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"passage_quote\":\"Failure to submit all required documentation may result in refusal or processing delays.\",\"reason\":\"Warning only; no requirement to configure.\"}],\"derived_fields\":[]}"
+}

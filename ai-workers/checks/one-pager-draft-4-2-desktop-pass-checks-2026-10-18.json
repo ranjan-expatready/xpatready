@@ -1,0 +1,777 @@
+{
+ "page": "file:///Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html",
+ "results": [
+  {
+   "id": "setup",
+   "name": "panel text extracted for activities and stages",
+   "ok": true,
+   "detail": 57
+  },
+  {
+   "id": "C-M2",
+   "name": "view 4 X9 is an inclusive gateway with no default flow",
+   "ok": true,
+   "detail": "<bpmn:inclusiveGateway id=\"X9\" name=\"Ready, missing, or both?\">"
+  },
+  {
+   "id": "C-M2",
+   "name": "X9 has two conditioned branches: ready forms continue (to view 6) and a client gap returns to the SQR (7.2)",
+   "ok": true,
+   "detail": [
+    {
+     "id": "F_v4_12",
+     "name": "Facts ready for a form",
+     "to": "L4b",
+     "cond": true
+    },
+    {
+     "id": "F_v4_13",
+     "name": "Client answer or document missing",
+     "to": "A_7_2",
+     "cond": true
+    }
+   ]
+  },
+  {
+   "id": "C-M2",
+   "name": "no inclusive gateway in any view uses a default that would suppress a branch that should run alongside (only X9 changed; others keep a true \"otherwise\" path)",
+   "ok": true,
+   "detail": [
+    "v1:I1(default)",
+    "v1:I2",
+    "v4:X9",
+    "v6:X15(default)"
+   ]
+  },
+  {
+   "id": "C-M2",
+   "name": "8.1 shows the worked example of both branches at once: a ready form goes on while the partner's missing answer is asked",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M2",
+   "name": "the old default label \"Facts ready for forms\" is gone from the model",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M1",
+   "name": "no page text holds a suspected mapping error only \"once confirmed\"",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M1",
+   "name": "4.3: a suspected material mapping error is held from that moment, pending investigation; affected forms cannot be approved or submitted; unrelated work continues",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M1",
+   "name": "4.3: disproved → hold released with evidence; confirmed → existing correction route (10.2, 10.3)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M1",
+   "name": "10.4: held from the moment it is suspected; investigated; confirmed → mapping under correction; disproved → released",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M1",
+   "name": "10.4: an ordinary question holds nothing (no material hold for every ticket)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M1",
+   "name": "release and submission guards: 9.3 cannot approve and 9.5 cannot submit a form whose mapping is held for investigation",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M1",
+   "name": "view 7: \"Mapping stands\" ends with the hold released",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M1",
+   "name": "stage 10 states the suspicion-time hold",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M3",
+   "name": "the contradicting phrase \"a missing or held fact stops it at review\" is gone everywhere",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M3",
+   "name": "8.1: missing/conflict → preview, stops at 8.4 before filling; Held with a verified value → filled, held at approval and submission; no verified value → missing",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M3",
+   "name": "8.2: trigger and rules agree (Held with a verified value proceeds; missing/conflict previews and stops at 8.4; no verified value = needs a fact)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M3",
+   "name": "8.4: Held fields go on to filling; approval and submission wait for 8.1",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M3",
+   "name": "9.1: the prerequisite allows a Held field filled from its verified value",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M3",
+   "name": "stage 6 decision and view 6 start state the same boundary",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M3",
+   "name": "view 6 \"starts\" text: missing or conflicting stops at review (8.4); Held is filled but not approved or submitted",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "C-M3",
+   "name": "no panel says a Held fact stops a form before filling",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "Tip",
+   "name": "the per-filing tooltip is complete: \"Per-filing mark: each applicant's filing moves on its own\"",
+   "ok": true,
+   "detail": [
+    "Per-filing mark: each applicant's filing moves on its own"
+   ]
+  },
+  {
+   "id": "Tip",
+   "name": "no tooltip attribute is cut at an apostrophe (every apostrophe-containing source tip survives whole)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "Tip",
+   "name": "hovering the per-filing mark shows the full sentence",
+   "ok": true,
+   "detail": "Per-filing mark: each applicant's filing moves on its own"
+  },
+  {
+   "id": "Tip",
+   "name": "decision tooltips: combined outcomes after a recorded decision say they apply together; a yes/no change check says exactly one",
+   "ok": true,
+   "detail": {
+    "Review outcome?": "Decision mark: these outcomes can apply together, for example to different items or as a follow-on",
+    "Same person, and does the firm take the case?": "Decision mark: these outcomes can apply together, for example to different items or as a follow-on",
+    "Every fact a form needs verified?": "Decision mark: these outcomes can apply together, for example to different items or as a follow-on",
+    "Anything wrong?": "Decision mark: these outcomes can apply together, for example to different items or as a follow-on",
+    "Approved and signed without a problem?": "Decision mark: these outcomes can apply together, for example to different items or as a follow-on",
+    "What follows a recorded decision?": "Decision mark: these outcomes can apply together, for example to different items or as a follow-on",
+    "Anything changed?": "Decision mark: exactly one of the outcomes below is taken",
+    "Does it affect this open case?": "Decision mark: exactly one of the outcomes below is taken"
+   }
+  },
+  {
+   "id": "Tip",
+   "name": "the start mark distinguishes an enquiry from a case",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "L",
+   "name": "case initiation: \"Start a new case\" with 4A and 4B; \"Two ways in\" gone",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "L",
+   "name": "4A says no case exists before the firm accepts the enquiry; the known person links to the existing record",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "L",
+   "name": "stage 9 hands off to After decision; case closure is a separate line; no \"End.\" shortcut on the case band",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "L",
+   "name": "'Good to know' replaced by 'Key rules'; 5.3 names the country pack, not a pathway version",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "L",
+   "name": "IRCC named in the Canadian example",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "L",
+   "name": "activity 1.1 names the content publisher and the base forms; conditional forms are not found by hand",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "L",
+   "name": "the legal caveat keeps its exact words where used",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "Load",
+   "name": "no page errors at 1440",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D",
+   "name": "960px light: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 960,
+    "iw": 960
+   }
+  },
+  {
+   "id": "D5",
+   "name": "960px light: every handoff label is whole words (no hyphen splits, no clipping)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D1",
+   "name": "960px light: map grid is two cards per line (3 tracks)",
+   "ok": true,
+   "detail": [
+    {
+     "cols": 3
+    },
+    {
+     "cols": 3
+    },
+    {
+     "cols": 3
+    }
+   ]
+  },
+  {
+   "id": "D3",
+   "name": "960px light: each end or handoff strip is attached: level with the previous card (≤ 4px) and beside its arrow",
+   "ok": true,
+   "detail": [
+    {
+     "dy": 0,
+     "dx": 96
+    },
+    {
+     "dy": 0,
+     "dx": 96
+    },
+    {
+     "dy": 0,
+     "dx": 96
+    }
+   ]
+  },
+  {
+   "id": "D6",
+   "name": "960px light: no card or strip text overflows",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D7",
+   "name": "960px light: actor names, side tags, labels and decision text reach 4.5:1 contrast on their backgrounds",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D6",
+   "name": "960px: the details open as a side panel that leaves the selected stage visible; the story reads one actor per row",
+   "ok": true,
+   "detail": {
+    "modal": "false",
+    "covered": false,
+    "w": 460,
+    "sel": true,
+    "story": [
+     "grid",
+     "grid",
+     "grid",
+     "grid"
+    ]
+   }
+  },
+  {
+   "id": "D6",
+   "name": "960px: Escape closes and returns focus to the stage",
+   "ok": true,
+   "detail": {
+    "hidden": true,
+    "f": "st-6"
+   }
+  },
+  {
+   "id": "D",
+   "name": "960px dark: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 960,
+    "iw": 960
+   }
+  },
+  {
+   "id": "D5",
+   "name": "960px dark: every handoff label is whole words (no hyphen splits, no clipping)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D1",
+   "name": "960px dark: map grid is two cards per line (3 tracks)",
+   "ok": true,
+   "detail": [
+    {
+     "cols": 3
+    },
+    {
+     "cols": 3
+    },
+    {
+     "cols": 3
+    }
+   ]
+  },
+  {
+   "id": "D3",
+   "name": "960px dark: each end or handoff strip is attached: level with the previous card (≤ 4px) and beside its arrow",
+   "ok": true,
+   "detail": [
+    {
+     "dy": 0,
+     "dx": 96
+    },
+    {
+     "dy": 0,
+     "dx": 96
+    },
+    {
+     "dy": 0,
+     "dx": 96
+    }
+   ]
+  },
+  {
+   "id": "D6",
+   "name": "960px dark: no card or strip text overflows",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D7",
+   "name": "960px dark: actor names, side tags, labels and decision text reach 4.5:1 contrast on their backgrounds",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D",
+   "name": "1280px light: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 1280,
+    "iw": 1280
+   }
+  },
+  {
+   "id": "D5",
+   "name": "1280px light: every handoff label is whole words (no hyphen splits, no clipping)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D1",
+   "name": "1280px light: map grid is four cards per line (7 tracks)",
+   "ok": true,
+   "detail": [
+    {
+     "cols": 7
+    },
+    {
+     "cols": 7
+    },
+    {
+     "cols": 7
+    }
+   ]
+  },
+  {
+   "id": "D3",
+   "name": "1280px light: each end or handoff strip is attached: level with the previous card (≤ 4px) and beside its arrow",
+   "ok": true,
+   "detail": [
+    {
+     "dy": 0,
+     "dx": 88
+    },
+    {
+     "dy": 0,
+     "dx": 88
+    },
+    {
+     "dy": 0,
+     "dx": 88
+    }
+   ]
+  },
+  {
+   "id": "D6",
+   "name": "1280px light: no card or strip text overflows",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D7",
+   "name": "1280px light: actor names, side tags, labels and decision text reach 4.5:1 contrast on their backgrounds",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D",
+   "name": "1280px dark: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 1280,
+    "iw": 1280
+   }
+  },
+  {
+   "id": "D5",
+   "name": "1280px dark: every handoff label is whole words (no hyphen splits, no clipping)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D1",
+   "name": "1280px dark: map grid is four cards per line (7 tracks)",
+   "ok": true,
+   "detail": [
+    {
+     "cols": 7
+    },
+    {
+     "cols": 7
+    },
+    {
+     "cols": 7
+    }
+   ]
+  },
+  {
+   "id": "D3",
+   "name": "1280px dark: each end or handoff strip is attached: level with the previous card (≤ 4px) and beside its arrow",
+   "ok": true,
+   "detail": [
+    {
+     "dy": 0,
+     "dx": 88
+    },
+    {
+     "dy": 0,
+     "dx": 88
+    },
+    {
+     "dy": 0,
+     "dx": 88
+    }
+   ]
+  },
+  {
+   "id": "D6",
+   "name": "1280px dark: no card or strip text overflows",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D7",
+   "name": "1280px dark: actor names, side tags, labels and decision text reach 4.5:1 contrast on their backgrounds",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D",
+   "name": "1440px light: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 1440,
+    "iw": 1440
+   }
+  },
+  {
+   "id": "D5",
+   "name": "1440px light: every handoff label is whole words (no hyphen splits, no clipping)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D1",
+   "name": "1440px light: map grid is four cards per line (7 tracks)",
+   "ok": true,
+   "detail": [
+    {
+     "cols": 7
+    },
+    {
+     "cols": 7
+    },
+    {
+     "cols": 7
+    }
+   ]
+  },
+  {
+   "id": "D3",
+   "name": "1440px light: each end or handoff strip is attached: level with the previous card (≤ 4px) and beside its arrow",
+   "ok": true,
+   "detail": [
+    {
+     "dy": 0,
+     "dx": 88
+    },
+    {
+     "dy": 0,
+     "dx": 88
+    },
+    {
+     "dy": 0,
+     "dx": 88
+    }
+   ]
+  },
+  {
+   "id": "D6",
+   "name": "1440px light: no card or strip text overflows",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D7",
+   "name": "1440px light: actor names, side tags, labels and decision text reach 4.5:1 contrast on their backgrounds",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D",
+   "name": "1440px dark: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 1440,
+    "iw": 1440
+   }
+  },
+  {
+   "id": "D5",
+   "name": "1440px dark: every handoff label is whole words (no hyphen splits, no clipping)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D1",
+   "name": "1440px dark: map grid is four cards per line (7 tracks)",
+   "ok": true,
+   "detail": [
+    {
+     "cols": 7
+    },
+    {
+     "cols": 7
+    },
+    {
+     "cols": 7
+    }
+   ]
+  },
+  {
+   "id": "D3",
+   "name": "1440px dark: each end or handoff strip is attached: level with the previous card (≤ 4px) and beside its arrow",
+   "ok": true,
+   "detail": [
+    {
+     "dy": 0,
+     "dx": 88
+    },
+    {
+     "dy": 0,
+     "dx": 88
+    },
+    {
+     "dy": 0,
+     "dx": 88
+    }
+   ]
+  },
+  {
+   "id": "D6",
+   "name": "1440px dark: no card or strip text overflows",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D7",
+   "name": "1440px dark: actor names, side tags, labels and decision text reach 4.5:1 contrast on their backgrounds",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D",
+   "name": "1920px light: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 1920,
+    "iw": 1920
+   }
+  },
+  {
+   "id": "D5",
+   "name": "1920px light: every handoff label is whole words (no hyphen splits, no clipping)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D1",
+   "name": "1920px light: map grid is four cards per line (7 tracks)",
+   "ok": true,
+   "detail": [
+    {
+     "cols": 7
+    },
+    {
+     "cols": 7
+    },
+    {
+     "cols": 7
+    }
+   ]
+  },
+  {
+   "id": "D3",
+   "name": "1920px light: each end or handoff strip is attached: level with the previous card (≤ 4px) and beside its arrow",
+   "ok": true,
+   "detail": [
+    {
+     "dy": 0,
+     "dx": 88
+    },
+    {
+     "dy": 0,
+     "dx": 88
+    },
+    {
+     "dy": 0,
+     "dx": 88
+    }
+   ]
+  },
+  {
+   "id": "D6",
+   "name": "1920px light: no card or strip text overflows",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D7",
+   "name": "1920px light: actor names, side tags, labels and decision text reach 4.5:1 contrast on their backgrounds",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D6",
+   "name": "1920px: the wider details pane docks beside the page without covering it",
+   "ok": true,
+   "detail": {
+    "docked": true,
+    "w": 540,
+    "right": 1364,
+    "il": 1380
+   }
+  },
+  {
+   "id": "D",
+   "name": "1920px dark: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 1920,
+    "iw": 1920
+   }
+  },
+  {
+   "id": "D5",
+   "name": "1920px dark: every handoff label is whole words (no hyphen splits, no clipping)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D1",
+   "name": "1920px dark: map grid is four cards per line (7 tracks)",
+   "ok": true,
+   "detail": [
+    {
+     "cols": 7
+    },
+    {
+     "cols": 7
+    },
+    {
+     "cols": 7
+    }
+   ]
+  },
+  {
+   "id": "D3",
+   "name": "1920px dark: each end or handoff strip is attached: level with the previous card (≤ 4px) and beside its arrow",
+   "ok": true,
+   "detail": [
+    {
+     "dy": 0,
+     "dx": 88
+    },
+    {
+     "dy": 0,
+     "dx": 88
+    },
+    {
+     "dy": 0,
+     "dx": 88
+    }
+   ]
+  },
+  {
+   "id": "D6",
+   "name": "1920px dark: no card or strip text overflows",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "D7",
+   "name": "1920px dark: actor names, side tags, labels and decision text reach 4.5:1 contrast on their backgrounds",
+   "ok": true,
+   "detail": []
+  }
+ ]
+}

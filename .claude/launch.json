@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ai-workers-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "ai-workers"
+      ],
+      "port": 8765
+    },
+    {
+      "name": "p3-review",
+      "runtimeExecutable": "/Users/ranjansingh/Desktop/Xpatready/.tools/node-v24.21.0/bin/node",
+      "runtimeArgs": [
+        "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p3/server.ts",
+        "--port",
+        "4317"
+      ],
+      "port": 4317
+    }
+  ]
+}

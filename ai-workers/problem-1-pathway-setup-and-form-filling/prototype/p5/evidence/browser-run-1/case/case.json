@@ -1,0 +1,6636 @@
+{
+ "case_id": "case-001",
+ "release": "2c66472f37585338c9c21bbf221833baa7ef77f6fa0f9531edc92e43072d06af",
+ "combination": "1: work permit applied from outside Canada",
+ "created_at": "2026-10-20T20:03:39.079Z",
+ "people": [
+  {
+   "id": "client-a",
+   "role": "principal",
+   "label": "CLIENTA EXAMPLE (principal applicant)"
+  },
+  {
+   "id": "partner",
+   "role": "partner",
+   "label": "PARTNER EXAMPLEP (partner, also applying)"
+  },
+  {
+   "id": "child",
+   "role": "child",
+   "label": "CHILD EXAMPLE (child, accompanying)"
+  }
+ ],
+ "facts": [
+  {
+   "id": "f-0002-e81f",
+   "fact": "person.family_name",
+   "about": "client-a",
+   "value": "EXAMPLE",
+   "status": "superseded",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:39.080Z"
+  },
+  {
+   "id": "f-0003-2b85",
+   "fact": "person.given_names",
+   "about": "client-a",
+   "value": "CLIENTA",
+   "status": "superseded",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:39.080Z"
+  },
+  {
+   "id": "f-0004-23a9",
+   "fact": "person.date_of_birth",
+   "about": "client-a",
+   "value": "1990-12-04",
+   "status": "superseded",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:39.080Z"
+  },
+  {
+   "id": "f-0005-3757",
+   "fact": "person.email_address",
+   "about": "client-a",
+   "value": "client.a@example.com",
+   "status": "superseded",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:39.080Z"
+  },
+  {
+   "id": "f-0006-aa72",
+   "fact": "person.family_name",
+   "about": "partner",
+   "value": "EXAMPLEP",
+   "status": "superseded",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:39.080Z"
+  },
+  {
+   "id": "f-0007-0725",
+   "fact": "person.given_names",
+   "about": "partner",
+   "value": "PARTNER",
+   "status": "superseded",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:39.080Z"
+  },
+  {
+   "id": "f-0008-c7a2",
+   "fact": "person.family_name",
+   "about": "child",
+   "value": "EXAMPLE",
+   "status": "superseded",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:39.080Z"
+  },
+  {
+   "id": "f-0009-bb32",
+   "fact": "person.given_names",
+   "about": "child",
+   "value": "CHILD",
+   "status": "superseded",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:39.080Z"
+  },
+  {
+   "id": "f-0022-6819",
+   "fact": "person.sex",
+   "about": "partner",
+   "value": "M",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-02",
+    "file_sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "M",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:43.105Z"
+  },
+  {
+   "id": "f-0024-185e",
+   "fact": "person.date_of_birth",
+   "about": "partner",
+   "value": "1991-09-03",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-02",
+    "file_sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "1991-09-03",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:43.105Z"
+  },
+  {
+   "id": "f-0026-daab",
+   "fact": "person.passport_number",
+   "about": "partner",
+   "value": "Z7654321",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-02",
+    "file_sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "Z7654321",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:43.105Z"
+  },
+  {
+   "id": "f-0028-bbb8",
+   "fact": "person.passport_expiry_date",
+   "about": "partner",
+   "value": "2029-03-09",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-02",
+    "file_sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "2029-03-09",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:43.105Z"
+  },
+  {
+   "id": "f-0030-99c8",
+   "fact": "person.citizenship",
+   "about": "partner",
+   "value": "IND",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-02",
+    "file_sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "IND",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:43.105Z"
+  },
+  {
+   "id": "f-0032-b158",
+   "fact": "person.passport_country_of_issue",
+   "about": "partner",
+   "value": "IND",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-02",
+    "file_sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "IND",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:43.105Z"
+  },
+  {
+   "id": "f-0036-e628",
+   "fact": "person.intended_job_title",
+   "about": "client-a",
+   "value": "Software engineer",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, PDF text layer, row \"Position  Software engineer\"",
+    "as_printed": "Software engineer",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "high"
+   },
+   "at": "2026-10-20T20:03:44.930Z"
+  },
+  {
+   "id": "f-0038-7782",
+   "fact": "person.intended_job_duties",
+   "about": "client-a",
+   "value": "Designs and builds software",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, PDF text layer, row \"Main duties  Designs and builds software\"",
+    "as_printed": "Designs and builds software",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "high"
+   },
+   "at": "2026-10-20T20:03:44.930Z"
+  },
+  {
+   "id": "f-0040-43a6",
+   "fact": "person.intended_work_location",
+   "about": "client-a",
+   "value": "100 Example Street, Toronto, ON M5V 1A1",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, Tesseract on the rendered page, row \"Work location 100 Example Street, Toront\"",
+    "as_printed": "100 Example Street, Toronto, ON M5V 1A1",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:44.930Z"
+  },
+  {
+   "id": "f-0042-d10b",
+   "fact": "person.intended_employment_start_date",
+   "about": "client-a",
+   "value": "2027-01-04",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, PDF text layer, row \"Start date  January 4, 2027  T E\"",
+    "as_printed": "January 4, 2027  T E",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "high"
+   },
+   "at": "2026-10-20T20:03:44.930Z"
+  },
+  {
+   "id": "f-0044-09ae",
+   "fact": "person.intended_employment_end_date",
+   "about": "client-a",
+   "value": "2029-01-03",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, Tesseract on the rendered page, row \"End date January 3, 2029\"",
+    "as_printed": "January 3, 2029",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:44.931Z"
+  },
+  {
+   "id": "f-0046-7779",
+   "fact": "person.lmia_or_offer_number",
+   "about": "client-a",
+   "value": "A1234567",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, Tesseract on the rendered page, row \"LMIA number A1234567\"",
+    "as_printed": "A1234567",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:44.931Z"
+  },
+  {
+   "id": "f-0048-697e",
+   "fact": "organisation.name",
+   "about": "client-a",
+   "value": "Example Employer Ltd",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, letterhead / offer sentence",
+    "as_printed": "Example Employer Ltd",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:44.931Z"
+  },
+  {
+   "id": "f-0050-9cae",
+   "fact": "person.intended_work_province",
+   "about": "client-a",
+   "value": "ON",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "derived from the work location",
+    "as_printed": "ON",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:44.931Z"
+  },
+  {
+   "id": "f-0052-4f9f",
+   "fact": "person.intended_job_title",
+   "about": "partner",
+   "value": "Early childhood educator",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Position Early childhood educator\"",
+    "as_printed": "Early childhood educator",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:50.027Z"
+  },
+  {
+   "id": "f-0054-051a",
+   "fact": "person.intended_job_duties",
+   "about": "partner",
+   "value": "Plans and leads learning activities for young children",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Main duties Plans and leads learning act\"",
+    "as_printed": "Plans and leads learning activities for young children",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:50.027Z"
+  },
+  {
+   "id": "f-0056-a4fd",
+   "fact": "person.intended_work_location",
+   "about": "partner",
+   "value": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Work location 25 Sample Avenue, Vancouve\"",
+    "as_printed": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:50.027Z"
+  },
+  {
+   "id": "f-0058-8cad",
+   "fact": "person.intended_employment_start_date",
+   "about": "partner",
+   "value": "2027-02-01",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Start date February 1, 2027\"",
+    "as_printed": "February 1, 2027",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:50.027Z"
+  },
+  {
+   "id": "f-0060-df5d",
+   "fact": "person.intended_employment_end_date",
+   "about": "partner",
+   "value": "2029-01-31",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"End date January 31, 2029\"",
+    "as_printed": "January 31, 2029",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:50.027Z"
+  },
+  {
+   "id": "f-0063-4e9a",
+   "fact": "organisation.name",
+   "about": "partner",
+   "value": "Example Learning Centre Inc.",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "page 1, letterhead / offer sentence",
+    "as_printed": "Example Learning Centre Inc.",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:50.027Z"
+  },
+  {
+   "id": "f-0065-d547",
+   "fact": "person.intended_work_province",
+   "about": "partner",
+   "value": "BC",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "derived from the work location",
+    "as_printed": "BC",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:50.027Z"
+  },
+  {
+   "id": "f-0067-e791",
+   "fact": "person.date_of_birth",
+   "about": "child",
+   "value": "2017-01-20",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-05",
+    "file_sha256": "f61eddf4b6258aff1d08ed425ba48aecfa40c20a81769301e6f9bd8e8da82a1f",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Date of birth January 20, 2017\"",
+    "as_printed": "January 20, 2017",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:53.723Z"
+  },
+  {
+   "id": "f-0069-c50a",
+   "fact": "person.sex",
+   "about": "child",
+   "value": "F",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-05",
+    "file_sha256": "f61eddf4b6258aff1d08ed425ba48aecfa40c20a81769301e6f9bd8e8da82a1f",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Sex Female\"",
+    "as_printed": "Female",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:53.723Z"
+  },
+  {
+   "id": "f-0075-8d12",
+   "fact": "person.place_of_birth_city",
+   "about": "child",
+   "value": "NEW DELHI",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-05",
+    "file_sha256": "f61eddf4b6258aff1d08ed425ba48aecfa40c20a81769301e6f9bd8e8da82a1f",
+    "page": 1,
+    "where": "",
+    "as_printed": "City Hospital, NEW DELHI, INDIA",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:53.723Z"
+  },
+  {
+   "id": "f-0077-574c",
+   "fact": "person.country_of_birth",
+   "about": "child",
+   "value": "INDIA",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-05",
+    "file_sha256": "f61eddf4b6258aff1d08ed425ba48aecfa40c20a81769301e6f9bd8e8da82a1f",
+    "page": 1,
+    "where": "",
+    "as_printed": "City Hospital, NEW DELHI, INDIA",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:53.723Z"
+  },
+  {
+   "id": "f-0083-2779",
+   "fact": "person.sex",
+   "about": "client-a",
+   "value": "F",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "F",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "high"
+   },
+   "at": "2026-10-20T20:03:55.773Z"
+  },
+  {
+   "id": "f-0086-e160",
+   "fact": "person.passport_number",
+   "about": "client-a",
+   "value": "Z1234567",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "Z1234567",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "high"
+   },
+   "at": "2026-10-20T20:03:55.773Z"
+  },
+  {
+   "id": "f-0088-99a6",
+   "fact": "person.passport_expiry_date",
+   "about": "client-a",
+   "value": "2030-01-14",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "14 JAN 2030",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "high"
+   },
+   "at": "2026-10-20T20:03:55.773Z"
+  },
+  {
+   "id": "f-0090-0fdd",
+   "fact": "person.citizenship",
+   "about": "client-a",
+   "value": "IND",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "INDIAN",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:55.773Z"
+  },
+  {
+   "id": "f-0092-59b0",
+   "fact": "person.passport_country_of_issue",
+   "about": "client-a",
+   "value": "IND",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "IND",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:55.773Z"
+  },
+  {
+   "id": "f-0094-639a",
+   "fact": "person.place_of_birth_city",
+   "about": "client-a",
+   "value": "NEW DELHI",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, printed zone, line at y=415",
+    "as_printed": "NEW DELHI",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:55.773Z"
+  },
+  {
+   "id": "f-0096-6721",
+   "fact": "person.passport_issue_date",
+   "about": "client-a",
+   "value": "2020-01-15",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, printed zone, line at y=494",
+    "as_printed": "15 JAN 2020",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:55.773Z"
+  },
+  {
+   "id": "f-0097-8486",
+   "fact": "person.date_of_birth",
+   "about": "client-a",
+   "value": "1990-04-12",
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1",
+    "where": "chosen by staff while reviewing doc-01"
+   },
+   "at": "2026-10-20T20:03:56.363Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.363Z"
+  },
+  {
+   "id": "f-0099-b592",
+   "fact": "person.family_name",
+   "about": "partner",
+   "value": "EXAMPLEP",
+   "status": "verified",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:56.496Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.496Z"
+  },
+  {
+   "id": "f-0100-159e",
+   "fact": "person.given_names",
+   "about": "partner",
+   "value": "PARTNER",
+   "status": "verified",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:56.496Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.496Z"
+  },
+  {
+   "id": "f-0101-e3de",
+   "fact": "person.sex",
+   "about": "partner",
+   "value": "M",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-02",
+    "file_sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "M",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.496Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.496Z"
+  },
+  {
+   "id": "f-0102-58d5",
+   "fact": "person.date_of_birth",
+   "about": "partner",
+   "value": "1991-09-03",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-02",
+    "file_sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "1991-09-03",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.496Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.496Z"
+  },
+  {
+   "id": "f-0103-044a",
+   "fact": "person.citizenship",
+   "about": "partner",
+   "value": "IND",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-02",
+    "file_sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "IND",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.496Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.496Z"
+  },
+  {
+   "id": "f-0105-49dc",
+   "fact": "person.passport_number",
+   "about": "partner",
+   "value": "Z7654321",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-02",
+    "file_sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "Z7654321",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.629Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.629Z"
+  },
+  {
+   "id": "f-0106-3fa5",
+   "fact": "person.passport_expiry_date",
+   "about": "partner",
+   "value": "2029-03-09",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-02",
+    "file_sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "2029-03-09",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.629Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.629Z"
+  },
+  {
+   "id": "f-0107-fba3",
+   "fact": "person.passport_country_of_issue",
+   "about": "partner",
+   "value": "IND",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-02",
+    "file_sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "IND",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.629Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.629Z"
+  },
+  {
+   "id": "f-0109-9b55",
+   "fact": "person.intended_job_title",
+   "about": "client-a",
+   "value": "Software engineer",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, PDF text layer, row \"Position  Software engineer\"",
+    "as_printed": "Software engineer",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "high"
+   },
+   "at": "2026-10-20T20:03:56.762Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.762Z"
+  },
+  {
+   "id": "f-0110-9957",
+   "fact": "person.intended_job_duties",
+   "about": "client-a",
+   "value": "Designs and builds software",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, PDF text layer, row \"Main duties  Designs and builds software\"",
+    "as_printed": "Designs and builds software",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "high"
+   },
+   "at": "2026-10-20T20:03:56.762Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.762Z"
+  },
+  {
+   "id": "f-0111-5954",
+   "fact": "person.intended_work_location",
+   "about": "client-a",
+   "value": "100 Example Street, Toronto, ON M5V 1A1",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, Tesseract on the rendered page, row \"Work location 100 Example Street, Toront\"",
+    "as_printed": "100 Example Street, Toronto, ON M5V 1A1",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.762Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.762Z"
+  },
+  {
+   "id": "f-0112-71e6",
+   "fact": "person.intended_employment_start_date",
+   "about": "client-a",
+   "value": "2027-01-04",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, PDF text layer, row \"Start date  January 4, 2027  T E\"",
+    "as_printed": "January 4, 2027  T E",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "high"
+   },
+   "at": "2026-10-20T20:03:56.763Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.763Z"
+  },
+  {
+   "id": "f-0113-0bf9",
+   "fact": "person.intended_employment_end_date",
+   "about": "client-a",
+   "value": "2029-01-03",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, Tesseract on the rendered page, row \"End date January 3, 2029\"",
+    "as_printed": "January 3, 2029",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.763Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.763Z"
+  },
+  {
+   "id": "f-0114-1438",
+   "fact": "person.lmia_or_offer_number",
+   "about": "client-a",
+   "value": "A1234567",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, Tesseract on the rendered page, row \"LMIA number A1234567\"",
+    "as_printed": "A1234567",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.763Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.763Z"
+  },
+  {
+   "id": "f-0115-6c24",
+   "fact": "organisation.name",
+   "about": "client-a",
+   "value": "Example Employer Ltd",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "page 1, letterhead / offer sentence",
+    "as_printed": "Example Employer Ltd",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.763Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.763Z"
+  },
+  {
+   "id": "f-0116-566d",
+   "fact": "person.intended_work_province",
+   "about": "client-a",
+   "value": "ON",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-03",
+    "file_sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+    "page": 1,
+    "where": "derived from the work location",
+    "as_printed": "ON",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.763Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.763Z"
+  },
+  {
+   "id": "f-0118-273f",
+   "fact": "person.intended_job_title",
+   "about": "partner",
+   "value": "Early childhood educator",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Position Early childhood educator\"",
+    "as_printed": "Early childhood educator",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.929Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.929Z"
+  },
+  {
+   "id": "f-0119-97b2",
+   "fact": "person.intended_job_duties",
+   "about": "partner",
+   "value": "Plans and leads learning activities for young children",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Main duties Plans and leads learning act\"",
+    "as_printed": "Plans and leads learning activities for young children",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.929Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.929Z"
+  },
+  {
+   "id": "f-0120-f922",
+   "fact": "person.intended_work_location",
+   "about": "partner",
+   "value": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Work location 25 Sample Avenue, Vancouve\"",
+    "as_printed": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.929Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.929Z"
+  },
+  {
+   "id": "f-0121-71e7",
+   "fact": "person.intended_employment_start_date",
+   "about": "partner",
+   "value": "2027-02-01",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Start date February 1, 2027\"",
+    "as_printed": "February 1, 2027",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.929Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.929Z"
+  },
+  {
+   "id": "f-0122-8193",
+   "fact": "person.intended_employment_end_date",
+   "about": "partner",
+   "value": "2029-01-31",
+   "status": "superseded",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"End date January 31, 2029\"",
+    "as_printed": "January 31, 2029",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.929Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.929Z"
+  },
+  {
+   "id": "f-0123-0669",
+   "fact": "organisation.name",
+   "about": "partner",
+   "value": "Example Learning Centre Inc.",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "page 1, letterhead / offer sentence",
+    "as_printed": "Example Learning Centre Inc.",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.929Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.929Z"
+  },
+  {
+   "id": "f-0124-005d",
+   "fact": "person.intended_work_province",
+   "about": "partner",
+   "value": "BC",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-04",
+    "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+    "page": 1,
+    "where": "derived from the work location",
+    "as_printed": "BC",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:56.929Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:56.929Z"
+  },
+  {
+   "id": "f-0126-96fb",
+   "fact": "person.family_name",
+   "about": "child",
+   "value": "EXAMPLE",
+   "status": "verified",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:57.062Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.062Z"
+  },
+  {
+   "id": "f-0127-2da3",
+   "fact": "person.given_names",
+   "about": "child",
+   "value": "CHILD",
+   "status": "verified",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:57.062Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.062Z"
+  },
+  {
+   "id": "f-0128-cf35",
+   "fact": "person.date_of_birth",
+   "about": "child",
+   "value": "2017-01-20",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-05",
+    "file_sha256": "f61eddf4b6258aff1d08ed425ba48aecfa40c20a81769301e6f9bd8e8da82a1f",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Date of birth January 20, 2017\"",
+    "as_printed": "January 20, 2017",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:57.062Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.062Z"
+  },
+  {
+   "id": "f-0129-3402",
+   "fact": "person.sex",
+   "about": "child",
+   "value": "F",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-05",
+    "file_sha256": "f61eddf4b6258aff1d08ed425ba48aecfa40c20a81769301e6f9bd8e8da82a1f",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Sex Female\"",
+    "as_printed": "Female",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:57.062Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.062Z"
+  },
+  {
+   "id": "f-0130-637e",
+   "fact": "person.place_of_birth_city",
+   "about": "child",
+   "value": "NEW DELHI",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-05",
+    "file_sha256": "f61eddf4b6258aff1d08ed425ba48aecfa40c20a81769301e6f9bd8e8da82a1f",
+    "page": 1,
+    "where": "",
+    "as_printed": "City Hospital, NEW DELHI, INDIA",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:57.062Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.062Z"
+  },
+  {
+   "id": "f-0131-8c2c",
+   "fact": "person.country_of_birth",
+   "about": "child",
+   "value": "INDIA",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-05",
+    "file_sha256": "f61eddf4b6258aff1d08ed425ba48aecfa40c20a81769301e6f9bd8e8da82a1f",
+    "page": 1,
+    "where": "",
+    "as_printed": "City Hospital, NEW DELHI, INDIA",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:57.062Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.062Z"
+  },
+  {
+   "id": "f-0133-9456",
+   "fact": "person.family_name",
+   "about": "client-a",
+   "value": "EXAMPLE",
+   "status": "verified",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:57.196Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.196Z"
+  },
+  {
+   "id": "f-0134-74da",
+   "fact": "person.given_names",
+   "about": "client-a",
+   "value": "CLIENTA",
+   "status": "verified",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:57.196Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.196Z"
+  },
+  {
+   "id": "f-0135-5838",
+   "fact": "person.sex",
+   "about": "client-a",
+   "value": "F",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "F",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "high"
+   },
+   "at": "2026-10-20T20:03:57.196Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.196Z"
+  },
+  {
+   "id": "f-0136-f721",
+   "fact": "person.citizenship",
+   "about": "client-a",
+   "value": "IND",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "INDIAN",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:57.196Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.196Z"
+  },
+  {
+   "id": "f-0137-5f73",
+   "fact": "person.place_of_birth_city",
+   "about": "client-a",
+   "value": "NEW DELHI",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, printed zone, line at y=415",
+    "as_printed": "NEW DELHI",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:57.196Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.196Z"
+  },
+  {
+   "id": "f-0139-7505",
+   "fact": "person.passport_number",
+   "about": "client-a",
+   "value": "Z1234567",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "Z1234567",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "high"
+   },
+   "at": "2026-10-20T20:03:57.329Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.329Z"
+  },
+  {
+   "id": "f-0140-aa0c",
+   "fact": "person.passport_expiry_date",
+   "about": "client-a",
+   "value": "2030-01-14",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "14 JAN 2030",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "high"
+   },
+   "at": "2026-10-20T20:03:57.330Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.330Z"
+  },
+  {
+   "id": "f-0141-ba82",
+   "fact": "person.passport_country_of_issue",
+   "about": "client-a",
+   "value": "IND",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "as_printed": "IND",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:57.330Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.330Z"
+  },
+  {
+   "id": "f-0142-ef55",
+   "fact": "person.passport_issue_date",
+   "about": "client-a",
+   "value": "2020-01-15",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-01",
+    "file_sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+    "page": 1,
+    "where": "page 1, printed zone, line at y=494",
+    "as_printed": "15 JAN 2020",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:03:57.330Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:57.330Z"
+  },
+  {
+   "id": "f-0144-ffdb",
+   "fact": "case.service_language",
+   "about": "case",
+   "value": "English",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.030Z"
+  },
+  {
+   "id": "f-0145-47e9",
+   "fact": "case.country_where_applying",
+   "about": "case",
+   "value": "India",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.045Z"
+  },
+  {
+   "id": "f-0146-38cc",
+   "fact": "person.marital_status",
+   "about": "client-a",
+   "value": "married",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.047Z"
+  },
+  {
+   "id": "f-0147-2929",
+   "fact": "person.previous_marriage_or_common_law",
+   "about": "client-a",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.048Z"
+  },
+  {
+   "id": "f-0148-4894",
+   "fact": "person.native_language",
+   "about": "client-a",
+   "value": "Hindi",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.050Z"
+  },
+  {
+   "id": "f-0149-1871",
+   "fact": "person.official_language_ability",
+   "about": "client-a",
+   "value": "English",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.052Z"
+  },
+  {
+   "id": "f-0150-4055",
+   "fact": "person.preferred_official_language",
+   "about": "client-a",
+   "value": "English",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.053Z"
+  },
+  {
+   "id": "f-0151-b180",
+   "fact": "person.language_test_taken",
+   "about": "client-a",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.054Z"
+  },
+  {
+   "id": "f-0152-4e90",
+   "fact": "person.us_lawful_permanent_resident",
+   "about": "client-a",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.056Z"
+  },
+  {
+   "id": "f-0153-3b69",
+   "fact": "person.phone_type",
+   "about": "client-a",
+   "value": "Cellular",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.057Z"
+  },
+  {
+   "id": "f-0154-54c5",
+   "fact": "person.tb_history_or_contact",
+   "about": "client-a",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.059Z"
+  },
+  {
+   "id": "f-0155-9b3b",
+   "fact": "person.disorder_requiring_services",
+   "about": "client-a",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.060Z"
+  },
+  {
+   "id": "f-0156-06de",
+   "fact": "person.status_violation_canada",
+   "about": "client-a",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.061Z"
+  },
+  {
+   "id": "f-0157-50a7",
+   "fact": "person.refused_visa_or_entry",
+   "about": "client-a",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.062Z"
+  },
+  {
+   "id": "f-0158-d6af",
+   "fact": "person.criminal_history",
+   "about": "client-a",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.064Z"
+  },
+  {
+   "id": "f-0159-6840",
+   "fact": "person.military_service",
+   "about": "client-a",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.065Z"
+  },
+  {
+   "id": "f-0160-132a",
+   "fact": "person.violent_organisation_association",
+   "about": "client-a",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.066Z"
+  },
+  {
+   "id": "f-0161-a73b",
+   "fact": "person.has_held_government_position",
+   "about": "client-a",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.067Z"
+  },
+  {
+   "id": "f-0162-edd7",
+   "fact": "person.has_children",
+   "about": "client-a",
+   "value": true,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.069Z"
+  },
+  {
+   "id": "f-0163-2929",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "about": "client-a/parent_1",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.070Z"
+  },
+  {
+   "id": "f-0164-77b9",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "about": "client-a/parent_2",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.071Z"
+  },
+  {
+   "id": "f-0165-879f",
+   "fact": "person.family_name",
+   "about": "client-a/parent_1",
+   "value": "EXAMPLE",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.072Z"
+  },
+  {
+   "id": "f-0166-325a",
+   "fact": "person.given_names",
+   "about": "client-a/parent_1",
+   "value": "MOTHER",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.073Z"
+  },
+  {
+   "id": "f-0167-0871",
+   "fact": "person.date_of_birth",
+   "about": "client-a/parent_1",
+   "value": "1962-06-15",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.074Z"
+  },
+  {
+   "id": "f-0168-31a3",
+   "fact": "person.country_of_birth",
+   "about": "client-a/parent_1",
+   "value": "India",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.075Z"
+  },
+  {
+   "id": "f-0169-c224",
+   "fact": "person.marital_status",
+   "about": "client-a/parent_1",
+   "value": "married",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.077Z"
+  },
+  {
+   "id": "f-0170-df29",
+   "fact": "person.family_name",
+   "about": "client-a/parent_2",
+   "value": "EXAMPLE",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.079Z"
+  },
+  {
+   "id": "f-0171-1e58",
+   "fact": "person.given_names",
+   "about": "client-a/parent_2",
+   "value": "FATHER",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.080Z"
+  },
+  {
+   "id": "f-0172-c2d4",
+   "fact": "person.date_of_birth",
+   "about": "client-a/parent_2",
+   "value": "1960-02-01",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.081Z"
+  },
+  {
+   "id": "f-0173-5eb0",
+   "fact": "person.country_of_birth",
+   "about": "client-a/parent_2",
+   "value": "India",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.082Z"
+  },
+  {
+   "id": "f-0174-78fa",
+   "fact": "person.marital_status",
+   "about": "client-a/parent_2",
+   "value": "married",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.083Z"
+  },
+  {
+   "id": "f-0175-031c",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "about": "child",
+   "value": true,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.084Z"
+  },
+  {
+   "id": "f-0176-c9da",
+   "fact": "relationship.child_relationship_type",
+   "about": "child",
+   "value": "daughter",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.086Z"
+  },
+  {
+   "id": "f-0177-dd88",
+   "fact": "person.marital_status",
+   "about": "child",
+   "value": "single",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.087Z"
+  },
+  {
+   "id": "f-0178-468c",
+   "fact": "person.previous_marriage_or_common_law",
+   "about": "partner",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.088Z"
+  },
+  {
+   "id": "f-0179-b9c4",
+   "fact": "person.life_insurance_names_partner_as_beneficiary",
+   "about": "partner",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.090Z"
+  },
+  {
+   "id": "f-0180-5270",
+   "fact": "person.native_language",
+   "about": "partner",
+   "value": "Hindi",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.091Z"
+  },
+  {
+   "id": "f-0181-20e6",
+   "fact": "person.official_language_ability",
+   "about": "partner",
+   "value": "English",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.092Z"
+  },
+  {
+   "id": "f-0182-fe54",
+   "fact": "person.preferred_official_language",
+   "about": "partner",
+   "value": "English",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.093Z"
+  },
+  {
+   "id": "f-0183-2abc",
+   "fact": "person.language_test_taken",
+   "about": "partner",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.094Z"
+  },
+  {
+   "id": "f-0184-ba4c",
+   "fact": "person.us_lawful_permanent_resident",
+   "about": "partner",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.095Z"
+  },
+  {
+   "id": "f-0185-b8e4",
+   "fact": "person.phone_type",
+   "about": "partner",
+   "value": "Cellular",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.097Z"
+  },
+  {
+   "id": "f-0186-3e33",
+   "fact": "person.email_address",
+   "about": "partner",
+   "value": "partner@example.com",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.098Z"
+  },
+  {
+   "id": "f-0187-37d3",
+   "fact": "person.tb_history_or_contact",
+   "about": "partner",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.099Z"
+  },
+  {
+   "id": "f-0188-5020",
+   "fact": "person.disorder_requiring_services",
+   "about": "partner",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.101Z"
+  },
+  {
+   "id": "f-0189-44a6",
+   "fact": "person.status_violation_canada",
+   "about": "partner",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.102Z"
+  },
+  {
+   "id": "f-0190-ddad",
+   "fact": "person.refused_visa_or_entry",
+   "about": "partner",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.103Z"
+  },
+  {
+   "id": "f-0191-f5f2",
+   "fact": "person.criminal_history",
+   "about": "partner",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.104Z"
+  },
+  {
+   "id": "f-0192-1a2f",
+   "fact": "person.military_service",
+   "about": "partner",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.105Z"
+  },
+  {
+   "id": "f-0193-077e",
+   "fact": "person.violent_organisation_association",
+   "about": "partner",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.107Z"
+  },
+  {
+   "id": "f-0194-d866",
+   "fact": "person.has_held_government_position",
+   "about": "partner",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.108Z"
+  },
+  {
+   "id": "f-0195-6559",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "about": "partner",
+   "value": true,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.109Z"
+  },
+  {
+   "id": "f-0196-1de1",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "about": "partner/parent_1",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.111Z"
+  },
+  {
+   "id": "f-0197-c62b",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "about": "partner/parent_2",
+   "value": false,
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.112Z"
+  },
+  {
+   "id": "f-0198-2306",
+   "fact": "person.family_name",
+   "about": "partner/parent_1",
+   "value": "EXAMPLEP",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.113Z"
+  },
+  {
+   "id": "f-0199-6af3",
+   "fact": "person.given_names",
+   "about": "partner/parent_1",
+   "value": "PMOTHER",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.114Z"
+  },
+  {
+   "id": "f-0200-d1ac",
+   "fact": "person.date_of_birth",
+   "about": "partner/parent_1",
+   "value": "1964-03-11",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.115Z"
+  },
+  {
+   "id": "f-0201-307b",
+   "fact": "person.country_of_birth",
+   "about": "partner/parent_1",
+   "value": "India",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.117Z"
+  },
+  {
+   "id": "f-0202-fe80",
+   "fact": "person.marital_status",
+   "about": "partner/parent_1",
+   "value": "married",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.118Z"
+  },
+  {
+   "id": "f-0203-bd6b",
+   "fact": "person.family_name",
+   "about": "partner/parent_2",
+   "value": "EXAMPLEP",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.119Z"
+  },
+  {
+   "id": "f-0204-e2d7",
+   "fact": "person.given_names",
+   "about": "partner/parent_2",
+   "value": "PFATHER",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.120Z"
+  },
+  {
+   "id": "f-0205-8abd",
+   "fact": "person.date_of_birth",
+   "about": "partner/parent_2",
+   "value": "1961-11-23",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.122Z"
+  },
+  {
+   "id": "f-0206-7a2b",
+   "fact": "person.country_of_birth",
+   "about": "partner/parent_2",
+   "value": "India",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.123Z"
+  },
+  {
+   "id": "f-0207-ae40",
+   "fact": "person.marital_status",
+   "about": "partner/parent_2",
+   "value": "married",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.124Z"
+  },
+  {
+   "id": "f-0208-7d73",
+   "fact": "person.phone_number",
+   "about": "client-a",
+   "value": [
+    {
+     "role": "primary",
+     "type": "Cellular",
+     "country_code": "91",
+     "number": "9800000000"
+    }
+   ],
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.125Z"
+  },
+  {
+   "id": "f-0209-9c33",
+   "fact": "person.mailing_address",
+   "about": "client-a",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.127Z"
+  },
+  {
+   "id": "f-0210-5925",
+   "fact": "person.residential_address",
+   "about": "client-a",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.129Z"
+  },
+  {
+   "id": "f-0211-2b73",
+   "fact": "person.employment_from_date",
+   "about": "client-a",
+   "row": 0,
+   "value": "2021-06-01",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.130Z"
+  },
+  {
+   "id": "f-0212-dee3",
+   "fact": "person.employment_activity",
+   "about": "client-a",
+   "row": 0,
+   "value": "Software engineer",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.131Z"
+  },
+  {
+   "id": "f-0213-4530",
+   "fact": "person.employment_employer_name",
+   "about": "client-a",
+   "row": 0,
+   "value": "Employer Three",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.132Z"
+  },
+  {
+   "id": "f-0214-b6eb",
+   "fact": "person.employment_location",
+   "about": "client-a",
+   "row": 0,
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.133Z"
+  },
+  {
+   "id": "f-0215-dc0e",
+   "fact": "person.employment_from_date",
+   "about": "client-a",
+   "row": 1,
+   "value": "2016-08-01",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.135Z"
+  },
+  {
+   "id": "f-0216-a1af",
+   "fact": "person.employment_to_date",
+   "about": "client-a",
+   "row": 1,
+   "value": "2021-05-31",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.136Z"
+  },
+  {
+   "id": "f-0217-9ab9",
+   "fact": "person.employment_activity",
+   "about": "client-a",
+   "row": 1,
+   "value": "Software developer",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.138Z"
+  },
+  {
+   "id": "f-0218-a984",
+   "fact": "person.employment_employer_name",
+   "about": "client-a",
+   "row": 1,
+   "value": "Employer Two",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.139Z"
+  },
+  {
+   "id": "f-0219-e585",
+   "fact": "person.employment_location",
+   "about": "client-a",
+   "row": 1,
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.140Z"
+  },
+  {
+   "id": "f-0220-7fd3",
+   "fact": "person.employment_from_date",
+   "about": "client-a",
+   "row": 2,
+   "value": "2013-07-01",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.141Z"
+  },
+  {
+   "id": "f-0221-9734",
+   "fact": "person.employment_to_date",
+   "about": "client-a",
+   "row": 2,
+   "value": "2016-07-31",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.142Z"
+  },
+  {
+   "id": "f-0222-00d2",
+   "fact": "person.employment_activity",
+   "about": "client-a",
+   "row": 2,
+   "value": "Graduate trainee",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.143Z"
+  },
+  {
+   "id": "f-0223-18ed",
+   "fact": "person.employment_employer_name",
+   "about": "client-a",
+   "row": 2,
+   "value": "Employer One",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.145Z"
+  },
+  {
+   "id": "f-0224-1b2f",
+   "fact": "person.employment_location",
+   "about": "client-a",
+   "row": 2,
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.146Z"
+  },
+  {
+   "id": "f-0225-4e56",
+   "fact": "person.occupation",
+   "about": "client-a",
+   "row": 0,
+   "value": "Software engineer",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.148Z"
+  },
+  {
+   "id": "f-0226-7989",
+   "fact": "person.phone_number",
+   "about": "partner",
+   "value": [
+    {
+     "role": "primary",
+     "type": "Cellular",
+     "country_code": "91",
+     "number": "9800000001"
+    }
+   ],
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.149Z"
+  },
+  {
+   "id": "f-0227-52fa",
+   "fact": "person.mailing_address",
+   "about": "partner",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.150Z"
+  },
+  {
+   "id": "f-0228-2566",
+   "fact": "person.residential_address",
+   "about": "partner",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.151Z"
+  },
+  {
+   "id": "f-0229-2a9f",
+   "fact": "person.employment_from_date",
+   "about": "partner",
+   "row": 0,
+   "value": "2018-04-01",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.153Z"
+  },
+  {
+   "id": "f-0230-cffb",
+   "fact": "person.employment_activity",
+   "about": "partner",
+   "row": 0,
+   "value": "Teacher",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.154Z"
+  },
+  {
+   "id": "f-0231-a7b8",
+   "fact": "person.employment_employer_name",
+   "about": "partner",
+   "row": 0,
+   "value": "Example School",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.155Z"
+  },
+  {
+   "id": "f-0232-9c06",
+   "fact": "person.employment_location",
+   "about": "partner",
+   "row": 0,
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.157Z"
+  },
+  {
+   "id": "f-0233-dc50",
+   "fact": "person.employment_from_date",
+   "about": "partner",
+   "row": 1,
+   "value": "2014-06-01",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.158Z"
+  },
+  {
+   "id": "f-0234-9a97",
+   "fact": "person.employment_to_date",
+   "about": "partner",
+   "row": 1,
+   "value": "2018-03-31",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.160Z"
+  },
+  {
+   "id": "f-0235-d9de",
+   "fact": "person.employment_activity",
+   "about": "partner",
+   "row": 1,
+   "value": "Teaching assistant",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.161Z"
+  },
+  {
+   "id": "f-0236-a29f",
+   "fact": "person.employment_employer_name",
+   "about": "partner",
+   "row": 1,
+   "value": "Example Academy",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.162Z"
+  },
+  {
+   "id": "f-0237-ec77",
+   "fact": "person.employment_location",
+   "about": "partner",
+   "row": 1,
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.164Z"
+  },
+  {
+   "id": "f-0238-22ed",
+   "fact": "person.occupation",
+   "about": "partner",
+   "row": 0,
+   "value": "Teacher",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.165Z"
+  },
+  {
+   "id": "f-0239-222a",
+   "fact": "person.residential_address",
+   "about": "client-a/parent_1",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.167Z"
+  },
+  {
+   "id": "f-0240-be7d",
+   "fact": "person.occupation",
+   "about": "client-a/parent_1",
+   "row": 0,
+   "value": "Retired",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.168Z"
+  },
+  {
+   "id": "f-0241-ff59",
+   "fact": "person.residential_address",
+   "about": "client-a/parent_2",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.169Z"
+  },
+  {
+   "id": "f-0242-7c8c",
+   "fact": "person.occupation",
+   "about": "client-a/parent_2",
+   "row": 0,
+   "value": "Retired",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.171Z"
+  },
+  {
+   "id": "f-0243-3d6b",
+   "fact": "person.residential_address",
+   "about": "partner/parent_1",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.172Z"
+  },
+  {
+   "id": "f-0244-a03e",
+   "fact": "person.occupation",
+   "about": "partner/parent_1",
+   "row": 0,
+   "value": "Retired",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.173Z"
+  },
+  {
+   "id": "f-0245-ea95",
+   "fact": "person.residential_address",
+   "about": "partner/parent_2",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.174Z"
+  },
+  {
+   "id": "f-0246-9b67",
+   "fact": "person.occupation",
+   "about": "partner/parent_2",
+   "row": 0,
+   "value": "Retired",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.176Z"
+  },
+  {
+   "id": "f-0247-a9f0",
+   "fact": "person.residential_address",
+   "about": "child",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.178Z"
+  },
+  {
+   "id": "f-0248-9f39",
+   "fact": "person.occupation",
+   "about": "child",
+   "row": 0,
+   "value": "Student",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.179Z"
+  },
+  {
+   "id": "f-0249-cb63",
+   "fact": "person.marital_status",
+   "about": "client-a",
+   "value": "common_law",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.508Z"
+  },
+  {
+   "id": "f-0250-7bcd",
+   "fact": "person.marital_status",
+   "about": "partner",
+   "value": "common_law",
+   "status": "superseded",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:58.572Z"
+  },
+  {
+   "id": "f-0251-c89f",
+   "fact": "person.work_permit_type",
+   "about": "client-a",
+   "value": "LMOS",
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.632Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.632Z"
+  },
+  {
+   "id": "f-0252-60d6",
+   "fact": "person.work_permit_type",
+   "about": "partner",
+   "value": "ELMO",
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.646Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.646Z"
+  },
+  {
+   "id": "f-0253-d319",
+   "fact": "person.is_employer_specific_work_permit",
+   "about": "client-a",
+   "value": true,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.649Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.649Z"
+  },
+  {
+   "id": "f-0254-b58f",
+   "fact": "person.is_employer_specific_work_permit",
+   "about": "partner",
+   "value": true,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.651Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.651Z"
+  },
+  {
+   "id": "f-0255-0eb9",
+   "fact": "case.employer_obtained_lmia",
+   "about": "case",
+   "value": true,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.652Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.652Z"
+  },
+  {
+   "id": "f-0256-8483",
+   "fact": "case.offer_lmia_exempt",
+   "about": "case",
+   "value": true,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.654Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.654Z"
+  },
+  {
+   "id": "f-0257-544a",
+   "fact": "case.uses_representative",
+   "about": "case",
+   "value": true,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.655Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.655Z"
+  },
+  {
+   "id": "f-0258-42c4",
+   "fact": "case.application_date",
+   "about": "case",
+   "value": "2026-11-02",
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.656Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.656Z"
+  },
+  {
+   "id": "f-0259-4034",
+   "fact": "organisation.address",
+   "about": "client-a",
+   "value": "100 Example Street, Toronto, ON M5V 1A1",
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.660Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.661Z"
+  },
+  {
+   "id": "f-0260-8014",
+   "fact": "organisation.address",
+   "about": "partner",
+   "value": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.662Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.662Z"
+  },
+  {
+   "id": "f-0261-f4db",
+   "fact": "person.intended_occupation_requires_medical",
+   "about": "partner",
+   "value": true,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.663Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.663Z"
+  },
+  {
+   "id": "f-0262-a792",
+   "fact": "person.intended_occupation_requires_medical",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.664Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.664Z"
+  },
+  {
+   "id": "f-0263-f516",
+   "fact": "person.family_name",
+   "about": "representative",
+   "value": "SAMPLE",
+   "status": "verified",
+   "source": {
+    "kind": "profile",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.665Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.665Z"
+  },
+  {
+   "id": "f-0264-d00c",
+   "fact": "person.given_names",
+   "about": "representative",
+   "value": "AVERY",
+   "status": "verified",
+   "source": {
+    "kind": "profile",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.667Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.667Z"
+  },
+  {
+   "id": "f-0265-5fd9",
+   "fact": "organisation.name",
+   "about": "representative",
+   "value": "Example Immigration Firm",
+   "status": "verified",
+   "source": {
+    "kind": "profile",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.669Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.669Z"
+  },
+  {
+   "id": "f-0266-f4fd",
+   "fact": "person.email_address",
+   "about": "representative",
+   "value": "avery.sample@example.com",
+   "status": "verified",
+   "source": {
+    "kind": "profile",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.671Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.671Z"
+  },
+  {
+   "id": "f-0267-2db3",
+   "fact": "representative.representative_category",
+   "about": "case",
+   "value": "paid",
+   "status": "verified",
+   "source": {
+    "kind": "profile",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.672Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.672Z"
+  },
+  {
+   "id": "f-0268-23bb",
+   "fact": "representative.membership_id",
+   "about": "case",
+   "value": "R000000",
+   "status": "verified",
+   "source": {
+    "kind": "profile",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.673Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.673Z"
+  },
+  {
+   "id": "f-0269-4ef5",
+   "fact": "representative.licensing_province",
+   "about": "case",
+   "value": "ON",
+   "status": "verified",
+   "source": {
+    "kind": "profile",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:03:59.674Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.674Z"
+  },
+  {
+   "id": "f-0270-1a76",
+   "fact": "person.email_address",
+   "about": "client-a",
+   "value": "client.a@example.com",
+   "status": "verified",
+   "source": {
+    "kind": "lead",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:59.813Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.813Z"
+  },
+  {
+   "id": "f-0271-2161",
+   "fact": "person.phone_type",
+   "about": "client-a",
+   "value": "Cellular",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:59.813Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.813Z"
+  },
+  {
+   "id": "f-0272-4d07",
+   "fact": "person.phone_number",
+   "about": "client-a",
+   "value": [
+    {
+     "role": "primary",
+     "type": "Cellular",
+     "country_code": "91",
+     "number": "9800000000"
+    }
+   ],
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:59.813Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.813Z"
+  },
+  {
+   "id": "f-0273-8785",
+   "fact": "person.mailing_address",
+   "about": "client-a",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:59.813Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.813Z"
+  },
+  {
+   "id": "f-0274-0254",
+   "fact": "person.residential_address",
+   "about": "client-a",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:59.813Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.813Z"
+  },
+  {
+   "id": "f-0276-31d8",
+   "fact": "person.marital_status",
+   "about": "client-a",
+   "value": "common_law",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:03:59.961Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:03:59.961Z"
+  },
+  {
+   "id": "f-0278-967c",
+   "fact": "person.us_lawful_permanent_resident",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.112Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.112Z"
+  },
+  {
+   "id": "f-0280-c689",
+   "fact": "person.previous_marriage_or_common_law",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.262Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.262Z"
+  },
+  {
+   "id": "f-0282-f65a",
+   "fact": "person.native_language",
+   "about": "client-a",
+   "value": "Hindi",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.412Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.412Z"
+  },
+  {
+   "id": "f-0283-2867",
+   "fact": "person.official_language_ability",
+   "about": "client-a",
+   "value": "English",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.412Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.412Z"
+  },
+  {
+   "id": "f-0284-768c",
+   "fact": "person.preferred_official_language",
+   "about": "client-a",
+   "value": "English",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.412Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.412Z"
+  },
+  {
+   "id": "f-0285-8fae",
+   "fact": "person.language_test_taken",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.412Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.412Z"
+  },
+  {
+   "id": "f-0287-ce0f",
+   "fact": "person.tb_history_or_contact",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.561Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.562Z"
+  },
+  {
+   "id": "f-0288-b8f4",
+   "fact": "person.disorder_requiring_services",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.562Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.562Z"
+  },
+  {
+   "id": "f-0290-00a2",
+   "fact": "person.status_violation_canada",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.712Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.712Z"
+  },
+  {
+   "id": "f-0291-184d",
+   "fact": "person.refused_visa_or_entry",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.712Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.712Z"
+  },
+  {
+   "id": "f-0292-297c",
+   "fact": "person.criminal_history",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.712Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.712Z"
+  },
+  {
+   "id": "f-0293-d99c",
+   "fact": "person.military_service",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.712Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.712Z"
+  },
+  {
+   "id": "f-0294-cb25",
+   "fact": "person.violent_organisation_association",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.712Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.712Z"
+  },
+  {
+   "id": "f-0295-98f8",
+   "fact": "person.has_held_government_position",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.712Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.712Z"
+  },
+  {
+   "id": "f-0297-fbe9",
+   "fact": "person.has_children",
+   "about": "client-a",
+   "value": true,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:00.862Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:00.862Z"
+  },
+  {
+   "id": "f-0299-fd77",
+   "fact": "person.employment_from_date",
+   "about": "client-a",
+   "row": 0,
+   "value": "2021-06-01",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0300-4299",
+   "fact": "person.employment_activity",
+   "about": "client-a",
+   "row": 0,
+   "value": "Software engineer",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0301-5e06",
+   "fact": "person.employment_employer_name",
+   "about": "client-a",
+   "row": 0,
+   "value": "Employer Three",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0302-3a10",
+   "fact": "person.employment_location",
+   "about": "client-a",
+   "row": 0,
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0303-162b",
+   "fact": "person.employment_from_date",
+   "about": "client-a",
+   "row": 1,
+   "value": "2016-08-01",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0304-c02e",
+   "fact": "person.employment_to_date",
+   "about": "client-a",
+   "row": 1,
+   "value": "2021-05-31",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0305-5a1c",
+   "fact": "person.employment_activity",
+   "about": "client-a",
+   "row": 1,
+   "value": "Software developer",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0306-b8e2",
+   "fact": "person.employment_employer_name",
+   "about": "client-a",
+   "row": 1,
+   "value": "Employer Two",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0307-abaa",
+   "fact": "person.employment_location",
+   "about": "client-a",
+   "row": 1,
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0308-16e1",
+   "fact": "person.employment_from_date",
+   "about": "client-a",
+   "row": 2,
+   "value": "2013-07-01",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0309-2f2b",
+   "fact": "person.employment_to_date",
+   "about": "client-a",
+   "row": 2,
+   "value": "2016-07-31",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0310-0d68",
+   "fact": "person.employment_activity",
+   "about": "client-a",
+   "row": 2,
+   "value": "Graduate trainee",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0311-cb5c",
+   "fact": "person.employment_employer_name",
+   "about": "client-a",
+   "row": 2,
+   "value": "Employer One",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0312-9134",
+   "fact": "person.employment_location",
+   "about": "client-a",
+   "row": 2,
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0313-4fc4",
+   "fact": "person.occupation",
+   "about": "client-a",
+   "row": 0,
+   "value": "Software engineer",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.012Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.012Z"
+  },
+  {
+   "id": "f-0315-2f4b",
+   "fact": "person.marital_status",
+   "about": "partner",
+   "value": "common_law",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.162Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.162Z"
+  },
+  {
+   "id": "f-0317-eca3",
+   "fact": "person.us_lawful_permanent_resident",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.312Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.312Z"
+  },
+  {
+   "id": "f-0319-beca",
+   "fact": "person.previous_marriage_or_common_law",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.463Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.463Z"
+  },
+  {
+   "id": "f-0320-86bc",
+   "fact": "person.life_insurance_names_partner_as_beneficiary",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.463Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.463Z"
+  },
+  {
+   "id": "f-0322-6964",
+   "fact": "person.native_language",
+   "about": "partner",
+   "value": "Hindi",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.613Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.613Z"
+  },
+  {
+   "id": "f-0323-7a9c",
+   "fact": "person.official_language_ability",
+   "about": "partner",
+   "value": "English",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.613Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.613Z"
+  },
+  {
+   "id": "f-0324-0be5",
+   "fact": "person.preferred_official_language",
+   "about": "partner",
+   "value": "English",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.613Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.613Z"
+  },
+  {
+   "id": "f-0325-59d7",
+   "fact": "person.language_test_taken",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.613Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.613Z"
+  },
+  {
+   "id": "f-0327-973e",
+   "fact": "person.phone_type",
+   "about": "partner",
+   "value": "Cellular",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.762Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.762Z"
+  },
+  {
+   "id": "f-0328-cf00",
+   "fact": "person.email_address",
+   "about": "partner",
+   "value": "partner@example.com",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.762Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.762Z"
+  },
+  {
+   "id": "f-0329-9626",
+   "fact": "person.phone_number",
+   "about": "partner",
+   "value": [
+    {
+     "role": "primary",
+     "type": "Cellular",
+     "country_code": "91",
+     "number": "9800000001"
+    }
+   ],
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.762Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.762Z"
+  },
+  {
+   "id": "f-0330-3aa1",
+   "fact": "person.mailing_address",
+   "about": "partner",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.762Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.762Z"
+  },
+  {
+   "id": "f-0331-205e",
+   "fact": "person.residential_address",
+   "about": "partner",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.762Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.762Z"
+  },
+  {
+   "id": "f-0333-9a93",
+   "fact": "person.tb_history_or_contact",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.912Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.912Z"
+  },
+  {
+   "id": "f-0334-7ae4",
+   "fact": "person.disorder_requiring_services",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:01.912Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:01.912Z"
+  },
+  {
+   "id": "f-0336-c06b",
+   "fact": "person.status_violation_canada",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.062Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.062Z"
+  },
+  {
+   "id": "f-0337-2d66",
+   "fact": "person.refused_visa_or_entry",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.062Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.062Z"
+  },
+  {
+   "id": "f-0338-3ebb",
+   "fact": "person.criminal_history",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.062Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.062Z"
+  },
+  {
+   "id": "f-0339-23c0",
+   "fact": "person.military_service",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.062Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.062Z"
+  },
+  {
+   "id": "f-0340-f889",
+   "fact": "person.violent_organisation_association",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.062Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.062Z"
+  },
+  {
+   "id": "f-0341-6bfe",
+   "fact": "person.has_held_government_position",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.062Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.062Z"
+  },
+  {
+   "id": "f-0343-9b38",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "about": "partner",
+   "value": true,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.212Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.212Z"
+  },
+  {
+   "id": "f-0345-0aa3",
+   "fact": "person.employment_from_date",
+   "about": "partner",
+   "row": 0,
+   "value": "2018-04-01",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.363Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.363Z"
+  },
+  {
+   "id": "f-0346-0434",
+   "fact": "person.employment_activity",
+   "about": "partner",
+   "row": 0,
+   "value": "Teacher",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.363Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.363Z"
+  },
+  {
+   "id": "f-0347-65b5",
+   "fact": "person.employment_employer_name",
+   "about": "partner",
+   "row": 0,
+   "value": "Example School",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.364Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.364Z"
+  },
+  {
+   "id": "f-0348-8949",
+   "fact": "person.employment_location",
+   "about": "partner",
+   "row": 0,
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.364Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.364Z"
+  },
+  {
+   "id": "f-0349-bcb7",
+   "fact": "person.employment_from_date",
+   "about": "partner",
+   "row": 1,
+   "value": "2014-06-01",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.364Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.364Z"
+  },
+  {
+   "id": "f-0350-0080",
+   "fact": "person.employment_to_date",
+   "about": "partner",
+   "row": 1,
+   "value": "2018-03-31",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.364Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.364Z"
+  },
+  {
+   "id": "f-0351-c5ab",
+   "fact": "person.employment_activity",
+   "about": "partner",
+   "row": 1,
+   "value": "Teaching assistant",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.364Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.364Z"
+  },
+  {
+   "id": "f-0352-7e24",
+   "fact": "person.employment_employer_name",
+   "about": "partner",
+   "row": 1,
+   "value": "Example Academy",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.364Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.364Z"
+  },
+  {
+   "id": "f-0353-c756",
+   "fact": "person.employment_location",
+   "about": "partner",
+   "row": 1,
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.364Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.364Z"
+  },
+  {
+   "id": "f-0354-c7bd",
+   "fact": "person.occupation",
+   "about": "partner",
+   "row": 0,
+   "value": "Teacher",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.364Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.364Z"
+  },
+  {
+   "id": "f-0356-51e7",
+   "fact": "person.marital_status",
+   "about": "child",
+   "value": "single",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.513Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.513Z"
+  },
+  {
+   "id": "f-0358-0047",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "about": "child",
+   "value": true,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.679Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.679Z"
+  },
+  {
+   "id": "f-0359-a975",
+   "fact": "relationship.child_relationship_type",
+   "about": "child",
+   "value": "daughter",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.679Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.679Z"
+  },
+  {
+   "id": "f-0361-e77e",
+   "fact": "person.residential_address",
+   "about": "child",
+   "value": {
+    "street_number": "12",
+    "street_name": "Example Road",
+    "city": "New Delhi",
+    "postal_code": "110001",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.829Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.829Z"
+  },
+  {
+   "id": "f-0363-ea40",
+   "fact": "person.occupation",
+   "about": "child",
+   "row": 0,
+   "value": "Student",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:02.979Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:02.979Z"
+  },
+  {
+   "id": "f-0365-3473",
+   "fact": "case.service_language",
+   "about": "case",
+   "value": "English",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.129Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.129Z"
+  },
+  {
+   "id": "f-0367-6d2f",
+   "fact": "case.country_where_applying",
+   "about": "case",
+   "value": "India",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.280Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.280Z"
+  },
+  {
+   "id": "f-0369-df09",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "about": "client-a/parent_1",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.429Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.429Z"
+  },
+  {
+   "id": "f-0371-c159",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "about": "client-a/parent_2",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.579Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.579Z"
+  },
+  {
+   "id": "f-0373-5dec",
+   "fact": "person.family_name",
+   "about": "client-a/parent_1",
+   "value": "EXAMPLE",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.729Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.729Z"
+  },
+  {
+   "id": "f-0374-4a34",
+   "fact": "person.given_names",
+   "about": "client-a/parent_1",
+   "value": "MOTHER",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.729Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.729Z"
+  },
+  {
+   "id": "f-0375-42c4",
+   "fact": "person.date_of_birth",
+   "about": "client-a/parent_1",
+   "value": "1962-06-15",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.729Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.729Z"
+  },
+  {
+   "id": "f-0376-0777",
+   "fact": "person.country_of_birth",
+   "about": "client-a/parent_1",
+   "value": "India",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.729Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.729Z"
+  },
+  {
+   "id": "f-0377-309b",
+   "fact": "person.marital_status",
+   "about": "client-a/parent_1",
+   "value": "married",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.729Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.729Z"
+  },
+  {
+   "id": "f-0379-3912",
+   "fact": "person.family_name",
+   "about": "client-a/parent_2",
+   "value": "EXAMPLE",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.880Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.880Z"
+  },
+  {
+   "id": "f-0380-d8f4",
+   "fact": "person.given_names",
+   "about": "client-a/parent_2",
+   "value": "FATHER",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.880Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.880Z"
+  },
+  {
+   "id": "f-0381-c3b8",
+   "fact": "person.date_of_birth",
+   "about": "client-a/parent_2",
+   "value": "1960-02-01",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.880Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.880Z"
+  },
+  {
+   "id": "f-0382-afd6",
+   "fact": "person.country_of_birth",
+   "about": "client-a/parent_2",
+   "value": "India",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.880Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.880Z"
+  },
+  {
+   "id": "f-0383-645c",
+   "fact": "person.marital_status",
+   "about": "client-a/parent_2",
+   "value": "married",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:03.880Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:03.880Z"
+  },
+  {
+   "id": "f-0385-a7a1",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "about": "partner/parent_1",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.029Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.029Z"
+  },
+  {
+   "id": "f-0387-e7f0",
+   "fact": "relationship.accompanies_subject_to_canada",
+   "about": "partner/parent_2",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.179Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.179Z"
+  },
+  {
+   "id": "f-0389-8eec",
+   "fact": "person.family_name",
+   "about": "partner/parent_1",
+   "value": "EXAMPLEP",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.328Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.328Z"
+  },
+  {
+   "id": "f-0390-4577",
+   "fact": "person.given_names",
+   "about": "partner/parent_1",
+   "value": "PMOTHER",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.328Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.328Z"
+  },
+  {
+   "id": "f-0391-5953",
+   "fact": "person.date_of_birth",
+   "about": "partner/parent_1",
+   "value": "1964-03-11",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.328Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.328Z"
+  },
+  {
+   "id": "f-0392-1100",
+   "fact": "person.country_of_birth",
+   "about": "partner/parent_1",
+   "value": "India",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.328Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.328Z"
+  },
+  {
+   "id": "f-0393-f9fe",
+   "fact": "person.marital_status",
+   "about": "partner/parent_1",
+   "value": "married",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.329Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.329Z"
+  },
+  {
+   "id": "f-0395-0130",
+   "fact": "person.family_name",
+   "about": "partner/parent_2",
+   "value": "EXAMPLEP",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.479Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.479Z"
+  },
+  {
+   "id": "f-0396-105a",
+   "fact": "person.given_names",
+   "about": "partner/parent_2",
+   "value": "PFATHER",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.479Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.479Z"
+  },
+  {
+   "id": "f-0397-920a",
+   "fact": "person.date_of_birth",
+   "about": "partner/parent_2",
+   "value": "1961-11-23",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.479Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.479Z"
+  },
+  {
+   "id": "f-0398-8e11",
+   "fact": "person.country_of_birth",
+   "about": "partner/parent_2",
+   "value": "India",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.479Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.479Z"
+  },
+  {
+   "id": "f-0399-e8bd",
+   "fact": "person.marital_status",
+   "about": "partner/parent_2",
+   "value": "married",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.479Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.479Z"
+  },
+  {
+   "id": "f-0401-6b8d",
+   "fact": "person.residential_address",
+   "about": "client-a/parent_1",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.630Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.630Z"
+  },
+  {
+   "id": "f-0403-49a5",
+   "fact": "person.occupation",
+   "about": "client-a/parent_1",
+   "row": 0,
+   "value": "Retired",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.781Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.781Z"
+  },
+  {
+   "id": "f-0405-6740",
+   "fact": "person.residential_address",
+   "about": "client-a/parent_2",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:04.928Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:04.928Z"
+  },
+  {
+   "id": "f-0407-7e7e",
+   "fact": "person.occupation",
+   "about": "client-a/parent_2",
+   "row": 0,
+   "value": "Retired",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:05.080Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:05.080Z"
+  },
+  {
+   "id": "f-0409-3a12",
+   "fact": "person.residential_address",
+   "about": "partner/parent_1",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:05.229Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:05.229Z"
+  },
+  {
+   "id": "f-0411-5b12",
+   "fact": "person.occupation",
+   "about": "partner/parent_1",
+   "row": 0,
+   "value": "Retired",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:05.552Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:05.552Z"
+  },
+  {
+   "id": "f-0413-0c39",
+   "fact": "person.residential_address",
+   "about": "partner/parent_2",
+   "value": {
+    "city": "New Delhi",
+    "country": "India"
+   },
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:05.732Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:05.732Z"
+  },
+  {
+   "id": "f-0415-5435",
+   "fact": "person.occupation",
+   "about": "partner/parent_2",
+   "row": 0,
+   "value": "Retired",
+   "status": "verified",
+   "source": {
+    "kind": "questionnaire",
+    "by": "client"
+   },
+   "at": "2026-10-20T20:04:05.880Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:05.880Z"
+  },
+  {
+   "id": "f-0417-1b1f",
+   "fact": "person.fee_exempt",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:04:06.017Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:06.017Z"
+  },
+  {
+   "id": "f-0418-5aae",
+   "fact": "person.fee_exempt",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:04:06.156Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:06.156Z"
+  },
+  {
+   "id": "f-0419-db26",
+   "fact": "person.biometrics_required",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:04:06.287Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:06.287Z"
+  },
+  {
+   "id": "f-0420-8022",
+   "fact": "person.biometrics_required",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:04:06.475Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:06.475Z"
+  },
+  {
+   "id": "f-0421-9363",
+   "fact": "person.residence_differs_from_citizenship",
+   "about": "client-a",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:04:06.705Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:06.705Z"
+  },
+  {
+   "id": "f-0422-242c",
+   "fact": "person.residence_differs_from_citizenship",
+   "about": "partner",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:04:06.895Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:06.895Z"
+  },
+  {
+   "id": "f-0423-1d38",
+   "fact": "case.offer_submitted_via_imm5802",
+   "about": "case",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:04:07.055Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:07.055Z"
+  },
+  {
+   "id": "f-0424-9dd0",
+   "fact": "case.offer_from_nominating_province_employer",
+   "about": "case",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:04:07.204Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:07.204Z"
+  },
+  {
+   "id": "f-0425-e1da",
+   "fact": "case.applying_for_pgwp",
+   "about": "case",
+   "value": false,
+   "status": "verified",
+   "source": {
+    "kind": "staff",
+    "by": "agent-1"
+   },
+   "at": "2026-10-20T20:04:07.354Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:07.354Z"
+  },
+  {
+   "id": "f-0442-5767",
+   "fact": "person.intended_employment_start_date",
+   "about": "partner",
+   "value": "2027-03-01",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-10",
+    "file_sha256": "07622861ea51eaa45c25c1b20efeeabc535e94938fbfbc430a558c0279e777fe",
+    "where": "page 1, Tesseract on the rendered page, row \"Start date March 1, 2027\"",
+    "as_printed": "March 1, 2027",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:04:15.396Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:15.396Z",
+   "supersedes": "f-0121-71e7"
+  },
+  {
+   "id": "f-0445-dfa1",
+   "fact": "person.intended_employment_end_date",
+   "about": "partner",
+   "value": "2029-02-28",
+   "status": "verified",
+   "source": {
+    "kind": "document",
+    "by": "agent",
+    "doc_id": "doc-10",
+    "file_sha256": "07622861ea51eaa45c25c1b20efeeabc535e94938fbfbc430a558c0279e777fe",
+    "where": "page 1, Tesseract on the rendered page, row \"End date February 28, 2029\"",
+    "as_printed": "February 28, 2029",
+    "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+    "confidence": "medium"
+   },
+   "at": "2026-10-20T20:04:15.546Z",
+   "verified_by": "agent-1",
+   "verified_at": "2026-10-20T20:04:15.546Z",
+   "supersedes": "f-0122-8193"
+  }
+ ],
+ "documents": [
+  {
+   "doc_id": "doc-01",
+   "sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+   "file": "files/1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59.png",
+   "original_name": "D1-passport-principal-scan.png",
+   "media_type": "image/png",
+   "uploaded_by": "agent",
+   "uploaded_at": "2026-10-20T20:03:39.812Z",
+   "batch": 1,
+   "claimed_type": "unknown",
+   "processing": "read",
+   "status": "Received",
+   "extraction_file": "extractions/doc-01.json",
+   "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+   "kind_seen": "passport",
+   "issues": [
+    "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally"
+   ],
+   "letter_date": "2020-01-15",
+   "about": "client-a",
+   "association": "matched",
+   "association_reason": "assigned by agent-1 (was ambiguous: the name matches CLIENTA EXAMPLE (principal applicant) but the date of birth differs (1990-04-12 vs 1990-12-04); a person decides)"
+  },
+  {
+   "doc_id": "doc-02",
+   "sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+   "file": "files/966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a.jpg",
+   "original_name": "D2-passport-partner-photo.jpg",
+   "media_type": "image/jpeg",
+   "uploaded_by": "agent",
+   "uploaded_at": "2026-10-20T20:03:39.828Z",
+   "batch": 1,
+   "claimed_type": "unknown",
+   "processing": "read",
+   "status": "Received",
+   "extraction_file": "extractions/doc-02.json",
+   "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+   "kind_seen": "passport",
+   "issues": [
+    "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally"
+   ],
+   "letter_date": null,
+   "about": "partner",
+   "association": "matched",
+   "association_reason": "name and date of birth match PARTNER EXAMPLEP (partner, also applying)"
+  },
+  {
+   "doc_id": "doc-03",
+   "sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+   "file": "files/bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c.pdf",
+   "original_name": "D3-job-offer-principal.pdf",
+   "media_type": "application/pdf",
+   "uploaded_by": "agent",
+   "uploaded_at": "2026-10-20T20:03:39.833Z",
+   "batch": 1,
+   "claimed_type": "unknown",
+   "processing": "read",
+   "status": "Received",
+   "extraction_file": "extractions/doc-03.json",
+   "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+   "kind_seen": "job_offer",
+   "issues": [
+    "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally"
+   ],
+   "letter_date": "2026-10-01",
+   "about": "client-a",
+   "association": "matched",
+   "association_reason": "name match CLIENTA EXAMPLE (principal applicant)"
+  },
+  {
+   "doc_id": "doc-04",
+   "sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+   "file": "files/1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81.jpg",
+   "original_name": "D4-job-offer-partner-scan.jpg",
+   "media_type": "image/jpeg",
+   "uploaded_by": "agent",
+   "uploaded_at": "2026-10-20T20:03:39.839Z",
+   "batch": 1,
+   "claimed_type": "unknown",
+   "processing": "read",
+   "status": "Received",
+   "extraction_file": "extractions/doc-04.json",
+   "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+   "kind_seen": "job_offer",
+   "issues": [
+    "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally"
+   ],
+   "letter_date": "2026-10-05",
+   "about": "partner",
+   "association": "matched",
+   "association_reason": "name match PARTNER EXAMPLEP (partner, also applying)"
+  },
+  {
+   "doc_id": "doc-05",
+   "sha256": "f61eddf4b6258aff1d08ed425ba48aecfa40c20a81769301e6f9bd8e8da82a1f",
+   "file": "files/f61eddf4b6258aff1d08ed425ba48aecfa40c20a81769301e6f9bd8e8da82a1f.png",
+   "original_name": "D5-birth-certificate-child.png",
+   "media_type": "image/png",
+   "uploaded_by": "agent",
+   "uploaded_at": "2026-10-20T20:03:39.845Z",
+   "batch": 1,
+   "claimed_type": "unknown",
+   "processing": "read",
+   "status": "Received",
+   "extraction_file": "extractions/doc-05.json",
+   "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+   "kind_seen": "birth_certificate",
+   "issues": [
+    "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally"
+   ],
+   "letter_date": null,
+   "about": "child",
+   "association": "matched",
+   "association_reason": "name and date of birth match CHILD EXAMPLE (child, accompanying)"
+  },
+  {
+   "doc_id": "doc-06",
+   "sha256": "b6b07b034a2cc319f10cbaff34cba34e2fb8a0916d13472bef9fb1bd808b8e2c",
+   "file": "files/b6b07b034a2cc319f10cbaff34cba34e2fb8a0916d13472bef9fb1bd808b8e2c.jpg",
+   "original_name": "D6-passport-principal-unreadable.jpg",
+   "media_type": "image/jpeg",
+   "uploaded_by": "agent",
+   "uploaded_at": "2026-10-20T20:03:39.847Z",
+   "batch": 1,
+   "claimed_type": "unknown",
+   "processing": "unreadable",
+   "status": "Needs replacing",
+   "extraction_file": "extractions/doc-06.json",
+   "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+   "kind_seen": "cannot_tell",
+   "issues": [
+    "looks like cannot_tell, not unknown",
+    "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally"
+   ],
+   "letter_date": null,
+   "association": "unreadable",
+   "status_reason": "the file cannot be read; please upload a clearer copy"
+  },
+  {
+   "doc_id": "doc-07",
+   "sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+   "file": "files/1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59.png",
+   "original_name": "D1-passport-principal-scan.png",
+   "media_type": "image/png",
+   "uploaded_by": "agent",
+   "uploaded_at": "2026-10-20T20:03:40.329Z",
+   "batch": 1,
+   "claimed_type": "unknown",
+   "processing": "duplicate",
+   "duplicate_of": "doc-01",
+   "status": "Received",
+   "status_reason": "same file as doc-01 (identical content); nothing re-read, no new facts or tasks"
+  },
+  {
+   "doc_id": "doc-08",
+   "sha256": "054390ed46b652cdb3c4c4e499c88aa31522e47c3ac7fc72ee94be711e4975b4",
+   "file": "files/054390ed46b652cdb3c4c4e499c88aa31522e47c3ac7fc72ee94be711e4975b4.png",
+   "original_name": "D7-passport-principal-mrz-conflict.png",
+   "media_type": "image/png",
+   "uploaded_by": "agent",
+   "uploaded_at": "2026-10-20T20:03:40.829Z",
+   "batch": 1,
+   "claimed_type": "passport",
+   "for_person": "partner",
+   "processing": "read",
+   "status": "Needs replacing",
+   "extraction_file": "extractions/doc-08.json",
+   "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+   "kind_seen": "passport",
+   "issues": [
+    "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally"
+   ],
+   "letter_date": "2020-01-15",
+   "about": "client-a",
+   "association": "wrong_person",
+   "association_reason": "uploaded for PARTNER EXAMPLEP (partner, also applying) but the document is CLIENTA EXAMPLE (principal applicant)'s",
+   "status_reason": "uploaded for PARTNER EXAMPLEP (partner, also applying) but the document is CLIENTA EXAMPLE (principal applicant)'s"
+  },
+  {
+   "doc_id": "doc-09",
+   "sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+   "file": "files/1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59.png",
+   "original_name": "D1-passport-principal-scan.png",
+   "media_type": "image/png",
+   "uploaded_by": "agent",
+   "uploaded_at": "2026-10-20T20:04:12.377Z",
+   "batch": 2,
+   "claimed_type": "unknown",
+   "processing": "duplicate",
+   "duplicate_of": "doc-01",
+   "kind_seen": "passport",
+   "about": "client-a",
+   "association": "matched",
+   "status": "Received",
+   "status_reason": "same file as doc-01 (identical content); nothing re-read, no new facts or tasks"
+  },
+  {
+   "doc_id": "doc-10",
+   "sha256": "07622861ea51eaa45c25c1b20efeeabc535e94938fbfbc430a558c0279e777fe",
+   "file": "files/07622861ea51eaa45c25c1b20efeeabc535e94938fbfbc430a558c0279e777fe.pdf",
+   "original_name": "D8-job-offer-partner-revised.pdf",
+   "media_type": "application/pdf",
+   "uploaded_by": "agent",
+   "uploaded_at": "2026-10-20T20:04:12.384Z",
+   "batch": 2,
+   "claimed_type": "unknown",
+   "processing": "read",
+   "status": "Received",
+   "extraction_file": "extractions/doc-10.json",
+   "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+   "kind_seen": "job_offer",
+   "issues": [
+    "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally"
+   ],
+   "letter_date": "2026-10-19",
+   "about": "partner",
+   "association": "matched",
+   "association_reason": "name match PARTNER EXAMPLEP (partner, also applying)"
+  }
+ ],
+ "items": [
+  {
+   "fact": "person.family_name",
+   "about": "partner",
+   "kind": "corroborates",
+   "value": "EXAMPLEP",
+   "as_printed": "EXAMPLEP",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "medium",
+   "current": {
+    "record_id": "f-0006-aa72",
+    "value": "EXAMPLEP",
+    "status": "proposed",
+    "source": {
+     "kind": "lead",
+     "by": "client"
+    }
+   },
+   "id": "i-0019-0c1e",
+   "batch": 1,
+   "doc_id": "doc-02",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.496Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.given_names",
+   "about": "partner",
+   "kind": "corroborates",
+   "value": "PARTNER",
+   "as_printed": "PARTNER",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "medium",
+   "current": {
+    "record_id": "f-0007-0725",
+    "value": "PARTNER",
+    "status": "proposed",
+    "source": {
+     "kind": "lead",
+     "by": "client"
+    }
+   },
+   "id": "i-0020-53ae",
+   "batch": 1,
+   "doc_id": "doc-02",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.496Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.sex",
+   "about": "partner",
+   "kind": "new",
+   "value": "M",
+   "as_printed": "M",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0021-925e",
+   "batch": 1,
+   "doc_id": "doc-02",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.496Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.date_of_birth",
+   "about": "partner",
+   "kind": "new",
+   "value": "1991-09-03",
+   "as_printed": "1991-09-03",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0023-a9c0",
+   "batch": 1,
+   "doc_id": "doc-02",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.496Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.passport_number",
+   "about": "partner",
+   "kind": "new",
+   "value": "Z7654321",
+   "as_printed": "Z7654321",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0025-109e",
+   "batch": 1,
+   "doc_id": "doc-02",
+   "section": "Travel and identity documents",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.629Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.passport_expiry_date",
+   "about": "partner",
+   "kind": "new",
+   "value": "2029-03-09",
+   "as_printed": "2029-03-09",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0027-c177",
+   "batch": 1,
+   "doc_id": "doc-02",
+   "section": "Travel and identity documents",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.629Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.citizenship",
+   "about": "partner",
+   "kind": "new",
+   "value": "IND",
+   "as_printed": "IND",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0029-b1f7",
+   "batch": 1,
+   "doc_id": "doc-02",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.496Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.passport_country_of_issue",
+   "about": "partner",
+   "kind": "new",
+   "value": "IND",
+   "as_printed": "IND",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0031-52f1",
+   "batch": 1,
+   "doc_id": "doc-02",
+   "section": "Travel and identity documents",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.629Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.place_of_birth_city",
+   "about": "partner",
+   "kind": "unresolved",
+   "value": null,
+   "reason": "not found by the label rules",
+   "where": "",
+   "id": "i-0033-1cdc",
+   "batch": 1,
+   "doc_id": "doc-02",
+   "section": "Personal details"
+  },
+  {
+   "fact": "person.passport_issue_date",
+   "about": "partner",
+   "kind": "unresolved",
+   "value": null,
+   "reason": "not found by the label rules",
+   "where": "",
+   "id": "i-0034-6070",
+   "batch": 1,
+   "doc_id": "doc-02",
+   "section": "Travel and identity documents"
+  },
+  {
+   "fact": "person.intended_job_title",
+   "about": "client-a",
+   "kind": "new",
+   "value": "Software engineer",
+   "as_printed": "Software engineer",
+   "where": "page 1, PDF text layer, row \"Position  Software engineer\"",
+   "confidence": "high",
+   "current": null,
+   "id": "i-0035-54b8",
+   "batch": 1,
+   "doc_id": "doc-03",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.763Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_job_duties",
+   "about": "client-a",
+   "kind": "new",
+   "value": "Designs and builds software",
+   "as_printed": "Designs and builds software",
+   "where": "page 1, PDF text layer, row \"Main duties  Designs and builds software\"",
+   "confidence": "high",
+   "current": null,
+   "id": "i-0037-f42a",
+   "batch": 1,
+   "doc_id": "doc-03",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.763Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_work_location",
+   "about": "client-a",
+   "kind": "new",
+   "value": "100 Example Street, Toronto, ON M5V 1A1",
+   "as_printed": "100 Example Street, Toronto, ON M5V 1A1",
+   "where": "page 1, Tesseract on the rendered page, row \"Work location 100 Example Street, Toront\"",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0039-7414",
+   "batch": 1,
+   "doc_id": "doc-03",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.763Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_employment_start_date",
+   "about": "client-a",
+   "kind": "new",
+   "value": "2027-01-04",
+   "as_printed": "January 4, 2027  T E",
+   "where": "page 1, PDF text layer, row \"Start date  January 4, 2027  T E\"",
+   "confidence": "high",
+   "current": null,
+   "id": "i-0041-348b",
+   "batch": 1,
+   "doc_id": "doc-03",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.763Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_employment_end_date",
+   "about": "client-a",
+   "kind": "new",
+   "value": "2029-01-03",
+   "as_printed": "January 3, 2029",
+   "where": "page 1, Tesseract on the rendered page, row \"End date January 3, 2029\"",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0043-5313",
+   "batch": 1,
+   "doc_id": "doc-03",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.763Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.lmia_or_offer_number",
+   "about": "client-a",
+   "kind": "new",
+   "value": "A1234567",
+   "as_printed": "A1234567",
+   "where": "page 1, Tesseract on the rendered page, row \"LMIA number A1234567\"",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0045-2807",
+   "batch": 1,
+   "doc_id": "doc-03",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.763Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "organisation.name",
+   "about": "client-a",
+   "kind": "new",
+   "value": "Example Employer Ltd",
+   "as_printed": "Example Employer Ltd",
+   "where": "page 1, letterhead / offer sentence",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0047-3232",
+   "batch": 1,
+   "doc_id": "doc-03",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.763Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_work_province",
+   "about": "client-a",
+   "kind": "new",
+   "value": "ON",
+   "as_printed": "ON",
+   "where": "derived from the work location",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0049-d198",
+   "batch": 1,
+   "doc_id": "doc-03",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.763Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_job_title",
+   "about": "partner",
+   "kind": "new",
+   "value": "Early childhood educator",
+   "as_printed": "Early childhood educator",
+   "where": "page 1, Tesseract, row \"Position Early childhood educator\"",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0051-e53e",
+   "batch": 1,
+   "doc_id": "doc-04",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.929Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_job_duties",
+   "about": "partner",
+   "kind": "new",
+   "value": "Plans and leads learning activities for young children",
+   "as_printed": "Plans and leads learning activities for young children",
+   "where": "page 1, Tesseract, row \"Main duties Plans and leads learning act\"",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0053-252d",
+   "batch": 1,
+   "doc_id": "doc-04",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.929Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_work_location",
+   "about": "partner",
+   "kind": "new",
+   "value": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+   "as_printed": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+   "where": "page 1, Tesseract, row \"Work location 25 Sample Avenue, Vancouve\"",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0055-f796",
+   "batch": 1,
+   "doc_id": "doc-04",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.929Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_employment_start_date",
+   "about": "partner",
+   "kind": "new",
+   "value": "2027-02-01",
+   "as_printed": "February 1, 2027",
+   "where": "page 1, Tesseract, row \"Start date February 1, 2027\"",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0057-eca0",
+   "batch": 1,
+   "doc_id": "doc-04",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.929Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_employment_end_date",
+   "about": "partner",
+   "kind": "new",
+   "value": "2029-01-31",
+   "as_printed": "January 31, 2029",
+   "where": "page 1, Tesseract, row \"End date January 31, 2029\"",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0059-d5e2",
+   "batch": 1,
+   "doc_id": "doc-04",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.929Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.lmia_or_offer_number",
+   "about": "partner",
+   "kind": "unresolved",
+   "value": null,
+   "reason": "not found by the label rules",
+   "where": "",
+   "id": "i-0061-672c",
+   "batch": 1,
+   "doc_id": "doc-04",
+   "section": "Intended work in Canada"
+  },
+  {
+   "fact": "organisation.name",
+   "about": "partner",
+   "kind": "new",
+   "value": "Example Learning Centre Inc.",
+   "as_printed": "Example Learning Centre Inc.",
+   "where": "page 1, letterhead / offer sentence",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0062-e236",
+   "batch": 1,
+   "doc_id": "doc-04",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.929Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_work_province",
+   "about": "partner",
+   "kind": "new",
+   "value": "BC",
+   "as_printed": "BC",
+   "where": "derived from the work location",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0064-1657",
+   "batch": 1,
+   "doc_id": "doc-04",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.929Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.date_of_birth",
+   "about": "child",
+   "kind": "new",
+   "value": "2017-01-20",
+   "as_printed": "January 20, 2017",
+   "where": "page 1, Tesseract, row \"Date of birth January 20, 2017\"",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0066-6725",
+   "batch": 1,
+   "doc_id": "doc-05",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.062Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.sex",
+   "about": "child",
+   "kind": "new",
+   "value": "F",
+   "as_printed": "Female",
+   "where": "page 1, Tesseract, row \"Sex Female\"",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0068-e9f3",
+   "batch": 1,
+   "doc_id": "doc-05",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.062Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "mother.full_name",
+   "about": "child",
+   "kind": "relationship_check",
+   "value": "CLIENTA EXAMPLE",
+   "as_printed": "CLIENTA EXAMPLE",
+   "where": "page 1, Tesseract, row \"Name of mother CLIENTA EXAMPLE\"",
+   "confidence": "medium",
+   "reason": "matches CLIENTA EXAMPLE (principal applicant) (relationship evidence)",
+   "id": "i-0070-cf64",
+   "batch": 1,
+   "doc_id": "doc-05",
+   "section": "Other"
+  },
+  {
+   "fact": "father.full_name",
+   "about": "child",
+   "kind": "relationship_check",
+   "value": "PARTNER EXAMPLEP",
+   "as_printed": "PARTNER EXAMPLEP",
+   "where": "page 1, Tesseract, row \"Name of father PARTNER EXAMPLEP\"",
+   "confidence": "medium",
+   "reason": "matches PARTNER EXAMPLEP (partner, also applying) (relationship evidence)",
+   "id": "i-0071-29b6",
+   "batch": 1,
+   "doc_id": "doc-05",
+   "section": "Other"
+  },
+  {
+   "fact": "person.given_names",
+   "about": "child",
+   "kind": "corroborates",
+   "value": "CHILD",
+   "as_printed": "CHILD EXAMPLE",
+   "where": "",
+   "confidence": "medium",
+   "current": {
+    "record_id": "f-0009-bb32",
+    "value": "CHILD",
+    "status": "proposed",
+    "source": {
+     "kind": "lead",
+     "by": "client"
+    }
+   },
+   "id": "i-0072-68b6",
+   "batch": 1,
+   "doc_id": "doc-05",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.062Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.family_name",
+   "about": "child",
+   "kind": "corroborates",
+   "value": "EXAMPLE",
+   "as_printed": "CHILD EXAMPLE",
+   "where": "",
+   "confidence": "medium",
+   "current": {
+    "record_id": "f-0008-c7a2",
+    "value": "EXAMPLE",
+    "status": "proposed",
+    "source": {
+     "kind": "lead",
+     "by": "client"
+    }
+   },
+   "id": "i-0073-ec30",
+   "batch": 1,
+   "doc_id": "doc-05",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.062Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.place_of_birth_city",
+   "about": "child",
+   "kind": "new",
+   "value": "NEW DELHI",
+   "as_printed": "City Hospital, NEW DELHI, INDIA",
+   "where": "",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0074-ab04",
+   "batch": 1,
+   "doc_id": "doc-05",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.062Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.country_of_birth",
+   "about": "child",
+   "kind": "new",
+   "value": "INDIA",
+   "as_printed": "City Hospital, NEW DELHI, INDIA",
+   "where": "",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0076-189b",
+   "batch": 1,
+   "doc_id": "doc-05",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.062Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.family_name",
+   "about": "client-a",
+   "kind": "corroborates",
+   "value": "EXAMPLE",
+   "as_printed": "EXAMPLE",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "high",
+   "current": {
+    "record_id": "f-0002-e81f",
+    "value": "EXAMPLE",
+    "status": "proposed",
+    "source": {
+     "kind": "lead",
+     "by": "client"
+    }
+   },
+   "id": "i-0080-79ad",
+   "batch": 1,
+   "doc_id": "doc-01",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.196Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.given_names",
+   "about": "client-a",
+   "kind": "corroborates",
+   "value": "CLIENTA",
+   "as_printed": "CLIENTA",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "medium",
+   "current": {
+    "record_id": "f-0003-2b85",
+    "value": "CLIENTA",
+    "status": "proposed",
+    "source": {
+     "kind": "lead",
+     "by": "client"
+    }
+   },
+   "id": "i-0081-045f",
+   "batch": 1,
+   "doc_id": "doc-01",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.196Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.sex",
+   "about": "client-a",
+   "kind": "new",
+   "value": "F",
+   "as_printed": "F",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "high",
+   "current": null,
+   "id": "i-0082-4140",
+   "batch": 1,
+   "doc_id": "doc-01",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.196Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.date_of_birth",
+   "about": "client-a",
+   "kind": "conflict",
+   "value": "1990-04-12",
+   "as_printed": "12 APR 1990",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "high",
+   "current": {
+    "record_id": "f-0004-23a9",
+    "value": "1990-12-04",
+    "status": "proposed",
+    "source": {
+     "kind": "lead",
+     "by": "client"
+    }
+   },
+   "reason": "differs from the proposed value from lead; a person decides (no last-upload-wins)",
+   "id": "i-0084-d8bd",
+   "batch": 1,
+   "doc_id": "doc-01",
+   "section": "Personal details",
+   "decision": {
+    "action": "use_value",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:56.363Z",
+    "value": "1990-04-12"
+   }
+  },
+  {
+   "fact": "person.passport_number",
+   "about": "client-a",
+   "kind": "new",
+   "value": "Z1234567",
+   "as_printed": "Z1234567",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "high",
+   "current": null,
+   "id": "i-0085-27b1",
+   "batch": 1,
+   "doc_id": "doc-01",
+   "section": "Travel and identity documents",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.330Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.passport_expiry_date",
+   "about": "client-a",
+   "kind": "new",
+   "value": "2030-01-14",
+   "as_printed": "14 JAN 2030",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "high",
+   "current": null,
+   "id": "i-0087-901f",
+   "batch": 1,
+   "doc_id": "doc-01",
+   "section": "Travel and identity documents",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.330Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.citizenship",
+   "about": "client-a",
+   "kind": "new",
+   "value": "IND",
+   "as_printed": "INDIAN",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0089-0135",
+   "batch": 1,
+   "doc_id": "doc-01",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.196Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.passport_country_of_issue",
+   "about": "client-a",
+   "kind": "new",
+   "value": "IND",
+   "as_printed": "IND",
+   "where": "page 1, machine-readable zone (bottom two lines)",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0091-21c9",
+   "batch": 1,
+   "doc_id": "doc-01",
+   "section": "Travel and identity documents",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.330Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.place_of_birth_city",
+   "about": "client-a",
+   "kind": "new",
+   "value": "NEW DELHI",
+   "as_printed": "NEW DELHI",
+   "where": "page 1, printed zone, line at y=415",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0093-3d2b",
+   "batch": 1,
+   "doc_id": "doc-01",
+   "section": "Personal details",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.196Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.passport_issue_date",
+   "about": "client-a",
+   "kind": "new",
+   "value": "2020-01-15",
+   "as_printed": "15 JAN 2020",
+   "where": "page 1, printed zone, line at y=494",
+   "confidence": "medium",
+   "current": null,
+   "id": "i-0095-1121",
+   "batch": 1,
+   "doc_id": "doc-01",
+   "section": "Travel and identity documents",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:03:57.330Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_job_title",
+   "about": "partner",
+   "kind": "corroborates",
+   "value": "Early childhood educator",
+   "as_printed": "Early childhood educator",
+   "where": "page 1, PDF text layer, row \"Position  Early childhood educator\"",
+   "confidence": "high",
+   "current": {
+    "record_id": "f-0118-273f",
+    "value": "Early childhood educator",
+    "status": "verified",
+    "source": {
+     "kind": "document",
+     "by": "agent",
+     "doc_id": "doc-04",
+     "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+     "page": 1,
+     "where": "page 1, Tesseract, row \"Position Early childhood educator\"",
+     "as_printed": "Early childhood educator",
+     "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+     "confidence": "medium"
+    }
+   },
+   "id": "i-0433-b110",
+   "batch": 2,
+   "doc_id": "doc-10",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:04:15.698Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_job_duties",
+   "about": "partner",
+   "kind": "corroborates",
+   "value": "Plans and leads learning activities for young children",
+   "as_printed": "Plans and leads learning activities for young children",
+   "where": "page 1, Tesseract on the rendered page, row \"Main duties Plans and leads learning act\"",
+   "confidence": "medium",
+   "current": {
+    "record_id": "f-0119-97b2",
+    "value": "Plans and leads learning activities for young children",
+    "status": "verified",
+    "source": {
+     "kind": "document",
+     "by": "agent",
+     "doc_id": "doc-04",
+     "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+     "page": 1,
+     "where": "page 1, Tesseract, row \"Main duties Plans and leads learning act\"",
+     "as_printed": "Plans and leads learning activities for young children",
+     "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+     "confidence": "medium"
+    }
+   },
+   "id": "i-0434-899a",
+   "batch": 2,
+   "doc_id": "doc-10",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:04:15.698Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_work_location",
+   "about": "partner",
+   "kind": "corroborates",
+   "value": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+   "as_printed": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+   "where": "page 1, Tesseract on the rendered page, row \"Work location 25 Sample Avenue, Vancouve\"",
+   "confidence": "medium",
+   "current": {
+    "record_id": "f-0120-f922",
+    "value": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+    "status": "verified",
+    "source": {
+     "kind": "document",
+     "by": "agent",
+     "doc_id": "doc-04",
+     "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+     "page": 1,
+     "where": "page 1, Tesseract, row \"Work location 25 Sample Avenue, Vancouve\"",
+     "as_printed": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+     "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+     "confidence": "medium"
+    }
+   },
+   "id": "i-0435-a775",
+   "batch": 2,
+   "doc_id": "doc-10",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:04:15.698Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_employment_start_date",
+   "about": "partner",
+   "kind": "changed",
+   "value": "2027-03-01",
+   "as_printed": "March 1, 2027",
+   "where": "page 1, Tesseract on the rendered page, row \"Start date March 1, 2027\"",
+   "confidence": "medium",
+   "current": {
+    "record_id": "f-0121-71e7",
+    "value": "2027-02-01",
+    "status": "verified",
+    "source": {
+     "kind": "document",
+     "by": "agent",
+     "doc_id": "doc-04",
+     "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+     "page": 1,
+     "where": "page 1, Tesseract, row \"Start date February 1, 2027\"",
+     "as_printed": "February 1, 2027",
+     "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+     "confidence": "medium"
+    }
+   },
+   "reason": "a newer version of the same document (2026-10-19) replaces doc-04 (2026-10-05); a person confirms",
+   "id": "i-0436-b5b8",
+   "batch": 2,
+   "doc_id": "doc-10",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:04:15.403Z"
+   }
+  },
+  {
+   "fact": "person.intended_employment_end_date",
+   "about": "partner",
+   "kind": "changed",
+   "value": "2029-02-28",
+   "as_printed": "February 28, 2029",
+   "where": "page 1, Tesseract on the rendered page, row \"End date February 28, 2029\"",
+   "confidence": "medium",
+   "current": {
+    "record_id": "f-0122-8193",
+    "value": "2029-01-31",
+    "status": "verified",
+    "source": {
+     "kind": "document",
+     "by": "agent",
+     "doc_id": "doc-04",
+     "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+     "page": 1,
+     "where": "page 1, Tesseract, row \"End date January 31, 2029\"",
+     "as_printed": "January 31, 2029",
+     "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+     "confidence": "medium"
+    }
+   },
+   "reason": "a newer version of the same document (2026-10-19) replaces doc-04 (2026-10-05); a person confirms",
+   "id": "i-0437-f5ef",
+   "batch": 2,
+   "doc_id": "doc-10",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:04:15.548Z"
+   }
+  },
+  {
+   "fact": "person.lmia_or_offer_number",
+   "about": "partner",
+   "kind": "unresolved",
+   "value": null,
+   "reason": "not found by the label rules",
+   "where": "",
+   "id": "i-0438-065c",
+   "batch": 2,
+   "doc_id": "doc-10",
+   "section": "Intended work in Canada"
+  },
+  {
+   "fact": "organisation.name",
+   "about": "partner",
+   "kind": "corroborates",
+   "value": "Example Learning Centre Inc.",
+   "as_printed": "Example Learning Centre Inc.",
+   "where": "page 1, letterhead / offer sentence",
+   "confidence": "medium",
+   "current": {
+    "record_id": "f-0123-0669",
+    "value": "Example Learning Centre Inc.",
+    "status": "verified",
+    "source": {
+     "kind": "document",
+     "by": "agent",
+     "doc_id": "doc-04",
+     "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+     "page": 1,
+     "where": "page 1, letterhead / offer sentence",
+     "as_printed": "Example Learning Centre Inc.",
+     "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+     "confidence": "medium"
+    }
+   },
+   "id": "i-0439-9272",
+   "batch": 2,
+   "doc_id": "doc-10",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:04:15.698Z",
+    "note": "section confirmed"
+   }
+  },
+  {
+   "fact": "person.intended_work_province",
+   "about": "partner",
+   "kind": "corroborates",
+   "value": "BC",
+   "as_printed": "BC",
+   "where": "derived from the work location",
+   "confidence": "medium",
+   "current": {
+    "record_id": "f-0124-005d",
+    "value": "BC",
+    "status": "verified",
+    "source": {
+     "kind": "document",
+     "by": "agent",
+     "doc_id": "doc-04",
+     "file_sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+     "page": 1,
+     "where": "derived from the work location",
+     "as_printed": "BC",
+     "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+     "confidence": "medium"
+    }
+   },
+   "id": "i-0440-1e14",
+   "batch": 2,
+   "doc_id": "doc-10",
+   "section": "Intended work in Canada",
+   "decision": {
+    "action": "confirm",
+    "by": "agent-1",
+    "at": "2026-10-20T20:04:15.698Z",
+    "note": "section confirmed"
+   }
+  }
+ ],
+ "approvals": [
+  {
+   "form": "IMM 1295",
+   "person": "client-a",
+   "by": "consultant-1",
+   "at": "2026-10-20T20:04:11.349Z",
+   "values_sha256": "bc041751918b4608fc154d07fa989a40f1291ef4fb26256816a17afff8b0140d",
+   "status": "approved"
+  },
+  {
+   "form": "IMM 1295",
+   "person": "partner",
+   "by": "consultant-1",
+   "at": "2026-10-20T20:04:11.580Z",
+   "values_sha256": "0f25d724162b0c749d2cb910243c0ce5f7f36ba8bb3fbb5d57825090c936f35e",
+   "status": "withdrawn",
+   "withdrawn_reason": "person.intended_employment_start_date for partner changed from \"2027-02-01\" to \"2027-03-01\""
+  }
+ ],
+ "events": [
+  {
+   "at": "2026-10-20T20:03:39.079Z",
+   "what": "case opened on release c1-v3 2c66472f",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:03:39.080Z",
+   "what": "duplicate decision: no possible duplicates found",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:03:55.172Z",
+   "what": "batch 1 processed in 14209 ms: D1-passport-principal-scan.png=read, D2-passport-partner-photo.jpg=read, D3-job-offer-principal.pdf=read, D4-job-offer-partner-scan.jpg=read, D5-birth-certificate-child.png=read, D6-passport-principal-unreadable.jpg=unreadable, D7-passport-principal-mrz-conflict.png=read",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:03:55.773Z",
+   "what": "agent-1 assigned doc-01 to client-a",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:03:56.363Z",
+   "what": "agent-1 use_value 1 item(s)",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:03:56.496Z",
+   "what": "agent-1 confirmed 5 value(s) in Personal details for partner",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:03:56.629Z",
+   "what": "agent-1 confirmed 3 value(s) in Travel and identity documents for partner",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:03:56.763Z",
+   "what": "agent-1 confirmed 8 value(s) in Intended work in Canada for client-a",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:03:56.929Z",
+   "what": "agent-1 confirmed 7 value(s) in Intended work in Canada for partner",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:03:57.062Z",
+   "what": "agent-1 confirmed 6 value(s) in Personal details for child",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:03:57.196Z",
+   "what": "agent-1 confirmed 5 value(s) in Personal details for client-a",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:03:57.330Z",
+   "what": "agent-1 confirmed 4 value(s) in Travel and identity documents for client-a",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:03:59.813Z",
+   "what": "agent-1 confirmed 5 value(s) in Contact details for client-a",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:03:59.961Z",
+   "what": "agent-1 confirmed 1 value(s) in Personal details for client-a",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:00.112Z",
+   "what": "agent-1 confirmed 1 value(s) in Travel and identity documents for client-a",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:00.262Z",
+   "what": "agent-1 confirmed 1 value(s) in Spouse or partner relationship for client-a",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:00.412Z",
+   "what": "agent-1 confirmed 4 value(s) in Languages for client-a",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:00.562Z",
+   "what": "agent-1 confirmed 2 value(s) in Medical background for client-a",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:00.712Z",
+   "what": "agent-1 confirmed 6 value(s) in Background declarations for client-a",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:00.862Z",
+   "what": "agent-1 confirmed 1 value(s) in Family members for client-a",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:01.012Z",
+   "what": "agent-1 confirmed 15 value(s) in Employment and activity history for client-a",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:01.162Z",
+   "what": "agent-1 confirmed 1 value(s) in Personal details for partner",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:01.312Z",
+   "what": "agent-1 confirmed 1 value(s) in Travel and identity documents for partner",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:01.463Z",
+   "what": "agent-1 confirmed 2 value(s) in Spouse or partner relationship for partner",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:01.613Z",
+   "what": "agent-1 confirmed 4 value(s) in Languages for partner",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:01.762Z",
+   "what": "agent-1 confirmed 5 value(s) in Contact details for partner",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:01.912Z",
+   "what": "agent-1 confirmed 2 value(s) in Medical background for partner",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:02.062Z",
+   "what": "agent-1 confirmed 6 value(s) in Background declarations for partner",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:02.212Z",
+   "what": "agent-1 confirmed 1 value(s) in Family members for partner",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:02.364Z",
+   "what": "agent-1 confirmed 10 value(s) in Employment and activity history for partner",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:02.513Z",
+   "what": "agent-1 confirmed 1 value(s) in Personal details for child",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:02.679Z",
+   "what": "agent-1 confirmed 2 value(s) in Family members for child",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:02.829Z",
+   "what": "agent-1 confirmed 1 value(s) in Contact details for child",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:02.979Z",
+   "what": "agent-1 confirmed 1 value(s) in Employment and activity history for child",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:03.129Z",
+   "what": "agent-1 confirmed 1 value(s) in Application details for case",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:03.280Z",
+   "what": "agent-1 confirmed 1 value(s) in Residence and immigration status for case",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:03.429Z",
+   "what": "agent-1 confirmed 1 value(s) in Family members for client-a/parent_1",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:03.579Z",
+   "what": "agent-1 confirmed 1 value(s) in Family members for client-a/parent_2",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:03.729Z",
+   "what": "agent-1 confirmed 5 value(s) in Personal details for client-a/parent_1",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:03.880Z",
+   "what": "agent-1 confirmed 5 value(s) in Personal details for client-a/parent_2",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:04.029Z",
+   "what": "agent-1 confirmed 1 value(s) in Family members for partner/parent_1",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:04.179Z",
+   "what": "agent-1 confirmed 1 value(s) in Family members for partner/parent_2",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:04.329Z",
+   "what": "agent-1 confirmed 5 value(s) in Personal details for partner/parent_1",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:04.479Z",
+   "what": "agent-1 confirmed 5 value(s) in Personal details for partner/parent_2",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:04.630Z",
+   "what": "agent-1 confirmed 1 value(s) in Contact details for client-a/parent_1",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:04.781Z",
+   "what": "agent-1 confirmed 1 value(s) in Employment and activity history for client-a/parent_1",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:04.928Z",
+   "what": "agent-1 confirmed 1 value(s) in Contact details for client-a/parent_2",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:05.080Z",
+   "what": "agent-1 confirmed 1 value(s) in Employment and activity history for client-a/parent_2",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:05.229Z",
+   "what": "agent-1 confirmed 1 value(s) in Contact details for partner/parent_1",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:05.552Z",
+   "what": "agent-1 confirmed 1 value(s) in Employment and activity history for partner/parent_1",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:05.733Z",
+   "what": "agent-1 confirmed 1 value(s) in Contact details for partner/parent_2",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:05.880Z",
+   "what": "agent-1 confirmed 1 value(s) in Employment and activity history for partner/parent_2",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:09.283Z",
+   "what": "agent-1 filled IMM 1295 for client-a: 79/79 read back, intact true",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:10.472Z",
+   "what": "agent-1 filled IMM 1295 for partner: 68/68 read back, intact true",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:10.924Z",
+   "what": "agent-1 filled IMM 5707 for client-a: 30/30 read back, intact true",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:11.349Z",
+   "what": "consultant-1 approved IMM 1295 for client-a (values bc041751)",
+   "by": "consultant-1"
+  },
+  {
+   "at": "2026-10-20T20:04:11.580Z",
+   "what": "consultant-1 approved IMM 1295 for partner (values 0f25d724)",
+   "by": "consultant-1"
+  },
+  {
+   "at": "2026-10-20T20:04:14.724Z",
+   "what": "batch 2 processed in 2196 ms: D8-job-offer-partner-revised.pdf=read",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:15.403Z",
+   "what": "approval of IMM 1295 for partner withdrawn: person.intended_employment_start_date for partner changed from \"2027-02-01\" to \"2027-03-01\"",
+   "by": "system"
+  },
+  {
+   "at": "2026-10-20T20:04:15.403Z",
+   "what": "agent-1 confirm 1 item(s)",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:15.548Z",
+   "what": "agent-1 confirm 1 item(s)",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:15.698Z",
+   "what": "agent-1 confirmed 0 value(s) in Intended work in Canada for partner",
+   "by": "agent-1"
+  },
+  {
+   "at": "2026-10-20T20:04:16.482Z",
+   "what": "agent-1 filled IMM 1295 for partner: 68/68 read back, intact true",
+   "by": "agent-1"
+  }
+ ],
+ "batches": 2
+}

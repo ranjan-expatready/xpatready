@@ -1,0 +1,94 @@
+{
+ "at": "2026-10-20T16:47:35.419Z",
+ "url": "http://localhost:4317/",
+ "steps": [
+  {
+   "name": "screen loads with the AI-drafting label and the readiness blockers",
+   "ok": true
+  },
+  {
+   "name": "submit refused while items are undecided (5.1 ready, 5.2 r2)",
+   "ok": true,
+   "detail": "Refused: not ready: 972 items have no decision (5.1 ready); 103 rules, conditions or values lack the SME sign-off (5.2 r2); 7 'decide' items undecided (5.1 r7)"
+  },
+  {
+   "name": "a correction without a reason is refused",
+   "ok": true,
+   "detail": "Refused: a correction needs a reason"
+  },
+  {
+   "name": "choosing another trial's proposal with a reason is recorded (5.1 r3)",
+   "ok": true
+  },
+  {
+   "name": "an unresolved box shows no Approve button",
+   "ok": true
+  },
+  {
+   "name": "every item decided through the screen (164 clicks; one decision per item)",
+   "ok": true,
+   "detail": "972/972"
+  },
+  {
+   "name": "still not ready: rules, conditions and values need the SME (5.2 r2)",
+   "ok": true
+  },
+  {
+   "name": "the author sees no SME sign-off button",
+   "ok": true
+  },
+  {
+   "name": "every rule, condition and value signed off by the SME duty; ready",
+   "ok": true,
+   "detail": "{\"items\":972,\"decided\":972,\"returned\":0,\"sme_needed\":103,\"sme_signed\":103}"
+  },
+  {
+   "name": "approve refused before submission",
+   "ok": true,
+   "detail": "Refused: not submitted for approval"
+  },
+  {
+   "name": "author submits the frozen configuration (hash shown)",
+   "ok": true,
+   "detail": "Submitted version 1 by user-A: SHA-256 b498eead63af6f3311bb109ef0cb1e6cdece80a491214ce9b75a56e852b22f0f"
+  },
+  {
+   "name": "the author cannot approve (5.3 a1, D254)",
+   "ok": true,
+   "detail": "Refused: self-approval refused: approver is the author"
+  },
+  {
+   "name": "a change after submission makes the approval stale (5.3 a2)",
+   "ok": true,
+   "detail": "Refused: the configuration changed after it was submitted: a stale approval cannot be reused (5.3 a2)"
+  },
+  {
+   "name": "the second person approves the re-submitted hash: version 1 published",
+   "ok": true,
+   "detail": "Published version 1: SHA-256 8cb7411723b51710f1b755c77e71e8af089ca26c9f375b6089de75667b0a9608"
+  },
+  {
+   "name": "release record names author A, submitter A, approver B",
+   "ok": true,
+   "detail": "8cb7411723b51710f1b755c77e71e8af089ca26c9f375b6089de75667b0a9608"
+  },
+  {
+   "name": "no sideways page scroll at 375px light",
+   "ok": true
+  },
+  {
+   "name": "no sideways page scroll at 1440px dark",
+   "ok": true
+  },
+  {
+   "name": "keyboard focus reaches the controls and shows a visible outline",
+   "ok": true,
+   "detail": "{\"tag\":\"SELECT\",\"outline\":\"solid\",\"ring\":\"2px\"}"
+  },
+  {
+   "name": "no page errors",
+   "ok": true,
+   "detail": ""
+  }
+ ]
+}

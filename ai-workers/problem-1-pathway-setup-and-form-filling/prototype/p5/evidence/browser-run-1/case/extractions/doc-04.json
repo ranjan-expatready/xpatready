@@ -1,0 +1,176 @@
+{
+ "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+ "method": "local",
+ "cached": false,
+ "cost_usd": 0,
+ "ms": 5095,
+ "refused": "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally",
+ "checks": null,
+ "run_file": null,
+ "output": {
+  "document": {
+   "kind_seen": "job_offer",
+   "matches_claimed_kind": true,
+   "readable": "yes",
+   "issues": [],
+   "issued_or_written_on": "2026-10-05"
+  },
+  "people_seen": [
+   {
+    "role": "employee the offer is addressed to",
+    "name_as_printed": "PARTNER EXAMPLEP"
+   }
+  ],
+  "fields": [
+   {
+    "fact": "person.intended_job_title",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "Early childhood educator",
+    "as_printed": "Early childhood educator",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Position Early childhood educator\"",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     149,
+     688,
+     769,
+     726
+    ],
+    "method": "Tesseract + label rule"
+   },
+   {
+    "fact": "person.intended_job_duties",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "Plans and leads learning activities for young children",
+    "as_printed": "Plans and leads learning activities for young children",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Main duties Plans and leads learning act\"",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     150,
+     735,
+     1063,
+     775
+    ],
+    "method": "Tesseract + label rule"
+   },
+   {
+    "fact": "person.intended_work_location",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+    "as_printed": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Work location 25 Sample Avenue, Vancouve\"",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     150,
+     798,
+     970,
+     833
+    ],
+    "method": "Tesseract + label rule"
+   },
+   {
+    "fact": "person.intended_employment_start_date",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "2027-02-01",
+    "as_printed": "February 1, 2027",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"Start date February 1, 2027\"",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     152,
+     864,
+     685,
+     892
+    ],
+    "method": "Tesseract + label rule"
+   },
+   {
+    "fact": "person.intended_employment_end_date",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "2029-01-31",
+    "as_printed": "January 31, 2029",
+    "page": 1,
+    "where": "page 1, Tesseract, row \"End date January 31, 2029\"",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     154,
+     921,
+     689,
+     949
+    ],
+    "method": "Tesseract + label rule"
+   },
+   {
+    "fact": "person.lmia_or_offer_number",
+    "about": "employee the offer is addressed to",
+    "status": "unresolved",
+    "value": null,
+    "as_printed": null,
+    "page": 1,
+    "where": "",
+    "confidence": "low",
+    "reason": "not found by the label rules",
+    "box": null,
+    "method": "Tesseract + label rule"
+   },
+   {
+    "fact": "organisation.name",
+    "about": "employer making the offer",
+    "status": "proposed",
+    "value": "Example Learning Centre Inc.",
+    "as_printed": "Example Learning Centre Inc.",
+    "page": 1,
+    "where": "page 1, letterhead / offer sentence",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "Tesseract + offer sentence rule"
+   },
+   {
+    "fact": "person.intended_work_province",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "BC",
+    "as_printed": "BC",
+    "page": 1,
+    "where": "derived from the work location",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "rule on the work location"
+   },
+   {
+    "fact": "person.full_name",
+    "about": "employee the offer is addressed to",
+    "status": "proposed",
+    "value": "PARTNER EXAMPLEP",
+    "as_printed": "PARTNER EXAMPLEP",
+    "page": 1,
+    "where": "page 1, addressee block",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "Tesseract + addressee rule"
+   }
+  ],
+  "internal_conflicts": [],
+  "reader": {
+   "name": "local OCR/MRZ + rules",
+   "tesseract": "5.5.0 (eng)",
+   "version": "local-reader/v1"
+  },
+  "ms": 5095
+ }
+}

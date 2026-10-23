@@ -1,0 +1,326 @@
+{
+ "note": "Every stored P2 result rescored offline from the preserved raw outputs; nothing re-run against the model. Layers A-D are separate; D is model output plus listed repairs, never unassisted model success.",
+ "original_configuration": {
+  "file": "p2/config/c1-draft-1-live.json",
+  "sha256": "5075783c695fa53fb532c2396d0536e84047dc30f94787ca37d7307bde0796a7",
+  "reproduced_byte_for_byte": true,
+  "original_score_reproduced": true
+ },
+ "A_original": {
+  "verdicts": {
+   "PASS": 20,
+   "FAIL": 2,
+   "NOT_EVALUABLE": 0
+  },
+  "failing": [
+   "P2-RQ-02",
+   "P2-RQ-03"
+  ],
+  "field_maps": [
+   {
+    "form": "IMM 5707",
+    "subject": "client-a",
+    "all_ok": 42,
+    "of": 42,
+    "fact_ok": 42,
+    "transform_ok": 42,
+    "wrong_person": 0,
+    "invented": 0,
+    "dependencies": 0
+   },
+   {
+    "form": "IMM 5707",
+    "subject": "partner",
+    "all_ok": 42,
+    "of": 42,
+    "fact_ok": 42,
+    "transform_ok": 42,
+    "wrong_person": 0,
+    "invented": 0,
+    "dependencies": 0
+   },
+   {
+    "form": "IMM 1295",
+    "subject": "client-a",
+    "all_ok": 3,
+    "of": 6,
+    "fact_ok": 3,
+    "transform_ok": 5,
+    "wrong_person": 0,
+    "invented": 0,
+    "dependencies": 0
+   }
+  ]
+ },
+ "B_evaluation_corrections_only": {
+  "verdicts": {
+   "PASS": 20,
+   "FAIL": 2,
+   "NOT_EVALUABLE": 0
+  },
+  "failing": [
+   "P2-FM-08",
+   "P2-RQ-02"
+  ],
+  "field_maps": [
+   {
+    "form": "IMM 5707",
+    "subject": "client-a",
+    "all_ok": 37,
+    "of": 42,
+    "fact_ok": 37,
+    "fact_ok_run_local": 42,
+    "transform_ok": 42,
+    "wrong_person": 0,
+    "invented": 0,
+    "dependencies": 0
+   },
+   {
+    "form": "IMM 5707",
+    "subject": "partner",
+    "all_ok": 37,
+    "of": 42,
+    "fact_ok": 37,
+    "fact_ok_run_local": 42,
+    "transform_ok": 42,
+    "wrong_person": 0,
+    "invented": 0,
+    "dependencies": 0
+   },
+   {
+    "form": "IMM 1295",
+    "subject": "client-a",
+    "all_ok": 6,
+    "of": 7,
+    "fact_ok": 7,
+    "fact_ok_run_local": 7,
+    "transform_ok": 7,
+    "wrong_person": 0,
+    "invented": 0,
+    "dependencies": 1
+   }
+  ]
+ },
+ "C_assembler_v2_detection_only": {
+  "verdicts": {
+   "PASS": 20,
+   "FAIL": 2,
+   "NOT_EVALUABLE": 0
+  },
+  "failing": [
+   "P2-FM-08",
+   "P2-RQ-02"
+  ],
+  "field_maps": [
+   {
+    "form": "IMM 5707",
+    "subject": "client-a",
+    "all_ok": 37,
+    "of": 42,
+    "fact_ok": 37,
+    "fact_ok_run_local": 42,
+    "transform_ok": 42,
+    "wrong_person": 0,
+    "invented": 0,
+    "dependencies": 0
+   },
+   {
+    "form": "IMM 5707",
+    "subject": "partner",
+    "all_ok": 37,
+    "of": 42,
+    "fact_ok": 37,
+    "fact_ok_run_local": 42,
+    "transform_ok": 42,
+    "wrong_person": 0,
+    "invented": 0,
+    "dependencies": 0
+   },
+   {
+    "form": "IMM 1295",
+    "subject": "client-a",
+    "all_ok": 6,
+    "of": 7,
+    "fact_ok": 7,
+    "fact_ok_run_local": 7,
+    "transform_ok": 7,
+    "wrong_person": 0,
+    "invented": 0,
+    "dependencies": 1
+   }
+  ],
+  "configuration": "p2/config/c1-draft-1-live-r2-detect.json",
+  "sha256": "18c5c3e0ee77df4e342095ae8e1f83fa5d22fa9eb8aeff170e024d25c6c02735",
+  "items_listed_for_review": 28
+ },
+ "D_reviewed_repairs": {
+  "verdicts": {
+   "PASS": 22,
+   "FAIL": 0,
+   "NOT_EVALUABLE": 0
+  },
+  "failing": [],
+  "field_maps": [
+   {
+    "form": "IMM 5707",
+    "subject": "client-a",
+    "all_ok": 42,
+    "of": 42,
+    "fact_ok": 42,
+    "fact_ok_run_local": 42,
+    "transform_ok": 42,
+    "wrong_person": 0,
+    "invented": 0,
+    "dependencies": 0
+   },
+   {
+    "form": "IMM 5707",
+    "subject": "partner",
+    "all_ok": 42,
+    "of": 42,
+    "fact_ok": 42,
+    "fact_ok_run_local": 42,
+    "transform_ok": 42,
+    "wrong_person": 0,
+    "invented": 0,
+    "dependencies": 0
+   },
+   {
+    "form": "IMM 1295",
+    "subject": "client-a",
+    "all_ok": 6,
+    "of": 7,
+    "fact_ok": 7,
+    "fact_ok_run_local": 7,
+    "transform_ok": 7,
+    "wrong_person": 0,
+    "invented": 0,
+    "dependencies": 1
+   }
+  ],
+  "configuration": "p2/config/c1-draft-1-live-r2.json",
+  "sha256": "9b5089ef8e7ff339d7048d3d3536701564ea93e7bd20af0c2214a151a301b010",
+  "field_review": {
+   "merges": 11,
+   "splits": 2,
+   "flags": 4,
+   "references_rewritten": 134,
+   "still_listed_for_review": 7
+  },
+  "content_repairs": [
+   {
+    "id": "R-D20",
+    "before": {
+     "who": "principal_applicant"
+    },
+    "after": {
+     "who": "each_applicant"
+    }
+   }
+  ],
+  "condition_key_renames_v1_and_v2": 83
+ },
+ "trials": [
+  {
+   "trial": 1,
+   "cost_usd": 1.8612,
+   "v1": [
+    "IMM 5707 client-a 42/42",
+    "IMM 5707 partner 42/42",
+    "IMM 1295 client-a 3/6"
+   ],
+   "v2": [
+    "IMM 5707 client-a 42/42",
+    "IMM 5707 partner 42/42",
+    "IMM 1295 client-a 6/7"
+   ],
+   "v2_wrong_person": 0,
+   "v2_invented": 0,
+   "v2_misses": []
+  },
+  {
+   "trial": 2,
+   "cost_usd": 1.8132,
+   "v1": [
+    "IMM 5707 client-a 42/42",
+    "IMM 5707 partner 42/42",
+    "IMM 1295 client-a 3/6"
+   ],
+   "v2": [
+    "IMM 5707 client-a 42/42",
+    "IMM 5707 partner 42/42",
+    "IMM 1295 client-a 6/7"
+   ],
+   "v2_wrong_person": 0,
+   "v2_invented": 0,
+   "v2_misses": []
+  },
+  {
+   "trial": 3,
+   "cost_usd": 2.0097,
+   "v1": [
+    "IMM 5707 client-a 41/42",
+    "IMM 5707 partner 41/42",
+    "IMM 1295 client-a 3/6"
+   ],
+   "v2": [
+    "IMM 5707 client-a 41/42",
+    "IMM 5707 partner 41/42",
+    "IMM 1295 client-a 6/7"
+   ],
+   "v2_wrong_person": 0,
+   "v2_invented": 0,
+   "v2_misses": [
+    "IMM 5707 client-a: fact derived: subject has no children (missing)",
+    "IMM 5707 client-a: an empty transformation step; got ''",
+    "IMM 5707 partner: fact derived: subject has no children (missing)",
+    "IMM 5707 partner: an empty transformation step; got ''"
+   ]
+  },
+  {
+   "trial": 4,
+   "cost_usd": 1.8638,
+   "v1": [
+    "IMM 5707 client-a 41/42",
+    "IMM 5707 partner 41/42",
+    "IMM 1295 client-a 3/6"
+   ],
+   "v2": [
+    "IMM 5707 client-a 41/42",
+    "IMM 5707 partner 41/42",
+    "IMM 1295 client-a 5/7"
+   ],
+   "v2_wrong_person": 0,
+   "v2_invented": 0,
+   "v2_misses": [
+    "IMM 5707 client-a: fact derived: subject has no children (missing)",
+    "IMM 5707 client-a: an empty transformation step; got ''",
+    "IMM 5707 partner: fact derived: subject has no children (missing)",
+    "IMM 5707 partner: an empty transformation step; got ''",
+    "IMM 1295 client-a: codes differ or are not stated: common-law=03 (draft none), married=01 (draft none); got 'code_list:imm1295.marital_stat"
+   ]
+  },
+  {
+   "trial": 5,
+   "cost_usd": 4.1381,
+   "v1": [
+    "IMM 5707 client-a 41/42",
+    "IMM 5707 partner 41/42",
+    "IMM 1295 client-a 3/6"
+   ],
+   "v2": [
+    "IMM 5707 client-a 41/42",
+    "IMM 5707 partner 41/42",
+    "IMM 1295 client-a 6/7"
+   ],
+   "v2_wrong_person": 0,
+   "v2_invented": 0,
+   "v2_misses": [
+    "IMM 5707 client-a: fact derived: subject has no children (missing)",
+    "IMM 5707 client-a: an empty transformation step; got ''",
+    "IMM 5707 partner: fact derived: subject has no children (missing)",
+    "IMM 5707 partner: an empty transformation step; got ''"
+   ]
+  }
+ ]
+}

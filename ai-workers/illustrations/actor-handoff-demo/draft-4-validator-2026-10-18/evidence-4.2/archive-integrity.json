@@ -1,0 +1,66 @@
+[
+  {
+    "file": "build_one_pager.py",
+    "match": true
+  },
+  {
+    "file": "check_cohesion.cjs",
+    "match": true
+  },
+  {
+    "file": "check_diagram_geometry.cjs",
+    "match": true
+  },
+  {
+    "file": "check_one_pager.cjs",
+    "match": true
+  },
+  {
+    "file": "check_panels.cjs",
+    "match": true
+  },
+  {
+    "file": "cohesion_ledger.py",
+    "match": true
+  },
+  {
+    "file": "make_publish_copy.py",
+    "match": true
+  },
+  {
+    "file": "read_panels.cjs",
+    "match": true
+  },
+  {
+    "file": "s3_data.py",
+    "match": true
+  },
+  {
+    "file": "s3_ledger.py",
+    "match": true
+  },
+  {
+    "file": "s3_panels.py",
+    "match": true
+  },
+  {
+    "file": "s3_terms.py",
+    "match": true
+  },
+  {
+    "file": "s3_views.py",
+    "match": true
+  },
+  {
+    "file": "solution-1-one-pager.html",
+    "match": true
+  },
+  {
+    "file": "records/delivery-control.md",
+    "match": true
+  },
+  {
+    "file": "records/NEXT.md",
+    "match": true
+  }
+]

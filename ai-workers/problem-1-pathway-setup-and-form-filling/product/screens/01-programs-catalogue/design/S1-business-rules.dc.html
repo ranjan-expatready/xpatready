@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Screen 1 logic and business rules</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#054e9c}a:hover{color:#043a73}
+</style>
+</helmet>
+<div style="width: 1200px; height: 1480px; box-sizing: border-box; padding: 48px 56px; background: #ffffff; font-family: Inter, system-ui, sans-serif; color: #2d2d2d; font-size: 14px; line-height: 1.5; display: flex; flex-direction: column; gap: 26px">
+
+  <div>
+    <div style="font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: #737373; font-weight: 600">Screen 1 · for agreement</div>
+    <h1 style="margin: 6px 0 6px; font-family: Figtree, Inter, sans-serif; font-size: 30px; font-weight: 700; letter-spacing: -0.01em">How combinations are built and linked</h1>
+    <p style="margin: 0; color: #595959; max-width: 860px; font-size: 15px">The job of this screen: find any combination in a few seconds, see whether a firm can use it yet, and start or continue its setup. Everything below follows the team's SA-01B; numbers in grey are its requirement IDs.</p>
+  </div>
+
+  <section aria-labelledby="h-link" style="display: flex; flex-direction: column; gap: 12px">
+    <h2 id="h-link" style="margin: 0; font-family: Figtree, Inter, sans-serif; font-size: 19px">1. How the masters link</h2>
+    <div style="display: flex; align-items: stretch; gap: 0">
+      <div style="flex: 1; border: 1px solid #99d2ff; background: #e6f4ff; border-radius: 8px; padding: 12px 14px">
+        <div style="font-weight: 700; color: #054e9c">Pathway</div>
+        <div style="font-size: 12.5px; color: #404040">Fixed: Individual or Corporate. Shown as the workspace switch, not a tree level you click through.</div>
+      </div>
+      <div aria-hidden="true" style="width: 34px; display: flex; align-items: center; justify-content: center; color: #8c8c8c; font-size: 20px">→</div>
+      <div style="flex: 1; border: 1px solid #d9d9d9; border-radius: 8px; padding: 12px 14px">
+        <div style="font-weight: 700">Program</div>
+        <div style="font-size: 12.5px; color: #404040">Master. The area of immigration. Belongs to one pathway.</div>
+      </div>
+      <div aria-hidden="true" style="width: 34px; display: flex; align-items: center; justify-content: center; color: #8c8c8c; font-size: 20px">→</div>
+      <div style="flex: 1; border: 1px solid #d9d9d9; border-radius: 8px; padding: 12px 14px">
+        <div style="font-weight: 700">Category</div>
+        <div style="font-size: 12.5px; color: #404040">Master. The application the firm opens.</div>
+      </div>
+      <div aria-hidden="true" style="width: 34px; display: flex; align-items: center; justify-content: center; color: #8c8c8c; font-size: 20px">→</div>
+      <div style="flex: 1; border: 1px dashed #bfbfbf; border-radius: 8px; padding: 12px 14px">
+        <div style="font-weight: 700">Sub-category <span style="font-weight: 500; color: #737373">optional</span></div>
+        <div style="font-size: 12.5px; color: #404040">Master. Only where rules, questions or documents really change.</div>
+      </div>
+      <div aria-hidden="true" style="width: 34px; display: flex; align-items: center; justify-content: center; color: #8c8c8c; font-size: 20px">→</div>
+      <div style="flex: 1.2; border: 2px solid #0862c5; border-radius: 8px; padding: 12px 14px">
+        <div style="font-weight: 700; color: #054e9c">Combination</div>
+        <div style="font-size: 12.5px; color: #404040">The last level present. Owns one configuration, released as versions.</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 0; align-items: stretch">
+      <div style="flex: 4.6"></div>
+      <div style="flex: 1.2; display: flex; justify-content: center; color: #8c8c8c; font-size: 20px" aria-hidden="true">↓</div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px">
+      <div style="border: 1px solid #d9d9d9; border-radius: 8px; padding: 10px 12px; background: #f7f7f7"><b style="font-weight: 600">Forms</b><div style="font-size: 12.5px; color: #595959">Library form + current edition; who completes and signs</div></div>
+      <div style="border: 1px solid #d9d9d9; border-radius: 8px; padding: 10px 12px; background: #f7f7f7"><b style="font-weight: 600">Documents</b><div style="font-size: 12.5px; color: #595959">Library document type; always or only if</div></div>
+      <div style="border: 1px solid #d9d9d9; border-radius: 8px; padding: 10px 12px; background: #f7f7f7"><b style="font-weight: 600">Sections and fields</b><div style="font-size: 12.5px; color: #595959">Shared sections of shared fields</div></div>
+      <div style="border: 1px solid #d9d9d9; border-radius: 8px; padding: 10px 12px; background: #f7f7f7"><b style="font-weight: 600">Rules</b><div style="font-size: 12.5px; color: #595959">"Ask this if…", "need this document if…"</div></div>
+      <div style="border: 1px solid #d9d9d9; border-radius: 8px; padding: 10px 12px; background: #f7f7f7"><b style="font-weight: 600">Steps</b><div style="font-size: 12.5px; color: #595959">Government steps and standard to-dos</div></div>
+    </div>
+    <p style="margin: 0; font-size: 13px; color: #595959">Each link from a combination to a library item is one <b style="font-weight: 600">line</b> with the same shape: what · which item · who (application or each person in these roles) · only if · order. <span style="color: #8c8c8c">SA-1B-57</span></p>
+  </section>
+
+  <section aria-labelledby="h-rules" style="display: flex; flex-direction: column; gap: 8px">
+    <h2 id="h-rules" style="margin: 0; font-family: Figtree, Inter, sans-serif; font-size: 19px">2. Business rules</h2>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 28px">
+      <div><b style="font-weight: 600">BR-1 Pathway is a workspace.</b> Two fixed values. Every program belongs to exactly one pathway; switching the workspace changes the whole list. <span style="color: #8c8c8c">SA-1B-50, 51</span></div>
+      <div><b style="font-weight: 600">BR-2 Pick, never type.</b> Program, category and sub-category are chosen from masters. New ones are created only through "Add program or category", which checks for duplicates. <span style="color: #8c8c8c">SA-1-15</span></div>
+      <div><b style="font-weight: 600">BR-3 The last level is the combination.</b> A category with no sub-categories is itself the combination ("Sub-category: Not applicable"). A category with sub-categories holds no setup of its own. <span style="color: #8c8c8c">SA-1B-55</span></div>
+      <div><b style="font-weight: 600">BR-4 Nothing attaches above a combination.</b> No form, document or rule on a program or category. Shared content lives in the library instead. <span style="color: #8c8c8c">SA-1B-56</span></div>
+      <div><b style="font-weight: 600">BR-5 Not levels.</b> Inside or outside Canada, family members and invitation stage are conditions, roles and stages inside one combination. Separate sub-category only when IRCC treats it as a separate application (expert decides). <span style="color: #8c8c8c">SA-1B-51, D13</span></div>
+      <div><b style="font-weight: 600">BR-6 Unique within the parent.</b> Same name under the same parent is refused (ignoring case and spaces). Same name under a different parent is allowed. Renaming keeps the stable key, so nothing breaks.</div>
+      <div><b style="font-weight: 600">BR-7 First sub-category moves the setup.</b> Adding a sub-category to a category that already has setup asks where that setup goes (new sub-category or copy into each). Nothing is lost silently.</div>
+      <div><b style="font-weight: 600">BR-8 Status is calculated.</b> Ready = released, every form has a current edition, every person role has questions, every rule resolves. Anything else says exactly what is missing. <span style="color: #8c8c8c">SA-1B-90, 91</span></div>
+      <div><b style="font-weight: 600">BR-9 Disable, never delete.</b> A disabled combination disappears from new cases; open cases keep their pinned release. <span style="color: #8c8c8c">SA-1-13, D18</span></div>
+      <div><b style="font-weight: 600">BR-10 Counts say what they count.</b> "18 documents · 6 always · 12 if"; library counts are distinct items, combination counts are uses.</div>
+      <div><b style="font-weight: 600">BR-11 Freshness is visible.</b> Each combination shows when its sources were last checked; next review defaults to 12 months; overdue turns orange and goes into the weekly digest. <span style="color: #8c8c8c">SA-1B-39, 40</span></div>
+      <div><b style="font-weight: 600">BR-12 Forms are library items.</b> "+ Add" attaches an existing form. Uploading a PDF creates the form, or a new edition when the code already exists, then attaches it. <span style="color: #8c8c8c">SA-1B-26</span></div>
+      <div><b style="font-weight: 600">BR-13 One AI place per combination.</b> The Setup status column. Its button always names the next step: Draft setup, View progress, Review proposals. AI output stays a proposal until a person accepts it. <span style="color: #8c8c8c">D1, D2</span></div>
+      <div><b style="font-weight: 600">BR-14 Who can do what.</b> Content publisher edits the draft. A different person approves and releases. Firms never see this screen; they see only the result on cases. <span style="color: #8c8c8c">SA-01B §2</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-tips" style="display: flex; flex-direction: column; gap: 8px">
+    <h2 id="h-tips" style="margin: 0; font-family: Figtree, Inter, sans-serif; font-size: 19px">3. Help text on the screen (tooltips)</h2>
+    <div style="display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 6px 16px; font-size: 13.5px">
+      <b style="font-weight: 600">Not applicable</b><span>This category has no sub-categories, so the category itself is the combination.</span>
+      <b style="font-weight: 600">Ready</b><span>Firms can open cases on this combination. Last released 14 Oct 2026 by the content team.</span>
+      <b style="font-weight: 600">Needs work</b><span>Firms cannot use this yet. Click to see each missing item and fix it.</span>
+      <b style="font-weight: 600">AI proposals to review</b><span>AI read the forms and checklist and suggested fields, sections, documents and rules. Nothing changes until you accept.</span>
+      <b style="font-weight: 600">Checked</b><span>When someone last compared this setup with IRCC's published forms and guides.</span>
+      <b style="font-weight: 600">+ Add (forms)</b><span>Attach a form from the library, or upload an IRCC PDF to add it to the library.</span>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-q" style="display: flex; flex-direction: column; gap: 8px; background: #fff3e0; border-radius: 8px; padding: 16px 18px">
+    <h2 id="h-q" style="margin: 0; font-family: Figtree, Inter, sans-serif; font-size: 19px; color: #663200">4. Three questions for you</h2>
+    <ol style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; color: #402000">
+      <li><b style="font-weight: 600">Same program name in both workspaces?</b> Recommended: separate programs per pathway (Individual "Work permits" and Corporate "LMIA" never share setup).</li>
+      <li><b style="font-weight: 600">Group rows by program, or one flat list?</b> Recommended: grouped by program as drawn, with a flat sortable view as an option for comparing.</li>
+      <li><b style="font-weight: 600">BR-7 default when the first sub-category is added:</b> recommended "move the existing setup into the new sub-category".</li>
+    </ol>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1200,"height":1480}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

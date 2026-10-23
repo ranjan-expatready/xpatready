@@ -1,0 +1,113 @@
+{
+  "recordedAtUTC": "2026-10-16T19:21:56.500865+00:00",
+  "scope": "Saved HTML versions and source structure; no live-product or visual-browser verification",
+  "versions": {
+    "pre-reset draft": {
+      "path": "archive/ai-workers-old-direction-2026-10-16/native-ai-map-draft-2026-10-16.html",
+      "sha256": "7464de04b6f4de6b54722a5964a8dcbc5f78ba3a9d41ffb11d998e8b4b1ada21",
+      "bytes": 45010,
+      "tables": 2,
+      "svg": 0,
+      "details": 0,
+      "openDetails": 0
+    },
+    "pre-reset prototype": {
+      "path": "archive/ai-workers-old-direction-2026-10-16/prototype/index.html",
+      "sha256": "a21bbe62c54ae08c26a783dd0d2840892263ef3a965b4257c8a003e79523d578",
+      "bytes": 172090,
+      "tables": 0,
+      "svg": 0,
+      "details": 0,
+      "openDetails": 0
+    },
+    "v1": {
+      "path": "archive/ai-workers/expat-ready-ai-concept-v1-2026-10-16.html",
+      "sha256": "388e4403572948a8378609d2f2e73224de65b55bd85acac43f472dc9a150a1d7",
+      "bytes": 84329,
+      "tables": 9,
+      "svg": 4,
+      "details": 0,
+      "openDetails": 0
+    },
+    "v2.1": {
+      "path": "archive/ai-workers/expat-ready-ai-concept-v2.1-2026-10-16.html",
+      "sha256": "639e3897b09a85ab8d22526587d50062f20d186ec4b3cdc307d5da999907ce8c",
+      "bytes": 203373,
+      "tables": 37,
+      "svg": 7,
+      "details": 22,
+      "openDetails": 0
+    },
+    "v3": {
+      "path": "archive/ai-workers/expat-ready-ai-concept-v3-2026-10-17.html",
+      "sha256": "65ae27ee0e7284db087b0424e3e480a2d3bbe5456e926ed0cb72d07f692bfc40",
+      "bytes": 242216,
+      "tables": 46,
+      "svg": 7,
+      "details": 26,
+      "openDetails": 0
+    },
+    "v4": {
+      "path": "ai-workers/expat-ready-ai-concept.html",
+      "sha256": "35484154a87bc576802c15238010d147f638a09c00cb0cf8454eaf01eb323c97",
+      "bytes": 278414,
+      "tables": 50,
+      "svg": 7,
+      "details": 46,
+      "openDetails": 0
+    }
+  },
+  "standaloneV2Found": false,
+  "retained": {
+    "numberedCaseSteps": 24,
+    "additionalAnyTimeRows": 3,
+    "setupSteps": 17,
+    "v3DetailedStepRowsPreservedAfterTerminologyNormalization": true,
+    "mechanisms": 8,
+    "appendices": 12,
+    "detailedMatrices": 5,
+    "keyedSkills": 34,
+    "displayLabels": 43
+  },
+  "realCatalogueReductions": {
+    "v1Columns": [
+      "Skill",
+      "Where",
+      "Kind",
+      "Engine",
+      "Status",
+      "Never does"
+    ],
+    "v4Columns": [
+      "Skill",
+      "Category",
+      "Kind",
+      "Never does"
+    ],
+    "v1Rows": 33,
+    "v4Rows": 43,
+    "olderNamesAbsentFromDisplayRows": [
+      "Case Opener",
+      "Client Helper",
+      "Lead Catcher",
+      "Route Planner and Expiry Watcher"
+    ],
+    "qualification": "Lead Catcher renamed with Proposal; Client Helper renamed; Case Opener/Route Planner/Expiry Watcher remain in detailed steps"
+  },
+  "restoredReferences": {
+    "v1": {
+      "path": "ai-workers/review/expat-ready-ai-concept-v1-restored-2026-10-17.html",
+      "historicalBannerOnly": true,
+      "originalContentUnchanged": true
+    },
+    "v2.1": {
+      "path": "ai-workers/review/expat-ready-ai-concept-v2.1-restored-2026-10-17.html",
+      "historicalBannerOnly": true,
+      "originalContentUnchanged": true
+    }
+  },
+  "activeV4Unchanged": true,
+  "v4ArchivedWithBuilderAndStyles": true,
+  "visualVerification": "Unverified; no browser restriction bypass",
+  "semanticAudit": "See concept-content-preservation-2026-10-17.md; counts and lexical matching alone are not a semantic preservation pass"
+}

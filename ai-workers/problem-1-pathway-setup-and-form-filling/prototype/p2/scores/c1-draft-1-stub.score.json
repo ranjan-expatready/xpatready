@@ -1,0 +1,2059 @@
+{
+ "configuration_version": "c1-draft-1-stub",
+ "summary": {
+  "PASS": 1,
+  "FAIL": 1,
+  "NOT_EVALUABLE": 20
+ },
+ "acceptance": [
+  {
+   "id": "P2-FM-01",
+   "slice": "field_maps",
+   "requirements": [
+    "3.2.ready",
+    "3.1.ready"
+   ],
+   "verdict": "FAIL",
+   "evidence": {
+    "problems": 467,
+    "per_form": {
+     "IMM 0000 (01-2000)": {
+      "data_bound_boxes": 57,
+      "entries": 1,
+      "mapped": 0,
+      "unresolved": 1
+     }
+    }
+   }
+  },
+  {
+   "id": "P2-FM-02",
+   "slice": "field_maps",
+   "requirements": [
+    "3.2.r3",
+    "3.1.a1"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": {
+    "wrong_person": 86,
+    "items": [
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key": "client-a.mother|client-a.father"
+     }
+    ]
+   }
+  },
+  {
+   "id": "P2-FM-03",
+   "slice": "field_maps",
+   "requirements": [
+    "3.1.r1",
+    "3.2.r3"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": {
+    "used_for": [
+     "client-a:client-a",
+     "client-a:partner",
+     "client-a:client-a.mother|client-a.father",
+     "client-a:child",
+     "partner:partner",
+     "partner:client-a",
+     "partner:partner.mother|partner.father",
+     "partner:child"
+    ],
+    "merged_meanings": []
+   }
+  },
+  {
+   "id": "P2-FM-04",
+   "slice": "field_maps",
+   "requirements": [
+    "slice-1.rules.parent_blocks"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": [
+    {
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "ok": false
+    },
+    {
+     "form": "IMM 5707",
+     "subject": "partner",
+     "ok": false
+    },
+    {
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "ok": true
+    }
+   ]
+  },
+  {
+   "id": "P2-FM-05",
+   "slice": "field_maps",
+   "requirements": [
+    "slice-1.rules.unresolved"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": {
+    "invented": 0
+   }
+  },
+  {
+   "id": "P2-FM-06",
+   "slice": "field_maps",
+   "requirements": [
+    "slice-1.rules.children_rows"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": {
+    "child_entries": 0
+   }
+  },
+  {
+   "id": "P2-FM-07",
+   "slice": "field_maps",
+   "requirements": [
+    "slice-1.rules.codes_differ_by_form"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": {
+    "marital_status_transforms": [
+     {
+      "form": "IMM 5707"
+     },
+     {
+      "form": "IMM 5707"
+     },
+     {
+      "form": "IMM 1295"
+     }
+    ]
+   }
+  },
+  {
+   "id": "P2-FM-08",
+   "slice": "field_maps",
+   "requirements": [
+    "comparison-plan S1"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": [
+    {
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "entries": 42,
+     "outcome_ok": 0,
+     "person_ok": 2,
+     "fact_ok": 2,
+     "row_ok": 42,
+     "transform_ok": 21,
+     "all_ok": 0,
+     "invented": 0,
+     "parent_blocks_ok": false,
+     "missing": 42
+    },
+    {
+     "form": "IMM 5707",
+     "subject": "partner",
+     "entries": 42,
+     "outcome_ok": 0,
+     "person_ok": 2,
+     "fact_ok": 2,
+     "row_ok": 42,
+     "transform_ok": 21,
+     "all_ok": 0,
+     "invented": 0,
+     "parent_blocks_ok": false,
+     "missing": 42
+    },
+    {
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "entries": 6,
+     "outcome_ok": 0,
+     "person_ok": 0,
+     "fact_ok": 0,
+     "row_ok": 6,
+     "transform_ok": 4,
+     "all_ok": 0,
+     "invented": 0,
+     "parent_blocks_ok": true,
+     "missing": 6
+    }
+   ]
+  },
+  {
+   "id": "P2-FM-09",
+   "slice": "field_maps",
+   "requirements": [
+    "3.1.r4"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": {
+    "mapped_entries": 0,
+    "not_found": 0,
+    "items": []
+   }
+  },
+  {
+   "id": "P2-RQ-01",
+   "slice": "requirements",
+   "requirements": [
+    "3.5.r2",
+    "AIW-D264"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": {
+    "problems": 0,
+    "items": []
+   }
+  },
+  {
+   "id": "P2-RQ-02",
+   "slice": "requirements",
+   "requirements": [
+    "combination-1.expected_forms"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": [
+    {
+     "form": "IMM 1295",
+     "found": false,
+     "ok": false
+    },
+    {
+     "form": "IMM 5707",
+     "found": false,
+     "ok": false
+    },
+    {
+     "form": "IMM 5409",
+     "found": false,
+     "ok": false
+    },
+    {
+     "form": "IMM 5476",
+     "found": false,
+     "ok": false
+    },
+    {
+     "form": "IMM 5475",
+     "found": false,
+     "ok": false
+    },
+    {
+     "form": "IMM 5257 SCH1",
+     "found": false,
+     "ok": false
+    }
+   ]
+  },
+  {
+   "id": "P2-RQ-03",
+   "slice": "requirements",
+   "requirements": [
+    "AIW-D264"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": "IMM 5707 not in the draft"
+  },
+  {
+   "id": "P2-RQ-04",
+   "slice": "requirements",
+   "requirements": [
+    "3.3.ready",
+    "3.3.r2"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": [
+    {
+     "document": "Passport information page",
+     "found": false,
+     "base_or_conditional": [],
+     "ok": false
+    },
+    {
+     "document": "Marriage certificate",
+     "found": false,
+     "base_or_conditional": [],
+     "ok": false
+    },
+    {
+     "document": "Children's birth certificates",
+     "found": false,
+     "base_or_conditional": [],
+     "ok": false
+    },
+    {
+     "document": "Proof of payment",
+     "found": false,
+     "base_or_conditional": [],
+     "ok": false
+    }
+   ]
+  },
+  {
+   "id": "P2-RQ-05",
+   "slice": "requirements",
+   "requirements": [
+    "3.5.r4",
+    "3.5.a2"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": {
+    "officer_passages": 0,
+    "not_tasks": []
+   }
+  },
+  {
+   "id": "P2-RQ-06",
+   "slice": "requirements",
+   "requirements": [
+    "3.3.r3",
+    "3.3.a1"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": {
+    "if_applicable_items": 0,
+    "not_conditional": []
+   }
+  },
+  {
+   "id": "P2-SC-01",
+   "slice": "sections",
+   "requirements": [
+    "3.4.ready"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": {
+    "unplaced": 0,
+    "items": []
+   }
+  },
+  {
+   "id": "P2-SC-02",
+   "slice": "sections",
+   "requirements": [
+    "3.7.r3",
+    "3.7.a2"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": {
+    "facts": [],
+    "placements": []
+   }
+  },
+  {
+   "id": "P2-SC-03",
+   "slice": "sections",
+   "requirements": [
+    "3.4.r6"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": {
+    "duplicates": []
+   }
+  },
+  {
+   "id": "P2-CK-01",
+   "slice": "checks",
+   "requirements": [
+    "3.8.r2",
+    "3.8.a1"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": []
+  },
+  {
+   "id": "P2-CK-02",
+   "slice": "checks",
+   "requirements": [
+    "3.8.r3",
+    "3.8.a2"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": []
+  },
+  {
+   "id": "P2-CK-03",
+   "slice": "checks",
+   "requirements": [
+    "3.8.r6",
+    "3.8.r5"
+   ],
+   "verdict": "NOT_EVALUABLE",
+   "evidence": {
+    "sme_pending": 0,
+    "inexpressible": 0,
+    "for_review": []
+   }
+  },
+  {
+   "id": "P2-CK-04",
+   "slice": "checks",
+   "requirements": [
+    "3.2.r4",
+    "3.2.r5"
+   ],
+   "verdict": "PASS",
+   "evidence": {
+    "option_checks": 102,
+    "length_checks": 187
+   }
+  }
+ ],
+ "field_maps": {
+  "alignment": {},
+  "merged_meanings": [],
+  "instances": [
+   {
+    "form": "IMM 5707",
+    "subject": "client-a",
+    "entries": 42,
+    "outcome_ok": 0,
+    "person_ok": 2,
+    "fact_ok": 2,
+    "row_ok": 42,
+    "transform_ok": 21,
+    "all_ok": 0,
+    "invented": 0,
+    "wrong_person": [
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key": "client-a.mother|client-a.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].Relationship[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+      "key": "client-a"
+     }
+    ],
+    "parent_blocks_ok": false,
+    "missing": 42,
+    "rows": [
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key_person": "client-a",
+      "key_fact": "person.family_name",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key_person": "client-a",
+      "key_fact": "person.given_names",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+      "key_person": "client-a",
+      "key_fact": "person.date_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key_person": "client-a",
+      "key_fact": "person.country_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key_person": "client-a",
+      "key_fact": "person.marital_status",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key_person": "client-a",
+      "key_fact": "person.occupation",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].NativeName[0]",
+      "key_person": "client-a",
+      "key_fact": "person.name_native_language",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": true,
+      "fact_ok": true,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key_person": "partner",
+      "key_fact": "case.accompanies_principal",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key_person": "partner",
+      "key_fact": "person.family_name",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key_person": "partner",
+      "key_fact": "person.given_names",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+      "key_person": "partner",
+      "key_fact": "person.date_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key_person": "partner",
+      "key_fact": "person.country_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key_person": "partner",
+      "key_fact": "person.marital_status",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key_person": "partner",
+      "key_fact": "person.occupation",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key_person": "partner",
+      "key_fact": "person.residential_address",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].NativeName[0]",
+      "key_person": "partner",
+      "key_fact": "person.name_native_language",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": true,
+      "fact_ok": true,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "case.accompanies_principal",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.family_name",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.given_names",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.date_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.country_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.marital_status",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.occupation",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.residential_address",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "case.accompanies_principal",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.family_name",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.given_names",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.date_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.country_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.marital_status",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.occupation",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key_person": "client-a.mother|client-a.father",
+      "key_fact": "person.residential_address",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key_person": "child",
+      "key_fact": "case.accompanies_principal",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key_person": "child",
+      "key_fact": "person.family_name",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key_person": "child",
+      "key_fact": "person.given_names",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+      "key_person": "child",
+      "key_fact": "person.date_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key_person": "child",
+      "key_fact": "person.country_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key_person": "child",
+      "key_fact": "person.marital_status",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key_person": "child",
+      "key_fact": "person.occupation",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key_person": "child",
+      "key_fact": "person.residential_address",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].Relationship[0]",
+      "key_person": "child",
+      "key_fact": "relationship.to_form_subject",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+      "key_person": "client-a",
+      "key_fact": "derived: subject has no children",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     }
+    ]
+   },
+   {
+    "form": "IMM 5707",
+    "subject": "partner",
+    "entries": 42,
+    "outcome_ok": 0,
+    "person_ok": 2,
+    "fact_ok": 2,
+    "row_ok": 42,
+    "transform_ok": 21,
+    "all_ok": 0,
+    "invented": 0,
+    "wrong_person": [
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key": "partner"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key": "partner.mother|partner.father"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].Relationship[0]",
+      "key": "child"
+     },
+     {
+      "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+      "key": "partner"
+     }
+    ],
+    "parent_blocks_ok": false,
+    "missing": 42,
+    "rows": [
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key_person": "partner",
+      "key_fact": "person.family_name",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key_person": "partner",
+      "key_fact": "person.given_names",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+      "key_person": "partner",
+      "key_fact": "person.date_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key_person": "partner",
+      "key_fact": "person.country_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key_person": "partner",
+      "key_fact": "person.marital_status",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key_person": "partner",
+      "key_fact": "person.occupation",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].NativeName[0]",
+      "key_person": "partner",
+      "key_fact": "person.name_native_language",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": true,
+      "fact_ok": true,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key_person": "client-a",
+      "key_fact": "case.accompanies_principal",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key_person": "client-a",
+      "key_fact": "person.family_name",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key_person": "client-a",
+      "key_fact": "person.given_names",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].DOB[0]",
+      "key_person": "client-a",
+      "key_fact": "person.date_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key_person": "client-a",
+      "key_fact": "person.country_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key_person": "client-a",
+      "key_fact": "person.marital_status",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key_person": "client-a",
+      "key_fact": "person.occupation",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key_person": "client-a",
+      "key_fact": "person.residential_address",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].NativeName[0]",
+      "key_person": "client-a",
+      "key_fact": "person.name_native_language",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": true,
+      "fact_ok": true,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "case.accompanies_principal",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.family_name",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.given_names",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.date_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.country_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.marital_status",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.occupation",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.residential_address",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "case.accompanies_principal",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.family_name",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.given_names",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.date_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.country_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.marital_status",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.occupation",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key_person": "partner.mother|partner.father",
+      "key_fact": "person.residential_address",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].Accompanying[0].yesno[0]",
+      "key_person": "child",
+      "key_fact": "case.accompanies_principal",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].FamilyName[0]",
+      "key_person": "child",
+      "key_fact": "person.family_name",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].GivenNames[0]",
+      "key_person": "child",
+      "key_fact": "person.given_names",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].DOB[0]",
+      "key_person": "child",
+      "key_fact": "person.date_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].COB[0]",
+      "key_person": "child",
+      "key_fact": "person.country_of_birth",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]",
+      "key_person": "child",
+      "key_fact": "person.marital_status",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Occupation[0]",
+      "key_person": "child",
+      "key_fact": "person.occupation",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Address[0]",
+      "key_person": "child",
+      "key_fact": "person.residential_address",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].Relationship[0]",
+      "key_person": "child",
+      "key_fact": "relationship.to_form_subject",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+      "key_person": "partner",
+      "key_fact": "derived: subject has no children",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     }
+    ]
+   },
+   {
+    "form": "IMM 1295",
+    "subject": "client-a",
+    "entries": 6,
+    "outcome_ok": 0,
+    "person_ok": 0,
+    "fact_ok": 0,
+    "row_ok": 6,
+    "transform_ok": 4,
+    "all_ok": 0,
+    "invented": 0,
+    "wrong_person": [
+     {
+      "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromYr[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromMM[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromDD[0]",
+      "key": "client-a"
+     },
+     {
+      "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].FamilyName[0]",
+      "key": "partner"
+     },
+     {
+      "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].GivenName[0]",
+      "key": "partner"
+     }
+    ],
+    "parent_blocks_ok": true,
+    "missing": 6,
+    "rows": [
+     {
+      "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]",
+      "key_person": "client-a",
+      "key_fact": "person.marital_status",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromYr[0]",
+      "key_person": "client-a",
+      "key_fact": "relationship.start_date",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": false,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromMM[0]",
+      "key_person": "client-a",
+      "key_fact": "relationship.start_date",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromDD[0]",
+      "key_person": "client-a",
+      "key_fact": "relationship.start_date",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].FamilyName[0]",
+      "key_person": "partner",
+      "key_fact": "person.family_name",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     },
+     {
+      "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].GivenName[0]",
+      "key_person": "partner",
+      "key_fact": "person.given_names",
+      "draft_outcome": "missing",
+      "outcome_ok": false,
+      "person_ok": false,
+      "fact_ok": false,
+      "row_ok": true,
+      "transform_ok": true,
+      "invented": false,
+      "all_ok": false
+     }
+    ]
+   }
+  ]
+ }
+}

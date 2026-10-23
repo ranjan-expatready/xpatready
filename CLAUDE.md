@@ -1,5 +1,15 @@
-# Expat Ready — AI Workers (Workstream 2)
+# Expat Ready — working folder
 
-One workstream, one folder: `ai-workers/`. Claude is the Lead and the founder's coach; the founder (non-technical) approves. The SessionStart hook loads `ai-workers/README.md` §0 (the rules), the plan table in `ai-workers/PROGRESS.md`, `ai-workers/NEXT.md` (the handoff) and a freshness report. Access rule: `AGENTS.md`.
+Open Claude Code **here, at this folder's root** (hooks, skills and agents live here). Skills and agents are loaded when a session starts: restart Claude Code after they change.
 
-Each session works on the one "Next outcome" in `NEXT.md` and stops at a checkpoint (README §0 rule 13). End every final message with the copy-paste line: **Continue Workstream 2 from ai-workers/NEXT.md. Work only on its next outcome.**
+@AGENTS.md
+
+## Current work: Pathway Configurator reference build
+* Product home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` — `PRODUCT.md` (what and words), `WORKFLOW.md` (who does what), `STATE.md` (where we are), `STANDARDS.md` + `EXPERIENCE.md` (the quality bar), `QUALITY.md` (scoring).
+* Reference app: `ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/` (NestJS + Prisma + PostgreSQL, React + Vite). Start: `zsh …/studio/start.sh` → http://localhost:4400.
+* The founder drives the builder with **`/next`**. Skills: `next`, `screen-challenge`, `screen-build`, `screen-review`, `team-handover`, `immigration-structure`, `grilling`; `lead` and `screen-concept` are for the Lead chat. Agents: `screen-reviewer`, `screen-breaker`.
+* Never follow blindly, never deviate silently: disagreements go in `screens/<NN>/challenge.md` with evidence.
+* End every reply with the "Paste to Lead" block (skill `next`).
+
+## Folders
+`product/` living rules and state · `prototype/studio/` the app · `sources/`, `code/` read-only references (newest only) · `ai-workers/` other files, `playbook/`, `delivery-reset-2026-10-21/` earlier records · `archive/` history.

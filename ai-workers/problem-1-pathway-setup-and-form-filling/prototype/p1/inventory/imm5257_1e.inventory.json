@@ -1,0 +1,7818 @@
+{
+ "summary": {
+  "file": "official-sources/ircc/forms/imm5257_1e.pdf",
+  "sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+  "reason_read": "variant V3 only",
+  "pdf": {
+   "pages": 1,
+   "needs_rendering": true,
+   "perms": [
+    "/DocMDP",
+    "/UR3"
+   ],
+   "acroform_fields": 2,
+   "encryption": {
+    "V": 4,
+    "R": 4,
+    "P": -20
+   }
+  },
+  "template_ns": "http://www.xfa.org/schema/xfa-template/2.8/",
+  "fields_total": 103,
+  "entry_fields_bound": 57,
+  "entry_fields_in_shipped_data": 57,
+  "ui_counts": {
+   "textEdit": 69,
+   "button": 13,
+   "exclGroup": 6,
+   "choiceList": 5,
+   "signature": 10
+  },
+  "required_fields": 10,
+  "choice_fields_with_options": 11,
+  "repeat_groups_dynamic": 5,
+  "row_groups_fixed": 34,
+  "barcode_fields": [],
+  "buttons": [
+   {
+    "som": "Schedule1[0].page1[0].ButtonsHeader[0].ValidateButton[0]",
+    "caption": "Validate",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "Schedule1[0].page1[0].ButtonsHeader[0].ValidateButton[1]",
+    "caption": "Clear Form",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "Schedule1[0].page1[0].Table1[0].Row1[0].Subform3[0].remove[0]",
+    "caption": "-",
+    "scripts": {
+     "click": 1,
+     "initialize": 1,
+     "mouseEnter": 1,
+     "mouseExit": 1,
+     "validate": 1
+    }
+   },
+   {
+    "som": "Schedule1[0].page1[0].Table1[0].Footer[0].Subform1[0].add[0]",
+    "caption": "+",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0].Subform3[0].remove[0]",
+    "caption": "-",
+    "scripts": {
+     "click": 1,
+     "initialize": 1,
+     "mouseEnter": 1,
+     "mouseExit": 1,
+     "validate": 1
+    }
+   },
+   {
+    "som": "Schedule1[0].page1[0].IllTreatSection[0].footer[0].add[0]",
+    "caption": "+",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0].Subform3[0].remove[0]",
+    "caption": "-",
+    "scripts": {
+     "click": 1,
+     "initialize": 1,
+     "mouseExit": 1,
+     "mouseEnter": 1,
+     "validate": 1
+    }
+   },
+   {
+    "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Footer[0].Subform1[0].add[0]",
+    "caption": "+",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0].Subform3[0].remove[0]",
+    "caption": "-",
+    "scripts": {
+     "click": 1,
+     "initialize": 1,
+     "mouseEnter": 1,
+     "mouseExit": 1,
+     "validate": 1
+    }
+   },
+   {
+    "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Footer[0].Subform1[0].add[0]",
+    "caption": "+",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0].Subform3[0].remove[0]",
+    "caption": "-",
+    "scripts": {
+     "click": 1,
+     "initialize": 1,
+     "mouseEnter": 1,
+     "mouseExit": 1,
+     "validate": 1
+    }
+   },
+   {
+    "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Footer[0].Subform1[0].add[0]",
+    "caption": "+",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "Schedule1[0].page1[0].ButtonsFooter[0].ValidateButton[0]",
+    "caption": "Validate",
+    "scripts": {
+     "click": 1
+    }
+   }
+  ],
+  "scripts_by_activity": {
+   "initialize": 14,
+   "exit": 21,
+   "click": 13,
+   "mouseEnter": 6,
+   "mouseExit": 6,
+   "enter": 1,
+   "docReady": 1,
+   "validate": 54,
+   "change": 12,
+   "script-object": 8
+  },
+  "presence_changing_scripts": 3,
+  "sections": {
+   "page1.ButtonsHeader.FormVersion": 1,
+   "page1.ButtonsHeader.formName": 1,
+   "page1.ButtonsHeader.readerInfo": 1,
+   "page1.ButtonsHeader.applicationvalidationDate": 3,
+   "page1.subIndicate.q1": 1,
+   "page1.subIndicate.ApplicationValidatedFlag": 1,
+   "page1.subNo1.Table1": 2,
+   "page1.subNo2.dateBox": 3,
+   "page1.subNo2.UCI": 1,
+   "page1.MilitaryServiceheader.NoYesGroup": 1,
+   "page1.Table1.Row1": 7,
+   "page1.IllTreatSection.illtreatment": 1,
+   "page1.IllTreatSection.illTreatTable": 8,
+   "page1.organizationSection.MilitaryServiceheader": 1,
+   "page1.organizationSection.Table1": 8,
+   "page1.positionsSection.MilitaryServiceheader": 1,
+   "page1.positionsSection.Table1": 8,
+   "page1.previousTravelSection.MilitaryServiceheader": 1,
+   "page1.previousTravelSection.Table1": 7
+  }
+ },
+ "groups": [
+  {
+   "som": "Schedule1[0].page1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].spacer1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].subNo1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].subNo1[0].Table1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].subNo1[0].Table1[0].Row1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].spacer1[1]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].subNo2[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].spacer1[2]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].Fragment1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].spacer1[3]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0].Header[0].Subform2[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0].Row1[0]",
+   "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*]",
+   "occur": {
+    "min": "0",
+    "max": "-1",
+    "initial": "4"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0].Row1[0].Subform3[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0].Footer[0].Subform1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].spacer1[4]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].Table2[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].Table2[0].Header[0].Subform2[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0]",
+   "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*]",
+   "occur": {
+    "min": "0",
+    "max": "-1",
+    "initial": "3"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0].Subform3[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].spacer1[5]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Header[0].Subform2[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0]",
+   "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*]",
+   "occur": {
+    "min": "0",
+    "max": "-1",
+    "initial": "4"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0].Subform3[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Footer[0].Subform1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].spacer1[6]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Header[0].Subform2[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0]",
+   "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*]",
+   "occur": {
+    "min": "0",
+    "max": "-1",
+    "initial": "4"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0].Subform3[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Footer[0].Subform1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].spacer1[7]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Header[0].Subform2[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0]",
+   "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*]",
+   "occur": {
+    "min": "0",
+    "max": "-1",
+    "initial": "4"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0].Subform3[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Footer[0].Subform1[0]",
+   "data_path": null,
+   "occur": null,
+   "fixed_row": true
+  }
+ ],
+ "presence_scripts": [
+  {
+   "on": "Schedule1[0].page1[0].config[0]",
+   "sets": [
+    "this->hidden"
+   ]
+  },
+  {
+   "on": "Schedule1[0].page1[0].subIndicate[0].ApplicationValidatedFlag[0]",
+   "sets": [
+    "form1.Page4.Barcodes.WhiteMask->visible"
+   ]
+  },
+  {
+   "on": "Schedule1[0].page1[0].subNo1[0].Table1[0].Row1[0].familyName[0]",
+   "sets": [
+    "JavaScriptMessage->hidden"
+   ]
+  }
+ ],
+ "fields": [
+  {
+   "som": "Schedule1[0].page1[0].config[0].passive[0]",
+   "section": "page1.config.passive",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Passive",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "initialize": 1,
+    "exit": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].active[0]",
+   "section": "page1.config.active",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Active and Banner",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "initialize": 1,
+    "exit": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].lineColor[0]",
+   "section": "page1.config.lineColor",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Line Color",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "initialize": 1,
+    "exit": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].dimGrey[0]",
+   "section": "page1.config.dimGrey",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Line Shadow",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "initialize": 1,
+    "exit": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].divider[0]",
+   "section": "page1.config.divider",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Divider",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "initialize": 1,
+    "exit": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].selection[0]",
+   "section": "page1.config.selection",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Selection",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "initialize": 1,
+    "exit": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].headerColor[0]",
+   "section": "page1.config.headerColor",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Header Font Color",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "initialize": 1,
+    "exit": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].headerTextLine1[0]",
+   "section": "page1.config.headerTextLine1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Header Text Line 1",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].headerTextLine2[0]",
+   "section": "page1.config.headerTextLine2",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Header Text Line 2",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].passiveColor[0]",
+   "section": "page1.config.passiveColor",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].activeColor[0]",
+   "section": "page1.config.activeColor",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].lineColorColor[0]",
+   "section": "page1.config.lineColorColor",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].lineShadowColor[0]",
+   "section": "page1.config.lineShadowColor",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].dividerColor[0]",
+   "section": "page1.config.dividerColor",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].selectionColor[0]",
+   "section": "page1.config.selectionColor",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].config[0].headerFontColor[0]",
+   "section": "page1.config.headerFontColor",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].ButtonsHeader[0].ValidateButton[0]",
+   "section": "page1.ButtonsHeader.ValidateButton",
+   "kind": "field",
+   "ui": "button",
+   "caption": "Validate",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].ButtonsHeader[0].ValidateButton[1]",
+   "section": "page1.ButtonsHeader.ValidateButton",
+   "kind": "field",
+   "ui": "button",
+   "caption": "Clear Form",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].ButtonsHeader[0].Age[0]",
+   "section": "page1.ButtonsHeader.Age",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].ButtonsHeader[0].AdultFlag[0]",
+   "section": "page1.ButtonsHeader.AdultFlag",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].ButtonsHeader[0].FormVersion[0]",
+   "section": "page1.ButtonsHeader.FormVersion",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "Schedule1[0].FormVersion[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].ButtonsHeader[0].formName[0]",
+   "section": "page1.ButtonsHeader.formName",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "Schedule1[0].FormName[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].ButtonsHeader[0].readerInfo[0]",
+   "section": "page1.ButtonsHeader.readerInfo",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "Schedule1[0].ReaderInfo[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].ButtonsHeader[0].applicationvalidationDate[0].year[0]",
+   "section": "page1.ButtonsHeader.applicationvalidationDate",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "Schedule1[0].ApplicationValidationDate[0].Year[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].ButtonsHeader[0].applicationvalidationDate[0].month[0]",
+   "section": "page1.ButtonsHeader.applicationvalidationDate",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "Schedule1[0].ApplicationValidationDate[0].Month[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].ButtonsHeader[0].applicationvalidationDate[0].day[0]",
+   "section": "page1.ButtonsHeader.applicationvalidationDate",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": "Schedule1[0].ApplicationValidationDate[0].Day[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].subIndicate[0].q1[0]",
+   "section": "page1.subIndicate.q1",
+   "kind": "exclGroup",
+   "ui": "exclGroup",
+   "caption": "",
+   "data_path": "Schedule1[0].PrincipalApplicant[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "The principal applicant",
+     "true"
+    ],
+    [
+     "The spouse, common-law partner or dependent child aged 18 years or older of the principal applicant",
+     "false"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": true,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "*Indicate whether you are",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].subIndicate[0].ApplicationValidatedFlag[0]",
+   "section": "page1.subIndicate.ApplicationValidatedFlag",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Validated",
+   "data_path": "Schedule1[0].FormValidated[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "*Indicate whether you are",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "mouseEnter": 1,
+    "mouseExit": 1,
+    "enter": 1,
+    "docReady": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].subNo1[0].Table1[0].Row1[0].familyName[0]",
+   "section": "page1.subNo1.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "*Family name (as shown on your passport or travel document)",
+   "data_path": "Schedule1[0].FamilyName[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": true,
+   "max_chars": 100,
+   "presence": "visible",
+   "heading": "Full name",
+   "in_row": "Schedule1[0].page1[0].subNo1[0].Table1[0].Row1[0]",
+   "scripts": {
+    "initialize": 1,
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].subNo1[0].Table1[0].Row1[0].givenName[0]",
+   "section": "page1.subNo1.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Given name(s) (as shown on your passport or travel document)",
+   "data_path": "Schedule1[0].GivenName[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 100,
+   "presence": "visible",
+   "heading": "Full name",
+   "in_row": "Schedule1[0].page1[0].subNo1[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].subNo2[0].dateBox[0].DBYear[0]",
+   "section": "page1.subNo2.dateBox",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "*Date of birth",
+   "data_path": "Schedule1[0].ApplicantBirthDate[0].Year[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": true,
+   "max_chars": 4,
+   "presence": "visible",
+   "heading": "YYYY",
+   "in_row": "Schedule1[0].page1[0].subNo2[0]",
+   "scripts": {
+    "change": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].subNo2[0].dateBox[0].DBMonth[0]",
+   "section": "page1.subNo2.dateBox",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Question 2 Date of Birth Month in MM format",
+   "data_path": "Schedule1[0].ApplicantBirthDate[0].Month[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": true,
+   "max_chars": 2,
+   "presence": "visible",
+   "heading": "YYYY",
+   "in_row": "Schedule1[0].page1[0].subNo2[0]",
+   "scripts": {
+    "change": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].subNo2[0].dateBox[0].DBDay[0]",
+   "section": "page1.subNo2.dateBox",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Question 2 Date of Birth Day in DD format",
+   "data_path": "Schedule1[0].ApplicantBirthDate[0].Day[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": true,
+   "max_chars": 2,
+   "presence": "visible",
+   "heading": "YYYY",
+   "in_row": "Schedule1[0].page1[0].subNo2[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].subNo2[0].UCI[0]",
+   "section": "page1.subNo2.UCI",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "UCI",
+   "data_path": "Schedule1[0].UCI[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 10,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].subNo2[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].MilitaryServiceheader[0].NoYesGroup[0]",
+   "section": "page1.MilitaryServiceheader.NoYesGroup",
+   "kind": "exclGroup",
+   "ui": "exclGroup",
+   "caption": "Question 4 Military Service. Did you serve in any military, militia, or civil defence unit or serve in a security organization or police force (including non obligatory national service, reserve or volunteer units)?",
+   "data_path": "Schedule1[0].MilitaryServiceInfo[0].ServedInMilitary[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "*Yes",
+     "true"
+    ],
+    [
+     "*No",
+     "false"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": true,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].MilitaryServiceheader[0].militarymarker[0]",
+   "section": "page1.MilitaryServiceheader.militarymarker",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0].Row1[0].from[0].Year[0]",
+   "section": "page1.Table1.Row1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Military Service From Date Year. The year of the start of the Military Service in YYYY format",
+   "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Year[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 4,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].Table1[0].Row1[0]",
+   "scripts": {
+    "change": 1,
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0].Row1[0].from[0].Month[0]",
+   "section": "page1.Table1.Row1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Military Service From Date Month. The month of the start of the Military Service in MM format",
+   "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Month[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 2,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].Table1[0].Row1[0]",
+   "scripts": {
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0].Row1[0].to[0].Year[0]",
+   "section": "page1.Table1.Row1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Military Service To Date Year. The year of the end of the Military Service in YYYY format",
+   "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Year[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 4,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].Table1[0].Row1[0]",
+   "scripts": {
+    "change": 1,
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0].Row1[0].to[0].Month[0]",
+   "section": "page1.Table1.Row1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Military Service To Date Month. The month of the end of the Military Service in MM format",
+   "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Month[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 2,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].Table1[0].Row1[0]",
+   "scripts": {
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0].Row1[0].stationed[0]",
+   "section": "page1.Table1.Row1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Military Service Location/Place where stationed. The location or place of your military service",
+   "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Location[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 100,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].Table1[0].Row1[0]",
+   "scripts": {
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0].Row1[0].prov[0]",
+   "section": "page1.Table1.Row1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Military Service Province. The province of your military service",
+   "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Province[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 50,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].Table1[0].Row1[0]",
+   "scripts": {
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0].Row1[0].country[0]",
+   "section": "page1.Table1.Row1",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "Military Service Country or Territory. The country or territory of your military service",
+   "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].CountryCode[0]",
+   "in_shipped_data": true,
+   "options": [
+    []
+   ],
+   "options_from": "xfa.datasets.LOVFile.LOV.CountryOfBirthList.CountryOfBirth[*]",
+   "options_resolved": [
+    [
+     "",
+     ""
+    ],
+    [
+     "Afghanistan",
+     "252"
+    ],
+    [
+     "Aland Island",
+     "401"
+    ],
+    [
+     "Albania",
+     "081"
+    ],
+    [
+     "Algeria",
+     "131"
+    ],
+    [
+     "Andorra",
+     "082"
+    ],
+    [
+     "Angola",
+     "151"
+    ],
+    [
+     "Anguilla",
+     "620"
+    ],
+    [
+     "Antigua And Barbuda",
+     "621"
+    ],
+    [
+     "Argentina",
+     "703"
+    ],
+    [
+     "Armenia",
+     "049"
+    ],
+    [
+     "Aruba",
+     "658"
+    ],
+    [
+     "Australia",
+     "305"
+    ],
+    [
+     "Austria",
+     "011"
+    ],
+    [
+     "Azerbaijan",
+     "050"
+    ],
+    [
+     "Bahamas",
+     "622"
+    ],
+    [
+     "Bahrain",
+     "253"
+    ],
+    [
+     "Bailwick of Jersey",
+     "412"
+    ],
+    [
+     "Bangladesh",
+     "212"
+    ],
+    [
+     "Barbados",
+     "610"
+    ],
+    [
+     "Belarus",
+     "051"
+    ],
+    [
+     "Belgium",
+     "012"
+    ],
+    [
+     "Belize",
+     "541"
+    ],
+    [
+     "Benin",
+     "160"
+    ],
+    [
+     "Bermuda",
+     "601"
+    ],
+    [
+     "Bhutan",
+     "254"
+    ],
+    [
+     "Bolivia",
+     "751"
+    ],
+    [
+     "Bonaire, Sint Eustatius, Saba",
+     "402"
+    ],
+    [
+     "Bosnia and Herzegovina",
+     "048"
+    ],
+    [
+     "Botswana",
+     "153"
+    ],
+    [
+     "Bouvet Island",
+     "403"
+    ],
+    [
+     "Brazil",
+     "709"
+    ],
+    [
+     "British Indian Ocean Territory",
+     "404"
+    ],
+    [
+     "British Virgin Islands",
+     "633"
+    ],
+    [
+     "Brunei Darussalam",
+     "255"
+    ],
+    [
+     "Bulgaria",
+     "083"
+    ],
+    [
+     "Burkina Faso",
+     "188"
+    ],
+    [
+     "Burma (Myanmar)",
+     "241"
+    ],
+    [
+     "Burundi",
+     "154"
+    ],
+    [
+     "Cabo Verde",
+     "911"
+    ],
+    [
+     "Cambodia",
+     "256"
+    ],
+    [
+     "Cameroon",
+     "155"
+    ],
+    [
+     "Canada",
+     "511"
+    ],
+    [
+     "Canary Islands",
+     "039"
+    ],
+    [
+     "Cayman Islands",
+     "624"
+    ],
+    [
+     "Central African Republic",
+     "157"
+    ],
+    [
+     "Chad",
+     "156"
+    ],
+    [
+     "Channel Islands",
+     "009"
+    ],
+    [
+     "Chile",
+     "721"
+    ],
+    [
+     "China",
+     "202"
+    ],
+    [
+     "China (Hong Kong SAR)",
+     "200"
+    ],
+    [
+     "China (Macao SAR)",
+     "198"
+    ],
+    [
+     "Christmas Island",
+     "405"
+    ],
+    [
+     "Colombia",
+     "722"
+    ],
+    [
+     "Comoros",
+     "905"
+    ],
+    [
+     "Cook Islands",
+     "840"
+    ],
+    [
+     "Costa Rica",
+     "542"
+    ],
+    [
+     "Croatia",
+     "043"
+    ],
+    [
+     "Cuba",
+     "650"
+    ],
+    [
+     "Curaçao",
+     "406"
+    ],
+    [
+     "Cyprus",
+     "221"
+    ],
+    [
+     "Czech Republic",
+     "015"
+    ],
+    [
+     "Czechoslovakia",
+     "014"
+    ],
+    [
+     "Democratic Rep. of Congo",
+     "158"
+    ],
+    [
+     "Denmark",
+     "017"
+    ],
+    [
+     "Djibouti",
+     "183"
+    ],
+    [
+     "Dominica",
+     "625"
+    ],
+    [
+     "Dominican Republic",
+     "651"
+    ],
+    [
+     "East Timor",
+     "916"
+    ],
+    [
+     "Ecuador",
+     "753"
+    ],
+    [
+     "Egypt",
+     "101"
+    ],
+    [
+     "El Salvador",
+     "543"
+    ],
+    [
+     "England",
+     "002"
+    ],
+    [
+     "Equatorial Guinea",
+     "178"
+    ],
+    [
+     "Eritrea",
+     "162"
+    ],
+    [
+     "Estonia",
+     "018"
+    ],
+    [
+     "Ethiopia",
+     "161"
+    ],
+    [
+     "Falkland Islands",
+     "912"
+    ],
+    [
+     "Faroe Islands",
+     "408"
+    ],
+    [
+     "Federated States of Micronesia",
+     "835"
+    ],
+    [
+     "Fiji",
+     "801"
+    ],
+    [
+     "Finland",
+     "021"
+    ],
+    [
+     "Fr. South. and Antarctic Lands",
+     "821"
+    ],
+    [
+     "France",
+     "022"
+    ],
+    [
+     "French Guiana",
+     "754"
+    ],
+    [
+     "French Polynesia",
+     "845"
+    ],
+    [
+     "Gabon",
+     "163"
+    ],
+    [
+     "Gambia",
+     "164"
+    ],
+    [
+     "Georgia",
+     "052"
+    ],
+    [
+     "Germany, Federal Republic Of",
+     "024"
+    ],
+    [
+     "Ghana",
+     "165"
+    ],
+    [
+     "Gibraltar",
+     "084"
+    ],
+    [
+     "Greece",
+     "025"
+    ],
+    [
+     "Greenland",
+     "521"
+    ],
+    [
+     "Grenada",
+     "626"
+    ],
+    [
+     "Guadeloupe",
+     "653"
+    ],
+    [
+     "Guam",
+     "832"
+    ],
+    [
+     "Guatemala",
+     "544"
+    ],
+    [
+     "Guernsey",
+     "409"
+    ],
+    [
+     "Guinea",
+     "166"
+    ],
+    [
+     "Guinea-Bissau",
+     "167"
+    ],
+    [
+     "Guyana",
+     "711"
+    ],
+    [
+     "Haiti",
+     "654"
+    ],
+    [
+     "Heard and MacDonald Islands",
+     "410"
+    ],
+    [
+     "Honduras",
+     "545"
+    ],
+    [
+     "Hong Kong",
+     "204"
+    ],
+    [
+     "Hungary",
+     "026"
+    ],
+    [
+     "Iceland",
+     "085"
+    ],
+    [
+     "India",
+     "205"
+    ],
+    [
+     "Indonesia",
+     "222"
+    ],
+    [
+     "Iran",
+     "223"
+    ],
+    [
+     "Iraq",
+     "224"
+    ],
+    [
+     "Ireland",
+     "027"
+    ],
+    [
+     "Isle of Man",
+     "411"
+    ],
+    [
+     "Israel",
+     "206"
+    ],
+    [
+     "Italy",
+     "028"
+    ],
+    [
+     "Ivory Coast",
+     "169"
+    ],
+    [
+     "Jamaica",
+     "602"
+    ],
+    [
+     "Japan",
+     "207"
+    ],
+    [
+     "Jordan",
+     "225"
+    ],
+    [
+     "Kazakhstan",
+     "053"
+    ],
+    [
+     "Kenya",
+     "132"
+    ],
+    [
+     "Kiribati",
+     "831"
+    ],
+    [
+     "Korea, North (DPRK)",
+     "257"
+    ],
+    [
+     "Korea, South",
+     "258"
+    ],
+    [
+     "Kosovo",
+     "064"
+    ],
+    [
+     "Kuwait",
+     "226"
+    ],
+    [
+     "Kyrgyzstan",
+     "054"
+    ],
+    [
+     "Laos",
+     "260"
+    ],
+    [
+     "Latvia",
+     "019"
+    ],
+    [
+     "Lebanon",
+     "208"
+    ],
+    [
+     "Lesotho",
+     "152"
+    ],
+    [
+     "Liberia",
+     "170"
+    ],
+    [
+     "Libya",
+     "171"
+    ],
+    [
+     "Liechtenstein",
+     "086"
+    ],
+    [
+     "Lithuania",
+     "020"
+    ],
+    [
+     "Luxembourg",
+     "013"
+    ],
+    [
+     "Macao",
+     "261"
+    ],
+    [
+     "Macedonia",
+     "070"
+    ],
+    [
+     "Madagascar",
+     "172"
+    ],
+    [
+     "Madeira",
+     "036"
+    ],
+    [
+     "Malawi",
+     "111"
+    ],
+    [
+     "Malaysia",
+     "242"
+    ],
+    [
+     "Maldives",
+     "901"
+    ],
+    [
+     "Mali",
+     "173"
+    ],
+    [
+     "Malta",
+     "030"
+    ],
+    [
+     "Marshall Islands",
+     "834"
+    ],
+    [
+     "Martinique",
+     "655"
+    ],
+    [
+     "Mauritania",
+     "174"
+    ],
+    [
+     "Mauritius",
+     "902"
+    ],
+    [
+     "Mayotte",
+     "906"
+    ],
+    [
+     "Mexico",
+     "501"
+    ],
+    [
+     "Moldova",
+     "055"
+    ],
+    [
+     "Monaco",
+     "087"
+    ],
+    [
+     "Mongolia",
+     "262"
+    ],
+    [
+     "Montenegro",
+     "063"
+    ],
+    [
+     "Montserrat",
+     "627"
+    ],
+    [
+     "Morocco",
+     "133"
+    ],
+    [
+     "Mozambique",
+     "175"
+    ],
+    [
+     "Namibia",
+     "122"
+    ],
+    [
+     "Nauru",
+     "341"
+    ],
+    [
+     "Nepal",
+     "264"
+    ],
+    [
+     "Netherlands Antilles, The",
+     "652"
+    ],
+    [
+     "Netherlands, The",
+     "031"
+    ],
+    [
+     "Nevis",
+     "628"
+    ],
+    [
+     "New Caledonia",
+     "822"
+    ],
+    [
+     "New Zealand",
+     "339"
+    ],
+    [
+     "Nicaragua",
+     "546"
+    ],
+    [
+     "Niger",
+     "176"
+    ],
+    [
+     "Nigeria",
+     "177"
+    ],
+    [
+     "Niue",
+     "414"
+    ],
+    [
+     "Northern Ireland",
+     "006"
+    ],
+    [
+     "Northern Mariana Islands",
+     "830"
+    ],
+    [
+     "Norway",
+     "032"
+    ],
+    [
+     "Oman",
+     "263"
+    ],
+    [
+     "Pakistan",
+     "209"
+    ],
+    [
+     "Palestinian Authority",
+     "213"
+    ],
+    [
+     "Panama",
+     "547"
+    ],
+    [
+     "Papua New Guinea",
+     "342"
+    ],
+    [
+     "Paraguay",
+     "755"
+    ],
+    [
+     "Peru",
+     "723"
+    ],
+    [
+     "Philippines",
+     "227"
+    ],
+    [
+     "Pitcairn Islands",
+     "842"
+    ],
+    [
+     "Poland",
+     "033"
+    ],
+    [
+     "Portugal",
+     "034"
+    ],
+    [
+     "Puerto Rico",
+     "656"
+    ],
+    [
+     "Qatar",
+     "265"
+    ],
+    [
+     "Republic of Congo",
+     "159"
+    ],
+    [
+     "Republic of Palau",
+     "836"
+    ],
+    [
+     "Réunion",
+     "903"
+    ],
+    [
+     "Romania",
+     "088"
+    ],
+    [
+     "Russia",
+     "056"
+    ],
+    [
+     "Rwanda",
+     "179"
+    ],
+    [
+     "Saint Helena",
+     "915"
+    ],
+    [
+     "Saint Kitts and Nevis",
+     "629"
+    ],
+    [
+     "Saint Lucia",
+     "630"
+    ],
+    [
+     "Saint Pierre and Miquelon",
+     "531"
+    ],
+    [
+     "Saint-Barthelemy",
+     "407"
+    ],
+    [
+     "Saint-Martin",
+     "415"
+    ],
+    [
+     "Samoa",
+     "844"
+    ],
+    [
+     "Samoa, American",
+     "843"
+    ],
+    [
+     "San Marino",
+     "089"
+    ],
+    [
+     "Sao Tome and Principe",
+     "914"
+    ],
+    [
+     "Saudi Arabia",
+     "231"
+    ],
+    [
+     "Scotland",
+     "007"
+    ],
+    [
+     "Senegal",
+     "180"
+    ],
+    [
+     "Serbia And Montenegro",
+     "061"
+    ],
+    [
+     "Serbia, Republic Of",
+     "062"
+    ],
+    [
+     "Seychelles",
+     "904"
+    ],
+    [
+     "Sierra Leone",
+     "181"
+    ],
+    [
+     "Singapore",
+     "246"
+    ],
+    [
+     "Sint-Maarten",
+     "416"
+    ],
+    [
+     "Slovakia",
+     "016"
+    ],
+    [
+     "Slovenia",
+     "047"
+    ],
+    [
+     "Solomon Islands",
+     "824"
+    ],
+    [
+     "Somalia",
+     "182"
+    ],
+    [
+     "South Africa, Republic Of",
+     "121"
+    ],
+    [
+     "South Sudan",
+     "189"
+    ],
+    [
+     "Spain",
+     "037"
+    ],
+    [
+     "Sri Lanka",
+     "201"
+    ],
+    [
+     "St. Vincent and the Grenadines",
+     "631"
+    ],
+    [
+     "Sudan",
+     "185"
+    ],
+    [
+     "Suriname",
+     "752"
+    ],
+    [
+     "Swaziland",
+     "186"
+    ],
+    [
+     "Sweden",
+     "040"
+    ],
+    [
+     "Switzerland",
+     "041"
+    ],
+    [
+     "Syria",
+     "210"
+    ],
+    [
+     "Taiwan",
+     "203"
+    ],
+    [
+     "Tajikistan",
+     "057"
+    ],
+    [
+     "Tanzania",
+     "130"
+    ],
+    [
+     "Thailand",
+     "267"
+    ],
+    [
+     "Tibet (Autonomous Region)",
+     "268"
+    ],
+    [
+     "Togo",
+     "187"
+    ],
+    [
+     "Tokelau",
+     "417"
+    ],
+    [
+     "Tonga",
+     "846"
+    ],
+    [
+     "Trinidad and Tobago",
+     "605"
+    ],
+    [
+     "Tunisia",
+     "135"
+    ],
+    [
+     "Turkey",
+     "045"
+    ],
+    [
+     "Turkmenistan",
+     "058"
+    ],
+    [
+     "Turks and Caicos Islands",
+     "632"
+    ],
+    [
+     "Tuvalu",
+     "826"
+    ],
+    [
+     "U.S. Minor outlying Islands",
+     "418"
+    ],
+    [
+     "Uganda",
+     "136"
+    ],
+    [
+     "Ukraine",
+     "059"
+    ],
+    [
+     "Union Of Soviet Socialist Rep",
+     "042"
+    ],
+    [
+     "United Arab Emirates",
+     "280"
+    ],
+    [
+     "United States of America",
+     "461"
+    ],
+    [
+     "Unknown",
+     "000"
+    ],
+    [
+     "Uruguay",
+     "724"
+    ],
+    [
+     "Uzbekistan",
+     "060"
+    ],
+    [
+     "Vanuatu",
+     "823"
+    ],
+    [
+     "Vatican City State",
+     "090"
+    ],
+    [
+     "Venezuela",
+     "725"
+    ],
+    [
+     "Vietnam",
+     "270"
+    ],
+    [
+     "Virgin Islands, U.S.",
+     "657"
+    ],
+    [
+     "Wales",
+     "008"
+    ],
+    [
+     "Wallis and Futuna Is., Terr.",
+     "841"
+    ],
+    [
+     "Western Sahara",
+     "184"
+    ],
+    [
+     "Yemen",
+     "273"
+    ],
+    [
+     "Yugoslavia",
+     "044"
+    ],
+    [
+     "Zambia",
+     "112"
+    ],
+    [
+     "Zimbabwe",
+     "113"
+    ]
+   ],
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].Table1[0].Row1[0]",
+   "scripts": {
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0].Row1[0].Subform3[0].remove[0]",
+   "section": "page1.Table1.Row1",
+   "kind": "field",
+   "ui": "button",
+   "caption": "-",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].Table1[0].Row1[0].Subform3[0]",
+   "scripts": {
+    "click": 1,
+    "initialize": 1,
+    "mouseEnter": 1,
+    "mouseExit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].Table1[0].Footer[0].Subform1[0].add[0]",
+   "section": "page1.Table1.Footer",
+   "kind": "field",
+   "ui": "button",
+   "caption": "+",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0].Table1[0].Footer[0].Subform1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illtreatment[0].NoYesGroup[0]",
+   "section": "page1.IllTreatSection.illtreatment",
+   "kind": "exclGroup",
+   "ui": "exclGroup",
+   "caption": "Question 5. Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?",
+   "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].HaveWitnessedParticipated[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "*Yes",
+     "true"
+    ],
+    [
+     "*No",
+     "false"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": true,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illtreatment[0].illtreatmentmarker[0]",
+   "section": "page1.IllTreatSection.illtreatment",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0].from[0].Year[0]",
+   "section": "page1.IllTreatSection.illTreatTable",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Question 5 From Date Year. The year of the start of the event in YYYY format",
+   "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Year[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 4,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0]",
+   "scripts": {
+    "change": 1,
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0].from[0].Month[0]",
+   "section": "page1.IllTreatSection.illTreatTable",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Question 5 From Date Month. The month of the start of the event in MM format",
+   "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Month[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 2,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0]",
+   "scripts": {
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0].to[0].Year[0]",
+   "section": "page1.IllTreatSection.illTreatTable",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Question 5 To Date Year. The year of the end of the event in YYYY format",
+   "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Year[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 4,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0]",
+   "scripts": {
+    "change": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0].to[0].Month[0]",
+   "section": "page1.IllTreatSection.illTreatTable",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Question 5 To Date Month. The month of the end of the event in MM format",
+   "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Month[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 2,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0]",
+   "scripts": {
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0].location[0]",
+   "section": "page1.IllTreatSection.illTreatTable",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Question 5 Location. The location of the event",
+   "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Location[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 100,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0]",
+   "scripts": {
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0].prov[0]",
+   "section": "page1.IllTreatSection.illTreatTable",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Question 5 Province. The province of the event",
+   "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Province[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 50,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0]",
+   "scripts": {
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0].country[0]",
+   "section": "page1.IllTreatSection.illTreatTable",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "Question 5 Country or Territory. The country or territory of the event",
+   "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].CountryCode[0]",
+   "in_shipped_data": true,
+   "options": [
+    []
+   ],
+   "options_from": "xfa.datasets.LOVFile.LOV.CountryOfBirthList.CountryOfBirth[*]",
+   "options_resolved": [
+    [
+     "",
+     ""
+    ],
+    [
+     "Afghanistan",
+     "252"
+    ],
+    [
+     "Aland Island",
+     "401"
+    ],
+    [
+     "Albania",
+     "081"
+    ],
+    [
+     "Algeria",
+     "131"
+    ],
+    [
+     "Andorra",
+     "082"
+    ],
+    [
+     "Angola",
+     "151"
+    ],
+    [
+     "Anguilla",
+     "620"
+    ],
+    [
+     "Antigua And Barbuda",
+     "621"
+    ],
+    [
+     "Argentina",
+     "703"
+    ],
+    [
+     "Armenia",
+     "049"
+    ],
+    [
+     "Aruba",
+     "658"
+    ],
+    [
+     "Australia",
+     "305"
+    ],
+    [
+     "Austria",
+     "011"
+    ],
+    [
+     "Azerbaijan",
+     "050"
+    ],
+    [
+     "Bahamas",
+     "622"
+    ],
+    [
+     "Bahrain",
+     "253"
+    ],
+    [
+     "Bailwick of Jersey",
+     "412"
+    ],
+    [
+     "Bangladesh",
+     "212"
+    ],
+    [
+     "Barbados",
+     "610"
+    ],
+    [
+     "Belarus",
+     "051"
+    ],
+    [
+     "Belgium",
+     "012"
+    ],
+    [
+     "Belize",
+     "541"
+    ],
+    [
+     "Benin",
+     "160"
+    ],
+    [
+     "Bermuda",
+     "601"
+    ],
+    [
+     "Bhutan",
+     "254"
+    ],
+    [
+     "Bolivia",
+     "751"
+    ],
+    [
+     "Bonaire, Sint Eustatius, Saba",
+     "402"
+    ],
+    [
+     "Bosnia and Herzegovina",
+     "048"
+    ],
+    [
+     "Botswana",
+     "153"
+    ],
+    [
+     "Bouvet Island",
+     "403"
+    ],
+    [
+     "Brazil",
+     "709"
+    ],
+    [
+     "British Indian Ocean Territory",
+     "404"
+    ],
+    [
+     "British Virgin Islands",
+     "633"
+    ],
+    [
+     "Brunei Darussalam",
+     "255"
+    ],
+    [
+     "Bulgaria",
+     "083"
+    ],
+    [
+     "Burkina Faso",
+     "188"
+    ],
+    [
+     "Burma (Myanmar)",
+     "241"
+    ],
+    [
+     "Burundi",
+     "154"
+    ],
+    [
+     "Cabo Verde",
+     "911"
+    ],
+    [
+     "Cambodia",
+     "256"
+    ],
+    [
+     "Cameroon",
+     "155"
+    ],
+    [
+     "Canada",
+     "511"
+    ],
+    [
+     "Canary Islands",
+     "039"
+    ],
+    [
+     "Cayman Islands",
+     "624"
+    ],
+    [
+     "Central African Republic",
+     "157"
+    ],
+    [
+     "Chad",
+     "156"
+    ],
+    [
+     "Channel Islands",
+     "009"
+    ],
+    [
+     "Chile",
+     "721"
+    ],
+    [
+     "China",
+     "202"
+    ],
+    [
+     "China (Hong Kong SAR)",
+     "200"
+    ],
+    [
+     "China (Macao SAR)",
+     "198"
+    ],
+    [
+     "Christmas Island",
+     "405"
+    ],
+    [
+     "Colombia",
+     "722"
+    ],
+    [
+     "Comoros",
+     "905"
+    ],
+    [
+     "Cook Islands",
+     "840"
+    ],
+    [
+     "Costa Rica",
+     "542"
+    ],
+    [
+     "Croatia",
+     "043"
+    ],
+    [
+     "Cuba",
+     "650"
+    ],
+    [
+     "Curaçao",
+     "406"
+    ],
+    [
+     "Cyprus",
+     "221"
+    ],
+    [
+     "Czech Republic",
+     "015"
+    ],
+    [
+     "Czechoslovakia",
+     "014"
+    ],
+    [
+     "Democratic Rep. of Congo",
+     "158"
+    ],
+    [
+     "Denmark",
+     "017"
+    ],
+    [
+     "Djibouti",
+     "183"
+    ],
+    [
+     "Dominica",
+     "625"
+    ],
+    [
+     "Dominican Republic",
+     "651"
+    ],
+    [
+     "East Timor",
+     "916"
+    ],
+    [
+     "Ecuador",
+     "753"
+    ],
+    [
+     "Egypt",
+     "101"
+    ],
+    [
+     "El Salvador",
+     "543"
+    ],
+    [
+     "England",
+     "002"
+    ],
+    [
+     "Equatorial Guinea",
+     "178"
+    ],
+    [
+     "Eritrea",
+     "162"
+    ],
+    [
+     "Estonia",
+     "018"
+    ],
+    [
+     "Ethiopia",
+     "161"
+    ],
+    [
+     "Falkland Islands",
+     "912"
+    ],
+    [
+     "Faroe Islands",
+     "408"
+    ],
+    [
+     "Federated States of Micronesia",
+     "835"
+    ],
+    [
+     "Fiji",
+     "801"
+    ],
+    [
+     "Finland",
+     "021"
+    ],
+    [
+     "Fr. South. and Antarctic Lands",
+     "821"
+    ],
+    [
+     "France",
+     "022"
+    ],
+    [
+     "French Guiana",
+     "754"
+    ],
+    [
+     "French Polynesia",
+     "845"
+    ],
+    [
+     "Gabon",
+     "163"
+    ],
+    [
+     "Gambia",
+     "164"
+    ],
+    [
+     "Georgia",
+     "052"
+    ],
+    [
+     "Germany, Federal Republic Of",
+     "024"
+    ],
+    [
+     "Ghana",
+     "165"
+    ],
+    [
+     "Gibraltar",
+     "084"
+    ],
+    [
+     "Greece",
+     "025"
+    ],
+    [
+     "Greenland",
+     "521"
+    ],
+    [
+     "Grenada",
+     "626"
+    ],
+    [
+     "Guadeloupe",
+     "653"
+    ],
+    [
+     "Guam",
+     "832"
+    ],
+    [
+     "Guatemala",
+     "544"
+    ],
+    [
+     "Guernsey",
+     "409"
+    ],
+    [
+     "Guinea",
+     "166"
+    ],
+    [
+     "Guinea-Bissau",
+     "167"
+    ],
+    [
+     "Guyana",
+     "711"
+    ],
+    [
+     "Haiti",
+     "654"
+    ],
+    [
+     "Heard and MacDonald Islands",
+     "410"
+    ],
+    [
+     "Honduras",
+     "545"
+    ],
+    [
+     "Hong Kong",
+     "204"
+    ],
+    [
+     "Hungary",
+     "026"
+    ],
+    [
+     "Iceland",
+     "085"
+    ],
+    [
+     "India",
+     "205"
+    ],
+    [
+     "Indonesia",
+     "222"
+    ],
+    [
+     "Iran",
+     "223"
+    ],
+    [
+     "Iraq",
+     "224"
+    ],
+    [
+     "Ireland",
+     "027"
+    ],
+    [
+     "Isle of Man",
+     "411"
+    ],
+    [
+     "Israel",
+     "206"
+    ],
+    [
+     "Italy",
+     "028"
+    ],
+    [
+     "Ivory Coast",
+     "169"
+    ],
+    [
+     "Jamaica",
+     "602"
+    ],
+    [
+     "Japan",
+     "207"
+    ],
+    [
+     "Jordan",
+     "225"
+    ],
+    [
+     "Kazakhstan",
+     "053"
+    ],
+    [
+     "Kenya",
+     "132"
+    ],
+    [
+     "Kiribati",
+     "831"
+    ],
+    [
+     "Korea, North (DPRK)",
+     "257"
+    ],
+    [
+     "Korea, South",
+     "258"
+    ],
+    [
+     "Kosovo",
+     "064"
+    ],
+    [
+     "Kuwait",
+     "226"
+    ],
+    [
+     "Kyrgyzstan",
+     "054"
+    ],
+    [
+     "Laos",
+     "260"
+    ],
+    [
+     "Latvia",
+     "019"
+    ],
+    [
+     "Lebanon",
+     "208"
+    ],
+    [
+     "Lesotho",
+     "152"
+    ],
+    [
+     "Liberia",
+     "170"
+    ],
+    [
+     "Libya",
+     "171"
+    ],
+    [
+     "Liechtenstein",
+     "086"
+    ],
+    [
+     "Lithuania",
+     "020"
+    ],
+    [
+     "Luxembourg",
+     "013"
+    ],
+    [
+     "Macao",
+     "261"
+    ],
+    [
+     "Macedonia",
+     "070"
+    ],
+    [
+     "Madagascar",
+     "172"
+    ],
+    [
+     "Madeira",
+     "036"
+    ],
+    [
+     "Malawi",
+     "111"
+    ],
+    [
+     "Malaysia",
+     "242"
+    ],
+    [
+     "Maldives",
+     "901"
+    ],
+    [
+     "Mali",
+     "173"
+    ],
+    [
+     "Malta",
+     "030"
+    ],
+    [
+     "Marshall Islands",
+     "834"
+    ],
+    [
+     "Martinique",
+     "655"
+    ],
+    [
+     "Mauritania",
+     "174"
+    ],
+    [
+     "Mauritius",
+     "902"
+    ],
+    [
+     "Mayotte",
+     "906"
+    ],
+    [
+     "Mexico",
+     "501"
+    ],
+    [
+     "Moldova",
+     "055"
+    ],
+    [
+     "Monaco",
+     "087"
+    ],
+    [
+     "Mongolia",
+     "262"
+    ],
+    [
+     "Montenegro",
+     "063"
+    ],
+    [
+     "Montserrat",
+     "627"
+    ],
+    [
+     "Morocco",
+     "133"
+    ],
+    [
+     "Mozambique",
+     "175"
+    ],
+    [
+     "Namibia",
+     "122"
+    ],
+    [
+     "Nauru",
+     "341"
+    ],
+    [
+     "Nepal",
+     "264"
+    ],
+    [
+     "Netherlands Antilles, The",
+     "652"
+    ],
+    [
+     "Netherlands, The",
+     "031"
+    ],
+    [
+     "Nevis",
+     "628"
+    ],
+    [
+     "New Caledonia",
+     "822"
+    ],
+    [
+     "New Zealand",
+     "339"
+    ],
+    [
+     "Nicaragua",
+     "546"
+    ],
+    [
+     "Niger",
+     "176"
+    ],
+    [
+     "Nigeria",
+     "177"
+    ],
+    [
+     "Niue",
+     "414"
+    ],
+    [
+     "Northern Ireland",
+     "006"
+    ],
+    [
+     "Northern Mariana Islands",
+     "830"
+    ],
+    [
+     "Norway",
+     "032"
+    ],
+    [
+     "Oman",
+     "263"
+    ],
+    [
+     "Pakistan",
+     "209"
+    ],
+    [
+     "Palestinian Authority",
+     "213"
+    ],
+    [
+     "Panama",
+     "547"
+    ],
+    [
+     "Papua New Guinea",
+     "342"
+    ],
+    [
+     "Paraguay",
+     "755"
+    ],
+    [
+     "Peru",
+     "723"
+    ],
+    [
+     "Philippines",
+     "227"
+    ],
+    [
+     "Pitcairn Islands",
+     "842"
+    ],
+    [
+     "Poland",
+     "033"
+    ],
+    [
+     "Portugal",
+     "034"
+    ],
+    [
+     "Puerto Rico",
+     "656"
+    ],
+    [
+     "Qatar",
+     "265"
+    ],
+    [
+     "Republic of Congo",
+     "159"
+    ],
+    [
+     "Republic of Palau",
+     "836"
+    ],
+    [
+     "Réunion",
+     "903"
+    ],
+    [
+     "Romania",
+     "088"
+    ],
+    [
+     "Russia",
+     "056"
+    ],
+    [
+     "Rwanda",
+     "179"
+    ],
+    [
+     "Saint Helena",
+     "915"
+    ],
+    [
+     "Saint Kitts and Nevis",
+     "629"
+    ],
+    [
+     "Saint Lucia",
+     "630"
+    ],
+    [
+     "Saint Pierre and Miquelon",
+     "531"
+    ],
+    [
+     "Saint-Barthelemy",
+     "407"
+    ],
+    [
+     "Saint-Martin",
+     "415"
+    ],
+    [
+     "Samoa",
+     "844"
+    ],
+    [
+     "Samoa, American",
+     "843"
+    ],
+    [
+     "San Marino",
+     "089"
+    ],
+    [
+     "Sao Tome and Principe",
+     "914"
+    ],
+    [
+     "Saudi Arabia",
+     "231"
+    ],
+    [
+     "Scotland",
+     "007"
+    ],
+    [
+     "Senegal",
+     "180"
+    ],
+    [
+     "Serbia And Montenegro",
+     "061"
+    ],
+    [
+     "Serbia, Republic Of",
+     "062"
+    ],
+    [
+     "Seychelles",
+     "904"
+    ],
+    [
+     "Sierra Leone",
+     "181"
+    ],
+    [
+     "Singapore",
+     "246"
+    ],
+    [
+     "Sint-Maarten",
+     "416"
+    ],
+    [
+     "Slovakia",
+     "016"
+    ],
+    [
+     "Slovenia",
+     "047"
+    ],
+    [
+     "Solomon Islands",
+     "824"
+    ],
+    [
+     "Somalia",
+     "182"
+    ],
+    [
+     "South Africa, Republic Of",
+     "121"
+    ],
+    [
+     "South Sudan",
+     "189"
+    ],
+    [
+     "Spain",
+     "037"
+    ],
+    [
+     "Sri Lanka",
+     "201"
+    ],
+    [
+     "St. Vincent and the Grenadines",
+     "631"
+    ],
+    [
+     "Sudan",
+     "185"
+    ],
+    [
+     "Suriname",
+     "752"
+    ],
+    [
+     "Swaziland",
+     "186"
+    ],
+    [
+     "Sweden",
+     "040"
+    ],
+    [
+     "Switzerland",
+     "041"
+    ],
+    [
+     "Syria",
+     "210"
+    ],
+    [
+     "Taiwan",
+     "203"
+    ],
+    [
+     "Tajikistan",
+     "057"
+    ],
+    [
+     "Tanzania",
+     "130"
+    ],
+    [
+     "Thailand",
+     "267"
+    ],
+    [
+     "Tibet (Autonomous Region)",
+     "268"
+    ],
+    [
+     "Togo",
+     "187"
+    ],
+    [
+     "Tokelau",
+     "417"
+    ],
+    [
+     "Tonga",
+     "846"
+    ],
+    [
+     "Trinidad and Tobago",
+     "605"
+    ],
+    [
+     "Tunisia",
+     "135"
+    ],
+    [
+     "Turkey",
+     "045"
+    ],
+    [
+     "Turkmenistan",
+     "058"
+    ],
+    [
+     "Turks and Caicos Islands",
+     "632"
+    ],
+    [
+     "Tuvalu",
+     "826"
+    ],
+    [
+     "U.S. Minor outlying Islands",
+     "418"
+    ],
+    [
+     "Uganda",
+     "136"
+    ],
+    [
+     "Ukraine",
+     "059"
+    ],
+    [
+     "Union Of Soviet Socialist Rep",
+     "042"
+    ],
+    [
+     "United Arab Emirates",
+     "280"
+    ],
+    [
+     "United States of America",
+     "461"
+    ],
+    [
+     "Unknown",
+     "000"
+    ],
+    [
+     "Uruguay",
+     "724"
+    ],
+    [
+     "Uzbekistan",
+     "060"
+    ],
+    [
+     "Vanuatu",
+     "823"
+    ],
+    [
+     "Vatican City State",
+     "090"
+    ],
+    [
+     "Venezuela",
+     "725"
+    ],
+    [
+     "Vietnam",
+     "270"
+    ],
+    [
+     "Virgin Islands, U.S.",
+     "657"
+    ],
+    [
+     "Wales",
+     "008"
+    ],
+    [
+     "Wallis and Futuna Is., Terr.",
+     "841"
+    ],
+    [
+     "Western Sahara",
+     "184"
+    ],
+    [
+     "Yemen",
+     "273"
+    ],
+    [
+     "Yugoslavia",
+     "044"
+    ],
+    [
+     "Zambia",
+     "112"
+    ],
+    [
+     "Zimbabwe",
+     "113"
+    ]
+   ],
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0]",
+   "scripts": {
+    "exit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0].Subform3[0].remove[0]",
+   "section": "page1.IllTreatSection.illTreatTable",
+   "kind": "field",
+   "ui": "button",
+   "caption": "-",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].BodyTable[0].Row1[0].Subform3[0]",
+   "scripts": {
+    "click": 1,
+    "initialize": 1,
+    "mouseEnter": 1,
+    "mouseExit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0].addDetails[0]",
+   "section": "page1.IllTreatSection.illTreatTable",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Details:",
+   "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Details[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 100,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].IllTreatSection[0].illTreatTable[0].bodypart[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].IllTreatSection[0].footer[0].add[0]",
+   "section": "page1.IllTreatSection.footer",
+   "kind": "field",
+   "ui": "button",
+   "caption": "+",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].MilitaryServiceheader[0].NoYesGroup[0]",
+   "section": "page1.organizationSection.MilitaryServiceheader",
+   "kind": "exclGroup",
+   "ui": "exclGroup",
+   "caption": "Question 6 Membership or Association with Organizations. Are you, or have you ever been a member or associated with any political party, or other group or organization which has engaged in or advocated violence as a means to achieving a pol",
+   "data_path": "Schedule1[0].MembershipAssociationInfo[0].BeenMemberAssociated[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "*Yes",
+     "true"
+    ],
+    [
+     "*No",
+     "false"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": true,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].MilitaryServiceheader[0].affiliationmarker[0]",
+   "section": "page1.organizationSection.MilitaryServiceheader",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0].from[0].Year[0]",
+   "section": "page1.organizationSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Organizations From Date Year. The year of the start of the membership or association in YYYY format",
+   "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Year[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 4,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "change": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0].from[0].Month[0]",
+   "section": "page1.organizationSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Organizations From Date Month. The month of the start of the membership or association in MM format",
+   "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Month[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 2,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0].to[0].Year[0]",
+   "section": "page1.organizationSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Organizations To Date Year. The year of the end of the membership or association in YYYY format",
+   "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Year[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 4,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "change": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0].to[0].Month[0]",
+   "section": "page1.organizationSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Organizations To Date Month. The month of the end of the membership or association in MM format",
+   "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Month[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 2,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0].organization[0]",
+   "section": "page1.organizationSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Organizations Name of Organization",
+   "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].NameOfOrganization[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 100,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0].activities[0]",
+   "section": "page1.organizationSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Organizations Activities and/or positions held within organization",
+   "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].ActivitiesPositionHeld[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 50,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0].prov[0]",
+   "section": "page1.organizationSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Organizations Province. The province of the organization",
+   "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].Province[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 50,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0].country[0]",
+   "section": "page1.organizationSection.Table1",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "Organizations Country or Territory. The country or territory of the organization",
+   "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].CountryCode[0]",
+   "in_shipped_data": true,
+   "options": [
+    []
+   ],
+   "options_from": "xfa.datasets.LOVFile.LOV.CountryOfBirthList.CountryOfBirth[*]",
+   "options_resolved": [
+    [
+     "",
+     ""
+    ],
+    [
+     "Afghanistan",
+     "252"
+    ],
+    [
+     "Aland Island",
+     "401"
+    ],
+    [
+     "Albania",
+     "081"
+    ],
+    [
+     "Algeria",
+     "131"
+    ],
+    [
+     "Andorra",
+     "082"
+    ],
+    [
+     "Angola",
+     "151"
+    ],
+    [
+     "Anguilla",
+     "620"
+    ],
+    [
+     "Antigua And Barbuda",
+     "621"
+    ],
+    [
+     "Argentina",
+     "703"
+    ],
+    [
+     "Armenia",
+     "049"
+    ],
+    [
+     "Aruba",
+     "658"
+    ],
+    [
+     "Australia",
+     "305"
+    ],
+    [
+     "Austria",
+     "011"
+    ],
+    [
+     "Azerbaijan",
+     "050"
+    ],
+    [
+     "Bahamas",
+     "622"
+    ],
+    [
+     "Bahrain",
+     "253"
+    ],
+    [
+     "Bailwick of Jersey",
+     "412"
+    ],
+    [
+     "Bangladesh",
+     "212"
+    ],
+    [
+     "Barbados",
+     "610"
+    ],
+    [
+     "Belarus",
+     "051"
+    ],
+    [
+     "Belgium",
+     "012"
+    ],
+    [
+     "Belize",
+     "541"
+    ],
+    [
+     "Benin",
+     "160"
+    ],
+    [
+     "Bermuda",
+     "601"
+    ],
+    [
+     "Bhutan",
+     "254"
+    ],
+    [
+     "Bolivia",
+     "751"
+    ],
+    [
+     "Bonaire, Sint Eustatius, Saba",
+     "402"
+    ],
+    [
+     "Bosnia and Herzegovina",
+     "048"
+    ],
+    [
+     "Botswana",
+     "153"
+    ],
+    [
+     "Bouvet Island",
+     "403"
+    ],
+    [
+     "Brazil",
+     "709"
+    ],
+    [
+     "British Indian Ocean Territory",
+     "404"
+    ],
+    [
+     "British Virgin Islands",
+     "633"
+    ],
+    [
+     "Brunei Darussalam",
+     "255"
+    ],
+    [
+     "Bulgaria",
+     "083"
+    ],
+    [
+     "Burkina Faso",
+     "188"
+    ],
+    [
+     "Burma (Myanmar)",
+     "241"
+    ],
+    [
+     "Burundi",
+     "154"
+    ],
+    [
+     "Cabo Verde",
+     "911"
+    ],
+    [
+     "Cambodia",
+     "256"
+    ],
+    [
+     "Cameroon",
+     "155"
+    ],
+    [
+     "Canada",
+     "511"
+    ],
+    [
+     "Canary Islands",
+     "039"
+    ],
+    [
+     "Cayman Islands",
+     "624"
+    ],
+    [
+     "Central African Republic",
+     "157"
+    ],
+    [
+     "Chad",
+     "156"
+    ],
+    [
+     "Channel Islands",
+     "009"
+    ],
+    [
+     "Chile",
+     "721"
+    ],
+    [
+     "China",
+     "202"
+    ],
+    [
+     "China (Hong Kong SAR)",
+     "200"
+    ],
+    [
+     "China (Macao SAR)",
+     "198"
+    ],
+    [
+     "Christmas Island",
+     "405"
+    ],
+    [
+     "Colombia",
+     "722"
+    ],
+    [
+     "Comoros",
+     "905"
+    ],
+    [
+     "Cook Islands",
+     "840"
+    ],
+    [
+     "Costa Rica",
+     "542"
+    ],
+    [
+     "Croatia",
+     "043"
+    ],
+    [
+     "Cuba",
+     "650"
+    ],
+    [
+     "Curaçao",
+     "406"
+    ],
+    [
+     "Cyprus",
+     "221"
+    ],
+    [
+     "Czech Republic",
+     "015"
+    ],
+    [
+     "Czechoslovakia",
+     "014"
+    ],
+    [
+     "Democratic Rep. of Congo",
+     "158"
+    ],
+    [
+     "Denmark",
+     "017"
+    ],
+    [
+     "Djibouti",
+     "183"
+    ],
+    [
+     "Dominica",
+     "625"
+    ],
+    [
+     "Dominican Republic",
+     "651"
+    ],
+    [
+     "East Timor",
+     "916"
+    ],
+    [
+     "Ecuador",
+     "753"
+    ],
+    [
+     "Egypt",
+     "101"
+    ],
+    [
+     "El Salvador",
+     "543"
+    ],
+    [
+     "England",
+     "002"
+    ],
+    [
+     "Equatorial Guinea",
+     "178"
+    ],
+    [
+     "Eritrea",
+     "162"
+    ],
+    [
+     "Estonia",
+     "018"
+    ],
+    [
+     "Ethiopia",
+     "161"
+    ],
+    [
+     "Falkland Islands",
+     "912"
+    ],
+    [
+     "Faroe Islands",
+     "408"
+    ],
+    [
+     "Federated States of Micronesia",
+     "835"
+    ],
+    [
+     "Fiji",
+     "801"
+    ],
+    [
+     "Finland",
+     "021"
+    ],
+    [
+     "Fr. South. and Antarctic Lands",
+     "821"
+    ],
+    [
+     "France",
+     "022"
+    ],
+    [
+     "French Guiana",
+     "754"
+    ],
+    [
+     "French Polynesia",
+     "845"
+    ],
+    [
+     "Gabon",
+     "163"
+    ],
+    [
+     "Gambia",
+     "164"
+    ],
+    [
+     "Georgia",
+     "052"
+    ],
+    [
+     "Germany, Federal Republic Of",
+     "024"
+    ],
+    [
+     "Ghana",
+     "165"
+    ],
+    [
+     "Gibraltar",
+     "084"
+    ],
+    [
+     "Greece",
+     "025"
+    ],
+    [
+     "Greenland",
+     "521"
+    ],
+    [
+     "Grenada",
+     "626"
+    ],
+    [
+     "Guadeloupe",
+     "653"
+    ],
+    [
+     "Guam",
+     "832"
+    ],
+    [
+     "Guatemala",
+     "544"
+    ],
+    [
+     "Guernsey",
+     "409"
+    ],
+    [
+     "Guinea",
+     "166"
+    ],
+    [
+     "Guinea-Bissau",
+     "167"
+    ],
+    [
+     "Guyana",
+     "711"
+    ],
+    [
+     "Haiti",
+     "654"
+    ],
+    [
+     "Heard and MacDonald Islands",
+     "410"
+    ],
+    [
+     "Honduras",
+     "545"
+    ],
+    [
+     "Hong Kong",
+     "204"
+    ],
+    [
+     "Hungary",
+     "026"
+    ],
+    [
+     "Iceland",
+     "085"
+    ],
+    [
+     "India",
+     "205"
+    ],
+    [
+     "Indonesia",
+     "222"
+    ],
+    [
+     "Iran",
+     "223"
+    ],
+    [
+     "Iraq",
+     "224"
+    ],
+    [
+     "Ireland",
+     "027"
+    ],
+    [
+     "Isle of Man",
+     "411"
+    ],
+    [
+     "Israel",
+     "206"
+    ],
+    [
+     "Italy",
+     "028"
+    ],
+    [
+     "Ivory Coast",
+     "169"
+    ],
+    [
+     "Jamaica",
+     "602"
+    ],
+    [
+     "Japan",
+     "207"
+    ],
+    [
+     "Jordan",
+     "225"
+    ],
+    [
+     "Kazakhstan",
+     "053"
+    ],
+    [
+     "Kenya",
+     "132"
+    ],
+    [
+     "Kiribati",
+     "831"
+    ],
+    [
+     "Korea, North (DPRK)",
+     "257"
+    ],
+    [
+     "Korea, South",
+     "258"
+    ],
+    [
+     "Kosovo",
+     "064"
+    ],
+    [
+     "Kuwait",
+     "226"
+    ],
+    [
+     "Kyrgyzstan",
+     "054"
+    ],
+    [
+     "Laos",
+     "260"
+    ],
+    [
+     "Latvia",
+     "019"
+    ],
+    [
+     "Lebanon",
+     "208"
+    ],
+    [
+     "Lesotho",
+     "152"
+    ],
+    [
+     "Liberia",
+     "170"
+    ],
+    [
+     "Libya",
+     "171"
+    ],
+    [
+     "Liechtenstein",
+     "086"
+    ],
+    [
+     "Lithuania",
+     "020"
+    ],
+    [
+     "Luxembourg",
+     "013"
+    ],
+    [
+     "Macao",
+     "261"
+    ],
+    [
+     "Macedonia",
+     "070"
+    ],
+    [
+     "Madagascar",
+     "172"
+    ],
+    [
+     "Madeira",
+     "036"
+    ],
+    [
+     "Malawi",
+     "111"
+    ],
+    [
+     "Malaysia",
+     "242"
+    ],
+    [
+     "Maldives",
+     "901"
+    ],
+    [
+     "Mali",
+     "173"
+    ],
+    [
+     "Malta",
+     "030"
+    ],
+    [
+     "Marshall Islands",
+     "834"
+    ],
+    [
+     "Martinique",
+     "655"
+    ],
+    [
+     "Mauritania",
+     "174"
+    ],
+    [
+     "Mauritius",
+     "902"
+    ],
+    [
+     "Mayotte",
+     "906"
+    ],
+    [
+     "Mexico",
+     "501"
+    ],
+    [
+     "Moldova",
+     "055"
+    ],
+    [
+     "Monaco",
+     "087"
+    ],
+    [
+     "Mongolia",
+     "262"
+    ],
+    [
+     "Montenegro",
+     "063"
+    ],
+    [
+     "Montserrat",
+     "627"
+    ],
+    [
+     "Morocco",
+     "133"
+    ],
+    [
+     "Mozambique",
+     "175"
+    ],
+    [
+     "Namibia",
+     "122"
+    ],
+    [
+     "Nauru",
+     "341"
+    ],
+    [
+     "Nepal",
+     "264"
+    ],
+    [
+     "Netherlands Antilles, The",
+     "652"
+    ],
+    [
+     "Netherlands, The",
+     "031"
+    ],
+    [
+     "Nevis",
+     "628"
+    ],
+    [
+     "New Caledonia",
+     "822"
+    ],
+    [
+     "New Zealand",
+     "339"
+    ],
+    [
+     "Nicaragua",
+     "546"
+    ],
+    [
+     "Niger",
+     "176"
+    ],
+    [
+     "Nigeria",
+     "177"
+    ],
+    [
+     "Niue",
+     "414"
+    ],
+    [
+     "Northern Ireland",
+     "006"
+    ],
+    [
+     "Northern Mariana Islands",
+     "830"
+    ],
+    [
+     "Norway",
+     "032"
+    ],
+    [
+     "Oman",
+     "263"
+    ],
+    [
+     "Pakistan",
+     "209"
+    ],
+    [
+     "Palestinian Authority",
+     "213"
+    ],
+    [
+     "Panama",
+     "547"
+    ],
+    [
+     "Papua New Guinea",
+     "342"
+    ],
+    [
+     "Paraguay",
+     "755"
+    ],
+    [
+     "Peru",
+     "723"
+    ],
+    [
+     "Philippines",
+     "227"
+    ],
+    [
+     "Pitcairn Islands",
+     "842"
+    ],
+    [
+     "Poland",
+     "033"
+    ],
+    [
+     "Portugal",
+     "034"
+    ],
+    [
+     "Puerto Rico",
+     "656"
+    ],
+    [
+     "Qatar",
+     "265"
+    ],
+    [
+     "Republic of Congo",
+     "159"
+    ],
+    [
+     "Republic of Palau",
+     "836"
+    ],
+    [
+     "Réunion",
+     "903"
+    ],
+    [
+     "Romania",
+     "088"
+    ],
+    [
+     "Russia",
+     "056"
+    ],
+    [
+     "Rwanda",
+     "179"
+    ],
+    [
+     "Saint Helena",
+     "915"
+    ],
+    [
+     "Saint Kitts and Nevis",
+     "629"
+    ],
+    [
+     "Saint Lucia",
+     "630"
+    ],
+    [
+     "Saint Pierre and Miquelon",
+     "531"
+    ],
+    [
+     "Saint-Barthelemy",
+     "407"
+    ],
+    [
+     "Saint-Martin",
+     "415"
+    ],
+    [
+     "Samoa",
+     "844"
+    ],
+    [
+     "Samoa, American",
+     "843"
+    ],
+    [
+     "San Marino",
+     "089"
+    ],
+    [
+     "Sao Tome and Principe",
+     "914"
+    ],
+    [
+     "Saudi Arabia",
+     "231"
+    ],
+    [
+     "Scotland",
+     "007"
+    ],
+    [
+     "Senegal",
+     "180"
+    ],
+    [
+     "Serbia And Montenegro",
+     "061"
+    ],
+    [
+     "Serbia, Republic Of",
+     "062"
+    ],
+    [
+     "Seychelles",
+     "904"
+    ],
+    [
+     "Sierra Leone",
+     "181"
+    ],
+    [
+     "Singapore",
+     "246"
+    ],
+    [
+     "Sint-Maarten",
+     "416"
+    ],
+    [
+     "Slovakia",
+     "016"
+    ],
+    [
+     "Slovenia",
+     "047"
+    ],
+    [
+     "Solomon Islands",
+     "824"
+    ],
+    [
+     "Somalia",
+     "182"
+    ],
+    [
+     "South Africa, Republic Of",
+     "121"
+    ],
+    [
+     "South Sudan",
+     "189"
+    ],
+    [
+     "Spain",
+     "037"
+    ],
+    [
+     "Sri Lanka",
+     "201"
+    ],
+    [
+     "St. Vincent and the Grenadines",
+     "631"
+    ],
+    [
+     "Sudan",
+     "185"
+    ],
+    [
+     "Suriname",
+     "752"
+    ],
+    [
+     "Swaziland",
+     "186"
+    ],
+    [
+     "Sweden",
+     "040"
+    ],
+    [
+     "Switzerland",
+     "041"
+    ],
+    [
+     "Syria",
+     "210"
+    ],
+    [
+     "Taiwan",
+     "203"
+    ],
+    [
+     "Tajikistan",
+     "057"
+    ],
+    [
+     "Tanzania",
+     "130"
+    ],
+    [
+     "Thailand",
+     "267"
+    ],
+    [
+     "Tibet (Autonomous Region)",
+     "268"
+    ],
+    [
+     "Togo",
+     "187"
+    ],
+    [
+     "Tokelau",
+     "417"
+    ],
+    [
+     "Tonga",
+     "846"
+    ],
+    [
+     "Trinidad and Tobago",
+     "605"
+    ],
+    [
+     "Tunisia",
+     "135"
+    ],
+    [
+     "Turkey",
+     "045"
+    ],
+    [
+     "Turkmenistan",
+     "058"
+    ],
+    [
+     "Turks and Caicos Islands",
+     "632"
+    ],
+    [
+     "Tuvalu",
+     "826"
+    ],
+    [
+     "U.S. Minor outlying Islands",
+     "418"
+    ],
+    [
+     "Uganda",
+     "136"
+    ],
+    [
+     "Ukraine",
+     "059"
+    ],
+    [
+     "Union Of Soviet Socialist Rep",
+     "042"
+    ],
+    [
+     "United Arab Emirates",
+     "280"
+    ],
+    [
+     "United States of America",
+     "461"
+    ],
+    [
+     "Unknown",
+     "000"
+    ],
+    [
+     "Uruguay",
+     "724"
+    ],
+    [
+     "Uzbekistan",
+     "060"
+    ],
+    [
+     "Vanuatu",
+     "823"
+    ],
+    [
+     "Vatican City State",
+     "090"
+    ],
+    [
+     "Venezuela",
+     "725"
+    ],
+    [
+     "Vietnam",
+     "270"
+    ],
+    [
+     "Virgin Islands, U.S.",
+     "657"
+    ],
+    [
+     "Wales",
+     "008"
+    ],
+    [
+     "Wallis and Futuna Is., Terr.",
+     "841"
+    ],
+    [
+     "Western Sahara",
+     "184"
+    ],
+    [
+     "Yemen",
+     "273"
+    ],
+    [
+     "Yugoslavia",
+     "044"
+    ],
+    [
+     "Zambia",
+     "112"
+    ],
+    [
+     "Zimbabwe",
+     "113"
+    ]
+   ],
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0].Subform3[0].remove[0]",
+   "section": "page1.organizationSection.Table1",
+   "kind": "field",
+   "ui": "button",
+   "caption": "-",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Row1[0].Subform3[0]",
+   "scripts": {
+    "click": 1,
+    "initialize": 1,
+    "mouseExit": 1,
+    "mouseEnter": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Footer[0].Subform1[0].add[0]",
+   "section": "page1.organizationSection.Table1",
+   "kind": "field",
+   "ui": "button",
+   "caption": "+",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0].organizationSection[0].Table1[0].Footer[0].Subform1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].MilitaryServiceheader[0].NoYesGroup[0]",
+   "section": "page1.positionsSection.MilitaryServiceheader",
+   "kind": "exclGroup",
+   "ui": "exclGroup",
+   "caption": "Question7 Government Positions. Have you ever held any government positions (such as civil servant, judge, police officer, mayor, member of parliament, hospital administrator)? Do not use abbreviations.",
+   "data_path": "Schedule1[0].GovernmentPositionsInfo[0].HeldGovernmentPositions[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "*Yes",
+     "true"
+    ],
+    [
+     "*No",
+     "false"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": true,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].MilitaryServiceheader[0].governmentPositionsmarker[0]",
+   "section": "page1.positionsSection.MilitaryServiceheader",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0].from[0].Year[0]",
+   "section": "page1.positionsSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Government Positions From Date Year. The year of the start of the government position held in YYYY format",
+   "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Year[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 4,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "change": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0].from[0].Month[0]",
+   "section": "page1.positionsSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Government Positions From Date Month. The month of the start of the government position held in MM format",
+   "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Month[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 2,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0].to[0].Year[0]",
+   "section": "page1.positionsSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Government Positions To Date Year. The year of the end of the government position held in YYYY format",
+   "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Year[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 4,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "change": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0].to[0].Month[0]",
+   "section": "page1.positionsSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Government Positions To Date Month. The month of the end of the government position held in MM format",
+   "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Month[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 2,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0].country[0]",
+   "section": "page1.positionsSection.Table1",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "Government Positions Country or Territory. The country or territory of the government position held",
+   "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].CountryCode[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": "xfa.datasets.LOVFile.LOV.CountryOfBirthList.CountryOfBirth[*]",
+   "options_resolved": [
+    [
+     "",
+     ""
+    ],
+    [
+     "Afghanistan",
+     "252"
+    ],
+    [
+     "Aland Island",
+     "401"
+    ],
+    [
+     "Albania",
+     "081"
+    ],
+    [
+     "Algeria",
+     "131"
+    ],
+    [
+     "Andorra",
+     "082"
+    ],
+    [
+     "Angola",
+     "151"
+    ],
+    [
+     "Anguilla",
+     "620"
+    ],
+    [
+     "Antigua And Barbuda",
+     "621"
+    ],
+    [
+     "Argentina",
+     "703"
+    ],
+    [
+     "Armenia",
+     "049"
+    ],
+    [
+     "Aruba",
+     "658"
+    ],
+    [
+     "Australia",
+     "305"
+    ],
+    [
+     "Austria",
+     "011"
+    ],
+    [
+     "Azerbaijan",
+     "050"
+    ],
+    [
+     "Bahamas",
+     "622"
+    ],
+    [
+     "Bahrain",
+     "253"
+    ],
+    [
+     "Bailwick of Jersey",
+     "412"
+    ],
+    [
+     "Bangladesh",
+     "212"
+    ],
+    [
+     "Barbados",
+     "610"
+    ],
+    [
+     "Belarus",
+     "051"
+    ],
+    [
+     "Belgium",
+     "012"
+    ],
+    [
+     "Belize",
+     "541"
+    ],
+    [
+     "Benin",
+     "160"
+    ],
+    [
+     "Bermuda",
+     "601"
+    ],
+    [
+     "Bhutan",
+     "254"
+    ],
+    [
+     "Bolivia",
+     "751"
+    ],
+    [
+     "Bonaire, Sint Eustatius, Saba",
+     "402"
+    ],
+    [
+     "Bosnia and Herzegovina",
+     "048"
+    ],
+    [
+     "Botswana",
+     "153"
+    ],
+    [
+     "Bouvet Island",
+     "403"
+    ],
+    [
+     "Brazil",
+     "709"
+    ],
+    [
+     "British Indian Ocean Territory",
+     "404"
+    ],
+    [
+     "British Virgin Islands",
+     "633"
+    ],
+    [
+     "Brunei Darussalam",
+     "255"
+    ],
+    [
+     "Bulgaria",
+     "083"
+    ],
+    [
+     "Burkina Faso",
+     "188"
+    ],
+    [
+     "Burma (Myanmar)",
+     "241"
+    ],
+    [
+     "Burundi",
+     "154"
+    ],
+    [
+     "Cabo Verde",
+     "911"
+    ],
+    [
+     "Cambodia",
+     "256"
+    ],
+    [
+     "Cameroon",
+     "155"
+    ],
+    [
+     "Canada",
+     "511"
+    ],
+    [
+     "Canary Islands",
+     "039"
+    ],
+    [
+     "Cayman Islands",
+     "624"
+    ],
+    [
+     "Central African Republic",
+     "157"
+    ],
+    [
+     "Chad",
+     "156"
+    ],
+    [
+     "Channel Islands",
+     "009"
+    ],
+    [
+     "Chile",
+     "721"
+    ],
+    [
+     "China",
+     "202"
+    ],
+    [
+     "China (Hong Kong SAR)",
+     "200"
+    ],
+    [
+     "China (Macao SAR)",
+     "198"
+    ],
+    [
+     "Christmas Island",
+     "405"
+    ],
+    [
+     "Colombia",
+     "722"
+    ],
+    [
+     "Comoros",
+     "905"
+    ],
+    [
+     "Cook Islands",
+     "840"
+    ],
+    [
+     "Costa Rica",
+     "542"
+    ],
+    [
+     "Croatia",
+     "043"
+    ],
+    [
+     "Cuba",
+     "650"
+    ],
+    [
+     "Curaçao",
+     "406"
+    ],
+    [
+     "Cyprus",
+     "221"
+    ],
+    [
+     "Czech Republic",
+     "015"
+    ],
+    [
+     "Czechoslovakia",
+     "014"
+    ],
+    [
+     "Democratic Rep. of Congo",
+     "158"
+    ],
+    [
+     "Denmark",
+     "017"
+    ],
+    [
+     "Djibouti",
+     "183"
+    ],
+    [
+     "Dominica",
+     "625"
+    ],
+    [
+     "Dominican Republic",
+     "651"
+    ],
+    [
+     "East Timor",
+     "916"
+    ],
+    [
+     "Ecuador",
+     "753"
+    ],
+    [
+     "Egypt",
+     "101"
+    ],
+    [
+     "El Salvador",
+     "543"
+    ],
+    [
+     "England",
+     "002"
+    ],
+    [
+     "Equatorial Guinea",
+     "178"
+    ],
+    [
+     "Eritrea",
+     "162"
+    ],
+    [
+     "Estonia",
+     "018"
+    ],
+    [
+     "Ethiopia",
+     "161"
+    ],
+    [
+     "Falkland Islands",
+     "912"
+    ],
+    [
+     "Faroe Islands",
+     "408"
+    ],
+    [
+     "Federated States of Micronesia",
+     "835"
+    ],
+    [
+     "Fiji",
+     "801"
+    ],
+    [
+     "Finland",
+     "021"
+    ],
+    [
+     "Fr. South. and Antarctic Lands",
+     "821"
+    ],
+    [
+     "France",
+     "022"
+    ],
+    [
+     "French Guiana",
+     "754"
+    ],
+    [
+     "French Polynesia",
+     "845"
+    ],
+    [
+     "Gabon",
+     "163"
+    ],
+    [
+     "Gambia",
+     "164"
+    ],
+    [
+     "Georgia",
+     "052"
+    ],
+    [
+     "Germany, Federal Republic Of",
+     "024"
+    ],
+    [
+     "Ghana",
+     "165"
+    ],
+    [
+     "Gibraltar",
+     "084"
+    ],
+    [
+     "Greece",
+     "025"
+    ],
+    [
+     "Greenland",
+     "521"
+    ],
+    [
+     "Grenada",
+     "626"
+    ],
+    [
+     "Guadeloupe",
+     "653"
+    ],
+    [
+     "Guam",
+     "832"
+    ],
+    [
+     "Guatemala",
+     "544"
+    ],
+    [
+     "Guernsey",
+     "409"
+    ],
+    [
+     "Guinea",
+     "166"
+    ],
+    [
+     "Guinea-Bissau",
+     "167"
+    ],
+    [
+     "Guyana",
+     "711"
+    ],
+    [
+     "Haiti",
+     "654"
+    ],
+    [
+     "Heard and MacDonald Islands",
+     "410"
+    ],
+    [
+     "Honduras",
+     "545"
+    ],
+    [
+     "Hong Kong",
+     "204"
+    ],
+    [
+     "Hungary",
+     "026"
+    ],
+    [
+     "Iceland",
+     "085"
+    ],
+    [
+     "India",
+     "205"
+    ],
+    [
+     "Indonesia",
+     "222"
+    ],
+    [
+     "Iran",
+     "223"
+    ],
+    [
+     "Iraq",
+     "224"
+    ],
+    [
+     "Ireland",
+     "027"
+    ],
+    [
+     "Isle of Man",
+     "411"
+    ],
+    [
+     "Israel",
+     "206"
+    ],
+    [
+     "Italy",
+     "028"
+    ],
+    [
+     "Ivory Coast",
+     "169"
+    ],
+    [
+     "Jamaica",
+     "602"
+    ],
+    [
+     "Japan",
+     "207"
+    ],
+    [
+     "Jordan",
+     "225"
+    ],
+    [
+     "Kazakhstan",
+     "053"
+    ],
+    [
+     "Kenya",
+     "132"
+    ],
+    [
+     "Kiribati",
+     "831"
+    ],
+    [
+     "Korea, North (DPRK)",
+     "257"
+    ],
+    [
+     "Korea, South",
+     "258"
+    ],
+    [
+     "Kosovo",
+     "064"
+    ],
+    [
+     "Kuwait",
+     "226"
+    ],
+    [
+     "Kyrgyzstan",
+     "054"
+    ],
+    [
+     "Laos",
+     "260"
+    ],
+    [
+     "Latvia",
+     "019"
+    ],
+    [
+     "Lebanon",
+     "208"
+    ],
+    [
+     "Lesotho",
+     "152"
+    ],
+    [
+     "Liberia",
+     "170"
+    ],
+    [
+     "Libya",
+     "171"
+    ],
+    [
+     "Liechtenstein",
+     "086"
+    ],
+    [
+     "Lithuania",
+     "020"
+    ],
+    [
+     "Luxembourg",
+     "013"
+    ],
+    [
+     "Macao",
+     "261"
+    ],
+    [
+     "Macedonia",
+     "070"
+    ],
+    [
+     "Madagascar",
+     "172"
+    ],
+    [
+     "Madeira",
+     "036"
+    ],
+    [
+     "Malawi",
+     "111"
+    ],
+    [
+     "Malaysia",
+     "242"
+    ],
+    [
+     "Maldives",
+     "901"
+    ],
+    [
+     "Mali",
+     "173"
+    ],
+    [
+     "Malta",
+     "030"
+    ],
+    [
+     "Marshall Islands",
+     "834"
+    ],
+    [
+     "Martinique",
+     "655"
+    ],
+    [
+     "Mauritania",
+     "174"
+    ],
+    [
+     "Mauritius",
+     "902"
+    ],
+    [
+     "Mayotte",
+     "906"
+    ],
+    [
+     "Mexico",
+     "501"
+    ],
+    [
+     "Moldova",
+     "055"
+    ],
+    [
+     "Monaco",
+     "087"
+    ],
+    [
+     "Mongolia",
+     "262"
+    ],
+    [
+     "Montenegro",
+     "063"
+    ],
+    [
+     "Montserrat",
+     "627"
+    ],
+    [
+     "Morocco",
+     "133"
+    ],
+    [
+     "Mozambique",
+     "175"
+    ],
+    [
+     "Namibia",
+     "122"
+    ],
+    [
+     "Nauru",
+     "341"
+    ],
+    [
+     "Nepal",
+     "264"
+    ],
+    [
+     "Netherlands Antilles, The",
+     "652"
+    ],
+    [
+     "Netherlands, The",
+     "031"
+    ],
+    [
+     "Nevis",
+     "628"
+    ],
+    [
+     "New Caledonia",
+     "822"
+    ],
+    [
+     "New Zealand",
+     "339"
+    ],
+    [
+     "Nicaragua",
+     "546"
+    ],
+    [
+     "Niger",
+     "176"
+    ],
+    [
+     "Nigeria",
+     "177"
+    ],
+    [
+     "Niue",
+     "414"
+    ],
+    [
+     "Northern Ireland",
+     "006"
+    ],
+    [
+     "Northern Mariana Islands",
+     "830"
+    ],
+    [
+     "Norway",
+     "032"
+    ],
+    [
+     "Oman",
+     "263"
+    ],
+    [
+     "Pakistan",
+     "209"
+    ],
+    [
+     "Palestinian Authority",
+     "213"
+    ],
+    [
+     "Panama",
+     "547"
+    ],
+    [
+     "Papua New Guinea",
+     "342"
+    ],
+    [
+     "Paraguay",
+     "755"
+    ],
+    [
+     "Peru",
+     "723"
+    ],
+    [
+     "Philippines",
+     "227"
+    ],
+    [
+     "Pitcairn Islands",
+     "842"
+    ],
+    [
+     "Poland",
+     "033"
+    ],
+    [
+     "Portugal",
+     "034"
+    ],
+    [
+     "Puerto Rico",
+     "656"
+    ],
+    [
+     "Qatar",
+     "265"
+    ],
+    [
+     "Republic of Congo",
+     "159"
+    ],
+    [
+     "Republic of Palau",
+     "836"
+    ],
+    [
+     "Réunion",
+     "903"
+    ],
+    [
+     "Romania",
+     "088"
+    ],
+    [
+     "Russia",
+     "056"
+    ],
+    [
+     "Rwanda",
+     "179"
+    ],
+    [
+     "Saint Helena",
+     "915"
+    ],
+    [
+     "Saint Kitts and Nevis",
+     "629"
+    ],
+    [
+     "Saint Lucia",
+     "630"
+    ],
+    [
+     "Saint Pierre and Miquelon",
+     "531"
+    ],
+    [
+     "Saint-Barthelemy",
+     "407"
+    ],
+    [
+     "Saint-Martin",
+     "415"
+    ],
+    [
+     "Samoa",
+     "844"
+    ],
+    [
+     "Samoa, American",
+     "843"
+    ],
+    [
+     "San Marino",
+     "089"
+    ],
+    [
+     "Sao Tome and Principe",
+     "914"
+    ],
+    [
+     "Saudi Arabia",
+     "231"
+    ],
+    [
+     "Scotland",
+     "007"
+    ],
+    [
+     "Senegal",
+     "180"
+    ],
+    [
+     "Serbia And Montenegro",
+     "061"
+    ],
+    [
+     "Serbia, Republic Of",
+     "062"
+    ],
+    [
+     "Seychelles",
+     "904"
+    ],
+    [
+     "Sierra Leone",
+     "181"
+    ],
+    [
+     "Singapore",
+     "246"
+    ],
+    [
+     "Sint-Maarten",
+     "416"
+    ],
+    [
+     "Slovakia",
+     "016"
+    ],
+    [
+     "Slovenia",
+     "047"
+    ],
+    [
+     "Solomon Islands",
+     "824"
+    ],
+    [
+     "Somalia",
+     "182"
+    ],
+    [
+     "South Africa, Republic Of",
+     "121"
+    ],
+    [
+     "South Sudan",
+     "189"
+    ],
+    [
+     "Spain",
+     "037"
+    ],
+    [
+     "Sri Lanka",
+     "201"
+    ],
+    [
+     "St. Vincent and the Grenadines",
+     "631"
+    ],
+    [
+     "Sudan",
+     "185"
+    ],
+    [
+     "Suriname",
+     "752"
+    ],
+    [
+     "Swaziland",
+     "186"
+    ],
+    [
+     "Sweden",
+     "040"
+    ],
+    [
+     "Switzerland",
+     "041"
+    ],
+    [
+     "Syria",
+     "210"
+    ],
+    [
+     "Taiwan",
+     "203"
+    ],
+    [
+     "Tajikistan",
+     "057"
+    ],
+    [
+     "Tanzania",
+     "130"
+    ],
+    [
+     "Thailand",
+     "267"
+    ],
+    [
+     "Tibet (Autonomous Region)",
+     "268"
+    ],
+    [
+     "Togo",
+     "187"
+    ],
+    [
+     "Tokelau",
+     "417"
+    ],
+    [
+     "Tonga",
+     "846"
+    ],
+    [
+     "Trinidad and Tobago",
+     "605"
+    ],
+    [
+     "Tunisia",
+     "135"
+    ],
+    [
+     "Turkey",
+     "045"
+    ],
+    [
+     "Turkmenistan",
+     "058"
+    ],
+    [
+     "Turks and Caicos Islands",
+     "632"
+    ],
+    [
+     "Tuvalu",
+     "826"
+    ],
+    [
+     "U.S. Minor outlying Islands",
+     "418"
+    ],
+    [
+     "Uganda",
+     "136"
+    ],
+    [
+     "Ukraine",
+     "059"
+    ],
+    [
+     "Union Of Soviet Socialist Rep",
+     "042"
+    ],
+    [
+     "United Arab Emirates",
+     "280"
+    ],
+    [
+     "United States of America",
+     "461"
+    ],
+    [
+     "Unknown",
+     "000"
+    ],
+    [
+     "Uruguay",
+     "724"
+    ],
+    [
+     "Uzbekistan",
+     "060"
+    ],
+    [
+     "Vanuatu",
+     "823"
+    ],
+    [
+     "Vatican City State",
+     "090"
+    ],
+    [
+     "Venezuela",
+     "725"
+    ],
+    [
+     "Vietnam",
+     "270"
+    ],
+    [
+     "Virgin Islands, U.S.",
+     "657"
+    ],
+    [
+     "Wales",
+     "008"
+    ],
+    [
+     "Wallis and Futuna Is., Terr.",
+     "841"
+    ],
+    [
+     "Western Sahara",
+     "184"
+    ],
+    [
+     "Yemen",
+     "273"
+    ],
+    [
+     "Yugoslavia",
+     "044"
+    ],
+    [
+     "Zambia",
+     "112"
+    ],
+    [
+     "Zimbabwe",
+     "113"
+    ]
+   ],
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0].jurisdiction[0]",
+   "section": "page1.positionsSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Government Positions Level of jurisdiction. The level of jurisdiction of the government position held (Example: national, regional, municipal)",
+   "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].LevelOfJurisdiction[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 50,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0].department[0]",
+   "section": "page1.positionsSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Government Positions Department/Branch. The department or branch of the government position held",
+   "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].DepartmentBranch[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 100,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0].activities[0]",
+   "section": "page1.positionsSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Government Positions Activities and/or positions held",
+   "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].ActivitiesPositionHeld[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 50,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0].Subform3[0].remove[0]",
+   "section": "page1.positionsSection.Table1",
+   "kind": "field",
+   "ui": "button",
+   "caption": "-",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Row1[0].Subform3[0]",
+   "scripts": {
+    "click": 1,
+    "initialize": 1,
+    "mouseEnter": 1,
+    "mouseExit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Footer[0].Subform1[0].add[0]",
+   "section": "page1.positionsSection.Table1",
+   "kind": "field",
+   "ui": "button",
+   "caption": "+",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0].positionsSection[0].Table1[0].Footer[0].Subform1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].MilitaryServiceheader[0].NoYesGroup[0]",
+   "section": "page1.previousTravelSection.MilitaryServiceheader",
+   "kind": "exclGroup",
+   "ui": "exclGroup",
+   "caption": "Question 8 Previous Travel. Since the age of 18 or during the past five years, whichever is more recent, have you travelled to any country other than the country of your citizenship or your current country of residence?",
+   "data_path": "Schedule1[0].PreviousTravelInfo[0].TraveledOtherCountry[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "*Yes",
+     "true"
+    ],
+    [
+     "*No",
+     "false"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": true,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].MilitaryServiceheader[0].previousTravelMarker[0]",
+   "section": "page1.previousTravelSection.MilitaryServiceheader",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0].from[0].Year[0]",
+   "section": "page1.previousTravelSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Previous Travel From Date Year. The year of the start of your previous travel in YYYY format",
+   "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Year[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 4,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "change": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0].from[0].Month[0]",
+   "section": "page1.previousTravelSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Previous Travel From Date Month. The month of the start of your previous travel in MM format",
+   "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Month[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 2,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0].to[0].Year[0]",
+   "section": "page1.previousTravelSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Previous Travel To Date Year. The year of the end of your previous travel in YYYY format",
+   "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Year[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 4,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "change": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0].to[0].Month[0]",
+   "section": "page1.previousTravelSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Previous Travel To Date Month. The month of the end of your previous travel in MM format",
+   "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Month[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 2,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0].country[0]",
+   "section": "page1.previousTravelSection.Table1",
+   "kind": "field",
+   "ui": "choiceList",
+   "caption": "Previous Travel Country or Territory. The country or territory where your previous travel took place",
+   "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].CountryCode[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": "xfa.datasets.LOVFile.LOV.CountryOfBirthList.CountryOfBirth[*]",
+   "options_resolved": [
+    [
+     "",
+     ""
+    ],
+    [
+     "Afghanistan",
+     "252"
+    ],
+    [
+     "Aland Island",
+     "401"
+    ],
+    [
+     "Albania",
+     "081"
+    ],
+    [
+     "Algeria",
+     "131"
+    ],
+    [
+     "Andorra",
+     "082"
+    ],
+    [
+     "Angola",
+     "151"
+    ],
+    [
+     "Anguilla",
+     "620"
+    ],
+    [
+     "Antigua And Barbuda",
+     "621"
+    ],
+    [
+     "Argentina",
+     "703"
+    ],
+    [
+     "Armenia",
+     "049"
+    ],
+    [
+     "Aruba",
+     "658"
+    ],
+    [
+     "Australia",
+     "305"
+    ],
+    [
+     "Austria",
+     "011"
+    ],
+    [
+     "Azerbaijan",
+     "050"
+    ],
+    [
+     "Bahamas",
+     "622"
+    ],
+    [
+     "Bahrain",
+     "253"
+    ],
+    [
+     "Bailwick of Jersey",
+     "412"
+    ],
+    [
+     "Bangladesh",
+     "212"
+    ],
+    [
+     "Barbados",
+     "610"
+    ],
+    [
+     "Belarus",
+     "051"
+    ],
+    [
+     "Belgium",
+     "012"
+    ],
+    [
+     "Belize",
+     "541"
+    ],
+    [
+     "Benin",
+     "160"
+    ],
+    [
+     "Bermuda",
+     "601"
+    ],
+    [
+     "Bhutan",
+     "254"
+    ],
+    [
+     "Bolivia",
+     "751"
+    ],
+    [
+     "Bonaire, Sint Eustatius, Saba",
+     "402"
+    ],
+    [
+     "Bosnia and Herzegovina",
+     "048"
+    ],
+    [
+     "Botswana",
+     "153"
+    ],
+    [
+     "Bouvet Island",
+     "403"
+    ],
+    [
+     "Brazil",
+     "709"
+    ],
+    [
+     "British Indian Ocean Territory",
+     "404"
+    ],
+    [
+     "British Virgin Islands",
+     "633"
+    ],
+    [
+     "Brunei Darussalam",
+     "255"
+    ],
+    [
+     "Bulgaria",
+     "083"
+    ],
+    [
+     "Burkina Faso",
+     "188"
+    ],
+    [
+     "Burma (Myanmar)",
+     "241"
+    ],
+    [
+     "Burundi",
+     "154"
+    ],
+    [
+     "Cabo Verde",
+     "911"
+    ],
+    [
+     "Cambodia",
+     "256"
+    ],
+    [
+     "Cameroon",
+     "155"
+    ],
+    [
+     "Canada",
+     "511"
+    ],
+    [
+     "Canary Islands",
+     "039"
+    ],
+    [
+     "Cayman Islands",
+     "624"
+    ],
+    [
+     "Central African Republic",
+     "157"
+    ],
+    [
+     "Chad",
+     "156"
+    ],
+    [
+     "Channel Islands",
+     "009"
+    ],
+    [
+     "Chile",
+     "721"
+    ],
+    [
+     "China",
+     "202"
+    ],
+    [
+     "China (Hong Kong SAR)",
+     "200"
+    ],
+    [
+     "China (Macao SAR)",
+     "198"
+    ],
+    [
+     "Christmas Island",
+     "405"
+    ],
+    [
+     "Colombia",
+     "722"
+    ],
+    [
+     "Comoros",
+     "905"
+    ],
+    [
+     "Cook Islands",
+     "840"
+    ],
+    [
+     "Costa Rica",
+     "542"
+    ],
+    [
+     "Croatia",
+     "043"
+    ],
+    [
+     "Cuba",
+     "650"
+    ],
+    [
+     "Curaçao",
+     "406"
+    ],
+    [
+     "Cyprus",
+     "221"
+    ],
+    [
+     "Czech Republic",
+     "015"
+    ],
+    [
+     "Czechoslovakia",
+     "014"
+    ],
+    [
+     "Democratic Rep. of Congo",
+     "158"
+    ],
+    [
+     "Denmark",
+     "017"
+    ],
+    [
+     "Djibouti",
+     "183"
+    ],
+    [
+     "Dominica",
+     "625"
+    ],
+    [
+     "Dominican Republic",
+     "651"
+    ],
+    [
+     "East Timor",
+     "916"
+    ],
+    [
+     "Ecuador",
+     "753"
+    ],
+    [
+     "Egypt",
+     "101"
+    ],
+    [
+     "El Salvador",
+     "543"
+    ],
+    [
+     "England",
+     "002"
+    ],
+    [
+     "Equatorial Guinea",
+     "178"
+    ],
+    [
+     "Eritrea",
+     "162"
+    ],
+    [
+     "Estonia",
+     "018"
+    ],
+    [
+     "Ethiopia",
+     "161"
+    ],
+    [
+     "Falkland Islands",
+     "912"
+    ],
+    [
+     "Faroe Islands",
+     "408"
+    ],
+    [
+     "Federated States of Micronesia",
+     "835"
+    ],
+    [
+     "Fiji",
+     "801"
+    ],
+    [
+     "Finland",
+     "021"
+    ],
+    [
+     "Fr. South. and Antarctic Lands",
+     "821"
+    ],
+    [
+     "France",
+     "022"
+    ],
+    [
+     "French Guiana",
+     "754"
+    ],
+    [
+     "French Polynesia",
+     "845"
+    ],
+    [
+     "Gabon",
+     "163"
+    ],
+    [
+     "Gambia",
+     "164"
+    ],
+    [
+     "Georgia",
+     "052"
+    ],
+    [
+     "Germany, Federal Republic Of",
+     "024"
+    ],
+    [
+     "Ghana",
+     "165"
+    ],
+    [
+     "Gibraltar",
+     "084"
+    ],
+    [
+     "Greece",
+     "025"
+    ],
+    [
+     "Greenland",
+     "521"
+    ],
+    [
+     "Grenada",
+     "626"
+    ],
+    [
+     "Guadeloupe",
+     "653"
+    ],
+    [
+     "Guam",
+     "832"
+    ],
+    [
+     "Guatemala",
+     "544"
+    ],
+    [
+     "Guernsey",
+     "409"
+    ],
+    [
+     "Guinea",
+     "166"
+    ],
+    [
+     "Guinea-Bissau",
+     "167"
+    ],
+    [
+     "Guyana",
+     "711"
+    ],
+    [
+     "Haiti",
+     "654"
+    ],
+    [
+     "Heard and MacDonald Islands",
+     "410"
+    ],
+    [
+     "Honduras",
+     "545"
+    ],
+    [
+     "Hong Kong",
+     "204"
+    ],
+    [
+     "Hungary",
+     "026"
+    ],
+    [
+     "Iceland",
+     "085"
+    ],
+    [
+     "India",
+     "205"
+    ],
+    [
+     "Indonesia",
+     "222"
+    ],
+    [
+     "Iran",
+     "223"
+    ],
+    [
+     "Iraq",
+     "224"
+    ],
+    [
+     "Ireland",
+     "027"
+    ],
+    [
+     "Isle of Man",
+     "411"
+    ],
+    [
+     "Israel",
+     "206"
+    ],
+    [
+     "Italy",
+     "028"
+    ],
+    [
+     "Ivory Coast",
+     "169"
+    ],
+    [
+     "Jamaica",
+     "602"
+    ],
+    [
+     "Japan",
+     "207"
+    ],
+    [
+     "Jordan",
+     "225"
+    ],
+    [
+     "Kazakhstan",
+     "053"
+    ],
+    [
+     "Kenya",
+     "132"
+    ],
+    [
+     "Kiribati",
+     "831"
+    ],
+    [
+     "Korea, North (DPRK)",
+     "257"
+    ],
+    [
+     "Korea, South",
+     "258"
+    ],
+    [
+     "Kosovo",
+     "064"
+    ],
+    [
+     "Kuwait",
+     "226"
+    ],
+    [
+     "Kyrgyzstan",
+     "054"
+    ],
+    [
+     "Laos",
+     "260"
+    ],
+    [
+     "Latvia",
+     "019"
+    ],
+    [
+     "Lebanon",
+     "208"
+    ],
+    [
+     "Lesotho",
+     "152"
+    ],
+    [
+     "Liberia",
+     "170"
+    ],
+    [
+     "Libya",
+     "171"
+    ],
+    [
+     "Liechtenstein",
+     "086"
+    ],
+    [
+     "Lithuania",
+     "020"
+    ],
+    [
+     "Luxembourg",
+     "013"
+    ],
+    [
+     "Macao",
+     "261"
+    ],
+    [
+     "Macedonia",
+     "070"
+    ],
+    [
+     "Madagascar",
+     "172"
+    ],
+    [
+     "Madeira",
+     "036"
+    ],
+    [
+     "Malawi",
+     "111"
+    ],
+    [
+     "Malaysia",
+     "242"
+    ],
+    [
+     "Maldives",
+     "901"
+    ],
+    [
+     "Mali",
+     "173"
+    ],
+    [
+     "Malta",
+     "030"
+    ],
+    [
+     "Marshall Islands",
+     "834"
+    ],
+    [
+     "Martinique",
+     "655"
+    ],
+    [
+     "Mauritania",
+     "174"
+    ],
+    [
+     "Mauritius",
+     "902"
+    ],
+    [
+     "Mayotte",
+     "906"
+    ],
+    [
+     "Mexico",
+     "501"
+    ],
+    [
+     "Moldova",
+     "055"
+    ],
+    [
+     "Monaco",
+     "087"
+    ],
+    [
+     "Mongolia",
+     "262"
+    ],
+    [
+     "Montenegro",
+     "063"
+    ],
+    [
+     "Montserrat",
+     "627"
+    ],
+    [
+     "Morocco",
+     "133"
+    ],
+    [
+     "Mozambique",
+     "175"
+    ],
+    [
+     "Namibia",
+     "122"
+    ],
+    [
+     "Nauru",
+     "341"
+    ],
+    [
+     "Nepal",
+     "264"
+    ],
+    [
+     "Netherlands Antilles, The",
+     "652"
+    ],
+    [
+     "Netherlands, The",
+     "031"
+    ],
+    [
+     "Nevis",
+     "628"
+    ],
+    [
+     "New Caledonia",
+     "822"
+    ],
+    [
+     "New Zealand",
+     "339"
+    ],
+    [
+     "Nicaragua",
+     "546"
+    ],
+    [
+     "Niger",
+     "176"
+    ],
+    [
+     "Nigeria",
+     "177"
+    ],
+    [
+     "Niue",
+     "414"
+    ],
+    [
+     "Northern Ireland",
+     "006"
+    ],
+    [
+     "Northern Mariana Islands",
+     "830"
+    ],
+    [
+     "Norway",
+     "032"
+    ],
+    [
+     "Oman",
+     "263"
+    ],
+    [
+     "Pakistan",
+     "209"
+    ],
+    [
+     "Palestinian Authority",
+     "213"
+    ],
+    [
+     "Panama",
+     "547"
+    ],
+    [
+     "Papua New Guinea",
+     "342"
+    ],
+    [
+     "Paraguay",
+     "755"
+    ],
+    [
+     "Peru",
+     "723"
+    ],
+    [
+     "Philippines",
+     "227"
+    ],
+    [
+     "Pitcairn Islands",
+     "842"
+    ],
+    [
+     "Poland",
+     "033"
+    ],
+    [
+     "Portugal",
+     "034"
+    ],
+    [
+     "Puerto Rico",
+     "656"
+    ],
+    [
+     "Qatar",
+     "265"
+    ],
+    [
+     "Republic of Congo",
+     "159"
+    ],
+    [
+     "Republic of Palau",
+     "836"
+    ],
+    [
+     "Réunion",
+     "903"
+    ],
+    [
+     "Romania",
+     "088"
+    ],
+    [
+     "Russia",
+     "056"
+    ],
+    [
+     "Rwanda",
+     "179"
+    ],
+    [
+     "Saint Helena",
+     "915"
+    ],
+    [
+     "Saint Kitts and Nevis",
+     "629"
+    ],
+    [
+     "Saint Lucia",
+     "630"
+    ],
+    [
+     "Saint Pierre and Miquelon",
+     "531"
+    ],
+    [
+     "Saint-Barthelemy",
+     "407"
+    ],
+    [
+     "Saint-Martin",
+     "415"
+    ],
+    [
+     "Samoa",
+     "844"
+    ],
+    [
+     "Samoa, American",
+     "843"
+    ],
+    [
+     "San Marino",
+     "089"
+    ],
+    [
+     "Sao Tome and Principe",
+     "914"
+    ],
+    [
+     "Saudi Arabia",
+     "231"
+    ],
+    [
+     "Scotland",
+     "007"
+    ],
+    [
+     "Senegal",
+     "180"
+    ],
+    [
+     "Serbia And Montenegro",
+     "061"
+    ],
+    [
+     "Serbia, Republic Of",
+     "062"
+    ],
+    [
+     "Seychelles",
+     "904"
+    ],
+    [
+     "Sierra Leone",
+     "181"
+    ],
+    [
+     "Singapore",
+     "246"
+    ],
+    [
+     "Sint-Maarten",
+     "416"
+    ],
+    [
+     "Slovakia",
+     "016"
+    ],
+    [
+     "Slovenia",
+     "047"
+    ],
+    [
+     "Solomon Islands",
+     "824"
+    ],
+    [
+     "Somalia",
+     "182"
+    ],
+    [
+     "South Africa, Republic Of",
+     "121"
+    ],
+    [
+     "South Sudan",
+     "189"
+    ],
+    [
+     "Spain",
+     "037"
+    ],
+    [
+     "Sri Lanka",
+     "201"
+    ],
+    [
+     "St. Vincent and the Grenadines",
+     "631"
+    ],
+    [
+     "Sudan",
+     "185"
+    ],
+    [
+     "Suriname",
+     "752"
+    ],
+    [
+     "Swaziland",
+     "186"
+    ],
+    [
+     "Sweden",
+     "040"
+    ],
+    [
+     "Switzerland",
+     "041"
+    ],
+    [
+     "Syria",
+     "210"
+    ],
+    [
+     "Taiwan",
+     "203"
+    ],
+    [
+     "Tajikistan",
+     "057"
+    ],
+    [
+     "Tanzania",
+     "130"
+    ],
+    [
+     "Thailand",
+     "267"
+    ],
+    [
+     "Tibet (Autonomous Region)",
+     "268"
+    ],
+    [
+     "Togo",
+     "187"
+    ],
+    [
+     "Tokelau",
+     "417"
+    ],
+    [
+     "Tonga",
+     "846"
+    ],
+    [
+     "Trinidad and Tobago",
+     "605"
+    ],
+    [
+     "Tunisia",
+     "135"
+    ],
+    [
+     "Turkey",
+     "045"
+    ],
+    [
+     "Turkmenistan",
+     "058"
+    ],
+    [
+     "Turks and Caicos Islands",
+     "632"
+    ],
+    [
+     "Tuvalu",
+     "826"
+    ],
+    [
+     "U.S. Minor outlying Islands",
+     "418"
+    ],
+    [
+     "Uganda",
+     "136"
+    ],
+    [
+     "Ukraine",
+     "059"
+    ],
+    [
+     "Union Of Soviet Socialist Rep",
+     "042"
+    ],
+    [
+     "United Arab Emirates",
+     "280"
+    ],
+    [
+     "United States of America",
+     "461"
+    ],
+    [
+     "Unknown",
+     "000"
+    ],
+    [
+     "Uruguay",
+     "724"
+    ],
+    [
+     "Uzbekistan",
+     "060"
+    ],
+    [
+     "Vanuatu",
+     "823"
+    ],
+    [
+     "Vatican City State",
+     "090"
+    ],
+    [
+     "Venezuela",
+     "725"
+    ],
+    [
+     "Vietnam",
+     "270"
+    ],
+    [
+     "Virgin Islands, U.S.",
+     "657"
+    ],
+    [
+     "Wales",
+     "008"
+    ],
+    [
+     "Wallis and Futuna Is., Terr.",
+     "841"
+    ],
+    [
+     "Western Sahara",
+     "184"
+    ],
+    [
+     "Yemen",
+     "273"
+    ],
+    [
+     "Yugoslavia",
+     "044"
+    ],
+    [
+     "Zambia",
+     "112"
+    ],
+    [
+     "Zimbabwe",
+     "113"
+    ]
+   ],
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0].location[0]",
+   "section": "page1.previousTravelSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Previous Travel Location. The location where your previous travel took place",
+   "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].Location[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 50,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0].purpose[0]",
+   "section": "page1.previousTravelSection.Table1",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "Previous Travel Purpose of Travel.",
+   "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].PurposeOfTravel[0]",
+   "in_shipped_data": true,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": 50,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0]",
+   "scripts": {
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0].Subform3[0].remove[0]",
+   "section": "page1.previousTravelSection.Table1",
+   "kind": "field",
+   "ui": "button",
+   "caption": "-",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Row1[0].Subform3[0]",
+   "scripts": {
+    "click": 1,
+    "initialize": 1,
+    "mouseEnter": 1,
+    "mouseExit": 1,
+    "validate": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Footer[0].Subform1[0].add[0]",
+   "section": "page1.previousTravelSection.Table1",
+   "kind": "field",
+   "ui": "button",
+   "caption": "+",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "SUkqAOMIAAAAzzi0AKCGAQDPOLQAoIYBAH//////////////////gB//////////////////gA// ////////////////gAP/////////////////gAH////",
+   "in_row": "Schedule1[0].page1[0].previousTravelSection[0].Table1[0].Footer[0].Subform1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].page1[0].ButtonsFooter[0].ValidateButton[0]",
+   "section": "page1.ButtonsFooter.ValidateButton",
+   "kind": "field",
+   "ui": "button",
+   "caption": "Validate",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen",
+   "in_row": "Schedule1[0].page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "Schedule1[0].SignatureField1[0]",
+   "section": "SignatureField1",
+   "kind": "field",
+   "ui": "signature",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": null,
+   "in_row": null,
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].SignatureField2[0]",
+   "section": "SignatureField2",
+   "kind": "field",
+   "ui": "signature",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": null,
+   "in_row": null,
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].SignatureField3[0]",
+   "section": "SignatureField3",
+   "kind": "field",
+   "ui": "signature",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": null,
+   "in_row": null,
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].SignatureField4[0]",
+   "section": "SignatureField4",
+   "kind": "field",
+   "ui": "signature",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": null,
+   "in_row": null,
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].SignatureField5[0]",
+   "section": "SignatureField5",
+   "kind": "field",
+   "ui": "signature",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": null,
+   "in_row": null,
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].SignatureField6[0]",
+   "section": "SignatureField6",
+   "kind": "field",
+   "ui": "signature",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": null,
+   "in_row": null,
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].SignatureField7[0]",
+   "section": "SignatureField7",
+   "kind": "field",
+   "ui": "signature",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": null,
+   "in_row": null,
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].SignatureField8[0]",
+   "section": "SignatureField8",
+   "kind": "field",
+   "ui": "signature",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": null,
+   "in_row": null,
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].SignatureField9[0]",
+   "section": "SignatureField9",
+   "kind": "field",
+   "ui": "signature",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": null,
+   "in_row": null,
+   "scripts": null
+  },
+  {
+   "som": "Schedule1[0].SignatureField10[0]",
+   "section": "SignatureField10",
+   "kind": "field",
+   "ui": "signature",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "invisible",
+   "heading": null,
+   "in_row": null,
+   "scripts": null
+  }
+ ]
+}

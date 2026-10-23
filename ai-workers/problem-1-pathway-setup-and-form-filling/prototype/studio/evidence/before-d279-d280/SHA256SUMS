@@ -1,0 +1,7 @@
+3041c31f21cf6f55d8433b066a585a8ebc4f3788b18384bc43becd12c593ea18  web-src/lib/api.ts
+7503685be3b63453f5caa3dbe06d0277341a71e62ae391ace6439453f8e2f73d  web-src/pages/composition.tsx
+5c269f1275e2a2fb5e4f98ed1d086a6abbfbc149e496b9df79ed8eddbf03996e  web-src/pages/configuration.tsx
+b29651754fab362d846f961f37442a8dcfd21db6668028ff1323a2952cbb56bb  web-src/pages/job.tsx
+a35ff4947d0b09e38b1b3bf8b8a70f0814e33784f5898da7d4ab30375c50f6de  web-src/pages/programs.tsx
+210fce0c9a33fdfeb4d17c8ca7172dcdb0b7e155e38fc0e8d40bb496ec02c6ff  web-src/pages/sources.tsx
+3174212caa4ac2d9ac07dd95500e3ccbccd1fff12eff61490642000368769cd4  web-src/App.tsx

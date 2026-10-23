@@ -1,0 +1,19 @@
+{
+ "at": "2026-10-21T08:37:49.035Z",
+ "seconds": 167,
+ "programs": 105,
+ "rows": 371,
+ "synthetic_programs": 100,
+ "synthetic_rows": 364,
+ "released": 122,
+ "draft_changes_after_release": 41,
+ "in_review": 22,
+ "injected_problems": 28,
+ "catalogue_server_ms": {
+  "queries": 3800,
+  "snapshots": 13603,
+  "summaries": 2289,
+  "total": 19692
+ },
+ "payload_bytes": 357183
+}

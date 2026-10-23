@@ -1,0 +1,132 @@
+{
+ "method": "own key derivation (ISO 32000-1 Algorithm 2, R4) + cryptography AES-128-CBC + zlib on the appended stream bytes; pypdf used only for object numbers and the unchanged /O /P /ID",
+ "run_folder": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p1/runs/e5-20261019T165914Z",
+ "checks": [
+  {
+   "form": "imm1295e",
+   "values": "generic",
+   "mode": "append-only",
+   "error": "ValueError: The length of the provided data is not a multiple of the block length."
+  },
+  {
+   "form": "imm1295e",
+   "values": "generic",
+   "mode": "append-only-encrypted-diagnostic",
+   "datasets_object": 114,
+   "written": 242,
+   "equal": 242
+  },
+  {
+   "form": "imm1295e",
+   "values": "family",
+   "mode": "append-only",
+   "error": "ValueError: The length of the provided data is not a multiple of the block length."
+  },
+  {
+   "form": "imm1295e",
+   "values": "family",
+   "mode": "append-only-encrypted-diagnostic",
+   "datasets_object": 114,
+   "written": 32,
+   "equal": 32
+  },
+  {
+   "form": "imm5707e",
+   "values": "generic",
+   "mode": "append-only",
+   "error": "ValueError: The length of the provided data is not a multiple of the block length."
+  },
+  {
+   "form": "imm5707e",
+   "values": "generic",
+   "mode": "append-only-encrypted-diagnostic",
+   "datasets_object": 77,
+   "written": 50,
+   "equal": 50
+  },
+  {
+   "form": "imm5707e",
+   "values": "family",
+   "mode": "append-only",
+   "error": "ValueError: The length of the provided data is not a multiple of the block length."
+  },
+  {
+   "form": "imm5707e",
+   "values": "family",
+   "mode": "append-only-encrypted-diagnostic",
+   "datasets_object": 77,
+   "written": 39,
+   "equal": 39
+  },
+  {
+   "form": "imm5409e",
+   "values": "generic",
+   "mode": "append-only",
+   "error": "ValueError: The length of the provided data is not a multiple of the block length."
+  },
+  {
+   "form": "imm5409e",
+   "values": "generic",
+   "mode": "append-only-encrypted-diagnostic",
+   "datasets_object": 8,
+   "written": 32,
+   "equal": 32
+  },
+  {
+   "form": "imm5476e",
+   "values": "generic",
+   "mode": "append-only",
+   "error": "ValueError: The length of the provided data is not a multiple of the block length."
+  },
+  {
+   "form": "imm5476e",
+   "values": "generic",
+   "mode": "append-only-encrypted-diagnostic",
+   "datasets_object": 48,
+   "written": 53,
+   "equal": 53
+  },
+  {
+   "form": "imm5475e",
+   "values": "generic",
+   "mode": "append-only",
+   "error": "ValueError: The length of the provided data is not a multiple of the block length."
+  },
+  {
+   "form": "imm5475e",
+   "values": "generic",
+   "mode": "append-only-encrypted-diagnostic",
+   "datasets_object": 76,
+   "written": 27,
+   "equal": 27
+  },
+  {
+   "form": "imm5257_1e",
+   "values": "generic",
+   "mode": "append-only",
+   "error": "ValueError: The length of the provided data is not a multiple of the block length."
+  },
+  {
+   "form": "imm5257_1e",
+   "values": "generic",
+   "mode": "append-only-encrypted-diagnostic",
+   "datasets_object": 114,
+   "written": 95,
+   "equal": 95
+  },
+  {
+   "form": "imm5488e",
+   "values": "generic",
+   "mode": "append-only",
+   "error": "ValueError: The length of the provided data is not a multiple of the block length."
+  },
+  {
+   "form": "imm5488e",
+   "values": "generic",
+   "mode": "append-only-encrypted-diagnostic",
+   "datasets_object": 78,
+   "written": 17,
+   "equal": 17
+  }
+ ]
+}

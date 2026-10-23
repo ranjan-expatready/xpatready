@@ -3,12 +3,13 @@
 | | |
 |---|---|
 | **Documents looked at** | Doc 4 Client Portal, document version 1.3, last updated 2026-07-03 (`sources/drive-snapshot-2026-10-11/01-techno-functional/06-Doc-4-Client-Portal.md`, unchanged since 9 Oct); the current client-portal module CP-01 v0.1 (5 Oct), **not on Drive** (`sources/drive-snapshot-2026-10-11/08-client-portal/NOT-FOUND.md`) |
+| **Current base (15 Oct 2026, snapshot 1535; scrum 4b outcome 0 (e))** | `sources/drive-snapshot-2026-10-13-1535/01-techno-functional/06-Doc-4-Client-Portal.md` is byte-identical to the 11 Oct copy quoted here, so every quote and line number below stands. CP-01 is still not on Drive. |
 | **Date of this note** | 11 Oct 2026 (fourth round, after re-check S3a-c) |
 | **Status** | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | **Changes** | **0.** No change is proposed against Doc 4. |
 
 **Why there are no changes here.** The first version of this note edited Doc 4's signing room (CP-6). The team's newer files have moved signing out of the portal, so that edit would have changed a ceremony the team no longer specifies (review S3a, B-1):
-- AG-05 v1.9 (7 Oct), decision CP1-D4 (L46): "Signing from the client portal hands off to the AG-05 signing page (consent, fields, certificate) and returns the client to the portal; the portal never renders its own signing step."
+- AG-05 v1.10 (10 Oct), decision CP1-D4 (L47): "Signing from the client portal hands off to the AG-05 signing page (consent, fields, certificate) and returns the client to the portal; the portal never renders its own signing step."
 - AG-5-53 (L453): "The portal SHALL NOT render its own signing step: consent, fields and the certificate of completion stay on the AG-5 signing page, and the same engine serves portal and emailed links."
 
 Under README §0 rule 11 the newer module file wins over Doc 4. So Doc 4 CP-6 is superseded on this point.
@@ -22,4 +23,4 @@ Under README §0 rule 11 the newer module file wins over Doc 4. So Doc 4 CP-6 is
    
    The founder's AIW-D67 asks for "the employer actions the client portal document specifies (upload, pay, sign, seat management) in Release 1". A team file never overrides a founder decision (rule 11). The change notes that apply AIW-D67 are the Agent-plane **CN-AG-15** (and AG-17's AG17-D38) and **CN-SA-03 change 3** (extra employer seats in SA-03's catalogue, with the seat keys gated by the Founder Decisions Log's E-1). The conflict between FD-7's recruitment summary and CP1-D7 is recorded for the founder in CN-FDL open point 1.
 
-**For the founder to locate.** The team's current client-portal module, `FINAL-ClientPortal-FR/CP-01-client-portal-app_v0.1_2026-10-05.md`, is cited by eleven files in the 11 Oct snapshot, including AG-15 v1.7, AG-17 v0.6 and SA-06 v3.3. It is not on Drive for the account used for the snapshot (`08-client-portal/NOT-FOUND.md`: "Ask the requirement authors to upload `FINAL-ClientPortal-FR/` to the `Functional Requirement with Version Control` folder, then take a new snapshot"). Once it is on Drive, the passcode (FD-21) and the employer portal (AIW-D67) are checked against CP-01, and any portal change is written against CP-01's own numbering (CP-1-n), never against Doc 4.
+**For the founder to locate.** The team's current client-portal module, `FINAL-ClientPortal-FR/CP-01-client-portal-app_v0.1_2026-10-05.md`, is cited by eleven files in the 11 Oct snapshot (history), including AG-15 v1.7, AG-17 v0.6 and SA-06 v3.3. It is not on Drive for the account used for the snapshot (`08-client-portal/NOT-FOUND.md`: "Ask the requirement authors to upload `FINAL-ClientPortal-FR/` to the `Functional Requirement with Version Control` folder, then take a new snapshot"). Once it is on Drive, the passcode (FD-21) and the employer portal (AIW-D67) are checked against CP-01, and any portal change is written against CP-01's own numbering (CP-1-n), never against Doc 4.

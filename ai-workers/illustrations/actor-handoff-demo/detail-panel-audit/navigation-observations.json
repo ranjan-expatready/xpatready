@@ -1,0 +1,17 @@
+{
+  "child": "Lead form and PQR",
+  "hash": "#a=6.1",
+  "buttons": [
+    "Close ✕",
+    "Example · Client A"
+  ],
+  "links": [],
+  "width": 460,
+  "bodyHeight": 904,
+  "parent": "New client",
+  "explicitBackVisible": false,
+  "closeFocus": {
+    "card": "st-A",
+    "act": null
+  }
+}

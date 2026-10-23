@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@import "./tokens.css";
+@source "../";
+/* Same dark-mode key as the team's index.css: data-theme on <html>. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+:root { --primary-foreground: hsl(0 0% 100%); --radius: 0.5rem; --z-drawer: 55; --z-tooltip: 60; }
+/* z-drawer / z-tooltip: the team's z-index scale (ERv2-frontend index.css) for the side panel and tooltips. */
+@theme inline { --color-primary-foreground: var(--primary-foreground); --z-index-drawer: var(--z-drawer); --z-index-tooltip: var(--z-tooltip); }
+/* Screen 01 build discovery: the team's --color-text-muted (neutral-600, #737373) is 4.42:1 on --color-surface (#f7f7f7)
+   and 4.08:1 on the neutral-100 switch track, below WCAG AA 4.5:1 (axe, 21 Oct), although tokens.css states 4.96:1. The
+   light sheet uses the next step of the team's own ramp (neutral-700, as the Lead's Screen 01 boards do) until the team
+   corrects the token. The dark sheet is unchanged. */
+:root:not([data-theme='dark']) { --color-text-muted: var(--erv2-neutral-700); }
+html, body, #root { height: 100%; }
+body { background: var(--color-surface); color: var(--color-text); font-family: var(--font-sans); font-size: 14px; -webkit-font-smoothing: antialiased; }
+:focus-visible { outline: none; }
+.mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }

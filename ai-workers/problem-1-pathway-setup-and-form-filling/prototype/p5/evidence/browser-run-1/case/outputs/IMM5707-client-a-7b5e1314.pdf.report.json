@@ -1,0 +1,27 @@
+{
+ "form_file": "imm5707e.pdf",
+ "source_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+ "output": "/private/tmp/claude-501/-Users-ranjansingh-Desktop-Xpatready/ecba1922-f076-48ae-9796-edfc3cf741ab/scratchpad/p5run/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p5/case/case-001/outputs/IMM5707-client-a-7b5e1314.pdf",
+ "output_sha256": "13c1ba525ae6d56a3437200fa10e1e92f42d6d5b836f823b348f0f30388e14e8",
+ "bytes": 2367211,
+ "original_bytes_kept": true,
+ "written": 30,
+ "read_back_equal": 30,
+ "mismatches": [],
+ "other_data_leaves_changed": 0,
+ "other_parts_unchanged": true,
+ "signatures": {
+  "/UR3": "verified"
+ },
+ "poppler_syntax_errors": 0,
+ "writer_notes": [
+  "pypdf writer holds no encryption for this encrypted document",
+  "new datasets stream encrypted with the document key (private pypdf API)",
+  "/Encrypt and /Info copied into the appended trailer (cross-reference stream dictionary)"
+ ],
+ "intact": true,
+ "checks": [],
+ "hand": 8,
+ "values_sha256": "7b5e13141b5bcfa4e4e2f39e04abb19644d9387a027693f74ff73a801dd57c29",
+ "download": "IMM5707-client-a-7b5e1314.pdf"
+}

@@ -1,0 +1,89 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "probe-checks-live-20261020t053429940z",
+  "idempotency_key": "5252a9d40d02f899eadde661f40794cb1eb3fb75d488994303eaca9a47d349ef",
+  "contract_version": "drafting-run/v0",
+  "kind": "checks",
+  "output_sha256": "06ec5977c5f4e46992958f8563e98ca2afd0b93b18138f8726c5828037ab89c4",
+  "inputs": {
+   "combination": "1",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5905e.text.inventory.json",
+     "sha256": "16594660c379864da2968739adf21760cd14c188c1d095d1face0b26e85b0902"
+    }
+   ],
+   "configuration_version": "c1-probe"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 1,
+   "budget_usd": 5,
+   "max_output_tokens": 8000,
+   "prompt_version": "checks.v1.md",
+   "prompt_sha256": "2528e464680e9eb5f9ec9260d2a682a489df4d3ee1cab47be39536cc104af0a8"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 3436,
+    "output_tokens": 2514,
+    "duration_ms": 21669
+   }
+  ],
+  "usage": {
+   "input_tokens": 3436,
+   "output_tokens": 2514,
+   "cost_usd": 0.064024,
+   "duration_ms": 21669
+  },
+  "started_at": "2026-10-20T05:34:29.940Z",
+  "ended_at": "2026-10-20T05:34:51.780Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "cf4c2ebbc2eebfe766c1edc2a693ebb2c5548a80737229b7e9ecf5bd86bd5357",
+  "template_sha256": "54f095ed2508a60e11fb18b501e3a1283004157176acf20c0bb23a0b400a4ba6",
+  "schema_file": "checks-output.v1.schema.json",
+  "schema_sha256": "da7da777cb8170077e9255b3ebcc28718d07e9875a101e99d8ee262840f1981f",
+  "screened": true,
+  "output_sha256": "06ec5977c5f4e46992958f8563e98ca2afd0b93b18138f8726c5828037ab89c4",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "552b3b21879b77c24bb6b4e0a21620cedbd5602c190037495a4a6364968eb86c",
+  "request_bytes": 8854,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 40,
+   "committed_usd": 12.079839999999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5905e.text.inventory.json",
+    "sha256": "16594660c379864da2968739adf21760cd14c188c1d095d1face0b26e85b0902",
+    "kind": "inventory"
+   }
+  ]
+ },
+ "raw_output": "{\"checks\":[{\"id\":\"wp_ndvo.schedule1_required_if_background_yes\",\"group\":\"official_rule\",\"applies_to\":\"EACH_APPLICANT\",\"inputs\":[\"background.any_yes\",\"documents.schedule1.provided\"],\"condition\":{\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"op\\\":\\\"and\\\",\\\"args\\\":[{\\\"op\\\":\\\"eq\\\",\\\"field\\\":\\\"background.any_yes\\\",\\\"value\\\":true},{\\\"op\\\":\\\"not\\\",\\\"arg\\\":{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"documents.schedule1.provided\\\"}}]}\"},\"severity\":\"block\",\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"If you have answered “yes” to any of the background information questions on the application\\n        form, provide a completed and signed Schedule 1 form\",\"runs_when\":[\"fact_verified\",\"form_rendered\",\"before_signing\"],\"user_action\":\"Complete and sign Schedule 1 (IMM 5257 SCH1) and add it to the application.\",\"expressible\":true,\"gap_reason\":null,\"condition_plain\":\"Fires when any background question is answered yes and no Schedule 1 is recorded.\"},{\"id\":\"wp_ndvo.child_birth_certificate\",\"group\":\"official_rule\",\"applies_to\":\"DEPENDENT\",\"inputs\":[\"person.accompanying\",\"documents.birth_certificate.provided\"],\"condition\":{\"subject_kind\":\"DEPENDENT\",\"tree_json\":\"{\\\"op\\\":\\\"and\\\",\\\"args\\\":[{\\\"op\\\":\\\"eq\\\",\\\"field\\\":\\\"person.accompanying\\\",\\\"value\\\":true},{\\\"op\\\":\\\"not\\\",\\\"arg\\\":{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"documents.birth_certificate.provided\\\"}}]}\"},\"severity\":\"block\",\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"You must provide children’s birth certificates for accompanying dependents.\",\"runs_when\":[\"fact_verified\",\"before_submission\"],\"user_action\":\"Upload the accompanying child's birth certificate.\",\"expressible\":true,\"gap_reason\":null,\"condition_plain\":\"Fires when an accompanying child has no birth certificate recorded.\"},{\"id\":\"wp_ndvo.imm5707_required\",\"group\":\"official_rule\",\"applies_to\":\"EACH_APPLICANT\",\"inputs\":[\"documents.imm5707.signed\",\"documents.imm5707.dated\"],\"condition\":{\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"op\\\":\\\"not\\\",\\\"arg\\\":{\\\"op\\\":\\\"and\\\",\\\"args\\\":[{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"documents.imm5707.signed\\\"},{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"documents.imm5707.dated\\\"}]}}\"},\"severity\":\"block\",\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"You must provide the Family Information Form (IMM 5707) fully completed, signed and dated.\",\"runs_when\":[\"form_rendered\",\"before_signing\",\"before_submission\"],\"user_action\":\"Complete, sign and date IMM 5707.\",\"expressible\":true,\"gap_reason\":null,\"condition_plain\":\"Fires when IMM 5707 is not recorded as signed and dated.\"},{\"id\":\"wp_ndvo.translation_required\",\"group\":\"official_rule\",\"applies_to\":\"EACH_APPLICANT\",\"inputs\":[\"document.language\",\"document.certified_translation\"],\"condition\":{\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"op\\\":\\\"and\\\",\\\"args\\\":[{\\\"op\\\":\\\"not\\\",\\\"arg\\\":{\\\"op\\\":\\\"in\\\",\\\"field\\\":\\\"document.language\\\",\\\"value\\\":[\\\"en\\\",\\\"fr\\\"]}},{\\\"op\\\":\\\"not\\\",\\\"arg\\\":{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"document.certified_translation\\\"}}]}\"},\"severity\":\"block\",\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"If your documents are in a language other than English or French, you must include a certified\\ntranslation.\",\"runs_when\":[\"fact_verified\",\"before_submission\"],\"user_action\":\"Add a certified English or French translation.\",\"expressible\":true,\"gap_reason\":null,\"condition_plain\":\"Fires when a document is not in English or French and has no certified translation.\"},{\"id\":\"wp_ndvo.marriage_certificate\",\"group\":\"official_rule\",\"applies_to\":\"PRINCIPAL\",\"inputs\":[\"person.marital_status\",\"documents.marriage_certificate.provided\"],\"condition\":{\"subject_kind\":\"PRINCIPAL\",\"tree_json\":\"{\\\"op\\\":\\\"and\\\",\\\"args\\\":[{\\\"op\\\":\\\"eq\\\",\\\"field\\\":\\\"person.marital_status\\\",\\\"value\\\":\\\"married\\\"},{\\\"op\\\":\\\"not\\\",\\\"arg\\\":{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"documents.marriage_certificate.provided\\\"}}]}\"},\"severity\":\"sme_pending\",\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"Marriage Certificate, as applicable.\",\"runs_when\":[\"fact_verified\",\"before_submission\"],\"user_action\":\"Upload the marriage certificate or confirm with specialist it is not applicable.\",\"expressible\":true,\"gap_reason\":null,\"condition_plain\":\"Fires when married and no marriage certificate recorded; when it applies needs specialist confirmation.\"},{\"id\":\"wp_ndvo.reference_letter_content\",\"group\":\"official_rule\",\"applies_to\":\"PRINCIPAL\",\"inputs\":[\"employment.reference_letter\"],\"condition\":null,\"severity\":\"warn\",\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"Letters of reference must outline the duration and specific nature of your\\n                           employment, including your exact duties on the job\",\"runs_when\":[\"fact_verified\"],\"user_action\":\"Obtain a reference letter with duration, duties and contact details.\",\"expressible\":false,\"gap_reason\":\"document content review not expressible as field comparison\",\"condition_plain\":\"Staff confirm each reference letter states duration, duties and contact name, address and phone.\"},{\"id\":\"wp_ndvo.spouse_child_own_forms\",\"group\":\"cross_record\",\"applies_to\":\"EACH_APPLICANT\",\"inputs\":[\"person.accompanying\",\"application.own_forms_submitted\"],\"condition\":{\"subject_kind\":\"EACH_APPLICANT\",\"tree_json\":\"{\\\"op\\\":\\\"and\\\",\\\"args\\\":[{\\\"op\\\":\\\"eq\\\",\\\"field\\\":\\\"person.accompanying\\\",\\\"value\\\":true},{\\\"op\\\":\\\"not\\\",\\\"arg\\\":{\\\"op\\\":\\\"exists\\\",\\\"field\\\":\\\"application.own_forms_submitted\\\"}}]}\"},\"severity\":\"block\",\"source_file\":\"prototype/p1/inventory/imm5905e.text.inventory.json\",\"source_quote\":\"Accompanying spouse and children of all ages must submit their own application forms.\",\"runs_when\":[\"form_rendered\",\"before_submission\"],\"user_action\":\"Prepare separate application forms for each accompanying family member.\",\"expressible\":true,\"gap_reason\":null,\"condition_plain\":\"Fires when an accompanying spouse or child has no own application forms.\"}],\"derived_fields\":[]}"
+}

@@ -1,0 +1,29 @@
+{
+ "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+ "method": "local",
+ "cached": false,
+ "cost_usd": 0,
+ "ms": 588,
+ "refused": "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally",
+ "checks": null,
+ "run_file": null,
+ "output": {
+  "document": {
+   "kind_seen": "cannot_tell",
+   "matches_claimed_kind": false,
+   "readable": "no",
+   "issues": [
+    "looks like cannot_tell, not unknown"
+   ]
+  },
+  "people_seen": [],
+  "fields": [],
+  "internal_conflicts": [],
+  "reader": {
+   "name": "local OCR/MRZ + rules",
+   "tesseract": "5.5.0 (eng)",
+   "version": "local-reader/v1"
+  },
+  "ms": 588
+ }
+}

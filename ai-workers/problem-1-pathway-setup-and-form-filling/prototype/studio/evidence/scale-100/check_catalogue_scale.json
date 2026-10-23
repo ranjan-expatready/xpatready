@@ -1,0 +1,91 @@
+{
+ "at": "2026-10-21T08:38:29.227Z",
+ "port": 4401,
+ "programs": 105,
+ "rows": 371,
+ "passed": 16,
+ "total": 16,
+ "clicks": 12,
+ "seconds": 38,
+ "steps": [
+  {
+   "name": "T1: all programs browsable in one table on first display",
+   "ok": true,
+   "detail": "105 program rows of 105 (371 combinations, collapsed), first display 1023 ms (catalogue cached server-side yes)"
+  },
+  {
+   "name": "T2: find a distant program, its second combination, and open that combination's Documents editor",
+   "ok": true,
+   "detail": "2882 ms, 3 actions; Renewal"
+  },
+  {
+   "name": "T3: back to Programs restores search, expansion and the selected combination (focused)",
+   "ok": true,
+   "detail": "276 ms; ?open=corporate.synthetic_087&sel=0de1fcd7-e86a-4e51-90df-83b95d3d2d6c&q=Synthetic+087; focus on row: true"
+  },
+  {
+   "name": "T4: a form identifier finds every combination that files it",
+   "ok": true,
+   "detail": "Showing 73 of 105 programs, 122 matching combinations for \"IMM 5409\" (expected 122)"
+  },
+  {
+   "name": "T5: the 'Draft problems' filter shows exactly the programs with a problem row, including released ones (released badge never hides a draft problem)",
+   "ok": true,
+   "detail": "22 programs; e.g. syn.001.c1: released v1 with 2 problem(s)"
+  },
+  {
+   "name": "T6: cancelling a quick edit changes nothing",
+   "ok": true,
+   "detail": "Synthetic 015 · Citizenship"
+  },
+  {
+   "name": "T7: a permitted quick edit saves and survives a reload; the key is unchanged",
+   "ok": true
+  },
+  {
+   "name": "T8: a concurrent change by someone else is refused on the field, not overwritten",
+   "ok": true,
+   "detail": "Someone renamed this program to \"Synthetic 015 · Citizenship (someone else)\" while you were editing. Your change was not saved; check the new name and try again."
+  },
+  {
+   "name": "T9: the approver persona cannot rename (server permission, also for a direct call)",
+   "ok": true,
+   "detail": "Approver (simulated) does not hold the author duty"
+  },
+  {
+   "name": "T10: keyboard only: search, Tab to the program, Enter expands it; focus is visible",
+   "ok": true,
+   "detail": "6 Tab presses; focus ring: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0"
+  },
+  {
+   "name": "T11: 1440px: no horizontal page scroll (the table scrolls inside its own frame if needed)",
+   "ok": true,
+   "detail": "overflow 0px"
+  },
+  {
+   "name": "T11: 1024px: no horizontal page scroll (the table scrolls inside its own frame if needed)",
+   "ok": true,
+   "detail": "overflow 0px"
+  },
+  {
+   "name": "T11: 390px: no horizontal page scroll (the table scrolls inside its own frame if needed)",
+   "ok": true,
+   "detail": "overflow 0px"
+  },
+  {
+   "name": "T12: catalogue AI action on an explicit selection shows the operation, every target with its action and reason, and the cost before starting",
+   "ok": true,
+   "detail": "AI configuration |  | Draft field maps for added forms · 4 selected combinations |  | Live AI | Guarded route, Claude Opus 5.5; reuses saved output for unchanged forms; costs shown below | Replay saved runs | No mo"
+  },
+  {
+   "name": "T12: nothing was started by opening or cancelling the dialog",
+   "ok": true,
+   "detail": "0 AI launches"
+  },
+  {
+   "name": "no page errors",
+   "ok": true,
+   "detail": ""
+  }
+ ]
+}

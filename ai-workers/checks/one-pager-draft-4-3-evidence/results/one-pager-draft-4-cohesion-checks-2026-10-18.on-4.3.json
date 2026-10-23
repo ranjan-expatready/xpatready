@@ -1,0 +1,300 @@
+{
+  "page": "file:///private/tmp/claude-501/-Users-ranjansingh-Desktop-Xpatready/f82b9f62-82c9-4824-aca0-a1b223b0c87a/scratchpad/run43/root/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html",
+  "checked_at": "2026-10-19T03:41:53.871Z",
+  "passed": 41,
+  "total": 41,
+  "results": [
+    {
+      "id": "M1",
+      "name": "superseded wording gone: \"closes when every filing is decided\"",
+      "ok": true,
+      "detail": "closes when every filing is decided"
+    },
+    {
+      "id": "M1",
+      "name": "superseded wording gone: \"ends when every filing is decided\"",
+      "ok": true,
+      "detail": "ends when every filing is decided"
+    },
+    {
+      "id": "M2",
+      "name": "superseded wording gone: \"No: back to the SQR\"",
+      "ok": true,
+      "detail": "No: back to the SQR"
+    },
+    {
+      "id": "M6",
+      "name": "superseded wording gone: \"real read answers\"",
+      "ok": true,
+      "detail": "real read answers"
+    },
+    {
+      "id": "I4",
+      "name": "superseded wording gone: \"Two different kinds of check\"",
+      "ok": true,
+      "detail": "Two different kinds of check"
+    },
+    {
+      "id": "I4",
+      "name": "superseded wording gone: \"never at a form\"",
+      "ok": true,
+      "detail": "never at a form"
+    },
+    {
+      "id": "I3",
+      "name": "superseded wording gone: \"Accept, edit or reject\"",
+      "ok": true,
+      "detail": "Accept, edit or reject"
+    },
+    {
+      "id": "I3",
+      "name": "superseded wording gone: \"Approve, Correct or Flag\"",
+      "ok": true,
+      "detail": "Approve, Correct or Flag"
+    },
+    {
+      "id": "I5",
+      "name": "superseded wording gone: \"only a correct form\"",
+      "ok": true,
+      "detail": "only a correct form"
+    },
+    {
+      "id": "M1",
+      "name": "stage 9: a decision leads to After decision; closure when every filing is closed; decision needs its own permission",
+      "ok": true,
+      "detail": "Stage 9Record responses and continue after the decisionEvery case, at a firm · Start a new case (4A, 4B) · stages 4–9What this achievesKeep every government response on the right filing, record each d"
+    },
+    {
+      "id": "M1/S3",
+      "name": "stage 9 and 9.6: an approved route level opens the next filing, reusing verified facts",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "S2",
+      "name": "9.6 acceptance: both filings decided, after-decision step open → case stays open",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "M1",
+      "name": "overview band end and BPMN overview end agree: every filing closed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "M1",
+      "name": "view 4 has the matching entry for the next filing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "M2",
+      "name": "view 4: staff verification (8.1) comes before the readiness question; only a client gap returns to the SQR",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "M2/S1",
+      "name": "8.1: a blank staff fact is entered by the agent, never sent to the client; only forms that read it wait; other filings continue",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "M3",
+      "name": "7.3: migration with consent and staff verification; historical comparison; a filed form is not automatically correct",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "M3",
+      "name": "4.3, 5.3 and stage 3: compare when available; otherwise 'Historical comparison unavailable'; differences classified; suspected error held",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "M6",
+      "name": "Evidence separates inventory and matching (in the real read) from writing/Validate, final-file read-back, portal and provider runs (not in it)",
+      "ok": true,
+      "detail": "Evidence status Proposed targets, measured results and approved acceptance criteria are kept apart. Nothing is measured yet. The planned real read of the official forms establishes two things only: ea"
+    },
+    {
+      "id": "M6",
+      "name": "stage 1 states the bounded real read",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "I2",
+      "name": "3.7 is a platform step in view 2 (rules, not AI); stage 2 names the platform assembling the question sets",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "I2",
+      "name": "3.4: approved placements are reused by rule before AI is asked",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "I3",
+      "name": "stage 11 story: coordination, then re-drafting, then review",
+      "ok": true,
+      "detail": [
+        "Content publisher Super AdminStarts and coordinates the run on the changed itemsA run on the changed items only",
+        "AIRe-drafts the changed items; the platform checks and tests themDrafted and checked changes",
+        "Content publisher Super AdminReviews each changed item beside its old and new sourceReviewed changes",
+        "Immigration SME Super AdminSigns off changed rules and valuesSigned-off changes",
+        "Second-person approver Super AdminApproves and publishes; never the change's author or submitter, nor the person who drafted or coordinated itA new published version"
+      ]
+    },
+    {
+      "id": "I3",
+      "name": "no activity repeats its review in both Authority and Checked by",
+      "ok": true,
+      "detail": []
+    },
+    {
+      "id": "I4",
+      "name": "checks table is headed 'Checks and what each establishes' and has three rows",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "I4",
+      "name": "legacy fourth-tier proposals marked superseded by AIW-D235 (CN-SA-01B change 9, TC-177)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "I5",
+      "name": "8.4 statuses in words with reason and required action; colour only supplements",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "S4",
+      "name": "10.4: an already-approved form on another case using the held mapping loses its approval and cannot be submitted",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "S5",
+      "name": "10.3: adoption recomputes checklist items and readiness, not only forms; a guide-only document change holds the filing",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-1",
+      "name": "5.1, 4.4 and stage 3 agree: a correction and a return both go back to drafting through 4.4",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-3",
+      "name": "reading starts per upload; verification per fact",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-4",
+      "name": "7.1 exception agrees with 9.6: open until every filing is closed",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-5/6",
+      "name": "9.6 answers the pack version from the team (AG17-D65) and keeps staff closure as an open team question",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-9",
+      "name": "second person excludes the author and the submitter (SA1-D6)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-10",
+      "name": "an item still waiting for the SME waits; only a corrected or rejected one returns",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "L7-18",
+      "name": "advisory (Major/Minor) warnings never block; Critical ones are acknowledged with a reason",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "id": "I1",
+      "name": "setup row: tallest card under 900px (was 1,003px) and the end column narrower than a stage card",
+      "ok": true,
+      "detail": {
+        "rows": [
+          449.421875,
+          472.1875,
+          687.203125
+        ],
+        "end": 147.125,
+        "card": 237.3125
+      }
+    },
+    {
+      "id": "I6",
+      "name": "a tooltip is dismissed when the page scrolls",
+      "ok": true,
+      "detail": {
+        "shown": true,
+        "hidden": true
+      }
+    },
+    {
+      "id": "I6",
+      "name": "a tooltip is dismissed when a diagram frame scrolls",
+      "ok": true,
+      "detail": {
+        "shown": true,
+        "hidden": true
+      }
+    },
+    {
+      "id": "M4",
+      "name": "375px light: Shared records stacked, six records, no cell overflow, no page-wide sideways scroll",
+      "ok": true,
+      "detail": {
+        "sw": 375,
+        "iw": 375,
+        "over": [],
+        "rows": [
+          343,
+          343,
+          343,
+          343,
+          343,
+          343
+        ],
+        "head": "none"
+      }
+    },
+    {
+      "id": "M4",
+      "name": "375px dark: Shared records stacked, six records, no cell overflow, no page-wide sideways scroll",
+      "ok": true,
+      "detail": {
+        "sw": 375,
+        "iw": 375,
+        "over": [],
+        "rows": [
+          343,
+          343,
+          343,
+          343,
+          343,
+          343
+        ],
+        "head": "none"
+      }
+    }
+  ]
+}

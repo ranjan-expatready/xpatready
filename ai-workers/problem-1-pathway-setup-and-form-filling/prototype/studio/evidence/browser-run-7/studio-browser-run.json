@@ -1,0 +1,101 @@
+{
+ "error": "locator.click: Error: strict mode violation: getByRole('button', { name: 'Draft with AI' }) resolved to 2 elements:\n    1) <button data-slot=\"button\" class=\"inline-flex items-center justify-center whitespace-nowrap text-xs font-medium transition-all shrink-0 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\"size-\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] cursor-pointer bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 h-8 rounded-lg gap-1.5 px-3 has-[>svg]:px-2.5\">…</button> aka getByRole('button', { name: 'Draft with AI' }).first()\n    2) <button data-slot=\"button\" class=\"inline-flex items-center justify-center whitespace-nowrap text-xs font-medium transition-all shrink-0 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*=\"size-\"])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:ring-ring/50 focus-visible:ring-[3px] cursor-pointer bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 h-8 rounded-lg gap-1.5 px-3 has-[>svg]:px-2.5\">…</button> aka getByRole('button', { name: 'Draft with AI' }).nth(1)\n\nCall log:\n  - waiting for getByRole('button', { name: 'Draft with AI' })\n\n    at click (/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/check_studio_browser.cjs:30:54)\n    at /Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/check_studio_browser.cjs:157:9",
+ "steps": [
+  {
+   "name": "A0: reset removes the workspace rows and files, preserved evidence byte-identical",
+   "ok": true,
+   "detail": " Removes everything the disposable demo workspace created. Keeps the engine, official originals, fixtures, AI run records, the spend ledger and review evidence.",
+   "s": 6
+  },
+  {
+   "name": "A0: workspace empty after reset (no programs; the two fixed pathways only)",
+   "ok": true,
+   "s": 6
+  },
+  {
+   "name": "A1: Load sample inputs creates 11 programs over the 2 pathways and sets up 6 combinations, official files through the upload path, one released",
+   "ok": true,
+   "detail": "{\"pathways\":2,\"programs\":11,\"rows\":6,\"attachments\":24,\"released\":1}",
+   "s": 11
+  },
+  {
+   "name": "A1: no duplicate field definitions",
+   "ok": true,
+   "detail": "164 fields",
+   "s": 11
+  },
+  {
+   "name": "A2: the work-permit row (Individual › Work permits › Employer-specific work permit) shows released v1 imported from c1-v3 and no draft changes",
+   "ok": true,
+   "s": 12
+  },
+  {
+   "name": "A3: preview renders the released configuration with the sample family's confirmed facts",
+   "ok": true,
+   "s": 13
+  },
+  {
+   "name": "A3: an on-screen answer (partner common-law) turns IMM 5409 on, with the reason",
+   "ok": true,
+   "detail": "IMM 5409 Statutory Declaration of Common-law Union · Spouse or partner Applies Needed once per couple when the principal applicant has a common-law partner who ",
+   "s": 14
+  },
+  {
+   "name": "A4: IMM 1295 filled from confirmed sample facts: every written value reads back and the file is intact",
+   "ok": true,
+   "detail": "Released version 1 · configuration 964dec70c8cb · only confirmed facts are written",
+   "s": 15
+  },
+  {
+   "name": "A4: the checked PDF downloads",
+   "ok": true,
+   "detail": "IMM1295-principal-2026-10-21T1117.pdf 939438 bytes",
+   "s": 15
+  },
+  {
+   "name": "A5: a person adds a conditional document requirement with a valid condition, saved as draft",
+   "ok": true,
+   "detail": "Document requirement added to the draft",
+   "s": 17
+  },
+  {
+   "name": "A5: the new requirement survives a reload, marked Draft and edited by a person",
+   "ok": true,
+   "s": 18
+  },
+  {
+   "name": "A6: draft preview: the new conditional document waits for its answer, then is needed once the child travels alone",
+   "ok": true,
+   "detail": "Cannot tell yet → Needed",
+   "s": 20
+  },
+  {
+   "name": "A6: the released version is unchanged by the draft edit",
+   "ok": true,
+   "s": 20
+  },
+  {
+   "name": "A7: the author submits the change for review",
+   "ok": true,
+   "detail": "Submitted for review",
+   "s": 21
+  },
+  {
+   "name": "A7: approval before the SME sign-off is refused",
+   "ok": true,
+   "detail": "2 changes need the content reviewer's SME sign-off first (for example Document requirement custody_documents_or_parental_letter_of_authorization:each_dependent_child).",
+   "s": 22
+  },
+  {
+   "name": "A7: a second person (approver) releases version 2",
+   "ok": true,
+   "detail": "Released version 2 (ab27eae1122b)",
+   "s": 27
+  },
+  {
+   "name": "A7: the released version now carries the new requirement",
+   "ok": true,
+   "s": 28
+  }
+ ]
+}

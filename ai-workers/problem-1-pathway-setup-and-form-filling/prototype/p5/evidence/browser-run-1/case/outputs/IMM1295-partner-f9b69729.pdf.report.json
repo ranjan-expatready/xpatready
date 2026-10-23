@@ -1,0 +1,101 @@
+{
+ "form_file": "imm1295e.pdf",
+ "source_sha256": "57fc256eef7d9d856e4ae85ebf8bfe80da41833ebde7a8c7ed78f2483470d7bb",
+ "output": "/private/tmp/claude-501/-Users-ranjansingh-Desktop-Xpatready/ecba1922-f076-48ae-9796-edfc3cf741ab/scratchpad/p5run/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p5/case/case-001/outputs/IMM1295-partner-f9b69729.pdf",
+ "output_sha256": "f5c7d63cc745a52d466b28a31ae4bfa8ecb7c3b78fc5eb3efbc44fede290ca3d",
+ "bytes": 939550,
+ "original_bytes_kept": true,
+ "written": 68,
+ "read_back_equal": 68,
+ "mismatches": [],
+ "other_data_leaves_changed": 0,
+ "other_parts_unchanged": true,
+ "signatures": {
+  "/DocMDP": "verified",
+  "/UR3": "verified"
+ },
+ "poppler_syntax_errors": 0,
+ "writer_notes": [
+  "pypdf writer holds no encryption for this encrypted document",
+  "new datasets stream encrypted with the document key (private pypdf API)",
+  "/Encrypt and /Info copied into the appended trailer (cross-reference stream dictionary)"
+ ],
+ "intact": true,
+ "checks": [
+  {
+   "id": "REQUIRED",
+   "severity": "block",
+   "box": "form1[0].Page1[0].PersonalDetails[0].PlaceBirthCity[0]",
+   "message": "*City/Town: required box has no confirmed value (no confirmed value)"
+  },
+  {
+   "id": "REQUIRED",
+   "severity": "block",
+   "box": "form1[0].Page1[0].PersonalDetails[0].PlaceBirthCountry[0]",
+   "message": "*Country or Territory: required box has no confirmed value (no confirmed value)"
+  },
+  {
+   "id": "REQUIRED",
+   "severity": "warn",
+   "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Country[0]",
+   "message": "*: required box to complete by hand (unresolved in the release: hand route: reverted: confirm the residence country with the client first)"
+  },
+  {
+   "id": "REQUIRED",
+   "severity": "warn",
+   "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]",
+   "message": "*: required box to complete by hand (unresolved in the release: hand route: no case fact a firm holds for this box; completed by hand from the case)"
+  },
+  {
+   "id": "REQUIRED",
+   "severity": "block",
+   "box": "form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]",
+   "message": "Question 8 A. During the past 5 years have you lived in any country other than your country of citizenship or your current country of residence for more than 6 months?: required box has no confirmed value (no confirmed value)"
+  },
+  {
+   "id": "REQUIRED",
+   "severity": "warn",
+   "box": "form1[0].Page1[0].PersonalDetails[0].SameAsCORIndicator[0]",
+   "message": "Question 9 A. Is the country from where you are applying the same as your current country of residence?: required box to complete by hand (step \"derive:Y if country where applying equals current residence country, else N\" is not in the executable set)"
+  },
+  {
+   "id": "REQUIRED",
+   "severity": "block",
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDate[0].IssueDate[0]",
+   "message": "*Issue date: required box has no confirmed value (no confirmed value)"
+  },
+  {
+   "id": "REQUIRED",
+   "severity": "warn",
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]",
+   "message": "Question 1d. Have you taken a test form a designated testing agency to assess your proficiency in English or French?: required box to complete by hand (unresolved in the release: hand route: no case fact a firm holds for this box; completed by hand from the case)"
+  },
+  {
+   "id": "REQUIRED",
+   "severity": "warn",
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]",
+   "message": "Question 1d. Have you taken a test form a designated testing agency to assess your proficiency in English or French?: required box to complete by hand (unresolved in the release: hand route: no case fact a firm holds for this box; completed by hand from the case)"
+  },
+  {
+   "id": "REQUIRED",
+   "severity": "block",
+   "box": "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]",
+   "message": "National Identity Document Section Question 1. Do you have a national identity document?: required box has no confirmed value (no confirmed value)"
+  },
+  {
+   "id": "REQUIRED",
+   "severity": "warn",
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].SameAsMailingIndicator[0]",
+   "message": "Question 2 Is your residential address the same as your mailing address?: required box to complete by hand (step \"derive:Y if residential address equals mailing address, else N\" is not in the executable set)"
+  },
+  {
+   "id": "REQUIRED",
+   "severity": "warn",
+   "box": "form1[0].Page4[0].Consent0[0].Choice[0]",
+   "message": "Question 6. Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?: required box to complete by hand (unresolved in the release: hand route: no case fact a firm holds for this box; completed by hand from the case)"
+  }
+ ],
+ "hand": 19,
+ "values_sha256": "f9b69729ccd7038bab4114dd0b0fbfa8054a88bf0323ccd441d3f7749d68a025",
+ "download": "IMM1295-partner-f9b69729.pdf"
+}

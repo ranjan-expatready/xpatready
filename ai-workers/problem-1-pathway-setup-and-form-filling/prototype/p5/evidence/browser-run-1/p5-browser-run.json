@@ -1,0 +1,161 @@
+{
+ "summary": {
+  "at": "2026-10-20T20:04:18.767Z",
+  "seconds": 43,
+  "clicks": 97,
+  "steps": 25,
+  "passed": 25,
+  "case": "case-001",
+  "reader_mode": "hybrid",
+  "documents": 10,
+  "items": 52,
+  "decisions": 46,
+  "events": 63
+ },
+ "log": [
+  {
+   "name": "lead: duplicate check runs before a case opens",
+   "ok": true,
+   "s": 3
+  },
+  {
+   "name": "case opened on release c1-v3 with three people",
+   "ok": true,
+   "detail": "case-001",
+   "s": 4
+  },
+  {
+   "name": "batch 1: eight uploads kept as originals",
+   "ok": true,
+   "detail": "D1-passport-principal-scan.png:read, D2-passport-partner-photo.jpg:read, D3-job-offer-principal.pdf:read, D4-job-offer-partner-scan.jpg:read, D5-birth-certificate-child.png:read, D6-passport-principal-unreadable.jpg:unreadable, D1-passport-principal-scan.png:duplicate, D7-passport-principal-mrz-conflict.png:read",
+   "s": 20
+  },
+  {
+   "name": "duplicate upload recognised by content, not re-read",
+   "ok": true,
+   "s": 20
+  },
+  {
+   "name": "unreadable photo returned for replacement, others unaffected",
+   "ok": true,
+   "s": 20
+  },
+  {
+   "name": "the lead's date-of-birth typo makes the principal's passport ambiguous (a name alone never merges)",
+   "ok": true,
+   "detail": "the name matches CLIENTA EXAMPLE (principal applicant) but the date of birth differs (1990-04-12 vs 1990-12-04); a person decides",
+   "s": 20
+  },
+  {
+   "name": "partner's passport, job offers and the birth certificate associated to the right people",
+   "ok": true,
+   "s": 20
+  },
+  {
+   "name": "after assignment the passport date of birth conflicts with the lead form (no last-upload-wins)",
+   "ok": true,
+   "detail": "1990-12-04 vs 1990-04-12",
+   "s": 20
+  },
+  {
+   "name": "principal's passport page uploaded for the partner is flagged as the wrong person",
+   "ok": true,
+   "detail": "wrong_person: uploaded for PARTNER EXAMPLEP (partner, also applying) but the document is CLIENTA EXAMPLE (principal applicant)'s",
+   "s": 20
+  },
+  {
+   "name": "clean proposals confirmed a section at a time (7 clicks)",
+   "ok": true,
+   "s": 22
+  },
+  {
+   "name": "distinct applicant job titles confirmed from their own offers (D30 values)",
+   "ok": true,
+   "detail": "Software engineer | Early childhood educator",
+   "s": 22
+  },
+  {
+   "name": "client answers reduce the remaining questions; document-read values are shown for checking",
+   "ok": true,
+   "detail": "100 -> 60",
+   "s": 23
+  },
+  {
+   "name": "changed answer changes the checklist and forms with a reason",
+   "ok": true,
+   "detail": "marriage certificate Cannot tell yet -> Not needed; common-law proof Needed; IMM 5409 true",
+   "s": 23
+  },
+  {
+   "name": "staff confirmed the client's reviewed answers by section (40 section clicks)",
+   "ok": true,
+   "detail": "0 still proposed",
+   "s": 32
+  },
+  {
+   "name": "IMM 1295 (principal) filled from confirmed facts, read back equal, signatures verify, original bytes kept",
+   "ok": true,
+   "detail": "79/79; {\"/DocMDP\":\"verified\",\"/UR3\":\"verified\"}; hand 19",
+   "s": 34
+  },
+  {
+   "name": "intact download is the checked file",
+   "ok": true,
+   "detail": "IMM1295-client-a-bc041751.pdf 939550 bytes",
+   "s": 34
+  },
+  {
+   "name": "IMM 1295 (partner) filled with the partner's own job, not the principal's",
+   "ok": true,
+   "detail": "68/68",
+   "s": 35
+  },
+  {
+   "name": "distinct principal/partner job and employer values in the two filled PDFs (D30)",
+   "ok": true,
+   "detail": "Software engineer @ Example Employer Ltd | Early childhood educator @ Example Learning Centre Inc.",
+   "s": 35
+  },
+  {
+   "name": "IMM 5707 (principal) filled and read back",
+   "ok": true,
+   "detail": "30/30",
+   "s": 35
+  },
+  {
+   "name": "consultant approved both IMM 1295 value sets",
+   "ok": true,
+   "s": 36
+  },
+  {
+   "name": "batch 2: unchanged file not re-read (duplicate), revised offer read",
+   "ok": true,
+   "detail": "D1-passport-principal-scan.png:duplicate, D8-job-offer-partner-revised.pdf:read",
+   "s": 39
+  },
+  {
+   "name": "batch 2 proposes the partner's changed dates as a change, not a silent overwrite",
+   "ok": true,
+   "detail": "person.intended_employment_start_date:changed:2027-02-01->2027-03-01; person.intended_employment_end_date:changed:2029-01-31->2029-02-28",
+   "s": 39
+  },
+  {
+   "name": "only the partner's IMM 1295 approval is withdrawn; the principal's stands",
+   "ok": true,
+   "detail": "IMM 1295/client-a:approved, IMM 1295/partner:withdrawn",
+   "s": 40
+  },
+  {
+   "name": "the changed start date reaches the partner's refilled PDF and reads back",
+   "ok": true,
+   "detail": "2027-02-01 -> 2027-03-01",
+   "s": 41
+  },
+  {
+   "name": "no page errors",
+   "ok": true,
+   "detail": "",
+   "s": 43
+  }
+ ]
+}

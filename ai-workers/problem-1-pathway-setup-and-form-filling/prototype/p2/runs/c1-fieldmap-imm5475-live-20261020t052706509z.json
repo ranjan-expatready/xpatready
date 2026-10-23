@@ -1,0 +1,474 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "c1-fieldmap-imm5475-live-20261020t052706509z",
+  "idempotency_key": "903d53b6b2acce742b870e36801d7643b8701c8b2cd8d7bdd188de0b789ac755",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "7f6f8ef881599f39f811ee5027da72a826cd8d902cba4fd135de8aff79d5c33a",
+  "inputs": {
+   "combination": "1",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5475e.inventory.json",
+     "sha256": "1f9a7f1cb2a67c9151a5b85daf25aeb9b18a2c59661ed19be4acfcad57ab1338"
+    }
+   ],
+   "configuration_version": "c1-draft-1"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 32000,
+   "prompt_version": "field-map.v1.md",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 7325,
+    "output_tokens": 6379,
+    "duration_ms": 50221
+   }
+  ],
+  "usage": {
+   "input_tokens": 7325,
+   "output_tokens": 6379,
+   "cost_usd": 0.15688,
+   "duration_ms": 50221
+  },
+  "started_at": "2026-10-20T05:27:06.509Z",
+  "ended_at": "2026-10-20T05:27:57.148Z",
+  "entries": [
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Choice[0].RadioButtonList[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.release_authorization_action",
+    "transform": "code_list:imm5475.release_choice (authorize=4, withdraw=6)",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Choose one"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].AppFamily[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.family_name",
+    "transform": "as_is (max 100 chars)",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "1. Your full name"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].AppGiven[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.given_names",
+    "transform": "as_is (max 100 chars)",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "1. Your full name"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].DOB[0].currentDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "2. Your date of birth (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].TextField2[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.submission_office_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Name of office where the application was submitted"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].TextField2[1]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.submission_office_location",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Location of office"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].TextField2[2]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.application_type",
+    "transform": "as_is (plain-language application type)",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Type of application (permanent residence,extension of study permit, etc.)"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].TextField2[3]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "The box has no caption in the inventory; its heading '1. Your full name' is a mechanical placement and does not identify what it asks for (it may be a UCI/client ID, application number or another item). A reviewer must check the printed form before mapping.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "1. Your full name"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].AppFamily[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.family_name",
+    "transform": "as_is (max 100 chars)",
+    "condition": "Only when the designated individual is the case representative; the applicant may designate someone else (e.g. a relative), in which case this box needs that person's name instead",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "5. Your designated individual's full name"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].AppGiven[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.given_names",
+    "transform": "as_is (max 100 chars)",
+    "condition": "Only when the designated individual is the case representative; otherwise the designated person's own value is needed",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "5. Your designated individual's full name"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].TextField2[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "organisation.name",
+    "transform": "as_is",
+    "condition": "Only when the designated individual is the case representative and acts through a firm or organization (box is 'if applicable')",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Name of firm or organization (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].apt[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.address_apt_unit",
+    "transform": "as_is (max 10 chars)",
+    "condition": "Only when the designated individual is the case representative",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Apt/Unit"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].Number[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.address_street_number",
+    "transform": "as_is (max 10 chars)",
+    "condition": "Only when the designated individual is the case representative",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Street no."
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].homeAddress[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.address_street_name",
+    "transform": "as_is (max 100 chars)",
+    "condition": "Only when the designated individual is the case representative",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Street name"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].city[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.address_city",
+    "transform": "as_is (max 30 chars)",
+    "condition": "Only when the designated individual is the case representative",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "City/Town"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].province[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.address_province_state",
+    "transform": "as_is",
+    "condition": "Only when the designated individual is the case representative",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Province/State/Territory"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].city[1]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.address_country",
+    "transform": "country_name_text (max 30 chars)",
+    "condition": "Only when the designated individual is the case representative",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Country or territory"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].postalCode[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.address_postal_code",
+    "transform": "as_is (max 10 chars)",
+    "condition": "Only when the designated individual is the case representative",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Postal code/Zip"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].Rextension[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.phone_country_code",
+    "transform": "digits_only (numeric box)",
+    "condition": "Only when the designated individual is the case representative",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Country Code"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].Rphone[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.phone_number",
+    "transform": "as_is (area code and number)",
+    "condition": "Only when the designated individual is the case representative",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Area Code and Telephone number"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].Rextension[1]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Second telephone country-code box has the same caption as the first; the inventory does not say whether it is an alternate telephone, a fax or another number, so the fact cannot be chosen without checking the printed form.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Country Code"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].Rphone[1]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Second telephone box has the same caption as the first; the inventory does not distinguish it (alternate telephone, fax or other), so the fact cannot be chosen without checking the printed form.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Area Code and Telephone number"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].TextField2[1]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "representative",
+    "fact": "person.email",
+    "transform": "as_is",
+    "condition": "Only when the designated individual is the case representative and has an e-mail address (box is 'if applicable')",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "E-mail address (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Seven[0].TextField2[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Applicant's signature; must be signed by the applicant personally, never generated by the system.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Signature of applicant"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Seven[0].currentDate[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date of the applicant's signature; it is entered by the signer when signing the declaration and prefilling it could misstate the signing date.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Seven[0].TextField2[1]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Spouse or common-law partner's signature; must be signed by that person personally, never generated by the system.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Signature of spouse common-law partner (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (12-2022)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Seven[0].currentDate[1]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date of the spouse or common-law partner's signature; entered by the signer when signing and prefilling it could misstate the signing date.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": {
+   "manifest": "IMM 5475 (12-2022)",
+   "drafted": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)"
+  }
+ },
+ "launch_evidence": {
+  "path_code_sha256": "ec47ecf3553d723528ae403f81e429e2b729b3f9520d83ace7360464d4c34941",
+  "template_sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+  "schema_file": "field-map-output.v1.schema.json",
+  "schema_sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+  "screened": true,
+  "output_sha256": "7f6f8ef881599f39f811ee5027da72a826cd8d902cba4fd135de8aff79d5c33a",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "4f3aab6d3c37203c1ca60a9238beddef45a2c4fa58b16a44afa909a959be039b",
+  "request_bytes": 16685,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 40,
+   "committed_usd": 6.408955999999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5475e.inventory.json",
+    "sha256": "1f9a7f1cb2a67c9151a5b85daf25aeb9b18a2c59661ed19be4acfcad57ab1338",
+    "kind": "inventory"
+   }
+  ]
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)\",\"canonical_fields\":[{\"id\":\"case.release_authorization_action\",\"meaning\":\"Whether the person is granting or withdrawing authority for the immigration authorities to release information from their case file to a designated individual\",\"value_type\":\"code\"},{\"id\":\"person.family_name\",\"meaning\":\"The person's family name (surname)\",\"value_type\":\"text\"},{\"id\":\"person.given_names\",\"meaning\":\"The person's given name or names\",\"value_type\":\"text\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"The person's date of birth\",\"value_type\":\"date\"},{\"id\":\"case.submission_office_name\",\"meaning\":\"Name of the office where the application was submitted\",\"value_type\":\"text\"},{\"id\":\"case.submission_office_location\",\"meaning\":\"Location (city/country) of the office where the application was submitted\",\"value_type\":\"text\"},{\"id\":\"case.application_type\",\"meaning\":\"Type of application (for example permanent residence, extension of study permit)\",\"value_type\":\"text\"},{\"id\":\"organisation.name\",\"meaning\":\"Name of the firm or organization a person works for or acts through\",\"value_type\":\"text\"},{\"id\":\"person.address_apt_unit\",\"meaning\":\"Apartment or unit number of the person's mailing address\",\"value_type\":\"text\"},{\"id\":\"person.address_street_number\",\"meaning\":\"Street number of the person's mailing address\",\"value_type\":\"text\"},{\"id\":\"person.address_street_name\",\"meaning\":\"Street name of the person's mailing address\",\"value_type\":\"text\"},{\"id\":\"person.address_city\",\"meaning\":\"City or town of the person's mailing address\",\"value_type\":\"text\"},{\"id\":\"person.address_province_state\",\"meaning\":\"Province, state or territory of the person's mailing address\",\"value_type\":\"text\"},{\"id\":\"person.address_country\",\"meaning\":\"Country or territory of the person's mailing address\",\"value_type\":\"country\"},{\"id\":\"person.address_postal_code\",\"meaning\":\"Postal code or ZIP code of the person's mailing address\",\"value_type\":\"text\"},{\"id\":\"person.phone_country_code\",\"meaning\":\"International dialling country code of the person's primary telephone number\",\"value_type\":\"number\"},{\"id\":\"person.phone_number\",\"meaning\":\"Area code and local number of the person's primary telephone number\",\"value_type\":\"text\"},{\"id\":\"person.email\",\"meaning\":\"The person's e-mail address\",\"value_type\":\"text\"}],\"entries\":[{\"data_path\":\"IMM_5475[0].Page1[0].Choice[0].RadioButtonList[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.release_authorization_action\",\"transform\":\"code_list:imm5475.release_choice (authorize=4, withdraw=6)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Choose one\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].AppFamily[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"1. Your full name\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].AppGiven[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is (max 100 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"1. Your full name\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].DOB[0].currentDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"2. Your date of birth (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].TextField2[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.submission_office_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Name of office where the application was submitted\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].TextField2[1]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.submission_office_location\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Location of office\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].TextField2[2]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.application_type\",\"transform\":\"as_is (plain-language application type)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Type of application (permanent residence,extension of study permit, etc.)\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].TextField2[3]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"The box has no caption in the inventory; its heading '1. Your full name' is a mechanical placement and does not identify what it asks for (it may be a UCI/client ID, application number or another item). A reviewer must check the printed form before mapping.\",\"evidence_quote\":\"1. Your full name\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].AppFamily[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Only when the designated individual is the case representative; the applicant may designate someone else (e.g. a relative), in which case this box needs that person's name instead\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"5. Your designated individual's full name\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].AppGiven[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Only when the designated individual is the case representative; otherwise the designated person's own value is needed\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"5. Your designated individual's full name\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].TextField2[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"organisation.name\",\"transform\":\"as_is\",\"condition\":\"Only when the designated individual is the case representative and acts through a firm or organization (box is 'if applicable')\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Name of firm or organization (if applicable)\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].apt[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_apt_unit\",\"transform\":\"as_is (max 10 chars)\",\"condition\":\"Only when the designated individual is the case representative\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Apt/Unit\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].Number[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_street_number\",\"transform\":\"as_is (max 10 chars)\",\"condition\":\"Only when the designated individual is the case representative\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Street no.\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].homeAddress[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_street_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Only when the designated individual is the case representative\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Street name\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].city[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_city\",\"transform\":\"as_is (max 30 chars)\",\"condition\":\"Only when the designated individual is the case representative\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"City/Town\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].province[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_province_state\",\"transform\":\"as_is\",\"condition\":\"Only when the designated individual is the case representative\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Province/State/Territory\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].city[1]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_country\",\"transform\":\"country_name_text (max 30 chars)\",\"condition\":\"Only when the designated individual is the case representative\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Country or territory\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].postalCode[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.address_postal_code\",\"transform\":\"as_is (max 10 chars)\",\"condition\":\"Only when the designated individual is the case representative\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Postal code/Zip\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].Rextension[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.phone_country_code\",\"transform\":\"digits_only (numeric box)\",\"condition\":\"Only when the designated individual is the case representative\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Country Code\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].Rphone[0]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.phone_number\",\"transform\":\"as_is (area code and number)\",\"condition\":\"Only when the designated individual is the case representative\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Area Code and Telephone number\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].Rextension[1]\",\"outcome\":\"unresolved\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Second telephone country-code box has the same caption as the first; the inventory does not say whether it is an alternate telephone, a fax or another number, so the fact cannot be chosen without checking the printed form.\",\"evidence_quote\":\"Country Code\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].Rphone[1]\",\"outcome\":\"unresolved\",\"person\":\"representative\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Second telephone box has the same caption as the first; the inventory does not distinguish it (alternate telephone, fax or other), so the fact cannot be chosen without checking the printed form.\",\"evidence_quote\":\"Area Code and Telephone number\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].TextField2[1]\",\"outcome\":\"mapped\",\"person\":\"representative\",\"row\":null,\"fact\":\"person.email\",\"transform\":\"as_is\",\"condition\":\"Only when the designated individual is the case representative and has an e-mail address (box is 'if applicable')\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"E-mail address (if applicable)\"},{\"data_path\":\"IMM_5475[0].Page1[0].Seven[0].TextField2[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Applicant's signature; must be signed by the applicant personally, never generated by the system.\",\"evidence_quote\":\"Signature of applicant\"},{\"data_path\":\"IMM_5475[0].Page1[0].Seven[0].currentDate[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of the applicant's signature; it is entered by the signer when signing the declaration and prefilling it could misstate the signing date.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5475[0].Page1[0].Seven[0].TextField2[1]\",\"outcome\":\"never_filled\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Spouse or common-law partner's signature; must be signed by that person personally, never generated by the system.\",\"evidence_quote\":\"Signature of spouse common-law partner (if applicable)\"},{\"data_path\":\"IMM_5475[0].Page1[0].Seven[0].currentDate[1]\",\"outcome\":\"never_filled\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of the spouse or common-law partner's signature; entered by the signer when signing and prefilling it could misstate the signing date.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"}]}"
+}

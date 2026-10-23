@@ -1,0 +1,23 @@
+{
+ "job_id": "c1-fieldmap-imm5257-1",
+ "kind": "field_map",
+ "combination": "1",
+ "configuration_version": "c1-draft-1",
+ "template": "field-map.v1.md",
+ "output_schema": "field-map-output.v1.schema.json",
+ "inputs": [
+  {
+   "file": "prototype/p1/inventory/imm5257_1e.inventory.json",
+   "sha256": "4e73608de3833cb89d1e2ae2eb79485b71d892c82d8bc6e25c3af5b6533d0f1e"
+  }
+ ],
+ "settings": {
+  "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+  "model": "claude-opus-5-5",
+  "effort": "high",
+  "timeout_ms": 900000,
+  "max_attempts": 2,
+  "budget_usd": 5,
+  "max_output_tokens": 48000
+ }
+}

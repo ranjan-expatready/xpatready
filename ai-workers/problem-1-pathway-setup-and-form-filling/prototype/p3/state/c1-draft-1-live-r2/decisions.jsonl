@@ -1,0 +1,1076 @@
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Country[0]:0","decision":"corrected","by":"user-A","reason":"the box is the current country of residence; another trial read it from the section heading","chosen":0,"at":"2026-10-20T16:46:55.411Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:56.361Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:56.478Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:56.594Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].SameAsCORIndicator[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:56.711Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PMFamilyName[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:56.827Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].GivenName[0].PMGivenName[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:56.944Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBYear[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:57.061Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBMonth[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:57.177Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBDay[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:57.294Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].TypeOfRelationship[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:57.411Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].FromDate[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:57.527Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].ToDate[0].ToDate[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:57.643Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:57.761Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:57.876Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:57.993Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].SameAsMailingIndicator[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:58.110Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].IntlNumber[0].IntlNumber[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:58.210Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].IntlNumber[0].IntlNumber[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:58.327Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].NumberExt[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:58.444Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].IntlNumber[0].IntlNumber[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:58.560Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].PurposeRow1[0].EmployerName[0].EmployerName[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:58.676Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].PurposeRow1[0].Address[0].Address[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:58.776Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].CityTown[0].CityTown[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:58.877Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].LCP[0].Caregiver[0].ChildCare[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:58.993Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].LCP[0].Caregiver[0].Disabled[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:59.110Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].LCP[0].Caregiver[0].Elderly[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:59.226Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].LCP[0].Caregiver[0].Other[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:59.326Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].EducationIndicator[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:46:59.580Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo2[0].VisaChoice3[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:59.694Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].PageWrapper[0].GovPosition[0].Choice[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:59.810Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].Consent0[0].Choice[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:46:59.910Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].Header[0].CRCNum[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.011Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].Age[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.011Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].AdultFlag[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.011Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].FormVersion[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PrevSpouseAge[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].ServiceIn[0].ServiceIn[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].VisaType[0].VisaType[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].UCIClientID[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].Name[0].FamilyName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].Name[0].GivenName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasFamilyName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasGivenName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].Sex[0].Sex[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].DOBYear[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].DOBMonth[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].DOBDay[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PlaceBirthCity[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PlaceBirthCountry[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].Citizenship[0].Citizenship[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].FromDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].ToDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromYr[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromMM[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromDD[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToYr[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.012Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToMM[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToDD[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Country[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Status[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Other[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].FromDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].ToDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Country[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Status[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Other[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].FromDate[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].ToDate[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].FromYr[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].FromMM[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].FromDD[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].ToYr[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].ToMM[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].ToDD[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].FromYr[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].FromMM[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].FromDD[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].ToYr[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].ToMM[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].ToDD[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Country[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Status[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Other[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].FromDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].ToDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.013Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromYr[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromMM[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromDD[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToYr[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToMM[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToDD[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].ApplicationValidatedFlag[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].DateOfMarriage[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromYr[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromMM[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromDD[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].FamilyName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].MaritalStatus[0].SectionA[0].GivenName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevMarriedIndicator[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].DateCalc[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].Year[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].Month[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].Day[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromYr[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromMM[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromDD[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToYr[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToMM[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToDD[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].nativeLang[0].nativeLang[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].ableToCommunicate[0].ableToCommunicate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.014Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].lov[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].LanguageTest[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].PassportNum[0].PassportNum[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].CountryofIssue[0].CountryofIssue[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDate[0].IssueDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].ExpiryDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueYYYY[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueMM[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDD[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryYYYY[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryMM[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryDD[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].natID[0].natIDdocs[0].DocNum[0].DocNum[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].natID[0].natIDdocs[0].CountryofIssue[0].CountryofIssue[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].natID[0].natIDdocs[0].IssueDate[0].IssueDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].natID[0].natIDdocs[0].ExpiryDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].USCard[0].usCarddocs[0].DocNum[0].DocNum[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].USCard[0].usCarddocs[0].ExpiryDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].POBox[0].POBox[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].Apt[0].AptUnit[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].StreetNum[0].StreetNum[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].Streetname[0].Streetname[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].CityTow[0].CityTown[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].Country[0].Country[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].ProvinceState[0].ProvinceState[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].PostalCode[0].PostalCode[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].District[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].AptUnit[0].AptUnit[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].StreetName[0].Streetname[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.015Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].CityTown[0].CityTown[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].Country[0].Country[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].ProvinceState[0].ProvinceState[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].PostalCode[0].PostalCode[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].District[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].Type[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].CanadaUS[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].Other[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NumberExt[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NumberCountry[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].ActualNumber[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NANumber[0].AreaCode[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NANumber[0].FirstThree[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NANumber[0].LastFive[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].Type[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].CanadaUS[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].Other[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].NumberExt[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].NumberCountry[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].ActualNumber[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].NANumber[0].AreaCode[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].NANumber[0].FirstThree[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].NANumber[0].LastFive[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].CanadaUS[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].Other[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].NumberCountry[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].ActualNumber[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].NANumber[0].AreaCode[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].NANumber[0].FirstThree[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Phone[0].NANumber[0].LastFive[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].FaxEmail[0].Email[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].TypeofWork[0].WorkPermitType[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].ProvinceState[0].ProvinceState[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].Address[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.016Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfWorkCont[0].details[0].jobTitle[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfWorkCont[0].details[0].posDesc[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfWorkCont[0].details[0].HowLongStudy[0].FromDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfWorkCont[0].details[0].HowLongStudy[0].ToDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].DetailsOfWorkCont[0].details[0].LMO[0].LMO[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].LCP[0].Caregiver[0].checkBoxCalcField[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].LCP[0].Caregiver[0].personsCare[0].noPersons[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].FromYear[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].FromMonth[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].ToYear[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].ToMonth[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].FieldOfStudy[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].School[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].CityTown[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].Country[0].Country[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].ProvState[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].FromYear[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].FromMonth[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].ToYear[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].ToMonth[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Occupation[0].Occupation[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Employer[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].CityTown[0].CityTown[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Country[0].Country[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].ProvState[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].FromYear[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].FromMonth[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ToYear[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ToMonth[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Occupation[0].Occupation[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Employer[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].CityTown[0].CityTown[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Country[0].Country[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ProvState[0]:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].FromYear[0]:2","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].FromMonth[0]:2","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ToYear[0]:2","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ToMonth[0]:2","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Occupation[0].Occupation[0]:2","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Employer[0]:2","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].CityTown[0].CityTown[0]:2","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.017Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Country[0].Country[0]:2","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ProvState[0]:2","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo[0].Details[0].MedicalDetails[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo[0].Choice[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo[0].Choice[1]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo[0].backgroundInfoCalc[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo2[0].VisaChoice1[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo2[0].VisaChoice2[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].BackgroundInfo2[0].Details[0].refusedDetails[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].PageWrapper[0].BackgroundInfo3[0].militaryServiceDetails[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].PageWrapper[0].Military[0].Choice[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].PageWrapper[0].Military[0].militaryServiceDetails[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].PageWrapper[0].Occupation[0].Choice[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].Consent0[0].TextField2[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].Consent0[0].C1CertificateIssueDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page4[0].ReaderInfo[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page5[0].TextField1[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page5[0].TextField1[1]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page5[0].TextField1[2]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page5[0].TextField1[3]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page5[0].TextField1[4]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.018Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].NativeName[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:00.311Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:00.426Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].NativeName[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:00.543Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].MarriageInPerson[0].MarriageInPerson[0].yesno[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:00.661Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].hideChildren[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:00.778Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].FamilyName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.876Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[0].GivenNames[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.876Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].DOB[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.876Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].COB[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.876Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Applicant[0].PaddedEntry[0].PersonalData[1].Occupation[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].Accompanying[0].yesno[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].FamilyName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[0].GivenNames[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].DOB[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].COB[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Address[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Spouse[0].PaddedEntry[0].PersonalData[1].Occupation[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].Accompanying[0].yesno[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].FamilyName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].GivenNames[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[0].DOB[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].COB[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Address[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent1[0].PaddedEntry[0].PersonalData[1].Occupation[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.877Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].Accompanying[0].yesno[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].FamilyName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].GivenNames[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[0].DOB[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].COB[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Address[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].Parent2[0].PaddedEntry[0].PersonalData[1].Occupation[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].PaddedEntry[0].SectionAsignature[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionA[0].PaddedEntry[0].SectionAdate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].Accompanying[0].yesno[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].Relationship[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].FamilyName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].GivenNames[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[0].DOB[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].COB[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Address[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].MaritalStatus[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Child[0].PaddedEntry[0].PersonalData[1].Occupation[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Note2[0].subNote2[0].SectionBsignature[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionB[0].Note2[0].subNote2[0].SectionBdate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionC[0].SectionCsignature[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5707 (01-2023):IMM_5707[0].page1[0].SectionC[0].SectionCdate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:00.878Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].Jurisdiction[0].Country[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:01.177Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].Jurisdiction[0].Province[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:01.277Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].County[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:01.394Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].YearsTogether[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:01.510Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].endDate[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:01.627Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].City[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:01.743Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].AdminDecl[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:01.860Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].County[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:01.977Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].Province[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:02.093Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].Country[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:02.210Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].Title[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:02.327Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].Day[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:02.444Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].Month[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:02.559Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].Year[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:02.659Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].FirstName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.759Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].SecondName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.759Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].City[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].Province[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].Country[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Info[0].startDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[0].yesno[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[1].yesno[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[2].yesno[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[3].yesno[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section2[0].yesno[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section3[0].yesno[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section4[0].TextField2[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].NameDecl[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].SignatureDecl[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].NamePartner[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].SignaturePartner[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.760Z"}
+{"item_id":"map:IMM 5409 (01-2023):IMM_5409[0].Page1[0].Section5[0].SignatureAdminDecl[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:02.761Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].office[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:03.027Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].office[1]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:03.143Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].office[2]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:03.260Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].application[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:03.377Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:03.493Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership[1]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:03.610Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].postalcode[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:03.727Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionC[0].familyName[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:03.843Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionC[0].givenName[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:03.960Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionC[0].organization[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:04.076Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].RadioButtonList[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.176Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].familyName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].givenName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].DOB[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionA[0].UCI[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].familyName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].givenName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].province2[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].membership2[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].uncompensated[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionI[0].otherRep[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].compensated[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].ICCRCMember[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].province[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].membership[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question6[0].questionII[0].quebecLaw[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].organization[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].lawyer[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].membershipID[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].unit[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].streetNo[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].streetName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].city[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].province[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].country[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].phoneCountryCode[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].phoneNumber[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].faxCountryCode[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].faxNumber[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.177Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question7[0].email[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question8[0].dateSigned[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[1]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].SectionB[0].question8[0].dateSigned[1]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionD[0].familyName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionD[0].givenName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionD[0].organization[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionD[0].signatrureApplicant[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionD[0].dateApplicantSigned[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionE[0].signatrureApplicant[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionE[0].dateApplicantSigned[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionE[0].signatrureApplicant[1]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5476 (11-2025):IMM_5476[0].Page1[0].sectionE[0].dateSpouseSigned[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:04.178Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].TextField2[3]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:04.493Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].AppFamily[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:04.610Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].AppGiven[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:04.727Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].TextField2[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:04.844Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].apt[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:04.960Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].Number[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:05.077Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].homeAddress[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:05.194Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].city[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:05.309Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].province[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:05.409Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].city[1]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:05.509Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].postalCode[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:05.610Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].Rextension[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:05.727Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].Rphone[0]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:05.843Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].Rextension[1]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:05.960Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].Rphone[1]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:06.076Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Five[0].TextField2[1]:0","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:06.194Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Choice[0].RadioButtonList[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:06.294Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].AppFamily[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:06.294Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].AppGiven[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:06.294Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].DOB[0].currentDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:06.294Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].TextField2[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:06.294Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].TextField2[1]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:06.294Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].AppDetails[0].TextField2[2]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:06.294Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Seven[0].TextField2[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:06.294Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Seven[0].currentDate[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:06.295Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Seven[0].TextField2[1]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:06.295Z"}
+{"item_id":"map:IMM 5475 (12-2022):IMM_5475[0].Page1[0].Seven[0].currentDate[1]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:06.295Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].HaveWitnessedParticipated[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:06.594Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Year[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:06.710Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Month[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:06.826Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Year[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:06.943Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Month[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:07.059Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Location[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:07.159Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Province[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:07.277Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].CountryCode[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:07.393Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Details[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:07.493Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].BeenMemberAssociated[0]:0","decision":"left_unresolved","by":"user-A","reason":"no case fact a firm holds for this box; completed by hand from the case","at":"2026-10-20T16:47:07.610Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].FormVersion[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.710Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].FormName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.710Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].ReaderInfo[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.710Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].ApplicationValidationDate[0].Year[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.710Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].ApplicationValidationDate[0].Month[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.710Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].ApplicationValidationDate[0].Day[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.710Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].PrincipalApplicant[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.710Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].FormValidated[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].FamilyName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].GivenName[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].ApplicantBirthDate[0].Year[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].ApplicantBirthDate[0].Month[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].ApplicantBirthDate[0].Day[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].UCI[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].ServedInMilitary[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Year[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Month[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Year[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Month[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Location[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Province[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].CountryCode[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Year[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.711Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Month[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Year[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Month[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].NameOfOrganization[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].ActivitiesPositionHeld[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].Province[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].CountryCode[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].HeldGovernmentPositions[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Year[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Month[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Year[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Month[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].CountryCode[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].LevelOfJurisdiction[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].DepartmentBranch[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].ActivitiesPositionHeld[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].TraveledOtherCountry[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Year[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Month[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Year[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Month[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].CountryCode[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].Location[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"map:IMM 5257 SCH1 (09-2023):Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].PurposeOfTravel[0]:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:07.712Z"}
+{"item_id":"field:person.uci","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:08.064Z"}
+{"item_id":"field:relationship.start_date","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:08.177Z"}
+{"item_id":"field:person.phone_number","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:08.293Z"}
+{"item_id":"field:person.email_address","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:08.410Z"}
+{"item_id":"field:relationship.cohabitation_start_date","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:08.527Z"}
+{"item_id":"field:person.telephone_number","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:08.643Z"}
+{"item_id":"field:person.email","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:08.760Z"}
+{"item_id":"field:case.service_language","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.860Z"}
+{"item_id":"field:person.family_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.860Z"}
+{"item_id":"field:person.given_names","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.other_family_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.other_given_names","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.sex","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.date_of_birth","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.place_of_birth_city","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.citizenship","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.residence_country","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.residence_immigration_status","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.residence_status_other_details","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.residence_status_from_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.residence_status_to_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:case.country_where_applying","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.marital_status","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.previous_marriage_or_common_law","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.861Z"}
+{"item_id":"field:person.native_language","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.official_language_ability","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.preferred_official_language","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.language_test_taken","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.passport_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.passport_country_of_issue","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.passport_issue_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.passport_expiry_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.national_id_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.national_id_country_of_issue","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.national_id_issue_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.national_id_expiry_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.us_lawful_permanent_resident","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.uscis_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.us_pr_card_expiry_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.mailing_address","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.residential_address","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.phone_type","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:person.fax_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:case.work_permit_type","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:organisation.name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.862Z"}
+{"item_id":"field:organisation.address","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:case.intended_work_location","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:case.intended_job_title","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:case.intended_job_duties","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:case.intended_employment_start_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:case.intended_employment_end_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:case.lmia_or_offer_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:case.caregiver_care_types","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:case.caregiver_persons_requiring_care","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:person.education_from_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:person.education_to_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:person.education_field_and_level","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:person.education_institution","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:person.education_location","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:person.employment_from_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:person.employment_to_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:person.occupation","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:person.employment_employer_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:person.employment_location","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:person.tb_history_or_contact","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:person.disorder_requiring_services","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.863Z"}
+{"item_id":"field:person.medical_details","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.status_violation_canada","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.refused_visa_or_entry","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.immigration_history_details","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.criminal_history","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.criminal_history_details","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.military_service","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.military_service_details","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.violent_organisation_association","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.country_of_birth","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.has_children","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:relationship.accompanies_subject_to_canada","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:relationship.child_relationship_type","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.full_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.residence_city","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.residence_province_state","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:relationship.joint_residence_lease_mortgage_or_purchase","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:relationship.joint_property_other_than_residence","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:relationship.joint_financial_accounts","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:relationship.common_law_declared_for_canadian_income_tax","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:person.life_insurance_names_partner_as_beneficiary","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:relationship.other_documentary_evidence","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:case.application_type","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:case.application_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:case.representative_form_action","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:representative.is_compensated","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:representative.representative_category","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.864Z"}
+{"item_id":"field:representative.representative_category_other","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:representative.membership_id","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:representative.licensing_province","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:representative.supervising_lawyer_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:representative.supervising_lawyer_membership_id","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.mailing_address_unit","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.mailing_address_street_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.mailing_address_street_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.mailing_address_city","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.mailing_address_province_state","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.mailing_address_country","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.mailing_address_postal_code","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:case.release_authorization_action","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:case.submission_office_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:case.submission_office_location","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.phone_country_code","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:case.subject_is_principal_applicant","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.military_service_start_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.military_service_end_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.military_service_location","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.military_service_province","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.military_service_country","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.organization_membership_start_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.organization_membership_end_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.organization_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.organization_activities_positions","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.organization_province","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.organization_country","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.has_held_government_position","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.government_position_start_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.government_position_end_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.865Z"}
+{"item_id":"field:person.government_position_country","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.government_position_jurisdiction_level","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.government_position_department","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.government_position_activities","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.travel_start_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.travel_end_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.travel_country","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.travel_location","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.travel_purpose","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:case.application_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.travelling_alone_to_canada","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:case.uses_representative","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.representative_acts_for_person","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:case.authorizes_release_to_designated_individual","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.witnessed_ill_treatment","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.fee_exempt","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.biometrics_required","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.requires_trv","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:case.is_employer_specific_work_permit","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:case.employer_obtained_lmia","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:case.offer_lmia_exempt","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:case.offer_submitted_via_imm5802","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:case.employer_exempt_from_compliance_regime","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:case.intended_work_province","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.is_provincial_nominee","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:case.offer_from_nominating_province_employer","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.nomination_expiry_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:case.applying_for_pgwp","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.flight_school_graduate","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.upfront_medical_completed","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:document.in_english_or_french","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:document.translator_is_canadian_certified","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.866Z"}
+{"item_id":"field:person.passport_requires_reentry_permit","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.867Z"}
+{"item_id":"field:person.exceptional_situation_no_valid_passport","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.867Z"}
+{"item_id":"field:person.plans_to_study_in_canada","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.867Z"}
+{"item_id":"field:person.plans_to_work_in_canada","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.867Z"}
+{"item_id":"field:case.job_requires_licence_or_certification","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.867Z"}
+{"item_id":"field:case.intended_occupation_requires_medical","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.867Z"}
+{"item_id":"field:person.employment_activity","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.867Z"}
+{"item_id":"field:person.current_residence_country","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:08.867Z"}
+{"item_id":"form:0:IMM 1295","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.127Z"}
+{"item_id":"form:1:IMM 5488","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.127Z"}
+{"item_id":"form:2:IMM 5905","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.127Z"}
+{"item_id":"form:3:IMM 5707","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.127Z"}
+{"item_id":"form:4:IMM 5409","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.127Z"}
+{"item_id":"form:5:IMM 5476","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.127Z"}
+{"item_id":"form:6:IMM 5475","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.127Z"}
+{"item_id":"form:7:IMM 5257 SCH1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.127Z"}
+{"item_id":"form:8:IMM 5802","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.127Z"}
+{"item_id":"doc:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.399Z"}
+{"item_id":"doc:1","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.399Z"}
+{"item_id":"doc:2","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.399Z"}
+{"item_id":"doc:3","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.399Z"}
+{"item_id":"doc:4","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.399Z"}
+{"item_id":"doc:5","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.399Z"}
+{"item_id":"doc:6","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.399Z"}
+{"item_id":"doc:7","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.399Z"}
+{"item_id":"doc:8","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.399Z"}
+{"item_id":"doc:9","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:10","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:11","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:12","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:13","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:14","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:15","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:16","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:17","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:18","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:19","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:20","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:21","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:22","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:23","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:24","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:25","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:26","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:27","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:28","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:29","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:30","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:31","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"doc:32","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:09.400Z"}
+{"item_id":"rule:1","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:09.727Z"}
+{"item_id":"rule:7","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:09.844Z"}
+{"item_id":"rule:14","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:09.960Z"}
+{"item_id":"rule:15","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:10.077Z"}
+{"item_id":"rule:17","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:10.193Z"}
+{"item_id":"rule:20","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:10.310Z"}
+{"item_id":"rule:21","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:10.428Z"}
+{"item_id":"rule:25","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:10.543Z"}
+{"item_id":"rule:28","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:10.660Z"}
+{"item_id":"rule:35","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:10.777Z"}
+{"item_id":"rule:0","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:2","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:3","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:4","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:5","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:6","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:8","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:9","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:10","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:11","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:12","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:13","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:16","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:18","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.893Z"}
+{"item_id":"rule:19","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:22","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:23","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:24","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:26","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:27","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:29","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:30","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:31","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:32","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:33","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:34","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:36","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:37","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"rule:38","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:10.894Z"}
+{"item_id":"derived:person.residence_differs_from_citizenship:other","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:11.195Z"}
+{"item_id":"derived:case.applying_country_differs_from_citizenship:other","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:11.310Z"}
+{"item_id":"derived:person.passport_years_since_expiry:other","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:11.426Z"}
+{"item_id":"derived:person.venezuelan_extended_passport_expiry:other","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:11.543Z"}
+{"item_id":"derived:person.passport_days_until_expiry:days_until#2","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:11.659Z"}
+{"item_id":"derived:person.passport_years_since_expiry:other#2","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:11.777Z"}
+{"item_id":"derived:person.nomination_days_until_expiry:days_until#2","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:11.893Z"}
+{"item_id":"derived:person.residence_differs_from_citizenship:other#2","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:12.010Z"}
+{"item_id":"derived:relationship.cohabitation_years:other","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:12.127Z"}
+{"item_id":"derived:case.spouse_or_partner_count:count_people_in_role","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:12.243Z"}
+{"item_id":"derived:person.employment_history_gap_months:other","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:12.360Z"}
+{"item_id":"derived:person.age_years:age_in_years","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:person.nomination_days_until_expiry:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:person.passport_days_until_expiry:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:person.national_id_days_until_expiry:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:person.us_pr_card_days_until_expiry:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:person.residence_status_days_until_expiry:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:person.passport_validity_days:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:person.passport_issue_days_after_birth:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:case.intended_employment_duration_days:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:case.intended_employment_start_days_from_application:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:relationship.start_vs_cohabitation_days:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:person.employment_row_duration_days:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:person.education_row_duration_days:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:person.residence_status_row_duration_days:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"derived:person.travel_row_duration_days:days_until","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.477Z"}
+{"item_id":"section:application_details","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.745Z"}
+{"item_id":"section:personal_details","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.745Z"}
+{"item_id":"section:languages","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.745Z"}
+{"item_id":"section:travel_document","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.745Z"}
+{"item_id":"section:contact","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.745Z"}
+{"item_id":"section:residence_history","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.745Z"}
+{"item_id":"section:relationship","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.745Z"}
+{"item_id":"section:family_members","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.745Z"}
+{"item_id":"section:intended_work","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.745Z"}
+{"item_id":"section:education_history","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.746Z"}
+{"item_id":"section:employment_history","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.746Z"}
+{"item_id":"section:background_medical","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.746Z"}
+{"item_id":"section:background_declarations","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.746Z"}
+{"item_id":"section:security_history","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.746Z"}
+{"item_id":"section:travel_history","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.746Z"}
+{"item_id":"section:representative","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.746Z"}
+{"item_id":"section:processing_requirements","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.746Z"}
+{"item_id":"section:submitted_documents","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:12.746Z"}
+{"item_id":"place:organisation.name","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:13.027Z"}
+{"item_id":"place:case.caregiver_care_types","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:13.143Z"}
+{"item_id":"place:case.caregiver_persons_requiring_care","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:13.261Z"}
+{"item_id":"place:person.employment_activity","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:13.377Z"}
+{"item_id":"place:person.current_residence_country","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:13.493Z"}
+{"item_id":"place:case.service_language","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.593Z"}
+{"item_id":"place:person.uci","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.593Z"}
+{"item_id":"place:person.family_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.593Z"}
+{"item_id":"place:person.given_names","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.593Z"}
+{"item_id":"place:person.full_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.593Z"}
+{"item_id":"place:person.other_family_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.593Z"}
+{"item_id":"place:person.other_given_names","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:person.sex","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:person.date_of_birth","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:person.place_of_birth_city","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:person.country_of_birth","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:person.citizenship","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:person.marital_status","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:case.subject_is_principal_applicant","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:person.residence_country","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:person.residence_immigration_status","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:person.residence_status_other_details","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:person.residence_status_from_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:person.residence_status_to_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:case.country_where_applying","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:relationship.start_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:relationship.cohabitation_start_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:person.previous_marriage_or_common_law","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:relationship.joint_residence_lease_mortgage_or_purchase","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.594Z"}
+{"item_id":"place:relationship.joint_property_other_than_residence","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:relationship.joint_financial_accounts","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:relationship.common_law_declared_for_canadian_income_tax","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.life_insurance_names_partner_as_beneficiary","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:relationship.other_documentary_evidence","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.native_language","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.official_language_ability","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.preferred_official_language","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.language_test_taken","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.passport_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.passport_country_of_issue","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.passport_issue_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.passport_expiry_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.national_id_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.national_id_country_of_issue","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.national_id_issue_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.national_id_expiry_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.us_lawful_permanent_resident","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.uscis_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.us_pr_card_expiry_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.passport_requires_reentry_permit","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.595Z"}
+{"item_id":"place:person.exceptional_situation_no_valid_passport","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:person.mailing_address","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:person.residential_address","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:person.residence_city","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:person.residence_province_state","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:person.phone_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:person.phone_type","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:person.fax_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:person.email_address","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.work_permit_type","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:organisation.address","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.intended_work_location","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.intended_job_title","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.intended_job_duties","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.intended_employment_start_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.intended_employment_end_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.lmia_or_offer_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.intended_work_province","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.is_employer_specific_work_permit","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.employer_obtained_lmia","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.offer_lmia_exempt","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.offer_submitted_via_imm5802","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.employer_exempt_from_compliance_regime","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:person.is_provincial_nominee","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.offer_from_nominating_province_employer","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:person.nomination_expiry_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.596Z"}
+{"item_id":"place:case.applying_for_pgwp","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:case.job_requires_licence_or_certification","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:case.intended_occupation_requires_medical","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.education_from_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.education_to_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.education_field_and_level","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.education_institution","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.education_location","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.flight_school_graduate","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.employment_from_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.employment_to_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.occupation","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.employment_employer_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.employment_location","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.tb_history_or_contact","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.disorder_requiring_services","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.medical_details","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.status_violation_canada","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.refused_visa_or_entry","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.immigration_history_details","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.criminal_history","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.criminal_history_details","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.military_service","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.military_service_details","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.violent_organisation_association","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.witnessed_ill_treatment","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.597Z"}
+{"item_id":"place:person.has_held_government_position","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.military_service_start_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.military_service_end_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.military_service_location","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.military_service_province","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.military_service_country","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.organization_membership_start_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.organization_membership_end_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.organization_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.organization_activities_positions","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.organization_province","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.organization_country","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.government_position_start_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.government_position_end_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.government_position_country","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.government_position_jurisdiction_level","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.government_position_department","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.government_position_activities","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.travel_start_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.travel_end_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.travel_country","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.travel_location","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.travel_purpose","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.has_children","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:relationship.accompanies_subject_to_canada","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:relationship.child_relationship_type","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.travelling_alone_to_canada","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.plans_to_study_in_canada","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:person.plans_to_work_in_canada","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:case.application_type","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.598Z"}
+{"item_id":"place:case.application_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:case.submission_office_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:case.submission_office_location","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:case.application_date","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:case.uses_representative","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:case.representative_form_action","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.representative_acts_for_person","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:representative.is_compensated","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:representative.representative_category","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:representative.representative_category_other","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:representative.membership_id","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:representative.licensing_province","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:representative.supervising_lawyer_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:representative.supervising_lawyer_membership_id","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.mailing_address_unit","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.mailing_address_street_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.mailing_address_street_name","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.mailing_address_city","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.mailing_address_province_state","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.mailing_address_country","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.mailing_address_postal_code","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.telephone_number","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:case.authorizes_release_to_designated_individual","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:case.release_authorization_action","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.phone_country_code","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.email","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.fee_exempt","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.biometrics_required","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.requires_trv","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:person.upfront_medical_completed","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:document.in_english_or_french","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"place:document.translator_is_canadian_certified","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:13.599Z"}
+{"item_id":"check:RW_NATIONAL_ID_EXPIRY_90","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:13.927Z"}
+{"item_id":"check:RW_NATIONAL_ID_EXPIRY_30","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:14.043Z"}
+{"item_id":"check:RW_US_PR_CARD_EXPIRY_90","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:14.160Z"}
+{"item_id":"check:RW_US_PR_CARD_EXPIRY_30","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:14.260Z"}
+{"item_id":"check:OR_FORMS_SIGNED_DATED","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:14.377Z"}
+{"item_id":"check:OR_IMM1295_VALIDATED_BARCODE","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:14.494Z"}
+{"item_id":"check:OR_OFFER_NUMBER_FORMAT","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:14.610Z"}
+{"item_id":"check:RW_PGWP_180_DAYS","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:14.726Z"}
+{"item_id":"check:OR_MEDICAL_COUNTRY_RESIDENCE","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:14.844Z"}
+{"item_id":"check:CR_COMMON_LAW_START_DATES","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:14.960Z"}
+{"item_id":"check:CR_COMMON_LAW_EVIDENCE","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:15.077Z"}
+{"item_id":"check:CR_COMMON_LAW_SAME_HOME","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:15.194Z"}
+{"item_id":"check:OR_MARRIAGE_IN_PERSON","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:15.311Z"}
+{"item_id":"check:CR_SPOUSE_MARITAL_STATUS_MATCH","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:15.427Z"}
+{"item_id":"check:CR_NAME_SAME_EVERYWHERE","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:15.544Z"}
+{"item_id":"check:CR_DUPLICATE_FACT_IDS","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:15.660Z"}
+{"item_id":"check:CR_QC_PROVINCE_MATCH","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:15.777Z"}
+{"item_id":"check:CR_MILITARY_ANSWERS_MATCH","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:15.894Z"}
+{"item_id":"check:OR_MEDICAL_DETAILS","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:16.010Z"}
+{"item_id":"check:OR_IMMIGRATION_HISTORY_DETAILS","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:16.127Z"}
+{"item_id":"check:OR_CRIMINAL_DETAILS","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:16.244Z"}
+{"item_id":"check:OR_MILITARY_DETAILS","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:16.360Z"}
+{"item_id":"check:CR_INTENDED_EMPLOYMENT_DATES","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:16.477Z"}
+{"item_id":"check:RW_EMPLOYMENT_START_PASSED","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:16.593Z"}
+{"item_id":"check:RW_EMPLOYMENT_HISTORY_GAP","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:16.710Z"}
+{"item_id":"check:OR_TRANSLATOR_AFFIDAVIT","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:16.826Z"}
+{"item_id":"check:OR_TRANSLATOR_NOT_FAMILY","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:16.943Z"}
+{"item_id":"check:OR_REFERENCE_LETTER_CONTENT","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:17.060Z"}
+{"item_id":"check:OR_FEE_AMOUNT","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:17.176Z"}
+{"item_id":"check:CR_LANGUAGE_ANSWERS_MATCH","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:17.293Z"}
+{"item_id":"check:RW_VENEZUELA_PASSPORT_EXPIRED_5_YEARS","decision":"accepted","by":"user-A","reason":"checked against the official source shown; the draft's reading stands","at":"2026-10-20T16:47:17.410Z"}
+{"item_id":"check:OR_PASSPORT_EXPIRED","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.526Z"}
+{"item_id":"check:OR_PASSPORT_PAGE_FACTS","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.526Z"}
+{"item_id":"check:RW_PASSPORT_EXPIRY_90","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.526Z"}
+{"item_id":"check:RW_PASSPORT_EXPIRY_30","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.526Z"}
+{"item_id":"check:RW_RESIDENCE_STATUS_EXPIRY_90","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:RW_RESIDENCE_STATUS_EXPIRY_30","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:OR_NOMINATION_EXPIRED","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:RW_NOMINATION_EXPIRY_90","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:CR_STATUS_CITIZEN_BUT_RESIDENCE_DIFFERS","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:OR_NAME_NOT_NA","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:OR_OFFER_NUMBER_PRESENT","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:OR_LMIA_NUMBER_PRESENT","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:CR_LMIA_AND_EXEMPT","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:CR_OWP_VS_EMPLOYER_SPECIFIC","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:OR_PGWP_TYPE_OPEN","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:OR_PGWP_EMPLOYER_TEXT","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:OR_PGWP_LANGUAGE_PROOF","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:OR_MEDICAL_DESIGNATED_OCCUPATION","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:OR_COMMON_LAW_ONE_YEAR","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:CR_SPOUSE_RECORD_WITHOUT_STATUS","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:CR_STATUS_WITHOUT_SPOUSE_RECORD","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:CR_PASSPORT_ISSUE_BEFORE_EXPIRY","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:CR_PASSPORT_ISSUED_AFTER_BIRTH","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:CR_HISTORY_ROW_DATES_ORDER","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:OR_TRANSLATION_REQUIRED","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:OR_PAID_REPRESENTATIVE_MEMBERSHIP","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"check:RW_VENEZUELA_PASSPORT_POST_2019_EXPIRED","decision":"accepted","by":"user-A","at":"2026-10-20T16:47:17.527Z"}
+{"item_id":"form:3:IMM 5707","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:19.426Z"}
+{"item_id":"form:4:IMM 5409","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:19.543Z"}
+{"item_id":"form:5:IMM 5476","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:19.643Z"}
+{"item_id":"form:6:IMM 5475","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:19.743Z"}
+{"item_id":"form:7:IMM 5257 SCH1","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:19.842Z"}
+{"item_id":"form:8:IMM 5802","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:19.960Z"}
+{"item_id":"doc:1","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:20.259Z"}
+{"item_id":"doc:3","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:20.360Z"}
+{"item_id":"doc:4","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:20.459Z"}
+{"item_id":"doc:5","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:20.559Z"}
+{"item_id":"doc:6","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:20.660Z"}
+{"item_id":"doc:7","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:20.777Z"}
+{"item_id":"doc:8","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:20.876Z"}
+{"item_id":"doc:9","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:20.993Z"}
+{"item_id":"doc:10","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:21.110Z"}
+{"item_id":"doc:11","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:21.227Z"}
+{"item_id":"doc:12","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:21.343Z"}
+{"item_id":"doc:13","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:21.443Z"}
+{"item_id":"doc:14","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:21.543Z"}
+{"item_id":"doc:15","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:21.642Z"}
+{"item_id":"doc:16","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:21.743Z"}
+{"item_id":"doc:17","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:21.842Z"}
+{"item_id":"doc:18","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:21.943Z"}
+{"item_id":"doc:19","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:22.043Z"}
+{"item_id":"doc:20","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:22.160Z"}
+{"item_id":"doc:21","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:22.276Z"}
+{"item_id":"doc:22","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:22.393Z"}
+{"item_id":"doc:23","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:22.493Z"}
+{"item_id":"doc:24","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:22.609Z"}
+{"item_id":"doc:25","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:22.709Z"}
+{"item_id":"doc:26","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:22.809Z"}
+{"item_id":"doc:27","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:22.909Z"}
+{"item_id":"doc:28","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:23.026Z"}
+{"item_id":"doc:29","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:23.126Z"}
+{"item_id":"doc:30","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:23.226Z"}
+{"item_id":"doc:31","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:23.343Z"}
+{"item_id":"doc:32","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:23.459Z"}
+{"item_id":"rule:0","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:23.758Z"}
+{"item_id":"rule:1","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:23.859Z"}
+{"item_id":"rule:2","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:23.976Z"}
+{"item_id":"rule:3","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:24.094Z"}
+{"item_id":"rule:4","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:24.209Z"}
+{"item_id":"rule:5","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:24.326Z"}
+{"item_id":"rule:6","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:24.443Z"}
+{"item_id":"rule:7","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:24.560Z"}
+{"item_id":"rule:8","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:24.677Z"}
+{"item_id":"rule:9","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:24.797Z"}
+{"item_id":"rule:10","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:24.910Z"}
+{"item_id":"rule:11","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:25.026Z"}
+{"item_id":"rule:12","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:25.126Z"}
+{"item_id":"rule:13","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:25.226Z"}
+{"item_id":"rule:14","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:25.326Z"}
+{"item_id":"rule:15","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:25.444Z"}
+{"item_id":"rule:16","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:25.542Z"}
+{"item_id":"rule:17","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:25.660Z"}
+{"item_id":"rule:18","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:25.760Z"}
+{"item_id":"rule:19","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:25.877Z"}
+{"item_id":"rule:20","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:25.994Z"}
+{"item_id":"rule:21","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:26.110Z"}
+{"item_id":"rule:22","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:26.209Z"}
+{"item_id":"rule:23","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:26.309Z"}
+{"item_id":"rule:24","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:26.426Z"}
+{"item_id":"rule:25","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:26.543Z"}
+{"item_id":"rule:26","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:26.643Z"}
+{"item_id":"rule:27","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:26.742Z"}
+{"item_id":"rule:28","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:26.842Z"}
+{"item_id":"rule:29","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:26.942Z"}
+{"item_id":"rule:30","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:27.060Z"}
+{"item_id":"rule:31","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:27.176Z"}
+{"item_id":"rule:32","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:27.276Z"}
+{"item_id":"rule:33","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:27.393Z"}
+{"item_id":"rule:34","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:27.492Z"}
+{"item_id":"rule:35","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:27.592Z"}
+{"item_id":"rule:36","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:27.692Z"}
+{"item_id":"rule:37","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:27.792Z"}
+{"item_id":"rule:38","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:27.892Z"}
+{"item_id":"check:OR_PASSPORT_EXPIRED","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:28.776Z"}
+{"item_id":"check:OR_PASSPORT_PAGE_FACTS","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:28.876Z"}
+{"item_id":"check:OR_NOMINATION_EXPIRED","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:28.979Z"}
+{"item_id":"check:OR_NAME_NOT_NA","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:29.093Z"}
+{"item_id":"check:OR_FORMS_SIGNED_DATED","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:29.210Z"}
+{"item_id":"check:OR_IMM1295_VALIDATED_BARCODE","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:29.326Z"}
+{"item_id":"check:OR_OFFER_NUMBER_PRESENT","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:29.426Z"}
+{"item_id":"check:OR_OFFER_NUMBER_FORMAT","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:29.529Z"}
+{"item_id":"check:OR_LMIA_NUMBER_PRESENT","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:29.642Z"}
+{"item_id":"check:OR_PGWP_TYPE_OPEN","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:29.742Z"}
+{"item_id":"check:OR_PGWP_EMPLOYER_TEXT","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:29.842Z"}
+{"item_id":"check:OR_PGWP_LANGUAGE_PROOF","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:29.942Z"}
+{"item_id":"check:OR_MEDICAL_DESIGNATED_OCCUPATION","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:30.042Z"}
+{"item_id":"check:OR_MEDICAL_COUNTRY_RESIDENCE","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:30.143Z"}
+{"item_id":"check:OR_COMMON_LAW_ONE_YEAR","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:30.242Z"}
+{"item_id":"check:OR_MARRIAGE_IN_PERSON","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:30.343Z"}
+{"item_id":"check:OR_MEDICAL_DETAILS","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:30.442Z"}
+{"item_id":"check:OR_IMMIGRATION_HISTORY_DETAILS","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:30.542Z"}
+{"item_id":"check:OR_CRIMINAL_DETAILS","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:30.642Z"}
+{"item_id":"check:OR_MILITARY_DETAILS","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:30.742Z"}
+{"item_id":"check:OR_TRANSLATION_REQUIRED","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:30.842Z"}
+{"item_id":"check:OR_TRANSLATOR_AFFIDAVIT","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:30.942Z"}
+{"item_id":"check:OR_TRANSLATOR_NOT_FAMILY","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:31.043Z"}
+{"item_id":"check:OR_REFERENCE_LETTER_CONTENT","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:31.160Z"}
+{"item_id":"check:OR_FEE_AMOUNT","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:31.259Z"}
+{"item_id":"check:OR_PAID_REPRESENTATIVE_MEMBERSHIP","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:31.376Z"}
+{"item_id":"check:RW_VENEZUELA_PASSPORT_EXPIRED_5_YEARS","decision":"sme_signed","by":"user-C","at":"2026-10-20T16:47:31.476Z"}
+{"item_id":"map:IMM 1295 (09-2023):form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Country[0]:0","decision":"left_unresolved","by":"user-A","reason":"reverted: confirm the residence country with the client first","at":"2026-10-20T16:47:32.644Z"}

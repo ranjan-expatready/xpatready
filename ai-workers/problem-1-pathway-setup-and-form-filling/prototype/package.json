@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Marks prototype TypeScript as ES modules. Toolchain and dependencies live in .tools/solution-1-prototype/node (AIW-D259)."
+}

@@ -1,0 +1,9 @@
+Code: newest local copy versus GitHub default branch and dev
+ERv2-frontend@85623d4-2026-10-14 | main: 0c1df16 (2026-09-17T03:37:28Z) | DIFFERENT REFERENCE BRANCH
+ERv2-frontend@85623d4-2026-10-14 | dev: 85623d4 (2026-10-13T18:30:38Z) | MATCH
+ERv2-sanitized@b48e4ce-2026-10-15 | main: 6ff8706 (2026-09-08T00:45:22Z) | DIFFERENT REFERENCE BRANCH
+ERv2-sanitized@b48e4ce-2026-10-15 | dev: b48e4ce (2026-10-14T15:24:51Z) | MATCH
+expat-ready-api@c4117a3-2026-10-09 | main: c4117a3 (2026-07-30T22:03:29Z) | MATCH
+expat-ready-ui@6d7f636-2026-10-09 | main: 6d7f636 (2026-07-30T22:03:29Z) | MATCH
+Drive: newest local snapshot drive-snapshot-2026-10-13-1535
+Lead must check live Drive metadata before citing requirements; this script does not check Drive.

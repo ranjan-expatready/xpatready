@@ -1,0 +1,278 @@
+{
+ "configuration_sha256": "e6c7487bd369e399687a23750659307852587d0df3f564ad0ba3c745a2a5a7a9",
+ "version": 2,
+ "structure": {
+  "boxes_per_form": {
+   "IMM 1295 (09-2023)": {
+    "data_bound_boxes": 242,
+    "entries": 242,
+    "mapped": 163,
+    "unresolved": 16
+   },
+   "IMM 5707 (01-2023)": {
+    "data_bound_boxes": 50,
+    "entries": 50,
+    "mapped": 40,
+    "unresolved": 4
+   },
+   "IMM 5409 (01-2023)": {
+    "data_bound_boxes": 32,
+    "entries": 32,
+    "mapped": 16,
+    "unresolved": 13
+   },
+   "IMM 5476 (11-2025)": {
+    "data_bound_boxes": 53,
+    "entries": 53,
+    "mapped": 36,
+    "unresolved": 7
+   },
+   "IMM 5475 (12-2022)": {
+    "data_bound_boxes": 27,
+    "entries": 27,
+    "mapped": 20,
+    "unresolved": 3
+   },
+   "IMM 5257 SCH1 (09-2023)": {
+    "data_bound_boxes": 57,
+    "entries": 57,
+    "mapped": 40,
+    "unresolved": 10
+   }
+  },
+  "canonical_fields": 164,
+  "decide_items": 7,
+  "checks_by_group": {
+   "official_rule": 26,
+   "readiness_warning": 14,
+   "cross_record": 18,
+   "form_native": 342,
+   "read_back": 6
+  },
+  "unresolved": 100,
+  "condition_keys_renamed": 83,
+  "field_review": {
+   "review_file": "prototype/p2/field-review.c1.json",
+   "merges_applied": [
+    {
+     "from": "person.place_of_birth_country",
+     "to": "person.country_of_birth",
+     "references_rewritten": 4
+    },
+    {
+     "from": "person.uci_number",
+     "to": "person.uci",
+     "references_rewritten": 2
+    },
+    {
+     "from": "person.present_address",
+     "to": "person.residential_address",
+     "references_rewritten": 5
+    },
+    {
+     "from": "person.has_military_or_security_service",
+     "to": "person.military_service",
+     "references_rewritten": 6
+    },
+    {
+     "from": "person.address_apt_unit",
+     "to": "person.mailing_address_unit",
+     "references_rewritten": 2
+    },
+    {
+     "from": "person.address_street_number",
+     "to": "person.mailing_address_street_number",
+     "references_rewritten": 2
+    },
+    {
+     "from": "person.address_street_name",
+     "to": "person.mailing_address_street_name",
+     "references_rewritten": 2
+    },
+    {
+     "from": "person.address_city",
+     "to": "person.mailing_address_city",
+     "references_rewritten": 2
+    },
+    {
+     "from": "person.address_province_state",
+     "to": "person.mailing_address_province_state",
+     "references_rewritten": 1
+    },
+    {
+     "from": "person.address_country",
+     "to": "person.mailing_address_country",
+     "references_rewritten": 2
+    },
+    {
+     "from": "person.address_postal_code",
+     "to": "person.mailing_address_postal_code",
+     "references_rewritten": 2
+    }
+   ],
+   "splits_applied": [
+    {
+     "id": "person.occupation",
+     "job": "c1-fieldmap-imm1295",
+     "new_id": "person.employment_activity",
+     "keep_meaning_from": "c1-fieldmap-imm5707",
+     "reason": "One id, two meanings: IMM 1295 defined it as 'activity or occupation during a period' (history rows), IMM 5707 as 'the person's present occupation'. The v1 assembler kept the first definition, so IMM 5707's present-occupation boxes pointed at a history field. Split by meaning; the history rows get their own field",
+     "map_entries_moved": 3,
+     "dependent_references_moved": 5,
+     "dependent_checks_moved": [
+      "RW_EMPLOYMENT_HISTORY_GAP",
+      "fn-required:form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Occupation[0].Occupation[0]",
+      "fn-length:form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Occupation[0].Occupation[0]",
+      "fn-length:form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Occupation[0].Occupation[0]",
+      "fn-length:form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Occupation[0].Occupation[0]"
+     ],
+     "dependent_checks_kept": [],
+     "references_listed_for_review": []
+    },
+    {
+     "id": "person.residence_country",
+     "job": "c1-fieldmap-imm5409",
+     "new_id": "person.current_residence_country",
+     "keep_meaning_from": "c1-fieldmap-imm1295",
+     "reason": "One id, two meanings: IMM 1295 'country or territory of a period of residence or presence' (previous-residence rows), IMM 5409 'country where the person currently lives'. Split by time meaning",
+     "map_entries_moved": 1,
+     "dependent_references_moved": 0,
+     "dependent_checks_moved": [],
+     "dependent_checks_kept": [
+      "fn-required:form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]",
+      "fn-option:form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]",
+      "fn-option:form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Country[0]",
+      "fn-option:form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Country[0]"
+     ],
+     "references_listed_for_review": [
+      "check CR_STATUS_CITIZEN_BUT_RESIDENCE_DIFFERS",
+      "check OR_MEDICAL_COUNTRY_RESIDENCE",
+      "derived_fields[1] person.residence_differs_from_citizenship",
+      "derived_fields[13] person.residence_differs_from_citizenship"
+     ]
+    }
+   ],
+   "flagged": [
+    {
+     "ids": [
+      "relationship.cohabitation_start_date",
+      "relationship.start_date"
+     ],
+     "reason": "Uncertain match: the date partners began living together equals the start of a common-law relationship but not the date of a marriage. Kept distinct; a person decides"
+    },
+    {
+     "ids": [
+      "person.email",
+      "person.email_address"
+     ],
+     "reason": "Same meaning (an e-mail address) but placed differently by whose value it is: the representative's from the profile record, the client's from the questionnaire. Placements are per fact, so merging would ask one way for both; kept distinct until placement can be per person (contract gap); a person decides"
+    },
+    {
+     "ids": [
+      "person.telephone_number",
+      "person.phone_number"
+     ],
+     "reason": "As for e-mail: same meaning, placed differently for the representative (profile record) and the client (questionnaire); kept distinct; a person decides"
+    },
+    {
+     "ids": [
+      "person.phone_number"
+     ],
+     "reason": "IMM 5475 writes the representative's number 'as_is (area code and number)': if the stored number includes the country code, the box needs the local part only (a form-specific transform); a person checks"
+    }
+   ],
+   "placements_dropped": [
+    {
+     "fact": "person.place_of_birth_country",
+     "kept": "person.country_of_birth"
+    },
+    {
+     "fact": "person.uci_number",
+     "kept": "person.uci"
+    },
+    {
+     "fact": "person.present_address",
+     "kept": "person.residential_address"
+    },
+    {
+     "fact": "person.has_military_or_security_service",
+     "kept": "person.military_service"
+    },
+    {
+     "fact": "person.address_apt_unit",
+     "kept": "person.mailing_address_unit"
+    },
+    {
+     "fact": "person.address_street_number",
+     "kept": "person.mailing_address_street_number"
+    },
+    {
+     "fact": "person.address_street_name",
+     "kept": "person.mailing_address_street_name"
+    },
+    {
+     "fact": "person.address_city",
+     "kept": "person.mailing_address_city"
+    },
+    {
+     "fact": "person.address_province_state",
+     "kept": "person.mailing_address_province_state"
+    },
+    {
+     "fact": "person.address_country",
+     "kept": "person.mailing_address_country"
+    },
+    {
+     "fact": "person.address_postal_code",
+     "kept": "person.mailing_address_postal_code"
+    }
+   ],
+   "unreviewed_same_id": [],
+   "unreviewed_similar": [],
+   "references_rewritten": 39,
+   "dependent_consistency": {
+    "form_native_checks_checked": 268,
+    "mismatches": []
+   }
+  },
+  "repairs": {
+   "file": "prototype/p2/repairs.c1.json",
+   "applied": [
+    {
+     "id": "R-D20",
+     "target": "forms",
+     "match": {
+      "form_number": "IMM 1295"
+     },
+     "before": {
+      "who": "principal_applicant"
+     },
+     "after": {
+      "who": "each_applicant"
+     },
+     "reason": "P2-M3 / D20: IMM 1295 is completed by each person applying for a work permit from outside Canada; the draft said principal applicant only. The requirements job's inputs did not include the IMM 1295 form page that says so, so the model could not have read it (a P2 input-set lesson). The case names who applies (combination-1.v2 scenario.applications: Client A and the partner).",
+     "citation": [
+      {
+       "file": "official-sources/ircc/web-pages/page-imm1295.html",
+       "quote": "Each person who needs a work permit must fill out this form."
+      },
+      {
+       "file": "official-sources/ircc/instructions/guide-5487.html",
+       "quote": "Family members must complete their own application forms."
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "unresolved_from_drafting": 100,
+ "historical_comparison": {
+  "IMM 1295 (09-2023)": "Historical comparison unavailable",
+  "IMM 5707 (01-2023)": "Historical comparison unavailable",
+  "IMM 5409 (01-2023)": "Historical comparison unavailable",
+  "IMM 5476 (11-2025)": "Historical comparison unavailable",
+  "IMM 5475 (12-2022)": "Historical comparison unavailable",
+  "IMM 5257 SCH1 (09-2023)": "Historical comparison unavailable"
+ },
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route"
+}

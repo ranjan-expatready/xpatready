@@ -1,0 +1,21 @@
+{
+  "stale_digest": {
+    "clean_control_exit": "completed_with_unresolved",
+    "clean_control_complete": 0,
+    "launcher_after_source_change": "template reviewer-stale.v1.md contains \"reviewer.pending@example.invalid\" from the answer key or the family values",
+    "stub_gate_still_valid": false,
+    "digest_unchanged": true,
+    "direct_after_source_change": {
+      "status": 2,
+      "ok": false,
+      "error": "launch ticket is for another start (run_id differs); the digest was not issued for this run"
+    },
+    "draft_sha256": "9114ecbb64f3e8e4041dc3a4396ab3926ac362c1012bb423e7e4df0742b00fd0"
+  },
+  "active_v2_key_path": {
+    "launcher_status": 2,
+    "launcher_exit": 2,
+    "direct_status": 2,
+    "direct_ok": false
+  }
+}

@@ -1,0 +1,2632 @@
+{
+ "method": "positional: official barcode1-5 manifests, inventory SOM->data bindings, slot k compared with Adobe-saved data; no value-membership counting",
+ "official_form": {
+  "file": "official-sources/ircc/forms/imm1295e.pdf",
+  "sha256": "57fc256eef7d9d856e4ae85ebf8bfe80da41833ebde7a8c7ed78f2483470d7bb"
+ },
+ "inputs_sha256": {
+  "imm1295e.complete-v6.append-only-encrypted-diagnostic.pdf": "834ed2327bde227da1871fb1d8ebd1982c21e16f02bfe79d48e7003ca143b3e2",
+  "imm1295e.complete-v6.as-written-before-adobe-save.pdf": "322984f8174567ec16295a22fd5c8dafa6c79b17d778eb2512ac4ce7302b4331",
+  "imm1295e-v6-barcodes-decoded.jsonl": "7e50be6a09e7bccc1c3c62b00be7b2e064e4e7d9ca5b9608b5706304faf1fad5",
+  "adobe-complete-1295-values.json": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22",
+  "imm1295e.inventory.json": "34c04c821fd7a351a317375d50c573c847e8d1025cad7f5003ddb4462cbb73c0"
+ },
+ "slots_per_barcode": {
+  "barcode1": 61,
+  "barcode2": 46,
+  "barcode3": 37,
+  "barcode4": 13,
+  "barcode5": 29
+ },
+ "slots_total": 186,
+ "unknown_bindings": [],
+ "slot_matches": {
+  "exact": 180,
+  "month_leading_zero": 6
+ },
+ "slot_problems": [],
+ "normalisation_rules": {
+  "month_leading_zero": "month box: barcode drops the leading zero of a two-digit month (demonstrated on the Adobe-saved IMM 1295)",
+  "boxes": [
+   "DOBMonth[0]",
+   "FromMonth[0]",
+   "ToMonth[0]"
+  ],
+  "all_other_boxes": "literal comparison"
+ },
+ "month_normalisations": [
+  {
+   "barcode": "barcode1",
+   "position": 9,
+   "box": "form1[0].Page1[0].PersonalDetails[0].DOBMonth[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].DOBMonth[0]",
+   "barcode_value": "4",
+   "saved_value": "04",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 12,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].FromMonth[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].FromMonth[0]",
+   "barcode_value": "6",
+   "saved_value": "06",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 21,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].FromMonth[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].FromMonth[0]",
+   "barcode_value": "8",
+   "saved_value": "08",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 23,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ToMonth[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ToMonth[0]",
+   "barcode_value": "5",
+   "saved_value": "05",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 30,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].FromMonth[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].FromMonth[0]",
+   "barcode_value": "7",
+   "saved_value": "07",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 32,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ToMonth[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ToMonth[0]",
+   "barcode_value": "7",
+   "saved_value": "07",
+   "match": "month_leading_zero"
+  }
+ ],
+ "written_values": 91,
+ "written_values_in_data": {
+  "before_adobe_save": 91,
+  "after_adobe_save": 90
+ },
+ "written_accounting": {
+  "entered_encoded": 81,
+  "answer_not_in_manifest": 2,
+  "entered_derived": 5,
+  "cleared_by_form_rule": 1,
+  "control_not_encoded": 2
+ },
+ "entered_encoded_matches": {
+  "exact": 75,
+  "month_leading_zero": 6
+ },
+ "accounting_problems": [],
+ "accounting": [
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].Name[0].FamilyName[0]",
+   "written": "EXAMPLE",
+   "saved": "EXAMPLE",
+   "category": "entered_encoded",
+   "at": "barcode1 position 3",
+   "barcode_value": "EXAMPLE",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].Name[0].GivenName[0]",
+   "written": "CLIENTA",
+   "saved": "CLIENTA",
+   "category": "entered_encoded",
+   "at": "barcode1 position 4",
+   "barcode_value": "CLIENTA",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].DOBYear[0]",
+   "written": "1990",
+   "saved": "1990",
+   "category": "entered_encoded",
+   "at": "barcode1 position 8",
+   "barcode_value": "1990",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].DOBMonth[0]",
+   "written": "04",
+   "saved": "04",
+   "category": "entered_encoded",
+   "at": "barcode1 position 9",
+   "barcode_value": "4",
+   "match": "month_leading_zero"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].DOBDay[0]",
+   "written": "12",
+   "saved": "12",
+   "category": "entered_encoded",
+   "at": "barcode1 position 10",
+   "barcode_value": "12",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].PlaceBirthCountry[0]",
+   "written": "205",
+   "saved": "205",
+   "category": "entered_encoded",
+   "at": "barcode1 position 12",
+   "barcode_value": "205",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].Citizenship[0].Citizenship[0]",
+   "written": "205",
+   "saved": "205",
+   "category": "entered_encoded",
+   "at": "barcode1 position 13",
+   "barcode_value": "205",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]",
+   "written": "03",
+   "saved": "03",
+   "category": "entered_encoded",
+   "at": "barcode1 position 52",
+   "barcode_value": "03",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].FamilyName[0]",
+   "written": "EXAMPLEP",
+   "saved": "EXAMPLEP",
+   "category": "entered_encoded",
+   "at": "barcode1 position 56",
+   "barcode_value": "EXAMPLEP",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].GivenName[0]",
+   "written": "PARTNER",
+   "saved": "PARTNER",
+   "category": "entered_encoded",
+   "at": "barcode1 position 57",
+   "barcode_value": "PARTNER",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].FromYear[0]",
+   "written": "2021",
+   "saved": "2021",
+   "category": "entered_encoded",
+   "at": "barcode3 position 11",
+   "barcode_value": "2021",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].FromMonth[0]",
+   "written": "06",
+   "saved": "06",
+   "category": "entered_encoded",
+   "at": "barcode3 position 12",
+   "barcode_value": "6",
+   "match": "month_leading_zero"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Occupation[0].Occupation[0]",
+   "written": "Software engineer",
+   "saved": "Software engineer",
+   "category": "entered_encoded",
+   "at": "barcode3 position 15",
+   "barcode_value": "Software engineer",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Employer[0]",
+   "written": "Employer Three",
+   "saved": "Employer Three",
+   "category": "entered_encoded",
+   "at": "barcode3 position 16",
+   "barcode_value": "Employer Three",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].CityTown[0].CityTown[0]",
+   "written": "New Delhi",
+   "saved": "New Delhi",
+   "category": "entered_encoded",
+   "at": "barcode3 position 17",
+   "barcode_value": "New Delhi",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Country[0].Country[0]",
+   "written": "205",
+   "saved": "205",
+   "category": "entered_encoded",
+   "at": "barcode3 position 18",
+   "barcode_value": "205",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].FromYear[0]",
+   "written": "2016",
+   "saved": "2016",
+   "category": "entered_encoded",
+   "at": "barcode3 position 20",
+   "barcode_value": "2016",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].FromMonth[0]",
+   "written": "08",
+   "saved": "08",
+   "category": "entered_encoded",
+   "at": "barcode3 position 21",
+   "barcode_value": "8",
+   "match": "month_leading_zero"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Occupation[0].Occupation[0]",
+   "written": "Software developer",
+   "saved": "Software developer",
+   "category": "entered_encoded",
+   "at": "barcode3 position 24",
+   "barcode_value": "Software developer",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Employer[0]",
+   "written": "Employer Two",
+   "saved": "Employer Two",
+   "category": "entered_encoded",
+   "at": "barcode3 position 25",
+   "barcode_value": "Employer Two",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].CityTown[0].CityTown[0]",
+   "written": "New Delhi",
+   "saved": "New Delhi",
+   "category": "entered_encoded",
+   "at": "barcode3 position 26",
+   "barcode_value": "New Delhi",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Country[0].Country[0]",
+   "written": "205",
+   "saved": "205",
+   "category": "entered_encoded",
+   "at": "barcode3 position 27",
+   "barcode_value": "205",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ToYear[0]",
+   "written": "2021",
+   "saved": "2021",
+   "category": "entered_encoded",
+   "at": "barcode3 position 22",
+   "barcode_value": "2021",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ToMonth[0]",
+   "written": "05",
+   "saved": "05",
+   "category": "entered_encoded",
+   "at": "barcode3 position 23",
+   "barcode_value": "5",
+   "match": "month_leading_zero"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].FromYear[0]",
+   "written": "2013",
+   "saved": "2013",
+   "category": "entered_encoded",
+   "at": "barcode3 position 29",
+   "barcode_value": "2013",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].FromMonth[0]",
+   "written": "07",
+   "saved": "07",
+   "category": "entered_encoded",
+   "at": "barcode3 position 30",
+   "barcode_value": "7",
+   "match": "month_leading_zero"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Occupation[0].Occupation[0]",
+   "written": "Graduate trainee",
+   "saved": "Graduate trainee",
+   "category": "entered_encoded",
+   "at": "barcode3 position 33",
+   "barcode_value": "Graduate trainee",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Employer[0]",
+   "written": "Employer One",
+   "saved": "Employer One",
+   "category": "entered_encoded",
+   "at": "barcode3 position 34",
+   "barcode_value": "Employer One",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].CityTown[0].CityTown[0]",
+   "written": "New Delhi",
+   "saved": "New Delhi",
+   "category": "entered_encoded",
+   "at": "barcode3 position 35",
+   "barcode_value": "New Delhi",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Country[0].Country[0]",
+   "written": "205",
+   "saved": "205",
+   "category": "entered_encoded",
+   "at": "barcode3 position 36",
+   "barcode_value": "205",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ToYear[0]",
+   "written": "2016",
+   "saved": "2016",
+   "category": "entered_encoded",
+   "at": "barcode3 position 31",
+   "barcode_value": "2016",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ToMonth[0]",
+   "written": "07",
+   "saved": "07",
+   "category": "entered_encoded",
+   "at": "barcode3 position 32",
+   "barcode_value": "7",
+   "match": "month_leading_zero"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].ServiceIn[0].ServiceIn[0]",
+   "written": "01",
+   "saved": "01",
+   "category": "entered_encoded",
+   "at": "barcode1 position 1",
+   "barcode_value": "01",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "answer_not_in_manifest",
+   "reason": "Question 2 A (other names used?): the form's barcode1-5 manifests list the alias name boxes but not this yes/no answer"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].Sex[0].Sex[0]",
+   "written": "Female",
+   "saved": "Female",
+   "category": "entered_encoded",
+   "at": "barcode1 position 7",
+   "barcode_value": "Female",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].PlaceBirthCity[0]",
+   "written": "New Delhi",
+   "saved": "New Delhi",
+   "category": "entered_encoded",
+   "at": "barcode1 position 11",
+   "barcode_value": "New Delhi",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Country[0]",
+   "written": "205",
+   "saved": "205",
+   "category": "entered_encoded",
+   "at": "barcode1 position 14",
+   "barcode_value": "205",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]",
+   "written": "01",
+   "saved": "01",
+   "category": "entered_encoded",
+   "at": "barcode1 position 15",
+   "barcode_value": "01",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode1 position 23",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].PersonalDetails[0].SameAsCORIndicator[0]",
+   "written": "Y",
+   "saved": "Y",
+   "category": "entered_encoded",
+   "at": "barcode1 position 42",
+   "barcode_value": "Y",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromYr[0]",
+   "written": "2015",
+   "saved": "2015",
+   "category": "entered_encoded",
+   "at": "barcode1 position 53",
+   "barcode_value": "2015",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromMM[0]",
+   "written": "06",
+   "saved": "06",
+   "category": "entered_encoded",
+   "at": "barcode1 position 54",
+   "barcode_value": "06",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromDD[0]",
+   "written": "01",
+   "saved": "01",
+   "category": "entered_encoded",
+   "at": "barcode1 position 55",
+   "barcode_value": "01",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].DateOfMarriage[0]",
+   "written": "2015-06-01",
+   "saved": "2015-06-01",
+   "category": "entered_derived",
+   "rule": "date split into hidden year/month/day boxes (template: validateDateWithHiddenFields on the visible date)",
+   "into": [
+    "barcode1 position 53: 2015",
+    "barcode1 position 54: 06",
+    "barcode1 position 55: 01"
+   ],
+   "match": [
+    "exact",
+    "exact",
+    "exact"
+   ]
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevMarriedIndicator[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode1 position 58",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].nativeLang[0].nativeLang[0]",
+   "written": "321",
+   "saved": "321",
+   "category": "entered_encoded",
+   "at": "barcode5 position 1",
+   "barcode_value": "321",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].ableToCommunicate[0].ableToCommunicate[0]",
+   "written": "English",
+   "saved": "English",
+   "category": "entered_encoded",
+   "at": "barcode5 position 3",
+   "barcode_value": "English",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].lov[0]",
+   "written": "01",
+   "saved": "",
+   "category": "cleared_by_form_rule",
+   "rule": "'language most at ease' applies only when ableToCommunicate is 'Both'; otherwise the form's script sets lov.rawValue = null",
+   "at": "barcode5 position 2",
+   "barcode_value": ""
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].LanguageTest[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode5 position 4",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].PassportNum[0].PassportNum[0]",
+   "written": "Z1234567",
+   "saved": "Z1234567",
+   "category": "entered_encoded",
+   "at": "barcode2 position 13",
+   "barcode_value": "Z1234567",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].CountryofIssue[0].CountryofIssue[0]",
+   "written": "205",
+   "saved": "205",
+   "category": "entered_encoded",
+   "at": "barcode2 position 14",
+   "barcode_value": "205",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDate[0].IssueDate[0]",
+   "written": "2020-01-15",
+   "saved": "2020-01-15",
+   "category": "entered_derived",
+   "rule": "date split into hidden year/month/day boxes (template: IssueDate validate calls validateDateWithHiddenFields(..., IssueYYYY, IssueMM, IssueDD))",
+   "into": [
+    "barcode2 position 15: 2020",
+    "barcode2 position 16: 01",
+    "barcode2 position 17: 15"
+   ],
+   "match": [
+    "exact",
+    "exact",
+    "exact"
+   ]
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].ExpiryDate[0]",
+   "written": "2030-01-14",
+   "saved": "2030-01-14",
+   "category": "entered_derived",
+   "rule": "date split into hidden year/month/day boxes (template: ExpiryDate validate, hidden expiryYYYY/MM/DD)",
+   "into": [
+    "barcode2 position 18: 2030",
+    "barcode2 position 19: 01",
+    "barcode2 position 20: 14"
+   ],
+   "match": [
+    "exact",
+    "exact",
+    "exact"
+   ]
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode2 position 21",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode2 position 22",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode5 position 21",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode5 position 26",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].StreetNum[0].StreetNum[0]",
+   "written": "12",
+   "saved": "12",
+   "category": "entered_encoded",
+   "at": "barcode2 position 25",
+   "barcode_value": "12",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].Streetname[0].Streetname[0]",
+   "written": "Example Road",
+   "saved": "Example Road",
+   "category": "entered_encoded",
+   "at": "barcode2 position 26",
+   "barcode_value": "Example Road",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].CityTow[0].CityTown[0]",
+   "written": "New Delhi",
+   "saved": "New Delhi",
+   "category": "entered_encoded",
+   "at": "barcode2 position 27",
+   "barcode_value": "New Delhi",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].Country[0].Country[0]",
+   "written": "205",
+   "saved": "205",
+   "category": "entered_encoded",
+   "at": "barcode2 position 28",
+   "barcode_value": "205",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].PostalCode[0].PostalCode[0]",
+   "written": "110001",
+   "saved": "110001",
+   "category": "entered_encoded",
+   "at": "barcode2 position 30",
+   "barcode_value": "110001",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].SameAsMailingIndicator[0]",
+   "written": "Y",
+   "saved": "Y",
+   "category": "entered_encoded",
+   "at": "barcode2 position 32",
+   "barcode_value": "Y",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].Type[0]",
+   "written": "02",
+   "saved": "02",
+   "category": "entered_encoded",
+   "at": "barcode2 position 41",
+   "barcode_value": "02",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].CanadaUS[0]",
+   "written": "0",
+   "saved": "0",
+   "category": "control_not_encoded",
+   "reason": "telephone format switch (Canada/US number boxes): chooses which boxes apply; the number itself is encoded through ActualNumber"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].Other[0]",
+   "written": "1",
+   "saved": "1",
+   "category": "control_not_encoded",
+   "reason": "telephone format switch (other-country number boxes): chooses which boxes apply; the number itself is encoded through ActualNumber"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NumberCountry[0]",
+   "written": "91",
+   "saved": "91",
+   "category": "entered_derived",
+   "rule": "full telephone number calculated into the hidden, read-only ActualNumber box (template: phone script on Phone)",
+   "into": [
+    "barcode2 position 42: +919800000000"
+   ],
+   "match": [
+    "exact"
+   ]
+  },
+  {
+   "box": "form1[0].Page3[0].FaxEmail[0].Email[0]",
+   "written": "client.a@example.com",
+   "saved": "client.a@example.com",
+   "category": "entered_encoded",
+   "at": "barcode2 position 46",
+   "barcode_value": "client.a@example.com",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].TypeofWork[0].WorkPermitType[0]",
+   "written": "ELMO",
+   "saved": "ELMO",
+   "category": "entered_encoded",
+   "at": "barcode5 position 5",
+   "barcode_value": "ELMO",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].PurposeRow1[0].EmployerName[0].EmployerName[0]",
+   "written": "Example Employer Ltd",
+   "saved": "Example Employer Ltd",
+   "category": "entered_encoded",
+   "at": "barcode5 position 6",
+   "barcode_value": "Example Employer Ltd",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].PurposeRow1[0].Address[0].Address[0]",
+   "written": "100 Example Street, Toronto",
+   "saved": "100 Example Street, Toronto",
+   "category": "entered_encoded",
+   "at": "barcode5 position 7",
+   "barcode_value": "100 Example Street, Toronto",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].ProvinceState[0].ProvinceState[0]",
+   "written": "06",
+   "saved": "06",
+   "category": "entered_encoded",
+   "at": "barcode5 position 8",
+   "barcode_value": "06",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].CityTown[0].CityTown[0]",
+   "written": "3812",
+   "saved": "3812",
+   "category": "entered_encoded",
+   "at": "barcode5 position 9",
+   "barcode_value": "3812",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].jobTitle[0]",
+   "written": "Software engineer",
+   "saved": "Software engineer",
+   "category": "entered_encoded",
+   "at": "barcode5 position 11",
+   "barcode_value": "Software engineer",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].posDesc[0]",
+   "written": "Designs and builds software",
+   "saved": "Designs and builds software",
+   "category": "entered_encoded",
+   "at": "barcode5 position 12",
+   "barcode_value": "Designs and builds software",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].HowLongStudy[0].FromDate[0]",
+   "written": "2027-01-04",
+   "saved": "2027-01-04",
+   "category": "entered_encoded",
+   "at": "barcode5 position 13",
+   "barcode_value": "2027-01-04",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].HowLongStudy[0].ToDate[0]",
+   "written": "2029-01-03",
+   "saved": "2029-01-03",
+   "category": "entered_encoded",
+   "at": "barcode5 position 14",
+   "barcode_value": "2029-01-03",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].PageWrapper[0].Education[0].EducationIndicator[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode3 position 1",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page4[0].BackgroundInfo[0].Choice[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode4 position 1",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page4[0].BackgroundInfo[0].Choice[1]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode4 position 2",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page4[0].BackgroundInfo2[0].VisaChoice1[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode4 position 4",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page4[0].BackgroundInfo2[0].VisaChoice2[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode4 position 5",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page4[0].BackgroundInfo2[0].VisaChoice3[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode4 position 6",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page4[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode4 position 8",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page4[0].PageWrapper[0].Military[0].Choice[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode4 position 10",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page4[0].PageWrapper[0].Occupation[0].Choice[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode4 position 12",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page4[0].PageWrapper[0].GovPosition[0].Choice[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "barcode4 position 13",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page4[0].Consent0[0].Choice[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "answer_not_in_manifest",
+   "reason": "Question 6 (ill treatment of prisoners or civilians, looting or desecration): not listed in any of the form's barcode1-5 manifests; the answer stays in the saved form data only"
+  },
+  {
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].IntlNumber[0].IntlNumber[0]",
+   "written": "9800000000",
+   "saved": "9800000000",
+   "category": "entered_derived",
+   "rule": "full telephone number calculated into the hidden, read-only ActualNumber box (template: phone script on Phone)",
+   "into": [
+    "barcode2 position 42: +919800000000"
+   ],
+   "match": [
+    "exact"
+   ]
+  },
+  {
+   "box": "form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].Address[0]",
+   "written": "100 Example Street, Toronto, ON",
+   "saved": "100 Example Street, Toronto, ON",
+   "category": "entered_encoded",
+   "at": "barcode5 position 10",
+   "barcode_value": "100 Example Street, Toronto, ON",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].LMO[0].LMO[0]",
+   "written": "A1234567",
+   "saved": "A1234567",
+   "category": "entered_encoded",
+   "at": "barcode5 position 15",
+   "barcode_value": "A1234567",
+   "match": "exact"
+  }
+ ],
+ "slots": [
+  {
+   "barcode": "barcode1",
+   "position": 1,
+   "box": "form1[0].Page1[0].PersonalDetails[0].ServiceIn[0].ServiceIn[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].ServiceIn[0].ServiceIn[0]",
+   "barcode_value": "01",
+   "saved_value": "01",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 2,
+   "box": "form1[0].Page1[0].PersonalDetails[0].UCIClientID[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].UCIClientID[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 3,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Name[0].FamilyName[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].Name[0].FamilyName[0]",
+   "barcode_value": "EXAMPLE",
+   "saved_value": "EXAMPLE",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 4,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Name[0].GivenName[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].Name[0].GivenName[0]",
+   "barcode_value": "CLIENTA",
+   "saved_value": "CLIENTA",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 5,
+   "box": "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasFamilyName[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasFamilyName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 6,
+   "box": "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasGivenName[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasGivenName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 7,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Sex[0].Sex[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].Sex[0].Sex[0]",
+   "barcode_value": "Female",
+   "saved_value": "Female",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 8,
+   "box": "form1[0].Page1[0].PersonalDetails[0].DOBYear[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].DOBYear[0]",
+   "barcode_value": "1990",
+   "saved_value": "1990",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 9,
+   "box": "form1[0].Page1[0].PersonalDetails[0].DOBMonth[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].DOBMonth[0]",
+   "barcode_value": "4",
+   "saved_value": "04",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 10,
+   "box": "form1[0].Page1[0].PersonalDetails[0].DOBDay[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].DOBDay[0]",
+   "barcode_value": "12",
+   "saved_value": "12",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 11,
+   "box": "form1[0].Page1[0].PersonalDetails[0].PlaceBirthCity[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PlaceBirthCity[0]",
+   "barcode_value": "New Delhi",
+   "saved_value": "New Delhi",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 12,
+   "box": "form1[0].Page1[0].PersonalDetails[0].PlaceBirthCountry[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PlaceBirthCountry[0]",
+   "barcode_value": "205",
+   "saved_value": "205",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 13,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Citizenship[0].Citizenship[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].Citizenship[0].Citizenship[0]",
+   "barcode_value": "205",
+   "saved_value": "205",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 14,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Country[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Country[0]",
+   "barcode_value": "205",
+   "saved_value": "205",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 15,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Status[0]",
+   "barcode_value": "01",
+   "saved_value": "01",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 16,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CurrentCOR[0].Row2[0].Other[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 17,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromYr[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromYr[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 18,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromMM[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromMM[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 19,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromDD[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CORDates[0].FromDD[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 20,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToYr[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToYr[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 21,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToMM[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToMM[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 22,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToDD[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CORDates[0].ToDD[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 23,
+   "box": "form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PCRIndicator[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 24,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PreviousCOR[0].Row2[0].Country[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Country[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 25,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PreviousCOR[0].Row2[0].Status[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Status[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 26,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PreviousCOR[0].Row2[0].Other[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Other[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 27,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PreviousCOR[0].Row3[0].Country[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Country[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 28,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PreviousCOR[0].Row3[0].Status[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Status[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 29,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PreviousCOR[0].Row3[0].Other[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row3[0].Other[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 30,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PCRDatesR1[0].FromYr[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].FromYr[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 31,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PCRDatesR1[0].FromMM[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].FromMM[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 32,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PCRDatesR1[0].FromDD[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].FromDD[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 33,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PCRDatesR1[0].ToYr[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].ToYr[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 34,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PCRDatesR1[0].ToMM[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].ToMM[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 35,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PCRDatesR1[0].ToDD[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PCRDatesR1[0].ToDD[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 36,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PCRDatesR2[0].FromYr[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].FromYr[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 37,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PCRDatesR2[0].FromMM[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].FromMM[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 38,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PCRDatesR2[0].FromDD[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].FromDD[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 39,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PCRDatesR2[0].ToYr[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].ToYr[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 40,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PCRDatesR2[0].ToMM[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].ToMM[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 41,
+   "box": "form1[0].Page1[0].PersonalDetails[0].Fragment1[0].PCRDatesR2[0].ToDD[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].PCRDatesR2[0].ToDD[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 42,
+   "box": "form1[0].Page1[0].PersonalDetails[0].SameAsCORIndicator[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].SameAsCORIndicator[0]",
+   "barcode_value": "Y",
+   "saved_value": "Y",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 43,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Country[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Country[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 44,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Status[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Status[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 45,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Other[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CountryWhereApplying[0].Row2[0].Other[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 46,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromYr[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromYr[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 47,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromMM[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromMM[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 48,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromDD[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromDD[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 49,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToYr[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToYr[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 50,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToMM[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToMM[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 51,
+   "box": "form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToDD[0]",
+   "data_path": "form1[0].Page1[0].PersonalDetails[0].CWADates[0].ToDD[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 52,
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]",
+   "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]",
+   "barcode_value": "03",
+   "saved_value": "03",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 53,
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromYr[0]",
+   "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromYr[0]",
+   "barcode_value": "2015",
+   "saved_value": "2015",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 54,
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromMM[0]",
+   "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromMM[0]",
+   "barcode_value": "06",
+   "saved_value": "06",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 55,
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromDD[0]",
+   "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromDD[0]",
+   "barcode_value": "01",
+   "saved_value": "01",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 56,
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].FamilyName[0]",
+   "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].FamilyName[0]",
+   "barcode_value": "EXAMPLEP",
+   "saved_value": "EXAMPLEP",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 57,
+   "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].GivenName[0]",
+   "data_path": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].GivenName[0]",
+   "barcode_value": "PARTNER",
+   "saved_value": "PARTNER",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 58,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevMarriedIndicator[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevMarriedIndicator[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 59,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].Year[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].Year[0]",
+   "barcode_value": "2026",
+   "saved_value": "2026",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 60,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].Month[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].Month[0]",
+   "barcode_value": "10",
+   "saved_value": "10",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode1",
+   "position": 61,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].Day[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].DateLastValidated[0].Day[0]",
+   "barcode_value": "19",
+   "saved_value": "19",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 1,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PMFamilyName[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PMFamilyName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 2,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].GivenName[0].PMGivenName[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].GivenName[0].PMGivenName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 3,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].TypeOfRelationship[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].TypeOfRelationship[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 4,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromYr[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromYr[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 5,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromMM[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromMM[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 6,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromDD[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].FromDD[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 7,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToYr[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToYr[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 8,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToMM[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToMM[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 9,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToDD[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PreviouslyMarriedDates[0].ToDD[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 10,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBYear[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBYear[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 11,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBMonth[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBMonth[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 12,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBDay[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].PrevSpouseDOB[0].DOBDay[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 13,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].PassportNum[0].PassportNum[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].PassportNum[0].PassportNum[0]",
+   "barcode_value": "Z1234567",
+   "saved_value": "Z1234567",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 14,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].CountryofIssue[0].CountryofIssue[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].CountryofIssue[0].CountryofIssue[0]",
+   "barcode_value": "205",
+   "saved_value": "205",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 15,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueYYYY[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueYYYY[0]",
+   "barcode_value": "2020",
+   "saved_value": "2020",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 16,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueMM[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueMM[0]",
+   "barcode_value": "01",
+   "saved_value": "01",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 17,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDD[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDD[0]",
+   "barcode_value": "15",
+   "saved_value": "15",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 18,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryYYYY[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryYYYY[0]",
+   "barcode_value": "2030",
+   "saved_value": "2030",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 19,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryMM[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryMM[0]",
+   "barcode_value": "01",
+   "saved_value": "01",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 20,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryDD[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryDD[0]",
+   "barcode_value": "14",
+   "saved_value": "14",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 21,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].TaiwanPIN[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 22,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IsraelPassportIndicator[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 23,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].POBox[0].POBox[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].POBox[0].POBox[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 24,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].Apt[0].AptUnit[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].Apt[0].AptUnit[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 25,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].StreetNum[0].StreetNum[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].StreetNum[0].StreetNum[0]",
+   "barcode_value": "12",
+   "saved_value": "12",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 26,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].Streetname[0].Streetname[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow1[0].Streetname[0].Streetname[0]",
+   "barcode_value": "Example Road",
+   "saved_value": "Example Road",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 27,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].CityTow[0].CityTown[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].CityTow[0].CityTown[0]",
+   "barcode_value": "New Delhi",
+   "saved_value": "New Delhi",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 28,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].Country[0].Country[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].Country[0].Country[0]",
+   "barcode_value": "205",
+   "saved_value": "205",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 29,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].ProvinceState[0].ProvinceState[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].ProvinceState[0].ProvinceState[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 30,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].PostalCode[0].PostalCode[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].PostalCode[0].PostalCode[0]",
+   "barcode_value": "110001",
+   "saved_value": "110001",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 31,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].District[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].AddressRow2[0].District[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 32,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].SameAsMailingIndicator[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].SameAsMailingIndicator[0]",
+   "barcode_value": "Y",
+   "saved_value": "Y",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 33,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].AptUnit[0].AptUnit[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].AptUnit[0].AptUnit[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 34,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].StreetNum[0].StreetNum[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 35,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].StreetName[0].Streetname[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].StreetName[0].Streetname[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 36,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].CityTown[0].CityTown[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow1[0].CityTown[0].CityTown[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 37,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].Country[0].Country[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].Country[0].Country[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 38,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].ProvinceState[0].ProvinceState[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].ProvinceState[0].ProvinceState[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 39,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].PostalCode[0].PostalCode[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].PostalCode[0].PostalCode[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 40,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].District[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].ResidentialAddressRow2[0].District[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 41,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].Type[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].Type[0]",
+   "barcode_value": "02",
+   "saved_value": "02",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 42,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].ActualNumber[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].ActualNumber[0]",
+   "barcode_value": "+919800000000",
+   "saved_value": "+919800000000",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 43,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].Type[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].Type[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 44,
+   "box": "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].ActualNumber[0]",
+   "data_path": "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].AltPhone[0].ActualNumber[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 45,
+   "box": "form1[0].Page3[0].FaxEmail[0].Phone[0].ActualNumber[0]",
+   "data_path": "form1[0].Page3[0].FaxEmail[0].Phone[0].ActualNumber[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode2",
+   "position": 46,
+   "box": "form1[0].Page3[0].FaxEmail[0].Email[0]",
+   "data_path": "form1[0].Page3[0].FaxEmail[0].Email[0]",
+   "barcode_value": "client.a@example.com",
+   "saved_value": "client.a@example.com",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 1,
+   "box": "form1[0].Page3[0].PageWrapper[0].Education[0].EducationIndicator[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Education[0].EducationIndicator[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 2,
+   "box": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].FromYear[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].FromYear[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 3,
+   "box": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].FromMonth[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].FromMonth[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 4,
+   "box": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].ToYear[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].ToYear[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 5,
+   "box": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].ToMonth[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].ToMonth[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 6,
+   "box": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].FieldOfStudy[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].FieldOfStudy[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 7,
+   "box": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].School[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].School[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 8,
+   "box": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].CityTown[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].CityTown[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 9,
+   "box": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].Country[0].Country[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].Country[0].Country[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 10,
+   "box": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].ProvState[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Education[0].Edu_Row1[0].ProvState[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 11,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].FromYear[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].FromYear[0]",
+   "barcode_value": "2021",
+   "saved_value": "2021",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 12,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].FromMonth[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].FromMonth[0]",
+   "barcode_value": "6",
+   "saved_value": "06",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 13,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].ToYear[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].ToYear[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 14,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].ToMonth[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].ToMonth[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 15,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Occupation[0].Occupation[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Occupation[0].Occupation[0]",
+   "barcode_value": "Software engineer",
+   "saved_value": "Software engineer",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 16,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Employer[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Employer[0]",
+   "barcode_value": "Employer Three",
+   "saved_value": "Employer Three",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 17,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].CityTown[0].CityTown[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].CityTown[0].CityTown[0]",
+   "barcode_value": "New Delhi",
+   "saved_value": "New Delhi",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 18,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Country[0].Country[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].Country[0].Country[0]",
+   "barcode_value": "205",
+   "saved_value": "205",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 19,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].ProvState[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow1[0].ProvState[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 20,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].FromYear[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].FromYear[0]",
+   "barcode_value": "2016",
+   "saved_value": "2016",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 21,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].FromMonth[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].FromMonth[0]",
+   "barcode_value": "8",
+   "saved_value": "08",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 22,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ToYear[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ToYear[0]",
+   "barcode_value": "2021",
+   "saved_value": "2021",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 23,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ToMonth[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ToMonth[0]",
+   "barcode_value": "5",
+   "saved_value": "05",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 24,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Occupation[0].Occupation[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Occupation[0].Occupation[0]",
+   "barcode_value": "Software developer",
+   "saved_value": "Software developer",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 25,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Employer[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Employer[0]",
+   "barcode_value": "Employer Two",
+   "saved_value": "Employer Two",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 26,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].CityTown[0].CityTown[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].CityTown[0].CityTown[0]",
+   "barcode_value": "New Delhi",
+   "saved_value": "New Delhi",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 27,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Country[0].Country[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].Country[0].Country[0]",
+   "barcode_value": "205",
+   "saved_value": "205",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 28,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ProvState[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow2[0].ProvState[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 29,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].FromYear[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].FromYear[0]",
+   "barcode_value": "2013",
+   "saved_value": "2013",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 30,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].FromMonth[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].FromMonth[0]",
+   "barcode_value": "7",
+   "saved_value": "07",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 31,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ToYear[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ToYear[0]",
+   "barcode_value": "2016",
+   "saved_value": "2016",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 32,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ToMonth[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ToMonth[0]",
+   "barcode_value": "7",
+   "saved_value": "07",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 33,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Occupation[0].Occupation[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Occupation[0].Occupation[0]",
+   "barcode_value": "Graduate trainee",
+   "saved_value": "Graduate trainee",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 34,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Employer[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Employer[0]",
+   "barcode_value": "Employer One",
+   "saved_value": "Employer One",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 35,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].CityTown[0].CityTown[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].CityTown[0].CityTown[0]",
+   "barcode_value": "New Delhi",
+   "saved_value": "New Delhi",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 36,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Country[0].Country[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].Country[0].Country[0]",
+   "barcode_value": "205",
+   "saved_value": "205",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode3",
+   "position": 37,
+   "box": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ProvState[0]",
+   "data_path": "form1[0].Page3[0].PageWrapper[0].Occupation[0].OccupationRow3[0].ProvState[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode4",
+   "position": 1,
+   "box": "form1[0].Page4[0].BackgroundInfo[0].Choice[0]",
+   "data_path": "form1[0].Page4[0].BackgroundInfo[0].Choice[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode4",
+   "position": 2,
+   "box": "form1[0].Page4[0].BackgroundInfo[0].Choice[1]",
+   "data_path": "form1[0].Page4[0].BackgroundInfo[0].Choice[1]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode4",
+   "position": 3,
+   "box": "form1[0].Page4[0].BackgroundInfo[0].Details[0].MedicalDetails[0]",
+   "data_path": "form1[0].Page4[0].BackgroundInfo[0].Details[0].MedicalDetails[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode4",
+   "position": 4,
+   "box": "form1[0].Page4[0].BackgroundInfo2[0].VisaChoice1[0]",
+   "data_path": "form1[0].Page4[0].BackgroundInfo2[0].VisaChoice1[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode4",
+   "position": 5,
+   "box": "form1[0].Page4[0].BackgroundInfo2[0].VisaChoice2[0]",
+   "data_path": "form1[0].Page4[0].BackgroundInfo2[0].VisaChoice2[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode4",
+   "position": 6,
+   "box": "form1[0].Page4[0].BackgroundInfo2[0].VisaChoice3[0]",
+   "data_path": "form1[0].Page4[0].BackgroundInfo2[0].VisaChoice3[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode4",
+   "position": 7,
+   "box": "form1[0].Page4[0].BackgroundInfo2[0].Details[0].refusedDetails[0]",
+   "data_path": "form1[0].Page4[0].BackgroundInfo2[0].Details[0].refusedDetails[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode4",
+   "position": 8,
+   "box": "form1[0].Page4[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]",
+   "data_path": "form1[0].Page4[0].PageWrapper[0].BackgroundInfo3[0].Choice[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode4",
+   "position": 9,
+   "box": "form1[0].Page4[0].PageWrapper[0].BackgroundInfo3[0].militaryServiceDetails[0]",
+   "data_path": "form1[0].Page4[0].PageWrapper[0].BackgroundInfo3[0].militaryServiceDetails[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode4",
+   "position": 10,
+   "box": "form1[0].Page4[0].PageWrapper[0].Military[0].Choice[0]",
+   "data_path": "form1[0].Page4[0].PageWrapper[0].Military[0].Choice[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode4",
+   "position": 11,
+   "box": "form1[0].Page4[0].PageWrapper[0].Military[0].militaryServiceDetails[0]",
+   "data_path": "form1[0].Page4[0].PageWrapper[0].Military[0].militaryServiceDetails[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode4",
+   "position": 12,
+   "box": "form1[0].Page4[0].PageWrapper[0].Occupation[0].Choice[0]",
+   "data_path": "form1[0].Page4[0].PageWrapper[0].Occupation[0].Choice[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode4",
+   "position": 13,
+   "box": "form1[0].Page4[0].PageWrapper[0].GovPosition[0].Choice[0]",
+   "data_path": "form1[0].Page4[0].PageWrapper[0].GovPosition[0].Choice[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 1,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].nativeLang[0].nativeLang[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].nativeLang[0].nativeLang[0]",
+   "barcode_value": "321",
+   "saved_value": "321",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 2,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].lov[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].lov[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 3,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].ableToCommunicate[0].ableToCommunicate[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].ableToCommunicate[0].ableToCommunicate[0]",
+   "barcode_value": "English",
+   "saved_value": "English",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 4,
+   "box": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].LanguageTest[0]",
+   "data_path": "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].LanguageTest[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 5,
+   "box": "form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].TypeofWork[0].WorkPermitType[0]",
+   "data_path": "form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].TypeofWork[0].WorkPermitType[0]",
+   "barcode_value": "ELMO",
+   "saved_value": "ELMO",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 6,
+   "box": "form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].PurposeRow1[0].EmployerName[0].EmployerName[0]",
+   "data_path": "form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].PurposeRow1[0].EmployerName[0].EmployerName[0]",
+   "barcode_value": "Example Employer Ltd",
+   "saved_value": "Example Employer Ltd",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 7,
+   "box": "form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].PurposeRow1[0].Address[0].Address[0]",
+   "data_path": "form1[0].Page3[0].DetailsOfIntendedWork[0].DetailsOfWork[0].PurposeRow1[0].Address[0].Address[0]",
+   "barcode_value": "100 Example Street, Toronto",
+   "saved_value": "100 Example Street, Toronto",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 8,
+   "box": "form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].ProvinceState[0].ProvinceState[0]",
+   "data_path": "form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].ProvinceState[0].ProvinceState[0]",
+   "barcode_value": "06",
+   "saved_value": "06",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 9,
+   "box": "form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].CityTown[0].CityTown[0]",
+   "data_path": "form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].CityTown[0].CityTown[0]",
+   "barcode_value": "3812",
+   "saved_value": "3812",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 10,
+   "box": "form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].Address[0]",
+   "data_path": "form1[0].Page3[0].IntendedLocationInCanada[0].intendedLocation[0].Address[0]",
+   "barcode_value": "100 Example Street, Toronto, ON",
+   "saved_value": "100 Example Street, Toronto, ON",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 11,
+   "box": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].jobTitle[0]",
+   "data_path": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].jobTitle[0]",
+   "barcode_value": "Software engineer",
+   "saved_value": "Software engineer",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 12,
+   "box": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].posDesc[0]",
+   "data_path": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].posDesc[0]",
+   "barcode_value": "Designs and builds software",
+   "saved_value": "Designs and builds software",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 13,
+   "box": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].HowLongStudy[0].FromDate[0]",
+   "data_path": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].HowLongStudy[0].FromDate[0]",
+   "barcode_value": "2027-01-04",
+   "saved_value": "2027-01-04",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 14,
+   "box": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].HowLongStudy[0].ToDate[0]",
+   "data_path": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].HowLongStudy[0].ToDate[0]",
+   "barcode_value": "2029-01-03",
+   "saved_value": "2029-01-03",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 15,
+   "box": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].LMO[0].LMO[0]",
+   "data_path": "form1[0].Page3[0].DetailsOfWorkCont[0].details[0].LMO[0].LMO[0]",
+   "barcode_value": "A1234567",
+   "saved_value": "A1234567",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 16,
+   "box": "form1[0].Page3[0].LCP[0].Caregiver[0].ChildCare[0]",
+   "data_path": "form1[0].Page3[0].LCP[0].Caregiver[0].ChildCare[0]",
+   "barcode_value": "0",
+   "saved_value": "0",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 17,
+   "box": "form1[0].Page3[0].LCP[0].Caregiver[0].Disabled[0]",
+   "data_path": "form1[0].Page3[0].LCP[0].Caregiver[0].Disabled[0]",
+   "barcode_value": "0",
+   "saved_value": "0",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 18,
+   "box": "form1[0].Page3[0].LCP[0].Caregiver[0].Elderly[0]",
+   "data_path": "form1[0].Page3[0].LCP[0].Caregiver[0].Elderly[0]",
+   "barcode_value": "0",
+   "saved_value": "0",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 19,
+   "box": "form1[0].Page3[0].LCP[0].Caregiver[0].Other[0]",
+   "data_path": "form1[0].Page3[0].LCP[0].Caregiver[0].Other[0]",
+   "barcode_value": "0",
+   "saved_value": "0",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 20,
+   "box": "form1[0].Page3[0].LCP[0].Caregiver[0].personsCare[0].noPersons[0]",
+   "data_path": "form1[0].Page3[0].LCP[0].Caregiver[0].personsCare[0].noPersons[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 21,
+   "box": "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]",
+   "data_path": "form1[0].Page2[0].natID[0].q1[0].natIDIndicator[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 22,
+   "box": "form1[0].Page2[0].natID[0].natIDdocs[0].DocNum[0].DocNum[0]",
+   "data_path": "form1[0].Page2[0].natID[0].natIDdocs[0].DocNum[0].DocNum[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 23,
+   "box": "form1[0].Page2[0].natID[0].natIDdocs[0].CountryofIssue[0].CountryofIssue[0]",
+   "data_path": "form1[0].Page2[0].natID[0].natIDdocs[0].CountryofIssue[0].CountryofIssue[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 24,
+   "box": "form1[0].Page2[0].natID[0].natIDdocs[0].IssueDate[0].IssueDate[0]",
+   "data_path": "form1[0].Page2[0].natID[0].natIDdocs[0].IssueDate[0].IssueDate[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 25,
+   "box": "form1[0].Page2[0].natID[0].natIDdocs[0].ExpiryDate[0]",
+   "data_path": "form1[0].Page2[0].natID[0].natIDdocs[0].ExpiryDate[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 26,
+   "box": "form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]",
+   "data_path": "form1[0].Page2[0].USCard[0].q1[0].usCardIndicator[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 27,
+   "box": "form1[0].Page2[0].USCard[0].usCarddocs[0].DocNum[0].DocNum[0]",
+   "data_path": "form1[0].Page2[0].USCard[0].usCarddocs[0].DocNum[0].DocNum[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 28,
+   "box": "form1[0].Page2[0].USCard[0].usCarddocs[0].ExpiryDate[0]",
+   "data_path": "form1[0].Page2[0].USCard[0].usCarddocs[0].ExpiryDate[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "barcode5",
+   "position": 29,
+   "box": "form1[0].Page4[0].ButtonsFooter[0].ReaderInfo[0]",
+   "data_path": "form1[0].Page4[0].ReaderInfo[0]",
+   "barcode_value": "Reader.26.00222031.Full.MAC.en_US.ENU-09-2023.",
+   "saved_value": "Reader.26.00222031.Full.MAC.en_US.ENU-09-2023.",
+   "match": "exact"
+  }
+ ],
+ "limits": "One Mac, Adobe Acrobat 26.002.22031 free mode, one IMM 1295 data set; barcodes decoded from Adobe page captures. Corroborates the file and barcode mechanism, not IRCC intake."
+}

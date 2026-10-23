@@ -1,0 +1,82 @@
+{
+ "cases": 145,
+ "sets": {
+  "E-1": 5,
+  "E-2": 5,
+  "E-3": 6,
+  "E-4": 5,
+  "E-5": 5,
+  "E-6": 5,
+  "E-7": 5,
+  "E-8": 5,
+  "E-9": 5,
+  "E-10": 5,
+  "E-11": 6,
+  "E-12": 5,
+  "E-13": 5,
+  "E-14": 6,
+  "E-15": 5,
+  "E-16": 5,
+  "E-17": 5,
+  "E-18": 8,
+  "EV-1": 6,
+  "EV-2": 5,
+  "EV-5": 5,
+  "EV-6": 5,
+  "EV-7": 6,
+  "EV-8": 6,
+  "EV-9": 5,
+  "EV-11": 5,
+  "EV-12": 6
+ },
+ "zeroTolerance": 104,
+ "adviceLike": 17,
+ "unconfirmed": 145,
+ "checksPassed": 7,
+ "checksTotal": 7,
+ "verdict": "PASS",
+ "checks": [
+  {
+   "check": "Columns are complete and every Case ID is unique and well-formed",
+   "pass": true,
+   "failures": 0,
+   "offenders": []
+  },
+  {
+   "check": "Every live AI set of AW-01 \u00a711.4 and AW-02 \u00a711.4 has cases, and no case names another set",
+   "pass": true,
+   "failures": 0,
+   "offenders": []
+  },
+  {
+   "check": "Each set mixes a normal, a missing/stale/conflicting and a refuse-or-flag case; E-18 has advice-like phrasing",
+   "pass": true,
+   "failures": 0,
+   "offenders": []
+  },
+  {
+   "check": "Every case is labelled seed, held out, with its pass bar Unknown",
+   "pass": true,
+   "failures": 0,
+   "offenders": []
+  },
+  {
+   "check": "Every answer is Unconfirmed until the Immigration SME role confirms it, and no input or answer is empty",
+   "pass": true,
+   "failures": 0,
+   "offenders": []
+  },
+  {
+   "check": "Every case cites fixtures, and every cited fixture exists",
+   "pass": true,
+   "failures": 0,
+   "offenders": []
+  },
+  {
+   "check": "LF line endings and every field quoted (the csv module rewrites the file byte-identically)",
+   "pass": true,
+   "failures": 0,
+   "offenders": []
+  }
+ ]
+}

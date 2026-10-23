@@ -101,7 +101,7 @@ Industry sources converge on the split "model for recognition, summarisation, cl
 
 #### 2.3 Recommendation for Expat Ready
 
-1. **Classify every step in every recipe with the five questions** and record the answer in the skill's manifest (section 3). The carve-out register (`../design/ai-carve-out-register-2026-10-11.md`) is the right home for the results; this research supplies the test, not new rows.
+1. **Classify every step in every recipe with the five questions** and record the answer in the skill's manifest (section 3). The story map's Class column (`../requirements/traceability.csv`) now holds the results; the carve-out register named here was folded on 15 Oct 2026 into AW-01 and AW-02 §12; this research supplies the test, not new rows.
 2. **AI never verifies a value, converts a lead, files, signs, sends or moves money** (these are already decisions on record: FD-16, AIW-D13, AIW-D44). The Filler fills only from verified values; the Signer and Biller stay deterministic.
 3. **AI proposes; Practice Pack rules check; a person confirms.** Pack rules are the "rules engine" of section 1.2; no new engine is needed [I].
 4. **Default autonomy for any AI-produced output is APPROVE.** AUTO only for internal-only outputs, after shadow evidence (AIW-D71, AIW-D80). OFF until the skill passes its test set (AIW-D83).
@@ -556,7 +556,7 @@ All accessed 11 Oct 2026. Labels refer to how each was used above.
 76. CrewAI, crews. https://docs.crewai.com/en/concepts/crews
 77. Semantic Kernel and its successor (secondary). https://atlan.com/know/ai-agent/microsoft/semantic-kernel/ ; Microsoft Agent Framework blog https://devblogs.microsoft.com/agent-framework/
 
-**Internal files referred to (not restated):** `ai-in-regulated-work-2026-10.md`; `../commercial/provider-and-cost.md` (§2.6, §3.3 to §3.5); `../design/ai-organisation.md`; `../design/ai-carve-out-register-2026-10-11.md`; `../design/workers/catalogue.md`; `../requirements/provider-test-script.md`; `../decisions.md` (AIW-D13, D35, D44, D69, D71, D80 to D84).
+**Internal files referred to (not restated):** `ai-in-regulated-work-2026-10.md`; `../commercial/provider-and-cost.md` (§2.6, §3.3 to §3.5); `../design/ai-organisation.md`; the carve-out register (folded on 15 Oct 2026 into AW-01 and AW-02 §12); `../design/workers/catalogue.md`; `../requirements/provider-test-script.md`; `../decisions.md` (AIW-D13, D35, D44, D69, D71, D80 to D84).
 
 ---
 

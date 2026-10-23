@@ -1,0 +1,629 @@
+{
+ "schema": "fact-aliases/v1",
+ "label": "Lead-verified from official sources (prototype only); not specialist-confirmed",
+ "method": "Writes expected/fact-aliases-c1.json: which draft canonical-field definitions mean each answer-key fact (P2-M1). Decided from each definition's own words (its meaning text and value type), never from the boxes it is mapped to, so a draft that swaps two facts across boxes cannot align itself. Covers every definition in the stored combination-1 drafts whose words could carry a key fact (keyword sweep over meanings, not",
+ "decisions": {
+  "same": "counts as the key fact",
+  "same_inverse": "counts when the transform inverts it",
+  "different": "never the key fact",
+  "uncertain": "a person decides; not counted correct"
+ },
+ "entries": [
+  {
+   "key_fact": "person.occupation",
+   "draft_id": "person.activity_occupation",
+   "meaning": "activity or occupation during a period of the person's history",
+   "value_type": "text",
+   "decision": "different",
+   "reason": "history activity record"
+  },
+  {
+   "key_fact": "person.country_of_birth",
+   "draft_id": "person.country_of_birth",
+   "meaning": "country or territory where the person was born",
+   "value_type": "country",
+   "decision": "same",
+   "reason": "country of birth"
+  },
+  {
+   "key_fact": "person.country_of_birth",
+   "draft_id": "person.country_of_birth",
+   "meaning": "the country or territory in which the person was born",
+   "value_type": "country",
+   "decision": "same",
+   "reason": "country of birth"
+  },
+  {
+   "key_fact": "person.country_of_birth",
+   "draft_id": "person.country_of_birth",
+   "meaning": "the country or territory where the person was born",
+   "value_type": "country",
+   "decision": "same",
+   "reason": "country of birth"
+  },
+  {
+   "key_fact": "person.residential_address",
+   "draft_id": "person.current_address",
+   "meaning": "the address where the person presently lives",
+   "value_type": "address",
+   "decision": "same",
+   "reason": "current home address"
+  },
+  {
+   "key_fact": "person.date_of_birth",
+   "draft_id": "person.date_of_birth",
+   "meaning": "date of birth",
+   "value_type": "date",
+   "decision": "same",
+   "reason": "date of birth"
+  },
+  {
+   "key_fact": "person.date_of_birth",
+   "draft_id": "person.date_of_birth",
+   "meaning": "date the person was born",
+   "value_type": "date",
+   "decision": "same",
+   "reason": "date of birth"
+  },
+  {
+   "key_fact": "person.date_of_birth",
+   "draft_id": "person.date_of_birth",
+   "meaning": "person's date of birth",
+   "value_type": "date",
+   "decision": "same",
+   "reason": "date of birth"
+  },
+  {
+   "key_fact": "person.date_of_birth",
+   "draft_id": "person.date_of_birth",
+   "meaning": "the calendar date on which the person was born",
+   "value_type": "date",
+   "decision": "same",
+   "reason": "date of birth"
+  },
+  {
+   "key_fact": "person.date_of_birth",
+   "draft_id": "person.date_of_birth",
+   "meaning": "the date the person was born",
+   "value_type": "date",
+   "decision": "same",
+   "reason": "date of birth"
+  },
+  {
+   "key_fact": "person.date_of_birth",
+   "draft_id": "person.date_of_birth",
+   "meaning": "the person's date of birth",
+   "value_type": "date",
+   "decision": "same",
+   "reason": "date of birth"
+  },
+  {
+   "key_fact": "person.occupation",
+   "draft_id": "person.employment_activity",
+   "meaning": "activity or occupation of an activity/occupation record",
+   "value_type": "text",
+   "decision": "different",
+   "reason": "history activity record"
+  },
+  {
+   "key_fact": "person.family_name",
+   "draft_id": "person.family_name",
+   "meaning": "family name (surname) as shown on passport or travel document",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "family name (surname); passport/identity-document/English/Latin wording all name the same fact"
+  },
+  {
+   "key_fact": "person.family_name",
+   "draft_id": "person.family_name",
+   "meaning": "family name (surname) as shown on the passport or travel document",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "family name (surname); passport/identity-document/English/Latin wording all name the same fact"
+  },
+  {
+   "key_fact": "person.family_name",
+   "draft_id": "person.family_name",
+   "meaning": "family name (surname) as shown on the person's passport or travel document",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "family name (surname); passport/identity-document/English/Latin wording all name the same fact"
+  },
+  {
+   "key_fact": "person.family_name",
+   "draft_id": "person.family_name",
+   "meaning": "family name (surname), as shown on the passport or travel document where one applies",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "family name (surname); passport/identity-document/English/Latin wording all name the same fact"
+  },
+  {
+   "key_fact": "person.family_name",
+   "draft_id": "person.family_name",
+   "meaning": "person's family name (surname) as on passport or travel document",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "family name (surname); passport/identity-document/English/Latin wording all name the same fact"
+  },
+  {
+   "key_fact": "person.family_name",
+   "draft_id": "person.family_name",
+   "meaning": "person's family name (surname) as shown on their passport or travel document",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "family name (surname); passport/identity-document/English/Latin wording all name the same fact"
+  },
+  {
+   "key_fact": "person.family_name",
+   "draft_id": "person.family_name",
+   "meaning": "the person's family name (surname)",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "family name (surname); passport/identity-document/English/Latin wording all name the same fact"
+  },
+  {
+   "key_fact": "person.family_name",
+   "draft_id": "person.family_name",
+   "meaning": "the person's family name (surname) as it appears on their identity document",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "family name (surname); passport/identity-document/English/Latin wording all name the same fact"
+  },
+  {
+   "key_fact": "person.family_name",
+   "draft_id": "person.family_name",
+   "meaning": "the person's family name (surname) as it appears on their identity documents",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "family name (surname); passport/identity-document/English/Latin wording all name the same fact"
+  },
+  {
+   "key_fact": "person.family_name",
+   "draft_id": "person.family_name",
+   "meaning": "the person's family name (surname) as written in english",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "family name (surname); passport/identity-document/English/Latin wording all name the same fact"
+  },
+  {
+   "key_fact": "person.family_name",
+   "draft_id": "person.family_name",
+   "meaning": "the person's family name (surname) in latin characters as recorded in the case",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "family name (surname); passport/identity-document/English/Latin wording all name the same fact"
+  },
+  {
+   "key_fact": "person.given_names",
+   "draft_id": "person.given_names",
+   "meaning": "given name(s) as shown on passport or travel document",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "given name(s)"
+  },
+  {
+   "key_fact": "person.given_names",
+   "draft_id": "person.given_names",
+   "meaning": "given name(s) as shown on the passport or travel document",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "given name(s)"
+  },
+  {
+   "key_fact": "person.given_names",
+   "draft_id": "person.given_names",
+   "meaning": "given name(s) as shown on the person's passport or travel document",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "given name(s)"
+  },
+  {
+   "key_fact": "person.given_names",
+   "draft_id": "person.given_names",
+   "meaning": "given name(s), as shown on the passport or travel document where one applies",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "given name(s)"
+  },
+  {
+   "key_fact": "person.given_names",
+   "draft_id": "person.given_names",
+   "meaning": "person's given name(s) as on passport or travel document",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "given name(s)"
+  },
+  {
+   "key_fact": "person.given_names",
+   "draft_id": "person.given_names",
+   "meaning": "person's given name(s) as shown on their passport or travel document",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "given name(s)"
+  },
+  {
+   "key_fact": "person.given_names",
+   "draft_id": "person.given_names",
+   "meaning": "the person's given name or names",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "given name(s)"
+  },
+  {
+   "key_fact": "person.given_names",
+   "draft_id": "person.given_names",
+   "meaning": "the person's given name or names as they appear on their identity document",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "given name(s)"
+  },
+  {
+   "key_fact": "person.given_names",
+   "draft_id": "person.given_names",
+   "meaning": "the person's given name or names as they appear on their identity documents",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "given name(s)"
+  },
+  {
+   "key_fact": "person.given_names",
+   "draft_id": "person.given_names",
+   "meaning": "the person's given name or names as written in english",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "given name(s)"
+  },
+  {
+   "key_fact": "person.given_names",
+   "draft_id": "person.given_names",
+   "meaning": "the person's given name or names in latin characters as recorded in the case",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "given name(s)"
+  },
+  {
+   "key_fact": "derived: subject has no children",
+   "draft_id": "person.has_children",
+   "meaning": "whether the person has any children (natural, adopted or step), derived from the child records held for the person",
+   "value_type": "yes_no",
+   "decision": "same_inverse",
+   "reason": "whether the person has children; the box is its inverse (the transform must invert)"
+  },
+  {
+   "key_fact": "person.residential_address",
+   "draft_id": "person.mailing_address",
+   "meaning": "address where the person receives mail",
+   "value_type": "address",
+   "decision": "different",
+   "reason": "mailing address, a different address"
+  },
+  {
+   "key_fact": "person.residential_address",
+   "draft_id": "person.mailing_address",
+   "meaning": "current mailing address",
+   "value_type": "address",
+   "decision": "different",
+   "reason": "mailing address, a different address"
+  },
+  {
+   "key_fact": "person.residential_address",
+   "draft_id": "person.mailing_address",
+   "meaning": "mailing address (unit, street number, street name, city, province/state, country, postal code)",
+   "value_type": "address",
+   "decision": "different",
+   "reason": "mailing address, a different address"
+  },
+  {
+   "key_fact": "person.residential_address",
+   "draft_id": "person.mailing_address",
+   "meaning": "person's current mailing address",
+   "value_type": "address",
+   "decision": "different",
+   "reason": "mailing address, a different address"
+  },
+  {
+   "key_fact": "person.marital_status",
+   "draft_id": "person.marital_status",
+   "meaning": "current marital status",
+   "value_type": "code",
+   "decision": "same",
+   "reason": "current marital (or relationship/partnership) status"
+  },
+  {
+   "key_fact": "person.marital_status",
+   "draft_id": "person.marital_status",
+   "meaning": "current marital status of the person",
+   "value_type": "code",
+   "decision": "same",
+   "reason": "current marital (or relationship/partnership) status"
+  },
+  {
+   "key_fact": "person.marital_status",
+   "draft_id": "person.marital_status",
+   "meaning": "person's current marital status",
+   "value_type": "code",
+   "decision": "same",
+   "reason": "current marital (or relationship/partnership) status"
+  },
+  {
+   "key_fact": "person.marital_status",
+   "draft_id": "person.marital_status",
+   "meaning": "the person's current marital or partnership status",
+   "value_type": "code",
+   "decision": "same",
+   "reason": "current marital (or relationship/partnership) status"
+  },
+  {
+   "key_fact": "person.marital_status",
+   "draft_id": "person.marital_status",
+   "meaning": "the person's current marital or relationship status",
+   "value_type": "code",
+   "decision": "same",
+   "reason": "current marital (or relationship/partnership) status"
+  },
+  {
+   "key_fact": "person.marital_status",
+   "draft_id": "person.marital_status",
+   "meaning": "the person's current marital status",
+   "value_type": "code",
+   "decision": "same",
+   "reason": "current marital (or relationship/partnership) status"
+  },
+  {
+   "key_fact": "person.name_native_language",
+   "draft_id": "person.native_language",
+   "meaning": "native language or mother tongue",
+   "value_type": "code",
+   "decision": "different",
+   "reason": "a language, not a name written in it"
+  },
+  {
+   "key_fact": "person.name_native_language",
+   "draft_id": "person.native_language",
+   "meaning": "person's native language / mother tongue",
+   "value_type": "code",
+   "decision": "different",
+   "reason": "a language, not a name written in it"
+  },
+  {
+   "key_fact": "person.name_native_language",
+   "draft_id": "person.native_language",
+   "meaning": "person's native language or mother tongue",
+   "value_type": "code",
+   "decision": "different",
+   "reason": "a language, not a name written in it"
+  },
+  {
+   "key_fact": "person.occupation",
+   "draft_id": "person.occupation",
+   "meaning": "activity or occupation during a period",
+   "value_type": "text",
+   "decision": "different",
+   "reason": "a period-bound history activity, not the present occupation the key's IMM 5707 boxes hold"
+  },
+  {
+   "key_fact": "person.occupation",
+   "draft_id": "person.occupation",
+   "meaning": "the person's present occupation",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "present occupation"
+  },
+  {
+   "key_fact": "person.country_of_birth",
+   "draft_id": "person.place_of_birth_country",
+   "meaning": "country or territory of birth",
+   "value_type": "country",
+   "decision": "same",
+   "reason": "country of birth; a second id for the same meaning (P2-M2 merge)"
+  },
+  {
+   "key_fact": "person.country_of_birth",
+   "draft_id": "person.place_of_birth_country",
+   "meaning": "country or territory where the person was born",
+   "value_type": "country",
+   "decision": "same",
+   "reason": "country of birth; a second id for the same meaning (P2-M2 merge)"
+  },
+  {
+   "key_fact": "person.residential_address",
+   "draft_id": "person.present_address",
+   "meaning": "the address where the person currently lives",
+   "value_type": "address",
+   "decision": "same",
+   "reason": "current home address (P2-M2 merge)"
+  },
+  {
+   "key_fact": "person.residential_address",
+   "draft_id": "person.present_address",
+   "meaning": "the person's current residential address",
+   "value_type": "address",
+   "decision": "same",
+   "reason": "current home address (P2-M2 merge)"
+  },
+  {
+   "key_fact": "person.occupation",
+   "draft_id": "person.present_occupation",
+   "meaning": "the person's current occupation",
+   "value_type": "text",
+   "decision": "same",
+   "reason": "present occupation"
+  },
+  {
+   "key_fact": "person.residential_address",
+   "draft_id": "person.residential_address",
+   "meaning": "address where the person physically lives",
+   "value_type": "address",
+   "decision": "same",
+   "reason": "current home address"
+  },
+  {
+   "key_fact": "person.residential_address",
+   "draft_id": "person.residential_address",
+   "meaning": "current residential (home) address",
+   "value_type": "address",
+   "decision": "same",
+   "reason": "current home address"
+  },
+  {
+   "key_fact": "person.residential_address",
+   "draft_id": "person.residential_address",
+   "meaning": "current residential (physical) address",
+   "value_type": "address",
+   "decision": "same",
+   "reason": "current home address"
+  },
+  {
+   "key_fact": "person.residential_address",
+   "draft_id": "person.residential_address",
+   "meaning": "current residential address",
+   "value_type": "address",
+   "decision": "same",
+   "reason": "current home address"
+  },
+  {
+   "key_fact": "person.residential_address",
+   "draft_id": "person.residential_address",
+   "meaning": "person's current residential (home) address",
+   "value_type": "address",
+   "decision": "same",
+   "reason": "current home address"
+  },
+  {
+   "key_fact": "person.travelling_alone_to_canada",
+   "draft_id": "person.travelling_alone_to_canada",
+   "meaning": "whether a minor is travelling to canada alone",
+   "value_type": "yes_no",
+   "decision": "same",
+   "reason": "D19 condition input"
+  },
+  {
+   "key_fact": "case.accompanies_principal",
+   "draft_id": "relationship.accompanies_subject_to_canada",
+   "meaning": "whether this family member will accompany the form subject to canada",
+   "value_type": "yes_no",
+   "decision": "same",
+   "reason": "whether this family member accompanies the subject to Canada; who the subject is comes from the person check"
+  },
+  {
+   "key_fact": "case.accompanies_principal",
+   "draft_id": "relationship.accompanies_subject_to_canada",
+   "meaning": "whether this family member will accompany the person the form is about to canada",
+   "value_type": "yes_no",
+   "decision": "same",
+   "reason": "whether this family member accompanies the subject to Canada; who the subject is comes from the person check"
+  },
+  {
+   "key_fact": "case.accompanies_principal",
+   "draft_id": "relationship.accompanies_subject_to_canada",
+   "meaning": "whether this family member will accompany the subject to canada",
+   "value_type": "yes_no",
+   "decision": "same",
+   "reason": "whether this family member accompanies the subject to Canada; who the subject is comes from the person check"
+  },
+  {
+   "key_fact": "case.accompanies_principal",
+   "draft_id": "relationship.accompanying_to_canada",
+   "meaning": "whether this family member will accompany the subject to canada",
+   "value_type": "yes_no",
+   "decision": "same",
+   "reason": "as above"
+  },
+  {
+   "key_fact": "relationship.to_form_subject",
+   "draft_id": "relationship.child_relationship_to_subject",
+   "meaning": "how a child is related to the form subject (natural, step or adopted son or daughter)",
+   "value_type": "code",
+   "decision": "same",
+   "reason": "as above"
+  },
+  {
+   "key_fact": "relationship.to_form_subject",
+   "draft_id": "relationship.child_relationship_type",
+   "meaning": "how a child is related to the subject: natural son or daughter, stepchild or adopted child",
+   "value_type": "code",
+   "decision": "same",
+   "reason": "how a child is related to the subject"
+  },
+  {
+   "key_fact": "relationship.to_form_subject",
+   "draft_id": "relationship.child_relationship_type",
+   "meaning": "how the child is related to the subject: natural son or daughter, stepchild or adopted child",
+   "value_type": "code",
+   "decision": "same",
+   "reason": "how a child is related to the subject"
+  },
+  {
+   "key_fact": "relationship.to_form_subject",
+   "draft_id": "relationship.child_relationship_type",
+   "meaning": "the kind of child relationship this person has to the subject (son, daughter, step-child, adopted child)",
+   "value_type": "code",
+   "decision": "same",
+   "reason": "how a child is related to the subject"
+  },
+  {
+   "key_fact": "relationship.start_date",
+   "draft_id": "relationship.cohabitation_start_date",
+   "meaning": "date the person and their common-law partner began living together in a conjugal relationship",
+   "value_type": "date",
+   "decision": "uncertain",
+   "reason": "living together in a conjugal relationship: equals the start of a common-law relationship but not of a marriage; a person decides (not counted correct)"
+  },
+  {
+   "key_fact": "relationship.start_date",
+   "draft_id": "relationship.cohabitation_start_date",
+   "meaning": "date the two partners began living together continuously in a conjugal relationship",
+   "value_type": "date",
+   "decision": "uncertain",
+   "reason": "living together in a conjugal relationship: equals the start of a common-law relationship but not of a marriage; a person decides (not counted correct)"
+  },
+  {
+   "key_fact": "derived: subject has no children",
+   "draft_id": "relationship.has_children",
+   "meaning": "whether the subject has any children (natural, adopted or step)",
+   "value_type": "yes_no",
+   "decision": "same_inverse",
+   "reason": "as above"
+  },
+  {
+   "key_fact": "relationship.to_form_subject",
+   "draft_id": "relationship.relationship_to_subject",
+   "meaning": "the kind of family relationship this person has to the person the form is about (for example son, step-daughter, adopted son)",
+   "value_type": "code",
+   "decision": "same",
+   "reason": "the kind of family relationship to the subject (covers the child codes)"
+  },
+  {
+   "key_fact": "relationship.start_date",
+   "draft_id": "relationship.start_date",
+   "meaning": "date a marriage took place or a common-law relationship began",
+   "value_type": "date",
+   "decision": "same",
+   "reason": "date the marriage took place or the common-law relationship began"
+  },
+  {
+   "key_fact": "relationship.start_date",
+   "draft_id": "relationship.start_date",
+   "meaning": "date of marriage or date the common-law relationship began",
+   "value_type": "date",
+   "decision": "same",
+   "reason": "date the marriage took place or the common-law relationship began"
+  },
+  {
+   "key_fact": "relationship.start_date",
+   "draft_id": "relationship.union_start_date",
+   "meaning": "date a marriage took place or a common-law relationship began",
+   "value_type": "date",
+   "decision": "same",
+   "reason": "as above"
+  },
+  {
+   "key_fact": "relationship.start_date",
+   "draft_id": "relationship.union_start_date",
+   "meaning": "date the person married, or began a common-law relationship with, their partner",
+   "value_type": "date",
+   "decision": "same",
+   "reason": "as above"
+  }
+ ]
+}

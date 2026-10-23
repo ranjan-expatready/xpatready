@@ -1,0 +1,3098 @@
+[
+  {
+    "width": 960,
+    "scheme": "light",
+    "pageWidth": 960,
+    "scrollWidth": 960,
+    "pageHeight": 24564,
+    "cards": [
+      {
+        "id": "st-1",
+        "rect": {
+          "x": 31,
+          "y": -20555,
+          "w": 898,
+          "h": 293.0625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "1\nGather the official material",
+            "rect": {
+              "x": 43,
+              "y": -20545,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nContent publisher SUPER ADMIN\nattaches the sources\nPlatform\nreads each new form ",
+            "rect": {
+              "x": 43,
+              "y": -20511,
+              "w": 874,
+              "h": 93.375
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Content publisher SUPER ADMIN\nattaches the sources\nPlatform\nreads each new form edition",
+            "rect": {
+              "x": 43,
+              "y": -20490.25,
+              "w": 874,
+              "h": 72.625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nA form edition is read once and reused by every combination that uses it\nAn ",
+            "rect": {
+              "x": 43,
+              "y": -20411.625,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "RUNS\n\nonce for each new form edition, checklist or guide",
+            "rect": {
+              "x": 43,
+              "y": -20346.5625,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mctl",
+            "text": "Example",
+            "rect": {
+              "x": 43,
+              "y": -20301.6875,
+              "w": 874,
+              "h": 28.75
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-2",
+        "rect": {
+          "x": 31,
+          "y": -20227.9375,
+          "w": 898,
+          "h": 293.0625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "2\nAI drafts the configuration",
+            "rect": {
+              "x": 43,
+              "y": -20217.9375,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nAI\ndrafts the whole setup\nPlatform\nassembles the PQR, SQR and staff working view",
+            "rect": {
+              "x": 43,
+              "y": -20183.9375,
+              "w": 874,
+              "h": 93.375
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "AI\ndrafts the whole setup\nPlatform\nassembles the PQR, SQR and staff working view by rules",
+            "rect": {
+              "x": 43,
+              "y": -20163.1875,
+              "w": 874,
+              "h": 72.625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nNo manual mapping: AI picks library sections and fields and writes each mapp",
+            "rect": {
+              "x": 43,
+              "y": -20084.5625,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "SIDE BY SIDE\n\nfield matching and mappings run beside the document list; rules, gates and q",
+            "rect": {
+              "x": 43,
+              "y": -20019.5,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mctl",
+            "text": "Example",
+            "rect": {
+              "x": 43,
+              "y": -19974.625,
+              "w": 874,
+              "h": 28.75
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-3",
+        "rect": {
+          "x": 31,
+          "y": -19900.875,
+          "w": 898,
+          "h": 489.640625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "3\nCheck, review and publish",
+            "rect": {
+              "x": 43,
+              "y": -19890.875,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nPlatform\nchecks and tests\nAI\nrechecks meaning\nContent publisher SUPER ADMIN\nrevi",
+            "rect": {
+              "x": 43,
+              "y": -19856.875,
+              "w": 874,
+              "h": 208.3125
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Platform\nchecks and tests\nAI\nrechecks meaning\nContent publisher SUPER ADMIN\nreviews\nImmigr",
+            "rect": {
+              "x": 43,
+              "y": -19836.125,
+              "w": 874,
+              "h": 187.5625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nEvery new or changed item is reviewed beside its source; approved unchanged ",
+            "rect": {
+              "x": 43,
+              "y": -19642.5625,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "SIDE BY SIDE\n\nexpected-answer tests and the AI recheck, after the structure check; review ",
+            "rect": {
+              "x": 43,
+              "y": -19577.5,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nReview outcome?\n\nA check fails, or the reviewer corrects→ only those items go ba",
+            "rect": {
+              "x": 43,
+              "y": -19532.625,
+              "w": 874,
+              "h": 110.390625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-A",
+        "rect": {
+          "x": 31,
+          "y": -19072.765625,
+          "w": 898,
+          "h": 429.671875
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "START\nNew client",
+            "rect": {
+              "x": 43,
+              "y": -19062.765625,
+              "w": 874,
+              "h": 33.296875
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nClient and family CLIENT PORTAL\nfills the lead form and PQR\nPlatform\nfinds possi",
+            "rect": {
+              "x": 43,
+              "y": -19023.46875,
+              "w": 874,
+              "h": 131.6875
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Client and family CLIENT PORTAL\nfills the lead form and PQR\nPlatform\nfinds possible duplic",
+            "rect": {
+              "x": 43,
+              "y": -19002.71875,
+              "w": 874,
+              "h": 110.9375
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nA returning person who uses the lead form is matched to their record here",
+            "rect": {
+              "x": 43,
+              "y": -18885.78125,
+              "w": 874,
+              "h": 37.90625
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nSame person as an existing client?\n\nYes→ link to that record; then the firm deci",
+            "rect": {
+              "x": 43,
+              "y": -18841.875,
+              "w": 874,
+              "h": 90.890625
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nFirm takes the case?\n\nYes→ open the case\nNo→ lead closed",
+            "rect": {
+              "x": 43,
+              "y": -18744.984375,
+              "w": 874,
+              "h": 90.890625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-B",
+        "rect": {
+          "x": 31,
+          "y": -18635.09375,
+          "w": 898,
+          "h": 180.421875
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "START\nExisting client, new service",
+            "rect": {
+              "x": 43,
+              "y": -18625.09375,
+              "w": 874,
+              "h": 33.296875
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nAgent FIRM\nopens a new case from the client's record",
+            "rect": {
+              "x": 43,
+              "y": -18585.796875,
+              "w": 874,
+              "h": 55.0625
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Agent FIRM\nopens a new case from the client's record",
+            "rect": {
+              "x": 43,
+              "y": -18565.046875,
+              "w": 874,
+              "h": 34.3125
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nNo new lead, and no repeat of the lead form or PQR\nOnly eligibility question",
+            "rect": {
+              "x": 43,
+              "y": -18524.734375,
+              "w": 874,
+              "h": 59.0625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-4",
+        "rect": {
+          "x": 31,
+          "y": -18409.671875,
+          "w": 898,
+          "h": 213.4375
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "4\nOpen the case",
+            "rect": {
+              "x": 43,
+              "y": -18399.671875,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nAgent FIRM\nopens the case and adds the family\nPlatform\napplies the pinned pack v",
+            "rect": {
+              "x": 43,
+              "y": -18365.671875,
+              "w": 874,
+              "h": 93.375
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Agent FIRM\nopens the case and adds the family\nPlatform\napplies the pinned pack version's r",
+            "rect": {
+              "x": 43,
+              "y": -18344.921875,
+              "w": 874,
+              "h": 72.625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nThe case is pinned to the pack version that is current when it opens\nEach pe",
+            "rect": {
+              "x": 43,
+              "y": -18266.296875,
+              "w": 874,
+              "h": 59.0625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-5",
+        "rect": {
+          "x": 31,
+          "y": -18162.234375,
+          "w": 898,
+          "h": 209.875
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "5\nReuse verified information",
+            "rect": {
+              "x": 43,
+              "y": -18152.234375,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nPlatform\nselects by rules, not AI",
+            "rect": {
+              "x": 43,
+              "y": -18118.234375,
+              "w": 874,
+              "h": 55.0625
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Platform\nselects by rules, not AI",
+            "rect": {
+              "x": 43,
+              "y": -18097.484375,
+              "w": 874,
+              "h": 34.3125
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nEach fact is chosen on its own (same person, meaning and date), never 'copy ",
+            "rect": {
+              "x": 43,
+              "y": -18057.171875,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "mctl",
+            "text": "Example",
+            "rect": {
+              "x": 43,
+              "y": -17992.109375,
+              "w": 874,
+              "h": 28.75
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-6",
+        "rect": {
+          "x": 31,
+          "y": -17918.359375,
+          "w": 898,
+          "h": 464.265625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "6\nCollect and verify the gaps",
+            "rect": {
+              "x": 43,
+              "y": -17908.359375,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nClient and family CLIENT PORTAL\nanswer and upload\nAI\nproposes values from docume",
+            "rect": {
+              "x": 43,
+              "y": -17874.359375,
+              "w": 874,
+              "h": 131.6875
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Client and family CLIENT PORTAL\nanswer and upload\nAI\nproposes values from documents\nAgent ",
+            "rect": {
+              "x": 43,
+              "y": -17853.609375,
+              "w": 874,
+              "h": 110.9375
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nOnly open questions are asked; facts that can change show 'still true?'\nA va",
+            "rect": {
+              "x": 43,
+              "y": -17736.671875,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "RUNS\n\nonce for each adult; one reading for each uploaded document",
+            "rect": {
+              "x": 43,
+              "y": -17671.609375,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nEvery fact a form needs verified?\n\nYes→ form preparation\nMissing or conflict→ on",
+            "rect": {
+              "x": 43,
+              "y": -17626.734375,
+              "w": 874,
+              "h": 126.890625
+            }
+          },
+          {
+            "cls": "mctl",
+            "text": "Example",
+            "rect": {
+              "x": 43,
+              "y": -17493.84375,
+              "w": 874,
+              "h": 28.75
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-7",
+        "rect": {
+          "x": 31,
+          "y": -17420.09375,
+          "w": 898,
+          "h": 413.015625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "7\nPrepare and check each form",
+            "rect": {
+              "x": 43,
+              "y": -17410.09375,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nPlatform\nrenders by rules, later fills and reads back\nAI\nflags meaning doubts\nAg",
+            "rect": {
+              "x": 43,
+              "y": -17376.09375,
+              "w": 874,
+              "h": 131.6875
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Platform\nrenders by rules, later fills and reads back\nAI\nflags meaning doubts\nAgent FIRM\nr",
+            "rect": {
+              "x": 43,
+              "y": -17355.34375,
+              "w": 874,
+              "h": 110.9375
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nNo AI writes a value; every written value is read back\nA form edition not ye",
+            "rect": {
+              "x": 43,
+              "y": -17238.40625,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "RUNS\n\nonce for each required form, side by side",
+            "rect": {
+              "x": 43,
+              "y": -17173.34375,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nAnything wrong?\n\nWrong fact→ back to stage 6; forms that read it are prepared ag",
+            "rect": {
+              "x": 43,
+              "y": -17128.46875,
+              "w": 874,
+              "h": 110.390625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-8",
+        "rect": {
+          "x": 31,
+          "y": -16973.078125,
+          "w": 898,
+          "h": 432.515625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "8\nApprove, sign and submit",
+            "rect": {
+              "x": 43,
+              "y": -16963.078125,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nLead representative FIRM\napproves the final file\nClient and family CLIENT PORTAL",
+            "rect": {
+              "x": 43,
+              "y": -16929.078125,
+              "w": 874,
+              "h": 131.6875
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Lead representative FIRM\napproves the final file\nClient and family CLIENT PORTAL\nsign and ",
+            "rect": {
+              "x": 43,
+              "y": -16908.328125,
+              "w": 874,
+              "h": 110.9375
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nA missing required document holds that filing; a recorded reason alone never",
+            "rect": {
+              "x": 43,
+              "y": -16791.390625,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "PER FILING\n\neach applicant's filing moves on its own unless the route requires joint submi",
+            "rect": {
+              "x": 43,
+              "y": -16726.328125,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nApproved and signed without a problem?\n\nYes→ submission\nA form returned→ back to",
+            "rect": {
+              "x": 43,
+              "y": -16681.453125,
+              "w": 874,
+              "h": 129.890625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-9",
+        "rect": {
+          "x": 31,
+          "y": -16506.5625,
+          "w": 898,
+          "h": 374.703125
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "9\nRecord the responses",
+            "rect": {
+              "x": 43,
+              "y": -16496.5625,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nGovernment OUTSIDE\nsends letters\nAgent FIRM\nrecords each on its filing; a decisi",
+            "rect": {
+              "x": 43,
+              "y": -16462.5625,
+              "w": 874,
+              "h": 93.375
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Government OUTSIDE\nsends letters\nAgent FIRM\nrecords each on its filing; a decision needs t",
+            "rect": {
+              "x": 43,
+              "y": -16441.8125,
+              "w": 874,
+              "h": 72.625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nA request becomes a task: it may need a document, a corrected fact (stage 6)",
+            "rect": {
+              "x": 43,
+              "y": -16363.1875,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WAITS FOR\n\nthe government's acknowledgement, requests and decision, for each filing",
+            "rect": {
+              "x": 43,
+              "y": -16298.125,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nWhat follows a decision?\n\nDecision recorded→ After decision: the follow-up steps",
+            "rect": {
+              "x": 43,
+              "y": -16253.25,
+              "w": 874,
+              "h": 110.390625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-10",
+        "rect": {
+          "x": 31,
+          "y": -15827.078125,
+          "w": 898,
+          "h": 329.828125
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "10\nFind the change",
+            "rect": {
+              "x": 43,
+              "y": -15817.078125,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nPlatform\nre-reads sources on a schedule\nContent publisher SUPER ADMIN\ntriages fi",
+            "rect": {
+              "x": 43,
+              "y": -15783.078125,
+              "w": 874,
+              "h": 93.375
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Platform\nre-reads sources on a schedule\nContent publisher SUPER ADMIN\ntriages firms' suppo",
+            "rect": {
+              "x": 43,
+              "y": -15762.328125,
+              "w": 874,
+              "h": 72.625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nA source that cannot be checked is 'not verified', never 'no change'\nSupport",
+            "rect": {
+              "x": 43,
+              "y": -15683.703125,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nAnything changed?\n\nNo→ nothing happens\nYes→ only changed items go forward\nCould ",
+            "rect": {
+              "x": 43,
+              "y": -15618.640625,
+              "w": 874,
+              "h": 110.390625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-11",
+        "rect": {
+          "x": 31,
+          "y": -15463.25,
+          "w": 898,
+          "h": 290.0625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "11\nReview and publish the change",
+            "rect": {
+              "x": 43,
+              "y": -15453.25,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nAI\nre-drafts changed items\nContent publisher SUPER ADMIN\nreviews\nImmigration SME",
+            "rect": {
+              "x": 43,
+              "y": -15419.25,
+              "w": 874,
+              "h": 170
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "AI\nre-drafts changed items\nContent publisher SUPER ADMIN\nreviews\nImmigration SME SUPER ADM",
+            "rect": {
+              "x": 43,
+              "y": -15398.5,
+              "w": 874,
+              "h": 149.25
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nThe same checks and two-person approval and publishing as setup\nEarlier vers",
+            "rect": {
+              "x": 43,
+              "y": -15243.25,
+              "w": 874,
+              "h": 59.0625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-12",
+        "rect": {
+          "x": 31,
+          "y": -15139.1875,
+          "w": 898,
+          "h": 316.890625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "12\nOpen cases adopt it",
+            "rect": {
+              "x": 43,
+              "y": -15129.1875,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nAgent FIRM\nsees 'what changes for this case' and adopts",
+            "rect": {
+              "x": 43,
+              "y": -15095.1875,
+              "w": 874,
+              "h": 55.0625
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Agent FIRM\nsees 'what changes for this case' and adopts",
+            "rect": {
+              "x": 43,
+              "y": -15074.4375,
+              "w": 874,
+              "h": 34.3125
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nOnly affected forms are prepared again, and only their approvals are withdra",
+            "rect": {
+              "x": 43,
+              "y": -15034.125,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WAITS FOR\n\nthe agent's adoption; the case keeps its version until then",
+            "rect": {
+              "x": 43,
+              "y": -14969.0625,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nDoes it affect this open case?\n\nYes→ adopt now, or later (by the cut-off, if the",
+            "rect": {
+              "x": 43,
+              "y": -14924.1875,
+              "w": 874,
+              "h": 90.890625
+            }
+          }
+        ]
+      }
+    ],
+    "tables": [
+      {
+        "section": "overview-bpmn",
+        "rect": {
+          "x": 16,
+          "y": -13194.75,
+          "w": 928,
+          "h": 1154.5
+        },
+        "cells": []
+      },
+      {
+        "section": "controls",
+        "rect": {
+          "x": 16,
+          "y": -3875,
+          "w": 928,
+          "h": 336.5
+        },
+        "cells": []
+      },
+      {
+        "section": "records",
+        "rect": {
+          "x": 16,
+          "y": -2492.25,
+          "w": 928,
+          "h": 882.5
+        },
+        "cells": []
+      },
+      {
+        "section": "cases",
+        "rect": {
+          "x": 16,
+          "y": -1502.5,
+          "w": 928,
+          "h": 563.5
+        },
+        "cells": []
+      },
+      {
+        "section": "evidence",
+        "rect": {
+          "x": 16,
+          "y": -791.25,
+          "w": 928,
+          "h": 954
+        },
+        "cells": []
+      },
+      {
+        "section": "evidence",
+        "rect": {
+          "x": 16,
+          "y": 206,
+          "w": 928,
+          "h": 408.75
+        },
+        "cells": []
+      },
+      {
+        "section": "evidence",
+        "rect": {
+          "x": 16,
+          "y": 658,
+          "w": 928,
+          "h": 774.75
+        },
+        "cells": []
+      },
+      {
+        "section": "evidence",
+        "rect": {
+          "x": 16,
+          "y": 1476,
+          "w": 928,
+          "h": 489.75
+        },
+        "cells": []
+      }
+    ],
+    "emptyListItems": [
+      {
+        "html": "<li class=\"fl-ev\"><b>Starts:</b> New combination needed<div class=\"fl-next\">→ 1 Start and read</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -14458,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Starts on a message:</b> Support ticket<div class=\"fl-next\">→ 7 Watch, triage, publish a change</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -14387.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v1\">1 Start and read</a></b><div class=\"fl-next\">→ 2 AI drafts the setup</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -14317,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v2\">2 AI drafts the setup</a></b><div class=\"fl-next\">→ 3 Check, review and publish</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -14246.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v3\">3 Check, review and publish</a></b><div class=\"fl-next\">→ Pack version published · → record: Published pack version</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -14176,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Ends:</b> Pack version published</li>",
+        "rect": {
+          "x": 16,
+          "y": -14105.5,
+          "w": 928,
+          "h": 39
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Starts on a schedule:</b> Scheduled check<div class=\"fl-next\">→ 7 Watch, triage, publish a change</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -14056.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v7\">7 Watch, triage, publish a change</a></b><div class=\"fl-next\">→ New version published</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13986,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Ends and sends a message:</b> New version published<div class=\"fl-next\">message 'New version published' → 7 Adopt a change on this case</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13915.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Starts on a message:</b> Prepare this form<div class=\"fl-next\">→ 5 Prepare each form</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13845,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v5\">5 Prepare each form</a></b><div class=\"fl-next\">→ Form approved or fact to correct · Support ticket → Support ticket</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13774.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Ends and sends a message:</b> Form approved or fact to correct<div class=\"fl-next\">message → 6 Sign, submit, respond</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13704,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Starts:</b> Prospect arrives<div class=\"fl-next\">→ 4 Prospect to verified facts</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13633.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Starts:</b> Existing client, new service<div class=\"fl-next\">→ 4 Prospect to verified facts</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13563,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v4\">4 Prospect to verified facts</a></b><div class=\"fl-next\">→ 6 Sign, submit, respond</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13492.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v6\">6 Sign, submit, respond</a></b><div class=\"fl-next\">→ Every filing closed · Prepare each form → Prepare this form · Application → message to Government</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13422,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Ends:</b> Every filing closed</li>",
+        "rect": {
+          "x": 16,
+          "y": -13351.5,
+          "w": 928,
+          "h": 39
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v7\">7 Adopt a change on this case</a></b><div class=\"fl-next\">Prepare affected forms again → 5 Prepare each form</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13302.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag req\" tabindex=\"0\" data-tip=\"Team requirement: Already in the team's requirement documents; this page follows it.\">Team requirement</span> One canonical field per fact meaning: key, type, validation, whether it is about a person ",
+        "rect": {
+          "x": 174.765625,
+          "y": -2285.75,
+          "w": 370.890625,
+          "h": 97.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Sections and field groups are reused where the meaning is the same; form filling references fields",
+        "rect": {
+          "x": 174.765625,
+          "y": -2186,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> A form edition holds its own field inventory and its form field map; a portal screen version is tr",
+        "rect": {
+          "x": 174.765625,
+          "y": -2125.25,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Each answer-list entry carries its mapping to every form's own option text</li>",
+        "rect": {
+          "x": 174.765625,
+          "y": -2064.5,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Everything in a combination references versioned library items (fields, sections, documents, form ",
+        "rect": {
+          "x": 174.765625,
+          "y": -2023.25,
+          "w": 370.890625,
+          "h": 78.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> A published item never changes; a change is a new version</li>",
+        "rect": {
+          "x": 174.765625,
+          "y": -1943,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag dec\" tabindex=\"0\" data-tip=\"Founder decision: Decided by the founder; changes only with the founder's yes.\">Founder decision</span> Only Expat Ready writes to the library; firms read it</li>",
+        "rect": {
+          "x": 174.765625,
+          "y": -1901.75,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Nothing fits an incoming item: the engine proposes a new library item and a person approves it onc",
+        "rect": {
+          "x": 174.765625,
+          "y": -1860.5,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag req\" tabindex=\"0\" data-tip=\"Team requirement: Already in the team's requirement documents; this page follows it.\">Team requirement</span> One record per person or organisation inside one firm, shared by all their cases; a case r",
+        "rect": {
+          "x": 174.765625,
+          "y": -1974,
+          "w": 370.890625,
+          "h": 78.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag dec\" tabindex=\"0\" data-tip=\"Founder decision: Decided by the founder; changes only with the founder's yes.\">Founder decision</span> Facts belong to the person and are reused across that person's cases inside the same firm only, ",
+        "rect": {
+          "x": 174.765625,
+          "y": -1893.75,
+          "w": 370.890625,
+          "h": 78.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag req\" tabindex=\"0\" data-tip=\"Team requirement: Already in the team's requirement documents; this page follows it.\">Team requirement</span> Facts that belong to one application (a job offer, a case-only answer) stay on that case a",
+        "rect": {
+          "x": 174.765625,
+          "y": -1813.5,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag dec\" tabindex=\"0\" data-tip=\"Founder decision: Decided by the founder; changes only with the founder's yes.\">Founder decision</span> Household facts (marriage date, children, a shared address) are entered once and linked to both ",
+        "rect": {
+          "x": 174.765625,
+          "y": -1752.75,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag req\" tabindex=\"0\" data-tip=\"Team requirement: Already in the team's requirement documents; this page follows it.\">Team requirement</span> A superseded value is kept as history with its source and dates, never overwritten</li>",
+        "rect": {
+          "x": 174.765625,
+          "y": -1692,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Each required fact is resolved on its own: same person or organisation, same field meaning and pur",
+        "rect": {
+          "x": 174.765625,
+          "y": -1650.75,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> The selected value is the current verified one: verified by a person, with a known source, and not",
+        "rect": {
+          "x": 174.765625,
+          "y": -1590,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> A later case-open date, upload time or edit time does not by itself make a value more authoritativ",
+        "rect": {
+          "x": 174.765625,
+          "y": -1529.25,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> A newer declared or document-read value that differs from a verified one waits as 'needs review'; ",
+        "rect": {
+          "x": 174.765625,
+          "y": -1488,
+          "w": 370.890625,
+          "h": 78.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> A value correctly superseded by a later verified one is history, not a conflict</li>",
+        "rect": {
+          "x": 174.765625,
+          "y": -1407.75,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Two current values with no recorded replacement between them (for example after two records are me",
+        "rect": {
+          "x": 174.765625,
+          "y": -1366.5,
+          "w": 370.890625,
+          "h": 78.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> A question about a past date (an address at an earlier application) is answered from the value tru",
+        "rect": {
+          "x": 174.765625,
+          "y": -1286.25,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag dec\" tabindex=\"0\" data-tip=\"Founder decision: Decided by the founder; changes only with the founder's yes.\">Founder decision</span> Each field's re-confirmation rule applies on every new case: identity facts are not re-asked unl",
+        "rect": {
+          "x": 174.765625,
+          "y": -1225.5,
+          "w": 370.890625,
+          "h": 117.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag req\" tabindex=\"0\" data-tip=\"Team requirement: Already in the team's requirement documents; this page follows it.\">Team requirement</span> Each case keeps the set of facts it was assessed and filed on; a later change to the share",
+        "rect": {
+          "x": 174.765625,
+          "y": -1106.25,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Choosing among values already verified is rules, not AI; AI only proposes values read from new doc",
+        "rect": {
+          "x": 174.765625,
+          "y": -1045.5,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      }
+    ],
+    "flows": [
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nRead forms and passages",
+        "rect": {
+          "x": 31,
+          "y": -20261.9375,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nDraft with sources",
+        "rect": {
+          "x": 31,
+          "y": -19934.875,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nPublished configuration",
+        "rect": {
+          "x": 31,
+          "y": -19411.234375,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "mrail mrail-pkg",
+        "text": "Published pack version\nShared and read-only. Each new case reads the pack version that is current when it opens; nothing is regenerated or sent for each client.\nRead, not sent: each new case reads it when it opens (stage 4)",
+        "rect": {
+          "x": 16,
+          "y": -19292.6875,
+          "w": 928,
+          "h": 104.421875
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nResolved client",
+        "rect": {
+          "x": 31,
+          "y": -18454.671875,
+          "w": 898,
+          "h": 45
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nPeople, roles, pinned pack version",
+        "rect": {
+          "x": 31,
+          "y": -18196.234375,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nUnresolved facts",
+        "rect": {
+          "x": 31,
+          "y": -17952.359375,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "mwrap",
+        "text": "Verified facts (stage 6 → stage 7)",
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        }
+      },
+      {
+        "cls": "marr phone-only",
+        "text": "then, handing over:\nVerified facts",
+        "rect": {
+          "x": 31,
+          "y": -17454.09375,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nChecked forms",
+        "rect": {
+          "x": 31,
+          "y": -17007.078125,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nSubmitted application",
+        "rect": {
+          "x": 31,
+          "y": -16540.5625,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nEach filing's decision",
+        "rect": {
+          "x": 31,
+          "y": -16131.859375,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "mrail mrail-x",
+        "text": "Between the bands\nDown, stage 7 → 10: a firm's support ticket about a form or a mapping.\nUp, stage 12 → 7: after the agent adopts a new published version, only the affected forms are prepared again.",
+        "rect": {
+          "x": 16,
+          "y": -16013.3125,
+          "w": 928,
+          "h": 95.984375
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nChanged items",
+        "rect": {
+          "x": 31,
+          "y": -15497.25,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nNew published version",
+        "rect": {
+          "x": 31,
+          "y": -15173.1875,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nAffected forms",
+        "rect": {
+          "x": 31,
+          "y": -14822.296875,
+          "w": 898,
+          "h": 34
+        }
+      }
+    ]
+  },
+  {
+    "width": 960,
+    "scheme": "dark",
+    "pageWidth": 960,
+    "scrollWidth": 960,
+    "pageHeight": 24564,
+    "cards": [
+      {
+        "id": "st-1",
+        "rect": {
+          "x": 31,
+          "y": -20555,
+          "w": 898,
+          "h": 293.0625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "1\nGather the official material",
+            "rect": {
+              "x": 43,
+              "y": -20545,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nContent publisher SUPER ADMIN\nattaches the sources\nPlatform\nreads each new form ",
+            "rect": {
+              "x": 43,
+              "y": -20511,
+              "w": 874,
+              "h": 93.375
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Content publisher SUPER ADMIN\nattaches the sources\nPlatform\nreads each new form edition",
+            "rect": {
+              "x": 43,
+              "y": -20490.25,
+              "w": 874,
+              "h": 72.625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nA form edition is read once and reused by every combination that uses it\nAn ",
+            "rect": {
+              "x": 43,
+              "y": -20411.625,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "RUNS\n\nonce for each new form edition, checklist or guide",
+            "rect": {
+              "x": 43,
+              "y": -20346.5625,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mctl",
+            "text": "Example",
+            "rect": {
+              "x": 43,
+              "y": -20301.6875,
+              "w": 874,
+              "h": 28.75
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-2",
+        "rect": {
+          "x": 31,
+          "y": -20227.9375,
+          "w": 898,
+          "h": 293.0625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "2\nAI drafts the configuration",
+            "rect": {
+              "x": 43,
+              "y": -20217.9375,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nAI\ndrafts the whole setup\nPlatform\nassembles the PQR, SQR and staff working view",
+            "rect": {
+              "x": 43,
+              "y": -20183.9375,
+              "w": 874,
+              "h": 93.375
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "AI\ndrafts the whole setup\nPlatform\nassembles the PQR, SQR and staff working view by rules",
+            "rect": {
+              "x": 43,
+              "y": -20163.1875,
+              "w": 874,
+              "h": 72.625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nNo manual mapping: AI picks library sections and fields and writes each mapp",
+            "rect": {
+              "x": 43,
+              "y": -20084.5625,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "SIDE BY SIDE\n\nfield matching and mappings run beside the document list; rules, gates and q",
+            "rect": {
+              "x": 43,
+              "y": -20019.5,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mctl",
+            "text": "Example",
+            "rect": {
+              "x": 43,
+              "y": -19974.625,
+              "w": 874,
+              "h": 28.75
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-3",
+        "rect": {
+          "x": 31,
+          "y": -19900.875,
+          "w": 898,
+          "h": 489.640625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "3\nCheck, review and publish",
+            "rect": {
+              "x": 43,
+              "y": -19890.875,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nPlatform\nchecks and tests\nAI\nrechecks meaning\nContent publisher SUPER ADMIN\nrevi",
+            "rect": {
+              "x": 43,
+              "y": -19856.875,
+              "w": 874,
+              "h": 208.3125
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Platform\nchecks and tests\nAI\nrechecks meaning\nContent publisher SUPER ADMIN\nreviews\nImmigr",
+            "rect": {
+              "x": 43,
+              "y": -19836.125,
+              "w": 874,
+              "h": 187.5625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nEvery new or changed item is reviewed beside its source; approved unchanged ",
+            "rect": {
+              "x": 43,
+              "y": -19642.5625,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "SIDE BY SIDE\n\nexpected-answer tests and the AI recheck, after the structure check; review ",
+            "rect": {
+              "x": 43,
+              "y": -19577.5,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nReview outcome?\n\nA check fails, or the reviewer corrects→ only those items go ba",
+            "rect": {
+              "x": 43,
+              "y": -19532.625,
+              "w": 874,
+              "h": 110.390625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-A",
+        "rect": {
+          "x": 31,
+          "y": -19072.765625,
+          "w": 898,
+          "h": 429.671875
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "START\nNew client",
+            "rect": {
+              "x": 43,
+              "y": -19062.765625,
+              "w": 874,
+              "h": 33.296875
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nClient and family CLIENT PORTAL\nfills the lead form and PQR\nPlatform\nfinds possi",
+            "rect": {
+              "x": 43,
+              "y": -19023.46875,
+              "w": 874,
+              "h": 131.6875
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Client and family CLIENT PORTAL\nfills the lead form and PQR\nPlatform\nfinds possible duplic",
+            "rect": {
+              "x": 43,
+              "y": -19002.71875,
+              "w": 874,
+              "h": 110.9375
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nA returning person who uses the lead form is matched to their record here",
+            "rect": {
+              "x": 43,
+              "y": -18885.78125,
+              "w": 874,
+              "h": 37.90625
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nSame person as an existing client?\n\nYes→ link to that record; then the firm deci",
+            "rect": {
+              "x": 43,
+              "y": -18841.875,
+              "w": 874,
+              "h": 90.890625
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nFirm takes the case?\n\nYes→ open the case\nNo→ lead closed",
+            "rect": {
+              "x": 43,
+              "y": -18744.984375,
+              "w": 874,
+              "h": 90.890625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-B",
+        "rect": {
+          "x": 31,
+          "y": -18635.09375,
+          "w": 898,
+          "h": 180.421875
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "START\nExisting client, new service",
+            "rect": {
+              "x": 43,
+              "y": -18625.09375,
+              "w": 874,
+              "h": 33.296875
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nAgent FIRM\nopens a new case from the client's record",
+            "rect": {
+              "x": 43,
+              "y": -18585.796875,
+              "w": 874,
+              "h": 55.0625
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Agent FIRM\nopens a new case from the client's record",
+            "rect": {
+              "x": 43,
+              "y": -18565.046875,
+              "w": 874,
+              "h": 34.3125
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nNo new lead, and no repeat of the lead form or PQR\nOnly eligibility question",
+            "rect": {
+              "x": 43,
+              "y": -18524.734375,
+              "w": 874,
+              "h": 59.0625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-4",
+        "rect": {
+          "x": 31,
+          "y": -18409.671875,
+          "w": 898,
+          "h": 213.4375
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "4\nOpen the case",
+            "rect": {
+              "x": 43,
+              "y": -18399.671875,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nAgent FIRM\nopens the case and adds the family\nPlatform\napplies the pinned pack v",
+            "rect": {
+              "x": 43,
+              "y": -18365.671875,
+              "w": 874,
+              "h": 93.375
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Agent FIRM\nopens the case and adds the family\nPlatform\napplies the pinned pack version's r",
+            "rect": {
+              "x": 43,
+              "y": -18344.921875,
+              "w": 874,
+              "h": 72.625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nThe case is pinned to the pack version that is current when it opens\nEach pe",
+            "rect": {
+              "x": 43,
+              "y": -18266.296875,
+              "w": 874,
+              "h": 59.0625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-5",
+        "rect": {
+          "x": 31,
+          "y": -18162.234375,
+          "w": 898,
+          "h": 209.875
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "5\nReuse verified information",
+            "rect": {
+              "x": 43,
+              "y": -18152.234375,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nPlatform\nselects by rules, not AI",
+            "rect": {
+              "x": 43,
+              "y": -18118.234375,
+              "w": 874,
+              "h": 55.0625
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Platform\nselects by rules, not AI",
+            "rect": {
+              "x": 43,
+              "y": -18097.484375,
+              "w": 874,
+              "h": 34.3125
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nEach fact is chosen on its own (same person, meaning and date), never 'copy ",
+            "rect": {
+              "x": 43,
+              "y": -18057.171875,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "mctl",
+            "text": "Example",
+            "rect": {
+              "x": 43,
+              "y": -17992.109375,
+              "w": 874,
+              "h": 28.75
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-6",
+        "rect": {
+          "x": 31,
+          "y": -17918.359375,
+          "w": 898,
+          "h": 464.265625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "6\nCollect and verify the gaps",
+            "rect": {
+              "x": 43,
+              "y": -17908.359375,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nClient and family CLIENT PORTAL\nanswer and upload\nAI\nproposes values from docume",
+            "rect": {
+              "x": 43,
+              "y": -17874.359375,
+              "w": 874,
+              "h": 131.6875
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Client and family CLIENT PORTAL\nanswer and upload\nAI\nproposes values from documents\nAgent ",
+            "rect": {
+              "x": 43,
+              "y": -17853.609375,
+              "w": 874,
+              "h": 110.9375
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nOnly open questions are asked; facts that can change show 'still true?'\nA va",
+            "rect": {
+              "x": 43,
+              "y": -17736.671875,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "RUNS\n\nonce for each adult; one reading for each uploaded document",
+            "rect": {
+              "x": 43,
+              "y": -17671.609375,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nEvery fact a form needs verified?\n\nYes→ form preparation\nMissing or conflict→ on",
+            "rect": {
+              "x": 43,
+              "y": -17626.734375,
+              "w": 874,
+              "h": 126.890625
+            }
+          },
+          {
+            "cls": "mctl",
+            "text": "Example",
+            "rect": {
+              "x": 43,
+              "y": -17493.84375,
+              "w": 874,
+              "h": 28.75
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-7",
+        "rect": {
+          "x": 31,
+          "y": -17420.09375,
+          "w": 898,
+          "h": 413.015625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "7\nPrepare and check each form",
+            "rect": {
+              "x": 43,
+              "y": -17410.09375,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nPlatform\nrenders by rules, later fills and reads back\nAI\nflags meaning doubts\nAg",
+            "rect": {
+              "x": 43,
+              "y": -17376.09375,
+              "w": 874,
+              "h": 131.6875
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Platform\nrenders by rules, later fills and reads back\nAI\nflags meaning doubts\nAgent FIRM\nr",
+            "rect": {
+              "x": 43,
+              "y": -17355.34375,
+              "w": 874,
+              "h": 110.9375
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nNo AI writes a value; every written value is read back\nA form edition not ye",
+            "rect": {
+              "x": 43,
+              "y": -17238.40625,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "RUNS\n\nonce for each required form, side by side",
+            "rect": {
+              "x": 43,
+              "y": -17173.34375,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nAnything wrong?\n\nWrong fact→ back to stage 6; forms that read it are prepared ag",
+            "rect": {
+              "x": 43,
+              "y": -17128.46875,
+              "w": 874,
+              "h": 110.390625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-8",
+        "rect": {
+          "x": 31,
+          "y": -16973.078125,
+          "w": 898,
+          "h": 432.515625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "8\nApprove, sign and submit",
+            "rect": {
+              "x": 43,
+              "y": -16963.078125,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nLead representative FIRM\napproves the final file\nClient and family CLIENT PORTAL",
+            "rect": {
+              "x": 43,
+              "y": -16929.078125,
+              "w": 874,
+              "h": 131.6875
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Lead representative FIRM\napproves the final file\nClient and family CLIENT PORTAL\nsign and ",
+            "rect": {
+              "x": 43,
+              "y": -16908.328125,
+              "w": 874,
+              "h": 110.9375
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nA missing required document holds that filing; a recorded reason alone never",
+            "rect": {
+              "x": 43,
+              "y": -16791.390625,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "PER FILING\n\neach applicant's filing moves on its own unless the route requires joint submi",
+            "rect": {
+              "x": 43,
+              "y": -16726.328125,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nApproved and signed without a problem?\n\nYes→ submission\nA form returned→ back to",
+            "rect": {
+              "x": 43,
+              "y": -16681.453125,
+              "w": 874,
+              "h": 129.890625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-9",
+        "rect": {
+          "x": 31,
+          "y": -16506.5625,
+          "w": 898,
+          "h": 374.703125
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "9\nRecord the responses",
+            "rect": {
+              "x": 43,
+              "y": -16496.5625,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nGovernment OUTSIDE\nsends letters\nAgent FIRM\nrecords each on its filing; a decisi",
+            "rect": {
+              "x": 43,
+              "y": -16462.5625,
+              "w": 874,
+              "h": 93.375
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Government OUTSIDE\nsends letters\nAgent FIRM\nrecords each on its filing; a decision needs t",
+            "rect": {
+              "x": 43,
+              "y": -16441.8125,
+              "w": 874,
+              "h": 72.625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nA request becomes a task: it may need a document, a corrected fact (stage 6)",
+            "rect": {
+              "x": 43,
+              "y": -16363.1875,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WAITS FOR\n\nthe government's acknowledgement, requests and decision, for each filing",
+            "rect": {
+              "x": 43,
+              "y": -16298.125,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nWhat follows a decision?\n\nDecision recorded→ After decision: the follow-up steps",
+            "rect": {
+              "x": 43,
+              "y": -16253.25,
+              "w": 874,
+              "h": 110.390625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-10",
+        "rect": {
+          "x": 31,
+          "y": -15827.078125,
+          "w": 898,
+          "h": 329.828125
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "10\nFind the change",
+            "rect": {
+              "x": 43,
+              "y": -15817.078125,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nPlatform\nre-reads sources on a schedule\nContent publisher SUPER ADMIN\ntriages fi",
+            "rect": {
+              "x": 43,
+              "y": -15783.078125,
+              "w": 874,
+              "h": 93.375
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Platform\nre-reads sources on a schedule\nContent publisher SUPER ADMIN\ntriages firms' suppo",
+            "rect": {
+              "x": 43,
+              "y": -15762.328125,
+              "w": 874,
+              "h": 72.625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nA source that cannot be checked is 'not verified', never 'no change'\nSupport",
+            "rect": {
+              "x": 43,
+              "y": -15683.703125,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nAnything changed?\n\nNo→ nothing happens\nYes→ only changed items go forward\nCould ",
+            "rect": {
+              "x": 43,
+              "y": -15618.640625,
+              "w": 874,
+              "h": 110.390625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-11",
+        "rect": {
+          "x": 31,
+          "y": -15463.25,
+          "w": 898,
+          "h": 290.0625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "11\nReview and publish the change",
+            "rect": {
+              "x": 43,
+              "y": -15453.25,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nAI\nre-drafts changed items\nContent publisher SUPER ADMIN\nreviews\nImmigration SME",
+            "rect": {
+              "x": 43,
+              "y": -15419.25,
+              "w": 874,
+              "h": 170
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "AI\nre-drafts changed items\nContent publisher SUPER ADMIN\nreviews\nImmigration SME SUPER ADM",
+            "rect": {
+              "x": 43,
+              "y": -15398.5,
+              "w": 874,
+              "h": 149.25
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nThe same checks and two-person approval and publishing as setup\nEarlier vers",
+            "rect": {
+              "x": 43,
+              "y": -15243.25,
+              "w": 874,
+              "h": 59.0625
+            }
+          }
+        ]
+      },
+      {
+        "id": "st-12",
+        "rect": {
+          "x": 31,
+          "y": -15139.1875,
+          "w": 898,
+          "h": 316.890625
+        },
+        "sections": [
+          {
+            "cls": "",
+            "text": "12\nOpen cases adopt it",
+            "rect": {
+              "x": 43,
+              "y": -15129.1875,
+              "w": 874,
+              "h": 28
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WHO ACTS\n\nAgent FIRM\nsees 'what changes for this case' and adopts",
+            "rect": {
+              "x": 43,
+              "y": -15095.1875,
+              "w": 874,
+              "h": 55.0625
+            }
+          },
+          {
+            "cls": "mwho",
+            "text": "Agent FIRM\nsees 'what changes for this case' and adopts",
+            "rect": {
+              "x": 43,
+              "y": -15074.4375,
+              "w": 874,
+              "h": 34.3125
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "GOOD TO KNOW\n\nOnly affected forms are prepared again, and only their approvals are withdra",
+            "rect": {
+              "x": 43,
+              "y": -15034.125,
+              "w": 874,
+              "h": 59.0625
+            }
+          },
+          {
+            "cls": "msec",
+            "text": "WAITS FOR\n\nthe agent's adoption; the case keeps its version until then",
+            "rect": {
+              "x": 43,
+              "y": -14969.0625,
+              "w": 874,
+              "h": 38.875
+            }
+          },
+          {
+            "cls": "mgate",
+            "text": "DECISION\n\nDoes it affect this open case?\n\nYes→ adopt now, or later (by the cut-off, if the",
+            "rect": {
+              "x": 43,
+              "y": -14924.1875,
+              "w": 874,
+              "h": 90.890625
+            }
+          }
+        ]
+      }
+    ],
+    "tables": [
+      {
+        "section": "overview-bpmn",
+        "rect": {
+          "x": 16,
+          "y": -13194.75,
+          "w": 928,
+          "h": 1154.5
+        },
+        "cells": []
+      },
+      {
+        "section": "controls",
+        "rect": {
+          "x": 16,
+          "y": -3875,
+          "w": 928,
+          "h": 336.5
+        },
+        "cells": []
+      },
+      {
+        "section": "records",
+        "rect": {
+          "x": 16,
+          "y": -2492.25,
+          "w": 928,
+          "h": 882.5
+        },
+        "cells": []
+      },
+      {
+        "section": "cases",
+        "rect": {
+          "x": 16,
+          "y": -1502.5,
+          "w": 928,
+          "h": 563.5
+        },
+        "cells": []
+      },
+      {
+        "section": "evidence",
+        "rect": {
+          "x": 16,
+          "y": -791.25,
+          "w": 928,
+          "h": 954
+        },
+        "cells": []
+      },
+      {
+        "section": "evidence",
+        "rect": {
+          "x": 16,
+          "y": 206,
+          "w": 928,
+          "h": 408.75
+        },
+        "cells": []
+      },
+      {
+        "section": "evidence",
+        "rect": {
+          "x": 16,
+          "y": 658,
+          "w": 928,
+          "h": 774.75
+        },
+        "cells": []
+      },
+      {
+        "section": "evidence",
+        "rect": {
+          "x": 16,
+          "y": 1476,
+          "w": 928,
+          "h": 489.75
+        },
+        "cells": []
+      }
+    ],
+    "emptyListItems": [
+      {
+        "html": "<li class=\"fl-ev\"><b>Starts:</b> New combination needed<div class=\"fl-next\">→ 1 Start and read</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -14458,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Starts on a message:</b> Support ticket<div class=\"fl-next\">→ 7 Watch, triage, publish a change</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -14387.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v1\">1 Start and read</a></b><div class=\"fl-next\">→ 2 AI drafts the setup</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -14317,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v2\">2 AI drafts the setup</a></b><div class=\"fl-next\">→ 3 Check, review and publish</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -14246.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v3\">3 Check, review and publish</a></b><div class=\"fl-next\">→ Pack version published · → record: Published pack version</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -14176,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Ends:</b> Pack version published</li>",
+        "rect": {
+          "x": 16,
+          "y": -14105.5,
+          "w": 928,
+          "h": 39
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Starts on a schedule:</b> Scheduled check<div class=\"fl-next\">→ 7 Watch, triage, publish a change</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -14056.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v7\">7 Watch, triage, publish a change</a></b><div class=\"fl-next\">→ New version published</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13986,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Ends and sends a message:</b> New version published<div class=\"fl-next\">message 'New version published' → 7 Adopt a change on this case</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13915.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Starts on a message:</b> Prepare this form<div class=\"fl-next\">→ 5 Prepare each form</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13845,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v5\">5 Prepare each form</a></b><div class=\"fl-next\">→ Form approved or fact to correct · Support ticket → Support ticket</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13774.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Ends and sends a message:</b> Form approved or fact to correct<div class=\"fl-next\">message → 6 Sign, submit, respond</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13704,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Starts:</b> Prospect arrives<div class=\"fl-next\">→ 4 Prospect to verified facts</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13633.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Starts:</b> Existing client, new service<div class=\"fl-next\">→ 4 Prospect to verified facts</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13563,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v4\">4 Prospect to verified facts</a></b><div class=\"fl-next\">→ 6 Sign, submit, respond</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13492.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v6\">6 Sign, submit, respond</a></b><div class=\"fl-next\">→ Every filing closed · Prepare each form → Prepare this form · Application → message to Government</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13422,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b>Ends:</b> Every filing closed</li>",
+        "rect": {
+          "x": 16,
+          "y": -13351.5,
+          "w": 928,
+          "h": 39
+        }
+      },
+      {
+        "html": "<li class=\"fl-ev\"><b><a href=\"#view-v7\">7 Adopt a change on this case</a></b><div class=\"fl-next\">Prepare affected forms again → 5 Prepare each form</div></li>",
+        "rect": {
+          "x": 16,
+          "y": -13302.5,
+          "w": 928,
+          "h": 60.5
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag req\" tabindex=\"0\" data-tip=\"Team requirement: Already in the team's requirement documents; this page follows it.\">Team requirement</span> One canonical field per fact meaning: key, type, validation, whether it is about a person ",
+        "rect": {
+          "x": 174.765625,
+          "y": -2285.75,
+          "w": 370.890625,
+          "h": 97.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Sections and field groups are reused where the meaning is the same; form filling references fields",
+        "rect": {
+          "x": 174.765625,
+          "y": -2186,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> A form edition holds its own field inventory and its form field map; a portal screen version is tr",
+        "rect": {
+          "x": 174.765625,
+          "y": -2125.25,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Each answer-list entry carries its mapping to every form's own option text</li>",
+        "rect": {
+          "x": 174.765625,
+          "y": -2064.5,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Everything in a combination references versioned library items (fields, sections, documents, form ",
+        "rect": {
+          "x": 174.765625,
+          "y": -2023.25,
+          "w": 370.890625,
+          "h": 78.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> A published item never changes; a change is a new version</li>",
+        "rect": {
+          "x": 174.765625,
+          "y": -1943,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag dec\" tabindex=\"0\" data-tip=\"Founder decision: Decided by the founder; changes only with the founder's yes.\">Founder decision</span> Only Expat Ready writes to the library; firms read it</li>",
+        "rect": {
+          "x": 174.765625,
+          "y": -1901.75,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Nothing fits an incoming item: the engine proposes a new library item and a person approves it onc",
+        "rect": {
+          "x": 174.765625,
+          "y": -1860.5,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag req\" tabindex=\"0\" data-tip=\"Team requirement: Already in the team's requirement documents; this page follows it.\">Team requirement</span> One record per person or organisation inside one firm, shared by all their cases; a case r",
+        "rect": {
+          "x": 174.765625,
+          "y": -1974,
+          "w": 370.890625,
+          "h": 78.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag dec\" tabindex=\"0\" data-tip=\"Founder decision: Decided by the founder; changes only with the founder's yes.\">Founder decision</span> Facts belong to the person and are reused across that person's cases inside the same firm only, ",
+        "rect": {
+          "x": 174.765625,
+          "y": -1893.75,
+          "w": 370.890625,
+          "h": 78.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag req\" tabindex=\"0\" data-tip=\"Team requirement: Already in the team's requirement documents; this page follows it.\">Team requirement</span> Facts that belong to one application (a job offer, a case-only answer) stay on that case a",
+        "rect": {
+          "x": 174.765625,
+          "y": -1813.5,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag dec\" tabindex=\"0\" data-tip=\"Founder decision: Decided by the founder; changes only with the founder's yes.\">Founder decision</span> Household facts (marriage date, children, a shared address) are entered once and linked to both ",
+        "rect": {
+          "x": 174.765625,
+          "y": -1752.75,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag req\" tabindex=\"0\" data-tip=\"Team requirement: Already in the team's requirement documents; this page follows it.\">Team requirement</span> A superseded value is kept as history with its source and dates, never overwritten</li>",
+        "rect": {
+          "x": 174.765625,
+          "y": -1692,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Each required fact is resolved on its own: same person or organisation, same field meaning and pur",
+        "rect": {
+          "x": 174.765625,
+          "y": -1650.75,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> The selected value is the current verified one: verified by a person, with a known source, and not",
+        "rect": {
+          "x": 174.765625,
+          "y": -1590,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> A later case-open date, upload time or edit time does not by itself make a value more authoritativ",
+        "rect": {
+          "x": 174.765625,
+          "y": -1529.25,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> A newer declared or document-read value that differs from a verified one waits as 'needs review'; ",
+        "rect": {
+          "x": 174.765625,
+          "y": -1488,
+          "w": 370.890625,
+          "h": 78.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> A value correctly superseded by a later verified one is history, not a conflict</li>",
+        "rect": {
+          "x": 174.765625,
+          "y": -1407.75,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Two current values with no recorded replacement between them (for example after two records are me",
+        "rect": {
+          "x": 174.765625,
+          "y": -1366.5,
+          "w": 370.890625,
+          "h": 78.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> A question about a past date (an address at an earlier application) is answered from the value tru",
+        "rect": {
+          "x": 174.765625,
+          "y": -1286.25,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag dec\" tabindex=\"0\" data-tip=\"Founder decision: Decided by the founder; changes only with the founder's yes.\">Founder decision</span> Each field's re-confirmation rule applies on every new case: identity facts are not re-asked unl",
+        "rect": {
+          "x": 174.765625,
+          "y": -1225.5,
+          "w": 370.890625,
+          "h": 117.25
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag req\" tabindex=\"0\" data-tip=\"Team requirement: Already in the team's requirement documents; this page follows it.\">Team requirement</span> Each case keeps the set of facts it was assessed and filed on; a later change to the share",
+        "rect": {
+          "x": 174.765625,
+          "y": -1106.25,
+          "w": 370.890625,
+          "h": 58.75
+        }
+      },
+      {
+        "html": "<li><span class=\"rtag prop\" tabindex=\"0\" data-tip=\"Proposed here: This solution's proposal; the team decides whether to adopt it.\">Proposed here</span> Choosing among values already verified is rules, not AI; AI only proposes values read from new doc",
+        "rect": {
+          "x": 174.765625,
+          "y": -1045.5,
+          "w": 370.890625,
+          "h": 39.25
+        }
+      }
+    ],
+    "flows": [
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nRead forms and passages",
+        "rect": {
+          "x": 31,
+          "y": -20261.9375,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nDraft with sources",
+        "rect": {
+          "x": 31,
+          "y": -19934.875,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nPublished configuration",
+        "rect": {
+          "x": 31,
+          "y": -19411.234375,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "mrail mrail-pkg",
+        "text": "Published pack version\nShared and read-only. Each new case reads the pack version that is current when it opens; nothing is regenerated or sent for each client.\nRead, not sent: each new case reads it when it opens (stage 4)",
+        "rect": {
+          "x": 16,
+          "y": -19292.6875,
+          "w": 928,
+          "h": 104.421875
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nResolved client",
+        "rect": {
+          "x": 31,
+          "y": -18454.671875,
+          "w": 898,
+          "h": 45
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nPeople, roles, pinned pack version",
+        "rect": {
+          "x": 31,
+          "y": -18196.234375,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nUnresolved facts",
+        "rect": {
+          "x": 31,
+          "y": -17952.359375,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "mwrap",
+        "text": "Verified facts (stage 6 → stage 7)",
+        "rect": {
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0
+        }
+      },
+      {
+        "cls": "marr phone-only",
+        "text": "then, handing over:\nVerified facts",
+        "rect": {
+          "x": 31,
+          "y": -17454.09375,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nChecked forms",
+        "rect": {
+          "x": 31,
+          "y": -17007.078125,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nSubmitted application",
+        "rect": {
+          "x": 31,
+          "y": -16540.5625,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nEach filing's decision",
+        "rect": {
+          "x": 31,
+          "y": -16131.859375,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "mrail mrail-x",
+        "text": "Between the bands\nDown, stage 7 → 10: a firm's support ticket about a form or a mapping.\nUp, stage 12 → 7: after the agent adopts a new published version, only the affected forms are prepared again.",
+        "rect": {
+          "x": 16,
+          "y": -16013.3125,
+          "w": 928,
+          "h": 95.984375
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nChanged items",
+        "rect": {
+          "x": 31,
+          "y": -15497.25,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nNew published version",
+        "rect": {
+          "x": 31,
+          "y": -15173.1875,
+          "w": 898,
+          "h": 34
+        }
+      },
+      {
+        "cls": "marr ",
+        "text": "then, handing over:\nAffected forms",
+        "rect": {
+          "x": 31,
+          "y": -14822.296875,
+          "w": 898,
+          "h": 34
+        }
+      }
+    ]
+  }
+]

@@ -1,0 +1,101 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git push*)",
+      "Bash(git -C * push*)",
+      "Bash(gh pr create*)",
+      "Bash(gh pr merge*)",
+      "Bash(gh pr edit*)",
+      "Bash(gh pr comment*)",
+      "Bash(gh pr review*)",
+      "Bash(gh pr close*)",
+      "Bash(gh issue create*)",
+      "Bash(gh issue edit*)",
+      "Bash(gh issue comment*)",
+      "Bash(gh issue close*)",
+      "Bash(gh repo create*)",
+      "Bash(gh repo edit*)",
+      "Bash(gh repo delete*)",
+      "Bash(gh repo rename*)",
+      "Bash(gh repo archive*)",
+      "Bash(gh release create*)",
+      "Bash(gh release delete*)",
+      "Bash(gh secret*)",
+      "Bash(gh variable set*)",
+      "Bash(gh workflow run*)",
+      "Bash(gh api -X POST*)",
+      "Bash(gh api -X PUT*)",
+      "Bash(gh api -X PATCH*)",
+      "Bash(gh api -X DELETE*)",
+      "Bash(gh api --method*)",
+      "mcp__550bd2b4-79d5-41e3-b030-655e745a3639__create_file",
+      "mcp__550bd2b4-79d5-41e3-b030-655e745a3639__update_file",
+      "mcp__550bd2b4-79d5-41e3-b030-655e745a3639__copy_file",
+      "mcp__550bd2b4-79d5-41e3-b030-655e745a3639__trash_file",
+      "mcp__550bd2b4-79d5-41e3-b030-655e745a3639__share_file"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/session-start.sh 2>/dev/null || true",
+            "timeout": 30,
+            "statusMessage": "Loading Pathway Configurator state"
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/snapshot.sh 2>/dev/null || true",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/snapshot.sh 2>/dev/null || true",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/stop-check.sh",
+            "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/snapshot.sh 2>/dev/null || true",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/prompt-log.sh 2>/dev/null || true",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "claudeMdExcludes": [
+    "**/Xpatready/code/**",
+    "**/Xpatready/sources/**",
+    "**/Xpatready/archive/**"
+  ]
+}

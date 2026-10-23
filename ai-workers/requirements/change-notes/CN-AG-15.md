@@ -4,10 +4,11 @@
 |---|---|
 | Module changed | AG-15 Client Portal Management |
 | Version and file | v1.7 of 10 Oct 2026, `02-functional-requirements/agent/AG-15-client-portal-management_v1.7_2026-10-10.md` (Drive snapshot of 11 Oct 2026, `sources/drive-snapshot-2026-10-11/`; line numbers below are that file's) |
+| Current base (15 Oct 2026, snapshot 1535; scrum 4b outcome 0 (e)) | **AG-15 v1.7**, `sources/drive-snapshot-2026-10-13-1535/02-functional-requirements/agent/AG-15-client-portal-management_v1.7_2026-10-10.md`: byte-identical to the 11 Oct copy quoted here, so every quote and line number below stands. |
 | Date of this note | 11 Oct 2026 (third fix round, after re-check S3c-c) |
 | Status | *Proposed by Workstream 2; the founder places it on Drive; nothing here is written to Drive by us.* |
 | Next free numbers used | none (the changes reword existing text; the highest are AG-15-51, L416, and BR-17, L438) |
-| Companion files | CN-AG-17 change 3 (the same change on the corporate side); CN-SA-03 (the Super Admin half of AIW-D67: SA-03's "not in Release 1" lines for extra employer seats change); CN-CP-portal (no change to Doc 4; it names this note as the one that applies AIW-D67); CN-FDL open points 1 and 2 (FD-7 against CP1-D7; the employer portal against AIW-D67); `charter-edits.md` §3 |
+| Companion files | CN-AG-17 change 3 (the same change on the corporate side); CN-SA-03 (the Super Admin half of AIW-D67: SA-03's "not in Release 1" lines for extra employer seats change); CN-CP-portal (no change to Doc 4; it names this note as the one that applies AIW-D67); CN-FDL open points 1 and 2 (FD-7 against CP1-D7; the employer portal against AIW-D67); `requirements/charter-edits-2026-10-14.md` §4 |
 
 **In plain words.** This is not an AI change. On 11 Oct the founder decided that employers get their full portal actions at launch: upload, pay, sign and seat management, so an employer can add colleagues as extra seats from day one. AG-15 v1.7, written a day earlier, says the opposite: only the employer's primary contact in Release 1, extra seats later and sold as an extra. A module never overrides a founder decision (README §0 rule 11), so this note brings AG-15 to the decision. How extra seats are priced is not decided here. Whether the employer also sees the recruitment summary tile in Release 1 (FD-7) is a separate question the founder has not yet answered; this note does not touch it.
 
@@ -37,4 +38,4 @@
    > L643: "(extra corporate seats: not Release 1; one on/off extra when built — SA3-D20)"
 3. **Proposed words.** BR-17: "additional corporate seats are one on/off extra, available from Release 1 (AIW-D67)". §11: "(extra corporate seats: one on/off extra, available from Release 1 — SA3-D20, AIW-D67)". The SA3-D20 row (L55) is annotated "Release 1 timing changed by AIW-D67".
 4. **Why.** AIW-D67 as in change 1; SA3-D20 kept for the shape, since the founder decided the timing, not the price.
-5. **Knock-ons.** SA-03 v2.17 SA3-D20 and §3.3 feature catalogue (CN-SA-03 carries the same timing change and the seats-extra row, Super Admin half).
+5. **Knock-ons.** SA-03 v2.20 SA3-D20 and §3.3 feature catalogue (CN-SA-03 carries the same timing change and the seats-extra row, Super Admin half).

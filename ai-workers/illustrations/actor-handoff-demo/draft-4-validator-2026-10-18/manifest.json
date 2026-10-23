@@ -1,0 +1,101 @@
+{
+  "frozen_at": "2026-10-18T07:10:13.980194+00:00",
+  "files": [
+    {
+      "source": "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html",
+      "saved": "inputs/solution-1-one-pager.html",
+      "sha256": "0758048127c34deace6ab78e7c729e8d3ffabf719d0da43bd091b48597a4f9ef",
+      "bytes": 900895
+    },
+    {
+      "source": "ai-workers/tools/s3/s3_terms.py",
+      "saved": "inputs/s3_terms.py",
+      "sha256": "317cbfbb3ce05ad04d4db40e8d3efd3404628b17411568d1f157fd688a4a0420",
+      "bytes": 10861
+    },
+    {
+      "source": "ai-workers/tools/s3/check_one_pager.cjs",
+      "saved": "inputs/check_one_pager.cjs",
+      "sha256": "cb01a10befd69336cd1e810f69422ad3f52a608e83521f6b135bde11d35e86f6",
+      "bytes": 47808
+    },
+    {
+      "source": "ai-workers/tools/s3/read_panels.cjs",
+      "saved": "inputs/read_panels.cjs",
+      "sha256": "2e45c86e4441108c0be14e38e3f5912460c856854ce606510e735e67b81344b0",
+      "bytes": 3838
+    },
+    {
+      "source": "ai-workers/tools/s3/check_panels.cjs",
+      "saved": "inputs/check_panels.cjs",
+      "sha256": "15ddf5b754c9d88961ba82e5bbfe33bfa6bcabc575caba7c5a95310ec55d2271",
+      "bytes": 17230
+    },
+    {
+      "source": "ai-workers/tools/s3/s3_data.py",
+      "saved": "inputs/s3_data.py",
+      "sha256": "86fbdc4d3b16c2f85249604de7ca793c576a82635e6b1a8a8d3c3d103c7daaa0",
+      "bytes": 198696
+    },
+    {
+      "source": "ai-workers/tools/s3/check_diagram_geometry.cjs",
+      "saved": "inputs/check_diagram_geometry.cjs",
+      "sha256": "25dadf1362909d504e72f2966b3769d3665827c0b8fc5665a7f0976361989730",
+      "bytes": 7912
+    },
+    {
+      "source": "ai-workers/tools/s3/check_cohesion.cjs",
+      "saved": "inputs/check_cohesion.cjs",
+      "sha256": "3bf035b448582cff847a646152632291804619661031e16f6b7ce5922d8291a2",
+      "bytes": 13424
+    },
+    {
+      "source": "ai-workers/tools/s3/s3_ledger.py",
+      "saved": "inputs/s3_ledger.py",
+      "sha256": "9af60b287435f7448f824eca70c5a1b4d8fe2f0d3df8fc55dc2405086260428b",
+      "bytes": 19014
+    },
+    {
+      "source": "ai-workers/tools/s3/cohesion_ledger.py",
+      "saved": "inputs/cohesion_ledger.py",
+      "sha256": "1ec48c0d92f62834a14a303385ff4c670d693a0785bfcf73905ae479b1902cab",
+      "bytes": 29945
+    },
+    {
+      "source": "ai-workers/tools/s3/build_one_pager.py",
+      "saved": "inputs/build_one_pager.py",
+      "sha256": "3c0f0e40a2deeadd164e374fa848581ea1e84319859564b484c6c4a1b02bf7d4",
+      "bytes": 146896
+    },
+    {
+      "source": "ai-workers/tools/s3/make_publish_copy.py",
+      "saved": "inputs/make_publish_copy.py",
+      "sha256": "8f61583f1afa8c4ba40cf58b0e1aff22829ff8251896e0d5b6ca50c06f7b3ee6",
+      "bytes": 1077
+    },
+    {
+      "source": "ai-workers/tools/s3/s3_views.py",
+      "saved": "inputs/s3_views.py",
+      "sha256": "ffd62db86d45c29a403c99f4415339cdfab0bb6ed05c96bda2e9a3291772d030",
+      "bytes": 26923
+    },
+    {
+      "source": "ai-workers/tools/s3/s3_panels.py",
+      "saved": "inputs/s3_panels.py",
+      "sha256": "07c0c05f94b9f66dea0e34274b2471255ab0b2f416e121e8b4339e9f0dc9702b",
+      "bytes": 22840
+    },
+    {
+      "source": "ai-workers/checks/one-pager-draft-4-maker-response-2026-10-18.md",
+      "saved": "inputs/one-pager-draft-4-maker-response-2026-10-18.md",
+      "sha256": "049240964f187c368f30e754919bc78363abbccbf5eceb8b8ac3571254a985bd",
+      "bytes": 20145
+    },
+    {
+      "source": "ai-workers/checks/one-pager-draft-4-content-ledger-2026-10-18.md",
+      "saved": "inputs/one-pager-draft-4-content-ledger-2026-10-18.md",
+      "sha256": "7574df44321094393a1b7087aa8a3f8698f5cea3df820550971aef357f8588c3",
+      "bytes": 36867
+    }
+  ]
+}

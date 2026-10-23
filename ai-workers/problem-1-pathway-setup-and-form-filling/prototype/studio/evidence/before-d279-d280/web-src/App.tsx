@@ -1,0 +1,170 @@
+import * as React from "react";
+import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Activity, BookOpen, Boxes, Database, FileStack, Layers, Moon, RotateCcw, Sun, Upload, X } from "lucide-react";
+import { api, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
+import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/controls";
+import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
+import { ProgramsPage } from "@/pages/programs";
+import { CompositionPage } from "@/pages/composition";
+import { JobPage } from "@/pages/job";
+import { FieldsPage, FieldPage, SectionsPage, DocumentTypesPage } from "@/pages/library";
+import { ActivityPage, ReleasesPage } from "@/pages/history";
+
+export default function App() {
+  return <BrowserRouter><Shell /></BrowserRouter>;
+}
+
+function Shell() {
+  const actorId = useActorId();
+  const session = useApi(["session", actorId], "/session");
+  const loc = useLocation();
+  const nav = [
+    { to: "/", label: "Programs", icon: Layers, match: (p: string) => p === "/" || p.startsWith("/c/") },
+    { to: "/library/fields", label: "Fields", icon: Database },
+    { to: "/library/sections", label: "Sections", icon: Boxes },
+    { to: "/library/documents", label: "Document types", icon: FileStack },
+    { to: "/releases", label: "Releases", icon: BookOpen },
+    { to: "/activity", label: "Activity", icon: Activity },
+  ];
+  return (
+    <div className="flex min-h-full flex-col">
+      <header className="sticky top-0 z-30 flex h-14 min-w-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
+        <Link to="/" className="flex shrink-0 items-center gap-3" aria-label="Product Studio home">
+          {/* Team BrandLogo convention: the "-dark" artwork is brand blue for light surfaces; the plain one is white. */}
+          <img src="/brand/expat-ready-notagline-dark.svg" alt="Expat Ready" className="h-6 dark:hidden" />
+          <img src="/brand/expat-ready-notagline.svg" alt="Expat Ready" className="hidden h-6 dark:block" />
+        </Link>
+        <span className="hidden h-6 w-px bg-border sm:block" />
+        <div className="hidden shrink-0 leading-tight sm:block"><p className="text-sm font-semibold">Product Studio</p><p className="text-[11px] text-text-muted">Pathway Configurator</p></div>
+        <Pill tone="warn" className="ml-1 hidden xl:inline-flex" title="Working prototype on a local demo database: no sign-in, simulated people, not production">Prototype · demo workspace</Pill>
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          <DemoControls loaded={(session.data?.counts?.programs ?? 0) > 0} />
+          <PersonaSwitch actors={session.data?.actors ?? []} />
+          <ThemeToggle />
+        </div>
+      </header>
+      <div className="flex flex-1">
+        <nav aria-label="Studio" className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-56 shrink-0 flex-col gap-0.5 border-r border-border bg-surface-raised p-3 md:flex">
+          <p className="px-2 pb-1 pt-2 text-[11px] font-medium uppercase tracking-wide text-text-muted">Configure</p>
+          {nav.slice(0, 1).map((n) => <NavItem key={n.to} {...n} active={n.match ? n.match(loc.pathname) : undefined} />)}
+          <p className="px-2 pb-1 pt-4 text-[11px] font-medium uppercase tracking-wide text-text-muted">Shared library</p>
+          {nav.slice(1, 4).map((n) => <NavItem key={n.to} {...n} />)}
+          <p className="px-2 pb-1 pt-4 text-[11px] font-medium uppercase tracking-wide text-text-muted">History</p>
+          {nav.slice(4).map((n) => <NavItem key={n.to} {...n} />)}
+          <div className="mt-auto rounded-lg border border-border bg-surface p-3 text-[11px] leading-relaxed text-text-muted">
+            Simulated people; local PostgreSQL demo database. AI drafting uses the guarded prototype route (synthetic or public official inputs only). Not production.
+          </div>
+        </nav>
+        <main className="min-w-0 flex-1 px-4 py-6 md:px-6">
+          {session.isError ? <Notice tone="danger" title="The studio server is not answering">Start it with studio/start.sh, then reload this page. ({(session.error as Error).message})</Notice> : null}
+          <Routes>
+            <Route path="/" element={<ProgramsPage />} />
+            <Route path="/c/:id" element={<CompositionPage />} />
+            <Route path="/c/:id/:tab" element={<CompositionPage />} />
+            <Route path="/c/:id/jobs/:jobId" element={<JobPage />} />
+            <Route path="/library/fields" element={<FieldsPage />} />
+            <Route path="/library/fields/:key" element={<FieldPage />} />
+            <Route path="/library/sections" element={<SectionsPage />} />
+            <Route path="/library/documents" element={<DocumentTypesPage />} />
+            <Route path="/releases" element={<ReleasesPage />} />
+            <Route path="/activity" element={<ActivityPage />} />
+            <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/">Back to programs</Link></Notice>} />
+          </Routes>
+        </main>
+      </div>
+      <Toaster />
+    </div>
+  );
+}
+
+function NavItem({ to, label, icon: Icon, active }: { to: string; label: string; icon: any; active?: boolean }) {
+  return (
+    <NavLink to={to} end={to === "/"} className={({ isActive }) => cn("flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-text-muted hover:bg-text/5 hover:text-text", (active ?? isActive) && "bg-primary/10 font-medium text-text-link")}>
+      <Icon className="size-4" />{label}
+    </NavLink>
+  );
+}
+
+function PersonaSwitch({ actors }: { actors: any[] }) {
+  const id = useActorId();
+  const qc = useToast();
+  const me = actors.find((a) => a.id === id);
+  return (
+    <label className="flex min-w-0 items-center gap-2 rounded-lg border border-border bg-surface px-2 py-1">
+      <span className="hidden whitespace-nowrap text-[11px] text-text-muted lg:inline">Acting as</span>
+      <select className="min-w-0 max-w-[13rem] truncate bg-transparent text-xs font-medium outline-none xl:max-w-[22rem]" value={id} onChange={(e) => { setActor(e.target.value); const a = actors.find((x) => x.id === e.target.value); qc.push({ tone: "info", text: `Now acting as ${a?.name} (simulated): ${a?.role}` }); }} aria-label="Simulated person">
+        {actors.map((a) => <option key={a.id} value={a.id}>{a.name} · {a.role}</option>)}
+      </select>
+      <Pill tone="neutral" title={me?.duties?.join(", ")}>Simulated</Pill>
+    </label>
+  );
+}
+
+function ThemeToggle() {
+  const [t, setT] = React.useState(() => document.documentElement.dataset.theme ?? "light");
+  return <Button variant="ghost" size="icon" aria-label={t === "dark" ? "Use the light theme" : "Use the dark theme"} onClick={() => { const n = t === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = n; try { localStorage.setItem("xr-theme", n); } catch { /* ignore */ } setT(n); }}>{t === "dark" ? <Sun /> : <Moon />}</Button>;
+}
+
+function DemoControls({ loaded }: { loaded: boolean }) {
+  const [resetOpen, setResetOpen] = React.useState(false);
+  const navTo = useNavigate();
+  const [log, setLog] = React.useState<string[] | null>(null);
+  const load = useAction(() => api("/demo/load", { method: "POST" }), { success: (r: any) => `Sample inputs loaded in ${r.seconds.toFixed(1)} s`, onDone: (r: any) => { setLog(r.log); navTo("/"); } });
+  return (
+    <div className="flex items-center gap-1.5">
+      <Button size="sm" variant="secondary" className="max-lg:px-2" onClick={() => load.mutate(undefined)} busy={load.isPending} disabled={loaded} title={loaded ? "Already loaded: reset first to load again" : "Creates the five sample programs and attaches their official files through the normal upload path"}><Upload /><span className="max-lg:hidden">Load sample inputs</span></Button>
+      <Button size="sm" variant="ghost" className="max-lg:px-2" onClick={() => setResetOpen(true)} aria-label="Reset demo"><RotateCcw /><span className="max-lg:hidden">Reset demo</span></Button>
+      <ResetDialog open={resetOpen} onOpenChange={setResetOpen} />
+      <Dialog open={!!log} onOpenChange={() => setLog(null)} title="Sample inputs loaded" description="Every step used the same services as the screens. Nothing was approved, filled or AI-drafted by the loader." footer={<Button onClick={() => setLog(null)}>Continue</Button>}>
+        <ul className="space-y-1 text-sm">{log?.map((l, i) => <li key={i} className={l.startsWith("  ") ? "pl-4 text-text-muted" : "font-medium"}>{l.trim()}</li>)}</ul>
+      </Dialog>
+    </div>
+  );
+}
+
+function ResetDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const status = useApi(["demo-status", open], open ? "/demo/status" : null);
+  const [confirm, setConfirm] = React.useState("");
+  const [result, setResult] = React.useState<any>(null);
+  const nav = useNavigate();
+  const reset = useAction(() => api("/demo/reset", { method: "POST", json: { confirm } }), { success: "Demo reset", invalidate: [[]], onDone: (r) => { setResult(r); setConfirm(""); nav("/"); } });
+  const s = status.data?.scope;
+  return (
+    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o) setResult(null); }} wide title={result ? "Demo reset" : "Reset the demo workspace?"} description="Removes everything the disposable demo workspace created. Keeps the engine, official originals, fixtures, AI run records, the spend ledger and review evidence."
+      footer={result ? <Button onClick={() => onOpenChange(false)}>Close</Button> : <><Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button><Button variant="destructive" disabled={confirm !== "RESET"} busy={reset.isPending} onClick={() => reset.mutate(undefined)}><RotateCcw /> Reset demo</Button></>}>
+      {result ? (
+        <div className="space-y-3">
+          <Notice tone={result.preserved_unchanged ? "ok" : "danger"} title={`${result.removed_rows} rows and ${result.removed_files} working files removed in ${result.seconds.toFixed(1)} s`}>{result.remaining_rows} rows remain in the new empty workspace. Preserved evidence {result.preserved_unchanged ? "is byte-identical before and after (fingerprints below)" : "CHANGED: investigate before continuing"}.</Notice>
+          <Preserved list={result.preserved} />
+        </div>
+      ) : status.isLoading ? <Spinner label="Counting" /> : s ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">{Object.entries<number>(s.rows).filter(([, v]) => v > 0).map(([k, v]) => <div key={k} className="flex justify-between border-b border-border py-1"><span className="text-text-muted">{k}</span><span className="font-medium">{v}</span></div>)}</div>
+          {s.total_rows === 0 ? <Notice title="The workspace is already empty">Nothing to remove.</Notice> : null}
+          <p className="text-sm">Working files: <b>{s.files}</b> ({Math.round(s.bytes / 1024)} KB) in <span className="mono">{s.folder}</span>. Generated scripts: {s.generated_scripts}.</p>
+          <div><p className="mb-1 text-xs font-medium">Kept, and checked unchanged after the reset</p><Preserved list={status.data.preserved} /></div>
+          <label className="block text-sm">Type <b>RESET</b> to confirm<Input className="mt-1 w-48" value={confirm} onChange={(e) => setConfirm(e.target.value)} aria-label="Type RESET to confirm" /></label>
+        </div>
+      ) : null}
+    </Dialog>
+  );
+}
+
+function Preserved({ list }: { list: any[] }) {
+  return <Table dense head={["Kept", "Files", "Fingerprint (SHA-256)"]}>{list.map((p) => <tr key={p.label}><td>{p.label}</td><td>{p.files}</td><td className="mono">{p.sha256.slice(0, 16)}…</td></tr>)}</Table>;
+}
+
+function Toaster() {
+  const t = useToast();
+  return (
+    <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-96 flex-col gap-2" aria-live="polite">
+      {t.list.map((x) => (
+        <div key={x.id} className={cn("pointer-events-auto flex items-start gap-3 rounded-lg border border-border border-l-4 bg-surface-raised px-4 py-3 text-sm shadow-lg", x.tone === "ok" ? "border-l-ok" : x.tone === "danger" ? "border-l-danger" : "border-l-primary")}>
+          <p className="flex-1">{x.text}</p><button className="text-text-muted" aria-label="Dismiss" onClick={() => t.drop(x.id)}><X className="size-4" /></button>
+        </div>
+      ))}
+    </div>
+  );
+}
+export { getActor };

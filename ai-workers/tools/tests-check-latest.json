@@ -1,0 +1,4612 @@
+{
+ "live": 573,
+ "passing": 573,
+ "needScriptedModel": 0,
+ "failing": 0,
+ "failsByPart": {
+  "preconditions": 0,
+  "fixtures": 0,
+  "steps": 0,
+  "one result": 0,
+  "requirement": 0
+ },
+ "fixturesDefined": 54,
+ "unknownFixtureIds": {},
+ "uncataloguedNames": {},
+ "byModule": {
+  "AW-01 Firm AI assistants": {
+   "live": 391,
+   "passing": 391
+  },
+  "AW-02 Platform AI assistants": {
+   "live": 182,
+   "passing": 182
+  }
+ },
+ "tests": [
+  {
+   "id": "TC-AW1-001",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-002",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-003",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-004",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-005",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-006",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-007",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-008",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-009",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-010",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-011",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-012",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-013",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-014",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-015",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-016",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-017",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-018",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-019",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-020",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-021",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-022",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-023",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-024",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-025",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-026",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-027",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-028",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-029",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-031",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-032",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-033",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-034",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-035",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-036",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-037",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-038",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-039",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-040",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-041",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-042",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-043",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-044",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-045",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-046",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-048",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-050",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-051",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-052",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-053",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-054",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-055",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-056",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-057",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-058",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-059",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-060",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-061",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-062",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-063",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-064",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-065",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-066",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-067",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-068",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-069",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-070",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-071",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-072",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-073",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-074",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-075",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-076",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-077",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-078",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-079",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-080",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-081",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-082",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-083",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-084",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-085",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-086",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-087",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-088",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-089",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-090",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-091",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-092",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-093",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-094",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-095",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-096",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-097",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-098",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-099",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-100",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-101",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-102",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-103",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-104",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-105",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-106",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-107",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-108",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-109",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-110",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-111",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-112",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-113",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-114",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-115",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-116",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-117",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-118",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-119",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-120",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-121",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-122",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-123",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-125",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-126",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-127",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-128",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-129",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-130",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-131",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-132",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-133",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-134",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-135",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-136",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-137",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-138",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-139",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-140",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-141",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-142",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-143",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-145",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-146",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-148",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-149",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-150",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-151",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-152",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-153",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-154",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-155",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-156",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-157",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-158",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-159",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-160",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-161",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-162",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-163",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-164",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-165",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-166",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-167",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-168",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-169",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-170",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-171",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-172",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-173",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-174",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-175",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-176",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-177",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-178",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-179",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-180",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-181",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-182",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-183",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-184",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-185",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-186",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-187",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-188",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-189",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-190",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-191",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-192",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-193",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-194",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-195",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-196",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-197",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-198",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-199",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-200",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-201",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-202",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-203",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-204",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-205",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-206",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-207",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-208",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-209",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-210",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-211",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-212",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-213",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-214",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-215",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-216",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-217",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-218",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-219",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-220",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-221",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-222",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-223",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-224",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-225",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-226",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-227",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-228",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-229",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-230",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-231",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-232",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-233",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-234",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-235",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-236",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-237",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-238",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-239",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-240",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Practice expert",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-241",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-242",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-243",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-244",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-245",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-246",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-247",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-248",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-249",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-250",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-251",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-252",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-253",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-254",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-255",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-256",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-257",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-258",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-259",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-260",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-262",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-263",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-264",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-265",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-001",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-002",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-003",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-004",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-005",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-006",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-007",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Platform engine and tenant stamp",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-008",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Platform engine and tenant stamp",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-009",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Platform engine and tenant stamp",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-010",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Platform engine and tenant stamp",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-011",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Audit",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-012",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Audit",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-013",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Provider record",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-014",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Provider record",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-015",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-016",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-017",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-018",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "AI run log",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-019",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "AI run log",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-020",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Model instructions",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-021",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Model instructions",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-022",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Model instructions",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-023",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hidden instructions",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-024",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hidden instructions",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-025",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-026",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-027",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-028",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-030",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-031",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-032",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-033",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-034",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-035",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-036",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-037",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-038",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-039",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-040",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-041",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-042",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-043",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-044",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-045",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-046",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-047",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-052",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-053",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-054",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-055",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-056",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-057",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-058",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-059",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-060",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-061",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-062",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-063",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-064",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-065",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-067",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-068",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-069",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-070",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-071",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-072",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-073",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-074",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-075",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-076",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-077",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-078",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-079",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-080",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-081",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-082",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-083",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-084",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-085",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-086",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-087",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-088",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-089",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-090",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-091",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-092",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Audit",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-093",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-094",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-095",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-096",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-097",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-098",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-099",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-100",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-101",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-102",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-103",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-104",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-105",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Platform engine and tenant stamp",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-106",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-107",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-108",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Audit",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-109",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Audit",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-110",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Audit",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-111",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Audit",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-112",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Provider record",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-113",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-114",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-115",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Provider record",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-116",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Provider record",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-117",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Provider record",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-118",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-119",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-120",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-121",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-122",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-123",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-124",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-125",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-126",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-127",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-128",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Provider record",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-129",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Provider record",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-130",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-131",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Hidden instructions",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-132",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-133",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-134",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-135",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-136",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-137",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-138",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-139",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-140",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-141",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-142",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-143",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-144",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-145",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-146",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-147",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-148",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-149",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-150",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-151",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-153",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-155",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-156",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-157",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-158",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-159",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-160",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-161",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-162",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-163",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-164",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Model instructions",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-165",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-166",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Platform engine and tenant stamp",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-167",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Platform engine and tenant stamp",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-168",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Platform engine and tenant stamp",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-169",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Spend caps",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-170",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pack author's assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-171",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Audit",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-266",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-267",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-268",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-269",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-270",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-271",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-272",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-273",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Firm assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-274",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-275",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-276",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-277",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-278",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-279",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-280",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-281",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-283",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-284",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-285",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "AI call record",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-286",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-287",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-288",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-289",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-290",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-291",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-292",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Hard limits",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-293",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-294",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-295",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-296",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-172",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-173",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-297",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-369",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-370",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-298",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-299",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-300",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-301",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-302",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-303",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-304",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-305",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-306",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-307",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-308",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-309",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-310",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-311",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-312",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-313",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-174",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-314",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-315",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-316",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-317",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-318",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-319",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-175",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-320",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-321",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-322",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-323",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-324",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-176",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Support and account assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-325",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-326",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-327",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-328",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-329",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-330",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-331",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-332",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-333",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-334",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-335",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-336",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-337",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-338",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-339",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-340",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-341",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-342",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-343",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-177",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-178",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-179",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-344",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-345",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-346",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-347",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-348",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-349",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-350",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-180",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-181",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-182",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-351",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-352",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-353",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-354",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-355",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-356",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-357",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-358",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-359",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-360",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Skill release contract",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-361",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Explanation fidelity (E-18)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-362",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Template sends inside an AI job (AIW-D105)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-363",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Explanation fidelity (E-18)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-364",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Explanation fidelity (E-18)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-365",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Explanation fidelity (E-18)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-366",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Explanation fidelity (E-18)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-367",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Explanation fidelity (E-18)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-368",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Pauses and stops",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-183",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Provider record",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-371",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-372",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-373",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-374",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-375",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Audit and provenance",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-376",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-377",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-378",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-379",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Approvals and safeguards",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-184",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-185",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-186",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-187",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-188",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Second person (AIW-D59)",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-189",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-380",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-381",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-382",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Delegation",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-383",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-384",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Daily list and summaries",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-385",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Binding to the product",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-386",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Binding to the product",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-387",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Binding to the product",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-388",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Binding to the product",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-389",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Binding to the product",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-390",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Binding to the product",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-391",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Binding to the product",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-392",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Binding to the product",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW2-190",
+   "module": "AW-02 Platform AI assistants",
+   "feature": "Binding to the product",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-393",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Binding to the product",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-394",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-395",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Billing assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-396",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Intake assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-397",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-398",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  },
+  {
+   "id": "TC-AW1-399",
+   "module": "AW-01 Firm AI assistants",
+   "feature": "Case assistant",
+   "fails": [],
+   "unknownFixtures": [],
+   "namedNotCited": []
+  }
+ ]
+}

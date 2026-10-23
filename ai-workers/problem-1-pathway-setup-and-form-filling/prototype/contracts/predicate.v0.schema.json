@@ -1,0 +1,180 @@
+{
+ "$schema": "http://json-schema.org/draft-07/schema#",
+ "$id": "https://expatready.local/contracts/predicate.v0.json",
+ "title": "Condition (predicate) tree: a portable copy of the team's shared contract (AIW-D264)",
+ "description": "Mirrors ERv2-sanitized@22f1d12 packages/contracts/src/schemas/predicate.ts: closed 11-op vocabulary (PREDICATE_OPS), leaf shapes (field, value, optional enumSetRef), ordered ops gt/gte/lt/lte with string-or-number values, exists with field only, and/or with args (at least one), not with arg, a required UPPER_SNAKE subjectKind on the root only, strict objects. tests/check_conditions.ts checks the vocabulary against the captured file. Field-type binding (ordered ops only on NUMBER or DATE fields) and the size caps are the team's publish-time checks, not repeated here.",
+ "definitions": {
+  "value": {
+   "type": [
+    "string",
+    "number",
+    "boolean"
+   ]
+  },
+  "ordered": {
+   "type": [
+    "string",
+    "number"
+   ]
+  },
+  "field": {
+   "type": "string",
+   "minLength": 1
+  },
+  "node": {
+   "oneOf": [
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "field",
+      "value"
+     ],
+     "properties": {
+      "op": {
+       "enum": [
+        "eq",
+        "neq"
+       ]
+      },
+      "field": {
+       "$ref": "#/definitions/field"
+      },
+      "value": {
+       "$ref": "#/definitions/value"
+      },
+      "enumSetRef": {
+       "type": "string",
+       "minLength": 1
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "field",
+      "value"
+     ],
+     "properties": {
+      "op": {
+       "const": "in"
+      },
+      "field": {
+       "$ref": "#/definitions/field"
+      },
+      "value": {
+       "type": "array",
+       "items": {
+        "$ref": "#/definitions/value"
+       }
+      },
+      "enumSetRef": {
+       "type": "string",
+       "minLength": 1
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "field",
+      "value"
+     ],
+     "properties": {
+      "op": {
+       "enum": [
+        "gt",
+        "gte",
+        "lt",
+        "lte"
+       ]
+      },
+      "field": {
+       "$ref": "#/definitions/field"
+      },
+      "value": {
+       "$ref": "#/definitions/ordered"
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "field"
+     ],
+     "properties": {
+      "op": {
+       "const": "exists"
+      },
+      "field": {
+       "$ref": "#/definitions/field"
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "args"
+     ],
+     "properties": {
+      "op": {
+       "enum": [
+        "and",
+        "or"
+       ]
+      },
+      "args": {
+       "type": "array",
+       "minItems": 1,
+       "items": {
+        "$ref": "#/definitions/node"
+       }
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "arg"
+     ],
+     "properties": {
+      "op": {
+       "const": "not"
+      },
+      "arg": {
+       "$ref": "#/definitions/node"
+      }
+     }
+    }
+   ]
+  }
+ },
+ "allOf": [
+  {
+   "type": "object",
+   "required": [
+    "op",
+    "subjectKind"
+   ],
+   "properties": {
+    "subjectKind": {
+     "type": "string",
+     "pattern": "^[A-Z][A-Z0-9_]*$",
+     "maxLength": 64
+    }
+   }
+  }
+ ],
+ "$comment": "A root is a node plus subjectKind; children carry none. validatePredicate (contracts/rules.ts) checks subjectKind here and the rest against #/definitions/node."
+}

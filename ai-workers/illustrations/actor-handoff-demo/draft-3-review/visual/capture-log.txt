@@ -1,0 +1,15 @@
+1440-light: errors 0
+tip eye-map: Open the details: what this stage receives, does and hands over, its rules, exceptions and the detailed activities
+tip side-tag: Super Admin role; works in the Content Pack Configurator
+tip atype: Super Admin actors: Expat Ready's own staff in the Super Admin console
+tip lanetag: Super Admin role; works in the Content Pack Configurator. Does: Attaches official sources, runs the engine, reviews every new or changed item beside its source,
+tip gateway: Decision mark ✕Exactly one outgoing path is taken; each path is labelled with its answer.Any blocking failure?
+tip rtag: Team requirement: Already in the team's requirement documents; this page follows it.
+tip alink: Activity 1.1 · Person step (the person mark)Create the configurator row and attach its sourcesCombination chosen in the programme hierarchy; official checklist,
+tip task-eye: Activity 8.2 · Automatic step by the product (the gear mark)Render the form from the factsVerified answer snapshot; the published form field map → Rendered form
+tip map-decision-mark: Decision mark: one of the outcomes below is taken
+1440-dark: errors 0
+1280-light: errors 0
+1280-dark: errors 0
+375-light: errors 0
+375-dark: errors 0

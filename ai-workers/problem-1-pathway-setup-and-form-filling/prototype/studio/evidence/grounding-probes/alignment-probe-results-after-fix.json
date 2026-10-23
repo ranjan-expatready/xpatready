@@ -1,0 +1,175 @@
+{
+  "scope": "Offline probes on frozen current working source, no database/browser/model calls",
+  "probes": [
+    {
+      "id": "selected-section-question",
+      "observed": {
+        "configured": 1,
+        "returned": 1
+      },
+      "expected": "Reconcile configured-section intent with unused-question pruning; this observation alone is not a confirmed material defect",
+      "defect": false
+    },
+    {
+      "id": "mapped-question-control",
+      "observed": {
+        "returned": [
+          "person.field_a"
+        ]
+      },
+      "expected": "The same question is returned when a form map reads it",
+      "defect": false
+    },
+    {
+      "id": "question-condition-dependency",
+      "observed": {
+        "waiting_questions": [
+          {
+            "fact": "person.condition_flag",
+            "status": "needs an answer"
+          },
+          {
+            "fact": "person.field_a",
+            "status": "hidden by a condition"
+          }
+        ],
+        "deciders": [
+          {
+            "fact": "person.condition_flag",
+            "about": "principal",
+            "about_label": "Principal",
+            "meaning": "Condition flag",
+            "value_type": "yes_no",
+            "decides": [
+              "whether \"Field A\" is asked"
+            ]
+          }
+        ],
+        "after_external_answer": [
+          {
+            "fact": "person.condition_flag",
+            "status": "answered"
+          },
+          {
+            "fact": "person.field_a",
+            "status": "needs an answer"
+          }
+        ]
+      },
+      "expected": "The configured deciding question is available before its dependent question needs it",
+      "defect": false
+    },
+    {
+      "id": "publish-hide-required-form-input",
+      "observed": {
+        "form_applies": true,
+        "question_status": "hidden by a condition",
+        "validation_problems": [
+          {
+            "level": "error",
+            "where": "Questions",
+            "item": "person.field_a",
+            "message": "Hiding a value a form reads: the question for person.field_a is hidden when \"its condition\", but FORM-A reads it whenever the form applies. Make the form or its boxes apply under the same condition, or remove the question's condition."
+          }
+        ]
+      },
+      "expected": "W1 3.4 blocks publishing a placement that hides a field read by an applicable form; this offline probe tests the publication validator, not a database release",
+      "defect": false
+    },
+    {
+      "id": "participant-change",
+      "observed": {
+        "content_hash_changed": true,
+        "review_change_items": [
+          {
+            "kind": "People on this row",
+            "key": "test-leaf",
+            "change": "changed",
+            "needs_sme": true,
+            "label": "who this row covers: Principal (1–1), Partner (1–1)"
+          }
+        ]
+      },
+      "expected": "A behavior-bearing configuration change appears in the review change set",
+      "defect": false
+    },
+    {
+      "id": "document-supply-change",
+      "observed": {
+        "content_hash_changed": true,
+        "review_change_items": [
+          {
+            "kind": "Document type",
+            "key": "type-a",
+            "change": "changed",
+            "needs_sme": true,
+            "label": "Document type A: supplies person.field_a"
+          }
+        ]
+      },
+      "expected": "A behavior-bearing configuration change appears in the review change set",
+      "defect": false
+    },
+    {
+      "id": "derived-definition-change",
+      "observed": {
+        "content_hash_changed": true,
+        "review_change_items": [
+          {
+            "kind": "Derived definition",
+            "key": "derived-a",
+            "change": "changed",
+            "needs_sme": true,
+            "label": "derived-a: inputs person.field_a"
+          }
+        ]
+      },
+      "expected": "A behavior-bearing configuration change appears in the review change set",
+      "defect": false
+    },
+    {
+      "id": "ordinary-change-control",
+      "observed": {
+        "review_change_items": [
+          {
+            "kind": "Document requirement",
+            "key": "requirement-a",
+            "change": "added",
+            "needs_sme": true,
+            "label": "Document type A"
+          }
+        ]
+      },
+      "expected": "A document requirement appears in the review change set",
+      "defect": false
+    },
+    {
+      "id": "five-program-fixture",
+      "observed": {
+        "programs": 5,
+        "compositions": 3
+      },
+      "expected": "D274/D275 require five sample programs; family variants are not extra programs",
+      "defect": false
+    },
+    {
+      "id": "declared-questions-validation",
+      "observed": {
+        "problems": [
+          {
+            "level": "warning",
+            "where": "Forms",
+            "item": "-",
+            "message": "This composition files no forms yet."
+          }
+        ]
+      },
+      "expected": "No invalid source reference is necessary to reproduce the missing selected-section question",
+      "defect": false
+    }
+  ],
+  "summary": {
+    "probes": 10,
+    "defect_observations": 0
+  }
+}

@@ -1,0 +1,25 @@
+{
+ "document": {
+  "kind_seen": "other",
+  "matches_claimed_kind": false,
+  "readable": "yes",
+  "issues": [
+   "stub output: the launch path ran with a stub caller; nothing was read"
+  ]
+ },
+ "people_seen": [],
+ "fields": [
+  {
+   "fact": "stub.not_read",
+   "about": "none",
+   "status": "unresolved",
+   "value": null,
+   "as_printed": null,
+   "page": 1,
+   "where": "none",
+   "confidence": "low",
+   "reason": "stub caller"
+  }
+ ],
+ "internal_conflicts": []
+}

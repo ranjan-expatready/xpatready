@@ -1,0 +1,178 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "stub",
+ "drafting_run": {
+  "run_id": "c1-checks-stub-20261020t033925082z",
+  "idempotency_key": "0156bba50da5f4bec917013170449276665fd38f748a06ee66008d7aca0ecad6",
+  "contract_version": "drafting-run/v0",
+  "kind": "checks",
+  "output_sha256": "b4644299c631c4921dc429ee9637a18adff700d4af6b28b2a0f81a249c5cd449",
+  "inputs": {
+   "combination": "1",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5488e.text.inventory.json",
+     "sha256": "c9815877f0a37faaff7ecc40f0f91f544c7a9d6842b646fc3c9ff693c07fded3"
+    },
+    {
+     "file": "prototype/p1/inventory/imm5905e.text.inventory.json",
+     "sha256": "16594660c379864da2968739adf21760cd14c188c1d095d1face0b26e85b0902"
+    },
+    {
+     "file": "prototype/p1/inventory/guide-5487.text.inventory.json",
+     "sha256": "28e33a17e0766873b97be51477b4ccadedaf86c9239e28655a26a1829ea83264"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm1295-stub-20261020t033923453z.json",
+     "sha256": "7dbd0f2d3623f02462c4f61da55c08b851ed513c5bddb7b40405f6378cec96fe"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5707-stub-20261020t033923658z.json",
+     "sha256": "e519fff5f733c648cb9c6c8ad9e1ca6dae5b6e8443b8221ce42bd66f06ecd012"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5409-stub-20261020t033923802z.json",
+     "sha256": "05cee50567b491ae75ea934bc72ed81c4737af768ff5e782720c3f107db29abb"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5476-stub-20261020t033923990z.json",
+     "sha256": "27ad5cf882626daa8bdd2e44f5e5d3b6ec543c63e951f20d357c9db3113eb154"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5475-stub-20261020t033924148z.json",
+     "sha256": "66db2cf538e30192b567864097453a12e4329e53ac56414b09fde5e9075c8477"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5257-1-stub-20261020t033924296z.json",
+     "sha256": "072f95e412e50f22e29683289a08273be6da294da49e3083961b7206044b3f31"
+    },
+    {
+     "file": "prototype/p2/runs/c1-requirements-stub-20261020t033924472z.json",
+     "sha256": "d8b2d59c04526327f8f49e355fd50241317f2e45c29a965db94355b7238c80ff"
+    },
+    {
+     "file": "prototype/p2/runs/c1-sections-stub-20261020t033924747z.json",
+     "sha256": "cdc90cddc32d570dbe5d2a8b9b1455fed634f782d5a6bfa8c13aacb5970cfcea"
+    }
+   ],
+   "configuration_version": "c1-draft-1"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 64000,
+   "prompt_version": "checks.v1.md",
+   "prompt_sha256": "be533d4d86dee498ba7d8cca0432139c30cf6ddb1cc5a287c2fffbe4b043da34"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "duration_ms": 1
+   }
+  ],
+  "usage": {
+   "input_tokens": 0,
+   "output_tokens": 0,
+   "cost_usd": 0,
+   "duration_ms": 1
+  },
+  "started_at": "2026-10-20T03:39:25.082Z",
+  "ended_at": "2026-10-20T03:39:25.381Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "launch_evidence": {
+  "path_code_sha256": "38c2c85c620e12aa094cb0bd9fe6bf3f1ea668279f5a011162391506a4fbea9b",
+  "template_sha256": "c06099ac6dd238138b55480f0688056893b0cb0b9987b459a597366945c43d7d",
+  "schema_file": "checks-output.v1.schema.json",
+  "schema_sha256": "2d28c5c4b4808a5d9bb812ad6fea1cee42c977a0082733028a18fd2ebbe0fe0d",
+  "screened": true,
+  "output_sha256": "b4644299c631c4921dc429ee9637a18adff700d4af6b28b2a0f81a249c5cd449",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "75c9ee43b4b97029d8f0f77c74fa3d2774aaa59e6feaa3b0aa3f887c4a68e014",
+  "request_bytes": 61515,
+  "stub_calls": 1,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 40,
+   "committed_usd": 0.783888
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5488e.text.inventory.json",
+    "sha256": "c9815877f0a37faaff7ecc40f0f91f544c7a9d6842b646fc3c9ff693c07fded3",
+    "kind": "inventory"
+   },
+   {
+    "file": "prototype/p1/inventory/imm5905e.text.inventory.json",
+    "sha256": "16594660c379864da2968739adf21760cd14c188c1d095d1face0b26e85b0902",
+    "kind": "inventory"
+   },
+   {
+    "file": "prototype/p1/inventory/guide-5487.text.inventory.json",
+    "sha256": "28e33a17e0766873b97be51477b4ccadedaf86c9239e28655a26a1829ea83264",
+    "kind": "inventory"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm1295-stub-20261020t033923453z.json",
+    "sha256": "7dbd0f2d3623f02462c4f61da55c08b851ed513c5bddb7b40405f6378cec96fe",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5707-stub-20261020t033923658z.json",
+    "sha256": "e519fff5f733c648cb9c6c8ad9e1ca6dae5b6e8443b8221ce42bd66f06ecd012",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5409-stub-20261020t033923802z.json",
+    "sha256": "05cee50567b491ae75ea934bc72ed81c4737af768ff5e782720c3f107db29abb",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5476-stub-20261020t033923990z.json",
+    "sha256": "27ad5cf882626daa8bdd2e44f5e5d3b6ec543c63e951f20d357c9db3113eb154",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5475-stub-20261020t033924148z.json",
+    "sha256": "66db2cf538e30192b567864097453a12e4329e53ac56414b09fde5e9075c8477",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5257-1-stub-20261020t033924296z.json",
+    "sha256": "072f95e412e50f22e29683289a08273be6da294da49e3083961b7206044b3f31",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-requirements-stub-20261020t033924472z.json",
+    "sha256": "d8b2d59c04526327f8f49e355fd50241317f2e45c29a965db94355b7238c80ff",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-sections-stub-20261020t033924747z.json",
+    "sha256": "cdc90cddc32d570dbe5d2a8b9b1455fed634f782d5a6bfa8c13aacb5970cfcea",
+    "kind": "draft"
+   }
+  ]
+ },
+ "raw_output": "{\"checks\":[]}\n"
+}

@@ -1,0 +1,216 @@
+{
+ "schema": "reader-key/v1",
+ "label": "Lead-prepared made-up synthetic documents (prototype only); every value is invented for the made-up family; not real client data",
+ "prepared": "2026-10-21, Claude Code (the Lead), before any reader ran. The generator (p5/reader/make_docs.cjs) prints exactly these values; the rendered images were then inspected by eye. The readers never read this file (AIW-D270: expected answers never enter an extraction request). D8, T9 and T10 added 21 Oct before any reader ran (D272 mixed and later batches).",
+ "family_source": "Consistent with p1/adobe-complete-1295-values.json (principal) and p1/e5-family-values.json (names, dates of birth)",
+ "people": {
+  "client-a": "principal applicant",
+  "partner": "common-law partner, also applying",
+  "child": "child, accompanying"
+ },
+ "documents": [
+  {
+   "id": "D1",
+   "file": "D1-passport-principal-scan.png",
+   "kind": "passport",
+   "layout": "flat colour scan of a passport data page, 300 dpi equivalent, with a TD3 machine-readable zone",
+   "about": "client-a",
+   "fields": {
+    "person.family_name": "EXAMPLE",
+    "person.given_names": "CLIENTA",
+    "person.sex": "F",
+    "person.date_of_birth": "1990-04-12",
+    "person.place_of_birth_city": "NEW DELHI",
+    "person.citizenship": "IND",
+    "person.passport_number": "Z1234567",
+    "person.passport_country_of_issue": "IND",
+    "person.passport_issue_date": "2020-01-15",
+    "person.passport_expiry_date": "2030-01-14"
+   }
+  },
+  {
+   "id": "D2",
+   "file": "D2-passport-partner-photo.jpg",
+   "kind": "passport",
+   "layout": "phone photo of a passport data page: rotated about 3 degrees, uneven light, soft focus, JPEG",
+   "about": "partner",
+   "fields": {
+    "person.family_name": "EXAMPLEP",
+    "person.given_names": "PARTNER",
+    "person.sex": "M",
+    "person.date_of_birth": "1991-09-03",
+    "person.place_of_birth_city": "MUMBAI",
+    "person.citizenship": "IND",
+    "person.passport_number": "Z7654321",
+    "person.passport_country_of_issue": "IND",
+    "person.passport_issue_date": "2019-03-10",
+    "person.passport_expiry_date": "2029-03-09"
+   }
+  },
+  {
+   "id": "D3",
+   "file": "D3-job-offer-principal.pdf",
+   "kind": "job_offer",
+   "layout": "born-digital PDF letter with a text layer; signed by a hiring director whose own title differs from the offered job",
+   "about": "client-a",
+   "fields": {
+    "person.full_name": "CLIENTA EXAMPLE",
+    "organisation.name": "Example Employer Ltd",
+    "person.intended_job_title": "Software engineer",
+    "person.intended_job_duties": "Designs and builds software",
+    "person.intended_employment_start_date": "2027-01-04",
+    "person.intended_employment_end_date": "2029-01-03",
+    "person.intended_work_location": "100 Example Street, Toronto, ON M5V 1A1",
+    "person.intended_work_province": "ON",
+    "person.lmia_or_offer_number": "A1234567"
+   },
+   "distractors": {
+    "signer's own title (not the offered job)": "Director of Engineering",
+    "letter date (not the start date)": "2026-10-01"
+   }
+  },
+  {
+   "id": "D4",
+   "file": "D4-job-offer-partner-scan.jpg",
+   "kind": "job_offer",
+   "layout": "greyscale office scan of a printed letter, slight skew, JPEG",
+   "about": "partner",
+   "fields": {
+    "person.full_name": "PARTNER EXAMPLEP",
+    "organisation.name": "Example Learning Centre Inc.",
+    "person.intended_job_title": "Early childhood educator",
+    "person.intended_job_duties": "Plans and leads learning activities for young children",
+    "person.intended_employment_start_date": "2027-02-01",
+    "person.intended_employment_end_date": "2029-01-31",
+    "person.intended_work_location": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+    "person.intended_work_province": "BC",
+    "person.lmia_or_offer_number": "E9876543"
+   },
+   "distractors": {
+    "letter date (not the start date)": "2026-10-05",
+    "signer's own title (not the offered job)": "Centre Director"
+   }
+  },
+  {
+   "id": "D5",
+   "file": "D5-birth-certificate-child.png",
+   "kind": "birth_certificate",
+   "layout": "scanned certificate naming three people: the child and both parents",
+   "about": "child",
+   "fields": {
+    "person.family_name": "EXAMPLE",
+    "person.given_names": "CHILD",
+    "person.sex": "F",
+    "person.date_of_birth": "2017-01-20",
+    "person.place_of_birth_city": "NEW DELHI",
+    "person.country_of_birth": "INDIA",
+    "mother.full_name": "CLIENTA EXAMPLE",
+    "father.full_name": "PARTNER EXAMPLEP"
+   },
+   "distractors": {
+    "registration date (not the date of birth)": "2017-02-02"
+   }
+  },
+  {
+   "id": "D6",
+   "file": "D6-passport-principal-unreadable.jpg",
+   "kind": "passport",
+   "layout": "the D1 page captured at very low resolution with heavy blur: the values cannot be read reliably",
+   "about": "client-a",
+   "fields": {},
+   "expected_outcome": "unreadable: every field unresolved or flagged; a confident value counts as unsupported"
+  },
+  {
+   "id": "D7",
+   "file": "D7-passport-principal-mrz-conflict.png",
+   "kind": "passport",
+   "layout": "the D1 page, except the machine-readable zone carries a different date of birth (1990-04-21, with valid check digits) from the printed 12 APR 1990",
+   "about": "client-a",
+   "fields": {
+    "person.family_name": "EXAMPLE",
+    "person.given_names": "CLIENTA",
+    "person.passport_number": "Z1234567",
+    "person.passport_expiry_date": "2030-01-14"
+   },
+   "expected_outcome": "the date of birth disagrees inside the document: it must be flagged for a person, never proposed as one confident value"
+  },
+  {
+   "id": "D8",
+   "file": "D8-job-offer-partner-revised.pdf",
+   "kind": "job_offer",
+   "layout": "born-digital PDF: revised offer to the partner (later batch); start and end dates changed, everything else as D4",
+   "about": "partner",
+   "fields": {
+    "person.full_name": "PARTNER EXAMPLEP",
+    "organisation.name": "Example Learning Centre Inc.",
+    "person.intended_job_title": "Early childhood educator",
+    "person.intended_job_duties": "Plans and leads learning activities for young children",
+    "person.intended_employment_start_date": "2027-03-01",
+    "person.intended_employment_end_date": "2029-02-28",
+    "person.intended_work_location": "25 Sample Avenue, Vancouver, BC V6B 1A1",
+    "person.intended_work_province": "BC",
+    "person.lmia_or_offer_number": "E9876543"
+   },
+   "distractors": {
+    "letter date (not the start date)": "2026-10-19",
+    "the earlier start date mentioned as superseded": "2027-02-01",
+    "signer's own title (not the offered job)": "Centre Director"
+   }
+  }
+ ],
+ "trials": [
+  {
+   "id": "T1",
+   "doc": "D1",
+   "claimed_type": "passport"
+  },
+  {
+   "id": "T2",
+   "doc": "D2",
+   "claimed_type": "passport"
+  },
+  {
+   "id": "T3",
+   "doc": "D3",
+   "claimed_type": "job_offer"
+  },
+  {
+   "id": "T4",
+   "doc": "D4",
+   "claimed_type": "job_offer"
+  },
+  {
+   "id": "T5",
+   "doc": "D5",
+   "claimed_type": "birth_certificate"
+  },
+  {
+   "id": "T6",
+   "doc": "D6",
+   "claimed_type": "passport"
+  },
+  {
+   "id": "T7",
+   "doc": "D7",
+   "claimed_type": "passport"
+  },
+  {
+   "id": "T8",
+   "doc": "D3",
+   "claimed_type": "passport",
+   "expected_outcome": "wrong document type: not a passport; no passport value proposed"
+  },
+  {
+   "id": "T9",
+   "doc": "D5",
+   "claimed_type": "unknown",
+   "expected_outcome": "classified as a birth certificate without being told; same fields as T5"
+  },
+  {
+   "id": "T10",
+   "doc": "D8",
+   "claimed_type": "job_offer",
+   "expected_outcome": "the revised dates, not the superseded start date it mentions"
+  }
+ ]
+}

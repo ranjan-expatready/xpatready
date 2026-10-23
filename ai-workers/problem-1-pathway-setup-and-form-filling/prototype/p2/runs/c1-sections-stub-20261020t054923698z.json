@@ -1,0 +1,143 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "stub",
+ "drafting_run": {
+  "run_id": "c1-sections-stub-20261020t054923698z",
+  "idempotency_key": "9d3601282f89a5790a70fbbc04868ac658d013d47f62e16e793d9b741a5630bc",
+  "contract_version": "drafting-run/v0",
+  "kind": "sections",
+  "output_sha256": "9cdfb3cad2d3fe65f5d53873ba0e0b6195a2192be692e7771c37194a9324406f",
+  "inputs": {
+   "combination": "1",
+   "official_files": [
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm1295-stub-20261020t054922595z.json",
+     "sha256": "faf8d78597dc034bfcc49f4185469d5934f8f036a948768240fceb7dcec6bd9b"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5707-stub-20261020t054922752z.json",
+     "sha256": "dc07e8b504d0a4613abe0939037ee41a05f982d077eb58b237cd224426806faa"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5409-stub-20261020t054922888z.json",
+     "sha256": "00c36d45f09651472ae335f2a7d3aeee982c99e77fd5ff3f88eedebd1d85ba29"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5476-stub-20261020t054923026z.json",
+     "sha256": "0209f09b51f659801e522c05faf963017df15f5aa4f2036e96c78577e6fa48b5"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5475-stub-20261020t054923165z.json",
+     "sha256": "e1b600f3cbf50a7346c7bbe2878e7d9cbcf9dfde1b6934d610641f4573ee3fc3"
+    },
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5257-1-stub-20261020t054923296z.json",
+     "sha256": "d2e19192c019027d637212a987e516307214df13ef8eaa5223902db876e61416"
+    },
+    {
+     "file": "prototype/p2/runs/c1-requirements-stub-20261020t054923459z.json",
+     "sha256": "b6ec1c89851af8146feab839e9599d7a22b3d8a217e9745b6dc41fd4b76113d2"
+    }
+   ],
+   "configuration_version": "c1-draft-1"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 64000,
+   "prompt_version": "sections.v1.md",
+   "prompt_sha256": "a6b20bd6e5a77c61219984f128cf05221584f9db95c530e5d5561bc37d4dd9e9"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "duration_ms": 0
+   }
+  ],
+  "usage": {
+   "input_tokens": 0,
+   "output_tokens": 0,
+   "cost_usd": 0,
+   "duration_ms": 0
+  },
+  "started_at": "2026-10-20T05:49:23.698Z",
+  "ended_at": "2026-10-20T05:49:23.904Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "91c786b26258cd2e248edb816d5b2da795074f9da59d94516a4fc8c16db2ed5e",
+  "template_sha256": "693db885c8894aff68c96752e68a8ea34390a6a6978e6fedd3a4229be0b03504",
+  "schema_file": "sections-output.v1.schema.json",
+  "schema_sha256": "7e9babd42b48973abb4d6574fa8fe0525601eaa854b08b9e902ebf8eaa1f3dd4",
+  "screened": true,
+  "output_sha256": "9cdfb3cad2d3fe65f5d53873ba0e0b6195a2192be692e7771c37194a9324406f",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "c67fc09c80faa467e9e0fdeed37a748283ce602279f7d6a6cd64702b3758cf97",
+  "request_bytes": 11290,
+  "stub_calls": 1,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 40,
+   "committed_usd": 14.653208
+  },
+  "admitted": [
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm1295-stub-20261020t054922595z.json",
+    "sha256": "faf8d78597dc034bfcc49f4185469d5934f8f036a948768240fceb7dcec6bd9b",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5707-stub-20261020t054922752z.json",
+    "sha256": "dc07e8b504d0a4613abe0939037ee41a05f982d077eb58b237cd224426806faa",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5409-stub-20261020t054922888z.json",
+    "sha256": "00c36d45f09651472ae335f2a7d3aeee982c99e77fd5ff3f88eedebd1d85ba29",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5476-stub-20261020t054923026z.json",
+    "sha256": "0209f09b51f659801e522c05faf963017df15f5aa4f2036e96c78577e6fa48b5",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5475-stub-20261020t054923165z.json",
+    "sha256": "e1b600f3cbf50a7346c7bbe2878e7d9cbcf9dfde1b6934d610641f4573ee3fc3",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5257-1-stub-20261020t054923296z.json",
+    "sha256": "d2e19192c019027d637212a987e516307214df13ef8eaa5223902db876e61416",
+    "kind": "draft"
+   },
+   {
+    "file": "prototype/p2/runs/c1-requirements-stub-20261020t054923459z.json",
+    "sha256": "b6ec1c89851af8146feab839e9599d7a22b3d8a217e9745b6dc41fd4b76113d2",
+    "kind": "draft"
+   }
+  ]
+ },
+ "raw_output": "{\"sections\":[],\"placements\":[],\"unresolved\":[{\"fact\":\"stub\",\"reason\":\"stub caller: no model was called, so nothing was drafted\"}]}\n"
+}

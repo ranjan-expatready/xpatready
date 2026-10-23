@@ -1,0 +1,70 @@
+{
+ "label": "Made-up synthetic documents for the P5 reader (AIW-D270). Each page is visibly marked as a synthetic specimen. No real person or real document.",
+ "generated_by": "p5/reader/make_docs.ts",
+ "items": [
+  {
+   "file": "D1-passport-principal-scan.png",
+   "sha256": "1dcd5b5c2094eb7d4786094a0d8d825565fb60b825839ee61799ab73ffdaab59",
+   "bytes": 523453,
+   "media_type": "image/png",
+   "synthetic": true,
+   "marking": "SYNTHETIC SPECIMEN · MADE-UP TEST DOCUMENT · NOT VALID"
+  },
+  {
+   "file": "D2-passport-partner-photo.jpg",
+   "sha256": "966b456f94ffd55f36ca80ddeef432e41a14b9e8f77402698b3c5c85b055b84a",
+   "bytes": 67799,
+   "media_type": "image/jpeg",
+   "synthetic": true,
+   "marking": "SYNTHETIC SPECIMEN · MADE-UP TEST DOCUMENT · NOT VALID"
+  },
+  {
+   "file": "D3-job-offer-principal.pdf",
+   "sha256": "bc41f16f8a7f13eb5041e41ac3ee535928378c26e9fd5dc8c96a4fed5c031c7c",
+   "bytes": 63734,
+   "media_type": "application/pdf",
+   "synthetic": true,
+   "marking": "SYNTHETIC SPECIMEN · MADE-UP TEST DOCUMENT · NOT VALID"
+  },
+  {
+   "file": "D4-job-offer-partner-scan.jpg",
+   "sha256": "1f7d4db50e13004b59f21b03442e91b8476860131bfa30fbc7a43cf8155faa81",
+   "bytes": 130142,
+   "media_type": "image/jpeg",
+   "synthetic": true,
+   "marking": "SYNTHETIC SPECIMEN · MADE-UP TEST DOCUMENT · NOT VALID"
+  },
+  {
+   "file": "D5-birth-certificate-child.png",
+   "sha256": "f61eddf4b6258aff1d08ed425ba48aecfa40c20a81769301e6f9bd8e8da82a1f",
+   "bytes": 144141,
+   "media_type": "image/png",
+   "synthetic": true,
+   "marking": "SYNTHETIC SPECIMEN · MADE-UP TEST DOCUMENT · NOT VALID"
+  },
+  {
+   "file": "D6-passport-principal-unreadable.jpg",
+   "sha256": "b6b07b034a2cc319f10cbaff34cba34e2fb8a0916d13472bef9fb1bd808b8e2c",
+   "bytes": 2013,
+   "media_type": "image/jpeg",
+   "synthetic": true,
+   "marking": "SYNTHETIC SPECIMEN · MADE-UP TEST DOCUMENT · NOT VALID"
+  },
+  {
+   "file": "D7-passport-principal-mrz-conflict.png",
+   "sha256": "054390ed46b652cdb3c4c4e499c88aa31522e47c3ac7fc72ee94be711e4975b4",
+   "bytes": 523440,
+   "media_type": "image/png",
+   "synthetic": true,
+   "marking": "SYNTHETIC SPECIMEN · MADE-UP TEST DOCUMENT · NOT VALID"
+  },
+  {
+   "file": "D8-job-offer-partner-revised.pdf",
+   "sha256": "07622861ea51eaa45c25c1b20efeeabc535e94938fbfbc430a558c0279e777fe",
+   "bytes": 65008,
+   "media_type": "application/pdf",
+   "synthetic": true,
+   "marking": "SYNTHETIC SPECIMEN · MADE-UP TEST DOCUMENT · NOT VALID"
+  }
+ ]
+}

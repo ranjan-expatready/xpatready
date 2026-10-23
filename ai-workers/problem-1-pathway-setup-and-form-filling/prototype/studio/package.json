@@ -1,0 +1,5 @@
+{
+  "private": true,
+  "type": "module",
+  "description": "Product Studio prototype (D275/D276): NestJS + Prisma + PostgreSQL API, React + Vite web. Toolchain in .tools/solution-1-prototype/studio-node."
+}

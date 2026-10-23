@@ -1,0 +1,152 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "form_edition",
+    "canonical_fields",
+    "entries"
+  ],
+  "properties": {
+    "form_edition": {
+      "type": "string",
+      "description": "copy exactly the printed edition given in the known_fact block, e.g. IMM 0000 (MM-YYYY)"
+    },
+    "canonical_fields": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "meaning",
+          "value_type"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z_]*\\.[a-z][a-z0-9_]*$"
+          },
+          "meaning": {
+            "type": "string"
+          },
+          "value_type": {
+            "enum": [
+              "text",
+              "date",
+              "code",
+              "yes_no",
+              "number",
+              "address",
+              "country"
+            ]
+          }
+        }
+      }
+    },
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "data_path",
+          "outcome",
+          "person",
+          "row",
+          "fact",
+          "transform",
+          "condition",
+          "confidence",
+          "unresolved_reason",
+          "evidence_quote"
+        ],
+        "properties": {
+          "data_path": {
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "mapped",
+              "unresolved",
+              "never_filled",
+              "not_a_fact"
+            ]
+          },
+          "person": {
+            "enum": [
+              "form_subject",
+              "subject_spouse_or_partner",
+              "subject_parent_1",
+              "subject_parent_2",
+              "subject_child",
+              "subject_sibling",
+              "representative",
+              "none"
+            ]
+          },
+          "row": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "fact": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-z][a-z_]*\\.[a-z][a-z0-9_]*$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "transform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "confidence": {
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "unresolved_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence_quote": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

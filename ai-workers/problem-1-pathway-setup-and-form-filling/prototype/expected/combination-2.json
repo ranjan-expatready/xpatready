@@ -1,0 +1,173 @@
+{
+ "schema": "expected-answers/v0",
+ "label": "Lead-verified from official sources (prototype only); not specialist-confirmed",
+ "prepared": "2026-10-19, Claude Code (the Lead), from the official files only; never from a draft configuration or prototype output",
+ "country_of_residence": "India (New Delhi visa office): a scenario setting chosen by the Lead",
+ "legal": "Unconfirmed: no counsel (AIW-D94)",
+ "deferred": [
+  "Field-level expected values: written in P1, after the field inventory of each form edition, each citing its form field; not part of P0"
+ ],
+ "combination": "2: visitor visa (temporary resident visa) applied from outside Canada",
+ "scenario": {
+  "people": [
+   {
+    "id": "mother",
+    "role": "applicant: Client A's mother, visiting family in Canada",
+    "date_of_birth": "1962-07-08",
+    "adult": true,
+    "already_known_from": "combination 1: Client A's IMM 5707 lists her as Client A's mother (name, date of birth, address, occupation)"
+   }
+  ],
+  "settings": [
+   "The firm represents her (IMM 5476 applies).",
+   "She pays for her own trip.",
+   "No background question is answered 'yes' in the base case; variant V3 tests Schedule 1."
+  ],
+  "variants": {
+   "V3": "the mother answers 'yes' to a background question"
+  }
+ },
+ "expected_forms": [
+  {
+   "form": "IMM 5257",
+   "edition": "09-2023",
+   "per": "each applicant",
+   "applies_to": [
+    "mother"
+   ],
+   "condition": "always",
+   "source": {
+    "file": "official-sources/ircc/checklists/imm5484e.pdf",
+    "sha256": "e48deef4a6343edda19e04b3ab598a275b12bb07047d4351f00c7c239f7883fc",
+    "where": "IMM 5484 (05-2026) XFA template",
+    "passage": "Application for Temporary Resident Visa (IMM 5257) Note: If this application form is completed on a computer it must be validated to generate a barcode."
+   }
+  },
+  {
+   "form": "IMM 5707",
+   "edition": "01-2023",
+   "per": "each person aged 18 or older",
+   "applies_to": [
+    "mother"
+   ],
+   "condition": "age 18 or older",
+   "source": {
+    "file": "official-sources/ircc/checklists/IMM5881E.pdf",
+    "sha256": "e04fdbc11a1e01e4fcc09f39ab80cc63ef3d9dbdc74a9492203e35acd2ffcc10",
+    "where": "IMM 5881 E (05-2026), New Delhi visa additional checklist",
+    "passage": "You must provide the Family Information Form (IMM 5707) fully completed, dated and signed."
+   },
+   "reuse": "same form edition and map as combination 1"
+  },
+  {
+   "form": "IMM 5476",
+   "edition": "11-2025",
+   "applies_to": [
+    "mother"
+   ],
+   "condition": "an authorized representative is used",
+   "source": {
+    "file": "official-sources/ircc/checklists/imm5484e.pdf",
+    "sha256": "e48deef4a6343edda19e04b3ab598a275b12bb07047d4351f00c7c239f7883fc",
+    "where": "IMM 5484 (05-2026) XFA template",
+    "passage": "Use of a Representative (IMM 5476) Note: Complete this form only if you used the services of a representative"
+   },
+   "reuse": "same form edition and map as combination 1"
+  },
+  {
+   "form": "IMM 5409",
+   "edition": "01-2023",
+   "applies_to": [],
+   "condition": "not applicable: she is not declaring a common-law union",
+   "source": {
+    "file": "official-sources/ircc/checklists/imm5484e.pdf",
+    "sha256": "e48deef4a6343edda19e04b3ab598a275b12bb07047d4351f00c7c239f7883fc",
+    "where": "IMM 5484 (05-2026) XFA template",
+    "passage": "Statutory Declaration of Common-law Union (IMM 5409) Note: Refer to the responsible visa office for your region."
+   }
+  },
+  {
+   "form": "IMM 5257 SCH1",
+   "edition": "09-2023",
+   "applies_to": [],
+   "applies_in_variant": {
+    "V3": [
+     "mother"
+    ]
+   },
+   "condition": "a 'yes' to any background question",
+   "source": {
+    "file": "official-sources/ircc/checklists/IMM5881E.pdf",
+    "sha256": "e04fdbc11a1e01e4fcc09f39ab80cc63ef3d9dbdc74a9492203e35acd2ffcc10",
+    "where": "IMM 5881 E (05-2026), New Delhi visa additional checklist",
+    "passage": "If you have answered “yes” to any of the background information questions on the application form, provide a completed and signed Schedule 1 form"
+   }
+  }
+ ],
+ "expected_documents": [
+  {
+   "document": "Original valid passport and a photocopy of the biodata page",
+   "applies_to": [
+    "mother"
+   ],
+   "source": {
+    "file": "official-sources/ircc/checklists/IMM5881E.pdf",
+    "sha256": "e04fdbc11a1e01e4fcc09f39ab80cc63ef3d9dbdc74a9492203e35acd2ffcc10",
+    "where": "IMM 5881 E (05-2026), New Delhi visa additional checklist",
+    "passage": "You must provide an original, valid passport, as well as a photocopy of the biodata (photo) page."
+   }
+  },
+  {
+   "document": "Proof of funds: income tax returns (2 years), bank statements (6 months)",
+   "applies_to": [
+    "mother"
+   ],
+   "condition": "purpose: visiting family or friends",
+   "source": {
+    "file": "official-sources/ircc/checklists/IMM5881E.pdf",
+    "sha256": "e04fdbc11a1e01e4fcc09f39ab80cc63ef3d9dbdc74a9492203e35acd2ffcc10",
+    "where": "IMM 5881 E (05-2026), New Delhi visa additional checklist",
+    "passage": "Visiting family or friends ☐ Proof of funds: You must provide proof of financial support: o Income Tax Returns for the past two years o Copies of bank statements or bank book covering the past six (6) months."
+   }
+  },
+  {
+   "document": "Proof of payment",
+   "applies_to": [
+    "mother"
+   ],
+   "source": {
+    "file": "official-sources/ircc/checklists/imm5484e.pdf",
+    "sha256": "e48deef4a6343edda19e04b3ab598a275b12bb07047d4351f00c7c239f7883fc",
+    "where": "IMM 5484 (05-2026) XFA template",
+    "passage": "Proof of payment showing the amount paid"
+   }
+  }
+ ],
+ "rules": [
+  {
+   "rule": "Employment history covers the past 10 years with no gaps; periods retired, not working or studying are indicated. Under AIW-D253 an unfilled gap is a warning met by recording the period; it is not a stop by itself.",
+   "source": {
+    "file": "official-sources/ircc/forms/imm5257e.pdf",
+    "sha256": "0dc03b24e7914a178ad29e2cfae811045835a1d36d7a3c35f040251d0aca562e",
+    "where": "IMM 5257 (09-2023) XFA template, Employment",
+    "passage": "Give details of your employment for the past 10 years ... Do not leave gaps. If retired, not working or studying, please indicate. If you are retired, please provide the 10 years before your retirement."
+   }
+  },
+  {
+   "rule": "Same instruction in the guide: if you do not work, describe what you are currently doing (retired, not working, going to school).",
+   "source": {
+    "file": "official-sources/ircc/instructions/guide-5256.html",
+    "sha256": "dc10d9878cc31d22d48059699c59b2a77ddb6b75ddb51c089cbe3d52ce766f5f",
+    "where": "Guide 5256 page copy (2026-03-31)",
+    "passage": "If you do not work, describe what you are currently doing (retired, not working, going to school, etc.)"
+   }
+  }
+ ],
+ "reuse_expected": [
+  "IMM 5707 and IMM 5476 maps from combination 1 are reused unchanged; unchanged approved items are not reviewed again (D233)",
+  "The mother's name, date of birth and relationship, recorded as facts about others on Client A's IMM 5707, are offered as her own facts, after a duplicate check; nothing already verified is asked again"
+ ],
+ "open": [
+  "The family-information form for an India-resident visitor is IMM 5707 (IMM 5881); IMM 5645 is a separate form that some country packages list instead and is not used here."
+ ]
+}

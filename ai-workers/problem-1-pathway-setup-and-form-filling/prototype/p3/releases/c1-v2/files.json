@@ -1,0 +1,6 @@
+{
+ "version": 2,
+ "configuration_file": "configuration.json",
+ "configuration_file_sha256": "4ad08d2cca8e4934419fd4b4eb2d7e77f9ba621a7a61f0711f1ba410cc3d4e02",
+ "configuration_sha256_is": "SHA-256 of the canonical JSON (sorted keys) of configuration.json"
+}

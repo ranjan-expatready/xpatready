@@ -1,0 +1,150 @@
+PASS 1440px light: no console errors
+PASS 1440px light: navigation at most 15% of the screen height
+PASS 1440px light: after jumping to #view-v5 the heading is below the navigation
+PASS 1440px light: after jumping to #evidence the heading is below the navigation
+PASS 1440px light: no sideways page scroll
+PASS 1440px light: every diagram imported
+PASS 1440px light: the seven view diagrams shown at natural size; the technical overview closed
+PASS 1440px: every diagram at 100% (container = drawing width, at most 1,240px)
+PASS one eye button per activity (41)
+PASS eye opens the inspector with the activity card
+PASS card has ten groups and the Input → Action → Output → Receiving owner line
+PASS location hash updated without navigation
+PASS opening does not scroll the page or the map
+PASS Example opens in the same card by keyboard
+PASS another selection replaces the card in the same inspector
+PASS Example stays open across selections
+PASS selected activity is outlined on the map
+PASS clicking the shape opens its card
+PASS Escape closes and returns focus to the eye button
+PASS closing leaves the page and map where they were
+PASS hover preview shows title and Input → Output only
+PASS Close button closes and returns focus
+PASS overview phase box jumps to its view, heading below the navigation
+PASS who-does-what matrix opens the card
+PASS all 41 cards complete (ten groups, flow line, person line, example or reason)
+PASS deep link #a=5.1 opens that card on load
+PASS 1440px: selected shape stays visible beside the open card (3.8, 9.3, 5.3, 9.6)
+PASS 1440px: another shape can be selected without closing the card
+PASS hover preview stays while the pointer is on it, and Escape closes it
+PASS map: plain-language process map comes before the BPMN overview; no symbols to decode beyond the eye
+PASS map: three bands; ways in A and B, then stages 1–12 in reading order; the stage strip lists every stage
+PASS map: every stage names who acts and has an eye button with a tooltip; no receives/does/hands-over prose on the cards
+PASS map: the first row of the case band starts level (card headers aligned)
+PASS map: every arrow is labelled with its handoff
+PASS map: decisions read as questions with at least two labelled outcomes
+PASS map: the published pack version is a shared record that cases read (not sent per case); the case band wraps 6 → 7 with a labelled connector
+PASS map: actor side shown in words (Super Admin, Firm, Client portal)
+PASS map: no card text overflows at 1440px
+PASS lists: every numbered actor line has its text in one aligned column; ways in carry no letters; Who is who shows each side's count
+PASS tooltips: the eye, a side tag, a lane tag, a gateway and a task mark each explain their meaning on hover
+PASS map: the eye opens the stage card in the side panel, marks the stage selected, page does not move
+PASS map: stage 5 carries the shared-record selection rules in context
+PASS map: Example opens Client A's example expanded, as expandable rows (no cramped five-column table)
+PASS example row expands in place and shows the passport proposal with readiness pending
+PASS map: an activity link in the stage card opens that activity card in the same panel (stage selection cleared)
+PASS case creation card 7.1 carries the same reuse example and scenario matrix
+PASS map: way in B is an existing client opening a new case without a new lead
+PASS map: Escape closes the stage card and returns focus to its eye button
+PASS shared records: plain words per record, a key to the rule tags, every tag explained on hover, readers and writers as links that open the card
+PASS who is who: five sides and every actor with product role, what they do and never do
+PASS every view has a "Diagram symbols" button that opens the legend in the side panel
+PASS diagrams: every lane and pool named horizontally; actor-type brackets (System, Super Admin, Firm, Client) in the left strip; no rotated names left visible
+PASS diagrams: business-rule notes only (symbol meanings live in the legend and tooltips); view 6 repeats per filing
+PASS every view lists what happens in it, one line per activity (41 in all)
+PASS BPMN: view 4 and the overview start an existing client's new case at 7.1, not at the lead form
+PASS nomenclature: no retired page terms remain (team words: Content Pack Configurator, published pack version, verified, form, support ticket, Lead representative, Immigration SME)
+PASS scenario walk (documentation coverage): no prior case: a new client goes through the lead form, PQR and duplicate check
+PASS scenario walk (documentation coverage): profile but no case: started from the record; only missing, re-confirmation and needed eligibility questions
+PASS scenario walk (documentation coverage): one prior case: shared facts reused; that case's approvals, signatures, receipts and decision not carried
+PASS scenario walk (documentation coverage): several cases: each fact resolved on its own, never the latest case
+PASS scenario walk (documentation coverage): stable verified fact reused and correctable, with no needless review
+PASS scenario walk (documentation coverage): current address supersedes a historical one; history is not a conflict; past dates keep past values
+PASS scenario walk (documentation coverage): J2: verified passport + proposed new number → two statuses; forms that read it not ready until verified or rejected with evidence
+PASS scenario walk (documentation coverage): J2: a required re-confirmation stays pending until answered
+PASS scenario walk (documentation coverage): J3: the matrix is status-specific (missing blank; re-confirmation pending; proposal shows both statuses; conflict shows alternatives, none selected)
+PASS scenario walk (documentation coverage): genuine disagreement: no value selected, a person verifies
+PASS scenario walk (documentation coverage): timestamps alone never decide authority
+PASS scenario walk (documentation coverage): identity: names or email never merge people; resolved identifier used
+PASS scenario walk (documentation coverage): permissions and firm boundary apply to every reuse
+PASS scenario walk (documentation coverage): documents re-checked against the new case; expiry warnings unchanged
+PASS scenario walk (documentation coverage): opening a case does not alter an earlier case; later shared-fact changes follow the affected-case rules; submitted forms never change
+PASS scenario walk (documentation coverage): no AI selects among verified values
+PASS scenario walk (documentation coverage): same person links the record and still asks gaps and differences
+PASS scenario walk (documentation coverage): R1: missing passport + "awaiting client" stays unresolved; a reason alone never clears a checklist item
+PASS scenario walk (documentation coverage): R1: an authorised disposition the rule permits, or a person accepting readable evidence when reading fails, resolves the item
+PASS scenario walk (documentation coverage): R2: approval → signature-only change → submission stays possible; a signed upload with a changed birth date does not inherit approval
+PASS scenario walk (documentation coverage): R3: each filing is approved, signed, submitted and decided on its own; principal decided, partner pending → case open; partner can still be signed and submitted
+PASS scenario walk (documentation coverage): 8.3/8.4: unavailable AI checker → "not checked by AI", focused human review completed and recorded; grey is not a review; hard checks still apply
+PASS 1440px: J1 — the selected map stage (3, 5, 6, 9, 12) stays fully visible beside its open card
+PASS 1440px: another visible stage can be selected without closing the card; only it stays selected
+PASS 1440px: Escape returns focus to the stage's eye button and clears the selection
+PASS 1440px dark: no console errors
+PASS 1440px dark: navigation at most 15% of the screen height
+PASS 1440px dark: after jumping to #view-v5 the heading is below the navigation
+PASS 1440px dark: after jumping to #evidence the heading is below the navigation
+PASS 1440px dark: no sideways page scroll
+PASS 1440px dark: every diagram imported
+PASS 1440px dark: the seven view diagrams shown at natural size; the technical overview closed
+PASS 1440px dark: page dark, diagram panel stays light
+PASS 1280px light: no console errors
+PASS 1280px light: navigation at most 15% of the screen height
+PASS 1280px light: after jumping to #view-v5 the heading is below the navigation
+PASS 1280px light: after jumping to #evidence the heading is below the navigation
+PASS 1280px light: no sideways page scroll
+PASS 1280px light: every diagram imported
+PASS 1280px light: the seven view diagrams shown at natural size; the technical overview closed
+PASS 1280px: selected shape stays visible beside the open card (3.8, 9.3, 5.3, 9.6)
+PASS 1280px: another shape can be selected without closing the card
+PASS 1280px: J1 — the selected map stage (3, 5, 6, 9, 12) stays fully visible beside its open card
+PASS 1280px: another visible stage can be selected without closing the card; only it stays selected
+PASS 1280px: Escape returns focus to the stage's eye button and clears the selection
+PASS 1280px dark: no console errors
+PASS 1280px dark: navigation at most 15% of the screen height
+PASS 1280px dark: after jumping to #view-v5 the heading is below the navigation
+PASS 1280px dark: after jumping to #evidence the heading is below the navigation
+PASS 1280px dark: no sideways page scroll
+PASS 1280px dark: every diagram imported
+PASS 1280px dark: the seven view diagrams shown at natural size; the technical overview closed
+PASS 1280px dark: page dark, diagram panel stays light
+PASS 768px light: no console errors
+PASS 768px light: navigation at most 15% of the screen height
+PASS 768px light: after jumping to #view-v5 the heading is below the navigation
+PASS 768px light: after jumping to #evidence the heading is below the navigation
+PASS 768px light: no sideways page scroll
+PASS 768px light: every diagram imported
+PASS 768px light: lists shown instead of diagrams
+PASS 768px dark: no console errors
+PASS 768px dark: navigation at most 15% of the screen height
+PASS 768px dark: after jumping to #view-v5 the heading is below the navigation
+PASS 768px dark: after jumping to #evidence the heading is below the navigation
+PASS 768px dark: no sideways page scroll
+PASS 768px dark: every diagram imported
+PASS 768px dark: lists shown instead of diagrams
+PASS 768px dark: page dark, diagram panel stays light
+PASS 375px light: no console errors
+PASS 375px light: navigation at most 15% of the screen height
+PASS 375px light: after jumping to #view-v5 the heading is below the navigation
+PASS 375px light: after jumping to #evidence the heading is below the navigation
+PASS 375px light: no sideways page scroll
+PASS 375px light: every diagram imported
+PASS 375px light: lists shown instead of diagrams
+PASS phone: list item opens a full-width bottom sheet
+PASS phone: Example opens by touch
+PASS phone: keyboard focus stays inside the sheet
+PASS phone: clicking the page behind the sheet does nothing; focus stays in the sheet
+PASS phone: Close returns focus to the list item
+PASS phone: closing makes the page usable again
+PASS phone: "Diagram" shows the full-size diagram in a sideways-scrolling frame
+PASS phone: the map stacks to one column with downward arrows (6 → 7 arrow shown), none wider than the screen
+PASS phone: a stage card opens as the full-width bottom sheet
+PASS 375px dark: no console errors
+PASS 375px dark: navigation at most 15% of the screen height
+PASS 375px dark: after jumping to #view-v5 the heading is below the navigation
+PASS 375px dark: after jumping to #evidence the heading is below the navigation
+PASS 375px dark: no sideways page scroll
+PASS 375px dark: every diagram imported
+PASS 375px dark: lists shown instead of diagrams
+PASS 375px dark: page dark, diagram panel stays light
+PASS deep link #c=st-5 opens that stage card on load
+149/149 passed

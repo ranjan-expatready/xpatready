@@ -1,0 +1,64 @@
+{
+  "checked_at": "2026-10-17T20:08:13.610543+00:00",
+  "links_checked": 87,
+  "broken_links": [],
+  "inputs": [
+    {
+      "file": "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html",
+      "frozen_and_live_match": true
+    },
+    {
+      "file": "ai-workers/tools/s3/build_one_pager.py",
+      "frozen_and_live_match": true
+    },
+    {
+      "file": "ai-workers/tools/s3/make_publish_copy.py",
+      "frozen_and_live_match": true
+    },
+    {
+      "file": "ai-workers/tools/s3/s3_data.py",
+      "frozen_and_live_match": true
+    },
+    {
+      "file": "ai-workers/tools/s3/s3_ledger.py",
+      "frozen_and_live_match": true
+    },
+    {
+      "file": "ai-workers/tools/s3/s3_panels.py",
+      "frozen_and_live_match": true
+    },
+    {
+      "file": "ai-workers/tools/s3/s3_terms.py",
+      "frozen_and_live_match": true
+    },
+    {
+      "file": "ai-workers/tools/s3/s3_views.py",
+      "frozen_and_live_match": true
+    },
+    {
+      "file": "ai-workers/tools/s3/check_one_pager.cjs",
+      "frozen_and_live_match": true
+    },
+    {
+      "file": "ai-workers/tools/s3/check_panels.cjs",
+      "frozen_and_live_match": true
+    }
+  ],
+  "archives": [
+    {
+      "archive": "archive/ai-workers/solution-1-v3-draft3-before-cohesion-2026-10-18",
+      "verified_files": 21
+    },
+    {
+      "archive": "archive/ai-workers/process-before-integrated-audit-close-2026-10-18",
+      "verified_files": 4
+    }
+  ],
+  "unique_panels": 57,
+  "panel_kinds": {
+    "activity": 41,
+    "other": 16
+  },
+  "NEXT_words": 389,
+  "product_unchanged": true
+}

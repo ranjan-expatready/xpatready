@@ -1,0 +1,767 @@
+{
+ "at": "2026-10-23T06:21:37.376Z",
+ "pass": 94,
+ "fail": 0,
+ "log": [
+  {
+   "name": "setup: sample inputs load",
+   "ok": true,
+   "detail": 30.489
+  },
+  {
+   "name": "BR-1 pass: Individual shows only Individual programs; Corporate only Corporate",
+   "ok": true,
+   "detail": {
+    "ind": 7,
+    "cor": 4
+   }
+  },
+  {
+   "name": "BR-1: switch counts equal the rows of each workspace",
+   "ok": true,
+   "detail": [
+    {
+     "value": "INDIVIDUAL",
+     "label": "Individual",
+     "combinations": 21
+    },
+    {
+     "value": "CORPORATE",
+     "label": "Corporate and employers",
+     "combinations": 8
+    }
+   ]
+  },
+  {
+   "name": "BR-1 fail: a program cannot sit under another program (only under its pathway)",
+   "ok": true,
+   "detail": "A program goes under a pathway, not under a program."
+  },
+  {
+   "name": "BR-2 fail: a combination is created only on a node picked from the masters",
+   "ok": true,
+   "detail": "That category or sub-category does not exist."
+  },
+  {
+   "name": "BR-2 fail: a new node needs an existing parent",
+   "ok": true,
+   "detail": "That parent does not exist (it may have been removed by a reset)."
+  },
+  {
+   "name": "BR-2 pass: a new category is added under a picked program",
+   "ok": true,
+   "detail": "individual.study_permits.study_permit_for_minors"
+  },
+  {
+   "name": "errors are RFC 9457 Problem Details",
+   "ok": true
+  },
+  {
+   "name": "BR-3 fail: a category that has sub-categories holds no setup",
+   "ok": true,
+   "detail": "\"Open work permit\" has sub-categories: choose one of them. Each is its own combination (BR-3)."
+  },
+  {
+   "name": "BR-3 fail: a program holds no setup",
+   "ok": true,
+   "detail": "A combination is a category or a sub-category, not a program (BR-3)."
+  },
+  {
+   "name": "BR-3 pass: a category without sub-categories is itself the combination",
+   "ok": true,
+   "detail": 201
+  },
+  {
+   "name": "BR-3 fail (database): the database itself refuses a combination on a program",
+   "ok": true,
+   "detail": "ERROR:  combination_level: a combination belongs to a category or sub-category, not a PROGRAM"
+  },
+  {
+   "name": "one combination per last-level node, in the database (unique)",
+   "ok": true,
+   "detail": "ERROR:  duplicate key value violates unique constraint \"combination_program_def_id_key\""
+  },
+  {
+   "name": "idempotent create: two clicks at once give one combination",
+   "ok": true,
+   "detail": [
+    201,
+    200
+   ]
+  },
+  {
+   "name": "BR-4/BR-7 fail: no sub-category under a category that has its own setup (refused, not split: P-26)",
+   "ok": true,
+   "detail": "\"Study permit\" already has its own setup, so it is the combination. Adding a sub-category would leave that setup above a combination (BR-3, BR-4). Sub-categories can only be added to a category that has no setup of its own."
+  },
+  {
+   "name": "BR-4 fail (database): the database refuses a node under a combination",
+   "ok": true,
+   "detail": "ERROR:  combination_level: individual.study_permits.study_permit already has its own setup, so nothing can be added under it"
+  },
+  {
+   "name": "BR-4 pass: a sub-category is added under a category with no setup",
+   "ok": true,
+   "detail": "individual.study_permits.extension.inside_canada"
+  },
+  {
+   "name": "BR-6 fail: a sibling with the same name (ignoring case, spaces, punctuation) is refused on its field",
+   "ok": true,
+   "detail": "\"Open work permit\" already exists under Work permits. Choose it instead, or give the new one a different name."
+  },
+  {
+   "name": "BR-6 pass: the same name under a different parent is allowed",
+   "ok": true,
+   "detail": "individual.study_permits.open_work_permit"
+  },
+  {
+   "name": "BR-9 fail: a node that has a combination cannot be deleted (the database refuses)",
+   "ok": true,
+   "detail": "ERROR:  update or delete on table \"program_def\" violates RESTRICT setting of foreign key constraint \"combination_program_def_id_fkey\" on table \"combination\""
+  },
+  {
+   "name": "item 1 pass: on every sample row the row's next step = the page header = the first missing line's step",
+   "ok": true,
+   "detail": "31 rows"
+  },
+  {
+   "name": "item 1: Visitor visa counts sources and set-up forms apart, in the next step's words",
+   "ok": true,
+   "detail": [
+    "2 forms attached as sources, 0 set up. Next step: Add 1 form from the library.",
+    "No questions yet for Applicant, Spouse or partner (travelling), Child (travelling). Next step: Add 1 form from the library."
+   ]
+  },
+  {
+   "name": "BR-8 pass: the reviewed work-permit row is Ready (in Release 1, startable)",
+   "ok": true,
+   "detail": "Live · Release 1"
+  },
+  {
+   "name": "BR-8: a combination never released is In setup",
+   "ok": true,
+   "detail": "In setup"
+  },
+  {
+   "name": "BR-12 pass: + Add picks a library form; its mapped edition becomes a form line",
+   "ok": true,
+   "detail": {
+    "added": "form_line",
+    "form": "IMM 1295",
+    "edition": "IMM 1295 (09-2023)"
+   }
+  },
+  {
+   "name": "BR-12 fail: the same form twice is refused",
+   "ok": true,
+   "detail": "IMM 1295 is already one of this combination's forms."
+  },
+  {
+   "name": "BR-12 fail: + Add never creates a form: unknown codes are refused",
+   "ok": true,
+   "detail": "IMM 9999 is not in the library. Upload the IRCC PDF to add it."
+  },
+  {
+   "name": "P-23: the shared draft lists the changed combination with its change count",
+   "ok": true,
+   "detail": {
+    "changes": 170,
+    "rows": [
+     "Spouse of a student"
+    ]
+   }
+  },
+  {
+   "name": "BR-14 fail: the author cannot release (the server refuses)",
+   "ok": true,
+   "detail": "Configuration author (simulated) does not hold the approve duty"
+  },
+  {
+   "name": "P-23 fail: a release against a changed draft is refused (review again)",
+   "ok": true,
+   "detail": "The draft now has 170 changes, not 171. Review the list again, then release."
+  },
+  {
+   "name": "BR-14 fail: someone who changed the draft cannot release it (self-approval refused)",
+   "ok": true,
+   "detail": "You made changes in this draft (Spouse of a student), so a different person releases it (BR-14)."
+  },
+  {
+   "name": "P-23/BR-14 pass: a different person releases the whole draft as Release 2",
+   "ok": true,
+   "detail": {
+    "pack": 2,
+    "rows": [
+     {
+      "label": "Spouse of a student",
+      "version": 1
+     }
+    ],
+    "held": []
+   }
+  },
+  {
+   "name": "BR-8 fail: released but not startable is Not ready, with each missing item",
+   "ok": true,
+   "detail": [
+    "No questions yet for Principal applicant, Spouse or partner, Dependent child. Next step: Add questions (Configuration › Questions and sections)."
+   ]
+  },
+  {
+   "name": "P-23: rows not in the new draft keep their snapshot and stay Ready",
+   "ok": true,
+   "detail": "Live · Release 1"
+  },
+  {
+   "name": "P-23: the draft is empty after the release",
+   "ok": true
+  },
+  {
+   "name": "filters: Not ready shows exactly that row with its program and category",
+   "ok": true,
+   "detail": {
+    "needs": 22,
+    "live": 1,
+    "all": 23,
+    "ready": 1,
+    "not_ready": 1,
+    "in_setup": 21,
+    "ai_proposals": 0
+   }
+  },
+  {
+   "name": "BR-10 pass: the row's counts are the engine's counts for that configuration",
+   "ok": true,
+   "detail": {
+    "row": {
+     "documents": 26,
+     "documentsAlways": 2,
+     "documentsIf": 24,
+     "questions": 295,
+     "sections": 18,
+     "rules": 39
+    },
+    "want": {
+     "documents": 26,
+     "documentsAlways": 2,
+     "documentsIf": 24,
+     "questions": 295,
+     "sections": 18,
+     "rules": 39
+    }
+   }
+  },
+  {
+   "name": "BR-10 fail: a row with nothing set up shows no numbers (not zeros)",
+   "ok": true
+  },
+  {
+   "name": "BR-11 pass: Checked is the oldest date among the row's official files; next review a year later",
+   "ok": true,
+   "detail": {
+    "at": "2026-10-19T12:24:29.000Z",
+    "nextReview": "2027-10-19T12:24:29.000Z",
+    "overdue": false
+   }
+  },
+  {
+   "name": "BR-11 fail: a row without official files shows no checked date",
+   "ok": true
+  },
+  {
+   "name": "P-51 pass: a form the library lacks is added; code, title, edition, published date, kind and checksum read from the file (name ignored)",
+   "ok": true,
+   "detail": {
+    "file": "anything.pdf",
+    "outcome": "added",
+    "kind": "form",
+    "code": "IMM 1344",
+    "title": "Application to sponsor, sponsorship agreement and undertaking",
+    "edition": "IMM 1344 (09-2024)",
+    "published": "2026-09-17",
+    "sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "message": "IMM 1344 (09-2024) added to the library as a new form (read from the file)."
+   }
+  },
+  {
+   "name": "P-51: the identical file again is \"already in the library\", never duplicated",
+   "ok": true,
+   "detail": {
+    "file": "copy.pdf",
+    "outcome": "in_library",
+    "kind": "form",
+    "code": "IMM 1344",
+    "title": "Application to sponsor, sponsorship agreement and undertaking",
+    "edition": "IMM 1344 (09-2024)",
+    "published": null,
+    "sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "message": "Already in the library: IMM 1344 (09-2024). Nothing duplicated."
+   }
+  },
+  {
+   "name": "source-trust gate: a readable but unapproved checksum is held before edition review",
+   "ok": true,
+   "detail": "Held for source verification: IMM 1295 (01-2027) is not on the approved source list. It was not added to the library, attached, or sent to AI."
+  },
+  {
+   "name": "source-trust fail-safe: an unapproved form is not added or attached",
+   "ok": true
+  },
+  {
+   "name": "P-32: the same held file again says it is already waiting (not held twice)",
+   "ok": true,
+   "detail": "Already waiting for a person: checksum not on approved source manifest. Nothing duplicated."
+  },
+  {
+   "name": "source-trust: a different, unapproved PDF with a readable code is held before edition comparison",
+   "ok": true,
+   "detail": "Held for source verification: IMM 1344 (09-2024) is not on the approved source list. It was not added to the library, attached, or sent to AI."
+  },
+  {
+   "name": "P-51: a file whose code and edition cannot be read is held for a person with the reason",
+   "ok": true,
+   "detail": "Held for a person: we could not read the form code and edition from this file (no form code (for example IMM 1295) found in the file). Nothing was added or attached."
+  },
+  {
+   "name": "P-51 fail (security): a file that is neither a PDF nor a saved web page is refused before it is read",
+   "ok": true,
+   "detail": "Only PDF files and saved web pages (HTML) can be added. Nothing was read."
+  },
+  {
+   "name": "source-trust: a readable checklist with an unapproved checksum is held outside the library",
+   "ok": true,
+   "detail": {
+    "file": "checklist.pdf",
+    "outcome": "held",
+    "kind": "checklist",
+    "code": "IMM 9100",
+    "title": "Document checklist (test)",
+    "edition": "IMM 9100 (01-2026)",
+    "published": null,
+    "sha256": "cdb309d7ab822ea18cd6f5344007f7fc64e04a571cd6ad01e3aae4529a7908e2",
+    "message": "Held for source verification: IMM 9100 (01-2026) is not on the approved source list. It was not added to the library, attached, or sent to AI."
+   }
+  },
+  {
+   "name": "source-trust: a legacy unapproved database entry is filtered out of the library picker",
+   "ok": true
+  },
+  {
+   "name": "P-51 fail: a guide uploaded to the library alone is refused (a guide belongs to a combination)",
+   "ok": true,
+   "detail": "A guide is kept as a source of a combination: add it on that combination's Sources. Nothing was added."
+  },
+  {
+   "name": "P-51 pass: a guide uploaded on a combination is attached to it as a source",
+   "ok": true,
+   "detail": "A guide (Guide 5487 - Applying for a Work Permit outside Canada): kept as a source of this combination; guides are not library forms. Attached to Study permit for minors."
+  },
+  {
+   "name": "P-51: many files in one request give one result per file, in order",
+   "ok": true,
+   "detail": {
+    "files": 4,
+    "in_library": 2,
+    "added": 0,
+    "attached": 0,
+    "held": 1,
+    "refused": 1,
+    "failed": 0
+   }
+  },
+  {
+   "name": "door 1: a form already in the library uploaded on a combination is attached to it (used by), not set up there yet",
+   "ok": true,
+   "detail": [
+    {
+     "code": "IMM 1295",
+     "drafted": false,
+     "document": false,
+     "inLibrary": true
+    },
+    {
+     "code": "IMM 5257",
+     "drafted": false,
+     "document": false,
+     "inLibrary": false
+    }
+   ]
+  },
+  {
+   "name": "door 1: a form whose boxes are already mapped is one click away (next step), never added by the intake itself",
+   "ok": true,
+   "detail": {
+    "kind": "add_from_library",
+    "label": "Add 1 form from the library",
+    "forms": [
+     "IMM 1295"
+    ]
+   }
+  },
+  {
+   "name": "P-51: the library records \"used by\" from the combinations a form is attached to or filed by",
+   "ok": true,
+   "detail": [
+    [
+     "IMM 1344",
+     0
+    ],
+    [
+     "IMM 5257",
+     3
+    ]
+   ]
+  },
+  {
+   "name": "authorisation: the approver persona cannot upload (server refuses)",
+   "ok": true,
+   "detail": "Approver (simulated) does not hold the author duty"
+  },
+  {
+   "name": "P-51 fail: more than 20 files in one request are refused",
+   "ok": true,
+   "detail": 413
+  },
+  {
+   "name": "m9: a file over 25 MB is refused with the limit in plain words",
+   "ok": true
+  },
+  {
+   "name": "source-trust race: concurrent uploads of one unapproved form are held once and never enter the library",
+   "ok": true,
+   "detail": [
+    "held",
+    "held",
+    "held",
+    "held"
+   ]
+  },
+  {
+   "name": "source-trust race: repeated unapproved edition uploads remain held once (database guard)",
+   "ok": true,
+   "detail": [
+    "Already waiting for a person: checksum n",
+    "Already waiting for a person: checksum n",
+    "Already waiting for a person: checksum n",
+    "Held for source verification: IMM 1295 ("
+   ]
+  },
+  {
+   "name": "source-trust fail: the database refuses a second held record for one checksum",
+   "ok": true
+  },
+  {
+   "name": "source-trust race: a new unapproved form uploaded five times gives five answers and one held record",
+   "ok": true,
+   "detail": [
+    [
+     201,
+     "held"
+    ],
+    [
+     201,
+     "held"
+    ],
+    [
+     201,
+     "held"
+    ],
+    [
+     201,
+     "held"
+    ],
+    [
+     201,
+     "held"
+    ]
+   ]
+  },
+  {
+   "name": "source-trust batches: simultaneous unapproved forms are held and never create a definition or edition",
+   "ok": true,
+   "detail": [
+    [
+     "held",
+     "held"
+    ],
+    [
+     "held",
+     "held"
+    ]
+   ]
+  },
+  {
+   "name": "#5 fail: an older edition (IMM 5476 11-2021 against the library's newer one) is \"Older edition: not used\", not a new edition",
+   "ok": true,
+   "detail": {
+    "out": "older_edition_held",
+    "held": []
+   }
+  },
+  {
+   "name": "source-trust: unapproved newer-looking edition is held before it can affect a Live row",
+   "ok": true,
+   "detail": {
+    "needs": false,
+    "live": true,
+    "next": null,
+    "held": []
+   }
+  },
+  {
+   "name": "F1 pass (INDIVIDUAL): the Live count equals the rows showing Live, and the Live filter lists exactly them",
+   "ok": true,
+   "detail": {
+    "live": 1,
+    "shown": 1
+   }
+  },
+  {
+   "name": "F1 pass (CORPORATE): the Live count equals the rows showing Live, and the Live filter lists exactly them",
+   "ok": true,
+   "detail": {
+    "live": 0,
+    "shown": 0
+   }
+  },
+  {
+   "name": "P-49 pass: released, startable and nothing open is Live (shown as \"Live\") and not in Needs work",
+   "ok": true,
+   "detail": "Live · Release 1"
+  },
+  {
+   "name": "P-49 / F1: Needs work is every row with a next step or not yet Live; every row is in Needs work or Live",
+   "ok": true,
+   "detail": {
+    "needs": 22,
+    "live": 1,
+    "all": 23,
+    "ready": 1,
+    "not_ready": 1,
+    "in_setup": 21,
+    "ai_proposals": 0
+   }
+  },
+  {
+   "name": "#1 pass: the combination page's summary carries the same next step as the row",
+   "ok": true,
+   "detail": [
+    {
+     "kind": "add_from_library",
+     "label": "Add 1 form from the library",
+     "forms": [
+      "IMM 5707"
+     ]
+    },
+    {
+     "kind": "add_from_library",
+     "label": "Add 1 form from the library",
+     "forms": [
+      "IMM 5707"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "#1: a source form already mapped in the library is marked so (the page does not call it unmapped)",
+   "ok": true,
+   "detail": [
+    {
+     "code": "IMM 5257",
+     "drafted": false,
+     "document": false,
+     "inLibrary": false
+    },
+    {
+     "code": "IMM 5707",
+     "drafted": false,
+     "document": false,
+     "inLibrary": true
+    }
+   ]
+  },
+  {
+   "name": "#4 fail: a malformed id is a plain 404, with no database call or server path in the answer",
+   "ok": true,
+   "detail": [
+    {
+     "status": 404,
+     "text": "{\"type\":\"https://expatready.local/problems/404\",\"title\":\"Not found\",\"status\":404,\"detail\":\"Not found (it may have been removed by a reset).\",\"message\":\"Not found (it may have been removed by a reset).\"}"
+    },
+    {
+     "status": 404,
+     "text": "{\"type\":\"https://expatready.local/problems/404\",\"title\":\"Not found\",\"status\":404,\"detail\":\"Not found (it may have been removed by a reset).\",\"message\":\"Not found (it may have been removed by a reset).\"}"
+    },
+    {
+     "status": 404,
+     "text": "{\"type\":\"https://expatready.local/problems/404\",\"title\":\"Not found\",\"status\":404,\"detail\":\"Not found (it may have been removed by a reset).\",\"message\":\"Not found (it may have been removed by a reset).\"}"
+    }
+   ]
+  },
+  {
+   "name": "#3: a release shows \"Release N\", the approver's role name, and a basis without checksums",
+   "ok": true,
+   "detail": {
+    "release": 1,
+    "approver": "Approver",
+    "basis": "Imported reviewed release: AI-drafted under the guarded path, reviewed and approved by a second person. Prototype only; not specialist-confirmed."
+   }
+  },
+  {
+   "name": "M3 pass: different names with no Latin letters, or sharing their first 60 characters, are all created with keys of their own",
+   "ok": true,
+   "detail": [
+    [
+     201,
+     "individual.item"
+    ],
+    [
+     201,
+     "individual.item-2"
+    ],
+    [
+     201,
+     "individual.a_very_long_program_name_that_goes_on_and_on_beyond_sixty_ch"
+    ],
+    [
+     201,
+     "individual.a_very_long_program_name_that_goes_on_and_on_beyond_sixty_ch-2"
+    ]
+   ]
+  },
+  {
+   "name": "M3 fail: the same name again (ignoring spaces) is still refused (BR-6)",
+   "ok": true,
+   "detail": "\"日本語プログラム\" already exists under Individual. Choose it instead, or give the new one a different name."
+  },
+  {
+   "name": "m5: a program or path not in this pathway is ignored and the answer says so (no empty contradiction)",
+   "ok": true,
+   "detail": {
+    "under": "",
+    "program": "",
+    "rows": 23
+   }
+  },
+  {
+   "name": "m4: a search over 120 characters is answered, not refused",
+   "ok": true
+  },
+  {
+   "name": "P-49: the Status column sorts Not ready, In setup, Live (and back)",
+   "ok": true,
+   "detail": {
+    "first": "NOT_READY",
+    "last": "READY"
+   }
+  },
+  {
+   "name": "P-49 fail: an unknown sort is refused on its field",
+   "ok": true
+  },
+  {
+   "name": "P-50: the path on a combination filters the list to any level (category here), with its labels",
+   "ok": true,
+   "detail": [
+    "Work permits",
+    "Open work permit"
+   ]
+  },
+  {
+   "name": "item 5: Super visa is one combination, Visitors › Super visa (no Parent / Grandparent sub-categories)",
+   "ok": true,
+   "detail": [
+    "Visitors › Extend stay in Canada",
+    "Visitors › Super visa",
+    "Visitors › Visitor visa"
+   ]
+  },
+  {
+   "name": "regression (slice 1): a form the intake added without a box map is planned as an AI draft, not a library reuse that fails",
+   "ok": true,
+   "detail": [
+    [
+     "draft",
+     null
+    ],
+    [
+     "reuse_library",
+     null
+    ]
+   ]
+  },
+  {
+   "name": "BR-13: forms the library already maps come first (no AI needed for them)",
+   "ok": true,
+   "detail": {
+    "kind": "add_from_library",
+    "label": "Add 1 form from the library",
+    "forms": [
+     "IMM 5707"
+    ]
+   }
+  },
+  {
+   "name": "BR-13 pass: then the approved form whose boxes are not mapped offers Draft setup with AI",
+   "ok": true,
+   "detail": {
+    "kind": "draft_ai",
+    "label": "Draft setup"
+   }
+  },
+  {
+   "name": "BR-13 fail: a row whose forms are already mapped in the library offers to add them, not AI",
+   "ok": true,
+   "detail": {
+    "kind": "add_from_library",
+    "label": "Add 3 forms from the library",
+    "forms": [
+     "IMM 5707",
+     "IMM 5476",
+     "IMM 5475"
+    ]
+   }
+  },
+  {
+   "name": "adding them from the library needs no AI and shows them as mapped forms",
+   "ok": true
+  },
+  {
+   "name": "BR-15 pass: the worker's LMIA work permit sits under Individual and says it is supported by Corporate › LMIA",
+   "ok": true
+  },
+  {
+   "name": "BR-16 pass: Express Entry is one category with two steps shown as labels, not an extra level",
+   "ok": true,
+   "detail": [
+    "Step 1 of 2 · followed by Permanent residence application",
+    "Step 2 of 2 · follows Profile"
+   ]
+  },
+  {
+   "name": "search covers form codes and says what matched",
+   "ok": true,
+   "detail": [
+    "With an LMIA"
+   ]
+  },
+  {
+   "name": "search in the other workspace says how many matches are in this one",
+   "ok": true,
+   "detail": 1
+  },
+  {
+   "name": "authorisation: the approver persona cannot add programs (deny by default on the server)",
+   "ok": true
+  },
+  {
+   "name": "authorisation: the reviewer persona cannot change a combination",
+   "ok": true
+  },
+  {
+   "name": "performance: a filtered catalogue answers in under 200 ms with the sample data",
+   "ok": true,
+   "detail": "32 ms"
+  }
+ ]
+}

@@ -1,0 +1,741 @@
+// Product Studio prototype database (D275/D276). PostgreSQL through Prisma, as in the team's backend.
+//
+// Model and column names follow the team's pack models in
+// code/ERv2-sanitized@22f1d12-2026-10-19/apps/api/prisma/models/country-pack-*.prisma
+// (CanonicalField, ProgramDef, LogicalSection, SectionQuestion, DocumentType, DocumentRequirement,
+// GovFormDef, FormEdition, FormFieldMap, Predicate, ConditionEffect, AttachMode) so the team can map each
+// prototype record onto its own. Deliberate simplifications, reported rather than hidden:
+//  - one table per definition with version/status/supersedesId columns (the team splits some into a
+//    durable master plus a version child);
+//  - every row carries workspaceId: the disposable demo workspace is the reset boundary (D274);
+//  - no tenancy, row-level security, encryption seams or effective dating; prototype only.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum DefinitionStatus {
+  DRAFT
+  PUBLISHED
+  SUPERSEDED
+  RETIRED
+}
+
+enum ProgramNodeKind {
+  PATHWAY
+  PROGRAM
+  STREAM
+  CATEGORY
+}
+
+enum FieldDataType {
+  STRING
+  NUMBER
+  BOOLEAN
+  DATE
+  ENUM
+  COMPOSITE
+}
+
+enum FieldScope {
+  CLIENT_LEVEL
+  CASE_LEVEL
+}
+
+enum ConditionEffect {
+  SHOW
+  HIDE
+  REQUIRE
+  OPTIONAL
+}
+
+enum AttachMode {
+  COMBINATION_MANDATORY
+  ANSWER_CONDITIONAL
+}
+
+enum Origin {
+  IMPORTED_RELEASE
+  AI_PROPOSAL
+  HUMAN
+}
+
+enum SourceBasis {
+  SOURCE_BACKED
+  ILLUSTRATIVE
+}
+
+/// The disposable demo workspace. Reset deletes every row that belongs to it and its working files.
+model Workspace {
+  id        String   @id @default(uuid()) @db.Uuid
+  key       String   @unique
+  label     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("workspace")
+}
+
+// ─── Programs and combinations ──────────────────────────────────────────────────────────────────
+
+/// Pathway › program › stream › category, as the team's ProgramDef (parentNodeKey, not a self-FK).
+model ProgramDef {
+  id             String          @id @default(uuid()) @db.Uuid
+  workspaceId    String          @map("workspace_id") @db.Uuid
+  programNodeKey String          @map("program_node_key")
+  parentNodeKey  String?         @map("parent_node_key")
+  nodeKind       ProgramNodeKind @map("node_kind")
+  label          String
+  description    String?
+  sourceBasis    SourceBasis     @default(SOURCE_BACKED) @map("source_basis")
+  /// PATHWAY only (SA-1B-50/51): who the client is, INDIVIDUAL or CORPORATE. Client type comes from the pathway.
+  clientType     String?         @map("client_type")
+  /// Category / sub-category (SA-1B-51): locations a case may choose when it is opened (inside/outside Canada is a
+  /// case detail, not a level). The prototype's sourced rows allow "outside_canada" only.
+  allowedLocations String[]      @default([]) @map("allowed_locations")
+  displayOrder   Int             @default(0) @map("display_order")
+  /// Screen 01 (P-26): a plain label under the name for a route step or a supporting application, for example
+  /// "Step 1 of 2 · followed by Permanent residence application" or "Supported by: Corporate › LMIA". A label only:
+  /// no link record and no behaviour behind it yet.
+  linkLabel      String?         @map("link_label")
+  createdBy      String          @map("created_by")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  combination Combination?
+
+  @@unique([workspaceId, programNodeKey])
+  @@map("program_def")
+}
+
+/// The combination: one filing type at the last level present (a category without sub-categories, or a sub-category),
+/// SA-1B-55. Exactly one per leaf node (unique programDefId); it owns one configuration: forms, document requirements,
+/// rules, checks and section selection. `participants` (who it applies to) is an adapter kept until Screen 03 moves
+/// people onto lines as roles.
+model Combination {
+  id             String      @id @default(uuid()) @db.Uuid
+  workspaceId    String      @map("workspace_id") @db.Uuid
+  programDefId   String      @map("program_def_id") @db.Uuid
+  combinationKey String      @map("combination_key")
+  label          String
+  description    String?
+  /// [{ role: "principal"|"spouse_or_partner"|"child"|"representative", label, min, max }]
+  participants   Json
+  sourceBasis    SourceBasis @default(SOURCE_BACKED) @map("source_basis")
+  basisNote      String?     @map("basis_note")
+  createdBy      String      @map("created_by")
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  program      ProgramDef            @relation(fields: [programDefId], references: [id], onDelete: Restrict)
+  attachments  SourceAttachment[]
+  forms        CombinationForm[]
+  sections     SqrSectionSelection[]
+  requirements DocumentRequirement[]
+  rules        Predicate[]
+  checks       Check[]
+  releases     ConfigRelease[]
+  jobs         DraftingJob[]
+
+  @@unique([workspaceId, combinationKey])
+  @@unique([programDefId])
+  @@map("combination")
+}
+
+// ─── Sources and forms ──────────────────────────────────────────────────────────────────────────
+
+/// An uploaded official form, checklist, guide or page. Only files whose bytes match the official manifest
+/// are "recognised"; anything else is held (no AI drafting, no reading).
+model SourceAttachment {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  combinationId  String   @map("combination_id") @db.Uuid
+  kind           String
+  fileName       String   @map("file_name")
+  storedPath     String   @map("stored_path")
+  sha256         String
+  bytes          Int
+  recognised     Boolean
+  officialFile   String?  @map("official_file")
+  edition        String?
+  approval       String?
+  status         String
+  statusDetail   String?  @map("status_detail")
+  /// MANUAL (a person chose the file) or SAMPLE (the Load sample inputs button chose it); same handling.
+  uploadedVia    String   @map("uploaded_via")
+  uploadedBy     String   @map("uploaded_by")
+  inventoryFile  String?  @map("inventory_file")
+  inventorySummary Json?  @map("inventory_summary")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, sha256])
+  @@map("source_attachment")
+}
+
+model GovFormDef {
+  id          String  @id @default(uuid()) @db.Uuid
+  workspaceId String  @map("workspace_id") @db.Uuid
+  formKey     String  @map("form_key")
+  displayName String  @map("display_name")
+  /// "data_form" (an XFA form the system fills) or "document" (a checklist or instructions)
+  formKind    String  @default("data_form") @map("form_kind")
+
+  editions FormEdition[]
+  usedBy   CombinationForm[]
+
+  @@unique([workspaceId, formKey])
+  @@map("gov_form_def")
+}
+
+model FormEdition {
+  id             String  @id @default(uuid()) @db.Uuid
+  workspaceId    String  @map("workspace_id") @db.Uuid
+  govFormDefId   String  @map("gov_form_def_id") @db.Uuid
+  editionLabel   String  @map("edition_label")
+  officialFile   String? @map("official_file")
+  sha256         String?
+  inventoryFile  String? @map("inventory_file")
+  dataBoundBoxes Int     @default(0) @map("data_bound_boxes")
+  /// Screen 01 uploads (P-25): the uploaded PDF kept outside the web root, so "+ Add" can attach it to another row.
+  storedPath     String? @map("stored_path")
+
+  form GovFormDef     @relation(fields: [govFormDefId], references: [id], onDelete: Cascade)
+  maps FormFieldMap[]
+
+  @@unique([workspaceId, editionLabel])
+  @@map("form_edition")
+}
+
+/// The one form intake (P-51): one row per file a person (or the sample loader) handed in, with what was read from the
+/// file and the outcome. Held rows wait for a person: a new edition of a form already in the library (impact review,
+/// P-32/P-38; never attached or used silently) or a file whose code and edition could not be read.
+model IntakeItem {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid
+  /// The combination it was uploaded on (door 1); null for the Forms library's own "Add forms" (door 2, Screen 04).
+  combinationId String?  @map("combination_id") @db.Uuid
+  fileName      String   @map("file_name")
+  storedPath    String   @map("stored_path")
+  sha256        String
+  bytes         Int
+  /// form · checklist · guide · unknown, read from the file
+  kind          String
+  code          String?
+  title         String?
+  editionLabel  String?  @map("edition_label")
+  published     String?
+  /// in_library · added · attached · new_edition_held · held · refused
+  outcome       String
+  /// HELD (waits for a person) or DONE
+  status        String
+  reason        String?
+  createdBy     String   @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([workspaceId, status])
+  @@index([workspaceId, sha256])
+  @@map("intake_item")
+}
+
+/// Which forms a combination files, for whom, and when (always or under a condition).
+model CombinationForm {
+  id            String           @id @default(uuid()) @db.Uuid
+  workspaceId   String           @map("workspace_id") @db.Uuid
+  combinationId String           @map("combination_id") @db.Uuid
+  govFormDefId  String           @map("gov_form_def_id") @db.Uuid
+  lineageKey    String           @map("lineage_key")
+  who           String
+  attachMode    AttachMode       @map("attach_mode")
+  predicateJson Json?            @map("predicate_json")
+  conditionPlain String?         @map("condition_plain")
+  sourceQuote   String?          @map("source_quote")
+  version       Int              @default(1)
+  status        DefinitionStatus
+  supersedesId  String?          @map("supersedes_id") @db.Uuid
+  origin        Origin
+  updatedBy     String           @map("updated_by")
+  updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+  form        GovFormDef  @relation(fields: [govFormDefId], references: [id], onDelete: Cascade)
+
+  @@unique([combinationId, lineageKey, version])
+  @@map("combination_form")
+}
+
+/// One box of one form edition and the fact that fills it. The team stores entries as Json on
+/// FormFieldMap; rows here so reuse ("which boxes read this field, for whom") is a query.
+model FormFieldMap {
+  id                String           @id @default(uuid()) @db.Uuid
+  workspaceId       String           @map("workspace_id") @db.Uuid
+  formEditionId     String           @map("form_edition_id") @db.Uuid
+  dataPath          String           @map("data_path")
+  caption           String?
+  heading           String?
+  outcome           String
+  person            String?
+  row               Int?
+  canonicalFieldKey String?          @map("canonical_field_key")
+  transform         String?
+  condition         String?
+  confidence        String?
+  evidenceQuote     String?          @map("evidence_quote")
+  reason            String?
+  version           Int              @default(1)
+  status            DefinitionStatus
+  supersedesId      String?          @map("supersedes_id") @db.Uuid
+  origin            Origin
+  draftingRunId     String?          @map("drafting_run_id")
+  updatedBy         String           @map("updated_by")
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  edition FormEdition @relation(fields: [formEditionId], references: [id], onDelete: Cascade)
+
+  @@unique([formEditionId, dataPath, version])
+  @@index([workspaceId, canonicalFieldKey])
+  @@map("form_field_map")
+}
+
+// ─── The shared library ─────────────────────────────────────────────────────────────────────────
+
+/// One meaning, independent of whose value it is (the same key for the applicant's and the partner's
+/// date of birth). Values for people and cases are never stored here.
+model CanonicalField {
+  id                String           @id @default(uuid()) @db.Uuid
+  workspaceId       String           @map("workspace_id") @db.Uuid
+  canonicalFieldKey String           @map("canonical_field_key")
+  version           Int
+  status            DefinitionStatus
+  supersedesId      String?          @map("supersedes_id") @db.Uuid
+  meaning           String
+  valueType         String           @map("value_type")
+  dataType          FieldDataType    @map("data_type")
+  scope             FieldScope
+  subjectKind       String           @map("subject_kind")
+  origin            Origin
+  sourceRef         String?          @map("source_ref")
+  note              String?
+  updatedBy         String           @map("updated_by")
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([workspaceId, canonicalFieldKey, version])
+  @@map("canonical_field")
+}
+
+model LogicalSection {
+  id           String           @id @default(uuid()) @db.Uuid
+  workspaceId  String           @map("workspace_id") @db.Uuid
+  sectionKey   String           @map("section_key")
+  version      Int
+  status       DefinitionStatus
+  supersedesId String?          @map("supersedes_id") @db.Uuid
+  title        String
+  meaning      String?
+  displayOrder Int              @default(0) @map("display_order")
+  origin       Origin
+  updatedBy    String           @map("updated_by")
+  updatedAt    DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([workspaceId, sectionKey, version])
+  @@map("logical_section")
+}
+
+/// A question placement: which canonical field is asked in which section, for whom, from which collection
+/// source, and under which condition.
+model SectionQuestion {
+  id                String           @id @default(uuid()) @db.Uuid
+  workspaceId       String           @map("workspace_id") @db.Uuid
+  lineageKey        String           @map("lineage_key")
+  sectionKey        String           @map("section_key")
+  canonicalFieldKey String           @map("canonical_field_key")
+  displayOrder      Int              @map("display_order")
+  questionText      String?          @map("question_text")
+  helpText          String?          @map("help_text")
+  /// once_per_case | per_person | per_row
+  repeats           String
+  /// prospect | case | lead
+  tier              String
+  /// client_questionnaire | verified_document | staff_working_view | profile_record | existing_record
+  collectedFrom     String           @map("collected_from")
+  clientVisible     Boolean          @default(true) @map("client_visible")
+  predicateJson     Json?            @map("predicate_json")
+  conditionEffect   ConditionEffect? @map("condition_effect")
+  conditionPlain    String?          @map("condition_plain")
+  ruleOnly          Boolean          @default(false) @map("rule_only")
+  version           Int
+  status            DefinitionStatus
+  supersedesId      String?          @map("supersedes_id") @db.Uuid
+  origin            Origin
+  updatedBy         String           @map("updated_by")
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([workspaceId, lineageKey, version])
+  @@index([workspaceId, canonicalFieldKey])
+  @@map("section_question")
+}
+
+/// Which library sections a combination's questionnaire uses, in order (the team's SqrSectionSelection).
+model SqrSectionSelection {
+  id            String @id @default(uuid()) @db.Uuid
+  workspaceId   String @map("workspace_id") @db.Uuid
+  combinationId String @map("combination_id") @db.Uuid
+  sectionKey    String @map("section_key")
+  sectionOrder  Int    @map("section_order")
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+
+  @@unique([combinationId, sectionKey])
+  @@map("sqr_section_selection")
+}
+
+model DocumentType {
+  id              String           @id @default(uuid()) @db.Uuid
+  workspaceId     String           @map("workspace_id") @db.Uuid
+  documentTypeKey String           @map("document_type_key")
+  name            String
+  category        String
+  /// Facts a supported document of this type can supply (closes P5 finding D36 in the prototype model).
+  suppliesFacts   String[]         @default([]) @map("supplies_facts")
+  readerProfile   Json?            @map("reader_profile")
+  version         Int
+  status          DefinitionStatus
+  supersedesId    String?          @map("supersedes_id") @db.Uuid
+  origin          Origin
+  updatedBy       String           @map("updated_by")
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@unique([workspaceId, documentTypeKey, version])
+  @@map("document_type")
+}
+
+model DocumentRequirement {
+  id              String           @id @default(uuid()) @db.Uuid
+  workspaceId     String           @map("workspace_id") @db.Uuid
+  combinationId   String           @map("combination_id") @db.Uuid
+  lineageKey      String           @map("lineage_key")
+  documentTypeKey String           @map("document_type_key")
+  attachMode      AttachMode       @map("attach_mode")
+  predicateJson   Json?            @map("predicate_json")
+  conditionPlain  String?          @map("condition_plain")
+  appliesToRoles  String           @map("applies_to_roles")
+  providedBy      String           @map("provided_by")
+  isRequired      Boolean          @default(true) @map("is_required")
+  sourceQuote     String?          @map("source_quote")
+  sourceFile      String?          @map("source_file")
+  note            String?
+  version         Int
+  status          DefinitionStatus
+  supersedesId    String?          @map("supersedes_id") @db.Uuid
+  origin          Origin
+  updatedBy       String           @map("updated_by")
+  updatedAt       DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+
+  @@unique([combinationId, lineageKey, version])
+  @@map("document_requirement")
+}
+
+/// A reusable condition with its effect ("add form IMM 5707 for this person"), in the team's closed
+/// 11-operator vocabulary (contracts/rules.ts). Evaluated deterministically; never generated code.
+model Predicate {
+  id             String           @id @default(uuid()) @db.Uuid
+  workspaceId    String           @map("workspace_id") @db.Uuid
+  combinationId  String           @map("combination_id") @db.Uuid
+  predicateKey   String           @map("predicate_key")
+  predicateJson  Json             @map("predicate_json")
+  whenPlain      String?          @map("when_plain")
+  thenPlain      String           @map("then_plain")
+  forWhom        String           @map("for_whom")
+  sourceQuote    String?          @map("source_quote")
+  version        Int
+  status         DefinitionStatus
+  supersedesId   String?          @map("supersedes_id") @db.Uuid
+  origin         Origin
+  updatedBy      String           @map("updated_by")
+  updatedAt      DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+
+  @@unique([combinationId, predicateKey, version])
+  @@map("predicate")
+}
+
+model DerivedField {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  derivedKey  String   @map("derived_key")
+  calculation String
+  inputs      String[]
+  reference   String
+  plain       String?
+  executable  Boolean
+
+  @@unique([workspaceId, derivedKey])
+  @@map("derived_field")
+}
+
+model Check {
+  id            String           @id @default(uuid()) @db.Uuid
+  workspaceId   String           @map("workspace_id") @db.Uuid
+  combinationId String           @map("combination_id") @db.Uuid
+  checkKey      String           @map("check_key")
+  checkGroup    String           @map("check_group")
+  appliesTo     String?          @map("applies_to")
+  predicateJson Json?            @map("predicate_json")
+  severity      String
+  message       String?
+  sourceQuote   String?          @map("source_quote")
+  illustrative  Boolean          @default(false)
+  version       Int
+  status        DefinitionStatus
+  supersedesId  String?          @map("supersedes_id") @db.Uuid
+  origin        Origin
+  updatedBy     String           @map("updated_by")
+  updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  combination Combination @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+
+  @@unique([combinationId, checkKey, version])
+  @@map("check_def")
+}
+
+// ─── AI drafting, normalisation, review and release ─────────────────────────────────────────────
+
+/// One step started from the screen: read a form (local), draft its field map (guarded AI path), compare
+/// with the library. mode: LOCAL | STUB | LIVE | REPLAY (REPLAY reuses a saved real run, labelled).
+model DraftingJob {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  combinationId String    @map("combination_id") @db.Uuid
+  attachmentId  String?   @map("attachment_id") @db.Uuid
+  kind          String
+  mode          String
+  status        String
+  message       String?
+  runId         String?   @map("run_id")
+  runFile       String?   @map("run_file")
+  costUsd       Float?    @map("cost_usd")
+  detail        Json?
+  startedBy     String    @map("started_by")
+  startedAt     DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  finishedAt    DateTime? @map("finished_at") @db.Timestamptz
+
+  /// D280: the scoped AI operation this step belongs to (null for steps started before batches existed).
+  batchId       String?   @map("batch_id") @db.Uuid
+  /// What the step reuses or produces: source edition, operation, prompt, model and settings (see api/src/ai.ts).
+  fingerprint   String?
+  attempt       Int       @default(1)
+
+  combination Combination         @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+  batch       AiBatch?            @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  items       NormalizationItem[]
+
+  // A partial unique index (migration 20261021070000_ai_batches) allows one QUEUED or RUNNING step per source and
+  // kind: a second launch for the same form is refused by the database, not only by a disabled button.
+  @@index([batchId])
+  @@map("drafting_job")
+}
+
+/// D280: one scoped AI operation launched from the catalogue, a program, a combination or a source. It groups small
+/// tracked steps (read, reuse, draft) over one governed path; it never sends many forms in one prompt. The plan the
+/// person saw is stored with its fingerprint; the server re-plans at launch and refuses if the scope changed.
+model AiBatch {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  idempotencyKey  String    @map("idempotency_key")
+  operation       String
+  scopeKind       String    @map("scope_kind")
+  scopeLabel      String    @map("scope_label")
+  mode            String
+  status          String
+  message         String?
+  planSha256      String    @map("plan_sha256")
+  plan            Json
+  spendLimitUsd   Float     @map("spend_limit_usd")
+  worstCaseUsd    Float     @map("worst_case_usd")
+  expectedUsd     Float?    @map("expected_usd")
+  cancelRequested Boolean   @default(false) @map("cancel_requested")
+  startedBy       String    @map("started_by")
+  startedAt       DateTime  @default(now()) @map("started_at") @db.Timestamptz
+  finishedAt      DateTime? @map("finished_at") @db.Timestamptz
+
+  jobs DraftingJob[]
+
+  @@unique([workspaceId, idempotencyKey])
+  @@map("ai_batch")
+}
+
+/// One proposed canonical field from an added form, compared with the library.
+/// outcome: REUSE | NEW | AMBIGUOUS | CONFLICT. decision: PENDING | ACCEPTED | CHANGED | RETURNED.
+model NormalizationItem {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  jobId          String   @map("job_id") @db.Uuid
+  formEditionId  String?  @map("form_edition_id") @db.Uuid
+  proposedKey    String   @map("proposed_key")
+  proposedMeaning String  @map("proposed_meaning")
+  proposedType   String   @map("proposed_type")
+  outcome        String
+  matchedKey     String?  @map("matched_key")
+  candidates     Json
+  persons        String[]
+  boxes          Json
+  evidence       Json
+  affected       Json
+  reason         String
+  decision       String   @default("PENDING")
+  decidedKey     String?  @map("decided_key")
+  decidedBy      String?  @map("decided_by")
+  decisionNote   String?  @map("decision_note")
+  decidedAt      DateTime? @map("decided_at") @db.Timestamptz
+
+  job DraftingJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@map("normalization_item")
+}
+
+/// A frozen, hashed configuration version that case work consumes. Draft edits never change it.
+model ConfigRelease {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  combinationId  String   @map("combination_id") @db.Uuid
+  version        Int
+  status         String
+  snapshot       Json
+  sha256         String
+  summary        Json
+  authorId       String   @map("author_id")
+  submitterId    String   @map("submitter_id")
+  approverId     String   @map("approver_id")
+  basis          String
+  releasedAt     DateTime @default(now()) @map("released_at") @db.Timestamptz
+  /// The pack version this row snapshot was released in (P-23: one shared draft, one release for everything).
+  packVersionId  String?  @map("pack_version_id") @db.Uuid
+
+  combination Combination  @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+  packVersion PackVersion? @relation(fields: [packVersionId], references: [id], onDelete: Restrict)
+
+  @@unique([combinationId, version])
+  @@index([packVersionId])
+  @@map("config_release")
+}
+
+/// One release of the whole shared draft (the team's CountryPackVersion, P-23). Each combination whose draft changed
+/// gets a frozen row snapshot (ConfigRelease) in it; unchanged combinations keep their earlier snapshot. Firms may open
+/// a combination when it is in a release and passes the startable check (SA-1B-90).
+model PackVersion {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  version     Int
+  authorIds   String[] @map("author_ids")
+  approverId  String   @map("approver_id")
+  summary     Json
+  releasedAt  DateTime @default(now()) @map("released_at") @db.Timestamptz
+
+  rows ConfigRelease[]
+
+  @@unique([workspaceId, version])
+  @@map("pack_version")
+}
+
+model ReviewSubmission {
+  id            String    @id @default(uuid()) @db.Uuid
+  workspaceId   String    @map("workspace_id") @db.Uuid
+  combinationId String    @map("combination_id") @db.Uuid
+  draftSha256   String    @map("draft_sha256")
+  submittedBy   String    @map("submitted_by")
+  submittedAt   DateTime  @default(now()) @map("submitted_at") @db.Timestamptz
+  status        String
+  changeSummary Json      @map("change_summary")
+  decidedBy     String?   @map("decided_by")
+  decidedAt     DateTime? @map("decided_at") @db.Timestamptz
+  decisionNote  String?   @map("decision_note")
+
+  @@map("review_submission")
+}
+
+model ReviewSignoff {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspaceId  String   @map("workspace_id") @db.Uuid
+  submissionId String   @map("submission_id") @db.Uuid
+  itemRef      String   @map("item_ref")
+  duty         String
+  actorId      String   @map("actor_id")
+  action       String
+  note         String?
+  at           DateTime @default(now()) @db.Timestamptz
+
+  @@map("review_signoff")
+}
+
+model AuditEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  at          DateTime @default(now()) @db.Timestamptz
+  actor       String
+  action      String
+  entity      String
+  entityKey   String?  @map("entity_key")
+  summary     String
+  detail      Json?
+  /// The configuration row an edit belongs to (finding 2 of the 21 Oct grounding audit): review uses these events to
+  /// know every author of a draft, including edits that leave no draft row (people, section selection, removals).
+  combinationId String?  @map("combination_id") @db.Uuid
+
+  @@index([workspaceId, at])
+  @@index([combinationId, at])
+  @@map("audit_event")
+}
+
+// ─── Sample facts for previews and PDF proof (labelled existing sample records, never AI results) ──
+
+model SampleProfile {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  profileKey  String   @map("profile_key")
+  label       String
+  basis       String
+  /// [{ id, role, label }]
+  people      Json
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  facts SampleFact[]
+
+  @@unique([workspaceId, profileKey])
+  @@map("sample_profile")
+}
+
+model SampleFact {
+  id                String  @id @default(uuid()) @db.Uuid
+  workspaceId       String  @map("workspace_id") @db.Uuid
+  profileId         String  @map("profile_id") @db.Uuid
+  personId          String  @map("person_id")
+  canonicalFieldKey String  @map("canonical_field_key")
+  row               Int?
+  value             Json
+  status            String
+  source            String
+
+  profile SampleProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, canonicalFieldKey])
+  @@map("sample_fact")
+}
+
+/// Generated output files (filled PDFs, read-back reports) of the demo workspace; deleted by reset.
+model GeneratedArtifact {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  kind        String
+  path        String
+  sha256      String
+  detail      Json?
+  createdBy   String   @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("generated_artifact")
+}

@@ -1,0 +1,100 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "stub",
+ "drafting_run": {
+  "run_id": "c1-fieldmap-imm5707-stub-20261020t033848490z",
+  "idempotency_key": "c6a571a430e9ee28bb8918e6a6f8fb1f51d2e1cb3c89f53233e12cd1a6016c3d",
+  "contract_version": "drafting-run/v0",
+  "inputs": {
+   "combination": "1",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5707e.inventory.json",
+     "sha256": "70ac3a608fe3695a2909e9fccb66a43935d1a2ead559ed2c146578d12618188e"
+    }
+   ],
+   "configuration_version": "c1-draft-1"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 32000,
+   "prompt_version": "field-map.v1.md",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 0,
+    "output_tokens": 0,
+    "duration_ms": 0
+   }
+  ],
+  "usage": {
+   "input_tokens": 0,
+   "output_tokens": 0,
+   "cost_usd": 0,
+   "duration_ms": 0
+  },
+  "started_at": "2026-10-20T03:38:48.490Z",
+  "ended_at": "2026-10-20T03:38:48.639Z",
+  "entries": [
+   {
+    "form_edition": "IMM 0000 (01-2000)",
+    "form_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+    "data_path": "STUB[0].NoModelCalled[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "stub caller: no model was called, so nothing was drafted",
+    "evidence": {
+     "file_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+     "quote": "stub"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "launch_evidence": {
+  "path_code_sha256": "c4aae8155211819e397b48bcef7fa4c45b55fe6923d202545071781d2bd7123e",
+  "template_sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+  "schema_file": "field-map-output.v1.schema.json",
+  "schema_sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+  "screened": true,
+  "output_sha256": "2bc67419239a6b6313466639a16c0de0052293eee2b5f4ae532aefe941795d81",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "223f03f0d5253c3c0ac8c3a776333f846a3dc3a8c00f596e8cad1ea08c05a516",
+  "request_bytes": 33972,
+  "stub_calls": 1,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 40,
+   "committed_usd": 0.783888
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5707e.inventory.json",
+    "sha256": "70ac3a608fe3695a2909e9fccb66a43935d1a2ead559ed2c146578d12618188e",
+    "kind": "inventory"
+   }
+  ]
+ },
+ "raw_output": "{\"form_edition\":\"IMM 0000 (01-2000)\",\"canonical_fields\":[{\"id\":\"person.stub_field\",\"meaning\":\"stub caller output; no model was called\",\"value_type\":\"text\"}],\"entries\":[{\"data_path\":\"STUB[0].NoModelCalled[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"stub caller: no model was called, so nothing was drafted\",\"evidence_quote\":\"stub\"}]}\n"
+}

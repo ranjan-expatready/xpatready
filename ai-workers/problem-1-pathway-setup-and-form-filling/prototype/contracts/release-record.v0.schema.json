@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://expatready.local/contracts/release-record.v0.json",
+  "title": "Release of one combination configuration: the exact hash approved, by whom, against which sources",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["configuration_sha256", "source_files", "drafting_run_ids", "author", "submitter", "approver", "decisions", "released_at"],
+  "definitions": {
+    "actor": { "type": "object", "additionalProperties": false, "required": ["user_id", "role"], "properties": { "user_id": { "type": "string", "minLength": 1 }, "role": { "type": "string", "minLength": 1, "description": "e.g. content_publisher, platform_owner; a role never exempts anyone from the second-person rule (D254)" } } }
+  },
+  "properties": {
+    "configuration_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "frozen at submit; the approver approves this hash (team pattern: CountryPackDraft.submittedPayloadHash)" },
+    "revision": { "type": "integer", "minimum": 1, "description": "compare-and-swap token (team pattern: CountryPackDraft.revision)" },
+    "source_files": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["file", "sha256"], "properties": { "file": { "type": "string" }, "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } } } },
+    "drafting_run_ids": { "type": "array", "items": { "type": "string" } },
+    "author": { "$ref": "#/definitions/actor", "description": "who drafted the pack (team pattern: CountryPackDraft.createdByUserId)" },
+    "submitter": { "$ref": "#/definitions/actor", "description": "who froze and submitted it for approval (team pattern: CountryPackDraft.submittedByUserId)" },
+    "approver": { "$ref": "#/definitions/actor", "description": "who approved it (team pattern: CountryPackDraft.approvedByUserId); never the author or the submitter (D254)" },
+    "publisher": { "$ref": "#/definitions/actor", "description": "who published it, when recorded separately from the approver; never the author or the submitter (D254)" },
+    "decisions": { "type": "array", "items": { "type": "object", "required": ["data_path", "decision"], "properties": { "data_path": { "type": "string" }, "decision": { "enum": ["accepted", "corrected", "rejected", "left_unresolved"] }, "reason": { "type": "string" } } } },
+    "supersedes": { "type": "string" },
+    "released_at": { "type": "string" }
+  }
+}

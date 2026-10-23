@@ -1,0 +1,203 @@
+{
+ "at": "2026-10-23T06:04:57.482Z",
+ "port": 4432,
+ "database": "xr_studio_grounding",
+ "pass": 29,
+ "fail": 0,
+ "log": [
+  {
+   "name": "the two pathways exist without sample data: one Individual, one Corporate",
+   "ok": true
+  },
+  {
+   "name": "a third pathway cannot be added",
+   "ok": true,
+   "detail": "Choose program, category or sub-category."
+  },
+  {
+   "name": "level order: a category cannot sit directly under a pathway",
+   "ok": true,
+   "detail": "A category goes under a program, not under a pathway."
+  },
+  {
+   "name": "a program is created under its pathway",
+   "ok": true,
+   "detail": "individual.visitors"
+  },
+  {
+   "name": "the same program name in the same pathway is refused (trimmed, any case)",
+   "ok": true,
+   "detail": "\"Visitors\" already exists under Individual. Choose it instead, or give the new one a different name."
+  },
+  {
+   "name": "the same name in the other pathway is a separate program",
+   "ok": true,
+   "detail": "corporate.visitors"
+  },
+  {
+   "name": "a category without stated locations gets both (narrowed later in the new-combination dialog, SA-1B-51)",
+   "ok": true,
+   "detail": [
+    "inside_canada",
+    "outside_canada"
+   ]
+  },
+  {
+   "name": "two people creating the same category at once: exactly one succeeds, the other is refused",
+   "ok": true,
+   "detail": [
+    201,
+    409
+   ]
+  },
+  {
+   "name": "configuration cannot attach to a program (above a combination)",
+   "ok": true,
+   "detail": "A combination is a category or a sub-category, not a program (BR-3)."
+  },
+  {
+   "name": "one combination per last-level node, also under concurrent creates: one created, the other returns it",
+   "ok": true,
+   "detail": [
+    201,
+    200
+   ]
+  },
+  {
+   "name": "a later attempt returns the existing combination to open (idempotent)",
+   "ok": true,
+   "detail": 200
+  },
+  {
+   "name": "a sub-category cannot go under a category that already has its own setup",
+   "ok": true,
+   "detail": "\"Visitor visa\" already has its own setup, so it is the combination. Adding a sub-category would leave that setup above a combination (BR-3, BR-4). Sub-categories can only be added to a category that has no setup of its own."
+  },
+  {
+   "name": "server permission: the approver cannot author masters",
+   "ok": true,
+   "detail": "Approver (simulated) does not hold the author duty"
+  },
+  {
+   "name": "a base document requirement is added to the draft",
+   "ok": true,
+   "detail": "passport:each_applicant"
+  },
+  {
+   "name": "server permission: the content reviewer cannot edit the draft",
+   "ok": true,
+   "detail": "Content reviewer (simulated) does not hold the author duty"
+  },
+  {
+   "name": "first release: submit, SME sign-off, second-person approval",
+   "ok": true,
+   "detail": {
+    "submit": 201,
+    "items": [
+     "Document requirement|passport:each_applicant",
+     "Document type|passport"
+    ],
+    "sme": [
+     "Document requirement|passport:each_applicant",
+     "Document type|passport"
+    ],
+    "early": 409,
+    "approve": 201,
+    "version": 1,
+    "label": "first"
+   }
+  },
+  {
+   "name": "control: nothing changed since the release, so nothing can be submitted",
+   "ok": true,
+   "detail": "Nothing has changed since the released version."
+  },
+  {
+   "name": "only the people on the row change",
+   "ok": true
+  },
+  {
+   "name": "a people-only change appears in review and needs the SME duty; early approval is refused",
+   "ok": true,
+   "detail": {
+    "submit": 201,
+    "items": [
+     "People on this row|individual.visitors.visitor_visa"
+    ],
+    "sme": [
+     "People on this row|individual.visitors.visitor_visa"
+    ],
+    "early": 409,
+    "approve": 201,
+    "version": 2,
+    "label": "people only"
+   }
+  },
+  {
+   "name": "the people-only release records its author (from the change events, not only draft rows)",
+   "ok": true,
+   "detail": {
+    "author": "user-A",
+    "approver": "user-B"
+   }
+  },
+  {
+   "name": "a name-only change is listed as row details and does not need the SME duty",
+   "ok": true,
+   "detail": [
+    {
+     "key": "individual.visitors.visitor_visa",
+     "kind": "Row details",
+     "label": "name, path, source basis or allowed locations (no line changed)",
+     "change": "changed",
+     "needs_sme": false
+    }
+   ]
+  },
+  {
+   "name": "a draft changed after submission cannot be released (stale submission)",
+   "ok": true,
+   "detail": "Release refused: approved hash differs from the submitted configuration (the draft changed after it was submitted; submit it again)."
+  },
+  {
+   "name": "a concurrent rename from an out-of-date screen is refused, not overwritten",
+   "ok": true,
+   "detail": "Someone renamed this combination to \"Changed again\" while you were editing. Your change was not saved."
+  },
+  {
+   "name": "a legacy row attached to a program cannot even be stored: the database refuses it (Screen 01 level trigger)",
+   "ok": true,
+   "detail": "ERROR:  combination_level: a combination belongs to a category or sub-category, not a PROGRAM"
+  },
+  {
+   "name": "isolated copy reset (its own database and files only)",
+   "ok": true,
+   "detail": {
+    "preserved_unchanged": true
+   }
+  },
+  {
+   "name": "isolated copy: sample inputs load through the normal paths: 2 pathways, 11 programs, 6 combinations set up",
+   "ok": true,
+   "detail": 6.147
+  },
+  {
+   "name": "a person makes the given-names question conditional (saved as draft)",
+   "ok": true,
+   "detail": {
+    "flag": "person.biometrics_required",
+    "status": 201
+   }
+  },
+  {
+   "name": "finding 3 at release: submitting a draft that can hide a value IMM 1295 always reads is refused",
+   "ok": true,
+   "detail": "Fix 6 problems before submitting: person.given_names: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 1295 reads it whenever the form applies. Make the form or its boxes apply under the same condition, or remove the question's condition. · person.given_names: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 5257 SCH1 reads it under a different condition. Make the form or its boxes apply under the same condition, or remove the question's condition. · person.given_names: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 5475 reads it under a different condition. Make the form or its boxes apply under the same condition, or remove the question's condition."
+  },
+  {
+   "name": "after the condition is removed the draft no longer has that error",
+   "ok": true,
+   "detail": 201
+  }
+ ]
+}

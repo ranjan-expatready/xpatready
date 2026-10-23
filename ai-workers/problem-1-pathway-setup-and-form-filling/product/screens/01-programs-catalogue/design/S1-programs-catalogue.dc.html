@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Combination catalogue</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@600;700&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#054e9c}a:hover{color:#043a73}
+</style>
+</helmet>
+<div style="font-family: Inter, system-ui, sans-serif; color: #2d2d2d; background: #f7f7f7; min-height: 1080px; font-size: 14px; line-height: 1.45">
+
+  <header style="display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 10px 24px; background: #ffffff; border-bottom: 1px solid #d9d9d9">
+    <div style="display: flex; align-items: center; gap: 10px">
+      <div style="width: 28px; height: 28px; border-radius: 6px; background: #0862c5; color: #ffffff; display: flex; align-items: center; justify-content: center; font-family: Figtree, Inter, sans-serif; font-weight: 700; font-size: 15px">E</div>
+      <div style="display: flex; flex-direction: column; line-height: 1.15">
+        <span style="font-family: Figtree, Inter, sans-serif; font-weight: 700; font-size: 15px; color: #0862c5">ExpatReady</span>
+        <span style="font-size: 12.5px; color: #595959">Product Studio · Pathway Configurator</span>
+      </div>
+    </div>
+    <div role="group" aria-label="Pathway workspace" style="display: flex; padding: 3px; background: #eeeeee; border-radius: 8px; margin-left: 24px">
+      <button type="button" onClick="{{ pickIndividual }}" style="{{ indBtn }}">Individual <span style="{{ indCount }}">{{ indTotal }}</span></button>
+      <button type="button" onClick="{{ pickCorporate }}" style="{{ corBtn }}">Corporate and employers <span style="{{ corCount }}">{{ corTotal }}</span></button>
+    </div>
+    <div style="flex: 1"></div>
+    <span style="font-size: 12.5px; padding: 3px 9px; border-radius: 6px; background: #fff3e0; color: #8c4600; font-weight: 500">Prototype · demo workspace</span><button type="button" style="height: 34px; padding: 0 12px; border: 1px solid #d9d9d9; background: #ffffff; border-radius: 6px; font: inherit; font-size: 13px; color: #595959">Load sample inputs</button><button type="button" style="height: 34px; padding: 0 10px; border: 0; background: transparent; font: inherit; font-size: 13px; font-weight: 500; color: #2d2d2d">Reset demo</button><span style="display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 13px"><span style="color: #737373">Acting as</span> Content publisher <span style="font-size: 11.5px; padding: 1px 6px; border: 1px solid #d9d9d9; border-radius: 4px; color: #737373">Simulated</span></span>
+  </header>
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 7px 24px; background: #fff3e0; color: #663200; font-size: 13px; border-bottom: 1px solid #ffe0b3">
+    <span><b style="font-weight: 600">You are editing Draft 13.</b> 6 changes not yet sent for review. Released content stays as approved until a new release.</span>
+    <div style="flex: 1"></div>
+    <a href="#" style="color: #663200; font-weight: 600">Review and release (6)</a>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; align-items: stretch">
+    <nav aria-label="Product Studio" style="flex: 1 1 220px; max-width: 240px; background: #ffffff; border-right: 1px solid #d9d9d9; padding: 12px 12px 18px; display: flex; flex-direction: column; gap: 2px; font-size: 14px"><div style="font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: #737373; font-weight: 600; padding: 16px 10px 6px">Configure</div><a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; color: #2d2d2d; text-decoration: none; background: #e6f4ff; color: #054e9c; font-weight: 600"><span aria-hidden="true" style="width: 18px; text-align: center; color: #0862c5">▤</span><span style="flex: 1">Programs</span></a><div style="font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: #737373; font-weight: 600; padding: 16px 10px 6px">Shared library</div><a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; color: #2d2d2d; text-decoration: none"><span aria-hidden="true" style="width: 18px; text-align: center; color: #737373">▦</span><span style="flex: 1">Fields</span></a><a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; color: #2d2d2d; text-decoration: none"><span aria-hidden="true" style="width: 18px; text-align: center; color: #737373">▣</span><span style="flex: 1">Sections</span></a><a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; color: #2d2d2d; text-decoration: none"><span aria-hidden="true" style="width: 18px; text-align: center; color: #737373">▢</span><span style="flex: 1">Document types</span></a><a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; color: #2d2d2d; text-decoration: none"><span aria-hidden="true" style="width: 18px; text-align: center; color: #737373">▧</span><span style="flex: 1">Forms</span></a><a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; color: #2d2d2d; text-decoration: none"><span aria-hidden="true" style="width: 18px; text-align: center; color: #737373">✓</span><span style="flex: 1">Checks</span></a><div style="font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: #737373; font-weight: 600; padding: 16px 10px 6px">History</div><a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; color: #2d2d2d; text-decoration: none"><span aria-hidden="true" style="width: 18px; text-align: center; color: #737373">✦</span><span style="flex: 1">AI work</span></a><a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; color: #2d2d2d; text-decoration: none"><span aria-hidden="true" style="width: 18px; text-align: center; color: #737373">◫</span><span style="flex: 1">Releases</span></a><a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; color: #2d2d2d; text-decoration: none"><span aria-hidden="true" style="width: 18px; text-align: center; color: #737373">∿</span><span style="flex: 1">Activity</span></a><div style="margin-top: 24px; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 8px; font-size: 12px; color: #595959; line-height: 1.5">Simulated people; local demo database. Not production.</div></nav>
+
+    <main style="flex: 999 1 560px; min-width: 0; padding: 24px 28px 40px; display: flex; flex-direction: column; gap: 18px">
+      <div style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px">
+        <div>
+          <h1 style="margin: 0; font-family: Figtree, Inter, sans-serif; font-size: 24px; font-weight: 700; letter-spacing: -0.01em">{{ wsTitle }}</h1>
+          <p style="margin: 4px 0 0; color: #595959; font-size: 14px">Open a program to see its categories and sub-categories. Each row with a status is one application a firm can open, and owns its forms, documents, questions and rules.</p>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap">
+          <button type="button" style="height: 36px; padding: 0 14px; border: 1px solid #bfbfbf; background: #ffffff; border-radius: 6px; font: inherit; font-size: 13.5px; font-weight: 500; color: #2d2d2d">Add program or category</button>
+          <a href="NewCombination.dc.html" style="display: inline-flex; align-items: center; height: 36px; padding: 0 16px; background: #0862c5; color: #ffffff; border-radius: 6px; font-size: 13.5px; font-weight: 600; text-decoration: none">+ New combination</a>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+        <sc-for list="{{ filters }}" as="f" hint-placeholder-count="5">
+          <button type="button" onClick="{{ f.pick }}" style="{{ f.style }}">{{ f.label }} <span style="opacity: .75">{{ f.count }}</span></button>
+        </sc-for>
+        <div style="flex: 1"></div>
+        <span style="font-size: 12px; color: #737373">Sample data · names illustrative; values come from the immigration expert</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 10px; font-size: 13px; color: #595959">
+        <span>{{ summaryLine }}</span>
+        <div style="flex: 1"></div>
+        <button type="button" onClick="{{ expandAll }}" style="height: 30px; padding: 0 10px; border: 1px solid #d9d9d9; background: #ffffff; border-radius: 6px; font: inherit; font-size: 12.5px; color: #2d2d2d">Expand all</button>
+        <button type="button" onClick="{{ collapseAll }}" style="height: 30px; padding: 0 10px; border: 1px solid #d9d9d9; background: #ffffff; border-radius: 6px; font: inherit; font-size: 12.5px; color: #2d2d2d">Collapse all</button>
+      </div>
+      <div style="background: #ffffff; border: 1px solid #d9d9d9; border-radius: 8px; overflow-x: auto">
+        <div style="min-width: 1060px" role="treegrid" aria-label="Programs, categories and sub-categories">
+          <div style="display: grid; grid-template-columns: minmax(330px, 2.3fr) minmax(170px, 1.3fr) 112px 112px minmax(210px, 1.4fr) 104px; gap: 12px; padding: 10px 16px; background: #f7f7f7; border-bottom: 1px solid #d9d9d9; font-size: 11.5px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: #595959">
+            <span>Program › Category › Sub-category</span><span>Forms</span><span>Documents</span><span>Questions</span><span>Setup status</span><span>Checked</span>
+          </div>
+          <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+            <div role="row" style="{{ r.rowStyle }}">
+              <div style="{{ r.nameCellStyle }}">
+                <sc-if value="{{ r.isConnector }}" hint-placeholder-val="{{ false }}">
+                  <span aria-hidden="true" style="width: 22px; flex: none; align-self: stretch; display: flex; align-items: center"><span style="display: block; width: 12px; height: 14px; border-left: 1.5px solid #bfbfbf; border-bottom: 1.5px solid #bfbfbf; border-bottom-left-radius: 4px; transform: translateY(-7px)"></span></span>
+                </sc-if>
+                <sc-if value="{{ r.hasToggle }}" hint-placeholder-val="{{ true }}">
+                  <button type="button" onClick="{{ r.toggle }}" aria-expanded="{{ r.expanded }}" aria-label="{{ r.toggleLabel }}" title="{{ r.toggleLabel }}" style="{{ r.toggleStyle }}">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="{{ r.chevStyle }}"><path d="M9 6l6 6-6 6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                  </button>
+                </sc-if>
+                <sc-if value="{{ r.isSpacer }}" hint-placeholder-val="{{ false }}">
+                  <span aria-hidden="true" style="width: 28px; flex: none"></span>
+                </sc-if>
+                <div style="display: flex; flex-direction: column; min-width: 0; gap: 2px">
+                  <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+                    <sc-if value="{{ r.isLeaf }}" hint-placeholder-val="{{ false }}">
+                      <a href="CombinationPanel.dc.html" style="{{ r.labelStyle }}">{{ r.label }}</a>
+                    </sc-if>
+                    <sc-if value="{{ r.isGroup }}" hint-placeholder-val="{{ true }}">
+                      <span style="{{ r.labelStyle }}">{{ r.label }}</span>
+                    </sc-if>
+                    <sc-if value="{{ r.hasBadge }}" hint-placeholder-val="{{ false }}">
+                      <span style="{{ r.badgeStyle }}">{{ r.badge }}</span>
+                    </sc-if>
+                    <sc-if value="{{ r.noSub }}" hint-placeholder-val="{{ false }}">
+                      <span title="This category has no sub-categories, so the category itself is the combination." style="font-size: 11.5px; color: #595959; background: #eeeeee; border-radius: 999px; padding: 1px 8px">No sub-categories</span>
+                    </sc-if>
+                  </div>
+                  <sc-if value="{{ r.hasMeta }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-size: 12px; color: #737373">{{ r.meta }}</span>
+                  </sc-if>
+                  <sc-if value="{{ r.hasLink }}" hint-placeholder-val="{{ false }}">
+                    <span title="A linked application. Its decision and details carry onto this case." style="font-size: 12px; color: #054e9c">↔ {{ r.link }}</span>
+                  </sc-if>
+                </div>
+              </div>
+              <sc-if value="{{ r.isLeaf }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-wrap: wrap; gap: 5px; align-items: center">
+                  <sc-for list="{{ r.forms }}" as="fm" hint-placeholder-count="2">
+                    <span style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 11.5px; padding: 2px 7px; border: 1px solid #cce9ff; background: #e6f4ff; color: #054e9c; border-radius: 5px">{{ fm }}</span>
+                  </sc-for>
+                  <button type="button" aria-label="Attach or upload a form" title="Attach a form from the library, or upload an IRCC PDF to add it to the library." style="height: 24px; padding: 0 8px; border: 1px dashed #5cb8ff; background: #ffffff; color: #0862c5; border-radius: 5px; font: inherit; font-size: 12px; font-weight: 500">{{ r.addLabel }}</button>
+                </div>
+                <div style="display: flex; flex-direction: column"><span style="font-weight: 600">{{ r.docs }}</span><span style="font-size: 12px; color: #737373">{{ r.docsNote }}</span></div>
+                <div style="display: flex; flex-direction: column"><span style="font-weight: 600">{{ r.qs }}</span><span style="font-size: 12px; color: #737373">{{ r.qsNote }}</span></div>
+                <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start">
+                  <span title="{{ r.statusTip }}" style="{{ r.statusStyle }}">{{ r.status }}</span>
+                  <sc-if value="{{ r.hasAction }}" hint-placeholder-val="{{ true }}">
+                    <a href="CombinationPanel.dc.html" style="font-size: 12.5px; font-weight: 600">{{ r.action }}</a>
+                  </sc-if>
+                </div>
+                <div style="display: flex; flex-direction: column"><span title="When someone last compared this setup with IRCC's published forms and guides." style="{{ r.freshStyle }}">{{ r.fresh }}</span><span style="font-size: 12px; color: #737373">{{ r.freshNote }}</span></div>
+              </sc-if>
+              <sc-if value="{{ r.isGroup }}" hint-placeholder-val="{{ true }}">
+                <div style="grid-column: 2 / -1; display: flex; align-items: center; gap: 6px; flex-wrap: wrap">
+                  <sc-for list="{{ r.chips }}" as="c" hint-placeholder-count="3">
+                    <span style="{{ c.style }}">{{ c.label }}</span>
+                  </sc-for>
+                  <div style="flex: 1"></div>
+                  <sc-if value="{{ r.isProg }}" hint-placeholder-val="{{ true }}">
+                    <a href="#" style="font-size: 12.5px; font-weight: 500">+ Category</a>
+                    <a href="#" style="font-size: 12.5px; color: #595959; margin-left: 10px">Rename</a>
+                  </sc-if>
+                  <sc-if value="{{ r.isCatGroup }}" hint-placeholder-val="{{ false }}">
+                    <a href="#" style="font-size: 12.5px; font-weight: 500">+ Sub-category</a>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      <p style="margin: 0; font-size: 12.5px; color: #737373">Status is calculated, never typed. <b style="font-weight: 600">Ready</b> means a firm can open a case on it: every form has a current edition, every person role has questions, every rule resolves, and it is released.</p>
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1080}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { ws: 'ind', filter: 'all', open: { wp: true, 'wp-es': true, 'wp-ow': true, lmia: true, 'lmia-gts': true } };
+  }
+  renderVals() {
+    const L = (label, o) => Object.assign({ label: label }, o);
+    const S = {
+      ready: { bg: '#e6f6ec', fg: '#0f5c2e', tip: 'Firms can open cases on this combination.' },
+      draft: { bg: '#e6f4ff', fg: '#054e9c', tip: 'Released, with draft changes waiting for review.' },
+      review: { bg: '#fff3e0', fg: '#663200', tip: 'AI read the forms and checklist and suggested setup. Nothing changes until you accept.' },
+      needs: { bg: '#fdecec', fg: '#991b1b', tip: 'Firms cannot use this yet. Open it to see each missing item.' },
+      running: { bg: '#e6f4ff', fg: '#054e9c', tip: 'AI is reading the sources now.' },
+      none: { bg: '#eeeeee', fg: '#404040', tip: 'Not set up yet.' }
+    };
+    const R = (status, kind, action, o) => Object.assign({ kind: kind, status: status, action: action || '', forms: [], docs: '—', docsNote: 'not set up', qs: '—', qsNote: 'not set up', fresh: '—', freshNote: '' }, o || {});
+    const OK = (n, f, d, dn, q, qn, o) => R('Ready · Release ' + n, 'ready', '', Object.assign({ forms: f, docs: d, docsNote: dn, qs: q, qsNote: qn, fresh: 'Oct 2026', freshNote: 'next Oct 2027' }, o || {}));
+    const ind = [
+      { key: 'vis', label: 'Visitors', cats: [
+        L('Visitor visa', { leaf: OK(4, ['IMM 5257', 'IMM 5645'], '11', '5 always · 6 if', '104', '13 sections') }),
+        L('Super visa', { subs: [
+          L('Parent', { leaf: OK(1, ['IMM 5257', 'IMM 5645'], '15', '7 always · 8 if', '110', '13 sections') }),
+          L('Grandparent', { leaf: R('Sources attached', 'none', 'Draft setup with AI', { forms: ['IMM 5257', 'IMM 5645'], docsNote: 'sources attached', qsNote: 'sources attached' }) })
+        ] }),
+        L('Business visitor', { leaf: R('Not started', 'none', 'Attach forms to begin') }),
+        L('Extend stay in Canada', { leaf: OK(2, ['IMM 5708'], '7', '3 always · 4 if', '72', '10 sections') })
+      ] },
+      { key: 'wp', label: 'Work permits', cats: [
+        L('Employer-specific work permit', { key: 'wp-es', subs: [
+          L('With an LMIA', { leaf: OK(3, ['IMM 1295', 'IMM 5645', 'IMM 5476'], '18', '6 always · 12 if', '164', '18 sections', { link: 'Supported by Corporate › LMIA' }) }),
+          L('LMIA-exempt (employer offer)', { leaf: R('23 AI proposals to review', 'review', 'Review proposals', { forms: ['IMM 1295', 'IMM 5645'], docs: '16', docsNote: '5 always · 11 if', qs: '151', qsNote: '17 sections', fresh: 'Oct 2026', freshNote: 'next Oct 2027', link: 'Supported by Corporate › Employer offer' }) })
+        ] }),
+        L('Open work permit', { key: 'wp-ow', subs: [
+          L('Spouse of a skilled worker', { leaf: R('Release 2 + 2 draft changes', 'draft', 'See changes', { forms: ['IMM 1295', 'IMM 5645'], docs: '15', docsNote: '5 always · 10 if', qs: '140', qsNote: '16 sections', fresh: 'Oct 2026', freshNote: 'next Oct 2027' }) }),
+          L('Spouse of a student', { leaf: OK(1, ['IMM 1295', 'IMM 5645'], '14', '5 always · 9 if', '138', '16 sections') }),
+          L('Post-graduation', { leaf: R('Needs work · 1 issue', 'needs', 'Spouse role has no questions', { forms: ['IMM 5710'], docs: '9', docsNote: '4 always · 5 if', qs: '96', qsNote: '12 sections', fresh: 'Oct 2026', freshNote: 'next Oct 2027', link: 'Follows Study permit' }) }),
+          L('Bridging', { leaf: R('Not started', 'none', 'Attach forms to begin') })
+        ] }),
+        L('International Experience Canada', { subs: [
+          L('Working holiday', { leaf: OK(2, ['Online'], '8', '4 always · 4 if', '61', '9 sections') }),
+          L('Young professionals', { leaf: R('AI drafting · 1 of 2 sources read', 'running', 'View progress', { forms: ['Online'], docsNote: 'drafting', qsNote: 'drafting' }) }),
+          L('International co-op', { leaf: R('Not started', 'none', 'Attach forms to begin') })
+        ] })
+      ] },
+      { key: 'sp', label: 'Study permits', cats: [
+        L('Study permit', { leaf: OK(2, ['IMM 1294', 'IMM 5645'], '14', '6 always · 8 if', '122', '15 sections', { fresh: 'Sep 2025', freshNote: 'review overdue', overdue: true }) }),
+        L('Study permit extension', { leaf: R('AI drafting · 2 of 3 sources read', 'running', 'View progress', { forms: ['IMM 5709'], docsNote: 'drafting', qsNote: 'drafting' }) })
+      ] },
+      { key: 'fs', label: 'Family sponsorship', cats: [
+        L('Spouse or partner', { subs: [
+          L('Applying from outside Canada', { leaf: R('Needs work · 2 issues', 'needs', '2 forms lack a current edition', { forms: ['IMM 1344', 'IMM 5532', 'IMM 0008'], docs: '24', docsNote: '9 always · 15 if', qs: '230', qsNote: '24 sections', fresh: 'Oct 2026', freshNote: 'next Oct 2027' }) }),
+          L('Applying from inside Canada', { leaf: OK(1, ['IMM 1344', 'IMM 5532', 'IMM 0008'], '25', '9 always · 16 if', '236', '24 sections') })
+        ] }),
+        L('Dependent child', { leaf: OK(1, ['IMM 1344', 'IMM 0008'], '13', '6 always · 7 if', '118', '14 sections') }),
+        L('Parents and grandparents', { leaf: R('9 AI proposals to review', 'review', 'Review proposals', { forms: ['IMM 1344', 'IMM 0008', 'IMM 5768'], docs: '17', docsNote: '8 always · 9 if', qs: '160', qsNote: '18 sections', fresh: 'Oct 2026', freshNote: 'next Oct 2027' }) })
+      ] },
+      { key: 'eco', label: 'Economic immigration', cats: [
+        L('Express Entry', { subs: [
+          L('Profile', { leaf: OK(2, ['Online'], '4', '4 always', '58', '8 sections') }),
+          L('PR application · Canadian Experience Class', { leaf: OK(1, ['Online'], '19', '9 always · 10 if', '172', '19 sections', { link: 'Follows Express Entry › Profile' }) }),
+          L('PR application · Federal Skilled Worker', { leaf: R('12 AI proposals to review', 'review', 'Review proposals', { forms: ['Online'], docs: '21', docsNote: '10 always · 11 if', qs: '176', qsNote: '19 sections', fresh: 'Oct 2026', freshNote: 'next Oct 2027', link: 'Follows Express Entry › Profile' }) })
+        ] }),
+        L('Ontario provincial nomination', { subs: [
+          L('Employer job offer: foreign worker', { leaf: R('Sources attached', 'none', 'Draft setup with AI', { forms: ['Provincial portal'], docsNote: 'sources attached', qsNote: 'sources attached' }) })
+        ] })
+      ] },
+      { key: 'cit', label: 'Citizenship', cats: [
+        L('Grant of citizenship', { leaf: OK(1, ['CIT 0002', 'CIT 0003'], '10', '6 always · 4 if', '88', '11 sections') })
+      ] },
+      { key: 'prd', label: 'PR status documents', cats: [
+        L('PR card renewal', { leaf: OK(1, ['IMM 5444'], '6', '4 always · 2 if', '44', '7 sections') }),
+        L('Travel document', { leaf: R('Not started', 'none', 'Attach forms to begin') })
+      ] }
+    ];
+    const cor = [
+      { key: 'lmia', label: 'Labour Market Impact Assessment', cats: [
+        L('High-wage position', { leaf: OK(1, ['EMP 5626'], '12', '7 always · 5 if', '118', '14 sections') }),
+        L('Low-wage position', { leaf: R('9 AI proposals to review', 'review', 'Review proposals', { forms: ['EMP 5627'], docs: '13', docsNote: '7 always · 6 if', qs: '126', qsNote: '15 sections', fresh: 'Oct 2026', freshNote: 'next Oct 2027' }) }),
+        L('Global Talent Stream', { key: 'lmia-gts', subs: [
+          L('Category A', { leaf: R('Draft · not released', 'draft', 'Send for review', { forms: ['Online'], docs: '9', docsNote: '6 always · 3 if', qs: '96', qsNote: '12 sections', fresh: 'Oct 2026', freshNote: 'next Oct 2027' }) }),
+          L('Category B', { leaf: R('Not started', 'none', 'Attach forms to begin') })
+        ] }),
+        L('Caregiver in a private home', { leaf: R('Needs work · 1 issue', 'needs', 'No checklist attached', { forms: ['Online'], docs: '8', docsNote: '5 always · 3 if', qs: '80', qsNote: '11 sections', fresh: 'Oct 2026', freshNote: 'next Oct 2027' }) })
+      ] },
+      { key: 'eo', label: 'Employer offers (LMIA-exempt)', cats: [
+        L('Offer of employment', { subs: [
+          L('Intra-company transferee', { leaf: OK(1, ['Employer Portal'], '7', '5 always · 2 if', '52', '8 sections') }),
+          L('Professional under a trade agreement', { leaf: R('Sources attached', 'none', 'Draft setup with AI', { forms: ['Employer Portal'], docsNote: 'sources attached', qsNote: 'sources attached' }) })
+        ] })
+      ] },
+      { key: 'de', label: 'Designation and endorsement', cats: [
+        L('Atlantic employer designation', { leaf: OK(1, ['Provincial form'], '6', '4 always · 2 if', '40', '6 sections') }),
+        L('Community employer recommendation', { leaf: R('Not started', 'none', 'Attach forms to begin') })
+      ] },
+      { key: 'cmp', label: 'Compliance', cats: [
+        L('Inspection response', { leaf: R('Draft · not released', 'draft', 'Send for review', { docs: '10', docsNote: 'as requested', qs: '34', qsNote: '5 sections', fresh: 'Oct 2026', freshNote: 'next Oct 2027' }) })
+      ] }
+    ];
+    const isInd = this.state.ws === 'ind';
+    const src = isInd ? ind : cor;
+    const f = this.state.filter;
+    const open = this.state.open;
+    const inFilter = (k) => f === 'all' || (f === 'ready' && k === 'ready') || (f === 'needs' && k === 'needs') || (f === 'review' && k === 'review') || (f === 'setup' && (k === 'none' || k === 'running' || k === 'draft'));
+    const leavesOf = (cat) => cat.leaf ? [cat.leaf] : cat.subs.map((s) => s.leaf);
+    const progLeaves = (p) => p.cats.reduce((a, c) => a.concat(leavesOf(c)), []);
+    const all = src.reduce((a, p) => a.concat(progLeaves(p)), []);
+    const countK = (arr, k) => arr.filter((x) => (k === 'setup' ? (x.kind === 'none' || x.kind === 'running' || x.kind === 'draft') : x.kind === k)).length;
+    const chipsFor = (arr) => {
+      const out = [];
+      const add = (n, lab, bg, fg) => { if (n) out.push({ label: n + ' ' + lab, style: 'font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: ' + bg + '; color: ' + fg }); };
+      add(countK(arr, 'ready'), 'ready', '#e6f6ec', '#0f5c2e');
+      add(countK(arr, 'needs'), 'need work', '#fdecec', '#991b1b');
+      add(countK(arr, 'review'), 'to review', '#fff3e0', '#663200');
+      add(countK(arr, 'setup'), 'in setup', '#eeeeee', '#404040');
+      return out;
+    };
+    const grid = 'display: grid; grid-template-columns: minmax(330px, 2.3fr) minmax(170px, 1.3fr) 112px 112px minmax(210px, 1.4fr) 104px; gap: 12px; align-items: center; ';
+    const toggleStyle = (on, big) => 'width: ' + (big ? 30 : 26) + 'px; height: ' + (big ? 30 : 26) + 'px; flex: none; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; cursor: pointer; border: 1px solid ' + (on ? '#99d2ff' : '#bfbfbf') + '; background: ' + (on ? '#e6f4ff' : '#ffffff') + '; color: ' + (on ? '#054e9c' : '#404040');
+    const chev = (on) => 'transition: transform .15s; transform: rotate(' + (on ? 90 : 0) + 'deg)';
+    const tog = (key) => () => { const o = Object.assign({}, this.state.open); o[key] = !o[key]; this.setState({ open: o }); };
+    const pill = (k) => 'display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: ' + S[k].bg + '; color: ' + S[k].fg;
+    const leafRow = (label, leaf, level, path, noSub) => Object.assign({}, leaf, {
+      isLeaf: true, isGroup: false, isProg: false, isCatGroup: false, label: label,
+      hasToggle: false, isConnector: level === 2, isSpacer: level === 1, noSub: !!noSub,
+      hasBadge: false, hasMeta: false, meta: '', hasLink: !!leaf.link,
+      labelStyle: 'font-weight: ' + (level === 2 ? 500 : 600) + '; color: #2d2d2d; text-decoration: none',
+      nameCellStyle: 'display: flex; align-items: center; gap: 8px; min-width: 0; padding-left: ' + (level === 2 ? 58 : 30) + 'px',
+      rowStyle: grid + 'padding: 10px 16px; border-bottom: 1px solid #eeeeee; background: #ffffff',
+      addLabel: leaf.forms.length ? '+ Add' : '+ Attach or upload form',
+      hasAction: !!leaf.action, statusStyle: pill(leaf.kind), statusTip: S[leaf.kind].tip,
+      freshStyle: leaf.overdue ? 'font-weight: 600; color: #b35a00' : 'font-weight: 500'
+    });
+    const filtering = f !== 'all';
+    const rows = [];
+    src.forEach((p) => {
+      const pl = progLeaves(p).filter((x) => inFilter(x.kind));
+      if (!pl.length) return;
+      const pOpen = filtering || !!open[p.key];
+      const nCats = p.cats.length;
+      rows.push({
+        isLeaf: false, isGroup: true, isProg: true, isCatGroup: false, label: p.label,
+        hasToggle: true, isConnector: false, isSpacer: false, noSub: false, expanded: pOpen,
+        toggle: tog(p.key), toggleLabel: (pOpen ? 'Collapse ' : 'Expand ') + p.label, toggleStyle: toggleStyle(pOpen, true), chevStyle: chev(pOpen),
+        hasBadge: true, badge: progLeaves(p).length + ' combinations', badgeStyle: 'font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: #ffffff; border: 1px solid #cce9ff; color: #054e9c',
+        hasMeta: true, meta: nCats + (nCats === 1 ? ' category' : ' categories'), hasLink: false,
+        labelStyle: "font-family: Figtree, Inter, sans-serif; font-weight: 700; font-size: 15.5px; color: #1d2a3a",
+        nameCellStyle: 'display: flex; align-items: center; gap: 10px; min-width: 0',
+        rowStyle: grid + 'padding: 10px 16px; background: ' + (pOpen ? '#eaf3fd' : '#f5f8fb') + '; border-bottom: 1px solid ' + (pOpen ? '#cce9ff' : '#e3e8ee') + '; border-top: 1px solid #e3e8ee',
+        chips: chipsFor(progLeaves(p))
+      });
+      if (!pOpen) return;
+      p.cats.forEach((c) => {
+        if (c.leaf) {
+          if (inFilter(c.leaf.kind)) rows.push(leafRow(c.label, c.leaf, 1, p.label + ' › ' + c.label, true));
+          return;
+        }
+        const cl = c.subs.filter((s) => inFilter(s.leaf.kind));
+        if (!cl.length) return;
+        const ck = c.key || (p.key + '-' + c.label);
+        const cOpen = filtering || !!open[ck];
+        rows.push({
+          isLeaf: false, isGroup: true, isProg: false, isCatGroup: true, label: c.label,
+          hasToggle: true, isConnector: false, isSpacer: false, noSub: false, expanded: cOpen,
+          toggle: tog(ck), toggleLabel: (cOpen ? 'Collapse ' : 'Expand ') + c.label, toggleStyle: toggleStyle(cOpen, false), chevStyle: chev(cOpen),
+          hasBadge: true, badge: c.subs.length + ' sub-categories', badgeStyle: 'font-size: 11.5px; font-weight: 500; padding: 1px 8px; border-radius: 999px; background: #f2f2f2; color: #595959',
+          hasMeta: false, meta: '', hasLink: false,
+          labelStyle: 'font-weight: 600; color: #2d2d2d',
+          nameCellStyle: 'display: flex; align-items: center; gap: 8px; min-width: 0; padding-left: 30px',
+          rowStyle: grid + 'padding: 9px 16px; background: #fbfcfd; border-bottom: 1px solid #eeeeee',
+          chips: chipsFor(c.subs.map((s) => s.leaf))
+        });
+        if (!cOpen) return;
+        c.subs.forEach((s) => { if (inFilter(s.leaf.kind)) rows.push(leafRow(s.label, s.leaf, 2, '', false)); });
+      });
+    });
+    const keysAll = {};
+    src.forEach((p) => { keysAll[p.key] = true; p.cats.forEach((c) => { if (c.subs) keysAll[c.key || (p.key + '-' + c.label)] = true; }); });
+    const chip = (key, label, n) => ({
+      label: label, count: n, pick: () => this.setState({ filter: key }),
+      style: 'height: 30px; padding: 0 12px; border-radius: 999px; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid ' + (f === key ? '#0862c5' : '#d9d9d9') + '; background: ' + (f === key ? '#e6f4ff' : '#ffffff') + '; color: ' + (f === key ? '#054e9c' : '#2d2d2d')
+    });
+    const seg = (on) => 'display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 14px; border: 0; border-radius: 6px; cursor: pointer; font: inherit; font-size: 13.5px; font-weight: 600; ' + (on ? 'background: #ffffff; color: #054e9c; box-shadow: 0 1px 2px rgba(0,0,0,.12)' : 'background: transparent; color: #595959');
+    const cnt = (on) => 'font-size: 11.5px; padding: 0 6px; border-radius: 999px; ' + (on ? 'background: #e6f4ff; color: #054e9c' : 'background: #d9d9d9; color: #404040');
+    const tot = (arr) => arr.reduce((a, p) => a + progLeaves(p).length, 0);
+    const nCatsAll = src.reduce((a, p) => a + p.cats.length, 0);
+    return {
+      rows: rows,
+      summaryLine: src.length + ' programs · ' + nCatsAll + ' categories · ' + all.length + ' combinations · ' + countK(all, 'ready') + ' ready',
+      expandAll: () => this.setState({ open: keysAll }),
+      collapseAll: () => this.setState({ open: {} }),
+      filters: [chip('all', 'All', all.length), chip('ready', 'Ready', countK(all, 'ready')), chip('needs', 'Needs work', countK(all, 'needs')), chip('review', 'AI proposals to review', countK(all, 'review')), chip('setup', 'In setup', countK(all, 'setup'))],
+      pickIndividual: () => this.setState({ ws: 'ind', filter: 'all' }),
+      pickCorporate: () => this.setState({ ws: 'cor', filter: 'all' }),
+      indBtn: seg(isInd), corBtn: seg(!isInd), indCount: cnt(isInd), corCount: cnt(!isInd),
+      indTotal: tot(ind), corTotal: tot(cor),
+      wsTitle: isInd ? 'Programs · Individual' : 'Programs · Corporate and employers'
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,938 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "c1-fieldmap-imm5257-1-live-20261020t052757177z",
+  "idempotency_key": "302aff8db8ce62c2d94fd7bce6e827a2db2dacf7792d2ff2f509d1cdaddfed1c",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "8d2db8306420fa7a4fc54a4db55297f4d8b434af00b1d22d62bfcd13cd2a1031",
+  "inputs": {
+   "combination": "1",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5257_1e.inventory.json",
+     "sha256": "4e73608de3833cb89d1e2ae2eb79485b71d892c82d8bc6e25c3af5b6533d0f1e"
+    }
+   ],
+   "configuration_version": "c1-draft-1"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 48000,
+   "prompt_version": "field-map.v1.md",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 40668,
+    "output_tokens": 17341,
+    "duration_ms": 130176
+   }
+  ],
+  "usage": {
+   "input_tokens": 40668,
+   "output_tokens": 17341,
+   "cost_usd": 0.509492,
+   "duration_ms": 130176
+  },
+  "started_at": "2026-10-20T05:27:57.177Z",
+  "ended_at": "2026-10-20T05:30:07.809Z",
+  "entries": [
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].FormVersion[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Hidden helper holding the form's own version identifier; form mechanics, not a fact about any person.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].FormName[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Hidden helper holding the form's name; form mechanics, not a fact.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ReaderInfo[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Hidden helper recording PDF reader information; form mechanics, not a fact.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ApplicationValidationDate[0].Year[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Hidden validation timestamp written by the form's Validate script; form mechanics, not a case fact.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ApplicationValidationDate[0].Month[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Hidden validation timestamp written by the form's Validate script; form mechanics, not a case fact.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ApplicationValidationDate[0].Day[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Hidden validation timestamp written by the form's Validate script; form mechanics, not a case fact.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PrincipalApplicant[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "case.subject_is_principal_applicant",
+    "transform": "yes_no_code:true/false",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "*Indicate whether you are"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].FormValidated[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Validation flag set by the form's Validate script (its presence script toggles a barcode mask); form mechanics, must not be set by the system.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Validated"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.family_name",
+    "transform": "as_is (max 100 chars)",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "*Family name (as shown on your passport or travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GivenName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.given_names",
+    "transform": "as_is (max 100 chars)",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Given name(s) (as shown on your passport or travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ApplicantBirthDate[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "*Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ApplicantBirthDate[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:MM",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 2 Date of Birth Month in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ApplicantBirthDate[0].Day[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:DD",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 2 Date of Birth Day in DD format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].UCI[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.uci",
+    "transform": "as_is (max 10 chars)",
+    "condition": "Only when the subject has been issued a UCI; otherwise leave blank.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "UCI"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].ServedInMilitary[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.has_military_or_security_service",
+    "transform": "derive: true if any military/militia/civil defence/security/police service period is recorded for the subject, else false -> yes_no_code:true/false",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 4 Military Service. Did you serve in any military, militia, or civil defence unit or serve in a security organization or police force (including non obligatory national service, reserve or volunteer units)?"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.military_service_start_date",
+    "transform": "date:YYYY",
+    "row": 0,
+    "condition": "Only when Question 4 is answered Yes; each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service From Date Year. The year of the start of the Military Service in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.military_service_start_date",
+    "transform": "date:MM",
+    "row": 0,
+    "condition": "Only when Question 4 is answered Yes; each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service From Date Month. The month of the start of the Military Service in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.military_service_end_date",
+    "transform": "date:YYYY",
+    "row": 0,
+    "condition": "Only when Question 4 is answered Yes; each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service To Date Year. The year of the end of the Military Service in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.military_service_end_date",
+    "transform": "date:MM",
+    "row": 0,
+    "condition": "Only when Question 4 is answered Yes; each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service To Date Month. The month of the end of the Military Service in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Location[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.military_service_location",
+    "transform": "as_is (max 100 chars)",
+    "row": 0,
+    "condition": "Only when Question 4 is answered Yes; each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service Location/Place where stationed. The location or place of your military service"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Province[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.military_service_province",
+    "transform": "as_is (max 50 chars)",
+    "row": 0,
+    "condition": "Only when Question 4 is answered Yes; each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service Province. The province of your military service"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].CountryCode[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.military_service_country",
+    "transform": "code_list:imm5257_1e.CountryCode (codes exactly as in options_resolved, e.g. Canada=511, United States of America=461, Unknown=000)",
+    "row": 0,
+    "condition": "Only when Question 4 is answered Yes; each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service Country or Territory. The country or territory of your military service"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].HaveWitnessedParticipated[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "unresolved_reason": "Asks whether the subject personally witnessed or participated in ill treatment of prisoners or civilians, looting or desecration; an ordinary case record does not hold this, and it cannot be derived from other facts. It must come from the subject's own declaration.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5. Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Year[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "row": 0,
+    "condition": "Only when Question 5 is answered Yes; each further event adds a row.",
+    "unresolved_reason": "Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 From Date Year. The year of the start of the event in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Month[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "row": 0,
+    "condition": "Only when Question 5 is answered Yes; each further event adds a row.",
+    "unresolved_reason": "Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 From Date Month. The month of the start of the event in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Year[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "row": 0,
+    "condition": "Only when Question 5 is answered Yes; each further event adds a row.",
+    "unresolved_reason": "Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 To Date Year. The year of the end of the event in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Month[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "row": 0,
+    "condition": "Only when Question 5 is answered Yes; each further event adds a row.",
+    "unresolved_reason": "Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 To Date Month. The month of the end of the event in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Location[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "row": 0,
+    "condition": "Only when Question 5 is answered Yes; each further event adds a row.",
+    "unresolved_reason": "Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 Location. The location of the event"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Province[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "row": 0,
+    "condition": "Only when Question 5 is answered Yes; each further event adds a row.",
+    "unresolved_reason": "Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 Province. The province of the event"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].CountryCode[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "row": 0,
+    "condition": "Only when Question 5 is answered Yes; each further event adds a row.",
+    "unresolved_reason": "Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events. If later supplied, codes must come from this form's CountryCode list.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 Country or Territory. The country or territory of the event"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Details[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "row": 0,
+    "condition": "Only when Question 5 is answered Yes; each further event adds a row.",
+    "unresolved_reason": "Free-text description of a witnessed or participated event under Question 5; no ordinary case record holds such events.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Details:"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].BeenMemberAssociated[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "The answer depends on characterising organizations (political party, or a group that engaged in or advocated violence; caption is truncated in the inventory). It cannot be safely derived from a list of memberships the firm may hold; the subject must declare it. Reviewer should confirm the full question wording.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 6 Membership or Association with Organizations. Are you, or have you ever been a member or associated with any political party, or other group or organization which has engaged in or advocated violence as a means to achieving a pol"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_membership_start_date",
+    "transform": "date:YYYY",
+    "row": 0,
+    "condition": "Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations From Date Year. The year of the start of the membership or association in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_membership_start_date",
+    "transform": "date:MM",
+    "row": 0,
+    "condition": "Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations From Date Month. The month of the start of the membership or association in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_membership_end_date",
+    "transform": "date:YYYY",
+    "row": 0,
+    "condition": "Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations To Date Year. The year of the end of the membership or association in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_membership_end_date",
+    "transform": "date:MM",
+    "row": 0,
+    "condition": "Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations To Date Month. The month of the end of the membership or association in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].NameOfOrganization[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_name",
+    "transform": "as_is (max 100 chars)",
+    "row": 0,
+    "condition": "Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations Name of Organization"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].ActivitiesPositionHeld[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_activities_positions",
+    "transform": "as_is (max 50 chars)",
+    "row": 0,
+    "condition": "Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations Activities and/or positions held within organization"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].Province[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_province",
+    "transform": "as_is (max 50 chars)",
+    "row": 0,
+    "condition": "Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations Province. The province of the organization"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].CountryCode[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_country",
+    "transform": "code_list:imm5257_1e.CountryCode (codes exactly as in options_resolved, e.g. Canada=511, United States of America=461, Unknown=000)",
+    "row": 0,
+    "condition": "Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations Country or Territory. The country or territory of the organization"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].HeldGovernmentPositions[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.has_held_government_position",
+    "transform": "derive: true if any government position is recorded for the subject, else false -> yes_no_code:true/false",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question7 Government Positions. Have you ever held any government positions (such as civil servant, judge, police officer, mayor, member of parliament, hospital administrator)? Do not use abbreviations."
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.government_position_start_date",
+    "transform": "date:YYYY",
+    "row": 0,
+    "condition": "Only when Question 7 is answered Yes; each further government position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions From Date Year. The year of the start of the government position held in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.government_position_start_date",
+    "transform": "date:MM",
+    "row": 0,
+    "condition": "Only when Question 7 is answered Yes; each further government position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions From Date Month. The month of the start of the government position held in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.government_position_end_date",
+    "transform": "date:YYYY",
+    "row": 0,
+    "condition": "Only when Question 7 is answered Yes; each further government position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions To Date Year. The year of the end of the government position held in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.government_position_end_date",
+    "transform": "date:MM",
+    "row": 0,
+    "condition": "Only when Question 7 is answered Yes; each further government position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions To Date Month. The month of the end of the government position held in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].CountryCode[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.government_position_country",
+    "transform": "code_list:imm5257_1e.CountryCode (codes exactly as in options_resolved, e.g. Canada=511, United States of America=461, Unknown=000)",
+    "row": 0,
+    "condition": "Only when Question 7 is answered Yes; each further government position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions Country or Territory. The country or territory of the government position held"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].LevelOfJurisdiction[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.government_position_jurisdiction_level",
+    "transform": "as_is (max 50 chars)",
+    "row": 0,
+    "condition": "Only when Question 7 is answered Yes; each further government position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions Level of jurisdiction. The level of jurisdiction of the government position held (Example: national, regional, municipal)"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].DepartmentBranch[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.government_position_department",
+    "transform": "as_is (max 100 chars; no abbreviations)",
+    "row": 0,
+    "condition": "Only when Question 7 is answered Yes; each further government position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions Department/Branch. The department or branch of the government position held"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].ActivitiesPositionHeld[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.government_position_activities",
+    "transform": "as_is (max 50 chars; no abbreviations)",
+    "row": 0,
+    "condition": "Only when Question 7 is answered Yes; each further government position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions Activities and/or positions held"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].TraveledOtherCountry[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.travel_country",
+    "transform": "derive: true if any recorded trip, starting after the later of the subject's 18th birthday or five years before the application date, went to a country other than the subject's countries of citizenship and current country of residence, else false -> yes_no_code:true/false",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 8 Previous Travel. Since the age of 18 or during the past five years, whichever is more recent, have you travelled to any country other than the country of your citizenship or your current country of residence?"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.travel_start_date",
+    "transform": "date:YYYY",
+    "row": 0,
+    "condition": "Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel From Date Year. The year of the start of your previous travel in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.travel_start_date",
+    "transform": "date:MM",
+    "row": 0,
+    "condition": "Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel From Date Month. The month of the start of your previous travel in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.travel_end_date",
+    "transform": "date:YYYY",
+    "row": 0,
+    "condition": "Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel To Date Year. The year of the end of your previous travel in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.travel_end_date",
+    "transform": "date:MM",
+    "row": 0,
+    "condition": "Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel To Date Month. The month of the end of your previous travel in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].CountryCode[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.travel_country",
+    "transform": "code_list:imm5257_1e.CountryCode (codes exactly as in options_resolved, e.g. Canada=511, United States of America=461, Unknown=000)",
+    "row": 0,
+    "condition": "Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel Country or Territory. The country or territory where your previous travel took place"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].Location[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.travel_location",
+    "transform": "as_is (max 50 chars)",
+    "row": 0,
+    "condition": "Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel Location. The location where your previous travel took place"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 SCH1 (09-2023)",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].PurposeOfTravel[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.travel_purpose",
+    "transform": "as_is (max 50 chars)",
+    "row": 0,
+    "condition": "Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel Purpose of Travel."
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": {
+   "manifest": "IMM 5257 SCH1 (09-2023)",
+   "drafted": "IMM 5257 Schedule 1 (edition date not printed in the inventory; source file official-sources/ircc/forms/imm5257_1e.pdf, sha256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93)"
+  }
+ },
+ "launch_evidence": {
+  "path_code_sha256": "d777427fd45efdd373eb746f2f0bc4c0ba1895def99c939b33cd436f009c65bf",
+  "template_sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+  "schema_file": "field-map-output.v1.schema.json",
+  "schema_sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+  "screened": true,
+  "output_sha256": "8d2db8306420fa7a4fc54a4db55297f4d8b434af00b1d22d62bfcd13cd2a1031",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "62a972f9c1f48f0dfae972fef4aa2761fbe4c774f0ca75dbc9ad447370d67037",
+  "request_bytes": 96183,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 40,
+   "committed_usd": 6.918447999999999
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5257_1e.inventory.json",
+    "sha256": "4e73608de3833cb89d1e2ae2eb79485b71d892c82d8bc6e25c3af5b6533d0f1e",
+    "kind": "inventory"
+   }
+  ]
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5257 Schedule 1 (edition date not printed in the inventory; source file official-sources/ircc/forms/imm5257_1e.pdf, sha256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93)\",\"canonical_fields\":[{\"id\":\"case.subject_is_principal_applicant\",\"meaning\":\"Whether the person the form is about is the principal applicant, rather than the principal applicant's spouse, common-law partner or dependent child\",\"value_type\":\"yes_no\"},{\"id\":\"person.family_name\",\"meaning\":\"Family name (surname) as shown on the person's passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.given_names\",\"meaning\":\"Given name(s) as shown on the person's passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"The person's date of birth\",\"value_type\":\"date\"},{\"id\":\"person.uci\",\"meaning\":\"The person's IRCC Unique Client Identifier, if one has been issued\",\"value_type\":\"code\"},{\"id\":\"person.has_military_or_security_service\",\"meaning\":\"Whether the person has ever served in any military, militia, civil defence unit, security organization or police force, including non-obligatory national service, reserve or volunteer units\",\"value_type\":\"yes_no\"},{\"id\":\"person.military_service_start_date\",\"meaning\":\"Start date of one period of military, militia, civil defence, security or police service\",\"value_type\":\"date\"},{\"id\":\"person.military_service_end_date\",\"meaning\":\"End date of one period of military, militia, civil defence, security or police service\",\"value_type\":\"date\"},{\"id\":\"person.military_service_location\",\"meaning\":\"Location or place where the person was stationed during one period of service\",\"value_type\":\"text\"},{\"id\":\"person.military_service_province\",\"meaning\":\"Province or region of the place where the person was stationed during one period of service\",\"value_type\":\"text\"},{\"id\":\"person.military_service_country\",\"meaning\":\"Country or territory of one period of service\",\"value_type\":\"country\"},{\"id\":\"person.organization_membership_start_date\",\"meaning\":\"Start date of the person's membership in or association with one organization\",\"value_type\":\"date\"},{\"id\":\"person.organization_membership_end_date\",\"meaning\":\"End date of the person's membership in or association with one organization\",\"value_type\":\"date\"},{\"id\":\"person.organization_name\",\"meaning\":\"Name of an organization the person is or was a member of or associated with\",\"value_type\":\"text\"},{\"id\":\"person.organization_activities_positions\",\"meaning\":\"Activities carried out and/or positions held by the person within one organization\",\"value_type\":\"text\"},{\"id\":\"person.organization_province\",\"meaning\":\"Province or region of one organization the person is or was associated with\",\"value_type\":\"text\"},{\"id\":\"person.organization_country\",\"meaning\":\"Country or territory of one organization the person is or was associated with\",\"value_type\":\"country\"},{\"id\":\"person.has_held_government_position\",\"meaning\":\"Whether the person has ever held any government position (for example civil servant, judge, police officer, mayor, member of parliament, hospital administrator)\",\"value_type\":\"yes_no\"},{\"id\":\"person.government_position_start_date\",\"meaning\":\"Start date of one government position held by the person\",\"value_type\":\"date\"},{\"id\":\"person.government_position_end_date\",\"meaning\":\"End date of one government position held by the person\",\"value_type\":\"date\"},{\"id\":\"person.government_position_country\",\"meaning\":\"Country or territory of one government position held by the person\",\"value_type\":\"country\"},{\"id\":\"person.government_position_jurisdiction_level\",\"meaning\":\"Level of jurisdiction of one government position (for example national, regional, municipal)\",\"value_type\":\"text\"},{\"id\":\"person.government_position_department\",\"meaning\":\"Department or branch of one government position\",\"value_type\":\"text\"},{\"id\":\"person.government_position_activities\",\"meaning\":\"Activities and/or positions held in one government position\",\"value_type\":\"text\"},{\"id\":\"person.travel_start_date\",\"meaning\":\"Start date of one trip the person made\",\"value_type\":\"date\"},{\"id\":\"person.travel_end_date\",\"meaning\":\"End date of one trip the person made\",\"value_type\":\"date\"},{\"id\":\"person.travel_country\",\"meaning\":\"Country or territory the person travelled to on one trip\",\"value_type\":\"country\"},{\"id\":\"person.travel_location\",\"meaning\":\"Location (city or place) the person travelled to on one trip\",\"value_type\":\"text\"},{\"id\":\"person.travel_purpose\",\"meaning\":\"Purpose of one trip the person made\",\"value_type\":\"text\"}],\"entries\":[{\"data_path\":\"Schedule1[0].FormVersion[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Hidden helper holding the form's own version identifier; form mechanics, not a fact about any person.\",\"evidence_quote\":\"JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen\"},{\"data_path\":\"Schedule1[0].FormName[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Hidden helper holding the form's name; form mechanics, not a fact.\",\"evidence_quote\":\"JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen\"},{\"data_path\":\"Schedule1[0].ReaderInfo[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Hidden helper recording PDF reader information; form mechanics, not a fact.\",\"evidence_quote\":\"JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen\"},{\"data_path\":\"Schedule1[0].ApplicationValidationDate[0].Year[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Hidden validation timestamp written by the form's Validate script; form mechanics, not a case fact.\",\"evidence_quote\":\"JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen\"},{\"data_path\":\"Schedule1[0].ApplicationValidationDate[0].Month[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Hidden validation timestamp written by the form's Validate script; form mechanics, not a case fact.\",\"evidence_quote\":\"JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen\"},{\"data_path\":\"Schedule1[0].ApplicationValidationDate[0].Day[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Hidden validation timestamp written by the form's Validate script; form mechanics, not a case fact.\",\"evidence_quote\":\"JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen\"},{\"data_path\":\"Schedule1[0].PrincipalApplicant[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.subject_is_principal_applicant\",\"transform\":\"yes_no_code:true/false\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"*Indicate whether you are\"},{\"data_path\":\"Schedule1[0].FormValidated[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Validation flag set by the form's Validate script (its presence script toggles a barcode mask); form mechanics, must not be set by the system.\",\"evidence_quote\":\"Validated\"},{\"data_path\":\"Schedule1[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"*Family name (as shown on your passport or travel document)\"},{\"data_path\":\"Schedule1[0].GivenName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is (max 100 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s) (as shown on your passport or travel document)\"},{\"data_path\":\"Schedule1[0].ApplicantBirthDate[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"*Date of birth\"},{\"data_path\":\"Schedule1[0].ApplicantBirthDate[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:MM\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 2 Date of Birth Month in MM format\"},{\"data_path\":\"Schedule1[0].ApplicantBirthDate[0].Day[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 2 Date of Birth Day in DD format\"},{\"data_path\":\"Schedule1[0].UCI[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.uci\",\"transform\":\"as_is (max 10 chars)\",\"condition\":\"Only when the subject has been issued a UCI; otherwise leave blank.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"UCI\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].ServedInMilitary[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.has_military_or_security_service\",\"transform\":\"derive: true if any military/militia/civil defence/security/police service period is recorded for the subject, else false -> yes_no_code:true/false\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 4 Military Service. Did you serve in any military, militia, or civil defence unit or serve in a security organization or police force (including non obligatory national service, reserve or volunteer units)?\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_start_date\",\"transform\":\"date:YYYY\",\"condition\":\"Only when Question 4 is answered Yes; each further service period adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service From Date Year. The year of the start of the Military Service in YYYY format\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_start_date\",\"transform\":\"date:MM\",\"condition\":\"Only when Question 4 is answered Yes; each further service period adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service From Date Month. The month of the start of the Military Service in MM format\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_end_date\",\"transform\":\"date:YYYY\",\"condition\":\"Only when Question 4 is answered Yes; each further service period adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service To Date Year. The year of the end of the Military Service in YYYY format\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_end_date\",\"transform\":\"date:MM\",\"condition\":\"Only when Question 4 is answered Yes; each further service period adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service To Date Month. The month of the end of the Military Service in MM format\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Location[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_location\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Only when Question 4 is answered Yes; each further service period adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service Location/Place where stationed. The location or place of your military service\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Province[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_province\",\"transform\":\"as_is (max 50 chars)\",\"condition\":\"Only when Question 4 is answered Yes; each further service period adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service Province. The province of your military service\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].CountryCode[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_country\",\"transform\":\"code_list:imm5257_1e.CountryCode (codes exactly as in options_resolved, e.g. Canada=511, United States of America=461, Unknown=000)\",\"condition\":\"Only when Question 4 is answered Yes; each further service period adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service Country or Territory. The country or territory of your military service\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].HaveWitnessedParticipated[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Asks whether the subject personally witnessed or participated in ill treatment of prisoners or civilians, looting or desecration; an ordinary case record does not hold this, and it cannot be derived from other facts. It must come from the subject's own declaration.\",\"evidence_quote\":\"Question 5. Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Year[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Only when Question 5 is answered Yes; each further event adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":\"Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events.\",\"evidence_quote\":\"Question 5 From Date Year. The year of the start of the event in YYYY format\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Month[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Only when Question 5 is answered Yes; each further event adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":\"Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events.\",\"evidence_quote\":\"Question 5 From Date Month. The month of the start of the event in MM format\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Year[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Only when Question 5 is answered Yes; each further event adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":\"Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events.\",\"evidence_quote\":\"Question 5 To Date Year. The year of the end of the event in YYYY format\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Month[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Only when Question 5 is answered Yes; each further event adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":\"Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events.\",\"evidence_quote\":\"Question 5 To Date Month. The month of the end of the event in MM format\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Location[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Only when Question 5 is answered Yes; each further event adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":\"Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events.\",\"evidence_quote\":\"Question 5 Location. The location of the event\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Province[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Only when Question 5 is answered Yes; each further event adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":\"Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events.\",\"evidence_quote\":\"Question 5 Province. The province of the event\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].CountryCode[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Only when Question 5 is answered Yes; each further event adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":\"Detail of a witnessed or participated event under Question 5; no ordinary case record holds such events. If later supplied, codes must come from this form's CountryCode list.\",\"evidence_quote\":\"Question 5 Country or Territory. The country or territory of the event\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Details[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Only when Question 5 is answered Yes; each further event adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":\"Free-text description of a witnessed or participated event under Question 5; no ordinary case record holds such events.\",\"evidence_quote\":\"Details:\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].BeenMemberAssociated[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"The answer depends on characterising organizations (political party, or a group that engaged in or advocated violence; caption is truncated in the inventory). It cannot be safely derived from a list of memberships the firm may hold; the subject must declare it. Reviewer should confirm the full question wording.\",\"evidence_quote\":\"Question 6 Membership or Association with Organizations. Are you, or have you ever been a member or associated with any political party, or other group or organization which has engaged in or advocated violence as a means to achieving a pol\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_membership_start_date\",\"transform\":\"date:YYYY\",\"condition\":\"Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations From Date Year. The year of the start of the membership or association in YYYY format\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_membership_start_date\",\"transform\":\"date:MM\",\"condition\":\"Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations From Date Month. The month of the start of the membership or association in MM format\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_membership_end_date\",\"transform\":\"date:YYYY\",\"condition\":\"Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations To Date Year. The year of the end of the membership or association in YYYY format\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_membership_end_date\",\"transform\":\"date:MM\",\"condition\":\"Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations To Date Month. The month of the end of the membership or association in MM format\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].NameOfOrganization[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations Name of Organization\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].ActivitiesPositionHeld[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_activities_positions\",\"transform\":\"as_is (max 50 chars)\",\"condition\":\"Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations Activities and/or positions held within organization\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].Province[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_province\",\"transform\":\"as_is (max 50 chars)\",\"condition\":\"Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations Province. The province of the organization\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].CountryCode[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_country\",\"transform\":\"code_list:imm5257_1e.CountryCode (codes exactly as in options_resolved, e.g. Canada=511, United States of America=461, Unknown=000)\",\"condition\":\"Only when Question 6 is answered Yes, and only for memberships within the scope of Question 6; each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations Country or Territory. The country or territory of the organization\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].HeldGovernmentPositions[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.has_held_government_position\",\"transform\":\"derive: true if any government position is recorded for the subject, else false -> yes_no_code:true/false\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Question7 Government Positions. Have you ever held any government positions (such as civil servant, judge, police officer, mayor, member of parliament, hospital administrator)? Do not use abbreviations.\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_start_date\",\"transform\":\"date:YYYY\",\"condition\":\"Only when Question 7 is answered Yes; each further government position adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions From Date Year. The year of the start of the government position held in YYYY format\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_start_date\",\"transform\":\"date:MM\",\"condition\":\"Only when Question 7 is answered Yes; each further government position adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions From Date Month. The month of the start of the government position held in MM format\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_end_date\",\"transform\":\"date:YYYY\",\"condition\":\"Only when Question 7 is answered Yes; each further government position adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions To Date Year. The year of the end of the government position held in YYYY format\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_end_date\",\"transform\":\"date:MM\",\"condition\":\"Only when Question 7 is answered Yes; each further government position adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions To Date Month. The month of the end of the government position held in MM format\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].CountryCode[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_country\",\"transform\":\"code_list:imm5257_1e.CountryCode (codes exactly as in options_resolved, e.g. Canada=511, United States of America=461, Unknown=000)\",\"condition\":\"Only when Question 7 is answered Yes; each further government position adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions Country or Territory. The country or territory of the government position held\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].LevelOfJurisdiction[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_jurisdiction_level\",\"transform\":\"as_is (max 50 chars)\",\"condition\":\"Only when Question 7 is answered Yes; each further government position adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions Level of jurisdiction. The level of jurisdiction of the government position held (Example: national, regional, municipal)\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].DepartmentBranch[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_department\",\"transform\":\"as_is (max 100 chars; no abbreviations)\",\"condition\":\"Only when Question 7 is answered Yes; each further government position adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions Department/Branch. The department or branch of the government position held\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].ActivitiesPositionHeld[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_activities\",\"transform\":\"as_is (max 50 chars; no abbreviations)\",\"condition\":\"Only when Question 7 is answered Yes; each further government position adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions Activities and/or positions held\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].TraveledOtherCountry[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.travel_country\",\"transform\":\"derive: true if any recorded trip, starting after the later of the subject's 18th birthday or five years before the application date, went to a country other than the subject's countries of citizenship and current country of residence, else false -> yes_no_code:true/false\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 8 Previous Travel. Since the age of 18 or during the past five years, whichever is more recent, have you travelled to any country other than the country of your citizenship or your current country of residence?\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_start_date\",\"transform\":\"date:YYYY\",\"condition\":\"Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel From Date Year. The year of the start of your previous travel in YYYY format\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_start_date\",\"transform\":\"date:MM\",\"condition\":\"Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel From Date Month. The month of the start of your previous travel in MM format\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_end_date\",\"transform\":\"date:YYYY\",\"condition\":\"Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel To Date Year. The year of the end of your previous travel in YYYY format\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_end_date\",\"transform\":\"date:MM\",\"condition\":\"Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel To Date Month. The month of the end of your previous travel in MM format\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].CountryCode[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_country\",\"transform\":\"code_list:imm5257_1e.CountryCode (codes exactly as in options_resolved, e.g. Canada=511, United States of America=461, Unknown=000)\",\"condition\":\"Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel Country or Territory. The country or territory where your previous travel took place\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].Location[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_location\",\"transform\":\"as_is (max 50 chars)\",\"condition\":\"Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel Location. The location where your previous travel took place\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].PurposeOfTravel[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_purpose\",\"transform\":\"as_is (max 50 chars)\",\"condition\":\"Only when Question 8 is answered Yes, and only for trips within the Question 8 window to countries other than citizenship/residence; each further trip adds a row.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel Purpose of Travel.\"}]}"
+}

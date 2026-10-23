@@ -1,0 +1,31 @@
+{
+  "checked_at": "2026-10-18T13:57:31.952681+00:00",
+  "html_sha256": "8afb68a30dd79c7130443cb5666fccec68bc039744c50bbcc00f99d8d24f02d0",
+  "X9_attributes": {
+    "id": "X9",
+    "name": "Ready, missing, or both?"
+  },
+  "X9_flows": [
+    {
+      "id": "F_v4_12",
+      "name": "Facts ready for a form",
+      "target": "L4b",
+      "condition": "Facts ready for a form"
+    },
+    {
+      "id": "F_v4_13",
+      "name": "Client answer or document missing",
+      "target": "A_7_2",
+      "condition": "Client answer or document missing"
+    }
+  ],
+  "panel_count": 57,
+  "failures": [],
+  "material_contradiction": {
+    "activity": "10.4",
+    "actual_sentence": "Alternate case. The investigation finds the mapping right (the verified fact was wrong): the hold is released with the evidence; a form approved before the report keeps its approval and can be submitted.",
+    "dependency_8_1": true,
+    "dependency_9_3": true,
+    "assessment": "A correct mapping releases only the mapping hold; discovering a wrong fact cannot make that affected stale approved form submittable."
+  }
+}

@@ -1,0 +1,1447 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "c1-fieldmap-imm5257-1-live-20261020t045947461z",
+  "idempotency_key": "302aff8db8ce62c2d94fd7bce6e827a2db2dacf7792d2ff2f509d1cdaddfed1c",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "eeadd6745a707bf07c27ec5db2a04464b35a096c396fd96957e801bf7712cf3d",
+  "inputs": {
+   "combination": "1",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5257_1e.inventory.json",
+     "sha256": "4e73608de3833cb89d1e2ae2eb79485b71d892c82d8bc6e25c3af5b6533d0f1e"
+    }
+   ],
+   "configuration_version": "c1-draft-1"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 48000,
+   "prompt_version": "field-map.v1.md",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 40668,
+    "output_tokens": 16814,
+    "duration_ms": 125333
+   }
+  ],
+  "usage": {
+   "input_tokens": 40668,
+   "output_tokens": 16814,
+   "cost_usd": 0.498952,
+   "duration_ms": 125333
+  },
+  "started_at": "2026-10-20T04:59:47.461Z",
+  "ended_at": "2026-10-20T05:01:52.997Z",
+  "entries": [
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].FormVersion[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Invisible helper holding the form's own version string; form mechanics, not a case fact.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].FormName[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Invisible helper holding the form name; form mechanics, not a case fact.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ReaderInfo[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Invisible helper recording PDF reader information, set by form scripts.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ApplicationValidationDate[0].Year[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Invisible validation-date helper set by the form's Validate script, not by the case.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ApplicationValidationDate[0].Month[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Invisible validation-date helper set by the form's Validate script, not by the case.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ApplicationValidationDate[0].Day[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Invisible validation-date helper set by the form's Validate script, not by the case.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PrincipalApplicant[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "case.subject_is_principal_applicant",
+    "transform": "yes_no_code:true/false (true = The principal applicant; false = The spouse, common-law partner or dependent child aged 18 years or older of the principal applicant)",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "*Indicate whether you are"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].FormValidated[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Validation flag set by the form's Validate button script (drives barcode mask visibility); form mechanics.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Validated"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.family_name",
+    "transform": "as_is (max 100 chars)",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "*Family name (as shown on your passport or travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GivenName[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.given_names",
+    "transform": "as_is (max 100 chars)",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Given name(s) (as shown on your passport or travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ApplicantBirthDate[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY (year part, 4 chars)",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "*Date of birth"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ApplicantBirthDate[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:MM (month part, 2 chars)",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 2 Date of Birth Month in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].ApplicantBirthDate[0].Day[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:DD (day part, 2 chars)",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 2 Date of Birth Day in DD format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].UCI[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.uci",
+    "transform": "as_is (max 10 chars)",
+    "condition": "Only if the person has been issued a UCI; optional box.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "UCI"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].ServedInMilitary[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.has_served_military_or_security",
+    "transform": "yes_no_code:true/false (use the recorded answer; do not infer No from absence of service records)",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 4 Military Service. Did you serve in any military, militia, or civil defence unit or serve in a security organization or police force (including non obligatory national service, reserve or volunteer units)?"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.military_service_start_date",
+    "transform": "date:YYYY (year part, 4 chars)",
+    "row": 0,
+    "condition": "Applies when Question 4 is Yes (true); no presence script in inventory, condition read from question wording. Repeating row group (initial 4, unbounded): each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service From Date Year. The year of the start of the Military Service in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.military_service_start_date",
+    "transform": "date:MM (month part, 2 chars)",
+    "row": 0,
+    "condition": "Applies when Question 4 is Yes (true). Each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service From Date Month. The month of the start of the Military Service in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.military_service_end_date",
+    "transform": "date:YYYY (year part, 4 chars)",
+    "row": 0,
+    "condition": "Applies when Question 4 is Yes (true). Each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service To Date Year. The year of the end of the Military Service in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.military_service_end_date",
+    "transform": "date:MM (month part, 2 chars)",
+    "row": 0,
+    "condition": "Applies when Question 4 is Yes (true). Each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service To Date Month. The month of the end of the Military Service in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Location[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.military_service_place",
+    "transform": "as_is (max 100 chars)",
+    "row": 0,
+    "condition": "Applies when Question 4 is Yes (true). Each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service Location/Place where stationed. The location or place of your military service"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Province[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.military_service_province_or_state",
+    "transform": "as_is (max 50 chars)",
+    "row": 0,
+    "condition": "Applies when Question 4 is Yes (true). Each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service Province. The province of your military service"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].CountryCode[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.military_service_country",
+    "transform": "code_list:imm5257_1e.CountryCode (3-digit codes exactly as listed in this form, e.g. Canada=511, United States of America=461, Unknown=000)",
+    "row": 0,
+    "condition": "Applies when Question 4 is Yes (true). Each further service period adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Military Service Country or Territory. The country or territory of your military service"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].HaveWitnessedParticipated[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Asks whether the person witnessed or participated in ill treatment of prisoners or civilians, looting or desecration of religious buildings. An ordinary case record does not hold whether the person was present at such events; the answer must come from the person directly. Reviewer may add a dedicated declaration fact if the firm records it (options: *Yes=true, *No=false).",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5. Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Year[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 0,
+    "condition": "Applies when Question 5 is Yes (true). Each further event adds a row.",
+    "unresolved_reason": "Start date of a witnessed/participated event; such events are not held in an ordinary case record.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 From Date Year. The year of the start of the event in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Month[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 0,
+    "condition": "Applies when Question 5 is Yes (true). Each further event adds a row.",
+    "unresolved_reason": "Start date of a witnessed/participated event; such events are not held in an ordinary case record.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 From Date Month. The month of the start of the event in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Year[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 0,
+    "condition": "Applies when Question 5 is Yes (true). Each further event adds a row.",
+    "unresolved_reason": "End date of a witnessed/participated event; such events are not held in an ordinary case record.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 To Date Year. The year of the end of the event in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Month[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 0,
+    "condition": "Applies when Question 5 is Yes (true). Each further event adds a row.",
+    "unresolved_reason": "End date of a witnessed/participated event; such events are not held in an ordinary case record.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 To Date Month. The month of the end of the event in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Location[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 0,
+    "condition": "Applies when Question 5 is Yes (true). Each further event adds a row.",
+    "unresolved_reason": "Location of a witnessed/participated event; such events are not held in an ordinary case record.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 Location. The location of the event"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Province[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 0,
+    "condition": "Applies when Question 5 is Yes (true). Each further event adds a row.",
+    "unresolved_reason": "Province of a witnessed/participated event; such events are not held in an ordinary case record.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 Province. The province of the event"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].CountryCode[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 0,
+    "condition": "Applies when Question 5 is Yes (true). Each further event adds a row.",
+    "unresolved_reason": "Country of a witnessed/participated event; such events are not held in an ordinary case record. If later mapped, use this form's CountryCode list.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 5 Country or Territory. The country or territory of the event"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Details[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "row": 0,
+    "condition": "Applies when Question 5 is Yes (true). Each further event adds a row.",
+    "unresolved_reason": "Free-text description of a witnessed/participated event (max 100 chars); not held in an ordinary case record and must be written by the person.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Details:"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].BeenMemberAssociated[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.member_of_violent_or_criminal_organization",
+    "transform": "yes_no_code:true/false (use the recorded answer; do not infer No from absence of membership records)",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 6 Membership or Association with Organizations. Are you, or have you ever been a member or associated with any political party, or other group or organization which has engaged in or advocated violence as a means to achieving a pol"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_membership_start_date",
+    "transform": "date:YYYY (year part, 4 chars)",
+    "row": 0,
+    "condition": "Applies when Question 6 is Yes (true); no presence script in inventory. Repeating row group (initial 4, unbounded): each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations From Date Year. The year of the start of the membership or association in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_membership_start_date",
+    "transform": "date:MM (month part, 2 chars)",
+    "row": 0,
+    "condition": "Applies when Question 6 is Yes (true). Each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations From Date Month. The month of the start of the membership or association in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_membership_end_date",
+    "transform": "date:YYYY (year part, 4 chars)",
+    "row": 0,
+    "condition": "Applies when Question 6 is Yes (true). Each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations To Date Year. The year of the end of the membership or association in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_membership_end_date",
+    "transform": "date:MM (month part, 2 chars)",
+    "row": 0,
+    "condition": "Applies when Question 6 is Yes (true). Each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations To Date Month. The month of the end of the membership or association in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].NameOfOrganization[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_name",
+    "transform": "as_is (max 100 chars)",
+    "row": 0,
+    "condition": "Applies when Question 6 is Yes (true). Each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations Name of Organization"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].ActivitiesPositionHeld[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_activities_or_positions",
+    "transform": "as_is (max 50 chars)",
+    "row": 0,
+    "condition": "Applies when Question 6 is Yes (true). Each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations Activities and/or positions held within organization"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].Province[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_province_or_state",
+    "transform": "as_is (max 50 chars)",
+    "row": 0,
+    "condition": "Applies when Question 6 is Yes (true). Each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations Province. The province of the organization"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].CountryCode[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.organization_country",
+    "transform": "code_list:imm5257_1e.CountryCode (3-digit codes exactly as listed in this form)",
+    "row": 0,
+    "condition": "Applies when Question 6 is Yes (true). Each further membership adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Organizations Country or Territory. The country or territory of the organization"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].HeldGovernmentPositions[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.has_held_government_position",
+    "transform": "yes_no_code:true/false (use the recorded answer; do not infer No from absence of position records)",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question7 Government Positions. Have you ever held any government positions (such as civil servant, judge, police officer, mayor, member of parliament, hospital administrator)? Do not use abbreviations."
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.government_position_start_date",
+    "transform": "date:YYYY (year part, 4 chars)",
+    "row": 0,
+    "condition": "Applies when Question 7 is Yes (true); no presence script in inventory. Repeating row group (initial 4, unbounded): each further position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions From Date Year. The year of the start of the government position held in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.government_position_start_date",
+    "transform": "date:MM (month part, 2 chars)",
+    "row": 0,
+    "condition": "Applies when Question 7 is Yes (true). Each further position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions From Date Month. The month of the start of the government position held in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.government_position_end_date",
+    "transform": "date:YYYY (year part, 4 chars)",
+    "row": 0,
+    "condition": "Applies when Question 7 is Yes (true). Each further position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions To Date Year. The year of the end of the government position held in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.government_position_end_date",
+    "transform": "date:MM (month part, 2 chars)",
+    "row": 0,
+    "condition": "Applies when Question 7 is Yes (true). Each further position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions To Date Month. The month of the end of the government position held in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].CountryCode[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.government_position_country",
+    "transform": "code_list:imm5257_1e.CountryCode (3-digit codes exactly as listed in this form)",
+    "row": 0,
+    "condition": "Applies when Question 7 is Yes (true). Each further position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions Country or Territory. The country or territory of the government position held"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].LevelOfJurisdiction[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.government_position_jurisdiction_level",
+    "transform": "as_is (max 50 chars)",
+    "row": 0,
+    "condition": "Applies when Question 7 is Yes (true). Each further position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions Level of jurisdiction. The level of jurisdiction of the government position held (Example: national, regional, municipal)"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].DepartmentBranch[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.government_position_department",
+    "transform": "as_is (max 100 chars; no abbreviations per form instruction)",
+    "row": 0,
+    "condition": "Applies when Question 7 is Yes (true). Each further position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions Department/Branch. The department or branch of the government position held"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].ActivitiesPositionHeld[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.government_position_activities",
+    "transform": "as_is (max 50 chars; no abbreviations per form instruction)",
+    "row": 0,
+    "condition": "Applies when Question 7 is Yes (true). Each further position adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Government Positions Activities and/or positions held"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].TraveledOtherCountry[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.travel_country",
+    "transform": "derive_yes_no:true if any recorded trip falls within the window (since age 18 or the past five years, whichever is more recent) to a country other than the person's country of citizenship or current country of residence, else false; output codes true/false",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Question 8 Previous Travel. Since the age of 18 or during the past five years, whichever is more recent, have you travelled to any country other than the country of your citizenship or your current country of residence?"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.travel_start_date",
+    "transform": "date:YYYY (year part, 4 chars)",
+    "row": 0,
+    "condition": "Applies when Question 8 is Yes (true); include only trips within the question's window to countries other than citizenship/residence. Repeating row group (initial 4, unbounded): each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel From Date Year. The year of the start of your previous travel in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.travel_start_date",
+    "transform": "date:MM (month part, 2 chars)",
+    "row": 0,
+    "condition": "Applies when Question 8 is Yes (true). Each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel From Date Month. The month of the start of your previous travel in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Year[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.travel_end_date",
+    "transform": "date:YYYY (year part, 4 chars)",
+    "row": 0,
+    "condition": "Applies when Question 8 is Yes (true). Each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel To Date Year. The year of the end of your previous travel in YYYY format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Month[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.travel_end_date",
+    "transform": "date:MM (month part, 2 chars)",
+    "row": 0,
+    "condition": "Applies when Question 8 is Yes (true). Each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel To Date Month. The month of the end of your previous travel in MM format"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].CountryCode[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.travel_country",
+    "transform": "code_list:imm5257_1e.CountryCode (3-digit codes exactly as listed in this form)",
+    "row": 0,
+    "condition": "Applies when Question 8 is Yes (true). Each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel Country or Territory. The country or territory where your previous travel took place"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].Location[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.travel_location",
+    "transform": "as_is (max 50 chars)",
+    "row": 0,
+    "condition": "Applies when Question 8 is Yes (true). Each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel Location. The location where your previous travel took place"
+    }
+   },
+   {
+    "form_edition": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+    "form_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+    "data_path": "Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].PurposeOfTravel[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.travel_purpose",
+    "transform": "as_is (max 50 chars)",
+    "row": 0,
+    "condition": "Applies when Question 8 is Yes (true). Each further trip adds a row.",
+    "evidence": {
+     "file_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+     "quote": "Previous Travel Purpose of Travel."
+    }
+   }
+  ]
+ },
+ "contract_valid": false,
+ "contract_errors": [
+  {
+   "instancePath": "/entries/0/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/1/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/2/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/3/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/4/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/5/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/6/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/7/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/8/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/9/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/10/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/11/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/12/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/13/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/14/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/15/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/16/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/17/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/18/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/19/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/20/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/21/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/22/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/23/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/24/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/25/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/26/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/27/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/28/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/29/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/30/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/31/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/32/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/33/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/34/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/35/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/36/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/37/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/38/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/39/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/40/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/41/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/42/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/43/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/44/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/45/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/46/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/47/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/48/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/49/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/50/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/51/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/52/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/53/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/54/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/55/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/56/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  }
+ ],
+ "output_errors": null,
+ "launch_evidence": {
+  "path_code_sha256": "22d6eeaa66f10560e724ac579a7325b568cae397cdccb6cc742ddd0ff007c785",
+  "template_sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+  "schema_file": "field-map-output.v1.schema.json",
+  "schema_sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+  "screened": true,
+  "output_sha256": "eeadd6745a707bf07c27ec5db2a04464b35a096c396fd96957e801bf7712cf3d",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "62a972f9c1f48f0dfae972fef4aa2761fbe4c774f0ca75dbc9ad447370d67037",
+  "request_bytes": 96183,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 40,
+   "committed_usd": 3.874028
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5257_1e.inventory.json",
+    "sha256": "4e73608de3833cb89d1e2ae2eb79485b71d892c82d8bc6e25c3af5b6533d0f1e",
+    "kind": "inventory"
+   }
+  ]
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.\",\"canonical_fields\":[{\"id\":\"case.subject_is_principal_applicant\",\"meaning\":\"Whether the person the form is about is the principal applicant in the case, rather than an accompanying spouse, common-law partner or adult dependent child\",\"value_type\":\"yes_no\"},{\"id\":\"person.family_name\",\"meaning\":\"Person's family name (surname) as shown on their passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.given_names\",\"meaning\":\"Person's given name(s) as shown on their passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"Person's date of birth\",\"value_type\":\"date\"},{\"id\":\"person.uci\",\"meaning\":\"Person's Unique Client Identifier issued by IRCC\",\"value_type\":\"code\"},{\"id\":\"person.has_served_military_or_security\",\"meaning\":\"Whether the person ever served in any military, militia, civil defence unit, security organization or police force, including non-obligatory national service, reserve or volunteer units\",\"value_type\":\"yes_no\"},{\"id\":\"person.military_service_start_date\",\"meaning\":\"Start date of one period of military, militia, security or police service\",\"value_type\":\"date\"},{\"id\":\"person.military_service_end_date\",\"meaning\":\"End date of one period of military, militia, security or police service\",\"value_type\":\"date\"},{\"id\":\"person.military_service_place\",\"meaning\":\"Location or place where the person was stationed during one period of service\",\"value_type\":\"text\"},{\"id\":\"person.military_service_province_or_state\",\"meaning\":\"Province, state or region of one period of service\",\"value_type\":\"text\"},{\"id\":\"person.military_service_country\",\"meaning\":\"Country or territory of one period of service\",\"value_type\":\"country\"},{\"id\":\"person.member_of_violent_or_criminal_organization\",\"meaning\":\"Whether the person is or ever was a member of or associated with a political party or other group or organization that engaged in or advocated violence to achieve a political or religious objective, or was associated with criminal activity\",\"value_type\":\"yes_no\"},{\"id\":\"person.organization_membership_start_date\",\"meaning\":\"Start date of one membership in or association with an organization\",\"value_type\":\"date\"},{\"id\":\"person.organization_membership_end_date\",\"meaning\":\"End date of one membership in or association with an organization\",\"value_type\":\"date\"},{\"id\":\"person.organization_name\",\"meaning\":\"Name of the organization of one membership or association\",\"value_type\":\"text\"},{\"id\":\"person.organization_activities_or_positions\",\"meaning\":\"Activities and/or positions the person held within the organization\",\"value_type\":\"text\"},{\"id\":\"person.organization_province_or_state\",\"meaning\":\"Province, state or region of the organization\",\"value_type\":\"text\"},{\"id\":\"person.organization_country\",\"meaning\":\"Country or territory of the organization\",\"value_type\":\"country\"},{\"id\":\"person.has_held_government_position\",\"meaning\":\"Whether the person ever held any government position (for example civil servant, judge, police officer, mayor, member of parliament, hospital administrator)\",\"value_type\":\"yes_no\"},{\"id\":\"person.government_position_start_date\",\"meaning\":\"Start date of one government position held\",\"value_type\":\"date\"},{\"id\":\"person.government_position_end_date\",\"meaning\":\"End date of one government position held\",\"value_type\":\"date\"},{\"id\":\"person.government_position_country\",\"meaning\":\"Country or territory of one government position held\",\"value_type\":\"country\"},{\"id\":\"person.government_position_jurisdiction_level\",\"meaning\":\"Level of jurisdiction of the government position (for example national, regional, municipal)\",\"value_type\":\"text\"},{\"id\":\"person.government_position_department\",\"meaning\":\"Department or branch of the government position\",\"value_type\":\"text\"},{\"id\":\"person.government_position_activities\",\"meaning\":\"Activities and/or positions held in the government position\",\"value_type\":\"text\"},{\"id\":\"person.travel_start_date\",\"meaning\":\"Start date of one trip abroad\",\"value_type\":\"date\"},{\"id\":\"person.travel_end_date\",\"meaning\":\"End date of one trip abroad\",\"value_type\":\"date\"},{\"id\":\"person.travel_country\",\"meaning\":\"Country or territory visited on one trip\",\"value_type\":\"country\"},{\"id\":\"person.travel_location\",\"meaning\":\"Location (city or place) visited on one trip\",\"value_type\":\"text\"},{\"id\":\"person.travel_purpose\",\"meaning\":\"Purpose of one trip\",\"value_type\":\"text\"}],\"entries\":[{\"data_path\":\"Schedule1[0].FormVersion[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Invisible helper holding the form's own version string; form mechanics, not a case fact.\",\"evidence_quote\":\"JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen\"},{\"data_path\":\"Schedule1[0].FormName[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Invisible helper holding the form name; form mechanics, not a case fact.\",\"evidence_quote\":\"JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen\"},{\"data_path\":\"Schedule1[0].ReaderInfo[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Invisible helper recording PDF reader information, set by form scripts.\",\"evidence_quote\":\"JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen\"},{\"data_path\":\"Schedule1[0].ApplicationValidationDate[0].Year[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Invisible validation-date helper set by the form's Validate script, not by the case.\",\"evidence_quote\":\"JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen\"},{\"data_path\":\"Schedule1[0].ApplicationValidationDate[0].Month[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Invisible validation-date helper set by the form's Validate script, not by the case.\",\"evidence_quote\":\"JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen\"},{\"data_path\":\"Schedule1[0].ApplicationValidationDate[0].Day[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Invisible validation-date helper set by the form's Validate script, not by the case.\",\"evidence_quote\":\"JavaScript has been disabled, the form requires JavaScript to validate properlyPlease enable JavaScript through Preferen\"},{\"data_path\":\"Schedule1[0].PrincipalApplicant[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.subject_is_principal_applicant\",\"transform\":\"yes_no_code:true/false (true = The principal applicant; false = The spouse, common-law partner or dependent child aged 18 years or older of the principal applicant)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"*Indicate whether you are\"},{\"data_path\":\"Schedule1[0].FormValidated[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Validation flag set by the form's Validate button script (drives barcode mask visibility); form mechanics.\",\"evidence_quote\":\"Validated\"},{\"data_path\":\"Schedule1[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"*Family name (as shown on your passport or travel document)\"},{\"data_path\":\"Schedule1[0].GivenName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is (max 100 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Given name(s) (as shown on your passport or travel document)\"},{\"data_path\":\"Schedule1[0].ApplicantBirthDate[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY (year part, 4 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"*Date of birth\"},{\"data_path\":\"Schedule1[0].ApplicantBirthDate[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:MM (month part, 2 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 2 Date of Birth Month in MM format\"},{\"data_path\":\"Schedule1[0].ApplicantBirthDate[0].Day[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:DD (day part, 2 chars)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 2 Date of Birth Day in DD format\"},{\"data_path\":\"Schedule1[0].UCI[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.uci\",\"transform\":\"as_is (max 10 chars)\",\"condition\":\"Only if the person has been issued a UCI; optional box.\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"UCI\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].ServedInMilitary[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.has_served_military_or_security\",\"transform\":\"yes_no_code:true/false (use the recorded answer; do not infer No from absence of service records)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 4 Military Service. Did you serve in any military, militia, or civil defence unit or serve in a security organization or police force (including non obligatory national service, reserve or volunteer units)?\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_start_date\",\"transform\":\"date:YYYY (year part, 4 chars)\",\"condition\":\"Applies when Question 4 is Yes (true); no presence script in inventory, condition read from question wording. Repeating row group (initial 4, unbounded): each further service period adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service From Date Year. The year of the start of the Military Service in YYYY format\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].From[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_start_date\",\"transform\":\"date:MM (month part, 2 chars)\",\"condition\":\"Applies when Question 4 is Yes (true). Each further service period adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service From Date Month. The month of the start of the Military Service in MM format\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_end_date\",\"transform\":\"date:YYYY (year part, 4 chars)\",\"condition\":\"Applies when Question 4 is Yes (true). Each further service period adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service To Date Year. The year of the end of the Military Service in YYYY format\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].To[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_end_date\",\"transform\":\"date:MM (month part, 2 chars)\",\"condition\":\"Applies when Question 4 is Yes (true). Each further service period adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service To Date Month. The month of the end of the Military Service in MM format\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Location[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_place\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Applies when Question 4 is Yes (true). Each further service period adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service Location/Place where stationed. The location or place of your military service\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].Province[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_province_or_state\",\"transform\":\"as_is (max 50 chars)\",\"condition\":\"Applies when Question 4 is Yes (true). Each further service period adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service Province. The province of your military service\"},{\"data_path\":\"Schedule1[0].MilitaryServiceInfo[0].MilitaryServiceDetails[0].MilitaryServiceDetail[*].CountryCode[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.military_service_country\",\"transform\":\"code_list:imm5257_1e.CountryCode (3-digit codes exactly as listed in this form, e.g. Canada=511, United States of America=461, Unknown=000)\",\"condition\":\"Applies when Question 4 is Yes (true). Each further service period adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Military Service Country or Territory. The country or territory of your military service\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].HaveWitnessedParticipated[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Asks whether the person witnessed or participated in ill treatment of prisoners or civilians, looting or desecration of religious buildings. An ordinary case record does not hold whether the person was present at such events; the answer must come from the person directly. Reviewer may add a dedicated declaration fact if the firm records it (options: *Yes=true, *No=false).\",\"evidence_quote\":\"Question 5. Have you ever witnessed or participated in the ill treatment of prisoners or civilians, looting or desecration of religious buildings?\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Year[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Applies when Question 5 is Yes (true). Each further event adds a row.\",\"confidence\":\"low\",\"unresolved_reason\":\"Start date of a witnessed/participated event; such events are not held in an ordinary case record.\",\"evidence_quote\":\"Question 5 From Date Year. The year of the start of the event in YYYY format\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].From[0].Month[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Applies when Question 5 is Yes (true). Each further event adds a row.\",\"confidence\":\"low\",\"unresolved_reason\":\"Start date of a witnessed/participated event; such events are not held in an ordinary case record.\",\"evidence_quote\":\"Question 5 From Date Month. The month of the start of the event in MM format\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Year[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Applies when Question 5 is Yes (true). Each further event adds a row.\",\"confidence\":\"low\",\"unresolved_reason\":\"End date of a witnessed/participated event; such events are not held in an ordinary case record.\",\"evidence_quote\":\"Question 5 To Date Year. The year of the end of the event in YYYY format\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].To[0].Month[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Applies when Question 5 is Yes (true). Each further event adds a row.\",\"confidence\":\"low\",\"unresolved_reason\":\"End date of a witnessed/participated event; such events are not held in an ordinary case record.\",\"evidence_quote\":\"Question 5 To Date Month. The month of the end of the event in MM format\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Location[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Applies when Question 5 is Yes (true). Each further event adds a row.\",\"confidence\":\"low\",\"unresolved_reason\":\"Location of a witnessed/participated event; such events are not held in an ordinary case record.\",\"evidence_quote\":\"Question 5 Location. The location of the event\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Province[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Applies when Question 5 is Yes (true). Each further event adds a row.\",\"confidence\":\"low\",\"unresolved_reason\":\"Province of a witnessed/participated event; such events are not held in an ordinary case record.\",\"evidence_quote\":\"Question 5 Province. The province of the event\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].CountryCode[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Applies when Question 5 is Yes (true). Each further event adds a row.\",\"confidence\":\"low\",\"unresolved_reason\":\"Country of a witnessed/participated event; such events are not held in an ordinary case record. If later mapped, use this form's CountryCode list.\",\"evidence_quote\":\"Question 5 Country or Territory. The country or territory of the event\"},{\"data_path\":\"Schedule1[0].WarHumanityCrimesInfo[0].WarHumanityCrimesDetails[0].WarHumanityCrimesDetail[*].Details[0]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":0,\"fact\":null,\"transform\":null,\"condition\":\"Applies when Question 5 is Yes (true). Each further event adds a row.\",\"confidence\":\"low\",\"unresolved_reason\":\"Free-text description of a witnessed/participated event (max 100 chars); not held in an ordinary case record and must be written by the person.\",\"evidence_quote\":\"Details:\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].BeenMemberAssociated[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.member_of_violent_or_criminal_organization\",\"transform\":\"yes_no_code:true/false (use the recorded answer; do not infer No from absence of membership records)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 6 Membership or Association with Organizations. Are you, or have you ever been a member or associated with any political party, or other group or organization which has engaged in or advocated violence as a means to achieving a pol\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_membership_start_date\",\"transform\":\"date:YYYY (year part, 4 chars)\",\"condition\":\"Applies when Question 6 is Yes (true); no presence script in inventory. Repeating row group (initial 4, unbounded): each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations From Date Year. The year of the start of the membership or association in YYYY format\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].From[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_membership_start_date\",\"transform\":\"date:MM (month part, 2 chars)\",\"condition\":\"Applies when Question 6 is Yes (true). Each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations From Date Month. The month of the start of the membership or association in MM format\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_membership_end_date\",\"transform\":\"date:YYYY (year part, 4 chars)\",\"condition\":\"Applies when Question 6 is Yes (true). Each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations To Date Year. The year of the end of the membership or association in YYYY format\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].To[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_membership_end_date\",\"transform\":\"date:MM (month part, 2 chars)\",\"condition\":\"Applies when Question 6 is Yes (true). Each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations To Date Month. The month of the end of the membership or association in MM format\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].NameOfOrganization[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_name\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Applies when Question 6 is Yes (true). Each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations Name of Organization\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].ActivitiesPositionHeld[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_activities_or_positions\",\"transform\":\"as_is (max 50 chars)\",\"condition\":\"Applies when Question 6 is Yes (true). Each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations Activities and/or positions held within organization\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].Province[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_province_or_state\",\"transform\":\"as_is (max 50 chars)\",\"condition\":\"Applies when Question 6 is Yes (true). Each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations Province. The province of the organization\"},{\"data_path\":\"Schedule1[0].MembershipAssociationInfo[0].MembershipAssociationDetails[0].MembershipAssociationDetail[*].CountryCode[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.organization_country\",\"transform\":\"code_list:imm5257_1e.CountryCode (3-digit codes exactly as listed in this form)\",\"condition\":\"Applies when Question 6 is Yes (true). Each further membership adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Organizations Country or Territory. The country or territory of the organization\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].HeldGovernmentPositions[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.has_held_government_position\",\"transform\":\"yes_no_code:true/false (use the recorded answer; do not infer No from absence of position records)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Question7 Government Positions. Have you ever held any government positions (such as civil servant, judge, police officer, mayor, member of parliament, hospital administrator)? Do not use abbreviations.\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_start_date\",\"transform\":\"date:YYYY (year part, 4 chars)\",\"condition\":\"Applies when Question 7 is Yes (true); no presence script in inventory. Repeating row group (initial 4, unbounded): each further position adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions From Date Year. The year of the start of the government position held in YYYY format\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].From[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_start_date\",\"transform\":\"date:MM (month part, 2 chars)\",\"condition\":\"Applies when Question 7 is Yes (true). Each further position adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions From Date Month. The month of the start of the government position held in MM format\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_end_date\",\"transform\":\"date:YYYY (year part, 4 chars)\",\"condition\":\"Applies when Question 7 is Yes (true). Each further position adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions To Date Year. The year of the end of the government position held in YYYY format\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].To[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_end_date\",\"transform\":\"date:MM (month part, 2 chars)\",\"condition\":\"Applies when Question 7 is Yes (true). Each further position adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions To Date Month. The month of the end of the government position held in MM format\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].CountryCode[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_country\",\"transform\":\"code_list:imm5257_1e.CountryCode (3-digit codes exactly as listed in this form)\",\"condition\":\"Applies when Question 7 is Yes (true). Each further position adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions Country or Territory. The country or territory of the government position held\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].LevelOfJurisdiction[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_jurisdiction_level\",\"transform\":\"as_is (max 50 chars)\",\"condition\":\"Applies when Question 7 is Yes (true). Each further position adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions Level of jurisdiction. The level of jurisdiction of the government position held (Example: national, regional, municipal)\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].DepartmentBranch[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_department\",\"transform\":\"as_is (max 100 chars; no abbreviations per form instruction)\",\"condition\":\"Applies when Question 7 is Yes (true). Each further position adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions Department/Branch. The department or branch of the government position held\"},{\"data_path\":\"Schedule1[0].GovernmentPositionsInfo[0].GovernmentPositionsDetails[0].GovernmentPositionsDetail[*].ActivitiesPositionHeld[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.government_position_activities\",\"transform\":\"as_is (max 50 chars; no abbreviations per form instruction)\",\"condition\":\"Applies when Question 7 is Yes (true). Each further position adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Government Positions Activities and/or positions held\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].TraveledOtherCountry[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.travel_country\",\"transform\":\"derive_yes_no:true if any recorded trip falls within the window (since age 18 or the past five years, whichever is more recent) to a country other than the person's country of citizenship or current country of residence, else false; output codes true/false\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 8 Previous Travel. Since the age of 18 or during the past five years, whichever is more recent, have you travelled to any country other than the country of your citizenship or your current country of residence?\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_start_date\",\"transform\":\"date:YYYY (year part, 4 chars)\",\"condition\":\"Applies when Question 8 is Yes (true); include only trips within the question's window to countries other than citizenship/residence. Repeating row group (initial 4, unbounded): each further trip adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel From Date Year. The year of the start of your previous travel in YYYY format\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].From[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_start_date\",\"transform\":\"date:MM (month part, 2 chars)\",\"condition\":\"Applies when Question 8 is Yes (true). Each further trip adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel From Date Month. The month of the start of your previous travel in MM format\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Year[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_end_date\",\"transform\":\"date:YYYY (year part, 4 chars)\",\"condition\":\"Applies when Question 8 is Yes (true). Each further trip adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel To Date Year. The year of the end of your previous travel in YYYY format\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].To[0].Month[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_end_date\",\"transform\":\"date:MM (month part, 2 chars)\",\"condition\":\"Applies when Question 8 is Yes (true). Each further trip adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel To Date Month. The month of the end of your previous travel in MM format\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].CountryCode[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_country\",\"transform\":\"code_list:imm5257_1e.CountryCode (3-digit codes exactly as listed in this form)\",\"condition\":\"Applies when Question 8 is Yes (true). Each further trip adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel Country or Territory. The country or territory where your previous travel took place\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].Location[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_location\",\"transform\":\"as_is (max 50 chars)\",\"condition\":\"Applies when Question 8 is Yes (true). Each further trip adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel Location. The location where your previous travel took place\"},{\"data_path\":\"Schedule1[0].PreviousTravelInfo[0].PreviousTravelDetails[0].PreviousTravelDetail[*].PurposeOfTravel[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":0,\"fact\":\"person.travel_purpose\",\"transform\":\"as_is (max 50 chars)\",\"condition\":\"Applies when Question 8 is Yes (true). Each further trip adds a row.\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Previous Travel Purpose of Travel.\"}]}"
+}

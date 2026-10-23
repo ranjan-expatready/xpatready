@@ -1,0 +1,30 @@
+# Solution 1: Pathway Setup to Form Filling
+
+**Status, current revision and hash, audit, limitations and acceptance:** [delivery-control.md](delivery-control.md), the one home for them. Which files are current, and what each is for: [`../README.md` §3](../README.md#3-current-files-and-their-purpose). The [reusable process](../../playbook/solution-delivery.md) governs derivation and later changes.
+
+**Stack / next maker (D276/D277):** default to the verified product stack (captured React/Vite/UI and NestJS/Prisma/PostgreSQL); justify additions against a concrete gap. The founder starts one fresh replacement Claude Code maker after the prior checkpoint/stop, using NEXT and the one coverage record. This Codex chat reviews the exact saved implementation/evidence; no session has been launched by this planning update.
+
+**First deliverable (D275, 21 Oct):** a working database-backed configuration MVP: maintain reusable fields/sections/documents/rules in product screens, add another form through AI normalization and human review, and render questionnaires/checklist/form behavior from the stored version. Five programs and sample/reset controls are required. Then complete the connected client/agent journey and reuse/update proof. NEXT sets the sequence; the one coverage record owns acceptance.
+
+**Current prototype direction (D274, 21 Oct):** one connected product experience across Super Admin/configuration, content review/separate approval, client/applicant and firm-agent screens, ending in an actual checked PDF download. The admin starts with pathway/program/composition and official form attachments, invokes AI on screen and reviews reusable definitions/conditions/mappings before release. Five sample programs, normal-path sample-input loading and scoped Reset make the demo repeatable. Read the [one coverage/demo record](prototype/requirement-coverage-2026-10-20.md#complete-persona-based-product-experience-and-repeatable-demo-d274-21-oct) and NEXT; existing static generated views remain component evidence, not a completed product demo. Implementation remains the maker's; this is a founder-authorised Codex planning update, not a formal verdict.
+
+The table below is history: the build and file references of Solution 1 v2 and the first v3 drafts. It is not a reading path or a build instruction for current work.
+
+## Earlier artifact and build references (history)
+
+| | |
+|---|---|
+| **Status** | **Solution 1 v3 in progress, 17 Oct 2026.** One-pager **draft 2** built and ready for the separate checker: [`solution-1-one-pager.html`](solution-1-one-pager.html) (overview + seven BPMN phase views, 39 activities with inspector cards and Client A examples), built from `../tools/s3/` (`s3_data.py`, `s3_views.py`, `s3_ledger.py`) by `python3 ../tools/s3/build_one_pager.py`; browser checks `node ../tools/s3/check_one_pager.cjs`. Plan: `../tools/s3/one-pager-draft-2-plan.md`. Draft 1: `../../archive/ai-workers/solution-1-one-pager-v3-draft1-2026-10-17.html`. v2 (D227) remains the current pack until the v3 slides, pack and workbook are rebuilt; hostile review of v2: `../checks/s1-v2-adversarial-review-2026-10-17.md`. Artefacts: one-pager, walkthrough slides (to come), detailed solution and requirements, workbook, prototype. |
+| **The documents** | [`solution-1-pathway-setup-to-form-filling.html`](solution-1-pathway-setup-to-form-filling.html) (Parts A and B) · [`solution-1-requirements.xlsx`](solution-1-requirements.xlsx) · [`solution-1-prototype.html`](solution-1-prototype.html). The folder slug keeps its old name. |
+| **Build** | `python3 ../tools/s2/build_s2.py` builds all three from `../tools/s2/` (`s2_exec.html`, `s2_detail.html`, `journey.html`, `s2_data.py`, `s2.css`); the prototype fragment is `../tools/solution1-prototype.html`. Edit a source, then rebuild; never edit the outputs. |
+| **Inputs** | [`inputs/meeting-2026-10-17/digest.md`](inputs/meeting-2026-10-17/digest.md) (raw export alongside contains names). [`truth-review-2026-10-17.md`](truth-review-2026-10-17.md). |
+| **Decided** | D169, D174, D197 (saved maps fill); D211 (barcode forms); D215 (past cases); D217–D224; D225 (base lines by a person, conditional by AI); D226 (Solution 1, no appendices); D227 (configuration engine; two-level pack; in-house first). |
+| **Waiting on the founder** | Confirm the ten combinations; name the pilot firm (D215); versioning shape before the first commit (D213); send TC-39 and TC-177 (D187). |
+| **Checks** | The v7/v8 adversarial reviews (v8 with the Lead's disposition for Solution 1), v7/v8 preservation checks and the v2 screenshots `s1-browser-*.jpg` were moved on 19 Oct 2026 to `../../archive/ai-workers/working-set-cleanup-2026-10-19/` (list and checksums in its `MOVES.md`). |
+| **Previous versions** | Solution 1 v1: `../../archive/ai-workers/solution-1-pathway-setup-to-form-filling-v1-2026-10-17.html`.  `../../archive/ai-workers/pathway-setup-and-form-filling-v8-2026-10-17.html`, `-v7-`, `-v6-` (v8 holds the full requirement set HR-01–HR-24, the SA-01B change list and the evidence tables). v5 and the engine page: `../../archive/ai-workers/`. |
+
+Change log, 21 Oct 2026 (D274): current product-demo direction and repeatable-demo entry added by Codex under the founder's scoped planning instruction; historical references retained.
+
+Change log, 21 Oct 2026 (D275): founder-authorised Codex planning alignment prioritises the dynamic database-backed configuration MVP, form-addition normalization, human rule/definition authoring and common renderer as the first deliverable. Full persona journey and previous evidence retained; production reuse is a quality target, not qualification or equal-effort evidence.
+
+Change log, 21 Oct 2026 (D276/D277): founder specifies current product stack as default and requests one fresh replacement Claude Code maker handoff. Saved stack inspected, live code equivalence Unverified; no installation, session creation or implementation performed by this planning update.

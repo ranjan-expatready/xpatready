@@ -1,0 +1,54 @@
+{
+ "created_utc": "2026-10-21T09:51:21Z",
+ "note": "Official ESDC inputs (P-29). Never edit; a new edition is a new download with a new row. The LMIA application forms themselves (EMP5626 high-wage, EMP5627 low-wage, EMP5624, EMP5628, EMP5593) are NOT public: ESDC issues them only on request when LMIA Online cannot be used (canada.ca LMIA Online page, checked 21 Oct 2026); their catalogue pages say \"The form does not exist\".",
+ "items": [
+  {
+   "file": "emp5711e.pdf",
+   "url": "https://catalogue.servicecanada.gc.ca/apps/EForms/pdf/en/ESDC-EMP5711.pdf",
+   "edition": "EMP5711 (server date 24 Feb 2026)",
+   "title": "Employment Agreement for the High Wage Stream",
+   "combination": "Demo 4: LMIA \u203a High-wage",
+   "applicability": "Employer must give the worker a signed employment agreement (IRPR, in force 26 Sep 2022); public fillable XFA form in the Service Canada forms catalogue",
+   "approval": "P-29 (founder, 21 Oct 2026)",
+   "downloaded_utc": "2026-10-21T09:51:21Z",
+   "status": "ok",
+   "bytes": 123358,
+   "sha256": "2d4d3e29e4106a02979e952d8e28d460fe2f9e042fc668f426933aac9f173d86",
+   "server_last_modified": "Tue, 24 Feb 2026 15:37:54 GMT",
+   "is_pdf": true,
+   "path": "forms/emp5711e.pdf"
+  },
+  {
+   "file": "emp5712e.pdf",
+   "url": "https://catalogue.servicecanada.gc.ca/apps/EForms/pdf/en/ESDC-EMP5712.pdf",
+   "edition": "EMP5712 (server date 24 Feb 2026)",
+   "title": "Employment Agreement for the Low-Wage Stream",
+   "combination": "Demo 5: LMIA \u203a Low-wage",
+   "applicability": "Employer must give the worker a signed employment agreement (IRPR, in force 26 Sep 2022); public fillable XFA form in the Service Canada forms catalogue",
+   "approval": "P-29 (founder, 21 Oct 2026)",
+   "downloaded_utc": "2026-10-21T09:51:21Z",
+   "status": "ok",
+   "bytes": 142433,
+   "sha256": "fd253f7d2e0e3e948063ca9595ab48fe22481b1c050d1de35371ab8a498081fd",
+   "server_last_modified": "Tue, 24 Feb 2026 15:37:51 GMT",
+   "is_pdf": true,
+   "path": "forms/emp5712e.pdf"
+  },
+  {
+   "file": "emp5713e.pdf",
+   "url": "https://catalogue.servicecanada.gc.ca/apps/EForms/pdf/en/ESDC-EMP5713.pdf",
+   "edition": "EMP5713 (server date 24 Feb 2026)",
+   "title": "Employment Agreement for the Global Talent Stream",
+   "combination": "Extension: LMIA \u203a Global Talent Stream",
+   "applicability": "Employer must give the worker a signed employment agreement (IRPR, in force 26 Sep 2022); public fillable XFA form in the Service Canada forms catalogue",
+   "approval": "P-29 (founder, 21 Oct 2026)",
+   "downloaded_utc": "2026-10-21T09:51:21Z",
+   "status": "ok",
+   "bytes": 123395,
+   "sha256": "efe924da9a6ab1a103f0052e5bc97ec28ba4c16a396b9b6b2c590c2055a16a0b",
+   "server_last_modified": "Tue, 24 Feb 2026 15:37:49 GMT",
+   "is_pdf": true,
+   "path": "forms/emp5713e.pdf"
+  }
+ ]
+}

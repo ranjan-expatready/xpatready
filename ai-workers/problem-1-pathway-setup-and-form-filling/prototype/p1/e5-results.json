@@ -1,0 +1,1407 @@
+{
+ "experiment": "E5",
+ "run_utc": "20261019T165914Z",
+ "run_folder": "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p1/runs/e5-20261019T165914Z",
+ "pypdf": "6.19.0",
+ "python": "3.14.0",
+ "openssl": "OpenSSL 3.6.0 1 Oct 2025 (Library: OpenSSL 3.6.0 1 Oct 2025)",
+ "forms": [
+  {
+   "form": "imm1295e",
+   "source_sha256": "57fc256eef7d9d856e4ae85ebf8bfe80da41833ebde7a8c7ed78f2483470d7bb",
+   "bytes": 851860,
+   "poppler_original": {
+    "syntax_errors": 0,
+    "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+   },
+   "original_signatures": {
+    "/DocMDP": {
+     "byte_range": [
+      0,
+      214173,
+      248031,
+      503290
+     ],
+     "covers_whole_file": false,
+     "verify": "verified"
+    },
+    "/UR3": {
+     "byte_range": [
+      0,
+      838621,
+      850853,
+      1007
+     ],
+     "covers_whole_file": true,
+     "verify": "verified"
+    }
+   },
+   "runs": [
+    {
+     "values": "generic",
+     "mode": "append-only",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "8fed44a2b5aa6190cafc9e78f34f61828dbcd2682373612503c51ed865427b54",
+     "bytes": 939848,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 3,
+      "page1_text_starts": ""
+     },
+     "read_back": {
+      "error": "ParseError: no element found: line 1, column 0"
+     },
+     "signatures": {
+      "/DocMDP": {
+       "byte_range": [
+        0,
+        214173,
+        248031,
+        503290
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      },
+      "/UR3": {
+       "byte_range": [
+        0,
+        838621,
+        850853,
+        1007
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "full-rewrite",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "c350fe8bc2409bc54e99f43fcf1c6d20543d45fbbfddd6d1f7728c4a424a00d3",
+     "bytes": 775232,
+     "original_bytes_are_prefix": false,
+     "output_encrypted": false,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 242,
+      "read_back_equal": 242,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "xfdf": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/DocMDP": {
+       "byte_range": [
+        0,
+        214173,
+        248031,
+        503290
+       ],
+       "same_as_original": true,
+       "verify": "signature contents not found at byte range gap"
+      },
+      "/UR3": {
+       "byte_range": [
+        0,
+        838621,
+        850853,
+        1007
+       ],
+       "same_as_original": true,
+       "verify": "byte range beyond end of file"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "append-only-encrypted-diagnostic",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document",
+      "new datasets stream encrypted with the document key (private pypdf API)",
+      "/Encrypt and /Info copied into the appended trailer (cross-reference stream dictionary)"
+     ],
+     "output_sha256": "378e811c0c72829dc430a52967f3ff20648b7f7c864c235384c7567dd61b1bf1",
+     "bytes": 939902,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 242,
+      "read_back_equal": 242,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "xfdf": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/DocMDP": {
+       "byte_range": [
+        0,
+        214173,
+        248031,
+        503290
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      },
+      "/UR3": {
+       "byte_range": [
+        0,
+        838621,
+        850853,
+        1007
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "family",
+     "mode": "append-only",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "a24982d50d8463e42d71a403092f8a54e8e3407aad94f6f7673097b1263fd4da",
+     "bytes": 939242,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 3,
+      "page1_text_starts": ""
+     },
+     "read_back": {
+      "error": "ParseError: no element found: line 1, column 0"
+     },
+     "signatures": {
+      "/DocMDP": {
+       "byte_range": [
+        0,
+        214173,
+        248031,
+        503290
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      },
+      "/UR3": {
+       "byte_range": [
+        0,
+        838621,
+        850853,
+        1007
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "family",
+     "mode": "full-rewrite",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "5cde5854ee00da5f08d18a6085da87c7cafe55491c0f5563fa5bdfb7489b34a1",
+     "bytes": 774626,
+     "original_bytes_are_prefix": false,
+     "output_encrypted": false,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 32,
+      "read_back_equal": 32,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "xfdf": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/DocMDP": {
+       "byte_range": [
+        0,
+        214173,
+        248031,
+        503290
+       ],
+       "same_as_original": true,
+       "verify": "signature contents not found at byte range gap"
+      },
+      "/UR3": {
+       "byte_range": [
+        0,
+        838621,
+        850853,
+        1007
+       ],
+       "same_as_original": true,
+       "verify": "byte range beyond end of file"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "family",
+     "mode": "append-only-encrypted-diagnostic",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document",
+      "new datasets stream encrypted with the document key (private pypdf API)",
+      "/Encrypt and /Info copied into the appended trailer (cross-reference stream dictionary)"
+     ],
+     "output_sha256": "694cd4feccb24341a9d96431d51286c7557c488b2aa46da9af5db45809f92441",
+     "bytes": 939294,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 32,
+      "read_back_equal": 32,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "xfdf": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/DocMDP": {
+       "byte_range": [
+        0,
+        214173,
+        248031,
+        503290
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      },
+      "/UR3": {
+       "byte_range": [
+        0,
+        838621,
+        850853,
+        1007
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    }
+   ],
+   "r2_data_files": {
+    "generic": "5e8c1106fa2eeb0e65890b8708f3315ecebf10dccc335c4363b488eaf65b1559",
+    "family": "2cffac733a32bbef6f89ca6b964a490a39b3980b47d7b5005d3f698135b26c9e"
+   }
+  },
+  {
+   "form": "imm5707e",
+   "source_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+   "bytes": 2366133,
+   "poppler_original": {
+    "syntax_errors": 0,
+    "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+   },
+   "original_signatures": {
+    "/UR3": {
+     "byte_range": [
+      0,
+      1918347,
+      1930579,
+      1099
+     ],
+     "covers_whole_file": false,
+     "verify": "verified"
+    }
+   },
+   "runs": [
+    {
+     "values": "generic",
+     "mode": "append-only",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "1d09cd3e70fb61223d9c31fd87cb16989ff1ea1d631bd2b48381291d68ff6536",
+     "bytes": 2367153,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 328,
+      "page1_text_starts": ""
+     },
+     "read_back": {
+      "error": "ParseError: no element found: line 1, column 0"
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1918347,
+        1930579,
+        1099
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "full-rewrite",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "b966538502ca595794240e88f5a202c4f36c23e6de8fb71bfb542a489de80773",
+     "bytes": 2367690,
+     "original_bytes_are_prefix": false,
+     "output_encrypted": false,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 50,
+      "read_back_equal": 50,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1918347,
+        1930579,
+        1099
+       ],
+       "same_as_original": true,
+       "verify": "signature contents not found at byte range gap"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "append-only-encrypted-diagnostic",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document",
+      "new datasets stream encrypted with the document key (private pypdf API)",
+      "/Encrypt and /Info copied into the appended trailer (cross-reference stream dictionary)"
+     ],
+     "output_sha256": "f838234957628d4127a3a03368a56838d4418deb0bcbd6e93840b2f07b3b5fc5",
+     "bytes": 2367211,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 50,
+      "read_back_equal": 50,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1918347,
+        1930579,
+        1099
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "family",
+     "mode": "append-only",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "f204b878dac174bb156905d7229ab0eeb369b131d9979f869d238b82b0fc2904",
+     "bytes": 2367161,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 328,
+      "page1_text_starts": ""
+     },
+     "read_back": {
+      "error": "ParseError: no element found: line 1, column 0"
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1918347,
+        1930579,
+        1099
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "family",
+     "mode": "full-rewrite",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "02efc3e3f40681f3a3693c9b9f4b96d04c033df24c82e545d52bb3aaed91e979",
+     "bytes": 2367698,
+     "original_bytes_are_prefix": false,
+     "output_encrypted": false,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 39,
+      "read_back_equal": 39,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1918347,
+        1930579,
+        1099
+       ],
+       "same_as_original": true,
+       "verify": "signature contents not found at byte range gap"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "family",
+     "mode": "append-only-encrypted-diagnostic",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document",
+      "new datasets stream encrypted with the document key (private pypdf API)",
+      "/Encrypt and /Info copied into the appended trailer (cross-reference stream dictionary)"
+     ],
+     "output_sha256": "0ca9eff30c2f0a71d747b5c60bb0c2365c34d30c87754fdfee12148adcecacc5",
+     "bytes": 2367211,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 39,
+      "read_back_equal": 39,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1918347,
+        1930579,
+        1099
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    }
+   ],
+   "r2_data_files": {
+    "generic": "7221d47ab416365394de8714622cdb8174449b3f2f5041836fde85b7ff761d14",
+    "family": "92c0c66efe92d5164be322a5666d70d47ceeb73b85997af18996e9baf9d391c3"
+   }
+  },
+  {
+   "form": "imm5409e",
+   "source_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+   "bytes": 1467134,
+   "poppler_original": {
+    "syntax_errors": 0,
+    "page1_text_starts": "Save Reset Form Print Form PROTECTED WHEN COMPLETED - A Vali"
+   },
+   "original_signatures": {
+    "/UR3": {
+     "byte_range": [
+      0,
+      1453807,
+      1466039,
+      1095
+     ],
+     "covers_whole_file": true,
+     "verify": "verified"
+    }
+   },
+   "runs": [
+    {
+     "values": "generic",
+     "mode": "append-only",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "655b416e1344abeabc13237db7ddf30b6c20686bc43ea0b984a204b8f8437ede",
+     "bytes": 1467956,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 7,
+      "page1_text_starts": ""
+     },
+     "read_back": {
+      "error": "ParseError: no element found: line 1, column 0"
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1453807,
+        1466039,
+        1095
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "full-rewrite",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "68d150ee245479aab0d9b53ea2d461f72f2b018a269df4201d24f3bc8d816cee",
+     "bytes": 1511400,
+     "original_bytes_are_prefix": false,
+     "output_encrypted": false,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Save Reset Form Print Form PROTECTED WHEN COMPLETED - A Vali"
+     },
+     "read_back": {
+      "written": 32,
+      "read_back_equal": 32,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "preamble": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "PDFSecurity": true,
+       "form": true,
+       "postamble": true
+      }
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1453807,
+        1466039,
+        1095
+       ],
+       "same_as_original": true,
+       "verify": "signature contents not found at byte range gap"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "append-only-encrypted-diagnostic",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document",
+      "new datasets stream encrypted with the document key (private pypdf API)",
+      "/Encrypt and /Info copied into the appended trailer (cross-reference stream dictionary)"
+     ],
+     "output_sha256": "b8d39517a0f20f41bee1800ea6279231a1c663f02073d1c3011bebe108cdb16b",
+     "bytes": 1468007,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Save Reset Form Print Form PROTECTED WHEN COMPLETED - A Vali"
+     },
+     "read_back": {
+      "written": 32,
+      "read_back_equal": 32,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "preamble": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "PDFSecurity": true,
+       "form": true,
+       "postamble": true
+      }
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1453807,
+        1466039,
+        1095
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    }
+   ],
+   "r2_data_files": {
+    "generic": "2a44e5126f58f8b772917890dba16b7844a096cb7323b4dd3f3b93fa058342ae"
+   }
+  },
+  {
+   "form": "imm5476e",
+   "source_sha256": "aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4",
+   "bytes": 2016187,
+   "poppler_original": {
+    "syntax_errors": 0,
+    "page1_text_starts": "Save Reset Form Print Form PROTECTED WHEN COMPLETED - B Page"
+   },
+   "original_signatures": {
+    "/UR3": {
+     "byte_range": [
+      0,
+      2002846,
+      2015078,
+      1109
+     ],
+     "covers_whole_file": true,
+     "verify": "verified"
+    }
+   },
+   "runs": [
+    {
+     "values": "generic",
+     "mode": "append-only",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "65dd608bc3ff901e52b5a89ffd936d8c237feb8e0fdaad0c3de022303205b82e",
+     "bytes": 2017310,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 7,
+      "page1_text_starts": ""
+     },
+     "read_back": {
+      "error": "ParseError: no element found: line 1, column 0"
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        2002846,
+        2015078,
+        1109
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "full-rewrite",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "09d61a246917ee7912ee94861dc8c5efcb860ede3193ea061b36743d4c4ff89d",
+     "bytes": 2081422,
+     "original_bytes_are_prefix": false,
+     "output_encrypted": false,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Save Reset Form Print Form PROTECTED WHEN COMPLETED - B Page"
+     },
+     "read_back": {
+      "written": 53,
+      "read_back_equal": 53,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "preamble": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "xfdf": true,
+       "PDFSecurity": true,
+       "form": true,
+       "postamble": true
+      }
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        2002846,
+        2015078,
+        1109
+       ],
+       "same_as_original": true,
+       "verify": "signature contents not found at byte range gap"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "append-only-encrypted-diagnostic",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document",
+      "new datasets stream encrypted with the document key (private pypdf API)",
+      "/Encrypt and /Info copied into the appended trailer (cross-reference stream dictionary)"
+     ],
+     "output_sha256": "4689354ad6b7d2cb28944d9c1687ea579b84df7f07844dbef01fe929244bb030",
+     "bytes": 2017366,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Save Reset Form Print Form PROTECTED WHEN COMPLETED - B Page"
+     },
+     "read_back": {
+      "written": 53,
+      "read_back_equal": 53,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "preamble": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "xfdf": true,
+       "PDFSecurity": true,
+       "form": true,
+       "postamble": true
+      }
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        2002846,
+        2015078,
+        1109
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    }
+   ],
+   "r2_data_files": {
+    "generic": "272e0ec53bdc0339e2536bff4d468f0349c7230c5f338119d3e12bde3ce4da9e"
+   }
+  },
+  {
+   "form": "imm5475e",
+   "source_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+   "bytes": 2278549,
+   "poppler_original": {
+    "syntax_errors": 0,
+    "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+   },
+   "original_signatures": {
+    "/UR3": {
+     "byte_range": [
+      0,
+      1835686,
+      1847918,
+      1116
+     ],
+     "covers_whole_file": false,
+     "verify": "verified"
+    }
+   },
+   "runs": [
+    {
+     "values": "generic",
+     "mode": "append-only",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "9c61613e2d4e78c3eeac9af66c72acc9516efeabd366855f2bde17bd7c3e62d5",
+     "bytes": 2279389,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 737,
+      "page1_text_starts": ""
+     },
+     "read_back": {
+      "error": "ParseError: no element found: line 1, column 0"
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1835686,
+        1847918,
+        1116
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "full-rewrite",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "a27a6bb88b7d021de2798343647ac95a0100891e4cdbd7b2242840f2e2ee948f",
+     "bytes": 2275891,
+     "original_bytes_are_prefix": false,
+     "output_encrypted": false,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 27,
+      "read_back_equal": 27,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1835686,
+        1847918,
+        1116
+       ],
+       "same_as_original": true,
+       "verify": "signature contents not found at byte range gap"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "append-only-encrypted-diagnostic",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document",
+      "new datasets stream encrypted with the document key (private pypdf API)",
+      "/Encrypt and /Info copied into the appended trailer (cross-reference stream dictionary)"
+     ],
+     "output_sha256": "8a70a3473a74edf79b881c40ffc549f7b73e527068b8d51548b257c72ccb740a",
+     "bytes": 2279435,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 27,
+      "read_back_equal": 27,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1835686,
+        1847918,
+        1116
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    }
+   ],
+   "r2_data_files": {
+    "generic": "124d4baa59926e63d6b26c19000f434cfc6b756cc8152b5177042ad29f8d049b"
+   }
+  },
+  {
+   "form": "imm5257_1e",
+   "source_sha256": "12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93",
+   "bytes": 538706,
+   "poppler_original": {
+    "syntax_errors": 0,
+    "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+   },
+   "original_signatures": {
+    "/DocMDP": {
+     "byte_range": [
+      0,
+      16447,
+      39745,
+      400145
+     ],
+     "covers_whole_file": false,
+     "verify": "verified"
+    },
+    "/UR3": {
+     "byte_range": [
+      0,
+      525447,
+      537679,
+      1027
+     ],
+     "covers_whole_file": true,
+     "verify": "verified"
+    }
+   },
+   "runs": [
+    {
+     "values": "generic",
+     "mode": "append-only",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "8cce51cfdd0633ad99215d761ba97a2e9a78eb404e336593d8eea6eaaaab5aad",
+     "bytes": 624514,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 3,
+      "page1_text_starts": ""
+     },
+     "read_back": {
+      "error": "ParseError: no element found: line 1, column 0"
+     },
+     "signatures": {
+      "/DocMDP": {
+       "byte_range": [
+        0,
+        16447,
+        39745,
+        400145
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      },
+      "/UR3": {
+       "byte_range": [
+        0,
+        525447,
+        537679,
+        1027
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "full-rewrite",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "947f9fef7a8dbdb5ef73b410d0e9ff4c3ac363b12f3f427b7536d86f24265440",
+     "bytes": 452970,
+     "original_bytes_are_prefix": false,
+     "output_encrypted": false,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 95,
+      "read_back_equal": 95,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "connectionSet": true,
+       "schema": true,
+       "xmpmeta": true,
+       "xfdf": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/DocMDP": {
+       "byte_range": [
+        0,
+        16447,
+        39745,
+        400145
+       ],
+       "same_as_original": true,
+       "verify": "signature contents not found at byte range gap"
+      },
+      "/UR3": {
+       "byte_range": [
+        0,
+        525447,
+        537679,
+        1027
+       ],
+       "same_as_original": true,
+       "verify": "byte range beyond end of file"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "append-only-encrypted-diagnostic",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document",
+      "new datasets stream encrypted with the document key (private pypdf API)",
+      "/Encrypt and /Info copied into the appended trailer (cross-reference stream dictionary)"
+     ],
+     "output_sha256": "967d8d96bd758624e98c2b79185d066a5e70df00569b98f7ad40a356363c1380",
+     "bytes": 624572,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 95,
+      "read_back_equal": 95,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "connectionSet": true,
+       "schema": true,
+       "xmpmeta": true,
+       "xfdf": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/DocMDP": {
+       "byte_range": [
+        0,
+        16447,
+        39745,
+        400145
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      },
+      "/UR3": {
+       "byte_range": [
+        0,
+        525447,
+        537679,
+        1027
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    }
+   ],
+   "r2_data_files": {
+    "generic": "b8abf3100a62744b0f0b869cff3063a5c97ea2bda1314acdd87c220ac45ac32f"
+   }
+  },
+  {
+   "form": "imm5488e",
+   "source_sha256": "0c8fa194789eb5f7840737c96d3120d81e2a7504663b2ebef457538168d24ec8",
+   "bytes": 2828035,
+   "poppler_original": {
+    "syntax_errors": 0,
+    "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+   },
+   "original_signatures": {
+    "/UR3": {
+     "byte_range": [
+      0,
+      1960011,
+      1972243,
+      1133
+     ],
+     "covers_whole_file": false,
+     "verify": "verified"
+    }
+   },
+   "runs": [
+    {
+     "values": "generic",
+     "mode": "append-only",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "7528f66760409905010ece476f91264114fe6a4b245e62706f2824e69972f10a",
+     "bytes": 2828643,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 360,
+      "page1_text_starts": ""
+     },
+     "read_back": {
+      "error": "ParseError: no element found: line 1, column 0"
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1960011,
+        1972243,
+        1133
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "full-rewrite",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document"
+     ],
+     "output_sha256": "fa5e66fef6d19ad96918160dc0d37499bce8f2a465c67c2bdb35ee5972cab4f4",
+     "bytes": 2827046,
+     "original_bytes_are_prefix": false,
+     "output_encrypted": false,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 17,
+      "read_back_equal": 17,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "xfdf": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1960011,
+        1972243,
+        1133
+       ],
+       "same_as_original": true,
+       "verify": "signature contents not found at byte range gap"
+      }
+     },
+     "signatures_missing": []
+    },
+    {
+     "values": "generic",
+     "mode": "append-only-encrypted-diagnostic",
+     "notes": [
+      "pypdf writer holds no encryption for this encrypted document",
+      "new datasets stream encrypted with the document key (private pypdf API)",
+      "/Encrypt and /Info copied into the appended trailer (cross-reference stream dictionary)"
+     ],
+     "output_sha256": "13a2df1c7ee9df510be6c05be486451c01de808a5a89316eef2b74dd467d324a",
+     "bytes": 2828697,
+     "original_bytes_are_prefix": true,
+     "output_encrypted": true,
+     "poppler": {
+      "syntax_errors": 0,
+      "page1_text_starts": "Please wait... If this message is not eventually replaced by"
+     },
+     "read_back": {
+      "written": 17,
+      "read_back_equal": 17,
+      "mismatches": [],
+      "other_data_leaves_changed": 0,
+      "other_parts_unchanged": {
+       "xdp:xdp": true,
+       "config": true,
+       "template": true,
+       "localeSet": true,
+       "xmpmeta": true,
+       "xfdf": true,
+       "PDFSecurity": true,
+       "form": true,
+       "</xdp:xdp>": true
+      }
+     },
+     "signatures": {
+      "/UR3": {
+       "byte_range": [
+        0,
+        1960011,
+        1972243,
+        1133
+       ],
+       "same_as_original": true,
+       "verify": "verified"
+      }
+     },
+     "signatures_missing": []
+    }
+   ],
+   "r2_data_files": {
+    "generic": "132124eb021e403207ca96b67eb45323fcb06aee74ea42df90410af4eb3bf908"
+   }
+  }
+ ]
+}

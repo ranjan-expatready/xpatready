@@ -1,0 +1,544 @@
+{
+ "note": "Sample programs for the Programs screen (Screen 01). Names are illustrative and labelled Sample on screen; the immigration expert confirms the real lists and every value. Only the rows with a 'setup' block get a combination and official files when the sample inputs are loaded; the others show as Not started. 'import': 'release' starts that row from the reviewed work-permit release (the only released sample). The two pathways are fixed values the studio always has (Individual; Corporate and employers). Super visa is one combination (parent or grandparent is a condition, not a sub-category, P-35); demo names follow SCREENS.md \"Demo combinations\".",
+ "programs": [
+  {
+   "pathway": "individual",
+   "key": "individual.visitors",
+   "label": "Visitors",
+   "description": "Visiting Canada for a short stay.",
+   "categories": [
+    {
+     "key": "individual.visitors.visitor_visa",
+     "label": "Visitor visa",
+     "locations": [
+      "outside_canada"
+     ],
+     "setup": {
+      "key": "vv.single",
+      "participants": [
+       {
+        "role": "principal",
+        "label": "Applicant",
+        "min": 1,
+        "max": 1
+       },
+       {
+        "role": "spouse_or_partner",
+        "label": "Spouse or partner (travelling)",
+        "min": 0,
+        "max": 1,
+        "preview": 0
+       },
+       {
+        "role": "child",
+        "label": "Child (travelling)",
+        "min": 0,
+        "max": 4,
+        "preview": 0
+       }
+      ],
+      "sources": [
+       "imm5257e.pdf",
+       "imm5707e.pdf",
+       "imm5484e.pdf",
+       "guide-5256.html",
+       "visa-package-india.html",
+       "IMM5881E.pdf"
+      ],
+      "note": "Sample: official visitor-visa forms and checklists attached; not set up yet."
+     }
+    },
+    {
+     "key": "individual.visitors.super_visa",
+     "label": "Super visa",
+     "locations": [
+      "outside_canada"
+     ],
+     "setup": {
+      "key": "sv.super_visa",
+      "participants": [
+       {
+        "role": "principal",
+        "label": "Parent or grandparent",
+        "min": 1,
+        "max": 1
+       },
+       {
+        "role": "spouse_or_partner",
+        "label": "Spouse or partner (also visiting)",
+        "min": 0,
+        "max": 1,
+        "preview": 0
+       }
+      ],
+      "sources": [
+       "imm5257e.pdf",
+       "imm5707e.pdf",
+       "imm5484e.pdf"
+      ],
+      "note": "Sample: general visitor forms only; super-visa income and insurance rules are not configured."
+     }
+    },
+    {
+     "key": "individual.visitors.extend_stay",
+     "label": "Extend stay in Canada",
+     "locations": [
+      "inside_canada"
+     ]
+    }
+   ]
+  },
+  {
+   "pathway": "individual",
+   "key": "individual.work_permits",
+   "label": "Work permits",
+   "description": "Working in Canada for an employer or with an open permit.",
+   "categories": [
+    {
+     "key": "individual.work_permits.employer_specific",
+     "label": "Employer-specific work permit",
+     "locations": [
+      "outside_canada"
+     ],
+     "subcategories": [
+      {
+       "key": "individual.work_permits.employer_specific.with_lmia",
+       "label": "With an LMIA",
+       "locations": [
+        "outside_canada"
+       ],
+       "link": "Supported by: Corporate › LMIA",
+       "setup": {
+        "key": "wp.family",
+        "participants": [
+         {
+          "role": "principal",
+          "label": "Principal applicant",
+          "min": 1,
+          "max": 1
+         },
+         {
+          "role": "spouse_or_partner",
+          "label": "Spouse or partner",
+          "min": 0,
+          "max": 1,
+          "preview": 1
+         },
+         {
+          "role": "child",
+          "label": "Child",
+          "min": 0,
+          "max": 4,
+          "preview": 1,
+          "applies": false
+         },
+         {
+          "role": "representative",
+          "label": "Representative",
+          "min": 0,
+          "max": 1,
+          "preview": 1
+         }
+        ],
+        "sources": [
+         "imm1295e.pdf",
+         "imm5707e.pdf",
+         "imm5409e.pdf",
+         "imm5476e.pdf",
+         "imm5475e.pdf",
+         "imm5257_1e.pdf",
+         "imm5488e.pdf",
+         "IMM5905E.pdf",
+         "guide-5487.html",
+         "work-permit-outside-forms-documents.html"
+        ],
+        "import": "release",
+        "note": "Sample: starts from the reviewed work-permit setup for applications from outside Canada (forms IMM 1295, IMM 5257 SCH1, IMM 5409, IMM 5475, IMM 5476, IMM 5707; checklists IMM 5488, IMM 5905). Documents specific to an LMIA are not configured yet."
+       }
+      },
+      {
+       "key": "individual.work_permits.employer_specific.lmia_exempt",
+       "label": "LMIA-exempt (employer offer)",
+       "locations": [
+        "outside_canada"
+       ],
+       "link": "Supported by: Corporate › Employer offers"
+      }
+     ]
+    },
+    {
+     "key": "individual.work_permits.open",
+     "label": "Open work permit",
+     "locations": [
+      "inside_canada",
+      "outside_canada"
+     ],
+     "subcategories": [
+      {
+       "key": "individual.work_permits.open.spouse_worker",
+       "label": "Spouse of a skilled worker",
+       "locations": [
+        "inside_canada",
+        "outside_canada"
+       ]
+      },
+      {
+       "key": "individual.work_permits.open.spouse_student",
+       "label": "Spouse of a student",
+       "locations": [
+        "inside_canada",
+        "outside_canada"
+       ]
+      },
+      {
+       "key": "individual.work_permits.open.post_graduation",
+       "label": "Post-graduation",
+       "locations": [
+        "inside_canada"
+       ],
+       "link": "Follows: Study permits › Study permit"
+      }
+     ]
+    },
+    {
+     "key": "individual.work_permits.iec",
+     "label": "International Experience Canada",
+     "locations": [
+      "outside_canada"
+     ],
+     "subcategories": [
+      {
+       "key": "individual.work_permits.iec.working_holiday",
+       "label": "Working holiday",
+       "locations": [
+        "outside_canada"
+       ]
+      },
+      {
+       "key": "individual.work_permits.iec.young_professionals",
+       "label": "Young professionals",
+       "locations": [
+        "outside_canada"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pathway": "individual",
+   "key": "individual.study_permits",
+   "label": "Study permits",
+   "description": "Studying in Canada.",
+   "categories": [
+    {
+     "key": "individual.study_permits.study_permit",
+     "label": "Study permit",
+     "locations": [
+      "outside_canada"
+     ],
+     "setup": {
+      "key": "sp.student",
+      "participants": [
+       {
+        "role": "principal",
+        "label": "Student",
+        "min": 1,
+        "max": 1
+       },
+       {
+        "role": "representative",
+        "label": "Representative",
+        "min": 0,
+        "max": 1,
+        "preview": 1
+       }
+      ],
+      "sources": [
+       "imm5707e.pdf",
+       "imm5476e.pdf",
+       "imm5475e.pdf"
+      ],
+      "note": "Sample: general forms only; no study-permit rules or documents are configured."
+     }
+    },
+    {
+     "key": "individual.study_permits.extension",
+     "label": "Study permit extension",
+     "locations": [
+      "inside_canada"
+     ]
+    }
+   ]
+  },
+  {
+   "pathway": "individual",
+   "key": "individual.family_sponsorship",
+   "label": "Family sponsorship",
+   "description": "Sponsoring a family member to become a permanent resident.",
+   "categories": [
+    {
+     "key": "individual.family_sponsorship.partner",
+     "label": "Spouse or partner",
+     "locations": [
+      "inside_canada",
+      "outside_canada"
+     ],
+     "subcategories": [
+      {
+       "key": "individual.family_sponsorship.partner.outside",
+       "label": "Applicant outside Canada",
+       "locations": [
+        "outside_canada"
+       ],
+       "setup": {
+        "key": "fs.outside",
+        "participants": [
+         {
+          "role": "principal",
+          "label": "Sponsored spouse or partner",
+          "min": 1,
+          "max": 1
+         },
+         {
+          "role": "child",
+          "label": "Dependent child",
+          "min": 0,
+          "max": 4,
+          "preview": 0
+         },
+         {
+          "role": "representative",
+          "label": "Representative",
+          "min": 0,
+          "max": 1,
+          "preview": 1
+         }
+        ],
+        "sources": [
+         "imm5476e.pdf",
+         "imm5475e.pdf"
+        ],
+        "note": "Sample: the sponsorship forms are completed in the IRCC portal and are not in the library; only the representative and consent forms are attached."
+       }
+      },
+      {
+       "key": "individual.family_sponsorship.partner.inside",
+       "label": "Applicant in Canada",
+       "locations": [
+        "inside_canada"
+       ]
+      }
+     ]
+    },
+    {
+     "key": "individual.family_sponsorship.child",
+     "label": "Dependent child",
+     "locations": [
+      "inside_canada",
+      "outside_canada"
+     ]
+    }
+   ]
+  },
+  {
+   "pathway": "individual",
+   "key": "individual.economic",
+   "label": "Economic immigration",
+   "description": "Permanent residence through work experience and skills.",
+   "categories": [
+    {
+     "key": "individual.economic.express_entry",
+     "label": "Express Entry",
+     "locations": [
+      "inside_canada",
+      "outside_canada"
+     ],
+     "subcategories": [
+      {
+       "key": "individual.economic.express_entry.profile",
+       "label": "Profile",
+       "locations": [
+        "inside_canada",
+        "outside_canada"
+       ],
+       "link": "Step 1 of 2 · followed by Permanent residence application"
+      },
+      {
+       "key": "individual.economic.express_entry.pr_application",
+       "label": "Permanent residence application",
+       "locations": [
+        "inside_canada",
+        "outside_canada"
+       ],
+       "link": "Step 2 of 2 · follows Profile"
+      }
+     ]
+    },
+    {
+     "key": "individual.economic.provincial",
+     "label": "Provincial nomination",
+     "locations": [
+      "inside_canada",
+      "outside_canada"
+     ],
+     "link": "Followed by: a federal permanent residence application"
+    }
+   ]
+  },
+  {
+   "pathway": "individual",
+   "key": "individual.citizenship",
+   "label": "Citizenship",
+   "description": "Becoming a Canadian citizen.",
+   "categories": [
+    {
+     "key": "individual.citizenship.grant",
+     "label": "Grant of citizenship",
+     "locations": [
+      "inside_canada"
+     ]
+    }
+   ]
+  },
+  {
+   "pathway": "individual",
+   "key": "individual.pr_documents",
+   "label": "Permanent resident documents",
+   "description": "Cards and travel documents for permanent residents.",
+   "categories": [
+    {
+     "key": "individual.pr_documents.card",
+     "label": "PR card renewal",
+     "locations": [
+      "inside_canada"
+     ]
+    },
+    {
+     "key": "individual.pr_documents.travel",
+     "label": "Travel document",
+     "locations": [
+      "outside_canada"
+     ]
+    }
+   ]
+  },
+  {
+   "pathway": "corporate",
+   "key": "corporate.lmia",
+   "label": "LMIA",
+   "description": "An employer asks to hire a foreign worker.",
+   "categories": [
+    {
+     "key": "corporate.lmia.high_wage",
+     "label": "High-wage position",
+     "locations": [
+      "inside_canada"
+     ],
+     "setup": {
+      "key": "lm.high_wage",
+      "participants": [
+       {
+        "role": "principal",
+        "label": "Employer (applicant)",
+        "min": 1,
+        "max": 1
+       },
+       {
+        "role": "representative",
+        "label": "Representative",
+        "min": 0,
+        "max": 1,
+        "preview": 1
+       }
+      ],
+      "sources": [],
+      "note": "Sample: the LMIA is an employer application to ESDC; its forms are not in the library yet."
+     }
+    },
+    {
+     "key": "corporate.lmia.low_wage",
+     "label": "Low-wage position",
+     "locations": [
+      "inside_canada"
+     ]
+    },
+    {
+     "key": "corporate.lmia.global_talent",
+     "label": "Global Talent Stream",
+     "locations": [
+      "inside_canada"
+     ]
+    },
+    {
+     "key": "corporate.lmia.caregiver",
+     "label": "In-home caregiver",
+     "locations": [
+      "inside_canada"
+     ]
+    }
+   ]
+  },
+  {
+   "pathway": "corporate",
+   "key": "corporate.employer_offers",
+   "label": "Employer offers (LMIA-exempt)",
+   "description": "An employer submits a job offer for a worker who needs no LMIA.",
+   "categories": [
+    {
+     "key": "corporate.employer_offers.offer",
+     "label": "Offer of employment",
+     "locations": [
+      "inside_canada"
+     ],
+     "subcategories": [
+      {
+       "key": "corporate.employer_offers.offer.ict",
+       "label": "Intra-company transferee",
+       "locations": [
+        "inside_canada"
+       ]
+      },
+      {
+       "key": "corporate.employer_offers.offer.trade",
+       "label": "Professional under a trade agreement",
+       "locations": [
+        "inside_canada"
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "pathway": "corporate",
+   "key": "corporate.designation",
+   "label": "Designation and endorsement",
+   "description": "An employer is designated or endorsed by a province.",
+   "categories": [
+    {
+     "key": "corporate.designation.atlantic",
+     "label": "Atlantic employer designation",
+     "locations": [
+      "inside_canada"
+     ]
+    }
+   ]
+  },
+  {
+   "pathway": "corporate",
+   "key": "corporate.compliance",
+   "label": "Compliance",
+   "description": "An employer answers a government compliance review.",
+   "categories": [
+    {
+     "key": "corporate.compliance.inspection",
+     "label": "Inspection response",
+     "locations": [
+      "inside_canada"
+     ]
+    }
+   ]
+  }
+ ]
+}

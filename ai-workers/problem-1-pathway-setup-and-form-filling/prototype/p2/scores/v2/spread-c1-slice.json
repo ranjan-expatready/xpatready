@@ -1,0 +1,452 @@
+{
+ "note": "every live trial, in run order; no best-of; scorer v2, assembler v2 (detection only)",
+ "trials": [
+  {
+   "trial": 1,
+   "runs": [
+    {
+     "file": "c1-fieldmap-imm5707-live-20261020t045405509z.reconverted.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 0.333348,
+     "input_tokens": 15852,
+     "output_tokens": 13497,
+     "seconds": 100
+    },
+    {
+     "file": "c1-fieldmap-imm1295-live-20261020t044724062z.reconverted.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 1.52788,
+     "input_tokens": 102660,
+     "output_tokens": 55862,
+     "seconds": 401
+    }
+   ],
+   "instances": [
+    {
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 42,
+     "of": 42,
+     "outcome_ok": 42,
+     "fact_ok": 42,
+     "fact_ok_run_local": 42,
+     "transform_ok": 42,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 0,
+     "parent_blocks_ok": true,
+     "fact_problems": [],
+     "transform_problems": []
+    },
+    {
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 42,
+     "of": 42,
+     "outcome_ok": 42,
+     "fact_ok": 42,
+     "fact_ok_run_local": 42,
+     "transform_ok": 42,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 0,
+     "parent_blocks_ok": true,
+     "fact_problems": [],
+     "transform_problems": []
+    },
+    {
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 6,
+     "of": 7,
+     "outcome_ok": 7,
+     "fact_ok": 7,
+     "fact_ok_run_local": 7,
+     "transform_ok": 7,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 1,
+     "parent_blocks_ok": true,
+     "fact_problems": [],
+     "transform_problems": []
+    }
+   ],
+   "merged_meanings": 0
+  },
+  {
+   "trial": 2,
+   "runs": [
+    {
+     "file": "c1-fieldmap-imm5707-live-20261020t052222731z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 0.333188,
+     "input_tokens": 15852,
+     "output_tokens": 13489,
+     "seconds": 98
+    },
+    {
+     "file": "c1-fieldmap-imm1295-live-20261020t051558106z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 1.48,
+     "input_tokens": 102660,
+     "output_tokens": 53468,
+     "seconds": 384
+    }
+   ],
+   "instances": [
+    {
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 42,
+     "of": 42,
+     "outcome_ok": 42,
+     "fact_ok": 42,
+     "fact_ok_run_local": 42,
+     "transform_ok": 42,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 0,
+     "parent_blocks_ok": true,
+     "fact_problems": [],
+     "transform_problems": []
+    },
+    {
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 42,
+     "of": 42,
+     "outcome_ok": 42,
+     "fact_ok": 42,
+     "fact_ok_run_local": 42,
+     "transform_ok": 42,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 0,
+     "parent_blocks_ok": true,
+     "fact_problems": [],
+     "transform_problems": []
+    },
+    {
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 6,
+     "of": 7,
+     "outcome_ok": 7,
+     "fact_ok": 7,
+     "fact_ok_run_local": 7,
+     "transform_ok": 7,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 1,
+     "parent_blocks_ok": true,
+     "fact_problems": [],
+     "transform_problems": []
+    }
+   ],
+   "merged_meanings": 0
+  },
+  {
+   "trial": 3,
+   "runs": [
+    {
+     "file": "c1-fieldmap-imm5707-live-20261020t060116285z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 0.338608,
+     "input_tokens": 15852,
+     "output_tokens": 13760,
+     "seconds": 102
+    },
+    {
+     "file": "c1-fieldmap-imm1295-live-20261020t060259023z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 1.67108,
+     "input_tokens": 102660,
+     "output_tokens": 63022,
+     "seconds": 449
+    }
+   ],
+   "instances": [
+    {
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "fact_ok": 41,
+     "fact_ok_run_local": 41,
+     "transform_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 0,
+     "parent_blocks_ok": true,
+     "fact_problems": [
+      {
+       "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+       "key": "derived: subject has no children",
+       "decision": "missing",
+       "run_local": "missing"
+      }
+     ],
+     "transform_problems": [
+      {
+       "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+       "why": "an empty transformation step; got ''"
+      }
+     ]
+    },
+    {
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "fact_ok": 41,
+     "fact_ok_run_local": 41,
+     "transform_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 0,
+     "parent_blocks_ok": true,
+     "fact_problems": [
+      {
+       "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+       "key": "derived: subject has no children",
+       "decision": "missing",
+       "run_local": "missing"
+      }
+     ],
+     "transform_problems": [
+      {
+       "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+       "why": "an empty transformation step; got ''"
+      }
+     ]
+    },
+    {
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 6,
+     "of": 7,
+     "outcome_ok": 7,
+     "fact_ok": 7,
+     "fact_ok_run_local": 6,
+     "transform_ok": 7,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 1,
+     "parent_blocks_ok": true,
+     "fact_problems": [],
+     "transform_problems": []
+    }
+   ],
+   "merged_meanings": 0
+  },
+  {
+   "trial": 4,
+   "runs": [
+    {
+     "file": "c1-fieldmap-imm5707-live-20261020t061028166z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 0.329288,
+     "input_tokens": 15852,
+     "output_tokens": 13294,
+     "seconds": 96
+    },
+    {
+     "file": "c1-fieldmap-imm1295-live-20261020t061204350z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 1.53454,
+     "input_tokens": 102660,
+     "output_tokens": 56195,
+     "seconds": 400
+    }
+   ],
+   "instances": [
+    {
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "fact_ok": 41,
+     "fact_ok_run_local": 41,
+     "transform_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 0,
+     "parent_blocks_ok": true,
+     "fact_problems": [
+      {
+       "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+       "key": "derived: subject has no children",
+       "decision": "missing",
+       "run_local": "missing"
+      }
+     ],
+     "transform_problems": [
+      {
+       "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+       "why": "an empty transformation step; got ''"
+      }
+     ]
+    },
+    {
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "fact_ok": 41,
+     "fact_ok_run_local": 41,
+     "transform_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 0,
+     "parent_blocks_ok": true,
+     "fact_problems": [
+      {
+       "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+       "key": "derived: subject has no children",
+       "decision": "missing",
+       "run_local": "missing"
+      }
+     ],
+     "transform_problems": [
+      {
+       "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+       "why": "an empty transformation step; got ''"
+      }
+     ]
+    },
+    {
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 5,
+     "of": 7,
+     "outcome_ok": 7,
+     "fact_ok": 7,
+     "fact_ok_run_local": 6,
+     "transform_ok": 6,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 1,
+     "parent_blocks_ok": true,
+     "fact_problems": [],
+     "transform_problems": [
+      {
+       "box": "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MaritalStatus[0]",
+       "why": "codes differ or are not stated: common-law=03 (draft none), married=01 (draft none); got 'code_list:imm1295.marital_status (00,01,02,03,04,05,06,09)'"
+      }
+     ]
+    }
+   ],
+   "merged_meanings": 0
+  },
+  {
+   "trial": 5,
+   "runs": [
+    {
+     "file": "c1-fieldmap-imm5707-live-20261020t061844836z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 0.331868,
+     "input_tokens": 15852,
+     "output_tokens": 13423,
+     "seconds": 100
+    },
+    {
+     "file": "c1-fieldmap-imm1295-live-20261020t062024995z.json",
+     "status": "completed_with_unresolved",
+     "contract_valid": true,
+     "cost_usd": 3.806248,
+     "input_tokens": 102660,
+     "output_tokens": 59146,
+     "seconds": 426
+    }
+   ],
+   "instances": [
+    {
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "fact_ok": 41,
+     "fact_ok_run_local": 41,
+     "transform_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 0,
+     "parent_blocks_ok": true,
+     "fact_problems": [
+      {
+       "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+       "key": "derived: subject has no children",
+       "decision": "missing",
+       "run_local": "missing"
+      }
+     ],
+     "transform_problems": [
+      {
+       "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+       "why": "an empty transformation step; got ''"
+      }
+     ]
+    },
+    {
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "fact_ok": 41,
+     "fact_ok_run_local": 41,
+     "transform_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 0,
+     "parent_blocks_ok": true,
+     "fact_problems": [
+      {
+       "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+       "key": "derived: subject has no children",
+       "decision": "missing",
+       "run_local": "missing"
+      }
+     ],
+     "transform_problems": [
+      {
+       "box": "IMM_5707[0].page1[0].SectionB[0].hideChildren[0]",
+       "why": "an empty transformation step; got ''"
+      }
+     ]
+    },
+    {
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 6,
+     "of": 7,
+     "outcome_ok": 7,
+     "fact_ok": 7,
+     "fact_ok_run_local": 7,
+     "transform_ok": 7,
+     "wrong_person": 0,
+     "invented": 0,
+     "dependencies": 1,
+     "parent_blocks_ok": true,
+     "fact_problems": [],
+     "transform_problems": []
+    }
+   ],
+   "merged_meanings": 0
+  }
+ ]
+}

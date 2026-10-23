@@ -1,0 +1,227 @@
+{
+ "schema": "expected-answers/v0",
+ "label": "Lead-verified from official sources (prototype only); not specialist-confirmed",
+ "prepared": "2026-10-19, Claude Code (the Lead), from the official files only; never from a draft configuration or prototype output",
+ "country_of_residence": "India (New Delhi visa office): a scenario setting chosen by the Lead",
+ "legal": "Unconfirmed: no counsel (AIW-D94)",
+ "deferred": [
+  "Field-level expected values: written in P1, after the field inventory of each form edition, each citing its form field; not part of P0"
+ ],
+ "combination": "1: work permit applied from outside Canada",
+ "scenario": {
+  "people": [
+   {
+    "id": "client-a",
+    "role": "principal applicant",
+    "date_of_birth": "1990-04-12",
+    "adult": true
+   },
+   {
+    "id": "partner",
+    "role": "common-law partner, accompanying",
+    "date_of_birth": "1991-09-03",
+    "adult": true
+   },
+   {
+    "id": "child",
+    "role": "child, accompanying",
+    "date_of_birth": "2017-01-20",
+    "adult": false
+   }
+  ],
+  "settings": [
+   "The firm represents the family (so IMM 5476 applies).",
+   "The partner also applies for a work permit with IMM 1295. This is a scenario setting; eligibility for any permit type is not asserted.",
+   "The child's own application form is Not in this demonstration (the kit says family members complete their own application forms; which form a 9-year-old uses is an eligibility question). The child appears on forms about others.",
+   "No background question is answered 'yes' in the base case, so Schedule 1 does not apply; variant V3 tests it."
+  ],
+  "variants": {
+   "V1": "married instead of common-law",
+   "V2": "no child",
+   "V3": "Client A answers 'yes' to a background question"
+  }
+ },
+ "expected_forms": [
+  {
+   "form": "IMM 1295",
+   "edition": "09-2023",
+   "per": "each applicant",
+   "applies_to": [
+    "client-a",
+    "partner"
+   ],
+   "condition": "always",
+   "source": {
+    "file": "official-sources/ircc/checklists/imm5488e.pdf",
+    "sha256": "0c8fa194789eb5f7840737c96d3120d81e2a7504663b2ebef457538168d24ec8",
+    "where": "IMM 5488 (10-2024) XFA template, forms list",
+    "passage": "1 Application for Work Permit made Outside of Canada (IMM 1295) Note : If this application form is completed on a computer it must be validated to generate a barcode page"
+   }
+  },
+  {
+   "form": "IMM 5707",
+   "edition": "01-2023",
+   "per": "each person aged 18 or older",
+   "applies_to": [
+    "client-a",
+    "partner"
+   ],
+   "not_for": {
+    "child": "under 18"
+   },
+   "condition": "age 18 or older",
+   "source": {
+    "file": "official-sources/ircc/checklists/imm5488e.pdf",
+    "sha256": "0c8fa194789eb5f7840737c96d3120d81e2a7504663b2ebef457538168d24ec8",
+    "where": "IMM 5488 (10-2024) XFA template, forms list",
+    "passage": "Family Information (IMM 5707) Note : Must be completed by those aged 18 years or older or a minor travelling alone to Canada."
+   },
+   "also": {
+    "file": "official-sources/ircc/instructions/IMM5905E.pdf",
+    "sha256": "e2b7142f519c152f1573ab028c59f23bb79194f9e345fd328b733ca63b4ea4c4",
+    "where": "IMM 5905 E (03-2026), New Delhi work permit instructions",
+    "passage": "You must provide the Family Information Form (IMM 5707) fully completed, signed and dated."
+   }
+  },
+  {
+   "form": "IMM 5409",
+   "edition": "01-2023",
+   "per": "one per common-law union; signed by both partners before a notary or commissioner",
+   "applies_to": [
+    "client-a",
+    "partner"
+   ],
+   "condition": "relationship is common-law (absent in V1)",
+   "source": {
+    "file": "official-sources/ircc/checklists/imm5488e.pdf",
+    "sha256": "0c8fa194789eb5f7840737c96d3120d81e2a7504663b2ebef457538168d24ec8",
+    "where": "IMM 5488 (10-2024) XFA template, forms list",
+    "passage": "Statutory Declaration of Common-law Union (IMM 5409), if applicable"
+   },
+   "also": {
+    "file": "official-sources/ircc/forms/imm5409e.pdf",
+    "sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+    "where": "IMM 5409 (01-2023) XFA template",
+    "passage": "Signature of declarant ... Signature of declarant's partner ... Declared before me"
+   }
+  },
+  {
+   "form": "IMM 5476",
+   "edition": "11-2025",
+   "per": "each applicant using the representative (Unverified: one per applicant or per application; P1 reads the form)",
+   "applies_to": [
+    "client-a",
+    "partner"
+   ],
+   "condition": "an authorized representative is used",
+   "source": {
+    "file": "official-sources/ircc/checklists/imm5488e.pdf",
+    "sha256": "0c8fa194789eb5f7840737c96d3120d81e2a7504663b2ebef457538168d24ec8",
+    "where": "IMM 5488 (10-2024) XFA template, forms list",
+    "passage": "Use of a Representative (IMM 5476), if applicable Note: Complete this form only if you are using the services of an authorized representative"
+   }
+  },
+  {
+   "form": "IMM 5475",
+   "edition": "12-2022",
+   "applies_to": [],
+   "condition": "only if the applicant authorizes release of information to a designated individual: not in the base case",
+   "source": {
+    "file": "official-sources/ircc/checklists/imm5488e.pdf",
+    "sha256": "0c8fa194789eb5f7840737c96d3120d81e2a7504663b2ebef457538168d24ec8",
+    "where": "IMM 5488 (10-2024) XFA template, forms list",
+    "passage": "Authority to Release Personal Information to a Designated Individual (IMM 5475), if applicable"
+   }
+  },
+  {
+   "form": "IMM 5257 SCH1",
+   "edition": "09-2023",
+   "applies_to": [],
+   "applies_in_variant": {
+    "V3": [
+     "client-a"
+    ]
+   },
+   "condition": "a 'yes' to any background question on the application form",
+   "source": {
+    "file": "official-sources/ircc/instructions/IMM5905E.pdf",
+    "sha256": "e2b7142f519c152f1573ab028c59f23bb79194f9e345fd328b733ca63b4ea4c4",
+    "where": "IMM 5905 E (03-2026), New Delhi work permit instructions",
+    "passage": "If you have answered “yes” to any of the background information questions on the application form, provide a completed and signed Schedule 1 form (Application for Temporary Resident Visa – IMM 5257 SCH1)"
+   }
+  }
+ ],
+ "expected_documents": [
+  {
+   "document": "Passport information page",
+   "applies_to": [
+    "client-a",
+    "partner"
+   ],
+   "source": {
+    "file": "official-sources/ircc/checklists/imm5488e.pdf",
+    "sha256": "0c8fa194789eb5f7840737c96d3120d81e2a7504663b2ebef457538168d24ec8",
+    "where": "IMM 5488 (10-2024) XFA template, forms list",
+    "passage": "A photocopy of the information page of your valid passport or travel document"
+   }
+  },
+  {
+   "document": "Marriage certificate",
+   "applies_to": [],
+   "applies_in_variant": {
+    "V1": [
+     "client-a",
+     "partner"
+    ]
+   },
+   "condition": "married",
+   "source": {
+    "file": "official-sources/ircc/checklists/imm5488e.pdf",
+    "sha256": "0c8fa194789eb5f7840737c96d3120d81e2a7504663b2ebef457538168d24ec8",
+    "where": "IMM 5488 (10-2024) XFA template, forms list",
+    "passage": "Photocopy of your Marriage license or Certificate, if applicable"
+   }
+  },
+  {
+   "document": "Children's birth certificates",
+   "applies_to": [
+    "child"
+   ],
+   "condition": "accompanying dependent child (absent in V2)",
+   "source": {
+    "file": "official-sources/ircc/instructions/IMM5905E.pdf",
+    "sha256": "e2b7142f519c152f1573ab028c59f23bb79194f9e345fd328b733ca63b4ea4c4",
+    "where": "IMM 5905 E (03-2026), New Delhi work permit instructions",
+    "passage": "You must provide children’s birth certificates for accompanying dependents."
+   }
+  },
+  {
+   "document": "Proof of payment",
+   "applies_to": [
+    "client-a",
+    "partner"
+   ],
+   "source": {
+    "file": "official-sources/ircc/checklists/imm5488e.pdf",
+    "sha256": "0c8fa194789eb5f7840737c96d3120d81e2a7504663b2ebef457538168d24ec8",
+    "where": "IMM 5488 (10-2024) XFA template, forms list",
+    "passage": "Proof of payment showing the amount paid"
+   }
+  }
+ ],
+ "rules": [
+  {
+   "rule": "Employment history covers the past 10 years (IMM 1295). No gap wording and no gap-enforcing script were found in IMM 1295; under AIW-D253 a gap is a warning, never a stop by itself.",
+   "source": {
+    "file": "official-sources/ircc/forms/imm1295e.pdf",
+    "sha256": "57fc256eef7d9d856e4ae85ebf8bfe80da41833ebde7a8c7ed78f2483470d7bb",
+    "where": "IMM 1295 (09-2023) XFA template, Employment",
+    "passage": "Give details of your employment for the past 10 years, including if you have held any government positions"
+   }
+  }
+ ],
+ "open": [
+  "IMM 5476: one form per applicant or one per application? Read in P1.",
+  "Partner's and child's permit types are scenario settings, not eligibility findings."
+ ]
+}

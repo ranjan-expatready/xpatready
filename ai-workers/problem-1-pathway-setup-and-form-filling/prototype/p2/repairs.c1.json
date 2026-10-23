@@ -1,0 +1,9 @@
+{
+ "schema": "config-repairs/v1",
+ "label": "Maker-reviewed content repairs for combination 1, applied by p2/assemble.ts v2 after the field review and listed separately from model output (never presented as unassisted model success). Prototype only: Lead-verified from official sources (prototype only); not specialist-confirmed. Legal: Unconfirmed: no counsel (AIW-D94).",
+ "repairs": [
+  {"id": "R-D20", "target": "forms", "match": {"form_number": "IMM 1295"}, "set": {"who": "each_applicant"},
+   "reason": "P2-M3 / D20: IMM 1295 is completed by each person applying for a work permit from outside Canada; the draft said principal applicant only. The requirements job's inputs did not include the IMM 1295 form page that says so, so the model could not have read it (a P2 input-set lesson). The case names who applies (combination-1.v2 scenario.applications: Client A and the partner).",
+   "citation": [{"file": "official-sources/ircc/web-pages/page-imm1295.html", "quote": "Each person who needs a work permit must fill out this form."}, {"file": "official-sources/ircc/instructions/guide-5487.html", "quote": "Family members must complete their own application forms."}]}
+ ]
+}

@@ -1,0 +1,65 @@
+{
+  "frozen_at": "2026-10-17T19:18:58.602550+00:00",
+  "files": [
+    {
+      "source": "ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html",
+      "saved": "inputs/solution-1-one-pager.html",
+      "sha256": "401457aab0f301fa80bae7f52d84859b6f507d1e329d63e07b1ec6ec6ca471af",
+      "bytes": 867868
+    },
+    {
+      "source": "ai-workers/tools/s3/build_one_pager.py",
+      "saved": "inputs/build_one_pager.py",
+      "sha256": "86b375e5ea646f09ed433f22b8531709942e83e5413303b24e6041d107e433ad",
+      "bytes": 139518
+    },
+    {
+      "source": "ai-workers/tools/s3/make_publish_copy.py",
+      "saved": "inputs/make_publish_copy.py",
+      "sha256": "8f61583f1afa8c4ba40cf58b0e1aff22829ff8251896e0d5b6ca50c06f7b3ee6",
+      "bytes": 1077
+    },
+    {
+      "source": "ai-workers/tools/s3/s3_data.py",
+      "saved": "inputs/s3_data.py",
+      "sha256": "409170193a6c9f73ab8a60b3a2251e9a75355f028c1a6bb6c6c1b21570f9608e",
+      "bytes": 181410
+    },
+    {
+      "source": "ai-workers/tools/s3/s3_ledger.py",
+      "saved": "inputs/s3_ledger.py",
+      "sha256": "de5954d78e08387f1d002e9b7765f86ac7117d62ae823d2ee51606515775789f",
+      "bytes": 18508
+    },
+    {
+      "source": "ai-workers/tools/s3/s3_panels.py",
+      "saved": "inputs/s3_panels.py",
+      "sha256": "94b71019c1c6e77c15a4fa70ad2715e5dbaeaa27919764fa22c61c7b49696ccd",
+      "bytes": 21267
+    },
+    {
+      "source": "ai-workers/tools/s3/s3_terms.py",
+      "saved": "inputs/s3_terms.py",
+      "sha256": "317cbfbb3ce05ad04d4db40e8d3efd3404628b17411568d1f157fd688a4a0420",
+      "bytes": 10861
+    },
+    {
+      "source": "ai-workers/tools/s3/s3_views.py",
+      "saved": "inputs/s3_views.py",
+      "sha256": "3287b4bf540138327f6a93c5c66b4bfb1da9425922b4d7ee7856e4b1ef7b57e0",
+      "bytes": 26094
+    },
+    {
+      "source": "ai-workers/tools/s3/check_one_pager.cjs",
+      "saved": "inputs/check_one_pager.cjs",
+      "sha256": "d890a2ca3e0b83df5706295bcd90d0a4e9099d21e6cb634ad1d5d2781d3ecc80",
+      "bytes": 47681
+    },
+    {
+      "source": "ai-workers/tools/s3/check_panels.cjs",
+      "saved": "inputs/check_panels.cjs",
+      "sha256": "b87ebd3703178c8672916a8885feb3c508f8798b05925a87e80e68335844dd57",
+      "bytes": 16932
+    }
+  ]
+}

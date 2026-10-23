@@ -1,0 +1,89 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "probe-sections-live-20261020t053405655z",
+  "idempotency_key": "eb31df48f3ed93910209f11ee5d4aca62d6b088900a7e35f2f7449f0c9b4031e",
+  "contract_version": "drafting-run/v0",
+  "kind": "sections",
+  "output_sha256": "def5ac7217c5d9f46b483c7de5cbe921762562b04dcfe5b0b186846e33a8f8b2",
+  "inputs": {
+   "combination": "1",
+   "official_files": [
+    {
+     "file": "prototype/p2/runs/c1-fieldmap-imm5475-live-20261020t052706509z.json",
+     "sha256": "962495eab1d4b7bd5d6e7c4aebabe6146d486c16518a5b66614e9319ca6f6db0"
+    }
+   ],
+   "configuration_version": "c1-probe"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "low",
+   "timeout_ms": 300000,
+   "max_attempts": 1,
+   "budget_usd": 5,
+   "max_output_tokens": 8000,
+   "prompt_version": "sections.v1.md",
+   "prompt_sha256": "a6b20bd6e5a77c61219984f128cf05221584f9db95c530e5d5561bc37d4dd9e9"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 6742,
+    "output_tokens": 2721,
+    "duration_ms": 23895
+   }
+  ],
+  "usage": {
+   "input_tokens": 6742,
+   "output_tokens": 2721,
+   "cost_usd": 0.081388,
+   "duration_ms": 23895
+  },
+  "started_at": "2026-10-20T05:34:05.660Z",
+  "ended_at": "2026-10-20T05:34:29.756Z"
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": null,
+ "launch_evidence": {
+  "path_code_sha256": "acebc59abedb3a30b85c24715895307b58852e39602d76e9331c050f91b6b739",
+  "template_sha256": "693db885c8894aff68c96752e68a8ea34390a6a6978e6fedd3a4229be0b03504",
+  "schema_file": "sections-output.v1.schema.json",
+  "schema_sha256": "7e9babd42b48973abb4d6574fa8fe0525601eaa854b08b9e902ebf8eaa1f3dd4",
+  "screened": true,
+  "output_sha256": "def5ac7217c5d9f46b483c7de5cbe921762562b04dcfe5b0b186846e33a8f8b2",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "3f792534ecd91f66f241eedd6cf90940b53f3d27bf6e18e5c1226c8a41413dd0",
+  "request_bytes": 17996,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 40,
+   "committed_usd": 12.015816
+  },
+  "admitted": [
+   {
+    "file": "prototype/p2/runs/c1-fieldmap-imm5475-live-20261020t052706509z.json",
+    "sha256": "962495eab1d4b7bd5d6e7c4aebabe6146d486c16518a5b66614e9319ca6f6db0",
+    "kind": "draft"
+   }
+  ]
+ },
+ "raw_output": "{\"sections\":[{\"id\":\"personal_details\",\"title\":\"Personal details\",\"meaning\":\"Identity facts about each person on the case, such as names and date of birth\",\"new\":true},{\"id\":\"contact_details\",\"title\":\"Contact details\",\"meaning\":\"Each person's mailing address, telephone and e-mail\",\"new\":true},{\"id\":\"application_details\",\"title\":\"Application details\",\"meaning\":\"Facts about the application itself, such as its type and where it was submitted\",\"new\":true},{\"id\":\"information_release\",\"title\":\"Release of information\",\"meaning\":\"The applicant's choice to authorize or withdraw release of case information to a designated individual\",\"new\":true},{\"id\":\"representative\",\"title\":\"Representative\",\"meaning\":\"Facts about the firm or organization through which the designated individual or representative acts\",\"new\":true}],\"placements\":[{\"fact\":\"case.release_authorization_action\",\"section_id\":\"information_release\",\"repeats\":\"once_per_case\",\"tier\":\"case\",\"collected_from\":\"client_questionnaire\",\"client_visible\":true,\"reason\":\"Only the applicant can choose to grant or withdraw the release authority.\",\"alternatives\":[\"application_details\"],\"confidence\":\"medium\"},{\"fact\":\"person.family_name\",\"section_id\":\"personal_details\",\"repeats\":\"per_person\",\"tier\":\"lead\",\"collected_from\":\"client_questionnaire\",\"client_visible\":true,\"reason\":\"Needed from first contact. Read from the passport when one is held; the representative's value comes from the stored profile.\",\"alternatives\":[],\"confidence\":\"high\"},{\"fact\":\"person.given_names\",\"section_id\":\"personal_details\",\"repeats\":\"per_person\",\"tier\":\"lead\",\"collected_from\":\"client_questionnaire\",\"client_visible\":true,\"reason\":\"Needed from first contact. Read from the passport when one is held; the representative's value comes from the stored profile.\",\"alternatives\":[],\"confidence\":\"high\"},{\"fact\":\"person.date_of_birth\",\"section_id\":\"personal_details\",\"repeats\":\"per_person\",\"tier\":\"prospect\",\"collected_from\":\"verified_document\",\"client_visible\":true,\"reason\":\"Supplied by the passport and verified by staff. The client is asked only if no document holds it.\",\"alternatives\":[],\"confidence\":\"high\"},{\"fact\":\"case.submission_office_name\",\"section_id\":\"application_details\",\"repeats\":\"once_per_case\",\"tier\":\"case\",\"collected_from\":\"staff_working_view\",\"client_visible\":false,\"reason\":\"The firm knows where it submitted the application; the client is not asked.\",\"alternatives\":[],\"confidence\":\"medium\"},{\"fact\":\"case.submission_office_location\",\"section_id\":\"application_details\",\"repeats\":\"once_per_case\",\"tier\":\"case\",\"collected_from\":\"staff_working_view\",\"client_visible\":false,\"reason\":\"The firm knows the submission office's location; the client is not asked.\",\"alternatives\":[],\"confidence\":\"medium\"},{\"fact\":\"case.application_type\",\"section_id\":\"application_details\",\"repeats\":\"once_per_case\",\"tier\":\"prospect\",\"collected_from\":\"staff_working_view\",\"client_visible\":true,\"reason\":\"Staff set it from the combination being prepared; the client may see it.\",\"alternatives\":[],\"confidence\":\"medium\"},{\"fact\":\"organisation.name\",\"section_id\":\"representative\",\"repeats\":\"once_per_case\",\"tier\":\"case\",\"collected_from\":\"profile_record\",\"client_visible\":true,\"reason\":\"This is the firm's name, so it comes from the representative profile and is never asked of the client.\",\"alternatives\":[\"contact_details\"],\"confidence\":\"medium\"},{\"fact\":\"person.address_apt_unit\",\"section_id\":\"contact_details\",\"repeats\":\"per_person\",\"tier\":\"case\",\"collected_from\":\"client_questionnaire\",\"client_visible\":true,\"reason\":\"The client gives their own address; the representative's address comes from the profile.\",\"alternatives\":[\"representative\"],\"confidence\":\"medium\"},{\"fact\":\"person.address_street_number\",\"section_id\":\"contact_details\",\"repeats\":\"per_person\",\"tier\":\"case\",\"collected_from\":\"client_questionnaire\",\"client_visible\":true,\"reason\":\"The client gives their own address; the representative's address comes from the profile.\",\"alternatives\":[\"representative\"],\"confidence\":\"medium\"},{\"fact\":\"person.address_street_name\",\"section_id\":\"contact_details\",\"repeats\":\"per_person\",\"tier\":\"case\",\"collected_from\":\"client_questionnaire\",\"client_visible\":true,\"reason\":\"The client gives their own address; the representative's address comes from the profile.\",\"alternatives\":[\"representative\"],\"confidence\":\"medium\"},{\"fact\":\"person.address_city\",\"section_id\":\"contact_details\",\"repeats\":\"per_person\",\"tier\":\"case\",\"collected_from\":\"client_questionnaire\",\"client_visible\":true,\"reason\":\"The client gives their own address; the representative's address comes from the profile.\",\"alternatives\":[\"representative\"],\"confidence\":\"medium\"},{\"fact\":\"person.address_province_state\",\"section_id\":\"contact_details\",\"repeats\":\"per_person\",\"tier\":\"case\",\"collected_from\":\"client_questionnaire\",\"client_visible\":true,\"reason\":\"The client gives their own address; the representative's address comes from the profile.\",\"alternatives\":[\"representative\"],\"confidence\":\"medium\"},{\"fact\":\"person.address_country\",\"section_id\":\"contact_details\",\"repeats\":\"per_person\",\"tier\":\"case\",\"collected_from\":\"client_questionnaire\",\"client_visible\":true,\"reason\":\"The client gives their own address; the representative's address comes from the profile.\",\"alternatives\":[\"representative\"],\"confidence\":\"medium\"},{\"fact\":\"person.address_postal_code\",\"section_id\":\"contact_details\",\"repeats\":\"per_person\",\"tier\":\"case\",\"collected_from\":\"client_questionnaire\",\"client_visible\":true,\"reason\":\"The client gives their own address; the representative's address comes from the profile.\",\"alternatives\":[\"representative\"],\"confidence\":\"medium\"},{\"fact\":\"person.phone_country_code\",\"section_id\":\"contact_details\",\"repeats\":\"per_person\",\"tier\":\"lead\",\"collected_from\":\"client_questionnaire\",\"client_visible\":true,\"reason\":\"Contact facts are needed early. The representative's number comes from the profile.\",\"alternatives\":[\"representative\"],\"confidence\":\"medium\"},{\"fact\":\"person.phone_number\",\"section_id\":\"contact_details\",\"repeats\":\"per_person\",\"tier\":\"lead\",\"collected_from\":\"client_questionnaire\",\"client_visible\":true,\"reason\":\"Contact facts are needed early. The representative's number comes from the profile.\",\"alternatives\":[\"representative\"],\"confidence\":\"medium\"},{\"fact\":\"person.email\",\"section_id\":\"contact_details\",\"repeats\":\"per_person\",\"tier\":\"lead\",\"collected_from\":\"client_questionnaire\",\"client_visible\":true,\"reason\":\"Contact facts are needed early. The representative's e-mail comes from the profile.\",\"alternatives\":[\"representative\"],\"confidence\":\"medium\"}],\"unresolved\":[{\"fact\":\"person.* name, address, phone and e-mail fields for the representative\",\"reason\":\"The schema allows one collected-from setting per field. The applicant's values are client_questionnaire, but the representative's values should be profile_record. If the designated individual is not the representative (for example a relative), the client must supply that person's details. A reviewer must confirm a per-person source override.\"},{\"fact\":\"IMM_5475 AppDetails TextField2[3]\",\"reason\":\"The box has no caption in the inventory, so no canonical field was assigned. A reviewer must check the printed form.\"},{\"fact\":\"IMM_5475 Five Rextension[1] / Rphone[1]\",\"reason\":\"The second telephone boxes are undistinguished (alternate telephone, fax or other), so no canonical field was assigned. A reviewer must check the printed form.\"}]}"
+}

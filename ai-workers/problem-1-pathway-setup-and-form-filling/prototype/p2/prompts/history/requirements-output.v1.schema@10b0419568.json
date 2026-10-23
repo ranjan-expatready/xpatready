@@ -1,0 +1,583 @@
+{
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "combination",
+  "forms",
+  "documents",
+  "rules",
+  "proposed_fields",
+  "unresolved",
+  "derived_fields"
+ ],
+ "$defs": {
+  "who": {
+   "enum": [
+    "each_applicant",
+    "principal_applicant",
+    "spouse_or_partner",
+    "each_adult_18_plus",
+    "each_dependent_child",
+    "couple_once",
+    "representative",
+    "each_person"
+   ]
+  },
+  "nullable_string": {
+   "anyOf": [
+    {
+     "type": "string"
+    },
+    {
+     "type": "null"
+    }
+   ]
+  },
+  "leaf": {
+   "anyOf": [
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "field",
+      "value"
+     ],
+     "properties": {
+      "op": {
+       "enum": [
+        "eq",
+        "neq"
+       ]
+      },
+      "field": {
+       "type": "string"
+      },
+      "value": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "number"
+        },
+        {
+         "type": "boolean"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "field",
+      "value"
+     ],
+     "properties": {
+      "op": {
+       "const": "in"
+      },
+      "field": {
+       "type": "string"
+      },
+      "value": {
+       "type": "array",
+       "items": {
+        "anyOf": [
+         {
+          "type": "string"
+         },
+         {
+          "type": "number"
+         },
+         {
+          "type": "boolean"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "field",
+      "value"
+     ],
+     "properties": {
+      "op": {
+       "enum": [
+        "gt",
+        "gte",
+        "lt",
+        "lte"
+       ]
+      },
+      "field": {
+       "type": "string"
+      },
+      "value": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "number"
+        }
+       ]
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "field"
+     ],
+     "properties": {
+      "op": {
+       "const": "exists"
+      },
+      "field": {
+       "type": "string"
+      }
+     }
+    }
+   ]
+  },
+  "branch1": {
+   "anyOf": [
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "args"
+     ],
+     "properties": {
+      "op": {
+       "enum": [
+        "and",
+        "or"
+       ]
+      },
+      "args": {
+       "type": "array",
+       "items": {
+        "$ref": "#/$defs/leaf"
+       }
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "arg"
+     ],
+     "properties": {
+      "op": {
+       "const": "not"
+      },
+      "arg": {
+       "$ref": "#/$defs/leaf"
+      }
+     }
+    }
+   ]
+  },
+  "branch2": {
+   "anyOf": [
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "args"
+     ],
+     "properties": {
+      "op": {
+       "enum": [
+        "and",
+        "or"
+       ]
+      },
+      "args": {
+       "type": "array",
+       "items": {
+        "anyOf": [
+         {
+          "$ref": "#/$defs/leaf"
+         },
+         {
+          "$ref": "#/$defs/branch1"
+         }
+        ]
+       }
+      }
+     }
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "op",
+      "arg"
+     ],
+     "properties": {
+      "op": {
+       "const": "not"
+      },
+      "arg": {
+       "anyOf": [
+        {
+         "$ref": "#/$defs/leaf"
+        },
+        {
+         "$ref": "#/$defs/branch1"
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "condition": {
+   "anyOf": [
+    {
+     "type": "null"
+    },
+    {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "subject_kind",
+      "tree"
+     ],
+     "properties": {
+      "subject_kind": {
+       "type": "string"
+      },
+      "tree": {
+       "anyOf": [
+        {
+         "$ref": "#/$defs/leaf"
+        },
+        {
+         "$ref": "#/$defs/branch1"
+        },
+        {
+         "$ref": "#/$defs/branch2"
+        }
+       ]
+      }
+     }
+    }
+   ]
+  },
+  "derived_field": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "id",
+    "calculation",
+    "inputs",
+    "reference",
+    "plain"
+   ],
+   "properties": {
+    "id": {
+     "type": "string"
+    },
+    "calculation": {
+     "enum": [
+      "age_in_years",
+      "days_until",
+      "count_people_in_role",
+      "other"
+     ]
+    },
+    "inputs": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "reference": {
+     "type": "string"
+    },
+    "plain": {
+     "type": "string"
+    }
+   }
+  }
+ },
+ "properties": {
+  "combination": {
+   "type": "string"
+  },
+  "forms": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "form_number",
+     "edition",
+     "title",
+     "who",
+     "status",
+     "condition",
+     "condition_plain",
+     "source_file",
+     "source_quote",
+     "confidence",
+     "reason"
+    ],
+    "properties": {
+     "form_number": {
+      "type": "string"
+     },
+     "edition": {
+      "$ref": "#/$defs/nullable_string"
+     },
+     "title": {
+      "type": "string"
+     },
+     "who": {
+      "$ref": "#/$defs/who"
+     },
+     "status": {
+      "enum": [
+       "always",
+       "conditional",
+       "officer_task",
+       "uncertain",
+       "dismissed"
+      ]
+     },
+     "condition": {
+      "$ref": "#/$defs/condition"
+     },
+     "condition_plain": {
+      "$ref": "#/$defs/nullable_string"
+     },
+     "source_file": {
+      "type": "string"
+     },
+     "source_quote": {
+      "type": "string"
+     },
+     "confidence": {
+      "enum": [
+       "high",
+       "medium",
+       "low"
+      ]
+     },
+     "reason": {
+      "$ref": "#/$defs/nullable_string"
+     }
+    }
+   }
+  },
+  "documents": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "document_type",
+     "new_type",
+     "provided_by",
+     "who",
+     "base_or_conditional",
+     "status",
+     "condition",
+     "condition_plain",
+     "source_file",
+     "source_quote",
+     "confidence",
+     "reason"
+    ],
+    "properties": {
+     "document_type": {
+      "type": "string"
+     },
+     "new_type": {
+      "type": "boolean"
+     },
+     "provided_by": {
+      "enum": [
+       "client",
+       "employer",
+       "government",
+       "representative",
+       "other"
+      ]
+     },
+     "who": {
+      "$ref": "#/$defs/who"
+     },
+     "base_or_conditional": {
+      "enum": [
+       "base",
+       "conditional"
+      ]
+     },
+     "status": {
+      "enum": [
+       "requirement_line",
+       "officer_task",
+       "uncertain",
+       "dismissed"
+      ]
+     },
+     "condition": {
+      "$ref": "#/$defs/condition"
+     },
+     "condition_plain": {
+      "$ref": "#/$defs/nullable_string"
+     },
+     "source_file": {
+      "type": "string"
+     },
+     "source_quote": {
+      "type": "string"
+     },
+     "confidence": {
+      "enum": [
+       "high",
+       "medium",
+       "low"
+      ]
+     },
+     "reason": {
+      "$ref": "#/$defs/nullable_string"
+     }
+    }
+   }
+  },
+  "rules": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "kind",
+     "when",
+     "when_plain",
+     "then",
+     "for_whom",
+     "why_shown",
+     "readings",
+     "source_file",
+     "source_quote"
+    ],
+    "properties": {
+     "kind": {
+      "enum": [
+       "rule",
+       "task",
+       "uncertain"
+      ]
+     },
+     "when": {
+      "$ref": "#/$defs/condition"
+     },
+     "then": {
+      "type": "string"
+     },
+     "for_whom": {
+      "$ref": "#/$defs/who"
+     },
+     "why_shown": {
+      "type": "string"
+     },
+     "readings": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "source_file": {
+      "type": "string"
+     },
+     "source_quote": {
+      "type": "string"
+     },
+     "when_plain": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "proposed_fields": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "meaning",
+     "value_type"
+    ],
+    "properties": {
+     "id": {
+      "type": "string"
+     },
+     "meaning": {
+      "type": "string"
+     },
+     "value_type": {
+      "enum": [
+       "text",
+       "date",
+       "code",
+       "yes_no",
+       "number",
+       "address",
+       "country"
+      ]
+     }
+    }
+   }
+  },
+  "unresolved": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "source_file",
+     "passage_quote",
+     "reason"
+    ],
+    "properties": {
+     "source_file": {
+      "type": "string"
+     },
+     "passage_quote": {
+      "type": "string"
+     },
+     "reason": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "derived_fields": {
+   "type": "array",
+   "items": {
+    "$ref": "#/$defs/derived_field"
+   }
+  }
+ }
+}

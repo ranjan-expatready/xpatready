@@ -1,0 +1,164 @@
+{
+ "page": "file:///Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager-working.html",
+ "checked_at": "2026-10-20T03:51:39.275Z",
+ "passed": 26,
+ "total": 26,
+ "results": [
+  {
+   "id": "D251",
+   "name": "8.1: one workspace by person and section; conflicts and uncertain values first, deduplicated, with sources; AI-read values marked",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D251",
+   "name": "8.1: section confirmation needs no per-AI-value acknowledgement and never marks an unresolved item verified",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D251",
+   "name": "8.1: per-fact provenance, status and confirmation history kept underneath",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D251",
+   "name": "no \"verifies each fact once\", \"least certain first\" or \"verified one at a time\" anywhere",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D251",
+   "name": "stage 6 card says the agent confirms facts section by section, flagged first",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D252",
+   "name": "8.2: a form fix shows person, shared fact and source, then asks information, mapping or not sure",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D252",
+   "name": "8.4: information wrong updates the case fact; profile update separate and unchecked; signed and filed versions preserved",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D252",
+   "name": "8.4: mapping wrong stays on the form, shared facts untouched, reported automatically; not sure changes nothing shared",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D252",
+   "name": "8.4: filling again keeps manual corrections and flags them when their source fact, mapping or edition changes",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D252",
+   "name": "no \"fixes the fact, never the field\" anywhere",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D252",
+   "name": "stage 7 decision offers Wrong information, Wrong mapping, Not sure and All clear",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D252/D253",
+   "name": "10.4 and 9.3: a reviewed form-only correction lets the reporting case continue while the mapping issue stays reported",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D253",
+   "name": "Blocked = required validation failed, material fact missing or in conflict, or person uncertain; resolved, never waived",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D253",
+   "name": "Critical warning passed only with the waive permission and a recorded reason shown to the representative; never marks verified",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D253",
+   "name": "9.3: the representative sees every waived Critical warning with its reason",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D253",
+   "name": "no \"cannot be waived\" and no history-gap block anywhere",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D253 history",
+   "name": "3.8: a history gap is a warning met by recording the period, citing the official instruction",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D254",
+   "name": "the SME is a duty assigned to a Content publisher, not a seventh role",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "D254",
+   "name": "5.3: the author or submitter cannot approve or publish, the Platform Owner included",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "Row 13",
+   "name": "AI step named Writer (formerly Drafter)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "Label",
+   "name": "page states it is working edition W1 and not accepted",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "Load",
+   "name": "no page errors at 1440",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "Load",
+   "name": "no page errors at 960 dark",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "Layout",
+   "name": "no sideways page scroll at 960 dark",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "Load",
+   "name": "no page errors at 375 light",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "Layout",
+   "name": "no sideways page scroll at 375 light",
+   "ok": true,
+   "detail": ""
+  }
+ ]
+}

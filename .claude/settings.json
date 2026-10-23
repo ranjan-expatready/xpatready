@@ -41,9 +41,26 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/session-start.sh 2>/dev/null || true",
-            "timeout": 45,
-            "statusMessage": "Loading AI Workers resume point"
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/session-start.sh 2>/dev/null || true",
+            "timeout": 30,
+            "statusMessage": "Loading Pathway Configurator state"
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/snapshot.sh 2>/dev/null || true",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/snapshot.sh 2>/dev/null || true",
+            "timeout": 20
           }
         ]
       }
@@ -53,7 +70,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/stop-check.sh",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/stop-check.sh",
+            "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/snapshot.sh 2>/dev/null || true",
             "timeout": 20
           }
         ]
@@ -64,11 +86,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/exchange-count.sh 2>/dev/null || true",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/prompt-log.sh 2>/dev/null || true",
             "timeout": 10
           }
         ]
       }
     ]
-  }
+  },
+  "claudeMdExcludes": [
+    "**/Xpatready/code/**",
+    "**/Xpatready/sources/**",
+    "**/Xpatready/archive/**"
+  ]
 }

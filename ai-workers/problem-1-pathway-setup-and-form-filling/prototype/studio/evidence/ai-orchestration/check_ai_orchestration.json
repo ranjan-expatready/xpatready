@@ -1,0 +1,150 @@
+{
+ "at": "2026-10-23T06:20:00.490Z",
+ "port": 4403,
+ "database": "xr_studio_aiorch",
+ "paid_calls": 0,
+ "test_switches": [
+  "STUDIO_FAULT_SOURCE=imm5475e.pdf (phase 1)",
+  "STUDIO_HOLD_QUEUE=1 (phase 2)"
+ ],
+ "pass": 22,
+ "fail": 0,
+ "log": [
+  {
+   "name": "plan before launch: per target action and reason, cost, nothing started",
+   "ok": true,
+   "detail": {
+    "targets": 7,
+    "model_calls": 0,
+    "steps": 6,
+    "reuse": 5,
+    "skipped": 1,
+    "not_eligible": 0,
+    "expected_usd": 0,
+    "worst_usd": 0
+   }
+  },
+  {
+   "name": "the same form in two selected rows is drafted once; the other row waits to reuse it",
+   "ok": true
+  },
+  {
+   "name": "server permission: the approver cannot launch AI work",
+   "ok": true,
+   "detail": "Approver (simulated) does not hold the author duty"
+  },
+  {
+   "name": "duplicate launch (same key sent twice at once, as a double click) starts one batch and both answers name it",
+   "ok": true,
+   "detail": [
+    201,
+    201
+   ]
+  },
+  {
+   "name": "a second launch over work that is now queued is refused (the plan changed)",
+   "ok": true,
+   "detail": "The work changed since you reviewed it (a source, a draft or a running step changed). Review the updated plan, then start again."
+  },
+  {
+   "name": "the source-level button refuses a form whose step is already queued or running",
+   "ok": true,
+   "detail": "A step for this form is already queued or running."
+  },
+  {
+   "name": "one failed step does not discard its siblings: batch is PARTIAL",
+   "ok": true,
+   "detail": {
+    "status": "PARTIAL",
+    "message": "5 done, 1 failed, 0 cancelled · spent US$0.00"
+   }
+  },
+  {
+   "name": "the failure is labelled as the induced test fault",
+   "ok": true
+  },
+  {
+   "name": "retry re-runs only the failed step (attempts 2 and 3), never the completed ones",
+   "ok": true
+  },
+  {
+   "name": "retries are bounded: a fourth attempt is refused and handed to a person",
+   "ok": true,
+   "detail": "1 step has reached 3 attempts; it needs a person, not another retry."
+  },
+  {
+   "name": "spend bound: a live launch whose worst case exceeds the person's limit is refused before anything is queued (no model call)",
+   "ok": true,
+   "detail": {
+    "worst": 4.42,
+    "message": "The worst case (US$4.42) is above this launch's limit (US$1.00). Narrow the selection or raise the limit."
+   }
+  },
+  {
+   "name": "a live plan reuses the saved real run for the unchanged form instead of paying again",
+   "ok": true,
+   "detail": {
+    "action": "reuse_saved_output",
+    "why": "Saved AI answer from run studio-fieldmap-imm5257e-live-20261021t060247723z (same form; prompt field-map.v1.md): no model call, US$0."
+   }
+  },
+  {
+   "name": "cancel before start: queued steps stop, nothing was sent",
+   "ok": true,
+   "detail": [
+    "CANCELLED"
+   ]
+  },
+  {
+   "name": "queued steps are persisted (held by the test switch)",
+   "ok": true
+  },
+  {
+   "name": "after a server restart the queued steps resume and finish",
+   "ok": true,
+   "detail": [
+    "COMPLETED"
+   ]
+  },
+  {
+   "name": "reset while steps are pending removes them with the workspace",
+   "ok": true
+  },
+  {
+   "name": "after the reset, nothing from the old workspace runs or applies (no steps, no rows)",
+   "ok": true
+  },
+  {
+   "name": "replay of the saved real IMM 5257 run (labelled, US$0) is compared with the library",
+   "ok": true,
+   "detail": "studio-fieldmap-imm5257e-live-20261021t060247723z: 84 items"
+  },
+  {
+   "name": "stale result refused: the library changed after the comparison, so applying is refused",
+   "ok": true,
+   "detail": "Stale: the shared library changed since this draft was compared with it (164 → 165 definition rows). Compare again with the current library (no AI call); decisions that still hold are kept."
+  },
+  {
+   "name": "compare again (no AI call) keeps every decision that still holds, including the person's change",
+   "ok": true,
+   "detail": {
+    "at": "2026-10-23T06:19:57.321Z",
+    "by": "user-A",
+    "kept": 84,
+    "reopened": 0
+   }
+  },
+  {
+   "name": "apply twice at once: exactly one applies, the other is refused",
+   "ok": true,
+   "detail": [
+    409,
+    201
+   ]
+  },
+  {
+   "name": "released versions are untouched by applying a draft elsewhere",
+   "ok": true
+  }
+ ]
+}

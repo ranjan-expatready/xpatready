@@ -1,0 +1,676 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "c1-fieldmap-imm5475-live-20261020t045857613z",
+  "idempotency_key": "903d53b6b2acce742b870e36801d7643b8701c8b2cd8d7bdd188de0b789ac755",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "27394729d80d9ceae228add3eec8b528787832afc911c4e73160c4714e01c827",
+  "inputs": {
+   "combination": "1",
+   "official_files": [
+    {
+     "file": "prototype/p1/inventory/imm5475e.inventory.json",
+     "sha256": "1f9a7f1cb2a67c9151a5b85daf25aeb9b18a2c59661ed19be4acfcad57ab1338"
+    }
+   ],
+   "configuration_version": "c1-draft-1"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 900000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 32000,
+   "prompt_version": "field-map.v1.md",
+   "prompt_sha256": "b2b240920e01f77840adaf26e051ed207b7fcb7df6292f3a2ff02cf2369e3bba"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 7325,
+    "output_tokens": 6176,
+    "duration_ms": 49421
+   }
+  ],
+  "usage": {
+   "input_tokens": 7325,
+   "output_tokens": 6176,
+   "cost_usd": 0.15282,
+   "duration_ms": 49421
+  },
+  "started_at": "2026-10-20T04:58:57.613Z",
+  "ended_at": "2026-10-20T04:59:47.431Z",
+  "entries": [
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Choice[0].RadioButtonList[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.information_release_action",
+    "transform": "code_list:imm5475.RadioButtonList (4=authorize release, 6=withdraw authorization)",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Choose one"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].AppFamily[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.family_name",
+    "transform": "as_is (max 100 characters)",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "1. Your full name"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].AppGiven[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.given_names",
+    "transform": "as_is (max 100 characters)",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "1. Your full name"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].DOB[0].currentDate[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY-MM-DD",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "2. Your date of birth (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].TextField2[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.submission_office_name",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Name of office where the application was submitted"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].TextField2[1]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.submission_office_location",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Location of office"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].TextField2[2]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.application_type",
+    "transform": "as_is",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Type of application (permanent residence,extension of study permit, etc.)"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].AppDetails[0].TextField2[3]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "The box has no caption in the inventory and its mechanical heading ('1. Your full name') does not describe it; it sits after the office/application-type boxes and may be a further case detail (e.g. file number or submission date), but which fact it asks for cannot be determined from the inventory. Reviewer should check the printed form.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "1. Your full name"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].AppFamily[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Belongs to the designated individual chosen by the subject to receive case information. This is a third party who is not one of the listed roles; it is not necessarily the firm's representative (IRCC normally uses a separate form for representatives), so mapping to representative facts could put the wrong person's name here. Reviewer must decide which record holds the designated individual. Form limit: 100 characters.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "5. Your designated individual's full name"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].AppGiven[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Designated individual's given names; the designated individual is a third party outside the listed roles and not necessarily the representative. Form limit: 100 characters.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "5. Your designated individual's full name"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].TextField2[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "condition": "Only if the designated individual belongs to a firm or organization",
+    "unresolved_reason": "Firm or organization of the designated individual; whose record this comes from is undetermined (third party, not necessarily the representative).",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Name of firm or organization (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].apt[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Designated individual's address (apartment/unit); designated individual is a third party outside the listed roles. Form limit: 10 characters.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Apt/Unit"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].Number[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Designated individual's street number; designated individual is a third party outside the listed roles. Form limit: 10 characters.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Street no."
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].homeAddress[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Designated individual's street name; designated individual is a third party outside the listed roles. Form limit: 100 characters.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Street name"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].city[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Designated individual's city/town; designated individual is a third party outside the listed roles. Form limit: 30 characters.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "City/Town"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].province[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Designated individual's province/state/territory; designated individual is a third party outside the listed roles.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Province/State/Territory"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].city[1]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Designated individual's country or territory (data path named 'city' but caption is country); designated individual is a third party outside the listed roles. Form limit: 30 characters.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Country or territory"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].postalCode[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Designated individual's postal/zip code; designated individual is a third party outside the listed roles. Form limit: 10 characters.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Postal code/Zip"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].Rextension[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Country calling code of the designated individual's first telephone number; the inventory does not say what distinguishes the two telephone lines (e.g. telephone vs alternate/fax), and the designated individual is outside the listed roles.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Country Code"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].Rphone[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Designated individual's first telephone number; which phone type this line is cannot be told from the inventory, and the designated individual is outside the listed roles.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Area Code and Telephone number"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].Rextension[1]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Country calling code of the designated individual's second telephone number; the line's purpose (alternate/fax) is not captioned in the inventory, and the designated individual is outside the listed roles.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Country Code"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].Rphone[1]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Designated individual's second telephone number; the line's purpose is not captioned in the inventory, and the designated individual is outside the listed roles.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Area Code and Telephone number"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Five[0].TextField2[1]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "condition": "Only if the designated individual has an e-mail address",
+    "unresolved_reason": "Designated individual's e-mail address; designated individual is a third party outside the listed roles and not necessarily the representative.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "E-mail address (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Seven[0].TextField2[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Handwritten signature of the applicant; must be signed by the person, never filled by the system.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Signature of applicant"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Seven[0].currentDate[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date of the applicant's signature; written by the applicant at the moment of signing, not a stored case fact.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Seven[0].TextField2[1]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "condition": "Only if the applicant has a spouse or common-law partner who signs",
+    "unresolved_reason": "Handwritten signature of the spouse or common-law partner; must be signed by that person, never filled by the system.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Signature of spouse common-law partner (if applicable)"
+    }
+   },
+   {
+    "form_edition": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+    "form_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+    "data_path": "IMM_5475[0].Page1[0].Seven[0].currentDate[1]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "condition": "Only if the spouse or common-law partner signs",
+    "unresolved_reason": "Date of the spouse/common-law partner's signature; written at the moment of signing, not a stored case fact.",
+    "evidence": {
+     "file_sha256": "938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83",
+     "quote": "Date (YYYY-MM-DD)"
+    }
+   }
+  ]
+ },
+ "contract_valid": false,
+ "contract_errors": [
+  {
+   "instancePath": "/entries/0/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/1/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/2/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/3/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/4/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/5/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/6/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/7/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/8/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/9/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/10/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/11/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/12/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/13/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/14/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/15/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/16/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/17/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/18/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/19/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/20/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/21/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/22/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/23/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/24/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/25/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  },
+  {
+   "instancePath": "/entries/26/form_edition",
+   "schemaPath": "https://expatready.local/contracts/field-map-entry.v0.json/properties/form_edition/pattern",
+   "keyword": "pattern",
+   "params": {
+    "pattern": "^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$"
+   },
+   "message": "must match pattern \"^IMM [0-9A-Z ]+ \\([0-9]{2}-[0-9]{4}\\)$\""
+  }
+ ],
+ "output_errors": null,
+ "launch_evidence": {
+  "path_code_sha256": "9336340f7e3d88933ad98c167a62039d5aa5695e769f7b0a0234f9da6b5238e6",
+  "template_sha256": "4753f481d0394e626a8ca0bee52e4f82a2fd9411f7639777fe98541a2e57deed",
+  "schema_file": "field-map-output.v1.schema.json",
+  "schema_sha256": "06ef1eab8f172447e3acb167b226bf9be826de727d886e45569117d4b2bd1903",
+  "screened": true,
+  "output_sha256": "27394729d80d9ceae228add3eec8b528787832afc911c4e73160c4714e01c827",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "4f3aab6d3c37203c1ca60a9238beddef45a2c4fa58b16a44afa909a959be039b",
+  "request_bytes": 16685,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 40,
+   "committed_usd": 3.375076
+  },
+  "admitted": [
+   {
+    "file": "prototype/p1/inventory/imm5475e.inventory.json",
+    "sha256": "1f9a7f1cb2a67c9151a5b85daf25aeb9b18a2c59661ed19be4acfcad57ab1338",
+    "kind": "inventory"
+   }
+  ]
+ },
+ "raw_output": "{\"form_edition\":\"IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)\",\"canonical_fields\":[{\"id\":\"case.information_release_action\",\"meaning\":\"Whether the person is granting or withdrawing authorization for the immigration authorities to release information from their case file to a named individual\",\"value_type\":\"code\"},{\"id\":\"person.family_name\",\"meaning\":\"The person's family name (surname) as it appears on their identity document\",\"value_type\":\"text\"},{\"id\":\"person.given_names\",\"meaning\":\"The person's given name or names as they appear on their identity document\",\"value_type\":\"text\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"The person's date of birth\",\"value_type\":\"date\"},{\"id\":\"case.submission_office_name\",\"meaning\":\"Name of the government office where the application was submitted\",\"value_type\":\"text\"},{\"id\":\"case.submission_office_location\",\"meaning\":\"Location (city/country) of the government office where the application was submitted\",\"value_type\":\"text\"},{\"id\":\"case.application_type\",\"meaning\":\"The type of immigration application concerned (for example permanent residence or study permit extension)\",\"value_type\":\"text\"}],\"entries\":[{\"data_path\":\"IMM_5475[0].Page1[0].Choice[0].RadioButtonList[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.information_release_action\",\"transform\":\"code_list:imm5475.RadioButtonList (4=authorize release, 6=withdraw authorization)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Choose one\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].AppFamily[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is (max 100 characters)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"1. Your full name\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].AppGiven[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.given_names\",\"transform\":\"as_is (max 100 characters)\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"1. Your full name\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].DOB[0].currentDate[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"2. Your date of birth (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].TextField2[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.submission_office_name\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Name of office where the application was submitted\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].TextField2[1]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.submission_office_location\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Location of office\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].TextField2[2]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.application_type\",\"transform\":\"as_is\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Type of application (permanent residence,extension of study permit, etc.)\"},{\"data_path\":\"IMM_5475[0].Page1[0].AppDetails[0].TextField2[3]\",\"outcome\":\"unresolved\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"The box has no caption in the inventory and its mechanical heading ('1. Your full name') does not describe it; it sits after the office/application-type boxes and may be a further case detail (e.g. file number or submission date), but which fact it asks for cannot be determined from the inventory. Reviewer should check the printed form.\",\"evidence_quote\":\"1. Your full name\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].AppFamily[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Belongs to the designated individual chosen by the subject to receive case information. This is a third party who is not one of the listed roles; it is not necessarily the firm's representative (IRCC normally uses a separate form for representatives), so mapping to representative facts could put the wrong person's name here. Reviewer must decide which record holds the designated individual. Form limit: 100 characters.\",\"evidence_quote\":\"5. Your designated individual's full name\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].AppGiven[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Designated individual's given names; the designated individual is a third party outside the listed roles and not necessarily the representative. Form limit: 100 characters.\",\"evidence_quote\":\"5. Your designated individual's full name\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].TextField2[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only if the designated individual belongs to a firm or organization\",\"confidence\":\"low\",\"unresolved_reason\":\"Firm or organization of the designated individual; whose record this comes from is undetermined (third party, not necessarily the representative).\",\"evidence_quote\":\"Name of firm or organization (if applicable)\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].apt[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Designated individual's address (apartment/unit); designated individual is a third party outside the listed roles. Form limit: 10 characters.\",\"evidence_quote\":\"Apt/Unit\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].Number[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Designated individual's street number; designated individual is a third party outside the listed roles. Form limit: 10 characters.\",\"evidence_quote\":\"Street no.\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].homeAddress[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Designated individual's street name; designated individual is a third party outside the listed roles. Form limit: 100 characters.\",\"evidence_quote\":\"Street name\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].city[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Designated individual's city/town; designated individual is a third party outside the listed roles. Form limit: 30 characters.\",\"evidence_quote\":\"City/Town\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].province[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Designated individual's province/state/territory; designated individual is a third party outside the listed roles.\",\"evidence_quote\":\"Province/State/Territory\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].city[1]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Designated individual's country or territory (data path named 'city' but caption is country); designated individual is a third party outside the listed roles. Form limit: 30 characters.\",\"evidence_quote\":\"Country or territory\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].postalCode[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Designated individual's postal/zip code; designated individual is a third party outside the listed roles. Form limit: 10 characters.\",\"evidence_quote\":\"Postal code/Zip\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].Rextension[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Country calling code of the designated individual's first telephone number; the inventory does not say what distinguishes the two telephone lines (e.g. telephone vs alternate/fax), and the designated individual is outside the listed roles.\",\"evidence_quote\":\"Country Code\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].Rphone[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Designated individual's first telephone number; which phone type this line is cannot be told from the inventory, and the designated individual is outside the listed roles.\",\"evidence_quote\":\"Area Code and Telephone number\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].Rextension[1]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Country calling code of the designated individual's second telephone number; the line's purpose (alternate/fax) is not captioned in the inventory, and the designated individual is outside the listed roles.\",\"evidence_quote\":\"Country Code\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].Rphone[1]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Designated individual's second telephone number; the line's purpose is not captioned in the inventory, and the designated individual is outside the listed roles.\",\"evidence_quote\":\"Area Code and Telephone number\"},{\"data_path\":\"IMM_5475[0].Page1[0].Five[0].TextField2[1]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only if the designated individual has an e-mail address\",\"confidence\":\"low\",\"unresolved_reason\":\"Designated individual's e-mail address; designated individual is a third party outside the listed roles and not necessarily the representative.\",\"evidence_quote\":\"E-mail address (if applicable)\"},{\"data_path\":\"IMM_5475[0].Page1[0].Seven[0].TextField2[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the applicant; must be signed by the person, never filled by the system.\",\"evidence_quote\":\"Signature of applicant\"},{\"data_path\":\"IMM_5475[0].Page1[0].Seven[0].currentDate[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date of the applicant's signature; written by the applicant at the moment of signing, not a stored case fact.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"},{\"data_path\":\"IMM_5475[0].Page1[0].Seven[0].TextField2[1]\",\"outcome\":\"never_filled\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only if the applicant has a spouse or common-law partner who signs\",\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the spouse or common-law partner; must be signed by that person, never filled by the system.\",\"evidence_quote\":\"Signature of spouse common-law partner (if applicable)\"},{\"data_path\":\"IMM_5475[0].Page1[0].Seven[0].currentDate[1]\",\"outcome\":\"never_filled\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only if the spouse or common-law partner signs\",\"confidence\":\"medium\",\"unresolved_reason\":\"Date of the spouse/common-law partner's signature; written at the moment of signing, not a stored case fact.\",\"evidence_quote\":\"Date (YYYY-MM-DD)\"}]}"
+}

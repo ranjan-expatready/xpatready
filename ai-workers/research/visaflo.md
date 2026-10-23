@@ -1,5 +1,7 @@
 # VisaFlo: competitor profile (W1, deliverable D1 part a)
 
+**Current-comparison notice, 12 Oct independent audit:** §16's Expat Ready column describes the earlier design and is superseded by the current blueprint and AW-01 v0.8. Conversational lead sorting, letters and assisted portal filling are now agreed Release 1 scope, not absent/parked opportunities. Current VisaFlo public claims and comparison limits are in [commercial audit §3](../checks/audit-commercial-2026-10-12.md). A missing public engineering detail is Unknown, not proof a rival lacks a control. No vendor execution was tested.
+
 **Prepared by:** competitor-analyst (W1), 9 Oct 2026. **Covers:** founder asks B13 (VisaFlo study) and part of B14.
 **Access date for every web source below:** 2026-10-09, unless a different date is given.
 **Rules followed:** public pages only, no sign-in. Their wording is quoted only in short attributed quotes (under 15 words). Their feature names are used only to identify what they sell, never as names for us. Sections 1–15 describe VisaFlo only. **Section 16 compares VisaFlo with Expat Ready** (added after review W1 flagged that ask B13 needed it). Section 17 covers OpenVisa, a consumer product that VisaFlo appears to run.

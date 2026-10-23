@@ -1,0 +1,368 @@
+{
+ "page": "file:///Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager-working.html",
+ "checked_at": "2026-10-19T12:40:05.993Z",
+ "passed": 37,
+ "total": 37,
+ "results": [
+  {
+   "id": "R-M1",
+   "name": "the contradicting acceptance case is gone: no \"(the verified fact was wrong)\" followed by \"keeps its approval\"",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "R-M1",
+   "name": "10.4 acceptance, unchanged correct facts: hold released with evidence; an earlier approval stands, subject to every normal submission check (9.5)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "R-M1",
+   "name": "10.4 acceptance, wrong fact found: only the mapping hold is released; forms reading the fact stay held at approval and submission until 8.1; prepared and checked again; old approvals withdrawn; approved and signed again; unrelated forms keep approvals",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "R-M1",
+   "name": "10.4 rule: releasing the mapping hold does not release forms that read a wrong fact; normal fact correction and approval/signing apply (9.3)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "R-M1",
+   "name": "10.4 done-when, return route and exception distinguish the mapping hold from the forms held for a wrong fact",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "R-M1",
+   "name": "keeping an earlier approval during investigation stays labelled \"Proposed here\", and now applies only when the facts are correct",
+   "ok": true,
+   "detail": "Proposed here While the mapping is investigated, a form in an open case that uses it cannot be approved or submitted ('mapping under investigation'); an approval given earlier is not yet withdrawn. If"
+  },
+  {
+   "id": "R-M1",
+   "name": "no sentence anywhere releases a hold for a wrong fact without keeping the forms that read it held",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "R-M1",
+   "name": "related guards: 9.3 cannot approve and 9.5 does not submit a form kept held for a wrong fact the investigation found",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "R-M1",
+   "name": "4.3 and stage 10 say the same: a wrong fact found instead keeps the forms that read it held",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "R-M1",
+   "name": "the rules R-M1 relies on are unchanged: 8.1 withdraws approvals on a fact change; 9.3 withdraws on a later fact change; 9.5 holds a replacement \"needs review\"",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "R-M1",
+   "name": "the confirmed-error route is unchanged: other cases' approved forms are marked \"mapping under correction\" and lose their approval",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "id": "Load",
+   "name": "no page errors at 1440",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "R-m2",
+   "name": "960px light: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 960,
+    "iw": 960
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "960px light: every downward continuation names its source and destination stage",
+   "ok": true,
+   "detail": [
+    "(stage 2 → stage 3)",
+    "(stage 4 → stage 5)",
+    "(stage 6 → stage 7)",
+    "(stage 8 → stage 9)",
+    "(stage 11 → stage 12)"
+   ]
+  },
+  {
+   "id": "R-m2",
+   "name": "960px light: the stage cue uses the handoff label's colour and stays inside its arrow row",
+   "ok": true,
+   "detail": {
+    "wrapVisible": false,
+    "routes": [
+     "(stage 2 → stage 3)",
+     "(stage 4 → stage 5)",
+     "(stage 6 → stage 7)",
+     "(stage 8 → stage 9)",
+     "(stage 11 → stage 12)"
+    ],
+    "hsColour": true,
+    "hsOver": 0,
+    "sw": 960,
+    "iw": 960
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "960px dark: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 960,
+    "iw": 960
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "960px dark: every downward continuation names its source and destination stage",
+   "ok": true,
+   "detail": [
+    "(stage 2 → stage 3)",
+    "(stage 4 → stage 5)",
+    "(stage 6 → stage 7)",
+    "(stage 8 → stage 9)",
+    "(stage 11 → stage 12)"
+   ]
+  },
+  {
+   "id": "R-m2",
+   "name": "960px dark: the stage cue uses the handoff label's colour and stays inside its arrow row",
+   "ok": true,
+   "detail": {
+    "wrapVisible": false,
+    "routes": [
+     "(stage 2 → stage 3)",
+     "(stage 4 → stage 5)",
+     "(stage 6 → stage 7)",
+     "(stage 8 → stage 9)",
+     "(stage 11 → stage 12)"
+    ],
+    "hsColour": true,
+    "hsOver": 0,
+    "sw": 960,
+    "iw": 960
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "1280px light: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 1280,
+    "iw": 1280
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "1280px light: the 6 → 7 wrap rises above stage 6's own column (within 6px), not stage 5's, and lands on stage 7",
+   "ok": true,
+   "detail": {
+    "wrapVisible": true,
+    "routes": [],
+    "hsColour": true,
+    "hsOver": 0,
+    "sw": 1280,
+    "iw": 1280,
+    "riser": 1123,
+    "foot": 152,
+    "s6": 1123,
+    "s5": 799,
+    "s7": 152
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "1280px light: stage cues are hidden where arrows run along the row",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "R-m2",
+   "name": "1280px dark: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 1280,
+    "iw": 1280
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "1280px dark: the 6 → 7 wrap rises above stage 6's own column (within 6px), not stage 5's, and lands on stage 7",
+   "ok": true,
+   "detail": {
+    "wrapVisible": true,
+    "routes": [],
+    "hsColour": true,
+    "hsOver": 0,
+    "sw": 1280,
+    "iw": 1280,
+    "riser": 1123,
+    "foot": 152,
+    "s6": 1123,
+    "s5": 799,
+    "s7": 152
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "1280px dark: stage cues are hidden where arrows run along the row",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "R-m2",
+   "name": "1440px light: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 1440,
+    "iw": 1440
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "1440px light: the 6 → 7 wrap rises above stage 6's own column (within 6px), not stage 5's, and lands on stage 7",
+   "ok": true,
+   "detail": {
+    "wrapVisible": true,
+    "routes": [],
+    "hsColour": true,
+    "hsOver": 0,
+    "sw": 1440,
+    "iw": 1440,
+    "riser": 1203,
+    "foot": 232,
+    "s6": 1203,
+    "s5": 879,
+    "s7": 232
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "1440px light: stage cues are hidden where arrows run along the row",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "R-m2",
+   "name": "1440px dark: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 1440,
+    "iw": 1440
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "1440px dark: the 6 → 7 wrap rises above stage 6's own column (within 6px), not stage 5's, and lands on stage 7",
+   "ok": true,
+   "detail": {
+    "wrapVisible": true,
+    "routes": [],
+    "hsColour": true,
+    "hsOver": 0,
+    "sw": 1440,
+    "iw": 1440,
+    "riser": 1203,
+    "foot": 232,
+    "s6": 1203,
+    "s5": 879,
+    "s7": 232
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "1440px dark: stage cues are hidden where arrows run along the row",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "R-m2",
+   "name": "1920px light: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 1920,
+    "iw": 1920
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "1920px light: the 6 → 7 wrap rises above stage 6's own column (within 6px), not stage 5's, and lands on stage 7",
+   "ok": true,
+   "detail": {
+    "wrapVisible": true,
+    "routes": [],
+    "hsColour": true,
+    "hsOver": 0,
+    "sw": 1920,
+    "iw": 1920,
+    "riser": 1443,
+    "foot": 472,
+    "s6": 1443,
+    "s5": 1119,
+    "s7": 472
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "1920px light: stage cues are hidden where arrows run along the row",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "R-m2",
+   "name": "1920px dark: no sideways page scroll",
+   "ok": true,
+   "detail": {
+    "sw": 1920,
+    "iw": 1920
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "1920px dark: the 6 → 7 wrap rises above stage 6's own column (within 6px), not stage 5's, and lands on stage 7",
+   "ok": true,
+   "detail": {
+    "wrapVisible": true,
+    "routes": [],
+    "hsColour": true,
+    "hsOver": 0,
+    "sw": 1920,
+    "iw": 1920,
+    "riser": 1443,
+    "foot": 472,
+    "s6": 1443,
+    "s5": 1119,
+    "s7": 472
+   }
+  },
+  {
+   "id": "R-m2",
+   "name": "1920px dark: stage cues are hidden where arrows run along the row",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "id": "R-m2",
+   "name": "375px phone: unchanged one-column arrows (no stage cue shown, no sideways scroll)",
+   "ok": true,
+   "detail": {
+    "hs": 0,
+    "sw": 375,
+    "iw": 375
+   }
+  }
+ ]
+}

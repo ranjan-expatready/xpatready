@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review and release · Expat Ready prototype</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="appbar"><picture><source srcset="/brand/logo-light.svg" media="(prefers-color-scheme: dark)"><img src="/brand/logo-dark.svg" alt="Expat Ready" width="160" height="32"></picture><span>Solution 1 working prototype · configuration review (Super Admin)</span></header>
+<header class="top">
+  <div class="title">
+    <h1>Review and release</h1>
+    <p class="sub">Combination 1 · work permit applied from outside Canada · <span id="cfg"></span></p>
+  </div>
+  <label class="who">Acting as <span class="sim">Simulated</span>
+    <select id="actor" aria-label="Acting user"></select>
+  </label>
+</header>
+<div class="label-banner" id="label" role="note"></div>
+<section class="summary" aria-label="Readiness">
+  <div class="stat"><b id="s-decided">–</b><span>items decided</span></div>
+  <div class="stat"><b id="s-sme">–</b><span>SME sign-offs</span></div>
+  <div class="stat"><b id="s-returned">–</b><span>returned for re-draft</span></div>
+  <div class="ready" id="ready"></div>
+</section>
+<main class="layout">
+  <nav class="groups" aria-label="Item groups"><ul id="groups"></ul></nav>
+  <section class="work">
+    <div class="toolbar">
+      <div class="chips" role="tablist" aria-label="Show">
+        <button class="chip" data-filter="attention" role="tab">Needs attention</button>
+        <button class="chip" data-filter="undecided" role="tab">Undecided</button>
+        <button class="chip" data-filter="all" role="tab">All</button>
+      </div>
+      <button id="bulk" class="btn ghost">Approve all unflagged in this group</button>
+    </div>
+    <p class="hint" id="grouphint"></p>
+    <div id="items"></div>
+  </section>
+</main>
+<section class="release" aria-label="Submit and release">
+  <h2>Submit, approve and publish</h2>
+  <p class="hint">The author or the submitter never approves or publishes, the Platform Owner included. The approver never edits and approves exactly the submitted version.</p>
+  <div class="row">
+    <button id="submit" class="btn">Submit for approval</button>
+    <button id="approve" class="btn primary">Approve and publish</button>
+  </div>
+  <div id="substatus" class="hint"></div>
+  <div id="relmsg" class="msg" role="status" aria-live="polite"></div>
+  <ul id="releases" class="releases"></ul>
+</section>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script src="/app.js"></script>
+</body>
+</html>

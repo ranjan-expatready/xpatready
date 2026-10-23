@@ -1,0 +1,1458 @@
+{
+ "page": "file:///Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html",
+ "run": "2026-10-18T08:15:46.072Z",
+ "passed": 150,
+ "failed": 0,
+ "results": [
+  {
+   "name": "1440px light: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px light: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "78px of 900px"
+  },
+  {
+   "name": "1440px light: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 126.671875
+   }
+  },
+  {
+   "name": "1440px light: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 99.0625
+   }
+  },
+  {
+   "name": "1440px light: no sideways page scroll",
+   "ok": true,
+   "detail": "1440 vs 1440"
+  },
+  {
+   "name": "1440px light: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px light: the seven view diagrams shown at natural size; the technical overview closed",
+   "ok": true,
+   "detail": "7 visible"
+  },
+  {
+   "name": "1440px: every diagram at 100% (container = drawing width, at most 1,240px)",
+   "ok": true,
+   "detail": [
+    {
+     "k": "v0",
+     "w": 1036,
+     "cw": 1036
+    },
+    {
+     "k": "v1",
+     "w": 952,
+     "cw": 952
+    },
+    {
+     "k": "v2",
+     "w": 1162,
+     "cw": 1162
+    },
+    {
+     "k": "v3",
+     "w": 1232,
+     "cw": 1232
+    },
+    {
+     "k": "v4",
+     "w": 1212,
+     "cw": 1212
+    },
+    {
+     "k": "v5",
+     "w": 1232,
+     "cw": 1232
+    },
+    {
+     "k": "v6",
+     "w": 1202,
+     "cw": 1202
+    },
+    {
+     "k": "v7",
+     "w": 802,
+     "cw": 802
+    }
+   ]
+  },
+  {
+   "name": "one eye button per activity (41)",
+   "ok": true,
+   "detail": 41
+  },
+  {
+   "name": "eye opens the inspector with the activity card",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Generate form field maps",
+    "focusIn": true,
+    "hash": "#a=3.2",
+    "parts": [
+     "What this achieves",
+     "Who acts",
+     "Before it starts",
+     "How it works",
+     "Result and what happens next"
+    ],
+    "t": "Activity 3.2 · View 2: AI drafts the setupClose ✕Activity 3.2Generate form field mapsAutomatic step · View 2: AI drafts the setup · Runs for each new form edition or screen versionRuns automatically. Results appear in the review workbench (5.1), beside their source.What this achievesRecords for each form field whose fact fills it and how, so forms are later filled by rules with no manual mapping.Who actsAI in the productdrafts, reads documents, checks meaning; never approvesAuthority. Drafts mappings only; never publishes.Checked by. Every new or changed mapping is reviewed by the content publisher (5.1), beside its source.Before it startsStarts whenField matches are available.NeedsEach field's heading and page are known, so the person it is about can be resolved.Works onMatched fields of the family-information form (Example)How it worksFor each field: the source person or organisation, the relationship to the form's applicant (self, partner, child 1), canonical field, purpose or time, target field, format, conditions and repeated rowMap each answer-list entry to the form's own option textMark fields no client fact supplies with their 'collected from' source (staff working view or a profile record)Not built yet in today's code.Today's map entry holds only the canonical field, the form field and a transform; it has no person, relationship, purpose or rowCode references: Sources and detail, below.Result and what happens nextProducesReusable form field map for that form edition, every entry a draftNextSection placement (3.4, AI); reviewed in 5.1.Then: Every combination that uses this edition can reference the set.Done whenEvery field has a mapping (its person may be a profile record, such as the selected representative) or an explicit 'not filled' mark.If notA field whose person or meaning cannot be read from label and heading is marked uncertain with the page snippet.Rules and exceptions (6)Founder decision One form field map per form edition or portal screen version; every combination that uses that edition reuses itFounder decision Mappings exist as data because filling needs them; the AI writes them; during initial validation a person reviews every new or changed entry; approved unchanged entries are reusedFounder decision Reusing a definition never merges different people's valuesProposed here An answer-list miss is refused, never guessedProposed here Overflow is a continuation sheet or a flag, never silent truncationTeam requirement Mappings reference the field and purpose, never a questionnaire section, so moving a section cannot break a formExample · Client ASame label, three people (Example)Form field labelPerson (relative to the form's applicant)Date of birththe form's applicant: Client AHeading on the form: ApplicantCanonical field: Date of birthFormat: the form's date formatDate of birththe form's applicant's partnerHeading on the form: Spouse/common-law partnerCanonical field: Date of birthFormat: the form's date formatDate of birth (row 1)the form's applicant's child, row 1Heading on the form: ChildrenCanonical field: Date of birthFormat: the form's date formatOne form field map, many combinations (Example)CombinationFamily-information form editionMappingWork permit, outside Canadasame editionreusedStudy permit, outside Canadasame editionreusedVisitor visasame editionreusedException. What needs a new mapping: a new form edition, or a field whose meaning differs. The same 'Date of birth' label under an unclear heading is marked uncertain and reviewed.Immigration conditions, forms and values shown are examples, pending the Immigration SME.Acceptance checks (2)Normal case. The partner's date of birth fills both the partner field on Client A's form and the applicant field on the partner's own form, from one verified value.Alternate case. An answer-list entry with no matching form option is refused, never guessed.Sources and detailRecord handed overMapping set per form edition or screen versionRecords read · updatedReads Library · updates LibraryScreenNone: it runs in the backgroundBox map: purpose plus field, transform, value map, overflowSA-1B-27Forms reference a purpose, never a sectionSA-1B-12AI may draft and diff box maps; a person approvesSA-1B-33Build gapA map entry holds only the canonical field, the form field and a transform: no person, relationship, purpose or repeated row. (packages/contracts/src/schemas/spine-masters.ts:169-175)"
+   }
+  },
+  {
+   "name": "card reads in order: what it achieves, who acts, before it starts, how it works, result and next; no repeated receiver labels",
+   "ok": true,
+   "detail": [
+    "What this achieves",
+    "Who acts",
+    "Before it starts",
+    "How it works",
+    "Result and what happens next"
+   ]
+  },
+  {
+   "name": "location hash updated without navigation",
+   "ok": true,
+   "detail": "#a=3.2"
+  },
+  {
+   "name": "opening does not scroll the page or the map",
+   "ok": true,
+   "detail": {
+    "y": 7944,
+    "x": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "name": "Example opens in the same card by keyboard",
+   "ok": true,
+   "detail": {
+    "exp": "true",
+    "vis": true,
+    "label": true
+   }
+  },
+  {
+   "name": "another selection replaces the card in the same inspector",
+   "ok": true,
+   "detail": {
+    "h": "Check person and field selection",
+    "n": 1,
+    "exp": "false",
+    "sel": 1
+   }
+  },
+  {
+   "name": "an unrelated panel does not open its example because the previous one was open",
+   "ok": true,
+   "detail": "false"
+  },
+  {
+   "name": "selected activity is outlined on the map",
+   "ok": true,
+   "detail": 1
+  },
+  {
+   "name": "clicking the shape opens its card",
+   "ok": true
+  },
+  {
+   "name": "Escape closes and returns focus to the eye button",
+   "ok": true,
+   "detail": {
+    "hidden": true,
+    "f": "1.2",
+    "hash": ""
+   }
+  },
+  {
+   "name": "closing leaves the page and map where they were",
+   "ok": true,
+   "detail": {
+    "y": 6874,
+    "x": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "name": "hover preview shows title and Input → Output only",
+   "ok": true,
+   "detail": "Activity 5.1 · Person step (the person mark)Review every new or changed itemNew and changed fields, sections, document types, mappings and 'collected from' settings, with findings and recheck flags → Reviewed structure, or corrections sent back"
+  },
+  {
+   "name": "Close button closes and returns focus",
+   "ok": true
+  },
+  {
+   "name": "overview phase box jumps to its view, heading below the navigation",
+   "ok": true,
+   "detail": {
+    "t": 127,
+    "nav": 78
+   }
+  },
+  {
+   "name": "who-does-what matrix opens the card",
+   "ok": true
+  },
+  {
+   "name": "all 41 activity panels give the five first-view parts, steps, done-when and an example (or a link to one); no disclosure inside another",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "deep link #a=5.1 opens that card on load",
+   "ok": true
+  },
+  {
+   "name": "1440px: selected shape stays visible beside the open card (3.8, 9.3, 5.3, 9.6)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px: another shape can be selected without closing the card",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Resolve filling errors and validate the final form"
+   }
+  },
+  {
+   "name": "hover preview stays while the pointer is on it, and Escape closes it",
+   "ok": true,
+   "detail": {
+    "tb": {
+     "vis": true,
+     "x": 761.15625,
+     "y": 322.328125
+    },
+    "stays": true,
+    "gone": true
+   }
+  },
+  {
+   "name": "map: plain-language process map comes before the BPMN overview; no symbols to decode beyond the eye",
+   "ok": true,
+   "detail": 0
+  },
+  {
+   "name": "map: three bands; ways in A and B, then stages 1–12 in reading order; the stage strip lists every stage",
+   "ok": true,
+   "detail": {
+    "first": "map",
+    "order": [
+     "1",
+     "2",
+     "3",
+     "A",
+     "B",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8",
+     "9",
+     "10",
+     "11",
+     "12"
+    ],
+    "bands": 3,
+    "strip": "1,2,3,A,B,4,5,6,7,8,9,10,11,12",
+    "who": true,
+    "eye": true,
+    "receivesOnCard": false,
+    "arrows": [
+     "Read forms and passages",
+     "Draft with sources",
+     "Published configuration",
+     "Client record resolved",
+     "People, roles, pinned pack version",
+     "Unresolved facts",
+     "Checked forms",
+     "Submitted application",
+     "Decision recorded",
+     "Changed items",
+     "New published version",
+     "Affected forms"
+    ],
+    "gates": [
+     {
+      "q": "Review outcome?",
+      "n": 3
+     },
+     {
+      "q": "Same person, and does the firm take the case?",
+      "n": 3
+     },
+     {
+      "q": "Every fact a form needs verified?",
+      "n": 3
+     },
+     {
+      "q": "Anything wrong?",
+      "n": 3
+     },
+     {
+      "q": "Approved and signed without a problem?",
+      "n": 4
+     },
+     {
+      "q": "What follows a recorded decision?",
+      "n": 3
+     },
+     {
+      "q": "Anything changed?",
+      "n": 3
+     },
+     {
+      "q": "Does it affect this open case?",
+      "n": 2
+     }
+    ],
+    "otherSvg": 0,
+    "symbolsClosed": true,
+    "overflow": [],
+    "store": true,
+    "wrap": "Verified facts (stage 6 → stage 7)",
+    "sides": [
+     "Super Admin",
+     "Super Admin",
+     "Super Admin",
+     "Super Admin",
+     "Client portal",
+     "Firm",
+     "Firm",
+     "Firm",
+     "Client portal",
+     "Firm",
+     "Firm",
+     "Firm",
+     "Client portal",
+     "Firm",
+     "Outside",
+     "Firm",
+     "Super Admin",
+     "Super Admin",
+     "Super Admin",
+     "Super Admin",
+     "Firm"
+    ],
+    "tops": [
+     -5529,
+     -5529,
+     -5529,
+     -5529
+    ]
+   }
+  },
+  {
+   "name": "map: every stage names who acts and has an eye button with a tooltip; no receives/does/hands-over prose on the cards",
+   "ok": true,
+   "detail": {
+    "first": "map",
+    "order": [
+     "1",
+     "2",
+     "3",
+     "A",
+     "B",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8",
+     "9",
+     "10",
+     "11",
+     "12"
+    ],
+    "bands": 3,
+    "strip": "1,2,3,A,B,4,5,6,7,8,9,10,11,12",
+    "who": true,
+    "eye": true,
+    "receivesOnCard": false,
+    "arrows": [
+     "Read forms and passages",
+     "Draft with sources",
+     "Published configuration",
+     "Client record resolved",
+     "People, roles, pinned pack version",
+     "Unresolved facts",
+     "Checked forms",
+     "Submitted application",
+     "Decision recorded",
+     "Changed items",
+     "New published version",
+     "Affected forms"
+    ],
+    "gates": [
+     {
+      "q": "Review outcome?",
+      "n": 3
+     },
+     {
+      "q": "Same person, and does the firm take the case?",
+      "n": 3
+     },
+     {
+      "q": "Every fact a form needs verified?",
+      "n": 3
+     },
+     {
+      "q": "Anything wrong?",
+      "n": 3
+     },
+     {
+      "q": "Approved and signed without a problem?",
+      "n": 4
+     },
+     {
+      "q": "What follows a recorded decision?",
+      "n": 3
+     },
+     {
+      "q": "Anything changed?",
+      "n": 3
+     },
+     {
+      "q": "Does it affect this open case?",
+      "n": 2
+     }
+    ],
+    "otherSvg": 0,
+    "symbolsClosed": true,
+    "overflow": [],
+    "store": true,
+    "wrap": "Verified facts (stage 6 → stage 7)",
+    "sides": [
+     "Super Admin",
+     "Super Admin",
+     "Super Admin",
+     "Super Admin",
+     "Client portal",
+     "Firm",
+     "Firm",
+     "Firm",
+     "Client portal",
+     "Firm",
+     "Firm",
+     "Firm",
+     "Client portal",
+     "Firm",
+     "Outside",
+     "Firm",
+     "Super Admin",
+     "Super Admin",
+     "Super Admin",
+     "Super Admin",
+     "Firm"
+    ],
+    "tops": [
+     -5529,
+     -5529,
+     -5529,
+     -5529
+    ]
+   }
+  },
+  {
+   "name": "map: the first row of the case band starts level (card headers aligned)",
+   "ok": true,
+   "detail": [
+    -5529,
+    -5529,
+    -5529,
+    -5529
+   ]
+  },
+  {
+   "name": "map: every arrow is labelled with its handoff",
+   "ok": true,
+   "detail": [
+    "Read forms and passages",
+    "Draft with sources",
+    "Published configuration",
+    "Client record resolved",
+    "People, roles, pinned pack version",
+    "Unresolved facts",
+    "Checked forms",
+    "Submitted application",
+    "Decision recorded",
+    "Changed items",
+    "New published version",
+    "Affected forms"
+   ]
+  },
+  {
+   "name": "map: decisions read as questions with at least two labelled outcomes",
+   "ok": true,
+   "detail": [
+    {
+     "q": "Review outcome?",
+     "n": 3
+    },
+    {
+     "q": "Same person, and does the firm take the case?",
+     "n": 3
+    },
+    {
+     "q": "Every fact a form needs verified?",
+     "n": 3
+    },
+    {
+     "q": "Anything wrong?",
+     "n": 3
+    },
+    {
+     "q": "Approved and signed without a problem?",
+     "n": 4
+    },
+    {
+     "q": "What follows a recorded decision?",
+     "n": 3
+    },
+    {
+     "q": "Anything changed?",
+     "n": 3
+    },
+    {
+     "q": "Does it affect this open case?",
+     "n": 2
+    }
+   ]
+  },
+  {
+   "name": "map: the published pack version is a shared record that cases read (not sent per case); the case band wraps 6 → 7 with a labelled connector",
+   "ok": true,
+   "detail": {
+    "first": "map",
+    "order": [
+     "1",
+     "2",
+     "3",
+     "A",
+     "B",
+     "4",
+     "5",
+     "6",
+     "7",
+     "8",
+     "9",
+     "10",
+     "11",
+     "12"
+    ],
+    "bands": 3,
+    "strip": "1,2,3,A,B,4,5,6,7,8,9,10,11,12",
+    "who": true,
+    "eye": true,
+    "receivesOnCard": false,
+    "arrows": [
+     "Read forms and passages",
+     "Draft with sources",
+     "Published configuration",
+     "Client record resolved",
+     "People, roles, pinned pack version",
+     "Unresolved facts",
+     "Checked forms",
+     "Submitted application",
+     "Decision recorded",
+     "Changed items",
+     "New published version",
+     "Affected forms"
+    ],
+    "gates": [
+     {
+      "q": "Review outcome?",
+      "n": 3
+     },
+     {
+      "q": "Same person, and does the firm take the case?",
+      "n": 3
+     },
+     {
+      "q": "Every fact a form needs verified?",
+      "n": 3
+     },
+     {
+      "q": "Anything wrong?",
+      "n": 3
+     },
+     {
+      "q": "Approved and signed without a problem?",
+      "n": 4
+     },
+     {
+      "q": "What follows a recorded decision?",
+      "n": 3
+     },
+     {
+      "q": "Anything changed?",
+      "n": 3
+     },
+     {
+      "q": "Does it affect this open case?",
+      "n": 2
+     }
+    ],
+    "otherSvg": 0,
+    "symbolsClosed": true,
+    "overflow": [],
+    "store": true,
+    "wrap": "Verified facts (stage 6 → stage 7)",
+    "sides": [
+     "Super Admin",
+     "Super Admin",
+     "Super Admin",
+     "Super Admin",
+     "Client portal",
+     "Firm",
+     "Firm",
+     "Firm",
+     "Client portal",
+     "Firm",
+     "Firm",
+     "Firm",
+     "Client portal",
+     "Firm",
+     "Outside",
+     "Firm",
+     "Super Admin",
+     "Super Admin",
+     "Super Admin",
+     "Super Admin",
+     "Firm"
+    ],
+    "tops": [
+     -5529,
+     -5529,
+     -5529,
+     -5529
+    ]
+   }
+  },
+  {
+   "name": "map: actor side shown in words (Super Admin, Firm, Client portal)",
+   "ok": true,
+   "detail": [
+    "Super Admin",
+    "Client portal",
+    "Firm",
+    "Outside"
+   ]
+  },
+  {
+   "name": "map: no card text overflows at 1440px",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "lists: every numbered actor line has its text in one aligned column; ways in carry no letters; Who is who shows each side's count",
+   "ok": true,
+   "detail": {
+    "n": 43,
+    "bad": 0,
+    "letters": false,
+    "counts": [
+     "3 roles",
+     "2 parts",
+     "2 roles",
+     "1 role",
+     "1 party"
+    ]
+   }
+  },
+  {
+   "name": "tooltips: the eye, a side tag, a lane tag, a gateway and a task mark each explain their meaning on hover",
+   "ok": true,
+   "detail": {
+    "t1": "Open the details: what this stage receives, does and hands over, its rules, exceptions and the detailed activities",
+    "t2": "Super Admin role; works in the Content Pack Configurator",
+    "t3": "Super Admin role; works in the Content Pack Configurator. Does: Attaches official sources, runs the engine, reviews every new or changed item beside its source, triages firms' support tickets.",
+    "t4": "Decision mark ✕Exactly one outgoing path is taken; each path is labelled with its answer.Any blocking failure?",
+    "t5": "Activity 5.1 · Person step (the person mark)Review every new or changed itemNew and changed fields, sections, document types, mappings and 'collected from' settings, with findings and recheck flags → Reviewed structure, or corrections sent back"
+   }
+  },
+  {
+   "name": "map: the eye opens the stage card in the side panel, marks the stage selected, page does not move",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Pre-fill from each person's verified facts",
+    "focus": "insp-h",
+    "hash": "#c=st-5",
+    "bar": "Stage 5 · process map",
+    "on": true,
+    "sel": true,
+    "y": 2318,
+    "rules": [
+     "Team requirement One record per person or organisation inside one firm, shared by all their cases; a case reaches it through the person's resolved identity, never by matching a name or an email",
+     "Founder decision Facts belong to the person and are reused across that person's cases inside the same firm only, never across firms; the firm's and the role's permissions apply to every reuse",
+     "Team requirement Facts that belong to one application (a job offer, a case-only answer) stay on that case and are never reused as the person's value",
+     "Founder decision Household facts (marriage date, children, a shared address) are entered once and linked to both partners; each partner's personal and restricted values stay their own",
+     "Team requirement A superseded value is kept as history with its source and dates, never overwritten",
+     "Proposed here Each required fact is resolved on its own: same person or organisation, same field meaning and purpose, and the right date or context; never by copying the latest case",
+     "Proposed here The selected value is the current verified one: verified by a person, with a known source, and not superseded by a later verified value",
+     "Proposed here A later case-open date, upload time or edit time does not by itself make a value more authoritative",
+     "Proposed here A newer declared or document-read value that differs from a verified one waits as 'needs review'; it never silently replaces the verified value, and until it is resolved the forms that read that fact cannot be approved or submitted",
+     "Proposed here A value correctly superseded by a later verified one is history, not a conflict",
+     "Proposed here Two current values with no recorded replacement between them (for example after two records are merged) are a conflict: both are shown with their sources and a person verifies one; nothing is guessed",
+     "Proposed here A question about a past date (an address at an earlier application) is answered from the value true at that date; today's value never supersedes it",
+     "Founder decision Each field's re-confirmation rule applies on every new case: identity facts are not re-asked unless a new document differs; addresses, jobs and travel are shown pre-filled with 'still true? add anything new'; the client's 'yes, still true' re-confirms the value; until it is answered, forms that read it are held at approval and submission",
+     "Team requirement Each case keeps the set of facts it was assessed and filed on; a later change to the shared record never rewrites a submitted form",
+     "Proposed here Choosing among values already verified is rules, not AI; AI only proposes values read from new documents (7.3)"
+    ],
+    "rulesClosed": true,
+    "story": 2
+   }
+  },
+  {
+   "name": "map: stage 5 carries the shared-record selection rules in context, closed until the reader opens them",
+   "ok": true,
+   "detail": 15
+  },
+  {
+   "name": "map: Example opens Client A's example as two-column comparisons with each row explained under it (no cramped five-column table, no disclosure inside it)",
+   "ok": true,
+   "detail": {
+    "vis": true,
+    "exp": "true",
+    "figs": [
+     {
+      "cap": "Reusing facts on a new case (Example: every value, case and date is invented)",
+      "rows": 6,
+      "cols": 2
+     },
+     {
+      "cap": "Who starts where, and what carries over (Example)",
+      "rows": 8,
+      "cols": 2
+     }
+    ],
+    "details": 0
+   }
+  },
+  {
+   "name": "example row explanation is visible in place and shows the passport proposal with readiness pending",
+   "ok": true,
+   "detail": "Partner's passportStored: the verified passport · proposed: the new number, 'needs review' · forms that read it: needs review Available information: Passport ve"
+  },
+  {
+   "name": "map: an activity link in the stage card opens that activity in the same panel, with Back to the stage; the stage stays selected",
+   "ok": true,
+   "detail": {
+    "h": "Create the case and assign its participants",
+    "hash": "#a=7.1",
+    "sel": 1,
+    "figs": [
+     "Who gets what (Example)",
+     "Reusing facts on a new case (Example: every value, case and date is invented)",
+     "Who starts where, and what carries over (Example)",
+     "A corporate case (Example)"
+    ],
+    "exOpen": false,
+    "stageSel": 1,
+    "back": "← Back to Stage 5 · Pre-fill from each person's verified facts"
+   }
+  },
+  {
+   "name": "case creation card 7.1 carries the same reuse example and scenario matrix, closed until the reader opens it",
+   "ok": true,
+   "detail": [
+    "Who gets what (Example)",
+    "Reusing facts on a new case (Example: every value, case and date is invented)",
+    "Who starts where, and what carries over (Example)",
+    "A corporate case (Example)"
+   ]
+  },
+  {
+   "name": "Back returns to the stage with its example still open, its scroll position and focus on the link used; the page does not move",
+   "ok": true,
+   "detail": {
+    "h": "Pre-fill from each person's verified facts",
+    "hash": "#c=st-5",
+    "exOpen": true,
+    "scroll": 2324,
+    "focus": "7.1",
+    "back": false,
+    "y": 2318,
+    "stageSel": true
+   }
+  },
+  {
+   "name": "map: way in B is an existing client opening a new case without a new lead",
+   "ok": true,
+   "detail": "Start another service"
+  },
+  {
+   "name": "map: Escape closes the stage card and returns focus to its eye button",
+   "ok": true,
+   "detail": {
+    "hidden": true,
+    "f": "st-B",
+    "cls": "eye seye det"
+   }
+  },
+  {
+   "name": "shared records: plain words per record, a key to the rule tags, every tag explained on hover, readers and writers as links that open the card",
+   "ok": true,
+   "detail": {
+    "rec": {
+     "links": 111,
+     "key": 4,
+     "tips": true,
+     "plain": 6
+    },
+    "rc": "Approve and publish the pack version"
+   }
+  },
+  {
+   "name": "who is who: five sides and every actor with product role, what they do and never do",
+   "ok": true,
+   "detail": {
+    "h": "Who is who",
+    "rows": 9,
+    "t": "Who is whoClose ✕Who is whoRole names follow the team's design: six Expat Ready staff roles in the Super Admin console; firm roles Case Manager and Case Officer; representative types RCIC, lawyer or notary, paralegal. The Immigration SME is not one of today's staff roles: it is proposed.ActorSide · product roleDoesNever doesContent publisherExpat Ready · Super Admin consoleSuper Admin role; works in the Content Pack ConfiguratorAttaches official sources, runs the engine, reviews every new or changed item beside its source, triages firms' support ticketsPublishes its own draft; edits a firm's caseImmigration SMEExpat Ready · Super Admin consoleSuper Admin role, proposed (the team's documents call this person the SME)Confirms rules, eligibility gates, documents and values, and signs the expected answers that AI steps are tested againstPublishes the pack version; gives a firm legal advice through the productSecond-person approverExpat Ready · Super Admin consoleSuper Admin: another Content publisher or the Platform Owner, never the pack version's author or submitterApproves and publishes the pack version (the second person)Edits what it publishes; a fault goes back as a new draftAI in the productSystem · inside the productSteps inside the product, named in the team's design Drafter, Reader (documents) and Checker (cross-checks); not a user or a roleDrafts the setup, proposes values read from documents, flags meaning doubtsApproves, verifies a fact, publishes, or writes a value on a formPlatformSystem · inside the productCode and rules, named in the team's design Filler (forms) and Reviewer (what is missing); no AI judgementReads forms, checks and tests drafts, selects verified facts, fills forms and reads every value backDecides anything a person must decideProspect, then clientClient · client portalThe prospect, then the client and family members, or an employer's signatoryAnswers the lead form, PQR and SQR, uploads documents, signs and declares their own partsVerifies a fact for the firm; sees another adult's restricted valuesAgentFirm · agency workspaceFirm role: Case Manager or Case OfficerReviews leads, opens cases, verifies each fact once, resolves flags, records government letters, adopts new versionsEdits a form field map or the published configuration; approves a form without the firm's form-approve permissionLead representativeFirm · agency workspaceFirm: the case's lead representative ('Lead RCIC' in the product), an RCIC, lawyer or notary, or paralegal; approves through the firm's form-approve permission and submits through its submit permissionApproves each final form and normally submits the application; the government fee is paid by the client, or by the firm on the client's behalf, as recorded on the caseSigns for the clientGovernmentOutside the productFor example the immigration department that receives the formsReceives the application; sends acknowledgements, requests and decisionsIs controlled by the product",
+    "groups": [
+     "Expat Ready · Super Admin console 3 roles",
+     "System · inside the product 2 parts",
+     "Firm · agency workspace 2 roles",
+     "Client · client portal 1 role",
+     "Outside the product 1 party"
+    ]
+   }
+  },
+  {
+   "name": "every view has a \"Diagram symbols\" button that opens the legend in the side panel",
+   "ok": true,
+   "detail": {
+    "h": "Diagram symbols (BPMN 2.0)",
+    "keys": 15,
+    "lanes": 9
+   }
+  },
+  {
+   "name": "diagrams: every lane and pool named horizontally; actor-type brackets (System, Super Admin, Firm, Client) in the left strip; no rotated names left visible",
+   "ok": true,
+   "detail": {
+    "lanes": 23,
+    "nLanes": 23,
+    "pools": 11,
+    "nPools": 11,
+    "vertical": 0,
+    "notes": 5,
+    "group": true,
+    "sides": [
+     "System",
+     "Super Admin"
+    ],
+    "types": 19,
+    "x15": true,
+    "notesText": "A blocking failure holds only the affected items and what depends onthem | Both can apply: a form whose facts are ready goes on while another person's missing answer is asked. A 'needs review' fact with a verified value is filled, but its forms wait at approval | AI checker unavailable: fields stay 'not checked by AI'; the agent reviews them in 8.4 | A required checklist item needs accepted evidence or an authorised disposition; a reason alone never clears it | A suspected wrong mapping is held at once, with its dependents, while it is investigated"
+   }
+  },
+  {
+   "name": "diagrams: business-rule notes only (symbol meanings live in the legend and tooltips); view 6 repeats per filing",
+   "ok": true,
+   "detail": {
+    "n": 5,
+    "t": "A blocking failure holds only the affected items and what depends onthem | Both can apply: a form whose facts are ready goes on while another person's missing answer is asked. A 'needs review' fact with a verified value is filled, but its forms wait at approval | AI checker unavailable: fields stay 'not checked by AI'; the agent reviews them in 8.4 | A required checklist item needs accepted evidence or an authorised disposition; a reason alone never clears it | A suspected wrong mapping is held at once, with its dependents, while it is investigated"
+   }
+  },
+  {
+   "name": "every view lists what happens in it, one line per activity (41 in all)",
+   "ok": true,
+   "detail": [
+    5,
+    8,
+    7,
+    7,
+    7,
+    3,
+    4
+   ]
+  },
+  {
+   "name": "BPMN: view 4 and the overview start an existing client's new case at 7.1, not at the lead form",
+   "ok": true,
+   "detail": {
+    "v4": true,
+    "v0": true
+   }
+  },
+  {
+   "name": "nomenclature: no retired page terms remain (team words: Content Pack Configurator, published pack version, verified, form, support ticket, Lead representative, Immigration SME)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "scenario walk (documentation coverage): no prior case: a new client goes through the lead form, PQR and duplicate check",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): profile but no case: started from the record; only missing, re-confirmation and needed eligibility questions",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): one prior case: shared facts reused; that case's approvals, signatures, receipts and decision not carried",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): several cases: each fact resolved on its own, never the latest case",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): stable verified fact reused and correctable, with no needless review",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): current address supersedes a historical one; history is not a conflict; past dates keep past values",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): J2: verified passport + proposed new number → two statuses; forms that read it not ready until verified or rejected with evidence",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): J2: a required re-confirmation stays pending until answered",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): J3: the matrix is status-specific (missing blank; re-confirmation pending; proposal shows both statuses; conflict shows alternatives, none selected)",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): genuine disagreement: no value selected, a person verifies",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): timestamps alone never decide authority",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): identity: names or email never merge people; resolved identifier used",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): permissions and firm boundary apply to every reuse",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): documents re-checked against the new case; expiry warnings unchanged",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): opening a case does not alter an earlier case; later shared-fact changes follow the affected-case rules; submitted forms never change",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): no AI selects among verified values",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): same person links the record and still asks gaps and differences",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): R1: missing passport + \"awaiting client\" stays unresolved; a reason alone never clears a checklist item",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): R1: an authorised disposition the rule permits, or a person accepting readable evidence when reading fails, resolves the item",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): R2: approval → signature-only change → submission stays possible; a signed upload with a changed birth date does not inherit approval",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): R3: each filing is approved, signed, submitted and decided on its own; principal decided, partner pending → case open; partner can still be signed and submitted",
+   "ok": true
+  },
+  {
+   "name": "scenario walk (documentation coverage): 8.3/8.4: unavailable AI checker → \"not checked by AI\", focused human review completed and recorded; grey is not a review; hard checks still apply",
+   "ok": true
+  },
+  {
+   "name": "1440px: J1 — the selected map stage (3, 5, 6, 9, 12) stays fully visible beside its open card",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px: another visible stage can be selected without closing the card; only it stays selected",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Record responses and continue after the decision",
+    "sel": [
+     "st-9"
+    ]
+   }
+  },
+  {
+   "name": "1440px: Escape returns focus to the stage's eye button and clears the selection",
+   "ok": true,
+   "detail": {
+    "hidden": true,
+    "f": "st-9",
+    "sel": 0
+   }
+  },
+  {
+   "name": "1440px dark: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px dark: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "78px of 900px"
+  },
+  {
+   "name": "1440px dark: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 126.671875
+   }
+  },
+  {
+   "name": "1440px dark: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 99.0625
+   }
+  },
+  {
+   "name": "1440px dark: no sideways page scroll",
+   "ok": true,
+   "detail": "1440 vs 1440"
+  },
+  {
+   "name": "1440px dark: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px dark: the seven view diagrams shown at natural size; the technical overview closed",
+   "ok": true,
+   "detail": "7 visible"
+  },
+  {
+   "name": "1440px dark: page dark, diagram panel stays light",
+   "ok": true,
+   "detail": "rgb(19, 22, 25) / rgb(255, 255, 255)"
+  },
+  {
+   "name": "1280px light: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px light: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "78px of 800px"
+  },
+  {
+   "name": "1280px light: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 126.671875
+   }
+  },
+  {
+   "name": "1280px light: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 99.0625
+   }
+  },
+  {
+   "name": "1280px light: no sideways page scroll",
+   "ok": true,
+   "detail": "1280 vs 1280"
+  },
+  {
+   "name": "1280px light: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px light: the seven view diagrams shown at natural size; the technical overview closed",
+   "ok": true,
+   "detail": "7 visible"
+  },
+  {
+   "name": "1280px: selected shape stays visible beside the open card (3.8, 9.3, 5.3, 9.6)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px: another shape can be selected without closing the card",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Resolve filling errors and validate the final form"
+   }
+  },
+  {
+   "name": "1280px: J1 — the selected map stage (3, 5, 6, 9, 12) stays fully visible beside its open card",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px: another visible stage can be selected without closing the card; only it stays selected",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Record responses and continue after the decision",
+    "sel": [
+     "st-9"
+    ]
+   }
+  },
+  {
+   "name": "1280px: Escape returns focus to the stage's eye button and clears the selection",
+   "ok": true,
+   "detail": {
+    "hidden": true,
+    "f": "st-9",
+    "sel": 0
+   }
+  },
+  {
+   "name": "1280px dark: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px dark: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "78px of 800px"
+  },
+  {
+   "name": "1280px dark: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 126.671875
+   }
+  },
+  {
+   "name": "1280px dark: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 99.0625
+   }
+  },
+  {
+   "name": "1280px dark: no sideways page scroll",
+   "ok": true,
+   "detail": "1280 vs 1280"
+  },
+  {
+   "name": "1280px dark: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px dark: the seven view diagrams shown at natural size; the technical overview closed",
+   "ok": true,
+   "detail": "7 visible"
+  },
+  {
+   "name": "1280px dark: page dark, diagram panel stays light",
+   "ok": true,
+   "detail": "rgb(19, 22, 25) / rgb(255, 255, 255)"
+  },
+  {
+   "name": "768px light: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "768px light: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "48px of 1024px"
+  },
+  {
+   "name": "768px light: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 96.5625
+   }
+  },
+  {
+   "name": "768px light: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 69.3125
+   }
+  },
+  {
+   "name": "768px light: no sideways page scroll",
+   "ok": true,
+   "detail": "768 vs 768"
+  },
+  {
+   "name": "768px light: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "768px light: lists shown instead of diagrams",
+   "ok": true,
+   "detail": "0 diagrams, 8 lists"
+  },
+  {
+   "name": "768px dark: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "768px dark: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "48px of 1024px"
+  },
+  {
+   "name": "768px dark: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 96.5625
+   }
+  },
+  {
+   "name": "768px dark: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 69.3125
+   }
+  },
+  {
+   "name": "768px dark: no sideways page scroll",
+   "ok": true,
+   "detail": "768 vs 768"
+  },
+  {
+   "name": "768px dark: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "768px dark: lists shown instead of diagrams",
+   "ok": true,
+   "detail": "0 diagrams, 8 lists"
+  },
+  {
+   "name": "768px dark: page dark, diagram panel stays light",
+   "ok": true,
+   "detail": "rgb(19, 22, 25) / rgb(255, 255, 255)"
+  },
+  {
+   "name": "375px light: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px light: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "48px of 812px"
+  },
+  {
+   "name": "375px light: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 96.78125
+   }
+  },
+  {
+   "name": "375px light: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 68.78125
+   }
+  },
+  {
+   "name": "375px light: no sideways page scroll",
+   "ok": true,
+   "detail": "375 vs 375"
+  },
+  {
+   "name": "375px light: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px light: lists shown instead of diagrams",
+   "ok": true,
+   "detail": "0 diagrams, 8 lists"
+  },
+  {
+   "name": "phone: list item opens a full-width bottom sheet",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "modal": "true",
+    "left": 0,
+    "w": 375,
+    "iw": 375
+   }
+  },
+  {
+   "name": "phone: Example opens by touch",
+   "ok": true
+  },
+  {
+   "name": "phone: keyboard focus stays inside the sheet",
+   "ok": true
+  },
+  {
+   "name": "phone: clicking the page behind the sheet does nothing; focus stays in the sheet",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "inside": true,
+    "inert": true
+   }
+  },
+  {
+   "name": "phone: Close returns focus to the list item",
+   "ok": true,
+   "detail": {
+    "hidden": true,
+    "act": "8.4"
+   }
+  },
+  {
+   "name": "phone: closing makes the page usable again",
+   "ok": true
+  },
+  {
+   "name": "phone: \"Diagram\" shows the full-size diagram in a sideways-scrolling frame",
+   "ok": true,
+   "detail": {
+    "vis": true,
+    "sw": 1232,
+    "cw": 341,
+    "page": 375,
+    "iw": 375
+   }
+  },
+  {
+   "name": "phone: the map stacks to one column with downward arrows (6 → 7 arrow shown), none wider than the screen",
+   "ok": true,
+   "detail": {
+    "cols": [
+     1,
+     1,
+     1
+    ],
+    "wide": 0,
+    "phoneArrow": 1,
+    "wrapHidden": true
+   }
+  },
+  {
+   "name": "phone: a stage card opens as the full-width bottom sheet",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "modal": "true",
+    "w": 375,
+    "iw": 375
+   }
+  },
+  {
+   "name": "375px dark: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px dark: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "48px of 812px"
+  },
+  {
+   "name": "375px dark: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 96.78125
+   }
+  },
+  {
+   "name": "375px dark: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 68.78125
+   }
+  },
+  {
+   "name": "375px dark: no sideways page scroll",
+   "ok": true,
+   "detail": "375 vs 375"
+  },
+  {
+   "name": "375px dark: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px dark: lists shown instead of diagrams",
+   "ok": true,
+   "detail": "0 diagrams, 8 lists"
+  },
+  {
+   "name": "375px dark: page dark, diagram panel stays light",
+   "ok": true,
+   "detail": "rgb(19, 22, 25) / rgb(255, 255, 255)"
+  },
+  {
+   "name": "deep link #c=st-5 opens that stage card on load",
+   "ok": true
+  }
+ ]
+}

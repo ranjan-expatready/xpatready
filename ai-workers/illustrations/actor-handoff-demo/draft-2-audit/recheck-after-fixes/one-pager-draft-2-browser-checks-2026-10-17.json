@@ -1,0 +1,632 @@
+{
+ "page": "file:///Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/solution-1-one-pager.html",
+ "run": "2026-10-17T15:16:19.097Z",
+ "passed": 91,
+ "failed": 0,
+ "results": [
+  {
+   "name": "1440px light: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px light: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "78px of 900px"
+  },
+  {
+   "name": "1440px light: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 99.34375
+   }
+  },
+  {
+   "name": "1440px light: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 98.59375
+   }
+  },
+  {
+   "name": "1440px light: no sideways page scroll",
+   "ok": true,
+   "detail": "1440 vs 1440"
+  },
+  {
+   "name": "1440px light: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px light: diagrams shown at natural size",
+   "ok": true,
+   "detail": "8 visible"
+  },
+  {
+   "name": "1440px: every diagram at 100% (container = drawing width, at most 1,240px)",
+   "ok": true,
+   "detail": [
+    {
+     "k": "v0",
+     "w": 1036,
+     "cw": 1036
+    },
+    {
+     "k": "v1",
+     "w": 952,
+     "cw": 952
+    },
+    {
+     "k": "v2",
+     "w": 1162,
+     "cw": 1162
+    },
+    {
+     "k": "v3",
+     "w": 1232,
+     "cw": 1232
+    },
+    {
+     "k": "v4",
+     "w": 1212,
+     "cw": 1212
+    },
+    {
+     "k": "v5",
+     "w": 1232,
+     "cw": 1232
+    },
+    {
+     "k": "v6",
+     "w": 1202,
+     "cw": 1202
+    },
+    {
+     "k": "v7",
+     "w": 802,
+     "cw": 802
+    }
+   ]
+  },
+  {
+   "name": "one eye button per activity (41)",
+   "ok": true,
+   "detail": 41
+  },
+  {
+   "name": "eye opens the inspector with the activity card",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Generate form field mappings",
+    "focusIn": true,
+    "hash": "#a=3.2",
+    "dt": 10,
+    "io": 4
+   }
+  },
+  {
+   "name": "card has ten groups and the Input → Action → Output → Receiving owner line",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Generate form field mappings",
+    "focusIn": true,
+    "hash": "#a=3.2",
+    "dt": 10,
+    "io": 4
+   }
+  },
+  {
+   "name": "location hash updated without navigation",
+   "ok": true,
+   "detail": "#a=3.2"
+  },
+  {
+   "name": "opening does not scroll the page or the map",
+   "ok": true,
+   "detail": {
+    "y": 3426,
+    "x": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "name": "Example opens in the same card by keyboard",
+   "ok": true,
+   "detail": {
+    "exp": "true",
+    "vis": true,
+    "label": true
+   }
+  },
+  {
+   "name": "another selection replaces the card in the same inspector",
+   "ok": true,
+   "detail": {
+    "h": "Check the copy's meaning",
+    "n": 1,
+    "exp": "true",
+    "sel": 1
+   }
+  },
+  {
+   "name": "Example stays open across selections",
+   "ok": true,
+   "detail": "true"
+  },
+  {
+   "name": "selected activity is outlined on the map",
+   "ok": true,
+   "detail": 1
+  },
+  {
+   "name": "clicking the shape opens its card",
+   "ok": true
+  },
+  {
+   "name": "Escape closes and returns focus to the eye button",
+   "ok": true,
+   "detail": {
+    "hidden": true,
+    "f": "1.2",
+    "hash": ""
+   }
+  },
+  {
+   "name": "closing leaves the page and map where they were",
+   "ok": true,
+   "detail": {
+    "y": 2780,
+    "x": [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   }
+  },
+  {
+   "name": "hover preview shows title and Input → Output only",
+   "ok": true,
+   "detail": "5.1 Review every new or changed itemNew and changed fields, sections, document types, mappings and 'collected from' settings, with findings and recheck flags → Reviewed structure, or corrections sent back"
+  },
+  {
+   "name": "Close button closes and returns focus",
+   "ok": true
+  },
+  {
+   "name": "overview phase box jumps to its view, heading below the navigation",
+   "ok": true,
+   "detail": {
+    "t": 99,
+    "nav": 78
+   }
+  },
+  {
+   "name": "who-does-what matrix opens the card",
+   "ok": true
+  },
+  {
+   "name": "all 41 cards complete (ten groups, flow line, person line, example or reason)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "deep link #a=5.1 opens that card on load",
+   "ok": true
+  },
+  {
+   "name": "1440px: selected shape stays visible beside the open card (3.8, 9.3, 5.3, 9.6)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px: another shape can be selected without closing the card",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Resolve read-back results, type refused fields, validate"
+   }
+  },
+  {
+   "name": "hover preview stays while the pointer is on it, and Escape closes it",
+   "ok": true,
+   "detail": {
+    "tb": {
+     "vis": true,
+     "x": 769,
+     "y": 464.09375
+    },
+    "stays": true,
+    "gone": true
+   }
+  },
+  {
+   "name": "1440px dark: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px dark: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "78px of 900px"
+  },
+  {
+   "name": "1440px dark: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 99.34375
+   }
+  },
+  {
+   "name": "1440px dark: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 98.59375
+   }
+  },
+  {
+   "name": "1440px dark: no sideways page scroll",
+   "ok": true,
+   "detail": "1440 vs 1440"
+  },
+  {
+   "name": "1440px dark: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1440px dark: diagrams shown at natural size",
+   "ok": true,
+   "detail": "8 visible"
+  },
+  {
+   "name": "1440px dark: page dark, diagram panel stays light",
+   "ok": true,
+   "detail": "rgb(18, 19, 20) / rgb(255, 255, 255)"
+  },
+  {
+   "name": "1280px light: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px light: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "78px of 800px"
+  },
+  {
+   "name": "1280px light: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 99.34375
+   }
+  },
+  {
+   "name": "1280px light: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 98.59375
+   }
+  },
+  {
+   "name": "1280px light: no sideways page scroll",
+   "ok": true,
+   "detail": "1280 vs 1280"
+  },
+  {
+   "name": "1280px light: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px light: diagrams shown at natural size",
+   "ok": true,
+   "detail": "8 visible"
+  },
+  {
+   "name": "1280px: selected shape stays visible beside the open card (3.8, 9.3, 5.3, 9.6)",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px: another shape can be selected without closing the card",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "h": "Resolve read-back results, type refused fields, validate"
+   }
+  },
+  {
+   "name": "1280px dark: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px dark: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "78px of 800px"
+  },
+  {
+   "name": "1280px dark: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 99.34375
+   }
+  },
+  {
+   "name": "1280px dark: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 78,
+    "hTop": 98.59375
+   }
+  },
+  {
+   "name": "1280px dark: no sideways page scroll",
+   "ok": true,
+   "detail": "1280 vs 1280"
+  },
+  {
+   "name": "1280px dark: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "1280px dark: diagrams shown at natural size",
+   "ok": true,
+   "detail": "8 visible"
+  },
+  {
+   "name": "1280px dark: page dark, diagram panel stays light",
+   "ok": true,
+   "detail": "rgb(18, 19, 20) / rgb(255, 255, 255)"
+  },
+  {
+   "name": "768px light: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "768px light: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "48px of 1024px"
+  },
+  {
+   "name": "768px light: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 68.59375
+   }
+  },
+  {
+   "name": "768px light: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 69.09375
+   }
+  },
+  {
+   "name": "768px light: no sideways page scroll",
+   "ok": true,
+   "detail": "768 vs 768"
+  },
+  {
+   "name": "768px light: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "768px light: lists shown instead of diagrams",
+   "ok": true,
+   "detail": "0 diagrams, 8 lists"
+  },
+  {
+   "name": "768px dark: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "768px dark: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "48px of 1024px"
+  },
+  {
+   "name": "768px dark: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 68.59375
+   }
+  },
+  {
+   "name": "768px dark: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 69.09375
+   }
+  },
+  {
+   "name": "768px dark: no sideways page scroll",
+   "ok": true,
+   "detail": "768 vs 768"
+  },
+  {
+   "name": "768px dark: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "768px dark: lists shown instead of diagrams",
+   "ok": true,
+   "detail": "0 diagrams, 8 lists"
+  },
+  {
+   "name": "768px dark: page dark, diagram panel stays light",
+   "ok": true,
+   "detail": "rgb(18, 19, 20) / rgb(255, 255, 255)"
+  },
+  {
+   "name": "375px light: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px light: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "48px of 812px"
+  },
+  {
+   "name": "375px light: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 91.03125
+   }
+  },
+  {
+   "name": "375px light: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 68.78125
+   }
+  },
+  {
+   "name": "375px light: no sideways page scroll",
+   "ok": true,
+   "detail": "375 vs 375"
+  },
+  {
+   "name": "375px light: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px light: lists shown instead of diagrams",
+   "ok": true,
+   "detail": "0 diagrams, 8 lists"
+  },
+  {
+   "name": "phone: list item opens a full-width bottom sheet",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "modal": "true",
+    "left": 0,
+    "w": 375,
+    "iw": 375
+   }
+  },
+  {
+   "name": "phone: Example opens by touch",
+   "ok": true
+  },
+  {
+   "name": "phone: keyboard focus stays inside the sheet",
+   "ok": true
+  },
+  {
+   "name": "phone: clicking the page behind the sheet does nothing; focus stays in the sheet",
+   "ok": true,
+   "detail": {
+    "open": true,
+    "inside": true,
+    "inert": true
+   }
+  },
+  {
+   "name": "phone: Close returns focus to the list item",
+   "ok": true,
+   "detail": {
+    "hidden": true,
+    "act": "8.4"
+   }
+  },
+  {
+   "name": "phone: closing makes the page usable again",
+   "ok": true
+  },
+  {
+   "name": "phone: \"Diagram\" shows the full-size diagram in a sideways-scrolling frame",
+   "ok": true,
+   "detail": {
+    "vis": true,
+    "sw": 1232,
+    "cw": 341,
+    "page": 375,
+    "iw": 375
+   }
+  },
+  {
+   "name": "375px dark: no console errors",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px dark: navigation at most 15% of the screen height",
+   "ok": true,
+   "detail": "48px of 812px"
+  },
+  {
+   "name": "375px dark: after jumping to #view-v5 the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 91.03125
+   }
+  },
+  {
+   "name": "375px dark: after jumping to #evidence the heading is below the navigation",
+   "ok": true,
+   "detail": {
+    "navB": 48,
+    "hTop": 68.78125
+   }
+  },
+  {
+   "name": "375px dark: no sideways page scroll",
+   "ok": true,
+   "detail": "375 vs 375"
+  },
+  {
+   "name": "375px dark: every diagram imported",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "375px dark: lists shown instead of diagrams",
+   "ok": true,
+   "detail": "0 diagrams, 8 lists"
+  },
+  {
+   "name": "375px dark: page dark, diagram panel stays light",
+   "ok": true,
+   "detail": "rgb(18, 19, 20) / rgb(255, 255, 255)"
+  }
+ ]
+}

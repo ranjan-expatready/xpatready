@@ -1,0 +1,677 @@
+{
+  "mainText": "Solution 1 · Pathway Setup to Form Filling\n\nActors, handoffs and rules, from configuring a combination to a filed form · v3 · one-pager draft 3: annotated process map first; draft 2 archived whole · 17 Oct 2026\n\nOverview\nSet up\n1 Start and read\n2 AI drafts the setup\n3 Check, review and publish\nProspect and case\n4 Prospect to verified facts\nPrepare and file\n5 Prepare each form\n6 Sign, submit and record the response\nChange\n7 Watch, triage, publish and adopt a change\nControls\nRecords\nCase types\nEvidence\n\nThe problem. Every immigration combination (Pathway › Program › Category › Sub-category) is set up by hand: documents, canonical fields, sections, form field maps, conditional rules, questionnaires. The work repeats at every form edition, and each repeat raises the risk of a wrong form.\n\nThe answer. No manual mapping. The engine reads the government's own forms, checklist and guide, and drafts the whole setup: it selects sections from the library it maintains, selects the fields for each section, creates a new section or field only when none fits, and writes every form field map as data, once per form edition. During initial review people review every new or changed item beside its source; approved items that have not changed are reused without another review; the SME confirms rules and values; a second person approves and publishes. At case time every fact is asked once and rules fill every form and portal screen from verified facts.\nOne made-up family in every example\n\nClient A applies for a work permit from outside Canada, with a common-law partner and one child aged 9.\n\nClient A's date of birth: 12 Apr 1990\nPartner's date of birth: 3 Sep 1991\nChild's date of birth: 20 Jan 2017\nPartner's passport: expires in 70 days (inside the default 90-day warning)\nClient A's addresses: 'lives here now' and 'send post here' differ\nTerms used on this page\nPQR\nprospect qualification questionnaire: the short eligibility questions before a firm takes the case\nSQR\nsmart questionnaire: the full case questions, one per adult\nAgent\nfirm staff (never an AI)\nLead representative\nthe case's licensed person ('Lead RCIC' in the product) who normally approves each form and submits; the government fee is paid by the client, or by the firm on the client's behalf\nPlatform\ncode and rules: no AI judgement\nAI\ndrafts setup, reads documents and checks meaning; never decides or fills a form\nWho is who\nWhich side of the product each actor works on, and their product role\nExpat Ready · Super Admin console 3 roles\n\nExpat Ready's own staff: set up, change and publish combinations for every firm\n\nContent publisher\nSuper Admin role; works in the Content Pack Configurator\nImmigration SME\nSuper Admin role, proposed (the team's documents call this person the SME)\nSecond-person approver\nSuper Admin: another Content publisher or the Platform Owner, never the drafter\nSystem · inside the product 2 parts\n\nNot people: the product's code and its AI steps\n\nAI in the product\nSteps inside the product, named in the team's design Drafter, Reader (documents) and Checker (cross-checks); not a user or a role\nPlatform\nCode and rules, named in the team's design Filler (forms) and Reviewer (what is missing); no AI judgement\nFirm · agency workspace 2 roles\n\nThe immigration firm's staff, who run each case\n\nAgent\nFirm role: Case Manager or Case Officer\nLead representative\nFirm: the case's lead representative ('Lead RCIC' in the product), an RCIC, lawyer or notary, or paralegal; approves through the firm's form-approve permission and submits through its submit permission\nClient · client portal 1 role\n\nThe person or organisation the firm acts for\n\nProspect, then client\nThe prospect, then the client and family members, or an employer's signatory\nOutside the product 1 party\n\nReceives the application and decides it\n\nGovernment\nFor example the immigration department that receives the forms\nEnd to end: the process at a glance\n\nA plain-language process map, not BPMN. Read each band left to right: setup happens once and is reused, every case reads the published setup, and a change is published and then adopted. Each stage shows who acts and with what authority, what to know, and the decision that ends it. The eye opens the full contract (receives, does, hands over, rules, exceptions); Example opens Client A's example; hover any mark or tag for its meaning. Stage numbers 1–12 belong to this map; the detailed BPMN views below are numbered 1–7 and their activities 1.1–10.4.\n\nONCEStages 1–3\n1\nGather the official material\n2\nAI drafts the configuration\n3\nCheck, review and publish\nEACH CASETwo ways in · stages 4–9\nTWO WAYS IN\nNew client\nExisting client\n4\nOpen the case\n5\nReuse verified information\n6\nCollect and verify the gaps\n7\nPrepare and check each form\n8\nApprove, sign and submit\n9\nRecord the responses\nON CHANGEStages 10–12\n10\nFind the change\n11\nReview and publish the change\n12\nOpen cases adopt it\nONCE\nSet up once per combination and form edition\nStages 1–3\nExpat Ready\n\nNot repeated for each client: every case reads the published result. Detailed in views 1–3.\n\n1\nGather the official material\n\nWHO ACTS\n\nContent publisher SUPER ADMIN\nattaches the sources\nPlatform\nreads each new form edition\n\nGOOD TO KNOW\n\nA form edition is read once and reused by every combination that uses it\nAn unreadable source is held; the rest of the run continues\n\nRUNS\n\nonce for each new form edition, checklist or guide\n\nExample\nthen, handing over:\nRead forms and passages\n2\nAI drafts the configuration\n\nWHO ACTS\n\nAI\ndrafts the whole setup\n\nGOOD TO KNOW\n\nNo manual mapping: AI picks library sections and fields and writes each mapping, citing its source\nA new field or section only when nothing in the library fits\n\nSIDE BY SIDE\n\nfield matching and mappings run beside the document list; rules, gates and questionnaires follow\n\nExample\nthen, handing over:\nDraft with sources\n3\nCheck, review and publish\n\nWHO ACTS\n\nPlatform\nchecks and tests\nAI\nrechecks meaning\nContent publisher SUPER ADMIN\nreviews\nImmigration SME SUPER ADMIN\nsigns off rules and values\nSecond-person approver SUPER ADMIN\napproves and publishes\n\nGOOD TO KNOW\n\nEvery new or changed item is reviewed beside its source; approved unchanged items are reused\nA published version never changes; a change is a new version\n\nSIDE BY SIDE\n\nexpected-answer tests and the AI recheck, after the structure check; review starts when both finish\n\nDECISION\n\nAny blocking check failure?\n\nYes\n→ only the affected items go back to stage 2\nNo\n→ review; uncertain items and AI disagreements arrive marked 'decide' and the reviewer decides them, with no re-draft\n\nDECISION\n\nCorrection, or a rule not signed off?\n\nYes\n→ only those items go back to stage 2\nNo\n→ to the approver\n\nDECISION\n\nApprover publishes?\n\nYes\n→ published; nothing undecided remains\nRejected\n→ back to review with the reason\nthen, handing over:\nPublished configuration\n\nEnd. Pack version published: it joins the shared record below\n\nPublished pack version\nShared and read-only. Each new case reads the pack version that is current when it opens; nothing is regenerated or sent for each client.\nRead, not sent: each new case reads it when it opens (stage 4)\nEACH CASE\nEvery case, at a firm\nTwo ways in · stages 4–9\nFirm and client\n\nStarts on the pack version that is current when the case opens. Detailed in views 4–6.\n\nTWO WAYS IN\nSTART\nNew client\n\nWHO ACTS\n\nClient and family CLIENT PORTAL\nfills the lead form and PQR\nPlatform\nfinds possible duplicates\nAgent FIRM\ndecides\n\nGOOD TO KNOW\n\nA returning person who uses the lead form is matched to their record here\n\nDECISION\n\nSame person as an existing client?\n\nYes\n→ link to that record; then the firm decides\nNo\n→ a new client record\n\nDECISION\n\nFirm takes the case?\n\nYes\n→ open the case\nNo\n→ lead closed\nSTART\nExisting client, new service\n\nWHO ACTS\n\nAgent FIRM\nopens a new case from the client's record\n\nGOOD TO KNOW\n\nNo new lead, and no repeat of the lead form or PQR\nOnly eligibility questions the new service needs, and the record cannot answer, are asked\nthen, handing over:\nResolved client\n4\nOpen the case\n\nWHO ACTS\n\nAgent FIRM\nopens the case and adds the family\nPlatform\napplies the pinned pack version's rules\n\nGOOD TO KNOW\n\nThe case is pinned to the pack version that is current when it opens\nEach person has one record and one role; names or email never merge people\nthen, handing over:\nPeople, roles, pinned pack version\n5\nReuse verified information\n\nWHO ACTS\n\nPlatform\nselects by rules, not AI\n\nGOOD TO KNOW\n\nEach fact is chosen on its own (same person, meaning and date), never 'copy the latest case'\nA newer unverified value or an unanswered 'still true?' waits; forms that read it cannot be approved or submitted until it is resolved\nExample\nthen, handing over:\nUnresolved facts\n6\nCollect and verify the gaps\n\nWHO ACTS\n\nClient and family CLIENT PORTAL\nanswer and upload\nAI\nproposes values from documents\nAgent FIRM\nverifies each fact once\n\nGOOD TO KNOW\n\nOnly open questions are asked; facts that can change show 'still true?'\nA value read by AI stays 'proposed' until the agent verifies it\n\nRUNS\n\nonce for each adult; one reading for each uploaded document\n\nDECISION\n\nEvery fact a form needs verified?\n\nYes\n→ form preparation\nMissing or conflict\n→ only the forms that read it wait\n'Needs review' or 'still true?'\n→ prepared, but not approved or submitted until resolved\nExample\nVerified facts (stage 6 → stage 7)\n7\nPrepare and check each form\n\nWHO ACTS\n\nPlatform\nfills by rules and reads back\nAI\nflags meaning doubts\nAgent FIRM\nresolves flags\n\nGOOD TO KNOW\n\nNo AI writes a value; every written value is read back\nA form edition not yet supported waits, showing since when; other forms continue\n\nRUNS\n\nonce for each required form, side by side\n\nDECISION\n\nAnything wrong?\n\nWrong fact\n→ back to stage 6; forms that read it are prepared again\nWrong mapping\n→ support ticket to Expat Ready (stage 10)\nAll clear\n→ to the representative\nthen, handing over:\nChecked forms\n8\nApprove, sign and submit\n\nWHO ACTS\n\nLead representative FIRM\napproves the final file\nClient and family CLIENT PORTAL\nsign and declare\nLead representative FIRM\nsubmits; the client, or the firm for them, pays the fee\n\nGOOD TO KNOW\n\nA missing required document holds that filing; a recorded reason alone never clears it\nSigning keeps the approval only if the signed file matches the approved answers\n\nPER FILING\n\neach applicant's filing moves on its own unless the route requires joint submission (the SME confirms)\n\nDECISION\n\nRepresentative approves the final form?\n\nYes, every form of the filing\n→ signing\nReturned\n→ back to stage 7 with a reason\n\nDECISION\n\nProblem when signing?\n\nNo: the signed file matches the approved answers\n→ submission\nSigned file does not match\n→ back to the representative's check; approval not inherited\nWrong value reported, or a re-run check blocks\n→ back to stage 6 to correct the fact\nthen, handing over:\nSubmitted application\n9\nRecord the responses\n\nWHO ACTS\n\nGovernment OUTSIDE\nsends letters\nAgent FIRM\nrecords each on its filing\n\nGOOD TO KNOW\n\nA request can reopen a fact (stage 6) or ask for a form completed by hand\nSubmitted forms are kept exactly as filed\n\nWAITS FOR\n\nthe government's acknowledgement, requests and decision, for each filing\n\nDECISION\n\nEvery filing decided?\n\nNot yet\n→ keep waiting\nYes\n→ the case closes\nthen, handing over:\nEach filing's decision\n\nEnd. The case closes when every filing is decided\n\nBetween the bands\nDown, stage 7 → 10: a firm's support ticket about a form or a mapping.\nUp, stage 12 → 7: after the agent adopts a new published version, only the affected forms are prepared again.\nON CHANGE\nWhen a form, guide or screen changes\nStages 10–12\nExpat Ready, then the firm\n\nReviewed and published like setup; open cases adopt the new version through the agent. Detailed in view 7.\n\n10\nFind the change\n\nWHO ACTS\n\nPlatform\nre-reads sources on a schedule\nContent publisher SUPER ADMIN\ntriages firms' support tickets\n\nGOOD TO KNOW\n\nA source that cannot be checked is 'not verified', never 'no change'\nSupport is the firms' one channel for forms and mappings (from stage 7)\n\nDECISION\n\nAnything changed?\n\nNo\n→ nothing happens\nYes\n→ only changed items go forward\nthen, handing over:\nChanged items\n11\nReview and publish the change\n\nWHO ACTS\n\nAI\nre-drafts changed items\nContent publisher SUPER ADMIN\nreviews\nImmigration SME SUPER ADMIN\nsigns off changed rules\nSecond-person approver SUPER ADMIN\napproves and publishes\n\nGOOD TO KNOW\n\nThe same checks and two-person approval and publishing as setup\nEarlier versions stay unchanged; new cases start on the new one\nthen, handing over:\nNew published version\n12\nOpen cases adopt it\n\nWHO ACTS\n\nAgent FIRM\nsees 'what changes for this case' and adopts\n\nGOOD TO KNOW\n\nOnly affected forms are prepared again, and only their approvals are withdrawn\nA government cut-off makes adoption required; submitted forms never change\n\nWAITS FOR\n\nthe agent's adoption; the case keeps its version until then\n\nDECISION\n\nDoes it affect this open case?\n\nYes\n→ adopt now, or by the cut-off\nNo\n→ nothing changes\nthen, handing over:\nAffected forms\n\nEnd. Affected forms go back to stage 7; only their approvals are withdrawn\n\nTechnical view: the end-to-end BPMN overview For the delivery team: four pools, one collapsed sub-process per detailed view, and who does what by view. Open\nSET UP\nExpat Ready, once per combination\nView 1 · Start and read\nMap stages 1\n\nThe publisher creates the row and starts the run; code reads only what is new.\n\nStarts: A new combination is needed. (New forms, editions and reported mappings go through the change path, view 7.) · Ends: Continues in view 2: the AI drafts the setup.\n\nDiagram\nList\nDiagram symbols\nExpat Ready: combination setup and change\nSUPER ADMIN\nSYSTEM\nContent publisher\nPlatform\nNew combinationneeded\n1.1Create row, attach sources\nFiled through portal screens?\n1.2Capture portal screens\n1.3Run the engine\nWhat is new toread?\n2.1Read each new form edition\n2.2Split checklist, guide, criteria\nTo view 2\nNo\nYes\nForms\nChecklist, guide\nNothing new\nWhat happens in this view (5 activities · each opens its card)\n1.1\nCreate the configurator row and attach its sources\nContent publisher SUPER ADMIN\nSelect base forms and base documents; attach the official sources\n1.2\nCapture portal screens\nContent publisher SUPER ADMIN\nOpen each screen of the filing; the extension records its fields\n1.3\nRun the engine\nContent publisher SUPER ADMIN\nChoose a full run or a run on changed sources only, then start\n2.1\nRead each new form edition\nPlatform\nCode extracts every field and, for a barcode form, its template and scripts\nRuns for each form edition not yet read\n2.2\nSplit the checklist, the guide and the eligibility page\nPlatform\nSplit into source checklist entries, condition passages and criterion sentences\nSET UP\nExpat Ready, once per combination\nView 2 · AI drafts the setup\nMap stages 2\n\nOne drafting pipeline in the platform; each step drafts only new or changed items and completes at once if there are none. Field matching, mappings and placements run beside the document list.\n\nStarts: From view 1, or held items returned from view 3. · Ends: Continues in view 3: check, review and publish.\n\nDiagram\nList\nDiagram symbols\nExpat Ready: combination setup and change\nSYSTEM\nAI\nFrom view 1\nHeld items (view 3)\n3.1Match fields to canonical fields\n3.3Build the document list\n3.2Generate form field maps\nLibrary\n3.4Place fields in sections\n3.5Draft conditional rules\n3.6Draft eligibility gates\n3.7Assemble PQR, SQR, staff view\n3.8Draft field and consistency checks\nTo view 3\nWhat happens in this view (8 activities · each opens its card)\n3.1\nMatch each field to a canonical field, or propose a new one\nAI\nRule match on an approved label in the same context; otherwise AI proposes the closest canonical field, or a new one\nRuns for each new form edition or screen version\n3.3\nBuild the document list\nAI\nLink each item to a reused or proposed document type; set who provides it and base or conditional, per person\n3.2\nGenerate form field maps\nAI\nWrite one mapping per form field: person, relationship, canonical field, purpose, target, format, conditions, row\nRuns for each new form edition or screen version\n3.4\nPlace fields in sections and draft where each value comes from\nAI\nReuse the section with the same meaning; propose a new one only when none fits; draft each placement's 'collected from'\n3.5\nDraft the conditional rules\nAI\nDraft when / then / for whom / why shown / source\n3.6\nDraft the eligibility gates\nAI\nDraft yes/no gates over canonical fields; load points tables as rows with their source\n3.7\nAssemble the PQR view, the SQR and the staff working view\nAI\nBuild three views of one set of definitions\n3.8\nDraft field and consistency checks\nAI\nDraft checks in five groups, each with applicability, inputs, condition, severity, source, timing and the user's action\nSET UP\nExpat Ready, once per combination\nView 3 · Check, review and publish\nMap stages 3\n\nCode checks and expected-answer tests run beside a fresh AI recheck. A blocking failure holds only the affected items and what depends on them; AI disagreements and near-duplicates go to the reviewer to decide.\n\nStarts: From view 2. · Ends: Pack version published: new cases open on it (view 4); open cases adopt it as a change (view 7).\n\nDiagram\nList\nDiagram symbols\nExpat Ready: combination setup and change\nSYSTEM\nSUPER ADMIN\nPlatform\nAI\nContent publisher\nImmigration SME\nSecond-person approver\nFrom view 2\n4.1Check structureand references\n4.3Test against expected answers\n4.2Recheck mapping meaning\nAny blocking failure?\n4.4Hold affected items\n5.1Review new or changed items\nTo view 2\nCorrections?\n5.2Confirm rules, gates, values\nAll confirmed?\n5.3Approve and publish\nPublished packversion\nPublished?\nPack versionpublished\nA blocking failure holds only the affected items and what depends onthem\nYes\nNo\nYes\nNo\nNo\nYes\nYes\nRejected\nFirm: prospect and case (views 4 and 6)\nNew version published (open cases adopt it, view7)\nWhat happens in this view (7 activities · each opens its card)\n4.1\nCheck structure and references\nPlatform\nCode checks coverage, references and consistency\n4.3\nTest against independent expected answers\nPlatform\nPreview each family's questions, documents, forms and filled values; compare\n4.2\nRecheck mapping meaning in a fresh context\nAI\nA separate AI run, without the drafting run's reasoning, checks that each person and fact fit the field\n4.4\nHold affected items and their dependents\nPlatform\nHold the item and everything that reads it; send them back to drafting with the evidence\n5.1\nReview every new or changed item\nContent publisher SUPER ADMIN\nApprove, correct or flag each, beside its source snippet\n5.2\nConfirm rules, gates, documents and values\nImmigration SME SUPER ADMIN\nConfirm, correct or resolve each reading\n5.3\nApprove and publish the pack version\nSecond-person approver SUPER ADMIN\nPublish, or reject with a reason\nPROSPECT AND CASE\nEvery lead and case, at a firm\nView 4 · Prospect to verified facts\nMap stages A, B, 4–6\n\nOne value per fact: declared by the client, proposed from documents, verified once by the agent.\n\nStarts: A prospect opens the firm's lead form; or an existing client needs a new service and the agent starts from the client's record; or a form reports a fact to correct (from view 6). · Ends: Continues in view 6, which asks for each form (view 5).\n\nDiagram\nList\nDiagram symbols\nFirm: prospect and case\nCLIENT\nFIRM · AGENCY\nSYSTEM\nClient and family\nAgent\nAI\nPlatform\nLead form opened\n6.1Lead form andPQR\n6.2Find possible duplicates\n6.3Review the lead\nFirm takes the case?\nLead closed\n7.1Open the case, add family\nExisting client, newservice\nPublished packversion\n7.2Answer SQR, upload documents\n7.3Read each uploaded document\nRequired factsavailable?\n8.1Verify every fact once\nFact to correct (view6)\nTo view 6\nForms that read a fact 'needs review' or 'still true?' are prepared but cannot be approved or submitted\nYes\nNo\nYes\nNo: back to the SQR\nWhat happens in this view (7 activities · each opens its card)\n6.1\nLead form and PQR\nClient and family CLIENT PORTAL\nAnswer the short lead form, then block 0 and the blocks for intent and status\n6.2\nFind possible duplicates\nPlatform\nMatch against existing people and organisations\n6.3\nReview the lead: same person, and take the case?\nAgent FIRM\nDecide same or different person; decide whether the firm takes the case\n7.1\nConvert the lead and open the case\nAgent FIRM\nPick the combination (its published version is pinned); add family members with roles; the platform pre-fills from verified facts\n7.2\nComplete the SQR and upload documents\nClient and family CLIENT PORTAL\nAnswer; upload each document once\nRuns for each adult on the case\n7.3\nRead each uploaded document\nAI\nRead the document; propose values with page; match it to its checklist item\nRuns for each uploaded document\n8.1\nVerify every fact once in the working view\nAgent FIRM\nVerify, decide conflicts, enter facts collected from staff\nPREPARE AND FILE\nEvery form and application\nView 5 · Prepare each form\nMap stages 7–8\n\nRuns once per form, side by side. Field and consistency checks and a meaning check run before filling; every written value is read back after.\n\nStarts: The case asks for this form (view 6, or again after adopting a new version in view 7). · Ends: Form approved, or a fact to correct (messages to the case, view 6); or the form is replaced after the case adopts a new version.\n\nDiagram\nList\nDiagram symbols\nFirm: each form · runs once per form, side by side\nSYSTEM\nFIRM · AGENCY\nPlatform\nAI\nLead representative\nAgent\nPrepare this form\n8.2Render the form\nForm edition supported?\n8.3Check the form's meaning\n8.4Review statuses and flags\nReview result\nFact to correct\nRaise a support ticket\n9.1Fill and read back\nAgent takes it back\nReplaced afteradoption\nForm replaced\nAnything for a person?\nMarked urgent\n9.2Resolve read-back, validate\n8.5Complete the form by hand\nSigned file to check\n9.3Approve the form\nFact or mapping problem?\nApproved?\nForm approved\nAI checker unavailable: fields stay 'not checked by AI'; the agent reviews them in 8.4\nYes\nNo: not yet supported\nCorrect\nWrong fact\nWrong mapping\nYes\nNo\nNo\nYes\nYes\nReturned\nFirm: prospect and case (views 4 and 6)\nExpat Ready: combination setup and change (views 1 to 3)\nPrepare each form\nFact to correct\nSupport ticket (wrong mapping, or form not yetsupported)\nForm approved\nWhat happens in this view (7 activities · each opens its card)\n8.2\nRender the form from the facts\nPlatform\nResolve each field to one verified fact through its mapping; run the field and consistency checks\n8.3\nCheck the form's meaning\nAI\nCheck important and disputed fields: do the person and the fact fit the field?\n8.4\nReview the form's statuses and flags\nAgent FIRM\nWork through the 'fields to check' list in the form's own order; decide each flag\n9.1\nFill each form type and read it back\nPlatform\nWrite each value for the form type, then read every written value back\n9.2\nResolve read-back results, type refused fields, validate\nAgent FIRM\nClassify each mismatch; type listed fields; validate barcode forms in Adobe Reader\n8.5\nComplete the form by hand\nAgent FIRM\nAuthorised staff complete the form by hand\n9.3\nApprove the form\nLead representative FIRM\nApprove the exact final file, or return it with a reason\nPREPARE AND FILE\nEvery form and application\nView 6 · Sign, submit and record the response\nMap stages 8–9\n\nThe case asks for every form of each filing. Signing, submission and the government's responses then run for each filing on its own, inside the dashed boundary; the case groups their outcomes and closes when every filing is decided.\n\nStarts: From view 4: facts verified. · Ends: Each filing ends when it is decided; the case closes when every filing is decided. Back to 8.1 (view 4) when a form or a signatory reports a wrong fact, or a re-run check blocks; a signed file that does not match the approved version goes back to the representative's check (9.3, view 5).\n\nDiagram\nList\nDiagram symbols\nFirm: prospect and case\nFIRM · AGENCY\nCLIENT\nFIRM · AGENCY\nAgent\nClient and family\nLead representative\nFrom view 4\nAsk for each form\nEvery form of afiling approved\nFact to correct\n9.4Sign and declare\nTo 8.1 (view 4)\nProblem when signing?\nTo the representative's check\n9.5Submit and pay\nGovernment letter\n9.6Record government letter\nThis filing decided?\nThis filing decided\nA required checklist item needs accepted evidence or an authorised disposition; a reason alone never clears it\nWrong value or checkblocks\nSigned file does not match\nNo\nYes\nNot yet\nFirm: each form (view 5)\nGovernment\nRepeats for each filing: each is signed, submitted and decided on its own\nPrepare each form\nForm approved (each)\nSigned file to check (9.3)\nApplication\nAcknowledgement, requests, decision\nWhat happens in this view (3 activities · each opens its card)\n9.4\nSign and declare\nClient and family CLIENT PORTAL\nEach required signatory signs or declares\nRuns for each required signatory\n9.5\nSubmit and pay\nLead representative FIRM\nThe authorised submitter submits; the fee is paid by a person\n9.6\nRecord each government letter\nAgent FIRM\nRecord it against the submission record; turn a request into a task\nCHANGE\nWhenever a form, guide or screen changes\nView 7 · Watch, triage, publish and adopt a change\nMap stages 10–12\n\nNew forms, editions and corrected mappings come from Expat Ready's daily change watch or from a firm's support ticket. Only changed items are re-run; each open case adopts with 'what changes for this case'.\n\nStarts: A scheduled check, or a firm's support ticket. · Ends: New version published; each affected open case adopts it, and its affected forms are prepared again.\n\nDiagram\nList\nDiagram symbols\nExpat Ready: combination setup and change\nSYSTEM\nSUPER ADMIN\nFirm: prospect and case\nFIRM · AGENCY\nPlatform\nContent publisher\nAgent\nScheduled check\n10.1Watch for change\nAnything changed?\nNo change\n10.2Re-run and publish change\nNew versionpublished\nSupport ticket\n10.4Triage a support ticket\nTicket is about?\nMapping stands: support answers thefirm\nNo\nYes\nChange\nMapping stands\nWhen a published change affects this case\nNew version\n10.3Adopt on this case\nCase on the newversion\nFirm: each form (view 5)\nPrepare affected formsagain\nWaiting form replaced\nWhat happens in this view (4 activities · each opens its card)\n10.1\nWatch for change\nPlatform\nRe-read, fingerprint and compare; trace what depends on each change\n10.2\nRe-run and publish the change\nContent publisher SUPER ADMIN\nRun views 1 to 3 on the changed items only: read, draft, check, review, SME sign-off, publishing\n10.4\nTriage a support ticket\nContent publisher SUPER ADMIN\nConfirm what it is; register a new edition, or hold a wrong mapping and list every case that uses it\n10.3\nAdopt the change on an open case\nAgent FIRM\nSee what changes for this case; adopt now, or at the cut-off\nControls that run through every view\nValidation\nFive groups, drafted in 3.8: form-native checks, official programme and document rules, cross-record consistency, advisory readiness, read-back. Document expiry warns at 90 and 30 days by default and never blocks; history gaps block submission until filled with a recorded history entry and checked again. Checks run at verification and render; time-sensitive ones again before signing and submission. In the team's words: block = a failed hard check (red, stops approval, never waived); warn = a Critical warning (amber, acknowledged with a reason); advise = a Major or Minor warning. AI drafts checks only in the existing kinds; anything else is a named gap. Records: Library, Facts per person or organisation.\nReview and approval\nInitial review: every new or changed item is reviewed beside its source, whatever the AI's confidence; approved unchanged items are reused. The SME confirms rules, gates and values; a second person approves and publishes; the representative approves each form; people sign, pay and submit. Records: Review and approval records.\nWhen a check fails\nA blocking failure holds the affected item and everything that depends on it for correction and re-testing. AI disagreements, near-duplicates and uncertain items go to the reviewer marked 'decide', never back to drafting until the models agree. Approved, unaffected work stays usable. A whole step is switched off only for a stated, concrete reason. Records: Review and approval records, Library.\nVersions\nEvery item is versioned. A case pins the version it opened on and adopts a newer one only through 10.3. Outputs are stamped with form edition, map version and answer snapshot; approvals are bound to the versions they covered. A change of AI model or prompt for any AI step is a change: the step is re-run against the expected answers before use. Records: Published pack version, Prepared and submitted outputs.\nAI processing\nEvery AI step (drafting, document reading, meaning checks) must process client data in Canada or the United States only, under written no-training and zero-data-retention terms, with client notice; client data must be stored in Canada (a requirement; legal: unconfirmed, no counsel). Records: Document evidence, Facts per person or organisation.\nChange\nA scheduled re-read finds changes; only changed items go through the same review and publishing; open cases adopt with 'what changes for this case'; a government cut-off makes adoption required. Records: Library, Published pack version.\nTwo different kinds of check\nCheck\tWhat it shows\tHow\tWhere\tWhat it does not show\nWrite and read-back check\tThe selected value was copied correctly into the form or screen.\tCode reads every written value back and compares it with the value expected after the map entry's approved transform.\t9.1\tDoes not show that the right person or fact was selected.\nField and consistency check\tThe facts satisfy the form's, the programme's and common-sense rules (dates in order, addresses agree, documents recent enough).\tChecks drafted in 3.8, tested in 4.3, run at verification and render, and again before signing and submission.\t3.8 · 4.3 · 8.2 · 8.4 · 9.4 · 9.5\tDoes not show the field holds the right person's fact.\nMeaning check\tThe right person and the right fact were selected for the field.\tSetup: review beside the source, independent expected answers, a fresh-context AI recheck. Case: an AI recheck of important and disputed fields, the agent's review, the representative's approval.\t4.2 · 4.3 · 5.1 · 8.3 · 8.4 · 9.3\tDoes not show the value was written correctly. The AI checker is proposed; its added value is measured in the real read.\n\nAt setup\n\nAI drafts\n→\ncode checks structure and references\n→\na fresh-context AI recheck of drafted mappings, beside independent expected-answer tests\n→\nthe publisher reviews every new or changed item\n→\nthe SME confirms rules, gates and values\n→\na second person approves and publishes\n\nAt case time\n\nAI proposes values from documents\n→\nthe agent verifies each fact once\n→\nrules render each form from published mappings and run the field and consistency checks\n→\nan AI meaning check flags important or disputed fields\n→\nthe agent reviews flags; code fills and reads every value back\n→\nthe representative approves each form\n→\npeople sign, pay and submit\nPrinciples\nRepeatable code, with named limits\nReading, counting, matching approved labels, checking, filling and read-back are code. AI drafts where judgement is needed: new labels, guide prose, placements, rules, gates. People decide.\nReuse first\nA field, section or document type that exists is reused. A new one is created only when nothing fits, and a person approves it once.\nEvery item cites its source\nFile, version, page and field or passage, with the date read. A reviewer sees the snippet beside the proposal.\nTested before trusted\nAI steps are tested against independently checked expected answers. Acceptance criteria come from business consequences; measured results are reported separately. Nothing is measured yet.\nVersioned, pinned, reproducible\nEvery item has a version. A case pins the version it opened on. The same versions and facts give the same values; byte-identical re-rendering is to be proven on standard fillable PDFs (9.1 acceptance); nothing is measured yet.\nNo AI at fill time\nFilling is rules over approved mappings and verified facts. The same facts always give the same form.\nExpat Ready runs the engine\nOnly the content team configures and publishes. Firms consume published combinations; they never author pack content or run the engine.\nShared records\n\nThe six places where information is kept. They are data stores, not services: activities read and change them. Click an activity number to open its card; hover it for a one-line preview.\n\nWhere each rule comes from:\nTeam requirement Already in the team's requirement documents; this page follows it.\nFounder decision Decided by the founder; changes only with the founder's yes.\nProposed here This solution's proposal; the team decides whether to adopt it.\nNot built yet Today's code cannot do this; the evidence is in the Evidence section.\nShared record\tIn plain words, what it holds and its rules\tRead by\tChanged by\nLibrary\t\n\nThe master library of reusable building blocks (fields, sections, documents, forms and their maps) that every combination is assembled from.\n\nCanonical fields, field groups, sections and placements, document types, answer lists, form editions with their field inventories and mappings, portal screen versions, rules and gates; draft and published versions.\n\nRules (8)\n\t\n\nSet up (views 1, 2, 3); Change (view 7)\n\n1.11.21.32.12.23.13.23.33.43.53.63.73.84.14.24.34.45.15.25.310.110.210.4\t\n\nSet up (views 1, 2, 3); Change (view 7)\n\n1.11.21.32.12.23.13.23.33.43.53.63.73.84.14.45.110.110.4\nPublished pack version\t\n\nThe frozen, approved setup that cases use. Nobody edits it; a change is a new version.\n\nOne version at a time. For each combination: references to library item versions, its lines (sections, documents, forms) each with who and only-if, rules, gates, views and check evidence.\n\n\t\n\nProspect and case (view 4); Prepare and file (view 5); Change (view 7)\n\n6.17.17.28.29.110.110.310.4\t\n\nSet up (view 3); Change (view 7)\n\n5.310.2\nFacts per person or organisation\t\n\nEverything the firm knows about each person or organisation, with where each value came from and who verified it.\n\nOne shared record per person or organisation at the firm, used by every case they are on: one current value per field, with source, status (declared, proposed from a document, verified), verifier, dates and history. Facts that belong to one application stay on that case.\n\nRules (15)\n\t\n\nProspect and case (view 4); Prepare and file (view 5); Change (view 7)\n\n6.26.37.17.27.38.18.28.38.48.59.19.310.3\t\n\nProspect and case (view 4); Change (view 7)\n\n6.16.26.37.17.27.38.110.3\nDocument evidence\t\n\nThe documents each person uploaded and what was read from them.\n\nUploads, read results with page references, the checklist item each one meets, per person.\n\n\t\n\nProspect and case (view 4); Prepare and file (view 5)\n\n7.38.18.3\t\n\nProspect and case (view 4)\n\n7.27.3\nReview and approval records\t\n\nWho reviewed, signed off, published or approved what, and on which version.\n\nEvery review decision, SME sign-off, publication and form approval, bound to the exact versions it covered.\n\n\t\n\nSet up (view 3); Change (view 7)\n\n5.15.25.310.2\t\n\nSet up (view 3); Prospect and case (view 4); Prepare and file (views 5, 6); Change (view 7)\n\n4.14.24.34.45.15.25.36.38.18.49.39.410.210.310.4\nPrepared and submitted outputs\t\n\nThe forms prepared for each case, their checks, and what was submitted and received back.\n\nRendered forms, filled PDFs, portal entries, read-back and validation results, submission receipts and government letters.\n\n\t\n\nPrepare and file (views 5, 6)\n\n8.38.49.29.39.49.59.6\t\n\nPrepare and file (views 5, 6)\n\n8.28.38.59.19.29.49.59.6\nIndividual · Family · Corporate\n\nSame engine and package shape; the subjects, filings, answerers, repeats and signing differ.\n\n\tIndividual\tFamily\tCorporate\nConfigure and build\tForms the principal completes\tAlso per-person forms, family schedules, fields about others (partner, child 1, mother)\tEmployer forms and employer guide; the organisation as a subject\nRules\tAnswers of one person\tScoped by role and age; repeated per child; a spouse applying or not\tStream, occupation, location; positions as a list\nQuestionnaires\tOne SQR\tOne SQR per adult; a parent answers for a child; shared household facts once\tEmployer questionnaire; each worker answers in their own linked case\nDocuments\tBase plus conditional\tPer person; one upload serves every person it applies to\tBusiness documents reused across the employer's cases\nForms and mappings\tOne instance of each form\tOne form per person who must complete it; fields about others filled through the map entry's person and relationship\tEmployer forms; worker forms in linked cases\nCase\tOne case, one role\tOne case, a role per person, each with their own fee and decision\tOne case per assessment, occupation and location; positions link to worker cases\nReturning client\tA new case from the client's record; each verified fact reused on its own; gaps, 'still true?' items and differences asked\tEach family member's own record reused; a new member is added with a duplicate check; household facts stay linked to both partners\tA returning employer's next assessment opens as a new case on the same organisation record; business documents reused if this case accepts them\nSigning (pending the SME)\tThe applicant\tEach applicant signs their own forms; both partners sign the common-law declaration\tThe employer's signatory signs employer forms\nEvidence status\n\nProposed targets, measured results and approved release criteria are kept apart. Nothing is measured yet: the real read of the official forms comes next.\n\nMeasure\tScope\tProposed target\tMeasured\tApproved release criterion\nFields read per form edition\tIMM 1295, 5707 (or IMM 5645 if the SME so decides), 5409, 5476\tevery widget on every page belongs to a read field (completeness)\tto be measured\tnot yet approved\nFields matched by rule, by AI, proposed new\tper form edition\tno target: describes the work\tto be measured\t—\nItems a person reviews per combination\tnew or changed fields, mappings, rules, gates\tno target during initial review: every new or changed item\tto be measured\t—\nCorrectness per AI step\tagainst the independently checked answer key, including wrong-person cases\tzero wrong-person values on a family file (a wrong person's fact on a filed form is a serious error)\tto be measured\tnot yet approved\nFields typed by hand per family file\tknown exceptions: each edition's type-by-hand list\tzero outside the known list\tto be measured\tnot yet approved\nSME time to sign expected answers\tper form edition and rule branch, reused across combinations\tno target until measured; watched because it could grow with every combination\tto be measured\t—\nHours to configure one combination\tby hand and with the engine\tno target until a baseline exists\tbaseline not yet measured\t—\nRuntime AI filling, tested once as the challenger\tone form edition, same answer key: family ambiguity, omissions, conditions, repeated rows\twhole-form correctness, review time, errors left, cost and time per fill\tto be measured\tthe route changes only on that evidence and with the founder's yes\nAdded value of the AI meaning checker\tflags that plain checks missed, and false alarms\tto be set from the business consequence of a missed wrong-person value\tto be measured\tnot yet approved\nWhat today's code cannot do yet\nGap\tEvidence\tActivities\nNo immigration-SME role: today's six Expat Ready staff roles are Platform Owner, Admin, Support, Billing, Content publisher and Auditor, so nobody holds a 'confirm rules and values' permission separate from publishing.\tpackages/contracts/src/schemas/role-template.platform.ts:29-305; team design SA-06 SA6-D18\t5.2 · 10.2\nA map entry holds only the canonical field, the form field and a transform: no person, relationship, purpose or repeated row.\tpackages/contracts/src/schemas/spine-masters.ts:169-175\t3.2\nThe filler holds one value per canonical field, so one form cannot carry Client A's and the partner's dates of birth.\tapps/api/src/spine/filler.service.ts:94-101\t8.2\nBarcode (XFA) forms are rejected by the reader. Proof question: can code write the form's own data, and does Validate then make the barcodes? The real read answers it. Fallback: the data-file import route, else typed by hand.\tapps/api/src/pack-authoring/pdf-acroform-inventory.ts:141-143\t2.1 · 9.1\nNo field-level tier flag and no 'collected from' setting; the code has per-programme question-set section selections with a marked PQR subset.\tspine-masters.ts (SqrSectionSelection.pqrCanonicalFieldKeys)\t3.4 · 3.7\nPlacements are not built.\tTeam design SA-01B §12\t3.4\nThe immigration-significant flag is in the team's design, not in the code.\tSA-1B-1; no match in the capture\t8.3 · 8.4\nPortal capture and portal filling are not built. Proof question: can the extension capture every branch of a screen, within the portal's terms? Fallback: staff type the screen by hand (8.5).\tNo match in the capture\t1.2 · 9.1\nThe current answer is chosen by replacement link and effective date only; confirmation status is not read, so a newer declared answer would replace a verified one. Re-asking re-confirmation fields on a new case is built.\tapps/api/src/spine/answer-store.service.ts:432-436, 247-253; capture-once-resolver.service.ts:77-79\t7.1 · 7.2 · 8.1\nRe-reading the uploaded final file after typing and Validate is not built. Proof question: can code read back the final file for each form type? Fallback: the representative reads each hand-entered value against its verified fact.\tNo match in the capture\t9.2 · 9.3\nProposed changes to the team's requirements\nRequirement\tToday\tProposed\nAgent glossary · AG-07 (Critical warning)\tA Critical warning is never a lock; a holder of the waive permission passes it with a reason.\tKeep that for advisory warnings; a failed hard check (form-native or official rule, or a wrong-person value) blocks approval until it is fixed and checked again, and cannot be waived.\nSA-06 SA6-D18\tSix Expat Ready staff roles; the SME's confirmation of content values is not a role or permission.\tAdd an Immigration SME role (or a confirmation permission held by that person) for confirming (signing off) rules, gates, documents and values and signing expected answers; it cannot publish.\nSA-1B-27\tA box map holds purpose, field, transform, value map and overflow.\tAdd the source person or organisation, the relationship to the form's applicant and the repeated row.\nSA-1B-7\tA placement sets wording, help, requiredness and hidden optional fields.\tAdd one 'collected from' setting: client questionnaire, staff working view, profile record, or verified document or record.\nSA-1B-38\tGates and grids are trusted by second-person approval; no mandatory test profiles; publishing runs no test set.\tAI-generated content is tested against independently checked expected answers before publishing.\nSA-1B-35 · SA-1B-28\tAI never sets a value on a form at fill time; nothing on a form is generated.\tKept as written.\nDoc-1 §5.4\tA new answer supersedes the prior one; the current answer is the latest un-superseded one by effective date.\tState that a declared or document-read answer that differs from a verified one waits for review and replaces it only when a person verifies it; two current answers meeting after a merge raise a conflict.\nSolution 1 v3 · one-pager draft 3 · Legal points: 'Unconfirmed: no counsel' · Immigration values, conditions and form choices shown are examples, pending the Immigration SME's confirmation · No real government field identifier is shown; they come from the real read · Screens marked proposed are names for the design, not existing screens · Diagrams use BPMN 2.0, drawn with the bpmn.io viewer",
+  "sections": [
+    {
+      "id": "overview",
+      "text": "End to end: the process at a glance\n\nA plain-language process map, not BPMN. Read each band left to right: setup happens once and is reused, every case reads the published setup, and a change is published and then adopted. Each stage shows who acts and with what authority, what to know, and the decision that ends it. The eye opens the full contract (receives, does, hands over, rules, exceptions); Example opens Client A's example; hover any mark or tag for its meaning. Stage numbers 1–12 belong to this map; the detailed BPMN views below are numbered 1–7 and their activities 1.1–10.4.\n\nONCEStages 1–3\n1\nGather the official material\n2\nAI drafts the configuration\n3\nCheck, review and publish\nEACH CASETwo ways in · stages 4–9\nTWO WAYS IN\nNew client\nExisting client\n4\nOpen the case\n5\nReuse verified information\n6\nCollect and verify the gaps\n7\nPrepare and check each form\n8\nApprove, sign and submit\n9\nRecord the responses\nON CHANGEStages 10–12\n10\nFind the change\n11\nReview and publish the change\n12\nOpen cases adopt it\nONCE\nSet up once per combination and form edition\nStages 1–3\nExpat Ready\n\nNot repeated for each client: every case reads the published result. Detailed in views 1–3.\n\n1\nGather the official material\n\nWHO ACTS\n\nContent publisher SUPER ADMIN\nattaches the sources\nPlatform\nreads each new form edition\n\nGOOD TO KNOW\n\nA form edition is read once and reused by every combination that uses it\nAn unreadable source is held; the rest of the run continues\n\nRUNS\n\nonce for each new form edition, checklist or guide\n\nExample\nthen, handing over:\nRead forms and passages\n2\nAI drafts the configuration\n\nWHO ACTS\n\nAI\ndrafts the whole setup\n\nGOOD TO KNOW\n\nNo manual mapping: AI picks library sections and fields and writes each mapping, citing its source\nA new field or section only when nothing in the library fits\n\nSIDE BY SIDE\n\nfield matching and mappings run beside the document list; rules, gates and questionnaires follow\n\nExample\nthen, handing over:\nDraft with sources\n3\nCheck, review and publish\n\nWHO ACTS\n\nPlatform\nchecks and tests\nAI\nrechecks meaning\nContent publisher SUPER ADMIN\nreviews\nImmigration SME SUPER ADMIN\nsigns off rules and values\nSecond-person approver SUPER ADMIN\napproves and publishes\n\nGOOD TO KNOW\n\nEvery new or changed item is reviewed beside its source; approved unchanged items are reused\nA published version never changes; a change is a new version\n\nSIDE BY SIDE\n\nexpected-answer tests and the AI recheck, after the structure check; review starts when both finish\n\nDECISION\n\nAny blocking check failure?\n\nYes\n→ only the affected items go back to stage 2\nNo\n→ review; uncertain items and AI disagreements arrive marked 'decide' and the reviewer decides them, with no re-draft\n\nDECISION\n\nCorrection, or a rule not signed off?\n\nYes\n→ only those items go back to stage 2\nNo\n→ to the approver\n\nDECISION\n\nApprover publishes?\n\nYes\n→ published; nothing undecided remains\nRejected\n→ back to review with the reason\nthen, handing over:\nPublished configuration\n\nEnd. Pack version published: it joins the shared record below\n\nPublished pack version\nShared and read-only. Each new case reads the pack version that is current when it opens; nothing is regenerated or sent for each client.\nRead, not sent: each new case reads it when it opens (stage 4)\nEACH CASE\nEvery case, at a firm\nTwo ways in · stages 4–9\nFirm and client\n\nStarts on the pack version that is current when the case opens. Detailed in views 4–6.\n\nTWO WAYS IN\nSTART\nNew client\n\nWHO ACTS\n\nClient and family CLIENT PORTAL\nfills the lead form and PQR\nPlatform\nfinds possible duplicates\nAgent FIRM\ndecides\n\nGOOD TO KNOW\n\nA returning person who uses the lead form is matched to their record here\n\nDECISION\n\nSame person as an existing client?\n\nYes\n→ link to that record; then the firm decides\nNo\n→ a new client record\n\nDECISION\n\nFirm takes the case?\n\nYes\n→ open the case\nNo\n→ lead closed\nSTART\nExisting client, new service\n\nWHO ACTS\n\nAgent FIRM\nopens a new case from the client's record\n\nGOOD TO KNOW\n\nNo new lead, and no repeat of the lead form or PQR\nOnly eligibility questions the new service needs, and the record cannot answer, are asked\nthen, handing over:\nResolved client\n4\nOpen the case\n\nWHO ACTS\n\nAgent FIRM\nopens the case and adds the family\nPlatform\napplies the pinned pack version's rules\n\nGOOD TO KNOW\n\nThe case is pinned to the pack version that is current when it opens\nEach person has one record and one role; names or email never merge people\nthen, handing over:\nPeople, roles, pinned pack version\n5\nReuse verified information\n\nWHO ACTS\n\nPlatform\nselects by rules, not AI\n\nGOOD TO KNOW\n\nEach fact is chosen on its own (same person, meaning and date), never 'copy the latest case'\nA newer unverified value or an unanswered 'still true?' waits; forms that read it cannot be approved or submitted until it is resolved\nExample\nthen, handing over:\nUnresolved facts\n6\nCollect and verify the gaps\n\nWHO ACTS\n\nClient and family CLIENT PORTAL\nanswer and upload\nAI\nproposes values from documents\nAgent FIRM\nverifies each fact once\n\nGOOD TO KNOW\n\nOnly open questions are asked; facts that can change show 'still true?'\nA value read by AI stays 'proposed' until the agent verifies it\n\nRUNS\n\nonce for each adult; one reading for each uploaded document\n\nDECISION\n\nEvery fact a form needs verified?\n\nYes\n→ form preparation\nMissing or conflict\n→ only the forms that read it wait\n'Needs review' or 'still true?'\n→ prepared, but not approved or submitted until resolved\nExample\nVerified facts (stage 6 → stage 7)\n7\nPrepare and check each form\n\nWHO ACTS\n\nPlatform\nfills by rules and reads back\nAI\nflags meaning doubts\nAgent FIRM\nresolves flags\n\nGOOD TO KNOW\n\nNo AI writes a value; every written value is read back\nA form edition not yet supported waits, showing since when; other forms continue\n\nRUNS\n\nonce for each required form, side by side\n\nDECISION\n\nAnything wrong?\n\nWrong fact\n→ back to stage 6; forms that read it are prepared again\nWrong mapping\n→ support ticket to Expat Ready (stage 10)\nAll clear\n→ to the representative\nthen, handing over:\nChecked forms\n8\nApprove, sign and submit\n\nWHO ACTS\n\nLead representative FIRM\napproves the final file\nClient and family CLIENT PORTAL\nsign and declare\nLead representative FIRM\nsubmits; the client, or the firm for them, pays the fee\n\nGOOD TO KNOW\n\nA missing required document holds that filing; a recorded reason alone never clears it\nSigning keeps the approval only if the signed file matches the approved answers\n\nPER FILING\n\neach applicant's filing moves on its own unless the route requires joint submission (the SME confirms)\n\nDECISION\n\nRepresentative approves the final form?\n\nYes, every form of the filing\n→ signing\nReturned\n→ back to stage 7 with a reason\n\nDECISION\n\nProblem when signing?\n\nNo: the signed file matches the approved answers\n→ submission\nSigned file does not match\n→ back to the representative's check; approval not inherited\nWrong value reported, or a re-run check blocks\n→ back to stage 6 to correct the fact\nthen, handing over:\nSubmitted application\n9\nRecord the responses\n\nWHO ACTS\n\nGovernment OUTSIDE\nsends letters\nAgent FIRM\nrecords each on its filing\n\nGOOD TO KNOW\n\nA request can reopen a fact (stage 6) or ask for a form completed by hand\nSubmitted forms are kept exactly as filed\n\nWAITS FOR\n\nthe government's acknowledgement, requests and decision, for each filing\n\nDECISION\n\nEvery filing decided?\n\nNot yet\n→ keep waiting\nYes\n→ the case closes\nthen, handing over:\nEach filing's decision\n\nEnd. The case closes when every filing is decided\n\nBetween the bands\nDown, stage 7 → 10: a firm's support ticket about a form or a mapping.\nUp, stage 12 → 7: after the agent adopts a new published version, only the affected forms are prepared again.\nON CHANGE\nWhen a form, guide or screen changes\nStages 10–12\nExpat Ready, then the firm\n\nReviewed and published like setup; open cases adopt the new version through the agent. Detailed in view 7.\n\n10\nFind the change\n\nWHO ACTS\n\nPlatform\nre-reads sources on a schedule\nContent publisher SUPER ADMIN\ntriages firms' support tickets\n\nGOOD TO KNOW\n\nA source that cannot be checked is 'not verified', never 'no change'\nSupport is the firms' one channel for forms and mappings (from stage 7)\n\nDECISION\n\nAnything changed?\n\nNo\n→ nothing happens\nYes\n→ only changed items go forward\nthen, handing over:\nChanged items\n11\nReview and publish the change\n\nWHO ACTS\n\nAI\nre-drafts changed items\nContent publisher SUPER ADMIN\nreviews\nImmigration SME SUPER ADMIN\nsigns off changed rules\nSecond-person approver SUPER ADMIN\napproves and publishes\n\nGOOD TO KNOW\n\nThe same checks and two-person approval and publishing as setup\nEarlier versions stay unchanged; new cases start on the new one\nthen, handing over:\nNew published version\n12\nOpen cases adopt it\n\nWHO ACTS\n\nAgent FIRM\nsees 'what changes for this case' and adopts\n\nGOOD TO KNOW\n\nOnly affected forms are prepared again, and only their approvals are withdrawn\nA government cut-off makes adoption required; submitted forms never change\n\nWAITS FOR\n\nthe agent's adoption; the case keeps its version until then\n\nDECISION\n\nDoes it affect this open case?\n\nYes\n→ adopt now, or by the cut-off\nNo\n→ nothing changes\nthen, handing over:\nAffected forms\n\nEnd. Affected forms go back to stage 7; only their approvals are withdrawn"
+    },
+    {
+      "id": "overview-bpmn",
+      "text": "Technical view: the end-to-end BPMN overview For the delivery team: four pools, one collapsed sub-process per detailed view, and who does what by view. Open"
+    },
+    {
+      "id": "view-v1",
+      "text": "SET UP\nExpat Ready, once per combination\nView 1 · Start and read\nMap stages 1\n\nThe publisher creates the row and starts the run; code reads only what is new.\n\nStarts: A new combination is needed. (New forms, editions and reported mappings go through the change path, view 7.) · Ends: Continues in view 2: the AI drafts the setup.\n\nDiagram\nList\nDiagram symbols\nExpat Ready: combination setup and change\nSUPER ADMIN\nSYSTEM\nContent publisher\nPlatform\nNew combinationneeded\n1.1Create row, attach sources\nFiled through portal screens?\n1.2Capture portal screens\n1.3Run the engine\nWhat is new toread?\n2.1Read each new form edition\n2.2Split checklist, guide, criteria\nTo view 2\nNo\nYes\nForms\nChecklist, guide\nNothing new\nWhat happens in this view (5 activities · each opens its card)\n1.1\nCreate the configurator row and attach its sources\nContent publisher SUPER ADMIN\nSelect base forms and base documents; attach the official sources\n1.2\nCapture portal screens\nContent publisher SUPER ADMIN\nOpen each screen of the filing; the extension records its fields\n1.3\nRun the engine\nContent publisher SUPER ADMIN\nChoose a full run or a run on changed sources only, then start\n2.1\nRead each new form edition\nPlatform\nCode extracts every field and, for a barcode form, its template and scripts\nRuns for each form edition not yet read\n2.2\nSplit the checklist, the guide and the eligibility page\nPlatform\nSplit into source checklist entries, condition passages and criterion sentences"
+    },
+    {
+      "id": "view-v2",
+      "text": "SET UP\nExpat Ready, once per combination\nView 2 · AI drafts the setup\nMap stages 2\n\nOne drafting pipeline in the platform; each step drafts only new or changed items and completes at once if there are none. Field matching, mappings and placements run beside the document list.\n\nStarts: From view 1, or held items returned from view 3. · Ends: Continues in view 3: check, review and publish.\n\nDiagram\nList\nDiagram symbols\nExpat Ready: combination setup and change\nSYSTEM\nAI\nFrom view 1\nHeld items (view 3)\n3.1Match fields to canonical fields\n3.3Build the document list\n3.2Generate form field maps\nLibrary\n3.4Place fields in sections\n3.5Draft conditional rules\n3.6Draft eligibility gates\n3.7Assemble PQR, SQR, staff view\n3.8Draft field and consistency checks\nTo view 3\nWhat happens in this view (8 activities · each opens its card)\n3.1\nMatch each field to a canonical field, or propose a new one\nAI\nRule match on an approved label in the same context; otherwise AI proposes the closest canonical field, or a new one\nRuns for each new form edition or screen version\n3.3\nBuild the document list\nAI\nLink each item to a reused or proposed document type; set who provides it and base or conditional, per person\n3.2\nGenerate form field maps\nAI\nWrite one mapping per form field: person, relationship, canonical field, purpose, target, format, conditions, row\nRuns for each new form edition or screen version\n3.4\nPlace fields in sections and draft where each value comes from\nAI\nReuse the section with the same meaning; propose a new one only when none fits; draft each placement's 'collected from'\n3.5\nDraft the conditional rules\nAI\nDraft when / then / for whom / why shown / source\n3.6\nDraft the eligibility gates\nAI\nDraft yes/no gates over canonical fields; load points tables as rows with their source\n3.7\nAssemble the PQR view, the SQR and the staff working view\nAI\nBuild three views of one set of definitions\n3.8\nDraft field and consistency checks\nAI\nDraft checks in five groups, each with applicability, inputs, condition, severity, source, timing and the user's action"
+    },
+    {
+      "id": "view-v3",
+      "text": "SET UP\nExpat Ready, once per combination\nView 3 · Check, review and publish\nMap stages 3\n\nCode checks and expected-answer tests run beside a fresh AI recheck. A blocking failure holds only the affected items and what depends on them; AI disagreements and near-duplicates go to the reviewer to decide.\n\nStarts: From view 2. · Ends: Pack version published: new cases open on it (view 4); open cases adopt it as a change (view 7).\n\nDiagram\nList\nDiagram symbols\nExpat Ready: combination setup and change\nSYSTEM\nSUPER ADMIN\nPlatform\nAI\nContent publisher\nImmigration SME\nSecond-person approver\nFrom view 2\n4.1Check structureand references\n4.3Test against expected answers\n4.2Recheck mapping meaning\nAny blocking failure?\n4.4Hold affected items\n5.1Review new or changed items\nTo view 2\nCorrections?\n5.2Confirm rules, gates, values\nAll confirmed?\n5.3Approve and publish\nPublished packversion\nPublished?\nPack versionpublished\nA blocking failure holds only the affected items and what depends onthem\nYes\nNo\nYes\nNo\nNo\nYes\nYes\nRejected\nFirm: prospect and case (views 4 and 6)\nNew version published (open cases adopt it, view7)\nWhat happens in this view (7 activities · each opens its card)\n4.1\nCheck structure and references\nPlatform\nCode checks coverage, references and consistency\n4.3\nTest against independent expected answers\nPlatform\nPreview each family's questions, documents, forms and filled values; compare\n4.2\nRecheck mapping meaning in a fresh context\nAI\nA separate AI run, without the drafting run's reasoning, checks that each person and fact fit the field\n4.4\nHold affected items and their dependents\nPlatform\nHold the item and everything that reads it; send them back to drafting with the evidence\n5.1\nReview every new or changed item\nContent publisher SUPER ADMIN\nApprove, correct or flag each, beside its source snippet\n5.2\nConfirm rules, gates, documents and values\nImmigration SME SUPER ADMIN\nConfirm, correct or resolve each reading\n5.3\nApprove and publish the pack version\nSecond-person approver SUPER ADMIN\nPublish, or reject with a reason"
+    },
+    {
+      "id": "view-v4",
+      "text": "PROSPECT AND CASE\nEvery lead and case, at a firm\nView 4 · Prospect to verified facts\nMap stages A, B, 4–6\n\nOne value per fact: declared by the client, proposed from documents, verified once by the agent.\n\nStarts: A prospect opens the firm's lead form; or an existing client needs a new service and the agent starts from the client's record; or a form reports a fact to correct (from view 6). · Ends: Continues in view 6, which asks for each form (view 5).\n\nDiagram\nList\nDiagram symbols\nFirm: prospect and case\nCLIENT\nFIRM · AGENCY\nSYSTEM\nClient and family\nAgent\nAI\nPlatform\nLead form opened\n6.1Lead form andPQR\n6.2Find possible duplicates\n6.3Review the lead\nFirm takes the case?\nLead closed\n7.1Open the case, add family\nExisting client, newservice\nPublished packversion\n7.2Answer SQR, upload documents\n7.3Read each uploaded document\nRequired factsavailable?\n8.1Verify every fact once\nFact to correct (view6)\nTo view 6\nForms that read a fact 'needs review' or 'still true?' are prepared but cannot be approved or submitted\nYes\nNo\nYes\nNo: back to the SQR\nWhat happens in this view (7 activities · each opens its card)\n6.1\nLead form and PQR\nClient and family CLIENT PORTAL\nAnswer the short lead form, then block 0 and the blocks for intent and status\n6.2\nFind possible duplicates\nPlatform\nMatch against existing people and organisations\n6.3\nReview the lead: same person, and take the case?\nAgent FIRM\nDecide same or different person; decide whether the firm takes the case\n7.1\nConvert the lead and open the case\nAgent FIRM\nPick the combination (its published version is pinned); add family members with roles; the platform pre-fills from verified facts\n7.2\nComplete the SQR and upload documents\nClient and family CLIENT PORTAL\nAnswer; upload each document once\nRuns for each adult on the case\n7.3\nRead each uploaded document\nAI\nRead the document; propose values with page; match it to its checklist item\nRuns for each uploaded document\n8.1\nVerify every fact once in the working view\nAgent FIRM\nVerify, decide conflicts, enter facts collected from staff"
+    },
+    {
+      "id": "view-v5",
+      "text": "PREPARE AND FILE\nEvery form and application\nView 5 · Prepare each form\nMap stages 7–8\n\nRuns once per form, side by side. Field and consistency checks and a meaning check run before filling; every written value is read back after.\n\nStarts: The case asks for this form (view 6, or again after adopting a new version in view 7). · Ends: Form approved, or a fact to correct (messages to the case, view 6); or the form is replaced after the case adopts a new version.\n\nDiagram\nList\nDiagram symbols\nFirm: each form · runs once per form, side by side\nSYSTEM\nFIRM · AGENCY\nPlatform\nAI\nLead representative\nAgent\nPrepare this form\n8.2Render the form\nForm edition supported?\n8.3Check the form's meaning\n8.4Review statuses and flags\nReview result\nFact to correct\nRaise a support ticket\n9.1Fill and read back\nAgent takes it back\nReplaced afteradoption\nForm replaced\nAnything for a person?\nMarked urgent\n9.2Resolve read-back, validate\n8.5Complete the form by hand\nSigned file to check\n9.3Approve the form\nFact or mapping problem?\nApproved?\nForm approved\nAI checker unavailable: fields stay 'not checked by AI'; the agent reviews them in 8.4\nYes\nNo: not yet supported\nCorrect\nWrong fact\nWrong mapping\nYes\nNo\nNo\nYes\nYes\nReturned\nFirm: prospect and case (views 4 and 6)\nExpat Ready: combination setup and change (views 1 to 3)\nPrepare each form\nFact to correct\nSupport ticket (wrong mapping, or form not yetsupported)\nForm approved\nWhat happens in this view (7 activities · each opens its card)\n8.2\nRender the form from the facts\nPlatform\nResolve each field to one verified fact through its mapping; run the field and consistency checks\n8.3\nCheck the form's meaning\nAI\nCheck important and disputed fields: do the person and the fact fit the field?\n8.4\nReview the form's statuses and flags\nAgent FIRM\nWork through the 'fields to check' list in the form's own order; decide each flag\n9.1\nFill each form type and read it back\nPlatform\nWrite each value for the form type, then read every written value back\n9.2\nResolve read-back results, type refused fields, validate\nAgent FIRM\nClassify each mismatch; type listed fields; validate barcode forms in Adobe Reader\n8.5\nComplete the form by hand\nAgent FIRM\nAuthorised staff complete the form by hand\n9.3\nApprove the form\nLead representative FIRM\nApprove the exact final file, or return it with a reason"
+    },
+    {
+      "id": "view-v6",
+      "text": "PREPARE AND FILE\nEvery form and application\nView 6 · Sign, submit and record the response\nMap stages 8–9\n\nThe case asks for every form of each filing. Signing, submission and the government's responses then run for each filing on its own, inside the dashed boundary; the case groups their outcomes and closes when every filing is decided.\n\nStarts: From view 4: facts verified. · Ends: Each filing ends when it is decided; the case closes when every filing is decided. Back to 8.1 (view 4) when a form or a signatory reports a wrong fact, or a re-run check blocks; a signed file that does not match the approved version goes back to the representative's check (9.3, view 5).\n\nDiagram\nList\nDiagram symbols\nFirm: prospect and case\nFIRM · AGENCY\nCLIENT\nFIRM · AGENCY\nAgent\nClient and family\nLead representative\nFrom view 4\nAsk for each form\nEvery form of afiling approved\nFact to correct\n9.4Sign and declare\nTo 8.1 (view 4)\nProblem when signing?\nTo the representative's check\n9.5Submit and pay\nGovernment letter\n9.6Record government letter\nThis filing decided?\nThis filing decided\nA required checklist item needs accepted evidence or an authorised disposition; a reason alone never clears it\nWrong value or checkblocks\nSigned file does not match\nNo\nYes\nNot yet\nFirm: each form (view 5)\nGovernment\nRepeats for each filing: each is signed, submitted and decided on its own\nPrepare each form\nForm approved (each)\nSigned file to check (9.3)\nApplication\nAcknowledgement, requests, decision\nWhat happens in this view (3 activities · each opens its card)\n9.4\nSign and declare\nClient and family CLIENT PORTAL\nEach required signatory signs or declares\nRuns for each required signatory\n9.5\nSubmit and pay\nLead representative FIRM\nThe authorised submitter submits; the fee is paid by a person\n9.6\nRecord each government letter\nAgent FIRM\nRecord it against the submission record; turn a request into a task"
+    },
+    {
+      "id": "view-v7",
+      "text": "CHANGE\nWhenever a form, guide or screen changes\nView 7 · Watch, triage, publish and adopt a change\nMap stages 10–12\n\nNew forms, editions and corrected mappings come from Expat Ready's daily change watch or from a firm's support ticket. Only changed items are re-run; each open case adopts with 'what changes for this case'.\n\nStarts: A scheduled check, or a firm's support ticket. · Ends: New version published; each affected open case adopts it, and its affected forms are prepared again.\n\nDiagram\nList\nDiagram symbols\nExpat Ready: combination setup and change\nSYSTEM\nSUPER ADMIN\nFirm: prospect and case\nFIRM · AGENCY\nPlatform\nContent publisher\nAgent\nScheduled check\n10.1Watch for change\nAnything changed?\nNo change\n10.2Re-run and publish change\nNew versionpublished\nSupport ticket\n10.4Triage a support ticket\nTicket is about?\nMapping stands: support answers thefirm\nNo\nYes\nChange\nMapping stands\nWhen a published change affects this case\nNew version\n10.3Adopt on this case\nCase on the newversion\nFirm: each form (view 5)\nPrepare affected formsagain\nWaiting form replaced\nWhat happens in this view (4 activities · each opens its card)\n10.1\nWatch for change\nPlatform\nRe-read, fingerprint and compare; trace what depends on each change\n10.2\nRe-run and publish the change\nContent publisher SUPER ADMIN\nRun views 1 to 3 on the changed items only: read, draft, check, review, SME sign-off, publishing\n10.4\nTriage a support ticket\nContent publisher SUPER ADMIN\nConfirm what it is; register a new edition, or hold a wrong mapping and list every case that uses it\n10.3\nAdopt the change on an open case\nAgent FIRM\nSee what changes for this case; adopt now, or at the cut-off"
+    },
+    {
+      "id": "controls",
+      "text": "Controls that run through every view\nValidation\nFive groups, drafted in 3.8: form-native checks, official programme and document rules, cross-record consistency, advisory readiness, read-back. Document expiry warns at 90 and 30 days by default and never blocks; history gaps block submission until filled with a recorded history entry and checked again. Checks run at verification and render; time-sensitive ones again before signing and submission. In the team's words: block = a failed hard check (red, stops approval, never waived); warn = a Critical warning (amber, acknowledged with a reason); advise = a Major or Minor warning. AI drafts checks only in the existing kinds; anything else is a named gap. Records: Library, Facts per person or organisation.\nReview and approval\nInitial review: every new or changed item is reviewed beside its source, whatever the AI's confidence; approved unchanged items are reused. The SME confirms rules, gates and values; a second person approves and publishes; the representative approves each form; people sign, pay and submit. Records: Review and approval records.\nWhen a check fails\nA blocking failure holds the affected item and everything that depends on it for correction and re-testing. AI disagreements, near-duplicates and uncertain items go to the reviewer marked 'decide', never back to drafting until the models agree. Approved, unaffected work stays usable. A whole step is switched off only for a stated, concrete reason. Records: Review and approval records, Library.\nVersions\nEvery item is versioned. A case pins the version it opened on and adopts a newer one only through 10.3. Outputs are stamped with form edition, map version and answer snapshot; approvals are bound to the versions they covered. A change of AI model or prompt for any AI step is a change: the step is re-run against the expected answers before use. Records: Published pack version, Prepared and submitted outputs.\nAI processing\nEvery AI step (drafting, document reading, meaning checks) must process client data in Canada or the United States only, under written no-training and zero-data-retention terms, with client notice; client data must be stored in Canada (a requirement; legal: unconfirmed, no counsel). Records: Document evidence, Facts per person or organisation.\nChange\nA scheduled re-read finds changes; only changed items go through the same review and publishing; open cases adopt with 'what changes for this case'; a government cut-off makes adoption required. Records: Library, Published pack version.\nTwo different kinds of check\nCheck\tWhat it shows\tHow\tWhere\tWhat it does not show\nWrite and read-back check\tThe selected value was copied correctly into the form or screen.\tCode reads every written value back and compares it with the value expected after the map entry's approved transform.\t9.1\tDoes not show that the right person or fact was selected.\nField and consistency check\tThe facts satisfy the form's, the programme's and common-sense rules (dates in order, addresses agree, documents recent enough).\tChecks drafted in 3.8, tested in 4.3, run at verification and render, and again before signing and submission.\t3.8 · 4.3 · 8.2 · 8.4 · 9.4 · 9.5\tDoes not show the field holds the right person's fact.\nMeaning check\tThe right person and the right fact were selected for the field.\tSetup: review beside the source, independent expected answers, a fresh-context AI recheck. Case: an AI recheck of important and disputed fields, the agent's review, the representative's approval.\t4.2 · 4.3 · 5.1 · 8.3 · 8.4 · 9.3\tDoes not show the value was written correctly. The AI checker is proposed; its added value is measured in the real read.\n\nAt setup\n\nAI drafts\n→\ncode checks structure and references\n→\na fresh-context AI recheck of drafted mappings, beside independent expected-answer tests\n→\nthe publisher reviews every new or changed item\n→\nthe SME confirms rules, gates and values\n→\na second person approves and publishes\n\nAt case time\n\nAI proposes values from documents\n→\nthe agent verifies each fact once\n→\nrules render each form from published mappings and run the field and consistency checks\n→\nan AI meaning check flags important or disputed fields\n→\nthe agent reviews flags; code fills and reads every value back\n→\nthe representative approves each form\n→\npeople sign, pay and submit\nPrinciples\nRepeatable code, with named limits\nReading, counting, matching approved labels, checking, filling and read-back are code. AI drafts where judgement is needed: new labels, guide prose, placements, rules, gates. People decide.\nReuse first\nA field, section or document type that exists is reused. A new one is created only when nothing fits, and a person approves it once.\nEvery item cites its source\nFile, version, page and field or passage, with the date read. A reviewer sees the snippet beside the proposal.\nTested before trusted\nAI steps are tested against independently checked expected answers. Acceptance criteria come from business consequences; measured results are reported separately. Nothing is measured yet.\nVersioned, pinned, reproducible\nEvery item has a version. A case pins the version it opened on. The same versions and facts give the same values; byte-identical re-rendering is to be proven on standard fillable PDFs (9.1 acceptance); nothing is measured yet.\nNo AI at fill time\nFilling is rules over approved mappings and verified facts. The same facts always give the same form.\nExpat Ready runs the engine\nOnly the content team configures and publishes. Firms consume published combinations; they never author pack content or run the engine."
+    },
+    {
+      "id": "records",
+      "text": "Shared records\n\nThe six places where information is kept. They are data stores, not services: activities read and change them. Click an activity number to open its card; hover it for a one-line preview.\n\nWhere each rule comes from:\nTeam requirement Already in the team's requirement documents; this page follows it.\nFounder decision Decided by the founder; changes only with the founder's yes.\nProposed here This solution's proposal; the team decides whether to adopt it.\nNot built yet Today's code cannot do this; the evidence is in the Evidence section.\nShared record\tIn plain words, what it holds and its rules\tRead by\tChanged by\nLibrary\t\n\nThe master library of reusable building blocks (fields, sections, documents, forms and their maps) that every combination is assembled from.\n\nCanonical fields, field groups, sections and placements, document types, answer lists, form editions with their field inventories and mappings, portal screen versions, rules and gates; draft and published versions.\n\nRules (8)\n\t\n\nSet up (views 1, 2, 3); Change (view 7)\n\n1.11.21.32.12.23.13.23.33.43.53.63.73.84.14.24.34.45.15.25.310.110.210.4\t\n\nSet up (views 1, 2, 3); Change (view 7)\n\n1.11.21.32.12.23.13.23.33.43.53.63.73.84.14.45.110.110.4\nPublished pack version\t\n\nThe frozen, approved setup that cases use. Nobody edits it; a change is a new version.\n\nOne version at a time. For each combination: references to library item versions, its lines (sections, documents, forms) each with who and only-if, rules, gates, views and check evidence.\n\n\t\n\nProspect and case (view 4); Prepare and file (view 5); Change (view 7)\n\n6.17.17.28.29.110.110.310.4\t\n\nSet up (view 3); Change (view 7)\n\n5.310.2\nFacts per person or organisation\t\n\nEverything the firm knows about each person or organisation, with where each value came from and who verified it.\n\nOne shared record per person or organisation at the firm, used by every case they are on: one current value per field, with source, status (declared, proposed from a document, verified), verifier, dates and history. Facts that belong to one application stay on that case.\n\nRules (15)\n\t\n\nProspect and case (view 4); Prepare and file (view 5); Change (view 7)\n\n6.26.37.17.27.38.18.28.38.48.59.19.310.3\t\n\nProspect and case (view 4); Change (view 7)\n\n6.16.26.37.17.27.38.110.3\nDocument evidence\t\n\nThe documents each person uploaded and what was read from them.\n\nUploads, read results with page references, the checklist item each one meets, per person.\n\n\t\n\nProspect and case (view 4); Prepare and file (view 5)\n\n7.38.18.3\t\n\nProspect and case (view 4)\n\n7.27.3\nReview and approval records\t\n\nWho reviewed, signed off, published or approved what, and on which version.\n\nEvery review decision, SME sign-off, publication and form approval, bound to the exact versions it covered.\n\n\t\n\nSet up (view 3); Change (view 7)\n\n5.15.25.310.2\t\n\nSet up (view 3); Prospect and case (view 4); Prepare and file (views 5, 6); Change (view 7)\n\n4.14.24.34.45.15.25.36.38.18.49.39.410.210.310.4\nPrepared and submitted outputs\t\n\nThe forms prepared for each case, their checks, and what was submitted and received back.\n\nRendered forms, filled PDFs, portal entries, read-back and validation results, submission receipts and government letters.\n\n\t\n\nPrepare and file (views 5, 6)\n\n8.38.49.29.39.49.59.6\t\n\nPrepare and file (views 5, 6)\n\n8.28.38.59.19.29.49.59.6"
+    },
+    {
+      "id": "cases",
+      "text": "Individual · Family · Corporate\n\nSame engine and package shape; the subjects, filings, answerers, repeats and signing differ.\n\n\tIndividual\tFamily\tCorporate\nConfigure and build\tForms the principal completes\tAlso per-person forms, family schedules, fields about others (partner, child 1, mother)\tEmployer forms and employer guide; the organisation as a subject\nRules\tAnswers of one person\tScoped by role and age; repeated per child; a spouse applying or not\tStream, occupation, location; positions as a list\nQuestionnaires\tOne SQR\tOne SQR per adult; a parent answers for a child; shared household facts once\tEmployer questionnaire; each worker answers in their own linked case\nDocuments\tBase plus conditional\tPer person; one upload serves every person it applies to\tBusiness documents reused across the employer's cases\nForms and mappings\tOne instance of each form\tOne form per person who must complete it; fields about others filled through the map entry's person and relationship\tEmployer forms; worker forms in linked cases\nCase\tOne case, one role\tOne case, a role per person, each with their own fee and decision\tOne case per assessment, occupation and location; positions link to worker cases\nReturning client\tA new case from the client's record; each verified fact reused on its own; gaps, 'still true?' items and differences asked\tEach family member's own record reused; a new member is added with a duplicate check; household facts stay linked to both partners\tA returning employer's next assessment opens as a new case on the same organisation record; business documents reused if this case accepts them\nSigning (pending the SME)\tThe applicant\tEach applicant signs their own forms; both partners sign the common-law declaration\tThe employer's signatory signs employer forms"
+    },
+    {
+      "id": "evidence",
+      "text": "Evidence status\n\nProposed targets, measured results and approved release criteria are kept apart. Nothing is measured yet: the real read of the official forms comes next.\n\nMeasure\tScope\tProposed target\tMeasured\tApproved release criterion\nFields read per form edition\tIMM 1295, 5707 (or IMM 5645 if the SME so decides), 5409, 5476\tevery widget on every page belongs to a read field (completeness)\tto be measured\tnot yet approved\nFields matched by rule, by AI, proposed new\tper form edition\tno target: describes the work\tto be measured\t—\nItems a person reviews per combination\tnew or changed fields, mappings, rules, gates\tno target during initial review: every new or changed item\tto be measured\t—\nCorrectness per AI step\tagainst the independently checked answer key, including wrong-person cases\tzero wrong-person values on a family file (a wrong person's fact on a filed form is a serious error)\tto be measured\tnot yet approved\nFields typed by hand per family file\tknown exceptions: each edition's type-by-hand list\tzero outside the known list\tto be measured\tnot yet approved\nSME time to sign expected answers\tper form edition and rule branch, reused across combinations\tno target until measured; watched because it could grow with every combination\tto be measured\t—\nHours to configure one combination\tby hand and with the engine\tno target until a baseline exists\tbaseline not yet measured\t—\nRuntime AI filling, tested once as the challenger\tone form edition, same answer key: family ambiguity, omissions, conditions, repeated rows\twhole-form correctness, review time, errors left, cost and time per fill\tto be measured\tthe route changes only on that evidence and with the founder's yes\nAdded value of the AI meaning checker\tflags that plain checks missed, and false alarms\tto be set from the business consequence of a missed wrong-person value\tto be measured\tnot yet approved\nWhat today's code cannot do yet\nGap\tEvidence\tActivities\nNo immigration-SME role: today's six Expat Ready staff roles are Platform Owner, Admin, Support, Billing, Content publisher and Auditor, so nobody holds a 'confirm rules and values' permission separate from publishing.\tpackages/contracts/src/schemas/role-template.platform.ts:29-305; team design SA-06 SA6-D18\t5.2 · 10.2\nA map entry holds only the canonical field, the form field and a transform: no person, relationship, purpose or repeated row.\tpackages/contracts/src/schemas/spine-masters.ts:169-175\t3.2\nThe filler holds one value per canonical field, so one form cannot carry Client A's and the partner's dates of birth.\tapps/api/src/spine/filler.service.ts:94-101\t8.2\nBarcode (XFA) forms are rejected by the reader. Proof question: can code write the form's own data, and does Validate then make the barcodes? The real read answers it. Fallback: the data-file import route, else typed by hand.\tapps/api/src/pack-authoring/pdf-acroform-inventory.ts:141-143\t2.1 · 9.1\nNo field-level tier flag and no 'collected from' setting; the code has per-programme question-set section selections with a marked PQR subset.\tspine-masters.ts (SqrSectionSelection.pqrCanonicalFieldKeys)\t3.4 · 3.7\nPlacements are not built.\tTeam design SA-01B §12\t3.4\nThe immigration-significant flag is in the team's design, not in the code.\tSA-1B-1; no match in the capture\t8.3 · 8.4\nPortal capture and portal filling are not built. Proof question: can the extension capture every branch of a screen, within the portal's terms? Fallback: staff type the screen by hand (8.5).\tNo match in the capture\t1.2 · 9.1\nThe current answer is chosen by replacement link and effective date only; confirmation status is not read, so a newer declared answer would replace a verified one. Re-asking re-confirmation fields on a new case is built.\tapps/api/src/spine/answer-store.service.ts:432-436, 247-253; capture-once-resolver.service.ts:77-79\t7.1 · 7.2 · 8.1\nRe-reading the uploaded final file after typing and Validate is not built. Proof question: can code read back the final file for each form type? Fallback: the representative reads each hand-entered value against its verified fact.\tNo match in the capture\t9.2 · 9.3\nProposed changes to the team's requirements\nRequirement\tToday\tProposed\nAgent glossary · AG-07 (Critical warning)\tA Critical warning is never a lock; a holder of the waive permission passes it with a reason.\tKeep that for advisory warnings; a failed hard check (form-native or official rule, or a wrong-person value) blocks approval until it is fixed and checked again, and cannot be waived.\nSA-06 SA6-D18\tSix Expat Ready staff roles; the SME's confirmation of content values is not a role or permission.\tAdd an Immigration SME role (or a confirmation permission held by that person) for confirming (signing off) rules, gates, documents and values and signing expected answers; it cannot publish.\nSA-1B-27\tA box map holds purpose, field, transform, value map and overflow.\tAdd the source person or organisation, the relationship to the form's applicant and the repeated row.\nSA-1B-7\tA placement sets wording, help, requiredness and hidden optional fields.\tAdd one 'collected from' setting: client questionnaire, staff working view, profile record, or verified document or record.\nSA-1B-38\tGates and grids are trusted by second-person approval; no mandatory test profiles; publishing runs no test set.\tAI-generated content is tested against independently checked expected answers before publishing.\nSA-1B-35 · SA-1B-28\tAI never sets a value on a form at fill time; nothing on a form is generated.\tKept as written.\nDoc-1 §5.4\tA new answer supersedes the prior one; the current answer is the latest un-superseded one by effective date.\tState that a declared or document-read answer that differs from a verified one waits for review and replaces it only when a person verifies it; two current answers meeting after a merge raise a conflict."
+    }
+  ],
+  "maps": [
+    {
+      "class": "band band-setup",
+      "rows": [
+        {
+          "height": 1002.546875,
+          "cards": [
+            {
+              "id": "st-1",
+              "h": 390.0625,
+              "w": 238.5,
+              "words": 59
+            },
+            {
+              "id": "st-2",
+              "h": 368.625,
+              "w": 238.5,
+              "words": 61
+            },
+            {
+              "id": "st-3",
+              "h": 1002.546875,
+              "w": 238.5,
+              "words": 157
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "band band-case",
+      "rows": [
+        {
+          "height": 1771.0625,
+          "cards": [
+            {
+              "id": "st-A",
+              "h": 508.53125,
+              "w": 238.5,
+              "words": 77
+            },
+            {
+              "id": "st-B",
+              "h": 267.796875,
+              "w": 238.5,
+              "words": 46
+            },
+            {
+              "id": "st-4",
+              "h": 316.375,
+              "w": 238.5,
+              "words": 53
+            },
+            {
+              "id": "st-5",
+              "h": 341.46875,
+              "w": 238.5,
+              "words": 56
+            },
+            {
+              "id": "st-6",
+              "h": 658.3125,
+              "w": 238.5,
+              "words": 102
+            },
+            {
+              "id": "st-7",
+              "h": 588.859375,
+              "w": 238.5,
+              "words": 92
+            },
+            {
+              "id": "st-8",
+              "h": 936.734375,
+              "w": 238.5,
+              "words": 152
+            },
+            {
+              "id": "st-9",
+              "h": 448.921875,
+              "w": 238.5,
+              "words": 68
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "class": "band band-change",
+      "rows": [
+        {
+          "height": 449.9375,
+          "cards": [
+            {
+              "id": "st-10",
+              "h": 392.453125,
+              "w": 238.5,
+              "words": 62
+            },
+            {
+              "id": "st-11",
+              "h": 387.34375,
+              "w": 238.5,
+              "words": 56
+            },
+            {
+              "id": "st-12",
+              "h": 449.9375,
+              "w": 238.5,
+              "words": 73
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "acts": [
+    {
+      "id": "1.1",
+      "title": "Create the configurator row and attach its sources",
+      "input": "Combination chosen in the programme hierarchy; official checklist, guide and eligibility page",
+      "output": "Draft row with a fingerprinted source set",
+      "node": "A_1_1",
+      "kind": "user",
+      "mi": null,
+      "color": "#1d4ed8",
+      "view": "View 1: Start and read",
+      "vid": "v1"
+    },
+    {
+      "id": "1.2",
+      "title": "Capture portal screens",
+      "input": "Authorised test session on the government portal",
+      "output": "Versioned portal screen field list; uncaptured branches listed",
+      "node": "A_1_2",
+      "kind": "user",
+      "mi": null,
+      "color": "#1d4ed8",
+      "view": "View 1: Start and read",
+      "vid": "v1"
+    },
+    {
+      "id": "1.3",
+      "title": "Run the engine",
+      "input": "Ready draft row, captured screens if any",
+      "output": "Run in progress with a status per stage: read, draft, check",
+      "node": "A_1_3",
+      "kind": "user",
+      "mi": null,
+      "color": "#1d4ed8",
+      "view": "View 1: Start and read",
+      "vid": "v1"
+    },
+    {
+      "id": "2.1",
+      "title": "Read each new form edition",
+      "input": "IMM 1295 PDF, not yet read (Example)",
+      "output": "Field inventory and form logic list for that edition",
+      "node": "A_2_1",
+      "kind": "service",
+      "mi": "for each form edition not yet read",
+      "color": "#374151",
+      "view": "View 1: Start and read",
+      "vid": "v1"
+    },
+    {
+      "id": "2.2",
+      "title": "Split the checklist, the guide and the eligibility page",
+      "input": "Checklist IMM 5488, guide IMM 5487, eligibility page (Example)",
+      "output": "Sourced items and passages, source text unchanged",
+      "node": "A_2_2",
+      "kind": "service",
+      "mi": null,
+      "color": "#374151",
+      "view": "View 1: Start and read",
+      "vid": "v1"
+    },
+    {
+      "id": "3.1",
+      "title": "Match each field to a canonical field, or propose a new one",
+      "input": "Field 'Date of birth' under 'Spouse/common-law partner' (Example)",
+      "output": "Match: canonical field 'Date of birth', with reason and evidence",
+      "node": "A_3_1",
+      "kind": "service",
+      "mi": "for each new form edition or screen version",
+      "color": "#b45309",
+      "view": "View 2: AI drafts the setup",
+      "vid": "v2"
+    },
+    {
+      "id": "3.2",
+      "title": "Generate form field maps",
+      "input": "Matched fields of the family-information form (Example)",
+      "output": "Reusable form field map for that form edition, every entry a draft",
+      "node": "A_3_2",
+      "kind": "service",
+      "mi": "for each new form edition or screen version",
+      "color": "#b45309",
+      "view": "View 2: AI drafts the setup",
+      "vid": "v2"
+    },
+    {
+      "id": "3.3",
+      "title": "Build the document list",
+      "input": "Checklist item 'Proof of relationship, if applicable' (Example)",
+      "output": "Document requirement lines, base and conditional",
+      "node": "A_3_3",
+      "kind": "service",
+      "mi": null,
+      "color": "#b45309",
+      "view": "View 2: AI drafts the setup",
+      "vid": "v2"
+    },
+    {
+      "id": "3.4",
+      "title": "Place fields in sections and draft where each value comes from",
+      "input": "Canonical fields the combination needs; the library's sections",
+      "output": "Placements, 'collected from' settings, proposed new sections",
+      "node": "A_3_4",
+      "kind": "service",
+      "mi": null,
+      "color": "#b45309",
+      "view": "View 2: AI drafts the setup",
+      "vid": "v2"
+    },
+    {
+      "id": "3.5",
+      "title": "Draft the conditional rules",
+      "input": "Guide passage 'Fill out only if you are in a common-law relationship' (Example)",
+      "output": "Rule with its source, per person and role",
+      "node": "A_3_5",
+      "kind": "service",
+      "mi": null,
+      "color": "#b45309",
+      "view": "View 2: AI drafts the setup",
+      "vid": "v2"
+    },
+    {
+      "id": "3.6",
+      "title": "Draft the eligibility gates",
+      "input": "Criterion sentence from the eligibility page (Example)",
+      "output": "Draft gates and tables, each with source, date checked and next review date",
+      "node": "A_3_6",
+      "kind": "service",
+      "mi": null,
+      "color": "#b45309",
+      "view": "View 2: AI drafts the setup",
+      "vid": "v2"
+    },
+    {
+      "id": "3.7",
+      "title": "Assemble the PQR view, the SQR and the staff working view",
+      "input": "Placements, rules, gates and 'collected from' settings",
+      "output": "PQR view, SQR definition, staff working view, with validations and limits",
+      "node": "A_3_7",
+      "kind": "service",
+      "mi": null,
+      "color": "#b45309",
+      "view": "View 2: AI drafts the setup",
+      "vid": "v2"
+    },
+    {
+      "id": "3.8",
+      "title": "Draft field and consistency checks",
+      "input": "Fields, documents, rules, the form's own limits and scripts, official programme and document rules",
+      "output": "Draft check set, each check with its source",
+      "node": "A_3_8",
+      "kind": "service",
+      "mi": null,
+      "color": "#b45309",
+      "view": "View 2: AI drafts the setup",
+      "vid": "v2"
+    },
+    {
+      "id": "4.1",
+      "title": "Check structure and references",
+      "input": "Complete draft from view 2",
+      "output": "Validation report: blocking, for-review and advisory findings",
+      "node": "A_4_1",
+      "kind": "service",
+      "mi": null,
+      "color": "#374151",
+      "view": "View 3: Check, review and publish",
+      "vid": "v3"
+    },
+    {
+      "id": "4.2",
+      "title": "Recheck mapping meaning in a fresh context",
+      "input": "Drafted mappings with field label, heading and page",
+      "output": "Agree or disagree per mapping, with the reason",
+      "node": "A_4_2",
+      "kind": "service",
+      "mi": null,
+      "color": "#b45309",
+      "view": "View 3: Check, review and publish",
+      "vid": "v3"
+    },
+    {
+      "id": "4.3",
+      "title": "Test against independent expected answers",
+      "input": "Draft pack version; made-up families with expected answers checked by hand and signed by the SME",
+      "output": "Results in three labelled columns: proposed target, measured result, approved acceptance criterion",
+      "node": "A_4_3",
+      "kind": "service",
+      "mi": null,
+      "color": "#374151",
+      "view": "View 3: Check, review and publish",
+      "vid": "v3"
+    },
+    {
+      "id": "4.4",
+      "title": "Hold affected items and their dependents",
+      "input": "A blocking finding, a reviewer's correction or an unconfirmed rule",
+      "output": "Held list; rework of those items only",
+      "node": "A_4_4",
+      "kind": "service",
+      "mi": null,
+      "color": "#374151",
+      "view": "View 3: Check, review and publish",
+      "vid": "v3"
+    },
+    {
+      "id": "5.1",
+      "title": "Review every new or changed item",
+      "input": "New and changed fields, sections, document types, mappings and 'collected from' settings, with findings and recheck flags",
+      "output": "Reviewed structure, or corrections sent back",
+      "node": "A_5_1",
+      "kind": "user",
+      "mi": null,
+      "color": "#1d4ed8",
+      "view": "View 3: Check, review and publish",
+      "vid": "v3"
+    },
+    {
+      "id": "5.2",
+      "title": "Confirm rules, gates, documents and values",
+      "input": "Drafted and changed rules, gates, document conditions and values, with sources",
+      "output": "Confirmed rules and gates, each signed off with a date",
+      "node": "A_5_2",
+      "kind": "user",
+      "mi": null,
+      "color": "#7c3aed",
+      "view": "View 3: Check, review and publish",
+      "vid": "v3"
+    },
+    {
+      "id": "5.3",
+      "title": "Approve and publish the pack version",
+      "input": "Reviewed draft, difference from the last version, check evidence",
+      "output": "Published version: new cases open on it; open cases see it as a change to adopt (10.3)",
+      "node": "A_5_3",
+      "kind": "user",
+      "mi": null,
+      "color": "#0f766e",
+      "view": "View 3: Check, review and publish",
+      "vid": "v3"
+    },
+    {
+      "id": "6.1",
+      "title": "Lead form and PQR",
+      "input": "Client A opens the firm's lead form link",
+      "output": "Declared facts on Client A's record; an indicative result and the gap",
+      "node": "A_6_1",
+      "kind": "user",
+      "mi": null,
+      "color": "#be185d",
+      "view": "View 4: Prospect to verified facts",
+      "vid": "v4"
+    },
+    {
+      "id": "6.2",
+      "title": "Find possible duplicates",
+      "input": "New lead: name, email, phone",
+      "output": "Candidate matches for staff to decide",
+      "node": "A_6_2",
+      "kind": "service",
+      "mi": null,
+      "color": "#374151",
+      "view": "View 4: Prospect to verified facts",
+      "vid": "v4"
+    },
+    {
+      "id": "6.3",
+      "title": "Review the lead: same person, and take the case?",
+      "input": "Lead with indicative result and any candidate matches",
+      "output": "Identity decision; lead converted or closed",
+      "node": "A_6_3",
+      "kind": "user",
+      "mi": null,
+      "color": "#15803d",
+      "view": "View 4: Prospect to verified facts",
+      "vid": "v4"
+    },
+    {
+      "id": "7.1",
+      "title": "Convert the lead and open the case",
+      "input": "Resolved client (new or existing) and the chosen combination",
+      "output": "Case with people, roles, forms, documents and pre-filled questions",
+      "node": "A_7_1",
+      "kind": "user",
+      "mi": null,
+      "color": "#15803d",
+      "view": "View 4: Prospect to verified facts",
+      "vid": "v4"
+    },
+    {
+      "id": "7.2",
+      "title": "Complete the SQR and upload documents",
+      "input": "Each adult's questions, minus what is known",
+      "output": "Declared answers and uploads",
+      "node": "A_7_2",
+      "kind": "user",
+      "mi": "for each adult on the case",
+      "color": "#be185d",
+      "view": "View 4: Prospect to verified facts",
+      "vid": "v4"
+    },
+    {
+      "id": "7.3",
+      "title": "Read each uploaded document",
+      "input": "Partner's passport scan (Example)",
+      "output": "Proposed facts with evidence, not yet verified",
+      "node": "A_7_3",
+      "kind": "service",
+      "mi": "for each uploaded document",
+      "color": "#b45309",
+      "view": "View 4: Prospect to verified facts",
+      "vid": "v4"
+    },
+    {
+      "id": "8.1",
+      "title": "Verify every fact once in the working view",
+      "input": "Declared answers, proposed facts with evidence, conflicts",
+      "output": "Verified facts with history",
+      "node": "A_8_1",
+      "kind": "user",
+      "mi": null,
+      "color": "#15803d",
+      "view": "View 4: Prospect to verified facts",
+      "vid": "v4"
+    },
+    {
+      "id": "8.2",
+      "title": "Render the form from the facts",
+      "input": "Verified answer snapshot; the published form field map",
+      "output": "Rendered form with value, source, status and check results per field",
+      "node": "A_8_2",
+      "kind": "service",
+      "mi": null,
+      "color": "#374151",
+      "view": "View 5: Prepare each form",
+      "vid": "v5"
+    },
+    {
+      "id": "8.3",
+      "title": "Check the form's meaning",
+      "input": "Rendered form: each field's label, heading, the person and fact selected, the evidence",
+      "output": "Flags with reasons, in the form check view",
+      "node": "A_8_3",
+      "kind": "service",
+      "mi": null,
+      "color": "#b45309",
+      "view": "View 5: Prepare each form",
+      "vid": "v5"
+    },
+    {
+      "id": "8.4",
+      "title": "Review the form's statuses and flags",
+      "input": "Form with field statuses, check results and meaning flags",
+      "output": "Form ready to fill, a fact to correct, or a mapping reported to support",
+      "node": "A_8_4",
+      "kind": "user",
+      "mi": null,
+      "color": "#15803d",
+      "view": "View 5: Prepare each form",
+      "vid": "v5"
+    },
+    {
+      "id": "8.5",
+      "title": "Complete the form by hand",
+      "input": "Form waiting ('Not yet supported', or a mapping reported wrong), and the case is urgent",
+      "output": "Hand-completed form, recorded as completed by hand",
+      "node": "A_8_5",
+      "kind": "manual",
+      "mi": null,
+      "color": "#15803d",
+      "view": "View 5: Prepare each form",
+      "vid": "v5"
+    },
+    {
+      "id": "9.1",
+      "title": "Fill each form type and read it back",
+      "input": "Reviewed form, answer snapshot, map version, screen fingerprint",
+      "output": "Filled PDF or typed portal screen, with read-back results",
+      "node": "A_9_1",
+      "kind": "service",
+      "mi": null,
+      "color": "#374151",
+      "view": "View 5: Prepare each form",
+      "vid": "v5"
+    },
+    {
+      "id": "9.2",
+      "title": "Resolve read-back results, type refused fields, validate",
+      "input": "Filled form with read-back mismatches, its type-by-hand list and validation needs",
+      "output": "Validated final file with its read-back, or a fact or mapping problem sent back to 8.4",
+      "node": "A_9_2",
+      "kind": "user",
+      "mi": null,
+      "color": "#15803d",
+      "view": "View 5: Prepare each form",
+      "vid": "v5"
+    },
+    {
+      "id": "9.3",
+      "title": "Approve the form",
+      "input": "The final file or portal screen with values, sources, statuses, its own read-back and validation results, and the hand-entered fields listed",
+      "output": "Approved form ('form approved' to the case)",
+      "node": "A_9_3",
+      "kind": "user",
+      "mi": null,
+      "color": "#0e7490",
+      "view": "View 5: Prepare each form",
+      "vid": "v5"
+    },
+    {
+      "id": "9.4",
+      "title": "Sign and declare",
+      "input": "Approved forms that need a signature or declaration",
+      "output": "Signed forms and declarations",
+      "node": "A_9_4",
+      "kind": "user",
+      "mi": "for each required signatory",
+      "color": "#be185d",
+      "view": "View 6: Sign, submit and record the response",
+      "vid": "v6"
+    },
+    {
+      "id": "9.5",
+      "title": "Submit and pay",
+      "input": "Approved, signed forms and accepted checklist items",
+      "output": "Submitted application; receipt kept",
+      "node": "A_9_5",
+      "kind": "user",
+      "mi": null,
+      "color": "#0e7490",
+      "view": "View 6: Sign, submit and record the response",
+      "vid": "v6"
+    },
+    {
+      "id": "9.6",
+      "title": "Record each government letter",
+      "input": "Acknowledgement, biometrics request, request for documents or decision",
+      "output": "Case record or assigned task",
+      "node": "A_9_6",
+      "kind": "user",
+      "mi": null,
+      "color": "#15803d",
+      "view": "View 6: Sign, submit and record the response",
+      "vid": "v6"
+    },
+    {
+      "id": "10.1",
+      "title": "Watch for change",
+      "input": "Official form pages, guides, eligibility pages, captured screens",
+      "output": "Change draft and impact list (combinations and open cases)",
+      "node": "A_10_1",
+      "kind": "service",
+      "mi": null,
+      "color": "#374151",
+      "view": "View 7: Watch, triage, publish and adopt a change",
+      "vid": "v7"
+    },
+    {
+      "id": "10.2",
+      "title": "Re-run and publish the change",
+      "input": "Change draft or triaged support ticket, with its impact list",
+      "output": "New published version",
+      "node": "A_10_2",
+      "kind": "call",
+      "mi": null,
+      "color": "#1d4ed8",
+      "view": "View 7: Watch, triage, publish and adopt a change",
+      "vid": "v7"
+    },
+    {
+      "id": "10.3",
+      "title": "Adopt the change on an open case",
+      "input": "New published version that affects Client A's case",
+      "output": "Case on the new version; affected forms re-rendered",
+      "node": "A_10_3",
+      "kind": "user",
+      "mi": null,
+      "color": "#15803d",
+      "view": "View 7: Watch, triage, publish and adopt a change",
+      "vid": "v7"
+    },
+    {
+      "id": "10.4",
+      "title": "Triage a support ticket",
+      "input": "A firm's support ticket: a form or edition not yet supported, or a mapping that looks wrong",
+      "output": "Triaged ticket: change to run, or 'mapping stands' answer",
+      "node": "A_10_4",
+      "kind": "user",
+      "mi": null,
+      "color": "#1d4ed8",
+      "view": "View 7: Watch, triage, publish and adopt a change",
+      "vid": "v7"
+    }
+  ],
+  "diagrams": [
+    "v0",
+    "v1",
+    "v2",
+    "v3",
+    "v4",
+    "v5",
+    "v6",
+    "v7"
+  ]
+}

@@ -1,0 +1,188 @@
+{
+ "reader": "local OCR/MRZ + rules (Tesseract 5.5.0)",
+ "method": "local",
+ "cached": false,
+ "cost_usd": 0,
+ "ms": 858,
+ "refused": "no cached AI read for this file and paid reading is switched off here (P5_PAID_READS); read locally",
+ "checks": null,
+ "run_file": null,
+ "output": {
+  "document": {
+   "kind_seen": "passport",
+   "matches_claimed_kind": true,
+   "readable": "yes",
+   "issues": [],
+   "issued_or_written_on": "2020-01-15"
+  },
+  "people_seen": [
+   {
+    "role": "document holder",
+    "name_as_printed": "CLIENTA EXAMPLE"
+   }
+  ],
+  "fields": [
+   {
+    "fact": "person.family_name",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "EXAMPLE",
+    "as_printed": "EXAMPLE",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "high",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits, agrees with printed zone"
+   },
+   {
+    "fact": "person.given_names",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "CLIENTA",
+    "as_printed": "CLIENTA",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits"
+   },
+   {
+    "fact": "person.sex",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "F",
+    "as_printed": "F",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "high",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits, agrees with printed zone"
+   },
+   {
+    "fact": "person.date_of_birth",
+    "about": "document holder",
+    "status": "unresolved",
+    "value": null,
+    "as_printed": null,
+    "page": 1,
+    "where": "page 1, printed zone, line at y=415",
+    "confidence": "low",
+    "reason": "the printed value (12 APR 1990) and the machine-readable zone (1990-04-21) disagree; a person decides",
+    "box": [
+     400,
+     415,
+     586,
+     437
+    ],
+    "method": "MRZ check digits + printed label"
+   },
+   {
+    "fact": "person.passport_number",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "Z1234567",
+    "as_printed": "Z1234567",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "high",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits, agrees with printed zone"
+   },
+   {
+    "fact": "person.passport_expiry_date",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "2030-01-14",
+    "as_printed": "14 JAN 2030",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "high",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits, agrees with printed zone"
+   },
+   {
+    "fact": "person.citizenship",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "IND",
+    "as_printed": "INDIAN",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits"
+   },
+   {
+    "fact": "person.passport_country_of_issue",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "IND",
+    "as_printed": "IND",
+    "page": 1,
+    "where": "page 1, machine-readable zone (bottom two lines)",
+    "confidence": "medium",
+    "reason": null,
+    "box": null,
+    "method": "MRZ check digits"
+   },
+   {
+    "fact": "person.place_of_birth_city",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "NEW DELHI",
+    "as_printed": "NEW DELHI",
+    "page": 1,
+    "where": "page 1, printed zone, line at y=415",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     757,
+     415,
+     930,
+     437
+    ],
+    "method": "printed label (no machine-readable equivalent)"
+   },
+   {
+    "fact": "person.passport_issue_date",
+    "about": "document holder",
+    "status": "proposed",
+    "value": "2020-01-15",
+    "as_printed": "15 JAN 2020",
+    "page": 1,
+    "where": "page 1, printed zone, line at y=494",
+    "confidence": "medium",
+    "reason": null,
+    "box": [
+     400,
+     494,
+     584,
+     516
+    ],
+    "method": "printed label (no machine-readable equivalent)"
+   }
+  ],
+  "internal_conflicts": [
+   {
+    "fact": "person.date_of_birth",
+    "values": [
+     "printed: 12 APR 1990",
+     "machine-readable zone: 1990-04-21"
+    ],
+    "where": "page 1"
+   }
+  ],
+  "reader": {
+   "name": "local OCR/MRZ + rules",
+   "tesseract": "5.5.0 (eng)",
+   "version": "local-reader/v1"
+  },
+  "ms": 858
+ }
+}

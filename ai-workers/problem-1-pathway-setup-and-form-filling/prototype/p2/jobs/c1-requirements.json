@@ -1,0 +1,59 @@
+{
+ "job_id": "c1-requirements",
+ "kind": "requirements",
+ "combination": "1",
+ "configuration_version": "c1-draft-1",
+ "template": "requirements.v1.md",
+ "output_schema": "requirements-output.v1.schema.json",
+ "inputs": [
+  {
+   "file": "prototype/p1/inventory/imm5488e.text.inventory.json",
+   "sha256": "c9815877f0a37faaff7ecc40f0f91f544c7a9d6842b646fc3c9ff693c07fded3"
+  },
+  {
+   "file": "prototype/p1/inventory/imm5905e.text.inventory.json",
+   "sha256": "16594660c379864da2968739adf21760cd14c188c1d095d1face0b26e85b0902"
+  },
+  {
+   "file": "prototype/p1/inventory/guide-5487.text.inventory.json",
+   "sha256": "28e33a17e0766873b97be51477b4ccadedaf86c9239e28655a26a1829ea83264"
+  },
+  {
+   "file": "prototype/p1/inventory/work-permit-outside-forms-documents.text.inventory.json",
+   "sha256": "3ba7004dde7815d2ab5d8a5f5625ed9e277e580c1ef0a9d8b259957e7d5fd23a"
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t051558106z.json",
+   "sha256": "c9dcb09e9db45d58d984bd23f5ca35db182c6d2f345aed72735f7e456dbbc462"
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5707-live-20261020t052222731z.json",
+   "sha256": "1ca6d86cf4d59013b0c5cbd8c5430fd778de428f7ef38211e99320cbc367d346"
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5409-live-20261020t052401212z.json",
+   "sha256": "ac5214c4c2d34a5169c63a3a2550eecadd9c2a2a3824abdd5071a400719552de"
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5476-live-20261020t052508977z.json",
+   "sha256": "a9947dc48e86dc62b07a2a13160743e89decd61f820b6e8a279baffb478e2dc5"
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5475-live-20261020t052706509z.json",
+   "sha256": "962495eab1d4b7bd5d6e7c4aebabe6146d486c16518a5b66614e9319ca6f6db0"
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5257-1-live-20261020t052757177z.json",
+   "sha256": "37e84da8bd5a47d576e7afa802dfe88856fc2a87046f01bac1554a55cab21086"
+  }
+ ],
+ "settings": {
+  "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+  "model": "claude-opus-5-5",
+  "effort": "high",
+  "timeout_ms": 900000,
+  "max_attempts": 2,
+  "budget_usd": 5,
+  "max_output_tokens": 64000
+ }
+}

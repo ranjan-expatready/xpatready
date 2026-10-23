@@ -1,0 +1,238 @@
+{
+ "at": "2026-10-21T06:24:07.889Z",
+ "live": false,
+ "passed": 40,
+ "total": 40,
+ "clicks": 74,
+ "seconds": 105,
+ "steps": [
+  {
+   "name": "A0: reset removes the workspace rows and files, preserved evidence byte-identical",
+   "ok": true,
+   "detail": " Removes everything the disposable demo workspace created. Keeps the engine, official originals, fixtures, AI run records, the spend ledger and review evidence.",
+   "s": 11
+  },
+  {
+   "name": "A0: workspace empty after reset",
+   "ok": true,
+   "s": 12
+  },
+  {
+   "name": "A1: Load sample inputs creates 3 programs, 5 compositions, sources through the upload path",
+   "ok": true,
+   "detail": "{\"programs\":3,\"compositions\":5,\"attachments\":29,\"released\":1}",
+   "s": 21
+  },
+  {
+   "name": "A1: no duplicate field definitions",
+   "ok": true,
+   "detail": "164 fields",
+   "s": 21
+  },
+  {
+   "name": "A2: composition 1 shows released v1 imported from c1-v3 and no draft changes",
+   "ok": true,
+   "s": 22
+  },
+  {
+   "name": "A3: preview renders the released configuration with the sample family's confirmed facts",
+   "ok": true,
+   "s": 23
+  },
+  {
+   "name": "A3: an on-screen answer (partner common-law) turns IMM 5409 on, with the reason",
+   "ok": true,
+   "detail": "IMM 5409 Statutory Declaration of Common-law Union · Spouse or partner Applies Needed once per couple when the principal applicant has a common-law partner who ",
+   "s": 24
+  },
+  {
+   "name": "A4: IMM 1295 filled from confirmed sample facts: every written value reads back and the file is intact",
+   "ok": true,
+   "detail": "Released version 1 · configuration e0b6d9733dda · only confirmed facts are written",
+   "s": 25
+  },
+  {
+   "name": "A4: the checked PDF downloads",
+   "ok": true,
+   "detail": "IMM1295-principal-2026-10-21T0622.pdf 939438 bytes",
+   "s": 26
+  },
+  {
+   "name": "A5: a person adds a conditional document requirement with a valid condition, saved as draft",
+   "ok": true,
+   "detail": "Document requirement added to the draft",
+   "s": 28
+  },
+  {
+   "name": "A5: the new requirement survives a reload, marked Draft and edited by a person",
+   "ok": true,
+   "s": 30
+  },
+  {
+   "name": "A6: draft preview: the new conditional document waits for its answer, then is needed once the child travels alone",
+   "ok": true,
+   "detail": "Cannot tell yet → Needed",
+   "s": 32
+  },
+  {
+   "name": "A6: the released version is unchanged by the draft edit",
+   "ok": true,
+   "s": 33
+  },
+  {
+   "name": "A7: the author submits the change for review",
+   "ok": true,
+   "detail": "Submitted for review",
+   "s": 34
+  },
+  {
+   "name": "A7: approval before the SME sign-off is refused",
+   "ok": true,
+   "detail": "1 change needs the content reviewer's SME sign-off first (for example Document requirement custody_documents_or_parental_letter_of_authorization:each_dependent_child).",
+   "s": 35
+  },
+  {
+   "name": "A7: a second person (approver) releases version 2",
+   "ok": true,
+   "detail": "Released version 2 (05a222df0d04)",
+   "s": 40
+  },
+  {
+   "name": "A7: the released version now carries the new requirement",
+   "ok": true,
+   "s": 41
+  },
+  {
+   "name": "A8: IMM 5257 through the guarded AI path (stub pass) ends in an honest state",
+   "ok": true,
+   "detail": "STUB COMPLETED: Stub pass completed: the guarded path works. A stub has no AI content, so there is nothing to compare.",
+   "s": 44
+  },
+  {
+   "name": "A9: a shared field shows the boxes of every form that read it and whose value each needs",
+   "ok": true,
+   "s": 46
+  },
+  {
+   "name": "B0: reset removes the workspace rows and files, preserved evidence byte-identical",
+   "ok": true,
+   "detail": " Removes everything the disposable demo workspace created. Keeps the engine, official originals, fixtures, AI run records, the spend ledger and review evidence.",
+   "s": 47
+  },
+  {
+   "name": "B0: workspace empty after reset",
+   "ok": true,
+   "s": 48
+  },
+  {
+   "name": "B1: pathway, program and composition created by hand",
+   "ok": true,
+   "s": 50
+  },
+  {
+   "name": "B2: manual upload of an official form is recognised; a non-official file is held; a sample attachment uses the same path",
+   "ok": true,
+   "s": 62
+  },
+  {
+   "name": "B2: both forms read on this computer (no AI); the non-official file stays held",
+   "ok": true,
+   "detail": "imm1295e.pdf=READ, not-an-official-form.pdf=HELD, imm5476e.pdf=READ",
+   "s": 63
+  },
+  {
+   "name": "B3: the IMM 1295 draft is a labelled replay of a saved real run; against an empty library every field is new",
+   "ok": true,
+   "detail": "c1-fieldmap-imm1295-live-20261020t062024995z: {\"new\":80,\"boxes\":242,\"reuse\":0,\"mapped\":165,\"conflict\":0,\"ambiguous\":0,\"not_a_fact\":59,\"unresolved\":14,\"never_filled\":4,\"proposed_fields\":80}",
+   "s": 64
+  },
+  {
+   "name": "B3: IMM 1295 applied: its map and new definitions are in the draft",
+   "ok": true,
+   "detail": "IMM 1295 (09-2023) applied to the draft: 242 boxes, 80 new fields",
+   "s": 71
+  },
+  {
+   "name": "B4: adding IMM 5476 reuses library definitions, proposes new ones and flags ambiguous ones (address parts, near duplicates)",
+   "ok": true,
+   "detail": "{\"new\":10,\"boxes\":53,\"reuse\":5,\"mapped\":36,\"conflict\":0,\"ambiguous\":9,\"not_a_fact\":0,\"unresolved\":7,\"never_filled\":10,\"proposed_fields\":24}",
+   "s": 73
+  },
+  {
+   "name": "B4: every proposal decided by a person; address parts reuse the composite address; one item returned with a reason",
+   "ok": true,
+   "detail": "24/24 decided; parts person.mailing_address_city->person.mailing_address person.mailing_address_country->person.mailing_address person.mailing_address_postal_code->person.mailing_address person.mailing_address_province_state->person.mailing_address person.mailing_address_street_name->person.mailing_address person.mailing_address_street_number->person.mailing_address person.mailing_address_unit->pe",
+   "s": 79
+  },
+  {
+   "name": "B5: draft preview: IMM 5476 boxes read reused definitions; new fields have no value source yet (unresolved, no placement)",
+   "ok": true,
+   "detail": "{\"unresolved\":43}",
+   "s": 81
+  },
+  {
+   "name": "B6: a person places person.email in a new section (draft)",
+   "ok": true,
+   "detail": "Placement saved as a draft version",
+   "s": 84
+  },
+  {
+   "name": "B6: without any screen-code change the email boxes now come from a client question",
+   "ok": true,
+   "detail": "3 boxes",
+   "s": 85
+  },
+  {
+   "name": "B7: the from-scratch configuration is reviewed and released as version 1",
+   "ok": true,
+   "detail": "Released version 1 (33cc622526c3)",
+   "s": 92
+  },
+  {
+   "name": "B7: library holds one definition per key, AI-proposed and human rows labelled",
+   "ok": true,
+   "detail": "90 fields",
+   "s": 93
+  },
+  {
+   "name": "C0: reset removes the workspace rows and files, preserved evidence byte-identical",
+   "ok": true,
+   "detail": " Removes everything the disposable demo workspace created. Keeps the engine, official originals, fixtures, AI run records, the spend ledger and review evidence.",
+   "s": 94
+  },
+  {
+   "name": "C0: workspace empty after reset",
+   "ok": true,
+   "s": 95
+  },
+  {
+   "name": "C1: Load sample inputs creates 3 programs, 5 compositions, sources through the upload path",
+   "ok": true,
+   "detail": "{\"programs\":3,\"compositions\":5,\"attachments\":29,\"released\":1}",
+   "s": 105
+  },
+  {
+   "name": "C1: no duplicate field definitions",
+   "ok": true,
+   "detail": "164 fields",
+   "s": 105
+  },
+  {
+   "name": "C1: the rerun after reset has the same counts as the first load (no duplicates, no stale state)",
+   "ok": true,
+   "detail": "{\"programs\":3,\"compositions\":5,\"attachments\":29,\"released\":1} fields 164",
+   "s": 105
+  },
+  {
+   "name": "C1: activity starts fresh from the reset (no stale history in the new workspace)",
+   "ok": true,
+   "s": 105
+  },
+  {
+   "name": "no page errors",
+   "ok": true,
+   "detail": "",
+   "s": 105
+  }
+ ]
+}
