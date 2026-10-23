@@ -186,7 +186,8 @@ async function main() {
     if (x.status < 300) placed++; else ok(`4.5 placement ${p.key}`, false, x.body);
   }
   ok("4.5 every fact IMM 5257 reads that nobody was asked for now has a question", placed === PLACES.length, { placed });
-  const selections = sql("select distinct section_key from section_question").split("\n").filter(Boolean);
+  // Sections in the library's display order, so the questionnaire starts with personal details.
+  const selections = sql("select s.section_key from logical_section s where s.section_key in (select section_key from section_question) group by s.section_key order by min(s.display_order)").split("\n").filter(Boolean);
   const cfg = (await call("GET", `/combinations/${vv}/config`)).body.snapshot;
   const needed = new Set<string>((cfg.placements as { section_id: string }[]).map((p) => p.section_id));
   for (const s of selections.filter((s) => needed.has(s) || s === VISIT || s === PREVIOUS)) await call("POST", `/combinations/${vv}/sections/${s}`, undefined, AUTHOR);

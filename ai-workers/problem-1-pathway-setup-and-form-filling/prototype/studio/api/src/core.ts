@@ -31,9 +31,19 @@ export const ACTORS = [
   { id: "user-C", persona: "sme", name: "Content reviewer", role: "Content publisher · Immigration SME duty", duties: ["review", "sme"], area: "studio" },
   { id: "user-B", persona: "approver", name: "Approver", role: "Content publisher · second person", duties: ["review", "approve"], area: "studio" },
 ] as const;
-export type Actor = (typeof ACTORS)[number];
+/** Simulated case people (runtime lane, R1): the firm's case officer and two client logins (Sample households). They
+ *  hold no configuration duty; configuration people hold no case duty. */
+export const RUNTIME_ACTORS = [
+  { id: "user-O", persona: "officer", name: "Case officer", role: "Firm staff · case officer", duties: ["case"], area: "runtime" },
+  { id: "user-P", persona: "client", name: "Client A", role: "Client · principal applicant", duties: ["answer"], area: "client" },
+  { id: "user-Q", persona: "client-b", name: "Client B", role: "Client · principal applicant", duties: ["answer"], area: "client" },
+] as const;
+export type Actor = (typeof ACTORS)[number] | (typeof RUNTIME_ACTORS)[number];
+/** Deny by default (STANDARDS §6, S-1): a missing or unknown actor is refused, never treated as the author. */
 export function actorOf(header: string | undefined): Actor {
-  return ACTORS.find((a) => a.id === header || a.persona === header) ?? ACTORS[0];
+  const a = [...ACTORS, ...RUNTIME_ACTORS].find((x) => x.id === header || x.persona === header);
+  if (!a) throw new HttpException({ type: "https://expatready.local/problems/unknown-actor", title: "Who is this?", status: 401, detail: "Choose a simulated person first: the request named no known person." }, HttpStatus.UNAUTHORIZED);
+  return a;
 }
 export function need(a: Actor, duty: string) {
   if (!(a.duties as readonly string[]).includes(duty)) throw new HttpException(`${a.name} (simulated) does not hold the ${duty} duty`, HttpStatus.FORBIDDEN);

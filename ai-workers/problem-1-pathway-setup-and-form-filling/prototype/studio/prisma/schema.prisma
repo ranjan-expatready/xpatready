@@ -156,6 +156,7 @@ model Combination {
   checks       Check[]
   releases     ConfigRelease[]
   jobs         DraftingJob[]
+  cases        Case[] // runtime lane (R1)
 
   @@unique([workspaceId, combinationKey])
   @@unique([programDefId])
@@ -364,6 +365,8 @@ model CanonicalField {
   answerListKey     String?          @map("answer_list_key")
   updatedBy         String           @map("updated_by")
   updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  answers ClientCanonicalAnswer[] // runtime lane (R1): answers point at the exact field version
 
   @@unique([workspaceId, canonicalFieldKey, version])
   @@map("canonical_field")
@@ -758,6 +761,7 @@ model ConfigRelease {
 
   combination Combination  @relation(fields: [combinationId], references: [id], onDelete: Cascade)
   packVersion PackVersion? @relation(fields: [packVersionId], references: [id], onDelete: Restrict)
+  pins        PackWorkPin[] // runtime lane (R1): cases pinned to this release
 
   @@unique([combinationId, version])
   @@index([packVersionId])
@@ -878,4 +882,186 @@ model GeneratedArtifact {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("generated_artifact")
+}
+
+// ─── Runtime (runtime lane, R1 thin slice, P-67) ──────────────────────────────────────────────────────────────────
+// A case for one released combination: its people, one current answer per person per fact, rows of repeating groups.
+// Names follow the team's client spine (code/ERv2-sanitized@22f1d12-2026-10-19/apps/api/prisma/models/client-spine.prisma;
+// divergences D-1…D-9 in product/screens/R1-thin-slice/plan.md §7). Constraints Prisma cannot express (one current
+// answer, deferred supersede links, no self-edge) are in the migration's SQL.
+
+/// One application for one released combination (the team has no Case table yet: its caseId columns would point here).
+model Case {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  combinationId  String   @map("combination_id") @db.Uuid
+  reference      String
+  status         String   @default("OPEN")
+  /// The simulated client login that may answer this case's questionnaire (no real sign-in in the prototype).
+  clientActorId  String   @map("client_actor_id")
+  createdBy      String   @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  idempotencyKey String?  @map("idempotency_key")
+
+  combination  Combination       @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+  pins         PackWorkPin[]
+  participants CaseParticipant[]
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, createdAt])
+  @@map("runtime_case")
+}
+
+/// The release a case works from (team PackWorkPin, pinned per case and combination here). Insert-only.
+model PackWorkPin {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  caseId          String   @map("case_id") @db.Uuid
+  combinationId   String   @map("combination_id") @db.Uuid
+  partyId         String   @map("party_id") @db.Uuid
+  packVersionId   String?  @map("pack_version_id") @db.Uuid
+  configReleaseId String   @map("config_release_id") @db.Uuid
+  contentHash     String   @map("content_hash") @db.VarChar(64)
+  purpose         String   @default("SQR_ADVANCE")
+  revision        Int      @default(1)
+  actorId         String   @map("actor_id")
+  pinnedAt        DateTime @default(now()) @map("pinned_at") @db.Timestamptz
+
+  case    Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  release ConfigRelease @relation(fields: [configReleaseId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, combinationId, revision])
+  @@map("pack_work_pin")
+}
+
+/// A person (team Party; per workspace here, per firm there).
+model Party {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  kind        String   @default("PERSON")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  profile  PartyProfile?
+  from     PartyRelationship[] @relation("PartyRelFrom")
+  to       PartyRelationship[] @relation("PartyRelTo")
+  subjects AnswerSubject[]
+
+  @@index([workspaceId])
+  @@map("party")
+}
+
+model PartyProfile {
+  id                  String  @id @default(uuid()) @db.Uuid
+  workspaceId         String  @map("workspace_id") @db.Uuid
+  partyId             String  @unique @map("party_id") @db.Uuid
+  displayName         String  @map("display_name")
+  localePreference    String? @map("locale_preference")
+  contactChannelsJson Json    @default("{}") @map("contact_channels_json")
+
+  party Party @relation(fields: [partyId], references: [id], onDelete: Cascade)
+
+  @@map("party_profile")
+}
+
+/// Principal → spouse or partner, principal → child (open vocabulary, as the team's). Self-edge refused in SQL.
+model PartyRelationship {
+  id               String  @id @default(uuid()) @db.Uuid
+  workspaceId      String  @map("workspace_id") @db.Uuid
+  fromPartyId      String  @map("from_party_id") @db.Uuid
+  toPartyId        String  @map("to_party_id") @db.Uuid
+  relationshipType String  @map("relationship_type")
+  role             String?
+
+  fromParty Party @relation("PartyRelFrom", fields: [fromPartyId], references: [id], onDelete: Cascade)
+  toParty   Party @relation("PartyRelTo", fields: [toPartyId], references: [id], onDelete: Cascade)
+
+  @@index([fromPartyId])
+  @@map("party_relationship")
+}
+
+/// Whom an answer is about: a person on the case, or the case itself (subjectKind "case", party = the principal).
+model AnswerSubject {
+  id          String @id @default(uuid()) @db.Uuid
+  workspaceId String @map("workspace_id") @db.Uuid
+  partyId     String @map("party_id") @db.Uuid
+  subjectKind String @map("subject_kind")
+  label       String
+
+  party        Party                   @relation(fields: [partyId], references: [id], onDelete: Cascade)
+  participant  CaseParticipant?
+  answers      ClientCanonicalAnswer[]
+  records      ClientFactRecord[]
+
+  @@map("answer_subject")
+}
+
+/// Who is on the case, in the combination's roles (the team has no case membership; D-2).
+model CaseParticipant {
+  id          String  @id @default(uuid()) @db.Uuid
+  workspaceId String  @map("workspace_id") @db.Uuid
+  caseId      String  @map("case_id") @db.Uuid
+  subjectId   String  @unique @map("subject_id") @db.Uuid
+  /// principal · spouse_or_partner · child · case
+  role        String
+  /// travelling with the application (a combination participant that "applies")
+  applies     Boolean @default(true)
+  order       Int
+
+  case    Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  subject AnswerSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, order])
+  @@map("case_participant")
+}
+
+/// One row of a repeating group (team ClientFactRecord; groupKey = the questionnaire section holding the group, D-5).
+/// Removing a row inserts a tombstone version; nothing is deleted.
+model ClientFactRecord {
+  id             String   @id @default(uuid()) @db.Uuid
+  workspaceId    String   @map("workspace_id") @db.Uuid
+  subjectId      String   @map("subject_id") @db.Uuid
+  groupKey       String   @map("group_key")
+  /// Stable row identity across versions (the first version's id).
+  rowKey         String   @map("row_key") @db.Uuid
+  order          Int
+  tombstone      Boolean  @default(false)
+  supersededById String?  @map("superseded_by_id") @db.Uuid
+  sourceJson     Json     @map("source_json")
+  effectiveAt    DateTime @default(now()) @map("effective_at") @db.Timestamptz
+
+  subject      AnswerSubject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  supersededBy ClientFactRecord?       @relation("ClientFactRecordChain", fields: [supersededById], references: [id], onDelete: Cascade)
+  supersedes   ClientFactRecord[]      @relation("ClientFactRecordChain")
+
+  @@index([subjectId, groupKey])
+  @@map("client_fact_record")
+}
+
+/// One answer about one subject for one shared field (and one row of a group). Append-only: a change inserts a new row
+/// and stamps the old one superseded, in one transaction. DECLARED = typed; VERIFIED = confirmed by the officer.
+model ClientCanonicalAnswer {
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  partyId           String    @map("party_id") @db.Uuid
+  subjectId         String    @map("subject_id") @db.Uuid
+  canonicalFieldId  String    @map("canonical_field_id") @db.Uuid
+  canonicalFieldKey String    @map("canonical_field_key")
+  /// The repeating-group row (ClientFactRecord.rowKey) this answer belongs to; null for a single answer.
+  rowKey            String?   @map("row_key") @db.Uuid
+  valueJson         Json      @map("value_json")
+  status            String
+  effectiveAt       DateTime  @default(now()) @map("effective_at") @db.Timestamptz
+  supersededById    String?   @map("superseded_by_id") @db.Uuid
+  /// { channel: questionnaire | agent_view | confirm_section, actor, at }
+  sourceJson        Json      @map("source_json")
+  verifiedBy        String?   @map("verified_by")
+  verifiedAt        DateTime? @map("verified_at") @db.Timestamptz
+
+  subject        AnswerSubject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  canonicalField CanonicalField          @relation(fields: [canonicalFieldId], references: [id], onDelete: Restrict)
+  supersededBy   ClientCanonicalAnswer?  @relation("ClientCanonicalAnswerChain", fields: [supersededById], references: [id], onDelete: Cascade)
+  supersedes     ClientCanonicalAnswer[] @relation("ClientCanonicalAnswerChain")
+
+  @@index([subjectId, canonicalFieldKey])
+  @@map("client_canonical_answer")
 }

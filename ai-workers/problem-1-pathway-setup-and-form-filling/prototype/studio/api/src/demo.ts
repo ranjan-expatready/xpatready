@@ -143,6 +143,7 @@ export class Demo {
     const ws = { workspaceId };
     await this.db.$transaction(async (tx) => {
       // Children first; every table is scoped to the demo workspace id.
+      await tx.party.deleteMany({ where: ws }); // runtime lane (R1): people and, with them, their answers and rows; cases go with their combination
       await tx.normalizationItem.deleteMany({ where: ws }); await tx.draftingJob.deleteMany({ where: ws }); await tx.aiBatch.deleteMany({ where: ws });
       await tx.reviewSignoff.deleteMany({ where: ws }); await tx.reviewSubmission.deleteMany({ where: ws }); await tx.configRelease.deleteMany({ where: ws }); await tx.packVersion.deleteMany({ where: ws });
       await tx.formFieldMap.deleteMany({ where: ws }); await tx.combinationForm.deleteMany({ where: ws }); await tx.formEdition.deleteMany({ where: ws }); await tx.govFormDef.deleteMany({ where: ws });
