@@ -1,4 +1,4 @@
-# P-65 — Independent review of the forms design (Lead, 23 Oct; founder agreement pending)
+# P-65 — Independent review of the forms design (Lead, 23 Oct; founder agreed 23 Oct)
 
 The founder had ChatGPT propose a design from a neutral problem statement ("canonical field library with human-operated government channels"), then asked the Lead to test it against our decisions (P-61, P-62, P-63), the code and IRCC sources, keep what is right, and update the files.
 
