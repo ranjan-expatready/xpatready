@@ -5,6 +5,8 @@
 
 2026-10-23 18:10 (Lead): no change to R1a. **After R1, next item R2 prospect slice (P-76, P-77):** PQR on the shared renderer for the visitor visa, staff eligibility page with Sample gates as rules on your R1 engine (no separate dummy engine; scoring grids stay B16), PQR answers into the SQR marked "please confirm". Capabilities C6.7–C6.9. Plan it when R1 is DONE.
 
+2026-10-23 18:30 (Lead): **founder answered plan question 1 as recommended (P-78): confirmed by who answered.** Own answers and the principal's answers for a minor count as confirmed; the principal's answers for an adult spouse show "answered by the principal" and fill only after the spouse (own link, later, P-40) or the officer ("Confirm section") confirms. Keep building as planned; tests: one pass and one fail per case. Capability C6.10.
+
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
 current_item: R1-thin-slice

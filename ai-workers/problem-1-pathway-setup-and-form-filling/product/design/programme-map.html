@@ -121,7 +121,7 @@ footer { font-size: 12px; color: var(--muted); }
 
 <script>
 const D = {
-  asof: "Updated 23 Oct 2026, 18:10 IST. Source files: product/PLAN.md, STATE.md, qa/CAPABILITIES.md, qa/BUGS.md, DECISIONS.md, BACKLOG.md.",
+  asof: "Updated 23 Oct 2026, 18:20 IST. Source files: product/PLAN.md, STATE.md, qa/CAPABILITIES.md, qa/BUGS.md, DECISIONS.md, BACKLOG.md.",
   summary: [
     ["M2 progress (counted)", "5 of 37 work", "6 partial · 3 broken · 2 not tested · 21 not built"],
     ["R1 and M3", "0 of 7 · 0 of 12", "Runtime build starting; M3 design drafts in"],
@@ -181,6 +181,7 @@ const D = {
   decisions: [
     ["Pre-qualification inside the client questionnaire", "PQR is part of the SQR, which is part of the agent view; AI drafts each combination's PQR, a person approves, released with the combination; a general PQR is built from released combinations (P-76). Prototype: PQR answers flow into the SQR; a staff eligibility page on the rules engine with Sample gates; no verdict to prospects (P-77)."],
     ["Facts are the root", "Shared fields; PDF and online forms are outputs; questionnaires built from facts (P-61, P-62, P-63)."],
+    ["Family answers: confirmed by who answered", "One family questionnaire, a section per person; own and minors' answers count as confirmed; an adult's answers given by the principal wait for that adult or the officer (P-78)."],
     ["Never overwrite signed work", "A changed fact marks signed, uploaded or submitted items stale (P-65)."],
     ["AI drafts, people decide", "AI never decides identity, filling or release; a different person approves (P-14, P-15, P-53, P-62)."],
     ["Portal capture and fill", "One extension: capture structure only, fill in the representative's session; form health (P-66)."],
