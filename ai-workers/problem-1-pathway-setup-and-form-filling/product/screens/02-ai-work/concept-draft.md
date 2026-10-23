@@ -35,7 +35,7 @@ A content publisher turns uploaded sources (PDF forms, checklists, saved portal 
 * BR-16 Words P-63 ("form field", "shared field", "field map"; never "box"); no hashes, run ids or model names on the main path (PRODUCT §4).
 
 ## 4. Layout (EXPERIENCE §3 patterns; team tokens, type 12/14/16/18/20/24)
-1. **To review** (Library list pattern, `FilterLayout`): chips Needs you · Waiting for others · Running · All, Kind filter, search; one row per item with what and why, status, AI cost, one next step for the acting role. States: normal, empty, loading, error, capturer (no action). *Q1.*
+1. **To review** (Library list pattern, `FilterLayout`): chips Needs you · Waiting for others · Running · All, Kind filter, search; one row per item with what and why, status, AI cost, one next step for the acting role. States: normal, empty, loading, error, capturer (no action). Rows also list combinations waiting for release, linking to their Review and release tab (P-79).
 2. **Draft setup** (combination page, P-07 Setup button): per source what the system found without AI and the plan (reused · AI drafts N in K parts · held), estimated cost, the AI line, "Start AI draft · up to US$x", "Draft without AI". States: normal, budget limit, AI unavailable.
 3. **Progress (A4)**: one count bar, per-part table (form, section group, how, form fields, status, cost); review finished parts while others run. States: running, part failed, done.
 4. **Review proposals** (Source + proposals): kind tabs (Field maps · Document requirements · Sections · Rules and checks · Answer lists), outcome chips, list · source page with highlight · AI proposal and decision; J/K/A/N keys. States: ambiguous, conflict, create new with advisory check, list purpose/overflow, option map per channel, stale, applied read-only.
@@ -61,7 +61,7 @@ Tests: one pass + one fail per BR-1..16 (e.g. BR-9 capturer approve → 403 / se
 * **Capability · Needed:** every view 1–8 and 10; Draft without AI; cost line; part progress; advisory duplicate check; option map per channel; impact review; capture review; merge panel; server role checks.
 * **Scaffolding (never ported):** "Use the saved AI answer" and stub pass (inside "Prototype options"), Demo menu, Acting as, Prototype badge, Sample portal fixtures, Sample ledger values.
 * **Not built:** capture by extension (F2), screenshots as a source (P-66 way D), Form health and "Re-capture needed" (M3, C9.3), adopting an update on an open case (B9), report a mapping problem (B28, M4), retire execution (C3.7, Screen 04), change watch.
-* **Pending a question:** held-file approval (Q2, C2.3), purpose/overflow on this screen (Q3, B1), queue page and menu item (Q1).
+* **Pending a question:** held-file approval (Q2, C2.3), purpose/overflow on this screen (Q3, B1), queue page and menu item (Q1, agreed P-79).
 
 ## Decisions followed, missing or in conflict
 * Followed: P-07, P-23, P-27, P-32, P-34, P-37, P-38, P-43, P-48, P-49, P-53, P-57, P-58, P-61–P-66, A1–A4; EXPERIENCE §3–§5.
@@ -71,7 +71,7 @@ Tests: one pass + one fail per BR-1..16 (e.g. BR-9 capturer approve → 403 / se
 * **K4 open (Lead, F1):** reused element ids kept as `id@screen-title`; the screen map shows the screen name, never the suffix.
 
 ## 7. Questions for the Lead (recommendation first)
-1. **Where do approvals that are not AI live?** *Recommend:* one "To review" page first under Configure (task-first, like Programs "Needs you"), listing AI proposals, new editions, portal captures, screen maps, new shared fields, merges and held files; History › AI work stays the run log. *Alternative:* everything under History › AI work (no menu change, but a capture approval hides under "AI" and "History"). Needs a decision because P-04 fixes the menu.
+1. **[Agreed P-79, 23 Oct: one To review page first under Configure; also lists combinations waiting for release, linking to their Review and release tab]** **Where do approvals that are not AI live?** *Recommend:* one "To review" page first under Configure (task-first, like Programs "Needs you"), listing AI proposals, new editions, portal captures, screen maps, new shared fields, merges and held files; History › AI work stays the run log. *Alternative:* everything under History › AI work (no menu change, but a capture approval hides under "AI" and "History"). Needs a decision because P-04 fixes the menu.
 2. **Can a person approve a held PDF in the product (C2.3)?** *Recommend:* yes, like captures (P-66): the uploader records the IRCC page it came from, a second person compares and approves; the file then joins the approved list. *Alternative:* keep approval as a manifest row by the Lead (C2.3 stays Not built; the demo needs every file pre-listed).
 3. **Do purposes and overflow (B1) belong here?** *Recommend:* yes, choose them in the field-map proposal (AI proposes from the form's wording; the person picks from five fixed kinds and two overflow choices), while list groups are defined in Screen 04; needs the purpose in the F1 field-map contract. *Alternative:* Screen 03/04 later, and Screen 02 shows "Purpose: not set" for list fields (release would then need a second pass).
 
@@ -79,5 +79,5 @@ Tests: one pass + one fail per BR-1..16 (e.g. BR-9 capturer approve → 403 / se
 - [ ] Board agreed by the founder (draft board exists; not yet clicked through)
 - [x] Every element labelled Needed / Not built and Capability / Scaffolding (§6b, board labels)
 - [ ] Data and API needs known (§6 lists them; C3.4/C2.6 and impact endpoints have no owner yet: K2)
-- [ ] Every decision it relies on agreed by the founder (Q1, Q2, Q3 open; K1 Lead)
+- [ ] Every decision it relies on agreed by the founder (Q1 agreed P-79; Q2, Q3 open; K1 Lead)
 - [ ] No open questions (three open)

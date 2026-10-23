@@ -16,6 +16,7 @@ updated: 2026-10-23
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-23 · Lead · Founder decided P-79 (one To review page under Configure); menu, SCREENS 02, Screen 02 draft updated.
 - 2026-10-23 · runtime · Founder decided P-78 (family answers confirmed by who answered; adult's answers given by the principal wait for that adult or the officer); R1 builds as planned.
 - 2026-10-23 · Lead · P-77: prototype PQR answers flow into the SQR; staff eligibility page on the R1 rules engine with Sample gates; runtime lane R2 after R1.
 - 2026-10-23 · Lead · Founder decided P-76 (PQR model, option C with AI-drafted picks, approved in the combination's release). Prepare application designer draft committed; all four design drafts ready for walkthrough.
@@ -25,4 +26,3 @@ updated: 2026-10-23
 - 2026-10-23 · Handover to a fresh Lead chat: main committed; forms slice 1 running in its session; evidence E1b waits on Computer use; Screen 01 waits on the founder walkthrough; P-65 and US$12 PDF-twin spend await the founder.
 - 2026-10-23 · Merged forms "Report to Lead" wording (23d4eeef, founder request) and evidence E1a scoring set (self-check 16/16). Evidence → E1b with computer use (founder).
 - 2026-10-23 · forms · DESIGN → BUILD · Lead merged the F1 challenge into main (b0e96158), answered all five objections; founder decided P-66 (extension for capture and fill, structure only, portal twin, form health).
-- 2026-10-23 · all · Hooks read the session's own folder from the hook input (lane sessions were checking the main copy; forms lane report). Founder gave a standing OK to merge lanes after the Lead check.
