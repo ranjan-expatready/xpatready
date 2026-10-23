@@ -15,7 +15,7 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 ## The one loop
 1. A lane does **one stage**, commits on its branch, updates `product/lanes/<lane>.md`, ends with a **Paste to Lead** block naming the lane.
 2. The Lead reads it (directly, or the founder pastes it into `/lead`), checks, records, and says the next command for each lane.
-3. When a lane's work passes the Lead check, the Lead merges its branch into `main` (founder OK on each merge). Every lane syncs `main` at the start of its next stage.
+3. When a lane's work passes the Lead check, the Lead merges its branch into `main` (standing founder OK, 23 Oct; the Lead reports each merge). Every lane syncs `main` at the start of its next stage.
 
 ## Guards every command runs first (no wrong step can do harm)
 * `product/tools/lane.sh whoami` says which copy this is. `/next` in the main copy, `/next forms` in the screens copy, or `/lead` in a lane copy does nothing and prints the right command and where to type it.

@@ -1,7 +1,11 @@
 #!/bin/bash
 # Stop hook (lane-aware, P-64): before a session stops, (1) its state file (main copy: STATE.md; a lane copy: lanes/<lane>.md) must be updated if product or app files changed, and the work must be committed; (2) rules files must pass check-docs; (3) explicit any in live code must not rise.
-ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"; cd "$ROOT" || exit 0
 input=$(cat); [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false' 2>/dev/null)" = "true" ] && exit 0
+# The session's own copy (a lane worktree or the main copy) comes from the hook input: in lane sessions the desktop app
+# points $CLAUDE_PROJECT_DIR at the main copy, so the script's own location is not enough (forms lane report, 23 Oct).
+cwd=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)
+ROOT=$(git -C "${cwd:-.}" rev-parse --show-toplevel 2>/dev/null) || ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
+cd "$ROOT" || exit 0
 PH=ai-workers/problem-1-pathway-setup-and-form-filling/product; APP=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
 reasons=""
 LANE=$(bash "$PH/tools/lane.sh" whoami 2>/dev/null); case "$LANE" in screens|forms|evidence) SF="$PH/lanes/$LANE.md";; *) SF="$PH/STATE.md";; esac

@@ -31,7 +31,9 @@ fi
 # the last clean run, with a full sweep at least every 6 hours. Before this, every tool call re-hashed ~2,500 files
 # (~1.4 GB, including the Studio's runtime data) and overlapping runs drove the machine to load 17-35.
 # Lane copies (git worktrees, P-64) are protected by a commit per stage; only the main copy keeps snapshots.
-[ "$(git -C "$ROOT" rev-parse --git-dir 2>/dev/null)" = "$(git -C "$ROOT" rev-parse --git-common-dir 2>/dev/null)" ] || exit 0
+[ -t 0 ] || { hin=$(cat 2>/dev/null); hcwd=$(printf '%s' "$hin" | jq -r '.cwd // empty' 2>/dev/null); }
+CHK="${hcwd:-$ROOT}"
+[ "$(cd "$CHK" 2>/dev/null && git rev-parse --absolute-git-dir 2>/dev/null)" = "$(cd "$CHK" 2>/dev/null && cd "$(git rev-parse --git-common-dir 2>/dev/null)" 2>/dev/null && pwd -P)" ] || exit 0
 LOCK="$DEST/.run.lock"; MARK="$DEST/.last-clean-run"; NEXT="$DEST/.this-run"
 if ! mkdir "$LOCK" 2>/dev/null; then
   # Another run is working; it saves the same versions. A lock older than 20 minutes is stale.
