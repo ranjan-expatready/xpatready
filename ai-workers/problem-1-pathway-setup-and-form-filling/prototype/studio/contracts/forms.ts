@@ -61,5 +61,9 @@ export const NewAnswerList = z.object({
 export const LinkAnswerList = z.object({ list: z.string().trim() });
 /** A person sets one form field's option map: value key → the form's code; codes no value fills are listed as unused. */
 export const SetOptionMap = z.object({ dataPath: z.string().trim().min(1, "Name the form field."), map: z.record(z.string(), z.string()), unused: z.array(z.string()).default([]) });
+/** The guarded screen_map job for an online version's open inputs (F1 slice 2): STUB proves the path at US$0; LIVE
+ *  is a paid call and repeats the worst case the person saw (to the cent), so nothing is spent unseen. */
+export const DraftLeftovers = z.object({ combinationId: z.string().uuid("Name the combination this is drafted for."), mode: z.enum(["STUB", "LIVE"], { message: "Choose STUB or LIVE." }), confirmWorstUsd: z.number().nonnegative().optional() });
+export const AcceptAiProposals = z.object({ jobId: z.string().uuid(), inputs: z.array(z.string()).optional() });
 export const NewMerge = z.object({ keep: z.string().trim(), merge: z.string().trim(), reason: z.string().trim().min(10, "Say why the two fields mean the same.").max(1000) });
 export const DecideMerge = z.object({ note: z.string().trim().max(1000).optional() });

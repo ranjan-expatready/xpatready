@@ -125,3 +125,39 @@ export function draftScreenMap(twin: CaptureRecord, ctx: { pdf: PdfEntry[]; pdfE
   const n = (o: string) => proposals.filter((p) => p.outcome === o || p.method === o).length;
   return { proposals, pdf_not_on_portal, counts: { inputs: proposals.length, mapped: n("mapped"), same_path: n("same_path"), pdf_twin: n("pdf_twin"), alias: n("alias"), leftover: n("leftover"), not_a_fact: n("not_a_fact"), ai_calls: 0 } };
 }
+
+// ───────────────────────────────────────────── F1 slice 2: the AI's screen map for leftovers (guarded screen_map job)
+export type ScreenMapAnswer = { canonical_fields: { id: string; meaning: string; value_type: string }[]; entries: { input: string; outcome: string; person: string; fact: string | null; transform: string | null; confidence: string; unresolved_reason: string | null; evidence_quote: string }[] };
+export type Leftover = { input: string; type: string; part: string | null; label: string };
+export type AiProposal = { input: string; label: string; outcome: "mapped" | "not_a_fact" | "unresolved"; fact: string | null; person: string | null; transform: string | null; ai_confidence: string; why: string };
+const PERSON_KEYS = ["form_subject", "subject_spouse_or_partner", "subject_parent_1", "subject_parent_2", "subject_child", "subject_sibling", "representative", "none"];
+
+/** What a person may accept from a guarded screen_map answer, one input at a time. Only the inputs that were left open
+ *  are considered (anything else in the answer is ignored and listed); a fact must already be in the library under a
+ *  valid name and suit the input's type (a new field is created by a person first); our own transform is used, never
+ *  the AI's text. Rules, no AI. */
+export function screenMapProposals(answer: ScreenMapAnswer, leftovers: Leftover[], library: LibraryEntry[], keyProblem: (k: string) => string | null): { proposals: AiProposal[]; ignored: string[]; not_answered: string[] } {
+  const lib = new Map(library.map((l) => [l.key, l]));
+  const resolve = (k: string) => { let key = k, n = 0; while (lib.get(key)?.mergedIntoKey && n++ < 5) key = lib.get(key)!.mergedIntoKey!; return key; };
+  const open = new Map(leftovers.map((l) => [l.input, l]));
+  const proposals: AiProposal[] = [], ignored: string[] = [], seen = new Set<string>();
+  for (const e of answer.entries ?? []) {
+    const l = open.get(e.input);
+    if (!l || seen.has(e.input)) { ignored.push(e.input); continue; }
+    seen.add(e.input);
+    const base = { input: l.input, label: l.label, ai_confidence: e.confidence, fact: null, person: null, transform: null };
+    if (e.outcome === "not_a_fact") { proposals.push({ ...base, outcome: "not_a_fact", why: `AI: not a fact (${(e.unresolved_reason ?? "no reason given").slice(0, 300)})` }); continue; }
+    if (e.outcome !== "mapped" || !e.fact) { proposals.push({ ...base, outcome: "unresolved", why: `AI left it open: ${(e.unresolved_reason ?? "no reason given").slice(0, 300)}` }); continue; }
+    const problem = keyProblem(e.fact);
+    const key = problem ? null : resolve(e.fact);
+    const field = key ? lib.get(key) : undefined;
+    const person = PERSON_KEYS.includes(e.person) ? e.person : null;
+    const stay = (why: string) => proposals.push({ ...base, outcome: "unresolved", why });
+    if (problem) stay(`AI proposed a field named ${problem}: a person names the field`);
+    else if (!field) stay(`AI proposed ${e.fact}, which is not in the library: a person creates it (or picks another) first`);
+    else if (!compatible(l.type, l.part, field.valueType)) stay(`AI proposed ${key}, which holds a ${field.valueType}; this input is a ${l.part ? `date part (${l.part})` : l.type}`);
+    else if (!person) stay(`AI gave no valid person ("${e.person}")`);
+    else proposals.push({ ...base, outcome: "mapped", fact: key!, person, transform: transformFor(l.type, l.part, field), why: `AI proposed ${key}${key !== e.fact ? ` (${e.fact} was merged into ${key})` : ""} for ${person} (${e.confidence}; "${e.evidence_quote.slice(0, 120)}")` });
+  }
+  return { proposals, ignored, not_answered: leftovers.filter((l) => !seen.has(l.input)).map((l) => l.input) };
+}

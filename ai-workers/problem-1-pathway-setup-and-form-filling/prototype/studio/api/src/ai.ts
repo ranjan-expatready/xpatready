@@ -26,7 +26,9 @@ const round = (n: number) => Math.round(n * 100) / 100;
 type Mode = "LIVE" | "REPLAY" | "STUB";
 export type Scope = { kind: "catalogue" | "program" | "combination" | "source"; ids: string[] };
 type Action = "draft" | "reuse_saved_output" | "reuse_library" | "skip" | "not_eligible";
-type Target = { combinationId: string; combination: string; program: string; attachmentId: string; source: string; action: Action; why: string; read_first?: boolean; run_file?: string; fingerprint?: string; expected_usd: number | null; worst_usd: number };
+type Target = { combinationId: string; combination: string; program: string; attachmentId: string; source: string; action: Action; why: string; read_first?: boolean; run_file?: string; fingerprint?: string; expected_usd: number | null; worst_usd: number;
+  /** A4: the draft reuse first and in parts (how many form fields the library fills, how many the AI sees, in how many parts). */
+  a4?: { total: number; reused: number; reused_from: string[]; to_ai: number; parts: { index: number; sections: string[]; fields: number; worst_usd: number }[] } };
 
 const ACTION_TEXT: Record<Action, string> = { draft: "Draft field map", reuse_saved_output: "Use the saved AI answer (no cost)", reuse_library: "Add from library", skip: "Skip", not_eligible: "Not eligible" };
 
@@ -89,8 +91,14 @@ export class Ai implements OnModuleInit {
         if (mode === "LIVE" && usable && !opts.draftAgain) { targets.push({ ...base, action: "reuse_saved_output", read_first, run_file: usable.file, fingerprint, why: savedWhy(usable) }); continue; }
         const repeat = mode === "LIVE" && prepared ? this.sources.repeatsFailedRun(prepared.jobId, prepared.draftInputs) : null;
         if (repeat) { targets.push({ ...base, action: "not_eligible", read_first, why: `A new paid call is refused: run ${repeat.run_id} asked the AI exactly this (same form, prompt, settings) and its answer failed our own check, so asking again would repeat it. Use the saved AI answer instead (no cost): it is re-checked with today's rules.` }); continue; }
-        const est = mode === "LIVE" ? this.estimate(prepared, all.filter((r) => r.valid || r.recheckable)) : { expected: 0, worst: 0 };
-        targets.push({ ...base, action: "draft", read_first, fingerprint, expected_usd: est.expected, worst_usd: est.worst, why: mode === "LIVE" ? `${read_first ? "Read the form on this computer, then a" : "A"} guarded live call (stub pass first; up to ${2} attempts).` : `${read_first ? "Read the form, then the" : "The"} guarded stub pass: no network, no cost, no AI content.` });
+        // A4: reuse first and in parts when the library already maps some of this form's fields or the form is large.
+        const split = inventoryFile ? await this.sources.draftSplit(a, await this.sources.printedEdition(a), false) : null;
+        const a4 = split ? { total: split.plan.total, reused: split.plan.reused.length, reused_from: split.reusedFrom, to_ai: split.plan.leftover, parts: split.parts.map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, worst_usd: p.worst_usd })) } : undefined;
+        const est = mode !== "LIVE" ? { expected: 0, worst: 0 } : split ? { expected: null, worst: split.worst_usd } : this.estimate(prepared, all.filter((r) => r.valid || r.recheckable));
+        const fp = split ? sha(JSON.stringify({ fingerprint, parts: split.parts.map((p) => p.file) })) : fingerprint;
+        const how = split ? `in ${split.parts.length} part${split.parts.length === 1 ? "" : "s"} (${split.plan.leftover} of ${split.plan.total} form fields${split.plan.reused.length ? `; ${split.plan.reused.length} reused from ${split.reusedFrom.join(", ")} without AI` : ""})` : "";
+        if (split && !split.parts.length) { targets.push({ ...base, action: "draft", read_first, fingerprint: fp, expected_usd: 0, worst_usd: 0, a4, why: `Every one of its ${split.plan.total} form fields is reused from ${split.reusedFrom.join(", ")} (same data path and caption): no AI call, US$0; a person reviews the result.` }); continue; }
+        targets.push({ ...base, action: "draft", read_first, fingerprint: fp, expected_usd: est.expected, worst_usd: est.worst, ...(a4 ? { a4 } : {}), why: mode === "LIVE" ? `${read_first ? "Read the form on this computer, then a" : "A"} guarded live call${how ? ` ${how}` : ""} (stub pass first; up to ${2} attempts${split ? " per part" : ""}).` : `${read_first ? "Read the form, then the" : "The"} guarded stub pass${how ? ` ${how}` : ""}: no network, no cost, no AI content.` });
       }
     }
     const runnable = targets.filter((t) => t.action === "draft" || t.action === "reuse_saved_output" || t.action === "reuse_library");

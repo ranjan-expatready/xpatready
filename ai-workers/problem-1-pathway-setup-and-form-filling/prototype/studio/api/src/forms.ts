@@ -21,14 +21,19 @@ import { basename, join, relative } from "node:path";
 import { promisify } from "node:util";
 import { Prisma, type FormEdition, type PortalCapture } from "@prisma/client";
 import type { Response } from "express";
-import { AbandonCapture, AcceptScreenMap, CAPTURE_LIMITS, CHANNEL_WORDS, SetOptionMap, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
+import { AbandonCapture, AcceptAiProposals, AcceptScreenMap, DraftLeftovers, CAPTURE_LIMITS, CHANNEL_WORDS, SetOptionMap, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
 import { buildRecord, contractProblems, difference, fingerprint, noAnswers, reviewHtml, type CaptureInput, type CaptureRecord } from "../../engine/capture.ts";
 import { channelProblems, channelsView } from "../../engine/channels.ts";
 import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
-import { compatible, draftScreenMap, normLabel, transformFor, type PdfEntry, type Proposal } from "../../engine/twin.ts";
+import { compatible, draftScreenMap, normLabel, screenMapProposals, transformFor, type AiProposal, type PdfEntry, type Proposal, type ScreenMapAnswer } from "../../engine/twin.ts";
+import { partOutputTokens } from "../../engine/parts.ts";
+import { factKeyProblem } from "../../../contracts/fact-key.ts";
+import { costUsd } from "../../../p2/ledger.ts";
+import { PARTS_DIR, RUN_CAP_USD, SCREEN_INVENTORIES } from "../../../p2/policy.ts";
 import { resolveKey } from "./form-lines.ts";
-import { actorOf, ACTORS, Audit, Db, fail, NODE, need, PY, revise, ROOT, SOLUTION, STUDIO, strip, VAR, Workspace, type Actor } from "./core.ts";
+import { Sources } from "./sources.ts";
+import { actorOf, ACTORS, Audit, Db, fail, NODE, need, PROTOTYPE, PY, revise, ROOT, SOLUTION, STUDIO, strip, VAR, Workspace, type Actor } from "./core.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import type { z } from "zod";
 
@@ -77,7 +82,7 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
 
 @Injectable()
 export class Forms {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Sources) private readonly sources: Sources) {}
 
   portals() { return PORTALS; }
 
@@ -419,6 +424,117 @@ export class Forms {
     return { input: b.input, outcome: changes.outcome, fact: changes.canonicalFieldKey ?? null };
   }
 
+  // ───────────────────────────────────────────── F1 slice 2: the guarded screen_map job for the inputs left open
+  /** The inputs of an online version still open after a person accepted its code-drafted screen map, the approved
+   *  screen inventory and the part with only those inputs (both admitted by the guard), and the guarded job file. */
+  private async leftoverJob(ed: FormEdition & { form: { formKey: string } }, write: boolean) {
+    const rows = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } }), (m) => m.dataPath, "draft");
+    if (!rows.length) fail("Accept the screen map first (no AI); the AI drafts only what is left open.", HttpStatus.CONFLICT);
+    const open = rows.filter((r) => r.outcome === "unresolved");
+    if (!open.length) fail(`Nothing is left open on ${ed.editionLabel}: every input is mapped or "not a fact".`, HttpStatus.CONFLICT);
+    const cap = await this.db.portalCapture.findFirst({ where: { formEditionId: ed.id, status: "APPROVED" }, orderBy: { approvedAt: "asc" } });
+    if (!cap?.approvedBy) fail("This online version has no approved capture; only approved screens are sent to the AI.", HttpStatus.CONFLICT);
+    const twin = this.twinOf(ed.inventoryFile!);
+    const fp = twin.fingerprint, slugForm = ed.form.formKey.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const screensBody = { contract: "screen-inventory/v1", fingerprint: fp, record: twin.record, approval: { capture_id: cap!.id, captured_by: cap!.capturedBy, approved_by: cap!.approvedBy, approved_at: cap!.approvedAt!.toISOString(), edition: ed.editionLabel } };
+    const screensFile = `${slugForm}-${ed.portalKey}-${fp.slice(0, 12)}.screens.json`, screensBytes = JSON.stringify(screensBody, null, 1) + "\n";
+    const ids = new Set(open.map((r) => r.dataPath));
+    const inputs = twin.record.screens.flatMap((s) => s.inputs.filter((i) => ids.has(i.id)).map((input) => ({ screen: s.key, title: s.title, input })));
+    const partBody = { contract: "inventory-part/v1", parent: { file: `prototype/p2/screen-inventories/${screensFile}`, sha256: sha(screensBytes) }, part: { index: 1, count: 1, section: "inputs left open" }, inputs };
+    const partBytes = JSON.stringify(partBody, null, 1) + "\n";
+    const partFile = `${slugForm}-${ed.portalKey}-${fp.slice(0, 12)}.open-${sha(canonicalIds(inputs)).slice(0, 12)}.part.json`;
+    const jobId = `studio-screenmap-${slugForm}-${ed.portalKey!.replace(/_/g, "-")}-${fp.slice(0, 12)}`;
+    const settings = { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: "claude-opus-5-5", effort: "high", timeout_ms: 600_000, max_attempts: 2, budget_usd: 5, max_output_tokens: partOutputTokens(inputs.length) };
+    const job = { job_id: jobId, kind: "screen_map", combination: "studio", configuration_version: "studio-screen-map", template: "screen-map.v1.md", output_schema: "screen-map-output.v1.schema.json", inputs: [{ file: `prototype/p2/parts/${partFile}`, sha256: sha(partBytes) }], settings };
+    if (write) {
+      mkdirSync(SCREEN_INVENTORIES, { recursive: true }); mkdirSync(PARTS_DIR, { recursive: true });
+      writeFileSync(join(SCREEN_INVENTORIES, screensFile), screensBytes); writeFileSync(join(PARTS_DIR, partFile), partBytes);
+      writeFileSync(join(PROTOTYPE, "p2", "jobs", `${jobId}.json`), JSON.stringify(job, null, 1) + "\n");
+    }
+    const worst = Math.round(Math.min(RUN_CAP_USD, costUsd(settings.model, partBytes.length + 8_000, settings.max_output_tokens) * settings.max_attempts) * 100) / 100;
+    const leftovers = inputs.map((x) => ({ input: x.input.id, type: x.input.type, part: x.input.part ?? null, label: captionOf(x.input.group, x.input.label) }));
+    return { jobId, leftovers, worst };
+  }
+
+  /** Starts the guarded screen_map job for the inputs left open (STUB: the path at US$0; LIVE: a paid call, confirmed at
+   *  its worst case). Runs after the request answers; the job's progress is read at GET /api/jobs/:id. */
+  async draftLeftovers(actor: Actor, editionId: string, body: unknown) {
+    need(actor, "author");
+    const b = parse(DraftLeftovers, body);
+    const ed = await this.db.formEdition.findUniqueOrThrow({ where: { id: editionId }, include: { form: true } });
+    if (ed.channel !== "ONLINE") fail("The screen_map job drafts an online version's inputs; a PDF edition's form fields are drafted from its file.");
+    const comb = await this.db.combination.findUniqueOrThrow({ where: { id: b.combinationId } });
+    if (comb.workspaceId !== ed.workspaceId || !(await this.db.combinationForm.findFirst({ where: { combinationId: comb.id, lineageKey: ed.form.formKey } }))) fail(`${comb.label} does not file ${ed.form.formKey}.`, HttpStatus.NOT_FOUND);
+    const plan = await this.leftoverJob(ed, false);
+    if (b.mode === "LIVE" && b.confirmWorstUsd !== plan.worst) conflict(`A live screen-map draft costs at most US$${plan.worst.toFixed(2)} (${plan.leftovers.length} inputs, up to 2 attempts): send that amount as confirmWorstUsd to go ahead.`);
+    const active = await this.db.draftingJob.findFirst({ where: { workspaceId: ed.workspaceId, kind: "screen_map", status: { in: ["QUEUED", "RUNNING"] }, detail: { path: ["edition_id"], equals: ed.id } } });
+    if (active) conflict("A screen-map draft of this online version is already running.");
+    const { jobId, leftovers } = await this.leftoverJob(ed, true);
+    const j = await this.db.draftingJob.create({ data: { workspaceId: ed.workspaceId, combinationId: comb.id, kind: "screen_map", mode: b.mode, status: "RUNNING", message: `${b.mode === "LIVE" ? "Stub pass, then the AI call" : "Stub pass of the guarded path (no network, no cost)"} for ${leftovers.length} open input${leftovers.length === 1 ? "" : "s"} of ${ed.editionLabel}`, startedBy: actor.id, detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, worst_usd: b.mode === "LIVE" ? plan.worst : 0 }) } });
+    await this.audit.log(ed.workspaceId, actor.id, "started", "screen-map draft", ed.editionLabel, `${actor.name} started the ${b.mode === "LIVE" ? `live (worst case US$${plan.worst.toFixed(2)})` : "stub (US$0)"} screen-map draft of ${leftovers.length} open inputs of ${ed.editionLabel}`, undefined, comb.id);
+    void this.runLeftovers(j.id, ed, jobId, leftovers, b.mode === "LIVE" ? "live" : "stub");
+    return this.sources.job(j.id);
+  }
+
+  private async runLeftovers(id: string, ed: FormEdition, jobId: string, leftovers: { input: string; type: string; part: string | null; label: string }[], mode: "stub" | "live") {
+    const lastJson = (s: string) => { for (const l of s.trim().split("\n").reverse()) { try { return JSON.parse(l); } catch { /* not JSON */ } } return null; };
+    const done = (data: Prisma.DraftingJobUpdateInput) => this.db.draftingJob.update({ where: { id }, data: { finishedAt: new Date(), ...data } });
+    try {
+      const stub = await this.sources.launchOnce(jobId, "stub"), sj = lastJson(stub.out);
+      if (stub.code !== 0) { await done({ status: "FAILED", message: `Stub pass failed: ${String(sj?.refused ?? stub.err).slice(-400)}. Nothing was drafted.` }); return; }
+      if (mode === "stub") { await done({ status: "COMPLETED", costUsd: 0, message: `Stub pass completed: the guarded path admitted the approved screens and the ${leftovers.length} open inputs. A stub has no AI content, so there is nothing to accept.` }); return; }
+      const live = await this.sources.launchOnce(jobId, "live"), lj = lastJson(live.out);
+      if (!lj?.run_file) { await done({ status: "FAILED", message: `The AI step did not run: ${String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).slice(0, 400)}. Nothing was drafted.` }); return; }
+      const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
+      const cost = rec.drafting_run?.usage?.cost_usd ?? 0;
+      if (!/^completed/.test(rec.drafting_run?.status ?? "") || rec.contract_valid !== true) { await done({ status: "FAILED", costUsd: cost, runId: rec.drafting_run?.run_id, message: explainScreenRun(rec) }); return; }
+      const library = (await this.libraryRows(ed.workspaceId)).filter((r) => r.status !== "RETIRED" || r.mergedIntoKey).map((r) => ({ key: r.canonicalFieldKey, valueType: r.valueType, aliases: r.aliases, mergedIntoKey: r.mergedIntoKey, answerListKey: r.answerListKey }));
+      const out = screenMapProposals(JSON.parse(rec.raw_output) as ScreenMapAnswer, leftovers, library, factKeyProblem);
+      const mapped = out.proposals.filter((p) => p.outcome !== "unresolved").length;
+      await done({ status: "COMPLETED", costUsd: cost, runId: rec.drafting_run?.run_id, runFile: String(lj.run_file).replace(`${SOLUTION}/`, ""), detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, ...out }),
+        message: `AI draft ${rec.drafting_run?.run_id}: ${mapped} of ${leftovers.length} open inputs have a proposal a person can accept (${out.proposals.length - mapped} stay open${out.ignored.length ? `; ${out.ignored.length} answers for inputs that were not asked were ignored` : ""}). Cost US$${Number(cost).toFixed(2)}.` });
+    } catch (e) {
+      await done({ status: "FAILED", message: (e as Error).message.slice(0, 400) });
+    }
+  }
+
+  /** A person accepts the AI's proposals for open inputs (all, or the listed ones): each becomes a new draft version of
+   *  that input's row, origin AI_PROPOSAL, with the run and the person who accepted it. An input a person mapped in the
+   *  meantime is left as it is. */
+  async acceptAiProposals(actor: Actor, editionId: string, body: unknown) {
+    need(actor, "review");
+    const b = parse(AcceptAiProposals, body);
+    const j = await this.db.draftingJob.findUniqueOrThrow({ where: { id: b.jobId } });
+    const d = (j.detail ?? {}) as { edition_id?: string; proposals?: AiProposal[] };
+    if (j.kind !== "screen_map" || d.edition_id !== editionId) fail("That job is not a screen-map draft of this online version.", HttpStatus.NOT_FOUND);
+    if (j.status !== "COMPLETED" || !d.proposals) conflict(j.status === "APPLIED" ? "Already accepted." : "This draft has no proposals to accept (a stub pass, or it did not finish).");
+    const ed = await this.db.formEdition.findUniqueOrThrow({ where: { id: editionId } });
+    const pick = b.inputs ? new Set(b.inputs) : null;
+    const lib = new Map((await this.libraryRows(ed.workspaceId)).map((r) => [r.canonicalFieldKey, r]));
+    const inputOf = new Map(this.twinOf(ed.inventoryFile!).record.screens.flatMap((s) => s.inputs.map((i) => [i.id, i] as const)));
+    let accepted = 0; const kept: string[] = [];
+    await this.db.$transaction(async (tx) => {
+      const claimed = await tx.draftingJob.updateMany({ where: { id: j.id, status: "COMPLETED" }, data: { status: "APPLIED", message: `${j.message} Accepted by ${actor.name}.` } });
+      if (!claimed.count) conflict("Accepted at the same moment by someone else.");
+      for (const p of d.proposals!.filter((x) => x.outcome !== "unresolved" && (!pick || pick.has(x.input)))) {
+        const rows = await tx.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: p.input } });
+        const now = [...rows].sort((x, y) => y.version - x.version)[0];
+        if (!now || now.outcome !== "unresolved") { kept.push(p.input); continue; }
+        const field = p.fact ? lib.get(p.fact) : undefined;
+        if (p.outcome === "mapped" && (!field || field.status === "RETIRED" || field.mergedIntoKey)) { kept.push(p.input); continue; }
+        const input = inputOf.get(p.input);
+        const list = field?.answerListKey ? await tx.answerList.findFirst({ where: { workspaceId: ed.workspaceId, answerListKey: field.answerListKey }, include: { values: { orderBy: { sortOrder: "asc" } } }, orderBy: { version: "desc" } }) : null;
+        const om = list && input?.options?.length ? draftOptionMap(list.values.map((v) => ({ key: v.valueKey, label: v.label })), input.options) : null;
+        await revise(tx.formFieldMap, rows, p.outcome === "mapped"
+          ? { outcome: "mapped", canonicalFieldKey: p.fact, person: p.person, transform: p.transform, confidence: p.ai_confidence, evidenceQuote: `${p.why} · run ${j.runId}, accepted by ${actor.name}`.slice(0, 500), reason: null, origin: "AI_PROPOSAL", draftingRunId: j.runId, optionMap: om ? json(om.optionMap) : Prisma.DbNull }
+          : { outcome: "not_a_fact", canonicalFieldKey: null, person: null, transform: null, confidence: null, evidenceQuote: null, reason: `${p.why} · run ${j.runId}, accepted by ${actor.name}`.slice(0, 500), origin: "AI_PROPOSAL", draftingRunId: j.runId, optionMap: Prisma.DbNull }, actor.id, strip);
+        accepted++;
+      }
+    });
+    await this.audit.log(ed.workspaceId, actor.id, "accepted", "AI screen map", ed.editionLabel, `${actor.name} accepted ${accepted} AI proposal${accepted === 1 ? "" : "s"} for open inputs of ${ed.editionLabel} (run ${j.runId})${kept.length ? `; ${kept.length} left as they were (changed meanwhile)` : ""}`, undefined, j.combinationId);
+    return { accepted, left_as_they_were: kept };
+  }
+
   /** The library field (other than `except`) that already answers to this label: an alias or its own name. */
   private namedBy(rows: Library, label: string, except: string) {
     const k = normLabel(label);
@@ -681,6 +797,15 @@ export class Forms {
 }
 
 type H = string | undefined;
+const canonicalIds = (inputs: { input: { id: string } }[]) => inputs.map((x) => x.input.id).join("|");
+/** A screen-map run that did not give a usable answer, in plain words (never blank). */
+function explainScreenRun(rec: { drafting_run?: { status?: string; usage?: { cost_usd?: number } }; output_errors?: unknown; contract_valid?: boolean }) {
+  const cost = `US$${Number(rec.drafting_run?.usage?.cost_usd ?? 0).toFixed(2)}`;
+  const s = rec.drafting_run?.status;
+  if (s === "invalid_output") return `The AI answered, but not in the agreed shape (${String(typeof rec.output_errors === "string" ? rec.output_errors : JSON.stringify(rec.output_errors)).slice(0, 160)}). Nothing was proposed. Cost ${cost}.`;
+  if (s === "refused") return `The AI declined to draft these inputs. Nothing was proposed. Cost ${cost}.`;
+  return `The AI step ended without a usable draft (status ${s ?? "unknown"}${rec.contract_valid === false ? ", the run record failed our check" : ""}). Nothing was proposed. Cost ${cost}.`;
+}
 // dotfiles "allow": lane copies live under .claude/worktrees/, and a hidden folder in the path made the download a 404.
 const send = async (res: Response, file: { path: string; name: string }) => { if (!existsSync(file.path)) throw new HttpException("Not found", HttpStatus.NOT_FOUND); res.download(file.path, file.name, { dotfiles: "allow" }); };
 
@@ -703,6 +828,8 @@ export class FormsController {
   @Get("library/forms/:code/editions") editions(@Param("code") code: string) { return this.f.editions(code); }
   @Post("online-versions/:id/screen-map/draft") draft(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.draftScreenMapFor(actorOf(a), id); }
   @Patch("online-versions/:id/screen-map") resolve(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.resolveInput(actorOf(a), id, b); }
+  @Post("online-versions/:id/screen-map/ai") draftAi(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.draftLeftovers(actorOf(a), id, b); }
+  @Post("online-versions/:id/screen-map/ai/accept") acceptAi(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.acceptAiProposals(actorOf(a), id, b); }
   @Post("online-versions/:id/screen-map/accept") accept(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.acceptScreenMap(actorOf(a), id, b); }
   @Post("editions/:id/option-maps/draft") optionMaps(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.draftOptionMaps(actorOf(a), id); }
   @Patch("editions/:id/option-maps") setOptionMap(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setOptionMap(actorOf(a), id, b); }

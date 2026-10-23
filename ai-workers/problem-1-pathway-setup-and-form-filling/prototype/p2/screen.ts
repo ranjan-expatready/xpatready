@@ -123,10 +123,12 @@ export function jobScreenItems(job: Job, template: Buffer, schema: Buffer): Scre
 
 /** The public text of a request's admitted official material: what the finished request may repeat. */
 export function admittedPublicText(admitted: { file: string; kind: string; bytes: Buffer; parent_sources?: { file: string }[] }[]): string {
-  const files = new Set<string>();
+  const files = new Set<string>(), own: string[] = [];
   for (const a of admitted) {
     if (a.kind === "inventory") files.add(a.file);
+    // F1 slice 2: a part repeats its parent's text; an approved screen inventory is the portal's own structure.
+    if (a.kind === "inventory_part" || a.kind === "screen_inventory") own.push(a.bytes.toString("utf8"));
     for (const p of a.parent_sources ?? []) if (p.file.startsWith("prototype/p1/inventory/")) files.add(p.file);
   }
-  return [...files].map((f) => readFileSync(join(INVENTORY, f.split("/").pop()!), "utf8")).join("\n");
+  return [...[...files].map((f) => readFileSync(join(INVENTORY, f.split("/").pop()!), "utf8")), ...own].join("\n");
 }

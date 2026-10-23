@@ -5,9 +5,11 @@ import { Ajv } from "ajv";
 import { createHash } from "node:crypto";
 import { lstatSync, readdirSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
+import { captureSchemaErrors, fingerprint, noAnswers, type CaptureRecord } from "../contracts/portal-capture.ts";
+import { canonical } from "../contracts/rules.ts";
 import {
-  BASE_URL, FORBIDDEN, INVENTORY, KEY_FILE, LABEL, MAX_ATTEMPTS, MODELS, OFFICIAL, PRICE_PER_MTOK, PROMPTS_DIR, PROTOTYPE,
-  ROUTE_ID, RUN_CAP_USD, RUNS_DIR, SOLUTION,
+  BASE_URL, FORBIDDEN, INVENTORY, KEY_FILE, LABEL, MAX_ATTEMPTS, MODELS, OFFICIAL, PARTS_DIR, PRICE_PER_MTOK, PROMPTS_DIR, PROTOTYPE,
+  ROUTE_ID, RUN_CAP_USD, RUNS_DIR, SCREEN_INVENTORIES, SOLUTION,
 } from "./policy.ts";
 
 export class PolicyRefusal extends Error {}
@@ -17,7 +19,7 @@ const inside = (p: string, dir: string) => p === dir || p.startsWith(dir + sep);
 type ManifestItem = { file: string; path: string; sha256: string };
 const manifestItems = (): ManifestItem[] => JSON.parse(readFileSync(join(OFFICIAL, "manifest.json"), "utf8")).items;
 
-export type AdmittedInput = { file: string; sha256: string; kind: "official" | "inventory" | "draft"; bytes: Buffer; parent_sources?: { file: string; sha256: string }[] };
+export type AdmittedInput = { file: string; sha256: string; kind: "official" | "inventory" | "draft" | "inventory_part" | "screen_inventory"; bytes: Buffer; parent_sources?: { file: string; sha256: string }[] };
 export type AdmitOptions = { allowStubDrafts?: boolean; depth?: number };
 
 /** Admits one drafting input: an official file listed in official-sources/ircc/manifest.json with the same
@@ -46,7 +48,65 @@ export function admitInput(file: string, expectedSha?: string, opts: AdmitOption
     return { file: rel, sha256: h, kind: "inventory", bytes };
   }
   if (dirname(abs) === RUNS_DIR && abs.endsWith(".json")) return admitDraft(rel, bytes, h, expectedSha, opts);
-  return refuse(`not on the drafting allowlist (official files, their P1 inventories, and guarded drafts under AIW-D263): ${file}`);
+  if (dirname(abs) === SCREEN_INVENTORIES && abs.endsWith(".screens.json")) return admitScreens(rel, bytes, h);
+  if (dirname(abs) === PARTS_DIR && abs.endsWith(".part.json")) return admitPart(rel, bytes, h, expectedSha, opts);
+  return refuse(`not on the drafting allowlist (official files, their P1 inventories, parts of them, approved screen inventories, and guarded drafts under AIW-D263): ${file}`);
+}
+
+const json = (bytes: Buffer, no: (m: string) => never) => { try { return JSON.parse(bytes.toString("utf8")); } catch { return no("not JSON"); } };
+
+/** F1 slice 2: an approved portal screen inventory (P-66). Admitted only when it meets the capture contract, holds no
+ *  answer, its fingerprint is the one recomputed from its structure, and a second person approved it. */
+function admitScreens(rel: string, bytes: Buffer, h: string): AdmittedInput {
+  const no = (m: string): never => refuse(`screen inventory ${rel} not admitted: ${m}`);
+  const env = json(bytes, no);
+  if (env.contract !== "screen-inventory/v1") no("not a screen-inventory/v1 record");
+  const r = env.record as CaptureRecord;
+  if (captureSchemaErrors(r).length) no("its record does not meet the capture contract");
+  if (noAnswers(r).length) no(`it carries an answer (${noAnswers(r).slice(0, 2).join(", ")})`);
+  const ids = r.screens.flatMap((s) => s.inputs.map((i) => i.id));
+  if (new Set(ids).size !== ids.length) no("an element id appears more than once");
+  if (fingerprint(r) !== env.fingerprint) no("its fingerprint is not the one its structure gives (changed after approval)");
+  const a = env.approval ?? {};
+  if (typeof a.captured_by !== "string" || typeof a.approved_by !== "string" || !a.captured_by || !a.approved_by) no("no approval recorded");
+  if (a.captured_by === a.approved_by) no("approved by the person who captured it (a second person approves, P-66)");
+  if (typeof a.approved_at !== "string" || Number.isNaN(Date.parse(a.approved_at))) no("no approval time");
+  return { file: rel, sha256: h, kind: "screen_inventory", bytes };
+}
+
+/** F1 slice 2 (A4): a part of an admitted inventory or screen inventory. Admitted only when its parent is admitted at
+ *  the hash it names, and everything it holds is copied unchanged from that parent: the same summary, row groups and
+ *  presence scripts, and form fields (or screen inputs) each found in the parent, none twice. */
+function admitPart(rel: string, bytes: Buffer, h: string, expectedSha: string | undefined, opts: AdmitOptions): AdmittedInput {
+  const no = (m: string): never => refuse(`inventory part ${rel} not admitted: ${m}`);
+  if ((opts.depth ?? 0) > 3) no("chain deeper than three steps");
+  const env = json(bytes, no);
+  if (env.contract !== "inventory-part/v1") no("not an inventory-part/v1 record");
+  const p = env.part ?? {};
+  if (!(Number.isInteger(p.index) && Number.isInteger(p.count) && p.index >= 1 && p.index <= p.count)) no("its part number is not n of m");
+  if (typeof env.parent?.file !== "string" || typeof env.parent?.sha256 !== "string") no("no parent named");
+  const parent = admitInput(env.parent.file, env.parent.sha256, { ...opts, depth: (opts.depth ?? 0) + 1 });
+  const pj = JSON.parse(parent.bytes.toString("utf8"));
+  const same = (a: unknown, b: unknown) => canonical((a ?? null) as never) === canonical((b ?? null) as never);
+  if (parent.kind === "inventory") {
+    for (const k of ["summary", "groups", "presence_scripts"]) if (!same(env[k], pj[k])) no(`its ${k} differs from the parent's`);
+    const known = new Set((pj.fields ?? []).map((f: unknown) => canonical(f as never)));
+    const mine = (env.fields ?? []).map((f: unknown) => canonical(f as never));
+    if (!mine.length) no("it holds no form field");
+    if (new Set(mine).size !== mine.length) no("a form field appears twice");
+    if (mine.some((f: string) => !known.has(f))) no("a form field is not in the parent inventory as it is there");
+  } else if (parent.kind === "screen_inventory") {
+    const screens = new Map((pj.record.screens as { key: string; title: string; inputs: unknown[] }[]).map((s) => [s.key, s]));
+    const mine = (env.inputs ?? []) as { screen: string; title: string; input: { id: string } }[];
+    if (!mine.length) no("it holds no input");
+    if (new Set(mine.map((x) => x.input?.id)).size !== mine.length) no("an input appears twice");
+    for (const x of mine) {
+      const s = screens.get(x.screen);
+      if (!s || s.title !== x.title || !s.inputs.some((i) => same(i, x.input))) no(`input ${x.input?.id} is not on screen ${x.screen} of the parent as it is there`);
+    }
+  } else no(`its parent is a ${parent.kind}, not an inventory or a screen inventory`);
+  if (expectedSha !== undefined && expectedSha !== h) no("hash differs from the run record");
+  return { file: rel, sha256: h, kind: "inventory_part", bytes, parent_sources: [{ file: parent.file, sha256: parent.sha256 }] };
 }
 
 /** AIW-D263: an earlier AI draft made by the guarded launch path from permitted inputs. Verified before

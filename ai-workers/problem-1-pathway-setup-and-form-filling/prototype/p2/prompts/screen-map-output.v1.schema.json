@@ -1,0 +1,124 @@
+{
+ "type": "object",
+ "additionalProperties": false,
+ "required": [
+  "canonical_fields",
+  "entries"
+ ],
+ "properties": {
+  "canonical_fields": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "id",
+     "meaning",
+     "value_type"
+    ],
+    "properties": {
+     "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z_]*\\.[a-z][a-z0-9_]*$"
+     },
+     "meaning": {
+      "type": "string"
+     },
+     "value_type": {
+      "enum": [
+       "text",
+       "date",
+       "code",
+       "yes_no",
+       "number",
+       "address",
+       "country"
+      ]
+     }
+    }
+   }
+  },
+  "entries": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+     "input",
+     "outcome",
+     "person",
+     "fact",
+     "transform",
+     "confidence",
+     "unresolved_reason",
+     "evidence_quote"
+    ],
+    "properties": {
+     "input": {
+      "type": "string"
+     },
+     "outcome": {
+      "enum": [
+       "mapped",
+       "unresolved",
+       "not_a_fact"
+      ]
+     },
+     "person": {
+      "enum": [
+       "form_subject",
+       "subject_spouse_or_partner",
+       "subject_parent_1",
+       "subject_parent_2",
+       "subject_child",
+       "subject_sibling",
+       "representative",
+       "none"
+      ]
+     },
+     "fact": {
+      "anyOf": [
+       {
+        "type": "string",
+        "pattern": "^[a-z][a-z_]*\\.[a-z][a-z0-9_]*$"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "transform": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "confidence": {
+      "enum": [
+       "high",
+       "medium",
+       "low"
+      ]
+     },
+     "unresolved_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "evidence_quote": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}

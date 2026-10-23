@@ -16,6 +16,13 @@ export const LEDGER_DIR = join(PROTOTYPE, "p2", "ledger");
 export const PROMPTS_DIR = join(PROTOTYPE, "p2", "prompts");
 /** Job files: which official inputs, which template, which settings. Read by the launcher and the child. */
 export const JOBS_DIR = join(PROTOTYPE, "p2", "jobs");
+/** F1 slice 2 (A4): parts of an admitted inventory, one per group of form sections, so a form is drafted in smaller
+ *  calls and the AI sees only the form fields the library could not fill. The guard admits a part only as an exact
+ *  subset of its admitted parent. Written by the Studio, regenerated deterministically, never committed. */
+export const PARTS_DIR = join(PROTOTYPE, "p2", "parts");
+/** F1 slice 2: approved portal screen inventories (P-66 portal twins) for the screen_map job. The guard admits one only
+ *  when a second person approved it and its fingerprint is the one recomputed from its structure. */
+export const SCREEN_INVENTORIES = join(PROTOTYPE, "p2", "screen-inventories");
 /** Run records and stub-pass records, written only by the launcher (the isolated child cannot write here). */
 export const RUNS_DIR = join(PROTOTYPE, "p2", "runs");
 /** Salted-hash screening digest written by the launcher before every run and read by the drafting process,
