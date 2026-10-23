@@ -19,6 +19,7 @@ Owner: the Lead. Source: the requirements trace of 23 Oct (`history/TRACE-SA01B-
 | B13 | **Returning client reuses verified facts** with source and date; "still true?" items re-asked | one-pager 6.3, 7.2; RD-5b profile; SA-1B-1 re-confirmation | M4 | P-65 verification status, R1 fact store | M |
 | B14 | **Country-specific requirements section** beside a document or form (for example how to get a police certificate there) | SA-1B-103 | M4 | Team question SA1B-Q13 | S |
 | B15 | **Corporate LMIA positions linked to worker cases** | SA-1B-70 | M4 | P-59 links, B7 | M |
+| B28 | **Report a mapping problem:** officer reports from the form review; a confirmed error holds the mapping for everyone and lists affected open cases (P-73) | one-pager 10.4; redesign 5 | M4 | P-66 form health, C9.3 | S |
 
 ## SA-01B items the team also owns today (in scope since P-70; prioritise later)
 | # | Item | Requirements | Size |
@@ -41,4 +42,4 @@ Outside SA-01B and therefore outside the POC (P-70): SA-01 country and pack cont
 AI reading of uploaded documents (SA-1B-34, one-pager 7.3) · independent AI review of a filled form (one-pager 8.3) · copy a line from another combination and add or remove one line across many (SA-1B-61, Screen 03 concept) · an upload question creates a document line (SA-1B-3 with P-47).
 
 ## Open questions from the trace (asked one at a time; answers go to `DECISIONS.md`)
-Scope: answered (P-70) · U1 PQR model · U2 what blocks "ready to file" · U3 verification before filling · U4 reporting a wrong mapping.
+Answered: scope (P-70), ready to file (P-71), verification (P-72), wrong mapping (P-73). Open: U1 PQR model (research in `decisions/PQR-options-2026-10-23.md`).
