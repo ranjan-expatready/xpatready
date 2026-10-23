@@ -1,6 +1,6 @@
 ---
 name: screen-review
-description: Independent review of one built Pathway Configurator screen against its concept, the written standards and the 16 quality dimensions, using the running app and the code, with a verdict. Use in a fresh context that did not build the screen.
+description: Independent review of one built Pathway Configurator screen against its concept, the written standards and the quality dimensions D1–D20, using the running app and the code, with a verdict. Use in a fresh context that did not build the screen.
 ---
 
 # Screen review
@@ -11,7 +11,7 @@ You did not build this screen. Use only saved files, the running app and the tes
 
 **Scope:** flag correctness gaps, standard violations and concept mismatches only. Do not request new features or extra polish beyond the bar.
 
-**Write `screens/NN/review.md`** (under 100 lines): Verdict (Ship / Ship after fixes / Rework) · D1–D16 scores with one line of evidence each · issues ranked, each Must or Should, with file:line or screenshot and the fix · what you could not check. Leave empty headings "Lead check" and "RCIC walkthrough". Edit nothing else.
+**Write `screens/NN/review.md`** (under 100 lines): Verdict (Ship / Ship after fixes / Rework) · D1–D20 scores with one line of evidence each (D17 and D20 "simulated only" unless an intended user walked it) · issues ranked, each Must or Should, with file:line or screenshot and the fix · what you could not check. Edit nothing else (the Lead check and the founder's walkthrough live in `lead-check.md`).
 
 **Capability or scaffolding (P-33):** a demo step that works only through scaffolding (sample loader, script, replay) instead of the product's own screen is a Major finding.
 **Scope (P-26):** check only what the concept's "What gets built" section lists. Anything on its "Not built" line is not a finding, and "the team's screen has it" is never a finding.

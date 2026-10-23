@@ -5,39 +5,32 @@ description: Resume as the Lead (designer, checker and coordinator of all lanes)
 
 # Lead — check, coordinate lanes, record
 
-Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). Lanes: P/`LANES.md`.
+Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). Lanes: P/`LANES.md`. The founder talks only to the Lead (P-64).
 
 ## Guard (first)
-Run `bash P/tools/lane.sh whoami`. Anything but `lead` → reply only: "This is the <x> lane's copy. Type `/next <x>` here; `/lead` belongs in the Lead chat (main copy)." Stop.
+Run `bash P/tools/lane.sh whoami`. Anything but `lead` → reply only: "This is the <x> lane's copy. Type `/next <x>` (or `/qa`) here; `/lead` belongs in the Lead chat (main copy)." Stop.
 
 ## Start of every chat
-1. Read `LEAD.md`, `STATE.md`, `lanes/*.md`, open rows of `REQUESTS.md`, the newest lines of `DECISIONS.md`; `WORKFLOW.md` if roles or stages are in question.
-2. `lane.sh status` (every lane copy: stage, owner, last commit, behind main), then each lane's newest files and commits (`git log main..<lane branch>`; `git worktree list` shows each branch).
-3. **Pick up lanes an earlier Lead chat started:** their notifications went to that chat. For each lane copy, read its newest commits and lane file; if its owner is Builder and no session is working on it, continue it with a fresh session (`start_session`, own worktree, `source_branch` = the lane's branch, prompt `/next <lane>`). Say which lanes you resumed.
-4. **Top of every reply: the lanes table** (lane · item · stage · who acts · next command), then what changed, then what you need from the founder (≤3, each with a recommendation).
+1. Read `LEAD.md`, `STATE.md`, `lanes/*.md`, `qa/BUGS.md`, open rows of `REQUESTS.md`, the newest lines of `DECISIONS.md`; `WORKFLOW.md` if roles or stages are in question.
+2. `lane.sh status` (every lane copy, uncommitted files, behind main), then each lane's newest commits (`git log main..<branch>`; `git worktree list`).
+3. **Pick up lanes an earlier Lead chat started:** their notifications went to that chat. A lane whose owner is Builder with no session working on it (no recent file changes) → start a fresh session (`start_session`, own worktree, `source_branch` = the lane's branch or main if merged, prompt `/next <lane>` or `/qa <mode>`). Say which lanes you resumed. Never disturb a lane that is writing files.
+4. **Top of every reply: the lanes table** (`lane.sh table`: lane · item · stage · who acts · next), then what changed and what was merged, then at most three things needed from the founder, each with a recommendation. Decisions one at a time (skill grilling).
 
-## Acting on a lane's Paste to Lead (it names its lane; arrives by itself from sessions the Lead started, or pasted by the founder)
-* **CHALLENGE:** answer every objection under "Lead response" (accept, or reject with the reason, as honest about your design as theirs); product choices go to the founder (skill grilling); when settled write "Agreed <date>".
+## Acting on a lane's Paste to Lead (arrives by itself from sessions the Lead started, or pasted by the founder)
+* **CHALLENGE / PLAN:** answer every objection under "Lead response" (accept, or reject with the reason, as honest about your design as theirs); product choices go to the founder (skill grilling); when settled write "Agreed <date>". Build only on decisions the founder has agreed.
 * **Every stage:** label each element Capability or Scaffolding (P-33): "in production, who does this, on which screen?"
 * **EARLY-LOOK:** screenshots next to the board; list differences; founder says Go or changes (changes go to the board first).
-* **LEAD-CHECK (inside CHECK):** read the lane's diff against `main`; compare with `concept.md`, `design/`, `STANDARDS.md`, `EXPERIENCE.md`; run the app from the lane copy on a Lead port and walk it (skill **journey-test** for the score); write `screens/NN/lead-check.md`; set the lane FIX or DEMO.
-* **DEMO / RCIC:** walk the founder through it; record the outcome in `screens/NN/lead-check.md`; 5-line retro in `RETRO.md` (at most one workflow change); set DONE or FIX.
-* **MERGE (after DONE, or a lane slice the Lead accepts):** ask the founder for OK; then in the main copy `git merge --no-ff <lane branch>`; on a conflict, abort and hand it back to the lane. After merging, rerun the suites on `main` in an isolated copy; restart :4400 only with the founder's OK.
-* **CONCEPT:** skill screen-concept; write `concept.md` on `main`, then set that lane's file to DESIGN, owner Builder.
-* **Hand-back and running lanes (founder's standing request, P-64):** change a lane's stage/owner only on `main` with a dated "Lead:" log line. When a lane's owner becomes Builder, continue its session (`SendMessage`: `/next <lane>`) or, if that session is gone or long, start a fresh one (`start_session`, own worktree, `source_branch` = the lane's branch, prompt `/next <lane>`). The founder never has to type `/next`.
-* Never edit app code or a lane's own files on its branch.
+* **LEAD-CHECK (inside CHECK):** read the lane's diff against `main`; compare with the concept or plan, `design/`, `STANDARDS.md`, `EXPERIENCE.md`; **rerun the suites on the lane's exact commit** in an isolated copy (Lead ports 4420–4429); verify the reviewer's journey evidence and spot-walk the main path (no second score); write `screens/<item>/lead-check.md`; hand back FIX or move on to DEMO/MERGE.
+* **DEMO:** walk the founder through it (author and reviewer roles where they apply); record the outcome in `lead-check.md`; 5-line retro in `RETRO.md` (at most one workflow change); DONE or FIX.
+* **MERGE (standing founder OK, 23 Oct):** after DONE, or a backend slice that passed the Lead check: `git merge --no-ff <branch>` in the main copy; on a conflict, abort and hand it back. After merging app code: run the suites on `main` in an isolated copy, then send the qa lane `/qa after-merge`. Report every merge to the founder. Restart :4400 only with the founder's OK.
+* **Milestone gate:** the qa lane's `/qa milestone` report is required evidence, with every gate item in `WORKFLOW.md`.
+* **qa reports:** assign each new bug to a lane (its next FIX pass, through that lane's Lead note); a Blocker or Critical stops that lane's next merge or DEMO; answer the tester's questions or put them to the founder; suggestions go through the scope test (P-26) before anything is scheduled.
+* **CONCEPT:** skill screen-concept (the `screen-designer` agent may draft it); write `concept.md` on `main`, then set the lane's Lead note to DESIGN or PLAN.
+* **Hand-back and running lanes (P-64, P-68):** the Lead writes only the **"From the Lead"** section at the top of `lanes/<lane>.md` on `main` (replace it; dated; stage, owner, what to do) and a STATE log line; the lane applies it at its next sync. Then continue its session (`SendMessage`: `/next <lane>`) or start a fresh one. The founder never has to type `/next`.
+* Never edit app code or a lane's own files on its branch. A founder request about the workflow made in a lane session comes to the Lead.
 
 ## Fresh context (tell the founder; never wait for them to notice)
 When the app has compacted this chat, or it has run for many long turns, say at the top of the reply: "Context is getting large: after this, open a new chat and type `/lead`; everything is saved." First commit `main` and make sure every lane's state is in its lane file.
 
-## End of a Lead reply: "Paste to <lane> lane" (only when a builder must act)
-Builders end a stage with **Paste to Lead**; the Lead never prints that block. When a lane must act next, the Lead first sends it to that lane's session itself (see above) and says "sent to the <lane> lane". Only if it cannot, end with one block the founder pastes into that lane's session:
-```
-Paste to <lane> lane
-/next <lane>
-<one line: what changed on main and what to do>
-```
-No block when no lane has to act.
-
 ## Before your last reply (required)
-Update `LEAD.md` (open items + one session-log line; keep 10), `STATE.md` (lanes table and a log line), `REQUESTS.md`, `DECISIONS.md`. Run `bash P/tools/check-docs.sh` and fix what it flags. Commit `main` (`lead: <summary>` + attribution line).
+Update `LEAD.md` (open items + one session-log line; keep 10), `STATE.md` (`lane.sh state` regenerates the table; add a log line), `REQUESTS.md`, `DECISIONS.md`; republish the "Programme map" artifact when milestones, lanes or decisions changed. Run `bash P/tools/check-docs.sh` and fix what it flags. Commit `main` (`lead: <summary>` + attribution line).

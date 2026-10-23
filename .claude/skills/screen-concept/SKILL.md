@@ -1,9 +1,11 @@
 ---
 name: screen-concept
-description: Lead's skill for designing one Pathway Configurator screen before it is built — job, masters and links, business rules, layout on the team's brand, states, copy, contract, tests and at most three founder questions — challenged by a fresh agent before the founder sees it. Use at stage CONCEPT or when asked to design or rethink a screen.
+description: Lead's skill for designing one Pathway Configurator screen before it is built — job, masters and links, business rules, layout on the team's brand, states, copy, contract, tests and at most three founder questions — challenged by a fresh agent before the founder sees it. Use at stage DESIGN or when asked to design or rethink a screen.
 ---
 
 # Screen concept
+
+**Draft helper:** the Lead may launch the `screen-designer` agent to draft `concept-draft.md` and the board from this skill; the Lead edits, decides and owns the result (the designer, the challenger and the builder are three different contexts).
 
 **Board first (P-42):** draw or update the screen in the journey canvas (page "Journey v2"; save its source to `product/design/` and `screens/NN/design/`) before writing concept text; the founder agrees by clicking through it. Use the brand kit and team patterns as a reference for a coherent look (layouts follow the capability) (`ai-workers/problem-1-pathway-setup-and-form-filling/product/design/TEAM-PATTERNS.md`). concept.md stays one page and ends with the Definition of Ready checklist (`WORKFLOW.md`).
 
@@ -19,4 +21,4 @@ Read: `ai-workers/problem-1-pathway-setup-and-form-filling/product/PRODUCT.md`, 
 7. **Questions** — at most three, recommendation first.
 8. Write `screens/NN-slug/concept.md` (under 100 lines) with sections for each step above.
 9. **Before showing the founder:** run a fresh agent with skill screen-challenge on the concept; fix every Blocker/Major or record why not.
-10. On agreement: record answers in concept.md and decisions in `DECISIONS.md`; set STATE to AGREED.
+10. On agreement: record answers in concept.md and decisions in `DECISIONS.md`; set the lane file's "From the Lead" note to READY → BUILD (owner Builder).

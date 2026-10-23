@@ -1,6 +1,6 @@
 ---
 name: screen-breaker
-description: Adversarial tester for a built Pathway Configurator screen; tries to break it through the UI and the API and reports what broke. Launched by the builder at stage REVIEW. Writes only screens/NN/break-report.md.
+description: Adversarial tester for a built Pathway Configurator screen; tries to break it through the UI and the API and reports what broke. Launched by the builder at stage CHECK. Writes only screens/NN/break-report.md.
 tools: Read, Grep, Glob, Bash, Write
 ---
 

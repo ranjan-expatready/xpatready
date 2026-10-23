@@ -5,7 +5,7 @@ description: Builder's skill for implementing one agreed Pathway Configurator sc
 
 # Screen build
 
-**Precondition:** STATE is BUILD or FINISH and `concept.md` shows the Definition of Ready ticked; the board in `product/design/` (and `screens/NN/design/`) is the layout to match exactly.
+**Precondition:** the lane file says BUILD or FINISH and `concept.md` shows the Definition of Ready ticked; the board in `product/design/` (and `screens/NN/design/`) is the layout to match exactly.
 **Team patterns (P-48):** read `ai-workers/problem-1-pathway-setup-and-form-filling/product/design/TEAM-PATTERNS.md` and the newest local `code/ERv2-frontend@*/docs/style-guide/`; use the brand kit, tokens, type scale and the team's components where they fit; the layout follows the capability and the board, not the team's existing screens; note any deviation and why.
 **Board = intent (P-44):** match its flow, structure, words and behaviours; improve visual and interaction details with the team's real components; before coding, write "Top 5 production improvements over the board" in build-notes; list every deviation with its reason in the EARLY-LOOK block; propose (never apply) changes to flow, scope or wording.
 **Slice 1 (BUILD):** only what the screen needs to show its main path on real data, looking like the board; screenshots; stop for EARLY-LOOK. No polish, no extra states, no refactors before the Go.
@@ -16,4 +16,4 @@ description: Builder's skill for implementing one agreed Pathway Configurator sc
 
 **Mid-build discovery** that the agreed design cannot work: stop that part, write it under "Build discoveries" in challenge.md with evidence and a fix, put it in the stage's Paste to Lead (Needs line), continue with unaffected parts.
 
-**Done when (checklist):** every BR has a passing and a failing test · existing suites still pass · axe-core clean · performance budgets measured · screenshots of every state at 1440 and 1024 in `screens/NN/screenshots/` · you walked every scenario yourself · `build-notes.md` (under 100 lines) lists files changed, team-name mapping, mock vs real, checks run per standards section, honest self-score D1–D16, known gaps, AI cost. Then set REVIEW. Never commit or push.
+**Done when (checklist):** every BR has a passing and a failing test · existing suites still pass · axe-core clean · performance budgets measured · screenshots of every state at 1440 and 1024 in `screens/NN/screenshots/` · you walked every scenario yourself · `build-notes.md` (under 100 lines) lists files changed, team-name mapping, mock vs real, checks run per standards section, honest self-score D1–D20, known gaps, AI cost. Then set CHECK. Commit on the lane branch; never push.
