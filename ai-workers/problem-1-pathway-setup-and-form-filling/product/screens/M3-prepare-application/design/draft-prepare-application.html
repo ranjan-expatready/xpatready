@@ -1,0 +1,664 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board · M3 Prepare application · draft</title>
+<!-- Self-contained board (designer draft for the Lead). Team tokens copied from ERv2-frontend@5ccd9fa tokens.css; muted text #595959 per P-41.
+     Every value marked Sample is invented for the board. Immigration values (channels, portals, screen names) are Sample until the immigration expert confirms. -->
+<style>
+:root{
+  --primary:#0862c5;--primary-50:#e6f4ff;--primary-100:#cce9ff;--primary-700:#054e9c;--link:#054e9c;
+  --text:#2d2d2d;--muted:#595959;--surface:#f7f7f7;--raised:#ffffff;--neutral-100:#eeeeee;
+  --border:#d9d9d9;--border-strong:#bfbfbf;
+  --danger:#dc2626;--text-danger:#991b1b;--warn:#ff8500;--orange-50:#fff3e0;--text-warn:#663200;
+  --ok:#16a34a;--text-ok:#0f5c2e;
+  --font:'Inter Variable',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --head:'Proxima Nova',var(--font);
+}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.5 var(--font);color:var(--text);background:var(--surface)}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:var(--link)}
+:focus-visible{outline:3px solid rgba(8,98,197,.5);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+/* Board controls: scaffolding, never ported */
+.boardbar{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:10px 16px;background:var(--orange-50);border-bottom:2px dashed var(--warn);font-size:12px}
+.boardbar strong{font-size:14px}
+.seg{display:inline-flex;border:1px solid var(--border-strong);border-radius:6px;overflow:hidden;background:var(--raised)}
+.seg button{border:0;background:none;padding:4px 10px;cursor:pointer;font-size:12px}
+.seg button[aria-pressed=true]{background:var(--primary);color:#fff}
+.boardbar label{display:inline-flex;gap:6px;align-items:center;cursor:pointer}
+
+/* Shell */
+.app-header{height:56px;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--raised);border-bottom:1px solid var(--border)}
+.wordmark{font-family:var(--head);font-weight:700;font-size:18px;color:var(--primary)}
+.crumbs{display:flex;gap:6px;align-items:center;font-size:14px;color:var(--muted);min-width:0}
+.crumbs a{color:var(--link);text-decoration:none}.crumbs a:hover{text-decoration:underline}
+.crumbs span[aria-current]{color:var(--text);font-weight:500}
+.who{margin-left:auto;font-size:12px;color:var(--muted)}
+.layout{display:flex;min-height:calc(100vh - 56px)}
+.nav{width:208px;flex-shrink:0;background:var(--raised);border-right:1px solid var(--border);padding:12px}
+.nav p{margin:8px 8px 4px;font-size:12px;color:var(--muted);font-weight:500}
+.nav a{display:block;padding:6px 8px;border-radius:6px;text-decoration:none;color:var(--text)}
+.nav a.on{background:var(--primary-50);color:var(--primary-700);font-weight:600}
+.nav .note{margin-top:16px;font-size:12px;color:var(--muted);padding:8px;border:1px dashed var(--border-strong);border-radius:6px}
+main{flex:1;min-width:0;padding:20px 24px 48px}
+@media (max-width:1100px){.nav{display:none}main{padding:16px}}
+
+.card{background:var(--raised);border:1px solid var(--border);border-radius:8px}
+.pagehead{display:flex;gap:16px;align-items:flex-start;padding:16px 20px 0}
+.pagehead h1{margin:0;font-family:var(--head);font-size:24px;line-height:1.3}
+.sub{margin:2px 0 0;color:var(--muted)}
+.tabs{display:flex;gap:4px;padding:12px 20px 0;border-bottom:1px solid var(--border)}
+.tabs a{padding:8px 12px;text-decoration:none;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.tabs a.on{color:var(--primary-700);border-color:var(--primary);font-weight:600}
+.filing{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:12px 20px;padding:14px 20px;border-bottom:1px solid var(--border);align-items:start}
+.filing dt{font-size:12px;color:var(--muted)}
+.filing dd{margin:0;font-weight:500;min-width:0}
+.hint{font-size:12px;color:var(--muted);font-weight:400}
+.ready{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.ready .grow{flex:1}
+@media (max-width:1180px){.filing{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.work{display:grid;grid-template-columns:320px minmax(0,1fr);min-height:560px}
+@media (max-width:1180px){.work{grid-template-columns:280px minmax(0,1fr)}}
+.items{border-right:1px solid var(--border);padding:8px 0}
+.group h2{margin:12px 16px 4px;font-size:12px;font-weight:600;color:var(--muted);display:flex;gap:6px}
+.group .none{margin:0 16px 4px;font-size:12px;color:var(--muted)}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;padding:8px 12px 8px 13px;cursor:pointer;min-height:44px}
+.item:hover{background:var(--surface)}
+.item[aria-current=true]{background:var(--primary-50);border-left-color:var(--primary)}
+.item .t1{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .t2{grid-column:1/-1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail{padding:16px 20px;min-width:0}
+.dhead{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
+.dhead h2{margin:0;font-family:var(--head);font-size:18px}
+.dhead .grow{flex:1;min-width:240px}
+
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--border-strong);border-radius:999px;padding:0 8px;font-size:12px;line-height:20px;white-space:nowrap;background:var(--raised)}
+.chip.ok{color:var(--text-ok);border-color:var(--ok)}
+.chip.danger{color:var(--text-danger);border-color:var(--danger)}
+.chip.warn{color:var(--text-warn);border-color:var(--warn);background:var(--orange-50)}
+.chip.info{color:var(--primary-700);border-color:var(--primary-100);background:var(--primary-50)}
+.chip.muted{color:var(--muted)}
+.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:6px;border:1px solid var(--border-strong);background:var(--raised);font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surface)}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.primary:hover{background:var(--primary-700)}
+.btn.small{height:28px;padding:0 10px;font-size:12px}
+.btn.link{border:0;background:none;color:var(--link);padding:0;height:auto;text-decoration:underline}
+.btn[disabled],.btn[aria-disabled=true]{opacity:.55;cursor:not-allowed}
+.finding{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:10px 12px;margin:0 0 12px;display:flex;gap:10px}
+.finding.critical{border-color:rgba(220,38,38,.4);background:rgba(220,38,38,.05)}
+.finding.warn{border-color:var(--warn);background:var(--orange-50)}
+.finding.info{border-color:var(--primary-100);background:var(--primary-50)}
+.finding .ico{font-weight:700;width:16px;flex-shrink:0}
+.finding.critical .ico{color:var(--text-danger)}.finding.warn .ico{color:var(--text-warn)}.finding.info .ico{color:var(--primary-700)}
+.finding p{margin:2px 0 0}
+.finding .acts{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap}
+
+.screen{border:1px solid var(--border);border-radius:8px;margin-bottom:8px;background:var(--raised)}
+.screen>header{display:flex;align-items:center;gap:10px;padding:8px 12px;min-height:44px}
+.screen>header .name{flex:1;min-width:0;background:none;border:0;text-align:left;font-weight:600;cursor:pointer;padding:4px 0}
+.screen .body{padding:0 12px 12px;border-top:1px solid var(--border)}
+.tick{display:inline-flex;align-items:center;gap:6px;font-size:12px;cursor:pointer}
+.tick input{width:16px;height:16px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;color:var(--muted);font-weight:500;padding:8px;border-bottom:1px solid var(--border)}
+td{padding:6px 8px;border-bottom:1px solid var(--border);vertical-align:middle;height:40px}
+td.ans{font-weight:500}
+.copy{border:1px solid var(--border-strong);background:var(--raised);border-radius:6px;height:28px;padding:0 8px;font-size:12px;cursor:pointer}
+.src{font-size:12px;color:var(--link);background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;text-align:left}
+.sample{font-size:12px;color:var(--muted);font-weight:400}
+.split{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:20px}
+@media (max-width:1180px){.split{grid-template-columns:1fr}}
+.pdfpage{border:1px solid var(--border);background:var(--raised);border-radius:4px;padding:14px;font-size:12px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.pdfpage .ttl{font-weight:700;text-align:center;margin-bottom:8px}
+.pf{display:flex;gap:6px;margin:4px 0;align-items:center}
+.pf .lab{flex:1;color:var(--muted)}
+.pf .val{border:1px solid var(--border-strong);padding:1px 6px;min-width:110px;background:var(--primary-50)}
+.pf .val.err{border-color:var(--danger);background:rgba(220,38,38,.05);color:var(--text-danger)}
+.pf .val.wait{border-style:dashed;background:var(--orange-50);color:var(--text-warn)}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.step{border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--raised)}
+.step h3{margin:0;font-size:14px;display:flex;gap:8px;align-items:center}
+.step p{margin:4px 0 0}
+.step .acts{margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.n{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--border-strong);font-size:12px}
+.n.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.stepper{display:flex;gap:0;margin:8px 0;flex-wrap:wrap}
+.stepper li{list-style:none;flex:1;min-width:110px;font-size:12px;padding:6px 8px;border-top:3px solid var(--border);color:var(--muted)}
+.stepper li.done{border-color:var(--ok);color:var(--text-ok)}
+.stepper li.now{border-color:var(--primary);color:var(--primary-700);font-weight:600}
+.ai{font-size:12px;color:var(--muted)}
+.notbuilt{border:1px dashed var(--border-strong);border-radius:8px;padding:8px 12px;color:var(--muted);font-size:12px;margin-top:12px}
+
+/* Right panel (team Sheet / Dialog variant=panel): pinned header, scrolling body, pinned footer */
+.scrim{position:fixed;inset:0;background:rgba(45,45,45,.35);display:none;z-index:40}
+.panel{position:fixed;top:0;right:0;height:100vh;width:min(520px,100vw);background:var(--raised);border-left:1px solid var(--border);display:none;flex-direction:column;z-index:41;box-shadow:-4px 0 16px rgba(0,0,0,.12)}
+.panel.open,.scrim.open{display:flex}
+.panel>header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start}
+.panel>header h2{margin:0;font-family:var(--head);font-size:18px;flex:1}
+.panel .pbody{flex:1;overflow:auto;padding:16px 20px}
+.panel>footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px}
+.field{margin-bottom:14px}
+.field label{display:block;font-weight:500;margin-bottom:4px}
+.field input[type=text],.field select,.field textarea{width:100%;border:1px solid var(--border-strong);border-radius:6px;padding:7px 10px;background:var(--raised)}
+.field .err{color:var(--text-danger);font-size:12px;margin-top:4px}
+.kv{display:grid;grid-template-columns:140px 1fr;gap:6px 12px;margin:0 0 14px}
+.kv dt{color:var(--muted);font-size:12px}.kv dd{margin:0}
+.impact{border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--surface);font-size:12px}
+.impact ul{margin:4px 0 0;padding-left:18px}
+
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 14px;border-radius:8px;display:none;gap:12px;align-items:center;z-index:60;max-width:640px}
+.toast.show{display:flex}
+.toast button{background:none;border:1px solid #fff;color:#fff;border-radius:6px;padding:2px 8px;cursor:pointer}
+.skel{background:linear-gradient(90deg,var(--neutral-100),var(--surface),var(--neutral-100));border-radius:6px;height:14px;margin:10px 16px}
+
+/* P-33 / P-26 labels */
+.lbl{display:none;font-size:12px;line-height:18px;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:middle;font-weight:500;white-space:nowrap}
+body.labels .lbl{display:inline-block}
+.lbl.c{background:var(--primary-50);color:var(--primary-700);border:1px solid var(--primary-100)}
+.lbl.s{background:var(--orange-50);color:var(--text-warn);border:1px solid var(--warn)}
+.lbl.x{background:var(--neutral-100);color:var(--muted);border:1px dashed var(--border-strong)}
+.notes{margin-top:20px;font-size:12px;color:var(--muted)}
+.notes summary{cursor:pointer;font-weight:600;color:var(--text)}
+.notes li{margin:2px 0}
+</style>
+</head>
+<body>
+
+<div class="boardbar" role="region" aria-label="Board controls (not part of the product)">
+  <strong>Board · Prepare application · draft for the Lead</strong>
+  <span>Situation <span class="seg" id="scenSeg"></span></span>
+  <span>State <span class="seg" id="stateSeg"></span></span>
+  <label><input type="checkbox" id="lblToggle"> Show labels (Capability / Scaffolding · Needed / Not built)</label>
+  <span class="lbl s" style="display:inline-block">Scaffolding · board only</span>
+</div>
+
+<header class="app-header">
+  <span class="wordmark" aria-label="ExpatReady">ExpatReady</span><span class="lbl s">BrandLogo in the build</span>
+  <nav class="crumbs" aria-label="Breadcrumb" id="crumbs"></nav>
+  <span class="who">Signed in as a representative (Sample)</span>
+</header>
+
+<div class="layout">
+  <nav class="nav" aria-label="Agent menu">
+    <p>Work</p>
+    <a href="#" class="on" aria-current="page">Cases</a>
+    <div class="note">Agent menu proposal: M3 defines it (Product §3). The team merges it into its case-management menu.</div>
+  </nav>
+  <main id="main"></main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="panel" id="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"></aside>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ---------- Sample data (every value Sample; channels and portals Sample until the immigration expert confirms) ---------- */
+const PEOPLE={A:'Client A',B:'Client B',C:'Client C'};
+const ROLES={A:'Principal applicant',B:'Spouse or partner',C:'Dependent child'};
+const SIGN_STATES=['Prepare','Printed','Sent for signature','Signed copy received','Uploaded'];
+const REASONS=['Checked: the answer is correct as entered','The document will be replaced before filing','Not relevant to this application','Other (explain below)'];
+
+function R(q,a,src,extra){return Object.assign({q,a,src},extra||{});}
+function scenarios(){return {
+pdf:{
+  label:'PDF only',path:['Individual','Visitors','Visitor visa'],caseRef:'ER-0142',release:'Release 3 · pinned 18 Oct',
+  portal:'APR Portal',method:'PDF only',methodWhy:'Worked out from its lines: 4 PDF upload, 1 signed PDF upload, no online forms',
+  filingRef:'ER-0142-01',refHint:'In the APR portal, type this as the client’s case ID. IRCC does not use it; it links the portal application to this filing.',
+  persons:[{id:'A',app:'',uci:''},{id:'B',app:'',uci:'0000-0002 (Sample)'},{id:'C',app:'',uci:''}],
+  items:[
+   {id:'p1',group:'pdf',code:'IMM 5257',title:'Application for a visitor visa',person:'A',mode:'direct',trial:'Fill trial passed (Sample)',filled:[43,44],
+    checks:[{id:'e1',where:'Passport · expiry date (page 1)',msg:'Must be after the date of issue. Now: issued 03-04-2024, expires 03-04-2014.',fact:'passportExpiryA'}],
+    unconfirmed:[],findings:[{id:'f1',text:'Purpose of visit is “Tourism”, but the uploaded invitation letter invites Client A to a conference on 12–14 May 2027.',evidence:['IMM 5257 · Purpose of visit: Tourism','Invitation letter, page 1: “…to attend the annual conference…”'],ack:null}],
+    steps:{validated:false,uploaded:false},
+    page:[['Family name','SAMPLE'],['Given name(s)','CLIENT A'],['Date of birth','1988-03-14'],['Passport number','P0000001'],['Passport expiry','2014-04-03','err'],['Purpose of visit','Tourism']]},
+   {id:'p2',group:'pdf',code:'IMM 5257',title:'Application for a visitor visa',person:'B',mode:'direct',trial:'Fill trial passed (Sample)',filled:[44,44],checks:[],unconfirmed:[],findings:[],
+    steps:{validated:true,uploaded:true,readback:'44 of 44 values equal the facts · 0 differences'},
+    page:[['Family name','SAMPLE'],['Given name(s)','CLIENT B'],['Date of birth','1987-11-02'],['Passport number','P0000002'],['Passport expiry','2033-01-09'],['Purpose of visit','Tourism']]},
+   {id:'p3',group:'pdf',code:'IMM 5257',title:'Application for a visitor visa',person:'C',mode:'direct',trial:'Fill trial passed (Sample)',filled:[42,44],checks:[],
+    unconfirmed:[{label:'Date of birth',from:'read from the passport upload by AI'},{label:'Passport number',from:'read from the passport upload by AI'}],section:'Travel document · Client C',findings:[],
+    steps:{validated:false,uploaded:false},
+    page:[['Family name','SAMPLE'],['Given name(s)','CLIENT C'],['Date of birth','proposed: 2017-05-21','wait'],['Passport number','proposed: P0000003','wait'],['Passport expiry','2031-05-20'],['Purpose of visit','Tourism']]},
+   {id:'p4',group:'pdf',code:'IMM 5707',title:'Family information',person:'A',mode:'sheet',trial:'Fill trial not passed yet (Sample)',filled:[31,31],checks:[],unconfirmed:[],findings:[],
+    steps:{typed:false,readback:false,uploaded:false},
+    sheet:[{h:'Section A · Applicant',rows:[R('1. Family name','SAMPLE','Passport · confirmed 20 Oct'),R('2. Given name(s)','CLIENT A','Passport · confirmed 20 Oct'),R('3. Date of birth','1988-03-14','Passport · confirmed 20 Oct'),R('4. Marital status','Married','Questionnaire · Client A')]},
+           {h:'Section B · Spouse or partner',rows:[R('1. Family name','SAMPLE','Passport · confirmed 20 Oct'),R('2. Date of birth','1987-11-02','Passport · confirmed 20 Oct'),R('3. Accompanying','Yes','Questionnaire · Client A')]},
+           {h:'Section C · Children',rows:[R('1. Given name(s)','CLIENT C','Passport · confirmed 20 Oct'),R('2. Accompanying','Yes','Questionnaire · Client A')]}]},
+   {id:'s1',group:'signed',code:'IMM 5476',title:'Use of a representative',person:'A',signers:'Client A and the representative',mode:'direct',trial:'Fill trial passed (Sample)',filled:[18,18],checks:[],unconfirmed:[],findings:[],sign:0,doc:'d5',
+    page:[['Applicant family name','SAMPLE'],['Representative','(firm, Sample)'],['Membership ID','R000000 (Sample)']]},
+   {id:'d1',group:'docs',title:'Passport',person:'A',state:'uploaded'},
+   {id:'d2',group:'docs',title:'Passport',person:'B',state:'uploaded'},
+   {id:'d3',group:'docs',title:'Passport',person:'C',state:'uploaded',note:'Facts read from it are proposed, waiting for the officer to confirm.'},
+   {id:'d4',group:'docs',title:'Proof of financial support',person:'A',state:'missing'},
+   {id:'d5',group:'docs',title:'Signed IMM 5476 · use of a representative',person:'A',state:'waiting',signedOf:'s1'}
+  ]},
+online:{
+  label:'Online only',path:['Individual','Economic immigration','Express Entry','Permanent residence application'],caseRef:'ER-0177',release:'Release 2 · pinned 12 Oct',
+  portal:'APR Portal',method:'Online only',methodWhy:'Worked out from its lines: 3 online, no PDF lines',
+  filingRef:'ER-0177-02',refHint:'If the portal asks for a case ID, type this reference (the immigration expert confirms for Express Entry).',
+  persons:[{id:'A',app:'',uci:'0000-0011 (Sample)'},{id:'B',app:'',uci:''},{id:'C',app:'',uci:''}],
+  docsNote:'The portal shows IRCC’s own personalised document list once the online forms are complete; upload there. This list comes from the configuration.',
+  items:[
+   {id:'o1',group:'online',code:'Express Entry',title:'Permanent residence application (online form)',person:'A',screens:[
+     {id:'x1',name:'Personal details',entered:true,rows:[R('Family name','SAMPLE','Passport · confirmed 20 Oct'),R('Given name(s)','CLIENT A','Passport · confirmed 20 Oct'),R('Date of birth','1988-03-14','Passport · confirmed 20 Oct'),R('Country of birth','India','Questionnaire · Client A')]},
+     {id:'x2',name:'Contact details',entered:true,rows:[R('Email','client-a@example.com','Questionnaire · Client A'),R('Telephone','+91 00000 00001','Questionnaire · Client A')]},
+     {id:'x3',name:'Passport and national identity document',entered:true,rows:[R('Passport number','P0000001','Passport · confirmed 20 Oct'),R('Country of issue','India','Passport · confirmed 20 Oct'),R('Expiry date','2034-04-03','Passport · confirmed 20 Oct')]},
+     {id:'x4',name:'Study and languages',entered:true,rows:[R('Highest level of education','Master’s degree','Questionnaire · Client A'),R('Native language','Hindi','Questionnaire · Client A')]},
+     {id:'x5',name:'Personal history',entered:false,recapture:{when:'23 Oct',by:'the extension, before filling',diffs:['Added: “Were you looking for work during this period?”','Changed: “Activity type” has one new choice']},
+      rows:[R('Period 1 · from – to','2015-09 – 2019-06','Questionnaire · Client A'),R('Period 1 · activity','Student','Questionnaire · Client A'),R('Period 2 · from – to','2019-07 – now','Questionnaire · Client A'),R('Period 2 · activity','Employed','Questionnaire · Client A')]},
+     {id:'x6',name:'Family information',entered:false,rows:[R('Marital status','Married','Questionnaire · Client A'),R('Date of marriage','2019-06-16','Marriage certificate · confirmed 22 Oct'),R('Spouse accompanying','Yes','Questionnaire · Client A')]},
+     {id:'x7',name:'Background and declaration',entered:false,manual:true,rows:[R('Ever refused a visa or permit?','No','Client A · own answer'),R('Ever convicted of a crime?','No','Client A · own answer')]}]},
+   {id:'o2',group:'online',code:'Express Entry',title:'Permanent residence application (online form)',person:'B',screens:[
+     {id:'y1',name:'Personal details',entered:false,rows:[R('Family name','SAMPLE','Passport · confirmed 20 Oct'),R('Date of birth','1987-11-02','Passport · confirmed 20 Oct')]},
+     {id:'y2',name:'Passport and national identity document',entered:false,rows:[R('Passport number','P0000002','Passport · confirmed 20 Oct')]},
+     {id:'y3',name:'Background and declaration',entered:false,manual:true,rows:[R('Ever refused a visa or permit?','No','Client B · own answer')]}]},
+   {id:'o3',group:'online',code:'Express Entry',title:'Permanent residence application (online form)',person:'C',screens:[
+     {id:'z1',name:'Personal details',entered:false,rows:[R('Family name','SAMPLE','Passport · confirmed 20 Oct'),R('Date of birth','2017-05-21','Passport · confirmed 21 Oct')]},
+     {id:'z2',name:'Passport and national identity document',entered:false,rows:[R('Passport number','P0000003','Passport · confirmed 21 Oct')]}]},
+   {id:'d1',group:'docs',title:'Passport',person:'A',state:'uploaded'},
+   {id:'d2',group:'docs',title:'Language test results',person:'A',state:'uploaded'},
+   {id:'d3',group:'docs',title:'Educational credential assessment',person:'A',state:'uploaded'},
+   {id:'d4',group:'docs',title:'Police certificate',person:'A',state:'missing'},
+   {id:'d5',group:'docs',title:'Proof of funds',person:'A',state:'missing'},
+   {id:'d6',group:'docs',title:'Passport',person:'B',state:'uploaded'},
+   {id:'d7',group:'docs',title:'Passport',person:'C',state:'missing'}
+  ]},
+mixed:{
+  label:'Mixed',path:['Individual','Family sponsorship','Spouse or partner','Outside Canada'],caseRef:'ER-0203',release:'Release 1 · pinned 19 Oct',
+  portal:'Representative PR Portal',method:'Online + signed PDFs',methodWhy:'Worked out from its lines: 3 online, 3 signed PDF uploads',
+  filingRef:'ER-0203-01',refHint:'Keep this reference with the portal application; type it wherever the portal asks for a case ID.',
+  roles:{A:'Principal applicant',B:'Spouse or partner (sponsor)',C:'Dependent child'},
+  persons:[{id:'A',app:'',uci:''},{id:'B',app:'',uci:'0000-0021 (Sample)'},{id:'C',app:'',uci:''}],
+  items:[
+   {id:'o1',group:'online',code:'IMM 0008',title:'Generic application form for Canada',person:'A',note:'Covers Client A and Client C',screens:[
+     {id:'m1',name:'Application details',entered:true,rows:[R('Program','Family sponsorship – spouse','Combination'),R('Representative','Yes','Case')]},
+     {id:'m2',name:'Personal details',entered:true,rows:[R('Family name','SAMPLE','Passport · confirmed 20 Oct'),R('Date of birth','1988-03-14','Passport · confirmed 20 Oct')]},
+     {id:'m3',name:'Contact information',entered:true,rows:[R('Email','client-a@example.com','Questionnaire · Client A')]},
+     {id:'m4',name:'Marital status',entered:true,changed:{fact:'Date of marriage',when:'22 Oct',was:'2019-06-14'},rows:[R('Current marital status','Married','Questionnaire · Client A'),R('Date of marriage','2019-06-16','Marriage certificate · confirmed 22 Oct',{fact:'marriageDate'})]},
+     {id:'m5',name:'Education and occupation',entered:true,rows:[R('Current occupation','Accountant','Questionnaire · Client A')]},
+     {id:'m6',name:'Language',entered:false,rows:[R('Native language','Punjabi','Questionnaire · Client A')]},
+     {id:'m7',name:'Passport and national identity',entered:false,rows:[R('Passport number','P0000001','Passport · confirmed 20 Oct')]},
+     {id:'m8',name:'Dependants',entered:false,rows:[R('Dependant 1 · given name(s)','CLIENT C','Passport · confirmed 21 Oct'),R('Dependant 1 · accompanying','Yes','Questionnaire · Client A')]}]},
+   {id:'o2',group:'online',code:'IMM 5669',title:'Schedule A – background and declaration',person:'A',screens:[
+     {id:'n1',name:'Personal details',entered:true,rows:[R('Family name','SAMPLE','Passport · confirmed 20 Oct')]},
+     {id:'n2',name:'Background questions',entered:false,manual:true,rows:[R('Ever convicted of a crime?','No','Client A · own answer'),R('Ever served in the military?','No','Client A · own answer')]},
+     {id:'n3',name:'Education',entered:false,rows:[R('Total years of schooling','16','Questionnaire · Client A')]},
+     {id:'n4',name:'Personal history',entered:false,rows:[R('Period 1 · from – to','2010-07 – 2014-06','Questionnaire · Client A')]},
+     {id:'n5',name:'Addresses',entered:false,rows:[R('Address 1 · from – to','2014-07 – now','Questionnaire · Client A')]}]},
+   {id:'o3',group:'online',code:'IMM 5406',title:'Additional family information',person:'A',screens:[
+     {id:'q1',name:'Parents',entered:false,rows:[R('Mother · date of birth','1960-01-01','Questionnaire · Client A')]},
+     {id:'q2',name:'Brothers and sisters',entered:false,rows:[R('Sibling 1 · relationship','Brother','Questionnaire · Client A')]}]},
+   {id:'s1',group:'signed',code:'IMM 1344',title:'Application to sponsor, sponsorship agreement and undertaking',person:'B',signers:'Client B (sponsor) and Client A',mode:'direct',trial:'Fill trial passed 23 Oct',filled:[61,61],checks:[],unconfirmed:[],sign:0,doc:'d6',
+    findings:[{id:'f2',text:'Client B’s address history on IMM 1344 ends in 2021-08, but the questionnaire lists the current address from 2021-06.',evidence:['IMM 1344 · previous address to: 2021-08','Questionnaire · current address from: 2021-06'],ack:null}],
+    page:[['Sponsor family name','SAMPLE'],['Sponsor given name(s)','CLIENT B'],['Date of marriage','2019-06-16'],['Previous address to','2021-08']]},
+   {id:'s2',group:'signed',code:'IMM 5532',title:'Relationship information and sponsorship evaluation',person:'B',signers:'Client B and Client A',mode:'direct',trial:'Fill trial passed (Sample)',filled:[74,74],checks:[],unconfirmed:[],findings:[],sign:4,doc:'d7',
+    stale:{fact:'Date of marriage',from:'2019-06-14',to:'2019-06-16',when:'22 Oct',signedOn:'20 Oct',why:'from the marriage certificate'},
+    page:[['Sponsor family name','SAMPLE'],['Applicant family name','SAMPLE'],['Date of marriage','2019-06-16'],['Place of marriage','Amritsar']]},
+   {id:'s3',group:'signed',code:'IMM 5476',title:'Use of a representative',person:'A',signers:'Client A, Client B and the representative',mode:'direct',trial:'Fill trial passed (Sample)',filled:[18,18],checks:[],unconfirmed:[],findings:[],sign:2,doc:'d8',
+    page:[['Applicant family name','SAMPLE'],['Representative','(firm, Sample)']]},
+   {id:'d1',group:'docs',title:'Marriage certificate',person:'A',state:'uploaded'},
+   {id:'d2',group:'docs',title:'Passport',person:'A',state:'uploaded'},
+   {id:'d3',group:'docs',title:'Passport',person:'C',state:'missing'},
+   {id:'d4',group:'docs',title:'Police certificate',person:'A',state:'missing'},
+   {id:'d5',group:'docs',title:'Relationship photos',person:'A',state:'uploaded'},
+   {id:'d6',group:'docs',title:'Signed IMM 1344',person:'B',state:'waiting',signedOf:'s1'},
+   {id:'d7',group:'docs',title:'Signed IMM 5532',person:'B',state:'stale',signedOf:'s2'},
+   {id:'d8',group:'docs',title:'Signed IMM 5476',person:'A',state:'waiting',signedOf:'s3'}
+  ]}
+};}
+const FACTS={
+  passportExpiryA:{label:'Passport expiry date',who:'Client A',section:'Travel document',value:'03-04-2014',suggest:'03-04-2034',src:'Passport upload · read by AI, confirmed by the officer 20 Oct',used:['IMM 5257 · Client A · passport expiry (3 form fields: day, month, year)'],clears:{item:'p1',check:'e1'}},
+  marriageDate:{label:'Date of marriage',who:'Client A and Client B',section:'Relationship',value:'2019-06-16',src:'Marriage certificate · confirmed by the officer 22 Oct (was 2019-06-14 from the questionnaire)',used:['IMM 0008 · screen Marital status','IMM 5532 · Part B, item 3','IMM 1344 · relationship section']}
+};
+
+/* ---------- State ---------- */
+let S={scen:'mixed',view:'working',data:scenarios(),sel:{},open:{},submitted:{},labels:false};
+let undoSnap=null;
+const sc=()=>S.data[S.scen];
+const roleOf=(p)=>(sc().roles||ROLES)[p];
+const esc=(s)=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const L=(k,t)=>`<span class="lbl ${k}">${t}</span>`;
+const CN=L('c','Capability · Needed'), SC=L('s','Scaffolding'), NB=(t)=>L('x','Not built'+(t?' · '+t:''));
+const ro=()=>S.view==='submitted';
+const dis=(cond)=>(cond||ro())?' disabled':'';
+
+/* ---------- Status rules (BR-1..BR-9 in concept-draft.md) ---------- */
+function status(it){
+  if(S.view==='empty'&&it.group!=='docs') return {t:'Not started',tone:'muted',i:'○',ready:false};
+  if(it.group==='online'){
+    const n=it.screens.length,e=it.screens.filter(s=>s.entered&&!s.changed).length;
+    if(it.screens.some(s=>s.changed)) return {t:'Re-check 1 screen',tone:'warn',i:'↻',block:'A fact changed after a screen was entered',ready:false,prog:`${e} of ${n} screens entered`};
+    if(it.screens.some(s=>s.recapture)) return {t:`Re-capture needed · ${e} of ${n}`,tone:'warn',i:'⚑',ready:false,prog:`${e} of ${n} screens entered`};
+    if(e===n) return {t:'Entered in the portal',tone:'ok',i:'✓',ready:true,prog:`${n} of ${n} screens entered`};
+    if(e===0) return {t:`Not started · 0 of ${n}`,tone:'muted',i:'○',ready:false,prog:`0 of ${n} screens entered`};
+    return {t:`In progress · ${e} of ${n}`,tone:'info',i:'◐',ready:false,prog:`${e} of ${n} screens entered`};
+  }
+  if(it.group==='docs'){
+    return ({uploaded:{t:'Uploaded',tone:'ok',i:'✓',ready:true},missing:{t:'Not uploaded',tone:'muted',i:'○',ready:false},
+      waiting:{t:'Waits for the signed scan',tone:'muted',i:'○',ready:false},stale:{t:'Reopened · signed copy out of date',tone:'warn',i:'↻',ready:false}})[it.state];
+  }
+  if(it.stale) return {t:'Signed copy out of date',tone:'warn',i:'↻',block:'Changed fact: '+it.stale.fact,ready:false};
+  if(it.checks.length) return {t:`Needs fixing · ${it.checks.length} form check error`,tone:'danger',i:'✕',block:'Form check: '+it.checks[0].where,ready:false};
+  if(it.unconfirmed.length) return {t:`Waiting for ${it.unconfirmed.length} facts`,tone:'warn',i:'!',block:`${it.unconfirmed.length} facts not confirmed`,ready:false};
+  if(it.group==='signed'){
+    if(it.sign>=4) return {t:'Signed scan uploaded',tone:'ok',i:'✓',ready:true};
+    if(it.sign===0) return {t:'Checked · ready to print',tone:'info',i:'◐',ready:false};
+    return {t:SIGN_STATES[it.sign],tone:'info',i:'◐',ready:false};
+  }
+  if(it.mode==='sheet'){
+    if(it.steps.uploaded) return {t:'Uploaded',tone:'ok',i:'✓',ready:true};
+    if(it.steps.readback) return {t:'Read back · upload next',tone:'info',i:'◐',ready:false};
+    return {t:'Answer sheet only',tone:'info',i:'≡',ready:false};
+  }
+  if(it.steps.uploaded) return {t:'Uploaded',tone:'ok',i:'✓',ready:true};
+  if(it.steps.validated) return {t:'Validated · upload next',tone:'info',i:'◐',ready:false};
+  return {t:`Checked · validate next`,tone:'info',i:'◐',ready:false};
+}
+const chip=(st)=>`<span class="chip ${st.tone}" title="${esc(st.block||st.t)}"><span aria-hidden="true">${st.i}</span>${esc(st.t)}</span>`;
+const itemName=(it)=>it.group==='docs'?it.title:it.code;
+const items=()=>sc().items;
+const byId=(id)=>items().find(i=>i.id===id);
+
+/* ---------- Render ---------- */
+function render(){
+  document.getElementById('scenSeg').innerHTML=['pdf','online','mixed'].map(k=>`<button aria-pressed="${S.scen===k}" data-a="scen" data-k="${k}">${S.data[k].label}</button>`).join('');
+  document.getElementById('stateSeg').innerHTML=[['working','Working'],['empty','Not started'],['loading','Loading'],['error','Could not load'],['conflict','Someone else saved'],['submitted','Submitted (read-only)']].map(([k,t])=>`<button aria-pressed="${S.view===k}" data-a="view" data-k="${k}">${t}</button>`).join('');
+  const s=sc();
+  document.getElementById('crumbs').innerHTML=`<a href="#">Cases</a><span aria-hidden="true">›</span><a href="#">Case ${s.caseRef}</a><span aria-hidden="true">›</span><span aria-current="page">Prepare application</span>`;
+  document.getElementById('main').innerHTML=page();
+}
+function page(){
+  const s=sc();
+  const head=`<div class="pagehead"><div style="flex:1;min-width:0"><h1>Prepare application ${CN}</h1>
+    <p class="sub">Everything to file for this application. Answers come from the agent view; only confirmed facts fill a form.</p></div>
+    <button class="btn" data-a="panel" data-k="record"${S.view==='loading'||S.view==='error'?' disabled':''}>Edit filing record</button></div>
+    <nav class="tabs" aria-label="Case"><a href="#">Overview</a><a href="#">Agent view</a><a href="#">Documents</a><a href="#" class="on" aria-current="page">Prepare application</a>${L('x','Other tabs: not on this board')}</nav>`;
+  if(S.view==='loading') return `<div class="card">${head}<div class="work"><div class="items" aria-busy="true"><span class="sr-only">Loading the filing</span>${'<div class="skel"></div>'.repeat(9)}</div><div class="detail">${'<div class="skel" style="height:22px"></div>'.repeat(6)}</div></div></div>`;
+  if(S.view==='error') return `<div class="card">${head}<div style="padding:48px 20px;text-align:center"><h2 style="font-size:18px;margin:0">This filing could not be loaded</h2><p class="sub">Nothing was changed. Check your connection and try again.</p><p><button class="btn" data-a="view" data-k="working">Try again</button></p></div></div>`;
+  return `<div class="card">${head}${filingStrip()}${banner()}${readiness()}<div class="work"><div class="items" role="list" aria-label="Filing items">${list()}</div><section class="detail" aria-live="polite">${detail()}</section></div></div>${notes()}`;
+}
+function filingStrip(){
+  const s=sc(); const sub=S.submitted[S.scen];
+  const per=s.persons.map(p=>`${PEOPLE[p.id]}: ${esc(sub?sub[p.id].app:(p.app||'after submission'))} · UCI ${esc(sub?sub[p.id].uci:(p.uci||'not known yet'))}`).join('<br>');
+  return `<dl class="filing">
+   <div><dt>Filing</dt><dd>${s.path.map(esc).join(' › ')}<div class="hint">${esc(s.release)}</div></dd></div>
+   <div><dt>Portal <span class="sample">Sample</span></dt><dd>${esc(s.portal)}<div class="hint" title="${esc(s.methodWhy)}">Filed as: ${esc(s.method)} ⓘ</div></dd></div>
+   <div><dt>Our filing reference</dt><dd>${esc(s.filingRef)} <button class="copy" data-a="copy" data-k="${esc(s.filingRef)}" aria-label="Copy our filing reference">Copy</button><div class="hint">${esc(s.refHint)}</div></dd></div>
+   <div><dt>Application number and UCI, per person</dt><dd class="hint" style="color:var(--text)">${per}</dd></div>
+   <div>${CN}</div></dl>`;
+}
+function banner(){
+  const s=sc();
+  if(S.view==='submitted'){const d=S.submitted[S.scen]?S.submitted[S.scen].date:'24 Oct';return `<div style="padding:12px 20px 0"><div class="finding info"><span class="ico">i</span><div><strong>Submitted on ${esc(d)} in the ${esc(s.portal)}. Read-only.</strong><p>Nothing here changes any more. If a fact changes later, submitted items are marked stale for a person to decide; they are never changed.</p></div></div></div>`;}
+  if(S.view==='conflict') return `<div style="padding:12px 20px 0"><div class="finding warn"><span class="ico">!</span><div><strong>Another person updated this filing a moment ago.</strong><p>They ticked a screen as entered. Reload to see their change; nothing you entered is lost.</p><div class="acts"><button class="btn small" data-a="view" data-k="working">Reload</button></div></div></div></div>`;
+  if(S.view==='empty') return `<div style="padding:12px 20px 0"><div class="finding info"><span class="ico">i</span><div><strong>Nothing is filled yet.</strong><p>Forms fill only from confirmed facts, and none are confirmed for this filing. Send the questionnaire to the family, or confirm sections in the agent view.</p><div class="acts"><button class="btn small" data-a="toast" data-k="Opens the agent view (not on this board).">Open the agent view</button></div></div></div></div>`;
+  return '';
+}
+function readiness(){
+  const its=items(),st=its.map(status),ready=st.filter(x=>x.ready).length,blk=its.filter((it,i)=>st[i].block);
+  let tag,action;
+  if(ro()){tag=chip({t:'Submitted',tone:'ok',i:'✓'});action=`<button class="btn" data-a="panel" data-k="record">View filing record</button>`;}
+  else if(blk.length){tag=chip({t:`Not ready to file · ${blk.length} blocking`,tone:'danger',i:'✕'});action=`<button class="btn primary" data-a="sel" data-k="${blk[0].id}">Next blocker</button>`;}
+  else if(ready<its.length){tag=chip({t:'In progress',tone:'info',i:'◐'});const nx=its.find((it,i)=>!st[i].ready);action=`<button class="btn primary" data-a="sel" data-k="${nx.id}">Next item</button>`;}
+  else {tag=chip({t:'Ready to file',tone:'ok',i:'✓'});action=`<button class="btn primary" data-a="panel" data-k="submit">Record submission</button>`;}
+  const why=blk.length?`<span class="hint">Only a form check error, a missing or unconfirmed fact, or a changed fact on a signed or entered item blocks. AI review findings never block.</span>`:'';
+  return `<div class="ready">${tag}<span><strong>${ready} of ${its.length}</strong> items done</span><span class="grow">${why}</span>${action}${CN}</div>`;
+}
+function list(){
+  const s=sc();
+  const groups=[['online','Online forms'],['pdf','PDF forms'],['signed','Signed PDFs'],['docs','Documents']];
+  if(!S.sel[S.scen]) S.sel[S.scen]=items()[0].id;
+  return groups.map(([g,t])=>{
+    const its=items().filter(i=>i.group===g);
+    const body=its.length?its.map(it=>{const st=status(it);const cur=S.sel[S.scen]===it.id;
+      return `<div role="listitem"><button class="item" aria-current="${cur}" data-a="sel" data-k="${it.id}">
+        <span class="t1">${esc(itemName(it))} · ${PEOPLE[it.person]}</span>${chip(st)}
+        <span class="t2" title="${esc(it.title)}">${esc(it.group==='docs'?roleOf(it.person):it.title)}${st.prog?' · '+st.prog:''}${it.filled&&it.group!=='online'?` · ${it.filled[0]} of ${it.filled[1]} filled`:''}</span></button></div>`;}).join('')
+      :`<p class="none">None in this filing</p>`;
+    const extra=(g==='docs'&&s.docsNote)?`<p class="none">${esc(s.docsNote)}</p>`:'';
+    return `<div class="group"><h2>${t} <span>· ${its.length}</span></h2>${extra}${body}</div>`;
+  }).join('')+`<div style="padding:8px 16px">${CN}</div>`;
+}
+function detail(){
+  const it=byId(S.sel[S.scen]); if(!it) return '';
+  const st=status(it);
+  const h=`<div class="dhead"><div class="grow"><h2>${esc(itemName(it))} · ${esc(it.group==='docs'?'':it.title)}</h2>
+    <div class="hint">${PEOPLE[it.person]} · ${roleOf(it.person)}${it.signers?' · signed by '+esc(it.signers):''}${it.note?' · '+esc(it.note):''}</div></div>${chip(st)}</div>`;
+  if(it.group==='online') return h+online(it);
+  if(it.group==='docs') return h+doc(it);
+  return h+pdf(it);
+}
+function answersTable(rows,itId,scrId){
+  return `<table><thead><tr><th scope="col">${scrId?'Question as the portal shows it':'Item on the form'}</th><th scope="col">Answer</th><th scope="col"><span class="sr-only">Copy</span></th><th scope="col">Source</th></tr></thead><tbody>${
+   rows.map((r,i)=>`<tr><td>${esc(r.q)}</td><td class="ans">${esc(r.a)}</td><td><button class="copy" data-a="copy" data-k="${esc(r.a)}" aria-label="Copy ${esc(r.q)}">Copy</button></td><td><button class="src" data-a="fact" data-k="${itId}|${scrId||''}|${i}">${esc(r.src)}</button></td></tr>`).join('')}</tbody></table>`;
+}
+function online(it){
+  const s=sc();
+  let out=`<div class="finding info"><span class="ico">i</span><div><strong>Portal sheet: the ${esc(s.portal)} screens in order.</strong>
+    <p>Copy each answer into the portal, or use “Fill this screen”: the ExpatReady browser extension fills the screen you have open in your own portal session, reads every value back, and never clicks Next or Submit. Tick each screen when it is entered.</p></div></div>`;
+  out+=it.screens.map((scr,ix)=>{
+    const open=S.open[scr.id]!==undefined?S.open[scr.id]:(scr.recapture||scr.changed||(!scr.entered&&ix===it.screens.findIndex(x=>!x.entered)));
+    const sst=scr.changed?{t:'Re-check: changed after entry',tone:'warn',i:'↻'}:scr.recapture?{t:'Re-capture needed',tone:'warn',i:'⚑'}:scr.manual&&!scr.entered?{t:'Answer on screen yourself',tone:'muted',i:'✎'}:scr.entered?{t:'Entered',tone:'ok',i:'✓'}:{t:'Not entered',tone:'muted',i:'○'};
+    const fillDis=scr.recapture||scr.manual;
+    const fillTip=scr.recapture?'The portal screen changed. The extension fills nothing here until the content team re-captures it.':scr.manual?'Background and declaration questions are always answered by the representative on screen.':'Fills the open portal screen in your own session, then reads every value back.';
+    let warn='';
+    if(scr.recapture) warn=`<div class="finding warn" style="margin-top:12px"><span class="ico">⚑</span><div><strong>This portal screen changed on ${esc(scr.recapture.when)} (found by ${esc(scr.recapture.by)}).</strong><ul style="margin:4px 0 0;padding-left:18px">${scr.recapture.diffs.map(d=>`<li>${esc(d)} <span class="sample">Sample</span></li>`).join('')}</ul><p>The content team has a “Re-capture needed” task. Until then: copy the answers below, check them against the screen, and answer the new question on screen.</p></div></div>`;
+    if(scr.changed) warn=`<div class="finding warn" style="margin-top:12px"><span class="ico">↻</span><div><strong>${esc(scr.changed.fact)} changed on ${esc(scr.changed.when)}, after this screen was entered.</strong><p>The portal still holds ${esc(scr.changed.was)}. ExpatReady never changes what is already in the portal: correct it there, then tick the screen again.</p></div></div>`;
+    return `<div class="screen"><header>
+      <span class="n${scr.entered&&!scr.changed?' done':''}" aria-hidden="true">${ix+1}</span>
+      <button class="name" data-a="toggle" data-k="${scr.id}" aria-expanded="${!!open}">${esc(scr.name)} <span class="sample">screen name Sample</span></button>
+      ${chip(sst)}
+      <label class="tick"><input type="checkbox" data-a="enter" data-k="${it.id}|${scr.id}" ${scr.entered&&!scr.changed?'checked':''}${dis(false)}> Entered in the portal</label>
+    </header>${open?`<div class="body">${warn}${answersTable(scr.rows,it.id,scr.id)}
+      <div style="display:flex;gap:12px;align-items:center;margin-top:10px;flex-wrap:wrap">
+       <button class="btn small${fillDis?'':' primary'}" data-a="fill" data-k="${scr.id}" title="${esc(fillTip)}" aria-describedby="tip-${scr.id}"${dis(fillDis)}>Fill this screen</button>
+       <span id="tip-${scr.id}" class="hint">${esc(fillTip)}</span>${L('c','Capability · Needed (proved on a saved portal screen)')}
+       <button class="btn link" data-a="looks" data-k="${it.id}|${scr.id}"${dis(scr.recapture)}>This screen looks different</button>
+      </div></div>`:''}</div>`;
+  }).join('');
+  return out+`<div class="notbuilt">Form health (fill success per form and screen) is the Super Admin’s view, not shown here. ${NB('this item')}</div>`;
+}
+function previewPage(it){
+  return `<div class="pdfpage" aria-label="Filled form preview"><div class="ttl">${esc(it.code)} · ${esc(it.title)}</div>
+    ${(it.page||[]).map(([l,v,c])=>`<div class="pf"><span class="lab">${esc(l)}</span><span class="val ${c||''}">${esc(v)}</span></div>`).join('')}
+    <p class="hint" style="margin-top:10px">Shown in ExpatReady; the file is written only by the server, never by the browser. Values Sample.</p>
+    <button class="btn link" data-a="panel" data-k="map|${it.id}"${dis(false)}>A value is in the wrong place? Report a mapping problem</button> ${L('c','Capability · Needed? (question 3)')}</div>`;
+}
+function factsStep(it,n){
+  const done=!it.unconfirmed.length;
+  return `<li class="step"><h3><span class="n${done?' done':''}">${n}</span>Facts</h3>
+    <p>${it.filled[0]} of ${it.filled[1]} form fields filled from confirmed facts.</p>
+    ${it.unconfirmed.length?`<div class="finding warn" style="margin:8px 0 0"><span class="ico">!</span><div><strong>${it.unconfirmed.length} facts are proposed, not confirmed. They block this form.</strong><ul style="margin:4px 0 0;padding-left:18px">${it.unconfirmed.map(u=>`<li>${esc(u.label)}: ${esc(u.from)}</li>`).join('')}</ul>
+      <div class="acts"><button class="btn small" data-a="confirm" data-k="${it.id}"${dis(false)}>Confirm section: ${esc(it.section)}</button></div></div></div>`:''}</li>`;
+}
+function checkStep(it,n){
+  const ok=!it.checks.length;
+  return `<li class="step"><h3><span class="n${ok?' done':''}">${n}</span>Check this form ${CN}</h3>
+    <p class="hint">ExpatReady’s form checks use the same rules as the form’s own Validate button. Errors here block the form.</p>
+    ${ok?`<p style="color:var(--text-ok)">✓ Form checks pass.</p>`:it.checks.map(c=>`<div class="finding critical" style="margin:8px 0 0"><span class="ico">✕</span><div><strong>${esc(c.where)}</strong><p>${esc(c.msg)} <span class="sample">Sample</span></p><div class="acts"><button class="btn small" data-a="fact" data-k="fact|${c.fact}"${dis(false)}>Fix the fact</button></div></div></div>`).join('')}
+    <div class="acts"><button class="btn small" data-a="recheck" data-k="${it.id}"${dis(false)}>Run form checks again</button></div></li>`;
+}
+function reviewBox(it){
+  const f=it.findings||[];
+  return `<div class="step" style="margin-top:10px"><h3>Independent review ${CN}</h3>
+    <p class="ai">AI checks this form against the documents and the other forms, by a different method. It never changes data and never blocks. About US$0.05 a run (Sample).</p>
+    ${f.length?f.map(x=>`<div class="finding ${x.ack?'':'info'}" style="margin:8px 0 0"><span class="ico">${x.ack?'✓':'i'}</span><div><strong>Advisory</strong> · ${esc(x.text)} <span class="sample">Sample</span>
+      <ul style="margin:4px 0 0;padding-left:18px;font-size:12px">${x.evidence.map(e=>`<li>${esc(e)}</li>`).join('')}</ul>
+      ${x.ack?`<p class="hint">Acknowledged: ${esc(x.ack)}</p>`:`<div class="acts"><button class="btn small" data-a="panel" data-k="ack|${it.id}|${x.id}"${dis(false)}>Acknowledge with a reason</button><button class="btn small" data-a="toast" data-k="Opens the agent view at the fact (not on this board).">Go to the fact</button></div>`}</div></div>`).join('')
+      :`<p class="hint">Latest run 23 Oct 09:12: no findings.</p>`}
+    <div class="acts"><button class="btn small" data-a="review" data-k="${it.id}"${dis(false)}>Run review again</button></div></div>`;
+}
+function pdf(it){
+  const blocked=it.checks.length||it.unconfirmed.length||it.stale;
+  let out=`<p class="hint" style="margin:-4px 0 12px">${esc(it.trial)}${it.mode==='sheet'?': fill the PDF yourself from the answer sheet; ExpatReady reads your copy back and compares it with the facts.':': ExpatReady fills the PDF directly.'}</p>`;
+  if(it.stale) out+=`<div class="finding warn"><span class="ico">↻</span><div><strong>The signed copy uploaded ${esc(it.stale.signedOn)} is out of date.</strong>
+     <p>${esc(it.stale.fact)} changed on ${esc(it.stale.when)} from ${esc(it.stale.from)} to ${esc(it.stale.to)} (${esc(it.stale.why)}). The signed copy was not changed and is kept in the history. Print, sign and upload a new copy, or undo the change in the agent view.</p>
+     <div class="acts"><button class="btn small primary" data-a="restart" data-k="${it.id}"${dis(false)}>Prepare a new copy</button><button class="btn small" data-a="fact" data-k="fact|marriageDate">See the fact</button></div></div></div>`;
+  let steps='';
+  if(it.mode==='sheet'){
+    steps=`<li class="step"><h3><span class="n done">1</span>Answer sheet ${CN}</h3><p class="hint">The form’s items in its own order, each with a copy button.</p>${it.sheet.map(s=>`<h4 style="margin:10px 0 4px;font-size:14px">${esc(s.h)}</h4>${answersTable(s.rows,it.id,'')}`).join('')}</li>
+     <li class="step"><h3><span class="n${it.steps.readback?' done':''}">2</span>Fill and validate in Adobe Reader, then upload your copy</h3>
+       <p>Download the blank form, type the answers, click Validate, save. Upload it here: ExpatReady reads it back and lists any value that differs from the facts.</p>
+       <div class="acts"><button class="btn small" data-a="toast" data-k="Downloaded the blank IMM 5707 (Sample).">Download blank form</button><button class="btn small primary" data-a="readback" data-k="${it.id}"${dis(false)}>Upload your copy</button>${it.steps.readback?'<span style="color:var(--text-ok)">✓ 31 of 31 values equal the facts</span>':''}</div></li>
+     <li class="step"><h3><span class="n${it.steps.uploaded?' done':''}">3</span>Upload to the portal</h3><label class="tick"><input type="checkbox" data-a="uploaded" data-k="${it.id}" ${it.steps.uploaded?'checked':''}${dis(!it.steps.readback)}> Uploaded in the portal</label></li>`;
+  } else if(it.group==='signed'){
+    const cur=it.sign;
+    steps=factsStep(it,1)+checkStep(it,2)+`<li class="step"><h3><span class="n${cur>=4&&!it.stale?' done':''}">3</span>Print, sign by hand, upload the signed scan ${CN}</h3>
+      <p class="hint">Signed by ${esc(it.signers)}. Uploading the scan closes the matching document line.</p>
+      <ol class="stepper">${SIGN_STATES.map((t,i)=>`<li class="${i<cur||(i===cur&&cur===4)?'done':i===cur?'now':''}">${t}</li>`).join('')}</ol>
+      <div class="acts">${it.stale?'':signAction(it,blocked)}</div>
+      <p class="hint">${blocked&&!it.stale?'Fix the blocking items above before printing.':'The PDF has IRCC barcodes: download, click Validate in Adobe Reader, then print.'}</p></li>`;
+  } else {
+    steps=factsStep(it,1)+checkStep(it,2)+`<li class="step"><h3><span class="n${it.steps.validated?' done':''}">3</span>Validate in Adobe Reader</h3>
+       <p>Download, open in Adobe Reader, click Validate, save, and upload the validated copy. ExpatReady reads the barcodes back and compares every value with the facts.</p>
+       <div class="acts"><button class="btn small" data-a="toast" data-k="Downloaded ${esc(it.code)} for ${PEOPLE[it.person]} (Sample). Open it in Adobe Reader and click Validate."${dis(blocked)}>Download for Adobe</button>
+       <button class="btn small primary" data-a="validated" data-k="${it.id}"${dis(blocked||it.steps.validated)}>Upload validated copy</button>
+       ${it.steps.validated?`<span style="color:var(--text-ok)">✓ ${esc(it.steps.readback||'44 of 44 values equal the facts · 0 differences')}</span>`:''}</div>
+       ${blocked?'<p class="hint">Available when the form checks pass and every fact is confirmed.</p>':''}</li>
+      <li class="step"><h3><span class="n${it.steps.uploaded?' done':''}">4</span>Upload to the portal</h3><label class="tick"><input type="checkbox" data-a="uploaded" data-k="${it.id}" ${it.steps.uploaded?'checked':''}${dis(!it.steps.validated)}> Uploaded in the portal</label></li>`;
+  }
+  out+=`<div class="split"><div>${previewPage(it)}</div><div><ol class="steps">${steps}</ol>${reviewBox(it)}
+    <div class="notbuilt">Representative approves each form (stamped, withdrawn when a fact changes) · backlog B6, M3. ${NB('this item')}</div></div></div>`;
+  return out;
+}
+function signAction(it,blocked){
+  const a=[['Download to validate and print','Printed'],['Mark sent for signature','Sent for signature'],['Signed copy received','Signed copy received'],['Upload signed scan','Uploaded']][it.sign];
+  if(!a) return `<span style="color:var(--text-ok)">✓ Signed scan uploaded; document line closed.</span>`;
+  return `<button class="btn small primary" data-a="sign" data-k="${it.id}"${dis(blocked)}>${a[0]}</button>`;
+}
+function doc(it){
+  const st=status(it);
+  let p=`<p>${esc(it.title)} for ${PEOPLE[it.person]} (${roleOf(it.person)}).</p>`;
+  if(it.signedOf){const s=byId(it.signedOf);p+=`<div class="finding ${it.state==='stale'?'warn':'info'}"><span class="ico">${it.state==='stale'?'↻':'i'}</span><div><strong>${it.state==='stale'?'Reopened: the signed copy is out of date.':it.state==='uploaded'?'Closed by the signed scan.':'Closes when the signed scan is uploaded.'}</strong><p>Upload it on the signed PDF line, not here.</p><div class="acts"><button class="btn small" data-a="sel" data-k="${s.id}">Open ${esc(s.code)}</button></div></div></div>`;}
+  if(it.note) p+=`<p class="hint">${esc(it.note)}</p>`;
+  p+=`<p class="hint">Document uploads, AI reading and validity checks live on the Documents tab ${L('x','not on this board')}. Here: what the filing still needs.</p>`;
+  if(it.state==='missing') p+=`<button class="btn" data-a="toast" data-k="Opens the Documents tab at this line (not on this board).">Go to the document</button>`;
+  return p+CN;
+}
+function notes(){
+  return `<details class="notes"><summary>Board notes (scaffolding, not part of the product) ${SC}</summary><ul>
+   <li>Situations: PDF only = Visitors › Visitor visa (IMM 5257 ×3, IMM 5707, IMM 5476). Online only = Express Entry › Permanent residence application. Mixed = Family sponsorship › Spouse or partner › Outside Canada (IMM 0008, 5669, 5406 online; IMM 1344, 5532, 5476 signed PDFs).</li>
+   <li>States drawn: not started (State › Not started; Express Entry Client B and C), in progress (Express Entry Client A, IMM 0008), stale signed PDF (Mixed › IMM 5532), changed after entry (Mixed › IMM 0008 Marital status), blocking form check (PDF only › IMM 5257 Client A), waiting for facts (PDF only › IMM 5257 Client C), advisory AI finding (IMM 5257 Client A, IMM 1344), re-capture needed (Online only › Personal history), answer sheet only (IMM 5707), loading, could not load, someone else saved, submitted read-only.</li>
+   <li>Channels, portals, screen names, form-field positions, people and every value are Sample until the immigration expert confirms. No personal names: Client A, B, C.</li>
+   <li>Try: PDF only › IMM 5257 Client A › Fix the fact → Save → Undo. Mixed › IMM 5532 › Prepare a new copy, then walk the signature steps. Mixed › IMM 0008 › Marital status › source link → edit the date to see what goes stale.</li></ul></details>`;
+}
+
+/* ---------- Panels ---------- */
+function openPanel(kind,arg){
+  const P=document.getElementById('panel');let title='',body='',foot='';
+  const [k,a1,a2]=kind.split('|');
+  if(k==='fact'||k==='rowfact'){
+    let f;
+    if(k==='fact') f=Object.assign({key:a1},FACTS[a1]);
+    else {const it=byId(a1);const rows=a2?it.screens.find(s=>s.id===a2).rows:it.sheet.flatMap(s=>s.rows);const r=rows[+arg];
+      f=r.fact?Object.assign({key:r.fact},FACTS[r.fact]):{key:null,label:r.q,who:PEOPLE[it.person],section:'(from the release)',value:r.a,src:r.src,used:[`${it.code} · ${a2?it.screens.find(s=>s.id===a2).name:'answer sheet'}`],ctx:{item:a1,scr:a2,row:+arg}};}
+    S.panelFact=f;
+    title=f.label;
+    body=`<dl class="kv"><dt>Person</dt><dd>${esc(f.who)}</dd><dt>Agent view section</dt><dd>${esc(f.section)}</dd><dt>Source and status</dt><dd>${esc(f.src)} <span class="chip ok">✓ Confirmed</span></dd><dt>Fills</dt><dd>${f.used.map(esc).join('<br>')}</dd></dl>
+      <div class="field"><label for="factVal">Value</label><input type="text" id="factVal" value="${esc(f.suggest||f.value)}"${dis(false)} aria-describedby="factHelp"><div id="factHelp" class="hint">One fact, one value: changing it here changes it in the agent view and every draft.</div></div>
+      <div class="impact" id="impact">${impactText(f)}</div>
+      <p style="margin-top:14px"><button class="btn link" data-a="panel" data-k="map|${f.ctx?f.ctx.item:(f.clears?f.clears.item:'')}">The value is right but lands in the wrong place? Report a mapping problem</button></p>`;
+    foot=`<button class="btn" data-a="close">Cancel</button><button class="btn primary" data-a="saveFact"${dis(false)}>Save fact</button>`;
+  } else if(k==='ack'){
+    const it=byId(a1),x=it.findings.find(f=>f.id===a2);S.panelAck={it:a1,f:a2};
+    title='Acknowledge a review finding';
+    body=`<p>${esc(x.text)}</p><p class="hint">Advisory: acknowledging records your reason; it does not change any data. The form stays ready if everything else is.</p>
+     <fieldset class="field" style="border:0;padding:0"><legend style="font-weight:500;margin-bottom:4px">Reason</legend>${REASONS.map((r,i)=>`<label style="display:block;margin:4px 0"><input type="radio" name="reason" value="${i}"${i===0?' checked':''}> ${esc(r)}</label>`).join('')}</fieldset>
+     <div class="field"><label for="ackNote">Note <span class="hint">(needed for “Other”)</span></label><textarea id="ackNote" rows="3"></textarea><div class="err" id="ackErr" hidden>Write a short note so the next person knows why.</div></div>`;
+    foot=`<button class="btn" data-a="close">Cancel</button><button class="btn primary" data-a="saveAck">Acknowledge</button>`;
+  } else if(k==='map'){
+    const it=byId(a1)||items()[0];
+    title='Report a mapping problem';
+    body=`<p>Use this when the fact is right but the form shows it in the wrong place, for the wrong person, or in the wrong format. Nothing on this case waits: correct the fact here if needed and keep going.</p>
+     <div class="field"><label for="mapForm">Form</label><input type="text" id="mapForm" value="${esc(it.code||'')} · ${esc(it.title||'')}" readonly></div>
+     <div class="field"><label for="mapWhat">What is wrong</label><select id="mapWhat"><option>The value is in the wrong form field</option><option>It is for the wrong person</option><option>The format is wrong (date, code)</option><option>Something else</option></select></div>
+     <div class="field"><label for="mapNote">What you saw</label><textarea id="mapNote" rows="3" placeholder="For example: date of marriage shows in the date of birth field on page 2"></textarea></div>
+     <p class="hint">The content team gets a task. If they confirm a real error, the mapping is held for everyone and affected open cases are listed ${L('x','hold and list: M4, B28')}.</p>`;
+    foot=`<button class="btn" data-a="close">Cancel</button><button class="btn primary" data-a="sendMap">Send report</button>`;
+  } else if(k==='record'||k==='submit'){
+    const s=sc();const sub=S.submitted[S.scen];
+    title=k==='submit'?'Record submission':'Filing record';
+    const st=items().map(status),notReady=st.filter(x=>!x.ready).length;
+    body=`${k==='submit'&&notReady?`<div class="finding warn"><span class="ico">!</span><div>${notReady} items are not done. You can still record a submission made in the portal.</div></div>`:''}
+     <dl class="kv"><dt>Portal</dt><dd>${esc(s.portal)} <span class="sample">from the combination’s setup · Sample</span></dd><dt>Our filing reference</dt><dd>${esc(s.filingRef)} <button class="copy" data-a="copy" data-k="${esc(s.filingRef)}">Copy</button><div class="hint">${esc(s.refHint)}</div></dd></dl>
+     ${k==='submit'?`<div class="field"><label for="subDate">Submitted on</label><input type="text" id="subDate" value="24-10-2026"><div class="hint">Day-month-year</div></div>`:''}
+     ${s.persons.map(p=>`<fieldset class="field" style="border:1px solid var(--border);border-radius:8px;padding:10px 12px"><legend style="font-weight:600">${PEOPLE[p.id]} · ${roleOf(p.id)}</legend>
+       <label for="app-${p.id}">Application number</label><input type="text" id="app-${p.id}" value="${esc(sub?sub[p.id].app:p.app)}" placeholder="Shown in the portal after submission"${ro()?' readonly':''}>
+       <label for="uci-${p.id}" style="margin-top:8px">UCI</label><input type="text" id="uci-${p.id}" value="${esc(sub?sub[p.id].uci:p.uci)}" placeholder="Client’s unique client identifier, if known"${ro()?' readonly':''}><div class="err" id="err-${p.id}" hidden></div></fieldset>`).join('')}
+     <p class="hint">Formats are Sample until the immigration expert confirms them.</p>`;
+    foot=`<button class="btn" data-a="close">${ro()?'Close':'Cancel'}</button>${ro()?'':`<button class="btn primary" data-a="${k==='submit'?'saveSubmit':'saveRecord'}">${k==='submit'?'Record submission':'Save'}</button>`}`;
+  }
+  P.innerHTML=`<header><h2 id="panelTitle">${esc(title)}</h2>${CN}<button class="btn small" data-a="close" aria-label="Close panel">✕</button></header><div class="pbody">${body}</div><footer>${foot}</footer>`;
+  P.classList.add('open');document.getElementById('scrim').classList.add('open');
+  const first=P.querySelector('.pbody input:not([readonly]),.pbody select,.pbody textarea,.pbody button');(first||P.querySelector('button')).focus();
+  const v=document.getElementById('factVal');if(v) v.addEventListener('input',()=>{document.getElementById('impact').innerHTML=impactText(S.panelFact,v.value);});
+}
+function impactText(f,val){
+  const nv=val===undefined?(f.suggest||f.value):val;
+  if(nv===f.value&&!f.suggest) return 'No change yet. Edit the value to see what it updates.';
+  const drafts=[],stale=[];
+  if(f.key==='passportExpiryA'){drafts.push('IMM 5257 · Client A (draft)');}
+  else if(f.key==='marriageDate'){drafts.push('IMM 1344 (not printed yet)');stale.push('IMM 0008 · screen Marital status (entered in the portal)');stale.push('IMM 5532 · signed copy of 20 Oct');}
+  else if(f.ctx){const it=byId(f.ctx.item);if(it.group==='online'){const scr=it.screens.find(s=>s.id===f.ctx.scr);(scr.entered?stale:drafts).push(`${it.code} · ${scr.name}${scr.entered?' (entered in the portal)':''}`);}else drafts.push(`${it.code} (draft)`);}
+  return `<strong>Saving updates ${drafts.length} draft${drafts.length===1?'':'s'}</strong>${drafts.length?`<ul>${drafts.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>`:''}
+    ${stale.length?`<p style="margin:8px 0 0"><strong>Marks ${stale.length} item${stale.length===1?'':'s'} stale and never changes ${stale.length===1?'it':'them'}:</strong></p><ul>${stale.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>`:''}`;
+}
+function closePanel(){document.getElementById('panel').classList.remove('open');document.getElementById('scrim').classList.remove('open');}
+
+/* ---------- Actions ---------- */
+function snap(){undoSnap=JSON.stringify(S.data);}
+function toast(msg,undo){const t=document.getElementById('toast');t.innerHTML=`<span>${esc(msg)}</span>${undo?'<button data-a="undo">Undo</button>':''}`;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),5000);}
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-a]');if(!b) return;const a=b.dataset.a,k=b.dataset.k;
+  if(b.tagName==='INPUT') return;
+  if(a==='scen'){S.scen=k;render();}
+  else if(a==='view'){S.view=k;if(k==='submitted'&&!S.submitted[S.scen]){S.submitted[S.scen]={date:'24 Oct',...Object.fromEntries(sc().persons.map((p,i)=>[p.id,{app:`${S.scen==='mixed'?'F':S.scen==='online'?'E':'V'}00000000${i+1} (Sample)`,uci:p.uci||`0000-00${30+i} (Sample)`}]))};}
+    if(k!=='submitted'&&S.submitted[S.scen]&&S.view!=='submitted'){} render();}
+  else if(a==='sel'){S.sel[S.scen]=k;render();const el=document.querySelector(`.item[data-k="${k}"]`);if(el) el.focus();}
+  else if(a==='toggle'){S.open[k]=!(b.getAttribute('aria-expanded')==='true');render();}
+  else if(a==='copy'){navigator.clipboard&&navigator.clipboard.writeText(k).catch(()=>{});toast('Copied: '+k);}
+  else if(a==='toast'){toast(k);}
+  else if(a==='panel'){openPanel(k);}
+  else if(a==='fact'){const [x,y,z]=k.split('|');if(x==='fact') openPanel('fact|'+y);else openPanel(`rowfact|${x}|${y}`,z);}
+  else if(a==='close'){closePanel();}
+  else if(a==='undo'){if(undoSnap){S.data=JSON.parse(undoSnap);undoSnap=null;render();toast('Undone.');}}
+  else if(a==='fill'){toast('Sent to the extension: it filled this screen in your portal tab and read every value back (Sample: all accepted). Review it, then tick “Entered in the portal”.');}
+  else if(a==='looks'){const [i,s]=k.split('|');snap();const scr=byId(i).screens.find(x=>x.id===s);scr.recapture={when:'today',by:'you',diffs:['Reported by you: the screen looks different']};render();toast('Thanks. A “Re-capture needed” task is open for the content team.',true);}
+  else if(a==='confirm'){const it=byId(k);snap();it.unconfirmed=[];it.filled=[it.filled[1],it.filled[1]];it.page=it.page.map(([l,v,c])=>[l,c==='wait'?v.replace('proposed: ',''):v]);render();toast(`Section confirmed: ${it.section}. IMM 5257 for ${PEOPLE[it.person]} filled again.`,true);}
+  else if(a==='recheck'){toast(byId(k).checks.length?'Form checks ran: 1 error still to fix.':'Form checks ran: no errors.');}
+  else if(a==='review'){b.textContent='Running…';b.disabled=true;setTimeout(()=>{render();toast('Review finished (Sample): the findings above are the latest run.');},900);}
+  else if(a==='validated'){const it=byId(k);snap();it.steps.validated=true;it.steps.readback=`${it.filled[1]} of ${it.filled[1]} values equal the facts · 0 differences`;render();toast('Validated copy read back: barcodes match the facts.',true);}
+  else if(a==='readback'){const it=byId(k);snap();it.steps.readback=true;render();toast('Your copy was read back: 31 of 31 values equal the facts.',true);}
+  else if(a==='sign'){const it=byId(k);snap();it.sign++;if(it.sign>=4){const d=byId(it.doc);if(d) d.state='uploaded';}render();toast(it.sign>=4?`Signed scan uploaded. “${byId(it.doc).title}” is closed.`:`${it.code}: ${SIGN_STATES[it.sign]}.`,true);}
+  else if(a==='restart'){const it=byId(k);snap();it.stale=null;it.sign=0;const d=byId(it.doc);if(d) d.state='waiting';render();toast(`${it.code} filled again from current facts. The old signed copy is kept, marked stale.`,true);}
+  else if(a==='saveFact'){const f=S.panelFact,v=document.getElementById('factVal').value.trim();
+    if(!v){document.getElementById('factVal').setAttribute('aria-invalid','true');return;}
+    snap();
+    if(f.clears){const it=byId(f.clears.item);if(it) it.checks=it.checks.filter(c=>c.id!==f.clears.check);if(it&&it.page) it.page=it.page.map(([l,vv,c])=>c==='err'?[l,'2034-04-03']:[l,vv,c]);}
+    if(f.ctx){const it=byId(f.ctx.item);if(it.group==='online'){const scr=it.screens.find(s=>s.id===f.ctx.scr);const r=scr.rows[f.ctx.row];const was=r.a;r.a=v;if(scr.entered&&v!==was) scr.changed={fact:f.label,when:'today',was};}}
+    closePanel();render();toast(`${f.label} updated. Drafts filled again; anything signed or entered is marked stale, never changed.`,true);}
+  else if(a==='saveAck'){const r=document.querySelector('input[name=reason]:checked').value,n=document.getElementById('ackNote').value.trim();
+    if(r==='3'&&!n){document.getElementById('ackErr').hidden=false;document.getElementById('ackNote').setAttribute('aria-describedby','ackErr');document.getElementById('ackNote').focus();return;}
+    snap();const x=byId(S.panelAck.it).findings.find(f=>f.id===S.panelAck.f);x.ack=REASONS[r]+(n?' — '+n:'');closePanel();render();toast('Finding acknowledged with your reason.',true);}
+  else if(a==='sendMap'){closePanel();toast('Reported to the content team. Nothing on this case waits.');}
+  else if(a==='saveRecord'){sc().persons.forEach(p=>{p.app=document.getElementById('app-'+p.id).value.trim();p.uci=document.getElementById('uci-'+p.id).value.trim();});closePanel();render();toast('Filing record saved.');}
+  else if(a==='saveSubmit'){S.submitted[S.scen]={date:document.getElementById('subDate').value,...Object.fromEntries(sc().persons.map(p=>[p.id,{app:document.getElementById('app-'+p.id).value.trim()||'not recorded',uci:document.getElementById('uci-'+p.id).value.trim()||'not known yet'}]))};S.view='submitted';closePanel();render();toast('Submission recorded. This filing is now read-only.');}
+});
+document.addEventListener('change',e=>{
+  const b=e.target;if(!b.dataset||!b.dataset.a) return;const a=b.dataset.a,k=b.dataset.k;
+  if(a==='enter'){const [i,s]=k.split('|');snap();const scr=byId(i).screens.find(x=>x.id===s);scr.entered=b.checked;if(b.checked) scr.changed=null;render();toast(b.checked?`“${scr.name}” marked entered in the portal.`:`“${scr.name}” no longer marked entered.`,true);}
+  if(a==='uploaded'){snap();byId(k).steps.uploaded=b.checked;render();toast(b.checked?'Marked uploaded in the portal.':'No longer marked uploaded.',true);}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape') closePanel();});
+document.getElementById('scrim').addEventListener('click',closePanel);
+document.getElementById('lblToggle').addEventListener('change',e=>{document.body.classList.toggle('labels',e.target.checked);});
+render();
+</script>
+</body>
+</html>

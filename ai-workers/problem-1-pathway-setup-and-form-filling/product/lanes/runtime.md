@@ -1,7 +1,7 @@
 # Lane: runtime — the thin end-to-end slice, then M3 runtime (P-67)
 
 ## From the Lead
-2026-10-23 17:05 (Lead): forms slice 1 is merged into main, so the schema is free. Finish PLAN now: commit `screens/R1-thin-slice/plan.md` (challenge in its own `challenge.md` if long), set owner Lead and report; the Lead answers within the hour. If the challenge finds no Blocker and needs no founder decision, the Lead's answer will set BUILD slice 1 straight away (founder wants the runtime build started today). Rules added since the concept: only confirmed facts fill (P-72); only the form's own Validate and missing or conflicting facts block (P-71); a wrong mapping is reported, not blocking (P-73).
+2026-10-23 18:00 (Lead): plan agreed (Lead response in `screens/R1-thin-slice/plan.md`). **BUILD R1a** (backend path): configure and release the visitor visa in your copy through the product's own endpoints, complete the questionnaire (B1), then case, people, answers with DECLARED/VERIFIED, "Confirm section". S-1 granted (`actorOf` in `api/src/core.ts`). Then CHECK (reviewer + breaker) → owner Lead. No paid AI.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

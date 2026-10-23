@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screen 03 · Combination workspace · draft board</title>
+<style>
+/* Team tokens (code/ERv2-frontend@5ccd9fa src/styles/tokens.css); muted text #595959 on grey (P-41). Sizes 12/14/16/18/20/24 only. */
+:root{--blue:#0862c5;--link:#054e9c;--text:#2d2d2d;--muted:#595959;--border:#d9d9d9;--border2:#bfbfbf;--surface:#f7f7f7;--raised:#ffffff;
+--p50:#e6f4ff;--p800:#043a73;--dan:#dc2626;--dant:#991b1b;--danbg:#fdecec;--warn:#ff8500;--warnt:#663200;--warnbg:#fff3e0;--ok:#16a34a;--okt:#0f5c2e;--okbg:#e7f6ec;--n100:#eeeeee}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.45;color:var(--text);background:var(--surface)}
+h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+h1{font-size:24px;font-weight:700}h2{font-size:18px;font-weight:600}h3{font-size:16px;font-weight:600}
+a,.lnk{color:var(--link);text-decoration:underline;text-underline-offset:2px;cursor:pointer;background:none;border:0;padding:0;font:inherit;font-weight:600}
+button{font-family:inherit;font-size:14px}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.mut{color:var(--muted)}.sm{font-size:12px}.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--p800)}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:6px;border:1px solid var(--border2);background:#fff;color:var(--text);font-weight:600;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}.btn.ghost{border-color:transparent;background:transparent}
+.btn[disabled]{background:var(--n100);border-color:var(--border);color:var(--muted);cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.c-ok{background:var(--okbg);color:var(--okt)}.c-no{background:var(--danbg);color:var(--dant)}.c-su{background:var(--n100);color:#404040}.c-ai{background:var(--p50);color:var(--p800)}.c-warn{background:var(--warnbg);color:var(--warnt)}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+table{width:100%;border-collapse:collapse;background:#fff}th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:#fbfbfb}
+td{padding:8px 12px;border-bottom:1px solid var(--n100);height:44px;vertical-align:middle}
+.trunc{max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:bottom}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.sp{flex:1}
+.stack>*+*{margin-top:16px}
+/* board-only chrome: visually separate, never ported */
+.boardbar{background:#2d2d2d;color:#eee;padding:8px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:12px;position:sticky;top:0;z-index:50}
+.boardbar select,.boardbar label{font-size:12px}.boardbar b{color:#fff}
+.ann{display:none;font-size:12px;font-weight:600;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:middle;white-space:nowrap;border:1px dashed}
+.showann .ann{display:inline-block}
+.a-cn{color:#0f5c2e;border-color:#16a34a;background:#f3fbf5}.a-cx{color:#404040;border-color:#8c8c8c;background:#f7f7f7}.a-sn{color:#663200;border-color:#ff8500;background:#fff8ee}
+.a-dec{color:#043a73;border-color:#0862c5;background:#f2f8ff}.a-miss{color:#991b1b;border-color:#dc2626;background:#fff5f5}
+/* app shell */
+.top{height:56px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;padding:0 16px}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--blue);font-size:18px}.logo i{width:24px;height:24px;border-radius:6px;background:var(--blue);display:inline-block}
+.shell{display:flex;min-height:calc(100vh - 92px)}
+.side{width:232px;background:#fff;border-right:1px solid var(--border);padding:16px 8px;flex-shrink:0}
+.side p{font-size:12px;font-weight:600;color:var(--muted);margin:16px 8px 4px}.side a{display:block;padding:7px 10px;border-radius:6px;color:#404040;text-decoration:none;font-weight:400}
+.side a.on{background:var(--p50);color:var(--p800);font-weight:600}
+main{flex:1;min-width:0;padding:20px 28px 60px}
+.draftbar{background:var(--p50);border:1px solid #cce9ff;border-radius:8px;padding:8px 14px;display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.crumbs{font-size:14px;color:var(--muted);margin-bottom:8px}.crumbs a{font-weight:400}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin:16px 0;overflow-x:auto}
+.tab{border:0;background:transparent;padding:10px 12px;color:#404040;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tab[aria-selected=true]{color:var(--p800);border-bottom-color:var(--blue);font-weight:600}
+.nextcard{border:1px solid var(--border);background:#fff;border-radius:12px;padding:12px 16px;display:flex;gap:12px;align-items:center}
+.miss{border:1px solid #f5b5b5;background:#fff8f8}.warnbox{border:1px solid #ffc773;background:#fffaf2}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start}
+.phone{width:360px;border:1px solid var(--border2);border-radius:20px;background:#fff;padding:16px;margin:auto}
+.q{margin:12px 0}.q label{display:block;font-weight:600}.q .help{font-size:12px;color:var(--muted)}
+.inp{border:1px solid var(--border2);border-radius:6px;height:36px;padding:0 8px;width:100%;font:inherit;background:#fff}
+.dmy{display:flex;gap:6px}.dmy .inp{width:64px}.dmy .inp:last-child{width:84px}
+.rolechips{display:flex;gap:6px;flex-wrap:wrap}
+.rc{border:1px solid var(--border2);background:#fff;border-radius:999px;padding:4px 12px;cursor:pointer}.rc[aria-pressed=true]{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.sec{border:1px solid var(--border);border-radius:8px;background:#fff;margin-bottom:8px}
+.sech{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer}.sech b{font-weight:600}
+.skel{background:linear-gradient(90deg,#eee,#f7f7f7,#eee);border-radius:6px;height:16px;margin:8px 0}
+@media (prefers-reduced-motion:no-preference){.skel{background-size:200% 100%;animation:sh 1.4s infinite}@keyframes sh{to{background-position:-200% 0}}}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:560px;background:#fff;border-left:1px solid var(--border);box-shadow:-8px 0 24px rgba(0,0,0,.08);display:flex;flex-direction:column;z-index:40}
+.dh{padding:16px 24px;border-bottom:1px solid var(--n100)}.db{padding:16px 24px;overflow:auto;flex:1}.df{padding:12px 24px;border-top:1px solid var(--n100);display:flex;justify-content:space-between}
+.fld{margin-bottom:16px}.fld>label,.fld>legend{display:block;font-weight:600;margin-bottom:4px}.fld .help{font-size:12px;color:var(--muted)}.fld .err{font-size:12px;color:var(--dant);margin-top:4px}
+.fld.bad .inp,.fld.bad .seg{border-color:var(--dan)}
+fieldset{border:0;padding:0;margin:0 0 16px}
+.seg{display:inline-flex;border:1px solid var(--border2);border-radius:6px;overflow:hidden}.seg button{border:0;background:#fff;padding:7px 12px;cursor:pointer;border-right:1px solid var(--border2)}.seg button:last-child{border-right:0}.seg button[aria-pressed=true]{background:var(--p50);color:var(--p800);font-weight:600}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#2d2d2d;color:#fff;border-radius:8px;padding:10px 16px;display:flex;gap:16px;align-items:center;z-index:60}
+.toast .lnk{color:#99d2ff}
+.notes{max-width:1100px;margin:32px auto;background:#fff;border:1px dashed var(--border2);border-radius:8px;padding:16px 24px;font-size:14px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.notes h2{margin-bottom:8px}.notes li{margin:4px 0}
+</style>
+</head>
+<body class="showann">
+<div class="boardbar" role="region" aria-label="Board controls, not part of the product">
+  <b>Board only · Screen 03 combination workspace · draft for the Lead</b>
+  <label>Combination <select id="bCombo"><option value="c3">3 · Spousal sponsorship (needs work)</option><option value="c2">2 · Work permit with an LMIA (Live, linked)</option><option value="new">New combination (empty)</option></select></label>
+  <label>State <select id="bState"><option value="normal">Normal</option><option value="loading">Loading</option><option value="running">Running (AI drafting)</option><option value="fielderr">Error on a field</option><option value="loaderr">Error: page did not load</option><option value="readonly">Read-only (approver)</option><option value="conflict">Conflict (someone else saved)</option><option value="long">Long names</option></select></label>
+  <label><input type="checkbox" id="bAnn" checked> Show labels</label>
+  <span>Labels: <span class="ann a-cn" style="display:inline-block">Capability · Needed</span><span class="ann a-cx" style="display:inline-block">Capability · Not built</span><span class="ann a-sn" style="display:inline-block">Scaffolding</span><span class="ann a-dec" style="display:inline-block">Follows a decision</span><span class="ann a-miss" style="display:inline-block">Decision missing or in conflict</span></span>
+  <span>All content is <b>Sample</b>; form codes and editions as the intake reads them; channels and portals Sample until the immigration expert confirms.</span>
+</div>
+
+<header class="top">
+  <span class="logo"><i aria-hidden="true"></i>ExpatReady</span><span class="mut">Product Studio · Pathway Configurator</span><span class="sp"></span>
+  <input class="inp" style="width:280px" aria-label="Search combinations, form codes and documents" placeholder="Search (⌘K)">
+  <button class="btn ghost">Demo ▾</button><span class="ann a-sn">Scaffolding: Demo menu (Load sample inputs, Reset)</span>
+  <button class="btn ghost" id="actorBtn">Acting as: Configuration author ▾</button><span class="ann a-sn">Scaffolding: Acting as</span>
+</header>
+<div class="shell">
+  <nav class="side" aria-label="Main">
+    <p>Configure</p><a href="#" class="on">Programs</a>
+    <p>Shared library</p><a href="#">Fields</a><a href="#">Sections</a><a href="#">Document types</a><a href="#">Forms</a><a href="#">Checks</a><a href="#">Rules</a>
+    <p>History</p><a href="#">AI work</a><a href="#">Releases</a><a href="#">Activity</a>
+  </nav>
+  <main id="main"></main>
+</div>
+<div id="drawer"></div>
+<div id="toast"></div>
+
+<section class="notes" aria-label="Board notes for the Lead">
+  <h2>Board notes (not product)</h2>
+  <ul>
+    <li><b>Followed:</b> tabs and Links (P-35, P-59, SCREENS row 03) · channel per form line, portal once per combination, filing method and signature worked out (P-61, P-62, <span class="mono">engine/channels.ts</span>) · questionnaire built from the facts the lines need, per person role, in library sections; conditions from library rules (P-62 §2, P-12) · document type picked from the library, never created silently (P-52/P-53) · Preview by person through the shared renderer with a Sample family (P-47, P-37) · submit, expert ticks, a different approver; the shared Releases page uses the same server guard (P-23, P-40, P-43, QA-1) · one AI place: the next-step card (P-07) · form field, shared field, field map; never "box" (P-63).</li>
+    <li><b>Pending:</b> PQR tab drawn as option C of the open founder decision (R-84); no verdict to a prospect.</li>
+    <li><b>Missing or conflicting:</b> Q1 how facts carried by a link show in the questionnaire · Q2 "Signed by" per form line (SA-1B-102) has no decision; method stays worked out from the channel · Q3 P-35 lists an "Agent view" tab, SCREENS row 03 and P-56 put runtime in M3 · Sponsor is not a person role in PRODUCT §4 or the app (immigration expert) · Screen 01's fix pass adds channels and "Add an online form" to today's combination page: Screen 03 reuses those components.</li>
+  </ul>
+</section>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const S = { combo: "c3", st: "normal", tab: "overview", drawer: null, role: "pa", preset: "m1", person: "pa", open: "marriage", toast: null, docRole: "all", ruleF: "all", actor: "author" };
+const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+// Annotation tags (board only). k: cn capability needed · cx capability not built · sn scaffolding · dec decision followed · miss decision missing/conflict
+const A = (k, t) => `<span class="ann a-${k}">${t}</span>`;
+const chip = (cls, t, tip) => `<span class="chip ${cls}"${tip ? ` title="${esc(tip)}"` : ""}>${t}</span>`;
+
+const PORTAL = "Representative Permanent Residence Portal";
+const CH = { ONLINE: ["Online", "c-ai", "The client signs the declaration in the portal"], SIGNED: ["Signed PDF upload", "c-warn", "Printed, signed by hand, scanned and uploaded"], PDF: ["PDF upload", "c-su", "No signature in the file"] };
+const C3 = {
+  label: "Applicant outside Canada", long: "Applicant outside Canada, including conjugal partners and dependent children of the partner who live abroad",
+  path: ["Individual", "Family sponsorship", "Spouse or partner"], status: ["c-no", "Not ready"],
+  facts: "Not released yet · 38 draft changes", portal: PORTAL,
+  people: [["Sponsor", "1", "Yes", true], ["Principal applicant", "1", "Yes"], ["Dependent child", "0 to 6", "Yes"], ["Representative", "0 to 1", "No"]],
+  forms: [
+    { code: "IMM 1344", title: "Application to sponsor, sponsorship agreement and undertaking", who: "Sponsor · once", only: "Always", ch: "SIGNED", ver: "PDF 09-2024", map: ["c-ok", "All 112 form fields mapped"] },
+    { code: "IMM 5532", title: "Relationship information and sponsorship evaluation", who: "Sponsor and principal applicant · once per couple", only: "Always", ch: "SIGNED", ver: "PDF 02-2021", map: ["c-ok", "All 96 mapped"] },
+    { code: "IMM 0008", title: "Generic application form for Canada", who: "Principal applicant, each dependent child · per person", only: "Always", ch: "ONLINE", ver: "Online, captured 20 Oct · re-check by 20 Jan", map: ["c-warn", "9 of 140 form fields not mapped"] },
+    { code: "IMM 5669", title: "Schedule A: background and declaration", who: "Each person 18 or older", only: "Always", ch: "ONLINE", ver: "Online, captured 20 Oct", map: ["c-ok", "All 58 mapped"] },
+    { code: "IMM 5406", title: "Additional family information", who: "Each person 18 or older", only: "Always", ch: "ONLINE", ver: "Online, captured 20 Oct", map: ["c-ok", "All 74 mapped"] },
+    { code: "IMM 5476", title: "Use of a representative", who: "Each person who uses one", only: "Uses a representative", ch: "SIGNED", ver: "PDF 11-2025", map: ["c-ok", "All 51 mapped"] },
+  ],
+  method: "Online + signed PDF uploads",
+  missing: [["9 AI proposals not decided", "Review proposals", "ai"], ["IMM 0008 (online): 9 form fields neither mapped nor marked “not a fact”", "Open the field map", "forms"], ["Principal applicant: 2 facts IMM 0008 needs are not asked", "Open the questionnaire", "sqr"]],
+  next: ["Review 9 AI proposals", "AI read IMM 5533 and the forms and proposed fields, documents and rules. Nothing changes until you accept."],
+  links: [],
+};
+const C2 = {
+  label: "With an LMIA", long: "With a Labour Market Impact Assessment (positive or neutral decision) for a named position",
+  path: ["Individual", "Work permits", "Employer-specific work permit"], status: ["c-ok", "Live"], facts: "In Release 3 · 2 draft changes", portal: "IRCC Portal",
+  people: [["Principal applicant", "1", "Yes"], ["Spouse or partner", "0 to 1", "Yes"], ["Dependent child", "0 to 6", "Yes"], ["Representative", "0 to 1", "No"]],
+  forms: [
+    { code: "IMM 1295", title: "Application for work permit made outside of Canada", who: "Principal applicant", only: "Always", ch: "ONLINE", ver: "Online, captured 19 Oct", map: ["c-ok", "All mapped"] },
+    { code: "IMM 5707", title: "Family information", who: "Each person 18 or older", only: "Always", ch: "PDF", ver: "PDF", map: ["c-ok", "All mapped"] },
+    { code: "IMM 5476", title: "Use of a representative", who: "Each person who uses one", only: "Uses a representative", ch: "SIGNED", ver: "PDF 11-2025", map: ["c-ok", "All 51 mapped"] },
+  ],
+  method: "Online + PDF uploads and signed PDF uploads", missing: [], next: ["Review and release", "2 changes are ready to send for review."],
+  links: [{ kind: "Supported by", to: "Corporate and employers › LMIA › High-wage position", facts: ["LMIA number", "Employer legal name", "Job title", "Occupation code", "Hourly wage", "Work location", "Start date"], docs: ["LMIA decision letter"] }],
+};
+const NEW = { label: "Super visa", long: "Super visa", path: ["Individual", "Visitors"], status: ["c-su", "In setup"], facts: "Not released yet · no changes", portal: null, people: [["Principal applicant", "1", "Yes"]], forms: [], method: "No forms yet", missing: [["No official sources yet", "Add sources", "overview"]], next: ["Add sources", "Upload the IRCC forms and checklist this application uses."], links: [] };
+const CMB = { c3: C3, c2: C2, new: NEW };
+const TABS = [["overview", "Overview"], ["forms", "Forms"], ["pqr", "PQR", "Pre-qualification questions, asked before a case exists"], ["sqr", "SQR", "The questionnaire each person on a case answers"], ["docs", "Documents"], ["rules", "Rules"], ["preview", "Preview by person"], ["review", "Review and release"]];
+
+function header(c) {
+  const ro = S.st === "readonly", run = S.st === "running";
+  const name = S.st === "long" ? c.long : c.label;
+  const facts = [c.facts, c.method, c.portal ? c.portal : null, "people: " + c.people.map((p) => p[0] + (p[1] !== "1" ? ` (${p[1]})` : "")).join(", "), "Sample"].filter(Boolean).join(" · ");
+  const linkLine = c.links.map((l) => `↔ ${l.kind} <a href="#" title="Open the linked combination">${l.to}</a>`).join(" · ");
+  return `
+  <div class="draftbar"><span>You are editing the draft · <b>41 changes in 4 combinations</b> (38 here)</span><span class="sp"></span><a href="#">Review and release (41)</a>${A("cn", "Capability · Needed")}${A("dec", "P-23, P-58")}</div>
+  <nav class="crumbs" aria-label="Path"><a href="#">Programs</a> › ${c.path.map((p) => `<a href="#">${p}</a>`).join(" › ")} › <span>${esc(name)}</span>${A("dec", "P-50 path, every level clickable")}</nav>
+  <div class="row" style="align-items:flex-start">
+    <div style="min-width:0;flex:1">
+      <div class="row"><h1 class="trunc" style="max-width:720px" title="${esc(name)}">${esc(name)}</h1>${chip(c.status[0], (c.status[0] === "c-no" ? "! " : c.status[0] === "c-ok" ? "✓ " : "○ ") + c.status[1], c.status[1] === "Live" ? "Firms can open cases on it. Last released 21 Oct." : c.status[1] === "Not ready" ? "Firms cannot use this yet. See what is missing on Overview." : "Being set up; no sources yet.")}</div>
+      <p class="mut" style="margin:4px 0 0">${esc(facts)}${A("cn", "Capability · Needed")}${A("dec", "P-61 filing method worked out from lines")}</p>
+      ${linkLine ? `<p style="margin:4px 0 0">${linkLine}${A("cn", "Capability · Needed (C1.3)")}${A("dec", "P-59 replaces the text label")}</p>` : ""}
+    </div>
+    <div class="nextcard">${run ? `<div><p class="sm mut" style="margin:0">Next step</p><p style="margin:0;font-weight:600">AI is drafting: 4 of 6 forms read</p><p class="sm mut" style="margin:0">IMM 0008 field map · Sample cost so far US$0.42 of US$1.10 estimated</p></div><button class="btn">View AI progress →</button>` : ro ? `<div><p class="sm mut" style="margin:0">Next step</p><p style="margin:0;font-weight:600">${c.next[0]}</p><p class="sm mut" style="margin:0">A configuration author does this step.</p></div>` : `<div><p class="sm mut" style="margin:0">Next step</p></div><button class="btn pri" title="${esc(c.next[1])}">${c.next[0]} →</button>`}${A("cn", "Capability · Needed")}${A("dec", "P-07 one AI place")}</div>
+  </div>
+  ${ro ? `<div class="card" style="margin-top:12px;background:#fbfbfb" role="status">You can view this combination and approve its release. Changes are made by a configuration author.${A("cn", "Read-only state")}</div>` : ""}
+  ${S.st === "conflict" ? `<div class="card warnbox" style="margin-top:12px" role="alert"><b>Someone else saved this combination while you were editing.</b> A configuration author changed IMM 5476 “Only if” at 14:32. <span class="row" style="margin-top:6px"><button class="btn pri">Reload their version</button><button class="btn">Compare with mine</button></span>${A("cn", "Conflict state · Needed")}${A("dec", "STANDARDS §4 409 with what changed")}</div>` : ""}
+  <div class="tabs" role="tablist" aria-label="Combination">${TABS.map((t) => `<button class="tab" role="tab" aria-selected="${S.tab === t[0]}" data-tab="${t[0]}"${t[2] ? ` title="${t[2]}"` : ""}>${t[1]}${t[0] === "review" && S.combo === "c3" ? ` ${chip("c-no", "2")}` : ""}${t[0] === "pqr" ? ` ${chip("c-warn", "pending")}` : ""}</button>`).join("")}</div>`;
+}
+
+function overview(c) {
+  if (S.combo === "new") return `<div class="card stack"><h2>Start with the official sources</h2><p>Upload the IRCC forms and the document checklist this application uses. ExpatReady reads each form's code and edition from the file, reuses forms already in the library, and drafts the rest for you to review.</p><div class="row"><button class="btn pri">Add sources</button><button class="btn">Pick forms from the library</button><button class="btn">Copy from another combination</button></div><p class="sm mut">Nothing is used by firms until a different person approves the release.</p>${A("cn", "Empty state teaches the first action")}</div>`;
+  return `<div class="stack">
+  ${c.missing.length ? `<section class="card miss" aria-labelledby="m1"><h2 id="m1">Missing before firms can use it (${c.missing.length})</h2><ul style="margin:8px 0 0;padding-left:18px">${c.missing.map((m) => `<li>${m[0]} · <a href="#" data-go="${m[2]}">${m[1]}</a></li>`).join("")}</ul>${A("cn", "Needs-work state · Needed")}</section>` : ""}
+  <div class="grid4">
+    <div class="card"><p class="sm mut" style="margin:0">Forms</p><b style="font-size:20px">${c.forms.length}</b><p class="sm mut" style="margin:0">${S.combo === "c3" ? "3 online · 3 signed PDF uploads" : "1 online · 1 PDF · 1 signed PDF"}</p></div>
+    <div class="card"><p class="sm mut" style="margin:0">Questions</p><b style="font-size:20px">${S.combo === "c3" ? 176 : 142}</b><p class="sm mut" style="margin:0">${S.combo === "c3" ? "Sponsor 58 · Principal applicant 96 · Dependent child 22" : "across all person roles"}</p></div>
+    <div class="card"><p class="sm mut" style="margin:0">Documents</p><b style="font-size:20px">${S.combo === "c3" ? 18 : 11}</b><p class="sm mut" style="margin:0">6 always · ${S.combo === "c3" ? 12 : 5} only if</p></div>
+    <div class="card"><p class="sm mut" style="margin:0">Rules and checks</p><b style="font-size:20px">31</b><p class="sm" style="margin:0">${S.combo === "c3" ? `<a href="#" data-go="rules">2 problems to fix</a>` : "no problems"}</p></div>
+  </div>
+  <div class="grid2">
+    <section class="card" aria-labelledby="lk"><div class="row"><h2 id="lk">Links to other combinations</h2><span class="sp"></span>${S.st === "readonly" ? "" : `<button class="btn" data-drawer="link">+ Add link</button>`}</div>${A("cn", "Capability · Needed (C1.3)")}${A("dec", "P-13, P-59")}
+      ${c.links.length ? c.links.map((l) => `<div style="margin-top:12px;border:1px solid var(--n100);border-radius:8px;padding:12px"><div class="row"><b>↔ ${l.kind}</b><a href="#">${l.to}</a><span class="sp"></span>${S.st === "readonly" ? "" : `<button class="lnk" data-drawer="link">Edit</button>`}</div><p class="sm mut" style="margin:6px 0 0">On a case linked to an LMIA case, these come from that case instead of being typed again.</p><p style="margin:6px 0 0"><b>${l.facts.length} facts:</b> ${l.facts.join(" · ")}</p><p style="margin:4px 0 0"><b>${l.docs.length} document:</b> ${l.docs.join(" · ")}</p></div>`).join("") + `<p class="sm mut" style="margin-top:8px">The LMIA combination shows this link as “Supports: Individual › Work permits › … › With an LMIA”.</p>`
+      : `<p class="mut" style="margin-top:8px">Not linked. Add a link when another application usually supports this one (an employer's LMIA for a worker's permit) or comes before it (a study permit before a post-graduation work permit). A link names the facts and documents a linked case brings with it.</p>`}
+    </section>
+    <section class="card" aria-labelledby="pp"><div class="row"><h2 id="pp">People in this combination</h2><span class="sp"></span>${S.st === "readonly" ? "" : `<button class="btn ghost">Edit</button>`}</div>
+      <table style="margin-top:8px"><thead><tr><th>Person role</th><th>Number</th><th>Files own application</th></tr></thead><tbody>${c.people.map((p) => `<tr><td>${p[0]}${p[3] ? A("miss", "Sponsor is not a person role yet: immigration expert") : ""}</td><td>${p[1]}</td><td>${p[2]}</td></tr>`).join("")}</tbody></table>
+    </section>
+  </div>
+  <div class="grid2">
+    <section class="card"><h2>Sources</h2><table style="margin-top:8px"><thead><tr><th>Source</th><th>Read</th><th>Checked</th></tr></thead><tbody>${S.combo === "c3" ? `<tr><td><span class="mono">IMM 5533</span> Document checklist: spouse</td><td>21 Oct</td><td>21 Oct · next by Oct 2027</td></tr><tr><td>6 forms (see Forms)</td><td>20–21 Oct</td><td>21 Oct</td></tr>` : `<tr><td><span class="mono">IMM 5488</span> Document checklist</td><td>12 Oct</td><td style="color:var(--warnt)">! 12 Oct 2025 · overdue</td></tr>`}</tbody></table><p class="sm mut">Adding or replacing a source is reviewed in AI work before anything changes.</p>${A("cn", "Moved here from today's “Sources and forms” tab")}</section>
+    <section class="card"><h2>Released versions</h2>${S.combo === "c2" ? `<table style="margin-top:8px"><thead><tr><th>Release</th><th>Released</th><th>Approved by</th></tr></thead><tbody><tr><td>Release 3</td><td>21 Oct</td><td>Approver</td></tr><tr><td>Release 2 ${chip("c-su", "superseded")}</td><td>20 Oct</td><td>Approver</td></tr></tbody></table>` : `<p class="mut">Nothing released yet. Cases only ever use a released version; drafts are previews.</p>`}</section>
+  </div></div>`;
+}
+
+function formsTab(c) {
+  if (S.combo === "new") return `<div class="card"><h2>No forms yet</h2><p>Add the forms this application files: pick them from the library or upload the IRCC PDFs. Each line then says who files it and how (PDF upload, online, or a signed PDF upload).</p><div class="row"><button class="btn pri">+ Add form</button><button class="btn">Add an online form</button><button class="btn">Copy from another combination</button></div></div>`;
+  const ro = S.st === "readonly";
+  return `<div class="stack">
+  <div class="card row"><div><p class="sm mut" style="margin:0" title="Worked out from the form lines below. Change a line's channel to change it.">Filing method</p><b>${c.method}</b>${A("cn", "Capability · Needed (C1.6)")}${A("dec", "P-61 §2 worked out, never typed")}</div>
+    <div style="margin-left:24px"><p class="sm mut" style="margin:0">Portal (one per application)</p><b>${c.portal}</b> ${ro ? "" : `<button class="lnk">Change</button>`}${A("dec", "P-61 portal set once on the combination")}</div>
+    <span class="sp"></span>${ro ? "" : `<button class="btn" data-drawer="copy">Copy from another combination</button>${A("cn", "C1.5 · Needed")}<button class="btn">Add an online form</button>${A("cn", "C2.7 · built in Screen 01 fix pass, reused")}<button class="btn pri">+ Add form</button>`}</div>
+  <table><thead><tr><th>Form</th><th>Who and copies</th><th>Only if</th><th>Channel</th><th>Signature</th><th>Version and field map</th><th><span class="sr">Actions</span></th></tr></thead><tbody>
+  ${c.forms.map((f, i) => `<tr><td><span class="mono">${f.code}</span> <span class="trunc" style="max-width:${S.st === "long" ? 200 : 240}px" title="${esc(f.title)}">${esc(f.title)}</span></td><td class="sm">${f.who}</td><td class="sm">${f.only === "Always" ? "Always" : "Only if " + f.only}</td>
+  <td>${chip(CH[f.ch][1], CH[f.ch][0], f.ch === "ONLINE" ? "Filed in the " + c.portal : CH[f.ch][2])}</td><td class="sm mut">${CH[f.ch][2]}</td><td class="sm"><span class="mut">${f.ver}</span><br>${chip(f.map[0], (f.map[0] === "c-ok" ? "✓ " : "! ") + f.map[1])}</td>
+  <td>${ro ? "" : `<button class="lnk" data-drawer="formline" data-i="${i}">Edit</button> · <button class="lnk" data-drawer="many" data-i="${i}" title="Add this line to other combinations, or remove it from them">Other combinations…</button>`}</td></tr>`).join("")}
+  </tbody></table>
+  <p class="sm mut">${A("cn", "Capability · Needed")}${A("dec", "SA-1B-57, 102 form line; P-63 words")} A signed PDF upload line also adds its signed copy to Documents. Sample filled forms for the sample family are on <a href="#" data-go="preview">Preview by person</a>. Not built in this screen: country variant of a form (backlog).${A("cx", "Country variant · Not built")}</p>
+  </div>`;
+}
+
+const SECTIONS = {
+  pa: [
+    { k: "personal", t: "Personal details", n: 18, how: "each person", rule: "" },
+    { k: "passport", t: "Passport and identity", n: 9, how: "each person", rule: "" },
+    { k: "marriage", t: "Marriage and relationship", n: 24, how: "once per couple", rule: "Asked when Marital status is Married or Common-law · from the library section" },
+    { k: "prev", t: "Previous relationships", n: 8, how: "each adult", rule: "Asked when Previously married is Yes · from the library section" },
+    { k: "family", t: "Family members", n: 31, how: "each adult", rule: "" },
+    { k: "history", t: "Education and work history", n: 22, how: "each adult · 10 years, no gaps", rule: "" },
+    { k: "addr", t: "Addresses and travel", n: 19, how: "each adult", rule: "" },
+    { k: "decl", t: "Background declarations", n: 14, how: "each adult · filled by the client only", rule: "" },
+  ],
+  sp: [{ k: "personal", t: "Personal details", n: 18, how: "each person", rule: "" }, { k: "marriage", t: "Marriage and relationship", n: 24, how: "once per couple", rule: "Asked when Marital status is Married or Common-law · from the library section" }, { k: "fin", t: "Sponsor finances and undertaking", n: 17, how: "sponsor", rule: "" }],
+  ch: [{ k: "personal", t: "Personal details", n: 18, how: "each person", rule: "" }, { k: "passport", t: "Passport and identity", n: 4, how: "each person", rule: "" }],
+};
+const FIELDS = [
+  ["Date of marriage", "Date (day / month / year)", "Client", "IMM 5532 · IMM 0008 · IMM 5406", "", false],
+  ["Place of marriage: city and country", "Address group", "Client", "IMM 5532", "", false],
+  ["Did you live together before marrying?", "Yes / no", "Client", "IMM 5532", "", true],
+  ["Periods you lived together", "Period history, repeating", "Client", "IMM 5532", "Asked when Lived together is Yes", false],
+  ["Have you been married or in a common-law relationship before?", "Yes / no", "Client", "IMM 0008 · IMM 5406", "Answer adds a document: Divorce or death certificate", true],
+  ["Relationship history checked by the firm", "Long text", "Case officer", "IMM 5532", "", false],
+];
+function sqrTab(c) {
+  if (S.combo === "new") return `<div class="card"><h2>No questions yet</h2><p>The questionnaire is built from the facts this combination's forms and documents need, for each person role. Add forms first; questions appear here grouped in library sections.</p><button class="btn pri" data-go="forms">Go to Forms</button></div>`;
+  const roles = [["sp", "Sponsor", 58], ["pa", "Principal applicant", 96], ["ch", "Dependent child", 22]];
+  const secs = SECTIONS[S.role] || SECTIONS.pa; const ro = S.st === "readonly";
+  return `<div class="split"><div class="stack">
+  <div class="row"><div class="rolechips" role="group" aria-label="Person role">${roles.map((r) => `<button class="rc" aria-pressed="${S.role === r[0]}" data-role="${r[0]}">${r[1]} · ${r[2]}</button>`).join("")}</div><span class="sp"></span>${ro ? "" : `<button class="btn">Copy sections from another combination</button><button class="btn pri">+ Add a section from the library</button>`}</div>
+  <div class="card ${S.role === "pa" && S.combo === "c3" ? "warnbox" : ""}"><b>Facts the forms and documents need for the principal applicant: 101</b><p style="margin:4px 0 0">Asked 96 · filled by the case officer 3 · not asked 2${S.combo === "c2" ? " · from the linked LMIA case 7" : ""}</p>
+    ${S.role === "pa" && S.combo === "c3" ? `<ul style="margin:8px 0 0;padding-left:18px"><li>Intended province of residence · needed by IMM 0008 · <button class="lnk">Add to a section</button></li><li>Language for correspondence · needed by IMM 0008 · <button class="lnk">Add to a section</button></li></ul><p class="sm mut" style="margin:6px 0 0">Release is blocked until every needed fact is asked, filled by the case officer, or comes from a linked case.</p>` : ""}${A("cn", "C4.1 · Needed")}${A("dec", "P-62 §2, §5.3 validator")}</div>
+  ${S.combo === "c2" ? `<div class="card"><b>↔ From the linked LMIA case (7 facts)</b><p class="sm" style="margin:4px 0 0">Job title, Occupation code, Hourly wage, Work location, Start date, Employer legal name, LMIA number: pre-filled from the linked case, marked “please confirm”; asked as usual when there is no linked case.</p>${A("miss", "Q1: no decision yet on how carried facts are asked")}</div>` : ""}
+  ${secs.map((s) => `<div class="sec"><div class="sech" data-open="${s.k}" role="button" aria-expanded="${S.open === s.k}" tabindex="0"><span aria-hidden="true">${S.open === s.k ? "▾" : "▸"}</span><b>${s.t}</b><span class="mut sm">${s.n} questions · ${s.how}</span><span class="sp"></span>${s.rule ? chip("c-su", "Conditional", s.rule) : ""}${ro ? "" : `<button class="lnk sm" title="Move up">↑</button><button class="lnk sm" title="Move down">↓</button>`}</div>
+    ${S.open === s.k ? `<div style="padding:0 12px 12px">${s.rule ? `<p class="sm mut" style="margin:0 0 6px">${s.rule}. Edit the rule on the section in the library (used in 9 combinations).</p>` : ""}
+      <table><thead><tr><th>Question</th><th>Asked as</th><th>Filled by</th><th>Needed by</th><th>Rule</th><th></th></tr></thead><tbody>${FIELDS.map((f, i) => `<tr><td>${f[0]}${S.tab === "pqr" && f[5] ? " " + chip("c-ai", "Pre-qualification") : ""}</td><td class="sm">${f[1]}</td><td class="sm">${f[2]}${f[2] === "Client" ? "" : ""}</td><td class="sm mono">${f[3]}</td><td class="sm">${f[4] || "—"}</td><td>${ro ? "" : `<button class="lnk sm" data-drawer="${i === 4 ? "adddoc" : "filledby"}">${i === 4 ? "Answer adds a document" : "Who fills it"}</button>`}</td></tr>`).join("")}</tbody></table>
+      <p class="sm mut">${A("cn", "B2 filled by · Needed")}${A("dec", "RD-6 default on the shared field")}${A("cn", "C4.5 answer adds a document · Needed")}${A("dec", "SA-1B-3, 58")} Rules come from the library; this combination can add documents and forms but never make a question optional that a form needs.</p></div>` : ""}</div>`).join("")}
+  ${A("cx", "Estimated time per section (B5) · Not built, M3")}
+  </div>
+  <aside aria-label="Live preview">${previewPhone("Marriage and relationship", S.role === "sp" ? "Sponsor" : "Principal applicant")}<p class="sm mut" style="text-align:center">Live preview through the shared questionnaire renderer, Sample family “Married, one child”.</p>${A("cn", "Preview beside the editor · Needed")}${A("dec", "P-47, EXPERIENCE §2.4")}</aside></div>`;
+}
+function previewPhone(sec, who) {
+  return `<div class="phone"><p class="sm mut" style="margin:0">Answering for: ${who} ▾ · Section 3 of 8</p><h3 style="margin:6px 0">${sec}</h3>
+  <div class="q"><label>Date of marriage</label><span class="help">As shown on your marriage certificate</span><div class="dmy"><input class="inp" aria-label="Day" value="14"><input class="inp" aria-label="Month" value="06"><input class="inp" aria-label="Year" value="2019"></div></div>
+  <div class="q"><label>Have you been married or in a common-law relationship before?</label><div class="row"><label style="font-weight:400"><input type="radio" name="pm" checked> Yes</label><label style="font-weight:400"><input type="radio" name="pm"> No</label></div>
+  <div style="margin-top:8px;border:1px dashed var(--border2);border-radius:6px;padding:8px" class="sm"><b>Upload: divorce or death certificate</b><br><span class="mut">Needed because you answered Yes. Take a photo or choose a file.</span></div></div>
+  <div class="row"><button class="btn">Back</button><span class="sp"></span><button class="btn pri">Save and continue</button></div><p class="sm mut" style="margin:6px 0 0">Saved</p></div>`;
+}
+
+function pqrTab(c) {
+  if (S.combo === "new") return `<div class="card"><h2>No pre-qualification questions yet</h2><p>Flag questions from this combination's questionnaire once it has some.</p></div>`;
+  const flagged = [["Is the sponsor a Canadian citizen or permanent resident?", "Sponsor"], ["Does the sponsor live in Canada?", "Sponsor"], ["Married, common-law or conjugal relationship?", "Couple"], ["Has the sponsor sponsored a partner in the last 5 years?", "Sponsor"], ["Where does the applicant live now?", "Principal applicant"], ["Any dependent children?", "Principal applicant"]];
+  return `<div class="card warnbox" style="margin-bottom:16px" role="note"><b>Pending founder decision on the pre-qualification model.</b> Drawn as option C: each combination flags its pre-qualification questions; the general pre-qualification questionnaire is assembled from these flags.${A("miss", "R-84 open: option C drawn, not decided")}</div>
+  <div class="split"><div class="stack">
+  <div class="row"><p style="margin:0;flex:1">Pre-qualification questions are asked before a case exists, so a firm can decide whether to offer a consultation. Flag questions from this combination's questionnaire; prospects never see an eligibility result.</p><button class="btn pri">Flag questions from the questionnaire</button></div>
+  <table><thead><tr><th>Question</th><th>About</th><th>In the questionnaire</th><th></th></tr></thead><tbody>${flagged.map((q) => `<tr><td>${q[0]}</td><td class="sm">${q[1]}</td><td class="sm">${chip("c-ok", "✓ Asked")} answers carry into the case</td><td><button class="lnk sm">Unflag</button></td></tr>`).join("")}</tbody></table>
+  <p class="sm mut">Only questions this combination asks can be flagged. Used in the general pre-qualification block “Family sponsorship”, with the flags of 3 other combinations.${A("cn", "C4.2 flags · Needed if option C")}${A("cx", "General PQR assembly, entry points, campaigns · Not built here")}</p></div>
+  <aside><div class="phone"><p class="sm mut" style="margin:0">Pre-qualification · Family sponsorship · 6 questions</p><div class="q"><label>Is the sponsor a Canadian citizen or permanent resident?</label><div class="row"><label style="font-weight:400"><input type="radio" name="q1" checked> Yes</label><label style="font-weight:400"><input type="radio" name="q1"> No</label><label style="font-weight:400"><input type="radio" name="q1"> Not sure</label></div></div>
+  <div class="card" style="margin-top:12px;background:#fbfbfb"><b>Thank you</b><p class="sm" style="margin:4px 0 0">A licensed consultant from the firm will contact you within 2 business days to book a consultation.</p><p class="sm mut" style="margin:4px 0 0">End screen worded by the firm (Sample). No verdict.</p></div></div>${A("cn", "Renderer PQR mode · Needed")}${A("miss", "P-47 says “Looks eligible”; option C says no verdict")}</aside></div>`;
+}
+
+const DOCS = [
+  ["Passport or travel document (all pages with stamps)", "Each person", "Always", "Single document", "Checklist IMM 5533 · AI, accepted"],
+  ["Proof of the sponsor's status in Canada", "Sponsor", "Always", "Any one of 4: Canadian passport · citizenship certificate · PR card · confirmation of PR", "Checklist IMM 5533 · AI, accepted"],
+  ["Marriage certificate", "Couple, once", "Only if Is married", "Single document", "Checklist IMM 5533 · AI, accepted"],
+  ["Divorce or death certificate", "Each adult who answered Yes", "Only if Previously married is Yes", "Any one of 3: divorce certificate · death certificate · annulment", "Added by the question “Married before?”"],
+  ["Police certificate", "Each person 18 or older", "Always · each country lived in 6 months or more", "Single document · issued within 6 months (value for this combination)", "Checklist IMM 5533 · AI, accepted"],
+  ["Proof of relationship", "Couple, once", "Always", "All of: photos together · communication history", "Added by a person"],
+  ["Signed IMM 1344", "Sponsor", "Always", "Signed scan", "Created by the form line IMM 1344 (signed PDF upload)"],
+  ["Signed IMM 5476", "Each person who uses a representative", "Only if Uses a representative", "Signed scan", "Created by the form line IMM 5476 (signed PDF upload)"],
+];
+function docsTab(c) {
+  if (S.combo === "new") return `<div class="card"><h2>No documents yet</h2><p>Documents come from the checklist AI reads, from questions whose answer adds a document, and from signed PDF uploads. You can also add one from the library.</p><button class="btn pri">+ Add document</button></div>`;
+  const ro = S.st === "readonly";
+  return `<div class="stack"><div class="row"><div class="rolechips" role="group" aria-label="Whose">${["All", "Sponsor", "Principal applicant", "Dependent child"].map((r, i) => `<button class="rc" aria-pressed="${i === 0}">${r}</button>`).join("")}</div><span class="sp"></span>${ro ? "" : `<button class="btn" data-drawer="copy">Copy from another combination</button><button class="btn pri" data-drawer="doc">+ Add document</button>`}</div>
+  <table><thead><tr><th>Document</th><th>Whose</th><th>Only if</th><th>Accepted documents</th><th>Origin</th><th></th></tr></thead><tbody>${DOCS.map((d, i) => `<tr><td><span class="trunc" title="${esc(d[0])}">${d[0]}</span></td><td class="sm">${d[1]}</td><td class="sm">${d[2]}</td><td class="sm"><span class="trunc" style="max-width:240px" title="${esc(d[3])}">${d[3]}</span></td><td class="sm mut">${d[4]}</td><td>${ro ? "" : `<button class="lnk sm" data-drawer="doc">Edit</button> · <button class="lnk sm" data-drawer="many" data-i="d${i}">Other combinations…</button>`}</td></tr>`).join("")}</tbody></table>
+  <p class="sm mut">${A("cn", "Document lines · Needed")}${A("dec", "SA-1B-57; P-12 kind C")}${A("cn", "B3 substitute set picked · Needed")}${A("dec", "SA-1B-19, 20: sets live in the library")}${A("cn", "Signed scan line from a signed PDF line")}${A("dec", "P-62 §3")} A document type not in the library is added through “Describe what you need”, never typed here.${A("dec", "P-53")}${A("cx", "Validity warnings at upload (B4) · M3")}</p></div>`;
+}
+
+const RULES = [
+  ["lib", "Ask previous relationship details when Previously married is Yes", "Each adult", "Library · Previous relationships section", "AI from IMM 0008 · accepted", ""],
+  ["lib", "Ask marriage details once per couple when Marital status is Married or Common-law", "Couple", "Library · Marriage and relationship section", "AI from IMM 5532 · accepted", ""],
+  ["line", "Marriage certificate is required, once per couple, when Is married", "Couple", "This combination · document line", "Checklist IMM 5533 · AI, accepted", ""],
+  ["line", "IMM 5476 for each person who uses a representative", "Each person", "This combination · form line", "Added by a person", ""],
+  ["check", "Police certificate issued within 6 months (6 set here)", "Each person 18 or older", "Shared check · value for this combination", "Checklist IMM 5533 · AI, accepted", ""],
+  ["line", "IMM 5409 when Is common-law and Is married", "Couple", "This combination · form line", "Added by a person", "This can never be true: a person cannot be both. Change the condition or remove the line."],
+  ["line", "Ask previous sponsorships when Has sponsored before is Yes", "Sponsor", "This combination · section placement", "AI from IMM 1344 · accepted", "“Has sponsored before” is never asked of the sponsor, so this question can never show. Add it to the sponsor's questionnaire."],
+];
+function rulesTab(c) {
+  if (S.combo === "new") return `<div class="card"><h2>No rules yet</h2><p>Rules appear when sections, documents and forms are added: rules on library sections and fields, “only if” on this combination's lines, and shared checks with a value set here.</p></div>`;
+  return `<div class="stack"><div class="rolechips" role="group" aria-label="Show">${[["all", "All · 31"], ["lib", "From the library · 18"], ["line", "This combination's lines · 9"], ["check", "Checks · 4"], ["prob", "Problems · 2"]].map((f) => `<button class="rc" aria-pressed="${S.ruleF === f[0]}" data-rulef="${f[0]}">${f[1]}</button>`).join("")}</div>
+  <table><thead><tr><th>Rule</th><th>Applies to</th><th>Where it lives</th><th>Source</th><th></th></tr></thead><tbody>${RULES.filter((r) => S.ruleF === "all" || (S.ruleF === "prob" ? r[5] : r[0] === S.ruleF)).map((r) => `<tr><td>${r[1]}${r[5] ? `<br><span class="sm" style="color:var(--dant)">! ${r[5]}</span>` : ""}</td><td class="sm">${r[2]}</td><td class="sm">${r[3]}</td><td class="sm mut">${r[4]}</td><td><button class="lnk sm">${r[0] === "lib" ? "Open in the library" : "Edit"}</button></td></tr>`).join("")}</tbody></table>
+  <p class="sm mut">${A("cn", "Rules tab, replaces Screen 05 · Needed")}${A("dec", "P-12, P-37 edit in place; RULES-MODEL §5")} Rules from the library are changed on the library item, which shows every combination it affects.</p></div>`;
+}
+
+const PRE = { m1: ["Married, one child", [["sp", "Sponsor", 58, 7, 2], ["pa", "Principal applicant", 96, 9, 4], ["ch", "Dependent child", 22, 3, 1]]], s: ["Single, no children", [["sp", "Sponsor", 58, 7, 2], ["pa", "Principal applicant", 88, 7, 4]]], cl: ["Common-law", [["sp", "Sponsor", 61, 8, 3], ["pa", "Principal applicant", 99, 10, 5]]], pm: ["Previously married", [["sp", "Sponsor", 58, 7, 2], ["pa", "Principal applicant", 104, 11, 4]]] };
+function previewTab(c) {
+  if (S.combo === "new") return `<div class="card"><h2>Nothing to preview yet</h2><p>Once forms and questions exist, choose a sample family to see each person's questionnaire, documents and forms exactly as they will appear.</p></div>`;
+  const p = PRE[S.preset]; const per = p[1].find((x) => x[0] === S.person) || p[1][0];
+  return `<div class="stack"><div class="row"><span class="mut">Sample family</span><div class="rolechips" role="radiogroup" aria-label="Sample family">${Object.keys(PRE).map((k) => `<button class="rc" role="radio" aria-pressed="${S.preset === k}" aria-checked="${S.preset === k}" data-preset="${k}">${PRE[k][0]}</button>`).join("")}</div>${A("cn", "Preset families then tweak · Needed")}${A("dec", "P-37")}</div>
+  <div class="row sm"><label><input type="checkbox"> Child is 18 or older</label><label><input type="checkbox" checked> Uses a representative</label><label><input type="checkbox"> Sponsor has sponsored before</label></div>
+  <div class="row"><span class="mut">Person</span><div class="rolechips" role="group" aria-label="Person">${p[1].map((x) => `<button class="rc" aria-pressed="${per[0] === x[0]}" data-person="${x[0]}">${x[1]} · ${x[2]} questions · ${x[3]} documents · ${x[4]} forms</button>`).join("")}</div></div>
+  <div style="display:grid;grid-template-columns:380px 1fr 1fr;gap:16px;align-items:start">
+    <div>${previewPhone("Marriage and relationship", per[1])}<p class="sm mut" style="text-align:center">What the client sees: only questions the client fills.${A("dec", "B2: client sees client fields only")}</p></div>
+    <section class="card"><h3>Documents for the ${per[1].toLowerCase()} (${per[3]})</h3><ul style="padding-left:18px;margin:8px 0 0"><li>Passport · because every person needs one</li><li>Marriage certificate · because Marital status is Married</li><li>Police certificate · because the person is 18 or older</li><li>Signed IMM 5476 · because a representative is used</li></ul></section>
+    <section class="card"><h3>Forms for the ${per[1].toLowerCase()} (${per[4]})</h3><table style="margin-top:8px"><tbody><tr><td><span class="mono">IMM 0008</span></td><td>${chip("c-ai", "Online")}</td><td><a href="#">Portal sheet preview</a></td></tr><tr><td><span class="mono">IMM 5669</span></td><td>${chip("c-ai", "Online")}</td><td><a href="#">Portal sheet preview</a></td></tr><tr><td><span class="mono">IMM 5532</span></td><td>${chip("c-warn", "Signed PDF upload")}</td><td><a href="#">Sample filled PDF</a></td></tr><tr><td><span class="mono">IMM 5476</span></td><td>${chip("c-warn", "Signed PDF upload")}</td><td><a href="#">Sample filled PDF</a></td></tr></tbody></table>
+    <p class="sm mut">Each output fills from the same sample facts; unmapped form fields are listed on each.</p><button class="lnk">Show facts and the form fields they fill</button>${A("miss", "Q3: “Agent view” tab (P-35) vs runtime in M3 (P-56)")}</section>
+  </div>${A("cn", "C4.3 shared renderer · Needed")}${A("dec", "P-47; SA-1B-62")}</div>`;
+}
+
+function reviewTab(c) {
+  if (S.combo === "new") return `<div class="card"><h2>Nothing to review</h2><p>Changes you make here collect in the draft. When they are ready, send them for review.</p></div>`;
+  const author = S.st !== "readonly";
+  const groups = [["Forms", 6, "IMM 0008 channel PDF upload → Online", "Person", "Changes how 2 people file it", false], ["Documents", 8, "Added: Divorce or death certificate, only if Previously married is Yes", "Added by the question", "Adds a document for each adult who answers Yes", true], ["Questionnaire", 19, "Added section Sponsor finances and undertaking", "AI, accepted", "17 questions for the sponsor", true], ["Rules", 4, "Police certificate within 6 months (was 12)", "Person", "Warns earlier for every adult", true], ["Links", 1, "—", "—", "—", false]];
+  return `<div class="stack"><div class="grid2" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card"><b>1 · Author submits</b><p class="sm mut" style="margin:4px 0 0">Configuration author · not yet</p></div><div class="card"><b>2 · Expert ticks</b><p class="sm mut" style="margin:4px 0 0">3 changes need an immigration expert's tick · 1 of 3</p></div><div class="card"><b>3 · A different person approves and releases</b><p class="sm mut" style="margin:4px 0 0">Not the author or submitter</p></div></div>
+  <div class="card miss"><h3>Release checks: 2 problems block release</h3><ul style="margin:6px 0 0;padding-left:18px"><li>IMM 5409 when Is common-law and Is married can never be true · <a href="#" data-go="rules">Fix in Rules</a></li><li>Principal applicant: 2 facts IMM 0008 needs are not asked · <a href="#" data-go="sqr">Fix in SQR</a></li></ul>${A("cn", "Validator at release · Needed")}${A("dec", "P-62 §5.3; SA-1B-63; STANDARDS §3.6")}</div>
+  <table><thead><tr><th>Change</th><th>Example</th><th>By</th><th>Impact</th><th>Expert tick</th></tr></thead><tbody>${groups.map((g) => `<tr><td><b>${g[0]}</b> · ${g[1]}</td><td class="sm">${g[2]}</td><td class="sm">${g[3]}</td><td class="sm">${g[4]}</td><td>${g[5] ? `<label class="sm"><input type="checkbox" ${g[0] === "Rules" ? "checked" : ""} ${author ? "disabled" : ""}> Needs expert</label>` : `<span class="sm mut">Not needed</span>`}</td></tr>`).join("")}</tbody></table>
+  <div class="row">${author ? `<button class="btn pri">Submit for review (38 changes)</button><span class="sm mut">You made these changes, so a different person approves them.</span>` : `<button class="btn pri" disabled title="2 problems block release and 2 expert ticks are missing">Approve and release</button><span class="sm" style="color:var(--dant)">2 problems block release · 2 expert ticks missing · nothing has been submitted</span>`}<span class="sp"></span><span class="sm mut">Release publishes the whole pack: 4 combinations have changes. The Releases page follows the same rule.</span></div>
+  <p class="sm mut">${A("cn", "C5.1 · Needed")}${A("cn", "C5.2 one server guard for both release paths · Needed")}${A("dec", "P-23, P-40, P-43, QA-1")}</p></div>`;
+}
+
+function drawer() {
+  const d = S.drawer; if (!d) return "";
+  const err = S.st === "fielderr";
+  const wrap = (title, sub, body, primary) => `<div class="drawer" role="dialog" aria-modal="true" aria-labelledby="dt"><div class="dh"><div class="row"><h2 id="dt">${title}</h2><span class="sp"></span><button class="btn ghost" data-close aria-label="Close panel">×</button></div><p class="sm mut" style="margin:4px 0 0">${sub}</p></div><div class="db">${S.st === "conflict" ? `<div class="card warnbox" role="alert" style="margin-bottom:12px">A configuration author saved this line at 14:32 while you were editing. <button class="lnk">Reload</button> or <button class="lnk">keep mine and compare</button>.</div>` : ""}${body}</div><div class="df"><button class="btn" data-close>Cancel</button><button class="btn pri" data-save>${primary}</button></div></div>`;
+  if (d === "formline") {
+    const f = CMB[S.combo].forms[S.di || 0] || C3.forms[2];
+    return wrap(`${f.code} · form line`, esc(f.title) + " · in the library; this line says who files it and how", `
+    <fieldset><legend style="font-weight:600">Who</legend><label><input type="radio" name="who"> Once for the application</label><br><label><input type="radio" name="who" checked> Each person in these roles</label><div class="row sm" style="margin:4px 0 0 20px"><label><input type="checkbox" checked> Principal applicant</label><label><input type="checkbox" checked> Dependent child</label><label><input type="checkbox"> Sponsor</label></div><p class="sm mut" style="margin:4px 0 0">Library default: Principal applicant and dependants. Changed here for this combination only.</p></fieldset>
+    <div class="fld"><label for="ma">Minimum age</label><input id="ma" class="inp" style="width:120px" placeholder="None"></div>
+    <div class="fld"><label for="oi">Only if</label><input id="oi" class="inp" value="Always" aria-describedby="oih"><p class="help" id="oih">Pick a shared condition from the library, for example “Uses a representative”.</p></div>
+    <div class="fld ${err ? "bad" : ""}"><label id="chl">Channel</label><div class="seg" role="group" aria-labelledby="chl"><button aria-pressed="false">PDF upload</button><button aria-pressed="true">Online</button><button aria-pressed="false">Signed PDF upload</button></div>
+      ${err ? `<p class="err" role="alert">IMM 0008 is filed Online, but this combination has no portal yet: choose the portal it is filed through.</p>` : `<p class="help">Online: filed in the ${PORTAL}. The client signs the declaration in the portal. An approved online version captured from that portal exists (captured 20 Oct).</p>`}</div>
+    <div class="fld"><label for="sb">Signed by</label><select id="sb" class="inp"><option>The person the form is about</option><option>A parent, for a minor</option><option>The principal applicant, for the family</option><option>The person and the representative</option><option>No signature</option></select><p class="help">Set by the immigration expert. How it is signed comes from the channel.</p>${A("miss", "Q2: SA-1B-102 “Signed by” has no decision")}</div>
+    <div class="fld"><label>Field map</label><p style="margin:0">${chip("c-warn", "! 9 of 140 form fields not mapped")} <a href="#">Open the field map</a></p></div>
+    ${A("cn", "Form line · Needed")}${A("dec", "MASTERS §4; SA-1B-60, 102; P-61; defaultChannelFor")}`, "Save line");
+  }
+  if (d === "link") return wrap("Link to another combination", "A link says which application usually supports or comes before this one, and what a linked case brings with it.", `
+    <fieldset><legend style="font-weight:600">Kind</legend><label><input type="radio" name="lk" checked> <b>Supported by</b>: another party's application this one relies on (an employer's LMIA)</label><br><label><input type="radio" name="lk"> <b>Follows</b>: an earlier application by the same people (a study permit before a post-graduation work permit)</label></fieldset>
+    <div class="fld ${err ? "bad" : ""}"><label for="lt">Combination</label><input id="lt" class="inp" value="${err ? "Individual › Work permits › Employer-specific work permit › With an LMIA" : "Corporate and employers › LMIA › High-wage position"}">${err ? `<p class="err" role="alert">A combination cannot be linked to itself. Pick the application that supports this one.</p>` : `<p class="help">Pick from the list. A “Follows” link that would make a loop is refused.</p>`}</div>
+    <fieldset><legend style="font-weight:600">Facts it carries (asked in the linked combination)</legend>${C2.links[0].facts.map((f) => `<label style="display:block"><input type="checkbox" checked> ${f}</label>`).join("")}<label style="display:block" class="mut"><input type="checkbox" disabled> Number of positions · not needed by this combination's forms</label></fieldset>
+    <fieldset><legend style="font-weight:600">Documents it carries</legend><label><input type="checkbox" checked> LMIA decision letter</label></fieldset>
+    <p class="sm mut">On a case, these come from the linked case instead of being typed again (M3).</p>${A("cn", "C1.3 · Needed")}${A("dec", "P-13, P-59, TAXONOMY §2–3")}`, "Save link");
+  if (d === "many") return wrap("IMM 5476 in other combinations", "Add this line to other combinations, or remove it from them. Each becomes a draft change in that combination and goes through review.", `
+    <div class="seg" role="group" aria-label="Action" style="margin-bottom:12px"><button aria-pressed="true">Add to</button><button aria-pressed="false">Remove from</button></div>
+    <p class="sm" style="margin:0 0 8px"><b>Line:</b> IMM 5476 · each person who uses a representative · only if Uses a representative · Signed PDF upload</p>
+    <input class="inp" placeholder="Filter combinations" aria-label="Filter combinations" style="margin-bottom:8px">
+    <table><thead><tr><th></th><th>Combination</th><th>Result</th></tr></thead><tbody>
+    <tr><td><input type="checkbox" checked aria-label="Select"></td><td class="sm">Visitors › Visitor visa</td><td class="sm">${chip("c-su", "Already has it")}</td></tr>
+    <tr><td><input type="checkbox" checked aria-label="Select"></td><td class="sm">Family sponsorship › Spouse or partner › Applicant in Canada</td><td class="sm">${chip("c-ok", "Will be added")}</td></tr>
+    <tr><td><input type="checkbox" checked aria-label="Select"></td><td class="sm">Study permits › Study permit</td><td class="sm">${chip("c-ok", "Will be added")}</td></tr>
+    <tr><td><input type="checkbox" checked aria-label="Select"></td><td class="sm">Work permits › Open work permit › Post-graduation</td><td class="sm">${chip("c-warn", "Has it with a different condition: kept")}</td></tr>
+    <tr><td><input type="checkbox" aria-label="Select"></td><td class="sm">Economic immigration › Express Entry › Profile</td><td class="sm">${chip("c-no", "Online only: no PDF channel")}</td></tr></tbody></table>
+    <p class="sm mut">2 combinations change. Undo is available until the draft is submitted.</p>${A("cn", "C1.5 · Needed")}${A("dec", "SA-1B-61; P-23 one shared draft")}`, "Add to 2 combinations");
+  if (d === "copy") return wrap("Copy from another combination", "Copied lines are new draft changes here, marked “Copied from …”. Shared library items are referenced, never copied.", `
+    <div class="fld"><label for="cf">Combination</label><input id="cf" class="inp" value="Family sponsorship › Spouse or partner › Applicant in Canada"></div>
+    <table><thead><tr><th></th><th>Line</th><th></th></tr></thead><tbody>
+    <tr><td><input type="checkbox" checked aria-label="Select"></td><td class="sm">Form IMM 5532 · once per couple · Signed PDF upload</td><td class="sm">${chip("c-su", "Already here")}</td></tr>
+    <tr><td><input type="checkbox" checked aria-label="Select"></td><td class="sm">Document · Proof of cohabitation · couple · only if Is common-law</td><td class="sm">${chip("c-ok", "Will be copied")}</td></tr>
+    <tr><td><input type="checkbox" aria-label="Select"></td><td class="sm">Section · Status in Canada · principal applicant</td><td class="sm">${chip("c-ok", "Will be copied")}</td></tr></tbody></table>
+    ${A("cn", "C1.5 · Needed")}${A("dec", "SA-1B-61; STANDARDS §3.3 referenced, not copied")}`, "Copy 1 line");
+  if (d === "adddoc") return wrap("Answer adds a document", "“Have you been married or in a common-law relationship before?” · Principal applicant", `
+    <div class="fld"><label for="aw">When the answer is</label><select id="aw" class="inp"><option>Yes</option><option>No</option></select></div>
+    <div class="fld ${err ? "bad" : ""}"><label for="dt2">Document</label><input id="dt2" class="inp" value="${err ? "Divorce papers" : "Divorce or death certificate"}">${err ? `<p class="err" role="alert">“Divorce papers” is not in the library. Pick “Divorce or death certificate”, or describe what you need to add a new document type.</p>` : `<p class="help">From the library. Not there? <button class="lnk">Describe what you need</button></p>`}</div>
+    <div class="fld"><label>Whose</label><p style="margin:0">The person who answered</p></div>
+    <div class="card" style="background:#fbfbfb"><b>Will be created as</b><p class="sm" style="margin:4px 0 0">A document line on Documents: Divorce or death certificate, for the person who answered, only if Previously married is Yes, marked “Added by the question”. The client sees the upload right after the question.</p></div>
+    ${A("cn", "C4.5 · Needed")}${A("dec", "SA-1B-3, 58; P-47 upload in the renderer")}`, "Add document line");
+  if (d === "filledby") return wrap("Who fills this question", "Date of marriage · shared field in the library", `
+    <fieldset><legend style="font-weight:600">Filled by</legend><label><input type="radio" name="fb" checked> Client</label><br><label><input type="radio" name="fb"> Case officer</label></fieldset>
+    <div class="card warnbox"><b>This changes the shared field everywhere.</b><p class="sm" style="margin:4px 0 0">Date of marriage is used in 7 combinations. Background and declaration questions stay with the client and cannot be changed.</p></div>
+    <p class="sm mut">The client's questionnaire shows only questions the client fills; a case officer can fill any question on a case.</p>${A("cn", "B2 · Needed")}${A("dec", "RD-6; MASTERS §5 Field: filled by")}`, "Save for all 7 combinations");
+  if (d === "doc") return wrap("Document line", "Proof of the sponsor's status in Canada", `
+    <div class="fld"><label for="dty">Document type</label><input id="dty" class="inp" value="Proof of status in Canada"><p class="help">From the library. Not there? <button class="lnk">Describe what you need</button></p></div>
+    <div class="fld"><label>Whose</label><select class="inp"><option>Sponsor</option><option>Each person</option><option>Couple, once</option></select></div>
+    <div class="fld"><label>Only if</label><input class="inp" value="Always"></div>
+    <fieldset><legend style="font-weight:600">Accepted documents (sets defined on the document type)</legend><label><input type="radio" name="ss" checked> <b>Citizen or permanent resident</b> · any one of: Canadian passport · citizenship certificate · PR card · confirmation of PR</label><br><label><input type="radio" name="ss"> <b>Registered Indian</b> · any one of: status card · registration letter</label></fieldset>
+    ${A("cn", "B3 · Needed")}${A("dec", "SA-1B-19, 20: a line picks a set, never defines one")}`, "Save line");
+  return "";
+}
+
+function body(c) {
+  if (S.st === "loading") return `<div class="card" aria-busy="true"><span class="sr" style="position:absolute;left:-9999px" role="status">Loading combination</span>${'<div class="skel"></div>'.repeat(8)}</div>${A("cn", "Loading state")}`;
+  if (S.st === "loaderr") return `<div class="card" role="alert"><h2>This combination could not be opened</h2><p class="mut">The studio did not answer. Nothing you changed was lost: your draft is saved on the server.</p><div class="row"><button class="btn pri">Try again</button><a href="#">Back to Programs</a></div>${A("cn", "Error state")}</div>`;
+  const f = { overview, forms: formsTab, pqr: pqrTab, sqr: sqrTab, docs: docsTab, rules: rulesTab, preview: previewTab, review: reviewTab }[S.tab];
+  return f(c);
+}
+function render() {
+  const c = CMB[S.combo];
+  $("#main").innerHTML = (S.st === "loaderr" ? `<nav class="crumbs"><a href="#">Programs</a></nav>` : header(c)) + body(c);
+  $("#drawer").innerHTML = drawer();
+  $("#toast").innerHTML = S.toast ? `<div class="toast" role="status">${S.toast} <button class="lnk" data-undo>Undo</button></div>` : "";
+  $("#actorBtn").textContent = S.st === "readonly" ? "Acting as: Approver ▾" : "Acting as: Configuration author ▾";
+}
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-tab],[data-go],[data-drawer],[data-close],[data-save],[data-role],[data-open],[data-preset],[data-person],[data-rulef],[data-undo]");
+  if (!t) return; e.preventDefault();
+  if (t.dataset.tab) S.tab = t.dataset.tab;
+  if (t.dataset.go) { S.tab = t.dataset.go === "ai" ? "review" : t.dataset.go; S.drawer = null; }
+  if (t.dataset.drawer) { S.drawer = t.dataset.drawer; S.di = Number(t.dataset.i) || 0; }
+  if (t.hasAttribute("data-close")) S.drawer = null;
+  if (t.hasAttribute("data-save")) { S.toast = S.drawer === "many" ? "IMM 5476 added to 2 combinations as draft changes" : "Saved to the draft"; S.drawer = null; setTimeout(() => { S.toast = null; render(); }, 5000); }
+  if (t.hasAttribute("data-undo")) S.toast = null;
+  if (t.dataset.role) S.role = t.dataset.role;
+  if (t.dataset.open) S.open = S.open === t.dataset.open ? "" : t.dataset.open;
+  if (t.dataset.preset) S.preset = t.dataset.preset;
+  if (t.dataset.person) S.person = t.dataset.person;
+  if (t.dataset.rulef) S.ruleF = t.dataset.rulef;
+  render();
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.drawer) { S.drawer = null; render(); } if (e.key === "Enter" && e.target.dataset && e.target.dataset.open) { e.target.click(); } });
+$("#bCombo").onchange = (e) => { S.combo = e.target.value; S.drawer = null; render(); };
+$("#bState").onchange = (e) => { S.st = e.target.value; if (S.st === "fielderr" && !S.drawer) { S.tab = "forms"; S.drawer = "formline"; S.di = 2; } if (S.st === "conflict" && !S.drawer) { S.tab = "forms"; } render(); };
+$("#bAnn").onchange = (e) => document.body.classList.toggle("showann", e.target.checked);
+render();
+</script>
+</body>
+</html>

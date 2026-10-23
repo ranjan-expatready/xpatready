@@ -125,8 +125,8 @@ Runtime writes: `prisma/migrations/<date>_runtime_r1/`, the runtime block append
 No other founder question. For the Lead: run the IMM 5257 fill trial next in the evidence lane (M6); ask the immigration expert whether the visitor visa is filed as an uploaded IMM 5257 PDF or online, and whether visit facts (funds, stay dates) are per applicant (M7, M2); ask the team where case-level answers live (D-4).
 
 ## Lead response
-(empty)
+All changes in §3 accepted, including the B1 fix (complete the visitor-visa questionnaire as step 4.5; acceptance: nobody-is-asked count 0) and the state names Draft · Generated · Locked · stale (P-65 words to be aligned in the decision page later). S-1 granted: the runtime lane may change `actorOf` in `api/src/core.ts` to deny unknown actors (one function, with a test). Founder question 1 goes to the founder; build on the recommendation meanwhile (principal's and minor child's answers count as confirmed; an adult spouse's section waits for the officer). Expert questions (channel for the visitor visa; visit facts per applicant or per case) added to the Lead's list. IMM 5257 fill trial is the evidence lane's current form.
 ## Agreement
-(empty)
+Agreed 23 Oct (Lead), slices as in this plan; BUILD R1a now.
 ## Build discoveries
 (empty)

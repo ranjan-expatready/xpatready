@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screen 02 · AI work and reviews · draft board (screen-designer, 23 Oct)</title>
+<!-- Self-contained draft board. Team tokens from code/ERv2-frontend@5ccd9fa src/styles/tokens.css; muted text #595959 (P-41).
+     Type sizes 12/14/16/18/20/24 only. All data is Sample unless the concept says otherwise. Board controls are not product. -->
+<style>
+:root{--primary:#0862c5;--link:#054e9c;--link-dark:#043a73;--text:#2d2d2d;--muted:#595959;--border:#d9d9d9;--border-strong:#bfbfbf;--surface:#f7f7f7;--raised:#ffffff;--soft:#eeeeee;
+--ok-bg:#e7f6ec;--ok:#0f5c2e;--danger-bg:#fdecec;--danger:#991b1b;--warn-bg:#fff3e0;--warn:#663200;--warn-line:#ffc773;--ai-bg:#e6f4ff;--ai:#043a73;--ai-line:#cce9ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--text);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+h1{font-size:24px;font-weight:700}h2{font-size:18px;font-weight:600}h3{font-size:16px;font-weight:600}
+a,.lnk{color:var(--link);font-weight:600;text-decoration:underline;text-underline-offset:2px;cursor:pointer;background:none;border:0;padding:0;font-size:14px;font-family:inherit}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.mut{color:var(--muted)}.s12{font-size:12px}.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--ai)}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:6px;font-weight:600;font-size:14px;border:1px solid var(--border-strong);background:#fff;color:var(--text);cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:#fff}.btn.sm{min-height:30px;padding:0 10px;font-size:12px}
+.btn.ghost{border-color:transparent;background:transparent}.btn.danger{border-color:#dc2626;color:var(--danger)}
+.btn[disabled]{background:var(--soft);border-color:var(--border);color:var(--muted);cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.ok{background:var(--ok-bg);color:var(--ok)}.no{background:var(--danger-bg);color:var(--danger)}.neu{background:var(--soft);color:#404040}.ai{background:var(--ai-bg);color:var(--ai)}.warn{background:var(--warn-bg);color:var(--warn)}
+.card{background:#fff;border:1px solid var(--border);border-radius:8px}
+.pad{padding:14px 16px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.grow{flex:1}
+.stack{display:flex;flex-direction:column;gap:12px}
+.ailine{display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:12px;color:#404040;background:#f5faff;border:1px solid var(--ai-line);border-radius:6px;padding:6px 10px}
+.notice{border-radius:8px;padding:10px 14px;border:1px solid var(--border);display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.notice.info{background:#f5faff;border-color:var(--ai-line)}.notice.warn{background:var(--warn-bg);border-color:var(--warn-line)}.notice.err{background:var(--danger-bg);border-color:#f5b5b5}.notice.okn{background:var(--ok-bg);border-color:#b7e2c4}
+table{border-collapse:collapse;width:100%;background:#fff}
+th{font-weight:600;text-align:left;font-size:12px;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);background:#fbfbfb}
+td{padding:9px 12px;border-bottom:1px solid var(--soft);vertical-align:top}
+tr.sel td{background:#eef6ff}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border)}
+.tab{border:0;background:transparent;padding:10px 12px;font-size:14px;color:#404040;border-bottom:2px solid transparent;cursor:pointer}
+.tab.on{color:var(--link-dark);border-bottom-color:var(--primary);font-weight:600}
+.fchip{border:1px solid var(--border-strong);background:#fff;border-radius:999px;padding:5px 12px;font-size:14px;cursor:pointer}
+.fchip.on{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
+.stat{padding:12px 14px}.stat b{font-size:20px;display:block}
+.bar{height:8px;background:var(--soft);border-radius:4px;overflow:hidden}.bar>i{display:block;height:8px;background:var(--primary)}
+.skel{background:linear-gradient(90deg,#eee,#f6f6f6,#eee);border-radius:4px;height:14px}
+@media (prefers-reduced-motion:no-preference){.skel{background-size:200% 100%;animation:sk 1.4s infinite}@keyframes sk{to{background-position:-200% 0}}}
+.src{background:#fafafa;border:1px solid var(--soft);border-radius:6px;padding:12px;font-size:12px;display:flex;flex-direction:column;gap:6px}
+.hl{background:var(--warn-bg);outline:2px solid #ff9814;border-radius:3px;padding:4px 6px}
+.plist button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--soft);background:#fff;padding:10px 14px;cursor:pointer;font-size:14px}
+.plist button.on{background:#eef6ff;box-shadow:inset 3px 0 0 var(--primary)}
+.panel{position:relative;background:#fff;border-left:1px solid var(--border);display:flex;flex-direction:column;width:520px;max-width:100%}
+.panel header{padding:14px 18px;border-bottom:1px solid var(--border)}.panel .body{padding:14px 18px;display:flex;flex-direction:column;gap:12px}.panel footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px}
+.toast{display:flex;gap:14px;align-items:center;background:#2d2d2d;color:#fff;border-radius:8px;padding:10px 14px;font-size:14px;align-self:flex-start}
+.toast .lnk{color:#99d2ff}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600}
+input,select,textarea{font:inherit;font-size:14px;padding:8px 10px;border:1px solid #8c8c8c;border-radius:6px;background:#fff;color:var(--text)}
+.err-msg{color:var(--danger);font-size:12px}
+/* shell */
+.shell{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:860px}
+.top{display:flex;align-items:center;gap:14px;padding:10px 20px;background:#fff;border-bottom:1px solid var(--border)}
+.draftbar{padding:8px 20px;background:#fbfbfb;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center}
+nav.side{background:#fff;border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+nav.side .grp{font-size:12px;color:var(--muted);margin:12px 8px 4px;font-weight:600}
+nav.side button{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;color:#404040;font-size:14px;border:0;background:transparent;text-align:left;cursor:pointer}
+nav.side button.on{background:var(--ai-bg);color:var(--link-dark);font-weight:600}
+main{padding:20px 24px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.crumbs{font-size:12px;color:var(--muted)}.crumbs a{font-weight:400;font-size:12px}
+/* board-only annotations */
+.lab,.dec{display:none}
+body.labels .lab{display:inline-flex;font-size:12px;font-weight:600;border:1px dashed #7c3aed;color:#5b21b6;background:#faf5ff;border-radius:4px;padding:0 5px;margin-left:6px;white-space:nowrap;vertical-align:middle}
+body.labels .lab.sc{border-color:#b35a00;color:#8c4600;background:#fff8ef}
+body.labels .lab.nb{border-style:dotted;color:#404040;background:#f3f3f3;border-color:#8c8c8c}
+body.labels .dec{display:inline-flex;font-size:12px;font-weight:600;border:1px solid #0f5c2e;color:#0f5c2e;background:#f0fbf4;border-radius:4px;padding:0 5px;margin-left:6px;white-space:nowrap;vertical-align:middle}
+body.labels .dec.q{border-color:#991b1b;color:#991b1b;background:#fff5f5}
+.board{background:#2d2d2d;color:#fff;padding:10px 20px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:12px}
+.board select{font-size:12px;padding:4px 6px}
+.board label{display:inline-flex;gap:6px;align-items:center}
+.legend{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;font-size:12px;display:none;gap:8px;flex-wrap:wrap}
+body.labels .legend{display:flex}
+</style>
+</head>
+<body class="labels">
+<div class="board" role="region" aria-label="Board controls (not part of the product)">
+  <b>Board controls · not product</b>
+  <label>View <select id="vsel" aria-label="View"></select></label>
+  <label>State <select id="ssel" aria-label="State"></select></label>
+  <label><input type="checkbox" id="lab" checked> Show labels (P-33, P-26) and decision marks</label>
+  <span style="opacity:.8">Sample data throughout; immigration values unconfirmed by the immigration expert.</span>
+</div>
+<div class="legend"><span class="lab">Capability · Needed</span><span class="lab sc">Scaffolding</span><span class="lab nb">Not built</span><span class="dec">Follows P-xx</span><span class="dec q">Open question / conflict</span></div>
+<div class="top">
+  <span style="font-family:'Proxima Nova',Inter,sans-serif;font-weight:700;font-size:18px;color:var(--primary)">ExpatReady</span>
+  <span style="display:flex;flex-direction:column;line-height:1.2"><b>Product Studio</b><span class="mut s12">Pathway Configurator</span></span>
+  <span class="chip warn">Prototype · demo workspace</span><span class="lab sc">Scaffolding · never ported</span>
+  <span class="grow"></span>
+  <button class="btn sm">Demo ▾</button><span class="lab sc">Scaffolding</span>
+  <span class="s12 mut">Acting as</span> <button class="btn sm" id="actor">Content reviewer ▾</button><span class="lab sc">Scaffolding (simulated people)</span>
+</div>
+<div class="draftbar"><span>Shared draft · <b>14 changes</b> in 5 combinations · not yet released</span><a>Review and release (14)</a><span class="dec">Follows P-58</span></div>
+<div class="shell">
+  <nav class="side" aria-label="Main menu">
+    <span class="grp">Configure</span>
+    <button data-v="queue">To review <span class="chip ai" style="margin-left:auto">7</span></button><span class="dec q" style="margin-left:10px">Q1: new item</span>
+    <button data-v="draft">Programs</button>
+    <span class="grp">Shared library</span>
+    <button>Fields</button><button>Sections</button><button>Document types</button><button data-v="impact">Forms <span class="chip warn" style="margin-left:auto">1 new edition</span></button><button>Checks</button>
+    <span class="grp">History</span>
+    <button data-v="log">AI work</button><button>Releases</button><button>Activity</button>
+  </nav>
+  <main id="main" tabindex="-1"></main>
+</div>
+<script>
+const L=(t)=>`<span class="lab">${t||'Capability · Needed'}</span>`;
+const S=(t)=>`<span class="lab sc">Scaffolding${t?' · '+t:''}</span>`;
+const NB=(t)=>`<span class="lab nb">Not built${t?' · '+t:''}</span>`;
+const D=(t)=>`<span class="dec">Follows ${t}</span>`;
+const Q=(t)=>`<span class="dec q">${t}</span>`;
+const crumbs=(...p)=>`<div class="crumbs">${p.map((x,i)=>i<p.length-1?`<a>${x}</a>`:x).join(' › ')}</div>`;
+const COMB='Family sponsorship › Spouse or partner › Applicant outside Canada';
+
+const V={};
+/* 1 QUEUE */
+V.queue={label:'1 · To review (queue)',menu:'queue',states:{normal:'Normal',empty:'Empty',loading:'Loading',error:'Error',waiting:'Acting as the capturer'},render:(s)=>{
+ const head=`<div class="row"><h1>To review</h1>${L()}${Q('Q1: one queue, new menu item')}<span class="grow"></span><input aria-label="Search" placeholder="Search forms, combinations, fields" style="min-width:260px"></div>
+ <p class="mut" style="margin:0">Everything that waits for a person: AI proposals, new editions, portal captures, held files, new shared fields and merges. Nothing reaches a release until a person decides.</p>
+ <div class="row"><button class="fchip on">Needs you · 7</button><button class="fchip">Waiting for others · 2</button><button class="fchip">Running · 1</button><button class="fchip">All · 23</button><select aria-label="Kind"><option>Kind: All</option><option>AI proposals</option><option>New editions</option><option>Portal captures</option><option>Screen maps</option><option>Held files</option><option>Shared fields and merges</option></select>${D('P-37 / P-49 "Needs you"')}</div>`;
+ if(s==='loading')return head+`<div class="card pad stack" aria-busy="true"><span class="sr-only" style="position:absolute;left:-9999px">Loading items to review</span>${'<div class="skel"></div>'.repeat(6)}</div>`;
+ if(s==='error')return head+`<div class="notice err" role="alert"><div class="grow"><b>The list could not be loaded.</b><br>The server did not answer. Your decisions so far are saved.</div><button class="btn">Retry</button></div>`;
+ if(s==='empty')return head+`<div class="card pad" style="text-align:center;padding:40px"><h3>Nothing waits for you</h3><p class="mut">When you add sources to a combination, its AI draft, new editions and approvals appear here. Start from <a>Programs</a> › a combination › <b>Draft setup</b>.</p></div>`;
+ const rows=[
+ ['ai','AI proposals','Review 44 AI proposals',COMB,'IMM 1344 · 233 form fields: 189 matched without AI, 44 to decide · checklist IMM 5533: 12 document requirements','Configuration author','US$1.51','Review 44 proposals','P-43'],
+ ['warn','New edition','Review impact','IMM 5476 · edition 05-2021 → 2025 (Sample)','13 form fields new or reworded · used by 5 combinations · 12 open cases stay on their release','Configuration author','US$0.40','Review impact','P-32/P-38'],
+ ['neu','Portal capture','Approve or return','IMM 0008 · online · Representative PR Portal','9 screens captured from saved blank pages by the Immigration expert · 4 differences from the last version',null,'US$0','Open capture','P-66'],
+ ['neu','Screen map','Review screen map','IMM 5257 · online · IRCC Portal','48 inputs: 33 from the PDF twin, 6 by alias, 4 not a fact, 5 left for a person','Configuration author','US$0','Review screen map','P-62 §8'],
+ ['neu','Shared field','Approve new shared field','Relationship to sponsor','Added from IMM 1344 with a reason: "AI said use Relationship to principal applicant; the sponsor is not the principal"','Configuration author','—','Review','P-53'],
+ ['neu','Merge','Approve merge','Birth date (applicant) → Date of birth','Proposed by the meaning check · 3 field maps and 1 rule move','Configuration author','—','Review merge','P-65'],
+ ['warn','Held file','Check the source','IMM 5669 · edition from the file','Not on the approved list: not read, attached or sent to AI','Configuration author','—','Check source','Q2']];
+ const mine=s==='waiting';
+ return head+`<div class="card" style="overflow:auto"><table><thead><tr><th>Item</th><th>What and why</th><th>Status</th><th>AI cost</th><th>Next step</th></tr></thead><tbody>
+ ${rows.map((r,i)=>`<tr${i===0?' class="sel"':''}><td style="min-width:240px"><span class="chip ${r[0]}">${r[1]}</span> ${r[1]==='Held file'?Q('Q2'):D(r[8])}<div style="margin-top:4px;font-weight:600">${r[3]}</div></td><td class="mut" style="max-width:420px">${r[4]}</td>
+ <td>${r[1]==='Portal capture'?(mine?'<span class="chip neu">Waiting for a second person</span><div class="s12 mut">You captured it; a different person approves</div>':'<span class="chip warn">Needs you</span><div class="s12 mut">Captured by the Immigration expert</div>'):'<span class="chip warn">Needs you</span>'}</td>
+ <td class="s12">${r[6]}</td><td>${r[1]==='Portal capture'&&mine?'<span class="mut s12">No action for you</span>':`<a>${r[7]}</a>`}</td></tr>`).join('')}
+ <tr><td><span class="chip ai">Running</span><div style="margin-top:4px;font-weight:600">Economic immigration › Express Entry › Profile</div></td><td class="mut">Draft setup · part 2 of 5 · 61 of 140 inputs</td><td><span class="chip ai">Running</span></td><td class="s12">US$0.22 so far · worst US$1.80</td><td><a>View progress</a></td></tr>
+ </tbody></table></div>
+ <p class="s12 mut">Rows are sorted oldest first within "Needs you". Each row shows only the action your role can take; the server checks it again. ${L('Capability · Needed (server-side role check)')}</p>`;}};
+
+/* 2 DRAFT SETUP */
+V.draft={label:'2 · Draft setup (cost before any paid run)',menu:'draft',states:{normal:'Normal',cap:'Budget limit reached',noai:'AI unavailable'},render:(s)=>{
+ const rows=[
+ ['IMM 5476','Use of a representative · 05-2021','Already mapped in the library','No AI · reused','US$0','ok'],
+ ['IMM 1344','Application to sponsor · 09-2024','233 form fields · 189 match the library by name or alias','AI drafts 44 in 3 parts','US$0.45–1.60','ai'],
+ ['IMM 5532','Relationship information · edition from the file','118 form fields · 71 match','AI drafts 47 in 2 parts','US$0.50–1.40','ai'],
+ ['IMM 0008','Generic application form · PDF edition','PDF twin not mapped yet','AI drafts 6 parts','US$1.20–3.40','ai'],
+ ['IMM 0008','Online version · Representative PR Portal','Screen map from the PDF twin after it is accepted','No AI · leftovers to a person or AI later','US$0','ok'],
+ ['IMM 5669','Schedule A · edition from the file','Held: not on the approved list','Not read, not sent to AI','—','no'],
+ ['IMM 5533','Document checklist','12 passages','AI drafts document requirements and rules with their quote','US$0.20–0.60','ai']];
+ return `${crumbs('Programs',COMB,'Draft setup')}
+ <div class="row"><h1>Draft setup</h1><span class="chip neu">In setup</span>${D('P-07 one AI place per combination')}</div>
+ <p class="mut" style="margin:0">Reuse comes first: forms already mapped, names and aliases the library knows and PDF twins are matched without AI. AI drafts only what is left. Nothing changes until a person accepts. ${D('P-38, P-62 §4, A4')}</p>
+ ${s==='cap'?`<div class="notice err" role="alert"><div class="grow"><b>Starting would pass the AI spending limit.</b> US$2.10 is left of US$100; this draft needs up to US$8.60. Draft without AI, or ask the founder to raise the limit.</div></div>`:''}
+ ${s==='noai'?`<div class="notice warn" role="status"><div class="grow"><b>AI is not available right now.</b> You can still draft without AI: everything the library can match is proposed, and a person maps the rest by searching the library.</div></div>`:''}
+ <div class="card" style="overflow:auto"><table><thead><tr><th>Source</th><th>What the system found (no AI)</th><th>Plan</th><th>Estimated cost</th></tr></thead><tbody>
+ ${rows.map(r=>`<tr><td style="min-width:200px"><span class="mono">${r[0]}</span><div>${r[1]}</div></td><td class="mut">${r[2]}</td><td><span class="chip ${r[5]}">${r[3]}</span></td><td class="s12">${r[4]}</td></tr>`).join('')}
+ </tbody></table></div>
+ <div class="ailine"><b>Before you start</b><span>Expected US$2.35 · worst case US$8.60 (each part capped at US$5)</span><span>Spent so far US$39.28 of US$100</span><span>About 6 minutes, parts run in parallel, in the background</span>${D('P-43 AI line, STANDARDS §8')}</div>
+ <div class="row"><button class="btn pri" ${s!=='normal'?'disabled':''}>Start AI draft · up to US$8.60</button>${L()}<button class="btn">Draft without AI</button>${L('Capability · Needed (STANDARDS §4 works with AI off)')}<span class="grow"></span>
+ <details><summary class="s12">Prototype options</summary><div class="s12 stack" style="padding:8px"><label><input type="radio" name="m"> Use the saved AI answer for IMM 1344 (US$0)</label><label><input type="radio" name="m"> Stub pass (no AI content)</label></div></details>${S('replay and stub, never ported (P-32)')}</div>
+ <p class="s12 mut">A source the system cannot identify, or one not on the approved list, is never sent to AI. ${D('P-57, P-62 §4: AI never decides identity')}</p>`;}};
+
+/* 3 PROGRESS */
+V.progress={label:'3 · Progress per part (A4)',menu:'draft',states:{running:'Running',failed:'A part failed',done:'Done'},render:(s)=>{
+ const P=[
+ ['IMM 5476','Whole form','Reused from the library','38 of 38','done','US$0'],
+ ['IMM 1344','Part 1 · Sponsor identity and contact (pp. 1–2)','Matched without AI','120 of 120','done','US$0'],
+ ['IMM 1344','Part 2 · Relationship and previous partners (pp. 3–4)','AI','22 of 22','done','US$0.31'],
+ ['IMM 1344','Part 3 · Undertaking and declarations (pp. 5–6)','AI',s==='running'?'9 of 22':'22 of 22',s==='running'?'run':s==='failed'?'fail':'done',s==='running'?'pending':'US$0.38'],
+ ['IMM 5532','Part 1 · Relationship history','AI',s==='running'?'0 of 24':'24 of 24',s==='running'?'queue':'done',s==='running'?'—':'US$0.41'],
+ ['IMM 0008','Parts 1–6 · Application details … declarations','AI',s==='running'?'0 of 212':'212 of 212',s==='running'?'queue':'done',s==='running'?'—':'US$1.62'],
+ ['IMM 5533','Checklist passages','AI',s==='running'?'0 of 12':'12 of 12',s==='running'?'queue':'done',s==='running'?'—':'US$0.18']];
+ const st={done:'<span class="chip ok">Done</span>',run:'<span class="chip ai">Running</span>',queue:'<span class="chip neu">Queued</span>',fail:'<span class="chip no">Failed</span>'};
+ const n=s==='running'?'Part 4 of 9 · 189 of 450 form fields':'9 of 9 parts · 450 of 450 form fields';
+ return `${crumbs('Programs',COMB,'Draft setup')}
+ <div class="row"><h1>Draft setup</h1>${s==='running'?'<span class="chip ai">Running</span>':s==='failed'?'<span class="chip warn">Partly done</span>':'<span class="chip ok">Ready to review</span>'}${D('A4, EXPERIENCE §4 running: real progress')}</div>
+ <div class="card pad stack"><div class="row"><b>${n}</b><span class="grow"></span><span class="s12">Spent US$${s==='running'?'0.31':'2.90'} · worst case US$8.60</span></div>
+ <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="450" aria-valuenow="${s==='running'?189:450}" aria-label="Form fields drafted"><i style="width:${s==='running'?42:100}%"></i></div>
+ <span class="s12 mut">Counts are form fields handled, not time. You can leave this page; Programs shows "Review N AI proposals" when parts are ready.</span>
+ <div class="row">${s==='running'?'<button class="btn">Cancel queued parts</button>'+L():''}<button class="btn ${s==='running'?'':'pri'}">Review ${s==='running'?'142 proposals ready so far':'proposals'}</button>${L('Capability · Needed (review finished parts while others run)')}</div></div>
+ ${s==='failed'?`<div class="notice err" role="alert"><div class="grow"><b>IMM 1344 part 3: AI answered 22 form fields; 1 name broke the naming rule (form field 114).</b> The other 21 were kept and are ready to review. Form field 114 goes to a person. Cost US$0.38. Running this part again would fail the same way, so it is not offered.</div><a>Review the 21 kept</a></div>${D('A1–A3: FAILED not BLOCKED, keep good entries, no paid repeat')}`:''}
+ <div class="card" style="overflow:auto"><table><thead><tr><th>Form</th><th>Part</th><th>How</th><th>Form fields</th><th>Status</th><th>Cost</th></tr></thead><tbody>
+ ${P.map(p=>`<tr><td class="mono">${p[0]}</td><td>${p[1]}</td><td>${p[2]==='AI'?'<span class="chip ai">AI</span>':'<span class="chip ok">'+p[2]+'</span>'}</td><td>${p[3]}</td><td>${st[p[4]]}</td><td class="s12">${p[5]}</td></tr>`).join('')}
+ </tbody></table></div>
+ <p class="s12 mut">Parts follow the form's own section groups. ${L()} The run record (run id, model, prompt version) is in History › AI work › Details, not on this page. ${D('PRODUCT §4 no run ids on the main path')}</p>`;}};
+
+/* 4 REVIEW PROPOSALS */
+V.review={label:'4 · Review proposals (source + proposals)',menu:'draft',states:{ambiguous:'Ambiguous selected',conflict:'Conflict selected',newfield:'Create new field (advisory check)',repeat:'List field: purpose and overflow',options:'Answer list option map',stale:'Library changed (stale)',applied:'Applied (read-only)'},render:(s)=>{
+ const items=[['Date of marriage or start of relationship','Ambiguous','warn','Medium','ambiguous'],['Sponsor\'s date of birth','Conflict','no','Low','conflict'],['Relationship to sponsor','New','ai','Medium','newfield'],['Sponsor\'s previous spouses or partners','New','ai','High','repeat'],['Sponsor\'s marital status','Reuse','ok','High','options'],['Sponsor\'s family name','Reuse','ok','High','x']];
+ const sel=['stale','applied'].includes(s)?'ambiguous':s;
+ const src={ambiguous:['Section B · Relationship to the person you are sponsoring','Q3: Date of marriage (YYYY-MM-DD) — or the date you began living together in a common-law relationship','Three form fields: year, month, day'],
+  conflict:['Section A · Sponsor information','Q4: Date of birth  [YYYY] [MM] [DD]','The library field "Date of birth" is one date; this form has three form fields'],
+  newfield:['Section B','Q1: What is your relationship to the person you are sponsoring?','Choices on the form: Spouse · Common-law partner · Conjugal partner'],
+  repeat:['Section C · Previous relationships','List all your previous spouses or partners (2 rows)','"If you need more space, use a separate sheet" (Sample wording)'],
+  options:['Section A','Q7: Current marital status','Form codes read from the file: 01 … 09']}[sel];
+ const right={
+ ambiguous:`<span><span class="chip warn">Ambiguous</span> <b>Two library fields could fit</b></span>
+  <div class="card pad s12"><b>Date of marriage</b> · date · Family · used by 4 combinations, 7 form fields<br><b>Date common-law relationship began</b> · date · Family · used by 3 combinations</div>
+  <span class="s12 mut">Why: the question accepts either date. AI suggests a new shared field "Date the relationship began" only if the expert wants one fact; otherwise map to both with a rule.</span>
+  <label class="f">For whom<select><option>The sponsor and the person sponsored (one fact for the couple)</option></select></label>
+  <div class="row"><button class="btn pri">Use "Date of marriage"</button><button class="btn">Pick another shared field</button><button class="btn">Create a new shared field</button><button class="btn ghost">Return with a reason</button></div>`,
+ conflict:`<span><span class="chip no">Conflict</span> <b>Type clash</b></span>
+  <p class="s12" style="margin:0">The form splits the date into year, month and day. The library field is one date. This is not a new fact: map the three form fields to "Date of birth" with a date part each.</p>
+  <table class="s12"><tr><th>Form field</th><th>Shared field</th><th>How</th></tr><tr><td>Q4 year</td><td>Date of birth</td><td>year part</td></tr><tr><td>Q4 month</td><td>Date of birth</td><td>month part</td></tr><tr><td>Q4 day</td><td>Date of birth</td><td>day part</td></tr></table>
+  <div class="row"><button class="btn pri">Map with date parts</button><button class="btn">Pick another shared field</button><button class="btn ghost">Return with a reason</button></div>`,
+ newfield:`<span><span class="chip ai">New</span> <b>Create a shared field</b></span>
+  <label class="f">Name<input value="Relationship to sponsor"></label><label class="f">What it means<input value="How the person sponsored is related to the sponsor"></label>
+  <label class="f">Type<select><option>Choice from an answer list</option></select></label>
+  <span class="s12 mut">Key made by the system: <span class="mono">person.relationship_to_sponsor</span> (never typed) ${D('P-34, C3.6')}</span>
+  <div class="notice warn"><div><b>Looks the same as an existing field</b> (meaning check, advice only)<br>"Relationship to principal applicant" · same answer list · used by 4 combinations. Verdict: <b>use existing</b>.</div></div>${D('P-53, P-62 §5')}
+  <label class="f">Your reason to add a new field (needed because the check disagreed)<textarea rows="2">The sponsor is not the principal applicant on this application.</textarea></label>
+  <div class="row"><button class="btn">Use the existing field</button><button class="btn pri">Add new with this reason</button></div><span class="s12 mut">A different person approves the new field before it can be released. Exact duplicates (same key, name or alias) are refused without AI.</span>`,
+ repeat:`<span><span class="chip ai">New</span> <b>List on the form: which entries fill it</b> ${Q('Q3: B1 here?')}</span>
+  <label class="f">Shared field group<select><option>Previous spouses or partners (list)</option></select></label>
+  <label class="f">Which entries (purpose)<select><option>All entries</option><option>Entry marked current</option><option>Entry marked for post</option><option>Latest entry</option><option>Entries overlapping a date range</option></select></label>
+  <label class="f">When the person has more entries than the form's 2 rows<select><option>Continue on an extra sheet</option><option>Flag for the case officer</option></select></label>
+  <span class="s12 mut">Never cut silently. AI proposed "All entries" from the instruction "List all". ${D('SA-1B-11, 12, 27')}</span>
+  <div class="row"><button class="btn pri">Accept</button><button class="btn">Edit</button><button class="btn ghost">Return with a reason</button></div>`,
+ options:`<span><span class="chip ok">Reuse</span> <b>Marital status</b> · answer list "Marital status"</span>
+  <table class="s12"><tr><th>Value</th><th>IMM 1344 PDF code</th><th>IMM 0008 online code</th></tr><tr><td>Married</td><td>01</td><td>MAR</td></tr><tr><td>Common-law</td><td>03</td><td>CL</td></tr><tr><td>Divorced</td><td>04</td><td>DIV</td></tr><tr><td>Annulled marriage</td><td>09</td><td><span class="chip no">Not mapped</span> <a class="s12">Map</a></td></tr></table>
+  <span class="s12 mut">Codes are read from each file and screen (Sample). Every value needs a code in each channel before release. ${D('P-62 §3, F1 validator')}</span>
+  <div class="row"><button class="btn pri">Accept</button><button class="btn">Edit option map</button></div>`}[sel];
+ return `${crumbs('Programs',COMB,'Review proposals')}
+ <div class="row"><h1>Review proposals</h1><span class="mut">${s==='applied'?'All decided · applied to the draft':'44 left to decide'}</span>${D('P-37, EXPERIENCE §3 Source + proposals')}</div>
+ <div class="ailine"><b>AI draft</b><span>Sources: IMM 1344 (09-2024), checklist IMM 5533</span><span>Confidence: 31 High · 9 Medium · 4 Low</span><span>Cost: US$1.51</span><span>Nothing changes until you accept</span></div>
+ ${s==='stale'?`<div class="notice warn" role="status"><div class="grow"><b>The library changed after this draft was compared</b> (2 shared fields added by another author). Applying is refused until you compare again. Comparing again uses no AI and keeps every decision that still holds.</div><button class="btn">Compare again (no AI)</button></div>`:''}
+ ${s==='applied'?`<div class="notice okn" role="status"><div class="grow"><b>Applied to the shared draft.</b> 233 form fields mapped · 3 new shared fields waiting for a second person · 12 document requirements. This draft is read-only.</div><a>Preview by person</a></div>`:''}
+ <div class="tabs" role="tablist"><button class="tab on">Field maps (233)</button><button class="tab">Document requirements (12)</button><button class="tab">Sections (3)</button><button class="tab">Rules and checks (9)</button><button class="tab">Answer lists (2)</button></div>${L('Capability · Needed (C3.4, C2.6: backend not built yet)')}
+ <div class="row"><button class="fchip on">Needs a decision · 13</button><button class="fchip">New · 9</button><button class="fchip">Reuse · 22</button><button class="fchip">Decided · 189</button><button class="fchip">All · 233</button><span class="grow"></span><button class="btn" ${s==='applied'?'disabled':''}>Accept 22 exact reuses</button>${D('P-43 bulk only for exact or high')}</div>
+ <div class="card" style="display:grid;grid-template-columns:280px minmax(0,1fr) minmax(0,1.1fr);min-height:420px">
+  <div class="plist" style="border-right:1px solid var(--soft)">${items.map(i=>`<button class="${i[4]===sel?'on':''}"><span class="chip ${i[2]}">${i[1]}</span> ${i[0]}<br><span class="s12 mut">IMM 1344 · confidence ${i[3]}</span></button>`).join('')}<div class="s12 mut" style="padding:10px 14px">J / K next and previous · A accept · N new</div></div>
+  <div class="pad stack" style="border-right:1px solid var(--soft)"><h3>Source · IMM 1344, page ${sel==='repeat'?4:sel==='conflict'?1:3}</h3><div class="src"><span>${src[0]}</span><span class="hl">${src[1]}</span><span>${src[2]}</span></div><a class="s12">Open the page</a></div>
+  <div class="pad stack">${s==='applied'?'<span class="chip ok">Accepted by the Configuration author</span><b>Date of marriage</b><span class="s12 mut">Read-only: applied to the draft.</span>':right}</div>
+ </div>
+ <div class="card pad row"><span class="grow">${s==='applied'?'Next: preview the effect, then Review and release.':'<b>13</b> proposals still need a decision. Every form field needs one: a shared field, "not a fact", or "filled by hand" with a reason.'} ${Q('Lead: PDF form fields left by hand (F1 choice 4)')}</span><button class="btn">Save and continue later</button><button class="btn pri" ${s==='applied'?'disabled':'disabled'}>Apply to draft</button></div>`;}};
+
+/* 5 SCREEN MAP */
+V.screenmap={label:'5 · Screen map (online version)',menu:'impact',states:{normal:'Leftover selected',accepted:'Accepted'},render:(s)=>{
+ const inputs=[['Family name','From the PDF twin','Medium','Family name'],['Given names','From the PDF twin','Medium','Given names'],['Date of birth (3 inputs)','From the PDF twin','Medium','Date of birth · year / month / day'],['Sex','Alias "Gender"','Medium','Sex · option map'],['Preferred language for correspondence','Left for a person','—',''],['Upload passport copy','Not a fact','—','document checklist asks for it']];
+ return `${crumbs('Shared library','Forms','IMM 5257','Online version · IRCC Portal','Screen map')}
+ <div class="row"><h1>Screen map · IMM 5257 online</h1><span class="chip ${s==='accepted'?'ok':'warn'}">${s==='accepted'?'Accepted':'Needs you'}</span>${D('P-61 §3a, P-62 §8: reuse the PDF twin')}</div>
+ <div class="ailine"><b>Drafted without AI</b><span>Source: approved capture (6 screens) + the IMM 5257 PDF field map</span><span>Cost: US$0</span><span>Matched by element id, PDF twin, then aliases</span></div>
+ <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px"><div class="card stat"><span class="mut s12">Inputs</span><b>48</b></div><div class="card stat"><span class="mut s12">From the PDF twin</span><b>33</b></div><div class="card stat"><span class="mut s12">By alias</span><b>6</b></div><div class="card stat"><span class="mut s12">Not a fact</span><b>4</b></div><div class="card stat" style="border-color:var(--warn-line)"><span class="mut s12">Left for a person</span><b>5</b></div></div>
+ <div class="card" style="display:grid;grid-template-columns:220px minmax(0,1.3fr) minmax(0,1fr)">
+  <div class="plist" style="border-right:1px solid var(--soft)">${['1 · Personal details (12)','2 · Passport (8)','3 · Contact (7)','4 · Marital status (6)','5 · Education (7)','6 · Employment (8)'].map((x,i)=>`<button class="${i===0?'on':''}">Screen ${x}</button>`).join('')}</div>
+  <div style="border-right:1px solid var(--soft);overflow:auto"><table><thead><tr><th>Input on the screen</th><th>Found by</th><th>Shared field</th></tr></thead><tbody>${inputs.map((r,i)=>`<tr${i===4?' class="sel"':''}><td>${r[0]}</td><td>${r[1]==='Left for a person'?'<span class="chip warn">Left for a person</span>':r[1]==='Not a fact'?'<span class="chip neu">Not a fact</span>':'<span class="chip ai">'+r[1]+'</span> <span class="s12 mut">'+r[2]+'</span>'}</td><td class="s12">${r[3]}</td></tr>`).join('')}</tbody></table></div>
+  <div class="pad stack"><h3>Preferred language for correspondence</h3><span class="s12 mut">Screen 1 · dropdown · required · choices English, French</span>
+   <label class="f">Search the library<input value="language"></label>
+   <div class="card pad s12"><b>Language for correspondence</b> · choice · used by IMM 0008 PDF<br><span class="mut">Same choices · not yet an alias</span></div>
+   <div class="row"><button class="btn pri">Use this field and learn the label</button><button class="btn">Not a fact…</button></div>
+   <button class="btn">Draft the 5 left with AI · about US$0.05</button>${L('Capability · Needed (forms slice 2 screen_map job)')}
+   <span class="s12 mut">Label matches are Medium and decided one by one; only same-element-id matches can be accepted in bulk. ${D('P-43, F1 R8')}</span></div>
+ </div>
+ <div class="card pad row"><span class="grow">${s==='accepted'?'Accepted by the Configuration author · labels learned as aliases: 2.':'5 inputs left. The screen map is accepted when every input is mapped or "not a fact".'}</span><button class="btn pri" ${s==='accepted'?'disabled':''}>Accept screen map</button></div>`;}};
+
+/* 6 CAPTURE */
+V.capture={label:'6 · Portal capture review (second person)',menu:'queue',states:{approver:'Second person',capturer:'Capturer (cannot approve)',returned:'Returned'},render:(s)=>`${crumbs('To review','IMM 0008 online · portal capture')}
+ <div class="row"><h1>Portal capture · IMM 0008</h1><span class="chip ${s==='returned'?'no':'warn'}">${s==='returned'?'Returned to the capturer':'Waiting for a second person'}</span>${D('P-66 §1, P-57 amended')}</div>
+ <div class="card pad stack"><div class="row" style="gap:24px"><span><span class="mut s12">Portal</span><br>Representative PR Portal</span><span><span class="mut s12">Captured by</span><br>Immigration expert · 22 Oct 2026 (Sample)</span><span><span class="mut s12">How</span><br>Saved blank pages (9)</span><span><span class="mut s12">Changes</span><br>4 differences from the version of 12 Jun 2026</span></div>
+ <span class="s12">Structure only: labels, ids, types, choices, required marks and help. Two pages were refused at upload because they held an answer. Check the labels and help text for anything that looks like a client's details.</span>
+ <div class="row"><a>Open review document (PDF)</a>${L()}<span class="mut s12">Branches not seen in this capture: "Dependant details" (appears only with dependants). Add it with a later capture.</span></div></div>
+ <div class="card" style="overflow:auto"><table><thead><tr><th>Screen</th><th>Input</th><th>Difference</th><th>Before</th><th>Now</th></tr></thead><tbody>
+ <tr><td>3 · Personal details</td><td>Marital status</td><td><span class="chip warn">Choices changed</span></td><td>6 choices</td><td>7 choices: "Annulled marriage" added</td></tr>
+ <tr><td>3 · Personal details</td><td>Native language</td><td><span class="chip warn">Reworded</span></td><td>Native language</td><td>Native language / mother tongue</td></tr>
+ <tr><td>5 · Education</td><td>Field of study</td><td><span class="chip ai">Added</span></td><td>—</td><td>Text · required</td></tr>
+ <tr><td>7 · Background</td><td>Number of years of education</td><td><span class="chip warn">Rule changed</span></td><td>max 2 digits</td><td>max 2 digits · required</td></tr>
+ </tbody></table></div>
+ ${s==='returned'?`<div class="notice warn"><div><b>Returned by the Content reviewer:</b> "Screen 5 was saved after a value was typed and removed; please save it again from a blank application." The capturer can remove that screen, add it again and finish, or abandon the capture.</div></div>`:''}
+ <div class="card pad row">${s==='capturer'?'<span class="grow mut">You captured this. A different person approves or returns it.</span><button class="btn" disabled>Approve</button><button class="btn">Abandon capture</button>':s==='returned'?'<span class="grow"></span><button class="btn">Remove a screen</button><button class="btn pri">Add screens</button>':'<label class="f grow">Reason (needed to return)<input placeholder="What must change"></label><button class="btn">Return with reason</button><button class="btn pri">Approve: becomes the online version</button>'}</div>
+ <p class="s12 mut">After approval the screen map is drafted without AI from the PDF twin. 4 differences open an impact review like a new PDF edition. ${D('P-61 §5')} Capture by browser extension ${NB('F2')} · screenshots ${NB('last resort, P-66 way D')}</p>`};
+
+/* 7 IMPACT */
+V.impact={label:'7 · New edition: impact review',menu:'impact',states:{comparison:'Comparison tab',library:'Impact on library tab',combinations:'Combinations tab',accepted:'Accepted'},render:(s)=>{
+ const tab=s==='accepted'?'comparison':s;
+ const t={comparison:`<table><thead><tr><th>Form field</th><th>05-2021</th><th>2025 edition (Sample)</th><th>Change</th><th>Field map</th></tr></thead><tbody>
+  <tr><td>Applicant family name</td><td>Family name</td><td>Family name</td><td><span class="chip neu">Unchanged</span></td><td class="s12">Carried over: Family name</td></tr>
+  <tr><td>Representative type</td><td>Unpaid / Paid</td><td>Unpaid / Paid / Designated individual</td><td><span class="chip warn">Choices changed</span></td><td class="s12">AI: add "Designated individual" to the answer list · High</td></tr>
+  <tr><td>Representative email</td><td>—</td><td>Email address</td><td><span class="chip ai">New</span></td><td class="s12">AI: reuse "Representative's email" · High</td></tr>
+  <tr><td>Consent to communicate electronically</td><td>—</td><td>Yes / No</td><td><span class="chip ai">New</span></td><td class="s12">AI: new shared field · Medium</td></tr>
+  <tr><td>Fax number</td><td>Fax</td><td>—</td><td><span class="chip no">Removed</span></td><td class="s12">"Representative fax" kept, marked unused here</td></tr></tbody></table>`,
+ library:`<table><thead><tr><th>Library item</th><th>Kind</th><th>AI proposes</th><th>Why</th><th>Where used</th></tr></thead><tbody>
+  <tr><td>Representative's email</td><td>Shared field</td><td><span class="chip ok">Keep</span></td><td class="s12">Same meaning; now on this form too</td><td class="s12">3 forms</td></tr>
+  <tr><td>Consent to communicate electronically</td><td>Shared field</td><td><span class="chip ai">New</span></td><td class="s12">No field with this meaning</td><td class="s12">—</td></tr>
+  <tr><td>Representative type</td><td>Answer list</td><td><span class="chip warn">Update</span></td><td class="s12">One value added; PDF and online codes needed</td><td class="s12">2 forms</td></tr>
+  <tr><td>Representative</td><td>Section</td><td><span class="chip warn">Update</span></td><td class="s12">Ask the 2 new fields here</td><td class="s12">5 combinations</td></tr>
+  <tr><td>Ask representative questions when a representative is used</td><td>Rule</td><td><span class="chip ok">Keep</span></td><td class="s12">Still true for the new fields</td><td class="s12">5 combinations</td></tr>
+  <tr><td>Representative fax</td><td>Shared field</td><td><span class="chip neu">Mark unused</span></td><td class="s12">No form uses it after this change</td><td class="s12">0 forms</td></tr></tbody></table>`,
+ combinations:`<table><thead><tr><th>Combination</th><th>Status</th><th>What changes</th><th>Open cases</th></tr></thead><tbody>
+  ${[['Visitors › Visitor visa','Live','2 questions added to Representative','5'],['Work permits › Employer-specific work permit › With an LMIA','Live','2 questions added','4'],[COMB,'In setup','2 questions added','0'],['Study permits › Study permit','In setup','2 questions added','0'],['Work permits › Open work permit › Post-graduation','Live','2 questions added','3']].map(r=>`<tr><td>${r[0]}</td><td><span class="chip ${r[1]==='Live'?'ok':'neu'}">${r[1]}</span></td><td class="s12">${r[2]}</td><td class="s12">${r[3]} stay on their release</td></tr>`).join('')}</tbody></table>`}[tab];
+ return `${crumbs('Shared library','Forms','IMM 5476 Use of a representative','New edition')}
+ <div class="row"><h1>New edition: review impact</h1><span class="chip ${s==='accepted'?'ok':'warn'}">${s==='accepted'?'In the shared draft':'Needs you'}</span>${D('P-32 §3, P-38 case 3, C9.1')}</div>
+ <div class="card pad">Edition <b>05-2021</b> → <b>2025 edition (Sample)</b>, uploaded by the Configuration author in Work permits › Employer-specific work permit › With an LMIA. Compared field by field without AI; AI mapped only the 13 new or reworded form fields and assessed the impact.</div>
+ <div class="ailine"><b>AI mapping and impact</b><span>Source: IMM 5476 2025 edition, pages 1–4</span><span>Confidence: 11 High · 2 Medium</span><span>Cost: US$0.40</span><span>Nothing changes until you accept and release</span></div>
+ <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px"><div class="card stat"><span class="mut s12">Unchanged · carried over</span><b>38</b></div><div class="card stat"><span class="mut s12">Reworded or choices changed</span><b>4</b></div><div class="card stat" style="border-color:var(--warn-line)"><span class="mut s12">New form fields</span><b>9</b><span class="s12 mut">7 reuse · 2 new shared fields</span></div><div class="card stat"><span class="mut s12">Removed</span><b>1</b><span class="s12 mut">shared field kept, marked unused</span></div></div>
+ ${s==='accepted'?`<div class="toast" role="status">Added to the shared draft: 14 changes across 5 combinations <button class="lnk">Undo</button> <a style="color:#99d2ff">Review and release</a></div>`:''}
+ <div class="tabs" role="tablist"><button class="tab ${tab==='comparison'?'on':''}">Comparison (52)</button><button class="tab ${tab==='library'?'on':''}">Impact on library (6)</button><button class="tab ${tab==='combinations'?'on':''}">Combinations (5)</button></div>
+ <div class="card" style="overflow:auto">${t}</div>
+ <div class="card pad row"><span class="grow">Open cases stay on the release they started on. After release, the 5 combinations use the 2025 edition by reference. ${D('STANDARDS §3.7')} Adopting on an open case ${NB('B9, M3')}</span><button class="btn">Accept the 11 high-confidence</button><button class="btn pri" ${s==='accepted'?'disabled':''}>Review all 13 and accept</button></div>`;}};
+
+/* 8 MERGE */
+V.merge={label:'8 · Merge approval (panel)',menu:'queue',states:{normal:'Second person',proposer:'Proposer view'},render:(s)=>`${crumbs('To review','Merge')}
+ <div style="display:flex;gap:0;min-height:560px"><div class="grow card pad mut" style="border-radius:8px 0 0 8px">The "To review" list stays behind the panel with its filters and scroll.</div>
+ <aside class="panel" aria-label="Merge two shared fields">
+ <header><div class="row"><h2>Merge two shared fields</h2><span class="chip warn">${s==='proposer'?'Waiting for a second person':'Needs you'}</span></div><span class="s12 mut">Proposed by the meaning check, confirmed by the Configuration author ${D('P-65')}</span></header>
+ <div class="body"><div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+ <div class="card pad s12"><span class="chip neu">Goes away</span><br><b>Birth date (applicant)</b><br>date · person<br>Aliases: DOB<br>Used by: IMM 5257 (3 form fields), 1 rule</div>
+ <div class="card pad s12"><span class="chip ok">Stays</span><br><b>Date of birth</b><br>date · person<br>Aliases: Birth date<br>Used by: 6 forms, 18 form fields, 2 rules</div></div>
+ <p style="margin:0">After the merge: "Birth date (applicant)" becomes an alias that points to "Date of birth"; 3 field maps and 1 rule move; Release 2 stays exactly as released.</p>
+ <span class="s12 mut">Both fields are checked again when you approve; if either changed, nothing moves.</span>
+ <label class="f">Reason (needed to reject)<input></label></div>
+ <footer><button class="btn">Close</button><span class="row">${s==='proposer'?'<button class="btn" disabled>Approve merge</button><span class="s12 mut">A different person approves</span>':'<button class="btn">Reject</button><button class="btn pri">Approve merge</button>'}</span></footer></aside></div>`};
+
+/* 9 HELD FILE */
+V.held={label:'9 · Held file (open question Q2)',menu:'queue',states:{normal:'Check the source'},render:()=>`${crumbs('To review','Held file')}
+ <div class="row"><h1>Held file · IMM 5669</h1><span class="chip warn">Held</span>${Q('Q2: approve in the product?')}${NB('C2.3 until Q2 is answered')}</div>
+ <div class="card pad stack"><span>Read from the file without AI: <b>IMM 5669</b> · edition printed on the form · published date · file fingerprint. This file is not on the approved list, so it was not read, attached or sent to AI. ${D('P-57')}</span>
+ <label class="f">Where it came from (the IRCC page it was downloaded from)<input value="https://www.canada.ca/… (Sample)"></label>
+ <span class="s12 mut">A second person compares the file with the one on that page, then approves it as an official source or rejects it.</span>
+ <div class="row"><button class="btn">Reject</button><button class="btn pri">Approve as an official source</button></div></div>`};
+
+/* 10 AI WORK LOG */
+V.log={label:'10 · History › AI work (existing log)',menu:'log',states:{normal:'Normal'},render:()=>`${crumbs('History','AI work')}
+ <div class="row"><h1>AI work</h1>${L('Capability · Needed (existing page, small changes)')}</div>
+ <p class="mut" style="margin:0">Every AI run with what it did and cost. Decisions happen in "To review".</p>
+ <div class="card" style="overflow:auto"><table><thead><tr><th>Scope</th><th>Parts</th><th>Status</th><th>Spent / worst case</th><th>Started</th></tr></thead><tbody>
+ <tr><td><a>${COMB}</a><div class="s12 mut">Draft setup</div></td><td class="s12">9 parts · 8 done, 1 failed</td><td><span class="chip warn">Partly done</span></td><td class="s12">US$2.90 / US$8.60</td><td class="s12 mut">23 Oct 10:42 · Configuration author</td></tr>
+ <tr><td><a>IMM 5476 2025 edition</a><div class="s12 mut">New edition impact</div></td><td class="s12">1 part · done</td><td><span class="chip ok">Done</span></td><td class="s12">US$0.40 / US$1.00</td><td class="s12 mut">22 Oct 16:05 · Configuration author</td></tr>
+ </tbody></table></div><p class="s12 mut">Run id, model and prompt version sit behind "Details" for admins. ${D('PRODUCT §4')}</p>`};
+
+/* 11 AI PATH PROPOSAL */
+V.path={label:'11 · New combination: describe it (P-37/P-41)',menu:'draft',states:{normal:'Proposal'},render:()=>`${crumbs('Programs','New combination')}
+ <div class="row"><h1>New combination</h1>${D('P-37, P-41: "Propose with AI" arrives with Screen 02')}${Q('Not in SCREENS row 02')}</div>
+ <div class="card pad stack"><label class="f">Describe it<input value="Parents and grandparents super visa, applied from outside Canada"></label><button class="btn" style="align-self:flex-start">Propose with AI · about US$0.02</button>
+ <div class="ailine"><b>AI proposal</b><span>Source: your description + the current program list</span><span>Confidence: High</span><span>Cost: US$0.02</span><span>Nothing is created until you confirm</span></div>
+ <span>Will be created as <b>Individual › Visitors › Super visa</b> · library forms: IMM 5257, IMM 5707 (Sample)</span>
+ <div class="notice warn"><div>"Visitors › Super visa" already exists. <a>Open the existing combination</a></div></div>
+ <div class="row"><button class="btn">Edit the path by hand</button><button class="btn pri" disabled>Create</button></div></div>`};
+
+const vsel=document.getElementById('vsel'),ssel=document.getElementById('ssel'),main=document.getElementById('main');
+const order=['queue','draft','progress','review','screenmap','capture','impact','merge','held','log','path'];
+order.forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=V[k].label;vsel.appendChild(o);});
+function fillStates(){ssel.innerHTML='';Object.entries(V[vsel.value].states).forEach(([k,l])=>{const o=document.createElement('option');o.value=k;o.textContent=l;ssel.appendChild(o);});}
+function draw(){const v=V[vsel.value];main.innerHTML=v.render(ssel.value);document.querySelectorAll('nav.side button').forEach(b=>b.classList.toggle('on',b.dataset.v===v.menu||(v.menu==='draft'&&b.textContent.trim()==='Programs')));document.getElementById('actor').textContent=(vsel.value==='capture'&&ssel.value==='capturer')||(vsel.value==='merge'&&ssel.value==='proposer')||(vsel.value==='queue'&&ssel.value==='waiting')?'Immigration expert ▾':'Content reviewer ▾';}
+vsel.onchange=()=>{fillStates();draw();};ssel.onchange=draw;
+document.getElementById('lab').onchange=(e)=>document.body.classList.toggle('labels',e.target.checked);
+document.querySelectorAll('nav.side button[data-v]').forEach(b=>b.onclick=()=>{const t=b.dataset.v==='draft'?'draft':b.dataset.v;vsel.value=t;fillStates();draw();});
+fillStates();draw();
+</script>
+</body>
+</html>
