@@ -121,7 +121,7 @@ footer { font-size: 12px; color: var(--muted); }
 
 <script>
 const D = {
-  asof: "Updated 23 Oct 2026, 18:40 IST. Source files: product/PLAN.md, STATE.md, qa/CAPABILITIES.md, qa/BUGS.md, DECISIONS.md, BACKLOG.md.",
+  asof: "Updated 23 Oct 2026, 18:50 IST. Source files: product/PLAN.md, STATE.md, qa/CAPABILITIES.md, qa/BUGS.md, DECISIONS.md, BACKLOG.md.",
   summary: [
     ["M2 progress (counted)", "5 of 37 work", "6 partial · 3 broken · 2 not tested · 21 not built"],
     ["R1 and M3", "0 of 7 · 0 of 12", "Runtime build starting; M3 design drafts in"],
@@ -145,7 +145,7 @@ const D = {
   ]},
   journey: [
     { n: "1", t: "Set up the combination", d: "Pathway › Program › Category › Sub-category, links between combinations", c: [["ok","Catalogue and path builder built"],["none","Links carry no facts yet (Screen 03)"]], caps: "C1.1–C1.4" },
-    { n: "2", t: "Bring in sources", d: "IRCC PDF forms, portal screens, checklists", c: [["ok","PDF intake, unapproved files held"],["brand","Portal capture in forms slice 1"],["none","Approve a held file in the product"],["none","Checklists read into proposals"]], caps: "C2.1–C2.6" },
+    { n: "2", t: "Bring in sources", d: "IRCC PDF forms, portal screens, checklists", c: [["ok","PDF intake, unapproved files held"],["brand","Portal capture in forms slice 1"],["none","Approve a held file in the product (P-80)"],["none","Checklists read into proposals"]], caps: "C2.1–C2.6" },
     { n: "3", t: "Build the shared library", d: "Shared fields, sections, answer lists, document types, rules, checks", c: [["ok","AI maps form fields with reuse / new / conflict"],["brand","Aliases, merges, answer lists (forms)"],["none","AI drafts sections, documents, rules"],["none","Describe what you need; retire"]], caps: "C3.1–C3.8" },
     { n: "4", t: "Questionnaires per person", d: "PQR and SQR for each person role; preview with a sample family", c: [["warn","SQR section selection, coverage preview"],["brand","Shared renderer in R1 (runtime)"],["none","PQR inside the SQR, AI-drafted, released with the combination (P-76)"]], caps: "C4.1–C4.4" },
     { n: "5", t: "Review and release", d: "Author submits, expert ticks, a different person releases", c: [["ok","Submit, sign-off, different approver"],["bad","Release page skips expert sign-off (QA-1)"]], caps: "C5.1–C5.2" },
@@ -183,6 +183,7 @@ const D = {
     ["Facts are the root", "Shared fields; PDF and online forms are outputs; questionnaires built from facts (P-61, P-62, P-63)."],
     ["Family answers: confirmed by who answered", "One family questionnaire, a section per person; own and minors' answers count as confirmed; an adult's answers given by the principal wait for that adult or the officer (P-78)."],
     ["One place for approvals", "A To review page first under Configure lists everything waiting for a person or second person, including combinations to release (P-79)."],
+    ["Held PDFs approved in the product", "The uploader records the IRCC page; a different person compares and approves; the file joins the approved list (P-80)."],
     ["Never overwrite signed work", "A changed fact marks signed, uploaded or submitted items stale (P-65)."],
     ["AI drafts, people decide", "AI never decides identity, filling or release; a different person approves (P-14, P-15, P-53, P-62)."],
     ["Portal capture and fill", "One extension: capture structure only, fill in the representative's session; form health (P-66)."],

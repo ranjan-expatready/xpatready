@@ -5,7 +5,7 @@
 
 2026-10-23 17:55 (Lead): no change to the Screen 01 fix pass. For Screen 03 later: founder decided P-76 (PQR inside the SQR, AI-drafted picks approved by a person, released with the combination); Screen 03 draft BR-14 updated; capabilities C4.2, C4.7, C4.8.
 
-2026-10-23 18:40 (Lead): no change to the Screen 01 fix pass. For Screen 02 later: founder decided P-79 (one "To review" page first under Configure, also listing combinations waiting for release as links); PRODUCT §3 menu, SCREENS 02 and the Screen 02 draft updated; capability C5.3.
+2026-10-23 18:40 (Lead): no change to the Screen 01 fix pass. For Screen 02 later: founder decided P-79 (one "To review" page first under Configure, also listing combinations waiting for release as links); PRODUCT §3 menu, SCREENS 02 and the Screen 02 draft updated; capability C5.3. Also P-80: a held PDF is approved in the product by a second person (uploader records the IRCC page; approval adds its checksum to the approved list); capability C2.3.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
