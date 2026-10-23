@@ -8,9 +8,10 @@ updated: 2026-10-23
 |---|---|---|---|---|
 | screens | 01 Programs | DEMO | Founder with Lead | Walk Screen 01 on :4400 as author and reviewer |
 | forms | F1 forms channels | BUILD (slice 1) | Builder | Data, capture contract, readers, approval, validator, twin reuse at US$0; F2 extension next |
-| evidence | E1 form acceptance | BUILD (E1b) | Builder | IMM 1344 → 0008 → 5257 in Adobe by computer use; founder watches the first |
+| evidence | E1 form acceptance | BUILD (E1b) | Founder | IMM 1344 filled (d2a431fc on its branch); Adobe step needs Computer use turned on for the evidence session |
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-23 · Handover to a fresh Lead chat: main committed; forms slice 1 running in its session; evidence E1b waits on Computer use; Screen 01 waits on the founder walkthrough; P-65 and US$12 PDF-twin spend await the founder.
 - 2026-10-23 · Merged forms "Report to Lead" wording (23d4eeef, founder request) and evidence E1a scoring set (self-check 16/16). Evidence → E1b with computer use (founder).
 - 2026-10-23 · forms · DESIGN → BUILD · Lead merged the F1 challenge into main (b0e96158), answered all five objections; founder decided P-66 (extension for capture and fill, structure only, portal twin, form health).
 - 2026-10-23 · all · Hooks read the session's own folder from the hook input (lane sessions were checking the main copy; forms lane report). Founder gave a standing OK to merge lanes after the Lead check.
