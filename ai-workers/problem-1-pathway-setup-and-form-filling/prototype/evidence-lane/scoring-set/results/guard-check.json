@@ -1,0 +1,38 @@
+{
+ "note": "Each attempt was made under the scorer's own conditions and must be refused.",
+ "all_refused": true,
+ "attempts": {
+  "fetch to the AI provider": {
+   "refused": true,
+   "why": "scoring set: network blocked (fetch); scoring is offline and free"
+  },
+  "https request": {
+   "refused": true,
+   "why": "scoring set: network blocked (http.request); scoring is offline and free"
+  },
+  "raw socket": {
+   "refused": true,
+   "why": "scoring set: network blocked (net.connect); scoring is offline and free"
+  },
+  "dns lookup": {
+   "refused": true,
+   "why": "scoring set: network blocked (dns.lookup); scoring is offline and free"
+  },
+  "API key in the environment": {
+   "refused": true,
+   "why": "absent"
+  },
+  "read outside the copy (key file location)": {
+   "refused": true,
+   "why": "ERR_ACCESS_DENIED"
+  },
+  "write into the real project folder": {
+   "refused": true,
+   "why": "ERR_ACCESS_DENIED"
+  },
+  "start a child process": {
+   "refused": true,
+   "why": "ERR_ACCESS_DENIED"
+  }
+ }
+}

@@ -22,7 +22,7 @@ Scan of `official-sources/ircc/forms/` (all dynamic XFA, usage-rights signed, re
 | 8 | IMM 1295 work permit (09-2023) | 5 | yes | 43 | A | **passed in Adobe 19 Oct** (P1 §4) — rerun as regression |
 | 9 | IMM 5707 family (01-2023) | 0 | yes | 0 | B | shown in Adobe 19 Oct (family copy) — rerun |
 
-**Order question for the Lead:** P-46 and `LEAD.md` say "IMM 0008, 1344, 5669 first"; the lane file starts with IMM 5257. This plan keeps the lane order. Since 5669 has no barcodes, I recommend 1344 → 0008 → 5257 for the first slice (demo 3's barcode forms first).
+**Order (Lead, 23 Oct):** E1b runs IMM 1344 → 0008 → 5257 (the spousal-sponsorship barcode forms first), then groups B and C, then the 1295/5707 regression. Before E1b: IRCC's Help Centre names **eIMM 5669** as a validated barcode form, but our IMM 5669 (05-2021) has none; find out whether IRCC's current validated Schedule A is a different file (no new download by this lane).
 
 Group A = Validate + barcodes (full method). B = Validate, no barcodes. C = no Validate, no barcodes ("none found" is confirmed by eye in Adobe).
 
@@ -66,7 +66,9 @@ Edge set: writer, Adobe-opens and barcode checks must hold; Validate messages ar
 * **Use**: any later prompt or model change is scored on this set first at US$0; a paid run only when the set cannot answer.
 
 ## 7. Build order (next stage, BUILD)
-E1a scoring set + self-check (needs no Adobe, can start at once) · E1b forms 1–3 (all three barcode forms) · E1c forms 4–7 · E1d regression of 8–9. One commit per slice; nothing in `p1/`, `p5/`, `expected/` or the app is changed.
+E1a scoring set + self-check (needs no Adobe, can start at once) · E1b IMM 1344, 0008, 5257 (barcode forms) · E1c IMM 5669, 5532, 5406, 5476 · E1d regression of IMM 1295 and 5707. One commit per slice; nothing in `p1/`, `p5/`, `expected/` or the app is changed.
 
 ## Risks
 The writer uses pypdf private internals (demonstration-only); the forms lane may change the filler, then E1 reruns. Barcode capture by screen depends on zoom; print-to-PDF tried first. IMM 0008 (10 barcodes, 94 required) will need the most iterations.
+
+**Agreed 23 Oct** (Lead): plan as written; order as above; how Adobe is driven is the founder's choice and E1b waits for it; E1a does not.
