@@ -11,6 +11,7 @@ import { actorOf, Audit, Db, STUDIO, Workspace } from "./core.ts";
 import { Ai } from "./ai.ts";
 import { Demo } from "./demo.ts";
 import { Fill } from "./fill.ts";
+import { Forms, FormsController } from "./forms.ts";
 import { Intake, MAX_BYTES, MAX_FILES } from "./intake.ts";
 import { Programs } from "./programs.ts";
 import { Sources } from "./sources.ts";
@@ -143,7 +144,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs] })
+@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms] })
 class AppModule {}
 
 async function main() {
@@ -153,9 +154,10 @@ async function main() {
   app.useGlobalFilters(new ProblemErrors());
   const web = join(STUDIO, "web", "dist");
   if (existsSync(web)) {
-    app.useStaticAssets(web, { index: false });
+    // dotfiles "allow": lane copies live under .claude/worktrees/, and a hidden folder in the path made every page a 404.
+    app.useStaticAssets(web, { index: false, dotfiles: "allow" });
     const index = join(web, "index.html");
-    app.getHttpAdapter().getInstance().get(/^\/(?!api\/).*/, (_req: any, res: any) => res.sendFile(index));
+    app.getHttpAdapter().getInstance().get(/^\/(?!api\/).*/, (_req: any, res: any) => res.sendFile(index, { dotfiles: "allow" }));
   }
   await app.listen(port, "127.0.0.1");
   console.log(`Product Studio on http://localhost:${port}`);

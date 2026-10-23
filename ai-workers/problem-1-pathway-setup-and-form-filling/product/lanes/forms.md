@@ -3,13 +3,14 @@
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: F1-forms-channels
-stage: BUILD
-owner: Builder
-next_action: BUILD slice 1 as agreed in `screens/F1-forms-channels/challenge.md` ("Lead response", "Agreement") plus the concept's capture record and portal twin (P-66 §4): data and migration, capture contract and readers (saved blank page, spreadsheet template), refusal of captures with values, second-person approval, fingerprint identity, channel per line, portal on the combination, derived filing method, validator rules, one answer list end to end, aliases and merges (P-65), twin reuse proven on the saved IMM 5257 draft at US$0, `check_ai_drafting.ts` fix. No UI pages, no paid AI. Show slice 1 at EARLY-LOOK.
+stage: EARLY-LOOK
+owner: Lead
+next_action: Lead early look at slice 1 (no UI): `screens/F1-forms-channels/build-notes.md`, review document in `screens/F1-forms-channels/screenshots/slice1/`, run `zsh studio/tools/isolated.sh <lead name> <lead port> start && tsx studio/tests/check_forms_channels.ts <port> <db>` from this lane copy (66 checks, US$0). Decide: unresolved PDF form fields an error or not; guarded-AI fix for lane copies (guard allows each link hop, or lane.sh links differently); lane.sh clones studio/node_modules for schema lanes; concept.md wording (refused, second-person approval); screens lane to call defaultChannelFor in "+ Add line". Then merge slice 1 (with `prisma generate` + `migrate deploy` on main together) and set slice 2.
 blocked_by: none
 updated: 2026-10-23
 
 ## Log (last 10 lines)
+- 2026-10-23 · F1 · BUILD → EARLY-LOOK · Slice 1 built (no UI, AI US$0): migration (additive; proven on a copy of today's data), capture contract, page and template readers, refusal of answers, second-person approval, fingerprint identity + difference, portal twin + review PDF, screen map without AI (PDF twin, aliases), channels + portal + derived filing method, validator rules, answer list `sex` end to end, aliases and reviewed merges, intake guard, check_ai_drafting fix. Tests: F1 66/66, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 19/22 (lane double-link, not slice), browser 100/101 (200 ms budget under load). Owner → Lead.
 - 2026-10-23 · Lead: challenge answered (all five accepted; P-65 aliases and merges added; A4 backend into slice 2); founder decided P-66 (extension both modes, structure-only capture, portal twin, form health). Set BUILD slice 1, owner Builder. F2 (working extension on saved screens) follows.
 - 2026-10-23 · F1 · DESIGN · Founder asked (in this session) to fix the repeated hand-back block: renamed "Paste to Lead" → "Report to Lead", once per stage (CLAUDE.md, next, lead, screen-build, LANES, WORKFLOW); stop and session-start hooks now check the session's own copy (hook input cwd), so lane sessions no longer get the main copy's reminders. Lead files: merge needed to take effect. No stage change.
 - 2026-10-23 · F1 · DESIGN · Builder challenge written: P-57 blocks captured portal screens (Blocker); online version = FormEdition with channel ONLINE and identity by content fingerprint; answer lists missing (mirror the team's EnumSet + ENUM map); portal per combination and a validator rule for each line's channel; PDF twins for IMM 0008/5669/5406 do not exist yet; ownership table and 3 slices. Owner → Lead. No code; AI US$0.

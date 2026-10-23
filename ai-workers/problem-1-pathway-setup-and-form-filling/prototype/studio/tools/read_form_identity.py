@@ -4,7 +4,8 @@ most frequent form code in its own text; the edition is the most frequent "(MM-Y
 XFA template or the first page ("IMM 1295 (09-2023) E"); the published date is the date the file says it was last
 saved (its ModDate, else CreationDate). Kind: "checklist" when its title or first page says document checklist,
 "guide" when they say guide or instructions, otherwise "form". An HTML page (a saved canada.ca page) is a guide: its
-title, a form code in that title and its "date modified". Prints one JSON line: {ok, kind, code, edition, edition_label,
+title, a form code in that title and its "date modified"; a page with two or more question inputs is a saved portal
+screen ("portal_screen", F1), which belongs in a portal capture, not on a combination's sources. Prints one JSON line: {ok, kind, code, edition, edition_label,
 title, published} or {ok: false, error, ...}. The file is opened as data only; nothing in it is executed.
   .tools/solution-1-prototype/.venv/bin/python -I studio/tools/read_form_identity.py <file>
 """
@@ -66,6 +67,13 @@ def read_html(raw):
     d = re.search(r"(?:dateModified|dcterms\.modified|Date modified:)[^0-9]{0,40}(\d{4}-\d{2}-\d{2})", text, re.I)
     found = Counter(f"{a} {b}" for a, b in re.findall(CODE, title))  # a page names many forms: only its title says which it is
     kind = "checklist" if "checklist" in title.lower() else "guide"
+    # F1: two or more question inputs (outside scripts and search forms) make it a saved portal screen, not a guide;
+    # none of IRCC's public pages in the official library has one (23 Oct).
+    body = re.sub(r"(?is)<(script|style|template|noscript)\b.*?</\1>", "", text)
+    body = re.sub(r"(?is)<form[^>]*(?:role=[\"']?search|search)[^>]*>.*?</form>", "", body)
+    inputs = [a for a in re.findall(r"(?is)<(?:input|select|textarea)\b([^>]*)>", body) if not re.search(r"type\s*=\s*[\"']?(hidden|submit|button|reset|image|search)", a, re.I)]
+    if len(inputs) >= 2:
+        kind = "portal_screen"
     return {"ok": True, "kind": kind, "code": found.most_common(1)[0][0] if found else None, "edition": None, "edition_label": None,
             "title": title or "Untitled page", "published": d.group(1) if d else None}
 

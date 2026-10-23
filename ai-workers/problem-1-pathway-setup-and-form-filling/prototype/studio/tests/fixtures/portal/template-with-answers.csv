@@ -1,0 +1,2 @@
+screen_order,screen_title,input_order,input_id,label,type,required,options,help,max_length,pattern,group,part,value
+1,Personal details,1,familyName,Family name,text,yes,,,100,,,,SAMPLE-PERSON

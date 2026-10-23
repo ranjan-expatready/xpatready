@@ -15,6 +15,7 @@ import { compareEditions } from "../../engine/programs.ts";
 import { checkedOutput, explainRun, failedOurCheck, isProviderLimit, sameDraftInputs, type DraftInputs } from "../../engine/ai-run.ts";
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 import { reconvertFile } from "../../../p2/reconvert.ts";
+import { defaultChannelFor, resolveKey } from "./form-lines.ts";
 import { ACTORS, Audit, Db, fail, need, NODE, OFFICIAL, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
 const ACTOR_BY_ID = (id: string) => ACTORS.find((a) => a.id === id) ?? ACTORS[0];
 /** The library revision a comparison was made against: every definition key, version and status. A different revision
@@ -261,9 +262,9 @@ export class Sources {
     const box = new Map<string, any>(inv.fields.filter((x: any) => x.data_path).map((x: any) => [x.data_path, x]));
     const entries = out.entries.map((e: any) => ({ ...e, caption: box.get(e.data_path)?.caption ?? null }));
     const rows = await this.db.canonicalField.findMany({ where: { workspaceId: a.workspaceId }, orderBy: { version: "desc" } });
-    const seen = new Set<string>(); const library: LibraryField[] = [];
-    for (const r of rows) if (!seen.has(r.canonicalFieldKey)) { seen.add(r.canonicalFieldKey); if (r.status !== "RETIRED") library.push({ key: r.canonicalFieldKey, meaning: r.meaning, valueType: r.valueType, status: r.status }); }
-    const items = normalize(out.canonical_fields, entries, library);
+    const seen = new Set<string>(); const library: LibraryField[] = []; const redirects = new Map<string, string>();
+    for (const r of rows) if (!seen.has(r.canonicalFieldKey)) { seen.add(r.canonicalFieldKey); if (r.mergedIntoKey) redirects.set(r.canonicalFieldKey, r.mergedIntoKey); else if (r.status !== "RETIRED") library.push({ key: r.canonicalFieldKey, meaning: r.meaning, valueType: r.valueType, status: r.status, aliases: r.aliases }); }
+    const items = normalize(out.canonical_fields, entries, library, redirects);
     const affected = await this.dependents(a.workspaceId, [...new Set(items.flatMap((i) => [i.matchedKey, ...i.candidates.map((c) => c.key)]).filter(Boolean) as string[])]);
     if (opts.recompare && job.status !== "COMPLETED") fail("Only a draft waiting for review can be compared again.", HttpStatus.CONFLICT);
     await this.db.normalizationItem.deleteMany({ where: { jobId } });
@@ -330,7 +331,8 @@ export class Sources {
     const rec = (it.evidence as any).recommendation;
     if (b.decision === "ACCEPTED") decidedKey = rec?.key ?? it.matchedKey ?? it.proposedKey;
     if (b.decision === "CHANGED") {
-      const key = b.key ?? fail("Choose the library field to use, or type a new key.");
+      // A field merged into another redirects to it (P-65): the decision records the surviving id.
+      const key = await resolveKey(this.db, job.workspaceId, b.key ?? fail("Choose the library field to use, or type a new key."));
       decidedKey = key;
       const exists = await this.db.canonicalField.findFirst({ where: { workspaceId: job.workspaceId, canonicalFieldKey: key } });
       const problem = exists ? null : newKeyProblem(key);
@@ -397,7 +399,7 @@ export class Sources {
           evidenceQuote: e.evidence_quote ?? null, reason: returned ? `returned by ${d!.decidedBy}: ${d!.decisionNote}` : e.unresolved_reason ?? null, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", draftingRunId: job.runId, updatedBy: actor.id };
       }) });
       const existing = await tx.combinationForm.findFirst({ where: { combinationId: job.combinationId, lineageKey: formKey } });
-      if (!existing) await tx.combinationForm.create({ data: { workspaceId: ws, combinationId: job.combinationId, govFormDefId: def.id, lineageKey: formKey, who: b.who ?? "each_applicant", attachMode: "COMBINATION_MANDATORY", version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: actor.id, sourceQuote: `${item.edition}: ${item.applicability}`.slice(0, 500) } });
+      if (!existing) await tx.combinationForm.create({ data: { workspaceId: ws, combinationId: job.combinationId, govFormDefId: def.id, lineageKey: formKey, who: b.who ?? "each_applicant", attachMode: "COMBINATION_MANDATORY", version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: actor.id, sourceQuote: `${item.edition}: ${item.applicability}`.slice(0, 500), channel: await defaultChannelFor(this.db, job.combinationId, def.id) } });
       // Claimed inside the transaction: a second apply of the same draft (double click, two people) changes nothing.
       const claimed = await tx.draftingJob.updateMany({ where: { id: jobId, status: "COMPLETED" }, data: { status: "APPLIED", message: `${job.message} Applied to the draft by ${actor.name}.` } });
       if (!claimed.count) fail("Already applied.", HttpStatus.CONFLICT);
@@ -424,7 +426,7 @@ export class Sources {
     const ed = await this.db.formEdition.findFirst({ where: { workspaceId: a.workspaceId, sha256: a.sha256, maps: { some: {} } }, include: { form: true } });
     if (!ed) fail("This form's boxes are not mapped in the library yet; read it and draft its field map.");
     if (await this.db.combinationForm.findFirst({ where: { combinationId: a.combinationId, lineageKey: ed!.form.formKey } })) fail(`${ed!.form.formKey} is already part of this combination.`, HttpStatus.CONFLICT);
-    await this.db.combinationForm.create({ data: { workspaceId: a.workspaceId, combinationId: a.combinationId, govFormDefId: ed!.form.id, lineageKey: ed!.form.formKey, who: b.who ?? "each_applicant", attachMode: "COMBINATION_MANDATORY", version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id, sourceQuote: `${ed!.editionLabel}: reused from the library` } });
+    await this.db.combinationForm.create({ data: { workspaceId: a.workspaceId, combinationId: a.combinationId, govFormDefId: ed!.form.id, lineageKey: ed!.form.formKey, who: b.who ?? "each_applicant", attachMode: "COMBINATION_MANDATORY", version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id, sourceQuote: `${ed!.editionLabel}: reused from the library`, channel: await defaultChannelFor(this.db, a.combinationId, ed!.form.id) } });
     const comp = await this.db.combination.findUniqueOrThrow({ where: { id: a.combinationId } });
     await this.audit.log(a.workspaceId, actor.id, "reused", "form", ed!.form.formKey, `${actor.name} added ${ed!.editionLabel} to "${comp.label}" from the library (no AI drafting; its released field map is shared)`, undefined, a.combinationId);
     return { ok: true, form: ed!.form.formKey };
@@ -437,7 +439,8 @@ export class Sources {
     const approved = new Set(manifest().map((i) => i.sha256));
     // Historical workspaces may contain entries created before the source gate. Keep those out of
     // library pickers and usage summaries; a prior database row is not a source-verification decision.
-    const visible = forms.map((f) => ({ ...f, editions: f.editions.filter((e) => approved.has(e.sha256)) })).filter((f) => f.editions.length);
+    // F1: an online version is verified by its second-person approval (P-66), not by the official list.
+    const visible = forms.map((f) => ({ ...f, editions: f.editions.filter((e) => e.channel === "ONLINE" || approved.has(e.sha256)) })).filter((f) => f.editions.length);
     // "Used by" (P-51): every combination that files the form or has one of its editions attached as a source.
     const shas = visible.flatMap((f) => f.editions.map((e) => e.sha256)).filter(Boolean) as string[];
     const att = await this.db.sourceAttachment.findMany({ where: { workspaceId, sha256: { in: shas } }, select: { sha256: true, combinationId: true } });
@@ -445,7 +448,9 @@ export class Sources {
       const mine = new Set(f.editions.map((e) => e.sha256));
       const used = new Set([...f.usedBy.map((u) => u.combinationId), ...att.filter((a) => mine.has(a.sha256)).map((a) => a.combinationId)]);
       return { code: f.formKey, title: f.displayName, kind: f.formKind, usedBy: used.size,
-        editions: [...f.editions].sort((a, b) => compareEditions(b, a)).map((e) => ({ label: e.editionLabel, mapped: e._count.maps > 0, boxes: e._count.maps, approved: !!e.officialFile })) };
+        editions: [...f.editions.filter((e) => e.channel !== "ONLINE")].sort((a, b) => compareEditions(b, a)).map((e) => ({ label: e.editionLabel, channel: "PDF", mapped: e._count.maps > 0, boxes: e._count.maps, approved: !!e.officialFile })),
+        online_versions: f.editions.filter((e) => e.channel === "ONLINE").map((e) => ({ id: e.id, label: e.editionLabel, channel: "ONLINE", portal: e.portalKey, captured_on: e.capturedOn?.toISOString().slice(0, 10) ?? null, recheck_by: e.recheckBy?.toISOString().slice(0, 10) ?? null, mapped: e._count.maps > 0, form_fields: e._count.maps })),
+        channels: [...new Set(f.editions.map((e) => (e.channel === "ONLINE" ? "Online" : "PDF")))] };
     });
   }
 
