@@ -47,7 +47,14 @@ case "$1" in
     for rel in .tools "$P/prototype/node_modules" "$P/prototype/studio/node_modules" "$P/prototype/studio/web/node_modules"; do
       [ -e "$MAIN/$rel" ] || continue
       [ -e "$HERE/$rel" ] || { mkdir -p "$(dirname "$HERE/$rel")"; ln -s "$MAIN/$rel" "$HERE/$rel"; echo "linked $rel"; }
-    done ;;
+    done
+    # Lanes that change the schema get their own copy-on-write clone of the studio packages: `prisma generate` in a
+    # linked copy rewrites the client the shared demo (:4400) uses (forms lane finding, 23 Oct). Never committed.
+    SN="$P/prototype/studio/node_modules"
+    case "$(whoami_)" in forms|runtime)
+      if [ -L "$HERE/$SN" ]; then src=$(cd "$HERE/$SN" && pwd -P); rm "$HERE/$SN" && cp -c -R "$src" "$HERE/$SN" \
+        && git -C "$HERE" update-index --skip-worktree "$SN" && echo "cloned studio packages (own database client)"; fi ;;
+    esac ;;
   sync)
     [ "$HERE" = "$MAIN" ] && { echo "main copy: nothing to sync"; exit 0; }
     git -C "$HERE" diff --quiet && git -C "$HERE" diff --cached --quiet || { echo "Commit this lane's work before syncing."; exit 3; }

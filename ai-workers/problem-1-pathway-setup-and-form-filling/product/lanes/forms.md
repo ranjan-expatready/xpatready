@@ -1,5 +1,8 @@
 # Lane: forms — PDF and online forms (P-61–P-63)
 
+## From the Lead
+2026-10-23 (Lead): slice 1 early look done; from now on the **backend path** (P-68, `WORKFLOW.md`). Set stage CHECK: launch screen-reviewer and screen-breaker in parallel on slice 1 (contracts, data, migration on a data copy, roles and second-person rules, concurrency, hostile capture files, values refused); fix every Must/Blocker/Major; then owner Lead (the Lead reruns the suites on your exact commit and merges). Choices 1–5 and 7 accepted; 4: the PDF "mapped or not a fact" rule waits for the Screen 02/03 review UI; 6 goes to the screens lane. Slice 2 adds the evidence lane's IMM 1344 findings (`prototype/evidence-lane/E1/imm1344/STATUS.md`): F1 save the phone boxes' shown state or flag "a person ticks Canada/US", F2 never type signatures (validate after the person signs), F3 write values in the form's own format (postal code `A1A 1A1`); and the guard's link-hop fix (`p2/guard.ts`, with a test). The Lead tidies `concept.md` items 2 and 4 and fixes the shared database client in `lane.sh setup`.
+
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: F1-forms-channels

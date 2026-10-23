@@ -9,9 +9,9 @@ updated: 2026-10-23
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
 | screens | 01-programs-catalogue | DEMO | Founder (with Lead) | Founder walks Screen 01 on :4400 (restarted 13:40 on the repaired build) as author and as reviewer, with th… |
-| forms | F1-forms-channels | BUILD | Builder | BUILD slice 1 as agreed in screens/F1-forms-channels/challenge.md ("Lead response", "Agreement") plus the c… |
-| evidence | E1-form-acceptance (E1b) | BUILD | Builder | IMM 1344: open prototype/evidence-lane/E1/imm1344/imm1344e.complete-v1.adobe.pdf in Adobe by computer use →… |
-| runtime | R1-thin-slice | PLAN | Builder | Blocked: none (BUILD waits for forms slice 1 on main) |
+| forms | F1-forms-channels | EARLY-LOOK | Lead | Lead note waiting for sync · Lead early look at slice 1 (no UI): screens/F1-forms-channels/build-notes.md, review document in screens/F1… |
+| evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead: check E1b IMM 1344 (prototype/evidence-lane/E1/imm1344/STATUS.md) and send findings F1–F3 to the form… |
+| runtime | R1-thin-slice | PLAN | Builder | Write screens/R1-thin-slice/plan.md (challenge, back-end table, team-model mapping, slices); set owner Lead. |
 | qa | QA-0 baseline | RUN | Builder | /qa milestone on main (M2 capabilities, coverage floor, suites rerun), then report. |
 <!-- lanes:end -->
 

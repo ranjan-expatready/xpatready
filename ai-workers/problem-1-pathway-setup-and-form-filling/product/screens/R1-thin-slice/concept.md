@@ -2,7 +2,7 @@
 
 **Job:** prove early that a released configuration drives a real case: people, answers asked once, the shared questionnaire renderer, the agent view and one checked PDF. Decisions: P-18, P-45 (as corrected by P-65), P-47, P-62 §6, P-65, P-67. Journey steps 6–7 (audit `history/AUDIT-2026-10-23.md`, capabilities C4.4, C6.1–C6.3, C7.1–C7.2 in `qa/CAPABILITIES.md`).
 
-**Combination:** Individual › Visitors › Visitor visa, released on main (IMM 5257 is the proven form: 44/44 written and read back). Household: Sample principal applicant, spouse, one child.
+**Combination:** Individual › Visitors › Visitor visa (IMM 5257 is the proven form: 44/44 written and read back). It is **not released** in the shared demo (:4400 has 1 Live of 22 on 23 Oct), so the lane's first step configures and releases it in its own copy through the product's own path (upload, saved IMM 5257 draft replayed at US$0, review, release by a second person); that path is Capability, the replay is Scaffolding (P-33). Household: Sample principal applicant, spouse, one child.
 
 ## What gets built (needed for the proof)
 1. **Data, mirroring the team's client spine** (`code/ERv2-sanitized@<newest>/apps/api/prisma/models/client-spine.prisma`): case pinned to one release (PackWorkPin), parties and relationships (Party, PartyRelationship), one answer per fact per person (AnswerSubject, ClientCanonicalAnswer with source, status, who, when), form instances per person and form (FormInstance). Team names; an adapter note where ours differs. Sample profiles stay scaffolding.

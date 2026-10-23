@@ -1,5 +1,8 @@
 # Lane: evidence — proof that filled forms pass, and an AI scoring set
 
+## From the Lead
+2026-10-23 (Lead): E1b IMM 1344 checked and merged (2b7464c3): Validate success, 5/5 barcodes, 149/149 slots reproduced by the Lead; F1–F3 sent to the forms lane; F2's signing question added to the expert questions. Next: IMM 0008 by the same method (BUILD), then IMM 5257; stop and report after each form.
+
 Command: `/next evidence` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: E1-form-acceptance
