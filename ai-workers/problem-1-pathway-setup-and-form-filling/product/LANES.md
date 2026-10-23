@@ -13,7 +13,7 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 **Fresh context, any time:** state lives in files and commits, never in a chat. A long Lead chat → open a new chat and type `/lead`; it reads the files and every lane copy (`lane.sh status`). A lane session is disposable: the Lead starts a fresh one per stage when its context is long, cut from the lane's branch.
 
 ## The one loop
-1. A lane does **one stage**, commits on its branch, updates `product/lanes/<lane>.md`, ends with one **Report to Lead** block naming the lane (once per stage; it reaches the Lead by itself when the Lead started the session, otherwise the founder pastes it into `/lead`).
+1. A lane does **one stage**, commits on its branch, updates `product/lanes/<lane>.md`, ends with one **Paste to Lead** block naming the lane (once per stage; it reaches the Lead by itself when the Lead started the session, otherwise the founder pastes it into `/lead`).
 2. The Lead reads it (directly, or the founder pastes it into `/lead`), checks, records, and says the next command for each lane.
 3. When a lane's work passes the Lead check, the Lead merges its branch into `main` (standing founder OK, 23 Oct; the Lead reports each merge). Every lane syncs `main` at the start of its next stage.
 

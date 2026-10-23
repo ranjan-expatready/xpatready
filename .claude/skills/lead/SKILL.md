@@ -1,6 +1,6 @@
 ---
 name: lead
-description: Resume as the Lead (designer, checker and coordinator of all lanes) for the Pathway Configurator, in the main copy, and keep the Lead journal and lanes overview current. Use when the founder types /lead, says resume, where are we, continue as lead, or pastes a "Report to Lead" block (older name: "Paste to Lead") from any lane, or a lane session reports back.
+description: Resume as the Lead (designer, checker and coordinator of all lanes) for the Pathway Configurator, in the main copy, and keep the Lead journal and lanes overview current. Use when the founder types /lead, says resume, where are we, continue as lead, or pastes a "Paste to Lead" block from any lane, or a lane session reports back.
 ---
 
 # Lead — check, coordinate lanes, record
@@ -15,7 +15,7 @@ Run `bash P/tools/lane.sh whoami`. Anything but `lead` → reply only: "This is 
 2. `lane.sh status` (every lane copy: stage, owner, last commit, behind main), then each lane's newest files and commits (`git log main..<lane branch>`; `git worktree list` shows each branch).
 3. **Top of every reply: the lanes table** (lane · item · stage · who acts · next command), then what changed, then what you need from the founder (≤3, each with a recommendation).
 
-## Acting on a lane's Report to Lead (it names its lane; arrives by itself from sessions the Lead started, or pasted by the founder)
+## Acting on a lane's Paste to Lead (it names its lane; arrives by itself from sessions the Lead started, or pasted by the founder)
 * **CHALLENGE:** answer every objection under "Lead response" (accept, or reject with the reason, as honest about your design as theirs); product choices go to the founder (skill grilling); when settled write "Agreed <date>".
 * **Every stage:** label each element Capability or Scaffolding (P-33): "in production, who does this, on which screen?"
 * **EARLY-LOOK:** screenshots next to the board; list differences; founder says Go or changes (changes go to the board first).
@@ -25,6 +25,15 @@ Run `bash P/tools/lane.sh whoami`. Anything but `lead` → reply only: "This is 
 * **CONCEPT:** skill screen-concept; write `concept.md` on `main`, then set that lane's file to DESIGN, owner Builder.
 * **Hand-back and running lanes (founder's standing request, P-64):** change a lane's stage/owner only on `main` with a dated "Lead:" log line. When a lane's owner becomes Builder, continue its session (`SendMessage`: `/next <lane>`) or, if that session is gone or long, start a fresh one (`start_session`, own worktree, `source_branch` = the lane's branch, prompt `/next <lane>`). The founder never has to type `/next`.
 * Never edit app code or a lane's own files on its branch.
+
+## End of a Lead reply: "Paste to <lane> lane" (only when a builder must act)
+Builders end a stage with **Paste to Lead**; the Lead never prints that block. When a lane must act next, the Lead first sends it to that lane's session itself (see above) and says "sent to the <lane> lane". Only if it cannot, end with one block the founder pastes into that lane's session:
+```
+Paste to <lane> lane
+/next <lane>
+<one line: what changed on main and what to do>
+```
+No block when no lane has to act.
 
 ## Before your last reply (required)
 Update `LEAD.md` (open items + one session-log line; keep 10), `STATE.md` (lanes table and a log line), `REQUESTS.md`, `DECISIONS.md`. Run `bash P/tools/check-docs.sh` and fix what it flags. Commit `main` (`lead: <summary>` + attribution line).
