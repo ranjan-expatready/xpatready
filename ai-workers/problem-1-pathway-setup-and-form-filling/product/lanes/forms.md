@@ -13,6 +13,7 @@ blocked_by: none
 updated: 2026-10-23
 
 ## Log (last 10 lines)
+- 2026-10-23 · F1 · FIX (slice 2) · cancel stops the parts not yet started and the step ends CANCELLED (it stayed RUNNING); launch 53/53; slice 2 rerunning.
 - 2026-10-23 · F1 · FIX (slice 2) · full run: guard 75, engine 38, rules 54, drafting 48, F1 106, API 94, grounding 29, orchestration 22; launch and slice 2 test fixes (ledger lock is not a ticket clash; a test-only pause between parts for the cancel check).
 - 2026-10-23 · F1 · CHECK → FIX (slice 2) · reviewer: ship after fixes, journey 6/10, 1 Must + 5 Major; breaker: 3 Blocker + 4 Major + 13 Minor; fixes written with tests (guard 75/75); suites running. US$0.
 - 2026-10-23 · F1 · CHECK (slice 2) · F1 suite rerun 106/106 after the test-client fix; waiting on reviewer and breaker.
@@ -22,4 +23,3 @@ updated: 2026-10-23
 - 2026-10-23 · F1 · FIX → CHECK · all review (1 Must, 10 Major) and break (9 Major) findings fixed with a test each, most minors too; F1 106/106, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 19/22 (lane guard, slice 2); second migration (revision, checks, one pending merge) proven on a demo copy with its rollback. Owner → Lead.
 - 2026-10-23 · F1 · CHECK → FIX · reviewer: ship after fixes, journey 5.5/10, 1 Must + 10 Major; breaker: 0 Blocker, 9 Major, 16 Minor (`review.md`, `break-report.md`).
 - 2026-10-23 · F1 · EARLY-LOOK → CHECK · applied Lead note 2026-10-23 (backend path P-68; fresh lane copy bound to forms, own studio packages; reviewer :4451, breaker :4452).
-- 2026-10-23 · F1 · BUILD → EARLY-LOOK · Slice 1 built (no UI, AI US$0): migration (additive; proven on a copy of today's data), capture contract, page and template readers, refusal of answers, second-person approval, fingerprint identity + difference, portal twin + review PDF, screen map without AI (PDF twin, aliases), channels + portal + derived filing method, validator rules, answer list `sex` end to end, aliases and reviewed merges, intake guard, check_ai_drafting fix. Tests: F1 66/66, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 19/22 (lane double-link, not slice), browser 100/101 (200 ms budget under load). Owner → Lead.

@@ -289,7 +289,7 @@ export class Sources {
       if (!(await this.db.draftingJob.findUnique({ where: { id } }))) return; // removed by a reset while running
       const cost = Math.round(state.reduce((x, s) => x + s.cost_usd, 0) * 100) / 100;
       if (state.some((s) => s.status === "not started")) {
-        await this.db.draftingJob.update({ where: { id }, data: { costUsd: cost, finishedAt: new Date(), message: `Stopped: ${state.filter((s) => s.status === "done").length} of ${parts.length} parts ran before the cancel; the rest were not sent. Nothing was applied. Cost US$${cost.toFixed(2)}.` } });
+        await this.db.draftingJob.update({ where: { id }, data: { status: "CANCELLED", costUsd: cost, finishedAt: new Date(), message: `Cancelled: ${state.filter((s) => s.status === "done").length} of ${parts.length} parts ran before the cancel; the rest were not sent. Nothing was applied. Cost US$${cost.toFixed(2)}.` } });
         return;
       }
       const failed = state.filter((s) => s.status !== "done");
