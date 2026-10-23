@@ -17,6 +17,7 @@ Founder request R-76: combinations are filed on paper (PDF), online, or both; on
 3. **Ingestion, cheapest first:**
    a. Online version of a form that also has a PDF (IMM 0008, 5669, 5406, 5257…): **reuse the PDF's map** (no AI); a person or AI only checks the portal screens for added, removed or reworded questions.
    b. Online-only form (Express Entry profile, portal-only questionnaires): a person uploads **IRCC's instructions or the portal screens saved as web pages** (read by code, like a PDF; corrected 23 Oct, see P-62 §8) as the source → AI drafts the questions and maps them to existing facts → a person reviews. Same review path as PDFs.
+   Saved pages come from a **blank or test application**, and code strips any values before storing them (a real page holds a client's data, P-65). With AI off, a person enters or maps the screen's questions by hand.
    c. Later (team, with the extension): **capture mode** records screen labels once while a representative fills a real case.
 4. **Default source for fields = the channel the line is filed in** (online by default where it is filed online, per the founder), pre-filled from the PDF map of the same form code when one exists.
 5. **Online versions change silently** (no printed edition). A captured version carries its capture date; when screens differ from it (re-capture, or the extension's version check), it is held for **impact review like a new PDF edition** (P-32).
