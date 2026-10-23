@@ -5,7 +5,7 @@ archive/
 __pycache__/
 .playwright-mcp/
 # Lanes setup (P-64, 23 Oct): never commit secrets, local tools, databases, logs, installed packages or generated runs
-.tools/
+/.tools
 /*.zip
 **/studio/var/
 **/web/dist/
