@@ -75,14 +75,14 @@ export function normalize(proposed: ProposedField[], entries: Entry[], library: 
     const base = { proposedKey: key, proposedMeaning: p.meaning, proposedType: p.value_type, persons, boxes, evidence: { quotes, confidence: conf } };
     const moved = redirects.get(key);
     if (moved && lib.get(moved)) {
-      out.push({ ...base, outcome: "REUSE", matchedKey: moved, candidates: [], reason: `${key} was merged into ${moved} after a review (P-65); the merged id redirects, so the boxes read ${moved}.`, recommendation: { action: "reuse", key: moved, text: `Reuse ${moved}` } });
+      out.push({ ...base, outcome: "REUSE", matchedKey: moved, candidates: [], reason: `${key} was merged into ${moved} after a review (P-65); the merged id redirects, so the form fields read ${moved}.`, recommendation: { action: "reuse", key: moved, text: `Reuse ${moved}` } });
       continue;
     }
     const exact = lib.get(key);
     const aliasHits = exact ? [] : [...new Map(boxes.flatMap((b) => byAlias.get(normLabel(b.caption)) ?? []).map((l) => [l.key, l])).values()].filter((l) => similarity(p, l).typeCompatible);
     if (aliasHits.length === 1) {
       const l = aliasHits[0];
-      out.push({ ...base, outcome: "AMBIGUOUS", matchedKey: l.key, candidates: [{ key: l.key, meaning: l.meaning, valueType: l.valueType, score: 1, why: "the box's label is an alias of this field" }], reason: `Not an existing key, but the box's label is an alias of ${l.key} (a label seen on another form). Probably the same meaning under another name.`, recommendation: { action: "reuse", key: l.key, text: `Use the existing ${l.key}` } });
+      out.push({ ...base, outcome: "AMBIGUOUS", matchedKey: l.key, candidates: [{ key: l.key, meaning: l.meaning, valueType: l.valueType, score: 1, why: "the form field's label is an alias of this field" }], reason: `Not an existing key, but the form field's label is an alias of ${l.key} (a label seen on another form). Probably the same meaning under another name.`, recommendation: { action: "reuse", key: l.key, text: `Use the existing ${l.key}` } });
       continue;
     }
     const ranked = library.filter((l) => l.key !== key).map((l) => ({ l, s: similarity(p, l) })).filter((x) => x.s.score >= 0.3).sort((a, b) => b.s.score - a.s.score).slice(0, 3);

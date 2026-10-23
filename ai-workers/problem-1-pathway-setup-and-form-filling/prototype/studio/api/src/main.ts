@@ -12,6 +12,7 @@ import { Ai } from "./ai.ts";
 import { Demo } from "./demo.ts";
 import { Fill } from "./fill.ts";
 import { Forms, FormsController } from "./forms.ts";
+import { CAPTURE_LIMITS } from "../../contracts/forms.ts";
 import { Intake, MAX_BYTES, MAX_FILES } from "./intake.ts";
 import { Programs } from "./programs.ts";
 import { Sources } from "./sources.ts";
@@ -128,7 +129,12 @@ class ProblemErrors implements ExceptionFilter {
     if (e instanceof HttpException) {
       const body = e.getResponse() as any, status = e.getStatus();
       // Upload limits fire before the intake sees the files (break m9): say which limit, in plain words.
-      if (status === 413 || /^(File too large|Too many files)$/.test(String(body?.message ?? ""))) return send(413, "Too large", /files/i.test(String(body?.message)) ? "Add at most 20 files at a time. Nothing was added." : "A file is larger than 25 MB. Nothing was added; add files up to 25 MB each.");
+      if (status === 413 || /^(File too large|Too many files)$/.test(String(body?.message ?? ""))) {
+        // Each upload says its own limits: portal captures take smaller files than the intake (review 12).
+        const capture = /\/api\/captures\//.test(String(host.switchToHttp().getRequest()?.url ?? ""));
+        const files = capture ? CAPTURE_LIMITS.files : MAX_FILES, mb = capture ? CAPTURE_LIMITS.fileMb : MAX_BYTES / 1024 / 1024;
+        return send(413, "Too large", /files/i.test(String(body?.message)) ? `Add at most ${files} files at a time. Nothing was added.` : `A file is larger than ${mb} MB. Nothing was added; add files up to ${mb} MB each.`);
+      }
       if (typeof body === "object" && body.detail) return send(status, body.title ?? "Request refused", body.detail, body);
       const detail = typeof body === "object" ? (Array.isArray(body.message) ? body.message.join("; ") : body.message ?? e.message) : String(body);
       return send(status, status === 403 ? "Not allowed" : status === 404 ? "Not found" : status === 409 ? "Conflict" : "Request refused", detail, typeof body === "object" && body.existingId ? { existingId: body.existingId } : {});

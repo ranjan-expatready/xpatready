@@ -7,7 +7,7 @@ import { optionMapProblems, type OptionMap } from "./options.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
 
-type Line = { form_number: string; channel?: Channel; status?: string; condition_plain?: string | null; who?: string; title?: string };
+type Line = { form_number: string; channel?: Channel; status?: string; condition_plain?: string | null; who?: string; title?: string; online_versions?: number; online_only?: boolean };
 /** The parts of the snapshot (engine/snapshot.ts) these rules read. */
 type MapEntry = { data_path: string; caption?: string | null; outcome: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null };
 type FieldMap = { form_number: string; form_edition: string; channel?: string; recheck_by?: string | null; entries: MapEntry[] };
@@ -44,10 +44,11 @@ export function channelProblems(s: Snapshot, today = new Date()): Problem[] {
   const lists = new Map<string, string[]>((s.canonical_fields as FieldDef[]).flatMap((f) => (f.answer_list ? [[f.id, f.answer_list.values.map((v) => v.key)] as [string, string[]]] : [])));
   for (const f of s.forms as Line[]) {
     const ch = chOf(f);
-    if (ch !== "ONLINE") continue;
+    // Each line's channel needs a version to file (challenge point 4, review 9): a PDF line needs the form's PDF.
+    if (ch !== "ONLINE") { if (f.online_only) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} is filed as a ${CHANNEL_WORDS[ch].toLowerCase()}, but the library has only its online version: file it Online, or add its PDF edition to the library.` }); continue; }
     if (!portal) { out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} is filed Online, but this combination has no portal yet: choose the portal it is filed through.` }); continue; }
     const online = mapsOf(s).filter((m) => m.form_number === f.form_number && m.channel === "ONLINE");
-    if (!online.length) { out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} is filed Online, but the library has no approved online version captured from the ${portalLabel(portal)}: capture its screens, or file it as a PDF upload.` }); continue; }
+    if (!online.length) { out.push({ level: "error", where: "Forms", item: f.form_number, message: f.online_versions ? `${f.form_number} is filed Online and has an approved online version from the ${portalLabel(portal)}, but no screen map yet: draft and accept it (no AI).` : `${f.form_number} is filed Online, but the library has no approved online version captured from the ${portalLabel(portal)}: capture its screens, or file it as a PDF upload.` }); continue; }
     const v = online[online.length - 1];
     if (v.recheck_by && v.recheck_by < day(today)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `The online version ${v.form_edition} passed its re-check date (${v.recheck_by}): capture the screens again, or confirm they are unchanged.` });
     const open = v.entries.filter((e) => !["mapped", "not_a_fact", "never_filled"].includes(e.outcome));

@@ -399,7 +399,7 @@ export class Sources {
           evidenceQuote: e.evidence_quote ?? null, reason: returned ? `returned by ${d!.decidedBy}: ${d!.decisionNote}` : e.unresolved_reason ?? null, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", draftingRunId: job.runId, updatedBy: actor.id };
       }) });
       const existing = await tx.combinationForm.findFirst({ where: { combinationId: job.combinationId, lineageKey: formKey } });
-      if (!existing) await tx.combinationForm.create({ data: { workspaceId: ws, combinationId: job.combinationId, govFormDefId: def.id, lineageKey: formKey, who: b.who ?? "each_applicant", attachMode: "COMBINATION_MANDATORY", version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: actor.id, sourceQuote: `${item.edition}: ${item.applicability}`.slice(0, 500), channel: await defaultChannelFor(this.db, job.combinationId, def.id) } });
+      if (!existing) await tx.combinationForm.create({ data: { workspaceId: ws, combinationId: job.combinationId, govFormDefId: def.id, lineageKey: formKey, who: b.who ?? "each_applicant", attachMode: "COMBINATION_MANDATORY", version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: actor.id, sourceQuote: `${item.edition}: ${item.applicability}`.slice(0, 500), channel: await defaultChannelFor(tx, job.combinationId, def.id) } });
       // Claimed inside the transaction: a second apply of the same draft (double click, two people) changes nothing.
       const claimed = await tx.draftingJob.updateMany({ where: { id: jobId, status: "COMPLETED" }, data: { status: "APPLIED", message: `${job.message} Applied to the draft by ${actor.name}.` } });
       if (!claimed.count) fail("Already applied.", HttpStatus.CONFLICT);

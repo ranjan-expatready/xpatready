@@ -4,7 +4,7 @@ import { Db } from "./core.ts";
 
 /** The channel a new line gets (challenge point 4): Online when the library has an approved online version of the form
  *  captured from the combination's portal, otherwise PDF upload. */
-export async function defaultChannelFor(db: Db, combinationId: string, govFormDefId: string) {
+export async function defaultChannelFor(db: Pick<Db, "combination" | "formEdition">, combinationId: string, govFormDefId: string) {
   const c = await db.combination.findUnique({ where: { id: combinationId }, select: { portalKey: true } });
   if (!c?.portalKey) return "PDF_UPLOAD" as const;
   const online = await db.formEdition.count({ where: { govFormDefId, channel: "ONLINE", portalKey: c.portalKey } });

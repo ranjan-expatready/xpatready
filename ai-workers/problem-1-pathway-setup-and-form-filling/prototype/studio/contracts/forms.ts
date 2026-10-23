@@ -29,6 +29,8 @@ export const SIGNATURE_WORDS: Record<Channel, string> = {
 export const RECHECK_DAYS = 180;
 export const CAPTURE_CONTRACT = "portal-capture/v1";
 export const CAPTURE_WAYS = ["saved_page", "template", "extension", "screenshots"] as const;
+/** Upload and size limits of a capture (break m5): the API and its messages read the same numbers. */
+export const CAPTURE_LIMITS = { files: 30, fileMb: 10, screens: 200 } as const;
 
 export const NewCapture = z.object({
   portal: z.enum(PORTAL_KEYS, { message: "Choose one of the portals." }),
@@ -37,9 +39,19 @@ export const NewCapture = z.object({
   applicationType: z.string().trim().max(200).optional(),
 });
 export const ReturnCapture = z.object({ note: z.string().trim().min(5, "Say what is wrong, so the person who captured it can fix it.").max(1000) });
+export const AbandonCapture = z.object({ note: z.string().trim().max(1000).optional() });
 export const SetPortal = z.object({ portal: z.enum(PORTAL_KEYS).nullable() });
 export const SetChannel = z.object({ channel: z.enum(CHANNELS, { message: "Choose PDF upload, Online or Signed PDF upload." }) });
 export const AcceptScreenMap = z.object({ inputs: z.array(z.string()).optional() });
+/** A person maps one online input: to a shared field (for a person), or as "not a fact" with the reason. */
+export const ResolveInput = z.object({
+  input: z.string().trim().min(1, "Name the input (its element id)."),
+  fact: z.string().trim().regex(/^[a-z][a-z0-9_]*\.[a-z0-9_.]+$/, "A shared field id, for example person.place_of_birth_city.").optional(),
+  person: z.string().trim().regex(/^[a-z][a-z0-9_]{1,40}$/).optional(),
+  notAFact: z.literal(true).optional(),
+  reason: z.string().trim().min(5, "Say why it is not a fact.").max(500).optional(),
+}).refine((b) => !!b.fact !== !!b.notAFact, { message: "Either map it to a shared field (fact) or mark it not a fact (notAFact), not both.", path: ["fact"] })
+  .refine((b) => !b.notAFact || !!b.reason, { message: "Say why it is not a fact.", path: ["reason"] });
 export const NewAlias = z.object({ alias: z.string().trim().min(2).max(200) });
 export const NewAnswerList = z.object({
   key: z.string().trim().regex(/^[a-z][a-z0-9_]{1,60}$/, "A list key in lower case, for example sex or marital_status."),
@@ -48,6 +60,6 @@ export const NewAnswerList = z.object({
 });
 export const LinkAnswerList = z.object({ list: z.string().trim() });
 /** A person sets one form field's option map: value key → the form's code; codes no value fills are listed as unused. */
-export const SetOptionMap = z.object({ map: z.record(z.string(), z.string()), unused: z.array(z.string()).default([]) });
+export const SetOptionMap = z.object({ dataPath: z.string().trim().min(1, "Name the form field."), map: z.record(z.string(), z.string()), unused: z.array(z.string()).default([]) });
 export const NewMerge = z.object({ keep: z.string().trim(), merge: z.string().trim(), reason: z.string().trim().min(10, "Say why the two fields mean the same.").max(1000) });
 export const DecideMerge = z.object({ note: z.string().trim().max(1000).optional() });

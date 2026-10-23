@@ -45,5 +45,14 @@ export function optionMapProblems(values: string[], m: OptionMap | null | undefi
 export function codeForValue(value: unknown, m: OptionMap, values: ListValue[]): string | null {
   const v = String(value ?? "").trim();
   const key = values.find((x) => x.key === v || n(x.label) === n(v))?.key ?? v;
-  return m.map[key] ?? null;
+  return Object.hasOwn(m.map, key) ? m.map[key] : null; // "toString" is not a code (break m11)
+}
+
+/** A PDF form field's own choices (label, code): its inventory's resolved options, else the inline code list of its
+ *  field map ("code_list:imm5707.marital_status (Common-law=1, Single=2, …; note)"), as the filler reads them. */
+export function pdfOptions(box: { options_resolved?: [string, string][] | null }, transform: string | null | undefined): FormOption[] {
+  if (Array.isArray(box.options_resolved) && box.options_resolved.length) return box.options_resolved.filter((o) => o[0] !== "" || o[1] !== "").map((o) => ({ code: String(o[1]), label: String(o[0]) }));
+  const m = /^code_list:[\w.]+ \(([^;)]*)/.exec((transform ?? "").trim());
+  if (!m) return [];
+  return m[1].split(",").map((pair) => /^\s*([^=|]+?)\s*=\s*(\w+)\s*$/.exec(pair)).filter((q): q is RegExpExecArray => !!q).map((q) => ({ code: q[2], label: q[1] }));
 }

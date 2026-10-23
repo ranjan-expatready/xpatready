@@ -439,12 +439,14 @@ model PortalCapture {
   /// saved_page · template · extension · screenshots (P-66 §1 ways A–D)
   way             String
   /// OPEN (screens being added) · HELD (finished, waiting for a second person) · APPROVED · RETURNED · IN_LIBRARY
-  /// (identical to an approved version) · REFUSED (a screen held an answer)
+  /// (identical to an approved version) · ABANDONED (given up by an author; kept for the audit)
   status          String
   statusDetail    String?   @map("status_detail")
   /// The capture record (contracts/portal-capture.v1.schema.json).
   record          Json
   files           Json      @default("[]")
+  /// Bumped by every write: a write that read an older revision is refused (two adds, or an add during finish).
+  revision        Int       @default(0)
   contentSha256   String?   @map("content_sha256")
   /// The approved online version this capture changes, with the field-by-field difference (P-66 §2.3).
   changesEditionId String?  @map("changes_edition_id") @db.Uuid

@@ -72,7 +72,11 @@ def read_html(raw):
     body = re.sub(r"(?is)<(script|style|template|noscript)\b.*?</\1>", "", text)
     body = re.sub(r"(?is)<form[^>]*(?:role=[\"']?search|search)[^>]*>.*?</form>", "", body)
     inputs = [a for a in re.findall(r"(?is)<(?:input|select|textarea)\b([^>]*)>", body) if not re.search(r"type\s*=\s*[\"']?(hidden|submit|button|reset|image|search)", a, re.I)]
-    if len(inputs) >= 2:
+    # One question holding an answer (a typed value, a tick, a chosen option, text in a text area) is a saved portal
+    # screen too: a page with a client's answer is never kept as a guide (CHECK fix, 23 Oct).
+    answered = any(re.search(r"\b(checked|selected)\b", a, re.I) or re.search(r"\bvalue\s*=\s*[\"']?[^\"'\s>]", a, re.I) and not re.search(r"type\s*=\s*[\"']?(radio|checkbox|file)", a, re.I) for a in inputs)
+    answered = answered or bool(re.search(r"(?is)<textarea\b[^>]*>\s*\S", body)) or bool(re.search(r"(?is)<option\b[^>]*\bselected\b", body))
+    if len(inputs) >= 2 or answered:
         kind = "portal_screen"
     return {"ok": True, "kind": kind, "code": found.most_common(1)[0][0] if found else None, "edition": None, "edition_label": None,
             "title": title or "Untitled page", "published": d.group(1) if d else None}

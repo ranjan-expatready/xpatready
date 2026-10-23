@@ -3,7 +3,11 @@
 //   1. same path: an earlier approved online version of the same form and portal mapped the same element id;
 //   2. PDF twin: the form's PDF edition has a mapped form field with the same label (normalised), or, for a date in three
 //      form fields, a date part of the same date (the screen's group label, e.g. "Date of birth", is the PDF's heading);
-//   3. name or alias: a shared field carries this label among its aliases (labels seen on other forms).
+//   3. name or alias: a shared field carries this label among its aliases (labels seen on other forms); an input in a
+//      group ("Current country of residence › Country or territory") matches the group and label together, or the bare
+//      label only when the group's own words are in the field's name (CHECK fix: the bare label named the wrong fact).
+// A screen about another person (a spouse or partner, a child, a parent) takes only that person's form fields; a parent
+// screen goes to a person, because the PDF's first and second parent cannot be told apart from the screen.
 // Whatever is left is listed for drafting (the guarded AI in slice 2) or a person; a document upload is "not a fact".
 // Nothing here is final: a person accepts the proposals; a merged-away field id redirects to the field it was merged into.
 import type { CaptureRecord } from "./capture.ts";
@@ -18,8 +22,10 @@ export type Proposal = {
 
 /** Labels compared as people read them: no "*", question numbers, list letters, qualifiers in brackets or punctuation. */
 export function normLabel(s: string | null | undefined) {
-  return (s ?? "").toLowerCase().replace(/\(s\)/g, "s").replace(/\([^)]*\)/g, " ").replace(/^\s*\*+\s*/, "").replace(/^\s*question\s+\d+\s*[a-z]?\b\.?/, "")
-    .replace(/^\s*[a-z]\)\s*/, "").replace(/[*:?.,;/\\-]+/g, " ").replace(/\brequired\b/g, " ").replace(/\s+/g, " ").trim();
+  // Unicode forms (full-width letters, composed accents), curly apostrophes and invisible spaces compare as people read
+  // them (break m9).
+  return (s ?? "").normalize("NFKC").replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, "").replace(/[\u2018\u2019\u02BC\u2032]/g, "'").toLowerCase().replace(/\(s\)/g, "s").replace(/\([^)]*\)/g, " ").replace(/^\s*\*+\s*/, "").replace(/^\s*question\s+\d+\s*[a-z]?\b\.?/, "")
+    .replace(/^\s*[a-z]\)\s*/, "").replace(/[*:?.,;/\\›»>-]+/g, " ").replace(/\brequired\b/g, " ").replace(/\s+/g, " ").trim();
 }
 /** Words that put a fact in another period or role (as engine/normalize.ts): a "Family name" box must not fill
  *  person.other_family_name unless the screen's own label says "other". */
@@ -30,9 +36,18 @@ const keyWords = (k: string) => k.split(".").slice(1).join(" ").replace(/_/g, " 
 const nameScore = (key: string, label: string) => { const a = new Set(keyWords(key)), b = new Set(normLabel(label).split(" ").filter((w) => !["of", "the", "a", "an", "your"].includes(w))); if (!a.size || !b.size) return 0; let n = 0; for (const w of a) if (b.has(w)) n++; return n / (a.size + b.size - n); };
 const partOf = (t: string | null) => /^date(?:_part)?:(YYYY|MM|DD)$/.exec((t ?? "").trim())?.[1] ?? null;
 const choice = (type: string) => type === "select" || type === "radio";
+const captionOf = (group: string | null | undefined, label: string) => (group && normLabel(group) !== normLabel(label) ? `${group} › ${label}` : label);
+
+/** Who a screen is about, from its title or the input's group; null for the applicant's own screens. */
+const PERSONS: [RegExp, string][] = [[/\b(spouse|common[- ]law|partner)\b/, "subject_spouse_or_partner"], [/\b(child|children|dependant|dependent)\b/, "subject_child"], [/\b(mother|father|parents?)\b/, "parent"], [/\brepresentative\b/, "representative"]];
+function personOf(...texts: (string | null | undefined)[]) {
+  const t = texts.map((x) => normLabel(x)).join(" ");
+  return PERSONS.find(([rx]) => rx.test(t))?.[1] ?? null;
+}
+const PERSON_WORDS: Record<string, string> = { subject_spouse_or_partner: "the spouse or partner", subject_child: "a child", parent: "a parent", representative: "the representative" };
 
 /** The executable step that turns the shared field's value into this input's own format. */
-function transformFor(type: string, part: string | null, lib: LibraryEntry | undefined) {
+export function transformFor(type: string, part: string | null, lib: { answerListKey?: string | null } | undefined) {
   if (part) return `date:${part}`;
   if (type === "date") return "date:YYYY-MM-DD";
   if (type === "checkbox") return "yes_no_code:true/false";
@@ -40,7 +55,7 @@ function transformFor(type: string, part: string | null, lib: LibraryEntry | und
   return "as_is";
 }
 /** A date part needs a date; a choice needs a coded or yes/no value; free text takes text. Unknown types pass. */
-function compatible(type: string, part: string | null, valueType: string | undefined) {
+export function compatible(type: string, part: string | null, valueType: string | undefined) {
   if (!valueType) return true;
   if (part || type === "date") return valueType === "date";
   if (choice(type)) return ["code", "country", "yes_no", "text"].includes(valueType);
@@ -61,6 +76,7 @@ export function draftScreenMap(twin: CaptureRecord, ctx: { pdf: PdfEntry[]; pdfE
       const key = resolve(fact)!;
       proposals.push({ ...base, outcome: "mapped", method, fact: key, transform: transformFor(i.type, i.part ?? null, lib.get(key)), person: person ?? "form_subject", from, why: key !== fact ? `${why} (${fact} was merged into ${key})` : why });
     };
+    const who = personOf(s.title, i.group);
     if (i.type === "file") { proposals.push({ ...base, outcome: "not_a_fact", method: null, fact: null, transform: null, person: null, from: null, why: "A document upload: the document checklist asks for it, not a shared field." }); continue; }
     // 1. same path
     const prev = ctx.previous.get(i.id);
@@ -80,9 +96,10 @@ export function draftScreenMap(twin: CaptureRecord, ctx: { pdf: PdfEntry[]; pdfE
     hits = hits.filter((h) => compatible(i.type, i.part ?? null, lib.get(resolve(h.fact)!)?.valueType));
     // Same label, several fields: drop fields of another period or role the screen does not name ("other", "previous").
     if (new Set(hits.map((h) => h.fact)).size > 1) hits = hits.filter((h) => quals(h.fact!).every((q) => own.includes(q)));
-    // The screen is the applicant's own: prefer the PDF's form fields about the form's subject.
-    const subject = hits.filter((h) => h.person === "form_subject");
-    if (subject.length) hits = subject;
+    // The screen's person: the applicant's own screen prefers the PDF's form fields about the form's subject; a screen
+    // about another person takes only that person's form fields (review 8: a spouse screen took the applicant's).
+    if (who) hits = hits.filter((h) => h.person === who);
+    else { const subject = hits.filter((h) => h.person === "form_subject"); if (subject.length) hits = subject; }
     // Still several: the field whose own name best matches the screen's group and label ("Place of birth › Country or
     // territory" → person.country_of_birth), only when that best match is unique.
     if (new Set(hits.map((h) => h.fact)).size > 1 && i.group) {
@@ -92,12 +109,17 @@ export function draftScreenMap(twin: CaptureRecord, ctx: { pdf: PdfEntry[]; pdfE
     }
     const facts = [...new Set(hits.map((h) => h.fact!))];
     if (facts.length === 1) { const h = hits[0]; used.add(facts[0]); done("pdf_twin", facts[0], h.person, `${ctx.pdfEdition} · ${h.caption ?? h.data_path}`, `Same ${i.part ? `date part (${i.part}) of "${i.group}"` : "label"} as the PDF form field "${h.caption}" in ${ctx.pdfEdition}.`); continue; }
-    // 3. name or alias
-    const keys = (byAlias.get(normLabel(i.part ? `${i.group} ${i.label}` : i.label)) ?? (i.part ? byAlias.get(normLabel(i.group)) : undefined) ?? []).filter((k) => compatible(i.type, i.part ?? null, lib.get(k)?.valueType));
-    if (keys.length === 1) { used.add(keys[0]); done("alias", keys[0], "form_subject", null, `"${i.part ? i.group : i.label}" is an alias of ${keys[0]} (a label seen on another form).`); continue; }
+    // 3. name or alias: the group and label together, else the bare label when the group's own words are in the
+    // field's name ("Place of birth › City or town" → person.place_of_birth_city, never "Current country of residence ›
+    // Country or territory" → person.country_of_birth).
+    const groupWords = new Set(normLabel(i.group).split(" ").filter((w) => w.length > 2 && !normLabel(i.label).split(" ").includes(w) && !["your", "the", "and"].includes(w)));
+    const fits = (k: string) => !i.group || i.part || !groupWords.size || keyWords(k).some((w) => groupWords.has(w));
+    const named = i.part ? byAlias.get(normLabel(`${i.group} ${i.label}`)) ?? byAlias.get(normLabel(i.group)) : (i.group ? byAlias.get(normLabel(`${i.group} ${i.label}`)) : undefined) ?? (byAlias.get(normLabel(i.label)) ?? []).filter(fits);
+    const keys = (named ?? []).filter((k) => compatible(i.type, i.part ?? null, lib.get(k)?.valueType));
+    if (keys.length === 1 && who !== "parent") { used.add(keys[0]); done("alias", keys[0], who ?? "form_subject", null, `"${i.part ? i.group : captionOf(i.group, i.label)}" is an alias of ${keys[0]} (a label seen on another form)${who ? `, for ${PERSON_WORDS[who]}` : ""}.`); continue; }
     const cands = facts.length ? facts : keys;
     proposals.push({ ...base, outcome: "leftover", method: null, fact: null, transform: null, person: null, from: null, candidates: cands,
-      why: cands.length > 1 ? `Matches ${cands.length} different shared fields (${cands.join(", ")}): a person chooses, or drafting decides.` : "No PDF form field, earlier version or alias has this label: drafting (slice 2) or a person maps it." });
+      why: who === "parent" ? "A screen about a parent: the PDF's first and second parent cannot be told apart from the screen, so a person maps it." : cands.length > 1 ? `Matches ${cands.length} different shared fields (${cands.join(", ")}): a person chooses, or drafting decides.` : who ? `No PDF form field about ${PERSON_WORDS[who]}, earlier version or alias has this label: drafting (slice 2) or a person maps it.` : "No PDF form field, earlier version or alias has this label: drafting (slice 2) or a person maps it." });
   }
   const pdf_not_on_portal = [...new Map(mapped.filter((e) => !used.has(e.fact!) && !proposals.some((p) => p.fact === e.fact)).map((e) => [e.fact!, { caption: (e.caption ?? e.data_path).slice(0, 120), fact: e.fact! }])).values()];
   const n = (o: string) => proposals.filter((p) => p.outcome === o || p.method === o).length;

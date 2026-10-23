@@ -26,9 +26,10 @@ export class Fill {
     if (!cov) fail(`${b.form} does not apply to that person in this ${view.mode === "release" ? "release" : "draft"}.`, HttpStatus.NOT_FOUND);
     const snapshot: any = view.mode === "release" ? (await this.db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" } }))!.snapshot : (await this.studio.config(combinationId, "draft")).snapshot;
     // F1: the PDF edition; an online version has no file to fill (its answers go on the portal sheet, M3).
-    const maps = snapshot.field_maps as { form_number: string; channel?: string }[];
+    // A line filed Online is never filled as a PDF, even when the library also has its PDF (review 18).
+    const line = (snapshot.forms as { form_number: string; channel?: string }[]).find((f) => f.form_number === b.form);
+    if (line?.channel === "ONLINE") fail(`${b.form} is filed Online here: its answers go on the portal sheet, not in a PDF.`, HttpStatus.CONFLICT);
     const map = snapshot.field_maps.find((m: { form_number: string; channel?: string }) => m.form_number === b.form && m.channel !== "ONLINE");
-    if (!map && maps.some((m) => m.form_number === b.form)) fail(`${b.form} is filed Online here: there is no PDF to fill. Its answers go on the portal sheet.`, HttpStatus.CONFLICT);
     if (!map?.official_file || !map.inventory_file) fail("This form's official file or box inventory is not recorded; it cannot be filled.");
     type Entry = { data_path: string; fact?: string | null; option_map?: OptionMap | null };
     type Def = { id: string; answer_list?: { values: ListValue[] } };

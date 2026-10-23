@@ -1,10 +1,10 @@
 {
- "at": "2026-10-23T09:11:06.617Z",
+ "at": "2026-10-23T10:41:56.921Z",
  "port": 4450,
  "database": "xr_studio_forms_f1",
  "paid_calls": 0,
  "fixtures": "Sample (tests/fixtures/portal/README.md)",
- "pass": 66,
+ "pass": 106,
  "fail": 0,
  "log": [
   {
@@ -70,6 +70,86 @@
    "ok": true
   },
   {
+   "name": "contract fail: an element id used twice in one capture is refused (each input has its own id)",
+   "ok": true,
+   "detail": [
+    "the element id in0 appears more than once (each input has its own id)"
+   ]
+  },
+  {
+   "name": "fingerprint fail: a minimum length is a rule change (new fingerprint, listed in the difference)",
+   "ok": true
+  },
+  {
+   "name": "labels: curly apostrophes, full-width letters and invisible spaces compare as people read them",
+   "ok": true
+  },
+  {
+   "name": "fill fail: 'toString' or 'constructor' is not a code in an option map",
+   "ok": true
+  },
+  {
+   "name": "PDF codes: a form field with no resolved options takes its codes from its field map's code list (the filler's own source)",
+   "ok": true,
+   "detail": [
+    {
+     "code": "1",
+     "label": "Common-law"
+    },
+    {
+     "code": "2",
+     "label": "Single"
+    },
+    {
+     "code": "3",
+     "label": "Divorced"
+    },
+    {
+     "code": "4",
+     "label": "Annulled marriage"
+    },
+    {
+     "code": "5",
+     "label": "Married"
+    },
+    {
+     "code": "6",
+     "label": "Legally separated"
+    },
+    {
+     "code": "7",
+     "label": "Widowed"
+    },
+    {
+     "code": "8",
+     "label": "Unknown"
+    }
+   ]
+  },
+  {
+   "name": "validator fail: a PDF line for a form the library has only online has nothing to fill",
+   "ok": true
+  },
+  {
+   "name": "validator: an approved online version with no screen map yet says so (not 'no approved online version')",
+   "ok": true
+  },
+  {
+   "name": "screen map fail: a spouse screen never takes the applicant's form fields; with the spouse's own it maps for the spouse",
+   "ok": true,
+   "detail": [
+    "No PDF form field about the spouse or partner, earlier version or alias has this label: drafting (slice 2) or a person maps it.",
+    "subject_spouse_or_partner"
+   ]
+  },
+  {
+   "name": "alias fail: a bare label under another group ('Current country of residence › Country or territory') is not the country of birth; under its own group it matches",
+   "ok": true,
+   "detail": [
+    "No PDF form field, earlier version or alias has this label: drafting (slice 2) or a person maps it."
+   ]
+  },
+  {
    "name": "setup: IMM 5257's PDF field map comes from the saved real AI draft (replayed, no model call)",
    "ok": true,
    "detail": {
@@ -96,8 +176,29 @@
    "detail": "This is a saved portal screen, not a guide: add it to a portal capture (with its portal), where it is checked for answers and approved by a second person. Nothing was added or attached."
   },
   {
-   "name": "intake pass: IRCC's public pages are still guides (no question inputs)",
-   "ok": true
+   "name": "intake pass: every IRCC public page in the official library still reads as a guide or checklist (none as a portal screen)",
+   "ok": true,
+   "detail": [
+    "guide",
+    "guide",
+    "guide",
+    "guide",
+    "guide",
+    "guide",
+    "guide",
+    "guide",
+    "checklist",
+    "checklist",
+    "guide",
+    "guide",
+    "guide",
+    "guide"
+   ]
+  },
+  {
+   "name": "intake fail: a saved portal screen with one answered question is refused too, and not stored",
+   "ok": true,
+   "detail": "This is a saved portal screen, not a guide: add it to a portal capture (with its portal), where it is checked for answers and approved by a second person. Nothing was added or attached."
   },
   {
    "name": "capture fail: an unknown portal, a lower-case code and a short title are refused with field errors",
@@ -142,6 +243,19 @@
    ]
   },
   {
+   "name": "finish answers before the review document is printed (printed in the background; HTML until the PDF exists)",
+   "ok": true,
+   "detail": {
+    "ms": 11,
+    "review_file": "prototype/studio/var/isolated-forms_f1/workspaces/demo/portal-twins/IMM5257-ircc_portal-5368469c-d6375ca38c3b.review.html"
+   }
+  },
+  {
+   "name": "review document: downloaded through the API as a PDF",
+   "ok": true,
+   "detail": 200
+  },
+  {
    "name": "finish: held for a second person, with fingerprint, portal twin and a review document (PDF)",
    "ok": true,
    "detail": "Held for a second person: a new online version. Not used until approved."
@@ -159,7 +273,7 @@
    "name": "approval: a second person makes it an online version, re-check date set (Sample 180 days)",
    "ok": true,
    "detail": {
-    "id": "6de02f6a-8ce1-44da-92eb-4dcf9040945f",
+    "id": "93aa9bdf-5497-4bf1-9261-121457cefa54",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-23",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -176,7 +290,7 @@
   {
    "name": "identity: the same screens saved again (new session token, script, time) are 'already in the library'",
    "ok": true,
-   "detail": "Already in the library: the screens are identical to IMM 5257 online · IRCC Portal · 2026-10-23 (same fingerprint). Nothing new to approve; its re-check date can be confirmed."
+   "detail": "Already in the library: the screens are identical to IMM 5257 online · IRCC Portal · 2026-10-23 (same fingerprint). Nothing new to approve. A second person confirms the screens are unchanged, which renews the online version's re-check date."
   },
   {
    "name": "identity fail: a reworded label and an added option are held with the field-by-field difference",
@@ -191,8 +305,23 @@
    "ok": true
   },
   {
-   "name": "return: the reviewer sends it back with the reason",
+   "name": "return: the reviewer sends it back with the reason and the next step",
    "ok": true
+  },
+  {
+   "name": "remove fail: a screen the capture does not have",
+   "ok": true,
+   "detail": "There is no screen 9 in this capture (it has 3)."
+  },
+  {
+   "name": "a returned capture is fixed: the edited screens removed, the right ones added; finish finds them already in the library",
+   "ok": true,
+   "detail": "Already in the library: the screens are identical to IMM 5257 online · IRCC Portal · 2026-10-23 (same fingerprint). Nothing new to approve. A second person confirms the screens are unchanged, which renews the online version's re-check date."
+  },
+  {
+   "name": "abandon: a capture given up stays for the audit and takes no more screens",
+   "ok": true,
+   "detail": "This capture is abandoned: start a new capture to record the screens again."
   },
   {
    "name": "template (way C): the spreadsheet template is read into the same record; a template with an answer column is refused",
@@ -201,6 +330,62 @@
     "2 screens read (6 questions): Personal details, Language.",
     "Refused: this screen holds an answer (value: the template has an answer column; it holds structure only). Nothing of it was kept. Save the screen from a blank application, before anything is typed or chosen."
    ]
+  },
+  {
+   "name": "reader fail: an answer in an editable area, a ticked custom control, an unreadable custom control, a label, an option label or the title is refused; nothing kept",
+   "ok": true,
+   "detail": [
+    "Refused: this screen holds an answer (an editable area: an editable area holds text). Noth",
+    "Refused: this screen holds an answer (radio: a custom control (role=radio) is ticked or ho",
+    "Not read: it uses a custom control (role=\"radiogroup\") the reader cannot read; record this",
+    "Refused: this screen holds an answer (Family name: SAMPLE: its label has text after the co",
+    "Refused: this screen holds an answer (Country of citizenship: \"Country of citizenship\" sho",
+    "Refused: this screen holds an answer (screen title: the screen title shows a long number ("
+   ]
+  },
+  {
+   "name": "reader pass: a selected 'Please select…' placeholder is not an answer, and a form named 'research-programme' is not a search form",
+   "ok": true,
+   "detail": "1 screen read (2 questions): Contact details."
+  },
+  {
+   "name": "form code: 'IMM-5257' and 'IMM  5257' are the library's IMM 5257, never a second form",
+   "ok": true,
+   "detail": [
+    "IMM 5257",
+    "IMM 5257"
+   ]
+  },
+  {
+   "name": "concurrency: two screens added at the same moment are both kept, or one is refused with 409; never 'added' and lost",
+   "ok": true,
+   "detail": [
+    409,
+    201,
+    1
+   ]
+  },
+  {
+   "name": "concurrency: a screen added while the capture is finished is kept or refused, never lost (the held version has what was said)",
+   "ok": true,
+   "detail": [
+    409,
+    201,
+    2
+   ]
+  },
+  {
+   "name": "concurrency fail: an approval and a return at the same moment cannot both succeed (one 409); the record agrees with the library",
+   "ok": true,
+   "detail": [
+    409,
+    201,
+    "RETURNED:false"
+   ]
+  },
+  {
+   "name": "captures list: a page at a time, without each capture's full difference",
+   "ok": true
   },
   {
    "name": "twin reuse: drafted from the IMM 5257 PDF map with no AI call",
@@ -298,8 +483,22 @@
    }
   },
   {
+   "name": "accept: label matches are medium confidence, never 'exact'; learned labels keep their group ('Place of birth › Country or territory')",
+   "ok": true,
+   "detail": "Place of birth › Country or territory"
+  },
+  {
    "name": "accept fail: a second acceptance is refused (the map exists)",
    "ok": true
+  },
+  {
+   "name": "map input fail: a date part cannot take a text field; mapped and 'not a fact' at once is refused; an unknown input is not found",
+   "ok": true,
+   "detail": [
+    "person.family_name holds a text; this input is a date part (YYYY).",
+    "Either map it to a shared field (fact) or mark it not a fact (notAFact), not both.",
+    "IMM 5257 online · IRCC Portal · 2026-10-23 has no input nowhere in its accepted screen map (accept the screen map first)."
+   ]
   },
   {
    "name": "channel fail: an unknown channel is refused",
@@ -313,7 +512,7 @@
   {
    "name": "validator fail: online inputs left open block release (neither mapped nor 'not a fact')",
    "ok": true,
-   "detail": "3 online inputs are neither mapped to a shared field nor marked \"not a fact\" (for example In which language do you want service? › In which language do you want service?)."
+   "detail": "3 online inputs are neither mapped to a shared field nor marked \"not a fact\" (for example In which language do you want service?)."
   },
   {
    "name": "filing method is derived: Online + PDF uploads; signatures follow the channel",
@@ -334,6 +533,38 @@
    "ok": true
   },
   {
+   "name": "the review's validator runs the channel rules (the re-check error is among the draft's problems at review and release)",
+   "ok": true,
+   "detail": 91
+  },
+  {
+   "name": "confirm fail: the person who captured the screens again cannot confirm them unchanged",
+   "ok": true
+  },
+  {
+   "name": "confirm: a second person confirms the identical re-capture; the re-check date runs from it, once",
+   "ok": true,
+   "detail": {
+    "id": "93aa9bdf-5497-4bf1-9261-121457cefa54",
+    "label": "IMM 5257 online · IRCC Portal · 2026-10-23",
+    "channel": "ONLINE",
+    "portal": "ircc_portal",
+    "captured_on": "2026-10-23",
+    "recheck_by": "2027-04-21",
+    "fingerprint": "d6375ca38c3bb70b1622d381fd8afdba0971ee4a5da445650f4b7290ad74ba36",
+    "questions": 13
+   }
+  },
+  {
+   "name": "map input: a person marks each open input 'not a fact' with the reason (a new draft version, origin HUMAN)",
+   "ok": true,
+   "detail": [
+    "unionDate",
+    "serviceLanguage",
+    "usedPortalBefore"
+   ]
+  },
+  {
    "name": "validator pass: portal set, online version current, every input mapped or 'not a fact' → no channel error",
    "ok": true,
    "detail": [
@@ -346,15 +577,11 @@
    ]
   },
   {
-   "name": "the review's validator runs the channel rules too (one validator at review and release)",
-   "ok": true
-  },
-  {
    "name": "Forms library: IMM 5257 shows both channels and its online version",
    "ok": true,
    "detail": [
-    "Online",
-    "PDF"
+    "PDF",
+    "Online"
    ]
   },
   {
@@ -374,7 +601,7 @@
    "ok": true
   },
   {
-   "name": "answer list: created once (Sample); a second list with the same key is refused",
+   "name": "answer list: created once (Sample); a second list with the same key, or two values with one label, is refused",
    "ok": true
   },
   {
@@ -402,7 +629,7 @@
    "name": "validator fail: a value with no code in a channel blocks release, and says which",
    "ok": true,
    "detail": [
-    "*Sex (person.sex): no code for \"another_gender\" (filling would refuse it)."
+    "*Sex (person.sex): no code for \"another_gender\", \"unknown\" (filling would refuse them)."
    ]
   },
   {
@@ -411,6 +638,158 @@
   },
   {
    "name": "option map: a person maps 'Another gender' to the PDF's 'Unspecified'; both channels complete, no sex problem left",
+   "ok": true,
+   "detail": []
+  },
+  {
+   "name": "answer list fail: a free-text field is not turned into a choice field",
+   "ok": true,
+   "detail": "person.family_name holds free text; only a choice field (a code, a country or yes/no) takes an answer list."
+  },
+  {
+   "name": "PDF option maps: IMM 5707's marital status form fields take their codes from their code lists (Married = 5), drafted without AI",
+   "ok": true,
+   "detail": [
+    {
+     "map": {
+      "married": "5",
+      "single": "2",
+      "common_law": "1",
+      "divorced": "3",
+      "separated": "6",
+      "widowed": "7",
+      "annulled": "4",
+      "unknown": "8"
+     },
+     "unused": [
+      "9"
+     ],
+     "codes": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "9",
+      "8"
+     ]
+    },
+    {
+     "map": {
+      "married": "5",
+      "single": "2",
+      "common_law": "1",
+      "divorced": "3",
+      "separated": "6",
+      "widowed": "7",
+      "annulled": "4",
+      "unknown": "8"
+     },
+     "unused": [
+      "9"
+     ],
+     "codes": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "9",
+      "8"
+     ]
+    },
+    {
+     "map": {
+      "married": "5",
+      "single": "2",
+      "common_law": "1",
+      "divorced": "3",
+      "separated": "6",
+      "widowed": "7",
+      "annulled": "4",
+      "unknown": "8"
+     },
+     "unused": [],
+     "codes": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8"
+     ]
+    },
+    {
+     "map": {
+      "married": "5",
+      "single": "2",
+      "common_law": "1",
+      "divorced": "3",
+      "separated": "6",
+      "widowed": "7",
+      "annulled": "4",
+      "unknown": "8"
+     },
+     "unused": [],
+     "codes": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8"
+     ]
+    },
+    {
+     "map": {
+      "married": "5",
+      "single": "2",
+      "common_law": "1",
+      "divorced": "3",
+      "separated": "6",
+      "widowed": "7",
+      "annulled": "4",
+      "unknown": "8"
+     },
+     "unused": [],
+     "codes": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8"
+     ]
+    }
+   ]
+  },
+  {
+   "name": "fill (API): 'married' is written as IMM 1295's own code 01 from the option map; without 'married' in the map it goes to 'by hand'",
+   "ok": true,
+   "detail": [
+    "written",
+    "01",
+    "by hand",
+    "\"married\" has no code in this form field's option map"
+   ]
+  },
+  {
+   "name": "fill fail: a line filed Online is not filled as a PDF, even though the library has the PDF",
+   "ok": true,
+   "detail": "IMM 1295 is filed Online here: its answers go on the portal sheet, not in a PDF."
+  },
+  {
+   "name": "answer list: a list linked by mistake can be taken off; no option-map problem is left for that field",
    "ok": true,
    "detail": []
   },
@@ -445,6 +824,82 @@
   {
    "name": "merge fail: a merge is applied once",
    "ok": true
+  },
+  {
+   "name": "merge fail: a merged-away field is not edited back to a draft and takes no new label (it only redirects)",
+   "ok": true,
+   "detail": [
+    "person.town_of_birth was merged into person.place_of_birth_city: change that field instead.",
+    "person.town_of_birth was merged into person.place_of_birth_city: add the label there."
+   ]
+  },
+  {
+   "name": "merge fail: a field already waiting in a merge cannot enter a second one (no chain, cycle or fork)",
+   "ok": true,
+   "detail": [
+    "case.test_merge_y is already in a merge waiting for a second person (case.test_merge_x into case.test_merge_y): decide that one first.",
+    "case.test_merge_x is already in a merge waiting for a second person (case.test_merge_x into case.test_merge_y): decide that one first."
+   ]
+  },
+  {
+   "name": "merge fail: checked again when approved; a field retired since the proposal stops it and nothing moves",
+   "ok": true,
+   "detail": "case.test_merge_y was retired after this merge was proposed: nothing was changed; reject this merge."
+  },
+  {
+   "name": "merge fail: the same merge proposed twice at the same moment is stored once",
+   "ok": true,
+   "detail": [
+    201,
+    409
+   ]
+  },
+  {
+   "name": "alias fail: a curly-apostrophe twin of another field's label, and a label of punctuation only, are refused",
+   "ok": true,
+   "detail": [
+    "\"Mother’s maiden name\" already names person.family_name: one label points to one shared field (a reviewed merge joins two fields).",
+    "An alias needs letters or digits."
+   ]
+  },
+  {
+   "name": "aliases added at the same moment are all kept",
+   "ok": true,
+   "detail": [
+    201,
+    201,
+    201,
+    201,
+    201
+   ]
+  },
+  {
+   "name": "duplicate ids: the same screen saved again is a duplicate; a spouse screen's reused ids are qualified by its screen",
+   "ok": true,
+   "detail": [
+    "This screen is already screen 1 of the capture (\"Personal details\"); nothing added. To replace it, remove screen 1 first.",
+    [
+     "familyName@your-spouse-or-common-law-partner",
+     "givenNames@your-spouse-or-common-law-partner",
+     "dobYear@your-spouse-or-common-law-partner",
+     "dobMonth@your-spouse-or-common-law-partner",
+     "dobDay@your-spouse-or-common-law-partner"
+    ]
+   ]
+  },
+  {
+   "name": "duplicate ids pass: the screen map is accepted; the spouse screen never takes the applicant's form fields",
+   "ok": true,
+   "detail": {
+    "accept": 201,
+    "spouse": [
+     "familyName@your-spouse-or-common-law-partner:person.family_name:subject_spouse_or_partner",
+     "givenNames@your-spouse-or-common-law-partner:person.given_names:subject_spouse_or_partner",
+     "dobYear@your-spouse-or-common-law-partner:person.date_of_birth:subject_spouse_or_partner",
+     "dobMonth@your-spouse-or-common-law-partner:person.date_of_birth:subject_spouse_or_partner",
+     "dobDay@your-spouse-or-common-law-partner:person.date_of_birth:subject_spouse_or_partner"
+    ]
+   }
   },
   {
    "name": "reset removes portal captures, answer lists and merges with the workspace",

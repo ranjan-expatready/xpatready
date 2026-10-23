@@ -3,9 +3,13 @@ ever keeping an answer. Two inputs:
   page <file.html>       one saved blank portal screen ("Save page as"): its title, and per input the label, the page's own
                          element id or name, type, required flag, length/pattern rules, help text and choices (code + label).
   template <file.csv>    the spreadsheet template (studio/samples/portal-capture-template.csv): one row per input.
-A screen that holds an answer is refused, never cleaned: a typed value, a ticked box or radio, a chosen dropdown option
-or text in a text area (the Lead's response to challenge point 1). Scripts, styles and hidden inputs (session tokens) are
-skipped and never stored; the file itself is not kept by the Studio, only this structure and the file's checksum.
+A screen that holds an answer is refused, never cleaned: a typed value, a ticked box or radio, a chosen dropdown option,
+text in a text area or an editable area, a ticked custom control, or text that looks like a client's details (an email
+address, a long number, a passport-like code, a label with text after its colon) (the Lead's response to challenge
+point 1; CHECK fixes, 23 Oct). A page with custom controls the reader cannot read (role="radio" and the like), the same
+element id twice, or text in another encoding than it declares is not read rather than half read. Scripts, styles and
+hidden inputs (session tokens) are skipped and never stored; the file itself is not kept by the Studio, only this
+structure and the file's checksum.
 Prints one JSON line: {ok, way, sha256, screens: [...]} or {ok: false, refused: [...] | error}.
 The file is read as data only; nothing in it is executed.
   .tools/solution-1-prototype/.venv/bin/python -I studio/tools/read_portal_capture.py page|template <file>
@@ -22,6 +26,42 @@ from html.parser import HTMLParser
 SKIP_TYPES = {"hidden", "submit", "button", "reset", "image", "search"}
 PARTS = {"year": "YYYY", "yyyy": "YYYY", "month": "MM", "mm": "MM", "day": "DD", "dd": "DD"}
 TYPES = {"text", "date", "select", "radio", "checkbox", "textarea", "number", "email", "tel", "file"}
+# Custom controls the reader does not read: a page using them is not read (its question would go missing silently).
+ARIA_CONTROLS = {"radio", "checkbox", "switch", "textbox", "combobox", "listbox", "spinbutton", "slider", "radiogroup", "menuitemradio", "menuitemcheckbox", "option"}
+MAX_INPUTS = 500  # per screen; a portal screen has tens
+# Text that looks like a client's details rather than a question (P-66: a capture holds structure only).
+CLIENT_DATA = [
+    (re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+"), "an email address"),
+    (re.compile(r"(?<![\w-])\d(?:[ -]?\d){7,}(?![\w-])"), "a long number (an identifier such as a UCI or an application number)"),
+    (re.compile(r"\b[A-Z]{1,2}\d{6,9}\b"), "a passport-like code"),
+]
+
+
+def client_data(text):
+    for rx, what in CLIENT_DATA:
+        if rx.search(text or ""):
+            return what
+    return None
+
+
+def template_text_problem(text):
+    """A template cell that is a spreadsheet formula, or marks a choice as made."""
+    t = (text or "").strip()
+    if re.match(r"^[=+@]|^-\s*\w+\(", t) or "\t" in t or "\r" in t:
+        return "a spreadsheet formula"
+    if re.search(r"[\[(]\s*(selected|chosen|checked|ticked|x|✓|✔)\s*[\])]|[✓✔☑]", t, re.I):
+        return "a choice marked as made"
+    return None
+
+
+def search_form(a):
+    words = re.split(r"[\s_-]+", (a.get("class", "") + " " + a.get("id", "") + " " + a.get("name", "")).lower())
+    return a.get("role") == "search" or "search" in words
+
+
+def placeholder(code, label):
+    """"Please select…", "-- Choose --" or an empty first option; a first option with a real label is a choice."""
+    return not (label or "").strip(" -") or bool(re.match(r"^\s*(?:-+\s*)?(?:please\s+)?(?:select|choose)\b", label or "", re.I))
 
 
 def clean(s):
@@ -43,6 +83,9 @@ class Screen(HTMLParser):
         self.legends = []      # open fieldsets: [legend text]
         self.select = None; self.option = None; self.textarea = None
         self.id_stack = []     # elements with an id whose text may be help (aria-describedby)
+        self.editable = []     # open contenteditable elements: [tag, text]
+        self.dom_ids = {}      # element id → times seen (a page using an id twice is not read)
+        self.problems = []     # reasons the page cannot be read reliably
 
     # -- helpers
     def _flush(self):
@@ -67,8 +110,18 @@ class Screen(HTMLParser):
             self.skip += 1; return
         if self.skip:
             return
-        if tag == "form" and (a.get("role") == "search" or "search" in (a.get("class", "") + a.get("id", "")).lower()):
+        if tag == "form" and search_form(a):
             self.search += 1; return
+        role = (a.get("role") or "").lower()
+        if role in ARIA_CONTROLS and tag not in ("input", "select", "textarea", "option"):
+            if (a.get("aria-checked") or a.get("aria-selected") or a.get("aria-pressed") or "").lower() in ("true", "mixed") or (a.get("aria-valuenow") or a.get("aria-valuetext") or "").strip():
+                self._refuse({"id": a.get("id"), "label": clean(a.get("aria-label")) or a.get("id") or role}, f"a custom control (role={role}) is ticked or holds a value")
+            elif not self.search:
+                self.problems.append(f"it uses a custom control (role=\"{role}\") the reader cannot read; record this screen with the spreadsheet template")
+        if "contenteditable" in a and (a.get("contenteditable") or "true").lower() != "false":
+            self.editable.append([tag, []])
+        if a.get("id") and tag not in ("option",):
+            self.dom_ids[a["id"]] = self.dom_ids.get(a["id"], 0) + 1
         if a.get("id") and tag not in ("input", "select", "textarea", "option"):
             self.id_stack.append([tag, a["id"], []])
         if tag == "title":
@@ -87,6 +140,9 @@ class Screen(HTMLParser):
                 return
             ident = a.get("id") or a.get("name")
             if not ident:
+                # No id or name: not a question the extension could find; still, an answer in it refuses the screen.
+                if tag == "input" and (("checked" in a and typ in ("radio", "checkbox")) or (a.get("value", "").strip() and typ not in ("radio", "checkbox", "file"))):
+                    self._refuse({"id": None, "label": clean(a.get("aria-label")) or typ}, "an input with no id holds an answer")
                 return
             el = {"id": ident, "name": a.get("name") or None, "type": typ if typ in TYPES else "text",
                   "required": "required" in a or a.get("aria-required") == "true",
@@ -131,6 +187,10 @@ class Screen(HTMLParser):
             return
         if tag == "form" and self.search:
             self.search -= 1; return
+        if self.editable and self.editable[-1][0] == tag:
+            _t, text = self.editable.pop()
+            if clean(" ".join(text)):
+                self._refuse({"id": None, "label": "an editable area"}, "an editable area holds text")
         if self.id_stack and self.id_stack[-1][0] == tag:
             _t, ident, text = self.id_stack.pop()
             self.text_by_id[ident] = clean(" ".join(text))
@@ -156,8 +216,8 @@ class Screen(HTMLParser):
             if o["code"] is None:
                 o["code"] = o["label"]
             sel = self.select
-            if not sel["options"] and sel["_placeholder"] is None and (o["code"] == "" or re.match(r"^(--|select|choose)", o["label"], re.I)):
-                sel["_placeholder"] = o["label"]
+            if not sel["options"] and sel["_placeholder"] is None and placeholder(o["code"], o["label"]):
+                sel["_placeholder"] = o["label"]  # "Please select…", selected or not, is not an answer
             else:
                 if o["selected"]:
                     self._refuse(sel, f"the option \"{o['label']}\" is chosen")
@@ -175,6 +235,8 @@ class Screen(HTMLParser):
             return
         for entry in self.id_stack:
             entry[2].append(data)
+        for entry in self.editable:
+            entry[1].append(data)
         if self.cap:
             if self.cap[0] == "label" and self.label_stack:
                 self.label_stack[-1]["text"].append(data)
@@ -209,17 +271,47 @@ class Screen(HTMLParser):
         names = {el["id"]: el["label"] for el in self.inputs}
         for r in self.refused:
             r["label"] = names.get(r["id"], r["label"])
-        return {"title": self.h1 or self.title, "inputs": self.inputs}
+        title = self.h1 or self.title
+        # Text that looks like a client's details: refused like an answer (a label "Family name: SMITH" shows one).
+        for where, text, el in [("the screen title", title, None)] + [(f"\"{el['label']}\"", t, el) for el in self.inputs for t in [el.get("label"), el.get("group"), el.get("help")] + [o.get("label") for o in el.get("options") or []]]:
+            what = client_data(text)
+            if what:
+                self._refuse({"id": el["id"] if el else None, "label": el["label"] if el else "screen title"}, f"{where} shows {what}")
+        for el in self.inputs:
+            if el["type"] not in ("radio", "checkbox", "select") and re.search(r":\s*\S{2,}", el.get("label") or ""):
+                self._refuse(el, "its label has text after the colon, which may be an answer shown as text")
+        dup = sorted({el["id"] for el in self.inputs if sum(1 for x in self.inputs if x["id"] == el["id"]) > 1} | {i for i, n in self.dom_ids.items() if n > 1 and i in {el["id"] for el in self.inputs}})
+        if dup:
+            self.problems.append(f"the page uses the element id {', '.join(dup[:3])} more than once, so its questions cannot be told apart")
+        if len(self.inputs) > MAX_INPUTS:
+            self.problems.append(f"it has {len(self.inputs)} questions; a portal screen has at most {MAX_INPUTS}")
+        return {"title": title, "inputs": self.inputs}
+
+
+def decode(raw, declared=None):
+    """Text in the encoding the file declares (a BOM or <meta charset>), else UTF-8; never silently garbled."""
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return raw[3:].decode("utf-8", errors="strict")
+    enc = declared
+    if enc is None:
+        m = re.search(rb"<meta[^>]+charset\s*=\s*[\"']?([A-Za-z0-9_-]+)", raw[:4096], re.I)
+        enc = m.group(1).decode("ascii") if m else "utf-8"
+    return raw.decode(enc, errors="strict")
 
 
 def read_page(raw):
-    text = raw.decode("utf-8", errors="replace")
+    try:
+        text = decode(raw)
+    except (UnicodeDecodeError, LookupError):
+        return {"ok": False, "error": "the page's text is not in the encoding it declares (save the page again, as a web page, complete)"}
     if not re.match(r"\s*(<!doctype html|<html)", text[:512], re.I):
         return {"ok": False, "error": "not a saved web page (HTML)"}
     p = Screen(); p.feed(text); p.close()
     screen = p.finish()
     if p.refused:
         return {"ok": False, "refused": p.refused, "title": screen["title"]}
+    if p.problems:
+        return {"ok": False, "error": "; ".join(list(dict.fromkeys(p.problems))[:3])}
     if not screen["inputs"]:
         return {"ok": False, "error": "no questions found on this page (a portal screen has inputs; a guide page belongs on the combination's sources)"}
     return {"ok": True, "screens": [screen]}
@@ -229,10 +321,13 @@ COLUMNS = ["screen_order", "screen_title", "input_order", "input_id", "label", "
 
 
 def read_template(raw):
-    text = raw.decode("utf-8-sig", errors="replace")
+    try:
+        text = raw.decode("utf-8-sig", errors="strict")
+    except UnicodeDecodeError:
+        return {"ok": False, "error": "the template is not UTF-8 text (save it as \"CSV UTF-8\")"}
     rows = list(csv.DictReader(io.StringIO(text)))
-    head = [h.strip().lower() for h in (rows[0].keys() if rows else [])]
-    answers = [h for h in head if h in ("value", "answer", "response", "values", "answers")]
+    head = [h.strip().lower() for h in (rows[0].keys() if rows else []) if h]
+    answers = [h for h in head if h not in COLUMNS and re.search(r"value|answer|respon|default|entered|client|selected|chosen|filled", h)]
     if answers:
         return {"ok": False, "refused": [{"id": None, "label": answers[0], "why": "the template has an answer column; it holds structure only"}]}
     missing = [c for c in ("screen_order", "screen_title", "input_id", "label", "type") if c not in head]
@@ -247,9 +342,17 @@ def read_template(raw):
         if typ not in TYPES:
             problems.append(f"row {n}: type \"{r['type']}\" is not one of {', '.join(sorted(TYPES))}")
             continue
-        if not r["screen_order"].isdigit():
-            problems.append(f"row {n}: screen_order must be a number"); continue
+        if not r["screen_order"].isdigit() or int(r["screen_order"]) < 1:
+            problems.append(f"row {n}: screen_order must be a number from 1"); continue
+        if r.get("max_length") and (not r["max_length"].isdigit() or not 0 < int(r["max_length"]) <= 100000):
+            problems.append(f"row {n}: max_length must be a number from 1 to 100000"); continue
+        if not r["input_id"]:
+            problems.append(f"row {n}: input_id is empty"); continue
+        if r.get("part") and r["part"] not in ("YYYY", "MM", "DD"):
+            problems.append(f"row {n}: part must be YYYY, MM or DD"); continue
         s = screens.setdefault(int(r["screen_order"]), {"title": r["screen_title"], "inputs": []})
+        if r["screen_title"] != s["title"]:
+            problems.append(f"row {n}: screen {int(r['screen_order'])} is titled \"{s['title']}\" on an earlier row"); continue
         el = {"id": r["input_id"], "label": r["label"], "type": typ, "required": r.get("required", "").lower() in ("yes", "y", "true", "1", "required")}
         if r.get("options"):
             opts = []
@@ -258,6 +361,9 @@ def read_template(raw):
                     continue
                 code, _, label = pair.partition("=")
                 opts.append({"code": code.strip(), "label": (label or code).strip()})
+            codes = [o["code"] for o in opts]
+            if len(set(codes)) != len(codes):
+                problems.append(f"row {n}: an option code appears twice"); continue
             el["options"] = opts
         for k in ("help", "pattern", "group", "part"):
             if r.get(k):
@@ -266,10 +372,27 @@ def read_template(raw):
             el["max_length"] = int(r["max_length"])
         el["order"] = int(r["input_order"]) if r.get("input_order", "").isdigit() else len(s["inputs"]) + 1
         s["inputs"].append(el)
+    ids = [el["id"] for s in screens.values() for el in s["inputs"]]
+    dup = sorted({i for i in ids if ids.count(i) > 1})
+    if dup:
+        problems.append(f"the input_id {', '.join(dup[:3])} appears more than once")
     if problems:
         return {"ok": False, "error": "; ".join(problems[:5])}
     if not screens:
         return {"ok": False, "error": "the template has no rows"}
+    refused = []
+    for k in sorted(screens):
+        s = screens[k]
+        s["inputs"].sort(key=lambda el: el["order"])  # the rows' own input_order, not the file's row order
+        for el in s["inputs"]:
+            for text in [s["title"], el.get("label"), el.get("group"), el.get("help")] + [o["label"] for o in el.get("options") or []] + [o["code"] for o in el.get("options") or []]:
+                what = client_data(text) or template_text_problem(text)
+                if what:
+                    refused.append({"id": el["id"], "label": el["label"], "why": f"its text shows {what}"}); break
+    if refused:
+        return {"ok": False, "refused": refused}
+    if any(len(s["inputs"]) > MAX_INPUTS for s in screens.values()):
+        return {"ok": False, "error": f"a screen has more than {MAX_INPUTS} questions"}
     return {"ok": True, "screens": [dict(screens[k], order=k) for k in sorted(screens)]}
 
 
