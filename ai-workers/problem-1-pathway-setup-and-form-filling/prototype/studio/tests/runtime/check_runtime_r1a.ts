@@ -196,6 +196,12 @@ async function main() {
   ok("RT-17 pass: answers are recorded in the audit trail (who, what, when)", /answered person.passport_number/.test(audit) && /confirmed \d+ answer/.test(audit));
   ok("RT-17 fail-guard: no answer value or name appears in the audit trail or the server log", secrets.every((x) => !audit.includes(x) && !log.includes(x)), secrets.filter((x) => audit.includes(x) || log.includes(x)));
 
+  // ── S-7 reset (last: it empties the copy): cases, people and answers go with the disposable workspace
+  if (process.argv.includes("--reset")) {
+    r = await call("POST", "/demo/reset", { confirm: "RESET" }, AUTHOR);
+    ok("S-7 pass: reset removes cases, people, answers and rows with the workspace", r.status < 300 && ["runtime_case", "party", "answer_subject", "client_canonical_answer", "client_fact_record", "pack_work_pin"].every((t) => sql(`select count(*) from ${t}`) === "0"), r.status < 300 ? undefined : r.body);
+  }
+
   process.exitCode = summary() ? 1 : 0;
 }
 

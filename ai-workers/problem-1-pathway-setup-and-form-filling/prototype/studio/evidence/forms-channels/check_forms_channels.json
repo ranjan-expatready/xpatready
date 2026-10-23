@@ -1,7 +1,7 @@
 {
- "at": "2026-10-23T10:41:56.921Z",
- "port": 4450,
- "database": "xr_studio_forms_f1",
+ "at": "2026-10-23T12:37:06.570Z",
+ "port": 4432,
+ "database": "xr_studio_runtime_rf",
  "paid_calls": 0,
  "fixtures": "Sample (tests/fixtures/portal/README.md)",
  "pass": 106,
@@ -246,8 +246,8 @@
    "name": "finish answers before the review document is printed (printed in the background; HTML until the PDF exists)",
    "ok": true,
    "detail": {
-    "ms": 11,
-    "review_file": "prototype/studio/var/isolated-forms_f1/workspaces/demo/portal-twins/IMM5257-ircc_portal-5368469c-d6375ca38c3b.review.html"
+    "ms": 196,
+    "review_file": "prototype/studio/var/isolated-runtime_rf/workspaces/demo/portal-twins/IMM5257-ircc_portal-d6631c2a-d6375ca38c3b.review.html"
    }
   },
   {
@@ -273,7 +273,7 @@
    "name": "approval: a second person makes it an online version, re-check date set (Sample 180 days)",
    "ok": true,
    "detail": {
-    "id": "93aa9bdf-5497-4bf1-9261-121457cefa54",
+    "id": "4ef3bf65-074b-4475-857c-7a558ee1a886",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-23",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -360,8 +360,8 @@
    "name": "concurrency: two screens added at the same moment are both kept, or one is refused with 409; never 'added' and lost",
    "ok": true,
    "detail": [
-    409,
     201,
+    409,
     1
    ]
   },
@@ -545,7 +545,7 @@
    "name": "confirm: a second person confirms the identical re-capture; the re-check date runs from it, once",
    "ok": true,
    "detail": {
-    "id": "93aa9bdf-5497-4bf1-9261-121457cefa54",
+    "id": "4ef3bf65-074b-4475-857c-7a558ee1a886",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-23",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -559,8 +559,8 @@
    "name": "map input: a person marks each open input 'not a fact' with the reason (a new draft version, origin HUMAN)",
    "ok": true,
    "detail": [
-    "unionDate",
     "serviceLanguage",
+    "unionDate",
     "usedPortalBefore"
    ]
   },
