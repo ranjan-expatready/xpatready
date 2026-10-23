@@ -10,4 +10,5 @@ blocked_by: none
 updated: 2026-10-23
 
 ## Log (last 10 lines)
+- 2026-10-23 · Lead: two items added for F1 after the AI repair recheck: (a) A4 speed and progress backend (reuse first, split by section groups, per-part progress, merge with near-duplicate flags; measured paid run needs the founder's go); (b) make `check_ai_drafting.ts` select the four refused IMM 1344 runs by name (it crashes when newer valid runs exist).
 - 2026-10-23 · F1 · DESIGN · Lane created (P-64); concept written by the Lead.

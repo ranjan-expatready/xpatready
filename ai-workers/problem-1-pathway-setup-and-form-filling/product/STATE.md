@@ -6,10 +6,11 @@ updated: 2026-10-23
 
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
-| screens | 01 Programs | CHECK | Lead | Lead recheck of the AI repair → founder walkthrough (DEMO) |
+| screens | 01 Programs | DEMO | Founder with Lead | Walk Screen 01 on :4400 as author and reviewer |
 | forms | F1 forms channels | DESIGN | Builder | Feasibility challenge of the F1 concept |
 | evidence | E1 form acceptance | DESIGN | Builder | Plan for per-form Adobe checks and the AI scoring set |
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-23 · screens · CHECK → DEMO · Lead recheck passed; :4400 restarted on the repaired build (data unchanged); A4 accepted and placed (forms lane + Screen 02).
 - 2026-10-23 · all · Forms and evidence lane sessions started by the Lead (DESIGN); screens lane waits on the Lead recheck of the AI repair.
 - 2026-10-23 · all · Lanes set up (P-64): local git baseline a49b861; screens, forms and evidence lanes; Screen 01 detail moved to `lanes/screens.md`.
