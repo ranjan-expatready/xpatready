@@ -55,6 +55,10 @@ tsx prototype/studio/tests/runtime/check_runtime_r1a.ts 4430 xr_studio_runtime_r
 | F-R1-4 | `check_forms_channels.ts` uses `fetch` with keep-alive; after the slow intake loop the next POST fails with EPIPE | runs 23 Oct (twice); 106/106 with keep-alive off | forms lane / qa |
 | F-R1-5 | IMM 5707's country-of-birth and marital-status boxes are text: a case fill must write the value's label there, not its key | `fill.ts` writes the stored value when there is no option map | for R1d (runtime) with the forms lane's fill |
 
+### From the Lead during R1a (23 Oct)
+* F-R1-1 workaround accepted; the validator defect is scheduled in forms slice 2 (then relink the 3 fields in `NO_LIST_YET`).
+* IMM 5257's fill trial passed in Adobe (186/186 barcode slots, reproduced by the Lead): R1d fills IMM 5257 directly; the "Checked copy, not for filing" label (RT-14) is no longer needed for it; "ready to file" stays blocked only by missing or conflicting facts (P-71).
+
 ### Not in R1a (next slices)
 RT-7 section checks (the visitor-visa release has no cross-field checks yet: add as data in R1c), RT-13…RT-16 (fill, out of date, lock, trigger: R1d), the renderer (R1c), "Report a mapping problem" (P-73, M3/M4).
 
