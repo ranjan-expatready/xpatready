@@ -1,6 +1,7 @@
 // Product Studio application service: programs and combinations, the shared library (versioned edits), the
 // combination's own configuration, previews through the common renderer, validation, review and release.
 import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
+import type { ReviewSubmission } from "@prisma/client";
 import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
@@ -17,6 +18,9 @@ const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "coup
 /** Business level names over the team's stored node kinds (see createNode). */
 export const LEVEL: Record<string, { name: string; parent: string | null }> = { PATHWAY: { name: "Pathway", parent: null }, PROGRAM: { name: "Program", parent: "PATHWAY" }, STREAM: { name: "Category", parent: "PROGRAM" }, CATEGORY: { name: "Sub-category", parent: "STREAM" } };
 const LOCATIONS = ["inside_canada", "outside_canada"];
+/** A release publishes row by row in one transaction; Prisma's 5 s default ended it half-way on a busy machine (a 500
+ *  on release while the lanes' suites ran, 23 Oct), so a release may take up to 30 s before it is rolled back. */
+const RELEASE_TX = { timeout: 30_000, maxWait: 10_000 };
 
 @Injectable()
 export class Studio {
@@ -25,8 +29,9 @@ export class Studio {
   // ------------------------------------------------------------------ session and programs
   async session(actor: Actor) {
     const workspaceId = await this.ws.id();
-    const [programs, fields, releases, jobs] = await Promise.all([this.db.programDef.count({ where: { workspaceId, nodeKind: { not: "PATHWAY" } } }), this.db.canonicalField.count({ where: { workspaceId } }), this.db.configRelease.count({ where: { workspaceId } }), this.db.draftingJob.count({ where: { workspaceId } })]);
-    return { actor, actors: ACTORS, workspace: { key: "demo", label: "Demo workspace (disposable)", id: workspaceId }, counts: { programs, fields, releases, jobs } };
+    const [programs, fields, releases, jobs, sample] = await Promise.all([this.db.programDef.count({ where: { workspaceId, nodeKind: { not: "PATHWAY" } } }), this.db.canonicalField.count({ where: { workspaceId } }), this.db.configRelease.count({ where: { workspaceId } }), this.db.draftingJob.count({ where: { workspaceId } }), this.db.auditEvent.count({ where: { workspaceId, action: "loaded", entity: "sample inputs" } })]);
+    // sampleLoaded: the sample inputs were loaded into this workspace, not merely "some program exists" (QA-12).
+    return { actor, actors: ACTORS, workspace: { key: "demo", label: "Demo workspace (disposable)", id: workspaceId }, counts: { programs, fields, releases, jobs }, sampleLoaded: sample > 0 };
   }
 
   /** The programme structure (SA-1B-50/51, D285): Pathway (who the client is: Individual or Corporate) › Program › Category
@@ -408,8 +413,9 @@ export class Studio {
     if (b.who) { if (!WHO.includes(b.who)) fail("Choose whose form it is."); changes.who = b.who; }
     if (b.attachMode) { changes.attachMode = b.attachMode; if (b.attachMode === "COMBINATION_MANDATORY") { changes.predicateJson = null; changes.conditionPlain = null; } }
     if (b.condition !== undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") { const t = await this.libraryTypes(c.workspaceId); const errs = checkCondition(b.condition, t.fields, t.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); changes.predicateJson = b.condition; changes.conditionPlain = b.conditionPlain ?? null; }
-    const { row, created } = await revise(this.db.combinationForm, rows, { ...changes, origin: "HUMAN" }, actor.id, strip);
-    if (b.retire && !created) await this.db.combinationForm.update({ where: { id: row.id }, data: { status: "RETIRED" } });
+    const { row } = await revise(this.db.combinationForm, rows, { ...changes, origin: "HUMAN" }, actor.id, strip);
+    // A released line's removal is a new version (revise makes it a draft): it must say RETIRED too, or the removal is lost.
+    if (b.retire) await this.db.combinationForm.update({ where: { id: row.id }, data: { status: "RETIRED" } });
     await this.audit.log(c.workspaceId, actor.id, "updated", "form", formKey, `${actor.name} ${b.retire ? "removed" : "changed"} ${formKey} in "${c.label}" (draft v${row.version})`, changes, combinationId);
     return row;
   }
@@ -519,23 +525,45 @@ export class Studio {
       const out = await this.publishRow(tx, c, snapshot, sha256, { packVersionId: pack.id, authors, submitter: sub!.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(snapshot) } });
       await tx.reviewSubmission.update({ where: { id: sub!.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
       return { ...out, pack: pack.version };
-    });
+    }, RELEASE_TX);
     await this.audit.log(c.workspaceId, actor.id, "released", "configuration", c.combinationKey, `${actor.name} approved and released "${c.label}" in Release ${release.pack}; ${Object.entries(release.n).filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(", ") || "no draft rows"} published`, { sha256, published: release.n, pack_version: release.pack }, id);
     return { version: release.version, pack: release.pack, sha256, published: release.n };
   }
 
+  /** The review steps a draft must have passed before anyone releases it, wherever the release is started (QA-1): it was
+   *  submitted, it has not changed since, and every change that needs the SME duty is signed. The shared Release page
+   *  holds a row back with this reason; the server refuses a release that skips it. */
+  async releaseGate(combinationId: string, sha256: string): Promise<{ ok: true; sub: ReviewSubmission } | { ok: false; why: string }> {
+    const sub = await this.db.reviewSubmission.findFirst({ where: { combinationId }, orderBy: { submittedAt: "desc" } });
+    if (!sub || sub.status !== "SUBMITTED") return { ok: false, why: sub?.status === "RETURNED" ? "Returned to the author: correct it and submit it again on its Review and release tab." : "Not submitted for review: submit it on its Review and release tab." };
+    if (sub.draftSha256 !== sha256) return { ok: false, why: "Changed after it was submitted: submit it again on its Review and release tab." };
+    const changes = sub.changeSummary as { kind: string; key: string; needs_sme?: boolean }[];
+    const signed = new Set((await this.db.reviewSignoff.findMany({ where: { submissionId: sub.id, action: "signed" } })).map((s) => s.itemRef));
+    const unsigned = changes.filter((x) => x.needs_sme && !signed.has(`${x.kind}|${x.key}`)).length;
+    if (unsigned) return { ok: false, why: `${unsigned} change${unsigned > 1 ? "s need" : " needs"} the content reviewer's SME sign-off.` };
+    return { ok: true, sub };
+  }
+
   /** One release for the whole shared draft (P-23): every listed combination gets a frozen snapshot in one new pack
-   *  version, in one transaction. The person releasing must not have authored any of it (BR-14, server-side). */
+   *  version, in one transaction. Each one must have passed review (releaseGate, QA-1), and the person releasing must
+   *  not have authored or submitted any of it (BR-14, server-side). */
   async releaseRows(actor: Actor, ids: string[]) {
     need(actor, "approve");
     const workspaceId = await this.ws.id();
-    const prepared: { c: { id: string; workspaceId: string; sourceBasis: string; label: string }; snapshot: Snapshot; sha256: string; authors: string[] }[] = [];
+    const prepared: { c: { id: string; workspaceId: string; sourceBasis: string; label: string }; snapshot: Snapshot; sha256: string; authors: string[]; sub: ReviewSubmission }[] = [];
     for (const id of ids) {
       const c = await this.db.combination.findUniqueOrThrow({ where: { id }, include: { program: true } });
       const { snapshot, sha256 } = await buildSnapshot(this.db, workspaceId, id, "draft");
       const blocking = (await this.problems(workspaceId, snapshot, id)).filter((p) => p.level === "error");
       if (blocking.length) fail(`Release refused: "${c.label}" has ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${blocking[0].item}: ${blocking[0].message})`, HttpStatus.CONFLICT);
-      prepared.push({ c, snapshot, sha256, authors: await this.draftAuthors(id, snapshot, workspaceId) });
+      const gate = await this.releaseGate(id, sha256);
+      if (!gate.ok) { await this.audit.log(workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: "${c.label}": ${gate.why}`); fail(`Release refused: "${c.label}": ${gate.why}`, HttpStatus.CONFLICT); }
+      prepared.push({ c, snapshot, sha256, authors: await this.draftAuthors(id, snapshot, workspaceId), sub: (gate as { sub: ReviewSubmission }).sub });
+    }
+    const submitted = prepared.filter((p) => p.sub.submittedBy === actor.id).map((p) => p.c.label);
+    if (submitted.length) {
+      await this.audit.log(workspaceId, actor.id, "refused", "release", null, `Release refused: ${actor.name} submitted ${submitted.join(", ")}`);
+      throw new HttpException({ type: "https://expatready.local/problems/self-approval", title: "A different person must release", status: 403, detail: `You submitted ${submitted.slice(0, 3).join(", ")}${submitted.length > 3 ? ` and ${submitted.length - 3} more` : ""} for review, so a different person releases it (BR-14).` }, HttpStatus.FORBIDDEN);
     }
     const authors = [...new Set(prepared.flatMap((p) => p.authors))];
     if (authors.includes(actor.id)) {
@@ -546,9 +574,14 @@ export class Studio {
     const out = await this.db.$transaction(async (tx) => {
       const pack = await this.newPackVersion(tx, workspaceId, authors, actor.id, { rows: prepared.length, via: "shared draft" });
       const rows = [];
-      for (const p of prepared) { const r = await this.publishRow(tx, p.c, p.snapshot, p.sha256, { packVersionId: pack.id, authors: p.authors, submitter: p.authors[0] ?? actor.id, approver: actor.id, summary: { counts: this.counts(p.snapshot) } }); rows.push({ label: p.c.label, version: r.version }); }
+      for (const p of prepared) {
+        const changes = p.sub.changeSummary as { needs_sme?: boolean }[];
+        const r = await this.publishRow(tx, p.c, p.snapshot, p.sha256, { packVersionId: pack.id, authors: p.authors, submitter: p.sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(p.snapshot) } });
+        await tx.reviewSubmission.update({ where: { id: p.sub.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
+        rows.push({ label: p.c.label, version: r.version });
+      }
       return { pack: pack.version, rows };
-    });
+    }, RELEASE_TX);
     await this.audit.log(workspaceId, actor.id, "released", "pack", String(out.pack), `${actor.name} released Release ${out.pack}: ${out.rows.map((r) => r.label).join(", ")}`, { rows: out.rows, authors });
     return out;
   }

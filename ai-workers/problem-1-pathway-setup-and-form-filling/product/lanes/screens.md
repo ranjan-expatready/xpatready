@@ -6,14 +6,15 @@
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_screen: 01-programs-catalogue
-stage: DEMO
-owner: Founder (with Lead)
-next_action: Founder walks Screen 01 on :4400 (restarted 13:40 on the repaired build) as author and as reviewer, with the Lead (`screens/01-programs-catalogue/lead-check.md`). Then DONE or FIX. Carried to the next fix pass: restart script must restart only its own port (lead-check finding 1).
+stage: FIX
+owner: Builder
+next_action: One fix pass closing Screen 01 (Lead note 17:05): QA-1, QA-13, QA-7, QA-9, QA-3/5/6/10/11/12, P-63 field words, next step once, "+ Add line" default channel; each with a pass and a fail test. Then CHECK (reviewer + breaker), owner Lead; qa retest before DONE.
 then: Screen 02 DESIGN (Lead concept with P-61–P-63 and the A4 progress screen; builder feasibility challenge).
 blocked_by: none
 updated: 2026-10-23
 
 ## Log (last 10 lines)
+- 2026-10-23 · 01 · DEMO → FIX · applied Lead note 2026-10-23 17:05 (founder: close Screen 01 in one FIX pass, qa retest, then DONE). Lane copy bound to screens.
 - 2026-10-23 · 01 · CHECK → DEMO · Lead: AI repair A1–A3, A6 confirmed (lead-check.md); :4400 restarted on the repaired build; A4 accepted (forms lane backend, Screen 02 progress screen); restart-script finding carried.
 - 2026-10-23 · 01 · CHECK · Founder decided P-62 (setup model) and P-63 (form field words). No stage change; workflow package next, then Lead recheck of the AI repair.
 - 2026-10-23 · 01 · CHECK · Founder decided P-61 (online forms); Lead proposed P-62 (end-to-end setup model). No stage change; Lead recheck of the AI repair still next.

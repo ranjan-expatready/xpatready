@@ -23,7 +23,16 @@ export function normalizeLabel(label: string): string {
 }
 export const cleanLabel = (label: string) => label.normalize("NFKC").trim().replace(/\s+/g, " ");
 
-const label = z.string().transform(cleanLabel).pipe(z.string().min(1, "Give it a name.").max(120, "Keep the name under 120 characters."));
+/** The limits a name must meet, in the words the field shows (the path builder checks them as you type, QA-6/QA-7). */
+export const LABEL_MAX = 120;
+export function labelProblem(raw: string): string | null {
+  const s = cleanLabel(raw);
+  if (!s) return "Give it a name.";
+  if (s.length > LABEL_MAX) return `Keep the name under ${LABEL_MAX} characters.`;
+  if (!normalizeLabel(s)) return "Use letters or digits in the name, not only punctuation.";
+  return null;
+}
+const label = z.string().transform(cleanLabel).superRefine((s, ctx) => { const m = labelProblem(s); if (m) ctx.addIssue({ code: "custom", message: m }); });
 
 export const CatalogueQuery = z.object({
   pathway: z.enum(PATHWAYS).default("INDIVIDUAL"),
@@ -100,8 +109,13 @@ export function problemFromZod(e: z.ZodError, title = "Some details need fixing"
 
 // ------------------------------------------------------------------ catalogue response (GET /catalogue)
 /** One cause per line; step is the action that moves it, in the next step's words (the row's next step while a setup
- *  step is waiting), and text is the whole sentence shown. */
+ *  step is waiting), and text is the whole sentence shown (without the step when every line shares it: sharedStep). */
 export type MissingItem = { code: "no_forms" | "form_without_edition" | "role_without_questions" | "rule_problem" | "not_started"; step: string; text: string };
+/** The one step every missing line shares, when there is more than one line and they all name it; null otherwise. The
+ *  lines then carry only their causes and the screen names the step once under the list (Lead note 23 Oct). */
+export function sharedStep(missing: { step: string }[]): string | null {
+  return missing.length > 1 && missing.every((m) => m.step === missing[0].step) ? missing[0].step : null;
+}
 export type CatalogueLeaf = {
   kind: "combination";
   nodeKey: string;

@@ -14,6 +14,7 @@ import { diff, validate } from "../../engine/validate.ts";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Audit, Db, need, ROOT, Workspace, type Actor } from "./core.ts";
+import { addFormLine } from "./form-lines.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 
@@ -218,15 +219,23 @@ export class Programs {
     };
   }
 
-  /** The shared draft (P-23): every combination whose draft differs from its released snapshot, with what blocks it. */
+  /** The shared draft (P-23): every combination whose draft differs from its released snapshot, with what blocks it: a
+   *  problem in the draft, or a review step not done yet (submitted, unchanged since, expert changes signed; QA-1). */
   async draft() {
     const workspaceId = await this.ws.id();
     const { rows } = await this.rows();
     const last = await this.db.packVersion.findFirst({ where: { workspaceId }, orderBy: { version: "desc" } });
     const changed = rows.filter((r) => r.changes > 0);
+    const snaps = changed.length ? await buildSnapshots(this.db, workspaceId, changed.map((r) => r.leaf.combinationId!), "draft") : new Map();
+    const why = new Map<string, string | null>();
+    for (const r of changed) {
+      if (r.errors) { why.set(r.leaf.combinationId!, r.firstError); continue; }
+      const gate = await this.studio.releaseGate(r.leaf.combinationId!, (snaps.get(r.leaf.combinationId!) as { sha256: string }).sha256);
+      why.set(r.leaf.combinationId!, gate.ok ? null : gate.why);
+    }
     return {
       changes: changed.reduce((s, r) => s + r.changes, 0),
-      rows: changed.map((r) => ({ combinationId: r.leaf.combinationId, label: r.leaf.label, path: r.leaf.path, changes: r.changes, held: r.errors > 0, why: r.firstError, released: !!r.leaf.release })),
+      rows: changed.map((r) => ({ combinationId: r.leaf.combinationId, label: r.leaf.label, path: r.leaf.path, changes: r.changes, held: !!why.get(r.leaf.combinationId!), why: why.get(r.leaf.combinationId!) ?? null, released: !!r.leaf.release })),
       last: last ? { version: last.version, at: last.releasedAt, approver: last.approverId } : null,
       next: (last?.version ?? 0) + 1,
     };
@@ -287,7 +296,8 @@ export class Programs {
   }
 
   /** POST /combinations/:id/lines {kind: FORM}: "+ Add" picks a form already in the library (BR-12, P-25). A form whose
-   *  edition has its boxes mapped becomes a form line; one without a map is attached as a source for AI to draft. */
+   *  edition has its field map becomes a form line, filed on the channel the library supports for the combination's
+   *  portal (F1); one without a field map is attached as a source for AI to draft. A removed form can be added again. */
   async addLine(actor: Actor, combinationId: string, body: unknown) {
     need(actor, "author");
     const b = parse(AddLineBody, body);
@@ -296,10 +306,9 @@ export class Programs {
     const form = await this.db.govFormDef.findFirst({ where: { workspaceId: c.workspaceId, formKey: b.formKey }, include: { editions: { include: { _count: { select: { maps: true } } } } } });
     if (!form) throw problem(404, "Not in the library", `${b.formKey} is not in the library. Upload the IRCC PDF to add it.`, { errors: [{ field: "formKey", message: "Choose a form from the library." }] });
     const current = newestEdition(form.editions.filter((e) => e._count.maps > 0));
-    const already = await this.db.combinationForm.findFirst({ where: { combinationId, lineageKey: form.formKey, status: { not: "RETIRED" } } });
-    if (already) throw problem(409, "Already on this combination", `${form.formKey} is already one of this combination's forms.`, { errors: [{ field: "formKey", message: "Already added." }] });
     if (current) {
-      await this.db.combinationForm.create({ data: { workspaceId: c.workspaceId, combinationId, govFormDefId: form.id, lineageKey: form.formKey, who: "each_applicant", attachMode: "COMBINATION_MANDATORY", version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id, sourceQuote: `${current.editionLabel}: added from the library` } });
+      const r = await addFormLine(this.db, { workspaceId: c.workspaceId, combinationId, govFormDefId: form.id, formKey: form.formKey, origin: "HUMAN", by: actor.id, sourceQuote: `${current.editionLabel}: added from the library` });
+      if (r === "already") throw problem(409, "Already on this combination", `${form.formKey} is already one of this combination's forms.`, { errors: [{ field: "formKey", message: "Already added." }] });
       await this.audit.log(c.workspaceId, actor.id, "reused", "form", form.formKey, `${actor.name} added ${current.editionLabel} to "${c.label}" from the library`, undefined, combinationId);
       this.cache = null;
       return { added: "form_line", form: form.formKey, edition: current.editionLabel };
@@ -321,7 +330,7 @@ export class Programs {
     const kids = (k: string) => nodes.filter((n) => n.parentNodeKey === k).sort((a, b) => a.label.localeCompare(b.label, "en-CA", { sensitivity: "base" }));
     const leafOf = new Map(rows.map((r) => [r.leaf.nodeKey, r.leaf]));
     const under = (k: string): number => (leafOf.has(k) ? 1 : 0) + kids(k).reduce((s, n) => s + under(n.programNodeKey), 0);
-    const opt = (n: ProgramDef) => ({ key: n.programNodeKey, label: n.label, combinations: under(n.programNodeKey), hasSetup: !!leafOf.get(n.programNodeKey)?.combinationId });
+    const opt = (n: ProgramDef) => ({ key: n.programNodeKey, label: n.label, combinations: under(n.programNodeKey), hasSetup: !!leafOf.get(n.programNodeKey)?.combinationId, combinationId: leafOf.get(n.programNodeKey)?.combinationId ?? null });
     return {
       pathway: pw,
       programs: top ? kids(top.programNodeKey).map((p) => ({ ...opt(p), categories: kids(p.programNodeKey).map((c) => ({ ...opt(c), subCategories: kids(c.programNodeKey).map(opt) })) })) : [],

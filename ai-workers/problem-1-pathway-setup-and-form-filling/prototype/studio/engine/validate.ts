@@ -48,10 +48,10 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   const unplaced = new Map<string, number>();
   for (const m of s.field_maps) for (const e of m.entries) {
     if (e.outcome !== "mapped" || !e.fact) continue;
-    if (!types.has(e.fact)) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `The box reads ${e.fact}, which is not in the library.` });
+    if (!types.has(e.fact)) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `The form field reads ${e.fact}, which is not in the library.` });
     else if (!placed.has(e.fact) && !docFacts.has(e.fact)) unplaced.set(e.fact, (unplaced.get(e.fact) ?? 0) + 1);
   }
-  for (const [fact, n] of unplaced) out.push({ level: "warning", where: "Library", item: fact, message: `${n} box${n > 1 ? "es read" : " reads"} this field, but nobody is asked for it and no supported document supplies it: in a case it stays unresolved until a placement is added.` });
+  for (const [fact, n] of unplaced) out.push({ level: "warning", where: "Library", item: fact, message: `${n} form field${n > 1 ? "s read" : " reads"} this field, but nobody is asked for it and no supported document supplies it: in a case it stays unresolved until a placement is added.` });
   for (const p of s.placements) {
     if (!sectionIds.has(p.section_id)) out.push({ level: "warning", where: "Questions", item: p.fact, message: `Placed in section ${p.section_id}, which this combination's questionnaire does not use.` });
     for (const e of checkCondition(p.condition, types, derived)) out.push({ level: "error", where: "Questions", item: p.fact, message: `Condition ${e}.` });
@@ -102,7 +102,7 @@ function reachability(s: Snapshot, placed: Set<string>, docFacts: Set<string>, d
       const own = bareCond(p.condition), when = p.condition_plain ?? "its condition";
       const forms = new Map<string, boolean>();
       for (const r of readers.get(p.fact) ?? []) { const ok = eff === "SHOW" && [r.formCond, r.boxCond].some((c) => bareCond(c) === own); forms.set(r.form, (forms.get(r.form) ?? true) && ok); }
-      for (const [form, ok] of forms) if (!ok) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a form reads: the question for ${p.fact} is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}", but ${form} reads it ${s.forms.find((x) => x.form_number === form)?.condition ? "under a different condition" : "whenever the form applies"}. Make the form or its boxes apply under the same condition, or remove the question's condition.` });
+      for (const [form, ok] of forms) if (!ok) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a form reads: the question for ${p.fact} is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}", but ${form} reads it ${s.forms.find((x) => x.form_number === form)?.condition ? "under a different condition" : "whenever the form applies"}. Make the form or its form fields apply under the same condition, or remove the question's condition.` });
       for (const c of conditions) if (fieldsOf(c.tree).includes(p.fact) && !(eff === "SHOW" && own && canonical(c.tree).includes(own))) out.push({ level: "error", where: "Questions", item: p.fact, message: `Hiding a value a condition reads: ${c.what} reads ${p.fact}, whose question is ${eff === "HIDE" ? "hidden when" : "shown only when"} "${when}". The condition could never be decided while the question is hidden.` });
     }
     for (const f of fieldsOf(p.condition)) if (!placed.has(f) && !docFacts.has(f) && !derived.has(f)) out.push({ level: "error", where: "Questions", item: p.fact, message: `Unreachable question: it depends on ${f}, which no question, supported document or derived definition supplies, so it can never be decided.` });
@@ -142,7 +142,7 @@ export function diff(prev: Snapshot | null, next: Snapshot): Change[] {
   const bump = (k: string, f: "added" | "changed" | "removed", ai: boolean) => { const form = k.split("|")[0]; const x = byForm.get(form) ?? { added: 0, changed: 0, removed: 0, ai: 0 }; x[f]++; if (ai) x.ai++; byForm.set(form, x); };
   for (const [k, e] of b) if (!a.has(k)) bump(k, "added", e.origin === "AI_PROPOSAL"); else if (bare(a.get(k)) !== bare(e)) bump(k, "changed", e.origin === "AI_PROPOSAL");
   for (const k of a.keys()) if (!b.has(k)) bump(k, "removed", false);
-  for (const [form, x] of byForm) out.push({ kind: "Field map", key: form, change: x.added && !x.changed && !x.removed ? "added" : "changed", origin: x.ai ? "AI_PROPOSAL" : undefined, needs_sme: x.ai > 0, label: `${x.added} boxes added, ${x.changed} changed, ${x.removed} removed${x.ai ? ` (${x.ai} AI-proposed)` : ""}` });
+  for (const [form, x] of byForm) out.push({ kind: "Field map", key: form, change: x.added && !x.changed && !x.removed ? "added" : "changed", origin: x.ai ? "AI_PROPOSAL" : undefined, needs_sme: x.ai > 0, label: `${x.added} form fields added, ${x.changed} changed, ${x.removed} removed${x.ai ? ` (${x.ai} AI-proposed)` : ""}` });
 
   // Grounding audit finding 2: everything the release carries is reviewed. Who the row covers (its people and roles)
   // changes which forms, documents and questions apply, so it needs the SME duty; names and source labels are shown as

@@ -6,14 +6,14 @@ import * as React from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronRight, Plus } from "lucide-react";
-import { normalizeLabel, cleanLabel, type SessionView } from "../../../contracts/programs";
+import { normalizeLabel, cleanLabel, labelProblem, type SessionView } from "../../../contracts/programs";
 import { api, ApiError, useActorId, useApi } from "@/lib/api";
 import { Button, Notice, Select } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { CATALOGUE_URL_KEY, PATHWAY_LABEL } from "@/pages/programs";
 
-type Opt = { key: string; label: string; combinations: number; hasSetup: boolean };
+type Opt = { key: string; label: string; combinations: number; hasSetup: boolean; combinationId?: string | null };
 type ProgramOpt = Opt & { categories: (Opt & { subCategories: Opt[] })[] };
 /** A level's value: an existing node, a new name, or (sub-category only) none. */
 type Val = { key: string; label: string } | { create: string } | null;
@@ -58,9 +58,13 @@ export function NewCombinationPage() {
       void qc.invalidateQueries();
       nav(`/c/${r.combination.id}/sources`);
     } catch (e) {
-      const errs = e instanceof ApiError ? e.problem.errors ?? [] : [];
-      if (errs.length) setErrors(Object.fromEntries(errs.map((x) => [x.field, x.message])));
-      setProblem((e as Error).message);
+      // A field error names the level ("program.create" → the Program field, QA-7); one the page has no field for is
+      // shown in the notice, so a refusal is never silent.
+      const fields = new Set(["program", "category", "subCategory", "link"]);
+      const errs = (e instanceof ApiError ? e.problem.errors ?? [] : []).map((x) => ({ ...x, field: x.field.split(".")[0] }));
+      const mine = errs.filter((x) => fields.has(x.field));
+      if (mine.length) setErrors(Object.fromEntries(mine.map((x) => [x.field, x.message])));
+      setProblem(mine.length === errs.length && mine.length ? null : (e as Error).message);
     } finally { setBusy(false); }
   };
 
@@ -105,15 +109,15 @@ export function NewCombinationPage() {
         </div>
 
         {exists ? (
-          <Notice tone="info" title="This combination already exists" action={<Button variant="secondary" onClick={() => nav(`/?${pathway === "CORPORATE" ? "pw=CORPORATE&" : ""}f=all&sel=${encodeURIComponent(leafNode!.key)}`)}>Open the existing combination</Button>}>
+          <Notice tone="info" title="This combination already exists" action={<Button variant="secondary" onClick={() => nav(leafNode!.combinationId ? `/c/${leafNode!.combinationId}` : `/?${pathway === "CORPORATE" ? "pw=CORPORATE&" : ""}f=all&sel=${encodeURIComponent(leafNode!.key)}`)}>Open the existing combination</Button>}>
             {PATHWAY_LABEL[pathway]} › {path.join(" › ")} is already set up. Open it instead of creating it again.
           </Notice>
         ) : (
           <div className="rounded-lg bg-surface px-3 py-2.5 text-sm" aria-live="polite">Will be created as <b className="font-semibold">{PATHWAY_LABEL[pathway]} › {path.length ? path.join(" › ") : "…"}</b></div>
         )}
-        {problem && !Object.keys(errors).length ? <Notice tone="danger" title="Not created">{problem}</Notice> : null}
+        {problem ? <Notice tone="danger" title="Not created">{problem}</Notice> : null}
         <div className="flex gap-2">
-          <Button onClick={submit} busy={busy} disabled={!canAuthor || !complete || exists || (!!linkKind && !link)}>Create and add sources</Button>
+          <Button onClick={submit} busy={busy} disabled={!canAuthor || !complete || exists || (!!linkKind && !link) || [program, category, sub].some((v) => !!v && "create" in v && !!labelProblem(v.create))}>Create and add sources</Button>
           <Button variant="secondary" onClick={back}>Cancel</Button>
         </div>
       </div>
@@ -135,20 +139,24 @@ function Picker({ id, label, options, value, onChange, error, disabled, parentNe
   const matches = options.filter((o) => !words || normalizeLabel(o.label).includes(words));
   const twin = words ? options.find((o) => normalizeLabel(o.label) === words) : undefined;
   type Item = { kind: "opt"; o: Opt } | { kind: "create"; label: string } | { kind: "none" };
-  const items: Item[] = [...(allowNone && !words ? [{ kind: "none" } as Item] : []), ...matches.map((o) => ({ kind: "opt", o }) as Item), ...(!noCreate && typed && !twin ? [{ kind: "create", label: typed } as Item] : [])];
+  // The server's own name rules, shown as you type and kept on the field once chosen (QA-6, QA-7); Create stays offered
+  // so the field keeps the name and its message, and the page will not send it.
+  const bad = typed ? labelProblem(typed) : null;
+  const items: Item[] = [...(allowNone && !words ? [{ kind: "none" } as Item] : []), ...(bad && !words ? [] : matches.map((o) => ({ kind: "opt", o }) as Item)), ...(!noCreate && typed && !twin ? [{ kind: "create", label: typed } as Item] : [])];
   const choose = (it: Item) => {
     onChange(it.kind === "opt" ? { key: it.o.key, label: it.o.label } : it.kind === "create" ? { create: it.label } : null);
     setText(null); setOpen(false);
   };
   React.useEffect(() => setHi(0), [text, open]);
   const node = value && "key" in value ? options.find((o) => o.key === value.key) : undefined;
-  const hint = noCreate ? "" : open && twin && text !== null ? `"${twin.label}" exists: choose it` : disabled && !value ? noneHint && !parentNew ? noneHint : "" : !value ? (allowNone ? noneHint ?? "" : "") : "key" in value ? `exists · ${node?.combinations ?? 0} combination${node?.combinations === 1 ? "" : "s"}` : parentNew ? "new" : "new · no duplicate found";
+  const valueProblem = value && "create" in value ? labelProblem(value.create) : null;
+  const hint = noCreate ? "" : open && bad && text !== null ? bad : valueProblem ? valueProblem : open && twin && text !== null ? `"${twin.label}" exists: choose it` : disabled && !value ? noneHint && !parentNew ? noneHint : "" : !value ? (allowNone ? noneHint ?? "" : "") : "key" in value ? `exists · ${node?.combinations ?? 0} combination${node?.combinations === 1 ? "" : "s"}` : parentNew ? "new" : "new · no duplicate found";
   const listId = `pk-${id}-list`;
   return (
     <div className="relative flex flex-col gap-1">
       <label htmlFor={`pk-${id}`} className={cn("text-[12.5px] text-text-muted", hideLabel && "sr-only")}>{label}</label>
       <input id={`pk-${id}`} role="combobox" aria-expanded={open} aria-controls={listId} aria-autocomplete="list" autoComplete="off" disabled={disabled}
-        aria-activedescendant={open && items[hi] ? `${listId}-${hi}` : undefined} aria-invalid={!!error || undefined} aria-describedby={`pk-${id}-hint`}
+        aria-activedescendant={open && items[hi] ? `${listId}-${hi}` : undefined} aria-invalid={!!error || !!valueProblem || undefined} aria-describedby={`pk-${id}-hint`}
         value={shown} placeholder={allowNone ? "None" : "Choose or type"}
         onChange={(e) => { setText(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} onBlur={() => setTimeout(() => { setOpen(false); setText(null); }, 120)}
         onKeyDown={(e) => {
@@ -172,7 +180,7 @@ function Picker({ id, label, options, value, onChange, error, disabled, parentNe
           )) : <li className="px-2 py-1.5 text-text-muted">{twin ? "" : "Nothing yet: type a name to create one."}</li>}
         </ul>
       ) : null}
-      <span id={`pk-${id}-hint`} className={cn("text-[12.5px]", error ? "text-text-danger" : value && !("key" in value) ? "text-text-ok" : "text-text-muted")}>{error ?? hint}</span>
+      <span id={`pk-${id}-hint`} aria-live="polite" className={cn("text-[12.5px]", error || (bad && open && text !== null) || valueProblem ? "text-text-danger" : value && !("key" in value) ? "text-text-ok" : "text-text-muted")}>{error ?? hint}</span>
     </div>
   );
 }

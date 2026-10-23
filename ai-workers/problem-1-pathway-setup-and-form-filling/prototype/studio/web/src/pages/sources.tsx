@@ -25,7 +25,7 @@ export function SourcesTab({ d }: { d: any }) {
   const invalidate = () => { void qc.invalidateQueries({ queryKey: ["combination", id] }); };
   const [results, setResults] = React.useState<IntakeResult[] | null>(null);
   const upload = useSourceUpload(id, setUploading, setResults);
-  const read = useAction((aid: string) => api(`/attachments/${aid}/read`, { method: "POST" }), { success: (r: any) => `Form read: ${r.summary.entry_fields_bound} data boxes`, invalidate: [["combination", id]] });
+  const read = useAction((aid: string) => api(`/attachments/${aid}/read`, { method: "POST" }), { success: (r: any) => `Form read: ${r.summary.entry_fields_bound} form fields`, invalidate: [["combination", id]] });
   const reuse = useAction((aid: string) => api(`/attachments/${aid}/reuse`, { method: "POST", json: {} }), { success: (r: any) => `${r.form} added from the library; no AI drafting needed`, invalidate: [["combination", id], ["preview"]] });
   const jobsFor = (aid: string) => d.jobs.filter((j: any) => j.attachmentId === aid);
   return (
@@ -113,7 +113,7 @@ function DraftDialog({ a, onClose }: { a: any; onClose: () => void }) {
     success: mode === "replay" ? "Saved AI answer used: proposals compared with the library" : mode === "live" ? "AI draft started" : "Stub pass started", invalidate: [["combination", a.combinationId]], onDone: () => { void qc.invalidateQueries({ queryKey: ["combination"] }); onClose(); } });
   const l = opts.data?.ledger;
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} title={`Draft the field map of ${a.edition}`} description="The AI reads the form's box inventory (public official content only) and proposes, for every box, whose fact fills it and which library field it is. People decide every proposal before anything reaches the draft."
+    <Dialog open onOpenChange={(o) => !o && onClose()} title={`Draft the field map of ${a.edition}`} description="The AI reads the list of the form's fields (public official content only) and proposes, for every form field, whose fact fills it and which library field it is. People decide every proposal before anything reaches the draft."
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => go.mutate(undefined)} busy={go.isPending}><Play /> {mode === "replay" ? "Use saved AI answer" : mode === "live" ? "Start live AI draft" : "Run stub pass"}</Button></>}>
       <div className="space-y-3 text-sm">
         <label className="flex items-start gap-2"><input type="radio" checked={mode === "live"} onChange={() => setMode("live")} className="mt-1" /><span><b>Live AI call</b> through the guarded route: stub pass first, then Claude Opus 5.5, up to US$5 for this run. {l ? `Spent so far US$${l.committed_usd} of the US$${l.cap_usd} experiment cap; US$${l.remaining_usd} left.` : ""} {opts.data && !opts.data.key_present ? <span className="text-text-danger">The API key file is missing: a live call will be refused.</span> : null}</span></label>

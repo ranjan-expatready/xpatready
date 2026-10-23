@@ -16,10 +16,10 @@ export const SHOW_ONLY_STEPS: NextAction["kind"][] = ["view_progress", "see_miss
 /** Where AI acts (founder finding F3): these steps carry the AI mark and say what AI does. */
 export const AI_STEPS: NextAction["kind"][] = ["draft_ai", "view_progress", "review_proposals"];
 export function stepTip(a: NextAction): string | null {
-  if (a.kind === "draft_ai") return "AI reads the attached forms and proposes their box maps, questions and fields. Nothing changes until a person accepts each proposal.";
+  if (a.kind === "draft_ai") return "AI reads the attached forms and proposes their field maps, questions and fields. Nothing changes until a person accepts each proposal.";
   if (a.kind === "view_progress") return "AI is drafting now. Nothing changes until a person accepts its proposals.";
   if (a.kind === "review_proposals") return "AI proposed these. A person accepts, changes or rejects each one; nothing changes until then.";
-  if (a.kind === "add_from_library") return `${(a.forms ?? []).join(", ")}: reuses box maps already in the library. No AI. Adds to the draft only; nothing changes for firms until release.`;
+  if (a.kind === "add_from_library") return `${(a.forms ?? []).join(", ")}: reuses field maps already in the library. No AI. Adds to the draft only; nothing changes for firms until release.`;
   return null;
 }
 /** A next step's words, with the team's AI mark when AI acts. */

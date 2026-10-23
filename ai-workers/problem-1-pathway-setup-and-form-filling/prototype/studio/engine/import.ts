@@ -93,7 +93,7 @@ export async function importConfiguration(db: PrismaClient, workspaceId: string,
     await db.formFieldMap.createMany({ data: map.entries.map((e: any) => ({ ...ws, formEditionId: ed!.id, dataPath: e.data_path, caption: box.get(e.data_path)?.caption?.slice(0, 500) ?? null, heading: box.get(e.data_path)?.section ?? null,
       outcome: e.outcome, person: e.person ?? null, row: e.row ?? null, canonicalFieldKey: e.fact ?? null, transform: e.transform ?? null, condition: e.condition ?? null, confidence: e.confidence ?? null,
       evidenceQuote: e.evidence_quote ?? null, reason: e.unresolved_reason ?? null, version: 1, status: "PUBLISHED", origin: "IMPORTED_RELEASE", draftingRunId: (map.drafting_run_id ?? null), updatedBy: o.by })) });
-    inc("form map boxes", map.entries.length);
+    inc("field map entries (form fields)", map.entries.length);
   }
 
   const rules = config.rules.filter((r: any) => keepWho(r.for_whom) && (!/form (IMM [\d ]+[A-Z0-9 ]*)/.test(r.then) || keepForm((/form (IMM [0-9]+(?: SCH1)?)/.exec(r.then) ?? [])[1] ?? "")));
@@ -102,7 +102,7 @@ export async function importConfiguration(db: PrismaClient, workspaceId: string,
   const checks = config.checks.filter((c: any) => c.group !== "form_native");
   await db.check.createMany({ data: checks.map((c: any) => ({ ...ws, combinationId, checkKey: c.id, checkGroup: c.group, appliesTo: c.applies_to ?? null, predicateJson: c.condition ?? undefined, severity: c.severity,
     message: [c.condition_plain, c.user_action].filter(Boolean).join(" ").slice(0, 900) || null, sourceQuote: c.source_quote ?? null, version: 1, status: cs, origin: "IMPORTED_RELEASE", updatedBy: o.by })) });
-  inc("checks (form-native box checks stay with the form map)", checks.length);
+  inc("checks (form-native form field checks stay with the field map)", checks.length);
   return counts;
 }
 

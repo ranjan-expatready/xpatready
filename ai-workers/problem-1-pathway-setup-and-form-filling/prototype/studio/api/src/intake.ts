@@ -122,7 +122,7 @@ export class Intake {
       r = await attach(r);
       // Boxes already mapped: no AI needed. The person adds it with one click (the row's next step, "Add N forms from the
       // library"); the intake never changes a combination's configuration by itself.
-      if (combination && kind === "form" && same._count.maps) r = { ...r, message: `${r.message} Its boxes are already mapped, so no AI is needed: add it from the library (next step).` };
+      if (combination && kind === "form" && same._count.maps) r = { ...r, message: `${r.message} Its form fields are already mapped, so no AI is needed: add it from the library (next step).` };
       await this.record(actor, workspaceId, combination?.id ?? null, name, null, hash, file.buffer.length, r, "DONE");
       return r;
     }
