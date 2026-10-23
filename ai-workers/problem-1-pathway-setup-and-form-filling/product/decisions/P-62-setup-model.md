@@ -16,7 +16,7 @@ Neither the PDF nor the online form is the master. **Facts** (fields in the shar
 | Master | Created by | AI? |
 |---|---|---|
 | Form · PDF edition · box map | Intake reads code, edition, checksum, boxes (no AI); AI drafts box → fact; person accepts | Drafting only |
-| **Online version** (new): portal, screens, question order, captured date | Person uploads saved screens/instructions; AI drafts questions → facts; person accepts | Drafting only |
+| **Online version** = a form edition with channel Online (portal, screens, question order, captured date; identity by content fingerprint; amended after the F1 challenge) | Person uploads saved screens/instructions; AI drafts questions → facts; person accepts | Drafting only |
 | **Portal** (new, small fixed list): IRCC Portal, APR Portal, Representative PR Portal, LMIA Online | Person (expert confirms) | No |
 | Field (fact) | Proposed by drafting or by a person ("describe what you need", P-34) | Advisory check |
 | **Answer list + option map per channel** (extended): one list of values; each PDF and each online version maps its own codes to it | PDF options read from the file (no AI); online options from screens (AI drafts) | Drafting only |

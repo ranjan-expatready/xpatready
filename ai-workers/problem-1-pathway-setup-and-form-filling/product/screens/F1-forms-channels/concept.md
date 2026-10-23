@@ -4,6 +4,7 @@
 
 ## What gets built (needed for the proof)
 1. **Data:** online version of a form (portal, screens in order, captured date, source file); portal list; each form line's channel (PDF upload · Online · Signed PDF upload) and signature method; combination filing method derived from its lines; answer-list option map per channel. Migrations keep existing records.
+2. **Capture record and portal twin (P-66):** one versioned capture contract (screens, inputs, ids, types, options with codes, required, rules, help; never values); readers for saved blank pages and the spreadsheet template; captures with any value refused; held until a second person approves; "finish" builds the portal twin and a readable review document. The extension (F2) will send the same record.
 2. **Intake for online sources:** a saved portal page (web page file) is read by code into screens and inputs (label, type, options, element id); IRCC instructions are kept as sources. Same identity and hold rules as PDFs (checksum, held until approved, P-57).
 3. **Screen map drafting:** reuse the PDF twin's field map first (no AI); AI matches only leftovers through the repaired guarded path; a person accepts. Online-only forms draft like PDFs.
 4. **Aliases and reviewed merges (P-65):** every shared field keeps aliases; matching tries form path, then name and aliases, before any AI; a reviewed merge keeps one id, turns the other into an alias that redirects, moves mappings and rules, and leaves released versions alone. A saved portal page is accepted only with its values stripped by code.
