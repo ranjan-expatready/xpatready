@@ -10,5 +10,6 @@ blocked_by: Lead response and founder question 1 (P-57 amendment) before slice 1
 updated: 2026-10-23
 
 ## Log (last 10 lines)
+- 2026-10-23 · F1 · DESIGN · Founder asked (in this session) to fix the repeated hand-back block: renamed "Paste to Lead" → "Report to Lead", once per stage (CLAUDE.md, next, lead, screen-build, LANES, WORKFLOW); stop and session-start hooks now check the session's own copy (hook input cwd), so lane sessions no longer get the main copy's reminders. Lead files: merge needed to take effect. No stage change.
 - 2026-10-23 · F1 · DESIGN · Builder challenge written: P-57 blocks captured portal screens (Blocker); online version = FormEdition with channel ONLINE and identity by content fingerprint; answer lists missing (mirror the team's EnumSet + ENUM map); portal per combination and a validator rule for each line's channel; PDF twins for IMM 0008/5669/5406 do not exist yet; ownership table and 3 slices. Owner → Lead. No code; AI US$0.
 - 2026-10-23 · F1 · DESIGN · Lane created (P-64); concept written by the Lead.

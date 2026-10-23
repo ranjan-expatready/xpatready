@@ -9,7 +9,7 @@
 | **Reviewer / Breaker** (fresh agents launched by the builder) | `.claude/agents/` | Score and attack the built screen | Fix anything; ask for new features |
 
 ## The loop the founder runs
-Parallel lanes, guards, file ownership and merging: `LANES.md` (P-64). Per lane: `/next <lane>` does exactly one stage, commits, and ends with a **Paste to Lead** block naming the lane; `/lead` acts on it and names the next command for every lane. State lives in files (`STATE.md` overview, `lanes/<lane>.md` per lane), never in chat.
+Parallel lanes, guards, file ownership and merging: `LANES.md` (P-64). Per lane: `/next <lane>` does exactly one stage, commits, and ends with one **Report to Lead** block naming the lane (once per stage, not every reply); `/lead` acts on it and names the next command for every lane. State lives in files (`STATE.md` overview, `lanes/<lane>.md` per lane), never in chat.
 
 ## How we work: see it, agree it, build it, show it early (P-36, P-42)
 Dual track: the Lead designs screen N+1 while the builder builds screen N. Nothing is coded that the founder has not clicked through.

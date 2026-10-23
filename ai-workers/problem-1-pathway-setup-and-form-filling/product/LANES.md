@@ -12,7 +12,7 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 The Lead starts each lane's session (desktop app, its own worktree) and is told when it finishes a step. The founder can open any lane's session to watch, and types the commands above only there.
 
 ## The one loop
-1. A lane does **one stage**, commits on its branch, updates `product/lanes/<lane>.md`, ends with a **Paste to Lead** block naming the lane.
+1. A lane does **one stage**, commits on its branch, updates `product/lanes/<lane>.md`, ends with one **Report to Lead** block naming the lane (once per stage; it reaches the Lead by itself when the Lead started the session, otherwise the founder pastes it into `/lead`).
 2. The Lead reads it (directly, or the founder pastes it into `/lead`), checks, records, and says the next command for each lane.
 3. When a lane's work passes the Lead check, the Lead merges its branch into `main` (founder OK on each merge). Every lane syncs `main` at the start of its next stage.
 

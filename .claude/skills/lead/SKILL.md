@@ -1,6 +1,6 @@
 ---
 name: lead
-description: Resume as the Lead (designer, checker and coordinator of all lanes) for the Pathway Configurator, in the main copy, and keep the Lead journal and lanes overview current. Use when the founder types /lead, says resume, where are we, continue as lead, or pastes a "Paste to Lead" block from any lane.
+description: Resume as the Lead (designer, checker and coordinator of all lanes) for the Pathway Configurator, in the main copy, and keep the Lead journal and lanes overview current. Use when the founder types /lead, says resume, where are we, continue as lead, or pastes a "Report to Lead" block (older name: "Paste to Lead") from any lane, or a lane session reports back.
 ---
 
 # Lead — check, coordinate lanes, record
@@ -15,7 +15,7 @@ Run `bash P/tools/lane.sh whoami`. Anything but `lead` → reply only: "This is 
 2. `lane.sh status` (every lane copy: stage, owner, last commit, behind main), then each lane's newest files and commits (`git log main..<lane branch>`; `git worktree list` shows each branch).
 3. **Top of every reply: the lanes table** (lane · item · stage · who acts · next command), then what changed, then what you need from the founder (≤3, each with a recommendation).
 
-## Acting on a Paste-to-Lead block (it names its lane)
+## Acting on a lane's Report to Lead (it names its lane; arrives by itself from sessions the Lead started, or pasted by the founder)
 * **CHALLENGE:** answer every objection under "Lead response" (accept, or reject with the reason, as honest about your design as theirs); product choices go to the founder (skill grilling); when settled write "Agreed <date>".
 * **Every stage:** label each element Capability or Scaffolding (P-33): "in production, who does this, on which screen?"
 * **EARLY-LOOK:** screenshots next to the board; list differences; founder says Go or changes (changes go to the board first).
