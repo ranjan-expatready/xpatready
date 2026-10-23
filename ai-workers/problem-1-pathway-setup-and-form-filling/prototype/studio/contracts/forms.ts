@@ -37,10 +37,19 @@ export const NewCapture = z.object({
   form: z.string().trim().regex(/^[A-Z][A-Z0-9 -]{1,30}$/, "A form code in capitals, for example IMM 5257 or EE PROFILE."),
   title: z.string().trim().min(3, "Give the form's title as the portal shows it.").max(200),
   applicationType: z.string().trim().max(200).optional(),
+  /** Screen 01 "Add an online form" (C2.7): the combination it is added from; the online version stays a library one. */
+  combinationId: z.string().uuid("Choose an existing combination.").optional(),
 });
 export const ReturnCapture = z.object({ note: z.string().trim().min(5, "Say what is wrong, so the person who captured it can fix it.").max(1000) });
 export const AbandonCapture = z.object({ note: z.string().trim().max(1000).optional() });
 export const SetPortal = z.object({ portal: z.enum(PORTAL_KEYS).nullable() });
+/** Which source drafting reads for a form (P-62 §1, C2.10): the PDF version first by default, or the online screens alone. */
+export const DRAFT_FROM = ["PDF_FIRST", "ONLINE_ONLY"] as const;
+export type DraftFrom = (typeof DRAFT_FROM)[number];
+export const DRAFT_FROM_WORDS: Record<DraftFrom, string> = { PDF_FIRST: "PDF version first, then the online screens for what differs", ONLINE_ONLY: "Online screens only (the PDF version is not reused)" };
+export const SetDraftFrom = z.object({ draftFrom: z.enum(DRAFT_FROM, { message: "Choose PDF version first or online screens only." }) });
+/** A capture's status in a combination's words (C2.7): what the author sees on the combination page. */
+export const CAPTURE_STATUS_WORDS: Record<string, string> = { OPEN: "Being captured: add the remaining screens, then finish", HELD: "Awaiting a second person", RETURNED: "Returned to the author", APPROVED: "Approved: an online version in the library", IN_LIBRARY: "Already in the library (identical screens)", ABANDONED: "Abandoned" };
 export const SetChannel = z.object({ channel: z.enum(CHANNELS, { message: "Choose PDF upload, Online or Signed PDF upload." }) });
 export const AcceptScreenMap = z.object({ inputs: z.array(z.string()).optional() });
 /** A person maps one online input: to a shared field (for a person), or as "not a fact" with the reason. */

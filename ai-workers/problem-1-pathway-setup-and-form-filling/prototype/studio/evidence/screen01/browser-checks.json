@@ -1,17 +1,17 @@
 {
- "at": "2026-10-23T13:17:05.999Z",
+ "at": "2026-10-23T13:52:45.926Z",
  "timings": {
-  "cold_first_view_ms": 205,
-  "first_view_ms": 87,
-  "filter_ms": 18
+  "cold_first_view_ms": 248,
+  "first_view_ms": 92,
+  "filter_ms": 17
  },
- "pass": 118,
+ "pass": 134,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load through the form intake",
    "ok": true,
-   "detail": "4.008"
+   "detail": "4.089"
   },
   {
    "name": "setup: one replay of a saved real AI run on Super visa (no model call, US$0)",
@@ -26,7 +26,7 @@
   {
    "name": "performance: first view under 1 s with the sample data (app files cached)",
    "ok": true,
-   "detail": "87 ms (cold browser 205 ms)"
+   "detail": "92 ms (cold browser 248 ms)"
   },
   {
    "name": "P-49: Needs work is the default view, with its count",
@@ -95,7 +95,7 @@
   {
    "name": "performance: changing the view answers under 200 ms",
    "ok": true,
-   "detail": "18 ms"
+   "detail": "17 ms"
   },
   {
    "name": "F1: Live shows every row whose status is Live",
@@ -189,12 +189,12 @@
   {
    "name": "keyboard: one tab stop, ↑/↓/Home/End move, Enter opens the combination page (P-50)",
    "ok": true,
-   "detail": "Spouse of a skilled worker → http://localhost:4448/c/2efede29-e2e9-4e00-b281-bf6140e4887c"
+   "detail": "Spouse of a skilled worker → http://localhost:4448/c/8918ce49-d46a-4c16-8626-272789802079"
   },
   {
    "name": "P-50: Back keeps the view (All), highlights the opened row and restores the scroll",
    "ok": true,
-   "detail": "{\"url\":\"?f=all&sel=individual.work_permits.open.spouse_worker\",\"sel\":\"Spouse of a skilled worker\",\"y\":663,\"focus\":\"Spouse of a skilled worker\",\"scrollBefore\":663}"
+   "detail": "{\"url\":\"?f=all&sel=individual.work_permits.open.spouse_worker\",\"sel\":\"Spouse of a skilled worker\",\"y\":695,\"focus\":\"Spouse of a skilled worker\",\"scrollBefore\":695}"
   },
   {
    "name": "axe: programs-back-row-highlighted has no WCAG A/AA violation",
@@ -332,7 +332,7 @@
   {
    "name": "source-trust: the held unapproved edition does not change a Live row or expose edition-impact review",
    "ok": true,
-   "detail": "Work permits › Employer-specific work permitWith an LMIASupported by: Corporate › LMIALiveOpen"
+   "detail": "Work permits › Employer-specific work permitWith an LMIASupported by: Corporate › LMIAFiled: PDF onlyLiveOpen"
   },
   {
    "name": "axe: programs-live-row-unverified-source-held has no WCAG A/AA violation",
@@ -486,7 +486,7 @@
   {
    "name": "QA-11: \"Open the existing combination\" opens that combination's page (not the list)",
    "ok": true,
-   "detail": "http://localhost:4448/c/4e49daa2-8e94-41f3-a4a9-31ab42869df5"
+   "detail": "http://localhost:4448/c/5b477f1a-439b-46df-91f5-d79f53fa4546"
   },
   {
    "name": "QA-1: the shared Release page holds back a combination nobody submitted, saying why",
@@ -533,6 +533,73 @@
    "name": "narrow 512 px: the combination's name keeps its width (≥ 200 px), next steps are not clipped, no sideways scroll",
    "ok": true,
    "detail": "{\"nameW\":354,\"over\":0,\"clipped\":0}"
+  },
+  {
+   "name": "C1.6: the Programs row says how the combination is filed",
+   "ok": true
+  },
+  {
+   "name": "C1.6: the combination page shows the filing method and each line's channel",
+   "ok": true
+  },
+  {
+   "name": "C1.6: the author sets a line's channel; the filing method and the signature follow",
+   "ok": true
+  },
+  {
+   "name": "C1.7: the author picks the combination's portal",
+   "ok": true
+  },
+  {
+   "name": "C2.7: \"Add an online form\" opens a right panel with the combination's portal chosen",
+   "ok": true
+  },
+  {
+   "name": "axe: add-online-form-panel has no WCAG A/AA violation",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "1024 px: add-online-form-panel has no sideways scroll",
+   "ok": true
+  },
+  {
+   "name": "C2.7: the screens are read, checked for answers and sent for approval",
+   "ok": true
+  },
+  {
+   "name": "C2.7: the combination lists the online form as \"Awaiting a second person\"",
+   "ok": true
+  },
+  {
+   "name": "axe: combination-online-form-awaiting has no WCAG A/AA violation",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "1024 px: combination-online-form-awaiting has no sideways scroll",
+   "ok": true
+  },
+  {
+   "name": "C1.6/C1.7: someone without the author duty sees the channels and the portal, but cannot change them",
+   "ok": true
+  },
+  {
+   "name": "C2.10: the sources tab says, per form, what drafting reads (PDF version first by default)",
+   "ok": true
+  },
+  {
+   "name": "C2.10: the author changes it per form and the line says what that means",
+   "ok": true
+  },
+  {
+   "name": "axe: sources-tab-drafting-reads has no WCAG A/AA violation",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "1024 px: sources-tab-drafting-reads has no sideways scroll",
+   "ok": true
   },
   {
    "name": "P-63: no page says \"box\" or \"box map\" (form field, field map)",
@@ -632,6 +699,18 @@
   },
   {
    "state": "22-combination-review-submitted-by-name",
+   "violations": []
+  },
+  {
+   "state": "23-add-online-form-panel",
+   "violations": []
+  },
+  {
+   "state": "24-combination-online-form-awaiting",
+   "violations": []
+  },
+  {
+   "state": "25-sources-tab-drafting-reads",
    "violations": []
   }
  ]

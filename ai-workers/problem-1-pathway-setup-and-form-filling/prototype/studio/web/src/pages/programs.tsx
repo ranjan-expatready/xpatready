@@ -240,6 +240,7 @@ function List({ rows, highlight, q, sort, canAuthor, onSort, onOpen, onAct }: { 
               {parents ? <span className="break-words text-xs text-text-muted">{parents}</span> : null}
               <b className="break-words font-semibold">{r.label}</b>
               {r.note ? <span className="break-words text-xs text-text-muted">{r.note}</span> : null}
+              {r.filing ? <span className="break-words text-xs text-text-muted" data-filing>Filed: {r.filing}</span> : null}
               {q && r.matches.some((m) => m !== "name") ? <span className="text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</span> : null}
             </div>
             <div role="gridcell" className="flex items-center gap-1.5">

@@ -128,7 +128,9 @@ export type CatalogueLeaf = {
   combinationId: string | null;
   /** drafted: the form's boxes are mapped (or it is a checklist, which has none); false = attached, not set up yet.
    *  inLibrary (attached sources only): its boxes are already mapped in the library, so it is added without AI. */
-  forms: { code: string; drafted: boolean; document: boolean; inLibrary?: boolean }[];
+  forms: { code: string; drafted: boolean; document: boolean; inLibrary?: boolean; channel?: "PDF_UPLOAD" | "ONLINE" | "SIGNED_PDF_UPLOAD" }[];
+  /** How the application is filed, worked out from its lines (C1.6, engine/channels.ts): "PDF only", "Online only", …; null with no lines. */
+  filing: string | null;
   counts: { documents: number; documentsAlways: number; documentsIf: number; questions: number; sections: number; rules: number } | null;
   status: Status;
   statusText: string;
@@ -178,9 +180,15 @@ export type SessionView = { actor: { id: string; name: string; role: string; dut
 /** A file held by the form intake (P-51) that concerns a combination. */
 export type HeldFile = { id: string; file: string; code: string | null; edition: string | null; outcome: string | null; reason: string | null; at: string | Date };
 /** GET /combinations/:id/summary (P-50): the combination page's header and Overview. */
+type Channel = "PDF_UPLOAD" | "ONLINE" | "SIGNED_PDF_UPLOAD";
 export type CombinationSummary = {
   row: CatalogueLeaf | null; changes: number; allowedLocations: string[]; participants: unknown;
-  forms: { code: string; title: string; document: boolean; who: string; when: string; edition: string | null; boxes: number }[];
+  forms: { code: string; title: string; document: boolean; who: string; when: string; edition: string | null; boxes: number; channel: Channel; channelWords: string; defaultChannel: Channel; signature: string | null }[];
+  /** The portal the filing goes through (C1.7) and the derived filing method (C1.6). */
+  portal: string | null; portalLabel: string | null; filing: string;
+  channelProblems: ProblemLine[];
+  /** Online forms added from this combination (C2.7), each with its status in plain words ("Awaiting a second person"). */
+  onlineForms: { id: string; form: string; title: string; portal: string; portalLabel: string; status: string; statusWords: string; detail: string | null; at: string | Date }[];
   sources: { id: string; kind: string | null; name: string; status: string; detail: string | null; at: string | Date }[];
   held: HeldFile[];
 };

@@ -21,9 +21,10 @@ import { basename, join, relative } from "node:path";
 import { promisify } from "node:util";
 import { Prisma, type FormEdition, type PortalCapture } from "@prisma/client";
 import type { Response } from "express";
-import { AbandonCapture, AcceptScreenMap, CAPTURE_LIMITS, CHANNEL_WORDS, SetOptionMap, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
+import { AbandonCapture, AcceptScreenMap, CAPTURE_LIMITS, CAPTURE_STATUS_WORDS, CHANNEL_WORDS, DRAFT_FROM_WORDS, SetDraftFrom, type DraftFrom, SetOptionMap, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
 import { buildRecord, contractProblems, difference, fingerprint, noAnswers, reviewHtml, type CaptureInput, type CaptureRecord } from "../../engine/capture.ts";
 import { channelProblems, channelsView } from "../../engine/channels.ts";
+import { newestEdition } from "../../engine/programs.ts";
 import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
 import { compatible, draftScreenMap, normLabel, transformFor, type PdfEntry, type Proposal } from "../../engine/twin.ts";
@@ -88,10 +89,13 @@ export class Forms {
     const workspaceId = await this.ws.id();
     // One form, one code (break M4): "IMM-5257" or "IMM  5257" is the library's IMM 5257, never a second form.
     let form = formCode(b.form);
+    // Added from a combination (C2.7): it must be one of this workspace's combinations.
+    const combo = b.combinationId ? await this.db.combination.findFirst({ where: { id: b.combinationId, workspaceId } }) : null;
+    if (b.combinationId && !combo) fail("That combination does not exist.", HttpStatus.NOT_FOUND);
     const known = (await this.db.govFormDef.findMany({ where: { workspaceId }, select: { formKey: true } })).find((d) => compact(d.formKey) === compact(form));
     if (known) form = known.formKey;
-    const c = await this.db.portalCapture.create({ data: { workspaceId, portalKey: b.portal, formKey: form, title: b.title, applicationType: b.applicationType ?? null, way: "saved_page", status: "OPEN", statusDetail: "Add the blank screens in portal order: saved pages or the template.", record: { screens: [] }, capturedBy: actor.id } });
-    await this.audit.log(workspaceId, actor.id, "started", "portal capture", form, `${actor.name} started capturing ${form} from the ${portalLabel(b.portal)}`);
+    const c = await this.db.portalCapture.create({ data: { workspaceId, portalKey: b.portal, formKey: form, title: b.title, applicationType: b.applicationType ?? null, way: "saved_page", status: "OPEN", statusDetail: "Add the blank screens in portal order: saved pages or the template.", record: { screens: [] }, combinationId: combo?.id ?? null, capturedBy: actor.id } });
+    await this.audit.log(workspaceId, actor.id, "started", "portal capture", form, `${actor.name} started capturing ${form} from the ${portalLabel(b.portal)}${combo ? ` for "${combo.label}"` : ""}`, undefined, combo?.id);
     return this.view(c);
   }
 
@@ -332,7 +336,8 @@ export class Forms {
     const twin = this.twinOf(ed.inventoryFile!);
     const pdfs = ed.form.editions.filter((e) => e.channel === "PDF").sort((a, b) => (a.editionLabel < b.editionLabel ? 1 : -1));
     let pdfEdition: string | null = null, pdf: PdfEntry[] = [];
-    for (const p of pdfs) { const rows = await this.mapRows(p.id); if (rows.length) { pdfEdition = p.editionLabel; pdf = rows.map((m) => ({ data_path: m.dataPath, caption: m.caption, heading: m.heading, fact: m.canonicalFieldKey, transform: m.transform, person: m.person, outcome: m.outcome })); break; } }
+    // The form's drafting source (C2.10): ONLINE_ONLY drafts from the online screens alone, never the PDF version.
+    if (ed.form.draftFrom !== "ONLINE_ONLY") for (const p of pdfs) { const rows = await this.mapRows(p.id); if (rows.length) { pdfEdition = p.editionLabel; pdf = rows.map((m) => ({ data_path: m.dataPath, caption: m.caption, heading: m.heading, fact: m.canonicalFieldKey, transform: m.transform, person: m.person, outcome: m.outcome })); break; } }
     const previous = new Map<string, { fact: string | null; transform: string | null; person: string | null; edition: string }>();
     for (const o of ed.form.editions.filter((e) => e.channel === "ONLINE" && e.portalKey === ed.portalKey && e.id !== ed.id)) for (const m of await this.mapRows(o.id)) if (m.outcome === "mapped" && !previous.has(m.dataPath)) previous.set(m.dataPath, { fact: m.canonicalFieldKey, transform: m.transform, person: m.person, edition: o.editionLabel });
     const library = (await this.libraryRows(ed.workspaceId)).filter((r) => r.status !== "RETIRED" || r.mergedIntoKey).map((r) => ({ key: r.canonicalFieldKey, valueType: r.valueType, aliases: r.aliases, mergedIntoKey: r.mergedIntoKey, answerListKey: r.answerListKey }));
@@ -459,6 +464,47 @@ export class Forms {
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, combinationId, "draft");
     return { ...channelsView(snapshot), problems: channelProblems(snapshot) };
+  }
+
+  /** The online forms an author added from this combination (C2.7), newest first, in the combination's words. */
+  async onlineForms(combinationId: string) {
+    const rows = await this.db.portalCapture.findMany({ where: { combinationId }, orderBy: { createdAt: "desc" } });
+    return rows.map((c) => ({ ...this.view(c), status_words: CAPTURE_STATUS_WORDS[c.status] ?? c.status }));
+  }
+
+  /** For each form of a combination (its lines, its attached forms, the online forms added from it): which source
+   *  drafting reads (C2.10, P-62 §1), what exists of each, and the per-form choice. */
+  async draftingSources(combinationId: string) {
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId }, include: { attachments: { where: { kind: "Form", recognised: true }, select: { edition: true } } } });
+    const lines = await this.db.combinationForm.findMany({ where: { combinationId }, select: { lineageKey: true } });
+    const captured = await this.db.portalCapture.findMany({ where: { combinationId, status: { not: "ABANDONED" } }, select: { formKey: true } });
+    const codes = [...new Set([...lines.map((l) => l.lineageKey), ...c.attachments.map((a) => (a.edition ?? "").split(" (")[0]).filter(Boolean), ...captured.map((x) => x.formKey)])].sort();
+    const defs = await this.db.govFormDef.findMany({ where: { workspaceId: c.workspaceId, formKey: { in: codes } }, include: { editions: { include: { _count: { select: { maps: true } } } } } });
+    return { portal: c.portalKey, portal_label: c.portalKey ? portalLabel(c.portalKey) : null, forms: codes.map((code) => {
+      const def = defs.find((d) => d.formKey === code);
+      const pdf = newestEdition((def?.editions ?? []).filter((e) => e.channel !== "ONLINE")) ?? null;
+      const online = (def?.editions ?? []).filter((e) => e.channel === "ONLINE" && (!c.portalKey || e.portalKey === c.portalKey)).sort((a, b) => (b.capturedOn?.getTime() ?? 0) - (a.capturedOn?.getTime() ?? 0))[0] ?? null;
+      const choice = (def?.draftFrom ?? "PDF_FIRST") as DraftFrom;
+      const reads = !def ? "Not in the library yet: nothing to draft from until its file or its screens are added."
+        : choice === "ONLINE_ONLY" ? (online ? `Reads the ${portalLabel(online.portalKey)} screens (${online.editionLabel}) alone; the PDF version is not reused.` : "Online screens only, but no online version has been approved yet: nothing to draft from.")
+        : pdf && online ? `Reads the PDF version (${pdf.editionLabel}) first, then the ${portalLabel(online.portalKey)} screens for what differs.`
+        : pdf ? `Reads the PDF version (${pdf.editionLabel})${c.portalKey ? `; no online version from the ${portalLabel(c.portalKey)} yet` : ""}.`
+        : online ? `Reads the ${portalLabel(online.portalKey)} screens (${online.editionLabel}): the library has no PDF version.` : "No PDF version or online version yet.";
+      return { code, in_library: !!def, draft_from: choice, draft_from_words: DRAFT_FROM_WORDS[choice], pdf: pdf ? { edition: pdf.editionLabel, mapped: pdf._count.maps } : null, online: online ? { edition: online.editionLabel, portal: online.portalKey, mapped: online._count.maps } : null, reads };
+    }) };
+  }
+
+  /** The author chooses which source drafting reads for one library form (C2.10); it applies wherever the form is used. */
+  async setDraftFrom(actor: Actor, formKey: string, body: unknown) {
+    need(actor, "author");
+    const b = parse(SetDraftFrom, body);
+    const workspaceId = await this.ws.id();
+    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey } } });
+    if (!def) fail(`${formKey} is not in the library.`, HttpStatus.NOT_FOUND);
+    if (def!.draftFrom === b.draftFrom) return { form: formKey, draft_from: b.draftFrom, draft_from_words: DRAFT_FROM_WORDS[b.draftFrom] };
+    await this.db.govFormDef.update({ where: { id: def!.id }, data: { draftFrom: b.draftFrom } });
+    await this.audit.log(workspaceId, actor.id, "changed", "form", formKey, `${actor.name} set what drafting reads for ${formKey}: ${DRAFT_FROM_WORDS[b.draftFrom]}`);
+    return { form: formKey, draft_from: b.draftFrom, draft_from_words: DRAFT_FROM_WORDS[b.draftFrom] };
   }
 
   // ───────────────────────────────────────────────────────────── library: aliases, answer lists, option maps (P-65)
@@ -708,6 +754,11 @@ export class FormsController {
   @Patch("editions/:id/option-maps") setOptionMap(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setOptionMap(actorOf(a), id, b); }
   @Get("combinations/:id/channels") channels(@Param("id") id: string) { return this.f.channels(id); }
   @Patch("combinations/:id/portal") portal(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setPortal(actorOf(a), id, b); }
+  /** The spreadsheet template for recording blank portal screens by hand (P-66 way C). */
+  @Get("capture-template.csv") template(@Res() res: Response) { res.type("text/csv").setHeader("content-disposition", 'attachment; filename="portal-capture-template.csv"'); res.send(readFileSync(join(STUDIO, "samples", "portal-capture-template.csv"))); }
+  @Get("combinations/:id/online-forms") onlineForms(@Param("id") id: string) { return this.f.onlineForms(id); }
+  @Get("combinations/:id/drafting-sources") draftingSources(@Param("id") id: string) { return this.f.draftingSources(id); }
+  @Patch("library/forms/:code/draft-from") draftFrom(@Headers("x-actor") a: H, @Param("code") code: string, @Body() b: unknown) { return this.f.setDraftFrom(actorOf(a), code, b); }
   @Patch("combinations/:id/forms/:line/channel") channel(@Headers("x-actor") a: H, @Param("id") id: string, @Param("line") l: string, @Body() b: unknown) { return this.f.setChannel(actorOf(a), id, l, b); }
   @Post("library/fields/:key/aliases") alias(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.f.addAlias(actorOf(a), k, b); }
   @Post("library/fields/:key/answer-list") link(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.f.linkAnswerList(actorOf(a), k, b); }

@@ -1,12 +1,12 @@
 {
- "at": "2026-10-23T13:13:34.140Z",
+ "at": "2026-10-23T13:39:30.464Z",
  "pass": 130,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 4.601
+   "detail": 6.116
   },
   {
    "name": "BR-1 pass: Individual shows only Individual programs; Corporate only Corporate",
@@ -280,7 +280,7 @@
    "name": "QA-1 pass: submitted and signed, the combination will be released",
    "ok": true,
    "detail": {
-    "combinationId": "2779d466-3ef2-4b0e-a873-dee3f49ada27",
+    "combinationId": "387d6341-ed71-4c34-9336-f59dfa08e1ee",
     "label": "Spouse of a student",
     "path": [
      "Work permits",
@@ -602,8 +602,8 @@
    "detail": [
     "Already waiting for a person: checksum n",
     "Already waiting for a person: checksum n",
-    "Held for source verification: IMM 1295 (",
-    "Already waiting for a person: checksum n"
+    "Already waiting for a person: checksum n",
+    "Held for source verification: IMM 1295 ("
    ]
   },
   {
@@ -921,7 +921,7 @@
   {
    "name": "performance: a filtered catalogue answers in under 200 ms with the sample data",
    "ok": true,
-   "detail": "2 ms"
+   "detail": "3 ms"
   },
   {
    "name": "QA-6 fail: a name of symbols only is refused on its field in plain words; nothing is created",
@@ -960,7 +960,7 @@
     "label": "With an LMIA",
     "combinations": 1,
     "hasSetup": true,
-    "combinationId": "e83d0be9-fd09-45af-862a-aea6311d67f7"
+    "combinationId": "2e159c77-640c-4973-ab9a-627e67d6df25"
    }
   },
   {
@@ -976,7 +976,7 @@
   {
    "name": "QA-5: the app still shows it at the real time",
    "ok": true,
-   "detail": "2026-10-23T13:13:33.696Z"
+   "detail": "2026-10-23T13:39:29.927Z"
   },
   {
    "name": "QA-5 condition: the database's own zone is not UTC on this machine, so the check above is a real test of the fix",
