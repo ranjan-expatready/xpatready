@@ -9,12 +9,13 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 | **screens** | own worktree and branch | Milestone 2 screens, one stage at a time (`WORKFLOW.md`) | `/next screens` |
 | **forms** | own worktree and branch | PDF and online forms (P-61–P-63): intake, form versions, field and screen maps, filler, portal sheet | `/next forms` |
 | **evidence** | own worktree and branch | Fills each real form and checks it in Adobe (P-46); AI scoring set from saved runs. Never app code | `/next evidence` |
-The Lead starts each lane's session (desktop app, its own worktree) and is told when it finishes a step. The founder can open any lane's session to watch, and types the commands above only there.
+**The founder uses one chat: the Lead (`/lead`).** The Lead starts or continues each lane's builder session itself (desktop app, the lane's own worktree, prompt `/next <lane>`), is told when a stage ends, checks it, and asks the founder only for decisions, walkthroughs, paid-AI go-aheads and merge OKs. Lane sessions show under the Lead chat; the founder may open one to watch, and may type `/next <lane>` there, which checks itself, but never has to.
+**Fresh context, any time:** state lives in files and commits, never in a chat. A long Lead chat → open a new chat and type `/lead`; it reads the files and every lane copy (`lane.sh status`). A lane session is disposable: the Lead starts a fresh one per stage when its context is long, cut from the lane's branch.
 
 ## The one loop
 1. A lane does **one stage**, commits on its branch, updates `product/lanes/<lane>.md`, ends with one **Report to Lead** block naming the lane (once per stage; it reaches the Lead by itself when the Lead started the session, otherwise the founder pastes it into `/lead`).
 2. The Lead reads it (directly, or the founder pastes it into `/lead`), checks, records, and says the next command for each lane.
-3. When a lane's work passes the Lead check, the Lead merges its branch into `main` (founder OK on each merge). Every lane syncs `main` at the start of its next stage.
+3. When a lane's work passes the Lead check, the Lead merges its branch into `main` (standing founder OK, 23 Oct; the Lead reports each merge). Every lane syncs `main` at the start of its next stage.
 
 ## Guards every command runs first (no wrong step can do harm)
 * `product/tools/lane.sh whoami` says which copy this is. `/next` in the main copy, `/next forms` in the screens copy, or `/lead` in a lane copy does nothing and prints the right command and where to type it.

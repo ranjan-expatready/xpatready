@@ -16,7 +16,7 @@ Neither the PDF nor the online form is the master. **Facts** (fields in the shar
 | Master | Created by | AI? |
 |---|---|---|
 | Form · PDF edition · box map | Intake reads code, edition, checksum, boxes (no AI); AI drafts box → fact; person accepts | Drafting only |
-| **Online version** (new): portal, screens, question order, captured date | Person uploads saved screens/instructions; AI drafts questions → facts; person accepts | Drafting only |
+| **Online version** = a form edition with channel Online (portal, screens, question order, captured date; identity by content fingerprint; amended after the F1 challenge) | Person uploads saved screens/instructions; AI drafts questions → facts; person accepts | Drafting only |
 | **Portal** (new, small fixed list): IRCC Portal, APR Portal, Representative PR Portal, LMIA Online | Person (expert confirms) | No |
 | Field (fact) | Proposed by drafting or by a person ("describe what you need", P-34) | Advisory check |
 | **Answer list + option map per channel** (extended): one list of values; each PDF and each online version maps its own codes to it | PDF options read from the file (no AI); online options from screens (AI drafts) | Drafting only |
@@ -41,8 +41,10 @@ Neither the PDF nor the online form is the master. **Facts** (fields in the shar
 * **Online form** → **portal sheet**: the portal's screens in order, each answer with a copy button and its source; later "Fill this screen" (extension). No PDF is created or attached.
 * **PDF form** → the filled PDF in the app with its own Validate (P-45), downloadable.
 * **Signed PDF** → filled PDF → print, sign by hand, upload the signed scan (it closes the matching document line).
-* **One data source:** answers come from PQR/SQR and the normalised agent view; editing a fact anywhere updates every item, with a notice (P-45).
-* The filing records its portal, and once known the application number and UCI (P-61).
+* **One data source:** answers come from PQR/SQR and the normalised agent view; each case fact carries source, owner, verification status and history. Editing a fact updates every **draft** item with a notice; anything signed, uploaded or submitted is **never changed**, only marked stale for a person to redo (P-65 corrects P-45 here).
+* **PDF filled directly only after its edition passes the fill trial** (Adobe Validate, barcodes; evidence lane); otherwise its answer sheet. **Signed PDFs:** prepare → printed → sent for signature → signed copy received → uploaded.
+* **Portal sheet:** a tick per screen, "entered in the portal", mirroring the portal's own Not started / In progress / Complete (APR user guide).
+* The filing records its portal; in the APR portal the representative types **our filing reference as the client's "case ID"** (a firm reference IRCC does not use), linking the two before submission; then the application number and UCI once known (P-61, P-65).
 
 ## 7. What changes, by component
 * Data: online version, portal, option maps per channel, form-line channel and signature method; derived filing method.

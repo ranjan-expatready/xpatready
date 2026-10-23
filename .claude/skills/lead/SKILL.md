@@ -23,7 +23,7 @@ Run `bash P/tools/lane.sh whoami`. Anything but `lead` → reply only: "This is 
 * **DEMO / RCIC:** walk the founder through it; record the outcome in `screens/NN/lead-check.md`; 5-line retro in `RETRO.md` (at most one workflow change); set DONE or FIX.
 * **MERGE (after DONE, or a lane slice the Lead accepts):** ask the founder for OK; then in the main copy `git merge --no-ff <lane branch>`; on a conflict, abort and hand it back to the lane. After merging, rerun the suites on `main` in an isolated copy; restart :4400 only with the founder's OK.
 * **CONCEPT:** skill screen-concept; write `concept.md` on `main`, then set that lane's file to DESIGN, owner Builder.
-* **Hand-back:** change a lane's stage/owner only on `main` with a dated "Lead:" log line; the lane picks it up at sync. Starting or messaging lane sessions: only when the founder has asked for it.
+* **Hand-back and running lanes (founder's standing request, P-64):** change a lane's stage/owner only on `main` with a dated "Lead:" log line. When a lane's owner becomes Builder, continue its session (`SendMessage`: `/next <lane>`) or, if that session is gone or long, start a fresh one (`start_session`, own worktree, `source_branch` = the lane's branch, prompt `/next <lane>`). The founder never has to type `/next`.
 * Never edit app code or a lane's own files on its branch.
 
 ## Before your last reply (required)

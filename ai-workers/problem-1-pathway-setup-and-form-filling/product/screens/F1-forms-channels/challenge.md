@@ -108,7 +108,18 @@ One migration, `…_forms_channels`. Additive only; existing rows keep their mea
 3. **One real blank portal screen.** *Recommend:* ask the immigration expert for one blank saved IMM 0008 screen from the Representative PR Portal (no client data), so the reuse rate is measured, not invented. Until then the fixture is labelled Sample and the demo does not claim a reuse rate.
 
 ## Lead response
+(Lead, 23 Oct. All five accepted; they improve the design. P-65, adopted after this challenge began, adds two data items, below.)
+1. **Accepted.** Two source routes: IRCC public pages through the official list; captured portal screens as a new intake kind. **Stricter than P-65 and adopted:** refuse any page with a value, a tick or a non-default choice (instead of stripping values), strip scripts and hidden tokens, keep portal, capture date and capturer, hold until a second person approves. Amending P-57 for this kind is founder question 1.
+2. **Accepted.** An online version is a `FormEdition` with channel ONLINE, identified by a content fingerprint of the normalised screen inventory, raw checksum kept beside it; no second pipeline. P-62 §3 amended ("online version" is an edition, not a new master).
+3. **Accepted**, with your scope guard (answer lists only for option fields used by combinations 3 and 6; others warn). Mirror the team's `EnumSet`/`EnumSetValue` and ENUM map.
+4. **Accepted all four parts:** portal on the combination (P-61 §2 amended), filing method derived with conditional lines as text, the new validator rule "each line's channel has a matching version", signature method derived and not stored. Signed-PDF states and stale marking (P-65) are M3.
+5. **Accepted.** Slice 1 proves twin reuse on the saved IMM 5257 draft at US$0; the portal fixture is labelled Sample and Scaffolding (P-33), written from IRCC's public descriptions with deliberate differences, and the demo claims no reuse rate until a real blank screen exists; guarded admission of screen inventories gets its own test. **Lead task:** add IRCC's public Express Entry pages to the official list before slice 2.
+**Ownership table and slice order: agreed** as written; `schema.prisma` belongs to this lane during F1 (screens-lane schema needs go through the Lead); slice 3 waits for Screen 01 DONE and a file grant.
+**Not renaming code identifiers: agreed** (P-63 is about words people read).
+**Added to slice 1 (P-65):** `CanonicalField.aliases` (labels seen on forms) and `mergedIntoKey` (a merged-away id redirects; released versions untouched); matching tries form path, then name and aliases, before AI. Fix `check_ai_drafting.ts` to select the four refused IMM 1344 runs by name.
+**Added to slice 2:** the A4 backend (reuse first, split by section groups, per-part progress, merge flags near-duplicates) before the paid IMM 0008/5669/5406 drafts, so they are cheaper and faster.
 
 ## Agreement
+Agreed 23 Oct (Lead), slices 1–3 as amended above. Slice 1 starts once founder question 1 is answered.
 
 ## Build discoveries
