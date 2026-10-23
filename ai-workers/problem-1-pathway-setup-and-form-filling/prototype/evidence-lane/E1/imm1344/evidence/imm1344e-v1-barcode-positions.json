@@ -1,0 +1,1934 @@
+{
+ "method": "positional (as p1/barcode_positions.py): the form's own barcode manifests, inventory field->data bindings, slot k compared with the Adobe-saved data",
+ "official_form": {
+  "file": "official-sources/ircc/forms/imm1344e.pdf",
+  "sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2"
+ },
+ "inputs_sha256": {
+  "imm1344e.complete-v1.adobe-saved.pdf": "f021fdba3ab635487da7460323fa81c08b6d3bc76dc9ea778ecf60daba4d17c3",
+  "imm1344e.complete-v1.as-written.pdf": "e5a790140144f06c9afd31d9e3f766d0f22586d4be0c908192c84a204c9bcbe1",
+  "imm1344e-v1-barcodes-decoded.jsonl": "dd786711a75b6b37daf79d508a71d6e1db9ee1266c05c426a551a8f814fb45bc",
+  "values.complete.json": "8855161f3b7b925f77e7a43d8e8903fc41484d4dd0d2de3f60ef5d1fb98e2b67",
+  "imm1344e.inventory.json": "ccce1c8ee2a85a37f846e413ceac9d5d00e3bc47bc9991f9d985ee759690cff6"
+ },
+ "slots_per_barcode": {
+  "BC1": 29,
+  "BC2": 32,
+  "BC3": 39,
+  "BC4": 28,
+  "BC5": 21
+ },
+ "slots_total": 149,
+ "unknown_bindings": [],
+ "slot_matches": {
+  "exact": 147,
+  "month_leading_zero": 2
+ },
+ "slot_problems": [],
+ "month_normalisations": [
+  {
+   "barcode": "BC1",
+   "position": 8,
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBMonth[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBMonth[0]",
+   "barcode_value": "4",
+   "saved_value": "04",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "BC1",
+   "position": 20,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBMonth[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBMonth[0]",
+   "barcode_value": "6",
+   "saved_value": "06",
+   "match": "month_leading_zero"
+  }
+ ],
+ "written_values": 56,
+ "written_values_in_data": {
+  "before_adobe_save": 56,
+  "after_adobe_save": 55
+ },
+ "written_accounting": {
+  "control_not_encoded": 1,
+  "entered_derived": 3,
+  "entered_encoded": 52
+ },
+ "entered_encoded_matches": {
+  "differs": 1,
+  "exact": 49,
+  "month_leading_zero": 2
+ },
+ "accounting_problems": [
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].PostalCode[0]",
+   "written": "M5V0A1",
+   "saved": "M5V 0A1",
+   "category": "entered_encoded",
+   "at": "BC2 position 22",
+   "barcode_value": "M5V 0A1",
+   "match": null,
+   "problem": "own slot differs from the written value"
+  }
+ ],
+ "accounting": [
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q1[0].Proceed[0]",
+   "written": "Y",
+   "saved": "Y",
+   "category": "entered_encoded",
+   "at": "BC1 position 2",
+   "barcode_value": "Y",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q2[0].LangPref[0]",
+   "written": "01",
+   "saved": "01",
+   "category": "entered_encoded",
+   "at": "BC1 position 3",
+   "barcode_value": "01",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q3[0].CoSignerInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC1 position 4",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q4[0].PAFamilyName[0]",
+   "written": "EXAMPLE",
+   "saved": "EXAMPLE",
+   "category": "entered_encoded",
+   "at": "BC1 position 5",
+   "barcode_value": "EXAMPLE",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q4[0].PAGivenName[0]",
+   "written": "CLIENTA",
+   "saved": "CLIENTA",
+   "category": "entered_encoded",
+   "at": "BC1 position 6",
+   "barcode_value": "CLIENTA",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBYear[0]",
+   "written": "1990",
+   "saved": "1990",
+   "category": "entered_encoded",
+   "at": "BC1 position 7",
+   "barcode_value": "1990",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBMonth[0]",
+   "written": "04",
+   "saved": "04",
+   "category": "entered_encoded",
+   "at": "BC1 position 8",
+   "barcode_value": "4",
+   "match": "month_leading_zero"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBDay[0]",
+   "written": "12",
+   "saved": "12",
+   "category": "entered_encoded",
+   "at": "BC1 position 9",
+   "barcode_value": "12",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q5New[0].Relationship[0]",
+   "written": "11",
+   "saved": "11",
+   "category": "entered_encoded",
+   "at": "BC1 position 10",
+   "barcode_value": "11",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q1[0].FamilyName[0]",
+   "written": "EXAMPLE",
+   "saved": "EXAMPLE",
+   "category": "entered_encoded",
+   "at": "BC1 position 13",
+   "barcode_value": "EXAMPLE",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q1[0].GivenName[0]",
+   "written": "SPONSOR",
+   "saved": "SPONSOR",
+   "category": "entered_encoded",
+   "at": "BC1 position 14",
+   "barcode_value": "SPONSOR",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q2[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC1 position 15",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].sex[0].Sex[0]",
+   "written": "Female",
+   "saved": "Female",
+   "category": "entered_encoded",
+   "at": "BC1 position 18",
+   "barcode_value": "Female",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBDay[0]",
+   "written": "21",
+   "saved": "21",
+   "category": "entered_encoded",
+   "at": "BC1 position 21",
+   "barcode_value": "21",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBMonth[0]",
+   "written": "06",
+   "saved": "06",
+   "category": "entered_encoded",
+   "at": "BC1 position 20",
+   "barcode_value": "6",
+   "match": "month_leading_zero"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBYear[0]",
+   "written": "1988",
+   "saved": "1988",
+   "category": "entered_encoded",
+   "at": "BC1 position 19",
+   "barcode_value": "1988",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].pob[0].PlaceBirthCity[0]",
+   "written": "TORONTO",
+   "saved": "TORONTO",
+   "category": "entered_encoded",
+   "at": "BC1 position 22",
+   "barcode_value": "TORONTO",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].pob[0].PlaceBirthCountry[0]",
+   "written": "511",
+   "saved": "511",
+   "category": "entered_encoded",
+   "at": "BC1 position 23",
+   "barcode_value": "511",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q6New[0].StatusInCan[0]",
+   "written": "1",
+   "saved": "1",
+   "category": "entered_encoded",
+   "at": "BC1 position 24",
+   "barcode_value": "1",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].MaritalStatus[0]",
+   "written": "01",
+   "saved": "01",
+   "category": "entered_encoded",
+   "at": "BC2 position 2",
+   "barcode_value": "01",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].DateOfMarriage[0]",
+   "written": "2019-03-15",
+   "saved": "2019-03-15",
+   "category": "entered_encoded",
+   "at": "BC2 position 3",
+   "barcode_value": "2019-03-15",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q8New[0].c[0].FamilyName[0]",
+   "written": "EXAMPLE",
+   "saved": "EXAMPLE",
+   "category": "entered_encoded",
+   "at": "BC2 position 4",
+   "barcode_value": "EXAMPLE",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q8New[0].c[0].GivenName[0]",
+   "written": "CLIENTA",
+   "saved": "CLIENTA",
+   "category": "entered_encoded",
+   "at": "BC2 position 5",
+   "barcode_value": "CLIENTA",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorDetails[0].q9New[0].fullname[0].PrevMarriedIndicator[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC2 position 6",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].StreetNum[0]",
+   "written": "100",
+   "saved": "100",
+   "category": "entered_encoded",
+   "at": "BC2 position 17",
+   "barcode_value": "100",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].Streetname[0]",
+   "written": "SAMPLE STREET",
+   "saved": "SAMPLE STREET",
+   "category": "entered_encoded",
+   "at": "BC2 position 18",
+   "barcode_value": "SAMPLE STREET",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].CityTown[0]",
+   "written": "TORONTO",
+   "saved": "TORONTO",
+   "category": "entered_encoded",
+   "at": "BC2 position 19",
+   "barcode_value": "TORONTO",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].Country[0]",
+   "written": "511",
+   "saved": "511",
+   "category": "entered_encoded",
+   "at": "BC2 position 20",
+   "barcode_value": "511",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].ProvinceState[0]",
+   "written": "06",
+   "saved": "06",
+   "category": "entered_encoded",
+   "at": "BC2 position 21",
+   "barcode_value": "06",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].PostalCode[0]",
+   "written": "M5V0A1",
+   "saved": "M5V 0A1",
+   "category": "entered_encoded",
+   "at": "BC2 position 22",
+   "barcode_value": "M5V 0A1",
+   "match": null
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].SameAsMailingIndicator[0]",
+   "written": "Y",
+   "saved": "Y",
+   "category": "entered_encoded",
+   "at": "BC2 position 24",
+   "barcode_value": "Y",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].CanadaUS[0]",
+   "written": "1",
+   "saved": "1",
+   "category": "control_not_encoded",
+   "reason": "telephone format switch (Canada/US number fields): chooses which fields apply; the number itself is encoded through ActualNumber"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].Type[0]",
+   "written": "02",
+   "saved": "02",
+   "category": "entered_encoded",
+   "at": "BC3 position 2",
+   "barcode_value": "02",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].AreaCode[0]",
+   "written": "416",
+   "saved": "416",
+   "category": "entered_derived",
+   "rule": "full telephone number calculated into the hidden, read-only ActualNumber field (template: ActualNumber calculate script; Canada/US: area code + exchange + subscriber number + extension, spaces removed)",
+   "into": [
+    "BC3 position 3: 4165550142"
+   ],
+   "match": [
+    "exact"
+   ]
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].FirstThree[0]",
+   "written": "555",
+   "saved": "555",
+   "category": "entered_derived",
+   "rule": "full telephone number calculated into the hidden, read-only ActualNumber field (template: ActualNumber calculate script; Canada/US: area code + exchange + subscriber number + extension, spaces removed)",
+   "into": [
+    "BC3 position 3: 4165550142"
+   ],
+   "match": [
+    "exact"
+   ]
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].LastFive[0]",
+   "written": "0142",
+   "saved": "0142",
+   "category": "entered_derived",
+   "rule": "full telephone number calculated into the hidden, read-only ActualNumber field (template: ActualNumber calculate script; Canada/US: area code + exchange + subscriber number + extension, spaces removed)",
+   "into": [
+    "BC3 position 3: 4165550142"
+   ],
+   "match": [
+    "exact"
+   ]
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Email[0].Email[0]",
+   "written": "sponsor@example.com",
+   "saved": "sponsor@example.com",
+   "category": "entered_encoded",
+   "at": "BC3 position 7",
+   "barcode_value": "sponsor@example.com",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorResidency[0].question[0].LiveOutsideCan[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 8",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q1[0].Over18Ind[0]",
+   "written": "Y",
+   "saved": "Y",
+   "category": "entered_encoded",
+   "at": "BC3 position 10",
+   "barcode_value": "Y",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q2[0].CanCitzInd[0]",
+   "written": "Y",
+   "saved": "Y",
+   "category": "entered_encoded",
+   "at": "BC3 position 11",
+   "barcode_value": "Y",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q3[0].SpouseCLInd[0]",
+   "written": "Y",
+   "saved": "Y",
+   "category": "entered_encoded",
+   "at": "BC3 position 12",
+   "barcode_value": "Y",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q4[0].ResideCanInd[0]",
+   "written": "Y",
+   "saved": "Y",
+   "category": "entered_encoded",
+   "at": "BC3 position 13",
+   "barcode_value": "Y",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q5[0].PrevSponsored[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 14",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q6[0].PrevAppInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 15",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q7[0].SocialAssistInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 16",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q8[0].BankruptInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 17",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q9[0].PrevSocialInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 18",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q10[0].UndertakeInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 19",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q11[0].LeaveCanInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 20",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q12[0].LatePayInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 21",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q13[0].JailInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 22",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q14[0].SexOffInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 23",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q15[0].SupportPayInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 24",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q16[0].RevokeCitzInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 25",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q17[0].InadmissibleInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 26",
+   "barcode_value": "N",
+   "match": "exact"
+  },
+  {
+   "box": "form1[0].Part1[0].SponsorEA[0].q18[0].ActParlimentInd[0]",
+   "written": "N",
+   "saved": "N",
+   "category": "entered_encoded",
+   "at": "BC3 position 27",
+   "barcode_value": "N",
+   "match": "exact"
+  }
+ ],
+ "slots": [
+  {
+   "barcode": "BC1",
+   "position": 1,
+   "box": "form1[0].Part1[0].Header[0].titleSF[0].crcNum[0]",
+   "data_path": "form1[0].Part1[0].Header[0].titleSF[0].crcNum[0]",
+   "barcode_value": "1085875172",
+   "saved_value": "1085875172",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 2,
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q1[0].Proceed[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q1[0].Proceed[0]",
+   "barcode_value": "Y",
+   "saved_value": "Y",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 3,
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q2[0].LangPref[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q2[0].LangPref[0]",
+   "barcode_value": "01",
+   "saved_value": "01",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 4,
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q3[0].CoSignerInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q3[0].CoSignerInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 5,
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q4[0].PAFamilyName[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q4[0].PAFamilyName[0]",
+   "barcode_value": "EXAMPLE",
+   "saved_value": "EXAMPLE",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 6,
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q4[0].PAGivenName[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q4[0].PAGivenName[0]",
+   "barcode_value": "CLIENTA",
+   "saved_value": "CLIENTA",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 7,
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBYear[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBYear[0]",
+   "barcode_value": "1990",
+   "saved_value": "1990",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 8,
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBMonth[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBMonth[0]",
+   "barcode_value": "4",
+   "saved_value": "04",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "BC1",
+   "position": 9,
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBDay[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBDay[0]",
+   "barcode_value": "12",
+   "saved_value": "12",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 10,
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q5New[0].Relationship[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q5New[0].Relationship[0]",
+   "barcode_value": "11",
+   "saved_value": "11",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 11,
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q5New[0].Other[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q5New[0].Other[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 12,
+   "box": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q5New[0].RelationFrom[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q5New[0].RelationFrom[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 13,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q1[0].FamilyName[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q1[0].FamilyName[0]",
+   "barcode_value": "EXAMPLE",
+   "saved_value": "EXAMPLE",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 14,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q1[0].GivenName[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q1[0].GivenName[0]",
+   "barcode_value": "SPONSOR",
+   "saved_value": "SPONSOR",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 15,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q2[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q2[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 16,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q2[0].AliasName[0].AliasFamilyName[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q2[0].AliasName[0].AliasFamilyName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 17,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q2[0].AliasName[0].AliasGivenName[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q2[0].AliasName[0].AliasGivenName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 18,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].sex[0].Sex[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].sex[0].Sex[0]",
+   "barcode_value": "Female",
+   "saved_value": "Female",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 19,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBYear[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBYear[0]",
+   "barcode_value": "1988",
+   "saved_value": "1988",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 20,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBMonth[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBMonth[0]",
+   "barcode_value": "6",
+   "saved_value": "06",
+   "match": "month_leading_zero"
+  },
+  {
+   "barcode": "BC1",
+   "position": 21,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBDay[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBDay[0]",
+   "barcode_value": "21",
+   "saved_value": "21",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 22,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].pob[0].PlaceBirthCity[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].pob[0].PlaceBirthCity[0]",
+   "barcode_value": "TORONTO",
+   "saved_value": "TORONTO",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 23,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].pob[0].PlaceBirthCountry[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].pob[0].PlaceBirthCountry[0]",
+   "barcode_value": "511",
+   "saved_value": "511",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 24,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q6New[0].StatusInCan[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q6New[0].StatusInCan[0]",
+   "barcode_value": "1",
+   "saved_value": "1",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 25,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q7New[0].DateStatInCan[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q7New[0].DateStatInCan[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 26,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q7New[0].UCI[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q7New[0].UCI[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 27,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q7cNew[0].SameNameInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q7cNew[0].SameNameInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 28,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q7cNew[0].FamilyName[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q7cNew[0].FamilyName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC1",
+   "position": 29,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q7cNew[0].GivenName[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q7cNew[0].GivenName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 1,
+   "box": "form1[0].Part1[0].Header[0].titleSF[0].crcNum[0]",
+   "data_path": "form1[0].Part1[0].Header[0].titleSF[0].crcNum[0]",
+   "barcode_value": "1085875172",
+   "saved_value": "1085875172",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 2,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].MaritalStatus[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].MaritalStatus[0]",
+   "barcode_value": "01",
+   "saved_value": "01",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 3,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].DateOfMarriage[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].DateOfMarriage[0]",
+   "barcode_value": "2019-03-15",
+   "saved_value": "2019-03-15",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 4,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q8New[0].c[0].FamilyName[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q8New[0].c[0].FamilyName[0]",
+   "barcode_value": "EXAMPLE",
+   "saved_value": "EXAMPLE",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 5,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q8New[0].c[0].GivenName[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q8New[0].c[0].GivenName[0]",
+   "barcode_value": "CLIENTA",
+   "saved_value": "CLIENTA",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 6,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q9New[0].fullname[0].PrevMarriedIndicator[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q9New[0].fullname[0].PrevMarriedIndicator[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 7,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q9New[0].fullname[0].PMFamilyName[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q9New[0].fullname[0].PMFamilyName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 8,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q9New[0].fullname[0].PMGivenName[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q9New[0].fullname[0].PMGivenName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 9,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].TypeOfRelationship[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].TypeOfRelationship[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 10,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].FromDate[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].FromDate[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 11,
+   "box": "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].ToDate[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].q9bNew[0].ToDate[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 12,
+   "box": "form1[0].Part1[0].SponsorDetails[0].PrevSpouseDOB[0].DOBYear[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].PrevSpouseDOB[0].DOBYear[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 13,
+   "box": "form1[0].Part1[0].SponsorDetails[0].PrevSpouseDOB[0].DOBMonth[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].PrevSpouseDOB[0].DOBMonth[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 14,
+   "box": "form1[0].Part1[0].SponsorDetails[0].PrevSpouseDOB[0].DOBDay[0]",
+   "data_path": "form1[0].Part1[0].SponsorDetails[0].PrevSpouseDOB[0].DOBDay[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 15,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].POBox[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].POBox[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 16,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].AptUnit[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].AptUnit[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 17,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].StreetNum[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].StreetNum[0]",
+   "barcode_value": "100",
+   "saved_value": "100",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 18,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].Streetname[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].Streetname[0]",
+   "barcode_value": "SAMPLE STREET",
+   "saved_value": "SAMPLE STREET",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 19,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].CityTown[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].CityTown[0]",
+   "barcode_value": "TORONTO",
+   "saved_value": "TORONTO",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 20,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].Country[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].Country[0]",
+   "barcode_value": "511",
+   "saved_value": "511",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 21,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].ProvinceState[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].ProvinceState[0]",
+   "barcode_value": "06",
+   "saved_value": "06",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 22,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].PostalCode[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].PostalCode[0]",
+   "barcode_value": "M5V 0A1",
+   "saved_value": "M5V 0A1",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 23,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].District[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].District[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 24,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].SameAsMailingIndicator[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].SameAsMailingIndicator[0]",
+   "barcode_value": "Y",
+   "saved_value": "Y",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 25,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow1[0].AptUnit[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow1[0].AptUnit[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 26,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow1[0].StreetNum[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow1[0].StreetNum[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 27,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow1[0].Streetname[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow1[0].Streetname[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 28,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow1[0].CityTown[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow1[0].CityTown[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 29,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow2[0].Country[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow2[0].Country[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 30,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow2[0].ProvinceState[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow2[0].ProvinceState[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 31,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow2[0].PostalCode[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow2[0].PostalCode[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC2",
+   "position": 32,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow2[0].District[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q2[0].ResidentialAddressRow2[0].District[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 1,
+   "box": "form1[0].Part1[0].Header[0].titleSF[0].crcNum[0]",
+   "data_path": "form1[0].Part1[0].Header[0].titleSF[0].crcNum[0]",
+   "barcode_value": "1085875172",
+   "saved_value": "1085875172",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 2,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].Type[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].Type[0]",
+   "barcode_value": "02",
+   "saved_value": "02",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 3,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].ActualNumber[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].ActualNumber[0]",
+   "barcode_value": "4165550142",
+   "saved_value": "4165550142",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 4,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].AltPhone[0].Type[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].AltPhone[0].Type[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 5,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].AltPhone[0].ActualNumber[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].AltPhone[0].ActualNumber[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 6,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Phone[0].ActualNumber[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Phone[0].ActualNumber[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 7,
+   "box": "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Email[0].Email[0]",
+   "data_path": "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Email[0].Email[0]",
+   "barcode_value": "sponsor@example.com",
+   "saved_value": "sponsor@example.com",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 8,
+   "box": "form1[0].Part1[0].SponsorResidency[0].question[0].LiveOutsideCan[0]",
+   "data_path": "form1[0].Part1[0].SponsorResidency[0].question[0].LiveOutsideCan[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 9,
+   "box": "form1[0].Part1[0].SponsorResidency[0].question[0].LiveQC[0]",
+   "data_path": "form1[0].Part1[0].SponsorResidency[0].question[0].LiveQC[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 10,
+   "box": "form1[0].Part1[0].SponsorEA[0].q1[0].Over18Ind[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q1[0].Over18Ind[0]",
+   "barcode_value": "Y",
+   "saved_value": "Y",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 11,
+   "box": "form1[0].Part1[0].SponsorEA[0].q2[0].CanCitzInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q2[0].CanCitzInd[0]",
+   "barcode_value": "Y",
+   "saved_value": "Y",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 12,
+   "box": "form1[0].Part1[0].SponsorEA[0].q3[0].SpouseCLInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q3[0].SpouseCLInd[0]",
+   "barcode_value": "Y",
+   "saved_value": "Y",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 13,
+   "box": "form1[0].Part1[0].SponsorEA[0].q4[0].ResideCanInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q4[0].ResideCanInd[0]",
+   "barcode_value": "Y",
+   "saved_value": "Y",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 14,
+   "box": "form1[0].Part1[0].SponsorEA[0].q5[0].PrevSponsored[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q5[0].PrevSponsored[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 15,
+   "box": "form1[0].Part1[0].SponsorEA[0].q6[0].PrevAppInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q6[0].PrevAppInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 16,
+   "box": "form1[0].Part1[0].SponsorEA[0].q7[0].SocialAssistInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q7[0].SocialAssistInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 17,
+   "box": "form1[0].Part1[0].SponsorEA[0].q8[0].BankruptInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q8[0].BankruptInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 18,
+   "box": "form1[0].Part1[0].SponsorEA[0].q9[0].PrevSocialInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q9[0].PrevSocialInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 19,
+   "box": "form1[0].Part1[0].SponsorEA[0].q10[0].UndertakeInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q10[0].UndertakeInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 20,
+   "box": "form1[0].Part1[0].SponsorEA[0].q11[0].LeaveCanInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q11[0].LeaveCanInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 21,
+   "box": "form1[0].Part1[0].SponsorEA[0].q12[0].LatePayInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q12[0].LatePayInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 22,
+   "box": "form1[0].Part1[0].SponsorEA[0].q13[0].JailInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q13[0].JailInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 23,
+   "box": "form1[0].Part1[0].SponsorEA[0].q14[0].SexOffInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q14[0].SexOffInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 24,
+   "box": "form1[0].Part1[0].SponsorEA[0].q15[0].SupportPayInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q15[0].SupportPayInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 25,
+   "box": "form1[0].Part1[0].SponsorEA[0].q16[0].RevokeCitzInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q16[0].RevokeCitzInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 26,
+   "box": "form1[0].Part1[0].SponsorEA[0].q17[0].InadmissibleInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q17[0].InadmissibleInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 27,
+   "box": "form1[0].Part1[0].SponsorEA[0].q18[0].ActParlimentInd[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].q18[0].ActParlimentInd[0]",
+   "barcode_value": "N",
+   "saved_value": "N",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 28,
+   "box": "form1[0].Part1[0].SponsorEA[0].IfYesDetails[0].Details[0]",
+   "data_path": "form1[0].Part1[0].SponsorEA[0].IfYesDetails[0].Details[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 29,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q1[0].FamilyName[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q1[0].FamilyName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 30,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q1[0].GivenName[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q1[0].GivenName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 31,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasNameIndicator[0].AliasNameIndicator[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasNameIndicator[0].AliasNameIndicator[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 32,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasFamilyName[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasFamilyName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 33,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasGivenName[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasGivenName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 34,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].sex[0].Sex[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].sex[0].Sex[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 35,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBYear[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBYear[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 36,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBMonth[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBMonth[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 37,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBDay[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBDay[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 38,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].pob[0].PlaceBirthCity[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].pob[0].PlaceBirthCity[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC3",
+   "position": 39,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].pob[0].PlaceBirthCountry[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].pob[0].PlaceBirthCountry[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 1,
+   "box": "form1[0].Part1[0].Header[0].titleSF[0].crcNum[0]",
+   "data_path": "form1[0].Part1[0].Header[0].titleSF[0].crcNum[0]",
+   "barcode_value": "1085875172",
+   "saved_value": "1085875172",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 2,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q6New[0].StatusInCan[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q6New[0].StatusInCan[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 3,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].DateStatInCan[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].DateStatInCan[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 4,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].UCI[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].UCI[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 5,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].SameNameInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].SameNameInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 6,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].FamilyName[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].FamilyName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 7,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].GivenName[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].GivenName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 8,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].Rel2Sponsor[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].Rel2Sponsor[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 9,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].Other[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].Other[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 10,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].MaritalStatusNew[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].MaritalStatusNew[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 11,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].DateOfMarriage[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].DateOfMarriage[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 12,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].e[0].FamilyName[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].e[0].FamilyName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 13,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].e[0].GivenName[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].e[0].GivenName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 14,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PrevMarriedIndicator[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PrevMarriedIndicator[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 15,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PMFamilyName[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PMFamilyName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 16,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PMGivenName[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PMGivenName[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 17,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].TypeOfRelationship[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].TypeOfRelationship[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 18,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].FromDate[0].FromDate[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].FromDate[0].FromDate[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 19,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].ToDate[0].ToDate[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].ToDate[0].ToDate[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 20,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBYear[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBYear[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 21,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBMonth[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBMonth[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 22,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBDay[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBDay[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 23,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].Type[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].Type[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 24,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].ActualNumber[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].ActualNumber[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 25,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].Type[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].Type[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 26,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].ActualNumber[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].ActualNumber[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 27,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].ActualNumber[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].ActualNumber[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC4",
+   "position": 28,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Email[0].Email[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Email[0].Email[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 1,
+   "box": "form1[0].Part1[0].Header[0].titleSF[0].crcNum[0]",
+   "data_path": "form1[0].Part1[0].Header[0].titleSF[0].crcNum[0]",
+   "barcode_value": "1085875172",
+   "saved_value": "1085875172",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 2,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignResidency[0].question[0].LiveOutsideCan[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignResidency[0].question[0].LiveOutsideCan[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 3,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignResidency[0].question[0].LiveQC[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignResidency[0].question[0].LiveQC[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 4,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q1[0].Over18Ind[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q1[0].Over18Ind[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 5,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q2[0].CanCitzInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q2[0].CanCitzInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 6,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q4[0].ResideCanInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q4[0].ResideCanInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 7,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q7[0].SocialAssistInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q7[0].SocialAssistInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 8,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q8[0].BankruptInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q8[0].BankruptInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 9,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q9[0].PrevSocialInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q9[0].PrevSocialInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 10,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q10[0].UndertakeInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q10[0].UndertakeInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 11,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q11[0].LeaveCanInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q11[0].LeaveCanInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 12,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q12[0].LatePayInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q12[0].LatePayInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 13,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q13[0].JailInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q13[0].JailInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 14,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q14[0].SexOffInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q14[0].SexOffInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 15,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q15[0].SupportPayInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q15[0].SupportPayInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 16,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q16[0].RevokeCitzInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q16[0].RevokeCitzInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 17,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q17[0].InadmissibleInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q17[0].InadmissibleInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 18,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q18[0].ActParlimentInd[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q18[0].ActParlimentInd[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 19,
+   "box": "form1[0].Part1[0].CoSigner[0].CosignEA[0].IfYesDetails[0].Details[0]",
+   "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].IfYesDetails[0].Details[0]",
+   "barcode_value": "",
+   "saved_value": "",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 20,
+   "box": "form1[0].Part1[0].Header[0].titleSF[0].DateLastValidated[0]",
+   "data_path": "form1[0].Part1[0].Header[0].titleSF[0].DateLastValidated[0]",
+   "barcode_value": "2026-10-23",
+   "saved_value": "2026-10-23",
+   "match": "exact"
+  },
+  {
+   "barcode": "BC5",
+   "position": 21,
+   "box": "form1[0].Part1[0].Header[0].titleSF[0].ReaderInfo[0]",
+   "data_path": "form1[0].Part1[0].Header[0].titleSF[0].ReaderInfo[0]",
+   "barcode_value": "Reader.26.00222031.Full.MAC.en_US.ENU-09-2024.",
+   "saved_value": "Reader.26.00222031.Full.MAC.en_US.ENU-09-2024.",
+   "match": "exact"
+  }
+ ]
+}

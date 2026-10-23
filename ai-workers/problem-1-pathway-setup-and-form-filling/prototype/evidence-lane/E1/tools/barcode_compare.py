@@ -89,7 +89,7 @@ def run(rules, saved_pdf, written_pdf, decoded, values_file):
         "written_values": len(written),
         "written_values_in_data": {"before_adobe_save": sum(before(k) == v for k, v in written.items()), "after_adobe_save": sum(saved(k) == v for k, v in written.items())},
         "written_accounting": count([a["category"] for a in acct]),
-        "entered_encoded_matches": count([a["match"] for a in acct if a["category"] == "entered_encoded"]),
+        "entered_encoded_matches": count([a["match"] or "differs" for a in acct if a["category"] == "entered_encoded"]),
         "accounting_problems": acct_problems, "accounting": acct, "slots": rows,
     }
     return report, bool(unknown or slot_problems or acct_problems)
