@@ -6,13 +6,14 @@
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: F1-forms-channels
-stage: FIX
-owner: Builder
-next_action: final full suite run on the slice 2 fixes in progress; then CHECK, owner Lead.
+stage: CHECK
+owner: Lead
+next_action: Lead check of slice 2 on the exact commit: build-notes "Slice 2" and "Slice 2 fixes" (finding → fix → test), review-slice2.md, break-report-slice2.md; rerun the suites (slice 2 server with STUDIO_PART_PAUSE_MS=3000). Decide: parallel paid parts need a ledger change (parts run one at a time); founder go for the IMM 0008/5669/5406 paid drafts. Then merge and set F2 capture mode (after its concept is agreed).
 blocked_by: none
 updated: 2026-10-23
 
 ## Log (last 10 lines)
+- 2026-10-23 · F1 · FIX → CHECK (slice 2) · every review Must/Major and break Blocker/Major fixed with a test, most minors too; all suites green: guard 75, launch 53, slice 2 52, F1 106, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 22 (lane copy). US$0. Owner → Lead.
 - 2026-10-23 · F1 · FIX (slice 2) · slice 2 suite 52/52 (evidence committed); final full run in progress.
 - 2026-10-23 · F1 · FIX (slice 2) · cancel stops the parts not yet started and the step ends CANCELLED (it stayed RUNNING); launch 53/53; slice 2 rerunning.
 - 2026-10-23 · F1 · FIX (slice 2) · full run: guard 75, engine 38, rules 54, drafting 48, F1 106, API 94, grounding 29, orchestration 22; launch and slice 2 test fixes (ledger lock is not a ticket clash; a test-only pause between parts for the cancel check).
@@ -22,4 +23,3 @@ updated: 2026-10-23
 - 2026-10-23 · F1 · BUILD (slice 2) · built QA-8 (--preserve-symlinks), per-run launch tickets (two launches at once collided), guarded parts and screen inventories, A4 reuse-first parts with progress and merge flags, screen_map job, evidence F1–F4 in the filler, runtime-lane option-map defect; guard 64/64, launch 53/53, slice 2 34/35 before the ticket fix; full run in progress. US$0.
 - 2026-10-23 · F1 · CHECK → BUILD (slice 2) · applied Lead note 2026-10-23 17:05 (slice 1 merged d795b019).
 - 2026-10-23 · F1 · FIX → CHECK · all review (1 Must, 10 Major) and break (9 Major) findings fixed with a test each, most minors too; F1 106/106, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 19/22 (lane guard, slice 2); second migration (revision, checks, one pending merge) proven on a demo copy with its rollback. Owner → Lead.
-- 2026-10-23 · F1 · CHECK → FIX · reviewer: ship after fixes, journey 5.5/10, 1 Must + 10 Major; breaker: 0 Blocker, 9 Major, 16 Minor (`review.md`, `break-report.md`).
