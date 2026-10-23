@@ -50,3 +50,4 @@ Portal fixtures are **Sample · Scaffolding (P-33)**: written from IRCC's public
 
 ## Known gaps (by scope)
 No UI (slice 3, after Screen 01 DONE and a file grant). AI for leftovers, guarded admission of screen inventories, A4 backend, combinations 3 and 6: slice 2. Express Entry public pages on the official list: Lead task.
+For the filler work (Lead note, 23 Oct, from the evidence lane): our IMM 5669 has no data part in its XFA, and `p5/fill.py` expects one.
