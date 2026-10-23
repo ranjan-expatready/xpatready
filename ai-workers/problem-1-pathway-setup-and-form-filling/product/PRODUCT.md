@@ -23,7 +23,7 @@ Immigration values come from the immigration expert; sample content is labelled 
 ## 3. Left menu — only this prototype's screens (P-04)
 | Group | Items (exact words) |
 |---|---|
-| Configure | **Programs** |
+| Configure | **To review** (P-79) · **Programs** |
 | Shared library | **Fields** · **Sections** · **Document types** · **Forms** · **Checks** · **Rules** (read-only central list, P-37) |
 | History | **AI work** · **Releases** · **Activity** |
 The team merges these into the product's menus. A new item needs a screen in `SCREENS.md` and a decision. Case officer and client menus are defined when their milestones start.
@@ -57,6 +57,7 @@ Reference app `../prototype/studio/`: NestJS + Prisma + PostgreSQL (`api/`, `pri
 | `DECISIONS.md` · `decisions/` | product decisions | Lead (founder decides) |
 | `REQUESTS.md` | every founder request | Lead |
 | `BACKLOG.md` | requirements not yet scheduled (from the SA-01B and one-pager trace) | Lead |
+| `PLAN.md` | dated plan from measured pace, re-planned every Friday | Lead |
 | `LANES.md` · `lanes/<lane>.md` · `STATE.md` | lanes and file ownership · each lane's stage (the lane; the Lead writes only its "From the Lead" note) · generated overview (`lane.sh state`) | Lead · lane · Lead |
 | `SCREENS.md` | register of screens and slices | Lead |
 | `qa/` (CAPABILITIES, BUGS, reports) | what works, open bugs, test runs | qa lane |

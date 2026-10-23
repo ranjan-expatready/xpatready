@@ -56,7 +56,7 @@ Checkers flag correctness gaps, standard violations and concept mismatches only;
 
 ## Keeping files true
 * **One home per fact** (`PRODUCT.md` §6); other files link, never restate. Status lives only in lane files; decisions only in `DECISIONS.md` (+ `decisions/`); requests point to the decision.
-* **Every founder request** goes into `REQUESTS.md` the same day; every product decision into `DECISIONS.md`. Logs keep 10 lines; older lines move to `history/`.
+* **Every founder request** goes into `REQUESTS.md` the same day; every product decision into `DECISIONS.md` **and, the same day, into capability rows (or the backlog), the owning lane's note and the Programme map (P-74; `tools/decision-impact.sh` must pass).** Logs keep 10 lines; older lines move to `history/`.
 * **Small and current:** rules files under 100 lines and 12 KB, skills and agents under 7 KB (`tools/check-docs.sh`, in the stop hook).
 * New asks during a build are logged and scheduled for the next item, not squeezed into the current one. No revision manifests or hash handoffs for routine work: git and the snapshot hook keep the history.
 * AI runs state their cost first and stay inside the caps (`PRODUCT.md` §5). Team sources are checked for freshness at challenge time (`ai-workers/tools/freshness.sh`).

@@ -1,0 +1,41 @@
+{
+ "note": "IMM 0008 (05-2026) barcode rules. Each rule names its source in the official template (imm0008e.pdf, sha256 2560489b…3285). Rules are added only from the template or the Adobe evidence, never to make a mismatch pass.",
+ "form_file": "imm0008e.pdf",
+ "inventory": "evidence-lane/E1/imm0008/imm0008e.inventory.json",
+ "manifests": [
+  "barcode1",
+  "barcode2",
+  "barcode3",
+  "barcode4",
+  "barcode5",
+  "barcode6",
+  "barcode7",
+  "barcode8",
+  "barcode9",
+  "barcode10"
+ ],
+ "manifests_note": "encodeAll() pairs PaperFormsBarcode1-8 (subform BC1) and 9-10 (BC2) with manifests barcode1-barcode10 in that order. Slot 1 of every barcode is Header.titleSF.CRCNum, the form's checksum set by Validate. Manifests reach dependant rows dependants[1..3]; the tool binds them like row 0 with the row index set (bind_repeats).",
+ "derived": [
+  {
+   "rule": "full telephone number calculated into the hidden, read-only ActualNumber field (template: ActualNumber calculate script; Other: \"+\" + country code + number, spaces removed)",
+   "kind": "phone_join",
+   "from": [
+    "form1[0].Page1[0].contactInformation[0].q3-4[0].Phone[0].NumberCountry[0]",
+    "form1[0].Page1[0].contactInformation[0].q3-4[0].Phone[0].IntlNumber[0].IntlNumber[0]"
+   ],
+   "to": [
+    "form1[0].Page1[0].contactInformation[0].q3-4[0].Phone[0].ActualNumber[0]"
+   ]
+  }
+ ],
+ "cleared": {},
+ "not_encoded": {
+  "form1[0].Page1[0].contactInformation[0].q3-4[0].Phone[0].Other[0]": [
+   "control_not_encoded",
+   "telephone format switch (Other: the international number box); the number itself is encoded through ActualNumber"
+  ]
+ },
+ "month_boxes": {
+  "DOBMM[0]": "month of birth: the template binds DOBMM with picture num{99}, so Adobe holds 4 and the barcode encodes 4 while the saved data keeps 04 (same rule as P1's DOBMonth on IMM 1295)"
+ }
+}

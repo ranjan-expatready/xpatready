@@ -77,8 +77,15 @@ footer { font-size: 12px; color: var(--muted); }
     <div class="journey" id="journey"></div>
   </section>
 
+  <section aria-labelledby="h-sol">
+    <h2 id="h-sol">Decided solutions: where each one is</h2>
+    <p class="muted">Every product decision becomes something a person can see and the tester can check, the same day (P-74). This is the list.</p>
+    <div class="tablebox"><table id="solutions"></table></div>
+  </section>
+
   <section aria-labelledby="h-ms">
-    <h2 id="h-ms">Milestones</h2>
+    <h2 id="h-ms">Milestones and progress</h2>
+    <p class="muted">No dates: everything as soon as possible. Progress is counted from the tester's capability list (product/PLAN.md, tools/progress.sh), never estimated.</p>
     <div class="tablebox"><table id="milestones"></table></div>
   </section>
 
@@ -114,49 +121,68 @@ footer { font-size: 12px; color: var(--muted); }
 
 <script>
 const D = {
-  asof: "Updated 23 Oct 2026, after the independent audit. Source files: product/STATE.md, qa/CAPABILITIES.md, DECISIONS.md, history/AUDIT-2026-10-23.md.",
+  asof: "Updated 23 Oct 2026, 18:40 IST. Source files: product/PLAN.md, STATE.md, qa/CAPABILITIES.md, qa/BUGS.md, DECISIONS.md, BACKLOG.md.",
   summary: [
-    ["Current milestone", "M2 · setup", "Super Admin configuration: Screens 01–04 and forms channels"],
-    ["Lanes running", "4 of 5", "forms, evidence, runtime, qa; screens waits on your walkthrough"],
-    ["Journey built on main", "Steps 1–5 partly", "Steps 6, 8, 9 have no code yet; R1 starts step 6"],
-    ["Adobe acceptance", "IMM 1344 passed", "after a person ticks the phone box and types signatures; 149/149 barcode slots"],
-    ["AI spend", "≈ US$29.66 of 100", "no paid run today"]
+    ["M2 progress (counted)", "5 of 37 work", "6 partial · 3 broken · 2 not tested · 21 not built"],
+    ["R1 and M3", "0 of 7 · 0 of 12", "Runtime build starting; M3 design drafts in"],
+    ["Lanes running", "5 of 5", "screens fix, forms slice 2, runtime, evidence IMM 5257, qa retest"],
+    ["Merged today", "Forms slice 1", "Portal capture back end, twin, channels, answer lists, aliases; plus tester baseline"],
+    ["Adobe acceptance", "IMM 1344 and 0008 pass", "after a person step each; 149/149 and 462/462 barcode slots"],
+    ["Open bugs", "1 Critical · 7 Major", "Screen 01 fix pass running now"]
   ],
+  solutions: { head: ["Decision", "What it is", "Built", "Where you will see it", "Order"], rows: [
+    ["Portal forms as sources (P-61, P-66)", "Capture each portal screen's structure, never values: extension capture mode (primary), saved blank page or template (fallbacks); a second person approves; builds the portal twin", "<span class='chip s-ok'>Back end merged</span>", "Screen 01: \"Add an online form\" on the combination; Screen 02: review and approve the capture", "Screen 01 now; Screen 02 next"],
+    ["Channel per form and filing method (P-61, P-62)", "Each form is PDF upload, Online with its portal, or Signed PDF upload; the combination is PDF only, Online only or Mixed; lines default to Online where IRCC files online", "<span class='chip s-ok'>Back end merged</span>", "Screen 01 row and combination page; Screen 03 Forms tab", "Screen 01 now"],
+    ["PDF or online as the base for shared fields (P-62 §1)", "Drafting reads the PDF version first, then the online screens for what differs; the author can change it per form; every shared field shows its source", "<span class='chip s-none'>Not built</span>", "Screen 01 sources tab (choice); Screen 02 (per field)", "Screen 01 now; Screen 02 next"],
+    ["Mapping portal questions (P-62, P-65)", "Reuse the PDF version's field map first, then aliases; AI only for leftovers; a person accepts", "<span class='chip s-warn'>Reuse built; AI leftovers in slice 2</span>", "Screen 02 screen-map review", "Forms slice 2 now"],
+    ["Browser extension (P-66)", "Capture mode for the content team (setup, M2); fill mode for agents, one portal screen per click in the representative's own session (M3); form health", "<span class='chip s-brand'>Plan drafted</span>", "Extension side panel on a saved portal screen", "After forms slices 2–3"],
+    ["Application workspace (P-62 §6)", "One Prepare application view per filing; the channel decides what the agent sees: portal sheet, filled PDF with Validate, or print-sign-upload", "<span class='chip s-brand'>Board ready</span>", "Clickable board for PDF, online and mixed", "Walk the board with the Lead; build after R1"],
+    ["Agent view, facts once (P-47, P-72)", "Every fact per person with source and status; only confirmed facts fill; confirm by section", "<span class='chip s-brand'>Runtime lane building</span>", "R1 thin slice on the visitor visa", "Runtime now"],
+    ["Pre-qualification flow (P-76, P-77)", "PQR answers flow into the SQR marked please confirm; staff eligibility page from rules as data with Sample gates", "<span class='chip s-none'>Not built</span>", "Runtime: prospect slice on the visitor visa", "Runtime, after R1"],
+    ["Ready to file (P-71) and wrong mappings (P-73)", "Only Validate and missing or conflicting facts block; AI findings acknowledged; wrong mappings reported, held if confirmed", "<span class='chip s-none'>Not built</span>", "Prepare application", "M3"],
+    ["Never overwrite signed work (P-65)", "A changed fact marks signed, uploaded or submitted items stale", "<span class='chip s-brand'>Runtime lane</span>", "R1 thin slice", "Runtime, third part"],
+    ["Words (P-63)", "Form field, shared field, field map; never \"box\"", "<span class='chip s-bad'>\"Boxes\" still on screen</span>", "Every screen", "Screen 01 now"]
+  ]},
   journey: [
     { n: "1", t: "Set up the combination", d: "Pathway › Program › Category › Sub-category, links between combinations", c: [["ok","Catalogue and path builder built"],["none","Links carry no facts yet (Screen 03)"]], caps: "C1.1–C1.4" },
     { n: "2", t: "Bring in sources", d: "IRCC PDF forms, portal screens, checklists", c: [["ok","PDF intake, unapproved files held"],["brand","Portal capture in forms slice 1"],["none","Approve a held file in the product"],["none","Checklists read into proposals"]], caps: "C2.1–C2.6" },
     { n: "3", t: "Build the shared library", d: "Shared fields, sections, answer lists, document types, rules, checks", c: [["ok","AI maps form fields with reuse / new / conflict"],["brand","Aliases, merges, answer lists (forms)"],["none","AI drafts sections, documents, rules"],["none","Describe what you need; retire"]], caps: "C3.1–C3.8" },
-    { n: "4", t: "Questionnaires per person", d: "PQR and SQR for each person role; preview with a sample family", c: [["warn","SQR section selection, coverage preview"],["brand","Shared renderer in R1 (runtime)"],["none","PQR authoring"]], caps: "C4.1–C4.4" },
+    { n: "4", t: "Questionnaires per person", d: "PQR and SQR for each person role; preview with a sample family", c: [["warn","SQR section selection, coverage preview"],["brand","Shared renderer in R1 (runtime)"],["none","PQR inside the SQR, AI-drafted, released with the combination (P-76)"]], caps: "C4.1–C4.4" },
     { n: "5", t: "Review and release", d: "Author submits, expert ticks, a different person releases", c: [["ok","Submit, sign-off, different approver"],["bad","Release page skips expert sign-off (QA-1)"]], caps: "C5.1–C5.2" },
     { n: "6", t: "Collect facts once", d: "Case, people, client link, agent view, document checklist", c: [["brand","R1 plan under way (visitor visa)"],["none","No case, people or answers on main"]], caps: "C6.1–C6.4" },
     { n: "7", t: "Fill forms", d: "IRCC PDFs with Validate and barcodes; portal screens", c: [["warn","PDF fill from sample facts"],["ok","IMM 1344 passes Adobe (two person steps)"],["brand","IMM 0008 next (evidence)"],["none","Portal sheet and extension"]], caps: "C7.1–C7.4" },
     { n: "8", t: "Sign, upload, submit", d: "Signed-PDF states, per-screen ticks, application number and UCI", c: [["none","Not built (M3)"]], caps: "C8.1–C8.2" },
     { n: "9", t: "Handle changes", d: "New editions, portal changes, changed answers; never overwrite signed work", c: [["warn","New editions held, no way forward yet"],["brand","Stale-never-overwrite in R1"],["none","Impact review, re-capture, form health"]], caps: "C9.1–C9.3" }
   ],
-  milestones: { head: ["Milestone", "Scope", "Status", "Gate to pass"], rows: [
-    ["M2 · Super Admin setup", "Screens 01–04, forms channels F1, release, preview by person", "<span class='chip s-brand'>In progress</span> Screen 01 at walkthrough; F1 slice 1 in check", "Every capability works; qa milestone report clean; suites green on the exact commit; D17 and D20 from an intended user; your walkthrough as author and reviewer"],
-    ["R1 · thin runtime slice", "Visitor visa: case, people, answers once, renderer, agent view, IMM 5257 from case facts", "<span class='chip s-brand'>Planning</span> build after forms slice 1 merges", "Proves direction early; does not pass M3"],
-    ["M3 · case, agent and client", "PQR/SQR at runtime, family link, agent view, checklist, portal sheet, extension, signed PDFs, submission", "<span class='chip s-none'>Not started</span>", "Same gate as M2, for officer, agent and client"],
-    ["Demo loop · after M3", "Configure → release → case → checked output → reuse → new edition; 3 + 2 combinations, then 5 + 5", "<span class='chip s-none'>Not started</span>", "Repeatable from reset; outputs pass your eye check"]
+  milestones: { head: ["Milestone", "Scope", "Status", "Progress (counted)"], rows: [
+    ["Screen 01 closed", "Programs, path builder, combination page, channels, portal, online sources", "<span class='chip s-brand'>Fix pass running</span>", "Closes when reviewer, breaker and tester pass it"],
+    ["M2 · Super Admin setup", "Screens 01–04, forms channels, capture, release, preview by person", "<span class='chip s-brand'>In progress</span>", "<b>5 of 37</b> work · 6 partial · 3 broken"],
+    ["R1 · thin runtime slice", "Visitor visa: case, people, answers once, renderer, agent view, IMM 5257 from case facts", "<span class='chip s-brand'>Building</span>", "<b>0 of 7</b> work"],
+    ["M3 · case, agent and client", "Prepare application, portal sheet, extension fill, signed PDFs, submission, checklist, client link", "<span class='chip s-none'>Design started</span>", "<b>0 of 12</b> work"],
+    ["Demo loop", "Configure → release → case → checked output → reuse → new edition; 3 + 2 combinations", "<span class='chip s-none'>Not started</span>", "After M3"]
   ]},
   lanes: { head: ["Lane", "Owns", "Now", "Who acts", "Next"], rows: [
-    ["screens", "Milestone 2 screens", "01 Programs · DEMO", "You, with the Lead", "Walk Screen 01 as author and reviewer; then a fix pass (QA-1, QA-3)"],
-    ["forms", "PDF and online forms, capture, answer lists, extension", "F1 slice 1 · CHECK", "Builder", "Independent reviewer and breaker; then the Lead merges"],
-    ["evidence", "Adobe fill trials per form; AI scoring set", "E1 · IMM 0008", "Builder", "Fill, Validate in Adobe, compare barcodes"],
-    ["runtime", "Thin slice R1, then M3 runtime", "R1 · PLAN", "Builder", "Plan with challenge and back-end table; build after forms merges"],
-    ["qa", "Independent testing of main; capabilities, bugs, coverage", "QA-0 baseline", "Tester", "Test M2 like a person, rerun suites, set the coverage floor"]
+    ["screens", "Milestone 2 screens", "01 Programs · FIX", "Builder", "One fix pass: 13 bugs, channels, online sources, words; then reviewer, breaker, tester"],
+    ["forms", "PDF and online forms, capture, answer lists, extension", "F1 slice 2 · BUILD", "Builder", "Guard fix, A4, AI for leftovers, Adobe findings; then extension"],
+    ["evidence", "Adobe fill trials per form; AI scoring set", "E1 · IMM 5257", "Builder", "Then the team's trial list"],
+    ["runtime", "Thin slice R1, then M3 runtime", "R1 · PLAN → BUILD", "Builder", "Plan to the Lead now; build starts today"],
+    ["qa", "Independent testing of main; capabilities, bugs, coverage", "After-merge run", "Tester", "Retest main, add QA-13, check every decision has a capability"],
+    ["Lead (design)", "Concepts drafted by the design helper", "Prepare application, Screens 02–03, extension", "Lead", "All four drafts ready; walk them with the Lead"]
   ]},
   open: [
-    ["Walk Screen 01", "On :4400 as author and as reviewer, with the Lead.", "Do it next: it unblocks the screens lane."],
+    ["See the drafts with the Lead", "The Lead walks you through the Prepare application board and Screens 02 and 03, one at a time, in plain words.", "As each draft is ready; about 10 minutes each."],
     ["Demo data on :4400", "Only 1 of 30 combinations is Live; a stray test row exists.", "Let the lanes configure demo combinations through the product; clean :4400 only with your OK."],
-    ["Validate placement (team clash 1)", "The team wants Validate inside ExpatReady after a form passes its trial; we chose Adobe.", "Decide after IMM 0008: evidence so far supports 'in-product after trial, person signs first'."],
+    ["Validate placement (team clash 1)", "The team wants Validate inside ExpatReady after a form passes its trial; we chose Adobe.", "Decide after IMM 5257: IMM 1344 and 0008 already pass with one or two person steps."],
     ["Up to US$12 for AI drafts", "IMM 0008, 5669, 5406 field maps.", "Approve when forms slice 2 makes the runs cheaper."],
     ["Questions for the immigration expert", "Schedule A for paper spousal sponsorship; one structure-only portal capture; channels per demo combination; validating before the person signs.", "Relay all four in one message."],
     ["GitHub private repository", "Pull requests with tests run on every change.", "Approve, excluding team code and requirement copies."],
     ["An intended user", "D17 and D20 need a real content publisher or RCIC walking it unaided.", "Name one before the M2 gate."]
   ],
   decisions: [
+    ["Pre-qualification inside the client questionnaire", "PQR is part of the SQR, which is part of the agent view; AI drafts each combination's PQR, a person approves, released with the combination; a general PQR is built from released combinations (P-76). Prototype: PQR answers flow into the SQR; a staff eligibility page on the rules engine with Sample gates; no verdict to prospects (P-77)."],
     ["Facts are the root", "Shared fields; PDF and online forms are outputs; questionnaires built from facts (P-61, P-62, P-63)."],
+    ["Family answers: confirmed by who answered", "One family questionnaire, a section per person; own and minors' answers count as confirmed; an adult's answers given by the principal wait for that adult or the officer (P-78)."],
+    ["One place for approvals", "A To review page first under Configure lists everything waiting for a person or second person, including combinations to release (P-79)."],
     ["Never overwrite signed work", "A changed fact marks signed, uploaded or submitted items stale (P-65)."],
     ["AI drafts, people decide", "AI never decides identity, filling or release; a different person approves (P-14, P-15, P-53, P-62)."],
     ["Portal capture and fill", "One extension: capture structure only, fill in the representative's session; form health (P-66)."],
@@ -166,9 +192,14 @@ const D = {
     ["Thin slice and independent tester", "Runtime lane R1; qa lane after every merge; c8 coverage floor (P-67, P-68, P-69)."]
   ],
   bugs: { head: ["Bug", "Severity", "What happens", "Lane", "Status"], rows: [
-    ["QA-1", "<span class='chip s-bad'>Critical</span>", "The shared Release page releases without submission or expert sign-off and records the first author as submitter", "screens", "Next fix pass"],
-    ["QA-2", "<span class='chip s-warn'>Major</span>", "AI drafting test suite red on main (expects 4 saved runs, 6 exist)", "forms", "Fixed in slice 1, merging after check"],
-    ["QA-3", "<span class='chip s-none'>Minor</span>", "The restart script stops every app copy, not only its own", "screens", "Next fix pass"]
+    ["QA-1", "<span class='chip s-bad'>Critical</span>", "The shared Release page releases without submission or expert sign-off and records the first author as submitter", "screens", "Fix pass running"],
+    ["QA-13", "<span class='chip s-warn'>Major</span>", "Visitor visa: \"Add 1 form from the library\" fails every time (an old removed line blocks it)", "screens", "Fix pass running"],
+    ["QA-7", "<span class='chip s-warn'>Major</span>", "A too-long name: Create does nothing and shows no message", "screens", "Fix pass running"],
+    ["QA-9", "<span class='chip s-warn'>Major</span>", "Three builder test suites are out of date and cannot pass", "screens", "Fix pass running"],
+    ["QA-8", "<span class='chip s-warn'>Major</span>", "AI steps fail in every lane copy (sandbox cannot read linked folders)", "forms", "Slice 2, first item"],
+    ["QA-4", "<span class='chip s-warn'>Major</span>", "Pages 404 in lane copies (hidden folder in the path)", "forms / Lead", "Fixed in slice 1; tester retesting"],
+    ["QA-2", "<span class='chip s-ok'>Fixed</span>", "AI drafting test suite was red on main", "forms", "Merged; tester retesting"],
+    ["+ 7 Minor", "<span class='chip s-none'>Minor</span>", "Wording, names, times, demo menu (qa/BUGS.md)", "screens", "Fix pass running"]
   ]},
   how: [
     ["You type /lead, nothing else", "I start, continue and check every lane. Every reply opens with the lanes table, then what changed, then at most three things I need from you."],
@@ -186,7 +217,7 @@ el("summary").innerHTML = D.summary.map(([k, v, s]) => `<div class="tile"><span 
 const stripe = (c) => c.some(x => x[0] === "bad") ? "var(--bad)" : c.some(x => x[0] === "ok") && !c.some(x => x[0] === "none") ? "var(--ok)" : c.some(x => x[0] === "ok" || x[0] === "warn") ? "var(--warn)" : "var(--none)";
 el("journey").innerHTML = D.journey.map(s => `<article class="step" style="--stripe:${stripe(s.c)}"><span class="num">Step ${s.n} · ${s.caps}</span><h3>${s.t}</h3><p class="muted">${s.d}</p><div class="chips">${s.c.map(([k, t]) => `<span class="chip s-${k}">${t}</span>`).join("")}</div></article>`).join("");
 const table = (id, t) => { el(id).innerHTML = `<thead><tr>${t.head.map(h => `<th scope="col">${h}</th>`).join("")}</tr></thead><tbody>${t.rows.map(r => `<tr>${r.map((c, i) => i === 0 ? `<th scope="row" style="background:transparent;font-size:14px;color:var(--ink)">${c}</th>` : `<td>${c}</td>`).join("")}</tr>`).join("")}</tbody>`; };
-table("milestones", D.milestones); table("lanes", D.lanes); table("bugs", D.bugs);
+table("solutions", D.solutions); table("milestones", D.milestones); table("lanes", D.lanes); table("bugs", D.bugs);
 el("open").innerHTML = D.open.map(([t, d, r]) => `<div class="item"><strong>${t}</strong><span class="muted">${d}</span><span class="rec">Recommendation: ${r}</span></div>`).join("");
 el("decisions").innerHTML = D.decisions.map(([t, d]) => `<div class="item"><strong>${t}</strong><span class="muted">${d}</span></div>`).join("");
 el("how").innerHTML = D.how.map(([t, d]) => `<div class="item"><strong>${t}</strong><span class="muted">${d}</span></div>`).join("");
