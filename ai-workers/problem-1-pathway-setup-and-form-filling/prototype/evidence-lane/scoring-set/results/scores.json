@@ -1,0 +1,1287 @@
+{
+ "label": "Rescored offline from saved model output; prototype-only exception; keys are Lead-verified from official sources, not specialist-confirmed",
+ "keyed_matches_saved_spread": {
+  "instances": 15,
+  "all_identical": true
+ },
+ "runs": [
+  {
+   "file": "prototype/p2/runs/c1-checks-live-20261020t054958915z.json",
+   "job": "c1-checks",
+   "status": "completed",
+   "contract_valid": true,
+   "structural": null,
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t044724062z.json",
+   "job": "c1-fieldmap-imm1295",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 242,
+    "outcomes": {
+     "never_filled": 4,
+     "not_a_fact": 59,
+     "mapped": 165,
+     "unresolved": 14
+    },
+    "form_fields": 242,
+    "covered": 242,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 5,
+    "canonical_fields": 80,
+    "edition": {
+     "manifest": "IMM 1295 (09-2023)",
+     "drafted": "IMM 1295 (06-2018)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": [
+    {
+     "trial": 1,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm5707-live-20261020t045405509z.json"
+     ],
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 6,
+     "of": 7,
+     "outcome_ok": 7,
+     "person_ok": 7,
+     "fact_ok": 7,
+     "fact_ok_run_local": 7,
+     "transform_ok": 7,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": []
+    }
+   ]
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t051558106z.json",
+   "job": "c1-fieldmap-imm1295",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 242,
+    "outcomes": {
+     "never_filled": 4,
+     "not_a_fact": 59,
+     "mapped": 165,
+     "unresolved": 14
+    },
+    "form_fields": 242,
+    "covered": 242,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 3,
+    "canonical_fields": 73,
+    "edition": {
+     "manifest": "IMM 1295 (09-2023)",
+     "drafted": "IMM 1295 (06-2018)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": [
+    {
+     "trial": 2,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm5707-live-20261020t052222731z.json"
+     ],
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 6,
+     "of": 7,
+     "outcome_ok": 7,
+     "person_ok": 7,
+     "fact_ok": 7,
+     "fact_ok_run_local": 7,
+     "transform_ok": 7,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": []
+    }
+   ]
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t060259023z.json",
+   "job": "c1-fieldmap-imm1295",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 242,
+    "outcomes": {
+     "never_filled": 4,
+     "not_a_fact": 59,
+     "mapped": 166,
+     "unresolved": 13
+    },
+    "form_fields": 242,
+    "covered": 242,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 4,
+    "canonical_fields": 89,
+    "edition": {
+     "manifest": "IMM 1295 (09-2023)",
+     "drafted": "IMM 1295 (06-2018)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": [
+    {
+     "trial": 3,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm5707-live-20261020t060116285z.json"
+     ],
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 6,
+     "of": 7,
+     "outcome_ok": 7,
+     "person_ok": 7,
+     "fact_ok": 7,
+     "fact_ok_run_local": 6,
+     "transform_ok": 7,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": []
+    }
+   ]
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t061204350z.json",
+   "job": "c1-fieldmap-imm1295",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 242,
+    "outcomes": {
+     "never_filled": 4,
+     "not_a_fact": 59,
+     "mapped": 166,
+     "unresolved": 13
+    },
+    "form_fields": 242,
+    "covered": 242,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 4,
+    "canonical_fields": 86,
+    "edition": {
+     "manifest": "IMM 1295 (09-2023)",
+     "drafted": "IMM 1295 (06-2018)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": [
+    {
+     "trial": 4,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm5707-live-20261020t061028166z.json"
+     ],
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 5,
+     "of": 7,
+     "outcome_ok": 7,
+     "person_ok": 7,
+     "fact_ok": 7,
+     "fact_ok_run_local": 6,
+     "transform_ok": 6,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": [
+      "codes differ or are not stated: common-law=03 (draft none), married=01 (draft none); got 'code_list:imm1295.marital_status (00,01,02,03,04,0"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t062024995z.json",
+   "job": "c1-fieldmap-imm1295",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 242,
+    "outcomes": {
+     "never_filled": 4,
+     "not_a_fact": 59,
+     "mapped": 165,
+     "unresolved": 14
+    },
+    "form_fields": 242,
+    "covered": 242,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 4,
+    "canonical_fields": 80,
+    "edition": {
+     "manifest": "IMM 1295 (09-2023)",
+     "drafted": "IMM 1295 (06-2018)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": [
+    {
+     "trial": 5,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm5707-live-20261020t061844836z.json"
+     ],
+     "form": "IMM 1295",
+     "subject": "client-a",
+     "all_ok": 6,
+     "of": 7,
+     "outcome_ok": 7,
+     "person_ok": 7,
+     "fact_ok": 7,
+     "fact_ok_run_local": 7,
+     "transform_ok": 7,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": []
+    }
+   ]
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5257-1-live-20261020t045947461z.json",
+   "job": "c1-fieldmap-imm5257-1",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 57,
+    "outcomes": {
+     "not_a_fact": 7,
+     "mapped": 41,
+     "unresolved": 9
+    },
+    "form_fields": 57,
+    "covered": 57,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 9,
+    "canonical_fields": 30,
+    "edition": {
+     "manifest": "IMM 5257 SCH1 (09-2023)",
+     "drafted": "IMM 5257 Schedule 1 (edition date not present in the inventory; source file imm5257_1e.pdf, SHA-256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93). Reviewer to confirm the printed edition.",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5257-1-live-20261020t052757177z.json",
+   "job": "c1-fieldmap-imm5257-1",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 57,
+    "outcomes": {
+     "not_a_fact": 7,
+     "mapped": 40,
+     "unresolved": 10
+    },
+    "form_fields": 57,
+    "covered": 57,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 1,
+    "canonical_fields": 29,
+    "edition": {
+     "manifest": "IMM 5257 SCH1 (09-2023)",
+     "drafted": "IMM 5257 Schedule 1 (edition date not printed in the inventory; source file official-sources/ircc/forms/imm5257_1e.pdf, sha256 12486ea3d55d7cfa7ab88a915389c506dd76204b453d04c26cec0bf9ded75f93)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5409-live-20261020t045545548z.json",
+   "job": "c1-fieldmap-imm5409",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 32,
+    "outcomes": {
+     "unresolved": 14,
+     "mapped": 15,
+     "never_filled": 3
+    },
+    "form_fields": 32,
+    "covered": 32,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 4,
+    "canonical_fields": 11,
+    "edition": {
+     "manifest": "IMM 5409 (01-2023)",
+     "drafted": "IMM 5409 (edition date not stated in the inventory; source file official-sources/ircc/forms/imm5409e.pdf, sha256 b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5409-live-20261020t052401212z.json",
+   "job": "c1-fieldmap-imm5409",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 32,
+    "outcomes": {
+     "unresolved": 13,
+     "mapped": 16,
+     "never_filled": 3
+    },
+    "form_fields": 32,
+    "covered": 32,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 3,
+    "canonical_fields": 11,
+    "edition": {
+     "manifest": "IMM 5409 (01-2023)",
+     "drafted": "IMM 5409 (E): edition date not given in the inventory; confirm against the official PDF footer",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5475-live-20261020t045857613z.json",
+   "job": "c1-fieldmap-imm5475",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 27,
+    "outcomes": {
+     "mapped": 7,
+     "unresolved": 16,
+     "never_filled": 4
+    },
+    "form_fields": 27,
+    "covered": 27,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 16,
+    "canonical_fields": 7,
+    "edition": {
+     "manifest": "IMM 5475 (12-2022)",
+     "drafted": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5475-live-20261020t052706509z.json",
+   "job": "c1-fieldmap-imm5475",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 27,
+    "outcomes": {
+     "mapped": 20,
+     "unresolved": 3,
+     "never_filled": 4
+    },
+    "form_fields": 27,
+    "covered": 27,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 3,
+    "canonical_fields": 18,
+    "edition": {
+     "manifest": "IMM 5475 (12-2022)",
+     "drafted": "IMM 5475 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5475e.pdf, sha256 938af318619a205f8ac612ce1ebe84c148a014cd9d8b408ac5a672b823c94b83)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5476-live-20261020t045654878z.json",
+   "job": "c1-fieldmap-imm5476",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 53,
+    "outcomes": {
+     "mapped": 38,
+     "unresolved": 5,
+     "never_filled": 10
+    },
+    "form_fields": 53,
+    "covered": 53,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 7,
+    "canonical_fields": 19,
+    "edition": {
+     "manifest": "IMM 5476 (11-2025)",
+     "drafted": "IMM 5476 (edition date not given in the inventory; it must be read from the printed footer of official-sources/ircc/forms/imm5476e.pdf, sha256 aca5c476b93d1c496b1afbc2cfe843499e852e31dcf0c192153bd01f8d6c56c4)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5476-live-20261020t052508977z.json",
+   "job": "c1-fieldmap-imm5476",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 53,
+    "outcomes": {
+     "mapped": 36,
+     "unresolved": 7,
+     "never_filled": 10
+    },
+    "form_fields": 53,
+    "covered": 53,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 7,
+    "canonical_fields": 25,
+    "edition": {
+     "manifest": "IMM 5476 (11-2025)",
+     "drafted": "IMM 5476 E (edition date not printed in the inventory; verify against official-sources/ircc/forms/imm5476e.pdf)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5707-live-20261020t045405509z.json",
+   "job": "c1-fieldmap-imm5707",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 50,
+    "outcomes": {
+     "mapped": 40,
+     "unresolved": 4,
+     "never_filled": 6
+    },
+    "form_fields": 50,
+    "covered": 50,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 1,
+    "canonical_fields": 10,
+    "edition": {
+     "manifest": "IMM 5707 (01-2023)",
+     "drafted": "IMM 5707 E (edition date not given in the inventory; the hidden FormNumber box carries no value. Reviewer to confirm from the printed form)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": [
+    {
+     "trial": 1,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t044724062z.json"
+     ],
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 42,
+     "of": 42,
+     "outcome_ok": 42,
+     "person_ok": 42,
+     "fact_ok": 42,
+     "fact_ok_run_local": 42,
+     "transform_ok": 42,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": []
+    },
+    {
+     "trial": 1,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t044724062z.json"
+     ],
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 42,
+     "of": 42,
+     "outcome_ok": 42,
+     "person_ok": 42,
+     "fact_ok": 42,
+     "fact_ok_run_local": 42,
+     "transform_ok": 42,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": []
+    }
+   ]
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5707-live-20261020t052222731z.json",
+   "job": "c1-fieldmap-imm5707",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 50,
+    "outcomes": {
+     "mapped": 40,
+     "unresolved": 4,
+     "never_filled": 6
+    },
+    "form_fields": 50,
+    "covered": 50,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 1,
+    "canonical_fields": 10,
+    "edition": {
+     "manifest": "IMM 5707 (01-2023)",
+     "drafted": "IMM 5707 (edition date not given in the inventory; source file official-sources/ircc/forms/imm5707e.pdf, sha256 6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": [
+    {
+     "trial": 2,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t051558106z.json"
+     ],
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 42,
+     "of": 42,
+     "outcome_ok": 42,
+     "person_ok": 42,
+     "fact_ok": 42,
+     "fact_ok_run_local": 42,
+     "transform_ok": 42,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": []
+    },
+    {
+     "trial": 2,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t051558106z.json"
+     ],
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 42,
+     "of": 42,
+     "outcome_ok": 42,
+     "person_ok": 42,
+     "fact_ok": 42,
+     "fact_ok_run_local": 42,
+     "transform_ok": 42,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": []
+    }
+   ]
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5707-live-20261020t060116285z.json",
+   "job": "c1-fieldmap-imm5707",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 50,
+    "outcomes": {
+     "mapped": 39,
+     "unresolved": 5,
+     "never_filled": 6
+    },
+    "form_fields": 50,
+    "covered": 50,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 1,
+    "canonical_fields": 9,
+    "edition": {
+     "manifest": "IMM 5707 (01-2023)",
+     "drafted": "IMM 5707 E (edition date not stated in the inventory; reviewer to confirm from the official PDF footer)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": [
+    {
+     "trial": 3,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t060259023z.json"
+     ],
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "person_ok": 42,
+     "fact_ok": 41,
+     "fact_ok_run_local": 41,
+     "transform_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": [
+      "fact derived: subject has no children: drafted none (missing)",
+      "an empty transformation step; got ''"
+     ]
+    },
+    {
+     "trial": 3,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t060259023z.json"
+     ],
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "person_ok": 42,
+     "fact_ok": 41,
+     "fact_ok_run_local": 41,
+     "transform_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": [
+      "fact derived: subject has no children: drafted none (missing)",
+      "an empty transformation step; got ''"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5707-live-20261020t061028166z.json",
+   "job": "c1-fieldmap-imm5707",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 50,
+    "outcomes": {
+     "mapped": 39,
+     "unresolved": 5,
+     "never_filled": 6
+    },
+    "form_fields": 50,
+    "covered": 50,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 1,
+    "canonical_fields": 9,
+    "edition": {
+     "manifest": "IMM 5707 (01-2023)",
+     "drafted": "IMM 5707 (edition date not given in inventory; reviewer to confirm from printed form)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": [
+    {
+     "trial": 4,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t061204350z.json"
+     ],
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "person_ok": 42,
+     "fact_ok": 41,
+     "fact_ok_run_local": 41,
+     "transform_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": [
+      "fact derived: subject has no children: drafted none (missing)",
+      "an empty transformation step; got ''"
+     ]
+    },
+    {
+     "trial": 4,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t061204350z.json"
+     ],
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "person_ok": 42,
+     "fact_ok": 41,
+     "fact_ok_run_local": 41,
+     "transform_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": [
+      "fact derived: subject has no children: drafted none (missing)",
+      "an empty transformation step; got ''"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "prototype/p2/runs/c1-fieldmap-imm5707-live-20261020t061844836z.json",
+   "job": "c1-fieldmap-imm5707",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 50,
+    "outcomes": {
+     "mapped": 39,
+     "unresolved": 5,
+     "never_filled": 6
+    },
+    "form_fields": 50,
+    "covered": 50,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 1,
+    "canonical_fields": 9,
+    "edition": {
+     "manifest": "IMM 5707 (01-2023)",
+     "drafted": "IMM 5707 E (edition date not given in the inventory; source file official-sources/ircc/forms/imm5707e.pdf, SHA-256 6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": [
+    {
+     "trial": 5,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t062024995z.json"
+     ],
+     "form": "IMM 5707",
+     "subject": "client-a",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "person_ok": 42,
+     "fact_ok": 41,
+     "fact_ok_run_local": 41,
+     "transform_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": [
+      "fact derived: subject has no children: drafted none (missing)",
+      "an empty transformation step; got ''"
+     ]
+    },
+    {
+     "trial": 5,
+     "paired_with": [
+      "prototype/p2/runs/c1-fieldmap-imm1295-live-20261020t062024995z.json"
+     ],
+     "form": "IMM 5707",
+     "subject": "partner",
+     "all_ok": 41,
+     "of": 42,
+     "outcome_ok": 41,
+     "person_ok": 42,
+     "fact_ok": 41,
+     "fact_ok_run_local": 41,
+     "transform_ok": 41,
+     "wrong_person": 0,
+     "invented": 0,
+     "missing": 0,
+     "parent_blocks_ok": true,
+     "problems": [
+      "fact derived: subject has no children: drafted none (missing)",
+      "an empty transformation step; got ''"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "prototype/p2/runs/c1-requirements-live-20261020t053007880z.json",
+   "job": "c1-requirements",
+   "status": "provider_error",
+   "contract_valid": true,
+   "structural": null,
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/c1-requirements-live-20261020t053544388z.json",
+   "job": "c1-requirements",
+   "status": "completed",
+   "contract_valid": true,
+   "structural": null,
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/c1-sections-live-20261020t054254821z.json",
+   "job": "c1-sections",
+   "status": "completed",
+   "contract_valid": true,
+   "structural": null,
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/probe-checks-live-20261020t053429940z.json",
+   "job": "probe-checks",
+   "status": "completed",
+   "contract_valid": true,
+   "structural": null,
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/probe-requirements-live-20261020t053328686z.json",
+   "job": "probe-requirements",
+   "status": "completed",
+   "contract_valid": true,
+   "structural": null,
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/probe-sections-live-20261020t053405655z.json",
+   "job": "probe-sections",
+   "status": "completed",
+   "contract_valid": true,
+   "structural": null,
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/studio-fieldmap-imm1344e-live-20261022t033516238z.json",
+   "job": "studio-fieldmap-imm1344e",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 233,
+    "outcomes": {
+     "not_a_fact": 43,
+     "mapped": 168,
+     "unresolved": 16,
+     "never_filled": 6
+    },
+    "form_fields": 233,
+    "covered": 233,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 17,
+    "canonical_fields": 53,
+    "edition": {
+     "manifest": "IMM 1344 (09-2024)",
+     "drafted": "IMM 1344 (07-2014) [taken from barcode captions IMM1344_07-2014_n; no other edition text in inventory, confirm against printed footer]",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/studio-fieldmap-imm1344e-live-20261022t034944757z.json",
+   "job": "studio-fieldmap-imm1344e",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 233,
+    "outcomes": {
+     "not_a_fact": 43,
+     "mapped": 168,
+     "unresolved": 16,
+     "never_filled": 6
+    },
+    "form_fields": 233,
+    "covered": 233,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 5,
+    "canonical_fields": 53,
+    "edition": {
+     "manifest": "IMM 1344 (09-2024)",
+     "drafted": "IMM 1344 (07-2014)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/studio-fieldmap-imm1344e-live-20261023t044208446z.json",
+   "job": "studio-fieldmap-imm1344e",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 233,
+    "outcomes": {
+     "not_a_fact": 43,
+     "mapped": 159,
+     "unresolved": 25,
+     "never_filled": 6
+    },
+    "form_fields": 233,
+    "covered": 233,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 4,
+    "canonical_fields": 49,
+    "edition": {
+     "manifest": "IMM 1344 (09-2024)",
+     "drafted": "IMM 1344 (07-2014) - taken from barcode captions IMM1344_07-2014_1 to _5; the printed footer edition is not in the inventory",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/studio-fieldmap-imm1344e-live-20261023t045220033z.json",
+   "job": "studio-fieldmap-imm1344e",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 233,
+    "outcomes": {
+     "not_a_fact": 43,
+     "mapped": 161,
+     "unresolved": 23,
+     "never_filled": 6
+    },
+    "form_fields": 233,
+    "covered": 233,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 1,
+    "canonical_fields": 44,
+    "edition": {
+     "manifest": "IMM 1344 (09-2024)",
+     "drafted": "IMM 1344 (07-2014)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/studio-fieldmap-imm1344e-live-20261023t062356430z.json",
+   "job": "studio-fieldmap-imm1344e",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 233,
+    "outcomes": {
+     "not_a_fact": 43,
+     "mapped": 162,
+     "unresolved": 22,
+     "never_filled": 6
+    },
+    "form_fields": 233,
+    "covered": 233,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 2,
+    "canonical_fields": 50,
+    "edition": {
+     "manifest": "IMM 1344 (09-2024)",
+     "drafted": "IMM 1344 (07-2014)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/studio-fieldmap-imm1344e-live-20261023t075036529z.json",
+   "job": "studio-fieldmap-imm1344e",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 233,
+    "outcomes": {
+     "not_a_fact": 43,
+     "mapped": 163,
+     "unresolved": 21,
+     "never_filled": 6
+    },
+    "form_fields": 233,
+    "covered": 233,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 3,
+    "canonical_fields": 48,
+    "edition": {
+     "manifest": "IMM 1344 (09-2024)",
+     "drafted": "IMM 1344 (07-2014)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/studio-fieldmap-imm5257e-live-20261021t043621474z.json",
+   "job": "studio-fieldmap-imm5257e",
+   "status": "provider_error",
+   "contract_valid": true,
+   "structural": {
+    "scorable": false,
+    "why": "provider_error"
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/studio-fieldmap-imm5257e-live-20261021t053359528z.json",
+   "job": "studio-fieldmap-imm5257e",
+   "status": "provider_error",
+   "contract_valid": true,
+   "structural": {
+    "scorable": false,
+    "why": "provider_error"
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/studio-fieldmap-imm5257e-live-20261021t055411020z.json",
+   "job": "studio-fieldmap-imm5257e",
+   "status": "invalid_output",
+   "contract_valid": true,
+   "structural": {
+    "scorable": false,
+    "why": "invalid_output: stopped at max_tokens"
+   },
+   "keyed": null
+  },
+  {
+   "file": "prototype/p2/runs/studio-fieldmap-imm5257e-live-20261021t060247723z.json",
+   "job": "studio-fieldmap-imm5257e",
+   "status": "completed_with_unresolved",
+   "contract_valid": true,
+   "structural": {
+    "scorable": true,
+    "entries": 242,
+    "outcomes": {
+     "not_a_fact": 65,
+     "mapped": 161,
+     "unresolved": 14,
+     "never_filled": 2
+    },
+    "form_fields": 242,
+    "covered": 242,
+    "coverage_pct": 100,
+    "unknown_form_fields": 0,
+    "unknown_examples": [],
+    "duplicates": 0,
+    "mapped_without_fact": 0,
+    "low_confidence": 2,
+    "canonical_fields": 84,
+    "edition": {
+     "manifest": "IMM 5257 (09-2023)",
+     "drafted": "IMM 5257 (06-2018)",
+     "same_date": false
+    },
+    "inventory_unchanged_since_run": true
+   },
+   "keyed": null
+  }
+ ],
+ "agreement": {
+  "c1-fieldmap-imm1295": {
+   "runs": 5,
+   "form_fields_in_any": 242,
+   "in_every_run": 242,
+   "same_outcome_pct": 99.2,
+   "same_person_pct": 99.2,
+   "same_fact_id_pct": 56.2,
+   "same_transform_pct": 38,
+   "all_four_same_pct": 35.1
+  },
+  "c1-fieldmap-imm5257-1": {
+   "runs": 2,
+   "form_fields_in_any": 57,
+   "in_every_run": 57,
+   "same_outcome_pct": 98.2,
+   "same_person_pct": 100,
+   "same_fact_id_pct": 89.5,
+   "same_transform_pct": 47.4,
+   "all_four_same_pct": 40.4
+  },
+  "c1-fieldmap-imm5409": {
+   "runs": 2,
+   "form_fields_in_any": 32,
+   "in_every_run": 32,
+   "same_outcome_pct": 96.9,
+   "same_person_pct": 100,
+   "same_fact_id_pct": 81.3,
+   "same_transform_pct": 84.4,
+   "all_four_same_pct": 68.8
+  },
+  "c1-fieldmap-imm5475": {
+   "runs": 2,
+   "form_fields_in_any": 27,
+   "in_every_run": 27,
+   "same_outcome_pct": 51.9,
+   "same_person_pct": 44.4,
+   "same_fact_id_pct": 48.1,
+   "same_transform_pct": 37,
+   "all_four_same_pct": 29.6
+  },
+  "c1-fieldmap-imm5476": {
+   "runs": 2,
+   "form_fields_in_any": 53,
+   "in_every_run": 53,
+   "same_outcome_pct": 96.2,
+   "same_person_pct": 92.5,
+   "same_fact_id_pct": 69.8,
+   "same_transform_pct": 69.8,
+   "all_four_same_pct": 54.7
+  },
+  "c1-fieldmap-imm5707": {
+   "runs": 5,
+   "form_fields_in_any": 50,
+   "in_every_run": 50,
+   "same_outcome_pct": 98,
+   "same_person_pct": 98,
+   "same_fact_id_pct": 70,
+   "same_transform_pct": 78,
+   "all_four_same_pct": 60
+  },
+  "studio-fieldmap-imm1344e": {
+   "runs": 6,
+   "form_fields_in_any": 233,
+   "in_every_run": 233,
+   "same_outcome_pct": 94.8,
+   "same_person_pct": 92.7,
+   "same_fact_id_pct": 56.7,
+   "same_transform_pct": 42.1,
+   "all_four_same_pct": 33.5
+  }
+ }
+}
