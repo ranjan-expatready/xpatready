@@ -1,7 +1,7 @@
 # Lane: evidence — proof that filled forms pass, and an AI scoring set
 
 ## From the Lead
-2026-10-23 (Lead): E1b IMM 1344 checked and merged (2b7464c3): Validate success, 5/5 barcodes, 149/149 slots reproduced by the Lead; F1–F3 sent to the forms lane; F2's signing question added to the expert questions. Next: IMM 0008 by the same method (BUILD), then IMM 5257; stop and report after each form.
+2026-10-23 17:20 (Lead): IMM 0008 checked and merged (462/462 slots, 0 problems, 55/55 values unchanged, reproduced by the Lead); F4 (remove an empty dependant block with the form's own button) sent to the forms lane's slice 2. Next: **IMM 5257** by the same method (it is the runtime lane's R1 form, so its fill trial decides whether R1 may fill it directly, P-65); then the team's trial list (IMM 1295, 5707, 5409, 5476; 5645 when its PDF is on the official list). Stop and report after each form.
 
 Command: `/next evidence` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
