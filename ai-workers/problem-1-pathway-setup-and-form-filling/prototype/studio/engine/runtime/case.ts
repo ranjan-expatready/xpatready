@@ -14,9 +14,12 @@ export type Confirmation = { confirmed: boolean; why: string };
 /** Fields the client answers (P-72 "the client's fields"): placed in the questionnaire or the client's profile. */
 const CLIENT_SOURCES = new Set(["client_questionnaire", "profile_record"]);
 
-const placementOf = (s: Snapshot, field: string) => (s.placements as { fact: string }[]).find((p) => p.fact === field) as Record<string, any> | undefined; // eslint-disable-line @typescript-eslint/no-explicit-any -- snapshot rows are loosely typed (engine/snapshot.ts)
-const fieldOf = (s: Snapshot, field: string) => (s.canonical_fields as { id: string }[]).find((f) => f.id === field) as Record<string, any> | undefined; // eslint-disable-line @typescript-eslint/no-explicit-any -- as above
-export const isClientField = (s: Snapshot, field: string) => CLIENT_SOURCES.has(placementOf(s, field)?.collected_from);
+/** The parts of a released placement and field this engine reads (the snapshot keeps them as loose JSON). */
+type Placement = { fact: string; section_id: string; repeats: string; collected_from: string; condition?: unknown; condition_effect?: string | null };
+type FieldDef = { id: string; value_type?: string; item_version?: number; answer_list?: { key: string; values: { key: string; label: string }[] } };
+const placementOf = (s: Snapshot, field: string): Placement | undefined => (s.placements as Placement[]).find((p) => p.fact === field);
+const fieldOf = (s: Snapshot, field: string): FieldDef | undefined => (s.canonical_fields as FieldDef[]).find((f) => f.id === field);
+export const isClientField = (s: Snapshot, field: string) => CLIENT_SOURCES.has(placementOf(s, field)?.collected_from ?? "");
 
 /** Age in whole years on a day, from an ISO date; null when the date is not a real date. */
 export function ageOn(birth: unknown, today: Date): number | null {
@@ -59,7 +62,7 @@ export function checkValue(s: Snapshot, field: string, value: unknown): string[]
   if (!f) return ["This question is not in the release the case works from."];
   const shape = shapeOf(s, field), type = String(f.value_type ?? "text");
   const str = typeof value === "string" ? value.trim() : null;
-  const list = (f.answer_list?.values ?? []) as { key: string; label: string }[];
+  const list = f.answer_list?.values ?? [];
   switch (type) {
     case "yes_no": return typeof value === "boolean" ? [] : ["Answer yes or no."];
     case "number": {
@@ -136,10 +139,10 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const k = `${b.about}|${b.fact}`, m = fills.get(k) ?? new Map(); const e = m.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, boxes: 0 }; e.boxes++; m.set(`${c.form}|${c.person}`, e); fills.set(k, m);
   }
   const questions = r.questions.filter((q) => !q.about.includes("/")).filter((q) => mode === "agent" || CLIENT_SOURCES.has(q.collected_from)).map((q) => {
-    const subjectId = subjectOf(q.about), p = placementOf(s, q.fact) ?? {};
+    const subjectId = subjectOf(q.about), p = placementOf(s, q.fact);
     let required = q.required, hidden = q.status === "hidden by a condition";
-    if (p.condition && p.condition_effect === "REQUIRE") { const c = evalCondition(s, known, p.condition, q.about === "case" ? "case" : subjectId); required = c.applies === true; }
-    const group = p.repeats === "per_row" ? q.section : null;
+    if (p?.condition && p.condition_effect === "REQUIRE") { const c = evalCondition(s, known, p.condition, q.about === "case" ? "case" : subjectId); required = c.applies === true; }
+    const group = p?.repeats === "per_row" ? q.section : null;
     const current = answers.filter((a) => a.subjectId === subjectId && a.field === q.fact);
     const live = group ? rows.filter((x) => x.subjectId === subjectId && x.group === group).sort((a, b) => a.order - b.order) : [];
     const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, problems: checkValue(s, q.fact, a.value), ...confirm.get(a.id)! } : null;
@@ -148,7 +151,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
       collected_from: q.collected_from, required, hidden, why: q.why, group, capacity: q.rows.length || null,
       answer: group ? null : one(current.find((a) => !a.rowKey)),
       rows: group ? live.map((x, i) => ({ row: x.rowKey, index: i, fits: q.rows.length ? i < q.rows.length : true, answer: one(current.find((a) => a.rowKey === x.rowKey)) })) : [],
-      options: (fieldOf(s, q.fact)?.answer_list?.values ?? null) as { key: string; label: string }[] | null,
+      options: fieldOf(s, q.fact)?.answer_list?.values ?? null,
       fills: [...(fills.get(`${q.about}|${q.fact}`)?.values() ?? [])],
     };
   });
