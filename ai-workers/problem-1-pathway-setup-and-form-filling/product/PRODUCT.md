@@ -7,7 +7,7 @@ A **simple working prototype** of one ExpatReady capability: a content publisher
 * **Local only** — never committed to the team's repositories; the founder aligns the whole journey, then the team retrofits it (P-01, P-19).
 * **Proof only (P-26)** — build only what the end-to-end proof needs; anything the team already has or will harden is not built. Before adding anything ask: does the proof break without it? If not, leave it out.
 * **Looks like the team's product** — same layout, colours, components, tokens and words as the existing screens, and the team's model names (P-10), so the team can put it on top of their code and adapt it. No handover notes.
-* **Journey:** Super Admin configures and previews → case officer/agent works the case → client answers on the family link → checked PDF. Milestone 2 builds the complete Super Admin configuration experience, including PQR/SQR authoring and representative preview; Milestone 3 proves those configurations in case officer, agent and client runtime through checked outputs (`SCREENS.md`, P-56).
+* **Journey:** Super Admin configures and previews → case officer/agent works the case → client answers on the family link → checked PDF. Milestone 2 builds the complete Super Admin configuration experience, including PQR/SQR authoring and representative preview; Milestone 3 proves those configurations in case officer, agent and client runtime through checked outputs (`SCREENS.md`, P-56). A thin runtime slice on the visitor visa runs early alongside M2 (P-67); an independent tester checks every capability in `qa/CAPABILITIES.md` (P-68).
 * **Purpose (P-28, P-54): production-quality slices, full scope.** Build the agreed capability in complete, testable milestone slices; no feature is cut to fit a milestone. Each slice gets functional scripts, manual/browser review, adversarial checks and founder acceptance before the next starts. This is a production-quality reference for the included capabilities, not production certification of the whole product or its integration into the team's codebase.
 * **Think production (P-32):** a person uploads every source; a person uploads a new edition when IRCC changes a form, and AI reports its impact on reusable parts and combinations before anything changes. Prototype tooling (fetch script, sample loader, Reset, replayed AI answers) is scaffolding, never a capability.
 * **The proof = one repeatable demo loop:** reset → create a combination → a person uploads up to 5 IRCC forms + document checklist → AI creates reusable fields, sections, documents and rules → review, accept, release → open a case → client answers → checked PDF (or, for an online-only application, a checked answer sheet in the portal's order, P-30) → add the next combination, which reuses what exists ("34 reused · 12 new") → upload a new edition of a form in use (IMM 5476 2021 → 2025) and review AI's impact across combinations → accept, release → reset and repeat. Done when it works for the top combinations across both workspaces — start 3 Individual + 2 Corporate and employers, extend to 5 + 5 — and the PDFs pass the founder's eye check. Reset replays recorded AI answers; live AI only for a new or changed form.
@@ -56,10 +56,12 @@ Reference app `../prototype/studio/`: NestJS + Prisma + PostgreSQL (`api/`, `pri
 | `domain/MASTERS.md` · `domain/RULES-MODEL.md` · `domain/TAXONOMY.md` | data model · rules and validation · immigration structure | Lead |
 | `DECISIONS.md` · `decisions/` | product decisions | Lead (founder decides) |
 | `REQUESTS.md` | every founder request | Lead, builder |
-| `STATE.md` · `SCREENS.md` | current stage · all screens | whoever owns the stage |
+| `LANES.md` · `lanes/<lane>.md` · `STATE.md` | lanes and file ownership · each lane's stage (the lane; the Lead writes only its "From the Lead" note) · generated overview (`lane.sh state`) | Lead · lane · Lead |
+| `SCREENS.md` | register of screens and slices | Lead |
+| `qa/` (CAPABILITIES, BUGS, reports) | what works, open bugs, test runs | qa lane |
 | `LEAD.md` | Lead journal | Lead |
 | `RETRO.md` · `design/journey-v2.dc.html` | five-line retro per screen · the clickable journey board (source of every screen's layout) | Lead |
-| `screens/NN/` | concept, design, challenge, build-notes, review, break-report | as named in WORKFLOW.md |
+| `screens/<item>/` | concept, design, challenge or plan, build-notes, review, break-report, lead-check | as named in `LANES.md` |
 Every file stays under 100 lines (checked by `tools/check-docs.sh`).
 
 ## 7. Measured so far — the baseline (P-27; keep, do not re-run or extend)
@@ -68,5 +70,5 @@ Every file stays under 100 lines (checked by `tools/check-docs.sh`).
 | AI maps form boxes (combination 1: 6 form editions, IMM 5707, IMM 1295 …) | 461 / 461 boxes mapped; on the 49 checked boxes 0 wrong person and 0 invented values in 5 trials; 37–42 / 42 correct before review | `../prototype/p2-results-brief-2026-10-20.md` |
 | Live add-form, IMM 5257 (visitor visa) | AI draft → review → release → filled PDF: 44 written, 44 read back equal, signatures intact | `../prototype/studio/evidence/slice-1-imm5257-live/` |
 | Catalogue at volume (old data model) | 105 programs / 371 rows: 19.7 s uncached, 1,023 ms cached | `../prototype/studio/evidence/scale-100/` |
-| AI spend | US$26.72 of US$100 | slice-1 `ledger.json` |
+| AI spend | US$26.72 of US$100 in the slice-1 ledger, plus US$2.94 for two IMM 1344 runs on 23 Oct (about US$29.66) | slice-1 `ledger.json`; `screens/01-programs-catalogue/lead-check.md` |
 

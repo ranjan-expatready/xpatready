@@ -1,5 +1,8 @@
 #!/bin/bash
-# Stop hook (lane-aware, P-64): before a session stops, (1) its state file (main copy: STATE.md; a lane copy: lanes/<lane>.md) must be updated if product or app files changed, and the work must be committed; (2) rules files must pass check-docs; (3) explicit any in live code must not rise.
+# Stop hook (lane-aware, P-64, P-68): before a session stops, (1) a lane copy has not changed Lead-owned files (rules,
+# skills, agents, other lanes' files), (2) its state file (main copy: STATE.md; a lane copy: lanes/<lane>.md) is updated
+# when product or app files changed, and a finished stage (state file changed) is committed; (3) rules files pass
+# check-docs; (4) explicit any in live code does not rise.
 input=$(cat); [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false' 2>/dev/null)" = "true" ] && exit 0
 # The session's own copy (a lane worktree or the main copy) comes from the hook input: in lane sessions the desktop app
 # points $CLAUDE_PROJECT_DIR at the main copy, so the script's own location is not enough (forms lane report, 23 Oct).
@@ -7,23 +10,36 @@ cwd=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)
 ROOT=$(git -C "${cwd:-.}" rev-parse --show-toplevel 2>/dev/null) || ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 cd "$ROOT" || exit 0
 PH=ai-workers/problem-1-pathway-setup-and-form-filling/product; APP=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+BLOCK="Paste to Lead"   # the builder's hand-back block (skill next); one name, one place
 reasons=""
-LANE=$(bash "$PH/tools/lane.sh" whoami 2>/dev/null); case "$LANE" in screens|forms|evidence) SF="$PH/lanes/$LANE.md";; *) SF="$PH/STATE.md";; esac
-# What changed is asked from git (file times are meaningless in a fresh lane copy).
+LANE=$(bash "$PH/tools/lane.sh" whoami 2>/dev/null); case "$LANE" in lead|unbound) SF="$PH/STATE.md";; *) SF="$PH/lanes/$LANE.md";; esac
+# (1) Lead-owned files: a lane proposes changes in its block; it never edits them (founder requests about the workflow go to the Lead).
+if [ "$LANE" != lead ] && [ "$LANE" != unbound ]; then
+  base=$(git merge-base main HEAD 2>/dev/null)
+  touched=$( { [ -n "$base" ] && git diff --name-only "$base" HEAD; git status --porcelain | cut -c4- | tr -d '"'; } 2>/dev/null | sort -u)
+  lead=$(printf '%s\n' "$touched" | grep -E "^(\.claude/(skills|agents|settings)|CLAUDE\.md$|AGENTS\.md$|$PH/[^/]+\.md$|$PH/(decisions|domain|tools|design)/|$PH/screens/[^/]+/(concept|lead-check)\.md$|$PH/lanes/)" | grep -v -x "$SF" | head -8)
+  [ -n "$lead" ] && reasons="- This $LANE lane changed Lead-owned files (LANES.md, 'Files: one writer each'). Undo these changes (git checkout main -- <file>, or revert the commit) and propose them in your $BLOCK block instead:
+$lead
+"
+fi
+# (2) What changed is asked from git (file times are meaningless in a fresh lane copy).
 status=$(git status --porcelain -- "$PH" "$APP" 2>/dev/null | cut -c4- | tr -d '"')
 changed=$(printf '%s\n' "$status" | grep -v -e "^$SF\$" -e "^$PH/history/" | grep -v '^$' | head -5)
 printf '%s\n' "$status" | grep -qx "$SF" && changed=""
-[ -n "$changed" ] && reasons="Files changed but $SF not updated:
+[ -n "$changed" ] && reasons="$reasons- Files changed but $SF not updated:
 $changed
-- Update $SF (stage, next action, one log line). If this reply already has the Paste to Lead block, do not repeat it.
+- Update $SF (stage, next action, one log line). If this reply already has the $BLOCK block, do not repeat it.
 "
-[ -n "$(git status --porcelain 2>/dev/null | head -1)" ] && reasons="$reasons- Uncommitted work in this copy ($LANE): commit it (git add -A && git commit; message '<lane>: <stage> — <summary>' with the attribution line).
+# A finished stage (its state file changed) must be committed; mid-stage work is not blocked on every reply.
+git status --porcelain -- "$SF" 2>/dev/null | grep -q . && reasons="$reasons- Uncommitted work at the end of a stage in this copy ($LANE): commit it (git add -A && git commit; message '<lane>: <stage> — <summary>' with the attribution line).
 "
+# (3) Rules files.
 docs=$(bash "$PH/tools/check-docs.sh" 2>&1) || reasons="$reasons- Rules files need attention (condense or fix links; keep each under its limit):
 $docs
 "
-# (3) STANDARDS §7 "no any": the explicit-any count in live code may only fall (Lead check 23 Oct, item 2).
-anyc=$(PATH="$ROOT/.tools/node-v24.21.0/bin:$PATH" node "$APP/tools/count-any.mjs" 2>&1) || reasons="$reasons- $anyc
-"
+# (4) STANDARDS §7 "no any": the explicit-any count in live code may only fall (Lead check 23 Oct, item 2).
+NODE="$ROOT/.tools/node-v24.21.0/bin/node"; [ -x "$NODE" ] || NODE=$(command -v node)
+if [ -n "$NODE" ]; then anyc=$("$NODE" "$APP/tools/count-any.mjs" 2>&1) || reasons="$reasons- $anyc
+"; fi
 [ -z "$reasons" ] && exit 0
 jq -n --arg r "$reasons" '{decision:"block",reason:$r}'

@@ -1,6 +1,6 @@
 ---
 name: journey-test
-description: Human-like end-to-end testing of a built Pathway Configurator screen, module or milestone - real user journeys walked in a visible browser like a person, replayed as automated Playwright checks with accessibility and screen sizes, data verified underneath, plus a short break-it pass - scored out of 10 (pass 8+, no criterion at 0). Use at FINISH (maker), CHECK (reviewer) and LEAD-CHECK, or when asked to test like a user, test end to end, or score a deliverable.
+description: Human-like end-to-end testing of a built Pathway Configurator screen, module or milestone - real user journeys walked in a visible browser like a person, replayed as automated Playwright checks with accessibility and screen sizes, data verified underneath, plus a short break-it pass - scored out of 10 (pass 8+, no criterion at 0). Used by the reviewer agent at CHECK (the one score per check), by the qa lane (skill qa), and when asked to test like a user, test end to end, or score a deliverable. Builders run its journeys as scripted checks without scoring; the Lead verifies the evidence rather than re-scoring.
 ---
 
 # Journey test — test it the way people will use it

@@ -1,5 +1,8 @@
 # Lane: screens — Milestone 2 screens
 
+## From the Lead
+2026-10-23 (Lead): stage stays DEMO (founder walkthrough). The next FIX pass, after the walkthrough, carries: QA-1 the shared Release page must not bypass submission and expert sign-off (`api/src/studio.ts:527-547`); QA-3 restart script stops only its own port; the forms lane's request to call `defaultChannelFor` in "+ Add line" (`api/src/programs.ts`) once F1 slice 1 is on main. See `qa/BUGS.md`.
+
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_screen: 01-programs-catalogue

@@ -31,7 +31,7 @@ Scale: 1 Broken (wrong result or data at risk) · 2 Major gaps (happy path only)
 |---|---|---|---|
 | D14 | Looks like the team's product | Same layout, colours, components and words as the existing screens? | Team tokens and components; team model and field names |
 | D15 | Speed | Quick with the sample data? | First view under 1 s with the sample programs; no request per row |
-| D16 | Testability | Are the rules the proof relies on tested? | Each business rule the proof uses has a passing and a failing test; screenshots for every screen |
+| D16 | Testability | Are the rules the proof relies on tested? | Each business rule the proof uses has a passing and a failing test; suites rerun on the exact commit by someone other than the maker; code coverage of `api/src` and `engine/` at or above the qa floor (c8, P-69); screenshots for every screen |
 
 ## Added dimensions — user understanding and complete proof
 | # | Dimension | Question | Test |
@@ -42,4 +42,4 @@ Scale: 1 Broken (wrong result or data at risk) · 2 Major gaps (happy path only)
 | D20 | User pain solved and meaningful “wow” | Does the experience remove a real pain and give the user a clear, valuable improvement? | Observe intended users completing a realistic task; compare effort, errors, time, confidence or previously impossible outcome with their current workaround; record user feedback and the evidence for the benefit |
 
 ## Journey score out of 10 (skill `journey-test`, P-64)
-Ten criteria, each 0, ½ or 1 with a screenshot or test as evidence: task completed · next step obvious · plain words · feedback and state · correct data · error recovery · accessibility and screen sizes · speed · visual quality · trust and sources. **Pass = 8 or more with no criterion at 0** (8 ≈ every mapped dimension at 4/5); 10 = world-class. It adds to D1–D20, never replaces them; D17 and D20 still need the founder's or an intended user's unaided walk.
+Ten criteria, each 0, ½ or 1 with a screenshot or test as evidence: task completed · next step obvious · plain words · feedback and state · correct data · error recovery · accessibility and screen sizes · speed · visual quality · trust and sources. **Pass = 8 or more with no criterion at 0** (8 ≈ every mapped dimension at 4/5); 10 = world-class. It adds to D1–D20, never replaces them; D17 and D20 still need the founder's or an intended user's unaided walk. One score per check, given by the reviewer agent (or the qa lane on `main`); builders run the journeys unscored, the Lead verifies the evidence (P-68).

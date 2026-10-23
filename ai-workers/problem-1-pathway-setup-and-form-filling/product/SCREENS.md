@@ -1,15 +1,15 @@
-# Screens — register and stages
+# Screens — register of screens and slices
 
-Stage words: DESIGN · READY · BUILD · EARLY-LOOK · FINISH · CHECK · FIX · DEMO · DONE (see WORKFLOW.md). Journey step IDs are the solution page's activities.
+Register of screens and slices. **Stages live only in `lanes/*.md`** (`lane.sh table`); test results live in each item's `lead-check.md` and the qa reports. Journey step IDs are the solution page's activities; capabilities in `qa/CAPABILITIES.md`.
 
 ## Milestone 2 — Product Studio · Pathway Configurator (Super Admin)
 
-| # | Screen (menu item) | Journey steps | SA-01B | Stage | Carried backend work |
+| # | Screen (menu item) | Journey steps | SA-01B | Lane | Carried backend work |
 |---|---|---|---|---|---|
-| 01 | **Programs** — combination catalogue, new combination and full combination page | 1.1 | 1B-50..56, 90..91; 1-12..15 | CHECK — Lead recheck of the AI drafting repair (A1–A3, A6) and decision on the A4 proposal | Latest isolated checks (23 Oct, after the AI repair): AI drafting 48/48, API 94/94, rules 54/54, engine 38/38, orchestration 22/22, browser 101/101 on a quiet machine. Unapproved form/checklist checksums are held before library/attachment/edition review/AI (P-57). D284 remains a frozen FAIL pending exact-revision independent check; shared :4400 count needs safe reconciliation. |
-| 02 | **AI work** (PDF and online sources, P-61/P-62) + combination "Draft setup / Review proposals" — sources read, AI proposals (reuse / new / ambiguous / conflict) beside the source; **new-edition impact**: box-by-box comparison, AI impact on reusable components and every combination using the form, accept → release (P-32) | 1.3, 2.1, 2.2, 3.1, 3.2 | 1B-33..35 | — | Builder's 21 Oct AI-orchestration slice (repeat launch, cancel, retry, stale result) is the backend for this screen |
-| 03 | **Combination workspace** (P-35) — tabs: Overview · Forms · **PQR** (pre-qualification question authoring; subset of SQR asked at lead stage) · **SQR** (full questionnaire authoring per person) · Documents (checklist authoring per person) · **Rules** (every rule that applies, as sentences, with its source; replaces dropped Screen 05) · **Preview by person** (representative sample-family preview using the shared questionnaire renderer) · Review and release. **Links** to other combinations ("Supported by", "Follows", with the facts and documents they carry; P-59). Agent/case runtime is M3. | 3.3, 3.4, 3.7 | 1B-57..63, 102 | — | PQR/SQR and representative preview are configuration capabilities; no scoring/verdict engine for PQR (team) |
-| 04 | **Shared library** — read-only lists plus **"Describe what you need"** for Field and Section (P-34); **Forms: "Add forms" (one or bulk) through the shared intake, list with code · title · edition · published · box map · used by · status (P-51)** — Fields · Sections · Document types · Forms · Checks: what exists, where used, AI or person, reused vs new per combination; Forms shows each form's editions and any new edition waiting for impact review (P-32). No direct editing, merge execution or rule authoring (P-28) | 3.1, 3.4 | 1B-1..24, 26..32 | — | — |
+| 01 | **Programs** — combination catalogue, new combination and full combination page | 1.1 | 1B-50..56, 90..91; 1-12..15 | screens | Forms lane F1 adds channels to rows and lines (slice 3). Release-path defect QA-1 and other bugs: `qa/BUGS.md`. |
+| 02 | **AI work** (PDF and online sources, P-61/P-62) + combination "Draft setup / Review proposals" — sources read, AI proposals (reuse / new / ambiguous / conflict) beside the source; **new-edition impact**: box-by-box comparison, AI impact on reusable components and every combination using the form, accept → release (P-32) | 1.3, 2.1, 2.2, 3.1, 3.2 | 1B-33..35 | screens | Builder's 21 Oct AI-orchestration slice (repeat launch, cancel, retry, stale result) is the backend for this screen |
+| 03 | **Combination workspace** (P-35) — tabs: Overview · Forms · **PQR** (pre-qualification question authoring; subset of SQR asked at lead stage) · **SQR** (full questionnaire authoring per person) · Documents (checklist authoring per person) · **Rules** (every rule that applies, as sentences, with its source; replaces dropped Screen 05) · **Preview by person** (representative sample-family preview using the shared questionnaire renderer) · Review and release. **Links** to other combinations ("Supported by", "Follows", with the facts and documents they carry; P-59). Agent/case runtime is M3. | 3.3, 3.4, 3.7 | 1B-57..63, 102 | screens | PQR/SQR and representative preview are configuration capabilities; no scoring/verdict engine for PQR (team) |
+| 04 | **Shared library** — read-only lists plus **"Describe what you need"** for Field and Section (P-34); **Forms: "Add forms" (one or bulk) through the shared intake, list with code · title · edition · published · box map · used by · status (P-51)** — Fields · Sections · Document types · Forms · Checks: what exists, where used, AI or person, reused vs new per combination; Forms shows each form's editions and any new edition waiting for impact review (P-32). No direct editing, merge execution or rule authoring (P-28) | 3.1, 3.4 | 1B-1..24, 26..32 | screens | — |
 | 05 | Rules inside the workspace — rule map per combination: fact rules (from library) vs requirement lines (domain/RULES-MODEL.md) | 3.5, 3.8, 4.1 | 1B-9, 14, 36 | Dropped (P-28) | Audit F3: unreachable conditional questions; hiding a field a form needs must fail release |
 | 06 | **Releases** — review and release change set, expert confirmations, approver ≠ author | 4.4, 5.1, 5.2, 5.3 | 1B-38, 39 | Existing Release button only (P-28) | Audit F2: review list must include every behaviour-bearing change (roles, document facts, derived fields) |
 | 07 | **Activity** — audit trail and freshness (next review due) | 10.1 | 1B-39, 40 | Dropped (P-28) | — |
@@ -29,6 +29,14 @@ Sources: `official-sources/ircc/` and `official-sources/esdc/` (manifests); the 
 
 ## Optional spike (P-45, parked by P-46) — separate folder, copies only, no app code
 | S-1 | **Optional, after the demo (P-46)** · **IRCC form in the browser** — render IMM 5532, IMM 5257 and IMM 0008 (dynamic XFA) in a web viewer; run their own Validate button; save; reopen in Adobe Reader and confirm the data and barcodes. Try pdf.js (XFA mode), then commercial SDK trials (Foxit Web SDK with XFA add-on, Apryse). Output: what works, cost, licence, recommendation | — | — | Parked | Only an enhancement; the safe path (P-46) is the design |
+
+## Forms and runtime slices
+| # | Slice | Lane | Path | Notes |
+|---|---|---|---|---|
+| F1 | Forms channels: PDF and online, capture, portal twin, answer lists, aliases and merges, validator (P-61–P-66) | forms | backend, then Screen 01–04 hooks | Concept `screens/F1-forms-channels/` |
+| F2 | Browser extension: capture and fill on a saved portal screen (P-66) | forms | backend + extension | After F1 |
+| R1 | Thin end-to-end slice: case, people, answers once, renderer, agent view, IMM 5257 from case facts (P-67) | runtime | backend + new runtime pages | Concept `screens/R1-thin-slice/` |
+| E1 | Fill trial in Adobe per form edition (P-46, P-65) | evidence | evidence | IMM 1344 passed after two person steps (23 Oct) |
 
 ## Milestone 3 — connected case, agent and client runtime
 

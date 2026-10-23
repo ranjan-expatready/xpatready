@@ -1,45 +1,36 @@
 # Lead journal — what the Lead holds between chats
 
-The Lead is the Claude chat session (in the "AI-Pathway way" Project, Xpatready folder connected) that designs screens, checks Claude Code's work and keeps decisions. Chats end; this file does not. **Every Lead session reads it first and updates it before its last reply.** Skill: `.claude/skills/lead` (type /lead in a new Lead chat).
+The Lead is Claude Code in the main copy, started with `/lead` (skill `lead`). It runs every lane session, checks, merges and records. Chats end; this file does not: every Lead chat reads it first and updates it before its last reply. Status is not kept here (lane files, `lane.sh table`); this file holds what only the Lead tracks.
 
 ## Standing context
-* Founder = product owner and, for now, the RCIC reviewer (P-17). Formal RCIC review later.
-* Builder = Claude Code at the Xpatready root, driven by `/next`. Lead never edits app code; Lead writes concepts, reviews, decisions, and STATE changes for Lead-owned stages.
-* Design canvas (artifact "Pathway Configurator Screens"): Screen 1 boards (sources copied to screens/01/design/), quality dimensions, "How rules work". Framework page (artifact "Working Framework").
-* Review page (artifact "Configurator Delivery Reset"): the 21 Oct diagnosis.
+* Founder = product owner and, for now, the RCIC reviewer (P-17); talks only to the Lead; decisions one at a time with a recommendation (skill grilling).
+* Visual pages: "Programme map" (end-to-end journey, milestones, lanes, decisions, how we work; keep current), "Pathway Configurator Screens" (Screen 1 boards), "Pathway Configurator Status Report" (R-73).
+* Standing merge OK after the Lead check (23 Oct). Restart :4400 only with the founder's OK. Never push.
 
 ## Open items the Lead is holding
 | Item | Waiting on | Next step |
 |---|---|---|
-| Screen 01 FIX (AI repair) | Builder (`/next`) | Six Lead items confirmed fixed 23 Oct; now AI repair A1–A4, A6 from `screens/01-programs-catalogue/lead-ai-check.md`; then suites on a quiet machine → Lead recheck → DEMO walkthrough |
-| D284 grounding findings | Exact-revision Lead/independent recheck | Frozen report remains a FAIL; 21 Oct isolated maker evidence is 29/29 and tests full-path identity, review/authorship coverage, hidden-field validation, plus 11 program records. Verify that evidence against current code before formally closing any finding. |
-| Screen 02 DESIGN | Screen 01 Lead check and clickable journey | Make AI touchpoints, source evidence, human choices and downstream effects explicit; align concept with P-32, P-38, P-51, P-52 and P-53 before code |
-| M3 connected runtime | After M2 acceptance | Use M2-configured PQR/SQR in case officer, agent and client journeys through checked PDF/answer sheet; include reuse and new-edition impact |
-| Adobe acceptance per form (P-46) | Demo run 03b | IMM 0008, 1344, 5669 first: fill → Adobe Validate → barcode compare |
-| Capability page | End of prototype | Lead writes it from the code (P-29) |
-| Static analysis report (R-70) | Builder FIX; Screen 02–04 concepts | P-59 decided links (M2 Screen 03, M3 runtime). Triage in Screen 01 review.md: `any` cleanup joins Screen 01 FIX; 13 gaps go into Screen 02–04 concepts; 28 rejected (report has 43 findings, not 32) |
-| AI drafting repair (R-71) | Builder FIX (founder go R-72) | `screens/01-programs-catalogue/lead-ai-check.md`: A1 naming rule in schema + per-entry check, A2 plain failure message, A3 reuse the 4 paid runs at US$0, A6 printed edition into AI input; A4 speed/progress and A5 AI for questions/sections/documents/rules go to the Screen 02 concept |
-| Snapshot hook | Done 23 Oct (P-60) | One run at a time, folders swept for changed files only (full sweep every 6 h), `studio/var`, `web/dist`, logs skipped; 92 s → 2 s. Backup: `archive/ai-workers/tool-backups/` |
-| Builder shared-library audit | Lead triage at Screen 02–04 concepts | Moved to `history/SHARED-LIBRARY-AUDIT-2026-10-23.md` (162 lines, over the limit); unreviewed |
-| Online forms and setup model (P-61–P-63) | Screen 02–04 concepts; builder wording pass | Words "box" → "form field" on screens (P-63); online versions, portals, channels, screen maps, validator into concepts; M3 Prepare application + extension proof |
-| Lanes (P-64) | Lead coordinates | forms-lane and evidence-lane sessions started 23 Oct (DESIGN); screens lane waits on the Lead recheck of the AI repair. GitHub private repo + PRs: founder approval pending (push still blocked) |
-| Immigration expert questions | Founder to relay | (1) Which Schedule A does a paper spousal sponsorship use: IMM 5669 or eIMM 5669 (refugee-claim version)? (2) One structure capture of a PR-portal application by a licensed representative (P-66). (3) Confirm form channels per demo combination (P-61) |
-| Writer gap: forms without a data part (IMM 5669) | Forms lane, after F1 slice 1 | Filling needs adding a data part to the XFA; Adobe acceptance unproven (evidence lane finding) |
-| Quality audit | Founder requested; provisional record saved | Apply D1–D20 at each screen; distinguish maker, independent, browser/script and founder/user evidence. See `solution-audit-2026-10-22.md` |
+| Screen 01 walkthrough (author and reviewer) | Founder | Walk :4400 with the Lead; then FIX pass (QA-1 release bypass, QA-3 restart script, default channel on "+ Add line") |
+| Demo data on :4400 | Founder's OK to change :4400 | Only 1 of 22 Individual and 0 of 8 Corporate combinations are Live; demo combinations 1–6 are not configured; stray test row "Sanjay › Sanjay". Configure through the product as Screens 02–03 land; never reset without OK |
+| Forms F1 slice 1 | Forms lane CHECK (reviewer + breaker) | Then Lead reruns suites on the exact commit, merges, `prisma generate` + `migrate deploy` on main, `/qa after-merge`; runtime BUILD may start |
+| Requirements trace (SA-01B high-level and slice, one-pager) | Agent run, then Lead | Save the trace, add missing items to a backlog by milestone; our decisions win where they settle a point |
+| Team conflicts 1–8 (audit §2) | Founder, one at a time | Validate placement now has evidence (IMM 1344: Adobe pass after the person ticks the phone box and types signatures); ask after IMM 0008 |
+| Spend: up to US$12 for AI drafts of IMM 0008/5669/5406 | Founder | Ask when forms slice 2 (A4 backend) is ready, so the runs are cheaper |
+| Expert questions | Founder to relay | (1) Schedule A for paper spousal sponsorship: IMM 5669 or eIMM 5669; (2) one structure-only portal capture by a licensed representative (P-66); (3) form channels per demo combination (P-61); (4) may a tool pre-validate before the person types the signature, and must they re-validate after (E1b F2) |
+| GitHub private repository + pull requests | Founder | Recommend: private repo excluding `sources/`, `code/`, official PDFs; CI runs suites, check-docs and the any-count on every pull request; pushes and PR creation opened in settings, merge/delete/secrets stay denied; one bot identity |
+| Screen 02 concept | Lead (screen-designer agent may draft) | P-61–P-63, A4 progress screen, new-edition impact; after Screen 01 DONE |
+| Intended user for D17/D20 | Founder | Name a real content publisher or RCIC for unaided walkthroughs before the M2 gate |
+| Static analysis gaps (R-70), shared-library audit | Screen 02–04 concepts | `history/SHARED-LIBRARY-AUDIT-2026-10-23.md` unreviewed |
+| Capability page (P-29) | End of prototype | Lead writes it from the code |
 
-## Watch list (check at every LEAD-CHECK)
-* Screen 01 remains CHECK. Latest isolated checks pass: API 92/92, rules 48/48, engine 38/38, browser 96/96 (axe and 1024 px overflow); manual author/reviewer browser walk verified draft summary/breakdown, release guard, Preview layout and preview-only family scenario. Review current code vs concept next; D17/D20 require founder/intended-user evidence. Shared :4400 sample mismatch is unresolved; do not reset it.
-* P-49 overlap is intentional: Live = released and openable by firms; Needs work = has a next action, so a row can appear in both.
-* D284 is a frozen FAIL, not proof that newer code still has four defects. Reconcile its findings against the exact current code and maker tests; independently recheck before closure.
-* Scope (P-26): only what the proof needs; anything "because the team's screen has it" is a defect.
-* P-32: a new edition is held until impact review; prototype fetch, reset, sample load and replay are scaffolding, not product capability.
-* Apply D1–D20 with evidence. D17 and D20 are primary, non-compensating ≥4/5 acceptance gates; mark unbuilt/untested scope Not yet evidenced. “Wow” must be a concrete user-validated improvement, not decoration.
-* P-54: a screen passing does not complete a milestone. Scripted and browser/manual checks, responsive/accessibility coverage, independent adversarial review, fixes and founder walkthrough all precede the next milestone. Full scope remains scheduled; no blind progression.
-* P-56: M2 = Super Admin configuration, PQR/SQR authoring, rules, release and representative preview; M3 = case officer/agent/client runtime and checked output. The full demo loop, reuse and new-edition impact close after M3.
-* Screen 01's latest isolated suites pass API 92/92, rules 48/48, engine 38/38 and browser 96/96. The old 97/97 remains historical. Current browser suite has axe WCAG A/AA clean states, 1024 px no-overflow and no console/page errors. Manual browser review confirmed the new copy/layout and the simulated reviewer release guard. Founder requests both Super Admin author and reviewer/RCIC walkthroughs; manual simulations are not D17/D20 intended-user evidence. Full findings/scores are in `screens/01-programs-catalogue/review.md`; :4400 has 22+8 vs 21+8, do not reset it.
-* State AI cost before a live run; prefer saved evidence/replay when it answers the question. Log founder requests in REQUESTS.md the same day.
+## Watch list (check at every Lead check)
+* P-26 scope test on every finding; P-33 capability or scaffolding on every element; P-60 no control cut.
+* Rerun suites on the exact commit before any merge; maker counts are claims, not evidence.
+* Lanes must not build on decisions the founder has not agreed (Definition of Ready).
+* D17/D20 need an intended user; never self-award. State AI cost before a live run.
 
 ## Session log (newest first; last 10 lines)
+- 2026-10-23 · New Lead chat (R-81): independent audit (`history/AUDIT-2026-10-23.md`); founder agreed P-65, Computer use for evidence, runtime lane P-67, qa lane P-68 (R-82), c8 coverage P-69 (installed). Workflow fixed (backend path, generated status, Lead-only rules hook, designer agent, stage names). Merged forms naming fix, evidence E1b (IMM 1344 Adobe pass after two person steps; 149/149 slots, Lead reproduced). Forms slice 1 → CHECK. :4400 shows 1 Live of 30: demo combinations not configured.
 - 2026-10-23 · Fresh-chat pickup and context warning added to the lead skill. Founder moving to a new Lead chat with an independent audit prompt. Open: Screen 01 walkthrough; P-65 agreement; US$12 for IMM 0008/5669/5406 drafts; evidence needs Computer use; expert questions (Schedule A, portal capture, channels); GitHub repo; Screen 02 concept (Lead).
 - 2026-10-23 · Merged forms wording change ("Report to Lead" once per stage; founder asked the lane directly) and evidence E1a (35 saved runs rescored at US$0; self-check byte-identical). Scoring insight: repeated AI drafts agree on person ~93–99% but on the same field name only ~56% (IMM 1344): stable names must come from library matching and aliases, not AI naming. Evidence → E1b by computer use.
 - 2026-10-23 · Standing merge OK from the founder. Hooks fixed to read the session folder (lane sessions were checking main). Merged forms challenge (b0e96158); Lead response: all five objections accepted (online version = edition with channel Online + fingerprint; answer lists; portal on combination; validator channel rule; P-57 amendment). Founder decided P-66: one extension for capture (structure only, by a licensed representative, guided, portal twin) and fill; form health. Forms lane → BUILD slice 1.
@@ -49,4 +40,3 @@ The Lead is the Claude chat session (in the "AI-Pathway way" Project, Xpatready 
 - 2026-10-23 · Founder aligned the forms concept: P-62 setup model (after spousal walkthrough), P-63 plain words (form field, shared field, field map; "box" retired). Confirmed from IRCC files: a date is three form fields mapped to one shared field. Online forms read from saved web pages or extension capture; extension fills in the representative's browser. Next: workflow package (R-75), then Lead recheck of the AI repair.
 - 2026-10-23 · Founder agreed P-61 (one form, two channels). Lead wrote P-62 end-to-end setup model (facts are the root; drafting reads PDF twin first; questionnaires from facts; masters and creators; AI required/optional/never; deterministic + advisory duplicate checks + system validator; Prepare application view per channel). Awaiting founder agreement; then workflow package (R-75).
 - 2026-10-23 · Founder: local git now, GitHub later; 4 lanes; clear unique commands with state checks; human-like E2E testing skill scored /10 (min 8) (R-75, package pending). Online forms researched on IRCC pages; P-61 "one form, two channels" proposed in decisions/ (R-76), awaiting founder. Builder finished AI repair (browser 101/101 on a quiet machine); Lead recheck of it still to do.
-- 2026-10-23 · Founder asked how to run milestones in parallel (R-74). Lead options: A sequential (today), B design ahead + evidence lane with one code writer (recommended), C two code writers on split areas (needs local version control, rule change), D build M2 and M3 together (rejected: M3 needs M2 renderer and data). Waiting on founder choice.
