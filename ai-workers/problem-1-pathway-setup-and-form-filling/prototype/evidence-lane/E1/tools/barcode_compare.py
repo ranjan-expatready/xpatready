@@ -25,6 +25,7 @@ import barcode_positions as B  # noqa: E402  (helpers only: data_values, same, s
 import e5_roundtrip as E  # noqa: E402
 
 MONTH_BOXES = B.MONTH_BOXES  # P1's list; a form's rules may add its own under "month_boxes"
+SAME = B.same  # P1's comparison, kept unchanged underneath the per-form number-box rule
 
 KINDS = {  # how a derived rule turns the written source values into the derived slots
     "date_split": lambda d: d.split("-"),
@@ -67,6 +68,8 @@ def bind_repeats(som_to_data, inv):
     def find(som):
         if som in som_to_data:
             return som_to_data[som]
+        if not som.endswith("]") and som + "[0]" in som_to_data:  # a ref without its last index means [0] (XFA SOM)
+            return som_to_data[som + "[0]"]
         for gs, gd, top in groups:
             m = re.match(re.escape(gs) + r"\[(\d+)\]", som)
             if m and 0 < int(m.group(1)) < top:
@@ -100,6 +103,14 @@ def run(rules, saved_pdf, written_pdf, decoded, values_file):
     saved = B.data_values(Path(saved_pdf))
     B.BARCODES = [n for n in names if n in payloads]  # B.compare iterates this list
     B.MONTH_BOXES = MONTH_BOXES + tuple(rules.get("month_boxes", {}))  # form-specific month fields, each with its evidence
+    number_boxes = tuple(rules.get("leading_zero_boxes", {}))  # other num{99} boxes (e.g. a day), each with its evidence
+
+    def same(barcode, value, box=""):
+        how = SAME(barcode, value, box)
+        if how is None and box.endswith(number_boxes or ("\0",)) and re.fullmatch(r"[1-9]", barcode or "") and value == "0" + barcode:
+            return "number_leading_zero"
+        return how
+    B.same = same  # B.compare and B.account call it
     rows, slot_problems = B.compare(slots, payloads, labels, saved)
     slot_problems += [{"barcode": n, "problem": "not decoded"} for n in missing]
 
