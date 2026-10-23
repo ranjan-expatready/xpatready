@@ -15,7 +15,7 @@ changed=$(printf '%s\n' "$status" | grep -v -e "^$SF\$" -e "^$PH/history/" | gre
 printf '%s\n' "$status" | grep -qx "$SF" && changed=""
 [ -n "$changed" ] && reasons="Files changed but $SF not updated:
 $changed
-- Update $SF (stage, next action, one log line). If this reply already has the Report to Lead block, do not repeat it.
+- Update $SF (stage, next action, one log line). If this reply already has the Paste to Lead block, do not repeat it.
 "
 [ -n "$(git status --porcelain 2>/dev/null | head -1)" ] && reasons="$reasons- Uncommitted work in this copy ($LANE): commit it (git add -A && git commit; message '<lane>: <stage> — <summary>' with the attribution line).
 "
