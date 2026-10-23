@@ -1,7 +1,7 @@
 # Lane: runtime — the thin end-to-end slice, then M3 runtime (P-67)
 
 ## From the Lead
-2026-10-23: PLAN R1 now (no code): challenge `screens/R1-thin-slice/concept.md` with a fresh agent (skill screen-challenge), add the back-end table (element → record → API → rule → test) and the mapping to the team's client-spine models in `screens/R1-thin-slice/plan.md`. BUILD starts only after forms slice 1 is merged into main (both change the schema).
+2026-10-23 17:05 (Lead): forms slice 1 is merged into main, so the schema is free. Finish PLAN now: commit `screens/R1-thin-slice/plan.md` (challenge in its own `challenge.md` if long), set owner Lead and report; the Lead answers within the hour. If the challenge finds no Blocker and needs no founder decision, the Lead's answer will set BUILD slice 1 straight away (founder wants the runtime build started today). Rules added since the concept: only confirmed facts fill (P-72); only the form's own Validate and missing or conflicting facts block (P-71); a wrong mapping is reported, not blocking (P-73).
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

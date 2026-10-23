@@ -267,6 +267,8 @@ export class Studio {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const workspaceId = await this.ws.id();
     const rows = await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } });
+    const merged = [...rows].sort((x, y) => y.version - x.version)[0]?.mergedIntoKey; // F1: a merged field only redirects (break m12)
+    if (merged) fail(`${key} was merged into ${merged}: change that field instead.`, HttpStatus.CONFLICT);
     const changes: any = {};
     if (b.meaning !== undefined) { if (b.meaning.trim().length < 8) fail("Describe the meaning in a short sentence."); changes.meaning = b.meaning.trim(); }
     if (b.valueType !== undefined) { if (!VALUE_TYPES.includes(b.valueType)) fail("Unknown value type."); changes.valueType = b.valueType; changes.dataType = VALUE_TYPE_TO_DATA_TYPE[b.valueType]; }

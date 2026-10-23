@@ -62,11 +62,27 @@ enum Origin {
   IMPORTED_RELEASE
   AI_PROPOSAL
   HUMAN
+  /// F1: proposed by a deterministic match (PDF twin, form path, name or alias; no AI), accepted by a person.
+  CODE_MATCH
 }
 
 enum SourceBasis {
   SOURCE_BACKED
   ILLUSTRATIVE
+}
+
+/// F1 (P-61 §2): how one form line of a combination is filed. Signature method and the combination's filing method are
+/// worked out from it (engine/channels.ts), never stored.
+enum FilingChannel {
+  PDF_UPLOAD
+  ONLINE
+  SIGNED_PDF_UPLOAD
+}
+
+/// F1 (challenge point 2): an edition is the PDF file, or an online version read from captured portal screens.
+enum EditionChannel {
+  PDF
+  ONLINE
 }
 
 /// The disposable demo workspace. Reset deletes every row that belongs to it and its working files.
@@ -125,6 +141,9 @@ model Combination {
   participants   Json
   sourceBasis    SourceBasis @default(SOURCE_BACKED) @map("source_basis")
   basisNote      String?     @map("basis_note")
+  /// F1 (challenge point 4): the one portal this filing goes through (contracts/forms.ts PORTALS, Sample until the
+  /// immigration expert confirms). Every Online line uses the form's online version captured from this portal.
+  portalKey      String?     @map("portal_key")
   createdBy      String      @map("created_by")
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz
 
@@ -201,6 +220,15 @@ model FormEdition {
   dataBoundBoxes Int     @default(0) @map("data_bound_boxes")
   /// Screen 01 uploads (P-25): the uploaded PDF kept outside the web root, so "+ Add" can attach it to another row.
   storedPath     String? @map("stored_path")
+  /// F1: PDF (the file) or ONLINE (an online version: the portal twin of an approved capture, P-66). An online version's
+  /// identity is contentSha256, the fingerprint of its normalised screens (saved pages differ byte for byte per save);
+  /// sha256 stays the PDF's file checksum. inventoryFile holds the twin (screens, inputs, options) for both channels.
+  channel        EditionChannel @default(PDF)
+  portalKey      String?   @map("portal_key")
+  capturedOn     DateTime? @map("captured_on") @db.Date
+  /// The date the online version must be checked again (validator: an Online line needs a version within it).
+  recheckBy      DateTime? @map("recheck_by") @db.Date
+  contentSha256  String?   @map("content_sha256")
 
   form GovFormDef     @relation(fields: [govFormDefId], references: [id], onDelete: Cascade)
   maps FormFieldMap[]
@@ -256,6 +284,8 @@ model CombinationForm {
   status        DefinitionStatus
   supersedesId  String?          @map("supersedes_id") @db.Uuid
   origin        Origin
+  /// F1 (P-61 §2): how this line is filed. Existing lines stay PDF upload (today's behaviour).
+  channel       FilingChannel    @default(PDF_UPLOAD)
   updatedBy     String           @map("updated_by")
   updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -289,6 +319,13 @@ model FormFieldMap {
   supersedesId      String?          @map("supersedes_id") @db.Uuid
   origin            Origin
   draftingRunId     String?          @map("drafting_run_id")
+  /// F1, online versions: the portal screen and the input's place on it (dataPath holds the page's element id or name).
+  screenKey         String?          @map("screen_key")
+  screenOrder       Int?             @map("screen_order")
+  inputOrder        Int?             @map("input_order")
+  /// F1 (challenge point 3): { map: { answer-list value key: this form field's code }, unused: [codes of this form
+  /// field that no value fills] }. `map` is the team's ENUM transform map (onMissing REFUSE).
+  optionMap         Json?            @map("option_map")
   updatedBy         String           @map("updated_by")
   updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -318,11 +355,114 @@ model CanonicalField {
   origin            Origin
   sourceRef         String?          @map("source_ref")
   note              String?
+  /// P-65: labels this field carries on forms and portal screens ("Date of birth", "DOB"), and the ids of fields merged
+  /// into it. Matching tries form path, then these, before any AI.
+  aliases           String[]         @default([])
+  /// P-65 reviewed merge: set on the merged-away field's closing version; its id redirects to this key.
+  mergedIntoKey     String?          @map("merged_into_key")
+  /// F1 (challenge point 3): the answer list a choice field takes its values from (the team's CanonicalField.enumSetId).
+  answerListKey     String?          @map("answer_list_key")
   updatedBy         String           @map("updated_by")
   updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   @@unique([workspaceId, canonicalFieldKey, version])
   @@map("canonical_field")
+}
+
+/// F1 (challenge point 3): one list of values a choice field can take, mirroring the team's EnumSet. Each form field's
+/// own codes map to these values per channel (FormFieldMap.optionMap).
+model AnswerList {
+  id            String           @id @default(uuid()) @db.Uuid
+  workspaceId   String           @map("workspace_id") @db.Uuid
+  answerListKey String           @map("answer_list_key")
+  version       Int
+  status        DefinitionStatus
+  label         String
+  sourceBasis   SourceBasis      @default(ILLUSTRATIVE) @map("source_basis")
+  origin        Origin
+  updatedBy     String           @map("updated_by")
+  updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  values AnswerListValue[]
+
+  @@unique([workspaceId, answerListKey, version])
+  @@map("answer_list")
+}
+
+/// The team's EnumSetValue.
+model AnswerListValue {
+  id           String @id @default(uuid()) @db.Uuid
+  answerListId String @map("answer_list_id") @db.Uuid
+  valueKey     String @map("value_key")
+  label        String
+  sortOrder    Int    @map("sort_order")
+
+  list AnswerList @relation(fields: [answerListId], references: [id], onDelete: Cascade)
+
+  @@unique([answerListId, valueKey])
+  @@map("answer_list_value")
+}
+
+/// P-65 reviewed merge of two shared fields: proposed by one person, applied when a different person approves. The
+/// merged-away id becomes an alias that redirects; draft mappings, rules and placements move; releases stay as released.
+model FieldMerge {
+  id           String    @id @default(uuid()) @db.Uuid
+  workspaceId  String    @map("workspace_id") @db.Uuid
+  keepKey      String    @map("keep_key")
+  mergeKey     String    @map("merge_key")
+  reason       String
+  /// PROPOSED · APPLIED · REJECTED
+  status       String
+  proposedBy   String    @map("proposed_by")
+  proposedAt   DateTime  @default(now()) @map("proposed_at") @db.Timestamptz
+  decidedBy    String?   @map("decided_by")
+  decidedAt    DateTime? @map("decided_at") @db.Timestamptz
+  decisionNote String?   @map("decision_note")
+  /// What moved when it was applied: counts per kind of row.
+  moved        Json?
+
+  @@index([workspaceId, status])
+  @@map("field_merge")
+}
+
+/// P-66 capture record: the structure of one portal application's screens (never an answer), from saved blank pages,
+/// the spreadsheet template or (F2) the extension. Held until a second person approves it (P-57 amended for this kind);
+/// approval makes it an online version (FormEdition, channel ONLINE). The page files themselves are not kept: only
+/// their checksums and the structure read from them (a page can show a client's data as text).
+model PortalCapture {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  portalKey       String    @map("portal_key")
+  formKey         String    @map("form_key")
+  title           String
+  applicationType String?   @map("application_type")
+  /// saved_page · template · extension · screenshots (P-66 §1 ways A–D)
+  way             String
+  /// OPEN (screens being added) · HELD (finished, waiting for a second person) · APPROVED · RETURNED · IN_LIBRARY
+  /// (identical to an approved version) · ABANDONED (given up by an author; kept for the audit)
+  status          String
+  statusDetail    String?   @map("status_detail")
+  /// The capture record (contracts/portal-capture.v1.schema.json).
+  record          Json
+  files           Json      @default("[]")
+  /// Bumped by every write: a write that read an older revision is refused (two adds, or an add during finish).
+  revision        Int       @default(0)
+  contentSha256   String?   @map("content_sha256")
+  /// The approved online version this capture changes, with the field-by-field difference (P-66 §2.3).
+  changesEditionId String?  @map("changes_edition_id") @db.Uuid
+  difference      Json?
+  twinFile        String?   @map("twin_file")
+  reviewFile      String?   @map("review_file")
+  formEditionId   String?   @map("form_edition_id") @db.Uuid
+  capturedOn      DateTime  @default(now()) @map("captured_on") @db.Date
+  capturedBy      String    @map("captured_by")
+  approvedBy      String?   @map("approved_by")
+  approvedAt      DateTime? @map("approved_at") @db.Timestamptz
+  decisionNote    String?   @map("decision_note")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([workspaceId, formKey, portalKey])
+  @@map("portal_capture")
 }
 
 model LogicalSection {

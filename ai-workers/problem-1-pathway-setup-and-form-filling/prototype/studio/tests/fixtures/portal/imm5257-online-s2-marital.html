@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<!-- Sample · Scaffolding (P-33): forms lane fixture, not a real IRCC screen (see imm5257-online-s1-personal.html). -->
+<html lang="en">
+<head><meta charset="utf-8"><title>Marital status - Application for a visitor visa - IRCC Portal</title><script>track("marital")</script></head>
+<body>
+  <main>
+    <h1>Marital status</h1>
+    <form id="application" method="post">
+      <input type="hidden" name="_csrf" value="b81-session-99">
+      <label for="maritalStatus">Your current marital status</label>
+      <select id="maritalStatus" name="maritalStatus" required>
+        <option value="">Select one</option>
+        <option value="MARRIED">Married</option><option value="SINGLE">Single</option><option value="COMMON_LAW">Common-law</option>
+        <option value="DIVORCED">Divorced</option><option value="SEPARATED">Legally separated</option><option value="WIDOWED">Widowed</option>
+        <option value="ANNULLED">Annulled marriage</option><option value="UNKNOWN">Unknown</option>
+      </select>
+      <label for="unionDate">Date you married or started living together</label>
+      <input type="date" id="unionDate" name="unionDate" aria-describedby="unionHelp">
+      <p id="unionHelp">Only if you are married or in a common-law relationship.</p>
+      <button type="submit">Save and continue</button>
+    </form>
+  </main>
+</body>
+</html>

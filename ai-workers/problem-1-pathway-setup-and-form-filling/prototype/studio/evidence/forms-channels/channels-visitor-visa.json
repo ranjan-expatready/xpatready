@@ -1,0 +1,35 @@
+{
+ "portal": "ircc_portal",
+ "portal_label": "IRCC Portal",
+ "filing_method": "Online + PDF uploads",
+ "lines": [
+  {
+   "form": "IMM 5257",
+   "title": "Application for visitor visa (temporary resident visa)",
+   "who": "each_applicant",
+   "status": "always",
+   "channel": "ONLINE",
+   "channel_words": "Online",
+   "signature": "The client signs the declaration in the portal",
+   "version": "IMM 5257 online · IRCC Portal · 2026-10-23"
+  },
+  {
+   "form": "IMM 5707",
+   "title": "Family Information",
+   "who": "each_applicant",
+   "status": "always",
+   "channel": "PDF_UPLOAD",
+   "channel_words": "PDF upload",
+   "signature": "No signature in the file",
+   "version": "IMM 5707 (01-2023)"
+  }
+ ],
+ "problems": [
+  {
+   "level": "warning",
+   "where": "Field map IMM 5257 online · IRCC Portal · 2026-10-23",
+   "item": "IMM 5257",
+   "message": "3 choice inputs are not on an answer list yet: filled by matching labels, so a changed label could go unnoticed."
+  }
+ ]
+}

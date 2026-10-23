@@ -108,6 +108,8 @@ export class Demo {
       "AI and reading steps": await t.draftingJob.count({ where: ws }), "AI proposals and decisions": await t.normalizationItem.count({ where: ws }),
       "Reviews, sign-offs and releases": (await t.reviewSubmission.count({ where: ws })) + (await t.reviewSignoff.count({ where: ws })) + (await t.configRelease.count({ where: ws })),
       "Sample profiles and facts": (await t.sampleProfile.count({ where: ws })) + (await t.sampleFact.count({ where: ws })), "Generated PDFs and reports": await t.generatedArtifact.count({ where: ws }), "Activity entries": await t.auditEvent.count({ where: ws }),
+      // F1 (forms lane): portal captures, answer lists and field merges
+      "Portal captures, answer lists and merges": (await t.portalCapture.count({ where: ws })) + (await t.answerList.count({ where: ws })) + (await t.fieldMerge.count({ where: ws })),
     };
     const dir = VAR("demo");
     const files = existsSync(dir) ? this.walk(dir) : [];
@@ -148,6 +150,7 @@ export class Demo {
       await tx.intakeItem.deleteMany({ where: ws }); await tx.sourceAttachment.deleteMany({ where: ws }); await tx.combination.deleteMany({ where: ws }); await tx.programDef.deleteMany({ where: ws });
       await tx.canonicalField.deleteMany({ where: ws }); await tx.logicalSection.deleteMany({ where: ws }); await tx.sectionQuestion.deleteMany({ where: ws }); await tx.documentType.deleteMany({ where: ws }); await tx.derivedField.deleteMany({ where: ws });
       await tx.sampleFact.deleteMany({ where: ws }); await tx.sampleProfile.deleteMany({ where: ws }); await tx.generatedArtifact.deleteMany({ where: ws }); await tx.auditEvent.deleteMany({ where: ws });
+      await tx.portalCapture.deleteMany({ where: ws }); await tx.answerList.deleteMany({ where: ws }); await tx.fieldMerge.deleteMany({ where: ws }); // F1 (forms lane)
       await tx.workspace.delete({ where: { id: workspaceId } });
     });
     const dir = VAR("demo");

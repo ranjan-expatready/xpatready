@@ -1,7 +1,7 @@
 # Lane: screens — Milestone 2 screens
 
 ## From the Lead
-2026-10-23 (Lead): stage stays DEMO (founder walkthrough). The next FIX pass, after the walkthrough, carries: QA-1 the shared Release page must not bypass submission and expert sign-off (`api/src/studio.ts:527-547`); QA-3 restart script stops only its own port; the forms lane's request to call `defaultChannelFor` in "+ Add line" (`api/src/programs.ts`) once F1 slice 1 is on main. See `qa/BUGS.md`.
+2026-10-23 17:05 (Lead): **founder decision: close Screen 01 with one FIX pass, retested by the qa lane, then DONE (no more demo rounds).** Set stage FIX, owner Builder. Fix in one pass, each with a pass and a fail test: QA-1 (Critical) the shared Release page must require submission and expert sign-off (`api/src/studio.ts:527-547`, and correct `check_screen01_api.ts` line 135, which asserts the bug as a pass); QA-13 (Major) re-adding a removed form 409s (`api/src/programs.ts:291-305`: reuse or re-version the retired line); QA-7 (Major) show the server's field message for a too-long name; QA-9 (Major) bring `check_studio_browser.cjs` Pass B, `fixtures/scale_100.ts` and `check_catalogue_scale.cjs` up to Layout v2; QA-6, QA-10, QA-11, QA-12, QA-5, QA-3 (Minor); P-63 words on every screen ("box(es)" → "form field(s)", "box map" → "field map"); the next step not repeated under each missing item; "+ Add line" calls `defaultChannelFor` (F1 is on main). Then CHECK (reviewer + breaker) → owner Lead; the qa lane retests before DONE. Details: `qa/BUGS.md`.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

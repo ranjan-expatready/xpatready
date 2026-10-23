@@ -22,10 +22,11 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). Lane r
 | `explore <area>` | Founder, Lead, or when time allows | Charter-based exploration (60 min): what a real author, RCIC, officer or client would try |
 | `with-me` | Founder opens this session | Explore together: ask the founder one question at a time (AskUserQuestion, recommendation first), test what they point at, report as you go |
 
-## 2. Test like a person (visible browser, isolated copy)
+## 2. Test like a person: headed first, then headless (isolated copy, and the shared demo read-only)
 Start your own copy: `zsh P/../prototype/studio/tools/isolated.sh qa_<run> <4470-4479> start`; load data through the product's own screens (Load sample only where the capability is not under test, P-33). Never touch :4400.
-For each capability row: walk it as its persona in the browser pane or Playwright headed, using only what a person sees. Check: the task completes · every validation message appears on the field that caused it, in plain words · wrong input, empty, very long, non-English, duplicate, wrong role by URL, double click, reload and back mid-action, two tabs · the next step is obvious · data and audit line underneath (API or database) exactly as entered · keyboard only, 1024 px and 200% zoom, axe clean · timings vs STANDARDS §9.
+For each capability row: first walk it **headed** as its persona (browser pane or Playwright headed), using only what a person sees; then replay the same journey **headless** (Playwright) at 400, 1024 and 1440 px, twice, to catch flakiness. Also walk the main path **read-only on the shared demo (:4400)**: real accumulated data finds bugs a fresh copy cannot (QA-13); never create, release or reset there. Check: the task completes · every validation message appears on the field that caused it, in plain words · wrong input, empty, very long, non-English, duplicate, wrong role by URL, double click, reload and back mid-action, two tabs · the next step is obvious · data and audit line underneath (API or database) exactly as entered · keyboard only, 1024 px and 200% zoom, axe clean · timings vs STANDARDS §9.
 Screenshot each decision point and every defect (`P/qa/reports/<date>-<mode>/`).
+**Against requirements and decisions:** every capability row names its sources (SA-1B / one-pager IDs from P/`history/TRACE-SA01B-2026-10-23.md`, P-decisions). For each, check the behaviour against the requirement and against our decision; where our decision differs, ours applies (P-70) and is what you test.
 
 ## 3. Test underneath
 * Rerun every suite on the exact commit (`prototype/studio/tests/`); report red suites first, with the failing check.
@@ -35,7 +36,7 @@ Screenshot each decision point and every defect (`P/qa/reports/<date>-<mode>/`).
 
 ## 4. Record
 * **P/`qa/CAPABILITIES.md`** — one row per capability: status Works / Broken / Partial / Not built / Not tested, last tested commit and date, evidence. Keep under 100 lines; detail goes in reports.
-* **P/`qa/BUGS.md`** — open bugs only: QA-n · severity (Blocker, Critical, Major, Minor) · capability · steps · expected · actual · evidence · found on commit · owning lane (your best guess; the Lead assigns). Closed bugs move to P/`history/`.
+* **P/`qa/BUGS.md`** — open findings only: QA-n · **type** (Bug: built but wrong · Gap: requirement or decision not met or not built · Conflict: behaviour, requirement and decision disagree · Ambiguity: the requirement or decision is unclear, phrased as a question · UX: works but confusing, slow or unclear words) · severity (Blocker, Critical, Major, Minor) · capability · requirement or decision ID · steps · expected · actual · evidence · found on commit · owning lane (your best guess; the Lead assigns). Closed bugs move to P/`history/`.
 * **Report** `P/qa/reports/<date>-<mode>.md` (under 150 lines): verdict, what works, bugs, coverage, journey scores where a screen was walked, what you could not test, **Questions for the Lead**, **Suggestions** (each labelled *Needed for the proof* or *Later* (P-26) and *Capability* or *Scaffolding* (P-33); never build them).
 * D17 and D20 need an intended user: you may simulate, never award them.
 

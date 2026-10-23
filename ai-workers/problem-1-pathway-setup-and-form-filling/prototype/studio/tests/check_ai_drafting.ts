@@ -44,7 +44,11 @@ const ajv = new Ajv({ allErrors: true, strict: false });
 for (const s of ["field-map-entry", "drafting-run"]) ajv.addSchema(json(join(PROTOTYPE, "contracts", `${s}.v0.schema.json`)));
 const runContract = ajv.getSchema("https://expatready.local/contracts/drafting-run.v0.json")!;
 const v2Valid = ajv.compile(out2);
-const saved = readdirSync(RUNS).filter((f) => /^studio-fieldmap-imm1344e-live-.*z\.json$/.test(f)).sort();
+// The four answers refused on 22–23 Oct, by name: later valid runs of the same form (23 Oct 06:23, 07:50) are not part
+// of this replay, so a pattern over the folder would pick them up and fail (Lead, F1 slice 1).
+const REFUSED = ["20261022t033516238z", "20261022t034944757z", "20261023t044208446z", "20261023t045220033z"].map((t) => `studio-fieldmap-imm1344e-live-${t}.json`);
+const onFile = new Set(readdirSync(RUNS));
+const saved = REFUSED.filter((f) => onFile.has(f));
 ok("four saved real IMM 1344 answers are on file", saved.length === 4, saved);
 let paid = 0;
 for (const f of saved) {

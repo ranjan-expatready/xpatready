@@ -123,3 +123,4 @@ One migration, `…_forms_channels`. Additive only; existing rows keep their mea
 Agreed 23 Oct (Lead), slices 1–3 as amended above. Slice 1 starts once founder question 1 is answered.
 
 ## Build discoveries
+- 23 Oct, slice 1 (details in `build-notes.md`): the capture is its own record (`PortalCapture`), not intake columns, because P-66 made it multi-screen with "finish"; unresolved PDF form fields stay a by-hand case (making them an error would block Screen 01's releases: Lead decision); `concept.md` still says "values stripped" and "hold rules as PDFs" where the agreed response says refused and second-person approval. Lane copies: guarded AI stub cannot load (double link), pages 404 (hidden folder; fixed), shared database client (cloned here).

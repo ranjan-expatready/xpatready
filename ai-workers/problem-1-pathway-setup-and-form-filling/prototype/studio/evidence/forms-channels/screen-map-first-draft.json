@@ -1,0 +1,569 @@
+{
+ "edition": {
+  "id": "93aa9bdf-5497-4bf1-9261-121457cefa54",
+  "label": "IMM 5257 online · IRCC Portal · 2026-10-23",
+  "channel": "ONLINE",
+  "portal": "ircc_portal",
+  "captured_on": "2026-10-23",
+  "recheck_by": "2027-04-21",
+  "fingerprint": "d6375ca38c3bb70b1622d381fd8afdba0971ee4a5da445650f4b7290ad74ba36",
+  "questions": 13
+ },
+ "pdf_edition": "IMM 5257 (09-2023)",
+ "proposals": [
+  {
+   "screen": "Personal details",
+   "screen_order": 1,
+   "input": "familyName",
+   "input_order": 1,
+   "label": "Family name (as shown on your passport or travel document)",
+   "group": "Full name",
+   "part": null,
+   "type": "text",
+   "candidates": [],
+   "outcome": "mapped",
+   "method": "pdf_twin",
+   "fact": "person.family_name",
+   "transform": "as_is",
+   "person": "form_subject",
+   "from": "IMM 5257 (09-2023) · *Family name (as shown on your passport or travel document)",
+   "why": "Same label as the PDF form field \"*Family name (as shown on your passport or travel document)\" in IMM 5257 (09-2023)."
+  },
+  {
+   "screen": "Personal details",
+   "screen_order": 1,
+   "input": "givenNames",
+   "input_order": 2,
+   "label": "Given name(s) (as shown on your passport or travel document)",
+   "group": "Full name",
+   "part": null,
+   "type": "text",
+   "candidates": [],
+   "outcome": "mapped",
+   "method": "pdf_twin",
+   "fact": "person.given_names",
+   "transform": "as_is",
+   "person": "form_subject",
+   "from": "IMM 5257 (09-2023) · Given name(s) (as shown on your passport or travel document)",
+   "why": "Same label as the PDF form field \"Given name(s) (as shown on your passport or travel document)\" in IMM 5257 (09-2023)."
+  },
+  {
+   "screen": "Personal details",
+   "screen_order": 1,
+   "input": "uci",
+   "input_order": 3,
+   "label": "UCI",
+   "group": null,
+   "part": null,
+   "type": "text",
+   "candidates": [],
+   "outcome": "mapped",
+   "method": "pdf_twin",
+   "fact": "person.uci",
+   "transform": "as_is",
+   "person": "form_subject",
+   "from": "IMM 5257 (09-2023) · UCI",
+   "why": "Same label as the PDF form field \"UCI\" in IMM 5257 (09-2023)."
+  },
+  {
+   "screen": "Personal details",
+   "screen_order": 1,
+   "input": "sex",
+   "input_order": 4,
+   "label": "Sex",
+   "group": null,
+   "part": null,
+   "type": "select",
+   "candidates": [],
+   "outcome": "mapped",
+   "method": "pdf_twin",
+   "fact": "person.sex",
+   "transform": "code_list:portal_choices",
+   "person": "form_subject",
+   "from": "IMM 5257 (09-2023) · *Sex",
+   "why": "Same label as the PDF form field \"*Sex\" in IMM 5257 (09-2023)."
+  },
+  {
+   "screen": "Personal details",
+   "screen_order": 1,
+   "input": "dobYear",
+   "input_order": 5,
+   "label": "Year",
+   "group": "Date of birth",
+   "part": "YYYY",
+   "type": "text",
+   "candidates": [],
+   "outcome": "mapped",
+   "method": "pdf_twin",
+   "fact": "person.date_of_birth",
+   "transform": "date:YYYY",
+   "person": "form_subject",
+   "from": "IMM 5257 (09-2023) · YYYY",
+   "why": "Same date part (YYYY) of \"Date of birth\" as the PDF form field \"YYYY\" in IMM 5257 (09-2023)."
+  },
+  {
+   "screen": "Personal details",
+   "screen_order": 1,
+   "input": "dobMonth",
+   "input_order": 6,
+   "label": "Month",
+   "group": "Date of birth",
+   "part": "MM",
+   "type": "select",
+   "candidates": [],
+   "outcome": "mapped",
+   "method": "pdf_twin",
+   "fact": "person.date_of_birth",
+   "transform": "date:MM",
+   "person": "form_subject",
+   "from": "IMM 5257 (09-2023) · MM",
+   "why": "Same date part (MM) of \"Date of birth\" as the PDF form field \"MM\" in IMM 5257 (09-2023)."
+  },
+  {
+   "screen": "Personal details",
+   "screen_order": 1,
+   "input": "dobDay",
+   "input_order": 7,
+   "label": "Day",
+   "group": "Date of birth",
+   "part": "DD",
+   "type": "text",
+   "candidates": [],
+   "outcome": "mapped",
+   "method": "pdf_twin",
+   "fact": "person.date_of_birth",
+   "transform": "date:DD",
+   "person": "form_subject",
+   "from": "IMM 5257 (09-2023) · DD",
+   "why": "Same date part (DD) of \"Date of birth\" as the PDF form field \"DD\" in IMM 5257 (09-2023)."
+  },
+  {
+   "screen": "Personal details",
+   "screen_order": 1,
+   "input": "birthCity",
+   "input_order": 8,
+   "label": "City or town",
+   "group": "Place of birth",
+   "part": null,
+   "type": "text",
+   "candidates": [],
+   "outcome": "leftover",
+   "method": null,
+   "fact": null,
+   "transform": null,
+   "person": null,
+   "from": null,
+   "why": "No PDF form field, earlier version or alias has this label: drafting (slice 2) or a person maps it."
+  },
+  {
+   "screen": "Personal details",
+   "screen_order": 1,
+   "input": "birthCountry",
+   "input_order": 9,
+   "label": "Country or territory",
+   "group": "Place of birth",
+   "part": null,
+   "type": "select",
+   "candidates": [],
+   "outcome": "mapped",
+   "method": "pdf_twin",
+   "fact": "person.country_of_birth",
+   "transform": "code_list:portal_choices",
+   "person": "form_subject",
+   "from": "IMM 5257 (09-2023) · * Country or Territory",
+   "why": "Same label as the PDF form field \"* Country or Territory\" in IMM 5257 (09-2023)."
+  },
+  {
+   "screen": "Marital status",
+   "screen_order": 2,
+   "input": "maritalStatus",
+   "input_order": 1,
+   "label": "Your current marital status",
+   "group": null,
+   "part": null,
+   "type": "select",
+   "candidates": [],
+   "outcome": "mapped",
+   "method": "pdf_twin",
+   "fact": "person.marital_status",
+   "transform": "code_list:portal_choices",
+   "person": "form_subject",
+   "from": "IMM 5257 (09-2023) · * a) Your current marital status",
+   "why": "Same label as the PDF form field \"* a) Your current marital status\" in IMM 5257 (09-2023)."
+  },
+  {
+   "screen": "Marital status",
+   "screen_order": 2,
+   "input": "unionDate",
+   "input_order": 2,
+   "label": "Date you married or started living together",
+   "group": null,
+   "part": null,
+   "type": "date",
+   "candidates": [],
+   "outcome": "leftover",
+   "method": null,
+   "fact": null,
+   "transform": null,
+   "person": null,
+   "from": null,
+   "why": "No PDF form field, earlier version or alias has this label: drafting (slice 2) or a person maps it."
+  },
+  {
+   "screen": "Language and service",
+   "screen_order": 3,
+   "input": "serviceLanguage",
+   "input_order": 1,
+   "label": "In which language do you want service?",
+   "group": "In which language do you want service?",
+   "part": null,
+   "type": "radio",
+   "candidates": [],
+   "outcome": "leftover",
+   "method": null,
+   "fact": null,
+   "transform": null,
+   "person": null,
+   "from": null,
+   "why": "No PDF form field, earlier version or alias has this label: drafting (slice 2) or a person maps it."
+  },
+  {
+   "screen": "Language and service",
+   "screen_order": 3,
+   "input": "usedPortalBefore",
+   "input_order": 2,
+   "label": "Have you applied through this portal before?",
+   "group": "Have you applied through this portal before?",
+   "part": null,
+   "type": "radio",
+   "candidates": [],
+   "outcome": "leftover",
+   "method": null,
+   "fact": null,
+   "transform": null,
+   "person": null,
+   "from": null,
+   "why": "No PDF form field, earlier version or alias has this label: drafting (slice 2) or a person maps it."
+  }
+ ],
+ "pdf_not_on_portal": [
+  {
+   "caption": "* I want service in",
+   "fact": "case.service_language"
+  },
+  {
+   "caption": "* Visa requested",
+   "fact": "case.visa_type_requested"
+  },
+  {
+   "caption": "Question 2 A Have you ever used any other name such as a nickname, maiden name or alias?",
+   "fact": "person.other_family_name"
+  },
+  {
+   "caption": "Given name(s)",
+   "fact": "person.other_given_names"
+  },
+  {
+   "caption": "* City/Town",
+   "fact": "person.place_of_birth_city"
+  },
+  {
+   "caption": "Citizenship",
+   "fact": "person.citizenship"
+  },
+  {
+   "caption": "*",
+   "fact": "person.current_residence_country"
+  },
+  {
+   "caption": "*",
+   "fact": "person.current_residence_status"
+  },
+  {
+   "caption": "Question 7 C If your immigration status is other, please give details.",
+   "fact": "person.current_residence_status_other"
+  },
+  {
+   "caption": "Question 7 D The start date of your immigration status in your current country of residence in YYYY-MM-DD format",
+   "fact": "person.current_residence_status_from"
+  },
+  {
+   "caption": "Question 7 E The end date of your immigration status in your current country of residence in YYYY-MM-DD format",
+   "fact": "person.current_residence_status_to"
+  },
+  {
+   "caption": "Question 8 B Row 2 Country or Territory . If you have more than one previous country of residence, please give your othe",
+   "fact": "person.previous_residence_country"
+  },
+  {
+   "caption": "Question 8 B Row 2 Status. Your immigration status in your previous country of residence",
+   "fact": "person.previous_residence_status"
+  },
+  {
+   "caption": "Question 8 B Row 2 Other Details. If your immigration status was other, please give details.",
+   "fact": "person.previous_residence_status_other"
+  },
+  {
+   "caption": "Question 8 B Row 2 Status From Date. The start date of your immigration status in your previous country of residence in ",
+   "fact": "person.previous_residence_from"
+  },
+  {
+   "caption": "Question 8 B Row 2 Status To Date. The end date of your immigration status in your previous country of residence in YYYY",
+   "fact": "person.previous_residence_to"
+  },
+  {
+   "caption": "Question 9 A. Is the country or territory from where you are applying the same as your current country or territory of r",
+   "fact": "person.applying_from_country"
+  },
+  {
+   "caption": "Question 9 B Country. If you replied No to question 9 A, please give the country from where you are applying.",
+   "fact": "person.applying_from_status"
+  },
+  {
+   "caption": "Question 9 B Other Details. If your immigration status is other, please give details.",
+   "fact": "person.applying_from_status_other"
+  },
+  {
+   "caption": "Question 9 B. Status From Date. The start date of your immigration status in the country from where you are applying in ",
+   "fact": "person.applying_from_status_from"
+  },
+  {
+   "caption": "Question 9 B Status To Date. The end date of your immigration status in the country from where you are applying in YYYY-",
+   "fact": "person.applying_from_status_to"
+  },
+  {
+   "caption": "Date",
+   "fact": "relationship.start_date"
+  },
+  {
+   "caption": "Question 11 A. Have you previously been married or in a common law relationship?",
+   "fact": "relationship.previously_married_or_common_law"
+  },
+  {
+   "caption": "* Passport number",
+   "fact": "person.passport_number"
+  },
+  {
+   "caption": "* Country or territory of issue",
+   "fact": "person.passport_country_of_issue"
+  },
+  {
+   "caption": "* Issue date",
+   "fact": "person.passport_issue_date"
+  },
+  {
+   "caption": "* Expiry date",
+   "fact": "person.passport_expiry_date"
+  },
+  {
+   "caption": "*a) Native language/Mother Tongue",
+   "fact": "person.native_language"
+  },
+  {
+   "caption": "*b) Are you able to communicate in English and/or French?",
+   "fact": "person.official_language_ability"
+  },
+  {
+   "caption": "c) In which language are you most at ease?",
+   "fact": "person.preferred_official_language"
+  },
+  {
+   "caption": "1d. Have you taken a test form a designated testing agency to assess your proficiency in English or French?",
+   "fact": "person.language_test_taken"
+  },
+  {
+   "caption": "Document number",
+   "fact": "person.national_id_number"
+  },
+  {
+   "caption": "Country or territory of issue",
+   "fact": "person.national_id_country_of_issue"
+  },
+  {
+   "caption": "Issue date",
+   "fact": "person.national_id_issue_date"
+  },
+  {
+   "caption": "Expiry date",
+   "fact": "person.national_id_expiry_date"
+  },
+  {
+   "caption": "Document number",
+   "fact": "person.us_green_card_number"
+  },
+  {
+   "caption": "Expiry date",
+   "fact": "person.us_pr_card_expiry_date"
+  },
+  {
+   "caption": "District",
+   "fact": "person.mailing_address"
+  },
+  {
+   "caption": "District",
+   "fact": "person.residential_address"
+  },
+  {
+   "caption": "Type",
+   "fact": "person.telephone_type"
+  },
+  {
+   "caption": "No.",
+   "fact": "person.telephone_number"
+  },
+  {
+   "caption": "Type",
+   "fact": "person.alternate_telephone_type"
+  },
+  {
+   "caption": "No.",
+   "fact": "person.alternate_telephone_number"
+  },
+  {
+   "caption": "No.",
+   "fact": "person.fax_number"
+  },
+  {
+   "caption": "E-mail address",
+   "fact": "person.email"
+  },
+  {
+   "caption": "* a) Purpose of my visit",
+   "fact": "case.visit_purpose"
+  },
+  {
+   "caption": "b) Other",
+   "fact": "case.visit_purpose_other"
+  },
+  {
+   "caption": "* From",
+   "fact": "case.intended_stay_from"
+  },
+  {
+   "caption": "* To",
+   "fact": "case.intended_stay_to"
+  },
+  {
+   "caption": "* Funds available for my stay (CAD)",
+   "fact": "case.funds_available_cad"
+  },
+  {
+   "caption": "Name",
+   "fact": "case.visit_contact_name"
+  },
+  {
+   "caption": "Relationship to me",
+   "fact": "case.visit_contact_relationship"
+  },
+  {
+   "caption": "Address in Canada",
+   "fact": "case.visit_contact_address_in_canada"
+  },
+  {
+   "caption": "School/Facility name",
+   "fact": "person.education_institution"
+  },
+  {
+   "caption": "MM",
+   "fact": "person.education_from_date"
+  },
+  {
+   "caption": "MM",
+   "fact": "person.education_to_date"
+  },
+  {
+   "caption": "Field of study",
+   "fact": "person.education_field_of_study"
+  },
+  {
+   "caption": "City/Town",
+   "fact": "person.education_city"
+  },
+  {
+   "caption": "Country or Territory",
+   "fact": "person.education_country"
+  },
+  {
+   "caption": "Province/State",
+   "fact": "person.education_province_state"
+  },
+  {
+   "caption": "MM",
+   "fact": "person.employment_from_date"
+  },
+  {
+   "caption": "MM",
+   "fact": "person.employment_to_date"
+  },
+  {
+   "caption": "Previous Activity/Occupation",
+   "fact": "person.occupation_title"
+  },
+  {
+   "caption": "Company/Employer/Facility name",
+   "fact": "person.employment_employer_name"
+  },
+  {
+   "caption": "City/Town",
+   "fact": "person.occupation_city"
+  },
+  {
+   "caption": "Country or Territory",
+   "fact": "person.occupation_country"
+  },
+  {
+   "caption": "Province/State",
+   "fact": "person.occupation_province_state"
+  },
+  {
+   "caption": "Question 1 B Do you have any physical or mental disorder that would require social or health services, other than medica",
+   "fact": "person.disorder_requiring_services"
+  },
+  {
+   "caption": "Question 2 A. Have you ever remained beyond the validity of your status, attended school without authorization or worked",
+   "fact": "person.status_violation_canada"
+  },
+  {
+   "caption": "Question 2 B. Have you ever been refused any kind of visa, admission, or been ordered to leave Canada or any other count",
+   "fact": "person.refused_visa_or_entry"
+  },
+  {
+   "caption": "d) If you answered “yes” to question 2a), 2b), or 2C please provide details.",
+   "fact": "person.immigration_history_details"
+  },
+  {
+   "caption": "Question 2 B. Have you ever been refused any kind of visa, admission, or been ordered to leave Canada or any other count",
+   "fact": "person.previously_applied_to_canada"
+  },
+  {
+   "caption": "Question 3 A. Have you ever committed, been arrested for, been charged with or convicted of any criminal offence in any ",
+   "fact": "person.criminal_history"
+  },
+  {
+   "caption": "b) If you answered “yes” to question 3a) above, please provide details.",
+   "fact": "person.criminal_history_details"
+  },
+  {
+   "caption": "Question 4 A. Did you serve in any military, militia, or civil defence unit or serve in a security organization or polic",
+   "fact": "person.military_service"
+  },
+  {
+   "caption": "b) If you answered yes to question 4a), please provide dates of service and countries or territories where you served.",
+   "fact": "person.military_service_details"
+  },
+  {
+   "caption": "Question 5. Are you, or have you ever been a member or associated with any political party, or other group or organizati",
+   "fact": "person.violent_organisation_association"
+  }
+ ],
+ "counts": {
+  "inputs": 13,
+  "mapped": 9,
+  "same_path": 0,
+  "pdf_twin": 9,
+  "alias": 0,
+  "leftover": 4,
+  "not_a_fact": 0,
+  "ai_calls": 0
+ }
+}
