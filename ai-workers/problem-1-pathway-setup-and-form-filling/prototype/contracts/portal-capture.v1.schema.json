@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://expatready.local/contracts/portal-capture.v1.json",
+  "title": "Portal capture record (P-66): the structure of one portal application's screens, never an answer",
+  "description": "Made from saved blank pages, the spreadsheet template or (F2) the browser extension's capture mode; the same record in every case. There is no place for a value: every object is closed (additionalProperties false), so a record carrying an answer does not validate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract", "portal", "form", "title", "way", "screens"],
+  "properties": {
+    "contract": { "const": "portal-capture/v1" },
+    "portal": { "type": "string", "enum": ["ircc_portal", "apr_portal", "rep_pr_portal", "lmia_online"] },
+    "form": { "type": "string", "pattern": "^[A-Z][A-Z0-9 -]{1,30}$" },
+    "title": { "type": "string", "minLength": 3, "maxLength": 300 },
+    "application_type": { "type": ["string", "null"] },
+    "way": { "type": "string", "enum": ["saved_page", "template", "extension", "screenshots"] },
+    "screens": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 200,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "order", "title", "inputs", "source"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^s[0-9]{2,3}$" },
+          "order": { "type": "integer", "minimum": 1 },
+          "title": { "type": "string", "maxLength": 300 },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["way", "file", "sha256"],
+            "properties": { "way": { "type": "string" }, "file": { "type": "string", "maxLength": 200 }, "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" } }
+          },
+          "inputs": {
+            "type": "array",
+            "maxItems": 500,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "label", "type", "required", "order"],
+              "properties": {
+                "id": { "type": "string", "minLength": 1, "maxLength": 300, "description": "the page's own element id or name, qualified by its screen (id@screen-title) when another screen of the capture uses the same id" },
+                "label": { "type": "string", "maxLength": 1000 },
+                "type": { "type": "string", "enum": ["text", "date", "select", "radio", "checkbox", "textarea", "number", "email", "tel", "file"] },
+                "required": { "type": "boolean" },
+                "order": { "type": "integer", "minimum": 1 },
+                "group": { "type": "string", "maxLength": 1000, "description": "the fieldset legend, for example Date of birth" },
+                "part": { "type": "string", "enum": ["YYYY", "MM", "DD"], "description": "a date split into three form fields" },
+                "help": { "type": "string", "maxLength": 4000 },
+                "max_length": { "type": "integer", "minimum": 1, "maximum": 100000 },
+                "min_length": { "type": "integer", "minimum": 0, "maximum": 100000 },
+                "pattern": { "type": "string", "maxLength": 1000 },
+                "options": {
+                  "type": "array",
+                  "maxItems": 1000,
+                  "items": { "type": "object", "additionalProperties": false, "required": ["code", "label"], "properties": { "code": { "type": "string", "maxLength": 200 }, "label": { "type": "string", "maxLength": 500 } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

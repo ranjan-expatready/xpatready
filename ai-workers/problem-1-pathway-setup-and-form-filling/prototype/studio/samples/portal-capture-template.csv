@@ -1,0 +1,8 @@
+screen_order,screen_title,input_order,input_id,label,type,required,options,help,max_length,pattern,group,part
+# Portal capture template (P-66 way C). One row per input on a blank portal screen; never type an answer. type: text date select radio checkbox textarea number email tel file. options: code=label; code=label. part: YYYY MM or DD for a date split into three form fields (give them the same group). The rows below are Sample examples: replace them.,,,,,,,,,,,,
+1,Personal details,1,familyName,Family name (as shown on your passport),text,yes,,,100,,Full name,
+1,Personal details,2,givenNames,Given name(s),text,no,,Leave blank if you have no given name,100,,Full name,
+1,Personal details,3,dobYear,Year,text,yes,,,4,,Date of birth,YYYY
+1,Personal details,4,dobMonth,Month,select,yes,01=01;02=02;03=03;04=04;05=05;06=06;07=07;08=08;09=09;10=10;11=11;12=12,,,,Date of birth,MM
+1,Personal details,5,dobDay,Day,text,yes,,,2,,Date of birth,DD
+2,Language,1,firstLanguageTest,Which language test did you take?,select,yes,IELTS=IELTS General Training;CELPIP=CELPIP General;TEF=TEF Canada,,,,,

@@ -9,6 +9,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { runTransform } from "../../../p5/transforms.ts";
+import { codeForValue, type ListValue, type OptionMap } from "../../engine/options.ts";
 import { Audit, Db, fail, PROTOTYPE, PY, ROOT, SOLUTION, VAR, type Actor } from "./core.ts";
 import { Studio } from "./studio.ts";
 
@@ -24,13 +25,24 @@ export class Fill {
     const cov = view.coverage.find((c: any) => c.form === b.form && c.person === b.person);
     if (!cov) fail(`${b.form} does not apply to that person in this ${view.mode === "release" ? "release" : "draft"}.`, HttpStatus.NOT_FOUND);
     const snapshot: any = view.mode === "release" ? (await this.db.configRelease.findFirst({ where: { combinationId }, orderBy: { version: "desc" } }))!.snapshot : (await this.studio.config(combinationId, "draft")).snapshot;
-    const map = snapshot.field_maps.find((m: any) => m.form_number === b.form);
+    // F1: the PDF edition; an online version has no file to fill (its answers go on the portal sheet, M3).
+    // A line filed Online is never filled as a PDF, even when the library also has its PDF (review 18).
+    const line = (snapshot.forms as { form_number: string; channel?: string }[]).find((f) => f.form_number === b.form);
+    if (line?.channel === "ONLINE") fail(`${b.form} is filed Online here: its answers go on the portal sheet, not in a PDF.`, HttpStatus.CONFLICT);
+    const map = snapshot.field_maps.find((m: { form_number: string; channel?: string }) => m.form_number === b.form && m.channel !== "ONLINE");
     if (!map?.official_file || !map.inventory_file) fail("This form's official file or box inventory is not recorded; it cannot be filled.");
+    type Entry = { data_path: string; fact?: string | null; option_map?: OptionMap | null };
+    type Def = { id: string; answer_list?: { values: ListValue[] } };
+    const entryOf = new Map<string, Entry>((map.entries as Entry[]).map((e) => [e.data_path, e]));
+    const listOf = new Map<string, ListValue[]>((snapshot.canonical_fields as Def[]).flatMap((f) => (f.answer_list ? [[f.id, f.answer_list.values] as [string, ListValue[]]] : [])));
     const inv = JSON.parse(readFileSync(join(SOLUTION, map.inventory_file), "utf8"));
     const box = new Map<string, any>(inv.fields.filter((x: any) => x.data_path).map((x: any) => [x.data_path, x]));
     const values: Record<string, string> = {};
     const boxes = cov!.boxes.map((r: any) => {
       if (r.coverage !== "confirmed fact") return { ...r, result: "not written", why: r.coverage === "answered on screen" ? "answered on screen, not confirmed" : r.detail };
+      // A form field on an answer list takes its own code from its option map (the team's ENUM map, onMissing REFUSE).
+      const e = entryOf.get(r.box), list = e?.fact ? listOf.get(e.fact) : undefined;
+      if (e?.option_map && list) { const code = codeForValue(r.value, e.option_map, list); if (code === null) return { ...r, result: "by hand", why: `"${r.value}" has no code in this form field's option map` }; values[r.box] = code; return { ...r, result: "written", written: code }; }
       const o = runTransform(r.transform ?? "as_is", r.value, box.get(r.box) ?? {});
       if (o.ok) { values[r.box] = o.value; return { ...r, result: "written", written: o.value }; }
       return { ...r, result: "hand" in o ? "by hand" : "blank", why: o.reason };

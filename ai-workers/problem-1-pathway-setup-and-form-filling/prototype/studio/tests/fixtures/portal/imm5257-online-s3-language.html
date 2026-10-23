@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<!-- Sample · Scaffolding (P-33): forms lane fixture, not a real IRCC screen (see imm5257-online-s1-personal.html). -->
+<html lang="en">
+<head><meta charset="utf-8"><title>Language and service - Application for a visitor visa - IRCC Portal</title></head>
+<body>
+  <main>
+    <h1>Language and service</h1>
+    <form id="application" method="post">
+      <fieldset>
+        <legend>In which language do you want service?</legend>
+        <input type="radio" id="langEn" name="serviceLanguage" value="EN" required><label for="langEn">English</label>
+        <input type="radio" id="langFr" name="serviceLanguage" value="FR"><label for="langFr">French</label>
+      </fieldset>
+      <fieldset>
+        <legend>Have you applied through this portal before?</legend>
+        <label><input type="radio" name="usedPortalBefore" value="Y"> Yes</label>
+        <label><input type="radio" name="usedPortalBefore" value="N"> No</label>
+      </fieldset>
+      <button type="submit">Save and continue</button>
+    </form>
+  </main>
+</body>
+</html>

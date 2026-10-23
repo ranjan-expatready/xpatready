@@ -20,7 +20,7 @@ import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import type { IntakeItem } from "@prisma/client";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { promisify } from "node:util";
 import { manifest } from "../../engine/import.ts";
@@ -38,7 +38,7 @@ export type IntakeResult = {
   /** Set when the file was attached to the combination it was uploaded on. */
   attachmentId?: string; attachmentStatus?: string;
 };
-const KIND_WORD: Record<string, string> = { form: "form", checklist: "document checklist", guide: "guide", unknown: "file" };
+const KIND_WORD: Record<string, string> = { form: "form", checklist: "document checklist", guide: "guide", portal_screen: "saved portal screen", unknown: "file" };
 
 @Injectable()
 export class Intake {
@@ -150,6 +150,14 @@ export class Intake {
       const r: IntakeResult = { file: name, outcome: "held", ...read, message: `Held for source verification: ${read.edition ?? read.code ?? "This form"} is not on the approved source list. It was not added to the library, attached, or sent to AI.` };
       await this.record(actor, workspaceId, combination?.id ?? null, name, stored, hash, file.buffer.length, r, "HELD", "checksum not on approved source manifest");
       await this.audit.log(workspaceId, actor.id, "held", "form", read.code ?? name, `${actor.name} uploaded an unverified form source; held before library, attachment or AI use`, { sha256: hash }, combination?.id);
+      return r;
+    }
+    // F1 (challenge point 1): a saved portal screen is never kept as a guide. It belongs in a portal capture, where a
+    // screen holding an answer is refused and a second person approves the rest (P-66).
+    if (read.kind === "portal_screen") {
+      const r: IntakeResult = { file: name, outcome: "refused", ...read, message: "This is a saved portal screen, not a guide: add it to a portal capture (with its portal), where it is checked for answers and approved by a second person. Nothing was added or attached." };
+      await this.record(actor, workspaceId, combination?.id ?? null, name, "", hash, file.buffer.length, r, "DONE", "saved portal screen: belongs in a portal capture");
+      rmSync(stored, { force: true });
       return r;
     }
     if (read.kind === "guide") {

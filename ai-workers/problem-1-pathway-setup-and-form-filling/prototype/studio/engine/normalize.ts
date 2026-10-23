@@ -4,8 +4,11 @@
 // own: an exact key with a compatible type and meaning is proposed for reuse; anything close but not identical is
 // put to a person (AMBIGUOUS), a type clash is a CONFLICT, and the rest are proposed NEW definitions. A person
 // decides every item; reuse never merges two people's values, because a box keeps its own person.
+// P-65 (F1): a key that was merged into another redirects to it (reuse the surviving field); a box whose label is an
+// alias of one library field (a label seen on another form) is put to a person with that field recommended.
+import { normLabel } from "./twin.ts";
 
-export type LibraryField = { key: string; meaning: string; valueType: string; status: string };
+export type LibraryField = { key: string; meaning: string; valueType: string; status: string; aliases?: string[] };
 export type ProposedField = { id: string; meaning: string; value_type: string };
 export type Entry = { data_path: string; outcome: string; person?: string | null; row?: number | null; fact?: string | null; transform?: string | null; confidence?: string | null; evidence_quote?: string | null; caption?: string | null };
 
@@ -54,8 +57,10 @@ export type Item = {
   evidence: { quotes: string[]; confidence: Record<string, number> }; reason: string; recommendation: { action: "reuse" | "create_new" | "decide"; key: string | null; text: string; transform?: string };
 };
 
-export function normalize(proposed: ProposedField[], entries: Entry[], library: LibraryField[]): Item[] {
+export function normalize(proposed: ProposedField[], entries: Entry[], library: LibraryField[], redirects: Map<string, string> = new Map()): Item[] {
   const lib = new Map(library.map((l) => [l.key, l]));
+  const byAlias = new Map<string, LibraryField[]>();
+  for (const l of library) for (const a of l.aliases ?? []) { const k = normLabel(a); if (k) byAlias.set(k, [...(byAlias.get(k) ?? []), l]); }
   const mapped = entries.filter((e) => e.outcome === "mapped" && e.fact);
   const out: Item[] = [];
   const keys = [...new Set([...proposed.map((p) => p.id), ...mapped.map((e) => e.fact!)])];
@@ -68,7 +73,18 @@ export function normalize(proposed: ProposedField[], entries: Entry[], library: 
     for (const b of boxes) conf[b.confidence ?? "unstated"] = (conf[b.confidence ?? "unstated"] ?? 0) + 1;
     const quotes = [...new Set(boxes.map((b) => b.evidence).filter(Boolean) as string[])].slice(0, 4);
     const base = { proposedKey: key, proposedMeaning: p.meaning, proposedType: p.value_type, persons, boxes, evidence: { quotes, confidence: conf } };
+    const moved = redirects.get(key);
+    if (moved && lib.get(moved)) {
+      out.push({ ...base, outcome: "REUSE", matchedKey: moved, candidates: [], reason: `${key} was merged into ${moved} after a review (P-65); the merged id redirects, so the form fields read ${moved}.`, recommendation: { action: "reuse", key: moved, text: `Reuse ${moved}` } });
+      continue;
+    }
     const exact = lib.get(key);
+    const aliasHits = exact ? [] : [...new Map(boxes.flatMap((b) => byAlias.get(normLabel(b.caption)) ?? []).map((l) => [l.key, l])).values()].filter((l) => similarity(p, l).typeCompatible);
+    if (aliasHits.length === 1) {
+      const l = aliasHits[0];
+      out.push({ ...base, outcome: "AMBIGUOUS", matchedKey: l.key, candidates: [{ key: l.key, meaning: l.meaning, valueType: l.valueType, score: 1, why: "the form field's label is an alias of this field" }], reason: `Not an existing key, but the form field's label is an alias of ${l.key} (a label seen on another form). Probably the same meaning under another name.`, recommendation: { action: "reuse", key: l.key, text: `Use the existing ${l.key}` } });
+      continue;
+    }
     const ranked = library.filter((l) => l.key !== key).map((l) => ({ l, s: similarity(p, l) })).filter((x) => x.s.score >= 0.3).sort((a, b) => b.s.score - a.s.score).slice(0, 3);
     const candidates = ranked.map(({ l, s }) => ({ key: l.key, meaning: l.meaning, valueType: l.valueType, score: s.score,
       why: [`key words ${s.key}`, `meaning words ${s.meaning}`, s.contextDiffers ? `period/context differs (${s.qualifiersProposed.join("/") || "none"} vs ${s.qualifiersLibrary.join("/") || "none"})` : "", s.roleDiffers ? "names a different relation" : "", s.typeCompatible ? "" : `type ${p.value_type} vs ${l.valueType}`].filter(Boolean).join("; ") }));
