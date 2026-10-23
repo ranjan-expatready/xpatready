@@ -9,11 +9,13 @@ current_item: E1-form-acceptance
 current_slice: E1b
 stage: EARLY-LOOK
 owner: Lead
-next_action: Lead: check E1b IMM 1344 (`prototype/evidence-lane/E1/imm1344/STATUS.md`) and send findings F1–F3 to the forms lane; decide whether E1 continues with IMM 0008 → 5257 by the same route (person steps recorded) or waits for a writer fix to F1.
+next_action: Lead: check E1b IMM 0008 (`prototype/evidence-lane/E1/imm0008/STATUS.md`); send F4 (and the F2 scope note) to the forms lane; then IMM 5257 by the same method.
 blocked_by: none
 updated: 2026-10-23
 
 ## Log (last 10 lines)
+- 2026-10-23 · E1b · BUILD → EARLY-LOOK · IMM 0008 (05-2026) in Adobe: "Validation completed successfully" after one person step (Remove the empty dependant block); no signature needed to validate; 10/10 barcodes, 462/462 slots agree, 55/55 written values unchanged, compare exit 0; signatures verify. Finding F4; compare tool generalised (self-test PASS, IMM 1344 report identical).
+- 2026-10-23 · E1b · applied Lead note 2026-10-23: EARLY-LOOK → BUILD for IMM 0008 (same method as IMM 1344).
 - 2026-10-23 · E1b · BUILD → EARLY-LOOK · IMM 1344 in Adobe by computer use: "Validation completed successfully" after two person steps (tick Canada/US; type the Sample signers' names); 5/5 barcodes decoded, 149/149 slots agree with the saved data; 55/56 written values unchanged (postal code gets its space); signatures verify. Findings F1 phone boxes, F2 typed signatures, F3 form formats.
 - 2026-10-23 · Lead: E1b IMM 1344 fill merged to main (ca7fc03d). Founder turned on Computer use for this lane (23 Oct): Adobe Reader by computer use; ask the founder to allow Adobe Reader the first time and let them watch IMM 1344. Fresh session started by the Lead.
 - 2026-10-23 · E1b · BUILD (paused) · IMM 1344: 56 Sample values filled, writer check PASS (56/56, signatures verify, poppler 0); barcode map 5 barcodes / 149 slots, all bound; compare tool generalised, self-test reproduces P1's IMM 1295 counts exactly. Adobe step blocked: no computer use in this session.

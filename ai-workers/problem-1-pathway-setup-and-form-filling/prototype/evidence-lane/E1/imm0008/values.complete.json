@@ -1,0 +1,287 @@
+{
+ "label": "Sample: made-up facts for testing the IMM 0008 (05-2026) form only; never submit. Immigration values are Sample (immigration expert to confirm). Legal: Unconfirmed: no counsel.",
+ "form": "IMM 0008 (05-2026)",
+ "form_file": "imm0008e.pdf",
+ "set": "complete",
+ "household": "Client A (citizen of India, living in New Delhi), principal applicant, sponsored by the Sponsor (spouse, Canadian citizen, Toronto ON; IMM 1344 in ../imm1344); married 15 Mar 2019; intends to live in Toronto ON; no dependants",
+ "not_written": "the sponsor is not a dependant of the principal applicant, so the spouse block (depPrime) and the dependant rows are left empty (Sample: immigration expert to confirm); form-calculated fields (checksum, validated flags, date last validated, full phone number, barcodes) and the consent and typed signature are left to the form and the signer",
+ "values": {
+  "form1[0].Page1[0].genDetails[0].q1[0].Program[0]": "01",
+  "form1[0].Page1[0].genDetails[0].q1[0].Category[0]": "01",
+  "form1[0].Page1[0].genDetails[0].q3[0].NumberOfApps[0]": "1",
+  "form1[0].Page1[0].genDetails[0].q5[0].CorrespondenceLang[0]": "01",
+  "form1[0].Page1[0].genDetails[0].q5[0].InterviewLang[0]": "001",
+  "form1[0].Page1[0].genDetails[0].q5[0].InterpreterRequested[0]": "N",
+  "form1[0].Page1[0].genDetails[0].q6[0].Prov[0]": "06",
+  "form1[0].Page1[0].genDetails[0].q6[0].CityTown[0]": "3812",
+  "form1[0].Page1[0].PersonalDetails[0].q1[0].FamilyName[0]": "EXAMPLE",
+  "form1[0].Page1[0].PersonalDetails[0].q1[0].GivenName[0]": "CLIENTA",
+  "form1[0].Page1[0].PersonalDetails[0].q2[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]": "N",
+  "form1[0].Page1[0].PersonalDetails[0].q3-4-5-6[0].Sex[0].Sex[0]": "Male",
+  "form1[0].Page1[0].PersonalDetails[0].q3-4-5-6[0].heightCM[0]": "175",
+  "form1[0].Page1[0].PersonalDetails[0].q3-4-5-6[0].eyeColor[0].eyeColor[0]": "03",
+  "form1[0].Page1[0].PersonalDetails[0].q7-8[0].DOB[0].DOBYYYY[0]": "1990",
+  "form1[0].Page1[0].PersonalDetails[0].q7-8[0].DOB[0].DOBMM[0]": "04",
+  "form1[0].Page1[0].PersonalDetails[0].q7-8[0].DOB[0].DOBDD[0]": "12",
+  "form1[0].Page1[0].PersonalDetails[0].q7-8[0].PlaceBirthCity[0]": "NEW DELHI",
+  "form1[0].Page1[0].PersonalDetails[0].q7-8[0].PlaceBirthCountry[0]": "205",
+  "form1[0].Page1[0].PersonalDetails[0].q9[0].Citizenship1[0]": "205",
+  "form1[0].Page1[0].PersonalDetails[0].q10[0].CurrentCOR[0].Row2[0].Country[0]": "205",
+  "form1[0].Page1[0].PersonalDetails[0].q10[0].CurrentCOR[0].Row2[0].Status[0]": "01",
+  "form1[0].Page1[0].PersonalDetails[0].q13[0].PCRIndicator[0]": "N",
+  "form1[0].Page1[0].PersonalDetails[0].q14[0].MaritalStatus[0].MaritalStatus[0]": "01",
+  "form1[0].Page1[0].PersonalDetails[0].q14[0].MaritalStatus[0].DateOfMarriage[0]": "2019-03-15",
+  "form1[0].Page1[0].PersonalDetails[0].q14[0].MaritalStatus[0].FamilyName[0]": "EXAMPLE",
+  "form1[0].Page1[0].PersonalDetails[0].q14[0].MaritalStatus[0].GivenName[0]": "SPONSOR",
+  "form1[0].Page1[0].PersonalDetails[0].q15[0].PrevMarriedIndicator[0]": "N",
+  "form1[0].Page1[0].contactInformation[0].q1[0].AddressRow1[0].StreetNum[0].StreetNum[0]": "12",
+  "form1[0].Page1[0].contactInformation[0].q1[0].AddressRow1[0].Streetname[0].Streetname[0]": "EXAMPLE ROAD",
+  "form1[0].Page1[0].contactInformation[0].q1[0].AddressRow2[0].CityTown[0].CityTown[0]": "NEW DELHI",
+  "form1[0].Page1[0].contactInformation[0].q1[0].AddressRow2[0].Country[0].Country[0]": "205",
+  "form1[0].Page1[0].contactInformation[0].q1[0].AddressRow2[0].PostalCode[0].PostalCode[0]": "110001",
+  "form1[0].Page1[0].contactInformation[0].q2[0].SameAsMailingIndicator[0]": "Y",
+  "form1[0].Page1[0].contactInformation[0].q3-4[0].Phone[0].Type[0]": "02",
+  "form1[0].Page1[0].contactInformation[0].q3-4[0].Phone[0].Other[0]": "1",
+  "form1[0].Page1[0].contactInformation[0].q3-4[0].Phone[0].NumberCountry[0]": "91",
+  "form1[0].Page1[0].contactInformation[0].q3-4[0].Phone[0].IntlNumber[0].IntlNumber[0]": "9800000000",
+  "form1[0].Page1[0].contactInformation[0].q5-6[0].Email[0]": "client.a@example.com",
+  "form1[0].Page1[0].passport[0].Passport[0].passportValidInd[0]": "Y",
+  "form1[0].Page1[0].passport[0].Passport[0].PassportNum[0].PassportNum[0]": "Z1234567",
+  "form1[0].Page1[0].passport[0].Passport[0].CountryofIssue[0].CountryofIssue[0]": "205",
+  "form1[0].Page1[0].passport[0].Passport[0].IssueDate[0].IssueDate[0]": "2020-01-15",
+  "form1[0].Page1[0].passport[0].Passport[0].ExpiryDate[0]": "2030-01-14",
+  "form1[0].Page1[0].passport[0].Passport[0].TaiwanPIN[0]": "N",
+  "form1[0].Page1[0].passport[0].Passport[0].IsraelPassportIndicator[0]": "N",
+  "form1[0].Page1[0].natID[0].q1[0].natIDIndicator[0]": "N",
+  "form1[0].Page1[0].uslpr[0].q1[0].uslprIndicator[0]": "N",
+  "form1[0].Page1[0].educationOccupation[0].EduOccupation[0].Education[0].levelEdu[0].levelEdu[0]": "05",
+  "form1[0].Page1[0].educationOccupation[0].EduOccupation[0].yearsOfEdu[0]": "16",
+  "form1[0].Page1[0].educationOccupation[0].EduOccupation[0].currentOccupation[0]": "SOFTWARE DEVELOPER",
+  "form1[0].Page1[0].educationOccupation[0].EduOccupation[0].intendedOccupation[0]": "SOFTWARE DEVELOPER",
+  "form1[0].Page1[0].languageDetails[0].Languages[0].languages[0].nativeLang[0].nativeLang[0]": "321",
+  "form1[0].Page1[0].languageDetails[0].Languages[0].languages[0].communicateLang[0].communicateLang[0]": "English",
+  "form1[0].Page1[0].languageDetails[0].Languages[0].langTest[0].LangTestIndicator[0]": "N"
+ },
+ "facts": {
+  "form1[0].Page1[0].genDetails[0].q1[0].Program[0]": {
+   "fact": "case.program (Family)",
+   "person": "case"
+  },
+  "form1[0].Page1[0].genDetails[0].q1[0].Category[0]": {
+   "fact": "case.category (Spouse; LOV ApplyingCategoryList.Family) = Spouse",
+   "person": "case"
+  },
+  "form1[0].Page1[0].genDetails[0].q3[0].NumberOfApps[0]": {
+   "fact": "case.family_members_applying (Client A only)",
+   "person": "case"
+  },
+  "form1[0].Page1[0].genDetails[0].q5[0].CorrespondenceLang[0]": {
+   "fact": "case.correspondence_language (English)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].genDetails[0].q5[0].InterviewLang[0]": {
+   "fact": "case.interview_language (English)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].genDetails[0].q5[0].InterpreterRequested[0]": {
+   "fact": "case.interpreter_requested",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].genDetails[0].q6[0].Prov[0]": {
+   "fact": "case.intended_province (ON)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].genDetails[0].q6[0].CityTown[0]": {
+   "fact": "case.intended_city (Toronto; LOV CityList.ON) = Toronto",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q1[0].FamilyName[0]": {
+   "fact": "person.family_name",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q1[0].GivenName[0]": {
+   "fact": "person.given_names",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q2[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]": {
+   "fact": "person.used_other_names",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q3-4-5-6[0].Sex[0].Sex[0]": {
+   "fact": "person.sex",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q3-4-5-6[0].heightCM[0]": {
+   "fact": "person.height_cm",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q3-4-5-6[0].eyeColor[0].eyeColor[0]": {
+   "fact": "person.eye_colour (Brown)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q7-8[0].DOB[0].DOBYYYY[0]": {
+   "fact": "person.date_of_birth (year)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q7-8[0].DOB[0].DOBMM[0]": {
+   "fact": "person.date_of_birth (month)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q7-8[0].DOB[0].DOBDD[0]": {
+   "fact": "person.date_of_birth (day)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q7-8[0].PlaceBirthCity[0]": {
+   "fact": "person.place_of_birth_city",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q7-8[0].PlaceBirthCountry[0]": {
+   "fact": "person.place_of_birth_country (India)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q9[0].Citizenship1[0]": {
+   "fact": "person.citizenship (India)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q10[0].CurrentCOR[0].Row2[0].Country[0]": {
+   "fact": "person.country_of_residence (India)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q10[0].CurrentCOR[0].Row2[0].Status[0]": {
+   "fact": "person.residence_status (Citizen)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q13[0].PCRIndicator[0]": {
+   "fact": "person.lived_elsewhere_last_5_years",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q14[0].MaritalStatus[0].MaritalStatus[0]": {
+   "fact": "person.marital_status (Married)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q14[0].MaritalStatus[0].DateOfMarriage[0]": {
+   "fact": "relationship.date_of_marriage",
+   "person": "sponsor+client-a"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q14[0].MaritalStatus[0].FamilyName[0]": {
+   "fact": "spouse.family_name",
+   "person": "sponsor"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q14[0].MaritalStatus[0].GivenName[0]": {
+   "fact": "spouse.given_names",
+   "person": "sponsor"
+  },
+  "form1[0].Page1[0].PersonalDetails[0].q15[0].PrevMarriedIndicator[0]": {
+   "fact": "person.previously_married",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].contactInformation[0].q1[0].AddressRow1[0].StreetNum[0].StreetNum[0]": {
+   "fact": "address.mailing.street_number",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].contactInformation[0].q1[0].AddressRow1[0].Streetname[0].Streetname[0]": {
+   "fact": "address.mailing.street_name",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].contactInformation[0].q1[0].AddressRow2[0].CityTown[0].CityTown[0]": {
+   "fact": "address.mailing.city",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].contactInformation[0].q1[0].AddressRow2[0].Country[0].Country[0]": {
+   "fact": "address.mailing.country (India)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].contactInformation[0].q1[0].AddressRow2[0].PostalCode[0].PostalCode[0]": {
+   "fact": "address.mailing.postal_code",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].contactInformation[0].q2[0].SameAsMailingIndicator[0]": {
+   "fact": "address.residential_same_as_mailing",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].contactInformation[0].q3-4[0].Phone[0].Type[0]": {
+   "fact": "phone.type (Cellular)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].contactInformation[0].q3-4[0].Phone[0].Other[0]": {
+   "fact": "phone.format (Other: the international box, shown by default)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].contactInformation[0].q3-4[0].Phone[0].NumberCountry[0]": {
+   "fact": "phone.country_code (India)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].contactInformation[0].q3-4[0].Phone[0].IntlNumber[0].IntlNumber[0]": {
+   "fact": "phone.number",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].contactInformation[0].q5-6[0].Email[0]": {
+   "fact": "person.email",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].passport[0].Passport[0].passportValidInd[0]": {
+   "fact": "passport.has_valid",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].passport[0].Passport[0].PassportNum[0].PassportNum[0]": {
+   "fact": "passport.number",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].passport[0].Passport[0].CountryofIssue[0].CountryofIssue[0]": {
+   "fact": "passport.country_of_issue (IND)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].passport[0].Passport[0].IssueDate[0].IssueDate[0]": {
+   "fact": "passport.issue_date",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].passport[0].Passport[0].ExpiryDate[0]": {
+   "fact": "passport.expiry_date",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].passport[0].Passport[0].TaiwanPIN[0]": {
+   "fact": "passport.taiwan_with_personal_id",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].passport[0].Passport[0].IsraelPassportIndicator[0]": {
+   "fact": "passport.israeli_national_passport",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].natID[0].q1[0].natIDIndicator[0]": {
+   "fact": "national_id.has",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].uslpr[0].q1[0].uslprIndicator[0]": {
+   "fact": "us_permanent_resident",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].educationOccupation[0].EduOccupation[0].Education[0].levelEdu[0].levelEdu[0]": {
+   "fact": "education.highest_level (Bachelor's)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].educationOccupation[0].EduOccupation[0].yearsOfEdu[0]": {
+   "fact": "education.years_total",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].educationOccupation[0].EduOccupation[0].currentOccupation[0]": {
+   "fact": "occupation.current",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].educationOccupation[0].EduOccupation[0].intendedOccupation[0]": {
+   "fact": "occupation.intended",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].languageDetails[0].Languages[0].languages[0].nativeLang[0].nativeLang[0]": {
+   "fact": "language.native (Hindi)",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].languageDetails[0].Languages[0].languages[0].communicateLang[0].communicateLang[0]": {
+   "fact": "language.can_communicate_in",
+   "person": "client-a"
+  },
+  "form1[0].Page1[0].languageDetails[0].Languages[0].langTest[0].LangTestIndicator[0]": {
+   "fact": "language.test_taken",
+   "person": "client-a"
+  }
+ }
+}
