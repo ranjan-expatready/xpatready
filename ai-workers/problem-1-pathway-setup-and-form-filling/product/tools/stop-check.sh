@@ -5,8 +5,11 @@ input=$(cat); [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false' 2>/
 PH=ai-workers/problem-1-pathway-setup-and-form-filling/product; APP=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
 reasons=""
 LANE=$(bash "$PH/tools/lane.sh" whoami 2>/dev/null); case "$LANE" in screens|forms|evidence) SF="$PH/lanes/$LANE.md";; *) SF="$PH/STATE.md";; esac
-changed=$(find "$PH" "$APP/api" "$APP/web/src" "$APP/engine" "$APP/prisma" "$APP/tests" -type f -newer "$SF" ! -name ".DS_Store" ! -path "$SF" ! -path "$PH/history/*" 2>/dev/null | head -5)
-[ -n "$changed" ] && reasons="Files changed after $SF:
+# What changed is asked from git (file times are meaningless in a fresh lane copy).
+status=$(git status --porcelain -- "$PH" "$APP" 2>/dev/null | cut -c4- | tr -d '"')
+changed=$(printf '%s\n' "$status" | grep -v -e "^$SF\$" -e "^$PH/history/" | grep -v '^$' | head -5)
+printf '%s\n' "$status" | grep -qx "$SF" && changed=""
+[ -n "$changed" ] && reasons="Files changed but $SF not updated:
 $changed
 - Update $SF (stage, next action, one log line) and end with the 'Paste to Lead' block.
 "
