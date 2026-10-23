@@ -90,6 +90,21 @@ const PLACES: Place[] = [
   { key: "person.occupation_province_state", section: "employment_history", repeats: "per_row", q: "Province or territory, if in Canada" },
 ];
 
+/** Rules as data on the placements (review Major 4): a detail is required only after "yes"; a fact only some people have
+ *  (another name, a national ID, a US card, a second phone, a fax, a Canadian province) is optional, and its companions
+ *  are required once it is answered. Sample until the immigration expert confirms each. */
+type Rule = { key: string; effect: "REQUIRE" | "OPTIONAL"; when: "always" | { yes: string[] } | { answered: string }; plain: string };
+const RULES: Rule[] = [
+  { key: "person.criminal_history_details", effect: "REQUIRE", when: { yes: ["person.criminal_history"] }, plain: "required when the person answered yes to the criminal-history question" },
+  { key: "person.military_service_details", effect: "REQUIRE", when: { yes: ["person.military_service"] }, plain: "required when the person served in the military or police" },
+  { key: "person.immigration_history_details", effect: "REQUIRE", when: { yes: ["person.refused_visa_or_entry", "person.status_violation_canada", "person.previously_applied_to_canada"] }, plain: "required when the person was refused, overstayed or applied before" },
+  ...["person.other_family_name", "person.other_given_names", "person.uci", "person.national_id_number", "person.us_green_card_number", "person.alternate_telephone_number", "person.fax_number",
+    "person.applying_from_status", "person.applying_from_status_from", "person.applying_from_status_to", "person.current_residence_status_to",
+    "person.education_province_state", "person.occupation_province_state", "person.previous_residence_status_other"].map((key): Rule => ({ key, effect: "OPTIONAL", when: "always", plain: "optional: only some people have it" })),
+  ...["person.national_id_country_of_issue", "person.national_id_issue_date", "person.national_id_expiry_date"].map((key): Rule => ({ key, effect: "REQUIRE", when: { answered: "person.national_id_number" }, plain: "required when a national identity document number is given" })),
+  { key: "person.us_pr_card_expiry_date", effect: "REQUIRE", when: { answered: "person.us_green_card_number" }, plain: "required when a US permanent resident card number is given" },
+];
+
 const slugValue = (label: string, taken: Set<string>) => {
   let k = label.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
   if (!/^[a-z]/.test(k)) k = `v_${k}`;
@@ -186,6 +201,20 @@ async function main() {
     if (x.status < 300) placed++; else ok(`4.5 placement ${p.key}`, false, x.body);
   }
   ok("4.5 every fact IMM 5257 reads that nobody was asked for now has a question", placed === PLACES.length, { placed });
+  // 4.5c rules on the placements (the library placement is kept; only its condition changes)
+  let ruled = 0;
+  for (const rule of RULES) {
+    const [section, repeats, tier, collected, question, help] = sql(`select section_key, repeats, tier, collected_from, coalesce(question_text,''), coalesce(help_text,'') from section_question where canonical_field_key='${rule.key}' order by version desc limit 1`).split("|");
+    if (!section) { ok(`4.5 rule on ${rule.key}: the field has a placement`, false); continue; }
+    const subjectKind = "EACH_APPLICANT";
+    // "Optional" is the effect with no condition (a condition on the question itself would be a loop, which release refuses).
+    const condition = rule.when === "always" ? undefined
+      : "yes" in rule.when ? (rule.when.yes.length === 1 ? { subjectKind, op: "eq", field: rule.when.yes[0], value: true } : { subjectKind, op: "or", args: rule.when.yes.map((field) => ({ op: "eq", field, value: true })) })
+      : { subjectKind, op: "exists", field: rule.when.answered };
+    const x = await call("POST", `/library/fields/${rule.key}/placement`, { sectionKey: section, collectedFrom: collected, repeats, tier, questionText: question || undefined, helpText: help || undefined, condition, conditionEffect: rule.effect, conditionPlain: rule.plain }, AUTHOR);
+    if (x.status < 300) ruled++; else ok(`4.5 rule on ${rule.key}`, false, x.body);
+  }
+  ok("4.5 rules as data: details required only after yes, optional facts optional", ruled === RULES.length, { ruled });
   // Sections in the library's display order, so the questionnaire starts with personal details.
   const selections = sql("select s.section_key from logical_section s where s.section_key in (select section_key from section_question) group by s.section_key order by min(s.display_order)").split("\n").filter(Boolean);
   const cfg = (await call("GET", `/combinations/${vv}/config`)).body.snapshot;

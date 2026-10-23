@@ -66,6 +66,8 @@ async function main() {
   // ── RT-4 asked once however many forms and boxes read the fact
   const agent = async () => (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, OFFICER)).body;
   const qs = (v: { sections: { questions: Q[] }[] }) => v.sections.flatMap((s) => s.questions);
+  /** The ids of the answers the officer sees in one person's section (what "Confirm section" vouches for). */
+  const seenIn = async (subject: string, section: string) => (await agent()).sections.filter((x: { subjectId: string; section: string }) => x.subjectId === subject && x.section === section).flatMap((x: { questions: Q[] }) => x.questions).flatMap((q: Q) => (q.group ? q.rows.map((r) => r.answer?.id) : [q.answer?.id])).filter(Boolean) as string[];
   let v = await agent();
   const keys = qs(v).map((q) => `${q.subjectId}|${q.fact}`);
   ok("RT-4 fail-guard: no person is asked the same fact twice", new Set(keys).size === keys.length, keys.length);
@@ -150,9 +152,15 @@ async function main() {
   await check(principal, "person.passport_number", "SAMPLE-P-1234567", OFFICER);
   a = await conf(principal, "person.passport_number");
   const waited = a?.confirmed === false;
-  r = await call("POST", `/runtime/cases/${caseId}/sections/travel_document/confirm`, { subjectId: principal }, CLIENT);
+  const looked = await seenIn(principal, "travel_document");
+  r = await call("POST", `/runtime/cases/${caseId}/sections/travel_document/confirm`, { subjectId: principal, seen: looked }, CLIENT);
   const clientConfirm = r.status;
+  await check(principal, "person.passport_number", "SAMPLE-P-7654321", OFFICER); // changed after the officer looked
+  r = await call("POST", `/runtime/cases/${caseId}/sections/travel_document/confirm`, { subjectId: principal, seen: looked }, OFFICER);
+  ok("RT-10 fail (review Must 2): confirming a section whose answer changed after the officer looked is refused (409) and names the fact; nothing is verified", r.status === 409 && r.body?.changed?.includes("person.passport_number") && sql(`select count(*) from client_canonical_answer where subject_id='${principal}' and status='VERIFIED'`) === "0", r.body);
   r = await call("POST", `/runtime/cases/${caseId}/sections/travel_document/confirm`, { subjectId: principal }, OFFICER);
+  ok("RT-10 fail: a confirm that does not say which answers were reviewed is refused (400)", r.status === 400 && r.body?.errors?.[0]?.field === "seen", r.body?.errors);
+  r = await call("POST", `/runtime/cases/${caseId}/sections/travel_document/confirm`, { subjectId: principal, seen: await seenIn(principal, "travel_document") }, OFFICER);
   a = await conf(principal, "person.passport_number");
   ok("RT-10 pass: the officer's \"Confirm section\" confirms the passport number (VERIFIED, history kept); the client cannot (403)", waited && clientConfirm === 403 && r.status === 201 && r.body.confirmed >= 1 && a?.confirmed === true && a.status === "VERIFIED" && Array.isArray(r.body.missing), { waited, clientConfirm, confirmed: r.body?.confirmed, missing: r.body?.missing?.length });
 
@@ -173,7 +181,7 @@ async function main() {
   ok("RT-12 fail: configuration people reach no case (403)", ra.status === 403 && rp.status === 403);
   r = await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: "Sample Child X" }, CLIENT);
   ok("RT-12 fail: only the officer adds people (403)", r.status === 403);
-  ok("RT-12 pass: the officer lists the workspace's cases; a client cannot list them", (await call("GET", "/runtime/cases", undefined, OFFICER)).body.some((c: { id: string }) => c.id === caseId) && (await call("GET", "/runtime/cases", undefined, CLIENT)).status === 403);
+  ok("RT-12 pass: the officer lists the workspace's cases; a client cannot list them", (await call("GET", "/runtime/cases?take=100", undefined, OFFICER)).body.cases.some((c: { id: string }) => c.id === caseId) && (await call("GET", "/runtime/cases", undefined, CLIENT)).status === 403);
 
   // ── RT-2 the pin is frozen: a later release does not change an open case; a new case gets the new release
   const oldLabel = qs(await agent()).find((q) => q.fact === "case.visit_purpose")!.label;
@@ -189,12 +197,68 @@ async function main() {
   const newLabel = qs((await call("GET", `/runtime/cases/${newer.id}/questionnaire?mode=agent`, undefined, OFFICER)).body).find((q) => q.fact === "case.visit_purpose")!.label;
   ok("RT-2 pass and fail: after a newer release the open case keeps its release and wording; a new case gets the newer one", !!vp && rel.status === 201 && caseNow.pin.release_version === Number(latest[0]) && labelNow === oldLabel && newer.pin.release_version === Number(latest[0]) + 1 && newLabel.includes(run), { old: caseNow.pin.release_version, new: newer.pin?.release_version, labelNow, newLabel });
 
+  // ── R1a FIX: review and break-report findings, each with a passing and a failing case
+  r = await call("GET", "/activity", undefined, CLIENT); const r2 = await call("GET", "/activity", undefined, null);
+  ok("FIX Must 1 fail: a client or an unknown caller cannot read the activity feed (403, 401)", r.status === 403 && r2.status === 401, [r.status, r2.status]);
+  ok("FIX Must 1 pass: the officer and configuration people read it", (await call("GET", "/activity", undefined, OFFICER)).status === 200 && (await call("GET", "/activity", undefined, AUTHOR)).status === 200);
+  v = await agent();
+  const asked = qs(v);
+  ok("FIX Major 3 pass: every question of the case fills a form box or decides something (P-62); questions no form reads are not asked", asked.every((q) => q.fills.length > 0 || (q as unknown as { decides?: unknown[] }).decides?.length) && v.summary.not_asked > 0, { asked: asked.length, not_asked: v.summary.not_asked });
+  ok("FIX Major 3 fail: the duplicate and representative questions are gone (email_address, phone_number, mailing-address parts, representative licence)", !asked.some((q) => ["person.email_address", "person.phone_number", "person.mailing_address_city", "representative.membership_id", "person.previous_marriage_or_common_law"].includes(q.fact)));
+  r = await put(principal, "representative.membership_id", "X-1", null, CLIENT);
+  ok("FIX B2 fail: the client cannot answer the representative's own facts (403 or not in the release's questions)", r.status === 403 || r.status === 404, r.status);
+  const detailsReq = async (yes: boolean) => { await check(principal, "person.criminal_history", yes); return qs(await agent()).find((q) => q.subjectId === principal && q.fact === "person.criminal_history_details")!.required; };
+  ok("FIX Major 4 pass and fail: criminal-history details are optional after no and required after yes (release rule)", (await detailsReq(false)) === false && (await detailsReq(true)) === true);
+  const nid = qs(await agent()).filter((q) => q.subjectId === principal && q.fact.startsWith("person.national_id"));
+  ok("FIX Major 4 pass: a national ID is optional, and its dates and country are required only once a number is given", nid.length === 4 && nid.every((q) => q.required === false));
+  r = await check(theCase, "case.visa_type_requested", "I want a golden visa");
+  const golden = r.problems.length > 0;
+  r = await check(theCase, "case.visa_type_requested", "VisitorVisa");
+  ok("FIX Major 5 pass and fail: a choice without an answer list takes only the codes its form lists", golden && r.problems.length === 0);
+  r = await put(principal, "person.email", "x".repeat(5000), (qs(await agent()).find((q) => q.subjectId === principal && q.fact === "person.email")!.answer?.id) ?? null, CLIENT);
+  const big = r.status;
+  let deep: unknown = "x"; for (let i = 0; i < 6; i++) deep = { d: deep };
+  const rd = await put(principal, "person.mailing_address", deep, (qs(await agent()).find((q) => q.subjectId === principal && q.fact === "person.mailing_address")!.answer?.id) ?? null, CLIENT);
+  const rn = await put(principal, "person.email", "a\u0000b@example.com", null, CLIENT);
+  ok("FIX Major 6 / B3 B6 B7 fail: an answer over 4,000 characters, nested over 3 levels, or holding a NUL character is refused (400), not stored", big === 400 && rd.status === 400 && rn.status === 400, [big, rd.status, rn.status]);
+  r = await call("PUT", `/runtime/cases/${caseId}/answers/${principal}/bad%00key`, { value: "x", expectedId: null }, CLIENT);
+  ok("FIX B6 fail: a NUL character in a question key is a 404, not a server error", r.status === 404, r.status);
+  const k2 = `r1a-key-${run}`;
+  const same = await Promise.all(Array.from({ length: 6 }, () => call("POST", "/runtime/cases", { combinationId: vv, reference: `R1A-K-${run}`, clientActor: CLIENT, principal: { displayName: "Sample Applicant K" }, idempotencyKey: k2 }, OFFICER)));
+  ok("FIX B5 pass: six simultaneous creates with one key all answer with the same case", same.every((x) => x.status < 300 && x.body.id === same[0].body.id) && sql(`select count(*) from runtime_case where idempotency_key='${k2}'`) === "1", same.map((x) => x.status));
+  r = await call("POST", "/runtime/cases", { combinationId: vv, reference: `R1A-K2-${run}`, clientActor: CLIENT_B, principal: { displayName: "Sample Applicant Z" }, idempotencyKey: k2 }, OFFICER);
+  ok("FIX B1 fail: reusing an idempotency key for a different request is refused (409), never answered with another case", r.status === 409, r.body?.detail);
+  r = await call("POST", "/runtime/cases", { combinationId: vv, reference: `R1A-K-${run}`, clientActor: CLIENT, principal: { displayName: "Sample Applicant K" } }, OFFICER);
+  ok("FIX B16 fail: a second case with the same reference is refused (409)", r.status === 409, r.body?.detail);
+  r = await call("POST", "/runtime/cases", { combinationId: vv, reference: `R1A-U-${run}`, clientActor: "nobody", principal: { displayName: "Sample Applicant U" } }, OFFICER);
+  ok("FIX B13 fail: an unknown client login is a 400 on that field, not a 401", r.status === 400 && r.body?.errors?.[0]?.field === "clientActor", r.body);
+  const fresh = (await call("POST", "/runtime/cases", { combinationId: vv, reference: `R1A-C-${run}`, clientActor: CLIENT, principal: { displayName: "Sample Applicant C" } }, OFFICER)).body.id;
+  const adds = await Promise.all(Array.from({ length: 3 }, (_, i) => call("POST", `/runtime/cases/${fresh}/people`, { role: "child", displayName: `Sample Child C${i}` }, OFFICER)));
+  ok("FIX minor (people race) pass: three lawful simultaneous child adds all succeed with distinct places", adds.every((x) => x.status === 201) && sql(`select count(distinct "order") from case_participant where case_id='${fresh}' and role='child'`) === "3", adds.map((x) => x.status));
+  const freshPrincipal = sql(`select subject_id from case_participant where case_id='${fresh}' and role='principal'`);
+  const radds = await Promise.all(Array.from({ length: 10 }, () => call("POST", `/runtime/cases/${fresh}/groups/${freshPrincipal}/rows`, { group: "employment_history" }, CLIENT)));
+  ok("FIX B10 pass: ten simultaneous row adds get ten distinct places", radds.every((x) => x.status === 201) && sql(`select count(distinct "order") from client_fact_record where subject_id='${freshPrincipal}' and superseded_by_id is null`) === "10", radds.map((x) => x.status));
+  const freshCase = sql(`select subject_id from case_participant where case_id='${fresh}' and role='case'`);
+  const rg1 = await call("POST", `/runtime/cases/${fresh}/groups/${freshPrincipal}/rows`, { group: "your_visit" }, CLIENT), rg2 = await call("POST", `/runtime/cases/${fresh}/groups/${freshCase}/rows`, { group: "employment_history" }, CLIENT);
+  ok("FIX B12 fail: an application-level group cannot get rows on a person, nor a person's group on the application (422)", rg1.status === 422 && rg2.status === 422, [rg1.status, rg2.status]);
+  const rowK = radds[0].body.row;
+  const [del, ansr] = await Promise.all([call("DELETE", `/runtime/cases/${fresh}/groups/${freshPrincipal}/rows/${rowK}`, undefined, CLIENT), call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.employment_employer_name`, { value: "Sample Employer R", expectedId: null, row: rowK }, CLIENT)]);
+  const lost = ansr.status === 200 && sql(`select count(*) from client_fact_record where row_key='${rowK}' and tombstone`) === "1" && sql(`select count(*) from client_canonical_answer where row_key='${rowK}'`) === "0";
+  ok("FIX B11 fail-guard: removing a row while answering into it never reports a saved answer that is lost", del.status === 200 && !lost, [del.status, ansr.status]);
+  const dbRefuses = (q: string) => { try { sql(q); return false; } catch { return true; } };
+  const pinId = sql(`select id from pack_work_pin where case_id='${caseId}'`), relId = sql(`select config_release_id from pack_work_pin where case_id='${caseId}'`);
+  ok("FIX B4 fail (database): a case's pin cannot be changed, and its release or combination cannot be deleted", dbRefuses(`update pack_work_pin set content_hash='x' where id='${pinId}'`) && dbRefuses(`delete from config_release where id='${relId}'`) && dbRefuses(`delete from combination where id='${vv}'`));
+  ok("FIX B4 fail (database): a second pin for the same case and combination is refused", dbRefuses(`insert into pack_work_pin (id, workspace_id, case_id, combination_id, party_id, config_release_id, content_hash, revision, actor_id) select gen_random_uuid(), workspace_id, case_id, combination_id, party_id, config_release_id, content_hash, 2, actor_id from pack_work_pin where id='${pinId}'`));
+  const ansId = sql(`select id from client_canonical_answer where subject_id='${principal}' and superseded_by_id is null limit 1`);
+  ok("FIX B14 fail (database): an answer cannot be changed in place, supersede itself, or name another person's party; a participant's role is checked", dbRefuses(`update client_canonical_answer set value_json='"x"' where id='${ansId}'`) && dbRefuses(`update client_canonical_answer set superseded_by_id=id where id='${ansId}'`) && dbRefuses(`insert into client_canonical_answer (id, workspace_id, party_id, subject_id, canonical_field_id, canonical_field_key, value_json, status, source_json) select gen_random_uuid(), workspace_id, gen_random_uuid(), subject_id, canonical_field_id, 'person.x', value_json, status, source_json from client_canonical_answer where id='${ansId}'`) && dbRefuses(`update case_participant set role='owner' where case_id='${caseId}' and role='child'`));
+  ok("FIX B15 pass: the reset preview lists cases, people and case answers", (await call("GET", "/demo/status", undefined, AUTHOR)).body?.scope?.rows?.Cases > 0 || JSON.stringify((await call("GET", "/demo/status", undefined, AUTHOR)).body).includes("Cases"));
+
   // ── RT-17 audit and logs never hold answer values
   const audit = sql("select coalesce(string_agg(summary || ' ' || coalesce(detail::text, ''), ' '), '') from audit_event where entity in ('case', 'case fact', 'person', 'row', 'section')");
   const log = readFileSync(LOG, "utf8");
   const secrets = ["SAMPLE-P-1234567", "Sample Employer 3", "client.a@example.com", "Sample Road", "Sample Spouse A", "1990-04-13"];
   ok("RT-17 pass: answers are recorded in the audit trail (who, what, when)", /answered person.passport_number/.test(audit) && /confirmed \d+ answer/.test(audit));
-  ok("RT-17 fail-guard: no answer value or name appears in the audit trail or the server log", secrets.every((x) => !audit.includes(x) && !log.includes(x)), secrets.filter((x) => audit.includes(x) || log.includes(x)));
+  ok("RT-17 fail-guard: no answer value, name or typed reference appears in the audit trail or the server log (errors only; the bad requests above leave none)", !audit.includes(`R1A-${run}`) && secrets.every((x) => !audit.includes(x) && !log.includes(x)), secrets.filter((x) => audit.includes(x) || log.includes(x)));
 
   // ── S-7 reset (last: it empties the copy): cases, people and answers go with the disposable workspace
   if (process.argv.includes("--reset")) {

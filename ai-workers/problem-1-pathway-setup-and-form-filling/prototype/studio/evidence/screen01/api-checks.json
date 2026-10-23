@@ -1,12 +1,12 @@
 {
- "at": "2026-10-23T12:32:54.440Z",
+ "at": "2026-10-23T13:05:03.250Z",
  "pass": 94,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 35.265
+   "detail": 22.953
   },
   {
    "name": "BR-1 pass: Individual shows only Individual programs; Corporate only Corporate",
@@ -441,9 +441,9 @@
    "ok": true,
    "detail": [
     "Already waiting for a person: checksum n",
-    "Held for source verification: IMM 1295 (",
     "Already waiting for a person: checksum n",
-    "Already waiting for a person: checksum n"
+    "Already waiting for a person: checksum n",
+    "Held for source verification: IMM 1295 ("
    ]
   },
   {
@@ -761,7 +761,7 @@
   {
    "name": "performance: a filtered catalogue answers in under 200 ms with the sample data",
    "ok": true,
-   "detail": "16 ms"
+   "detail": "42 ms"
   }
  ]
 }

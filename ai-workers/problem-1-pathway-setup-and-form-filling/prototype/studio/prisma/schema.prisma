@@ -902,12 +902,16 @@ model Case {
   createdBy      String   @map("created_by")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
   idempotencyKey String?  @map("idempotency_key")
+  /// sha256 of the create request: a key reused with a different request is refused, never answered with another case.
+  idempotencyFingerprint String? @map("idempotency_fingerprint") @db.VarChar(64)
 
-  combination  Combination       @relation(fields: [combinationId], references: [id], onDelete: Cascade)
+  /// A case keeps its combination: deleting a combination with cases is refused (reset deletes cases first).
+  combination  Combination       @relation(fields: [combinationId], references: [id], onDelete: Restrict)
   pins         PackWorkPin[]
   participants CaseParticipant[]
 
   @@unique([workspaceId, idempotencyKey])
+  @@unique([workspaceId, reference])
   @@index([workspaceId, createdAt])
   @@map("runtime_case")
 }
@@ -928,9 +932,11 @@ model PackWorkPin {
   pinnedAt        DateTime @default(now()) @map("pinned_at") @db.Timestamptz
 
   case    Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
-  release ConfigRelease @relation(fields: [configReleaseId], references: [id], onDelete: Cascade)
+  /// A pinned release cannot be deleted (released means frozen; STANDARDS §3.7).
+  release ConfigRelease @relation(fields: [configReleaseId], references: [id], onDelete: Restrict)
 
-  @@unique([caseId, combinationId, revision])
+  /// One pin per case and combination until moving a case to a newer release (ADOPT) is built.
+  @@unique([caseId, combinationId])
   @@map("pack_work_pin")
 }
 

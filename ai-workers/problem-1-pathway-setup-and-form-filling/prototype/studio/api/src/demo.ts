@@ -108,6 +108,8 @@ export class Demo {
       "AI and reading steps": await t.draftingJob.count({ where: ws }), "AI proposals and decisions": await t.normalizationItem.count({ where: ws }),
       "Reviews, sign-offs and releases": (await t.reviewSubmission.count({ where: ws })) + (await t.reviewSignoff.count({ where: ws })) + (await t.configRelease.count({ where: ws })),
       "Sample profiles and facts": (await t.sampleProfile.count({ where: ws })) + (await t.sampleFact.count({ where: ws })), "Generated PDFs and reports": await t.generatedArtifact.count({ where: ws }), "Activity entries": await t.auditEvent.count({ where: ws }),
+      // Runtime lane (R1): cases, the people on them and their answers (all versions)
+      Cases: await t.case.count({ where: ws }), "People on cases": await t.party.count({ where: ws }), "Case answers (all versions) and rows": (await t.clientCanonicalAnswer.count({ where: ws })) + (await t.clientFactRecord.count({ where: ws })),
       // F1 (forms lane): portal captures, answer lists and field merges
       "Portal captures, answer lists and merges": (await t.portalCapture.count({ where: ws })) + (await t.answerList.count({ where: ws })) + (await t.fieldMerge.count({ where: ws })),
     };
@@ -143,7 +145,7 @@ export class Demo {
     const ws = { workspaceId };
     await this.db.$transaction(async (tx) => {
       // Children first; every table is scoped to the demo workspace id.
-      await tx.party.deleteMany({ where: ws }); // runtime lane (R1): people and, with them, their answers and rows; cases go with their combination
+      await tx.case.deleteMany({ where: ws }); await tx.party.deleteMany({ where: ws }); // runtime lane (R1): cases (with their pins and participants), then people with their answers and rows
       await tx.normalizationItem.deleteMany({ where: ws }); await tx.draftingJob.deleteMany({ where: ws }); await tx.aiBatch.deleteMany({ where: ws });
       await tx.reviewSignoff.deleteMany({ where: ws }); await tx.reviewSubmission.deleteMany({ where: ws }); await tx.configRelease.deleteMany({ where: ws }); await tx.packVersion.deleteMany({ where: ws });
       await tx.formFieldMap.deleteMany({ where: ws }); await tx.combinationForm.deleteMany({ where: ws }); await tx.formEdition.deleteMany({ where: ws }); await tx.govFormDef.deleteMany({ where: ws });

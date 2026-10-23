@@ -12,33 +12,49 @@ export type CaseRole = (typeof ROLES)[number];
  *  the fact it is read from are Sample until the founder and the immigration expert confirm them. */
 export const MINOR = { birthDateField: "person.date_of_birth", underAge: 18 } as const;
 
+/** Text a person types: no NUL or other control characters (PostgreSQL refuses NUL; a refusal must be a 400, not a 500). */
+const text = (missing: string, min: number, max: number) => z.string({ message: missing }).trim().min(min, missing).max(max, `Keep it to ${max} characters.`).refine((x) => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(x), "Remove the control characters from this text.");
+
 export const NewCase = z.object({
-  combinationId: z.string().uuid("Choose a released combination."),
-  reference: z.string().trim().min(3, "Give the case a reference of at least 3 characters.").max(80),
+  combinationId: z.string({ message: "Choose a released combination." }).uuid("Choose a released combination."),
+  reference: text("Give the case a reference of at least 3 characters.", 3, 80),
   /** The simulated client login that answers the questionnaire. */
-  clientActor: z.string().trim().min(1, "Name the client who answers the questionnaire."),
-  principal: z.object({ displayName: z.string().trim().min(2, "Give the principal applicant a display name.").max(120) }),
-  idempotencyKey: z.string().trim().min(8).max(128).optional(),
+  clientActor: text("Name the client who answers the questionnaire.", 1, 40),
+  principal: z.object({ displayName: text("Give the principal applicant a display name.", 2, 120) }, { message: "Name the principal applicant." }),
+  idempotencyKey: z.string().trim().min(8, "An idempotency key has at least 8 characters.").max(128).optional(),
 });
 
 export const NewPerson = z.object({
   role: z.enum(["spouse_or_partner", "child"], { message: "A person joins as a spouse or partner, or as a child." }),
-  displayName: z.string().trim().min(2, "Give the person a display name.").max(120),
+  displayName: text("Give the person a display name.", 2, 120),
   applies: z.boolean().default(true),
 });
-export const UpdatePerson = z.object({ applies: z.boolean() });
+export const UpdatePerson = z.object({ applies: z.boolean({ message: "Say whether the person is travelling (true or false)." }) });
+
+/** Answer values stay small and flat: the largest real value (an address) is a few hundred characters. */
+export const VALUE_LIMITS = { chars: 4000, depth: 3 } as const;
+const tooDeep = (v: unknown, d = 0): boolean => d > VALUE_LIMITS.depth || (!!v && typeof v === "object" && Object.values(v as Record<string, unknown>).some((x) => tooDeep(x, d + 1)));
 
 /** One answer. expectedId is the id of the current answer the person saw (null when there was none): a different
  *  current answer means someone else changed it first (409 with the newer value). Invalid values are saved and flagged;
  *  validation never blocks saving (P-47). */
 export const PutAnswer = z.object({
-  value: z.unknown().refine((v) => v !== undefined && v !== null && v !== "", "Give a value (to remove an answer, remove its row or leave it unanswered)."),
-  expectedId: z.string().uuid().nullable(),
-  row: z.string().uuid().optional(),
+  value: z.unknown()
+    .refine((v) => v !== undefined && v !== null && v !== "", "Give a value (to remove an answer, remove its row or leave it unanswered).")
+    .refine((v) => !tooDeep(v), `An answer is at most ${VALUE_LIMITS.depth} levels deep.`)
+    .refine((v) => (JSON.stringify(v) ?? "").length <= VALUE_LIMITS.chars, `An answer is at most ${VALUE_LIMITS.chars} characters.`)
+    .refine((v) => !/\\u0000/.test(JSON.stringify(v) ?? ""), "Remove the control characters from this answer."),
+  expectedId: z.string({ message: "Send the id of the answer you saw, or null when there was none." }).uuid().nullable(),
+  row: z.string().uuid("Name the row by its id.").optional(),
 });
 
-export const NewRow = z.object({ group: z.string().trim().min(1) });
-export const ConfirmSection = z.object({ subjectId: z.string().uuid("Choose whose section to confirm.") });
+export const NewRow = z.object({ group: z.string({ message: "Name the repeating group (its section)." }).trim().min(1, "Name the repeating group (its section).").max(80) });
+/** "Confirm section" vouches for what the officer saw: the ids of the answers shown. Any answer that changed or arrived
+ *  since is refused with 409 and listed, never confirmed unseen (STANDARDS §4). */
+export const ConfirmSection = z.object({
+  subjectId: z.string({ message: "Choose whose section to confirm." }).uuid("Choose whose section to confirm."),
+  seen: z.array(z.string().uuid(), { message: "Send the ids of the answers you reviewed." }).max(500),
+});
 
 export const Address = z.object({ po_box: z.string().optional(), apt_unit: z.string().optional(), street_number: z.string().optional(), street_name: z.string().optional(), city: z.string().optional(), district: z.string().optional(), province: z.string().optional(), postal_code: z.string().optional(), country: z.string().optional() });
 export const Phone = z.object({ type: z.string().optional(), country_code: z.string().optional(), number: z.string().optional(), extension: z.string().optional() });
