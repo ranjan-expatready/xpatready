@@ -42,15 +42,18 @@ export const NewCapture = z.object({
 });
 export const ReturnCapture = z.object({ note: z.string().trim().min(5, "Say what is wrong, so the person who captured it can fix it.").max(1000) });
 export const AbandonCapture = z.object({ note: z.string().trim().max(1000).optional() });
-export const SetPortal = z.object({ portal: z.enum(PORTAL_KEYS).nullable() });
+/** "from": the value the person's screen showed; a save made from an out-of-date screen is refused (STANDARDS §4). */
+export const SetPortal = z.object({ portal: z.enum(PORTAL_KEYS).nullable(), from: z.enum(PORTAL_KEYS).nullable().optional() });
 /** Which source drafting reads for a form (P-62 §1, C2.10): the PDF version first by default, or the online screens alone. */
 export const DRAFT_FROM = ["PDF_FIRST", "ONLINE_ONLY"] as const;
 export type DraftFrom = (typeof DRAFT_FROM)[number];
 export const DRAFT_FROM_WORDS: Record<DraftFrom, string> = { PDF_FIRST: "PDF version first, then the online screens for what differs", ONLINE_ONLY: "Online screens only (the PDF version is not reused)" };
-export const SetDraftFrom = z.object({ draftFrom: z.enum(DRAFT_FROM, { message: "Choose PDF version first or online screens only." }) });
+export const SetDraftFrom = z.object({ draftFrom: z.enum(DRAFT_FROM, { message: "Choose PDF version first or online screens only." }), from: z.enum(DRAFT_FROM).optional() });
+/** "Use the default" for the lines whose default is Online (C1.7): each with the channel the screen showed. */
+export const UseDefaults = z.object({ lines: z.array(z.object({ line: z.string().min(1), from: z.enum(CHANNELS) })).min(1, "Choose at least one form.") });
 /** A capture's status in a combination's words (C2.7): what the author sees on the combination page. */
 export const CAPTURE_STATUS_WORDS: Record<string, string> = { OPEN: "Being captured: add the remaining screens, then finish", HELD: "Awaiting a second person", RETURNED: "Returned to the author", APPROVED: "Approved: an online version in the library", IN_LIBRARY: "Already in the library (identical screens)", ABANDONED: "Abandoned" };
-export const SetChannel = z.object({ channel: z.enum(CHANNELS, { message: "Choose PDF upload, Online or Signed PDF upload." }) });
+export const SetChannel = z.object({ channel: z.enum(CHANNELS, { message: "Choose PDF upload, Online or Signed PDF upload." }), from: z.enum(CHANNELS).optional() });
 export const AcceptScreenMap = z.object({ inputs: z.array(z.string()).optional() });
 /** A person maps one online input: to a shared field (for a person), or as "not a fact" with the reason. */
 export const ResolveInput = z.object({

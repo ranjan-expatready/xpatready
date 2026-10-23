@@ -8,7 +8,7 @@ import type { z } from "zod";
 import { AddLineBody, CatalogueQuery, cleanLabel, CreateCombinationBody, CreateNodeBody, CreatePathBody, DEFAULT_PARTICIPANTS, LEVEL_NAME, normalizeLabel, problemFromZod, ReleaseBody,
   type CatalogueGroup, type CatalogueLeaf, type CatalogueNode, type CatalogueResponse, type CombinationSummary, type ParticipantLine, type Status } from "../../contracts/programs.ts";
 import { manifest } from "../../engine/import.ts";
-import { channelProblems, channelsView, filingMethod } from "../../engine/channels.ts";
+import { channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
 import { CAPTURE_STATUS_WORDS, CHANNEL_WORDS, portalLabel, type Channel } from "../../contracts/forms.ts";
 import { checkedOf, comparePaths, compareStatus, isLive, missingItems, needsWork, newestEdition, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
@@ -16,7 +16,7 @@ import { diff, validate } from "../../engine/validate.ts";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Audit, Db, need, ROOT, Workspace, type Actor } from "./core.ts";
-import { addFormLine, defaultChannelFor } from "./form-lines.ts";
+import { addFormLine } from "./form-lines.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 
@@ -153,7 +153,7 @@ export class Programs {
       const nextAction = nextActionOf({ ...setup, status, changes, missing, held: held.length });
       rows.push({ pathway, changes, errors: errors.length, firstError: errors[0] ? `${errors[0].item}: ${errors[0].message}` : null, hasContent, docNames,
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
-        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingMethod(snapForms) : null, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
+        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
           missing, aiProposals, aiRunning: running, release: rel ? { pack: rel.packVersion?.version ?? 1, at: rel.releasedAt.toISOString() } : null, checked,
           nextAction, needs: needsWork({ status, nextAction }), live: isLive({ status }), held, note: noteOf(aiProposals, nextAction?.kind, held) } });
     }
@@ -346,6 +346,8 @@ export class Programs {
       return { added: "form_line", form: form.formKey, edition: onlineHere.editionLabel };
     }
     const latest = newestEdition(form.editions.filter((e) => e.channel !== "ONLINE"));
+    const onlineElsewhere = form.editions.find((e) => e.channel === "ONLINE");
+    if (!latest?.storedPath && onlineElsewhere) throw problem(409, "Choose the portal first", c.portalKey ? `${form.formKey} is in the library only as an online version from the ${portalLabel(onlineElsewhere.portalKey)}, not from this combination's ${portalLabel(c.portalKey)}. Add an online form from this combination's portal, or upload the IRCC PDF.` : `${form.formKey} is in the library only as an online version (${portalLabel(onlineElsewhere.portalKey)}). Choose this combination's portal first, then add it; or upload the IRCC PDF.`);
     if (!latest?.storedPath) throw problem(409, "No file for this form", `${form.formKey} has no stored file to attach. Upload the IRCC PDF.`);
     const r = await this.sources.attach(actor, combinationId, { originalname: latest.officialFile ?? `${form.formKey}.pdf`, buffer: readFileSync(resolve(ROOT, latest.storedPath)) }, "MANUAL");
     this.cache = null;
@@ -458,18 +460,20 @@ export class Programs {
     // channel problems the validator raises at release, from the same draft snapshot the review uses.
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, combinationId, "draft");
     const view = channelsView(snapshot);
-    const defaults = new Map(await Promise.all(lines.map(async (f) => [f.lineageKey, await defaultChannelFor(this.db, combinationId, f.govFormDefId)] as const)));
+    // Each line's default for this portal (C1.7): Online where the library has an approved online version from it. One
+    // query for all lines (break round 2 m7), the same rule as defaultChannelFor.
+    const onlineForms = new Set(c.portalKey ? (await this.db.formEdition.findMany({ where: { govFormDefId: { in: lines.map((f) => f.govFormDefId) }, channel: "ONLINE", portalKey: c.portalKey }, select: { govFormDefId: true } })).map((e) => e.govFormDefId) : []);
     const captures = await this.db.portalCapture.findMany({ where: { combinationId }, orderBy: { createdAt: "desc" } });
     return {
       row: row?.leaf ?? null, changes: row?.changes ?? 0, allowedLocations: c.program.allowedLocations, participants: c.participants,
-      portal: c.portalKey, portalLabel: c.portalKey ? portalLabel(c.portalKey) : null, filing: view.filing_method,
+      portal: c.portalKey, portalLabel: c.portalKey ? portalLabel(c.portalKey) : null, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: view.filing_method,
       channelProblems: channelProblems(snapshot).filter((p) => p.where === "Forms"),
       onlineForms: captures.map((x) => ({ id: x.id, form: x.formKey, title: x.title, portal: x.portalKey, portalLabel: portalLabel(x.portalKey), status: x.status, statusWords: CAPTURE_STATUS_WORDS[x.status] ?? x.status, detail: x.statusDetail, at: x.createdAt })),
-      forms: lines.map((f) => {
+      forms: lines.sort((x, y) => x.lineageKey.localeCompare(y.lineageKey)).map((f) => {
         const online = f.channel === "ONLINE";
         const e = newestEdition(f.form.editions.filter((x) => x._count.maps > 0 && (online ? x.channel === "ONLINE" && x.portalKey === c.portalKey : x.channel !== "ONLINE")));
         return { code: f.form.formKey, title: f.form.displayName, document: f.form.formKind !== "data_form", who: f.who, when: f.attachMode === "COMBINATION_MANDATORY" ? "always" : f.conditionPlain ?? "only if", edition: e?.editionLabel ?? null, boxes: e?._count.maps ?? 0,
-          channel: f.channel, channelWords: CHANNEL_WORDS[f.channel], defaultChannel: defaults.get(f.lineageKey) ?? "PDF_UPLOAD", signature: view.lines.find((l) => l.form === f.lineageKey)?.signature ?? null };
+          channel: f.channel, channelWords: CHANNEL_WORDS[f.channel], defaultChannel: onlineForms.has(f.govFormDefId) ? "ONLINE" : "PDF_UPLOAD", signature: view.lines.find((l) => l.form === f.lineageKey)?.signature ?? null };
       }),
       sources: c.attachments.map((x) => ({ id: x.id, kind: x.kind, name: x.edition ?? x.fileName, status: x.status, detail: x.statusDetail, at: x.createdAt })),
       held: await this.heldFor(c.workspaceId, combinationId, new Set((row?.leaf.forms ?? []).map((f) => f.code))),

@@ -21,14 +21,14 @@ import { basename, join, relative } from "node:path";
 import { promisify } from "node:util";
 import { Prisma, type FormEdition, type PortalCapture } from "@prisma/client";
 import type { Response } from "express";
-import { AbandonCapture, AcceptScreenMap, CAPTURE_LIMITS, CAPTURE_STATUS_WORDS, CHANNEL_WORDS, DRAFT_FROM_WORDS, SetDraftFrom, type DraftFrom, SetOptionMap, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
+import { AbandonCapture, AcceptScreenMap, CAPTURE_LIMITS, CAPTURE_STATUS_WORDS, CHANNEL_WORDS, DRAFT_FROM_WORDS, SetDraftFrom, UseDefaults, type Channel, type DraftFrom, SetOptionMap, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
 import { buildRecord, contractProblems, difference, fingerprint, noAnswers, reviewHtml, type CaptureInput, type CaptureRecord } from "../../engine/capture.ts";
 import { channelProblems, channelsView } from "../../engine/channels.ts";
 import { newestEdition } from "../../engine/programs.ts";
 import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
 import { compatible, draftScreenMap, normLabel, transformFor, type PdfEntry, type Proposal } from "../../engine/twin.ts";
-import { resolveKey } from "./form-lines.ts";
+import { defaultChannelFor, resolveKey } from "./form-lines.ts";
 import { actorOf, ACTORS, Audit, Db, fail, NODE, need, PY, revise, ROOT, SOLUTION, STUDIO, strip, VAR, Workspace, type Actor } from "./core.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import type { z } from "zod";
@@ -39,6 +39,10 @@ const nameOf = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? id;
 const day = (d: Date) => d.toISOString().slice(0, 10);
 const rel = (p: string) => relative(SOLUTION, p);
 const conflict = (msg: string) => fail(msg, HttpStatus.CONFLICT);
+/** Channel saves are a few rows; the default 5 s is kept short on purpose but busy machines need room (23 Oct). */
+const CHANNEL_TX = { timeout: 20_000, maxWait: 10_000 };
+/** Two saves that both made a new version of a released line: the database keeps one; the other is a 409. */
+const raced = (e: unknown): never => { if ((e as { code?: string } | null)?.code === "P2002") conflict("This line was changed at the same moment: refresh to see it."); throw e; };
 /** A form code as the library writes it: capitals, one space between its parts ("IMM-5257" → "IMM 5257"). */
 const formCode = (s: string) => s.trim().toUpperCase().replace(/[\s_-]+/g, " ");
 const compact = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -441,23 +445,52 @@ export class Forms {
   async setPortal(actor: Actor, combinationId: string, body: unknown) {
     need(actor, "author");
     const b = parse(SetPortal, body);
-    const c = await this.db.combination.update({ where: { id: combinationId }, data: { portalKey: b.portal } });
-    await this.audit.log(c.workspaceId, actor.id, "changed", "combination", c.combinationKey, `${actor.name} set the portal of "${c.label}" to ${b.portal ? portalLabel(b.portal) : "none"}`, undefined, c.id);
+    const before = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
+    if (before.portalKey === b.portal) return this.channels(combinationId);
+    // Claimed on the value the screen showed (break round 2 M2): a stale screen gets a 409, never a silent overwrite.
+    const from = b.from === undefined ? before.portalKey : b.from;
+    const n = await this.db.combination.updateMany({ where: { id: combinationId, portalKey: from }, data: { portalKey: b.portal } });
+    if (!n.count) conflict(`The portal was changed to ${portalLabel(before.portalKey)} while you were choosing. Your choice was not saved; check it and choose again.`);
+    await this.audit.log(before.workspaceId, actor.id, "changed", "combination", before.combinationKey, `${actor.name} set the portal of "${before.label}" to ${b.portal ? portalLabel(b.portal) : "none"}`, undefined, before.id);
     return this.channels(combinationId);
   }
 
   async setChannel(actor: Actor, combinationId: string, lineKey: string, body: unknown) {
     need(actor, "author");
     const b = parse(SetChannel, body);
-    const rows = await this.db.combinationForm.findMany({ where: { combinationId, lineageKey: lineKey } });
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
+    await this.db.$transaction((tx) => this.channelOf(tx, c, lineKey, b.channel, b.from, actor), CHANNEL_TX).catch(raced);
+    return this.channels(combinationId);
+  }
+
+  /** "Use the default" (C1.7): every listed line to Online, in one transaction, each claimed on the channel the screen
+   *  showed; any line changed meanwhile, or whose default is not Online, refuses the whole set (review round 2). */
+  async useDefaults(actor: Actor, combinationId: string, body: unknown) {
+    need(actor, "author");
+    const b = parse(UseDefaults, body);
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
+    await this.db.$transaction(async (tx) => {
+      for (const l of b.lines) {
+        const row = await tx.combinationForm.findFirst({ where: { combinationId, lineageKey: l.line }, orderBy: { version: "desc" } });
+        if (!row || (await defaultChannelFor(tx, combinationId, row.govFormDefId)) !== "ONLINE") conflict(`${l.line}'s default is not Online for this combination's portal: nothing was changed.`);
+        await this.channelOf(tx, c, l.line, "ONLINE", l.from, actor);
+      }
+    }, CHANNEL_TX).catch(raced);
+    return this.channels(combinationId);
+  }
+
+  /** One line's channel, claimed on the channel the screen showed. A checklist is not filed, so it has no channel. */
+  private async channelOf(tx: Prisma.TransactionClient, c: { id: string; workspaceId: string; label: string }, lineKey: string, channel: Channel, from: Channel | undefined, actor: Actor) {
+    const rows = await tx.combinationForm.findMany({ where: { combinationId: c.id, lineageKey: lineKey }, include: { form: { select: { formKind: true } } } });
     if (!rows.length) fail(`${lineKey} is not a form of this combination.`, HttpStatus.NOT_FOUND);
     const newest = [...rows].sort((x, y) => y.version - x.version)[0];
     if (newest.status === "RETIRED") fail(`${lineKey} was removed from this combination.`, HttpStatus.NOT_FOUND);
-    if (newest.channel === b.channel) return this.channels(combinationId);
-    await revise(this.db.combinationForm, rows, { channel: b.channel }, actor.id, strip);
-    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
-    await this.audit.log(c.workspaceId, actor.id, "changed", "form line", lineKey, `${actor.name} set how ${lineKey} is filed in "${c.label}": ${CHANNEL_WORDS[newest.channel]} → ${CHANNEL_WORDS[b.channel]}`, undefined, c.id);
-    return this.channels(combinationId);
+    if (newest.form.formKind !== "data_form") fail(`${lineKey} is a checklist: it is not filed, so it has no channel.`);
+    if (from && newest.channel !== from) conflict(`${lineKey} was changed to ${CHANNEL_WORDS[newest.channel]} while you were choosing. Your choice was not saved; check it and choose again.`);
+    if (newest.channel === channel) return;
+    if (newest.status === "DRAFT") { const n = await tx.combinationForm.updateMany({ where: { id: newest.id, channel: newest.channel }, data: { channel, origin: "HUMAN", updatedBy: actor.id } }); if (!n.count) conflict(`${lineKey} was changed at the same moment: refresh to see it.`); }
+    else await revise(tx.combinationForm, rows.map(({ form, ...r }) => { void form; return r; }), { channel }, actor.id, strip);
+    await this.audit.log(c.workspaceId, actor.id, "changed", "form line", lineKey, `${actor.name} set how ${lineKey} is filed in "${c.label}": ${CHANNEL_WORDS[newest.channel]} → ${CHANNEL_WORDS[channel]}`, undefined, c.id);
   }
 
   async channels(combinationId: string) {
@@ -483,10 +516,10 @@ export class Forms {
     return { portal: c.portalKey, portal_label: c.portalKey ? portalLabel(c.portalKey) : null, forms: codes.map((code) => {
       const def = defs.find((d) => d.formKey === code);
       const pdf = newestEdition((def?.editions ?? []).filter((e) => e.channel !== "ONLINE")) ?? null;
-      const online = (def?.editions ?? []).filter((e) => e.channel === "ONLINE" && (!c.portalKey || e.portalKey === c.portalKey)).sort((a, b) => (b.capturedOn?.getTime() ?? 0) - (a.capturedOn?.getTime() ?? 0))[0] ?? null;
+      const online = (def?.editions ?? []).filter((e) => e.channel === "ONLINE" && !!c.portalKey && e.portalKey === c.portalKey).sort((a, b) => (b.capturedOn?.getTime() ?? 0) - (a.capturedOn?.getTime() ?? 0))[0] ?? null;
       const choice = (def?.draftFrom ?? "PDF_FIRST") as DraftFrom;
       const reads = !def ? "Not in the library yet: nothing to draft from until its file or its screens are added."
-        : choice === "ONLINE_ONLY" ? (online ? `Reads the ${portalLabel(online.portalKey)} screens (${online.editionLabel}) alone; the PDF version is not reused.` : "Online screens only, but no online version has been approved yet: nothing to draft from.")
+        : choice === "ONLINE_ONLY" ? (online ? `Reads the ${portalLabel(online.portalKey)} screens (${online.editionLabel}) alone; the PDF version is not reused.` : !c.portalKey ? "Online screens only, but this combination has no portal yet: choose its portal first." : `Online screens only, but no online version from the ${portalLabel(c.portalKey)} has been approved yet: nothing to draft from.`)
         : pdf && online ? `Reads the PDF version (${pdf.editionLabel}) first, then the ${portalLabel(online.portalKey)} screens for what differs.`
         : pdf ? `Reads the PDF version (${pdf.editionLabel})${c.portalKey ? `; no online version from the ${portalLabel(c.portalKey)} yet` : ""}.`
         : online ? `Reads the ${portalLabel(online.portalKey)} screens (${online.editionLabel}): the library has no PDF version.` : "No PDF version or online version yet.";
@@ -499,10 +532,15 @@ export class Forms {
     need(actor, "author");
     const b = parse(SetDraftFrom, body);
     const workspaceId = await this.ws.id();
-    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey } } });
-    if (!def) fail(`${formKey} is not in the library.`, HttpStatus.NOT_FOUND);
+    // "imm 5707", "IMM-5707" and "IMM  5707" are the library's IMM 5707 (as captures read them; break round 2 m4).
+    const def = (await this.db.govFormDef.findMany({ where: { workspaceId } })).find((d) => compact(d.formKey) === compact(formKey));
+    if (!def) fail(`${formCode(formKey)} is not in the library.`, HttpStatus.NOT_FOUND);
+    formKey = def!.formKey;
+    if (def!.formKind !== "data_form") fail(`${formKey} is a checklist: nothing is drafted from it.`);
+    if (b.from && def!.draftFrom !== b.from) conflict(`What drafting reads for ${formKey} was changed while you were choosing. Your choice was not saved; check it and choose again.`);
     if (def!.draftFrom === b.draftFrom) return { form: formKey, draft_from: b.draftFrom, draft_from_words: DRAFT_FROM_WORDS[b.draftFrom] };
-    await this.db.govFormDef.update({ where: { id: def!.id }, data: { draftFrom: b.draftFrom } });
+    const n = await this.db.govFormDef.updateMany({ where: { id: def!.id, draftFrom: def!.draftFrom }, data: { draftFrom: b.draftFrom } });
+    if (!n.count) conflict(`What drafting reads for ${formKey} was changed at the same moment: refresh to see it.`);
     await this.audit.log(workspaceId, actor.id, "changed", "form", formKey, `${actor.name} set what drafting reads for ${formKey}: ${DRAFT_FROM_WORDS[b.draftFrom]}`);
     return { form: formKey, draft_from: b.draftFrom, draft_from_words: DRAFT_FROM_WORDS[b.draftFrom] };
   }
@@ -759,6 +797,7 @@ export class FormsController {
   @Get("combinations/:id/online-forms") onlineForms(@Param("id") id: string) { return this.f.onlineForms(id); }
   @Get("combinations/:id/drafting-sources") draftingSources(@Param("id") id: string) { return this.f.draftingSources(id); }
   @Patch("library/forms/:code/draft-from") draftFrom(@Headers("x-actor") a: H, @Param("code") code: string, @Body() b: unknown) { return this.f.setDraftFrom(actorOf(a), code, b); }
+  @Post("combinations/:id/channels/use-defaults") useDefaults(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.useDefaults(actorOf(a), id, b); }
   @Patch("combinations/:id/forms/:line/channel") channel(@Headers("x-actor") a: H, @Param("id") id: string, @Param("line") l: string, @Body() b: unknown) { return this.f.setChannel(actorOf(a), id, l, b); }
   @Post("library/fields/:key/aliases") alias(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.f.addAlias(actorOf(a), k, b); }
   @Post("library/fields/:key/answer-list") link(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.f.linkAnswerList(actorOf(a), k, b); }

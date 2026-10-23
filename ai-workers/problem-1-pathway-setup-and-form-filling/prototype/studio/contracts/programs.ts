@@ -112,7 +112,7 @@ export function problemFromZod(e: z.ZodError, title = "Some details need fixing"
 // ------------------------------------------------------------------ catalogue response (GET /catalogue)
 /** One cause per line; step is the action that moves it, in the next step's words (the row's next step while a setup
  *  step is waiting), and text is the whole sentence shown (without the step when every line shares it: sharedStep). */
-export type MissingItem = { code: "no_forms" | "form_without_edition" | "role_without_questions" | "rule_problem" | "not_started"; step: string; text: string };
+export type MissingItem = { code: "no_forms" | "form_without_edition" | "role_without_questions" | "filing_problem" | "rule_problem" | "not_started"; step: string; text: string };
 /** The one step every missing line shares, when there is more than one line and they all name it; null otherwise. The
  *  lines then carry only their causes and the screen names the step once under the list (Lead note 23 Oct). */
 export function sharedStep(missing: { step: string }[]): string | null {
@@ -129,7 +129,7 @@ export type CatalogueLeaf = {
   /** drafted: the form's boxes are mapped (or it is a checklist, which has none); false = attached, not set up yet.
    *  inLibrary (attached sources only): its boxes are already mapped in the library, so it is added without AI. */
   forms: { code: string; drafted: boolean; document: boolean; inLibrary?: boolean; channel?: "PDF_UPLOAD" | "ONLINE" | "SIGNED_PDF_UPLOAD" }[];
-  /** How the application is filed, worked out from its lines (C1.6, engine/channels.ts): "PDF only", "Online only", …; null with no lines. */
+  /** How the application is filed, worked out from its lines (C1.6, engine/channels.ts filingKind): "PDF only", "Online only" or "Mixed: online and PDF"; null with no lines. */
   filing: string | null;
   counts: { documents: number; documentsAlways: number; documentsIf: number; questions: number; sections: number; rules: number } | null;
   status: Status;
@@ -185,7 +185,9 @@ export type CombinationSummary = {
   row: CatalogueLeaf | null; changes: number; allowedLocations: string[]; participants: unknown;
   forms: { code: string; title: string; document: boolean; who: string; when: string; edition: string | null; boxes: number; channel: Channel; channelWords: string; defaultChannel: Channel; signature: string | null }[];
   /** The portal the filing goes through (C1.7) and the derived filing method (C1.6). */
-  portal: string | null; portalLabel: string | null; filing: string;
+  portal: string | null; portalLabel: string | null;
+  /** C1.6's words: "PDF only", "Online only", "Mixed: online and PDF"; filingDetail says it line by line. */
+  filing: string; filingDetail: string;
   channelProblems: ProblemLine[];
   /** Online forms added from this combination (C2.7), each with its status in plain words ("Awaiting a second person"). */
   onlineForms: { id: string; form: string; title: string; portal: string; portalLabel: string; status: string; statusWords: string; detail: string | null; at: string | Date }[];

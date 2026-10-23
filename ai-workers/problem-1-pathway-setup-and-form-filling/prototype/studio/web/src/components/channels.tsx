@@ -22,22 +22,22 @@ export function FilingLine({ id, sum, canAuthor }: { id: string; sum: Combinatio
   React.useEffect(() => setValue(sum.portal ?? ""), [sum.portal]);
   const setPortal = async (portal: string) => {
     setBusy(true); setValue(portal);
-    try { await api(`/combinations/${id}/portal`, { method: "PATCH", json: { portal: portal || null } }); toast.push({ tone: "ok", text: portal ? `Filed through the ${PORTALS.find((p) => p.key === portal)?.label}` : "Portal cleared" }); refresh(qc, id); }
+    try { await api(`/combinations/${id}/portal`, { method: "PATCH", json: { portal: portal || null, from: sum.portal } }); toast.push({ tone: "ok", text: portal ? `Filed through the ${PORTALS.find((p) => p.key === portal)?.label}` : "Portal cleared" }); refresh(qc, id); }
     catch (e) { setValue(sum.portal ?? ""); toast.push({ tone: "danger", text: (e as Error).message }); } finally { setBusy(false); }
   };
   return (
     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" data-filing>
-      <span><span className="text-text-muted">Filing: </span><b className="font-semibold">{sum.filing}</b></span>
+      <span title={sum.filingDetail !== sum.filing ? sum.filingDetail : undefined}><span className="text-text-muted">Filing: </span><b className="font-semibold">{sum.filing}</b>{sum.filingDetail !== sum.filing && sum.forms.length ? <span className="sr-only"> ({sum.filingDetail})</span> : null}</span>
       <span className="flex items-center gap-2">
         <label htmlFor={`portal-${id}`} className="text-text-muted">Portal</label>
         {canAuthor ? (
-          <Select id={`portal-${id}`} className="h-8 w-auto" value={value} disabled={busy} onChange={(e) => void setPortal(e.target.value)}>
+          <Select id={`portal-${id}`} className="h-8 w-auto min-w-0 max-w-full" value={value} disabled={busy} onChange={(e) => void setPortal(e.target.value)}>
             <option value="">No portal yet</option>
             {PORTALS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
           </Select>
         ) : <b id={`portal-${id}`} className="font-semibold">{sum.portalLabel ?? "No portal yet"}</b>}
       </span>
-      <span className="text-[13px] text-text-muted">Sample portals until the immigration expert confirms where each program is filed.</span>
+      <span className="text-xs text-text-muted">Sample portals until the immigration expert confirms where each program is filed.</span>
     </div>
   );
 }
@@ -50,8 +50,8 @@ export function ChannelCell({ id, line, canAuthor }: { id: string; line: Combina
   React.useEffect(() => setValue(line.channel), [line.channel]);
   const set = async (channel: Channel) => {
     setBusy(true); setValue(channel);
-    try { await api(`/combinations/${id}/forms/${encodeURIComponent(line.code)}/channel`, { method: "PATCH", json: { channel } }); toast.push({ tone: "ok", text: `${line.code} filed as ${CHANNEL_WORDS[channel]}` }); refresh(qc, id); }
-    catch (e) { setValue(line.channel); toast.push({ tone: "danger", text: (e as Error).message }); } finally { setBusy(false); }
+    try { await api(`/combinations/${id}/forms/${encodeURIComponent(line.code)}/channel`, { method: "PATCH", json: { channel, from: line.channel } }); toast.push({ tone: "ok", text: `${line.code} filed as ${CHANNEL_WORDS[channel]}` }); refresh(qc, id); }
+    catch (e) { setValue(line.channel); refresh(qc, id); toast.push({ tone: "danger", text: (e as Error).message }); } finally { setBusy(false); }
   };
   if (line.document) return <span className="text-text-muted">Checklist (not filed)</span>;
   return (
@@ -61,44 +61,58 @@ export function ChannelCell({ id, line, canAuthor }: { id: string; line: Combina
           {CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_WORDS[c]}{c === line.defaultChannel ? " (default)" : ""}</option>)}
         </Select>
       ) : <span>{line.channelWords}</span>}
-      {line.signature ? <span className="text-[13px] text-text-muted">{line.signature}</span> : null}
+      {line.signature ? <span className="text-xs text-text-muted">{line.signature}</span> : null}
     </div>
   );
 }
 
-/** Lines whose channel differs from the default for this portal (C1.7): one action applies the defaults; the author
- *  confirms per combination (the immigration expert confirms which forms are filed online). */
+/** Lines filed as a PDF upload that the library can file Online through this combination's portal (C1.7): one action,
+ *  applied in one go on the server; the author confirms per combination (the immigration expert confirms which forms
+ *  are filed online). A line deliberately signed by hand is not offered. */
 export function UseDefaults({ id, sum, canAuthor }: { id: string; sum: CombinationSummary; canAuthor: boolean }) {
   const qc = useQueryClient(); const toast = useToast();
   const [busy, setBusy] = React.useState(false);
-  const off = sum.forms.filter((f) => !f.document && f.channel !== f.defaultChannel);
+  const off = sum.forms.filter((f) => !f.document && f.defaultChannel === "ONLINE" && f.channel === "PDF_UPLOAD");
   if (!off.length || !canAuthor) return null;
   const apply = async () => {
     setBusy(true);
-    try { for (const f of off) await api(`/combinations/${id}/forms/${encodeURIComponent(f.code)}/channel`, { method: "PATCH", json: { channel: f.defaultChannel } }); toast.push({ tone: "ok", text: `Default channel used for ${off.map((f) => f.code).join(", ")}` }); refresh(qc, id); }
-    catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); } finally { setBusy(false); }
+    try { await api(`/combinations/${id}/channels/use-defaults`, { method: "POST", json: { lines: off.map((f) => ({ line: f.code, from: f.channel })) } }); toast.push({ tone: "ok", text: `${off.map((f) => f.code).join(", ")} filed Online` }); }
+    catch (e) { toast.push({ tone: "danger", text: `Nothing changed: ${(e as Error).message}` }); } finally { refresh(qc, id); setBusy(false); }
   };
   return (
     <p className="mt-2 flex flex-wrap items-center gap-2 text-sm" data-use-defaults>
-      <span>{off.map((f) => `${f.code}: default ${CHANNEL_WORDS[f.defaultChannel]}`).join(" · ")} {sum.portalLabel ? `(an approved online version from the ${sum.portalLabel} exists)` : ""}</span>
-      <Button size="sm" variant="secondary" busy={busy} onClick={() => void apply()}>Use the default for {off.length} form{off.length === 1 ? "" : "s"}</Button>
+      <span>{off.map((f) => f.code).join(", ")} can be filed Online through the {sum.portalLabel} (an approved online version exists).</span>
+      <Button size="sm" variant="secondary" busy={busy} onClick={() => void apply()}>File {off.length === 1 ? "it" : `these ${off.length}`} Online</Button>
     </p>
   );
 }
 
-/** Online forms added from this combination (C2.7), each with its status in plain words. */
-export function OnlineForms({ sum }: { sum: CombinationSummary }) {
+/** Online forms added from this combination (C2.7), each with its status in plain words. One not finished can be
+ *  continued or abandoned here (review round 2, should 1); abandoned ones are counted, not listed. */
+export function OnlineForms({ id, sum, canAuthor, onContinue }: { id: string; sum: CombinationSummary; canAuthor: boolean; onContinue: (o: CombinationSummary["onlineForms"][number]) => void }) {
+  const qc = useQueryClient(); const toast = useToast();
+  const [busy, setBusy] = React.useState<string | null>(null);
+  const shown = sum.onlineForms.filter((o) => o.status !== "ABANDONED"), gone = sum.onlineForms.length - shown.length;
   if (!sum.onlineForms.length) return null;
+  const abandon = async (o: CombinationSummary["onlineForms"][number]) => {
+    setBusy(o.id);
+    try { await api(`/captures/${o.id}/abandon`, { method: "POST", json: { note: "Abandoned from the combination page." } }); toast.push({ tone: "ok", text: `${o.form} online form abandoned` }); }
+    catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); } finally { refresh(qc, id); setBusy(null); }
+  };
   const tone = (s: string) => (s === "HELD" ? "warn" : s === "APPROVED" || s === "IN_LIBRARY" ? "ok" : s === "RETURNED" ? "danger" : "neutral");
   return (
     <div className="mt-4" data-online-forms>
-      <h3 className="text-sm font-semibold">Online forms added here ({sum.onlineForms.length})</h3>
+      <h3 className="text-sm font-semibold">Online forms added here ({shown.length}){gone ? <span className="font-normal text-text-muted"> · {gone} abandoned, not shown</span> : null}</h3>
       <ul className="mt-1.5 space-y-1.5 text-sm">
-        {sum.onlineForms.map((o) => (
+        {shown.map((o) => (
           <li key={o.id} className="flex flex-wrap items-center gap-2">
             <span className="mono font-medium">{o.form}</span><span className="text-text-muted">{o.title} · {o.portalLabel}</span>
             <Pill tone={tone(o.status)}>{o.statusWords}</Pill>
-            {o.status === "HELD" ? <span className="text-[13px] text-text-muted">Not used until a second person approves it.</span> : o.status === "RETURNED" && o.detail ? <span className="text-[13px] text-text-muted">{o.detail}</span> : null}
+            {o.status === "HELD" ? <span className="text-xs text-text-muted">Not used until a second person approves it.</span> : o.status === "RETURNED" && o.detail ? <span className="text-xs text-text-muted">{o.detail}</span> : null}
+            {canAuthor && (o.status === "OPEN" || o.status === "RETURNED") ? <>
+              <Button size="sm" variant="secondary" onClick={() => onContinue(o)}>Continue</Button>
+              <Button size="sm" variant="ghost" busy={busy === o.id} onClick={() => void abandon(o)}>Abandon</Button>
+            </> : null}
           </li>
         ))}
       </ul>
@@ -109,12 +123,14 @@ export function OnlineForms({ sum }: { sum: CombinationSummary }) {
 type AddResult = { file: string; outcome: string; message: string };
 /** "Add an online form" (C2.7): the portal, the form's code and title as the portal shows them, and its blank screens
  *  (saved pages, or the filled-in template). It is checked for answers, finished and held for a second person. */
-export function AddOnlineFormPanel({ id, sum, codes, onClose }: { id: string; sum: CombinationSummary; codes: string[]; onClose: () => void }) {
+export function AddOnlineFormPanel({ id, sum, codes, onClose, resume }: { id: string; sum: CombinationSummary; codes: string[]; onClose: () => void; resume?: CombinationSummary["onlineForms"][number] }) {
   const qc = useQueryClient(); const toast = useToast();
-  const [portal, setPortal] = React.useState(sum.portal ?? "");
-  React.useEffect(() => { if (sum.portal) setPortal((p) => p || sum.portal!); }, [sum.portal]);
-  const [form, setForm] = React.useState(codes[0] ?? "");
-  const [title, setTitle] = React.useState("");
+  const [portal, setPortal] = React.useState(resume?.portal ?? sum.portal ?? "");
+  // Follows the combination's portal until the person chooses one here (review round 2, should 3).
+  const touched = React.useRef(!!resume);
+  React.useEffect(() => { if (!touched.current) setPortal(sum.portal ?? ""); }, [sum.portal]);
+  const [form, setForm] = React.useState(resume?.form ?? codes[0] ?? "");
+  const [title, setTitle] = React.useState(resume?.title ?? "");
   const [files, setFiles] = React.useState<File[]>([]);
   const [busy, setBusy] = React.useState(false);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
@@ -125,7 +141,7 @@ export function AddOnlineFormPanel({ id, sum, codes, onClose }: { id: string; su
   const submit = async () => {
     setBusy(true); setErrors({}); setProblem(null); setResults(null);
     try {
-      const c = await api<{ id: string }>("/captures", { method: "POST", json: { portal, form, title, combinationId: id } });
+      const c = resume ?? await api<{ id: string }>("/captures", { method: "POST", json: { portal, form, title, combinationId: id } });
       const fd = new FormData(); for (const f of files) fd.append("files", f, f.name);
       const added = await api<{ results: AddResult[] }>(`/captures/${c.id}/screens`, { method: "POST", body: fd });
       setResults(added.results);
@@ -133,7 +149,11 @@ export function AddOnlineFormPanel({ id, sum, codes, onClose }: { id: string; su
         const fin = await api<{ status: string; status_detail: string }>(`/captures/${c.id}/finish`, { method: "POST" });
         setDone(fin.status === "HELD" ? "Awaiting a second person: it is not used until someone other than you approves it." : fin.status_detail);
         toast.push({ tone: "ok", text: `${form} online form: ${fin.status === "HELD" ? "awaiting a second person" : "already in the library"}` });
-      } else setProblem("No screen was added, so the online form was not finished. Save each screen from a blank application and try again.");
+      } else {
+        // Nothing was added: a new capture is abandoned at once, so no empty "being captured" row is left behind.
+        if (!resume) await api(`/captures/${c.id}/abandon`, { method: "POST", json: { note: "No screen could be added." } }).catch(() => {});
+        setProblem("No screen was added, so nothing was kept. Save each screen from a blank application and try again.");
+      }
       refresh(qc, id);
     } catch (e) {
       const errs = ((e as { problem?: { errors?: { field: string; message: string }[] } }).problem?.errors ?? []);
@@ -143,17 +163,17 @@ export function AddOnlineFormPanel({ id, sum, codes, onClose }: { id: string; su
     } finally { setBusy(false); }
   };
   return (
-    <Panel open onOpenChange={(o) => !o && onClose()} title="Add an online form" description="Record the form as the portal shows it: its blank screens, never a client's answers. A second person approves it before it is used."
+    <Panel open onOpenChange={(o) => !o && onClose()} title={resume ? `Continue the ${resume.form} online form` : "Add an online form"} description="Record the form as the portal shows it: its blank screens, never a client's answers. A second person approves it before it is used."
       footer={done ? <Button onClick={onClose}>Close</Button> : <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={!portal || !form.trim() || title.trim().length < 3 || !files.length || !!tooBig} onClick={() => void submit()}><Upload /> Add and send for approval</Button></>}>
       <div className="flex flex-col gap-4">
-        <Field label="Portal" error={errors.portal} hint={sum.portal ? "This combination's portal" : "This combination has no portal yet: choose the one the form is filed through."}>
-          <Select value={portal} onChange={(e) => setPortal(e.target.value)} aria-label="Portal"><option value="">Choose…</option>{PORTALS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}</Select>
+        <Field label="Portal" error={errors.portal} hint={!sum.portal ? "This combination has no portal yet: choose the one the form is filed through." : portal && portal !== sum.portal ? `Not this combination's portal (${sum.portalLabel}): its lines filed Online use the ${sum.portalLabel}.` : "This combination's portal"}>
+          <Select value={portal} disabled={!!resume} onChange={(e) => { touched.current = true; setPortal(e.target.value); }} aria-label="Portal"><option value="">Choose…</option>{PORTALS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}</Select>
         </Field>
         <Field label="Form code" error={errors.form} hint="As IRCC numbers it, for example IMM 5257.">
-          <Input aria-label="Form code" list={`codes-${id}`} value={form} onChange={(e) => setForm(e.target.value)} />
+          <Input aria-label="Form code" list={`codes-${id}`} value={form} disabled={!!resume} onChange={(e) => setForm(e.target.value)} />
           <datalist id={`codes-${id}`}>{codes.map((c) => <option key={c} value={c} />)}</datalist>
         </Field>
-        <Field label="Title as the portal shows it" error={errors.title}><Input aria-label="Title as the portal shows it" value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
+        <Field label="Title as the portal shows it" error={errors.title}><Input aria-label="Title as the portal shows it" value={title} disabled={!!resume} onChange={(e) => setTitle(e.target.value)} /></Field>
         <Field label="Blank screens" hint={<>Saved web pages of each blank screen (.html), in portal order, or the filled-in <a className="text-text-link underline" href="/api/capture-template.csv" download>spreadsheet template</a> (.csv). Up to {CAPTURE_LIMITS.files} files, {CAPTURE_LIMITS.fileMb} MB each.</>} error={tooBig ? `${tooBig.name} is over ${CAPTURE_LIMITS.fileMb} MB.` : undefined}>
           <input type="file" multiple accept=".html,.htm,.csv" aria-label="Choose blank screens" onChange={(e) => setFiles([...(e.target.files ?? [])])} className="text-sm" />
         </Field>
@@ -174,7 +194,7 @@ export function DraftingSources({ id, canAuthor }: { id: string; canAuthor: bool
   if (!d.data?.forms.length) return null;
   const set = async (code: string, draftFrom: DraftFrom) => {
     setBusy(code);
-    try { await api(`/library/forms/${encodeURIComponent(code)}/draft-from`, { method: "PATCH", json: { draftFrom } }); toast.push({ tone: "ok", text: `${code}: drafting reads ${DRAFT_FROM_WORDS[draftFrom].toLowerCase()}` }); refresh(qc, id); }
+    try { await api(`/library/forms/${encodeURIComponent(code)}/draft-from`, { method: "PATCH", json: { draftFrom, from: d.data?.forms.find((x) => x.code === code)?.draft_from } }); toast.push({ tone: "ok", text: `${code}: drafting reads ${DRAFT_FROM_WORDS[draftFrom].toLowerCase()}` }); refresh(qc, id); }
     catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); } finally { setBusy(null); }
   };
   return (

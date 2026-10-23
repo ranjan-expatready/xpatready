@@ -114,6 +114,15 @@ m = missingItems(empty, people, []);
 ok("step once fail: lines with different steps each keep their own (nothing is merged away)", sharedStep(m) === null && m.length === 2 && m.every((x) => /Next step: /.test(x.text)) && new Set(m.map((x) => x.step)).size === 2, m.map((x) => x.text));
 ok("step once: a single line keeps its step in the sentence (nothing to repeat)", sharedStep([{ step: "Add sources" }]) === null && missingItems({ ...empty, sections: full.sections, placements: full.placements } as Snapshot, people, [], setupOf({})).every((x) => /Next step: Add sources\./.test(x.text)));
 
+// ---------------------------------------------------------------- round 2: filing problems are their own missing line
+{
+  const withOnline = { ...full, forms: full.forms.map((f: any, i: number) => (i === 0 ? { ...f, channel: "ONLINE" } : f)) } as Snapshot;
+  const probs = [{ level: "error" as const, where: "Forms", item: (full.forms[0] as any).form_number, message: "is filed Online, but this combination has no portal yet: choose the portal it is filed through." }];
+  const mm = missingItems(withOnline, people, probs);
+  ok("round 2 pass: an Online line's problem is one \"cannot be filed as set\" line with its own step", mm.length === 1 && mm[0].code === "filing_problem" && mm[0].step === "Change how it is filed", mm.map((x) => x.text));
+  ok("round 2 fail: it is not reported as unmapped PDF form fields or as a rule that does not resolve", !mm.some((x) => x.code === "form_without_edition" || x.code === "rule_problem"));
+}
+
 // ---------------------------------------------------------------- QA-6, QA-7 the name rules, one place for server and page
 ok("QA-6 fail: a name of symbols only is refused in plain words (it has nothing to compare or key)", !CreateNodeBody.safeParse({ kind: "PROGRAM", parentKey: "individual", label: "!!!" }).success && labelProblem("!!!") === "Use letters or digits in the name, not only punctuation.");
 ok("QA-6 pass: letters in any script, digits and punctuation around them are kept", ["Résidence temporaire", "Visa d'été — 日本語", "H-1B", "2027"].every((x) => labelProblem(x) === null && CreateNodeBody.safeParse({ kind: "PROGRAM", parentKey: "individual", label: x }).success));

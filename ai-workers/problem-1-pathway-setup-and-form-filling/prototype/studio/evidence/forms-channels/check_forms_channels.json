@@ -1,5 +1,5 @@
 {
- "at": "2026-10-23T13:39:56.049Z",
+ "at": "2026-10-23T14:19:57.129Z",
  "port": 4449,
  "database": "xr_studio_screens_forms",
  "paid_calls": 0,
@@ -35,7 +35,7 @@
   {
    "name": "filing method: a channel only a conditional line adds is said with its condition",
    "ok": true,
-   "detail": "Online only; plus pdf upload when the applicant has a representative"
+   "detail": "Online only; plus PDF upload when the applicant has a representative"
   },
   {
    "name": "option map (online): every value finds the portal's own code, by label",
@@ -246,8 +246,8 @@
    "name": "finish answers before the review document is printed (printed in the background; HTML until the PDF exists)",
    "ok": true,
    "detail": {
-    "ms": 9,
-    "review_file": "prototype/studio/var/isolated-screens_forms/workspaces/demo/portal-twins/IMM5257-ircc_portal-5db1c68b-d6375ca38c3b.review.html"
+    "ms": 8,
+    "review_file": "prototype/studio/var/isolated-screens_forms/workspaces/demo/portal-twins/IMM5257-ircc_portal-86ab65fd-d6375ca38c3b.review.html"
    }
   },
   {
@@ -273,7 +273,7 @@
    "name": "approval: a second person makes it an online version, re-check date set (Sample 180 days)",
    "ok": true,
    "detail": {
-    "id": "4272c45a-b78d-439f-9581-92c8d512c33b",
+    "id": "a8fb8442-5a9e-454b-9e17-4a77731d8c48",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-23",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -360,8 +360,8 @@
    "name": "concurrency: two screens added at the same moment are both kept, or one is refused with 409; never 'added' and lost",
    "ok": true,
    "detail": [
-    201,
     409,
+    201,
     1
    ]
   },
@@ -545,7 +545,7 @@
    "name": "confirm: a second person confirms the identical re-capture; the re-check date runs from it, once",
    "ok": true,
    "detail": {
-    "id": "4272c45a-b78d-439f-9581-92c8d512c33b",
+    "id": "a8fb8442-5a9e-454b-9e17-4a77731d8c48",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-23",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -580,8 +580,8 @@
    "name": "Forms library: IMM 5257 shows both channels and its online version",
    "ok": true,
    "detail": [
-    "PDF",
-    "Online"
+    "Online",
+    "PDF"
    ]
   },
   {

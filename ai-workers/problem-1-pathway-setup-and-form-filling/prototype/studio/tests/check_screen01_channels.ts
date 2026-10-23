@@ -41,21 +41,32 @@ const rowOf = async (key: string) => ((await call("GET", "/catalogue?pathway=IND
   ok("C1.6: a row with no form lines has no filing method (not \"PDF only\")", (await rowOf("individual.visitors.extend_stay")).filing === null);
   r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 1295")}/channel`, { channel: "SIGNED_PDF_UPLOAD" });
   s = await sum();
-  ok("C1.6 pass: the author sets one line's channel; the line, its signature and the filing method follow", r.status === 200 && s.forms.find((f: any) => f.code === "IMM 1295").channelWords === "Signed PDF upload" && /signed by hand/.test(s.forms.find((f: any) => f.code === "IMM 1295").signature) && s.filing === "PDF only (some signed by hand)", s.filing);
+  ok("C1.6 pass: the author sets one line's channel; the line, its signature and the filing method follow", r.status === 200 && s.forms.find((f: any) => f.code === "IMM 1295").channelWords === "Signed PDF upload" && /signed by hand/.test(s.forms.find((f: any) => f.code === "IMM 1295").signature) && s.filing === "PDF only" && s.filingDetail === "PDF only (some signed by hand)", [s.filing, s.filingDetail]);
   ok("C1.6: the change is a draft change of the combination (released content unchanged until release)", (await call("GET", "/draft")).body.rows.some((x: any) => x.combinationId === wp) && sql(`select count(*) from combination_form where combination_id='${wp}' and lineage_key='IMM 1295' and status='PUBLISHED' and channel='PDF_UPLOAD'`) === "1");
   r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 1295")}/channel`, { channel: "FAX" });
   ok("C1.6 fail: a channel that is not one of the three is refused on its field", r.status === 400 && r.body.errors?.[0]?.field === "channel", r.body.errors);
   r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 1295")}/channel`, { channel: "ONLINE" }, "user-B");
   ok("C1.6 fail: only an author sets a channel (the approver is refused by the server)", r.status === 403);
-  await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 1295")}/channel`, { channel: "PDF_UPLOAD" });
+  r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 1295")}/channel`, { channel: "ONLINE", from: "PDF_UPLOAD" });
+  ok("round 2 M2 fail: a save from a screen that still showed PDF upload (now Signed) is refused, not a silent overwrite", r.status === 409 && /was changed to Signed PDF upload/.test(r.body.message) && (await sum()).forms.find((f: any) => f.code === "IMM 1295").channel === "SIGNED_PDF_UPLOAD", r.body.message);
+  r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 5488")}/channel`, { channel: "ONLINE" });
+  ok("review 2 should 4 fail: a checklist is not filed, so it has no channel", r.status === 400 && /checklist/.test(r.body.message), r.body.message);
+  r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 1295")}/channel`, { channel: "PDF_UPLOAD", from: "SIGNED_PDF_UPLOAD" });
+  ok("round 2 M2 pass: a save from an up-to-date screen goes through", r.status === 200 && (await sum()).forms.find((f: any) => f.code === "IMM 1295").channel === "PDF_UPLOAD");
 
   // ---------------------------------------------------------------- C1.7 portal, default channel
   r = await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 5707")}/channel`, { channel: "ONLINE" });
   s = await sum();
   ok("C1.7 fail: a line filed Online with no portal blocks release, in plain words", s.channelProblems.some((p: any) => p.level === "error" && p.item === "IMM 5707" && /no portal yet/.test(p.message)), s.channelProblems.map((p: any) => p.message));
-  r = await call("PATCH", `/combinations/${wp}/portal`, { portal: "ircc_portal" });
+  const lmiaRow = (await rowOf("individual.work_permits.employer_specific.with_lmia"));
+  const before = lmiaRow.release ? (await call("GET", "/draft")).body.rows.find((x: any) => x.combinationId === wp)?.changes ?? 0 : 0;
+  r = await call("PATCH", `/combinations/${wp}/portal`, { portal: "ircc_portal", from: null });
   s = await sum();
   ok("C1.7 pass: the author picks the combination's portal; the page names it", r.status === 200 && s.portal === "ircc_portal" && s.portalLabel === "IRCC Portal");
+  const review = (await call("GET", `/combinations/${wp}/review`)).body;
+  ok("round 2 M1 pass: on a Live combination the portal change is a draft change, listed for review (\"Row details\")", ((await call("GET", "/draft")).body.rows.find((x: any) => x.combinationId === wp)?.changes ?? 0) === before + 1 && review.draft.changes.some((c: any) => c.kind === "Row details" && /portal/.test(c.label)), review.draft.changes.filter((c: any) => c.kind === "Row details"));
+  r = await call("PATCH", `/combinations/${wp}/portal`, { portal: "apr_portal", from: null });
+  ok("round 2 M2 fail: a portal save from a screen that still showed no portal is refused", r.status === 409 && (await sum()).portal === "ircc_portal", r.body.message);
   ok("C1.7 fail: Online with the portal but no approved online version still blocks release, saying what to do", s.channelProblems.some((p: any) => p.item === "IMM 5707" && /no approved online version/.test(p.message)), s.channelProblems.map((p: any) => p.message));
   ok("C1.7: with no approved online version the default stays PDF upload", s.forms.find((f: any) => f.code === "IMM 5707").defaultChannel === "PDF_UPLOAD");
   r = await call("PATCH", `/combinations/${wp}/portal`, { portal: "fax_portal" });
@@ -86,15 +97,25 @@ const rowOf = async (key: string) => ((await call("GET", "/catalogue?pathway=IND
   s = await sum();
   ok("C1.7 pass: with an approved online version from its portal, the line's default channel is Online", s.forms.find((f: any) => f.code === "IMM 5707").defaultChannel === "ONLINE" && s.forms.find((f: any) => f.code === "IMM 1295").defaultChannel === "PDF_UPLOAD");
   ok("C1.7: the default is shown, never applied silently (the line stays PDF upload until the author chooses)", s.forms.find((f: any) => f.code === "IMM 5707").channel === "PDF_UPLOAD");
+  r = await call("POST", `/combinations/${wp}/channels/use-defaults`, { lines: [{ line: "IMM 5707", from: "PDF_UPLOAD" }, { line: "IMM 1295", from: "PDF_UPLOAD" }] });
+  ok("C1.7 fail: \"use the default\" for a line whose default is not Online changes nothing at all (one transaction)", r.status === 409 && (await sum()).forms.find((f: any) => f.code === "IMM 5707").channel === "PDF_UPLOAD", r.body.message);
+  r = await call("POST", `/combinations/${wp}/channels/use-defaults`, { lines: [{ line: "IMM 5707", from: "SIGNED_PDF_UPLOAD" }] });
+  ok("C1.7 fail: \"use the default\" from an out-of-date screen is refused", r.status === 409);
+  r = await call("POST", `/combinations/${wp}/channels/use-defaults`, { lines: [{ line: "IMM 5707", from: "PDF_UPLOAD" }] });
+  s = await sum();
+  ok("C1.7 pass: the author applies the default: the line is filed Online and the filing method is Mixed", r.status === 201 && s.forms.find((f: any) => f.code === "IMM 5707").channel === "ONLINE" && s.filing === "Mixed: online and PDF" && (await rowOf("individual.work_permits.employer_specific.with_lmia")).filing === "Mixed: online and PDF", s.filing);
+  await call("PATCH", `/combinations/${wp}/forms/${encodeURIComponent("IMM 5707")}/channel`, { channel: "PDF_UPLOAD" });
 
   // ---------------------------------------------------------------- C2.7 a form the library has only online
   const c2 = (await call("POST", "/captures", { portal: "ircc_portal", form: "IMM 9101", title: "Online-only sample form", combinationId: vv })).body;
   await screens(c2.id, S); await call("POST", `/captures/${c2.id}/finish`); await call("POST", `/captures/${c2.id}/approve`, undefined, "user-C");
   r = await call("POST", `/combinations/${vv}/lines`, { kind: "FORM", formKey: "IMM 9101" });
-  ok("C2.7 fail: a form the library has only online cannot be added to a combination without that portal", r.status === 409, r.body?.detail);
+  ok("C2.7 fail: a form the library has only online cannot be added to a combination without a portal, and the message says to choose the portal", r.status === 409 && /Choose this combination's portal first/.test(r.body?.detail), r.body?.detail);
   await call("PATCH", `/combinations/${vv}/portal`, { portal: "ircc_portal" });
   r = await call("POST", `/combinations/${vv}/lines`, { kind: "FORM", formKey: "IMM 9101" });
   ok("C2.7 pass: with the portal set, \"+ Add\" makes it a form line filed Online", r.status === 201 && sql(`select channel from combination_form where combination_id='${vv}' and lineage_key='IMM 9101'`) === "ONLINE", r.body);
+  const vvMissing = ((await rowOf("individual.visitors.visitor_visa")).missing as any[]);
+  ok("review 2 should 2: an Online line without its screen map is one filing line in the missing list, with its own step (not \"map the PDF\" or \"fix a rule\")", vvMissing.some((m) => m.code === "filing_problem" && m.step === "Change how it is filed" && /IMM 9101/.test(m.text)) && !vvMissing.some((m) => (m.code === "rule_problem" && /screen map/.test(m.text)) || (m.code === "form_without_edition" && /IMM 9101/.test(m.text))), vvMissing.map((m) => m.text));
 
   // ---------------------------------------------------------------- C2.10 what drafting reads, per form
   let ds = (await call("GET", `/combinations/${wp}/drafting-sources`)).body;
@@ -106,6 +127,14 @@ const rowOf = async (key: string) => ((await call("GET", "/catalogue?pathway=IND
   ds = (await call("GET", `/combinations/${wp}/drafting-sources`)).body; f = ds.forms.find((x: any) => x.code === "IMM 5707");
   const onlineOnly = (await call("POST", `/online-versions/${ed}/screen-map/draft`)).body;
   ok("C2.10 pass: the author changes it per form; the page says so and screen-map drafting no longer reuses the PDF version", r.status === 200 && f.draft_from === "ONLINE_ONLY" && /alone; the PDF version is not reused/.test(f.reads) && onlineOnly.pdf_edition === null && onlineOnly.counts.pdf_twin === 0 && pdfFirst.pdf_edition !== null, { pdfFirst: pdfFirst.pdf_edition, pdfTwin: pdfFirst.counts?.pdf_twin, onlineOnly: onlineOnly.counts });
+  const vvRead = (await call("GET", `/combinations/${(await rowOf("individual.visitors.super_visa")).combinationId}/drafting-sources`)).body.forms.find((x: any) => x.code === "IMM 5707");
+  ok("round 2 m4: on a combination without a portal the words say so (never another portal's screens)", !vvRead || /no portal yet/.test(vvRead.reads), vvRead?.reads);
+  r = await call("PATCH", `/library/forms/${encodeURIComponent("imm-5707")}/draft-from`, { draftFrom: "ONLINE_ONLY", from: "ONLINE_ONLY" });
+  ok("round 2 m4 pass: a code written another way is the library's form", r.status === 200 && r.body.form === "IMM 5707");
+  r = await call("PATCH", `/library/forms/${encodeURIComponent("IMM 5707")}/draft-from`, { draftFrom: "PDF_FIRST", from: "PDF_FIRST" });
+  ok("round 2 M2 fail: a drafting-source save from an out-of-date screen is refused", r.status === 409 && sql("select draft_from from gov_form_def where form_key='IMM 5707'") === "ONLINE_ONLY", r.body.message);
+  r = await call("PATCH", `/library/forms/${encodeURIComponent("IMM 5488")}/draft-from`, { draftFrom: "ONLINE_ONLY" });
+  ok("review 2 should 4 fail: nothing is drafted from a checklist, so it has no drafting choice", r.status === 400 && /checklist/.test(r.body.message));
   r = await call("PATCH", `/library/forms/${encodeURIComponent("IMM 5707")}/draft-from`, { draftFrom: "PDF_ONLY" });
   ok("C2.10 fail: a choice that is not one of the two is refused on its field", r.status === 400 && r.body.errors?.[0]?.field === "draftFrom");
   r = await call("PATCH", `/library/forms/${encodeURIComponent("IMM 5707")}/draft-from`, { draftFrom: "PDF_FIRST" }, "user-B");

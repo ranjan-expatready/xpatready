@@ -1,6 +1,6 @@
 {
- "at": "2026-10-23T13:40:13.998Z",
- "port": 4447,
+ "at": "2026-10-23T14:19:42.324Z",
+ "port": 4449,
  "database": "xr_studio_screens_grounding",
  "pass": 29,
  "fail": 0,
@@ -148,7 +148,7 @@
     {
      "key": "individual.visitors.visitor_visa",
      "kind": "Row details",
-     "label": "name, path, source basis or allowed locations (no line changed)",
+     "label": "name, path, portal, source basis or allowed locations (no line changed)",
      "change": "changed",
      "needs_sme": false
     }
@@ -179,7 +179,7 @@
   {
    "name": "isolated copy: sample inputs load through the normal paths: 2 pathways, 11 programs, 6 combinations set up",
    "ok": true,
-   "detail": 5.368
+   "detail": 3.534
   },
   {
    "name": "a person makes the given-names question conditional (saved as draft)",

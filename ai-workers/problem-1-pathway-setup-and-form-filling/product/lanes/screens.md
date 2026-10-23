@@ -12,12 +12,13 @@ Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes 
 current_screen: 01-programs-catalogue
 stage: CHECK
 owner: Lead
-next_action: Lead check of the one FIX pass (build-notes "Fixes (one FIX pass to close Screen 01, 23 Oct)" + "CHECK → FIX in the same pass"), merge, then the qa lane retests QA-1/3/5/6/7/9/10/11/12/13 before DONE. Open Minors for the Lead: deny by default, atomic baseRevision, m9 words, approver buttons on Sources.
+next_action: Lead check of the closing pass and its P-74 extension (build-notes: "Fixes (one FIX pass…)", "CHECK → FIX", "Extension (P-74)", "CHECK round 2 → FIX"), merge (new migration 20261023210000: prisma generate + migrate deploy), then the qa lane retests QA-1/3/5/6/7/9/10/11/12/13 and C1.6, C1.7, C2.7, C2.10, C3.10 before DONE. Open for the Lead: deny by default, atomic baseRevision on other editors, intake wording (m9), capture reading inside the request (forms lane).
 then: Screen 02 DESIGN (Lead concept with P-61–P-63 and the A4 progress screen; builder feasibility challenge).
 blocked_by: none
 updated: 2026-10-23
 
 ## Log (last 10 lines)
+- 2026-10-23 · 01 · FIX → CHECK · P-74 extension: C1.6 channel per line + filing method (row and page), C1.7 portal + default channel, C2.7 add an online form (awaiting a second person; continue/abandon), C2.10 what drafting reads per form, C3.10; CHECK round 2 (reviewer 8/10, 2 Must; breaker 3 Major) fixed: portal reviewed, version checks, no stuck captures. Rules 65, API 130, channels 42, browser 135, race safe. AI US$0.
 - 2026-10-23 · 01 · FIX → CHECK · One pass: QA-1 release gate (both routes, per person, rolled back if the draft moves during release), QA-13 re-add restores the line, QA-3/5/6/7/9/10/11/12, P-63 words, step said once, default channel; reviewer Ship after fixes 8.5/10 (2 Must, 5 Should) and breaker 4 Major/9 Minor fixed in the same pass. Rules 63, API 130, browser 118, race 7/7, grounding 29, forms 106, scale 17/17. AI US$0.
 - 2026-10-23 · 01 · DEMO → FIX · applied Lead note 2026-10-23 17:05 (founder: close Screen 01 in one FIX pass, qa retest, then DONE). Lane copy bound to screens.
 - 2026-10-23 · 01 · CHECK → DEMO · Lead: AI repair A1–A3, A6 confirmed (lead-check.md); :4400 restarted on the repaired build; A4 accepted (forms lane backend, Screen 02 progress screen); restart-script finding carried.
@@ -27,4 +28,3 @@ updated: 2026-10-23
 - 2026-10-23 · 01 · FIX → CHECK · AI drafting repair (P-60, no control cut): one fact naming rule in contracts, v2 prompt/schema and studio; entries checked one by one (bad entry → needs a person, rest kept); plain FAILED messages; four IMM 1344 answers recovered at US$0 (233/233 kept; browser: saved answer → 161 mapped, 44 to decide); paid repeat of a failed run refused; printed edition sent to the AI. A4 proposal for the Lead. Suites: AI drafting 48/48, rules 54/54, engine 38/38, grounding 29/29, orchestration 22/22, API 94/94, browser 101/101 (quiet machine). AI US$0.
 - 2026-10-23 · 01 · FIX · Lead gave the founder parallel-work options (R-74); no stage change. Builder AI repair still next.
 - 2026-10-23 · 01 · FIX · Lead published the executive report for the founder (R-73). No stage change; builder AI repair still next.
-- 2026-10-23 · 01 · CHECK → FIX · Founder: no quality control is cut (P-60); Option 1 withdrawn. Lead fixed the snapshot hook (92 s → 2 s). Builder: AI drafting repair A1–A4, A6 (lead-ai-check.md), then all suites, Lead recheck, DEMO.

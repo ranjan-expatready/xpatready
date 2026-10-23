@@ -98,6 +98,7 @@ function NextStep({ row }: { row: CatalogueLeaf }) {
 function Overview({ d, sum, show }: { d: CombinationView; sum: CombinationSummary | undefined; show: string | null }) {
   const [edit, setEdit] = React.useState(false);
   const [adding, setAdding] = React.useState(false), [addingOnline, setAddingOnline] = React.useState(false);
+  const [resume, setResume] = React.useState<CombinationSummary["onlineForms"][number] | undefined>(undefined);
   const actorId = useActorId();
   const session = useApi<SessionView>(["session", actorId], "/session");
   const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
@@ -137,9 +138,9 @@ function Overview({ d, sum, show }: { d: CombinationView; sum: CombinationSummar
         )}
         {sum ? <UseDefaults id={d.combination.id} sum={sum} canAuthor={canAuthor} /> : null}
         {sum?.channelProblems.length ? <ul className="mt-3 space-y-1 text-sm" aria-label="Filing problems">{sum.channelProblems.map((p, i) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level === "error" ? "Blocks release" : "Warning"}</Pill>{p.message}</li>)}</ul> : null}
-        {sum ? <OnlineForms sum={sum} /> : null}
+        {sum ? <OnlineForms id={d.combination.id} sum={sum} canAuthor={canAuthor} onContinue={(o) => { setResume(o); setAddingOnline(true); }} /> : null}
         {adding ? <AddFormPanel combinationId={d.combination.id} label={d.combination.label} have={(sum?.forms ?? []).map((f) => f.code)} onClose={() => setAdding(false)} /> : null}
-        {addingOnline && sum ? <AddOnlineFormPanel id={d.combination.id} sum={sum} codes={[...new Set([...sum.forms.filter((f) => !f.document).map((f) => f.code), ...pending.map((f) => f.code)])]} onClose={() => setAddingOnline(false)} /> : null}
+        {addingOnline && sum ? <AddOnlineFormPanel key={resume?.id ?? "new"} resume={resume} id={d.combination.id} sum={sum} codes={[...new Set([...sum.forms.filter((f) => !f.document).map((f) => f.code), ...pending.map((f) => f.code)])]} onClose={() => { setAddingOnline(false); setResume(undefined); }} /> : null}
       </section>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Forms" value={k.forms} sub={`${k.map_boxes} mapped form fields`} />

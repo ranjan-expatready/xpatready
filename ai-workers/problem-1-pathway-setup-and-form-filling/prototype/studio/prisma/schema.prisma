@@ -150,6 +150,7 @@ model Combination {
   program      ProgramDef            @relation(fields: [programDefId], references: [id], onDelete: Restrict)
   attachments  SourceAttachment[]
   forms        CombinationForm[]
+  captures     PortalCapture[]
   sections     SqrSectionSelection[]
   requirements DocumentRequirement[]
   rules        Predicate[]
@@ -466,6 +467,7 @@ model PortalCapture {
   /// The combination an author added this online form from (Screen 01 "Add an online form", C2.7); null when it was
   /// captured from the library. The online version itself belongs to the library, not to the combination.
   combinationId   String?   @map("combination_id") @db.Uuid
+  combination     Combination? @relation(fields: [combinationId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, formKey, portalKey])
   @@index([combinationId])

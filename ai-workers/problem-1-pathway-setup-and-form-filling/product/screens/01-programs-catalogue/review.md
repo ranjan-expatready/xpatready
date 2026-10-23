@@ -1,95 +1,94 @@
-# Screen 01 — review (reviewer agent, 23 Oct, closing FIX pass)
+# Screen 01 — review (reviewer agent, 23 Oct, closing FIX pass, second CHECK)
 
-Earlier rounds (early look, Lead decisions, first review, Lead checks, static-analysis triage) are in git history (`9f3bbf77` and before).
+Round 1 of this pass is at `c0e8ff98` (git history). Earlier rounds are at `9f3bbf77` and before.
 
-**Commit reviewed:** `c0e8ff98` on `claude/screens-01-fix-c3010a`. **Verdict: Ship after fixes.** 2 Must, 5 Should. **Journey score 8.5/10, a pass** (`journey-test-reviewer-2026-10-23.md`).
-**How checked:** I read the concept, challenge, build notes ("Fixes (one FIX pass…)"), lead-check, BUGS.md, the standards and the diff `9f3bbf77..c0e8ff98`. I ran isolated copies on :4440 (`xr_studio_screens_rv`, `_rv2`, `_rv3`, each fresh, now stopped and dropped) behind the page proxy on :4441 (QA-4). Model calls were refused at `ANTHROPIC_BASE_URL=http://127.0.0.1:9`, so no paid AI ran. Seven journeys were walked in headless Chrome (Playwright), plus API and SQL probes.
-**Suites I reran:** rules **61/61** · API **121/121** (fresh copy) · browser **115/115 twice** (fresh copy each time; timings: first view warm 207/215 ms, cold 1732/831 ms; filter 141/120 ms). The suite outputs went to my scratchpad, not to the repo.
-**Mutation spot-check** (in a scratch copy of `contracts/` + `engine/`): removing `sharedStep` → 3 FAIL. Removing the punctuation-only rule → 1 FAIL. Removing the 120-character limit → 1 FAIL.
+**Commit reviewed:** `8d020757` on `claude/screens-01-fix-c3010a`. **Verdict: Ship after fixes.** 2 Must, 5 Should. **Journey score 8/10, a pass at the bar** (`journey-test-reviewer-2026-10-23-r2.md`).
 
-## Each bug this pass had to fix: checked in the running app
+**How I checked:** I read the build notes ("Fixes…", "CHECK → FIX…", "Extension (P-74)"), round 1, the break report, CAPABILITIES C1.6/C1.7/C2.7/C2.10/C3.10, P-61/62/63/66/74 and the diff `c0e8ff98..8d020757`. Walks ran on :4440 (`xr_studio_screens_rv`), suites and probes on fresh :4441 copies (`_rv2`–`_rv9`); all are now stopped and dropped. Model calls were refused, so there was no paid AI.
+
+**Suites (outputs in my scratchpad, not the repo):** rules **63/63** · API **130/130** · channels **29/29** · release race **7/7 rounds safe** · browser **133/134 twice** (Should 3).
+
+**Mutations** (a scratch copy of `api/`): reverting the re-add restore → API "CHECK must 2" FAILS; dropping `need(author)` from `setChannel` → channels "only an author sets a channel" FAILS. Ignoring `draftFrom` could not be isolated (the capture step does not finish in the scratch copy), so it is not counted.
+
+## Round 1 items and breaker findings: checked
 | Item | Result | Evidence |
 |---|---|---|
-| QA-1 shared release skipped review | **Fixed** | An approver sees "Held back: Not submitted for review" and the button reads "Nothing ready to release", disabled. `POST /pack/release` → 409. After submit with SME items unsigned: "2 changes need the content reviewer's SME sign-off" on both release routes. After the SME signs in the UI it says "Will be released". Changed after submit → held. Author → 403, submitter → 403 (suite). The DB records submitter user-A, approver user-B and the submission APPROVED. Three concurrent releases → one release, two 409s |
-| QA-13 re-add a removed form | **Fixed, with a new defect (Must 2)** | Re-adding after a draft removal works, and so does re-adding after a released removal (v4 DRAFT supersedes RETIRED v3). A second add → 409. Five parallel adds → one line (201 + 4×409) and one audit line. Removing a released line now gives RETIRED v2 |
-| "+ Add line" default channel (F1) | **Fixed** (PDF path seen) | New lines got `PDF_UPLOAD` on rows with no portal. I did not exercise the Online path; the forms suite (106) covers it |
-| QA-7 / QA-6 name rules | **Fixed** | A 121-character name shows "Keep the name under 120 characters." in red, `aria-invalid`, and Create is off. "!!!" shows "Use letters or digits…". "Visa d'été — 日本語" was created by keyboard only at 1024 px |
-| QA-11 | **Fixed** | "Open the existing combination" → `/c/6a6512f7…` |
-| QA-10 | **Fixed** | "Submitted by Configuration author at 6:18:30 PM" |
-| QA-12 | **Fixed** | Menu reads loaded → after reset "Load sample inputs" → hand-made program "Load sample inputs (programs exist: reset first)", disabled |
-| QA-5 | **Fixed** | DB zone Asia/Kolkata. `updated_at` 18:15:29+05:30 matched `now()` |
-| QA-3 | **Fixed** (read) | `restart-api.sh` and `stop.sh` kill only the listener on `STUDIO_PORT`. `stop.sh` still stops the shared database, as noted |
-| P-63 words | **Fixed** | 19 pages swept: no "box" or "box map" on screen. Server strings use "form field" / "field map" |
-| Next step said once | **Fixed** | Visitor visa: "Next step for all of these: Add 1 form from the library." A single line keeps its own step |
-| QA-9 stale builder checks | **Not in the commit (Must 1)** | See below |
+| Must 1 QA-9 committed | **Fixed** | The three files are in `8d020757` (Layout v2 `/new`, `/program-nodes`). I did not rerun the scale suite |
+| Must 2 / m6 re-add resets the line | **Fixed** | Walked on Live "With an LMIA": remove IMM 5409, then re-add it from "+ Add form". It comes back as "couple once · Needed once per couple…", draft changes return to the earlier count, v2 is deleted and v1 PUBLISHED stands. The mutation is caught |
+| Should 1 / M4 removed-form state | **Fixed** | The Overview shows it as an attached source with the add step, and "+ Add form" offers Add |
+| Should 2 gate in `approve` | **Fixed** | `studio.ts:528-531` calls `releaseGate`; plain BR-14 words |
+| Should 3 changed-after-submission | **Fixed** | Tested in the API suite (130) |
+| Should 4 P2002 in the transaction | **Fixed** | `createMany … skipDuplicates`, conditional update/delete (`form-lines.ts:39-49`) |
+| Should 5 browser Back | **Fixed** | Back → `?sel=…super_visa`, row highlighted and focused |
+| Breaker M1 release race | **Fixed** | 0–60 ms: 409 (refused or rolled back); 120–250 ms: the change stays DRAFT; never published unreviewed |
+| Breaker M2 / M3 | **Fixed** | Per-person `/draft` (`programs.ts:241-246`); WHO list check (`form-lines.ts:28`) |
+
+## Extension (P-74): checked
+| Capability | Result |
+|---|---|
+| C1.6 | **Partly met.** The row and panel show the filing method; "Filed as" per line for the author (read-only for others); signatures in words; draft change only. The words break (Must 2) |
+| C1.7 | **Partly met.** Portal picker with Sample portals labelled; "(default)" per line; "Use the default for N" only on click; channel problems "Blocks release". A portal change is not reviewed (Must 1) |
+| C2.7 | **Met, with one defect.** Saved pages read; answers refused with reason; "Awaiting a second person"; self-approval 403; approved → "+ Add" makes an Online line. The orphan capture is Should 1 |
+| C2.10 | **Met.** Sources tab, per form: "Reads the PDF version (…) first, then the IRCC Portal screens for what differs"; the choice changes words and drafting; words only for the approver |
+| C3.10 | **Met.** No "box" on 24 pages, tabs and both panels |
 
 ## Issues
-**Must 1: QA-9 is not fixed in `c0e8ff98`.** The updated `tests/check_studio_browser.cjs`, `tests/check_catalogue_scale.cjs` and `tests/fixtures/scale_100.ts` exist only as uncommitted changes in the lane copy. The committed files are still stale: `check_studio_browser.cjs:176` clicks "Add program or category"; `check_catalogue_scale.cjs:24` waits for "Programs and their combinations"; `scale_100.ts:38` posts to `/programs`. The build notes say "(see below)" but there is nothing below. **Fix:** commit the three files and their evidence, and add the run result to the build notes.
+**Must 1: a portal change bypasses review and is released unlisted.**
+* Cause: `setPortal` (`api/src/forms.ts:441-446`) edits `combination.portal_key` in place. `diff()` leaves `portal` out of its row-details meta (`engine/validate.ts:152`), yet the snapshot carries it (`engine/snapshot.ts:141`).
+* Evidence: on a fresh Live row the draft count went 0 → 0 after a portal change. Walked: Release 2 of "With an LMIA" published `portal = ircc_portal`, while the review list showed only the 2 channel changes and the SME signed without seeing it. This breaks STANDARDS §3.7/§3.8 and BR-14.
+* **Fix:** add `portal` to the diff (a "Filing" change, counted and listed). Test: a portal change on a Live row is 1 draft change and is held until reviewed.
 
-**Must 2: undoing a removal resets the form line's content without saying so** (`api/src/form-lines.ts:33-36`). The undo-in-place writes the default `line` (who `each_applicant`, `COMBINATION_MANDATORY`, no condition) over the retired version, so the released who and when are lost.
-* Walked in the UI on Live "With an LMIA": IMM 5409 was "Once per couple, conditional" in Release 1. Remove it, then click the header's "Add 1 form from the library". Result: the line is DRAFT, `each_applicant`, mandatory. The header says "1 draft change", and that change went out in Release 2 with no SME item.
-* The build notes call this "undone in place", but the result is a different line. The API check (`check_screen01_api.ts:180`) asserts only version and status, so it passes.
-* **Fix:** when undoing a pending removal, restore the superseded published row's who, attach mode, condition and channel (or drop the retired draft version). Assert "0 draft changes after remove + re-add".
+**Must 2: the filing method is a broken sentence on the Programs row and the panel** (`engine/channels.ts:34`, shown by `api/src/programs.ts:156`, `web/src/pages/programs.tsx:243`, `web/src/components/channels.tsx:30`).
+* It shows "PDF only; plus signed pdf upload when Needed when the applicant uses an authorized representative, …": lower-case "pdf", "when Needed when", and the full condition text. The row grows from 44 px to 102 px (EXPERIENCE §2, §5). C1.6 names the values "PDF only · Online only · Mixed".
+* **Fix:** show the short method on the row and panel. Leave the per-line detail to "Filed as" or a tooltip. Add a rule test with a conditional line on another channel.
 
-**Should 1: the removed-form state contradicts itself.** After a removal the Overview Forms table still lists IMM 5409 with no "Removed" mark. "+ Add form" shows it as "Added", because `combination.tsx:136` passes `row.forms`, which includes forms attached only as sources. Meanwhile the header's next step is "Add 1 form from the library" (screenshot J6-5). The same "Added" pill appears for any form attached only as a source (Visitor visa IMM 5707). **Fix:** pass only form lines as `have`, mark removed-in-draft lines, and show source-only forms as addable.
+**Should 1: a refused "Add an online form" leaves an orphan capture.**
+* `channels.tsx:128-136` creates the capture before the screens pass. When no screen is added, it stays OPEN and is listed as "Being captured: add the remaining screens, then finish". No screen can finish or abandon it, and each retry adds another one.
+* **Fix:** abandon it when nothing was added (`POST /captures/:id/abandon`), or offer Continue/Abandon on the row.
 
-**Should 2: `approve()` repeats the release gate instead of calling `releaseGate`** (`studio.ts:504-521` vs `:536`). This breaks STANDARDS §7 (no duplicated logic). It also shows the approver "approved hash differs from the submitted configuration". **Fix:** call `releaseGate` and use its plain message.
+**Should 2: an Online line's missing items give the wrong cause and step** (`engine/programs.ts:62`, `:69`). They read "1 rule does not resolve (…no screen map yet…). Next step: fix it on the Configuration tab" and "No form fields mapped yet for IMM 5257. Next step: Add 1 form from the library" (journey `J2-3`). **Fix:** make channel problems their own missing item, with a step the person can take ("Change how it is filed" / map its screens).
 
-**Should 3: the "Changed after it was submitted" branch has no test.** I confirmed it by hand: held, and approve → 409. **Fix:** add a pass and a fail to the API suite.
+**Should 3: the online-form panel keeps a stale portal** (`channels.tsx:114-115`). Opened right after a portal change, it preselects the old portal and never corrects it, because the state is set once and the effect fills only an empty value. Reproduced (APR → LMIA Online shows APR at 0–3 s). The browser suite step "portal chosen" failed 2/2 for me, though the evidence says 134/134. **Fix:** follow `sum.portal` until the user touches the field, and wait for the refetch in the suite.
 
-**Should 4: `addFormLine` catches P2002 inside the AI-apply transaction** (`sources.ts:402`). In PostgreSQL the transaction is already aborted at that point, so under a race the apply fails instead of answering "already". **Fix:** use a savepoint, or check under a row lock.
+**Should 4: [M] standards not met in the new code.**
+* Migration `20261023210000` has no recorded rollback (§5), and `portal_capture.combination_id` has no foreign key (§3.4).
+* The API accepts a channel (200) and a drafting source on a checklist while the UI says "Checklist (not filed)" (§3.4).
+* Channel, portal and drafting-source saves carry no revision, so a stale save overwrites silently (§4; parallel saves are safe: 409 + 200).
+* **Fix:** add the rollback, the foreign key, refuse on checklists, and send `baseRevision`.
 
-**Should 5: browser Back loses the highlight.** Browser Back from a combination page returns to `/?f=all` with no highlighted or focused row. The in-page "Programs" link restores the row and the scroll (Extend stay in Canada, scrollY 307). The concept says "Back … the opened row highlighted". **Fix:** restore from history state on popstate.
+**Should 5: small UI issues.**
+* "Use the default for N forms" sends N sequential PATCHes and can apply only part (`channels.tsx:78`). The edited line jumps to the top of the Forms table (the summary orders by version, `programs.ts:453`; sort by code). The `w-auto` portal select makes the page 13 px wide at 400 px.
 
 ## [M] standards (met unless listed)
-**Not met:**
-* STANDARDS §6 deny by default: an unknown or missing `x-actor` creates a combination (201). The builder labels this "Not built: simulated people"; the Lead should accept or route it.
-* EXPERIENCE §5: the Review tab shows "Fingerprint 20a20b34…", internal item keys (`review_test_letter:principal_applicant`) and derived-field keys. The builder assigns these to Screen 03 and they are not counted here.
-* EXPERIENCE §1 type scale: the path-builder hints use `text-[12.5px]` (`new-combination.tsx:157`).
+**Not met:** Should 4. Deny by default: no or unknown `x-actor` still acts as the author, also on the new PATCHes (left to the Lead in round 1). EXPERIENCE §5: the Review tab's fingerprint and keys (Screen 03, as before). §1 type scale: the `text-[12.5px]` hint and new `text-[13px]` notes (`channels.tsx:40,64,101`).
 
-**Met, with evidence:**
-* Problem Details with field errors.
-* Server authorisation by duty: approver → 403 on create; author → 403 on release.
-* One request per view: catalogue 12 ms.
-* axe: 0 violations on 19 pages and every suite state.
-* No sideways scroll at 1024 px or 200 % zoom (list, combination, new, release).
-* Keyboard path: tab to the grid, arrow keys, Enter, in-page Back.
-* Race safety: shown above.
-* Freshness: shown.
-* Demo chrome separate: "Demo" menu and "Prototype" badge.
+**Met:** Problem Details with field errors (e.g. capture code in capitals); server duty checks (approver/SME → 403 on channel, portal, capture and drafting source); upload checks (answers refused, nothing kept); axe 0 on the combination page, both panels, the Sources tab, the approver view and the list at 512 px; keyboard path to "Filed as" with a 3 px focus ring; no sideways scroll at 1024 px or 200 %; one request per view (summary 94 ms; it makes one `defaultChannelFor` query per line, small).
 
-**Scaffolding (P-33):** the sample load and my document-requirement setup used the API. The release, sign-off, submit, remove and re-add steps used the product's own screens.
+**Scaffolding (P-33):** sample load and capture approval used the API. Approval is Screen 02, so it is not a finding here. Everything else used the product's screens.
 
 ## D1–D20 (1–5; independent reviewer, browser/script)
 | D | Score and evidence |
 |---|---|
-| D1 Requirement fit | 4: 11 of 12 fix items verified live; QA-9 not committed (Must 1) |
-| D2 Data integrity | 3: races refused by the DB (adds, releases); undo resets released content (Must 2); deny by default open |
-| D3 Reuse | 4: one `addFormLine` for three callers; library forms reused, not copied |
-| D4 Rule integrity | 4: one gate on the shared release; status calculated; rule mutations caught |
-| D5 Stability and recovery | 4: 30 s release transaction; reload and in-page Back hold; browser Back loses the highlight (Should 5) |
-| D6 Freshness and governance | 4: stored times correct (QA-5); refused releases audited; real submitter recorded |
-| D7 AI trust | 4: AI steps marked, with tooltips (suite F3); no AI step run here (QA-8, no paid AI) |
-| D8 Orientation | 4: full clickable path; Back to the row via the page link |
-| D9 Flow | 4: one step, said once; removed-form signals conflict (Should 1) |
-| D10 Language | 4: P-63 complete on 19 pages; hashes and keys remain on the Review tab (Screen 03) |
-| D11 Feedback and state | 4: field errors, held reasons, draft bar, toasts |
-| D12 Visual quality | 4: clean and aligned; one off-scale size |
-| D13 Accessibility | 4: axe 0, keyboard, 1024 px and 200 % zoom; no real screen reader |
-| D14 Team look | 4: team tokens and patterns; team-name mapping recorded in the build notes |
-| D15 Speed | 4: warm first view 207–215 ms, filter 120–141 ms; one cold load at 1.7 s on a busy machine |
-| D16 Testability | 4: suites rerun green by a non-maker; mutations caught; gaps in Must 2 and Should 3; c8 coverage not run by me |
-| D17 First-use | Simulated only. The founder's walk is pending (lead-check) |
-| D18 Provenance | 4: origin pills, sources tab, release by and when |
-| D19 End-to-end | Not yet evidenced beyond configure → release (case onward is later screens) |
+| D1 Requirement fit | 4: all round-1 items fixed; C2.10 and C3.10 met, C2.7 met with Should 1; C1.6 and C1.7 partly met (Musts) |
+| D2 Data integrity | 3: versioned lines, safe races and an exact restore; the portal is edited in place and released unreviewed (Must 1); no foreign key or revision on the new writes |
+| D3 Reuse | 4: one `addFormLine`, one `releaseGate`/`gateOf`, the F1 engine reused; the drafting source belongs to the library form |
+| D4 Rule integrity | 3: the gate holds on both routes; a portal change escapes the diff that feeds review |
+| D5 Stability and recovery | 4: race rollback, Back restored, reload holds; orphan capture after a refusal |
+| D6 Freshness and governance | 3: audit lines for channel, portal and drafting source; the portal change skips review and sign-off |
+| D7 AI trust | 4: unchanged; AI steps marked; drafting source stated per form; no AI run (QA-8) |
+| D8 Orientation | 4: path, Back highlight, Forms panel clear |
+| D9 Flow | 3: the online-line missing items point to the wrong step; dead-end "Being captured" row |
+| D10 Language | 3: C3.10 clean and the channel words are good; the filing sentence is broken (Must 2); "rule does not resolve" for a filing problem |
+| D11 Feedback and state | 4: toasts, per-file results, "Awaiting a second person", "(default)", "Blocks release" |
+| D12 Visual quality | 3: rows grow to 102 px from the filing sentence; very wide portal select; off-scale 13 px notes |
+| D13 Accessibility | 4: axe 0, keyboard, focus ring, 1024 px and 200 %; 400 px 13 px overflow; no real screen reader |
+| D14 Team look | 4: team controls (Select, Panel, Pill, Table); demo chrome separate |
+| D15 Speed | 4: first view 122–265 ms, filter 25 ms, channel save 90 ms, online form 826 ms |
+| D16 Testability | 4: suites green by a non-maker except one flaky step; 2 of 2 isolated mutations caught; no test covers portal-in-review |
+| D17 First-use | Simulated only. The founder's walk is pending |
+| D18 Provenance | 4: Sample portals labelled, capture approval state, drafting source per form, release by and when |
+| D19 End-to-end | Not yet evidenced beyond configure → release |
 | D20 Pain and wow | Simulated only |
 
 ## What I could not check
-* The Online-channel default (forms suite only).
-* AI drafting and its review (QA-8 in lane copies; no paid AI).
-* A real screen reader.
-* A visible (headed) browser walk: I used headless Chrome and looked at the screenshots.
-* Rule mutations on the API side. That needs a scratch copy of the server; I did spot-checks by reading the code.
-* c8 coverage.
-
-My screenshots are temporary, in my scratchpad (`…/scratchpad/jt/shots/`), and are not committed.
+Capture review on a screen (Screen 02); AI drafting (QA-8); PDF downloads (QA-4); a real screen reader; a headed walk (I used headless Chrome and screenshots); a rerun of the scale suite; c8 coverage; the drafting-source mutation (scratch environment).

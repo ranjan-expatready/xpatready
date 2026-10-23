@@ -359,16 +359,21 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const forms = p.getByRole("region", { name: "Forms" });
   step("C1.6: the combination page shows the filing method and each line's channel", /Filing: PDF only/.test(await forms.textContent()) && await forms.getByRole("combobox", { name: /^How IMM \d+.* is filed$/ }).count() >= 6);
   await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("SIGNED_PDF_UPLOAD"); await idle();
-  await p.waitForFunction(() => /some signed by hand/.test(document.querySelector("[data-filing]")?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
-  step("C1.6: the author sets a line's channel; the filing method and the signature follow", /PDF only \(some signed by hand\)/.test(await p.locator("[data-filing]").textContent()) && /signed by hand, scanned/.test(await forms.textContent()));
+  await p.waitForFunction(() => /signed by hand, scanned/.test(document.querySelector('[aria-labelledby="ov-forms"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
+  step("C1.6: the author sets a line's channel; the line's signature follows and the filing method stays in C1.6's short words", /Filing: PDF only/.test(await p.locator("[data-filing]").textContent()) && /some signed by hand/.test((await p.locator("[data-filing] [title]").getAttribute("title")) ?? "") && /signed by hand, scanned/.test(await forms.textContent()));
   await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("PDF_UPLOAD"); await idle();
   await forms.getByRole("combobox", { name: "Portal" }).selectOption("ircc_portal"); await idle();
   await p.waitForFunction(() => /IRCC Portal/.test(document.querySelector("main")?.textContent ?? "") && !document.querySelector("[data-filing] select:disabled"), null, { timeout: 5000 }).catch(() => {});
   step("C1.7: the author picks the combination's portal", (await forms.getByRole("combobox", { name: "Portal" }).inputValue()) === "ircc_portal");
   await forms.getByRole("button", { name: "Add an online form" }).click();
   const op = p.getByRole("dialog", { name: "Add an online form" }); await op.waitFor();
+  for (let i = 0; i < 25 && (await op.getByRole("combobox", { name: "Portal" }).inputValue()) !== "ircc_portal"; i++) await p.waitForTimeout(200); // the summary refresh after the portal save
   step("C2.7: \"Add an online form\" opens a right panel with the combination's portal chosen", (await op.getByRole("combobox", { name: "Portal" }).inputValue()) === "ircc_portal");
   await op.getByLabel("Form code").fill("IMM 5707"); await op.getByLabel("Title as the portal shows it").fill("Family information (online)");
+  await op.getByLabel("Choose blank screens").setInputFiles(path.join(__dirname, "fixtures", "portal", "imm5257-online-s1-personal-with-answers.html"));
+  await op.getByRole("button", { name: "Add and send for approval" }).click();
+  await op.getByText(/nothing was kept/).waitFor({ timeout: 30000 }).catch(() => {}); await idle();
+  step("review 2 should 1: a page holding an answer is refused and nothing is left behind (no \"being captured\" row)", /nothing was kept/.test(await op.textContent()) && !/Being captured/.test((await p.locator("[data-online-forms]").textContent().catch(() => "")) ?? ""));
   await op.getByLabel("Choose blank screens").setInputFiles(["imm5257-online-s1-personal.html", "imm5257-online-s2-marital.html", "imm5257-online-s3-language.html"].map((f) => path.join(__dirname, "fixtures", "portal", f)));
   await state("add-online-form-panel", { viewport: true });
   await op.getByRole("button", { name: "Add and send for approval" }).click();
@@ -385,7 +390,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   step("C2.10: the sources tab says, per form, what drafting reads (PDF version first by default)", /Reads the PDF version \(IMM 1295/.test(await dsrc.textContent()) && (await dsrc.getByRole("combobox", { name: "What drafting reads for IMM 1295" }).inputValue()) === "PDF_FIRST");
   await dsrc.getByRole("combobox", { name: "What drafting reads for IMM 1295" }).selectOption("ONLINE_ONLY"); await idle();
   await p.waitForFunction(() => /Online screens only, but no online version/.test(document.querySelector("[data-drafting-sources]")?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
-  step("C2.10: the author changes it per form and the line says what that means", /Online screens only, but no online version has been approved yet/.test(await dsrc.textContent()));
+  step("C2.10: the author changes it per form and the line says what that means", /Online screens only, but no online version from the IRCC Portal has been approved yet/.test(await dsrc.textContent()));
   await dsrc.getByRole("combobox", { name: "What drafting reads for IMM 1295" }).selectOption("PDF_FIRST"); await idle();
   await state("sources-tab-drafting-reads");
 

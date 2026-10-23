@@ -117,3 +117,17 @@ Source: `lanes/screens.md` "From the Lead" and `qa/BUGS.md`. **No model call; AI
 | **C3.10** | No "box" on any page or message (sweep above); browser reads seven pages. | browser |
 Also: author-only buttons on the Sources tab are hidden from other people (breaker m9). Choice kept small: the drafting source is a property of the library form (one form, one choice wherever used), not per combination.
 **Checks:** channels 29/29 · rules 63 · API 130 · browser **134/134** · race 7/7 · engine 38 · AI drafting 48 · grounding 29 · forms channels 106. Type check clean.
+
+### CHECK round 2 → FIX (reviewer: Ship after fixes, journey 8/10, 2 Must + 5 Should; breaker: 3 Major + 7 Minor; round-1 items all confirmed fixed)
+| Finding | Fix | Test |
+|---|---|---|
+| Must 1 / M1: a portal change skipped review | The portal is part of the compared row details (`engine/validate.ts`): one draft change, "Row details … portal", reviewed and released like the rest. | channels: Live row +1 change, listed |
+| Must 2: the filing method was a broken sentence | Row and page show C1.6's words (`filingKind`: PDF only · Online only · Mixed: online and PDF); the line-by-line detail (`filingMethod`, now "plus PDF upload when the applicant …") is the tooltip. | channels, browser |
+| M2 / should 4: no version check on channel, portal, drafting source | Each save sends the value the screen showed (`from`); a stale one is a 409, the write is claimed (`updateMany … where value = from`), and two new versions of a released line keep one (409 for the other). Checklists have no channel and no drafting source (400). Migration: foreign key and written rollback. | channels: three 409s, two passes, two checklist refusals |
+| M3 / should 1: stuck online forms | A refused attempt abandons its new capture at once ("nothing was kept"); an unfinished one shows Continue and Abandon on the combination page; abandoned ones are counted, not listed. | browser |
+| Should 2: wrong cause for an Online line | Channel problems are one missing line, "N forms cannot be filed as set", step "Change how it is filed"; an Online line is never "unmapped PDF form fields". | rules pass/fail; channels on Visitor visa |
+| Should 3: stale portal in the panel | The panel follows the combination's portal until the person picks one; a different portal is warned. | browser |
+| Should 5 / m2 / m7 | "File these Online" is one server transaction for lines whose default is Online (never a signed line); lines are listed in code order; the portal select fits at 400 px; defaults computed in one query; type sizes on the scale. | channels: all-or-nothing |
+| m3 / m4 | "+ Add" of an online-only form says to choose the portal first; drafting words never borrow another portal; form codes written another way find the library form. | channels |
+| Left: m6 (a 9 MB saved page is read inside the request, up to 60 s: the forms lane's capture reader) | — | — |
+**Checks:** rules 65 · API 130 · channels 42 · browser 135 · race safe · engine 38 · AI drafting 48 · grounding 29 · forms channels 106.

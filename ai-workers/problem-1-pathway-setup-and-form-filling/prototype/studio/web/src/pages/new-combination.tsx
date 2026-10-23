@@ -82,7 +82,7 @@ export function NewCombinationPage() {
         {opts.isLoading ? <Skeleton className="h-16 w-full" /> : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex flex-col gap-1">
-              <label htmlFor="pc-pathway" className="text-[12.5px] text-text-muted">Pathway</label>
+              <label htmlFor="pc-pathway" className="text-xs text-text-muted">Pathway</label>
               <Select id="pc-pathway" value={pathway} onChange={(e) => { setPathway(e.target.value); setProgram(null); setCategory(null); setSub(null); }}>
                 <option value="INDIVIDUAL">{PATHWAY_LABEL.INDIVIDUAL}</option><option value="CORPORATE">{PATHWAY_LABEL.CORPORATE}</option>
               </Select>
@@ -105,7 +105,7 @@ export function NewCombinationPage() {
             {linkKind ? <Picker id="link" label="Combination it is linked to" hideLabel noCreate options={(opts.data?.combinations ?? []).map((c) => ({ key: c.nodeKey, label: `${c.pathway === pathway ? "" : `${c.pathway === "CORPORATE" ? "Corporate" : "Individual"} › `}${c.path.join(" › ")}`, combinations: 1, hasSetup: true }))}
               value={link} error={errors.link} onChange={setLink} /> : null}
           </div>
-          <span className="text-[12.5px] text-text-muted">A label on the row for now (for example "Supported by: Corporate › LMIA"); nothing carries across between linked applications yet.</span>
+          <span className="text-xs text-text-muted">A label on the row for now (for example "Supported by: Corporate › LMIA"); nothing carries across between linked applications yet.</span>
         </div>
 
         {exists ? (
@@ -156,7 +156,7 @@ function Picker({ id, label, options, value, onChange, error, disabled, parentNe
   const listId = `pk-${id}-list`;
   return (
     <div className="relative flex flex-col gap-1">
-      <label htmlFor={`pk-${id}`} className={cn("text-[12.5px] text-text-muted", hideLabel && "sr-only")}>{label}</label>
+      <label htmlFor={`pk-${id}`} className={cn("text-xs text-text-muted", hideLabel && "sr-only")}>{label}</label>
       <input id={`pk-${id}`} role="combobox" aria-expanded={open} aria-controls={listId} aria-autocomplete="list" autoComplete="off" disabled={disabled}
         aria-activedescendant={open && items[hi] ? `${listId}-${hi}` : undefined} aria-invalid={!!error || !!valueProblem || undefined} aria-describedby={`pk-${id}-hint`}
         value={shown} placeholder={allowNone ? "None" : "Choose or type"}
@@ -182,7 +182,7 @@ function Picker({ id, label, options, value, onChange, error, disabled, parentNe
           )) : <li className="px-2 py-1.5 text-text-muted">{twin ? "" : "Nothing yet: type a name to create one."}</li>}
         </ul>
       ) : null}
-      <span id={`pk-${id}-hint`} aria-live="polite" className={cn("text-[12.5px]", error || (typing && bad) || (!typing && valueProblem) ? "text-text-danger" : value && !("key" in value) ? "text-text-ok" : "text-text-muted")}>{error ?? hint}</span>
+      <span id={`pk-${id}-hint`} aria-live="polite" className={cn("text-xs", error || (typing && bad) || (!typing && valueProblem) ? "text-text-danger" : value && !("key" in value) ? "text-text-ok" : "text-text-muted")}>{error ?? hint}</span>
     </div>
   );
 }
