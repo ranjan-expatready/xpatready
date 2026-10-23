@@ -1,6 +1,6 @@
 {
- "at": "2026-10-23T12:33:39.815Z",
- "port": 4441,
+ "at": "2026-10-23T13:15:07.522Z",
+ "port": 4449,
  "database": "xr_studio_screens_forms",
  "paid_calls": 0,
  "fixtures": "Sample (tests/fixtures/portal/README.md)",
@@ -246,8 +246,8 @@
    "name": "finish answers before the review document is printed (printed in the background; HTML until the PDF exists)",
    "ok": true,
    "detail": {
-    "ms": 124,
-    "review_file": "prototype/studio/var/isolated-screens_forms/workspaces/demo/portal-twins/IMM5257-ircc_portal-132adefe-d6375ca38c3b.review.html"
+    "ms": 15,
+    "review_file": "prototype/studio/var/isolated-screens_forms/workspaces/demo/portal-twins/IMM5257-ircc_portal-90698cd2-d6375ca38c3b.review.html"
    }
   },
   {
@@ -273,7 +273,7 @@
    "name": "approval: a second person makes it an online version, re-check date set (Sample 180 days)",
    "ok": true,
    "detail": {
-    "id": "96987f38-7597-45d8-8f5d-1b8eb93e06b3",
+    "id": "63f1997a-2b7a-4be5-999f-115d5245bf00",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-23",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -545,7 +545,7 @@
    "name": "confirm: a second person confirms the identical re-capture; the re-check date runs from it, once",
    "ok": true,
    "detail": {
-    "id": "96987f38-7597-45d8-8f5d-1b8eb93e06b3",
+    "id": "63f1997a-2b7a-4be5-999f-115d5245bf00",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-23",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -559,8 +559,8 @@
    "name": "map input: a person marks each open input 'not a fact' with the reason (a new draft version, origin HUMAN)",
    "ok": true,
    "detail": [
-    "serviceLanguage",
     "unionDate",
+    "serviceLanguage",
     "usedPortalBefore"
    ]
   },
@@ -580,8 +580,8 @@
    "name": "Forms library: IMM 5257 shows both channels and its online version",
    "ok": true,
    "detail": [
-    "PDF",
-    "Online"
+    "Online",
+    "PDF"
    ]
   },
   {

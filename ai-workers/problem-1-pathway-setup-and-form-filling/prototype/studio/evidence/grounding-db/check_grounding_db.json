@@ -1,6 +1,6 @@
 {
- "at": "2026-10-23T12:19:13.071Z",
- "port": 4440,
+ "at": "2026-10-23T13:14:27.401Z",
+ "port": 4447,
  "database": "xr_studio_screens_grounding",
  "pass": 29,
  "fail": 0,
@@ -59,8 +59,8 @@
    "name": "one combination per last-level node, also under concurrent creates: one created, the other returns it",
    "ok": true,
    "detail": [
-    201,
-    200
+    200,
+    201
    ]
   },
   {
@@ -157,7 +157,7 @@
   {
    "name": "a draft changed after submission cannot be released (stale submission)",
    "ok": true,
-   "detail": "Release refused: approved hash differs from the submitted configuration (the draft changed after it was submitted; submit it again)."
+   "detail": "Release refused: The draft changed after it was submitted: submit it again on its Review and release tab."
   },
   {
    "name": "a concurrent rename from an out-of-date screen is refused, not overwritten",
@@ -179,7 +179,7 @@
   {
    "name": "isolated copy: sample inputs load through the normal paths: 2 pathways, 11 programs, 6 combinations set up",
    "ok": true,
-   "detail": 62.55
+   "detail": 11.135
   },
   {
    "name": "a person makes the given-names question conditional (saved as draft)",

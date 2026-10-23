@@ -19,9 +19,11 @@ export const LEVEL_NAME: Record<string, string> = { PATHWAY: "Pathway", PROGRAM:
 /** BR-6: two names under the same parent are the same when they match ignoring case, spaces and punctuation
  *  ("Open work permit", "open  work-permit"). No fuzzy matching. */
 export function normalizeLabel(label: string): string {
-  return label.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}]+/gu, "");
+  // Combining marks stay (break m2): Hindi or Thai vowel signs make different names ("किसान" is not "कसान").
+  return label.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}\p{M}]+/gu, "");
 }
-export const cleanLabel = (label: string) => label.normalize("NFKC").trim().replace(/\s+/g, " ");
+/** Spaces tidied; invisible direction and format characters removed, so a name shows as it is stored (break m2). */
+export const cleanLabel = (label: string) => label.normalize("NFKC").replace(/\p{Cf}/gu, "").trim().replace(/\s+/g, " ");
 
 /** The limits a name must meet, in the words the field shows (the path builder checks them as you type, QA-6/QA-7). */
 export const LABEL_MAX = 120;
@@ -29,7 +31,7 @@ export function labelProblem(raw: string): string | null {
   const s = cleanLabel(raw);
   if (!s) return "Give it a name.";
   if (s.length > LABEL_MAX) return `Keep the name under ${LABEL_MAX} characters.`;
-  if (!normalizeLabel(s)) return "Use letters or digits in the name, not only punctuation.";
+  if (!/[\p{L}\p{N}]/u.test(s)) return "Use letters or digits in the name, not only punctuation.";
   return null;
 }
 const label = z.string().transform(cleanLabel).superRefine((s, ctx) => { const m = labelProblem(s); if (m) ctx.addIssue({ code: "custom", message: m }); });

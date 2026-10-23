@@ -1,17 +1,17 @@
 {
- "at": "2026-10-23T12:37:32.048Z",
+ "at": "2026-10-23T13:17:05.999Z",
  "timings": {
-  "cold_first_view_ms": 1754,
-  "first_view_ms": 245,
-  "filter_ms": 156
+  "cold_first_view_ms": 205,
+  "first_view_ms": 87,
+  "filter_ms": 18
  },
- "pass": 115,
+ "pass": 118,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load through the form intake",
    "ok": true,
-   "detail": "21.554"
+   "detail": "4.008"
   },
   {
    "name": "setup: one replay of a saved real AI run on Super visa (no model call, US$0)",
@@ -26,7 +26,7 @@
   {
    "name": "performance: first view under 1 s with the sample data (app files cached)",
    "ok": true,
-   "detail": "245 ms (cold browser 1754 ms)"
+   "detail": "87 ms (cold browser 205 ms)"
   },
   {
    "name": "P-49: Needs work is the default view, with its count",
@@ -95,7 +95,7 @@
   {
    "name": "performance: changing the view answers under 200 ms",
    "ok": true,
-   "detail": "156 ms"
+   "detail": "18 ms"
   },
   {
    "name": "F1: Live shows every row whose status is Live",
@@ -171,7 +171,7 @@
   {
    "name": "regression: \"Show all\" keeps the All view after the search box settles (no stale URL rewrite)",
    "ok": true,
-   "detail": "http://localhost:4443/?f=all"
+   "detail": "http://localhost:4448/?f=all"
   },
   {
    "name": "item 5: Corporate shows the demo names (LMIA › High-wage position, Low-wage position, Global Talent Stream, In-home caregiver)",
@@ -189,7 +189,7 @@
   {
    "name": "keyboard: one tab stop, ↑/↓/Home/End move, Enter opens the combination page (P-50)",
    "ok": true,
-   "detail": "Spouse of a skilled worker → http://localhost:4443/c/845fa4ee-92ac-4f32-b398-31a8b6dc3457"
+   "detail": "Spouse of a skilled worker → http://localhost:4448/c/2efede29-e2e9-4e00-b281-bf6140e4887c"
   },
   {
    "name": "P-50: Back keeps the view (All), highlights the opened row and restores the scroll",
@@ -204,6 +204,11 @@
   {
    "name": "1024 px: programs-back-row-highlighted has no sideways scroll",
    "ok": true
+  },
+  {
+   "name": "review should 5: the browser's Back button returns to the list with the opened row highlighted and focused",
+   "ok": true,
+   "detail": "{\"sel\":\"Super visa\",\"focus\":\"Super visa\",\"url\":\"?f=all&sel=individual.visitors.super_visa\"}"
   },
   {
    "name": "P-50: the page header carries the full path, every level a link (Programs › Individual › Visitors › Visitor visa)",
@@ -481,7 +486,7 @@
   {
    "name": "QA-11: \"Open the existing combination\" opens that combination's page (not the list)",
    "ok": true,
-   "detail": "http://localhost:4443/c/2e654f08-5751-4499-a64e-c45f26d6b2c7"
+   "detail": "http://localhost:4448/c/4e49daa2-8e94-41f3-a4a9-31ab42869df5"
   },
   {
    "name": "QA-1: the shared Release page holds back a combination nobody submitted, saying why",
@@ -518,6 +523,16 @@
   {
    "name": "QA-1: once submitted and signed, the Release page will release it",
    "ok": true
+  },
+  {
+   "name": "narrow 390 px: the combination's name keeps its width (≥ 200 px), next steps are not clipped, no sideways scroll",
+   "ok": true,
+   "detail": "{\"nameW\":232,\"over\":0,\"clipped\":0}"
+  },
+  {
+   "name": "narrow 512 px: the combination's name keeps its width (≥ 200 px), next steps are not clipped, no sideways scroll",
+   "ok": true,
+   "detail": "{\"nameW\":354,\"over\":0,\"clipped\":0}"
   },
   {
    "name": "P-63: no page says \"box\" or \"box map\" (form field, field map)",

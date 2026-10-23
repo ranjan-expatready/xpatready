@@ -150,7 +150,9 @@ function Picker({ id, label, options, value, onChange, error, disabled, parentNe
   React.useEffect(() => setHi(0), [text, open]);
   const node = value && "key" in value ? options.find((o) => o.key === value.key) : undefined;
   const valueProblem = value && "create" in value ? labelProblem(value.create) : null;
-  const hint = noCreate ? "" : open && bad && text !== null ? bad : valueProblem ? valueProblem : open && twin && text !== null ? `"${twin.label}" exists: choose it` : disabled && !value ? noneHint && !parentNew ? noneHint : "" : !value ? (allowNone ? noneHint ?? "" : "") : "key" in value ? `exists · ${node?.combinations ?? 0} combination${node?.combinations === 1 ? "" : "s"}` : parentNew ? "new" : "new · no duplicate found";
+  // While typing, the hint is about the text being typed; the chosen value's problem shows again when typing stops (break m3).
+  const typing = open && text !== null;
+  const hint = noCreate ? "" : typing && bad ? bad : typing && twin ? `"${twin.label}" exists: choose it` : typing && typed ? (parentNew ? "new" : "new · no duplicate found") : valueProblem ? valueProblem : disabled && !value ? noneHint && !parentNew ? noneHint : "" : !value ? (allowNone ? noneHint ?? "" : "") : "key" in value ? `exists · ${node?.combinations ?? 0} combination${node?.combinations === 1 ? "" : "s"}` : parentNew ? "new" : "new · no duplicate found";
   const listId = `pk-${id}-list`;
   return (
     <div className="relative flex flex-col gap-1">
@@ -180,7 +182,7 @@ function Picker({ id, label, options, value, onChange, error, disabled, parentNe
           )) : <li className="px-2 py-1.5 text-text-muted">{twin ? "" : "Nothing yet: type a name to create one."}</li>}
         </ul>
       ) : null}
-      <span id={`pk-${id}-hint`} aria-live="polite" className={cn("text-[12.5px]", error || (bad && open && text !== null) || valueProblem ? "text-text-danger" : value && !("key" in value) ? "text-text-ok" : "text-text-muted")}>{error ?? hint}</span>
+      <span id={`pk-${id}-hint`} aria-live="polite" className={cn("text-[12.5px]", error || (typing && bad) || (!typing && valueProblem) ? "text-text-danger" : value && !("key" in value) ? "text-text-ok" : "text-text-muted")}>{error ?? hint}</span>
     </div>
   );
 }

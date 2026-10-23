@@ -1,43 +1,87 @@
-# Screen 01 — Programs: break report
+# Screen 01 — Programs: break report (after the one FIX pass)
 
-Breaker, 21 Oct 2026. Scope: concept "What gets built" + Layout v2 + review.md items 1–9 (P-26). No code changed, no AI call, nothing committed.
-**Setup.** The app on :4400 was a stale process (started 17:42, before FINISH: `POST /api/intake` and `/api/intake/held` returned 404). I ran `start.sh`, which restarted it on the current build. Every write was then done on an isolated copy (`tools/isolated.sh brkx 4431`, its own database `xr_studio_brkx`, sample inputs loaded). The founder's demo database got GET requests only. Test files and scripts are in the session scratchpad (`breaker/`).
-**Counts:** Blocker 0 · Major 4 · Minor 10 (all "Needed for the proof"). Not-built observations are listed separately and are not counted.
+Breaker, 23 Oct 2026, lane copy `screens-01-fix-c3010a` at c0e8ff98. Scope: concept "What gets built" + Layout v2, and this pass's fixes (QA-1, 3, 5, 6, 7, 9, 10, 11, 12, QA-13, P-63, next step said once, default channel). Isolated copy `screens_br` on :4442, page proxy :4443, sample inputs loaded. No code changed, no AI call, nothing committed. Scripts and screenshots: session scratchpad `br/`.
+**Counts:** Blocker 0 · Major 4 · Minor 9.
 
 ## Major
-**M1. Concurrent uploads of the same file are wrongly held as "a different file".** Steps: send 4 parallel `POST /intake` of the same new PDF (`race-c.pdf`, IMM 9989 (01-2026)) on Super visa. Expected: one `added`, three `in_library` (P-25: an identical file is recognised). Actual: one `added` and three `held` with "IMM 9989 (01-2026) is already in the library from a different file". That leaves 3 false HELD rows in `intake_item` that a person would have to check, all with identical checksums. Cause: check, then a slow Python read, then act, with no lock and no re-check by checksum before the label check (`api/src/intake.ts:89`, `:125`).
-**M2. One collision fails the whole batch after earlier files were already saved, and a racing edition is lost.** Steps: in parallel, batch A `[p1.pdf (IMM 9985), e1.pdf (IMM 9987 01-2026)]` and batch B `[p2.pdf (IMM 9984), e2.pdf (IMM 9987 02-2026)]`. Expected: one result per file, with e2 as `new_edition_held`. Actual: B returns `409 "Already in progress or already exists… Refresh"` with no per-file results. p2 (IMM 9984) **was** added to the library anyway, and e2 was neither held nor recorded. This is the per-file contract of P-51 broken (`intake.ts:51`, `:139-142`; generic P2002 mapping in `main.ts:133`).
-**M3. Non-English, punctuation-only or long names collide on the generated key and get a false "already exists".** Steps: New combination → Program "BREAK-日本語プログラム" › Category "カテゴリー" → created with key `individual.break.` (empty slug). Then Program "BREAK-中文项目" (a different name): the UI hint says "new · no duplicate found", and Create gives "Not created — Already in progress or already exists… Refresh to see the current state". Refreshing never helps (screenshot `new-nonenglish.png`). The same happens for "BREAK-???" vs "BREAK-...", and for two different 120-character names that share their first ~55 characters. Expected: a different name is created (BR-6 compares by meaning; the key is only internal). Cause: the key is `slug(label)` built from ASCII only and cut to 60 characters (`engine/import.ts:15`, `api/src/studio.ts:65`).
-**M4. The combination page's "Next step" contradicts the list's next step.** Steps: hold a new edition of IMM 5476 (upload `previous-editions/imm5476e-2021.pdf`). Open Live "With an LMIA". The list says **"See 2 new editions"**. The page header says **"Configuration released; preview what it asks → Preview"**. Super visa: the list says "Add 1 form from the library", the page says "Draft changes are ready to check and submit". Expected: one next action per row, the same in both places (P-07, review item 7). Cause: the page computes its own action in the browser (`web/src/pages/combination.tsx:73-84`) instead of using the row's `nextAction` (`engine/programs.ts:67`).
+**M1. A change saved while a release is running is marked PUBLISHED without review or SME sign-off, and it is not in the release.**
+* Steps: Super visa was submitted and every SME change signed. The approver started `POST /pack/release`. 34 ms later the author added a document requirement ("Race late 34", an SME item).
+* Expected: the release takes exactly the submitted draft. The new requirement stays DRAFT and goes to the next review.
+* Actual: release 201 (Release 2). `document_requirement` "race_late_34" v1 is PUBLISHED, but the frozen snapshot does not contain it (`snapshot::text like '%race_late_34%'` = false). The next release then counted 0 requirements published.
+* Cause: the gate and the snapshot are read outside the transaction, and `publishRow` publishes every DRAFT row of the combination, not only the rows in the snapshot (`api/src/studio.ts:556-560`, `:602-613`). The same applies to `approve` (`:504-527`). There is no lock or re-check inside the transaction.
+
+**M2. An approver who submits a combination blocks every release in the shared draft.**
+* Steps: the approver (user-B, who holds the review duty) presses Submit on Visitor visa's Review tab, which is enabled for them (`web/src/pages/review.tsx:71`). The content reviewer signs.
+* Release page: Visitor visa shows "Will be released" and the button reads "Release 1 combination as Release N". Clicking it returns 403 "You submitted Visitor visa…".
+* The 403 refuses the whole release, not just that row (`api/src/studio.ts:565-569`). `/draft` does not hold the row back for this person (`api/src/programs.ts:225-233`).
+* Only one person has the approve duty, so nothing in the shared draft can be released until someone resubmits Visitor visa. The other way out is the approver "returning" it with an empty item list (see m1).
+
+**M3. The Sources-tab reuse stores any text as "who", and it passes submit and release.**
+* Steps: `POST /attachments/<IMM 5409 attachment>/reuse {"who":"<script>alert(1)</script>"}` after IMM 5409's released removal. Response 201.
+* Validation shows 0 errors. The form is submitted and released in Release 5 (snapshot `who` is that string). The draft preview covers IMM 5409 for nobody.
+* Expected: the WHO list is checked, as `saveForm` does (pick, don't type; §3.4 and §3.6). Code: `api/src/sources.ts:422-429`, `api/src/form-lines.ts:31`.
+
+**M4. After a form is removed, the combination page still shows it and will not let it be added again.**
+* Steps: on "With an LMIA" (Live), remove IMM 1295 and IMM 5475 (`PATCH …/forms/… {"retire":true}`). Then open the page.
+* Overview → Forms still lists both forms with their old "Who and when". The draft snapshot has neither.
+* "+ Add form" marks IMM 1295 and IMM 5475 "Added", with no Add button. So the QA-13 re-add cannot be done from the place "+ Add form" lives. Only the row's "Add 2 forms from the library" works. Screenshot `br/shots/add-form-panel-after-remove.png`.
+* The table also shows stale versions: after remove and re-add, IMM 5476 shows v1 "principal applicant" while the draft and Release 5 say "each applicant".
+* Cause 1: `summary` keeps the oldest version that is not RETIRED. A `Map` built from rows sorted newest-first keeps the last entry per form, and a removed form's older version is never RETIRED (`api/src/programs.ts:419-420`).
+* Cause 2: the "Added" list in the add panel comes from the row's forms, which include attached sources that are not lines (`web/src/pages/combination.tsx:136`).
 
 ## Minor
-**m1. An older edition is called "New edition".** If you upload IMM 5257 (06-2019) while the library has (09-2023), the screen says "New edition: impact review needed… waiting: IMM 5257 (06-2019)". It also moves a Live row to Needs work ("See 2 new editions", one of them 2021). The editions are never compared by date (`intake.ts:131-133`). It is held (safe), but the wording misleads the reviewer.
-**m2. A non-IRCC PDF becomes a library form.** A self-made PDF that prints "IMM 9993 (03-2026)" is `added` to the shared library, using the title from its metadata (e.g. `<img onerror…>`, or "ignore previous instructions…"). The same bytes attached to the row are marked "HELD: not an approved official source". The library shows only `approved:false`. The planted-instruction PDF was classed as a guide and never sent to AI. No script ran: React escaped the title, and no dialog fired on Programs, Forms library or the combination page.
-**m3. Server authorisation is not deny-by-default.** A missing or unknown `x-actor` header (e.g. `nobody`) is treated as the author. It succeeded on `/intake`, `/combinations/path`, `/program-nodes`, `/combinations`, `/lines` and `/attachments` (`api/src/core.ts:35-37`; STANDARDS §6 [M]). The approver and the SME got 403 on every author route, as expected.
-**m4. A long search breaks the list.** Paste more than 120 characters into search (or use `/?q=a…130`). After about 7 s of skeleton, "The programs could not be loaded — Too big… restart the studio". The input has no `maxLength`, and the advice to restart is wrong (`contracts/programs.ts:31`; screenshot `q-long-9s.png`).
-**m5. Junk or crafted `under=`/`prog=` URLs give contradictory text.** `/?under=junk.key` shows both "Nothing needs work right now, so all combinations are shown." and "Nothing matches — No combination ." (broken sentence). `/?prog=nope` shows "Program: All" while it filters to nothing. `/?under=corporate.lmia` in Individual shows "Showing: LMIA" with no rows (`web/src/pages/programs.tsx:152,161,189`).
-**m6. Count vs chip.** The filter reads "Live · 0" while a row's status chip says "Live" (With an LMIA has a held edition, so it counts under Needs work). Clicking Live gives "Nothing matches" next to a visible Live row. This conflicts with BR-10 ("counts say what they count"), even if P-49's meaning is intended.
-**m7. Stored file paths depend on the environment.** With `STUDIO_VAR` outside the repo (allowed by `isolated.sh`), the intake stores an absolute `storedPath`. "+ Add" of that form then fails with a 500, and so does downloading it (`intake.ts:141`, `programs.ts:296`). The 500 detail exposes the absolute server path to the browser (`main.ts:138`). With the default `var/` it works.
-**m8. Search speed.** Results appear about 290–300 ms after typing stops (200 ms debounce + about 90 ms), against the "search < 200 ms" budget (§9). Filter changes took 39–144 ms and first view 75–312 ms (both held).
-**m9. Upload limit messages.** One file over 25 MB rejects the whole batch with "File too large" and does not name the file. 21 files gives "Too many files". The friendly messages in `intake.ts:46,78` never show, because multer's limits fire first.
-**m10. IMM 5475 has two edition labels.** The reader gives `IMM 5475 (05-2021)` (printed in the XFA). The manifest and the founder's demo database say `(12-2022)` for the same checksum, so the label changes after a reload.
-
-## Not built (P-26) or outside this screen — observations, not counted
-* Two near-duplicate names created at the same moment both exist ("BREAK-Race One" and "BREAKRaceOne" under Individual). The service check is built, but the normalised-name index is "Not built".
-* Rename, disable and delete, rules that hide fields, and 100 programs / 400 combinations are Not built here or belong to other screens.
-* The founder's demo database still holds pre-FINISH sample data ("Super visa for parents and grandparents", pathway label "Corporate", "Labour market impact assessment (LMIA)"), so item 5 names show only after a reload.
+* **m1. Review steps.** The author can sign the review-duty items of their own submission (201). Any review-duty holder, including the author or the approver, can "return" a submission with `items: []`. `signoff` checks neither who is signing nor that the list is not empty (`api/src/studio.ts:487-500`).
+* **m2. Non-English names.** `normalizeLabel` removes vowel signs (`\p{M}`), so different Hindi and Thai names are refused as duplicates: "BR कसान वज़ा" vs "BR किसान वीज़ा", "BR วซา" vs "BR วีซ่า". Bidi control characters are kept: "BR ‮asiv" is created and displays as "BR visa" (`contracts/programs.ts:22-24`).
+* **m3. Stale field message in the path builder.** After choosing "!!!" or a 121-character name, typing a new name keeps showing the old message. Typing exactly 120 characters shows "Keep the name under 120 characters."; typing "visitors." shows "Use letters or digits…" instead of "Visitors exists". This is because `valueProblem` wins over the live hint (`web/src/pages/new-combination.tsx` `Picker` hint). "Under 120" is also off by one: 120 is accepted.
+* **m4. Deny by default still missing (earlier round's m3).** With no `x-actor` header, or an unknown one, the caller acts as the author: "BR by nobody" was created (`api/src/core.ts:35-37`; §6 [M]).
+* **m5. Line edits.** Removing an already-removed line returns 200 and adds a version each time (IMM 5409 v2 then v3, both RETIRED). A `PATCH who` without `baseRevision` on a removed line silently brings it back as a draft. Two saves sent at once with the same `baseRevision` both return 200; the check is not atomic (`api/src/studio.ts:405-429`).
+* **m6. Re-add resets the line.** Re-adding a released line after a removal resets who, condition and channel to the defaults. IMM 5476 went from principal_applicant to each_applicant, which shows as a draft change (`api/src/form-lines.ts:31-36`). Plain "add" behaviour is arguable; it is a surprise after an accidental removal.
+* **m7. `/draft` makes one or two gate queries per changed row (N+1, §5 [M]), and the draft bar calls it on every page (`api/src/programs.ts:228-233`, `web/src/App.tsx:98`).** At 393 rows it takes 1.8–3.6 s. The "Every change is held back" refusal is 23.6 KB of text (`api/src/programs.ts:253`). The 400-row budgets are not built; the N+1 is the finding.
+* **m8. Scripts (QA-3).** `restart-api.sh` stopped only :4442. But it starts the new server without `DATABASE_URL`/`STUDIO_VAR`, so with `STUDIO_PORT` alone a copy's server would come back on the demo database (`tools/restart-api.sh:9`). `stop.sh` with any `STUDIO_PORT` still stops the shared PostgreSQL every copy uses (`stop.sh:6`); I read this in the code and did not run it, because other lanes were live.
+* **m9. Words.** The planted PDF's intake answer says "kept as a source… Attached to Super visa", but its attachment is HELD ("Unrecognised file"). It is also missing from the Overview's "Held for a person (3)". As the approver, the Sources tab still offers "Choose files", "Attach a sample file" and "Draft with AI" (author-only actions).
 
 ## What held
-* Intake refuses 0 files, empty files, `.txt`, and a PNG renamed `.pdf`. It holds broken or code-less PDFs. Path-traversal names are reduced to their basename (`passwd.pdf`). 21 files gets 400, over 25 MB gets 413, exactly 20 files is accepted. Duplicates in one batch give `added` then `in_library`. A re-upload of a held file is not duplicated ("Already waiting").
-* New-edition hold: neither the 2019/2021 official previous editions nor a forged 2030 edition entered `form_edition`. "+ Add" still used the current edition. The same edition from a different file was held. A hostile HTML page was refused on the library door and attached as HELD on a row. Downloads are sent as `Content-Disposition: attachment`.
-* Roles: the approver and SME got 403 on intake, attachments, sample, path, program-nodes, combinations and lines. Release needs the approver. Two parallel releases gave one 201 and one 409.
-* Hierarchy: wrong-level and cross-program keys, a Corporate program in Individual, a sub-category under a set-up category, and a category with sub-categories as a leaf were all refused with field errors. Case, spacing and punctuation duplicates were refused ("Visitors", "super  VISA").
-* Idempotency: an existing path returns 200 `created:false`. 3 parallel starts of one row gave 1 combination (201/200/200). 3 parallel "+ Add IMM 1295" gave 1 line.
-* Catalogue: junk `pathway`, `filter` and `sort` values give a 400 Problem. Search across code spacing ("IMM5257" = "imm 5257") works. An XSS string in `q` is shown as text.
-* Keyboard: the Tab order runs pathway → views → Program → Status sort → list. Arrow keys and Enter open the right row. After a reload on `/c/:id`, the "Programs" link restores the view and highlights and focuses the row. Browser Back works.
-* Layout: no sideways scroll at 1024 px or at 640 px (200 % of 1280) on the list, the new-combination page or the Forms library. Long names wrap.
+* **QA-1 gate.** Each of these was held on the Release page and refused by the server (409 or 403):
+  * never submitted;
+  * submitted with 1 of 22 SME items unsigned;
+  * changed after submission (the "who" change on Applicant outside Canada; IMM 5707 removed on LMIA);
+  * returned;
+  * `expectedChanges` off by one, a string, or missing (400);
+  * release by the author, the SME or an unknown persona; the author signing an SME item.
+* **Mixed draft.** Ready rows were released and held rows came back with their reasons. Two `pack/release` and two `approve` calls sent at once gave exactly one release. The real submitter was recorded.
+* **QA-13.**
+  * Re-adding after a draft removal updates the line in place.
+  * After a released removal, the re-add is v3, superseding v2.
+  * 3 parallel re-adds gave 201/409/409. 2 `+ Add` plus 2 reuse calls sent together gave one 201.
+  * After release: IMM 5707 v1 and v2 SUPERSEDED, v3 PUBLISHED.
+  * The draft snapshot drops a removed form; the released snapshot keeps it until release. "+ Add line" on a row without a portal gets PDF_UPLOAD.
+* **Names.**
+  * Refused with the field message, nothing stored: "!!!", "— · …", emoji, zero-width only, combining marks only, spaces, tabs or NBSP only; 121 characters (message stays after blur, button off).
+  * Created: 120 characters, Arabic, Hindi, Thai, digits; HTML is stored and shown as text.
+  * Refused as duplicates: "Visitors." and full-width or zero-width variants of "Visitors".
+* **Other fixes.**
+  * QA-11: "Open the existing combination" goes to `/c/<id>` (mouse and keyboard).
+  * QA-12: all three Demo-menu states are correct (empty, after a hand-made combination, after reload).
+  * QA-5: stored times are within 9 s of `now()` while PostgreSQL runs in Asia/Kolkata.
+  * QA-10: "Submitted by Configuration author" and "Last release: Release 5 by Approver".
+  * P-63: no "box" wording on the rendered pages or in the web source.
+  * Next step said once: "Next step for all of these: Add sources."
+  * QA-4 also looks fixed here: `/new` and `/c/<id>` open directly on :4442.
+* **Hierarchy and roles.**
+  * Refused: a Corporate program in Individual, a category of another program, a category with sub-categories used as a leaf, a sub-category under a set-up category, a program under a program, a combination on a program, a link to a program, a bad link kind.
+  * Approver and SME got 403 on create, reuse and intake. 4 parallel identical creates gave 1 created.
+* **Uploads.**
+  * Held: a PDF with an `/OpenAction` JavaScript, a forged IMM 5707 (06-2030), an HTML/PDF polyglot.
+  * The planted-instruction PDF was not on the AI plan.
+  * The library door refused it, and a path-traversal name was reduced to its base name. No dialog fired on any page.
+* **Concurrency, layout, keyboard and scale.**
+  * A stale `baseRevision` gets 409 naming who changed it.
+  * No page-level sideways scroll at 1024 px or at 640 px (200 %) on 7 pages; wide tables scroll inside their card.
+  * The path builder works by keyboard alone.
+  * 100 programs (393 rows) loaded through the API. Catalogue: 40–130 ms cached, 3.7–5.6 s after a write; Programs first rows in 1.3 s; Release page 3.8 s. Not built (P-26); observations only.
+
+## Not built (P-26) — not counted
+"BR Race" and "BR-Race" created at the same moment both exist (no normalised-name index). Scale budgets at 400 rows.
 
 ## Left behind
-* The demo database on :4400 has no BREAK records. Its API process was restarted by `start.sh`.
-* Isolated database `xr_studio_brkx` (all my BREAK- programs and IMM 999x test forms) and `studio/var/isolated-brkx/api.log`. The server is stopped. I did not drop the database (no drop rule).
-* Database `xr_studio_brk` on :4417: I started it, but the parallel reviewer then used it (scratchpad `walk*.cjs`), so I left it running.
+Database `xr_studio_screens_br` (reset and reloaded once, then 100-program run, then fresh start and sample load). Server :4442 and proxy :4443 stopped.

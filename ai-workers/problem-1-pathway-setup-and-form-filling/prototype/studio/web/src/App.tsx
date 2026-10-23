@@ -95,7 +95,7 @@ function Shell() {
 
 /** The shared draft (P-23): one line on every page with everyone's unreleased changes and the one way to release. */
 function DraftBar() {
-  const d = useApi<any>(["draft"], "/draft", { refetchInterval: 15_000 });
+  const d = useApi<any>(["draft", "summary"], "/draft?summary=1", { refetchInterval: 15_000 }); // counts only (break m7)
   if (!d.data) return null;
   const x = d.data, rows = x.rows.length;
   // Short on purpose (early look item 6): what it is, how many, and the one way to release.

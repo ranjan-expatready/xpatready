@@ -1,89 +1,95 @@
 {
- "at": "2026-10-21T08:38:29.227Z",
- "port": 4401,
- "programs": 105,
- "rows": 371,
- "passed": 16,
- "total": 16,
- "clicks": 12,
- "seconds": 38,
+ "at": "2026-10-23T13:02:42.499Z",
+ "port": 4448,
+ "programs": 111,
+ "rows": 393,
+ "passed": 17,
+ "total": 17,
+ "clicks": 4,
+ "seconds": 40,
  "steps": [
   {
-   "name": "T1: all programs browsable in one table on first display",
+   "name": "setup: the copy holds 100+ programs (sample + SYNTHETIC)",
    "ok": true,
-   "detail": "105 program rows of 105 (371 combinations, collapsed), first display 1023 ms (catalogue cached server-side yes)"
+   "detail": "111 programs, 393 combinations (Individual 272, Corporate 121)"
   },
   {
-   "name": "T2: find a distant program, its second combination, and open that combination's Documents editor",
+   "name": "T1: every combination of the pathway in one list on first display, within 2000 ms",
    "ok": true,
-   "detail": "2882 ms, 3 actions; Renewal"
+   "detail": "272 rows of 272 (All · 272), 730 ms; server {\"rows\":11387,\"total\":165}"
   },
   {
-   "name": "T3: back to Programs restores search, expansion and the selected combination (focused)",
+   "name": "T2: search finds a distant synthetic program's second combination and opens its combination page",
    "ok": true,
-   "detail": "276 ms; ?open=corporate.synthetic_087&sel=0de1fcd7-e86a-4e51-90df-83b95d3d2d6c&q=Synthetic+087; focus on row: true"
+   "detail": "1915 ms, 2 actions; Synthetic 093 · Family sponsorship › Priority stream → /c/b819a63b-86e9-42e2-8387-c7d6a2eeab74"
   },
   {
-   "name": "T4: a form identifier finds every combination that files it",
+   "name": "T3: back to Programs restores the search and the All view, and highlights and focuses the opened row",
    "ok": true,
-   "detail": "Showing 73 of 105 programs, 122 matching combinations for \"IMM 5409\" (expected 122)"
+   "detail": "145 ms; ?f=all&q=Synthetic+093&sel=individual.synthetic_093_family_sponsorship.priority_stream; {\"sel\":\"individual.synthetic_093_family_sponsorship.priority_stream\",\"focus\":\"individual.synthetic_093_family_sponsorship.priority_stream\"}"
   },
   {
-   "name": "T5: the 'Draft problems' filter shows exactly the programs with a problem row, including released ones (released badge never hides a draft problem)",
+   "name": "T4: a form code finds every combination that files it, says what matched, and counts the other pathway's matches",
    "ok": true,
-   "detail": "22 programs; e.g. syn.001.c1: released v1 with 2 problem(s)"
+   "detail": "87 shown, 87 expected; Corporate: 35 more matches in Corporate and employers. Switch (expected 35)"
   },
   {
-   "name": "T6: cancelling a quick edit changes nothing",
+   "name": "T5: Needs work is the default view and lists exactly the rows the server says need work",
    "ok": true,
-   "detail": "Synthetic 015 · Citizenship"
+   "detail": "Needs work · 271; 271 shown, 271 expected, 411 ms"
   },
   {
-   "name": "T7: a permitted quick edit saves and survives a reload; the key is unchanged",
-   "ok": true
-  },
-  {
-   "name": "T8: a concurrent change by someone else is refused on the field, not overwritten",
+   "name": "T5: under the Status sort, Not ready comes first and the Not ready, In setup and Live counts match the server's",
    "ok": true,
-   "detail": "Someone renamed this program to \"Synthetic 015 · Citizenship (someone else)\" while you were editing. Your change was not saved; check the new name and try again."
+   "detail": "Not ready 84/84, In setup 187/187, Live 1/1; sorted true"
   },
   {
-   "name": "T9: the approver persona cannot rename (server permission, also for a direct call)",
+   "name": "T5: the Live view lists exactly the Live rows",
    "ok": true,
-   "detail": "Approver (simulated) does not hold the author duty"
+   "detail": "1 shown, 1 Live"
   },
   {
-   "name": "T10: keyboard only: search, Tab to the program, Enter expands it; focus is visible",
+   "name": "T6: the Program filter offers every program of the pathway and shows only the chosen program's combinations",
    "ok": true,
-   "detail": "6 Tab presses; focus ring: rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0"
+   "detail": "77 programs offered of 77; 4 rows for Synthetic 093 · Family sponsorship"
   },
   {
-   "name": "T11: 1440px: no horizontal page scroll (the table scrolls inside its own frame if needed)",
+   "name": "T7: the path filter shows only the combinations under one category, and says which",
    "ok": true,
-   "detail": "overflow 0px"
+   "detail": "2 rows under Synthetic 014 · Economic immigration › Standard application (expected 2)"
   },
   {
-   "name": "T11: 1024px: no horizontal page scroll (the table scrolls inside its own frame if needed)",
+   "name": "T8: every row shows the server's next step (one next step per combination)",
    "ok": true,
-   "detail": "overflow 0px"
+   "detail": "272 rows checked; 0 differ"
   },
   {
-   "name": "T11: 390px: no horizontal page scroll (the table scrolls inside its own frame if needed)",
+   "name": "T9: the approver persona cannot add a category (server permission, also for a direct call); nothing is added",
    "ok": true,
-   "detail": "overflow 0px"
+   "detail": "403 Approver (simulated) does not hold the author duty"
   },
   {
-   "name": "T12: catalogue AI action on an explicit selection shows the operation, every target with its action and reason, and the cost before starting",
+   "name": "T10: keyboard only: search, Tab to the list, Enter opens the combination; the focused row is visibly marked",
    "ok": true,
-   "detail": "AI configuration |  | Draft field maps for added forms · 4 selected combinations |  | Live AI | Guarded route, Claude Opus 5.5; reuses saved output for unchanged forms; costs shown below | Replay saved runs | No mo"
+   "detail": "10 Tab presses; focus ring: oklab(0.50873 -0.0403388 -0.167223 / 0.6) 0px 0px 0px 3px in; opened /c/f86a407f-e6bb-4b75-b5ba-6038e77fa9a8"
   },
   {
-   "name": "T12: nothing was started by opening or cancelling the dialog",
+   "name": "T11: 1440px: no horizontal page scroll; the long program name wraps, nothing cut or clipped",
    "ok": true,
-   "detail": "0 AI launches"
+   "detail": "overflow 0px; name column 772px; text cut false; columns clipped by the list frame false"
   },
   {
-   "name": "no page errors",
+   "name": "T11: 1024px: no horizontal page scroll; the long program name wraps, nothing cut or clipped",
+   "ok": true,
+   "detail": "overflow 0px; name column 356px; text cut false; columns clipped by the list frame false"
+  },
+  {
+   "name": "T11: 390px: no horizontal page scroll; the long program name wraps, nothing cut or clipped",
+   "ok": true,
+   "detail": "overflow 0px; name column 232px; text cut false; columns clipped by the list frame false"
+  },
+  {
+   "name": "T12: no page errors",
    "ok": true,
    "detail": ""
   }

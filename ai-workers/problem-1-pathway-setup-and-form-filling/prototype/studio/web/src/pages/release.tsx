@@ -15,7 +15,7 @@ export function ReleasePage() {
   const qc = useQueryClient(); const toast = useToast();
   const actorId = useActorId();
   const session = useApi<any>(["session", actorId], "/session");
-  const d = useApi<any>(["draft"], "/draft");
+  const d = useApi<any>(["draft", actorId], "/draft"); // per person: your own changes are held back for you (BR-14)
   const [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null), [done, setDone] = React.useState<any>(null);
   const canApprove = (session.data?.actor?.duties ?? []).includes("approve");
   const release = async () => {

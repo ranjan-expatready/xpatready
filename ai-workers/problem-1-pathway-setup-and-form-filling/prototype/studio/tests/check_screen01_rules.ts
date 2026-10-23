@@ -120,6 +120,8 @@ ok("QA-6 pass: letters in any script, digits and punctuation around them are kep
 const longName = CreatePathBody.safeParse({ pathway: "INDIVIDUAL", program: { create: "A".repeat(60) + " " + "B".repeat(70) }, category: { create: "Long test" } });
 ok("QA-7: a name over 120 characters is refused on its level's field with the message the page shows", !longName.success && problemFromZod(longName.error).errors?.[0]?.field === "program.create" && problemFromZod(longName.error).errors?.[0]?.message === "Keep the name under 120 characters." && labelProblem("A".repeat(121)) === "Keep the name under 120 characters.");
 ok("QA-7 pass: exactly 120 characters is accepted", labelProblem("A".repeat(120)) === null);
+ok("break m2 pass: names that differ only in vowel signs (Hindi, Thai) are different names", normalizeLabel("किसान वीज़ा") !== normalizeLabel("कसान वज़ा") && normalizeLabel("วีซ่า") !== normalizeLabel("วซา"));
+ok("break m2 fail: a name of combining marks only is refused; direction controls are removed before storing", labelProblem("\u0301\u0301") !== null && CreateNodeBody.parse({ kind: "PROGRAM", parentKey: "individual", label: "BR \u202Easiv" }).label === "BR asiv");
 
 // ---------------------------------------------------------------- Lead check item 3: only this combination's warnings
 const lib = [{ key: "person.x", valueType: "text" }];

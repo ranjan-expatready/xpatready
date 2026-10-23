@@ -172,6 +172,11 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const back = await p.evaluate(() => ({ url: location.search, sel: document.querySelector('[role="row"][aria-selected="true"]')?.getAttribute("data-label"), y: Math.round(window.scrollY), focus: document.activeElement?.getAttribute("data-label") }));
   step("P-50: Back keeps the view (All), highlights the opened row and restores the scroll", back.url.includes("f=all") && back.sel === focusedLabel && Math.abs(back.y - scrollBefore) < 40 && back.focus === focusedLabel, JSON.stringify({ ...back, scrollBefore }));
   await state("programs-back-row-highlighted", { viewport: true });
+  // Review should 5: the browser's own Back button does the same.
+  await row("Super visa").click(); await p.waitForURL(/\/c\//); await idle(); // a row already set up (opening a not-started one would start it)
+  await p.goBack(); await grid().waitFor(); await idle(); await p.waitForTimeout(200);
+  const backBtn = await p.evaluate(() => ({ sel: document.querySelector('[role="row"][aria-selected="true"]')?.getAttribute("data-label"), focus: document.activeElement?.getAttribute("data-label"), url: location.search }));
+  step("review should 5: the browser's Back button returns to the list with the opened row highlighted and focused", backBtn.sel === "Super visa" && backBtn.focus === "Super visa" && backBtn.url.includes("f=all"), JSON.stringify(backBtn));
 
   // ======================================================== the combination page (row target)
   await p.goto(`${BASE}/?f=all`); await idle();
@@ -340,6 +345,13 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await state("combination-review-submitted-by-name");
   await p.goto(`${BASE}/release`); await idle();
   step("QA-1: once submitted and signed, the Release page will release it", /Will be released/.test((await p.getByRole("row", { name: /Study permit/ }).first().textContent()) ?? ""));
+  // QA-9 scale finding: below 640 px (a phone, or 200 % zoom) the next step moves under the name; the name keeps its width.
+  for (const w of [390, 512]) {
+    await p.setViewportSize({ width: w, height: 844 }); await p.goto(`${BASE}/?f=all`); await grid().waitFor(); await idle();
+    const narrow = await p.evaluate(() => { const c = document.querySelector('[role="row"][data-node] [role="gridcell"]'); const steps = [...document.querySelectorAll('[role="row"][data-node] [role="gridcell"]:nth-child(3)')]; return { nameW: Math.round(c.getBoundingClientRect().width), over: document.documentElement.scrollWidth - innerWidth, clipped: steps.filter((x) => x.scrollWidth > x.clientWidth + 1).length }; });
+    step(`narrow ${w} px: the combination's name keeps its width (≥ 200 px), next steps are not clipped, no sideways scroll`, narrow.nameW >= 200 && narrow.over <= 0 && narrow.clipped === 0, JSON.stringify(narrow));
+  }
+  await p.setViewportSize({ width: 1440, height: 900 });
   // P-63: no "box" on the pages a person reads (form field, field map).
   const boxPages = [];
   for (const u of ["/?f=all", `/c/${wpId}`, `/c/${wpId}/configuration`, `/c/${wpId}/sources`, "/library/forms", "/library/fields", "/release"]) {

@@ -1,127 +1,95 @@
-# Screen 01 — review
+# Screen 01 — review (reviewer agent, 23 Oct, closing FIX pass)
 
-## Early look (Lead, 21 Oct, slice 1 screenshots `screenshots/slice1/`) — **Go, with these changes first**
-Accepted: the builder's top-5 improvements (switcher, keyboard list, type-ahead pickers with inline Create, real ⌘K search) except the panel/sheet (P-50). Decisions on proposals: **P1** keep New combination as a page (it will hold the AI proposal; P-48 layouts follow the capability) · **P2** AI propose arrives with Screen 02 · **P3** add "Rules" to the menu when its page exists · **P4** superseded by P-49 ("Needs work") · **P5** next-step words accepted.
+Earlier rounds (early look, Lead decisions, first review, Lead checks, static-analysis triage) are in git history (`9f3bbf77` and before).
 
-Apply before FINISH (founder's "Lead update", P-49, P-50):
-1. **No side panel or sheet on Programs:** a row opens the combination page; its header shows the full path with every level clickable back to the filtered list; Back keeps pathway, filters, sort and scroll and highlights the opened row; "+ Add form" moves to the combination page.
-2. **Filters:** Needs work (default: In setup, Not ready, and Live rows with something to do) · Live · All, with counts, plus Program; show "Ready" as **"Live"**; Status column sortable.
-3. **Path never truncated in the middle:** two lines in the first cell — muted "Program › Category" above, the combination's own name in bold below; wrap, don't cut.
-4. **Sentence-case column headers** (Combination · Status · Next step) — team rule (P-48).
-5. **Samples:** Super visa is **one** combination, `Visitors › Super visa` (parent or grandparent is a condition, not a sub-category, P-35); demo combination names as in `SCREENS.md` "Demo combinations".
-6. **Draft bar shorter:** "Draft · 44 changes not yet released" + "Review and release (44)".
-7. **Combination page (now the row target), minimal clean-up until Screen 03 redesigns it:** no technical key on the main path (`individual.visitors.transit_visa`); remove the floating "AI for this combination…" button (one AI place = the next-step button, P-07); facts in one muted line.
-8. **New-edition hold (P-32)** in the upload path: same form code, different edition → held as "New edition: impact review needed", never attached silently. Test it.
-9. **One form intake (P-51):** every upload (combination sources, "+ Add form") goes through one intake service that accepts one **or many** files and returns a result per file: code, title, printed edition, published date, checksum, kind (form / checklist / guide) read from the file without AI; identical file → "already in the library"; same code, new edition → held (item 8); unreadable → held for a person. A new form enters the library and is attached to this combination; the library records "used by". Box mapping by AI runs only when the form is first used in a combination. The Forms library's own bulk "Add forms" (Screen 04) will reuse this service unchanged.
-Then FINISH as written (tests per rule, states, axe and keyboard at 1440/1024, remove superseded files, drop react-virtual) → CHECK.
+**Commit reviewed:** `c0e8ff98` on `claude/screens-01-fix-c3010a`. **Verdict: Ship after fixes.** 2 Must, 5 Should. **Journey score 8.5/10, a pass** (`journey-test-reviewer-2026-10-23.md`).
+**How checked:** I read the concept, challenge, build notes ("Fixes (one FIX pass…)"), lead-check, BUGS.md, the standards and the diff `9f3bbf77..c0e8ff98`. I ran isolated copies on :4440 (`xr_studio_screens_rv`, `_rv2`, `_rv3`, each fresh, now stopped and dropped) behind the page proxy on :4441 (QA-4). Model calls were refused at `ANTHROPIC_BASE_URL=http://127.0.0.1:9`, so no paid AI ran. Seven journeys were walked in headless Chrome (Playwright), plus API and SQL probes.
+**Suites I reran:** rules **61/61** · API **121/121** (fresh copy) · browser **115/115 twice** (fresh copy each time; timings: first view warm 207/215 ms, cold 1732/831 ms; filter 141/120 ms). The suite outputs went to my scratchpad, not to the repo.
+**Mutation spot-check** (in a scratch copy of `contracts/` + `engine/`): removing `sharedStep` → 3 FAIL. Removing the punctuation-only rule → 1 FAIL. Removing the 120-character limit → 1 FAIL.
 
-## Lead decisions at CHECK (21 Oct)
-* **Accepted: the intake never edits a configuration.** An already-mapped form uploaded on a combination is attached and offered as the next step ("Add N forms from the library"), one click, no AI. Keeps a person in the loop (P-11, P-15) and draft counts honest.
-* **Accepted: guides are sources, not library forms.** They attach to the combination (no edition to version) and are refused on the library-only door with that reason. Forms and checklists are library items.
-* Builder's other choices (held editions kept out of `form_edition`; sample loader through the intake; `/summary` route) accepted.
-* **On the independent review (Lead, 21 Oct): all 11 findings accepted; code checked for 1, 2, 3 and 5.** FIX them all in one pass with the breaker's Must/Blocker/Major; each is small, and a second FIX loop costs more than the lot.
-  * **#5 raised to Major.** The current edition is chosen by sorting labels as text ("12-2021" above "11-2025"), so "+ Add" can attach the older form, and an older upload is called "New edition". New-edition handling is the core of Screen 02 (P-32). Pick the current edition by published date (printed month and year as fallback). An older file is held as "Older edition: not used", a newer one as "New edition: impact review needed". Add a rule test for each.
-  * **#1:** one source of truth. The server's `nextAction` drives the row, the page header and the Overview; the browser works nothing out itself. Add the row-equals-page browser check.
-  * **#2:** besides the partial unique index, a batch never fails as a whole: each file gets its own result (P-51). Add the race test (same file ×4, new form ×5).
-  * **#4:** also no absolute paths or ORM text in any error body.
-  * **#11 is scaffolding (P-33):** Reset + Load sample on `:4400` before the demo, and no other change.
-* **Official forms:** all 9 were fetched by the Lead (plain curl, checksums match); `fetch_official_sources.py --check` = 0 pending. Remove `-A Mozilla/5.0` from its curl call; when a checksum differs, report "checksum differs: possible new edition" instead of "download failed". Stop asking the founder for manual downloads.
-
-## Founder findings during FIX (Lead, 21 Oct): fix in this FIX pass
-* **F1 (Major) "Live" filter contradicts the Status column.** Reproduced by the founder: All shows Employer-specific work permit as Live, but the Live filter shows 0 (Individual). Cause: `isLive = !needsWork` in `engine/programs.ts`, so a Live row with a draft change, AI proposal or held edition leaves the Live filter. This is the Lead's own early-look wording, item 2. **Fix:** **Live** = every row whose status is Live (firms can open cases on it), whether or not it has a next step. **Needs work** = every row with a next step. A Live row with work appears in both. Test: in each workspace, the number of rows showing the Live status equals the Live count.
-* **F2 (Minor) One cause, one line, with the action.** With no questionnaire yet, "Missing before firms can use it" repeats "Sponsor has no questions", "Spouse or partner has no questions"… **Fix:** "No questions yet for Sponsor, Spouse or partner, Dependent child. Next step: Draft setup (AI proposes the questions from the forms)." Every missing item says what to do next.
-* **F3 (Minor) Show where AI acts.** In the Next step column and on the combination page, mark AI steps (Draft setup, View AI progress, Review N AI proposals) with the team's AI mark and a tooltip saying what AI does. "Add N forms from the library" gets a tooltip naming the forms: "Reuses box maps already in the library. No AI. Adds to the draft only; nothing changes for firms until release."
-
-## Independent review (reviewer agent, 21 Oct)
-**Verdict: Ship after fixes.** 1 Must · 2 Major · 8 Minor. The list, filters, two-line path, clickable path, Back (URL, scroll 723 px, row focused and highlighted), new-edition hold and one intake all work. The combination page, now the row target, contradicts the row's next step.
-How checked: code read; screenshots 01–19; live `:4400` read only. A fresh isolated copy (`tools/isolated.sh`, port 4417, sample load, removed afterwards) for the probes, a keyboard walk at 1024 px, 200 % zoom (720 px: no sideways scroll on the list or the combination page) and axe (combination page with held items: 0 violations). Rule-test mutation spot-check: needsWork without held, see_new_edition removed, status rank swapped and Live→Ready wording are each caught by `check_screen01_rules.ts`. No AI call, no code edit.
-
-### Must
-1. **One combination, three different next steps (BR-13, EXPERIENCE §2.5, STANDARDS §7 no duplicated web/API logic).** The page header works out its own next step in the browser (`web/src/pages/combination.tsx:73-91`). The Overview hard-codes "its boxes are not mapped yet (next step: Draft setup)" for every attached form (`combination.tsx:128`). Reproduced on Visitor visa: the row says "Add 1 form from the library" (IMM 5707, 50 boxes mapped in the library); the header says "Add a form to the configuration"; Overview says IMM 5707 is not mapped. That statement is false and could prompt an AI draft that is not needed (P-38). Screenshot 09. On a Live row with a held edition, the row says "See new edition" but the header says "Configuration released; preview what it asks" (screenshot 14, reproduced). Fix: the header and the Overview use `summary.row.nextAction` and the row's `forms[].drafted`, with the list's own action handler. Add one browser check that the row and the page show the same step. *Needed for the proof (P-50 row target, item 7).*
-
-### Major
-2. **The same held file is recorded several times when uploads race (STANDARDS §4 duplicates under race, §3.4 database constraints).** The "already waiting" check (`api/src/intake.ts:100-101`) has no database guard behind it: migration `20261021200000_form_intake` has indexes only. Reproduced: 4 uploads of `imm5476e-2021.pdf` at the same moment gave 4 HELD rows and 4 audit entries, and With an LMIA showed "Held for a person (4)" for one file. A brand-new form (IMM 1344) uploaded 5 times at once gave one "added" and four whole-batch 409s with no per-file result. Fix: a partial unique index on `intake_item (workspace_id, sha256) WHERE status='HELD'`; in `one()`, catch P2002 and re-read, returning "already waiting" or "in_library" for that file. *Needed for the proof (P-32 hold, P-51 per-file results).*
-3. **Technical words on the row target's main path (EXPERIENCE §5 [M], PRODUCT §4).** Released versions shows the hash `e56e22bf29` and the id `user-B`, and its basis text carries a hash and an ISO timestamp (`combination.tsx:148`; screenshot 14). The held box says "arrives with Screen 02" and "(PdfReadError)" (`combination.tsx:119-120`, `intake.ts:111`). Recent steps says "existing inventory confirmed identical". The facts line says "Released v1" while the draft bar says "Firms use Release 2". Fix: role names instead of ids, no hashes, one release word ("Release N"), and a plain held reason ("We could not read the form code from this file"). *Needed for the proof (item 7 clean-up).*
-
-### Minor
-4. A bad id gives a 500 that shows the Prisma call and an absolute server path. Reproduced with `POST /intake` and `combinationId=not-a-uuid`, and with `GET /combinations/xyz/summary`. Cause: `api/src/main.ts:138` returns the raw message. Fix: check uuids in the contract (400/404) and send a generic message for a 500 (STANDARDS §6, §8). *Needed for the proof.*
-5. The current edition is picked by sorting edition labels as text (`intake.ts:132`; `programs.ts:285, 294, 401`). "12-2021" sorts above "11-2025", so once two editions exist (after Screen 02) "+ Add" can attach the older one. An older file (IMM 5476 11-2021 against 11-2025, screenshots 13/14) is also called a "new edition". Fix: sort by printed month and year or by published date. *Needed for the proof.*
-6. The approver sees "Edit" on People (`combination.tsx:141`). The server refuses it (403, checked), but the read-only state is not drawn (EXPERIENCE §4). *Needed for the proof.*
-7. Keyboard users cannot reach the status chip's tooltip or the overdue icon in the list (`web/src/pages/programs.tsx:259-260`, `tabIndex -1`). The row label does say the status (EXPERIENCE §2.10, §2.12). *Needed for the proof.*
-8. The Add form panel says "new forms … are added here" (`web/src/components/forms.tsx:118`). Under the accepted rule they are attached as sources, not added to the configuration. Fix the wording. *Needed for the proof.*
-9. A stale comment refers to the removed `/forms/upload` (`contracts/programs.ts:73`; STANDARDS §7). *Needed for the proof.*
-10. New combination page (screenshot 19): no path back to Programs (EXPERIENCE §2.1), a stray "exists" under Pathway, and placeholders cut off at 1440 ("Choose or type a categor"). *Needed for the proof.*
-11. The running app at `:4400` still holds data from before FINISH: "Super visa for parents and grandparents", "Visitor visa (temporary resident visa)", and `/api/demo/status` shows 0 intake records. The screenshots came from an isolated copy. Run Reset + Load sample before the founder demo. The full-page screenshots 09 and 14 show the sticky header painted halfway down the page (a capture artefact). *Needed for the proof.*
-
-Not findings: the catalogue's server rebuild runs `structureProblems` once per combination (`api/src/programs.ts:114`, two queries per row), inside the cache, within budget at sample scale. Scale work is the team's (STANDARDS §9, P-26 Not built). The cross-workspace search hint was built although the concept lists it under Not built; it is harmless.
-
-### Scores (1–5)
-D1 4 all nine items present; BR-13 broken on the page (1) · D2 3 duplicate HELD rows under race (2) · D3 4 identity by checksum, "used by", nothing stored twice · D4 4 calculated status, startable check, mutations caught · D5 4 idempotent start, reload and Back hold; bad id gives a 500 (4) · D6 4 checked date, audit for each upload, held list · D7 4 one AI place, intake uses no AI, nothing auto-added · D8 4 clickable path, Back keeps place; "v1" against "Release 2" · D9 3 conflicting next steps (1) · D10 3 hashes, ids, "Screen 02" (3) · D11 4 per-file results, draft bar, held box; approver Edit (6) · D12 4 clean, aligned; path builder rough (10) · D13 4 keyboard path, axe 0, 200 % works; chip tooltip not reachable by keyboard (7) · D14 4 team tokens, sentence case, FilterLayout, `IntakeItem` mapping recorded · D15 4 one request per view, catalogue 3–191 ms; server rebuild runs per-row queries · D16 4 rules tests catch mutations, 19 states × 2; no test for row/page step agreement or the race.
-
-Could not check: screen reader by a person; an approval walk-through of a real release (Screen 02/03); the live `:4400` state stable (the breaker restarted it during this review).
-
-## Lead check (22 Oct — live manual recheck)
-
-**Result: not clean; keep CHECK open.** The shared :4400 workspace is read-only for this audit; no reset or configuration save was performed there. A fresh isolated :4413 workspace was loaded through the product UI (21 Individual + 8 Corporate rows, 6 configured combinations, 24 source attachments, 1 reviewed release). Browser/manual paths checked: catalogue → Visitor visa overview → add one already-mapped form (saved in the isolated DB, success toast, no AI call) → search for “With an LMIA” → released-combination overview → Preview using the sample family and the empty-case option. Preview updated the expected counts and questions; answers are labelled preview-only. The isolated database now contains that one deliberate test draft.
-
-### Current observations to fix or resolve
-1. **Must — source trust gate (implemented; recheck pending):** `api/src/intake.ts` now requires the uploaded form/checklist checksum to appear in the approved manifest before library creation, attachment, edition-impact review or AI use. Existing identical library entries with an unapproved checksum are held rather than attached. Reverify manifest-approved and unapproved flows in the isolated API/browser checks; migration/cleanup of any historical unapproved library entries remains a separate audit item.
-2. **Should — draft context (copy improved; shared-state mismatch open):** the global banner now reports total changes and affected combinations; the release review reports each combination's change count and whether it can be released (`web/src/App.tsx`, `web/src/pages/release.tsx`). This matches the one shared release model while keeping the sticky bar compact. The :4400 discrepancy (Visitor review showed changes while the bar said none) still needs isolated reproduction; do not reset shared data to investigate.
-3. **Should — one clear action:** Overview can list forms attached as sources while saying no forms are configured (`combination.tsx:53-54, 126-132`); the card’s next step and the “Add sources” wording do not explain the distinction between a source attachment and a configured form. Keep source vs configured counts distinct, but explain the next action consistently.
-4. **Should — user language (Preview improved; other screens open):** Preview now hides its technical fingerprint and uses “Spouses or partners travelling” / “Children travelling” count labels. Releases/Activity still expose fingerprints and simulated IDs (`web/src/pages/history.tsx`, `web/src/pages/review.tsx`); review those screens for user-facing wording.
-5. **Minor — form hint:** the Sections title input uses “Travel history” as its example even though that section is already present (`web/src/pages/library.tsx:123`). Remove the misleading example or replace it with neutral guidance.
-
-### Lead scores from this recheck (1–5; evidence labels)
-* D8 Orientation 3 — Browser: breadcrumb/path is clear; draft context varies by workspace and selected combination.
-* D9 Flow 3 — Browser: search and sample add-form path work; Overview/source wording leaves two plausible next actions.
-* D10 Language 3 — Browser/code: Preview now hides its technical fingerprint and clarifies family-count labels; actor IDs and hashes remain elsewhere, and source-vs-configured form distinction is not taught.
-* D11 Feedback/state 3 — Browser: the shared bar now reports total changes and affected combinations; release review gives each combination's count. The unresolved :4400 banner/review mismatch remains open.
-* D12 Visual quality 4 — Human screen review at 1265×724: consistent spacing, navigation, tables and status chips; field meanings wrap into tall rows in the library.
-* D13 Accessibility/responsive 3 — Manual keyboard tab advanced to navigation; earlier 1024/635 and axe evidence exists, but not rerun on the shared current state.
-* D18 Provenance 4 — Script: unapproved forms/checklists are held before library, attachment, edition impact or AI use; even a simulated legacy unapproved library entry is hidden from the picker. The source-to-proposal decision trail across later screens remains unaudited.
-* D17 First-use intuitiveness — Not yet evidenced: no intended-user unaided task walkthrough.
-* D20 User pain solved / meaningful wow — Not yet evidenced: no intended-user comparison against the current workaround or recorded user feedback.
-
-**Latest verification (22 Oct):** isolated API 92/92, rules 48/48, engine 38/38, Browser/Playwright 96/96. The browser suite passed axe WCAG A/AA checks at tested states, 1024 px no-horizontal-scroll checks, and console/page-error check; filter response was 77 ms. Manual browser walkthrough on isolated `:4416`: shared-draft summary showed total plus combination count; release review showed per-combination counts 44 and 102; reviewer role could not release; author Preview used clear family-count labels and no fingerprint. Empty-case preview changed from 4 questions with sample facts to 72 for no facts/two children, without saving preview answers. Controls align without truncating the known-facts label at 1265 px. No live AI call or immigration sign-off/release was performed. Historical 97/97 has been superseded by the current 96/96 run.
-
-**Still open:** screen-reader operation; 200% zoom; founder/intended-user unaided task walkthrough in both author and reviewer/RCIC roles for D17/D20; whether the 17 imported-sample warnings on Visitor visa (question placements in sections unused by that combination) reflect expected shared definitions or a misleading reviewer burden; full human submit → SME sign-off → second-person release on expert-verified content. The role page and API authorization are covered by scripts; builder simulation does not replace human user evidence.
-
-## Lead check (23 Oct — concept comparison) — **Result: FIX**
-How checked: `concept.md` (Layout v2, Filters, P-50 page, path builder) and `SCREENS.md` demo list against a fresh isolated copy (`tools/isolated.sh leadcheck 4420`, sample loaded: 21 Individual + 8 Corporate, 6 configured, 24 sources, 1 release) in the built-in browser at 800 px, as Configuration author. Shared :4400 untouched. No AI call.
-
-**Confirmed fixed in the browser:** reviewer #1 (Visitor visa: row and page header both "Add 1 form from the library"); #3 (Released versions shows "Approver", no hash or id); #10 (New combination has the Programs path, no stray word, links explained as label only); founder F1 (Live · 1 = the one row showing Live); 22 Oct items 1–2 (source gate, draft summary) as recorded above. All five demo combinations and the Express Entry route labels are present; Corporate rows are empty "In setup" as the concept allows.
-
-**Fix now (builder, one pass):**
-1. **Major — one next step on the page (BR-13, EXPERIENCE §2.5; 22 Oct item 3 still open).** Visitor visa: header says "Add 1 form from the library" and the Forms table lists IMM 5257 and IMM 5707 attached as sources, but "Missing before firms can use it" says "No forms yet. Next step: add the forms this application files (Add sources)". The missing list must use the same order as `nextActionOf` and the same words, and count sources and configured forms separately ("2 forms attached as sources, 0 set up"). Test: header step = row step = the first missing line's action, on every sample row.
-2. **Major — explicit `any` (STANDARDS §7 [M]; see triage below).** Type the Screen 01 files (`combination.tsx`, `api/src/programs.ts`, `engine/programs.ts`, `programs.tsx`, `intake.ts`) with the shared contracts; add a stop-check ratchet that fails when the live-code `any` count rises.
-3. **Minor — warnings without meaning.** Overview shows "8 warnings" on Visitor visa (0 rules, 0 questions) and "7 warnings" on a Live row whose next step is "Nothing to do". Show what each warning is (or link to it) and count only this combination's own; none on a combination with no setup.
-4. **Minor — "1 combinations shown"** → "1 combination shown" (BR-10).
-5. **Minor — Questions tile "295 · 18 sections · 164 fields"** does not say what 295 counts (BR-10). Name it (for example "295 questions across all people").
-6. **Minor — sample note on With an LMIA** lists five forms; the page shows six forms and two checklists (IMM 5257 SCH1 missing from the note). Make the note match the data.
-
-**Not in this FIX (reason):** "Supported by: Corporate › LMIA" points at a program with four combinations, not one; real links are P-59 (Screen 03). With an LMIA is Live with LMIA-specific documents not configured; it is labelled Sample and not specialist-confirmed, and BR-8 is met; raise it in the RCIC walkthrough. Releases/Activity fingerprints and the Sections hint (22 Oct items 4–5) belong to the History and library screens; carry them to Screens 02 and 04.
-
-**After FIX:** builder reruns the four suites in an isolated copy and adds the step-agreement test; Lead rechecks items 1–6; then DEMO = founder walkthrough as author and as reviewer/RCIC (D17/D20 evidence).
-
-## Lead triage of the static analysis report (23 Oct)
-Source: `STATIC-ANALYSIS-FINDINGS-2026-10-22.md` (it says 32 findings; its body has 43: R1–5, D1–7, U1–7, T1–7, C1–8, O1–4, I1–5). Each claim was checked against `prisma/schema.prisma`, `api/src/main.ts`, `engine/programs.ts`, `STANDARDS.md`, `domain/MASTERS.md` and the newest requirements snapshot (19 Oct). **Result (43): 1 real defect it framed wrongly, 1 wording fix, 13 valid gaps for later screens (8 rows below), 28 rejected.** The report itself is unreliable: the summary says 2 Critical and lists 1; R4, R5 and T2–T7 are Minor in the body but Major in the summary; D1 and R2 are the same finding counted twice; R1 cites SA-01B v1.2 although the newest snapshot reverses it; it mostly checked documents, not code.
-
-**Fix with Screen 01 (Lead check finding 6, Major):** STANDARDS §7 [M] says "Strict TypeScript, no `any`". Strict mode is on in `api/` and `web/` (C1's claim is wrong), but live code has ~370 explicit `any` (api 128, web 182, engine 62) and no lint rule blocks new ones. Screen 01 files: `combination.tsx` 22, `api/src/programs.ts` 14, `engine/programs.ts` 7, `programs.tsx` 4, `intake.ts` 2. Fix: type the Screen 01 files with the shared zod contracts; add a check to the stop check that fails when the `any` count rises; other files are typed when a later screen touches them.
-
-**Wording (R4, Minor, Lead-owned):** "Needs work" is defined once in code (`nextActionOf`: ordered steps Add sources → View AI progress → Review proposals → Add from library → Draft setup → See missing → See new edition → Review and release; `needsWork` = not Live or has a step). The concept said "e.g." and still had the pre-F1 Live wording; the Lead wrote the ordered list and the F1 Live rule into the concept's Filters line (23 Oct). Done.
-
-**Valid gaps, not Screen 01 (carry into the named concept; none blocks Screen 01):**
-| # | Gap (verified) | Where it is decided |
+## Each bug this pass had to fix: checked in the running app
+| Item | Result | Evidence |
 |---|---|---|
-| D1/R2 | No link record for "Supported by" / "Follows" (P-13); `linkLabel` is a label only, as P-26 chose for Screen 01. Not Critical for Screen 01. | **Decided P-59 (23 Oct):** Super Admin creates links in M2 (Screen 03 concept); M3 carries facts and documents onto linked cases |
-| R3 | `participants` JSON adapter on Combination; already commented in the schema; move to roles on lines needs expand → migrate → contract (STANDARDS §5) | Screen 03 concept |
-| D2 | Field groups/purposes not modelled (MASTERS "New"). The placement model exists (`SectionQuestion`), so half the claim is wrong | Screen 02/03 concept |
-| D3 | Checks have no tier, stage or objective (P-14) | Screen 03 concept |
-| D4 | `Predicate` is per combination; P-12 wants shared conditions defined once | Screen 03 concept |
-| D5 | Substitute sets missing (MASTERS "Partial"). The claim "no DocumentType model" is wrong: it exists | Screen 03/04 concept |
-| U1 | Bulk accept for exact or high-confidence AI matches (EXPERIENCE §2.6); no AI proposals on Screen 01 | Screen 02 concept |
-| U2–U6 | Keyboard paths, empty states, undo, progress, search scope per screen | Each concept, checked by the reviewer |
+| QA-1 shared release skipped review | **Fixed** | An approver sees "Held back: Not submitted for review" and the button reads "Nothing ready to release", disabled. `POST /pack/release` → 409. After submit with SME items unsigned: "2 changes need the content reviewer's SME sign-off" on both release routes. After the SME signs in the UI it says "Will be released". Changed after submit → held. Author → 403, submitter → 403 (suite). The DB records submitter user-A, approver user-B and the submission APPROVED. Three concurrent releases → one release, two 409s |
+| QA-13 re-add a removed form | **Fixed, with a new defect (Must 2)** | Re-adding after a draft removal works, and so does re-adding after a released removal (v4 DRAFT supersedes RETIRED v3). A second add → 409. Five parallel adds → one line (201 + 4×409) and one audit line. Removing a released line now gives RETIRED v2 |
+| "+ Add line" default channel (F1) | **Fixed** (PDF path seen) | New lines got `PDF_UPLOAD` on rows with no portal. I did not exercise the Online path; the forms suite (106) covers it |
+| QA-7 / QA-6 name rules | **Fixed** | A 121-character name shows "Keep the name under 120 characters." in red, `aria-invalid`, and Create is off. "!!!" shows "Use letters or digits…". "Visa d'été — 日本語" was created by keyboard only at 1024 px |
+| QA-11 | **Fixed** | "Open the existing combination" → `/c/6a6512f7…` |
+| QA-10 | **Fixed** | "Submitted by Configuration author at 6:18:30 PM" |
+| QA-12 | **Fixed** | Menu reads loaded → after reset "Load sample inputs" → hand-made program "Load sample inputs (programs exist: reset first)", disabled |
+| QA-5 | **Fixed** | DB zone Asia/Kolkata. `updated_at` 18:15:29+05:30 matched `now()` |
+| QA-3 | **Fixed** (read) | `restart-api.sh` and `stop.sh` kill only the listener on `STUDIO_PORT`. `stop.sh` still stops the shared database, as noted |
+| P-63 words | **Fixed** | 19 pages swept: no "box" or "box map" on screen. Server strings use "form field" / "field map" |
+| Next step said once | **Fixed** | Visitor visa: "Next step for all of these: Add 1 form from the library." A single line keeps its own step |
+| QA-9 stale builder checks | **Not in the commit (Must 1)** | See below |
 
-**Rejected (reason):** R1 — SA-01B redesign decision 3 (18 Oct) reverses SA1B-D28: forms fill themselves in Release 1. R5 — "Review and release" / "Release N" follows P-23 and the team model; the "v1" vs "Release 2" mix is already review #3. D6 — mapping recorded in build-notes; P-26: no handover notes. D7 — schema already says "disposable demo workspace". U7 (⌘K), T1 rate limits, T2 correlation id, T3 pool, T4 caching, T6 error tracking, T7 API versioning, C6 env validation — already in STANDARDS as the team's hardening (§4, §8, §9); P-26 does not build them in a local reference. C2 — shared zod contracts exist (`contracts/`). C3 — RFC 9457 filter exists (`main.ts` ProblemErrors). C4 — Prisma parameterises; no raw SQL in `api/src`. C5 — STANDARDS §6 and server-side author ≠ approver (403 tested). T5 — AI calls go through one `Ai` class (`api/src/ai.ts`). C7/C8 — no commits here (AGENTS rule 1); reviewer, breaker and stop check exist. O1/O2 — order and Sample/source labels are needed (AGENTS rule 4). O3/O4 — kept: audit context, low cost. I1 — `version`/`supersedesId`/`status` exist; I2 — retire is P-52; I3, I5 — the team's; I4 — `AuditEvent` exists.
+## Issues
+**Must 1: QA-9 is not fixed in `c0e8ff98`.** The updated `tests/check_studio_browser.cjs`, `tests/check_catalogue_scale.cjs` and `tests/fixtures/scale_100.ts` exist only as uncommitted changes in the lane copy. The committed files are still stale: `check_studio_browser.cjs:176` clicks "Add program or category"; `check_catalogue_scale.cjs:24` waits for "Programs and their combinations"; `scale_100.ts:38` posts to `/programs`. The build notes say "(see below)" but there is nothing below. **Fix:** commit the three files and their evidence, and add the run result to the build notes.
 
-## RCIC walkthrough
+**Must 2: undoing a removal resets the form line's content without saying so** (`api/src/form-lines.ts:33-36`). The undo-in-place writes the default `line` (who `each_applicant`, `COMBINATION_MANDATORY`, no condition) over the retired version, so the released who and when are lost.
+* Walked in the UI on Live "With an LMIA": IMM 5409 was "Once per couple, conditional" in Release 1. Remove it, then click the header's "Add 1 form from the library". Result: the line is DRAFT, `each_applicant`, mandatory. The header says "1 draft change", and that change went out in Release 2 with no SME item.
+* The build notes call this "undone in place", but the result is a different line. The API check (`check_screen01_api.ts:180`) asserts only version and status, so it passes.
+* **Fix:** when undoing a pending removal, restore the superseded published row's who, attach mode, condition and channel (or drop the retired draft version). Assert "0 draft changes after remove + re-add".
+
+**Should 1: the removed-form state contradicts itself.** After a removal the Overview Forms table still lists IMM 5409 with no "Removed" mark. "+ Add form" shows it as "Added", because `combination.tsx:136` passes `row.forms`, which includes forms attached only as sources. Meanwhile the header's next step is "Add 1 form from the library" (screenshot J6-5). The same "Added" pill appears for any form attached only as a source (Visitor visa IMM 5707). **Fix:** pass only form lines as `have`, mark removed-in-draft lines, and show source-only forms as addable.
+
+**Should 2: `approve()` repeats the release gate instead of calling `releaseGate`** (`studio.ts:504-521` vs `:536`). This breaks STANDARDS §7 (no duplicated logic). It also shows the approver "approved hash differs from the submitted configuration". **Fix:** call `releaseGate` and use its plain message.
+
+**Should 3: the "Changed after it was submitted" branch has no test.** I confirmed it by hand: held, and approve → 409. **Fix:** add a pass and a fail to the API suite.
+
+**Should 4: `addFormLine` catches P2002 inside the AI-apply transaction** (`sources.ts:402`). In PostgreSQL the transaction is already aborted at that point, so under a race the apply fails instead of answering "already". **Fix:** use a savepoint, or check under a row lock.
+
+**Should 5: browser Back loses the highlight.** Browser Back from a combination page returns to `/?f=all` with no highlighted or focused row. The in-page "Programs" link restores the row and the scroll (Extend stay in Canada, scrollY 307). The concept says "Back … the opened row highlighted". **Fix:** restore from history state on popstate.
+
+## [M] standards (met unless listed)
+**Not met:**
+* STANDARDS §6 deny by default: an unknown or missing `x-actor` creates a combination (201). The builder labels this "Not built: simulated people"; the Lead should accept or route it.
+* EXPERIENCE §5: the Review tab shows "Fingerprint 20a20b34…", internal item keys (`review_test_letter:principal_applicant`) and derived-field keys. The builder assigns these to Screen 03 and they are not counted here.
+* EXPERIENCE §1 type scale: the path-builder hints use `text-[12.5px]` (`new-combination.tsx:157`).
+
+**Met, with evidence:**
+* Problem Details with field errors.
+* Server authorisation by duty: approver → 403 on create; author → 403 on release.
+* One request per view: catalogue 12 ms.
+* axe: 0 violations on 19 pages and every suite state.
+* No sideways scroll at 1024 px or 200 % zoom (list, combination, new, release).
+* Keyboard path: tab to the grid, arrow keys, Enter, in-page Back.
+* Race safety: shown above.
+* Freshness: shown.
+* Demo chrome separate: "Demo" menu and "Prototype" badge.
+
+**Scaffolding (P-33):** the sample load and my document-requirement setup used the API. The release, sign-off, submit, remove and re-add steps used the product's own screens.
+
+## D1–D20 (1–5; independent reviewer, browser/script)
+| D | Score and evidence |
+|---|---|
+| D1 Requirement fit | 4: 11 of 12 fix items verified live; QA-9 not committed (Must 1) |
+| D2 Data integrity | 3: races refused by the DB (adds, releases); undo resets released content (Must 2); deny by default open |
+| D3 Reuse | 4: one `addFormLine` for three callers; library forms reused, not copied |
+| D4 Rule integrity | 4: one gate on the shared release; status calculated; rule mutations caught |
+| D5 Stability and recovery | 4: 30 s release transaction; reload and in-page Back hold; browser Back loses the highlight (Should 5) |
+| D6 Freshness and governance | 4: stored times correct (QA-5); refused releases audited; real submitter recorded |
+| D7 AI trust | 4: AI steps marked, with tooltips (suite F3); no AI step run here (QA-8, no paid AI) |
+| D8 Orientation | 4: full clickable path; Back to the row via the page link |
+| D9 Flow | 4: one step, said once; removed-form signals conflict (Should 1) |
+| D10 Language | 4: P-63 complete on 19 pages; hashes and keys remain on the Review tab (Screen 03) |
+| D11 Feedback and state | 4: field errors, held reasons, draft bar, toasts |
+| D12 Visual quality | 4: clean and aligned; one off-scale size |
+| D13 Accessibility | 4: axe 0, keyboard, 1024 px and 200 % zoom; no real screen reader |
+| D14 Team look | 4: team tokens and patterns; team-name mapping recorded in the build notes |
+| D15 Speed | 4: warm first view 207–215 ms, filter 120–141 ms; one cold load at 1.7 s on a busy machine |
+| D16 Testability | 4: suites rerun green by a non-maker; mutations caught; gaps in Must 2 and Should 3; c8 coverage not run by me |
+| D17 First-use | Simulated only. The founder's walk is pending (lead-check) |
+| D18 Provenance | 4: origin pills, sources tab, release by and when |
+| D19 End-to-end | Not yet evidenced beyond configure → release (case onward is later screens) |
+| D20 Pain and wow | Simulated only |
+
+## What I could not check
+* The Online-channel default (forms suite only).
+* AI drafting and its review (QA-8 in lane copies; no paid AI).
+* A real screen reader.
+* A visible (headed) browser walk: I used headless Chrome and looked at the screenshots.
+* Rule mutations on the API side. That needs a scratch copy of the server; I did spot-checks by reading the code.
+* c8 coverage.
+
+My screenshots are temporary, in my scratchpad (`…/scratchpad/jt/shots/`), and are not committed.

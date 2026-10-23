@@ -1,6 +1,6 @@
 {
- "at": "2026-10-23T12:28:07.344Z",
- "port": 4447,
+ "at": "2026-10-23T13:18:21.103Z",
+ "port": 4449,
  "database": "xr_studio_screens_aiorch",
  "paid_calls": 0,
  "test_switches": [
@@ -128,7 +128,7 @@
    "name": "compare again (no AI call) keeps every decision that still holds, including the person's change",
    "ok": true,
    "detail": {
-    "at": "2026-10-23T12:28:05.225Z",
+    "at": "2026-10-23T13:18:20.783Z",
     "by": "user-A",
     "kept": 84,
     "reopened": 0

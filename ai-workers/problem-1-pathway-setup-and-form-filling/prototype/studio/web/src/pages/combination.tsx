@@ -133,7 +133,7 @@ function Overview({ d, sum, show }: { d: CombinationView; sum: CombinationSummar
             {pending.map((f) => <tr key={f.code}><td><span className="mono font-medium">{f.code}</span></td><td colSpan={3} className="text-xs text-text-muted">{f.inLibrary ? "Attached as a source. Its form fields are already mapped in the library, so it is added without AI." : "Attached as a source. Its form fields are not mapped yet; AI drafts them."}</td></tr>)}
           </Table>
         )}
-        {adding ? <AddFormPanel combinationId={d.combination.id} label={d.combination.label} have={(row?.forms ?? []).map((f) => f.code)} onClose={() => setAdding(false)} /> : null}
+        {adding ? <AddFormPanel combinationId={d.combination.id} label={d.combination.label} have={(sum?.forms ?? []).map((f) => f.code)} onClose={() => setAdding(false)} /> : null}
       </section>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat label="Forms" value={k.forms} sub={`${k.map_boxes} mapped form fields`} />

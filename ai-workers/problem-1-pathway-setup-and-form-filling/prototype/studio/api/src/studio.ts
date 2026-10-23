@@ -13,7 +13,7 @@ import { newKeyProblem } from "../../../contracts/fact-key.ts";
 
 const VALUE_TYPES = Object.keys(VALUE_TYPE_TO_DATA_TYPE);
 const COLLECTED = ["client_questionnaire", "verified_document", "staff_working_view", "profile_record", "existing_record"];
-const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative"];
+export const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative"];
 
 /** Business level names over the team's stored node kinds (see createNode). */
 export const LEVEL: Record<string, { name: string; parent: string | null }> = { PATHWAY: { name: "Pathway", parent: null }, PROGRAM: { name: "Program", parent: "PATHWAY" }, STREAM: { name: "Category", parent: "PROGRAM" }, CATEGORY: { name: "Sub-category", parent: "STREAM" } };
@@ -21,6 +21,16 @@ const LOCATIONS = ["inside_canada", "outside_canada"];
 /** A release publishes row by row in one transaction; Prisma's 5 s default ended it half-way on a busy machine (a 500
  *  on release while the lanes' suites ran, 23 Oct), so a release may take up to 30 s before it is rolled back. */
 const RELEASE_TX = { timeout: 30_000, maxWait: 10_000 };
+
+type Gate = { ok: true; sub: ReviewSubmission } | { ok: false; why: string };
+/** QA-1's gate on loaded rows (pure): the newest submission, the items signed on it, the draft's fingerprint now. */
+function gateOf(sub: ReviewSubmission | null, signed: Set<string>, sha256: string): Gate {
+  if (!sub || sub.status !== "SUBMITTED") return { ok: false, why: sub?.status === "RETURNED" ? "Returned to the author: correct it and submit it again on its Review and release tab." : "Not submitted for review: submit it on its Review and release tab." };
+  if (sub.draftSha256 !== sha256) return { ok: false, why: "The draft changed after it was submitted: submit it again on its Review and release tab." };
+  const unsigned = (sub.changeSummary as { kind: string; key: string; needs_sme?: boolean }[]).filter((x) => x.needs_sme && !signed.has(`${x.kind}|${x.key}`)).length;
+  if (unsigned) return { ok: false, why: `${unsigned} change${unsigned > 1 ? "s need" : " needs"} the content reviewer's SME sign-off.` };
+  return { ok: true, sub };
+}
 
 @Injectable()
 export class Studio {
@@ -407,6 +417,8 @@ export class Studio {
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const rows = await this.db.combinationForm.findMany({ where: { combinationId, lineageKey: formKey } });
     if (!rows.length) fail(`${formKey} is not part of this combination.`, HttpStatus.NOT_FOUND);
+    // A removed line is not edited or removed again (break m5): add it back from the library first.
+    if ([...rows].sort((x, y) => y.version - x.version)[0].status === "RETIRED") fail(`${formKey} was removed from this combination. Add it again from the library to change it.`, HttpStatus.CONFLICT);
     this.sameRevision(rows, b.baseRevision);
     const changes: any = {};
     if (b.retire) changes.status = "RETIRED";
@@ -440,7 +452,7 @@ export class Studio {
   }
 
   // ------------------------------------------------------------------ review and release (D254 duties)
-  private async draftAuthors(combinationId: string, s: Snapshot, workspaceId: string): Promise<string[]> {
+  async draftAuthors(combinationId: string, s: Snapshot, workspaceId: string): Promise<string[]> {
     const ids = new Set<string>();
     const draftRows = await Promise.all([
       this.db.canonicalField.findMany({ where: { workspaceId, status: "DRAFT", canonicalFieldKey: { in: s.canonical_fields.map((f) => f.id) } }, select: { updatedBy: true } }),
@@ -488,6 +500,9 @@ export class Studio {
     const c = await this.db.combination.findUniqueOrThrow({ where: { id } });
     const sub = await this.db.reviewSubmission.findFirst({ where: { combinationId: id, status: "SUBMITTED" }, orderBy: { submittedAt: "desc" } });
     if (!sub) fail("Nothing is waiting for review.");
+    // A sign-off names at least one item, and the person who submitted does not sign their own submission (break m1).
+    if (!b.items?.length) fail("Choose the changes you sign or return.");
+    if (b.action === "signed" && sub!.submittedBy === actor.id) fail("You submitted this, so a different person signs it.", HttpStatus.FORBIDDEN);
     const changes = sub!.changeSummary as any[];
     const needsSme = (ref: string) => changes.find((x) => `${x.kind}|${x.key}` === ref)?.needs_sme;
     for (const ref of b.items) {
@@ -504,26 +519,25 @@ export class Studio {
   async approve(actor: Actor, id: string) {
     need(actor, "approve");
     const c = await this.db.combination.findUniqueOrThrow({ where: { id }, include: { program: true } });
-    const sub = await this.db.reviewSubmission.findFirst({ where: { combinationId: id, status: "SUBMITTED" }, orderBy: { submittedAt: "desc" } });
-    if (!sub) fail("Nothing has been submitted for approval.");
     const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     // Re-checked at approval, not only at submission: a row that has since fallen above a full combination, or a draft
     // that now has errors, is not released.
     const blocking = (await this.problems(c.workspaceId, snapshot, id)).filter((p) => p.level === "error");
     if (blocking.length) fail(`Release refused: ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${blocking[0].item}: ${blocking[0].message})`, HttpStatus.CONFLICT);
+    // The same review gate as the shared Release page (QA-1, review should 2).
+    const gate = await this.releaseGate(id, sha256);
+    if (!gate.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: ${gate.why}`); fail(`Release refused: ${gate.why}`, HttpStatus.CONFLICT); }
+    const sub = (gate as { sub: ReviewSubmission }).sub;
     const authors = await this.draftAuthors(id, snapshot, c.workspaceId);
     for (const author of authors) {
-      const check = canRelease({ author: { user_id: author, role: "content_publisher" }, submitter: { user_id: sub!.submittedBy, role: "content_publisher" }, approver: { user_id: actor.id, role: "content_publisher" }, configuration_sha256: sha256 }, sub!.draftSha256);
-      if (!check.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: ${check.reason}`); fail(`Release refused: ${check.reason}${check.reason.includes("hash") ? " (the draft changed after it was submitted; submit it again)" : ""}.`, HttpStatus.CONFLICT); }
+      const check = canRelease({ author: { user_id: author, role: "content_publisher" }, submitter: { user_id: sub.submittedBy, role: "content_publisher" }, approver: { user_id: actor.id, role: "content_publisher" }, configuration_sha256: sha256 }, sub.draftSha256);
+      if (!check.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: ${check.reason}`); fail(`Release refused: ${check.reason.replace("self-approval refused: approver is the author", "you changed this draft, so a different person releases it (BR-14)").replace("self-approval refused: approver is the submitter", "you submitted it, so a different person releases it (BR-14)")}.`, HttpStatus.CONFLICT); }
     }
-    const changes = sub!.changeSummary as any[];
-    const signed = new Set((await this.db.reviewSignoff.findMany({ where: { submissionId: sub!.id, action: "signed" } })).map((s) => s.itemRef));
-    const missing = changes.filter((x) => x.needs_sme && !signed.has(`${x.kind}|${x.key}`));
-    if (missing.length) fail(`${missing.length} change${missing.length > 1 ? "s need" : " needs"} the content reviewer's SME sign-off first (for example ${missing[0].kind} ${missing[0].key}).`, HttpStatus.CONFLICT);
+    const changes = sub.changeSummary as any[];
     const release = await this.db.$transaction(async (tx) => {
       const pack = await this.newPackVersion(tx, c.workspaceId, authors, actor.id, { rows: 1, via: "combination review" });
-      const out = await this.publishRow(tx, c, snapshot, sha256, { packVersionId: pack.id, authors, submitter: sub!.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(snapshot) } });
-      await tx.reviewSubmission.update({ where: { id: sub!.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
+      const out = await this.publishRow(tx, c, snapshot, sha256, { packVersionId: pack.id, authors, submitter: sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(snapshot) } });
+      await tx.reviewSubmission.update({ where: { id: sub.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
       return { ...out, pack: pack.version };
     }, RELEASE_TX);
     await this.audit.log(c.workspaceId, actor.id, "released", "configuration", c.combinationKey, `${actor.name} approved and released "${c.label}" in Release ${release.pack}; ${Object.entries(release.n).filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(", ") || "no draft rows"} published`, { sha256, published: release.n, pack_version: release.pack }, id);
@@ -532,16 +546,19 @@ export class Studio {
 
   /** The review steps a draft must have passed before anyone releases it, wherever the release is started (QA-1): it was
    *  submitted, it has not changed since, and every change that needs the SME duty is signed. The shared Release page
-   *  holds a row back with this reason; the server refuses a release that skips it. */
-  async releaseGate(combinationId: string, sha256: string): Promise<{ ok: true; sub: ReviewSubmission } | { ok: false; why: string }> {
+   *  holds a row back with this reason; both release routes refuse a release that skips it. */
+  async releaseGate(combinationId: string, sha256: string): Promise<Gate> {
     const sub = await this.db.reviewSubmission.findFirst({ where: { combinationId }, orderBy: { submittedAt: "desc" } });
-    if (!sub || sub.status !== "SUBMITTED") return { ok: false, why: sub?.status === "RETURNED" ? "Returned to the author: correct it and submit it again on its Review and release tab." : "Not submitted for review: submit it on its Review and release tab." };
-    if (sub.draftSha256 !== sha256) return { ok: false, why: "Changed after it was submitted: submit it again on its Review and release tab." };
-    const changes = sub.changeSummary as { kind: string; key: string; needs_sme?: boolean }[];
-    const signed = new Set((await this.db.reviewSignoff.findMany({ where: { submissionId: sub.id, action: "signed" } })).map((s) => s.itemRef));
-    const unsigned = changes.filter((x) => x.needs_sme && !signed.has(`${x.kind}|${x.key}`)).length;
-    if (unsigned) return { ok: false, why: `${unsigned} change${unsigned > 1 ? "s need" : " needs"} the content reviewer's SME sign-off.` };
-    return { ok: true, sub };
+    const signed = sub ? (await this.db.reviewSignoff.findMany({ where: { submissionId: sub.id, action: "signed" }, select: { itemRef: true } })).map((x) => x.itemRef) : [];
+    return gateOf(sub, new Set(signed), sha256);
+  }
+  /** The same gate for many rows at once (the Release page): two queries, not two per row (break m7). */
+  async releaseGates(rows: { combinationId: string; sha256: string }[]): Promise<Map<string, Gate>> {
+    const subs = await this.db.reviewSubmission.findMany({ where: { combinationId: { in: rows.map((r) => r.combinationId) } }, orderBy: { submittedAt: "desc" } });
+    const latest = new Map<string, ReviewSubmission>();
+    for (const x of subs) if (!latest.has(x.combinationId)) latest.set(x.combinationId, x);
+    const signed = await this.db.reviewSignoff.findMany({ where: { submissionId: { in: [...latest.values()].map((x) => x.id) }, action: "signed" }, select: { submissionId: true, itemRef: true } });
+    return new Map(rows.map((r) => { const sub = latest.get(r.combinationId) ?? null; return [r.combinationId, gateOf(sub, new Set(signed.filter((x) => x.submissionId === sub?.id).map((x) => x.itemRef)), r.sha256)]; }));
   }
 
   /** One release for the whole shared draft (P-23): every listed combination gets a frozen snapshot in one new pack
@@ -614,6 +631,10 @@ export class Studio {
     };
     // A retired row released: the lineage it ends stays retired; its predecessor is superseded.
     for (const delegate of [tx.documentRequirement, tx.predicate, tx.combinationForm] as any[]) for (const x of await delegate.findMany({ where: { combinationId: id, status: "RETIRED", supersedesId: { not: null } } })) await delegate.update({ where: { id: x.supersedesId }, data: { status: "SUPERSEDED" } });
+    // What is now published must be exactly the frozen, reviewed snapshot (break M1): an edit saved while the release ran
+    // would otherwise be published unreviewed and missing from the release. Any difference rolls the whole release back.
+    const published = await buildSnapshot(tx, ws, id, "published");
+    if (published.sha256 !== sha256) fail(`Release refused: "${(c as { label?: string }).label ?? "a combination"}" was changed while it was being released, so nothing was released. Review the change, submit it again, then release.`, HttpStatus.CONFLICT);
     return { r, n, version };
   }
 

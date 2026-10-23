@@ -220,37 +220,58 @@ export class Programs {
   }
 
   /** The shared draft (P-23): every combination whose draft differs from its released snapshot, with what blocks it: a
-   *  problem in the draft, or a review step not done yet (submitted, unchanged since, expert changes signed; QA-1). */
-  async draft() {
+   *  problem in the draft, a review step not done yet (submitted, unchanged since, expert changes signed; QA-1), or, for
+   *  the person about to release, that they changed or submitted it themselves (BR-14, break M2), so the page never
+   *  says "Will be released" for a row the server will refuse. `summary` (the draft bar on every page) skips the checks. */
+  async draft(actor?: Actor | null, summary = false) {
     const workspaceId = await this.ws.id();
     const { rows } = await this.rows();
     const last = await this.db.packVersion.findFirst({ where: { workspaceId }, orderBy: { version: "desc" } });
     const changed = rows.filter((r) => r.changes > 0);
-    const snaps = changed.length ? await buildSnapshots(this.db, workspaceId, changed.map((r) => r.leaf.combinationId!), "draft") : new Map();
-    const why = new Map<string, string | null>();
-    for (const r of changed) {
-      if (r.errors) { why.set(r.leaf.combinationId!, r.firstError); continue; }
-      const gate = await this.studio.releaseGate(r.leaf.combinationId!, (snaps.get(r.leaf.combinationId!) as { sha256: string }).sha256);
-      why.set(r.leaf.combinationId!, gate.ok ? null : gate.why);
-    }
+    const why = new Map<string, { why: string | null; self?: boolean }>();
+    if (!summary && changed.length) {
+      const snaps = await buildSnapshots(this.db, workspaceId, changed.map((r) => r.leaf.combinationId!), "draft");
+      const gates = await this.studio.releaseGates(changed.map((r) => ({ combinationId: r.leaf.combinationId!, sha256: (snaps.get(r.leaf.combinationId!) as { sha256: string }).sha256 })));
+      for (const r of changed) {
+        const id = r.leaf.combinationId!;
+        if (r.errors) { why.set(id, { why: r.firstError }); continue; }
+        const gate = gates.get(id)!;
+        if (!gate.ok) { why.set(id, { why: gate.why }); continue; }
+        if (actor && (actor.duties as readonly string[]).includes("approve")) {
+          if (gate.sub.submittedBy === actor.id) { why.set(id, { why: "You submitted it, so a different person releases it (BR-14).", self: true }); continue; }
+          const { snapshot } = snaps.get(id) as { snapshot: Snapshot };
+          if ((await this.studio.draftAuthors(id, snapshot, workspaceId)).includes(actor.id)) { why.set(id, { why: "You changed it, so a different person releases it (BR-14).", self: true }); continue; }
+        }
+        why.set(id, { why: null });
+      }
+    } else for (const r of changed) why.set(r.leaf.combinationId!, { why: r.errors ? r.firstError : null });
     return {
       changes: changed.reduce((s, r) => s + r.changes, 0),
-      rows: changed.map((r) => ({ combinationId: r.leaf.combinationId, label: r.leaf.label, path: r.leaf.path, changes: r.changes, held: !!why.get(r.leaf.combinationId!), why: why.get(r.leaf.combinationId!) ?? null, released: !!r.leaf.release })),
+      rows: changed.map((r) => { const w = why.get(r.leaf.combinationId!)!; return { combinationId: r.leaf.combinationId, label: r.leaf.label, path: r.leaf.path, changes: r.changes, held: !!w.why, why: w.why, self: !!w.self, released: !!r.leaf.release }; }),
       last: last ? { version: last.version, at: last.releasedAt, approver: last.approverId } : null,
       next: (last?.version ?? 0) + 1,
     };
   }
 
-  /** POST /pack/release: one release for the whole shared draft. A different person from every author releases
-   *  (BR-14); rows whose draft has errors are held back and listed; the rest get a frozen snapshot in the new version. */
+  /** POST /pack/release: one release for the whole shared draft. Rows that are held back (a problem, review not done,
+   *  or changed or submitted by the person releasing: BR-14) stay at their last release and are listed; the rest get a
+   *  frozen snapshot in the new version. Nothing releasable only because of the releaser's own work is a 403. */
   async release(actor: Actor, body: unknown) {
     need(actor, "approve");
     const b = parse(ReleaseBody, body);
-    const d = await this.draft();
+    const d = await this.draft(actor);
     if (!d.changes) throw problem(409, "Nothing to release", "The shared draft has no changes since the last release.");
     if (b.expectedChanges !== d.changes) throw problem(409, "The draft changed", `The draft now has ${d.changes} changes, not ${b.expectedChanges}. Review the list again, then release.`);
     const include = d.rows.filter((r) => !r.held);
-    if (!include.length) throw problem(409, "Every change is held back", `Fix the problems first: ${d.rows.map((r) => `${r.label}: ${r.why}`).join(" · ")}`);
+    if (!include.length) {
+      const mine = d.rows.filter((r) => r.self).map((r) => r.label);
+      if (mine.length) {
+        await this.audit.log(await this.ws.id(), actor.id, "refused", "release", null, `Release refused: ${actor.name} changed or submitted ${mine.join(", ")}`);
+        throw problem(403, "A different person must release", `You changed or submitted ${mine.slice(0, 3).join(", ")}${mine.length > 3 ? ` and ${mine.length - 3} more` : ""}, so a different person releases ${mine.length === 1 ? "it" : "them"} (BR-14).`);
+      }
+      const shown = d.rows.slice(0, 5).map((r) => `${r.label}: ${r.why}`).join(" · ");
+      throw problem(409, "Every change is held back", `Nothing can be released yet. ${shown}${d.rows.length > 5 ? ` · and ${d.rows.length - 5} more (see Review and release)` : ""}`);
+    }
     const out = await this.studio.releaseRows(actor, include.map((r) => r.combinationId!));
     this.cache = null;
     return { ...out, held: d.rows.filter((r) => r.held).map((r) => ({ label: r.label, why: r.why })) };
@@ -416,8 +437,12 @@ export class Programs {
     if (!c) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
     const { rows } = await this.rows();
     const row = rows.find((r) => r.leaf.combinationId === combinationId);
-    const forms = await this.db.combinationForm.findMany({ where: { combinationId, status: { not: "RETIRED" } }, include: { form: { include: { editions: { include: { _count: { select: { maps: true } } } } } } } });
-    const lines = [...new Map(forms.sort((x, y) => y.version - x.version).map((f) => [f.lineageKey, f])).values()];
+    // The draft's lines: the newest version of each lineage, unless that version removes it (CHECK M4: an older version
+    // of a removed form, or a superseded one, is never shown as the current line).
+    const forms = await this.db.combinationForm.findMany({ where: { combinationId, status: { not: "SUPERSEDED" } }, orderBy: { version: "desc" }, include: { form: { include: { editions: { include: { _count: { select: { maps: true } } } } } } } });
+    const newest = new Map<string, (typeof forms)[number]>();
+    for (const f of forms) if (!newest.has(f.lineageKey)) newest.set(f.lineageKey, f);
+    const lines = [...newest.values()].filter((f) => f.status !== "RETIRED");
     return {
       row: row?.leaf ?? null, changes: row?.changes ?? 0, allowedLocations: c.program.allowedLocations, participants: c.participants,
       forms: lines.map((f) => { const e = newestEdition(f.form.editions.filter((x) => x._count.maps > 0)); return { code: f.form.formKey, title: f.form.displayName, document: f.form.formKind !== "data_form", who: f.who, when: f.attachMode === "COMBINATION_MANDATORY" ? "always" : f.conditionPlain ?? "only if", edition: e?.editionLabel ?? null, boxes: e?._count.maps ?? 0 }; }),

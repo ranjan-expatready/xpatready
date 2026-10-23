@@ -1,6 +1,6 @@
 {
  "edition": {
-  "id": "96987f38-7597-45d8-8f5d-1b8eb93e06b3",
+  "id": "63f1997a-2b7a-4be5-999f-115d5245bf00",
   "label": "IMM 5257 online · IRCC Portal · 2026-10-23",
   "channel": "ONLINE",
   "portal": "ircc_portal",
@@ -248,8 +248,12 @@
  ],
  "pdf_not_on_portal": [
   {
-   "caption": "Date",
-   "fact": "relationship.start_date"
+   "caption": "* I want service in",
+   "fact": "case.service_language"
+  },
+  {
+   "caption": "* Visa requested",
+   "fact": "case.visa_type_requested"
   },
   {
    "caption": "Question 2 A Have you ever used any other name such as a nickname, maiden name or alias?",
@@ -260,44 +264,28 @@
    "fact": "person.other_given_names"
   },
   {
+   "caption": "* City/Town",
+   "fact": "person.place_of_birth_city"
+  },
+  {
    "caption": "Citizenship",
    "fact": "person.citizenship"
-  },
-  {
-   "caption": "Question 9 A. Is the country from where you are applying the same as your current country of residence?",
-   "fact": "person.applying_from_country"
-  },
-  {
-   "caption": "Question 9 B. Status From Date. The start date of your immigration status in the country from where you are applying in ",
-   "fact": "person.applying_from_status_from"
-  },
-  {
-   "caption": "Question 9 B Other Details. If your immigration status is other, please give details.",
-   "fact": "person.applying_from_status_other"
-  },
-  {
-   "caption": "Question 9 B Country. If you replied No to question 9 A, please give the country from where you are applying.",
-   "fact": "person.applying_from_status"
-  },
-  {
-   "caption": "Question 9 B Status To Date. The end date of your immigration status in the country from where you are applying in YYYY-",
-   "fact": "person.applying_from_status_to"
   },
   {
    "caption": "*",
    "fact": "person.current_residence_country"
   },
   {
-   "caption": "Question 7 D The start date of your immigration status in your current country of residence in YYYY-MM-DD format",
-   "fact": "person.current_residence_status_from"
+   "caption": "*",
+   "fact": "person.current_residence_status"
   },
   {
    "caption": "Question 7 C If your immigration status is other, please give details.",
    "fact": "person.current_residence_status_other"
   },
   {
-   "caption": "*",
-   "fact": "person.current_residence_status"
+   "caption": "Question 7 D The start date of your immigration status in your current country of residence in YYYY-MM-DD format",
+   "fact": "person.current_residence_status_from"
   },
   {
    "caption": "Question 7 E The end date of your immigration status in your current country of residence in YYYY-MM-DD format",
@@ -308,64 +296,68 @@
    "fact": "person.previous_residence_country"
   },
   {
-   "caption": "* City/Town",
-   "fact": "person.place_of_birth_city"
-  },
-  {
-   "caption": "Question 8 B Row 2 Status From Date. The start date of your immigration status in your previous country of residence in ",
-   "fact": "person.previous_residence_from"
+   "caption": "Question 8 B Row 2 Status. Your immigration status in your previous country of residence",
+   "fact": "person.previous_residence_status"
   },
   {
    "caption": "Question 8 B Row 2 Other Details. If your immigration status was other, please give details.",
    "fact": "person.previous_residence_status_other"
   },
   {
-   "caption": "Question 8 B Row 2 Status. Your immigration status in your previous country of residence",
-   "fact": "person.previous_residence_status"
+   "caption": "Question 8 B Row 2 Status From Date. The start date of your immigration status in your previous country of residence in ",
+   "fact": "person.previous_residence_from"
   },
   {
    "caption": "Question 8 B Row 2 Status To Date. The end date of your immigration status in your previous country of residence in YYYY",
    "fact": "person.previous_residence_to"
   },
   {
-   "caption": "* I want service in",
-   "fact": "case.service_language"
+   "caption": "Question 9 A. Is the country or territory from where you are applying the same as your current country or territory of r",
+   "fact": "person.applying_from_country"
   },
   {
-   "caption": "* Visa requested",
-   "fact": "case.visa_type_requested"
+   "caption": "Question 9 B Country. If you replied No to question 9 A, please give the country from where you are applying.",
+   "fact": "person.applying_from_status"
   },
   {
-   "caption": "Province/State",
-   "fact": "person.mailing_address"
+   "caption": "Question 9 B Other Details. If your immigration status is other, please give details.",
+   "fact": "person.applying_from_status_other"
   },
   {
-   "caption": "E-mail address",
-   "fact": "person.email"
+   "caption": "Question 9 B. Status From Date. The start date of your immigration status in the country from where you are applying in ",
+   "fact": "person.applying_from_status_from"
   },
   {
-   "caption": "Other",
-   "fact": "person.fax_number"
+   "caption": "Question 9 B Status To Date. The end date of your immigration status in the country from where you are applying in YYYY-",
+   "fact": "person.applying_from_status_to"
   },
   {
-   "caption": "Other",
-   "fact": "person.alternate_telephone_number"
+   "caption": "Date",
+   "fact": "relationship.start_date"
   },
   {
-   "caption": "Type",
-   "fact": "person.alternate_telephone_type"
+   "caption": "Question 11 A. Have you previously been married or in a common law relationship?",
+   "fact": "relationship.previously_married_or_common_law"
   },
   {
-   "caption": "Other",
-   "fact": "person.telephone_number"
+   "caption": "* Passport number",
+   "fact": "person.passport_number"
   },
   {
-   "caption": "Type",
-   "fact": "person.telephone_type"
+   "caption": "* Country or territory of issue",
+   "fact": "person.passport_country_of_issue"
   },
   {
-   "caption": "Question 2 Is your residential address the same as your mailing address?",
-   "fact": "person.residential_address"
+   "caption": "* Issue date",
+   "fact": "person.passport_issue_date"
+  },
+  {
+   "caption": "* Expiry date",
+   "fact": "person.passport_expiry_date"
+  },
+  {
+   "caption": "*a) Native language/Mother Tongue",
+   "fact": "person.native_language"
   },
   {
    "caption": "*b) Are you able to communicate in English and/or French?",
@@ -376,48 +368,24 @@
    "fact": "person.preferred_official_language"
   },
   {
-   "caption": "*a) Native language/Mother Tongue",
-   "fact": "person.native_language"
-  },
-  {
    "caption": "1d. Have you taken a test form a designated testing agency to assess your proficiency in English or French?",
    "fact": "person.language_test_taken"
   },
   {
-   "caption": "* Country or territory of issue",
-   "fact": "person.passport_country_of_issue"
-  },
-  {
-   "caption": "* Expiry date",
-   "fact": "person.passport_expiry_date"
-  },
-  {
-   "caption": "* Issue date",
-   "fact": "person.passport_issue_date"
-  },
-  {
-   "caption": "* Passport number",
-   "fact": "person.passport_number"
-  },
-  {
-   "caption": "Question 11 A. Have you previously been married or in a common law relationship?",
-   "fact": "relationship.previously_married_or_common_law"
+   "caption": "Document number",
+   "fact": "person.national_id_number"
   },
   {
    "caption": "Country or territory of issue",
    "fact": "person.national_id_country_of_issue"
   },
   {
-   "caption": "National Identity Document Section Question 1. Do you have a national identity document?",
-   "fact": "person.national_id_number"
+   "caption": "Issue date",
+   "fact": "person.national_id_issue_date"
   },
   {
    "caption": "Expiry date",
    "fact": "person.national_id_expiry_date"
-  },
-  {
-   "caption": "Issue date",
-   "fact": "person.national_id_issue_date"
   },
   {
    "caption": "Document number",
@@ -428,40 +396,44 @@
    "fact": "person.us_pr_card_expiry_date"
   },
   {
-   "caption": "Question 1 B Do you have any physical or mental disorder that would require social or health services, other than medica",
-   "fact": "person.disorder_requiring_services"
+   "caption": "District",
+   "fact": "person.mailing_address"
   },
   {
-   "caption": "d) If you answered “yes” to question 2a), 2b), or 2C please provide details.",
-   "fact": "person.immigration_history_details"
+   "caption": "District",
+   "fact": "person.residential_address"
   },
   {
-   "caption": "Question 2 B. Have you ever been refused any kind of visa, admission, or been ordered to leave Canada or any other count",
-   "fact": "person.previously_applied_to_canada"
+   "caption": "Type",
+   "fact": "person.telephone_type"
   },
   {
-   "caption": "Question 2 A. Have you ever remained beyond the validity of your status, attended school without authorization or worked",
-   "fact": "person.status_violation_canada"
+   "caption": "No.",
+   "fact": "person.telephone_number"
   },
   {
-   "caption": "Question 2 B. Have you ever been refused any kind of visa, admission, or been ordered to leave Canada or any other count",
-   "fact": "person.refused_visa_or_entry"
+   "caption": "Type",
+   "fact": "person.alternate_telephone_type"
   },
   {
-   "caption": "* Address in Canada",
-   "fact": "case.visit_contact_address_in_canada"
+   "caption": "No.",
+   "fact": "person.alternate_telephone_number"
   },
   {
-   "caption": "* Name",
-   "fact": "case.visit_contact_name"
+   "caption": "No.",
+   "fact": "person.fax_number"
   },
   {
-   "caption": "Relationship to me",
-   "fact": "case.visit_contact_relationship"
+   "caption": "E-mail address",
+   "fact": "person.email"
   },
   {
-   "caption": "* Funds available for my stay (CAD)",
-   "fact": "case.funds_available_cad"
+   "caption": "* a) Purpose of my visit",
+   "fact": "case.visit_purpose"
+  },
+  {
+   "caption": "b) Other",
+   "fact": "case.visit_purpose_other"
   },
   {
    "caption": "* From",
@@ -472,12 +444,36 @@
    "fact": "case.intended_stay_to"
   },
   {
-   "caption": "b) Other",
-   "fact": "case.visit_purpose_other"
+   "caption": "* Funds available for my stay (CAD)",
+   "fact": "case.funds_available_cad"
   },
   {
-   "caption": "* a) Purpose of my visit",
-   "fact": "case.visit_purpose"
+   "caption": "Name",
+   "fact": "case.visit_contact_name"
+  },
+  {
+   "caption": "Relationship to me",
+   "fact": "case.visit_contact_relationship"
+  },
+  {
+   "caption": "Address in Canada",
+   "fact": "case.visit_contact_address_in_canada"
+  },
+  {
+   "caption": "School/Facility name",
+   "fact": "person.education_institution"
+  },
+  {
+   "caption": "MM",
+   "fact": "person.education_from_date"
+  },
+  {
+   "caption": "MM",
+   "fact": "person.education_to_date"
+  },
+  {
+   "caption": "Field of study",
+   "fact": "person.education_field_of_study"
   },
   {
    "caption": "City/Town",
@@ -488,24 +484,24 @@
    "fact": "person.education_country"
   },
   {
-   "caption": "Field of study",
-   "fact": "person.education_field_of_study"
-  },
-  {
-   "caption": "YYYY",
-   "fact": "person.education_from_date"
-  },
-  {
    "caption": "Province/State",
    "fact": "person.education_province_state"
   },
   {
-   "caption": "Education Section Question 1. Have you had any post secondary education including university, college or apprenticeship ",
-   "fact": "person.education_institution"
+   "caption": "MM",
+   "fact": "person.employment_from_date"
   },
   {
-   "caption": "YYYY",
-   "fact": "person.education_to_date"
+   "caption": "MM",
+   "fact": "person.employment_to_date"
+  },
+  {
+   "caption": "Previous Activity/Occupation",
+   "fact": "person.occupation_title"
+  },
+  {
+   "caption": "Company/Employer/Facility name",
+   "fact": "person.employment_employer_name"
   },
   {
    "caption": "City/Town",
@@ -516,24 +512,28 @@
    "fact": "person.occupation_country"
   },
   {
-   "caption": "Company/Employer/Facility name",
-   "fact": "person.employment_employer_name"
-  },
-  {
-   "caption": "YYYY",
-   "fact": "person.employment_from_date"
-  },
-  {
-   "caption": "Previous Activity/Occupation",
-   "fact": "person.occupation_title"
-  },
-  {
    "caption": "Province/State",
    "fact": "person.occupation_province_state"
   },
   {
-   "caption": "YYYY",
-   "fact": "person.employment_to_date"
+   "caption": "Question 1 B Do you have any physical or mental disorder that would require social or health services, other than medica",
+   "fact": "person.disorder_requiring_services"
+  },
+  {
+   "caption": "Question 2 A. Have you ever remained beyond the validity of your status, attended school without authorization or worked",
+   "fact": "person.status_violation_canada"
+  },
+  {
+   "caption": "Question 2 B. Have you ever been refused any kind of visa, admission, or been ordered to leave Canada or any other count",
+   "fact": "person.refused_visa_or_entry"
+  },
+  {
+   "caption": "d) If you answered “yes” to question 2a), 2b), or 2C please provide details.",
+   "fact": "person.immigration_history_details"
+  },
+  {
+   "caption": "Question 2 B. Have you ever been refused any kind of visa, admission, or been ordered to leave Canada or any other count",
+   "fact": "person.previously_applied_to_canada"
   },
   {
    "caption": "Question 3 A. Have you ever committed, been arrested for, been charged with or convicted of any criminal offence in any ",
