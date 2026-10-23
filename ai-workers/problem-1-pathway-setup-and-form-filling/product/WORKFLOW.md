@@ -3,15 +3,13 @@
 ## Roles
 | Role | Where | Does | Never |
 |---|---|---|---|
-| **Founder** (product owner; RCIC reviewer for now, P-17) | Lead chat + Claude Code terminal | Decides product choices (≤3 per screen), agrees concepts, types `/next`, pastes blocks, walks built screens as an RCIC | Relays work between agents beyond pasting the block |
+| **Founder** (product owner; RCIC reviewer for now, P-17) | Lead chat + lane sessions | Decides product choices (≤3 per screen), agrees concepts, types `/lead` and `/next <lane>`, pastes blocks, OKs merges, walks built screens as an RCIC | Relays work between agents beyond pasting the block |
 | **Lead** (Claude chat in the "AI-Pathway way" Project, Xpatready folder connected) | Starts with `/lead` | Designs screens (`screen-concept`), answers challenges, checks builds against concept and standards, keeps decisions, requests and `LEAD.md` | Edits app code |
-| **Builder** (Claude Code at the Xpatready root) | Driven by `/next` | Challenges concepts, builds, self-checks, runs reviewer and breaker agents, fixes | Builds before agreement; changes rules files; commits or pushes |
+| **Builder** (Claude Code in a lane copy, `LANES.md`) | Driven by `/next <lane>` | Challenges concepts, builds, self-checks (skill `journey-test`), runs reviewer and breaker agents, fixes, commits each stage on its lane branch | Builds before agreement; changes rules files; pushes; works in another lane's files |
 | **Reviewer / Breaker** (fresh agents launched by the builder) | `.claude/agents/` | Score and attack the built screen | Fix anything; ask for new features |
 
 ## The loop the founder runs
-1. Claude Code: type `/next`. It does exactly one stage and ends with a **Paste to Lead** block.
-2. Lead chat: paste the block (in a new chat, type `/lead` first). The Lead acts on it and says what is next.
-3. Repeat. Long chat? Start a new one — state lives in files, never in chat. After skills or agents change, restart Claude Code.
+Parallel lanes, guards, file ownership and merging: `LANES.md` (P-64). Per lane: `/next <lane>` does exactly one stage, commits, and ends with a **Paste to Lead** block naming the lane; `/lead` acts on it and names the next command for every lane. State lives in files (`STATE.md` overview, `lanes/<lane>.md` per lane), never in chat.
 
 ## How we work: see it, agree it, build it, show it early (P-36, P-42)
 Dual track: the Lead designs screen N+1 while the builder builds screen N. Nothing is coded that the founder has not clicked through.

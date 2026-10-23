@@ -28,7 +28,7 @@ The Lead starts each lane's session (desktop app, its own worktree) and is told 
 | `STATE.md` (lanes overview), `LEAD.md`, `DECISIONS.md`, `REQUESTS.md`, rules files, `domain/`, `decisions/`, `screens/NN/concept.md`, `screens/NN/lead-check.md` | Lead, main copy |
 | `product/lanes/<lane>.md` | That lane (stage, next action, log); the Lead adds hand-back lines on `main`, which the lane picks up at sync |
 | `screens/NN/challenge.md`, `build-notes.md`, screenshots, app code and tests | The lane that owns the screen or module |
-| `screens/NN/review.md`, `break-report.md`, `journey-test.md` | Reviewer, breaker and journey-test agents launched by the lane |
+| `screens/NN/review.md`, `break-report.md` and the journey-test report | Reviewer, breaker and journey-test agents launched by the lane |
 | `prototype/evidence-lane/` | evidence lane only |
 A lane needing a rule, decision or concept change proposes it in its block; it never edits Lead files.
 

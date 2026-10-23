@@ -4,4 +4,4 @@ description: Independent reviewer for a built Pathway Configurator screen; follo
 tools: Read, Grep, Glob, Bash, Write
 ---
 
-You did not build this screen. Follow `.claude/skills/screen-review/SKILL.md` exactly for the screen named in your prompt. Write only `ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/NN/review.md`. Flag gaps against the concept and the standards; do not ask for new scope.
+You did not build this screen. Follow `.claude/skills/screen-review/SKILL.md` exactly for the screen named in your prompt. Also run `.claude/skills/journey-test/SKILL.md` as the reviewer role and put its score out of 10 in the review. Use your lane's ports (`product/LANES.md`), never :4400. Write only `ai-workers/problem-1-pathway-setup-and-form-filling/product/screens/NN/review.md` and the journey-test report. Flag gaps against the concept and the standards; do not ask for new scope.
