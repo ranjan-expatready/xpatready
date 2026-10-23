@@ -1,0 +1,292 @@
+{
+ "label": "Sample: made-up facts for testing the IMM 1344 (09-2024) form only; never submit. Immigration values are Sample (immigration expert to confirm). Legal: Unconfirmed: no counsel.",
+ "form": "IMM 1344 (09-2024)",
+ "form_file": "imm1344e.pdf",
+ "set": "complete",
+ "household": "the Sponsor (Canadian citizen by birth, Toronto ON) sponsors Client A (spouse, citizen of India, living in New Delhi); married 15 Mar 2019; no co-signer; no children on this form",
+ "not_written": "form-calculated fields (checksum, validated flags, hidden date parts, full phone number, barcodes) and the hand signatures are left to the form and the signer",
+ "values": {
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q1[0].Proceed[0]": "Y",
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q2[0].LangPref[0]": "01",
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q3[0].CoSignerInd[0]": "N",
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q4[0].PAFamilyName[0]": "EXAMPLE",
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q4[0].PAGivenName[0]": "CLIENTA",
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBYear[0]": "1990",
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBMonth[0]": "04",
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBDay[0]": "12",
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q5New[0].Relationship[0]": "11",
+  "form1[0].Part1[0].SponsorDetails[0].q1[0].FamilyName[0]": "EXAMPLE",
+  "form1[0].Part1[0].SponsorDetails[0].q1[0].GivenName[0]": "SPONSOR",
+  "form1[0].Part1[0].SponsorDetails[0].q2[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]": "N",
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].sex[0].Sex[0]": "Female",
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBDay[0]": "21",
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBMonth[0]": "06",
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBYear[0]": "1988",
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].pob[0].PlaceBirthCity[0]": "TORONTO",
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].pob[0].PlaceBirthCountry[0]": "511",
+  "form1[0].Part1[0].SponsorDetails[0].q6New[0].StatusInCan[0]": "1",
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].MaritalStatus[0]": "01",
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].DateOfMarriage[0]": "2019-03-15",
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].c[0].FamilyName[0]": "EXAMPLE",
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].c[0].GivenName[0]": "CLIENTA",
+  "form1[0].Part1[0].SponsorDetails[0].q9New[0].fullname[0].PrevMarriedIndicator[0]": "N",
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].StreetNum[0]": "100",
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].Streetname[0]": "SAMPLE STREET",
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].CityTown[0]": "TORONTO",
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].Country[0]": "511",
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].ProvinceState[0]": "06",
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].PostalCode[0]": "M5V0A1",
+  "form1[0].Part1[0].SponsorContactInfo[0].q2[0].SameAsMailingIndicator[0]": "Y",
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].CanadaUS[0]": "1",
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].Type[0]": "02",
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].AreaCode[0]": "416",
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].FirstThree[0]": "555",
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].LastFive[0]": "0142",
+  "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Email[0].Email[0]": "sponsor@example.com",
+  "form1[0].Part1[0].SponsorResidency[0].question[0].LiveOutsideCan[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q1[0].Over18Ind[0]": "Y",
+  "form1[0].Part1[0].SponsorEA[0].q2[0].CanCitzInd[0]": "Y",
+  "form1[0].Part1[0].SponsorEA[0].q3[0].SpouseCLInd[0]": "Y",
+  "form1[0].Part1[0].SponsorEA[0].q4[0].ResideCanInd[0]": "Y",
+  "form1[0].Part1[0].SponsorEA[0].q5[0].PrevSponsored[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q6[0].PrevAppInd[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q7[0].SocialAssistInd[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q8[0].BankruptInd[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q9[0].PrevSocialInd[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q10[0].UndertakeInd[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q11[0].LeaveCanInd[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q12[0].LatePayInd[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q13[0].JailInd[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q14[0].SexOffInd[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q15[0].SupportPayInd[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q16[0].RevokeCitzInd[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q17[0].InadmissibleInd[0]": "N",
+  "form1[0].Part1[0].SponsorEA[0].q18[0].ActParlimentInd[0]": "N"
+ },
+ "facts": {
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q1[0].Proceed[0]": {
+   "fact": "case.if_sponsor_ineligible_proceed",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q2[0].LangPref[0]": {
+   "fact": "case.correspondence_language",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q3[0].CoSignerInd[0]": {
+   "fact": "case.has_co_signer",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q4[0].PAFamilyName[0]": {
+   "fact": "person.family_name",
+   "person": "client-a"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q4[0].PAGivenName[0]": {
+   "fact": "person.given_names",
+   "person": "client-a"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBYear[0]": {
+   "fact": "person.date_of_birth (year)",
+   "person": "client-a"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBMonth[0]": {
+   "fact": "person.date_of_birth (month)",
+   "person": "client-a"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].PADOB[0].DOBDay[0]": {
+   "fact": "person.date_of_birth (day)",
+   "person": "client-a"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].genDetails[0].q5New[0].Relationship[0]": {
+   "fact": "relationship.principal_applicant_is (Spouse living outside Canada)",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q1[0].FamilyName[0]": {
+   "fact": "person.family_name",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q1[0].GivenName[0]": {
+   "fact": "person.given_names",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q2[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]": {
+   "fact": "person.used_other_names",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].sex[0].Sex[0]": {
+   "fact": "person.sex",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBDay[0]": {
+   "fact": "person.date_of_birth (day)",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBMonth[0]": {
+   "fact": "person.date_of_birth (month)",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].dob[0].DOBYear[0]": {
+   "fact": "person.date_of_birth (year)",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].pob[0].PlaceBirthCity[0]": {
+   "fact": "person.place_of_birth_city",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q3-4-5[0].pob[0].PlaceBirthCountry[0]": {
+   "fact": "person.place_of_birth_country (Canada)",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q6New[0].StatusInCan[0]": {
+   "fact": "person.status_in_canada (citizen by birth)",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].MaritalStatus[0]": {
+   "fact": "person.marital_status (Married)",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].a-b[0].DateOfMarriage[0]": {
+   "fact": "relationship.date_of_marriage",
+   "person": "sponsor+client-a"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].c[0].FamilyName[0]": {
+   "fact": "spouse.family_name",
+   "person": "client-a"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q8New[0].c[0].GivenName[0]": {
+   "fact": "spouse.given_names",
+   "person": "client-a"
+  },
+  "form1[0].Part1[0].SponsorDetails[0].q9New[0].fullname[0].PrevMarriedIndicator[0]": {
+   "fact": "person.previously_married",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].StreetNum[0]": {
+   "fact": "address.mailing.street_number",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow1[0].Streetname[0]": {
+   "fact": "address.mailing.street_name",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].CityTown[0]": {
+   "fact": "address.mailing.city",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].Country[0]": {
+   "fact": "address.mailing.country (Canada)",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].ProvinceState[0]": {
+   "fact": "address.mailing.province (ON)",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q1[0].AddressRow2[0].PostalCode[0]": {
+   "fact": "address.mailing.postal_code",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q2[0].SameAsMailingIndicator[0]": {
+   "fact": "address.residential_same_as_mailing",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].CanadaUS[0]": {
+   "fact": "phone.primary.format (Canada/US)",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].Type[0]": {
+   "fact": "phone.primary.type (Cellular)",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].AreaCode[0]": {
+   "fact": "phone.primary.area_code",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].FirstThree[0]": {
+   "fact": "phone.primary.exchange",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].LastFive[0]": {
+   "fact": "phone.primary.subscriber",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorContactInfo[0].q5-6[0].Email[0].Email[0]": {
+   "fact": "person.email",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorResidency[0].question[0].LiveOutsideCan[0]": {
+   "fact": "sponsor.citizen_living_outside_canada",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q1[0].Over18Ind[0]": {
+   "fact": "sponsor.eligibility.Over18",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q2[0].CanCitzInd[0]": {
+   "fact": "sponsor.eligibility.CanCitz",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q3[0].SpouseCLInd[0]": {
+   "fact": "sponsor.eligibility.SpouseCL",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q4[0].ResideCanInd[0]": {
+   "fact": "sponsor.eligibility.ResideCan",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q5[0].PrevSponsored[0]": {
+   "fact": "sponsor.eligibility.PrevSponsored",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q6[0].PrevAppInd[0]": {
+   "fact": "sponsor.eligibility.PrevApp",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q7[0].SocialAssistInd[0]": {
+   "fact": "sponsor.eligibility.SocialAssist",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q8[0].BankruptInd[0]": {
+   "fact": "sponsor.eligibility.Bankrupt",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q9[0].PrevSocialInd[0]": {
+   "fact": "sponsor.eligibility.PrevSocial",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q10[0].UndertakeInd[0]": {
+   "fact": "sponsor.eligibility.Undertake",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q11[0].LeaveCanInd[0]": {
+   "fact": "sponsor.eligibility.LeaveCan",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q12[0].LatePayInd[0]": {
+   "fact": "sponsor.eligibility.LatePay",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q13[0].JailInd[0]": {
+   "fact": "sponsor.eligibility.Jail",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q14[0].SexOffInd[0]": {
+   "fact": "sponsor.eligibility.SexOff",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q15[0].SupportPayInd[0]": {
+   "fact": "sponsor.eligibility.SupportPay",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q16[0].RevokeCitzInd[0]": {
+   "fact": "sponsor.eligibility.RevokeCitz",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q17[0].InadmissibleInd[0]": {
+   "fact": "sponsor.eligibility.Inadmissible",
+   "person": "sponsor"
+  },
+  "form1[0].Part1[0].SponsorEA[0].q18[0].ActParlimentInd[0]": {
+   "fact": "sponsor.eligibility.ActParliment",
+   "person": "sponsor"
+  }
+ }
+}

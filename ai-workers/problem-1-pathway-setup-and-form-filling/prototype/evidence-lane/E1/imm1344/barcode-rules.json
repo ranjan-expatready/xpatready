@@ -1,0 +1,34 @@
+{
+ "note": "IMM 1344 (09-2024) barcode rules. Each rule names its source in the official template (imm1344e.pdf, sha256 bb11ccbd…74d2). Rules are added only from the template or the Adobe evidence, never to make a mismatch pass.",
+ "form_file": "imm1344e.pdf",
+ "inventory": "p1/inventory/imm1344e.inventory.json",
+ "manifests": [
+  "BC1",
+  "BC2",
+  "BC3",
+  "BC4",
+  "BC5"
+ ],
+ "manifests_note": "encodeAll() pairs PaperFormsBarcodeN with manifest BCN (N = 1..5). The designer hint on PaperFormsBarcode4 names BC3, but the runtime script uses BC4; the script is what Adobe runs. Slot 1 of every barcode is crcNum, a checksum of the form data that Validate computes.",
+ "derived": [
+  {
+   "rule": "full telephone number calculated into the hidden, read-only ActualNumber field (template: ActualNumber calculate script; Canada/US: area code + exchange + subscriber number + extension, spaces removed)",
+   "kind": "concat",
+   "from": [
+    "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].AreaCode[0]",
+    "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].FirstThree[0]",
+    "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].NANumber[0].LastFive[0]"
+   ],
+   "to": [
+    "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].ActualNumber[0]"
+   ]
+  }
+ ],
+ "cleared": {},
+ "not_encoded": {
+  "form1[0].Part1[0].SponsorContactInfo[0].q3-4[0].Phone[0].CanadaUS[0]": [
+   "control_not_encoded",
+   "telephone format switch (Canada/US number fields): chooses which fields apply; the number itself is encoded through ActualNumber"
+  ]
+ }
+}
