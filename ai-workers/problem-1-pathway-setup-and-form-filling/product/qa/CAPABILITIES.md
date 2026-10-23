@@ -34,7 +34,9 @@ Rows: the Lead (every product decision becomes a row or a backlog item the same 
 | C3.10 | 3 Library | Every screen and message says form field, shared field and field map; never "box" (P-63) | M2 | **Broken** | main 23 Oct (Lead walk) | "Boxes mapped", "data boxes" on the combination page |
 | C3.11 | 3 Library | A Signed PDF upload line automatically adds its signed-scan document requirement for that person (P-62 §3) | M2 | Not built | — | Screen 03 |
 | C4.1 | 4 Questionnaires | Author builds the SQR per person role from the facts the forms and documents need | M2 | Partial | — | Section selection only |
-| C4.2 | 4 Questionnaires | Author builds the PQR (pre-qualification subset) | M2 | Not built | — | Owner open: per country (team) vs per combination |
+| C4.2 | 4 Questionnaires | Author marks the combination's PQR questions on its PQR tab; only questions its SQR asks can be marked (P-76) | M2 | Not built | — | Screen 03 |
+| C4.7 | 4 Questionnaires | AI drafts the combination's PQR picks with a reason per pick; a person accepts or removes each (P-76) | M2 | Not built | — | Screen 03; AI drafting owned by forms slice 3 |
+| C4.8 | 5 Release | PQR and SQR changes are part of the combination's one review and release, with sources, forms, documents and rules; no separate approval (P-76) | M2 | Not built | — | Screen 03 Review and release |
 | C4.3 | 4 Questionnaires | Preview by person with a sample family through the shared renderer (P-47) | M2 | Partial | — | Coverage preview, not the renderer |
 | C4.5 | 4 Questionnaires | An upload question creates a document line (SA-1B-3 with P-47) | M2 | Not built | 141194dc 23 Oct | Not in the app; needs the shared renderer (C4.4) |
 | C4.6 | 4 Questionnaires | Preview by person shows, for each person, which outputs they get per channel: portal screens, filled PDFs, PDFs to sign (P-62 §7) | M2 | Not built | — | Screen 03 |

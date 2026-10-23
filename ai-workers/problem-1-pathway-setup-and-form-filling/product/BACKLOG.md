@@ -36,10 +36,11 @@ Owner: the Lead. Source: the requirements trace of 23 Oct (`history/TRACE-SA01B-
 | B25 | Lead form: lead-flagged fields within a cap, warning above the cap | SA-1B-80, 81 | S |
 | B26 | ExpatReady delivery steps with a client label per language | SA-1B-46 | S |
 | B27 | Field map export and re-import, all or nothing | SA-1-31 | S |
+| B29 | General country-level PQR built automatically from released combinations' PQRs, opening the program the person chooses; prospect-facing use (M3) (P-76) | SA-1B-77–84, P-76 | M |
 Outside SA-01B and therefore outside the POC (P-70): SA-01 country and pack container slices (SA-01.00–.02, .09–.11, SA-1-64, 66, 67), duplicate-person search (AG-02, one-pager 6.2).
 
 ## Planned but missing from the tester's checklist (added through the qa lane's Lead note)
 AI reading of uploaded documents (SA-1B-34, one-pager 7.3) · independent AI review of a filled form (one-pager 8.3) · copy a line from another combination and add or remove one line across many (SA-1B-61, Screen 03 concept) · an upload question creates a document line (SA-1B-3 with P-47).
 
 ## Open questions from the trace (asked one at a time; answers go to `DECISIONS.md`)
-Answered: scope (P-70), ready to file (P-71), verification (P-72), wrong mapping (P-73). Open: U1 PQR model (research in `decisions/PQR-options-2026-10-23.md`).
+Answered: scope (P-70), ready to file (P-71), verification (P-72), wrong mapping (P-73). PQR model (U1, P-76). Open sub-questions: verdict to the prospect, pre-fill the SQR to confirm, entry links in Release 1.
