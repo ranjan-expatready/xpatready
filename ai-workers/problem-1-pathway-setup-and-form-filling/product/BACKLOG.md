@@ -1,0 +1,27 @@
+# Backlog — requirements not yet in a screen, slice or milestone
+
+Owner: the Lead. Source: the requirements trace of 23 Oct (`history/TRACE-SA01B-2026-10-23.md`: SA-01B v1.5, redesign decisions, SA-01 slices, one-page solution). Our decisions win where they already settle a point; this list holds only what is genuinely missing. An item leaves the backlog when a concept or plan schedules it (then it gets a capability row in `qa/CAPABILITIES.md`). Sizes S/M/L are guesses; milestones are proposals (M4 is new).
+
+| # | Item (who can do what) | Requirements | Milestone | Depends on | Size |
+|---|---|---|---|---|---|
+| B1 | **Purposes and overflow for list facts:** a publisher maps a form field to "current", "for post", "all in 10 years" or "latest" of a list, and sets what happens when the list is longer than the form (continuation or flag, never a silent cut) | SA-1B-11, 12, 27 | M2 | F1 field-map contract, P-47 repeating group, Screens 03/04 | M |
+| B2 | **Who fills each field:** default Client or Case officer per field; background and declaration locked to the client; the client sees only client fields | RD-6; one-pager 3.4, 3.7 | M2 | C4.1, P-47 renderer; runtime use in R1/M3 | M |
+| B3 | **Document substitute sets:** "any one of" / "all of" sets; a combination picks its set; any valid member satisfies the checklist | SA-1B-19, 20 | M2 | Screen 04 document types, C2.6/C3.4, C6.4 | M |
+| B4 | **Document validity warnings at upload** ("expires in 28 days", "older than 6 months"); overriding records a reason | SA-1B-23 | M3 | C6.4, P-14 tier-2 checks | S |
+| B5 | **Estimated completion time per section** for the client | SA-1B-16 | M3 | P-47 | S |
+| B6 | **Representative approves each form:** stamped with the file fingerprint and answer snapshot; a later fact change withdraws it | one-pager 9.3 | M3 | C7.2, C9.2 | S |
+| B7 | **Family members on different combinations in one case** (study permit principal, open work permit spouse) | RD-19; TAXONOMY case 2 | M3 | R1 data model | M |
+| B8 | **Adult privacy and "Send to …":** an adult gets their own tab by a code-verified link; the principal then sees progress only; take back, resend (consent wording: Unconfirmed, no counsel) | RD-12b | M3 | C6.2 | M |
+| B9 | **Adopt a published update on an open case:** "What changes for this case", adopt now or later; drafts re-render, approvals withdrawn, signed or submitted items untouched (P-65) | one-pager 10.3; RD-18; SA-01.14; SA-1-28 | M3 | C9.1, C9.2, R1 pin | M |
+| B10 | **Multi-stage runtime:** open a case at a later stage with earlier stages "done before we started"; "Start next stage" carries answers, adds documents, forms and the deadline (structure stays P-13/P-24) | SA-1B-67, 68; RD-10b | M3 | P-24, P-59; B11 for deadlines | L |
+| B11 | **Government steps, deadlines and responses:** biometrics, medical, acknowledgement, decision as lines with a deadline mark and usual timeline (expert values); the officer records a letter, the due date is pre-filled and confirmed; "after decision" | SA-1B-45, 57 (step kinds), 69, 96; RD-14a; SA-01.08; one-pager 9.6 | M4 | Screen 03 line kinds, R1 filings | L |
+| B12 | **To-do starters per programme** (content only; the to-do engine is the team's) | SA-1B-97; RD-14b; SA-01.08 | M4 | B11 | S |
+| B13 | **Returning client reuses verified facts** with source and date; "still true?" items re-asked | one-pager 6.3, 7.2; RD-5b profile; SA-1B-1 re-confirmation | M4 | P-65 verification status, R1 fact store | M |
+| B14 | **Country-specific requirements section** beside a document or form (for example how to get a police certificate there) | SA-1B-103 | M4 | Team question SA1B-Q13 | S |
+| B15 | **Corporate LMIA positions linked to worker cases** | SA-1B-70 | M4 | P-59 links, B7 | M |
+
+## Planned but missing from the tester's checklist (added through the qa lane's Lead note)
+AI reading of uploaded documents (SA-1B-34, one-pager 7.3) · independent AI review of a filled form (one-pager 8.3) · copy a line from another combination and add or remove one line across many (SA-1B-61, Screen 03 concept) · an upload question creates a document line (SA-1B-3 with P-47).
+
+## Open questions from the trace (asked one at a time; answers go to `DECISIONS.md`)
+Scope reading of P-26/P-28 next to P-54 (59 "Out of scope" rows) · U1 PQR model · U2 what blocks "ready to file" · U3 verification before filling · U4 reporting a wrong mapping.
