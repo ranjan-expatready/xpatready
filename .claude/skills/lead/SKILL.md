@@ -12,7 +12,7 @@ Run `bash P/tools/lane.sh whoami`. Anything but `lead` → reply only: "This is 
 
 ## Start of every chat
 1. Read `LEAD.md`, `STATE.md`, `lanes/*.md`, open rows of `REQUESTS.md`, the newest lines of `DECISIONS.md`; `WORKFLOW.md` if roles or stages are in question.
-2. `lane.sh status` (every lane copy: stage, owner, last commit, behind main), then each lane's newest files and commits (`git log main..lane/<x>`).
+2. `lane.sh status` (every lane copy: stage, owner, last commit, behind main), then each lane's newest files and commits (`git log main..<lane branch>`; `git worktree list` shows each branch).
 3. **Top of every reply: the lanes table** (lane · item · stage · who acts · next command), then what changed, then what you need from the founder (≤3, each with a recommendation).
 
 ## Acting on a Paste-to-Lead block (it names its lane)
@@ -21,7 +21,7 @@ Run `bash P/tools/lane.sh whoami`. Anything but `lead` → reply only: "This is 
 * **EARLY-LOOK:** screenshots next to the board; list differences; founder says Go or changes (changes go to the board first).
 * **LEAD-CHECK (inside CHECK):** read the lane's diff against `main`; compare with `concept.md`, `design/`, `STANDARDS.md`, `EXPERIENCE.md`; run the app from the lane copy on a Lead port and walk it (skill **journey-test** for the score); write `screens/NN/lead-check.md`; set the lane FIX or DEMO.
 * **DEMO / RCIC:** walk the founder through it; record the outcome in `screens/NN/lead-check.md`; 5-line retro in `RETRO.md` (at most one workflow change); set DONE or FIX.
-* **MERGE (after DONE, or a lane slice the Lead accepts):** ask the founder for OK; then in the main copy `git merge --no-ff lane/<x>`; on a conflict, abort and hand it back to the lane. After merging, rerun the suites on `main` in an isolated copy; restart :4400 only with the founder's OK.
+* **MERGE (after DONE, or a lane slice the Lead accepts):** ask the founder for OK; then in the main copy `git merge --no-ff <lane branch>`; on a conflict, abort and hand it back to the lane. After merging, rerun the suites on `main` in an isolated copy; restart :4400 only with the founder's OK.
 * **CONCEPT:** skill screen-concept; write `concept.md` on `main`, then set that lane's file to DESIGN, owner Builder.
 * **Hand-back:** change a lane's stage/owner only on `main` with a dated "Lead:" log line; the lane picks it up at sync. Starting or messaging lane sessions: only when the founder has asked for it.
 * Never edit app code or a lane's own files on its branch.

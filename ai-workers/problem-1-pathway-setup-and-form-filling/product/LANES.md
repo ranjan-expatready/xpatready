@@ -6,9 +6,9 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 | Lane | Copy and branch | What it owns | Founder command |
 |---|---|---|---|
 | **Lead** | main copy, `main` | Concepts, decisions, requests, checks, merges, `STATE.md`, shared demo :4400 | `/lead` |
-| **screens** | lane worktree, `lane/screens` | Milestone 2 screens, one stage at a time (`WORKFLOW.md`) | `/next screens` |
-| **forms** | lane worktree, `lane/forms` | PDF and online forms (P-61–P-63): intake, form versions, field and screen maps, filler, portal sheet | `/next forms` |
-| **evidence** | lane worktree, `lane/evidence` | Fills each real form and checks it in Adobe (P-46); AI scoring set from saved runs. Never app code | `/next evidence` |
+| **screens** | own worktree and branch | Milestone 2 screens, one stage at a time (`WORKFLOW.md`) | `/next screens` |
+| **forms** | own worktree and branch | PDF and online forms (P-61–P-63): intake, form versions, field and screen maps, filler, portal sheet | `/next forms` |
+| **evidence** | own worktree and branch | Fills each real form and checks it in Adobe (P-46); AI scoring set from saved runs. Never app code | `/next evidence` |
 The Lead starts each lane's session (desktop app, its own worktree) and is told when it finishes a step. The founder can open any lane's session to watch, and types the commands above only there.
 
 ## The one loop
