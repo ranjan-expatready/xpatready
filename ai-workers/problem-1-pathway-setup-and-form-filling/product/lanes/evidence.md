@@ -4,10 +4,11 @@ Command: `/next evidence` in this lane's own copy (`LANES.md`). This lane writes
 
 current_item: E1-form-acceptance
 stage: DESIGN
-owner: Builder
-next_action: Write `prototype/evidence-lane/E1-plan.md`: forms in order (IMM 5257, 1344, 0008, 5669, 5532, 5406, 5476, 1295, 5707), sample facts used (Sample), method per form (fill with the existing engine on a copy → Adobe Validate → barcode compare, P-46), pass criteria, what needs the founder (Adobe on this Mac), and the no-cost AI scoring set from saved runs (`prototype/p2/runs/`). No app code, no paid AI.
+owner: Lead
+next_action: Lead checks `prototype/evidence-lane/E1-plan.md` and answers its questions (form order vs P-46; Adobe by computer use or founder clicks). Then BUILD E1a (free scoring set + self-check), E1b forms 1–3.
 blocked_by: none
 updated: 2026-10-23
 
 ## Log (last 10 lines)
+- 2026-10-23 · E1 · DESIGN · Plan written: 9 forms in 3 groups (only IMM 5257, 1344, 0008, 1295 make barcodes), Sample household, pass criteria, founder needs, US$0 scoring set from 35 saved live runs; to Lead.
 - 2026-10-23 · E1 · DESIGN · Lane created (P-64).
