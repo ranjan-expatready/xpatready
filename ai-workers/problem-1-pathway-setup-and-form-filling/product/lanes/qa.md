@@ -5,13 +5,14 @@
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: QA-0 baseline
+current_item: after-merge F1 slice 1 (65826022)
 stage: WAITING
 owner: Lead
-next_action: Lead reads `qa/reports/2026-10-23-milestone.md`, assigns QA-4 to QA-12 to lanes, answers the three questions; then `/qa after-merge` retests each fix with its check in `prototype/studio/tests/qa/`.
+next_action: Lead reads `qa/reports/2026-10-23-after-merge.md`, assigns QA-13 to QA-18, answers three questions (quiet window for browser checks, :4400 migrate + generate, closed-findings file); qa reruns the browser journeys when the machine is quiet.
 blocked_by: none
 updated: 2026-10-23
 
 ## Log (last 10 lines)
 - 2026-10-23 · Lead: lane created at the founder's request (R-82, P-68); ports 4470–4479, databases `qa_*`.
 - 2026-10-23 · QA-0 `/qa milestone` on main 141194dc: not ready — QA-1 Critical reproduced (API and browser); 5 Major, 6 Minor (new QA-4–QA-12); red suites: AI drafting, orchestration (lane copy), Studio browser, scale; coverage floor api 93/74, engine 94/85; Screen 01 journey 7.5/10 with a 0. Four capability rows added (Lead note).
+- 2026-10-23 · after-merge on main 65826022 (F1 slice 1): QA-2 closed, QA-4 half fixed, QA-1 still open; slice 1 sound through the API (probe 25/26, suite 106/106); new QA-13–QA-18 (QA-14 name race turns grounding red; QA-18 engine branches 84.7% < 85% floor); browser journeys not reliable at load 22–112.
