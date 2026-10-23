@@ -262,6 +262,9 @@ export class Sources {
     // A cancel or a reset stops the parts not yet started (break M2): each would otherwise be a paid call.
     const wanted = async () => { const j = await this.db.draftingJob.findUnique({ where: { id }, include: { batch: true } }); return !!j && !j.batch?.cancelRequested && j.status === "RUNNING"; };
     const runPart = async (s: (typeof state)[number]) => {
+      // STUDIO_PART_PAUSE_MS (isolated test server only, like STUDIO_FAULT_SOURCE): a pause before each part, so a cancel
+      // can be shown to stop the parts not yet started. The demo server never sets it.
+      if (process.env.STUDIO_PART_PAUSE_MS) await new Promise((r) => setTimeout(r, Number(process.env.STUDIO_PART_PAUSE_MS)));
       if (!(await wanted())) { s.status = "not started"; s.error = "cancelled or reset before this part started; nothing was sent"; return; }
       s.status = "running"; await progress();
       const stub = await this.launchOnce(s.job_id, "stub"), sj = lastJson(stub.out);

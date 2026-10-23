@@ -189,7 +189,10 @@ t("... the digest the launcher writes holds salted hashes only: no family value 
   const start = () => new Promise<{ code: number | null; out: string }>((res) => { const p = spawn(process.execPath, [join(P2, "launch.ts"), "--job", "c1-fieldmap-imm5707", "--stub"], { env }); let out = ""; p.stdout.on("data", (d) => (out += d)); p.on("close", (code) => res({ code, out })); });
   const both = await Promise.all([start(), start(), start()]);
   const recs = both.map((x) => { try { return JSON.parse(x.out.trim().split("\n").pop() ?? "{}"); } catch { return {}; } });
-  t("three launches of the same job at the same moment all pass, each with its own ticket", both.every((x) => x.code === 0) && new Set(recs.map((r) => r.run_file)).size === 3);
+  // The experiment ledger itself admits one runner at a time and refuses the others ("ledger locked", before any call);
+  // what must never happen is a launch refused for another launch's ticket.
+  const passed = recs.filter((r) => r.exit === 0), locked = recs.filter((r) => /ledger locked/i.test(String(r.refused ?? "")));
+  t("three launches of the same job at the same moment: none is refused for another launch's ticket; each that runs has its own run", passed.length >= 1 && passed.length + locked.length === 3 && !recs.some((r) => /launch ticket|screening digest/.test(String(r.refused ?? ""))) && new Set(passed.map((r) => r.run_file)).size === passed.length);
   ticket("c1-fieldmap-imm5707", "stub", "direct-own-ticket"); // writes the shared file too
   const noOwn = parse(iso([], directArgs("c1-fieldmap-imm5707", "stub", "direct-without-ticket")));
   t("a drafting process never takes the shared digest in place of its own run's ticket", noOwn.ok === false && /no screening digest/.test(noOwn.error ?? ""));
@@ -214,7 +217,8 @@ const leftover = parse(iso([], directArgs("stale", "stub", "reviewer-stale")));
 t("R4-R2-M1 exact case: draft.ts started directly with matching hashes and the digest an earlier launch left is refused",
   leftover.ok === false && leftover.refused === true && /launch ticket|no screening digest/.test(leftover.error ?? "") && leftover.stub_calls === undefined && ledgerLines().length === l9);
 const reuse = parse(iso([], directArgs("c1-fieldmap-imm5707", "stub", (env8.drafting_run?.run_id as string) ?? "x")));
-t("... and so is a direct start that reuses the run id of a ticket the launcher already used", reuse.ok === false && /launch ticket (already used|is for another start)/.test(reuse.error ?? ""));
+// Since F1 slice 2 the launcher also removes a run's ticket file after the run, so a reused run id finds none.
+t("... and so is a direct start that reuses the run id of a ticket the launcher already used", reuse.ok === false && /launch ticket (already used|is for another start)|no screening digest/.test(reuse.error ?? ""));
 // (b) With a ticket that is current for this start, the screen inside the process sees the new family value.
 const freshTicketStale = parse(isoT("stale", "stub", "direct-stale-current"));
 t("with a current ticket, draft.ts started directly refuses the template: the new family value is screened inside the process",

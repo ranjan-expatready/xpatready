@@ -3,7 +3,8 @@
 // filler. Every rule has a passing and a failing case. On an isolated copy (its own database and files; the demo is
 // never touched). NO model call (US$0): AI steps run the guarded stub pass; an accepted AI proposal is a hand-written
 // answer, said so in its check. QA-8 (the guard in lane copies) is checked in tests/check_p2_guard.ts.
-//   zsh studio/tools/isolated.sh forms_s2 4451 start && tsx studio/tests/check_forms_slice2.ts 4451 xr_studio_forms_s2
+//   zsh studio/tools/isolated.sh forms_s2 4451 start STUDIO_PART_PAUSE_MS=3000 && tsx studio/tests/check_forms_slice2.ts 4451 xr_studio_forms_s2
+// (the pause before each part lets the cancel check stop parts not yet started; without it that one check fails)
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -72,7 +73,7 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   const codedPrior = prior({ data_path: coded.data_path, caption: coded.caption, transform: "code_list:old (A=1, B=2)", options: [["A", "1"], ["B", "2"]], confidence: "medium" });
   ok("A4 reuse fail (review 4): a choice field whose codes differ from the earlier edition's is not reused; with the same codes it is, at the earlier row's own confidence", planDraft(inv1344, [codedPrior]).reused.length === 0 && planDraft(inv1344, [{ ...codedPrior, options: coded.options_resolved }]).reused[0]?.confidence === "medium");
   // The paid-only steps of A4 and screen_map, run at US$0 on saved and hand-written records (review 6).
-  const saved5257 = JSON.parse(readFileSync(join(PROTOTYPE, "p2", "runs", readdirSync(join(PROTOTYPE, "p2", "runs")).filter((f) => f.startsWith("studio-fieldmap-imm5257e-live-") && !f.includes("reconverted")).sort().find((f) => JSON.parse(readFileSync(join(PROTOTYPE, "p2", "runs", f), "utf8")).contract_valid === true)!), "utf8"));
+  const saved5257 = JSON.parse(readFileSync(join(PROTOTYPE, "p2", "runs", readdirSync(join(PROTOTYPE, "p2", "runs")).filter((f) => f.startsWith("studio-fieldmap-imm5257e-live-") && !f.includes("reconverted")).sort().find((f) => { const e = JSON.parse(readFileSync(join(PROTOTYPE, "p2", "runs", f), "utf8")); return e.contract_valid === true && !!e.raw_output && !e.output_errors && /^completed/.test(e.drafting_run?.status ?? ""); })!), "utf8"));
   const whole5257 = JSON.parse(saved5257.raw_output) as { form_edition: string; canonical_fields: { id: string; meaning: string; value_type: string }[]; entries: { data_path: string }[] };
   const inv5257 = JSON.parse(readFileSync(join(PROTOTYPE, "p1", "inventory", "imm5257e.inventory.json"), "utf8"));
   const split5257 = planDraft(inv5257, []);
@@ -139,9 +140,9 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   const t = r.body.targets?.[0];
   ok("A4 plan: IMM 5257 (242 form fields) is planned in parts by section group, none reused yet, US$0 in stub mode", t?.action === "draft" && t.a4?.parts.length > 1 && t.a4.reused === 0 && t.a4.to_ai === t.a4.total && t.worst_usd === 0 && /parts/.test(t.why), t?.a4 && { parts: t.a4.parts.map((p: { fields: number }) => p.fields), why: t.why });
   r = await call("POST", `/attachments/${att(vv, "imm5257e.pdf")}/draft`, { mode: "stub" });
-  const other = await call("POST", `/attachments/${att(sv, "imm5707e.pdf")}/draft`, { mode: "stub" }); // a second draft at the same time (break B3)
+  const other = await call("POST", `/attachments/${att(sv, "imm5257e.pdf")}/draft`, { mode: "stub" }); // a second draft of a form, at the same time (break B3)
   const stubJob = await finished(r.body.id), otherJob = await finished(other.body.id);
-  ok("A4 (break B3): two drafts at the same moment both finish: launches take turns, none is refused 'ledger locked'", otherJob.status === "COMPLETED" && !/ledger locked/.test(JSON.stringify(stubJob) + JSON.stringify(otherJob)), [stubJob.status, otherJob.status, otherJob.message?.slice(0, 120)]);
+  ok("A4 (break B3): two drafts in parts at the same moment both finish: launches take turns, none is refused 'ledger locked'", stubJob.status === "COMPLETED" && otherJob.status === "COMPLETED" && (otherJob.detail?.a4?.parts ?? []).length > 1 && !/ledger locked/.test(JSON.stringify(stubJob) + JSON.stringify(otherJob)), [stubJob.status, otherJob.status, otherJob.message?.slice(0, 120)]);
   ok("A4 (break M1): the part jobs that ran name their content (…-p1of5-<12 hex>)", (stubJob.detail?.a4?.parts ?? []).every((p: { job_id: string }) => /-p\d+of\d+-[0-9a-f]{12}$/.test(p.job_id)), stubJob.detail?.a4?.parts?.map((p: { job_id: string }) => p.job_id.slice(-22)));
   const parts = stubJob.detail?.a4?.parts ?? [];
   ok("A4 run: every part passes the guarded stub path, one at a time, each recorded with its sections and form fields", stubJob.status === "COMPLETED" && parts.length === t.a4.parts.length && parts.every((p: { status: string }) => p.status === "done") && /Stub pass completed for all/.test(stubJob.message), stubJob.message);
@@ -196,7 +197,7 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   for (const i of (await call("GET", `/jobs/${reusedJob.id}`)).body.items.filter((x: { decision: string }) => x.decision === "PENDING")) await call("POST", `/jobs/${reusedJob.id}/items/${i.id}`, { decision: "ACCEPTED" });
   r = await call("POST", `/jobs/${reusedJob.id}/apply`, {});
   const origins = sql("select string_agg(distinct origin::text, ',') from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 5257 (09-2023)'");
-  ok("A4 reuse apply: the reused form fields enter the library as code matches (origin CODE_MATCH, 'as mapped in IMM 5257 (01-2020)'), never as AI", r.status === 201 && origins === "CODE_MATCH" && sql("select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 5257 (09-2023)' and m.evidence_quote like '%as mapped in IMM 5257 (01-2020)%'") !== "0", { status: r.status, origins });
+  ok("A4 reuse apply: the reused form fields enter the library as code matches (origin CODE_MATCH, 'as released in IMM 5257 (01-2020)'), never as AI", r.status === 201 && origins === "CODE_MATCH" && sql("select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 5257 (09-2023)' and m.evidence_quote like '%as released in IMM 5257 (01-2020)%'") !== "0", { status: r.status, origins });
 
   // ──────────────────────────────────────────── screen_map: the guarded job for inputs left open (US$0)
   const cap = (await call("POST", "/captures", { portal: "ircc_portal", form: "IMM 5257", title: "Visitor visa (Sample)" })).body;
@@ -216,8 +217,8 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   ok("screen_map fail (review 2): two starts at the same moment make one job; the other is refused", [d1.status, d2.status].sort().join() === "201,409" && sql(`select count(*) from drafting_job where kind='screen_map'`) === "1", [d1.status, d2.status]);
   r = d1.status === 201 ? d1 : d2;
   const sm = await finished(r.body.id);
-  const smRun = readdirSync(join(PROTOTYPE, "p2", "runs")).filter((f) => f.startsWith(sm.detail.job_id) && f.includes("-stub-")).sort().pop()!;
-  const smEnv = JSON.parse(readFileSync(join(PROTOTYPE, "p2", "runs", smRun), "utf8"));
+  const smRun = readdirSync(join(PROTOTYPE, "p2", "runs")).filter((f) => f.startsWith(sm.detail?.job_id ?? "-") && f.includes("-stub-")).sort().pop();
+  const smEnv = smRun ? JSON.parse(readFileSync(join(PROTOTYPE, "p2", "runs", smRun), "utf8")) : { note: `no stub run: ${sm.status} ${sm.message}` };
   ok("screen_map: the stub pass admits the approved screens and only the open inputs (an admitted part of the screen inventory), US$0", sm.status === "COMPLETED" && sm.costUsd === 0 && sm.detail.inputs === open.length && smEnv.launch_evidence?.admitted?.[0]?.kind === "inventory_part" && smEnv.drafting_run?.kind === "screen_map" && smEnv.contract_valid === true, { message: sm.message, admitted: smEnv.launch_evidence?.admitted });
   r = await call("POST", `/online-versions/${ed}/screen-map/ai/accept`, { jobId: sm.id }, "user-C");
   ok("screen_map fail: a stub pass has nothing to accept", r.status === 409, r.body.message);
