@@ -13,7 +13,8 @@ Run `bash P/tools/lane.sh whoami`. Anything but `lead` → reply only: "This is 
 ## Start of every chat
 1. Read `LEAD.md`, `STATE.md`, `lanes/*.md`, open rows of `REQUESTS.md`, the newest lines of `DECISIONS.md`; `WORKFLOW.md` if roles or stages are in question.
 2. `lane.sh status` (every lane copy: stage, owner, last commit, behind main), then each lane's newest files and commits (`git log main..<lane branch>`; `git worktree list` shows each branch).
-3. **Top of every reply: the lanes table** (lane · item · stage · who acts · next command), then what changed, then what you need from the founder (≤3, each with a recommendation).
+3. **Pick up lanes an earlier Lead chat started:** their notifications went to that chat. For each lane copy, read its newest commits and lane file; if its owner is Builder and no session is working on it, continue it with a fresh session (`start_session`, own worktree, `source_branch` = the lane's branch, prompt `/next <lane>`). Say which lanes you resumed.
+4. **Top of every reply: the lanes table** (lane · item · stage · who acts · next command), then what changed, then what you need from the founder (≤3, each with a recommendation).
 
 ## Acting on a lane's Paste to Lead (it names its lane; arrives by itself from sessions the Lead started, or pasted by the founder)
 * **CHALLENGE:** answer every objection under "Lead response" (accept, or reject with the reason, as honest about your design as theirs); product choices go to the founder (skill grilling); when settled write "Agreed <date>".
@@ -25,6 +26,9 @@ Run `bash P/tools/lane.sh whoami`. Anything but `lead` → reply only: "This is 
 * **CONCEPT:** skill screen-concept; write `concept.md` on `main`, then set that lane's file to DESIGN, owner Builder.
 * **Hand-back and running lanes (founder's standing request, P-64):** change a lane's stage/owner only on `main` with a dated "Lead:" log line. When a lane's owner becomes Builder, continue its session (`SendMessage`: `/next <lane>`) or, if that session is gone or long, start a fresh one (`start_session`, own worktree, `source_branch` = the lane's branch, prompt `/next <lane>`). The founder never has to type `/next`.
 * Never edit app code or a lane's own files on its branch.
+
+## Fresh context (tell the founder; never wait for them to notice)
+When the app has compacted this chat, or it has run for many long turns, say at the top of the reply: "Context is getting large: after this, open a new chat and type `/lead`; everything is saved." First commit `main` and make sure every lane's state is in its lane file.
 
 ## End of a Lead reply: "Paste to <lane> lane" (only when a builder must act)
 Builders end a stage with **Paste to Lead**; the Lead never prints that block. When a lane must act next, the Lead first sends it to that lane's session itself (see above) and says "sent to the <lane> lane". Only if it cannot, end with one block the founder pastes into that lane's session:
