@@ -3,12 +3,12 @@
 // only live-mode request is refused by the batch limit before anything is queued. Two test-only server switches are
 // used and labelled in the evidence: STUDIO_FAULT_SOURCE (an induced failure for one form) and STUDIO_HOLD_QUEUE
 // (keep steps queued to show restart, cancel and reset behaviour deterministically).
-//   tsx studio/tests/check_ai_orchestration.ts
+//   tsx studio/tests/check_ai_orchestration.ts [port=4403] [name=aiorch]   (starts its own isolated copy)
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-const PORT = 4403, NAME = "aiorch", DB = `xr_studio_${NAME}`;
+const PORT = Number(process.argv[2] ?? 4403), NAME = process.argv[3] ?? "aiorch", DB = `xr_studio_${NAME}`; // a lane passes its own port and name
 const STUDIO = join(import.meta.dirname, "..");
 const log: any[] = []; let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 240)}` : ""}`); };

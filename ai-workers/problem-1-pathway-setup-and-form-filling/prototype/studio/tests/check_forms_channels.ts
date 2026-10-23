@@ -112,7 +112,10 @@ const capture = async (screens: string[], title = "Application for a visitor vis
   const kinds14 = readdirSync(OFFICIAL, { recursive: true }).map(String).filter((f) => /\.html?$/.test(f)).map((f) => JSON.parse(execFileSync(PYTHON, ["-I", join(STUDIO, "tools", "read_form_identity.py"), join(OFFICIAL, f)], { encoding: "utf8" }).trim().split("\n").pop()!).kind as string);
   ok("intake pass: every IRCC public page in the official library still reads as a guide or checklist (none as a portal screen)", kinds14.length >= 10 && kinds14.every((k) => k === "guide" || k === "checklist"), kinds14);
   const fd1 = new FormData(); fd1.append("files", new Blob([new Uint8Array(readFileSync(join(FIX, "intake-one-question-answered.html")))]), "intake-one-question-answered.html"); fd1.append("combinationId", vv);
-  const one = (await (await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd1 })).json()).results[0];
+  // The Python reads above block this process for many seconds, so the server may have closed the idle keep-alive
+  // socket (EPIPE on reuse): send once more on a fresh one (test harness only; the request itself is unchanged).
+  const post1 = () => fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd1 });
+  const one = (await (await post1().catch(post1)).json()).results[0];
   ok("intake fail: a saved portal screen with one answered question is refused too, and not stored", one.outcome === "refused" && sql("select count(*) from source_attachment where file_name='intake-one-question-answered.html'") === "0" && sql("select coalesce(max(stored_path),'') from intake_item where file_name='intake-one-question-answered.html'") === "", one.message);
 
   // ──────────────────────────────────────────── captures: refusal, contract, second person, identity
