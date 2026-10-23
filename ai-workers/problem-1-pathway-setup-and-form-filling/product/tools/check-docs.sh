@@ -9,9 +9,9 @@ check() { local max=$1 kb=$2; shift 2; for f in "$@"; do [ -f "$f" ] || continue
   [ "$n" -gt "$max" ] && echo "TOO LONG ($n lines > $max): ${f#$ROOT/}"
   [ "$kb" -gt 0 ] && [ "$b" -gt $((kb * 1024)) ] && echo "TOO BIG ($((b / 1024)) KB > $kb KB): ${f#$ROOT/}"; done; }
 {
-  # Registers (DECISIONS, REQUESTS) are capped by lines only: older rows move to history/.
-  check 100 0 "$PH/DECISIONS.md" "$PH/REQUESTS.md"
-  check 100 12 $(ls "$PH"/*.md "$PH"/domain/*.md "$PH"/decisions/*.md "$PH"/lanes/*.md "$PH"/qa/*.md 2>/dev/null | grep -v -e '/DECISIONS.md$' -e '/REQUESTS.md$')
+  # Registers (DECISIONS, REQUESTS, qa/CAPABILITIES) are capped by lines only: older rows move to history/.
+  check 100 0 "$PH/DECISIONS.md" "$PH/REQUESTS.md" "$PH/qa/CAPABILITIES.md"
+  check 100 12 $(ls "$PH"/*.md "$PH"/domain/*.md "$PH"/decisions/*.md "$PH"/lanes/*.md "$PH"/qa/*.md 2>/dev/null | grep -v -e '/DECISIONS.md$' -e '/REQUESTS.md$' -e '/qa/CAPABILITIES.md$')
   check 100 7 "$ROOT"/.claude/skills/*/SKILL.md "$ROOT"/.claude/agents/*.md
   check 150 0 "$PH"/screens/*/*.md
   check 60 0 "$ROOT/CLAUDE.md" "$ROOT/AGENTS.md"
