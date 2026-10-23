@@ -519,7 +519,7 @@ export class Studio {
       const out = await this.publishRow(tx, c, snapshot, sha256, { packVersionId: pack.id, authors, submitter: sub!.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(snapshot) } });
       await tx.reviewSubmission.update({ where: { id: sub!.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
       return { ...out, pack: pack.version };
-    });
+    }, { timeout: 60_000 }); // a whole new form publishes hundreds of draft rows: Prisma's 5 s default refused 339 (runtime R1a)
     await this.audit.log(c.workspaceId, actor.id, "released", "configuration", c.combinationKey, `${actor.name} approved and released "${c.label}" in Release ${release.pack}; ${Object.entries(release.n).filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(", ") || "no draft rows"} published`, { sha256, published: release.n, pack_version: release.pack }, id);
     return { version: release.version, pack: release.pack, sha256, published: release.n };
   }
