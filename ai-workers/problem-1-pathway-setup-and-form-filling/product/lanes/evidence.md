@@ -1,7 +1,7 @@
 # Lane: evidence — proof that filled forms pass, and an AI scoring set
 
 ## From the Lead
-2026-10-24 (Lead): IMM 1295 checked and merged (1d0d363c): saved file hash matches, barcode compare rerun by the Lead is identical (186/186 slots, 0 problems, 91 written values accounted). Set stage BUILD, owner Builder: IMM 5707 (trial list 2/4), then 5409, 5476, one commit and one EARLY-LOOK report each.
+2026-10-24 12:30 (Lead): IMM 5707 checked and merged (1067c0cb): saved file hash matches the report; Lead read-back of the Adobe-saved file (pypdf 6.19.0, lane venv) 39/39 values equal; UR3 and zero person steps accepted. Mother's Sample birth date: keep P1's values for these regressions (they compare against P1); when the runtime fills from case facts, the case's facts win; no change now. Set stage BUILD, owner Builder: IMM 5409 (trial list 3/4), then 5476; one commit and one EARLY-LOOK report each. Stop isolated copies at the end of the stage.
 
 Command: `/next evidence` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
