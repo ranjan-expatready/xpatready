@@ -16,12 +16,24 @@ export const LEDGER_DIR = join(PROTOTYPE, "p2", "ledger");
 export const PROMPTS_DIR = join(PROTOTYPE, "p2", "prompts");
 /** Job files: which official inputs, which template, which settings. Read by the launcher and the child. */
 export const JOBS_DIR = join(PROTOTYPE, "p2", "jobs");
+/** F1 slice 2 (A4): parts of an admitted inventory, one per group of form sections, so a form is drafted in smaller
+ *  calls and the AI sees only the form fields the library could not fill. The guard admits a part only as an exact
+ *  subset of its admitted parent. Written by the Studio, regenerated deterministically, never committed. */
+export const PARTS_DIR = join(PROTOTYPE, "p2", "parts");
+/** F1 slice 2: approved portal screen inventories (P-66 portal twins) for the screen_map job. The guard admits one only
+ *  when a second person approved it and its fingerprint is the one recomputed from its structure. */
+export const SCREEN_INVENTORIES = join(PROTOTYPE, "p2", "screen-inventories");
 /** Run records and stub-pass records, written only by the launcher (the isolated child cannot write here). */
 export const RUNS_DIR = join(PROTOTYPE, "p2", "runs");
 /** Salted-hash screening digest written by the launcher before every run and read by the drafting process,
  *  which screens its own template, schema, draft inputs and request with it (R4-M1). Not writable by the child. */
 export const SCREENING_DIR = join(PROTOTYPE, "p2", "screening");
 export const DIGEST_FILE = join(SCREENING_DIR, "canary-digest.json");
+/** F1 slice 2: each launch's ticket is also written under its own run id, and the drafting process reads only that one,
+ *  so two launches at the same moment (the parts of one form, two forms in the queue) no longer overwrite each other's
+ *  ticket ("launch ticket is for another start"). Still single-use, bound to the run, and not writable by the child. */
+export const TICKETS_DIR = join(SCREENING_DIR, "tickets");
+export const ticketFile = (runId: string) => join(TICKETS_DIR, `${runId}.json`);
 /** R4-R2-M1: the digest is also a single-use launch ticket for one run. The drafting process refuses a ticket
  *  older than this, or one already used; it records each used ticket here (inside the ledger folder, the only
  *  place it may write). A digest left behind by an earlier launch therefore cannot screen a later start. */

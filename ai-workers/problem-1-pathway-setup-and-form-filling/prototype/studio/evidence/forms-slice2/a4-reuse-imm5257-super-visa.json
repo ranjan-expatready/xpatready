@@ -1,0 +1,44 @@
+{
+ "plan": {
+  "combinationId": "fe32b2a1-eb98-4006-9f12-99ca05b4febb",
+  "combination": "Super visa",
+  "program": "Super visa",
+  "attachmentId": "347316ae-4004-46c9-8ff9-8d2a2f075915",
+  "source": "IMM 5257 (09-2023)",
+  "expected_usd": null,
+  "worst_usd": 0.57,
+  "action": "draft",
+  "read_first": false,
+  "fingerprint": "314ee1bd8d0bd48405732b24fc5303a45b434ac9be9fac1396697722cf84e3bb",
+  "a4": {
+   "total": 242,
+   "reused": 228,
+   "reused_from": [
+    "IMM 5257 (01-2020)"
+   ],
+   "to_ai": 14,
+   "parts": [
+    {
+     "index": 1,
+     "sections": [
+      "Page2.MaritalStatus",
+      "Page3.BackgroundInfo",
+      "Page3.PageWrapper",
+      "Page3.Consent1"
+     ],
+     "fields": 14,
+     "worst_usd": 0.57,
+     "saved_answer": false,
+     "repeats_failed_run": null
+    }
+   ]
+  },
+  "why": "A guarded live call in 1 part (14 of 242 form fields; 228 reused from IMM 5257 (01-2020) without AI) (stub pass first; up to 2 attempts per part).",
+  "action_label": "Draft field map"
+ },
+ "job": {
+  "status": "COMPLETED",
+  "message": "Every form field reused from IMM 5257 (01-2020) without AI (US$0) as studio-fieldmap-imm5257e-reused-20261023t132038491z-3e65f0. 161 of 242 boxes mapped; 84 fields: 84 reuse, 0 new, 0 ambiguous, 0 conflicting.",
+  "cost": 0
+ }
+}

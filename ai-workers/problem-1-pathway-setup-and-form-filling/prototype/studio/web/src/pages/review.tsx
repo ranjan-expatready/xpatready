@@ -1,4 +1,5 @@
 import * as React from "react";
+import { fmtWhen } from "@/components/status";
 import { CheckCircle2, CornerUpLeft, Rocket, Send } from "lucide-react";
 import { api, useAction, useActorId, useApi } from "@/lib/api";
 import { Button, Notice, Pill, Table, Textarea } from "@/components/ui/controls";
@@ -33,7 +34,7 @@ export function ReviewTab({ d }: { d: any }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-3">
-        <StepCard n={1} title="Author submits" done={!!sub} who="Configuration author or content reviewer" text={sub ? `Submitted by ${nameOf(session.data.actors, sub.submittedBy)} at ${new Date(sub.submittedAt).toLocaleTimeString()}${sub.stale ? ": the draft changed afterwards, submit again" : ""}` : `${v.draft.changes.length} draft change${v.draft.changes.length === 1 ? "" : "s"}; ${errors.length} problem${errors.length === 1 ? "" : "s"} to fix`} />
+        <StepCard n={1} title="Author submits" done={!!sub} who="Configuration author or content reviewer" text={sub ? `Submitted by ${nameOf(session.data.actors, sub.submittedBy)}, ${fmtWhen(sub.submittedAt)}${sub.stale ? ": the draft changed afterwards, submit again" : ""}` : `${v.draft.changes.length} draft change${v.draft.changes.length === 1 ? "" : "s"}; ${errors.length} problem${errors.length === 1 ? "" : "s"} to fix`} />
         <StepCard n={2} title="SME duty signs content" done={!!sub && !unsignedSme.length} who="Content reviewer (Immigration SME duty)" text={sub ? `${needSme.length - unsignedSme.length} of ${needSme.length} rule, document, check or AI-proposed changes signed` : "Rules, document requirements, checks and AI proposals need the SME duty"} />
         <StepCard n={3} title="A second person releases" done={false} who="Approver (never the author or submitter)" text={v.releases[0] ? `Last release: Release ${v.releases[0].release} by ${v.releases[0].approver}` : "Nothing released yet"} />
       </div>

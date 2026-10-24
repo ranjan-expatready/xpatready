@@ -5,7 +5,7 @@
 // runs) instead of re-buying every paid AI draft. Reset removes the disposable workspace's rows and working files and keeps the engine,
 // official originals, fixtures, AI run records, the spend ledger and review evidence, which it fingerprints before
 // and after so "unchanged" is checked, not asserted.
-import { HttpStatus, Inject, Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -44,15 +44,23 @@ export class Demo {
   async load(actor: Actor) {
     need(actor, "author");
     const workspaceId = await this.ws.id();
-    if (await this.db.programDef.count({ where: { workspaceId, nodeKind: { not: "PATHWAY" } } })) fail("Programs already exist in this workspace. Reset the demo first to load the sample inputs.", HttpStatus.CONFLICT);
+    // One load at a time (break round 3): claimed before anything awaits, so a second click while loading is told so,
+    // never a half-load and a 500.
+    if (this.loading) fail("The sample inputs are already loading: wait for them to finish.", HttpStatus.CONFLICT);
+    this.loading = true;
     const t0 = Date.now();
     const log: string[] = [];
-    try { return await this.loadSteps(actor, workspaceId, t0, log); }
+    try {
+      if (await this.db.programDef.count({ where: { workspaceId, nodeKind: { not: "PATHWAY" } } })) fail("Programs already exist in this workspace. Reset the demo first to load the sample inputs.", HttpStatus.CONFLICT);
+      return await this.loadSteps(actor, workspaceId, t0, log);
+    }
     catch (e) {
+      if (e instanceof HttpException && e.getStatus() === HttpStatus.CONFLICT && !log.length) throw e;
       await this.audit.log(workspaceId, actor.id, "failed", "sample inputs", null, `Loading the sample inputs stopped: ${(e as Error).message.slice(0, 300)}`, { log });
       fail(`Loading stopped after: ${log.slice(-1)[0] ?? "the start"}. Reason: ${(e as Error).message.slice(0, 240)}. Reset the demo, then load again.`, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    } finally { this.loading = false; }
   }
+  private loading = false;
 
   private async loadSteps(actor: Actor, workspaceId: string, t0: number, log: string[]) {
     const config = JSON.parse(readFileSync(join(RELEASE, "configuration.json"), "utf8"));
@@ -110,6 +118,8 @@ export class Demo {
       "AI and reading steps": await t.draftingJob.count({ where: ws }), "AI proposals and decisions": await t.normalizationItem.count({ where: ws }),
       "Reviews, sign-offs and releases": (await t.reviewSubmission.count({ where: ws })) + (await t.reviewSignoff.count({ where: ws })) + (await t.configRelease.count({ where: ws })),
       "Sample profiles and facts": (await t.sampleProfile.count({ where: ws })) + (await t.sampleFact.count({ where: ws })), "Generated PDFs and reports": await t.generatedArtifact.count({ where: ws }), "Activity entries": await t.auditEvent.count({ where: ws }),
+      // Runtime lane (R1): cases, the people on them and their answers (all versions)
+      Cases: await t.case.count({ where: ws }), "People on cases": await t.party.count({ where: ws }), "Case answers (all versions) and rows": (await t.clientCanonicalAnswer.count({ where: ws })) + (await t.clientFactRecord.count({ where: ws })),
       // F1 (forms lane): portal captures, answer lists and field merges
       "Portal captures, answer lists and merges": (await t.portalCapture.count({ where: ws })) + (await t.answerList.count({ where: ws })) + (await t.fieldMerge.count({ where: ws })),
     };
@@ -145,6 +155,7 @@ export class Demo {
     const ws = { workspaceId };
     await this.db.$transaction(async (tx) => {
       // Children first; every table is scoped to the demo workspace id.
+      await tx.case.deleteMany({ where: ws }); await tx.party.deleteMany({ where: ws }); // runtime lane (R1): cases (with their pins and participants), then people with their answers and rows
       await tx.normalizationItem.deleteMany({ where: ws }); await tx.draftingJob.deleteMany({ where: ws }); await tx.aiBatch.deleteMany({ where: ws });
       await tx.reviewSignoff.deleteMany({ where: ws }); await tx.reviewSubmission.deleteMany({ where: ws }); await tx.configRelease.deleteMany({ where: ws }); await tx.packVersion.deleteMany({ where: ws });
       await tx.formFieldMap.deleteMany({ where: ws }); await tx.combinationForm.deleteMany({ where: ws }); await tx.formEdition.deleteMany({ where: ws }); await tx.govFormDef.deleteMany({ where: ws });

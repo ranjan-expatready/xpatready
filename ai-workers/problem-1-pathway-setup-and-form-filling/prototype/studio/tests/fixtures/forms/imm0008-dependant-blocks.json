@@ -1,0 +1,96 @@
+{
+ "note": "Structure only, copied from the IMM 0008 (05-2026) official form inventory (evidence lane E1b, 23 Oct): the shown-by-default first dependant block (depPrime) and the repeating dependants block that starts with no rows. Used by check_forms_slice2.ts for finding F4.",
+ "source": "official-sources/ircc/forms/imm0008e.pdf",
+ "source_sha256": "2560489b57160f59c54a58d2f837d220a0426285ec17465c487b6fe2a5f63285",
+ "fields": [
+  {
+   "data_path": null,
+   "som": "form1[0].Page1[0].depPrime[0].depID[0].RemoveButton[0]",
+   "ui": "button",
+   "caption": "Remove Dependant",
+   "required": false,
+   "presence": "visible"
+  },
+  {
+   "data_path": "form1[0].Page1[0].depPrime[0].q1[0].FamilyName[0]",
+   "som": "form1[0].Page1[0].depPrime[0].q1[0].FamilyName[0]",
+   "ui": "textEdit",
+   "caption": "* Family name(s) (exactly as shown on your passport or travel document)",
+   "required": true,
+   "presence": "visible"
+  },
+  {
+   "data_path": "form1[0].Page1[0].depPrime[0].q1[0].GivenName[0]",
+   "som": "form1[0].Page1[0].depPrime[0].q1[0].GivenName[0]",
+   "ui": "textEdit",
+   "caption": "Given name(s) (exactly as shown on your passport or travel document)",
+   "required": false,
+   "presence": "visible"
+  },
+  {
+   "data_path": "form1[0].Page1[0].depPrime[0].personalDetails[0].q7-8[0].DOB[0].DOBYYYY[0]",
+   "som": "form1[0].Page1[0].depPrime[0].personalDetails[0].q7-8[0].DOB[0].DOBYYYY[0]",
+   "ui": "textEdit",
+   "caption": "* YYYY",
+   "required": true,
+   "presence": "visible"
+  },
+  {
+   "data_path": "form1[0].Page1[0].depPrime[0].personalDetails[0].q7-8[0].DOB[0].DOBMM[0]",
+   "som": "form1[0].Page1[0].depPrime[0].personalDetails[0].q7-8[0].DOB[0].DOBMM[0]",
+   "ui": "textEdit",
+   "caption": "* MM",
+   "required": true,
+   "presence": "visible"
+  },
+  {
+   "data_path": "form1[0].Page1[0].depPrime[0].personalDetails[0].q7-8[0].DOB[0].DOBDD[0]",
+   "som": "form1[0].Page1[0].depPrime[0].personalDetails[0].q7-8[0].DOB[0].DOBDD[0]",
+   "ui": "textEdit",
+   "caption": "* DD",
+   "required": true,
+   "presence": "visible"
+  },
+  {
+   "data_path": null,
+   "som": "form1[0].Page1[0].dependants[0].depID[0].RemoveButton[0]",
+   "ui": "button",
+   "caption": "Remove Dependant",
+   "required": false,
+   "presence": "visible"
+  },
+  {
+   "data_path": "form1[0].Page1[0].dependants[0].q1[0].FamilyName[0]",
+   "som": "form1[0].Page1[0].dependants[0].q1[0].FamilyName[0]",
+   "ui": "textEdit",
+   "caption": "*Family name(s) (exactly as shown on your passport or travel document)",
+   "required": true,
+   "presence": "visible"
+  },
+  {
+   "data_path": "form1[0].Page1[0].dependants[0].q1[0].GivenName[0]",
+   "som": "form1[0].Page1[0].dependants[0].q1[0].GivenName[0]",
+   "ui": "textEdit",
+   "caption": "Given name(s) (exactly as shown on your passport or travel document)",
+   "required": false,
+   "presence": "visible"
+  }
+ ],
+ "groups": [
+  {
+   "som": "form1[0].Page1[0].depPrime[0].q1[0]",
+   "data_path": "form1[0].Page1[0].depPrime[0].q1[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "form1[0].Page1[0].dependants[0]",
+   "data_path": "form1[0].Page1[0].dependants[0]",
+   "occur": {
+    "min": "0",
+    "max": "4"
+   },
+   "fixed_row": false
+  }
+ ]
+}

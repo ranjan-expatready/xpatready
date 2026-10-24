@@ -1,0 +1,102 @@
+{
+ "label": "Sample: made-up facts for testing the IMM 5409 (01-2023) form only; never submit. Immigration values are Sample (immigration expert to confirm). Legal: Unconfirmed: no counsel.",
+ "form": "IMM 5409 (01-2023)",
+ "form_file": "imm5409e.pdf",
+ "set": "complete",
+ "household": "combination 1 (P1): Client A and common-law partner EXAMPLEP PARTNER, living together in New Delhi since 2015-06-01 (IMM 1295 and IMM 5707 Sample values)",
+ "not_written": "both declarants' signatures and everything completed by the person who administers the declaration (place declared, title, date, their name and signature) are done on paper at the oath; section 4 (other documents) is empty because sections 1 to 3 apply",
+ "values": {
+  "IMM_5409[0].Page1[0].Info[0].Jurisdiction[0].Country[0]": "India",
+  "IMM_5409[0].Page1[0].Info[0].Jurisdiction[0].Province[0]": "Delhi",
+  "IMM_5409[0].Page1[0].Info[0].FirstName[0]": "CLIENTA EXAMPLE",
+  "IMM_5409[0].Page1[0].Info[0].SecondName[0]": "PARTNER EXAMPLEP",
+  "IMM_5409[0].Page1[0].Info[0].City[0]": "NEW DELHI",
+  "IMM_5409[0].Page1[0].Info[0].Province[0]": "DELHI",
+  "IMM_5409[0].Page1[0].Info[0].Country[0]": "INDIA",
+  "IMM_5409[0].Page1[0].Info[0].YearsTogether[0]": "11",
+  "IMM_5409[0].Page1[0].Info[0].startDate[0]": "2015-06-01",
+  "IMM_5409[0].Page1[0].Info[0].endDate[0]": "2026-10-24",
+  "IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[0].yesno[0]": "1",
+  "IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[1].yesno[0]": "2",
+  "IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[2].yesno[0]": "1",
+  "IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[3].yesno[0]": "2",
+  "IMM_5409[0].Page1[0].Section2[0].yesno[0]": "2",
+  "IMM_5409[0].Page1[0].Section3[0].yesno[0]": "2",
+  "IMM_5409[0].Page1[0].Section5[0].NameDecl[0]": "CLIENTA EXAMPLE",
+  "IMM_5409[0].Page1[0].Section5[0].NamePartner[0]": "PARTNER EXAMPLEP"
+ },
+ "facts": {
+  "IMM_5409[0].Page1[0].Info[0].Jurisdiction[0].Country[0]": {
+   "fact": "declaration.made_in_country",
+   "person": "client-a+partner"
+  },
+  "IMM_5409[0].Page1[0].Info[0].Jurisdiction[0].Province[0]": {
+   "fact": "declaration.made_in_province_state",
+   "person": "client-a+partner"
+  },
+  "IMM_5409[0].Page1[0].Info[0].FirstName[0]": {
+   "fact": "declarant.full_name (passport order: given, family)",
+   "person": "client-a"
+  },
+  "IMM_5409[0].Page1[0].Info[0].SecondName[0]": {
+   "fact": "partner.full_name",
+   "person": "partner"
+  },
+  "IMM_5409[0].Page1[0].Info[0].City[0]": {
+   "fact": "couple.city",
+   "person": "client-a+partner"
+  },
+  "IMM_5409[0].Page1[0].Info[0].Province[0]": {
+   "fact": "couple.province_state",
+   "person": "client-a+partner"
+  },
+  "IMM_5409[0].Page1[0].Info[0].Country[0]": {
+   "fact": "couple.country",
+   "person": "client-a+partner"
+  },
+  "IMM_5409[0].Page1[0].Info[0].YearsTogether[0]": {
+   "fact": "relationship.continuous_years (2015-06-01 to 2026-10-24)",
+   "person": "client-a+partner"
+  },
+  "IMM_5409[0].Page1[0].Info[0].startDate[0]": {
+   "fact": "relationship.common_law_since (IMM 1295 in P1)",
+   "person": "client-a+partner"
+  },
+  "IMM_5409[0].Page1[0].Info[0].endDate[0]": {
+   "fact": "relationship.to_date (date of the declaration)",
+   "person": "client-a+partner"
+  },
+  "IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[0].yesno[0]": {
+   "fact": "evidence.joint_lease_or_mortgage (Yes)",
+   "person": "client-a+partner"
+  },
+  "IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[1].yesno[0]": {
+   "fact": "evidence.joint_other_property (No)",
+   "person": "client-a+partner"
+  },
+  "IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[2].yesno[0]": {
+   "fact": "evidence.joint_bank_or_credit_accounts (Yes)",
+   "person": "client-a+partner"
+  },
+  "IMM_5409[0].Page1[0].Section1[0].Options[0].Sec[3].yesno[0]": {
+   "fact": "evidence.declared_union_under_canadian_income_tax (No)",
+   "person": "client-a+partner"
+  },
+  "IMM_5409[0].Page1[0].Section2[0].yesno[0]": {
+   "fact": "evidence.my_life_insurance_names_partner (No)",
+   "person": "client-a"
+  },
+  "IMM_5409[0].Page1[0].Section3[0].yesno[0]": {
+   "fact": "evidence.partner_life_insurance_names_me (No)",
+   "person": "partner"
+  },
+  "IMM_5409[0].Page1[0].Section5[0].NameDecl[0]": {
+   "fact": "declarant.full_name",
+   "person": "client-a"
+  },
+  "IMM_5409[0].Page1[0].Section5[0].NamePartner[0]": {
+   "fact": "partner.full_name",
+   "person": "partner"
+  }
+ }
+}

@@ -123,10 +123,22 @@ export function jobScreenItems(job: Job, template: Buffer, schema: Buffer): Scre
 
 /** The public text of a request's admitted official material: what the finished request may repeat. */
 export function admittedPublicText(admitted: { file: string; kind: string; bytes: Buffer; parent_sources?: { file: string }[] }[]): string {
-  const files = new Set<string>();
+  const files = new Set<string>(), screens = new Set<string>();
   for (const a of admitted) {
     if (a.kind === "inventory") files.add(a.file);
-    for (const p of a.parent_sources ?? []) if (p.file.startsWith("prototype/p1/inventory/")) files.add(p.file);
+    // F1 slice 2: a part of an official inventory may repeat that inventory's printed text (its parent is named in
+    // parent_sources). A captured screen inventory (or a part of one) may repeat only the words of the approved screens
+    // themselves (titles, questions, groups, help, choices: what the portal prints, approved by a second person), read
+    // from the screen inventory, never a file's own bytes, names or approval (review 1).
+    if (a.kind === "screen_inventory") screens.add(a.file);
+    for (const p of a.parent_sources ?? []) {
+      if (p.file.startsWith("prototype/p1/inventory/")) files.add(p.file);
+      if (p.file.startsWith("prototype/p2/screen-inventories/")) screens.add(p.file);
+    }
   }
-  return [...files].map((f) => readFileSync(join(INVENTORY, f.split("/").pop()!), "utf8")).join("\n");
+  const screenWords = [...screens].flatMap((f) => {
+    const r = JSON.parse(readFileSync(join(PROTOTYPE, "..", f), "utf8")).record as { screens: { title: string; inputs: { label: string; group?: string; help?: string; options?: { label: string }[] }[] }[] };
+    return r.screens.flatMap((s) => [s.title, ...s.inputs.flatMap((i) => [i.label, i.group ?? "", i.help ?? "", ...(i.options ?? []).map((o) => o.label)])]);
+  });
+  return [...[...files].map((f) => readFileSync(join(INVENTORY, f.split("/").pop()!), "utf8")), ...screenWords].join("\n");
 }

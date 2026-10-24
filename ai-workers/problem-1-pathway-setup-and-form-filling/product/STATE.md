@@ -8,14 +8,15 @@ updated: 2026-10-23
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
-| screens | 01-programs-catalogue | FIX | Builder | Small FIX (Lead note 24 Oct): QA-14 same-parent names unique in the database (normalised name), QA-17 Recen… |
-| forms | F1-forms-channels | CHECK | Lead | Lead check of slice 2 on the exact commit: build-notes "Slice 2" and "Slice 2 fixes" (finding → fix → test)… |
-| evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check IMM 5707 (prototype/evidence-lane/E1/imm5707/STATUS.md); then /next evidence for IMM 5409 (tria… |
-| runtime | R1-thin-slice | CHECK | Lead | Lead checks R1a after FIX (build-notes "Fixes"; review and break report) and the shared files S-1, S-2, S-6… |
-| qa | after-merge F1 slice 1 (65826022) | WAITING | Lead | Lead note waiting for sync · Lead reads qa/reports/2026-10-23-after-merge.md, assigns QA-13 to QA-18, answers three questions (quiet win… |
+| screens | 01-programs-catalogue | CHECK | Lead | Lead note waiting for sync · Lead check of the small FIX (build-notes "Small FIX after the merge" + "CHECK round 3"), merge (new migrati… |
+| forms | F1-forms-channels | CHECK | Lead | Lead note waiting for sync · Lead check of slice 2 on the merged commit (main and Screen 01 merged in; conflicts in fill.ts, forms.ts, s… |
+| evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead: check IMM 5409 (prototype/evidence-lane/E1/imm5409/STATUS.md); send F5 (static forms: page fields sta… |
+| runtime | R1-thin-slice | CHECK | Lead | Lead note waiting for sync · Lead checks R1a on the new commit (merged with main 24 Oct; build-notes "Fixes" and "After the 24 Oct merge… |
+| qa | after-merge Screen 01 (1cb174a6, main e742bc59) | WAITING | Lead | Lead note waiting for sync · Lead reads qa/reports/2026-10-24-after-merge.md (Screen 01 ready from qa: 0 Critical, 3 Major open outside … |
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-24 · Lead (cloud) · Merged Screen 01 small FIX, forms slice 2, runtime R1a and evidence IMM 5409 on `claude/zen-sagan-oztxto` (not yet on main); 16/16 suites green on the result after the Lead fixed the suite runner (slice 2 server setting; runtime and drafting-guard suites now in CI; ES-module test folders). Next: qa after-merge → Screen 01 DONE; forms 2b, runtime R1c, evidence IMM 5476.
 - 2026-10-24 · Lead · PR #5 merged (be10fa7): CI runs every suite on every push (first GitHub run 11/11 green after the L2 wait port), graph in CI, automatic pull at session start. Scheduled Lead set up and paused (founder: until the weekly usage resets).
 - 2026-10-24 · Lead · Founder decided P-84 (scheduled cloud Lead every 4 hours), P-85 (full suites on every push: `tools/run-suites.sh`, 11/11 green on main in 6 min) and P-86 (generated traceability graph `tools/graph.mjs`: 0 hard gaps; 22 untested routes, 7 pages no browser test opens, 5 Works capabilities no test names, 1 unused component → qa lane).
 - 2026-10-24 · cloud · PR #4 merged (3c3d578): cloud sessions live. Follow-up: session start pulls a clean copy automatically (no manual git pull, Mac or cloud); one-Lead check in the lead skill; lane.sh branch skips a lane's merged old branches.
@@ -25,4 +26,3 @@ updated: 2026-10-23
 - 2026-10-24 · all · Every lane finished its stage overnight and waits on the Lead check: screens (Screen 01 with channels), forms slice 2, runtime R1a, evidence; qa waiting. Screen 01 is checked first.
 - 2026-10-24 · Lead · P-81 private GitHub repository through a filtered mirror; waiting on founder steps (repository, tool install, settings).
 - 2026-10-24 · Lead · Stray test combination removed from :4400 (founder OK; history event added; backup kept); Individual 21, Corporate 8.
-- 2026-10-23 · Lead · :4400 restarted on main 13629dfc with the forms database update (founder OK); backup taken; data unchanged; lane apps untouched.

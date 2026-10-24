@@ -34,15 +34,29 @@ for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
     [ "$DEMO" = 1 ] || { rows+=("| $f | skipped | | resets the :4400 demo: --demo (CI, cloud) |"); continue; }
     zsh "$S/start.sh" >/dev/null 2>&1; run "$f" demo node "$path"; continue
   fi
-  if [[ "$usage" =~ isolated\.sh\ ([a-z0-9_]+)\ ([0-9]+)\ start\ \&\&\ (tsx|node)\ studio/tests/$f(.*) ]]; then
-    name="${BASH_REMATCH[1]}"; port="${BASH_REMATCH[2]}"; tool="${BASH_REMATCH[3]}"
-    args=$(printf '%s' "${BASH_REMATCH[4]}" | sed -E 's/\[[^]]*\]//g; s/ {2,}.*//')
-    zsh "$S/tools/isolated.sh" "$name" "$port" start >/dev/null 2>&1 || { rows+=("| $f | FAIL | | isolated copy $name did not start |"); fail=1; continue; }
+  # A usage line may pass server settings after "start" (isolated.sh start KEY=VALUE ..., e.g. a test-only pause).
+  if [[ "$usage" =~ isolated\.sh\ ([a-z0-9_]+)\ ([0-9]+)\ start((\ [A-Z_][A-Z0-9_]*=[^ ]+)*)\ \&\&\ (tsx|node)\ studio/tests/$f(.*) ]]; then
+    name="${BASH_REMATCH[1]}"; port="${BASH_REMATCH[2]}"; env=(${BASH_REMATCH[3]}); tool="${BASH_REMATCH[5]}"
+    args=$(printf '%s' "${BASH_REMATCH[6]}" | sed -E 's/\[[^]]*\]//g; s/ {2,}.*//')
+    zsh "$S/tools/isolated.sh" "$name" "$port" start "${env[@]}" >/dev/null 2>&1 || { rows+=("| $f | FAIL | | isolated copy $name did not start |"); fail=1; continue; }
     if [ "$tool" = node ]; then run "$f" "$name" node "$path" $args; else run "$f" "$name" $TSX "$path" $args; fi
     zsh "$S/tools/isolated.sh" "$name" "$port" stop >/dev/null 2>&1
   else
     case "$f" in *.cjs) run "$f" plain node "$path";; *) run "$f" plain env DATABASE_URL="$DB/xr_studio_demo" $TSX "$path";; esac
   fi
+done
+# Suites outside tests/check_*: the runtime lane's (R1, two steps on one copy) and the drafting guard's (prototype/tests,
+# plain: they make their own temporary copies). Both lanes' Lead checks found CI skipping them (24 Oct).
+RT="$S/tests/runtime"
+if [ -f "$RT/check_case_engine.ts" ]; then run check_case_engine.ts plain $TSX "$RT/check_case_engine.ts"; fi
+if [ -f "$RT/check_runtime_r1a.ts" ]; then
+  if zsh "$S/tools/isolated.sh" runtime_r1 4430 start >/dev/null 2>&1 && $TSX "$RT/setup_visitor_visa.ts" 4430 xr_studio_runtime_r1 > "$OUT/setup_visitor_visa.log" 2>&1; then
+    run check_runtime_r1a.ts runtime_r1 $TSX "$RT/check_runtime_r1a.ts" 4430 xr_studio_runtime_r1 --reset
+  else rows+=("| check_runtime_r1a.ts | FAIL | | isolated copy runtime_r1 or setup_visitor_visa.ts failed (see setup_visitor_visa.log) |"); fail=1; fi
+  zsh "$S/tools/isolated.sh" runtime_r1 4430 stop >/dev/null 2>&1
+fi
+for t in check_p2_guard check_p2_launch; do
+  [ -f "$P/prototype/tests/$t.ts" ] && run "$t.ts" plain "$S/node_modules/.bin/tsx" "$P/prototype/tests/$t.ts"
 done
 echo "| Suite | Result | Time | Last line |"; echo "|---|---|---|---|"; printf '%s\n' "${rows[@]}"
 echo "commit $(git rev-parse --short HEAD) · logs in ${OUT#$ROOT/}"
