@@ -4,7 +4,7 @@
 //     on-screen answer → actual PDF fill/read-back/download → human adds a conditional document requirement (draft) →
 //     draft preview changes → submit, refused early approval, SME sign-off, release v2 → release preview shows it →
 //     guarded AI path for IMM 5257 (stub pass; a live call only with STUDIO_LIVE=1).
-//   Pass B, from scratch after Reset: pathway/program/combination by hand → manual upload (official and a non-official
+//   Pass B, from scratch after Reset: program, category and combination through the New combination path builder → manual upload (official and a non-official
 //     file) and a sample attachment → read forms → AI field map of IMM 1295 (replay of the saved real run) into an
 //     empty library → IMM 5476 (replay) compared with that library: reuse, new, ambiguous, address parts → decisions,
 //     a returned item → apply → coverage → section and placement added by a person → coverage changes → release.
@@ -53,7 +53,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   };
   const loadSamples = async (label) => {
     await go("/"); await click(btn("Demo")); await click(p.getByRole("menuitem", { name: /Load sample inputs/ }));
-    await p.getByText("Sample inputs loaded", { exact: false }).first().waitFor({ timeout: 60000 });
+    await p.getByText("Sample inputs loaded", { exact: false }).first().waitFor({ timeout: 180000 }); // setup, not a timed budget: slow on a busy machine
     await click(btn("Continue"));
     // Screen 01 catalogue: one tree per pathway; a combination is a last-level row with combinationId.
     const leaves = (ns) => ns.flatMap((n) => (n.kind === "combination" ? [n] : leaves(n.children)));
@@ -104,10 +104,18 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const dlg = await p.getByRole("dialog").innerText();
   step("A4: IMM 1295 filled from confirmed sample facts: every written value reads back and the file is intact", /The file is intact and every written value reads back/.test(dlg), dlg.split("\n").slice(2, 3).join(" ").slice(0, 300));
   await shot("A4-pdf-fill.png");
-  const [dl] = await Promise.all([p.waitForEvent("download"), p.getByRole("link", { name: "Download the checked PDF" }).click()]);
-  const pdfPath = path.join(OUT, `downloaded-${dl.suggestedFilename()}`); await dl.saveAs(pdfPath);
-  step("A4: the checked PDF downloads", fs.statSync(pdfPath).size > 800000 && fs.readFileSync(pdfPath).subarray(0, 5).toString() === "%PDF-", `${dl.suggestedFilename()} ${fs.statSync(pdfPath).size} bytes`);
-  await click(p.getByRole("dialog").getByRole("button", { name: "Close" }).last());
+  // A failed download is a failed step, not the end of the run (a lane copy under a dot-folder answers 404 here, QA-4).
+  const dlLink = p.getByRole("link", { name: "Download the checked PDF" }); const href = await dlLink.getAttribute("href");
+  const [dl] = await Promise.all([p.waitForEvent("download", { timeout: 30000 }).catch(() => null), dlLink.click()]);
+  if (dl) {
+    const pdfPath = path.join(OUT, `downloaded-${dl.suggestedFilename()}`); await dl.saveAs(pdfPath);
+    step("A4: the checked PDF downloads", fs.statSync(pdfPath).size > 800000 && fs.readFileSync(pdfPath).subarray(0, 5).toString() === "%PDF-", `${dl.suggestedFilename()} ${fs.statSync(pdfPath).size} bytes`);
+  } else {
+    const r = await p.request.fetch(`${URL}${href}`);
+    step("A4: the checked PDF downloads", false, `no download; ${href} answered ${r.status()} ${(await r.text()).slice(0, 120)}${/\/\.[^/]+\//.test(__dirname) ? " (this copy lives under a dot-folder: QA-4 also affects file downloads)" : ""}`);
+    if (p.url().includes("/api/")) { await p.goBack(); await idle(); }
+  }
+  if (await p.getByRole("dialog").count()) await click(p.getByRole("dialog").getByRole("button", { name: "Close" }).last());
 
   // a person adds a conditional document requirement (sample input instead of typing)
   await go(`/c/${wp}/configuration`); await click(p.getByRole("tab", { name: /^Documents/ }));
@@ -159,7 +167,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await click(p.getByRole("dialog").getByRole("button", { name: LIVE ? "Start live AI draft" : "Run stub pass" }));
   for (let i = 0; i < 120; i++) { const d = await api(`/combinations/${vv}`); const j = d.jobs.find((x) => x.kind === "field_map"); if (j && j.status !== "RUNNING" && j.status !== "QUEUED") break; await p.waitForTimeout(2000); }
   const vvd = await api(`/combinations/${vv}`); const job = vvd.jobs.find((x) => x.kind === "field_map");
-  step(`A8: IMM 5257 through the guarded AI path (${LIVE ? "live" : "stub pass"}) ends in an honest state`, job && ["COMPLETED", "BLOCKED"].includes(job.status), `${job?.mode} ${job?.status}: ${job?.message?.slice(0, 160)}`);
+  step(`A8: IMM 5257 through the guarded AI path (${LIVE ? "live" : "stub pass"}) ends in an honest state`, job && ["COMPLETED", "BLOCKED"].includes(job.status), `${/Access to this API has been restricted/.test(job?.message ?? "") ? "known QA-8 (the AI step's child process is refused file access in this copy; not faked): " : ""}${job?.mode} ${job?.status}: ${job?.message?.slice(0, 160)}`);
   await go(`/c/${vv}/sources`); await shot("A8-imm5257-guarded-path.png");
 
   await go("/library/fields/person.date_of_birth");
@@ -170,43 +178,44 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   // ================================================================ PASS B: from scratch, after a reset
   await reset("B0");
   await go("/");
-  // Masters first (level, parent and duplicates are checked by the server), then the combination is chosen from them
-  // (Screen 01: "Add program or category", then "+ New combination"; the two pathways are fixed).
-  const addNode = async (kind, parent, name) => {
-    await click(btn("Add program or category").first()); const md = p.getByRole("dialog", { name: "Add program or category" });
-    await md.getByRole("radio", { name: new RegExp(`^${kind}`) }).check();
-    if (parent) await md.getByLabel(/belongs to/).selectOption({ label: parent });
-    await md.getByLabel("Name").fill(name);
-    await click(md.getByRole("button", { name: new RegExp(`^Add ${kind.toLowerCase()}$`) }));
+  // Layout v2 (P-35): no separate "Add program or category"; the New combination path builder (/new) picks or creates
+  // each level (the server checks level, parent and duplicates) and creates the combination in one request.
+  await click(btn("New combination").first()); await p.waitForURL(/\/new/); // the empty list offers it twice (header and empty state)
+  const level = async (label, name) => {
+    const box = p.getByRole("combobox", { name: label, exact: true });
+    await box.click(); await box.fill(name);
+    await click(p.getByRole("listbox", { name: label }).getByRole("option", { name: `Create "${name}"` }));
   };
-  await addNode("Program", null, "Work permits (built from scratch)");
-  await addNode("Category", "Work permits (built from scratch)", "Employer-specific work permit");
-  await click(btn("New combination")); const cd = p.getByRole("dialog", { name: "New combination" });
-  await cd.getByLabel("Program", { exact: true }).selectOption({ label: "Work permits (built from scratch)" });
-  await cd.getByLabel("Category", { exact: true }).selectOption({ index: 1 });
-  await click(cd.getByRole("button", { name: /Next: official sources/ }));
-  await click(p.getByRole("dialog", { name: "Add the official sources" }).getByRole("button", { name: "Save and set up by hand" }));
-  await click(p.getByRole("dialog", { name: "Employer-specific work permit" }).getByRole("link", { name: /Open full configuration/ }));
-  await p.waitForURL(/\/c\//); const scratch = p.url().split("/c/")[1].split("/")[0];
-  const b1 = await p.getByText(/Category: Employer-specific work permit/).first().waitFor({ timeout: 15000 }).then(() => true, () => false);
-  step("B1: pathway, program and category chosen as masters, then the configuration row created for that full combination", !!scratch && b1);
+  await level("Program", "Work permits (built from scratch)");
+  await level("Category", "Employer-specific work permit");
+  const willBe = await p.getByText(/^Will be created as/).innerText();
+  await click(btn("Create and add sources"));
+  await p.waitForURL(/\/c\/[0-9a-f-]+\/sources/, { timeout: 15000 }).catch(() => {}); const scratch = p.url().includes("/c/") ? p.url().split("/c/")[1].split("/")[0] : null;
+  if (scratch) await p.getByRole("heading", { level: 1, name: "Employer-specific work permit" }).waitFor({ timeout: 15000 }).catch(() => {}); // the page header arrives with the combination
+  const crumbs = scratch ? await p.getByRole("navigation", { name: "Path" }).getByRole("link").allTextContents().catch(() => []) : [];
+  const made = (await api("/catalogue?pathway=INDIVIDUAL&filter=all")).rows.find((r) => r.combinationId === scratch);
+  step("B1: the path builder creates the program and category and the combination for that full path in one go", !!scratch && /Individual › Work permits \(built from scratch\) › Employer-specific work permit/.test(willBe) && made?.path.join(" › ") === "Work permits (built from scratch) › Employer-specific work permit" && crumbs.join(" › ").includes("Work permits (built from scratch)"), `${willBe} → ${crumbs.join(" › ")}`);
   await go(`/c/${scratch}/sources`);
   await p.setInputFiles('input[type=file]', [path.join(OFFICIAL, "forms/imm1295e.pdf")]); await p.waitForTimeout(1500); await idle();
   const junk = path.join(OUT, "not-an-official-form.pdf"); fs.writeFileSync(junk, "%PDF-1.4 not an official form\n");
-  await p.setInputFiles('input[type=file]', [junk]); await p.waitForTimeout(1500); await idle();
-  await click(btn("Attach a sample file")); await click(p.getByRole("dialog").getByRole("row", { name: /IMM 5476/ }).getByRole("button", { name: "Attach" })); await click(p.getByRole("dialog").getByRole("button", { name: "Done" }));
+  await p.setInputFiles('input[type=file]', [junk]);
+  const junkToast = await toastLike(/held for a person/); await idle();
+  await click(btn("Attach a sample file")); await click(p.getByRole("dialog").getByRole("row", { name: /IMM 5476/ }).getByRole("button", { name: "Attach" }).first()); await click(p.getByRole("dialog").getByRole("button", { name: "Done" })); // the current edition is listed first
   // Wait for the refreshed list (under machine load one immediate read could still show the previous list).
-  for (let i = 0; i < 40; i++) { main = await p.innerText("main"); if (/Recognised: ready to read/.test(main) && /Held: not recognised/.test(main) && /IMM 5476/.test(main)) break; await p.waitForTimeout(375); }
-  step("B2: manual upload of an official form is recognised; a non-official file is held; a sample attachment uses the same path", /Recognised: ready to read/.test(main) && /Held: not recognised/.test(main) && /IMM 5476/.test(main));
+  // The one intake (P-51): a file that is not an approved official source is held for a person, never attached.
+  for (let i = 0; i < 40; i++) { main = await p.innerText("main"); if (/Recognised: ready to read/.test(main) && /IMM 1295/.test(main) && /IMM 5476/.test(main)) break; await p.waitForTimeout(375); }
+  const heldJunk = () => api(`/intake/held?combination=${scratch}`).then((h) => h.some((x) => x.file === "not-an-official-form.pdf"));
+  const junkAttached = () => api(`/combinations/${scratch}/attachments`).then((a) => a.some((x) => x.fileName === "not-an-official-form.pdf"));
+  step("B2: manual upload of an official form is recognised; a non-official file is held for a person, not attached; a sample attachment uses the same path", /Recognised: ready to read/.test(main) && /IMM 1295/.test(main) && /IMM 5476/.test(main) && /held for a person/.test(junkToast) && await heldJunk() && !(await junkAttached()), junkToast);
   await shot("B2-sources.png");
   // Read each recognised form, one click per form, waiting until the server records it as read.
   for (let i = 0; i < 4; i++) {
     const before = (await api(`/combinations/${scratch}/attachments`)).filter((a) => a.status === "READ").length; if (before >= 2) break;
     if (await btn("Read form").count()) await click(btn("Read form").first());
-    for (let w = 0; w < 60 && (await api(`/combinations/${scratch}/attachments`)).filter((a) => a.status === "READ").length <= before; w++) await p.waitForTimeout(500);
+    for (let w = 0; w < 240 && (await api(`/combinations/${scratch}/attachments`)).filter((a) => a.status === "READ").length <= before; w++) await p.waitForTimeout(500); // up to 2 min: slow on a busy machine
   }
   const atts = await api(`/combinations/${scratch}/attachments`);
-  step("B2: both forms read on this computer (no AI); the non-official file stays held", atts.filter((a) => a.status === "READ").length === 2 && atts.some((a) => a.status === "HELD"), atts.map((a) => `${a.fileName}=${a.status}`).join(", "));
+  step("B2: both forms read on this computer (no AI); the non-official file stays held", atts.filter((a) => a.status === "READ").length === 2 && await heldJunk() && !(await junkAttached()), atts.map((a) => `${a.fileName}=${a.status}`).join(", "));
 
   /** Every remaining undecided proposal: take the shown recommendation (a person's click per item). */
   const decideRest = async () => {
@@ -229,7 +238,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await draftReplay("IMM 1295");
   await p.getByText("Replay of a saved run").first().waitFor();
   const j1295 = await api(`/jobs/${p.url().split("/jobs/")[1]}`);
-  step("B3: the IMM 1295 draft is a labelled replay of a saved real run; against an empty library every field is new", j1295.mode === "REPLAY" && /Replay of saved run/.test(j1295.message) && j1295.detail.counts.reuse === 0 && j1295.detail.counts.new === j1295.items.length, `${j1295.runId}: ${JSON.stringify(j1295.detail.counts)}`);
+  step("B3: the IMM 1295 draft is a labelled replay of a saved real run; against an empty library every field is new", j1295.mode === "REPLAY" && /Replay of saved run|Saved AI answer from run .*no model call, US\$0/.test(j1295.message) && j1295.detail.counts.reuse === 0 && j1295.detail.counts.new === j1295.items.length, `${j1295.mode} · ${j1295.items.length} items · "${String(j1295.message).slice(0, 90)}" · ${j1295.runId}: ${JSON.stringify(j1295.detail.counts)}`);
   await shot("B3-imm1295-proposals.png");
   await click(btn("Accept clean new definitions"));
   await decideRest();

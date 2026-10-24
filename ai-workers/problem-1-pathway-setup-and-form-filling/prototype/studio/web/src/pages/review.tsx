@@ -4,6 +4,9 @@ import { api, useAction, useActorId, useApi } from "@/lib/api";
 import { Button, Notice, Pill, Table, Textarea } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 
+/** The simulated person's name for an id the server stores (QA-10: never "user-A" on screen). */
+const nameOf = (actors: { id: string; name: string }[] | undefined, id: string | null | undefined) => actors?.find((a) => a.id === id)?.name ?? id ?? "";
+
 export function ReviewTab({ d }: { d: any }) {
   const id = d.combination.id;
   const actorId = useActorId();
@@ -30,9 +33,9 @@ export function ReviewTab({ d }: { d: any }) {
   return (
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-3">
-        <StepCard n={1} title="Author submits" done={!!sub} who="Configuration author or content reviewer" text={sub ? `Submitted by ${sub.submittedBy} at ${new Date(sub.submittedAt).toLocaleTimeString()}${sub.stale ? ": the draft changed afterwards, submit again" : ""}` : `${v.draft.changes.length} draft change${v.draft.changes.length === 1 ? "" : "s"}; ${errors.length} problem${errors.length === 1 ? "" : "s"} to fix`} />
+        <StepCard n={1} title="Author submits" done={!!sub} who="Configuration author or content reviewer" text={sub ? `Submitted by ${nameOf(session.data.actors, sub.submittedBy)} at ${new Date(sub.submittedAt).toLocaleTimeString()}${sub.stale ? ": the draft changed afterwards, submit again" : ""}` : `${v.draft.changes.length} draft change${v.draft.changes.length === 1 ? "" : "s"}; ${errors.length} problem${errors.length === 1 ? "" : "s"} to fix`} />
         <StepCard n={2} title="SME duty signs content" done={!!sub && !unsignedSme.length} who="Content reviewer (Immigration SME duty)" text={sub ? `${needSme.length - unsignedSme.length} of ${needSme.length} rule, document, check or AI-proposed changes signed` : "Rules, document requirements, checks and AI proposals need the SME duty"} />
-        <StepCard n={3} title="A second person releases" done={false} who="Approver (never the author or submitter)" text={v.releases[0] ? `Last release v${v.releases[0].version} by ${v.releases[0].approver}` : "Nothing released yet"} />
+        <StepCard n={3} title="A second person releases" done={false} who="Approver (never the author or submitter)" text={v.releases[0] ? `Last release: Release ${v.releases[0].release} by ${v.releases[0].approver}` : "Nothing released yet"} />
       </div>
       <Notice tone="info" title={`You are acting as ${me.name} (simulated): ${me.role}`}>Duties: {me.duties.join(", ")}. The server enforces them: an author or submitter can never approve, and a draft changed after submission cannot be released.</Notice>
       {errors.length || warnings.length ? (
@@ -57,7 +60,7 @@ export function ReviewTab({ d }: { d: any }) {
                 <td><Pill tone={c.change === "added" ? "info" : c.change === "removed" ? "danger" : "warn"}>{c.change}</Pill></td>
                 <td>{c.origin === "AI_PROPOSAL" ? <Pill tone="ai">AI-proposed</Pill> : c.origin === "HUMAN" ? <Pill tone="info">person</Pill> : <Pill>{c.origin ?? "—"}</Pill>}</td>
                 <td className="text-xs">{c.needs_sme ? "SME duty" : "review"}</td>
-                <td className="text-xs">{s ? <Pill tone={s.action === "signed" ? "ok" : "warn"}>{s.action} by {s.actorId}</Pill> : sub ? "—" : ""}</td>
+                <td className="text-xs">{s ? <Pill tone={s.action === "signed" ? "ok" : "warn"}>{s.action} by {nameOf(session.data.actors, s.actorId)}</Pill> : sub ? "—" : ""}</td>
               </tr>); })}
           </Table>
         )}
@@ -70,7 +73,7 @@ export function ReviewTab({ d }: { d: any }) {
         <Button onClick={() => approve.mutate(undefined)} busy={approve.isPending} disabled={!sub || !can("approve")} title={!can("approve") ? "Only the approver duty can release" : ""}><Rocket /> Approve and release</Button>
       </div>
       {v.releases.length ? (
-        <div><p className="mb-2 font-medium">Released versions</p><Table dense head={["Version", "Fingerprint", "Author / submitter / approver", "Released", "Basis"]}>{v.releases.map((x: any) => <tr key={x.id}><td>v{x.version} {x.status === "SUPERSEDED" ? <Pill>superseded</Pill> : <Pill tone="ok">current</Pill>}</td><td className="mono text-xs">{x.sha256.slice(0, 16)}</td><td className="text-xs">{x.author} / {x.submitter} / {x.approver}</td><td className="text-xs">{new Date(x.released_at).toLocaleString()}</td><td className="max-w-md text-xs text-text-muted">{x.basis}</td></tr>)}</Table></div>
+        <div><p className="mb-2 font-medium">Released versions</p><Table dense head={["Version", "Fingerprint", "Author / submitter / approver", "Released", "Basis"]}>{v.releases.map((x: any) => <tr key={x.id}><td>v{x.version} {x.status === "SUPERSEDED" ? <Pill>superseded</Pill> : <Pill tone="ok">current</Pill>}</td><td className="mono text-xs">{x.sha256.slice(0, 16)}</td><td className="text-xs">{String(x.author ?? "").split(",").map((a: string) => nameOf(session.data.actors, a)).join(", ")} / {nameOf(session.data.actors, x.submitter)} / {nameOf(session.data.actors, x.approver)}</td><td className="text-xs">{new Date(x.released_at).toLocaleString()}</td><td className="max-w-md text-xs text-text-muted">{x.basis}</td></tr>)}</Table></div>
       ) : null}
     </div>
   );

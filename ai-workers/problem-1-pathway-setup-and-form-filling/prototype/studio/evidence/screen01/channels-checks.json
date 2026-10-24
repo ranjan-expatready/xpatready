@@ -1,0 +1,248 @@
+{
+ "at": "2026-10-23T14:19:35.499Z",
+ "pass": 42,
+ "fail": 0,
+ "log": [
+  {
+   "name": "setup: sample inputs load",
+   "ok": true,
+   "detail": 3.586
+  },
+  {
+   "name": "C1.6 pass: every line shows its channel (PDF upload today) and the combination its filing method",
+   "ok": true,
+   "detail": "PDF only"
+  },
+  {
+   "name": "C1.6 pass: the Programs row says how it is filed",
+   "ok": true
+  },
+  {
+   "name": "C1.6: a row with no form lines has no filing method (not \"PDF only\")",
+   "ok": true
+  },
+  {
+   "name": "C1.6 pass: the author sets one line's channel; the line, its signature and the filing method follow",
+   "ok": true,
+   "detail": [
+    "PDF only",
+    "PDF only (some signed by hand)"
+   ]
+  },
+  {
+   "name": "C1.6: the change is a draft change of the combination (released content unchanged until release)",
+   "ok": true
+  },
+  {
+   "name": "C1.6 fail: a channel that is not one of the three is refused on its field",
+   "ok": true,
+   "detail": [
+    {
+     "field": "channel",
+     "message": "Choose PDF upload, Online or Signed PDF upload."
+    }
+   ]
+  },
+  {
+   "name": "C1.6 fail: only an author sets a channel (the approver is refused by the server)",
+   "ok": true
+  },
+  {
+   "name": "round 2 M2 fail: a save from a screen that still showed PDF upload (now Signed) is refused, not a silent overwrite",
+   "ok": true,
+   "detail": "IMM 1295 was changed to Signed PDF upload while you were choosing. Your choice was not saved; check it and choose again."
+  },
+  {
+   "name": "review 2 should 4 fail: a checklist is not filed, so it has no channel",
+   "ok": true,
+   "detail": "IMM 5488 is a checklist: it is not filed, so it has no channel."
+  },
+  {
+   "name": "round 2 M2 pass: a save from an up-to-date screen goes through",
+   "ok": true
+  },
+  {
+   "name": "C1.7 fail: a line filed Online with no portal blocks release, in plain words",
+   "ok": true,
+   "detail": [
+    "IMM 5707 is filed Online, but this combination has no portal yet: choose the portal it is filed through."
+   ]
+  },
+  {
+   "name": "C1.7 pass: the author picks the combination's portal; the page names it",
+   "ok": true
+  },
+  {
+   "name": "round 2 M1 pass: on a Live combination the portal change is a draft change, listed for review (\"Row details\")",
+   "ok": true,
+   "detail": [
+    {
+     "kind": "Row details",
+     "key": "wp.family",
+     "change": "changed",
+     "needs_sme": false,
+     "label": "name, path, portal, source basis or allowed locations (no line changed)"
+    }
+   ]
+  },
+  {
+   "name": "round 2 M2 fail: a portal save from a screen that still showed no portal is refused",
+   "ok": true,
+   "detail": "The portal was changed to IRCC Portal while you were choosing. Your choice was not saved; check it and choose again."
+  },
+  {
+   "name": "C1.7 fail: Online with the portal but no approved online version still blocks release, saying what to do",
+   "ok": true,
+   "detail": [
+    "IMM 5707 is filed Online, but the library has no approved online version captured from the IRCC Portal: capture its screens, or file it as a PDF upload."
+   ]
+  },
+  {
+   "name": "C1.7: with no approved online version the default stays PDF upload",
+   "ok": true
+  },
+  {
+   "name": "C1.7 fail: a portal not on the list is refused",
+   "ok": true
+  },
+  {
+   "name": "C1.7 fail: only an author picks the portal",
+   "ok": true
+  },
+  {
+   "name": "C2.7 fail: an online form is only added from an existing combination",
+   "ok": true,
+   "detail": "That combination does not exist."
+  },
+  {
+   "name": "C2.7 fail: a screen holding an answer is refused and not kept; the online form shows as still being captured",
+   "ok": true,
+   "detail": "Being captured: add the remaining screens, then finish"
+  },
+  {
+   "name": "C2.7 pass: blank screens added and finished from the combination show \"Awaiting a second person\" there",
+   "ok": true,
+   "detail": {
+    "id": "0a214b91-c408-41b8-82f1-fbf6f49ddb1f",
+    "form": "IMM 5707",
+    "title": "Family information (online)",
+    "portal": "ircc_portal",
+    "portalLabel": "IRCC Portal",
+    "status": "HELD",
+    "statusWords": "Awaiting a second person",
+    "detail": "Held for a second person: a new online version. Not used until approved.",
+    "at": "2026-10-23T14:19:34.416Z"
+   }
+  },
+  {
+   "name": "C2.7: while it waits it is not an online version (nothing in the library yet)",
+   "ok": true
+  },
+  {
+   "name": "C2.7 fail: the person who added it cannot approve it",
+   "ok": true
+  },
+  {
+   "name": "C2.7 pass: a second person approves it; the combination shows it approved, as an online version in the library",
+   "ok": true,
+   "detail": "Approved: an online version in the library"
+  },
+  {
+   "name": "C1.7 pass: with an approved online version from its portal, the line's default channel is Online",
+   "ok": true
+  },
+  {
+   "name": "C1.7: the default is shown, never applied silently (the line stays PDF upload until the author chooses)",
+   "ok": true
+  },
+  {
+   "name": "C1.7 fail: \"use the default\" for a line whose default is not Online changes nothing at all (one transaction)",
+   "ok": true,
+   "detail": "IMM 1295's default is not Online for this combination's portal: nothing was changed."
+  },
+  {
+   "name": "C1.7 fail: \"use the default\" from an out-of-date screen is refused",
+   "ok": true
+  },
+  {
+   "name": "C1.7 pass: the author applies the default: the line is filed Online and the filing method is Mixed",
+   "ok": true,
+   "detail": "Mixed: online and PDF"
+  },
+  {
+   "name": "C2.7 fail: a form the library has only online cannot be added to a combination without a portal, and the message says to choose the portal",
+   "ok": true,
+   "detail": "IMM 9101 is in the library only as an online version (IRCC Portal). Choose this combination's portal first, then add it; or upload the IRCC PDF."
+  },
+  {
+   "name": "C2.7 pass: with the portal set, \"+ Add\" makes it a form line filed Online",
+   "ok": true,
+   "detail": {
+    "added": "form_line",
+    "form": "IMM 9101",
+    "edition": "IMM 9101 online · IRCC Portal · 2026-10-23"
+   }
+  },
+  {
+   "name": "review 2 should 2: an Online line without its screen map is one filing line in the missing list, with its own step (not \"map the PDF\" or \"fix a rule\")",
+   "ok": true,
+   "detail": [
+    "No questions yet for Applicant, Spouse or partner (travelling), Child (travelling). Next step: Add 1 form from the library.",
+    "1 form cannot be filed as set (first: IMM 9101 is filed Online and has an approved online version from the IRCC Portal, but no screen map yet: draft and accept it (no AI).) Next step: change how it is filed (Overview › Forms), or add what it needs."
+   ]
+  },
+  {
+   "name": "C2.10 pass: by default drafting reads the PDF version first, then the portal's screens for what differs",
+   "ok": true,
+   "detail": "Reads the PDF version (IMM 5707 (01-2023)) first, then the IRCC Portal screens for what differs."
+  },
+  {
+   "name": "C2.10 pass: the author changes it per form; the page says so and screen-map drafting no longer reuses the PDF version",
+   "ok": true,
+   "detail": {
+    "pdfFirst": "IMM 5707 (01-2023)",
+    "pdfTwin": 2,
+    "onlineOnly": {
+     "inputs": 13,
+     "mapped": 0,
+     "same_path": 0,
+     "pdf_twin": 0,
+     "alias": 0,
+     "leftover": 13,
+     "not_a_fact": 0,
+     "ai_calls": 0
+    }
+   }
+  },
+  {
+   "name": "round 2 m4: on a combination without a portal the words say so (never another portal's screens)",
+   "ok": true,
+   "detail": "Online screens only, but this combination has no portal yet: choose its portal first."
+  },
+  {
+   "name": "round 2 m4 pass: a code written another way is the library's form",
+   "ok": true
+  },
+  {
+   "name": "round 2 M2 fail: a drafting-source save from an out-of-date screen is refused",
+   "ok": true,
+   "detail": "What drafting reads for IMM 5707 was changed while you were choosing. Your choice was not saved; check it and choose again."
+  },
+  {
+   "name": "review 2 should 4 fail: nothing is drafted from a checklist, so it has no drafting choice",
+   "ok": true
+  },
+  {
+   "name": "C2.10 fail: a choice that is not one of the two is refused on its field",
+   "ok": true
+  },
+  {
+   "name": "C2.10 fail: only an author changes it",
+   "ok": true
+  },
+  {
+   "name": "C2.10 fail: a form that is not in the library has no choice to make",
+   "ok": true
+  }
+ ]
+}

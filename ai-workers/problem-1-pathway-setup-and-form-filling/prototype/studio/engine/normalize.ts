@@ -65,7 +65,7 @@ export function normalize(proposed: ProposedField[], entries: Entry[], library: 
   const out: Item[] = [];
   const keys = [...new Set([...proposed.map((p) => p.id), ...mapped.map((e) => e.fact!)])];
   for (const key of keys) {
-    const p = proposed.find((x) => x.id === key) ?? { id: key, meaning: "(used by a box but not defined by the draft)", value_type: "text" };
+    const p = proposed.find((x) => x.id === key) ?? { id: key, meaning: "(used by a form field but not defined by the draft)", value_type: "text" };
     const boxes = mapped.filter((e) => e.fact === key).map((e) => ({ data_path: e.data_path, caption: e.caption ?? null, person: e.person ?? null, row: e.row ?? null, transform: e.transform ?? null, confidence: e.confidence ?? null, evidence: e.evidence_quote ?? null }));
     if (!boxes.length) continue; // a definition no box reads is not added
     const persons = [...new Set(boxes.map((b) => b.person ?? "none"))];
@@ -91,8 +91,8 @@ export function normalize(proposed: ProposedField[], entries: Entry[], library: 
     if (exact) {
       const s = similarity(p, exact);
       if (!s.typeCompatible) { out.push({ ...base, outcome: "CONFLICT", matchedKey: key, candidates, reason: `Same key as the library field, but the value type differs: library ${exact.valueType}, this form ${p.value_type}. Using it as is could write the wrong kind of value.`, recommendation: { action: "decide", key, text: "Keep the library type and fix the map's transformation, or define a separate field" } }); continue; }
-      if (s.contextDiffers && s.meaning < 0.5) { out.push({ ...base, outcome: "AMBIGUOUS", matchedKey: key, candidates, reason: `Same key, but the meanings differ in period or context (${s.qualifiersProposed.join("/") || "none"} on this form, ${s.qualifiersLibrary.join("/") || "none"} in the library). A current value must not fill a previous-value box.`, recommendation: { action: "decide", key, text: "Confirm it is the same meaning, or define a separate field" } }); continue; }
-      out.push({ ...base, outcome: "REUSE", matchedKey: key, candidates: [], reason: `Same key and a compatible type (${exact.valueType}); meaning overlap ${s.meaning}. The boxes keep their own person, so reuse shares the definition, not anyone's value.`, recommendation: { action: "reuse", key, text: `Reuse ${key}` } });
+      if (s.contextDiffers && s.meaning < 0.5) { out.push({ ...base, outcome: "AMBIGUOUS", matchedKey: key, candidates, reason: `Same key, but the meanings differ in period or context (${s.qualifiersProposed.join("/") || "none"} on this form, ${s.qualifiersLibrary.join("/") || "none"} in the library). A current value must not fill a previous-value form field.`, recommendation: { action: "decide", key, text: "Confirm it is the same meaning, or define a separate field" } }); continue; }
+      out.push({ ...base, outcome: "REUSE", matchedKey: key, candidates: [], reason: `Same key and a compatible type (${exact.valueType}); meaning overlap ${s.meaning}. The form fields keep their own person, so reuse shares the definition, not anyone's value.`, recommendation: { action: "reuse", key, text: `Reuse ${key}` } });
       continue;
     }
     const part = partOf(key, library);

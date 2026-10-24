@@ -32,7 +32,7 @@ BR-10 Document line picks a document type from the library; missing type → "De
 BR-11 Document line picks one of its type's named substitute sets ("any one of" / "all of"); never defines its own (SA-1B-19, 20; B3).
 BR-12 Links: Supported by / Follows another combination; carry named facts and documents that exist in the target; no self-link; no Follows loop (P-13, P-59, TAXONOMY §2–3). Fail: self-link and loop refused with a field message.
 BR-13 Copy from another combination; add or remove one line across many: affected combinations listed with outcome (will change, already has it, different condition kept, channel impossible) before anything enters the draft; each is a draft change in its own combination; Undo until submitted (SA-1B-61, P-23).
-BR-14 PQR (pending R-84, option C): flag questions this combination's SQR asks; no verdict to a prospect. Fail: flagging a question not in the SQR is refused.
+BR-14 PQR (agreed P-76, 23 Oct): PQR ⊂ SQR ⊂ agent view. The PQR tab marks questions this combination's SQR asks; AI drafts the picks with a reason each, a person accepts or removes; PQR changes are released with the combination (BR-16), never separately; the general country-level PQR is built from released combinations (B29, not on this screen). No verdict to a prospect (sub-question pending). Fail: marking a question not in the SQR is refused.
 BR-15 Preview by person runs the shared renderer (P-47) read-only with a Sample family preset plus tweaks (P-37); same resolution as runtime.
 BR-16 Review and release: author submits; items needing an expert get a tick; a different person approves; the Releases page uses the same server guard (P-23, P-40, P-43; QA-1). Validator problems block; everything else warns (EXPERIENCE §2.9).
 
@@ -60,7 +60,7 @@ Filing method tip: "Worked out from the form lines below. Change a line's channe
 | Substitute-set authoring (Screen 04); field-map review (Screen 02); carrying facts on cases (M3) | Capability · other screen or milestone |
 
 ## 9. Decisions followed, missing, conflicting
-Followed: P-07, P-12, P-13, P-23, P-35, P-37, P-40, P-43, P-47, P-50, P-52/53, P-58, P-59, P-61, P-62, P-63; SA-1B-3, 19–20, 57–63; RD-6. Pending: R-84 (PQR; option C drawn). Missing: carried-fact behaviour (Q1); "Signed by" per form line (Q2, SA-1B-102; the team's stored `signatureMethod` maps to our derived method at retrofit); **Sponsor** is not a person role in PRODUCT §4 or the app (immigration expert; combination 3 needs it). Conflicts: P-35 lists an "Agent view" tab, SCREENS 03 + P-56 put runtime in M3 (Q3); P-47 PQR ends "Looks eligible", option C and CICC s.44(2) say no verdict (resolved by R-84). Overlap: Screen 01's fix pass adds channels and "Add an online form" to today's page; Screen 03 must reuse those components, so it should start after that fix merges.
+Followed: P-07, P-12, P-13, P-23, P-35, P-37, P-40, P-43, P-47, P-50, P-52/53, P-58, P-59, P-61, P-62, P-63; SA-1B-3, 19–20, 57–63; RD-6. Agreed since drawing: P-76 (PQR, option C). Missing: carried-fact behaviour (Q1); "Signed by" per form line (Q2, SA-1B-102; the team's stored `signatureMethod` maps to our derived method at retrofit); **Sponsor** is not a person role in PRODUCT §4 or the app (immigration expert; combination 3 needs it). Conflicts: P-35 lists an "Agent view" tab, SCREENS 03 + P-56 put runtime in M3 (Q3); P-47 PQR ends "Looks eligible", option C and CICC s.44(2) say no verdict (resolved by R-84). Overlap: Screen 01's fix pass adds channels and "Add an online form" to today's page; Screen 03 must reuse those components, so it should start after that fix merges.
 
 ## 10. Questions for the Lead (recommendation first)
 1. **Facts a link carries, in the linked combination's questionnaire:** recommend pre-filled from the linked case and marked "please confirm" (P-65, P-72), asked as usual when no linked case exists; not skipped, because the linked case may be missing.
@@ -71,6 +71,6 @@ Followed: P-07, P-12, P-13, P-23, P-35, P-37, P-40, P-43, P-47, P-50, P-52/53, P
 - [ ] Board agreed by the founder (draft only)
 - [x] Every element labelled Needed or Not built, and Capability or Scaffolding (§8, board labels)
 - [x] Data and API needs known (§2, §6); F1 back end on main
-- [ ] Every decision it relies on agreed: R-84 PQR open; Q1–Q3; Sponsor role (expert)
+- [ ] Every decision it relies on agreed: PQR agreed (P-76); Q1–Q3; Sponsor role (expert)
 - [ ] No open questions (three above)
 - [ ] Screen 01 fix pass (C1.6, C2.7, QA-1) merged first

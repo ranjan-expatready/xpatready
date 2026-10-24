@@ -31,8 +31,20 @@ export function filingMethod(lines: Line[]): string {
   const base = new Set(always.map(chOf));
   const extra = lines.filter((l) => !base.has(chOf(l)));
   const head = say(base) || "Only conditional forms";
-  const more = [...new Map(extra.map((l) => [chOf(l), l])).values()].map((l) => `plus ${CHANNEL_WORDS[chOf(l)].toLowerCase()} when ${l.condition_plain ?? "its condition holds"}`);
+  // "plus PDF upload when the applicant has a representative": the channel's own words, the condition as a clause.
+  const clause = (c: string | null | undefined) => { const t = (c ?? "its condition holds").trim().replace(/[.;]+$/, ""); return t.charAt(0).toLowerCase() + t.slice(1); };
+  const more = [...new Map(extra.map((l) => [chOf(l), l])).values()].map((l) => `plus ${LOWER[chOf(l)]} when ${clause(l.condition_plain)}`);
   return [head, ...more].join("; ");
+}
+const LOWER: Record<Channel, string> = { PDF_UPLOAD: "PDF upload", ONLINE: "online", SIGNED_PDF_UPLOAD: "signed PDF upload" };
+
+/** The filing method in one of C1.6's words, for the Programs row and the page: "PDF only" (PDF and signed PDF
+ *  uploads), "Online only" or "Mixed: online and PDF"; checklists are not filed. The line-by-line detail is filingMethod. */
+export function filingKind(lines: (Line & { form_kind?: string | null })[]): string {
+  const filed = lines.filter((l) => (l.form_kind ?? "data_form") === "data_form");
+  if (!filed.length) return lines.length ? "Checklists only" : "No forms yet";
+  const online = filed.filter((l) => chOf(l) === "ONLINE").length;
+  return !online ? "PDF only" : online === filed.length ? "Online only" : "Mixed: online and PDF";
 }
 
 const day = (d: Date) => d.toISOString().slice(0, 10);

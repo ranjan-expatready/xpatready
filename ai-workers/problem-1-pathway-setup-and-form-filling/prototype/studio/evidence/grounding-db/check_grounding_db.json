@@ -1,7 +1,7 @@
 {
- "at": "2026-10-23T06:04:57.482Z",
- "port": 4432,
- "database": "xr_studio_grounding",
+ "at": "2026-10-23T14:19:42.324Z",
+ "port": 4449,
+ "database": "xr_studio_screens_grounding",
  "pass": 29,
  "fail": 0,
  "log": [
@@ -59,8 +59,8 @@
    "name": "one combination per last-level node, also under concurrent creates: one created, the other returns it",
    "ok": true,
    "detail": [
-    201,
-    200
+    200,
+    201
    ]
   },
   {
@@ -148,7 +148,7 @@
     {
      "key": "individual.visitors.visitor_visa",
      "kind": "Row details",
-     "label": "name, path, source basis or allowed locations (no line changed)",
+     "label": "name, path, portal, source basis or allowed locations (no line changed)",
      "change": "changed",
      "needs_sme": false
     }
@@ -157,7 +157,7 @@
   {
    "name": "a draft changed after submission cannot be released (stale submission)",
    "ok": true,
-   "detail": "Release refused: approved hash differs from the submitted configuration (the draft changed after it was submitted; submit it again)."
+   "detail": "Release refused: The draft changed after it was submitted: submit it again on its Review and release tab."
   },
   {
    "name": "a concurrent rename from an out-of-date screen is refused, not overwritten",
@@ -179,7 +179,7 @@
   {
    "name": "isolated copy: sample inputs load through the normal paths: 2 pathways, 11 programs, 6 combinations set up",
    "ok": true,
-   "detail": 6.147
+   "detail": 3.534
   },
   {
    "name": "a person makes the given-names question conditional (saved as draft)",
@@ -192,7 +192,7 @@
   {
    "name": "finding 3 at release: submitting a draft that can hide a value IMM 1295 always reads is refused",
    "ok": true,
-   "detail": "Fix 6 problems before submitting: person.given_names: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 1295 reads it whenever the form applies. Make the form or its boxes apply under the same condition, or remove the question's condition. · person.given_names: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 5257 SCH1 reads it under a different condition. Make the form or its boxes apply under the same condition, or remove the question's condition. · person.given_names: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 5475 reads it under a different condition. Make the form or its boxes apply under the same condition, or remove the question's condition."
+   "detail": "Fix 6 problems before submitting: person.given_names: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 1295 reads it whenever the form applies. Make the form or its form fields apply under the same condition, or remove the question's condition. · person.given_names: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 5257 SCH1 reads it under a different condition. Make the form or its form fields apply under the same condition, or remove the question's condition. · person.given_names: Hiding a value a form reads: the question for person.given_names is shown only when \"only if person.biometrics_required is yes\", but IMM 5475 reads it under a different condition. Make the form or its form fields apply under the same condition, or remove the question's condition."
   },
   {
    "name": "after the condition is removed the draft no longer has that error",

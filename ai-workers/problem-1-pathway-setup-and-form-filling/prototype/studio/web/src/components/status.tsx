@@ -40,7 +40,7 @@ export function StatusChip({ status, text, extraTip, tabIndex = 0 }: { status: S
   );
 }
 
-export const AI_TIP = "AI read the forms and suggested fields for their boxes. Nothing changes until you accept.";
+export const AI_TIP = "AI read the forms and suggested a shared field for each form field. Nothing changes until you accept.";
 export function AiMarker({ n, tabIndex = 0 }: { n: number; tabIndex?: number }) {
   if (!n) return null;
   return (

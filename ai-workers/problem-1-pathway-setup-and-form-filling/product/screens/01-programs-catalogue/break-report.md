@@ -1,43 +1,67 @@
-# Screen 01 — Programs: break report
+# Screen 01 — Programs: break report, round 2 (second CHECK of the closing fix pass)
 
-Breaker, 21 Oct 2026. Scope: concept "What gets built" + Layout v2 + review.md items 1–9 (P-26). No code changed, no AI call, nothing committed.
-**Setup.** The app on :4400 was a stale process (started 17:42, before FINISH: `POST /api/intake` and `/api/intake/held` returned 404). I ran `start.sh`, which restarted it on the current build. Every write was then done on an isolated copy (`tools/isolated.sh brkx 4431`, its own database `xr_studio_brkx`, sample inputs loaded). The founder's demo database got GET requests only. Test files and scripts are in the session scratchpad (`breaker/`).
-**Counts:** Blocker 0 · Major 4 · Minor 10 (all "Needed for the proof"). Not-built observations are listed separately and are not counted.
+Breaker, 23 Oct 2026, lane copy `screens-01-fix-c3010a` at 8d020757. Scope: concept "What gets built" + Layout v2, the round-1 retests and the P-74 extension (C1.6, C1.7, C2.7, C2.10, C3.10). Isolated copy `screens_br` on :4442 (fresh database, sample inputs loaded; :4400 untouched). No code changed, no AI call, nothing committed. Scripts and screenshots: session scratchpad `br2/` (`shots/`).
+**Counts:** Blocker 0 · Major 3 · Minor 7. Left for the Lead as agreed: m4 deny by default, m5 atomic `baseRevision`, m9 intake wording.
+
+## Round-1 retests
+* **M1 fixed.** I raced a release against a channel change (at 20 ms) and against a portal change (at 60 ms and 90 ms). The release was refused each time: 409 "The draft changed" or 409 "was changed while it was being released". Nothing was published unreviewed.
+* **M2 fixed.** The approver submitted LMIA. `/draft` holds it for them ("You submitted it…", `self: true`). Signing their own submission gets 403.
+* **M3 fixed.** Reusing with `who: "<script>…"` gets 400 "Choose whose form it is from the list." and nothing is added.
+* **M4 fixed.** After IMM 1295 is removed, the summary's Forms no longer lists it. The only place it still appears is as an attached source with "Add 1 form from the library".
+* **m1 fixed** (empty items 400; the submitter signing gets 403). **m2 fixed** (different Hindi and Thai names are both created; the RTL override is stripped, so "BR asiv" is stored as plain text). **m3 fixed** (the hint follows the typing: "Visitors." gives "Visitors" exists: choose it).
+* **m5 first half fixed** (removing a line twice, or editing a removed one, gets 409). **m7 fixed** (`/draft?summary=1` takes 3 ms). **m8 fixed** (`STUDIO_PORT=4442 restart-api.sh` without `DATABASE_URL` is refused, exit 2; `stop.sh` stops the database only on port 4400, read in the code).
 
 ## Major
-**M1. Concurrent uploads of the same file are wrongly held as "a different file".** Steps: send 4 parallel `POST /intake` of the same new PDF (`race-c.pdf`, IMM 9989 (01-2026)) on Super visa. Expected: one `added`, three `in_library` (P-25: an identical file is recognised). Actual: one `added` and three `held` with "IMM 9989 (01-2026) is already in the library from a different file". That leaves 3 false HELD rows in `intake_item` that a person would have to check, all with identical checksums. Cause: check, then a slow Python read, then act, with no lock and no re-check by checksum before the label check (`api/src/intake.ts:89`, `:125`).
-**M2. One collision fails the whole batch after earlier files were already saved, and a racing edition is lost.** Steps: in parallel, batch A `[p1.pdf (IMM 9985), e1.pdf (IMM 9987 01-2026)]` and batch B `[p2.pdf (IMM 9984), e2.pdf (IMM 9987 02-2026)]`. Expected: one result per file, with e2 as `new_edition_held`. Actual: B returns `409 "Already in progress or already exists… Refresh"` with no per-file results. p2 (IMM 9984) **was** added to the library anyway, and e2 was neither held nor recorded. This is the per-file contract of P-51 broken (`intake.ts:51`, `:139-142`; generic P2002 mapping in `main.ts:133`).
-**M3. Non-English, punctuation-only or long names collide on the generated key and get a false "already exists".** Steps: New combination → Program "BREAK-日本語プログラム" › Category "カテゴリー" → created with key `individual.break.` (empty slug). Then Program "BREAK-中文项目" (a different name): the UI hint says "new · no duplicate found", and Create gives "Not created — Already in progress or already exists… Refresh to see the current state". Refreshing never helps (screenshot `new-nonenglish.png`). The same happens for "BREAK-???" vs "BREAK-...", and for two different 120-character names that share their first ~55 characters. Expected: a different name is created (BR-6 compares by meaning; the key is only internal). Cause: the key is `slug(label)` built from ASCII only and cut to 60 characters (`engine/import.ts:15`, `api/src/studio.ts:65`).
-**M4. The combination page's "Next step" contradicts the list's next step.** Steps: hold a new edition of IMM 5476 (upload `previous-editions/imm5476e-2021.pdf`). Open Live "With an LMIA". The list says **"See 2 new editions"**. The page header says **"Configuration released; preview what it asks → Preview"**. Super visa: the list says "Add 1 form from the library", the page says "Draft changes are ready to check and submit". Expected: one next action per row, the same in both places (P-07, review item 7). Cause: the page computes its own action in the browser (`web/src/pages/combination.tsx:73-84`) instead of using the row's `nextAction` (`engine/programs.ts:67`).
+**M1. A portal change is never a draft change, so it goes live without review.**
+* Steps: on Live "With an LMIA", `PATCH /combinations/:id/portal {"portal":"ircc_portal"}` as the author.
+* Expected: one draft change, listed for review and release, like any other row detail.
+* Actual: the draft bar says 0 changes. `POST /submit` then succeeded with `changeSummary: []`. The approver approved it with nothing to sign. Release 2's snapshot now has `portal: ircc_portal`. The portal also rides silently into any later release of that row (Release 3 has it, and its review listed only the IMM 5409 channel).
+* Cause: the snapshot carries `combination.portal`, but `diff` compares row details without it (`engine/validate.ts:152` `meta` has no `portal`). The portal decides each line's default channel and the "Online" checks. The sha gate does see it, so the release race holds.
+
+**M2. Channel, portal and drafting-source saves have no version check: two sessions both get 200 and the last one wins (STANDARDS §4 [M]).**
+* Steps: two `PATCH …/forms/IMM 5409/channel` calls sent at once on the draft line, one "ONLINE" and one "PDF_UPLOAD".
+* Actual: both return 200 and the line ends up ONLINE. The session that chose PDF upload saw "IMM 5409 filed as PDF upload".
+* The same happens one after the other: a page loaded earlier overwrites a newer choice with no 409.
+* No `baseRevision` is accepted or checked: `api/src/forms.ts:441` (portal), `:449` (channel), `:498` (draft-from). "Use the default for N forms" makes N blind PATCHes (`web/src/components/channels.tsx:78`).
+* What held: concurrent saves on a released line produce one new version; the other calls get 409.
+
+**M3. "Add an online form" leaves captures that nobody can finish or abandon, and the combination page shows them for ever.**
+* Steps, on Visitor visa:
+  1. A page with an answer: refused, correctly.
+  2. Then reload, and separately Back, 60 ms and 30 ms after "Add and send for approval".
+* Expected: a refused or interrupted attempt leaves nothing behind, or the page offers continue and abandon.
+* Actual: each attempt left a capture OPEN, with 0 or 2 screens. "Online forms added here" now lists three rows "Being captured: add the remaining screens, then finish", plus every Abandoned one.
+* Neither this page nor any other web page has a finish, continue or abandon action. `grep` for `/finish` and `abandon` in `web/src` finds only this panel's own chain (`channels.tsx:125-137`). `OnlineForms` (`:90`) only lists.
+* Each retry adds another row, so the list stops telling the author what is really awaiting a second person.
 
 ## Minor
-**m1. An older edition is called "New edition".** If you upload IMM 5257 (06-2019) while the library has (09-2023), the screen says "New edition: impact review needed… waiting: IMM 5257 (06-2019)". It also moves a Live row to Needs work ("See 2 new editions", one of them 2021). The editions are never compared by date (`intake.ts:131-133`). It is held (safe), but the wording misleads the reviewer.
-**m2. A non-IRCC PDF becomes a library form.** A self-made PDF that prints "IMM 9993 (03-2026)" is `added` to the shared library, using the title from its metadata (e.g. `<img onerror…>`, or "ignore previous instructions…"). The same bytes attached to the row are marked "HELD: not an approved official source". The library shows only `approved:false`. The planted-instruction PDF was classed as a guide and never sent to AI. No script ran: React escaped the title, and no dialog fired on Programs, Forms library or the combination page.
-**m3. Server authorisation is not deny-by-default.** A missing or unknown `x-actor` header (e.g. `nobody`) is treated as the author. It succeeded on `/intake`, `/combinations/path`, `/program-nodes`, `/combinations`, `/lines` and `/attachments` (`api/src/core.ts:35-37`; STANDARDS §6 [M]). The approver and the SME got 403 on every author route, as expected.
-**m4. A long search breaks the list.** Paste more than 120 characters into search (or use `/?q=a…130`). After about 7 s of skeleton, "The programs could not be loaded — Too big… restart the studio". The input has no `maxLength`, and the advice to restart is wrong (`contracts/programs.ts:31`; screenshot `q-long-9s.png`).
-**m5. Junk or crafted `under=`/`prog=` URLs give contradictory text.** `/?under=junk.key` shows both "Nothing needs work right now, so all combinations are shown." and "Nothing matches — No combination ." (broken sentence). `/?prog=nope` shows "Program: All" while it filters to nothing. `/?under=corporate.lmia` in Individual shows "Showing: LMIA" with no rows (`web/src/pages/programs.tsx:152,161,189`).
-**m6. Count vs chip.** The filter reads "Live · 0" while a row's status chip says "Live" (With an LMIA has a held edition, so it counts under Needs work). Clicking Live gives "Nothing matches" next to a visible Live row. This conflicts with BR-10 ("counts say what they count"), even if P-49's meaning is intended.
-**m7. Stored file paths depend on the environment.** With `STUDIO_VAR` outside the repo (allowed by `isolated.sh`), the intake stores an absolute `storedPath`. "+ Add" of that form then fails with a 500, and so does downloading it (`intake.ts:141`, `programs.ts:296`). The 500 detail exposes the absolute server path to the browser (`main.ts:138`). With the default `var/` it works.
-**m8. Search speed.** Results appear about 290–300 ms after typing stops (200 ms debounce + about 90 ms), against the "search < 200 ms" budget (§9). Filter changes took 39–144 ms and first view 75–312 ms (both held).
-**m9. Upload limit messages.** One file over 25 MB rejects the whole batch with "File too large" and does not name the file. 21 files gives "Too many files". The friendly messages in `intake.ts:46,78` never show, because multer's limits fire first.
-**m10. IMM 5475 has two edition labels.** The reader gives `IMM 5475 (05-2021)` (printed in the XFA). The manifest and the founder's demo database say `(12-2022)` for the same checksum, so the label changes after a reload.
-
-## Not built (P-26) or outside this screen — observations, not counted
-* Two near-duplicate names created at the same moment both exist ("BREAK-Race One" and "BREAKRaceOne" under Individual). The service check is built, but the normalised-name index is "Not built".
-* Rename, disable and delete, rules that hide fields, and 100 programs / 400 combinations are Not built here or belong to other screens.
-* The founder's demo database still holds pre-FINISH sample data ("Super visa for parents and grandparents", pathway label "Corporate", "Labour market impact assessment (LMIA)"), so item 5 names show only after a reload.
+* **m1. The filing method reads badly, and it is very long on the Programs row.** Example: "PDF only; plus signed pdf upload when Needed once per couple when the principal applicant has a common-law partner who will accompany them to Canada.; plus online when Needed only when…". The problems are lower-case "pdf", "when Needed", ".;", and the full condition repeated on the row (`engine/channels.ts` `filingMethod`; screenshot `shots/comb-1024.png`).
+* **m2. "Use the default for 3 forms" is misleading.**
+  * It would turn a deliberate "Signed PDF upload" (IMM 5409) back into "PDF upload": the default is never Signed, so a signed line always shows as "off default".
+  * The one note "(an approved online version from the IRCC Portal exists)" covers lines whose default is PDF upload (`channels.tsx:74`, `:83`).
+  * Failures part-way leave a partial result, with one error toast.
+* **m3. An online-only form with no portal gets a wrong message.** `+ Add` of IMM 7777 (library has only an online version) on Visitor visa, which has no portal, says "IMM 7777 has no stored file to attach. Upload the IRCC PDF." It does not say "choose the portal first" (`api/src/programs.ts:349`). With the portal set, the Online line is added correctly.
+* **m4. The drafting-source words are wrong on combinations without a portal.**
+  * Visitor visa and Super visa have no portal and file IMM 5707 as a PDF, yet they read "Reads the IRCC Portal screens … alone; the PDF version is not reused." The online filter accepts any portal when there is none (`api/src/forms.ts:486`).
+  * Codes are not normalised: `draft-from` with "imm 5707", "IMM-5707" or "IMM  5707" gets 404. Captures map all of these to IMM 5707.
+* **m5. A capture added from a combination may use another portal, with no warning.** IMM 1295 was captured on LMIA Online for LMIA, whose portal is the IRCC Portal. Its row says "Approved: an online version in the library", yet its default stays PDF upload.
+* **m6. A large saved page holds the request for 60 s.** A 9 MB saved page took 60.1 s inside `POST /captures/:id/screens` and ended "Not read: the file could not be read". The reader runs in the web request (§4 [M]: never inside a web request). Also "1 questions".
+* **m7. N+1 on the summary.** The summary now calls `defaultChannelFor` once per line, two queries each (`api/src/programs.ts` summary; §5 [M] no N+1). It takes 22–75 ms here, so the budget is not at risk with the sample data.
 
 ## What held
-* Intake refuses 0 files, empty files, `.txt`, and a PNG renamed `.pdf`. It holds broken or code-less PDFs. Path-traversal names are reduced to their basename (`passwd.pdf`). 21 files gets 400, over 25 MB gets 413, exactly 20 files is accepted. Duplicates in one batch give `added` then `in_library`. A re-upload of a held file is not duplicated ("Already waiting").
-* New-edition hold: neither the 2019/2021 official previous editions nor a forged 2030 edition entered `form_edition`. "+ Add" still used the current edition. The same edition from a different file was held. A hostile HTML page was refused on the library door and attached as HELD on a row. Downloads are sent as `Content-Disposition: attachment`.
-* Roles: the approver and SME got 403 on intake, attachments, sample, path, program-nodes, combinations and lines. Release needs the approver. Two parallel releases gave one 201 and one 409.
-* Hierarchy: wrong-level and cross-program keys, a Corporate program in Individual, a sub-category under a set-up category, and a category with sub-categories as a leaf were all refused with field errors. Case, spacing and punctuation duplicates were refused ("Visitors", "super  VISA").
-* Idempotency: an existing path returns 200 `created:false`. 3 parallel starts of one row gave 1 combination (201/200/200). 3 parallel "+ Add IMM 1295" gave 1 line.
-* Catalogue: junk `pathway`, `filter` and `sort` values give a 400 Problem. Search across code spacing ("IMM5257" = "imm 5257") works. An XSS string in `q` is shown as text.
-* Keyboard: the Tab order runs pathway → views → Program → Status sort → list. Arrow keys and Enter open the right row. After a reload on `/c/:id`, the "Programs" link restores the view and highlights and focuses the row. Browser Back works.
-* Layout: no sideways scroll at 1024 px or at 640 px (200 % of 1280) on the list, the new-combination page or the Forms library. Long names wrap.
+* **Roles.** The approver and the SME get 403 on portal, channel, draft-from and capture create. Self-approval of a capture gets 403. In the UI the approver sees read-only channels, a read-only portal and drafting words, and no "Add an online form" or "Use the default".
+* **Bad input.** Unknown and removed lines (404), unknown combinations (404), and an invalid uuid (400). "online", "IRCC_PORTAL" and "online_only" get 400. A lower-case form code shows its field message in the panel.
+* **Channels and release.** An Online line with no portal, with another portal, with no approved online version, or with no screen map is listed "Blocks release". It is held on the Release page and refused at submit. A changed channel is a draft change, needs SME sign-off, and Release 3 carries it (IMM 5409 SIGNED_PDF_UPLOAD).
+* **Uploads.**
+  * Refused, with nothing kept: the with-answers page, `template-with-answers.csv`, CSV formulas (`=cmd|…`, `+SUM`, `@SUM`, `-2+3` in label, help and options), all six `hostile-*.html` and `intake-one-question-answered.html`. The aria-unread page is "not read".
+  * The same file twice and the same screen again are marked duplicates. 60 files at once get 413 and nothing is added; 30 are accepted; a file over 10 MB gets 413.
+* **Approvals.** Approve against return, sent at once 4 times: exactly one wins (APPROVED or RETURNED, or both 409 when the capture was already in the library). Approve, return and abandon at once: one return, then the abandon; the approve gets 409.
+* **Drafting source.** `ONLINE_ONLY` is honoured by `POST /online-versions/:id/screen-map/draft`: `pdf_twin` went from 4 to 0 and `pdf_edition` to null. The choice shows on every combination using the form (LMIA, Visitor visa, Super visa, Study permit).
+* **C3.10.** No "box" or "boxes" in the rendered text, titles, labels or options of 21 page states, or in any API message string. Stored field-map reasons contain "check boxes" but are not shown anywhere.
+* **Keyboard, layout and reload.** Tab reaches "Add an online form", Enter opens the panel with focus inside, and Escape closes it. No page-level sideways scroll at 1024 px or 200 % (512 px). The Forms table, with "Filed as", scrolls inside its card (`shots/c512a.png`). Reload and Back mid-action caused no error (see M3 for what was left behind).
+
+## Not built (P-26) — not counted
+100 programs / 400 combinations not re-run (budgets not built). One workspace per database, so "another workspace's id" was tested only as unknown ids. The capture review itself is Screen 02.
 
 ## Left behind
-* The demo database on :4400 has no BREAK records. Its API process was restarted by `start.sh`.
-* Isolated database `xr_studio_brkx` (all my BREAK- programs and IMM 999x test forms) and `studio/var/isolated-brkx/api.log`. The server is stopped. I did not drop the database (no drop rule).
-* Database `xr_studio_brk` on :4417: I started it, but the parallel reviewer then used it (scratchpad `walk*.cjs`), so I left it running.
+Database `xr_studio_screens_br` (one fresh start, then the tests above). Server :4442 stopped; :4443 not used.

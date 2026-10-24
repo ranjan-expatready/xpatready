@@ -31,7 +31,7 @@ export class Fill {
     const line = (snapshot.forms as { form_number: string; channel?: string }[]).find((f) => f.form_number === b.form);
     if (line?.channel === "ONLINE") fail(`${b.form} is filed Online here: its answers go on the portal sheet, not in a PDF.`, HttpStatus.CONFLICT);
     const map = snapshot.field_maps.find((m: { form_number: string; channel?: string }) => m.form_number === b.form && m.channel !== "ONLINE");
-    if (!map?.official_file || !map.inventory_file) fail("This form's official file or box inventory is not recorded; it cannot be filled.");
+    if (!map?.official_file || !map.inventory_file) fail("This form's official file or form field list is not recorded; it cannot be filled.");
     type Entry = { data_path: string; fact?: string | null; option_map?: OptionMap | null };
     type Def = { id: string; answer_list?: { values: ListValue[] } };
     const entryOf = new Map<string, Entry>((map.entries as Entry[]).map((e) => [e.data_path, e]));
@@ -68,7 +68,7 @@ export class Fill {
     const pdf = readFileSync(out);
     const art = await this.db.generatedArtifact.create({ data: { workspaceId: (await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } })).workspaceId, kind: "filled_pdf", path: out.replace(`${ROOT}/`, ""), sha256: sha(pdf), createdBy: actor.id,
       detail: { form: b.form, person: b.person, mode: view.mode, configuration_sha256: view.sha256, written: Object.keys(values).length, intact: report.intact, read_back_equal: report.read_back_equal, signatures: report.signatures, report_file: `${base}.report.json`, person_steps: steps } } });
-    await this.audit.log(art.workspaceId, actor.id, "filled", "PDF", b.form, `${actor.name} filled ${b.form} for ${cov!.person_label} from confirmed sample facts: ${Object.keys(values).length} boxes written, read back ${report.read_back_equal}/${report.written}, ${report.intact ? "intact" : "NOT intact"} (${view.label})`);
+    await this.audit.log(art.workspaceId, actor.id, "filled", "PDF", b.form, `${actor.name} filled ${b.form} for ${cov!.person_label} from confirmed sample facts: ${Object.keys(values).length} form fields written, read back ${report.read_back_equal}/${report.written}, ${report.intact ? "intact" : "NOT intact"} (${view.label})`);
     return { artifact_id: art.id, label: view.label, configuration_sha256: view.sha256, form: b.form, person: b.person, person_label: cov!.person_label, report, boxes, person_steps: steps,
       counts: { written: boxes.filter((x: any) => x.result === "written").length, by_hand: boxes.filter((x: any) => x.result === "by hand").length, blank: boxes.filter((x: any) => x.result === "blank").length, not_written: boxes.filter((x: any) => x.result === "not written").length, by_a_person: boxes.filter((x: any) => x.result === "by a person").length } };
   }

@@ -40,7 +40,7 @@ function answered(env: RunEnvelope): number | null {
   try { const o = JSON.parse(env.raw_output ?? ""); return Array.isArray(o?.entries) ? o.entries.length : null; } catch { return null; }
 }
 
-/** The contract problems grouped by box, as "box 115 (field name …)". */
+/** The contract problems grouped by form field, as "form field 115: field name …". */
 function boxProblems(env: RunEnvelope, raw: Partial<FieldMapAnswer> | null): string[] {
   const byBox = new Map<number, string>();
   for (const e of env.contract_errors ?? []) {
@@ -49,7 +49,7 @@ function boxProblems(env: RunEnvelope, raw: Partial<FieldMapAnswer> | null): str
     const i = Number(m[1]);
     if (byBox.has(i)) continue;
     const what = m[2] === "fact" ? `field name "${raw?.entries?.[i]?.fact ?? "?"}" breaks the naming rule` : `${(m[2] ?? "entry").replace(/\//g, " ")} ${e.message ?? "is not allowed"}`;
-    byBox.set(i, `box ${i + 1}: ${what}`);
+    byBox.set(i, `form field ${i + 1}: ${what}`);
   }
   return [...byBox.values()];
 }
@@ -78,7 +78,7 @@ export function explainRun(env: RunEnvelope): { status: "FAILED" | "BLOCKED"; me
   if (/^completed/.test(run.status ?? "") && env.contract_valid === false) {
     let raw: Partial<FieldMapAnswer> | null = null; try { raw = JSON.parse(env.raw_output ?? ""); } catch { /* unreadable */ }
     const probs = boxProblems(env, raw);
-    const head = n !== null ? `AI answered ${plural(n, "box", "boxes")}.` : "AI answered.";
+    const head = n !== null ? `AI answered ${plural(n, "form field")}.` : "AI answered.";
     const what = probs.length ? `${plural(probs.length, "entry", "entries")} broke our entry rules (${probs.slice(0, 3).join("; ")}${probs.length > 3 ? "; …" : ""}).` : "The answer failed our check of the run record.";
     return { status: "FAILED", message: `${head} ${what} Nothing was applied. Cost ${cost}.` };
   }

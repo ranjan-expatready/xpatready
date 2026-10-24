@@ -63,7 +63,7 @@ function Forms({ id, s, fields }: { id: string; s: any; fields: any }) {
             <td><p className="font-medium">{f.form_number}</p><p className="text-xs text-text-muted">{f.title}</p><OriginPill origin={f.origin} status={s.row_versions?.[`form:${f.form_number}`]?.includes("DRAFT") ? "DRAFT" : undefined} /></td>
             <td>{whoLabel(f.who)}</td>
             <td className="max-w-md text-xs">{f.status === "always" ? <Pill tone="ok">Always</Pill> : <><Pill tone="warn">Conditional</Pill><p className="mt-1">{f.condition_plain ?? plainCondition(f.condition, fields.meaning)}</p></>}</td>
-            <td className="text-xs">{m ? <>{m.form_edition}<br /><span className="text-text-muted">{m.entries.filter((e: any) => e.outcome === "mapped").length} mapped of {m.entries.length} boxes</span></> : f.form_kind === "document" ? <span className="text-text-muted">document, not filled</span> : <span className="text-text-warn">no map yet</span>}</td>
+            <td className="text-xs">{m ? <>{m.form_edition}<br /><span className="text-text-muted">{m.entries.filter((e: any) => e.outcome === "mapped").length} mapped of {m.entries.length} form fields</span></> : f.form_kind === "document" ? <span className="text-text-muted">document, not filled</span> : <span className="text-text-warn">no map yet</span>}</td>
             <td><Button size="sm" variant="ghost" onClick={() => setEdit(f)}><Pencil /> Edit</Button></td>
           </tr>); })}
       </Table>
@@ -211,7 +211,7 @@ function Questions({ id, s }: { id: string; s: any }) {
 function Checks({ s, meaning }: { s: any; meaning: (k: string) => string }) {
   return (
     <>
-      <Notice tone="info">Checks run on facts as they are confirmed. Warnings never become a blanket block; severity comes from the approved configuration. Box-level form checks stay with each form map.</Notice>
+      <Notice tone="info">Checks run on facts as they are confirmed. Warnings never become a blanket block; severity comes from the approved configuration. Form-field checks stay with each form's field map.</Notice>
       <Table head={["Check", "Group", "Severity", "When it fires"]}>{s.checks.map((c: any) => <tr key={c.id}><td className="mono">{c.id}{c.illustrative ? <Pill tone="warn" className="ml-1">Illustrative</Pill> : null}</td><td className="text-xs">{c.group.replace(/_/g, " ")}</td><td><Pill tone={c.severity === "block" ? "danger" : c.severity === "warn" ? "warn" : "neutral"}>{c.severity}</Pill></td><td className="max-w-2xl text-xs">{c.message ?? plainCondition(c.condition, meaning)}</td></tr>)}</Table>
     </>
   );
