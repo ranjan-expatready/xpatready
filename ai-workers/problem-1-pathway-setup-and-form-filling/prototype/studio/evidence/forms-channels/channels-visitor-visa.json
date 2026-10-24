@@ -11,7 +11,7 @@
    "channel": "ONLINE",
    "channel_words": "Online",
    "signature": "The client signs the declaration in the portal",
-   "version": "IMM 5257 online · IRCC Portal · 2026-10-24"
+   "version": "IMM 5257 online · IRCC Portal · 2026-10-23"
   },
   {
    "form": "IMM 5707",
@@ -27,7 +27,7 @@
  "problems": [
   {
    "level": "warning",
-   "where": "Field map IMM 5257 online · IRCC Portal · 2026-10-24",
+   "where": "Field map IMM 5257 online · IRCC Portal · 2026-10-23",
    "item": "IMM 5257",
    "message": "3 choice inputs are not on an answer list yet: filled by matching labels, so a changed label could go unnoticed."
   }
