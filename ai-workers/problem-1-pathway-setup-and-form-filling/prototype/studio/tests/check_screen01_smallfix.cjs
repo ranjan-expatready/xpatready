@@ -23,8 +23,7 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
 
 
 (async () => {
-  // A cloud copy has its browser at /opt/pw-browsers/chromium (another Playwright version than the studio's).
-  const b = await chromium.launch(fs.existsSync("/opt/pw-browsers/chromium") ? { executablePath: "/opt/pw-browsers/chromium" } : {});
+  const b = await chromium.launch({ channel: "chrome", headless: true }); // as the other browser suites: CI, Mac and cloud
   try {
     // -------------------------------------------------------------- QA-22: the session arrives late (empty catalogue)
     for (const [who, hold] of [["the author", "user-A"], ["a non-author", "user-C"]]) {
