@@ -22,6 +22,7 @@ const bytes = (path: string, actor: string) => new Promise<{ status: number; bod
   req.on("error", reject); req.end();
 });
 type Copy = { id: string; status: string; locked: { kind: string } | null; out_of_date: boolean; stale: boolean; changed: string[]; counts: { written: number; not_written: number } | null; intact: boolean | null };
+type Q = { subjectId: string; fact: string; value_type: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; required: boolean; hidden: boolean; group: string | null; fills: { form: string; person: string }[]; answer: { confirmed: boolean } | null };
 type Form = { form: string; subject_id: string; person: string; draft: { written_now: number; mapped: number; unconfirmed: number }; readiness: { ready: boolean; missing: { fact: string }[] }; copies: Copy[] };
 
 async function main() {
@@ -76,18 +77,42 @@ async function main() {
   f = await formOf("IMM 5257", P);
   ok("RT-14 fail: with required facts unconfirmed, IMM 5257 is not ready to file and they are listed", !f.readiness.ready && f.readiness.missing.length > 0, f.readiness.missing.length);
 
-  // ── RT-16 lock, before anything changes
-  r = await call("POST", `/runtime/form-copies/${first}/lock`, { kind: "filed" }, CLIENT);
-  ok("RT-16 fail: the client cannot lock a copy (403)", r.status === 403, r.status);
-  r = await call("POST", `/runtime/form-copies/${first}/lock`, { kind: "printed" }, OFFICER);
-  ok("RT-16 fail: an unknown lock kind is a 400 in plain words", r.status === 400 && /validated copy uploaded back, or filed/.test(r.body?.detail ?? ""), r.body?.detail);
-  r = await call("POST", `/runtime/form-copies/${first}/lock`, { kind: "validated_copy_uploaded" }, OFFICER);
-  ok("RT-16 pass: the officer locks an up-to-date generated copy (\"validated copy uploaded back\")", r.status === 201 && r.body.locked?.kind === "validated_copy_uploaded", r.body);
+  // ── P-71 (Lead, R1d early look): a copy is locked only when its form is ready to file
   r = await call("POST", `/runtime/form-copies/${first}/lock`, { kind: "filed" }, OFFICER);
+  ok("P-71 fail: a copy of a form not ready to file cannot be filed or locked (409), with the reason", r.status === 409 && /facts? to confirm before filing: confirm/.test(r.body?.detail ?? ""), r.body?.detail);
+  // Confirm every required fact IMM 5257 reads for the principal (Sample values by type), then make a new copy.
+  const sample = (q: { value_type: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; fact: string }) => q.options?.length ? q.options[0].key : q.shape.phone ? { country_code: "1", number: "5550100" }
+    : q.value_type === "yes_no" ? false : q.value_type === "date" ? (q.shape.datePrecision === "month" ? "1990-01" : "1990-01-01") : q.value_type === "number" ? "1000"
+    : q.value_type === "address" ? { street_name: "Sample Road", city: "Sample City", country: "Canada" } : /email/.test(q.fact) ? "client.d@example.com" : "SAMPLE";
+  const makeReady = async (subject: string, form: string) => {
+    for (let pass = 0; pass < 3; pass++) {
+      const f0 = await formOf(form, subject); if (f0.readiness.ready) return true;
+      const v = await agent();
+      const todo = v.sections.flatMap((x: { questions: Q[] }) => x.questions).filter((q: Q) => q.required && !q.hidden && !q.group && q.fills.some((x) => x.form === form && x.person === f0.person) && !q.answer?.confirmed);
+      for (const q of todo) await answer(q.subjectId, q.fact, sample(q));
+      for (const subj of [...new Set(todo.map((q: Q) => q.subjectId))] as string[]) await confirmAll(subj);
+    }
+    return (await formOf(form, subject)).readiness.ready;
+  };
+  ok("P-71 pass: with every required fact confirmed, IMM 5257 for the principal is ready to file", await makeReady(P, "IMM 5257"));
+  r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-ready` }, OFFICER);
+  const locked1: string = r.body.id; await done(locked1);
+  const row1 = JSON.parse(sql(`select json_build_object('path', path, 'sha', sha256) from form_instance where id='${locked1}'`));
+  r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${spouse}/generate`, { idempotencyKey: `gen-${run}-spouse2` }, OFFICER);
+  const spouse2: string = r.body.id; await done(spouse2);
+
+  // ── RT-16 lock, before anything changes
+  r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "filed" }, CLIENT);
+  ok("RT-16 fail: the client cannot lock a copy (403)", r.status === 403, r.status);
+  r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "printed" }, OFFICER);
+  ok("RT-16 fail: an unknown lock kind is a 400 in plain words", r.status === 400 && /validated copy uploaded back, or filed/.test(r.body?.detail ?? ""), r.body?.detail);
+  r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "validated_copy_uploaded" }, OFFICER);
+  ok("RT-16 pass: the officer locks an up-to-date generated copy (\"validated copy uploaded back\")", r.status === 201 && r.body.locked?.kind === "validated_copy_uploaded", r.body);
+  r = await call("POST", `/runtime/form-copies/${locked1}/lock`, { kind: "filed" }, OFFICER);
   ok("RT-16 fail: a locked copy cannot be locked again (409)", r.status === 409, r.body?.detail);
   const dbRefuses = (q: string) => { try { sql(q); return false; } catch { return true; } };
   ok("RT-16 fail (database): a locked copy's file, hash, result or lock cannot be changed; a generated copy cannot be rewritten or moved back; the facts a copy read cannot change",
-    dbRefuses(`update form_instance set path='x' where id='${first}'`) && dbRefuses(`update form_instance set locked_kind='filed' where id='${first}'`)
+    dbRefuses(`update form_instance set path='x' where id='${locked1}'`) && dbRefuses(`update form_instance set locked_kind='filed' where id='${locked1}'`)
     && dbRefuses(`update form_instance set sha256='x' where id='${spouseCopy}'`) && dbRefuses(`update form_instance set status='QUEUED' where id='${spouseCopy}'`)
     && dbRefuses(`update answer_snapshot set facts_json='[]' where id=(select snapshot_id from form_instance where id='${spouseCopy}')`));
 
@@ -96,14 +121,14 @@ async function main() {
   await answer(P, "person.passport_number", "SAMPLEP999");
   await confirmAll(P);
   f = await formOf("IMM 5257", P);
-  const locked = f.copies.find((x) => x.id === first)!;
-  ok("RT-15/16 pass: after the passport number changes, the locked copy is stale and names the fact; its file and row are unchanged", locked.stale && locked.out_of_date && locked.changed.some((x) => /passport/i.test(x)) && sha(readFileSync(join(ROOT, row.path))) === row.sha && sql(`select sha256 from form_instance where id='${first}'`) === row.sha, locked);
+  const locked = f.copies.find((x) => x.id === locked1)!;
+  ok("RT-15/16 pass: after the passport number changes, the locked copy is stale and names the fact; its file and row are unchanged", locked.stale && locked.out_of_date && locked.changed.some((x) => /passport/i.test(x)) && sha(readFileSync(join(ROOT, row1.path))) === row1.sha && sql(`select sha256 from form_instance where id='${locked1}'`) === row1.sha, locked);
   ok("RT-15 pass: nothing was regenerated on its own (a new copy only on the officer's request)", sql(`select count(*) from form_instance where case_id='${caseId}'`) === before);
-  ok("RT-15 fail-guard: the spouse's copy, whose facts did not change, is not out of date", !(await formOf("IMM 5257", spouse)).copies[0].out_of_date);
+  ok("RT-15 fail-guard: the spouse's copy, whose facts did not change, is not out of date", !(await formOf("IMM 5257", spouse)).copies.find((x) => x.id === spouse2)!.out_of_date);
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-3` }, OFFICER);
   const second: string = r.body.id; await done(second);
   f = await formOf("IMM 5257", P);
-  ok("RT-15 pass: a new copy is a new row with today's facts, up to date; the locked one stays stale and unchanged", f.copies[0].id === second && !f.copies[0].out_of_date && f.copies.find((x) => x.id === first)!.stale && sql(`select count(*) from form_instance where case_id='${caseId}' and subject_id='${P}'`) === "2");
+  ok("RT-15 pass: a new copy is a new row with today's facts, up to date; the locked one stays stale and unchanged", f.copies[0].id === second && !f.copies[0].out_of_date && f.copies.find((x) => x.id === locked1)!.stale && sql(`select count(*) from form_instance where case_id='${caseId}' and subject_id='${P}'`) === "3");
   await answer(P, "person.given_names", "APPLICANTE"); await confirmAll(P);
   r = await call("POST", `/runtime/form-copies/${second}/lock`, { kind: "filed" }, OFFICER);
   ok("RT-16 fail: an out-of-date copy cannot be locked (409): generate a new one first", r.status === 409 && /out of date/.test(r.body?.detail ?? ""), r.body?.detail);

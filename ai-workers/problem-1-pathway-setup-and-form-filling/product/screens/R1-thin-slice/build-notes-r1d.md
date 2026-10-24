@@ -41,6 +41,15 @@ Plan §9 row R1d and §8 RT-13…RT-17: IMM 5257 (and the case's other PDF forms
 | QA-26 rest: "applies" as text | plain words: "Say whether the person is travelling (true or false)." | API "QA-26 fail: applies" |
 Journey 99/99, R1d 25/25, R1a 99/99, engine 36/36; `run-suites.sh --demo` 20/20.
 
+## After the early look (Lead, 24 Oct: Go with changes)
+| Change | Where | Test (fails when the change is removed) |
+|---|---|---|
+| (1) P-71: a copy is locked (Filed / Validated copy uploaded back) only when its form is ready to file; generating stays allowed | API `lock` refuses with 409 and the reason; the buttons are disabled with "Not yet: N facts to confirm before filing: confirm them, then generate a new copy." (one wording, `notReady` in the contract) | API "P-71 fail" (mutation caught) and "P-71 pass" (every required fact confirmed → ready, a new copy locks); journey "P-71 fail-guard" and "P-71 pass" |
+| (2) P-63: "(1 box)" in the save toast | the save message says "form fields" | journey "agent pass: an edit saves …" and API "QA-37 pass" |
+| (3) the "fills …" list grows with the household | `fillsText` (contract): one line per form, "IMM 5257 for 6 people", each person on hover; the save message too | journey "readability (Lead, R1d)" |
+| (4) IMM 5707 per person | stays as the release places it (expert question on the Lead's list) | |
+Also: the journey's states wait until no button is busy before the screenshot and axe (a contrast flag was caught mid-transition). Journey 102/102 twice on fresh copies, R1d 27/27, R1a 99/99, engine 36/36; `run-suites.sh --demo` 20/20.
+
 ## Known gaps
 1. Restart recovery of the queue is written, not tested by a suite (a restart mid-generation).
 2. "By hand" counts a confirmed value whose form field has no code for it (option map); the copy lists them, the officer writes them in Adobe.

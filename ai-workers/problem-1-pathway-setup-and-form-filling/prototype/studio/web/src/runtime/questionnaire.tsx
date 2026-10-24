@@ -12,7 +12,7 @@ import { Button, Dialog, Input, Notice, Pill, Select, Textarea } from "@/compone
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import type { QuestionnaireView, ViewAnswer, ViewCheck, ViewQuestion, ViewSection } from "../../../contracts/runtime";
+import { fillsText, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 
 export type CasePerson = { subject_id: string; role: "case" | "principal" | "spouse_or_partner" | "child"; label: string; applies: boolean };
 export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; people: CasePerson[] };
@@ -518,7 +518,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           {a ? (
             <>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} /></div>
-              <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? ` · fills ${q.fills.map((f) => `${f.form} for ${f.person}`).join(", ")}` : ""}</p>
+              <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? <> · <span title={q.fills.map((f) => `${f.form} for ${f.person}`).join("\n")}>fills {fillsText(q.fills)}</span></> : null}</p>
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
               {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}
             </>
@@ -587,7 +587,7 @@ function EditDialog({ caseId, q, row, close }: { caseId: string; q: Question; ro
     setBusy(false);
   }
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`${a ? "Change" : "Add"}: ${q.label}`} description={`${q.about_label}${row ? ` · entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1}` : ""}${q.fills.length ? ` · fills ${q.fills.map((f) => `${f.form} for ${f.person} (${f.boxes} form field${f.boxes > 1 ? "s" : ""})`).join(", ")}` : ""}`}
+    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`${a ? "Change" : "Add"}: ${q.label}`} description={`${q.about_label}${row ? ` · entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1}` : ""}${q.fills.length ? ` · fills ${fillsText(q.fills, true)}` : ""}`}
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={busy} onClick={() => void save()}>Save</Button></>}>
       <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
         <QuestionField q={q} idBase="edit-field" draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setError(null); }} errors={error ? [error] : a?.problems ?? []} compact officer />

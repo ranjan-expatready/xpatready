@@ -33,8 +33,18 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   };
   let n = 0;
   /** Screenshot at each width (the first is the page's own) and axe on it; no sideways scroll at any width. */
+  const WAIT = 10000;
+  /** The state a step needs: shown, gone, a value, the focus, or data underneath — waited for, never slept for. */
+  const shows = (loc) => loc.waitFor({ state: "visible", timeout: WAIT }).then(() => true, () => false);
+  const gone = (loc) => loc.waitFor({ state: "detached", timeout: WAIT }).then(() => true, () => false);
+  const until = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: WAIT }).then(() => true, () => false);
+  const eventually = async (fn) => { const end = Date.now() + WAIT; for (;;) { try { if (await fn()) return true; } catch { /* not there yet */ } if (Date.now() > end) return false; await new Promise((ok) => setTimeout(ok, 100)); } };
+  const idle = async (p) => { await p.waitForLoadState("networkidle").catch(() => {}); };
+  const frames = (p) => p.evaluate(() => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(() => ok(null)))));
   const state = async (p, name, widths) => {
     n++; const base = `${String(n).padStart(2, "0")}-${name}`;
+    // A state is what the person sees once the page has settled: no button busy, transitions drawn.
+    await p.waitForFunction(() => !document.querySelector("button[aria-busy]"), undefined, { timeout: WAIT }).catch(() => {}); await frames(p);
     const own = p.viewportSize();
     for (const w of widths) {
       if (w !== p.viewportSize().width) { await p.setViewportSize({ width: w, height: w < 500 ? 844 : 900 }); await frames(p); }
@@ -47,14 +57,6 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
     step(`axe: ${name} has no WCAG A/AA violation`, r.violations.length === 0, r.violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0]?.target?.join(" ")}`).join(" | "));
     if (p.viewportSize().width !== own.width) await p.setViewportSize(own);
   };
-  const WAIT = 10000;
-  /** The state a step needs: shown, gone, a value, the focus, or data underneath — waited for, never slept for. */
-  const shows = (loc) => loc.waitFor({ state: "visible", timeout: WAIT }).then(() => true, () => false);
-  const gone = (loc) => loc.waitFor({ state: "detached", timeout: WAIT }).then(() => true, () => false);
-  const until = (p, fn, arg) => p.waitForFunction(fn, arg, { timeout: WAIT }).then(() => true, () => false);
-  const eventually = async (fn) => { const end = Date.now() + WAIT; for (;;) { try { if (await fn()) return true; } catch { /* not there yet */ } if (Date.now() > end) return false; await new Promise((ok) => setTimeout(ok, 100)); } };
-  const idle = async (p) => { await p.waitForLoadState("networkidle").catch(() => {}); };
-  const frames = (p) => p.evaluate(() => new Promise((ok) => requestAnimationFrame(() => requestAnimationFrame(() => ok(null)))));
   /** Save and continue, then wait until saving is over (the button is enabled again or the part changed). */
   /** Save and continue: every save ends by reloading the questionnaire view; wait for that, then for the button to be free. */
   const saveAndContinue = async (p) => { const reloaded = p.waitForResponse((r) => r.request().method() === "GET" && /\/questionnaire/.test(r.url()), { timeout: WAIT }); await p.getByRole("button", { name: "Save and continue" }).click(); await reloaded; await p.waitForFunction(() => !document.querySelector("button[aria-busy]"), undefined, { timeout: WAIT }); await idle(p); await frames(p); };
@@ -219,6 +221,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await visitSec.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
   step("agent pass: Confirm section confirms the visit's answers (Confirmed, history kept)", await shows(o.getByText(/Your visit for The application: \d+ answers? confirmed/)) && await shows(visitSec.getByText("Confirmed", { exact: true }).first()));
   step("agent source (review M4): a confirmed answer still says who first answered it", await shows(visitSec.getByText(/questionnaire · Client A · .* · confirmed by Case officer/).first()));
+  step("readability (Lead, R1d): an answer read by the whole household says \"fills IMM 5257 for N people\", with each person on hover", await shows(visitSec.getByText(/fills IMM 5257 for 6 people/).first()) && /Sample Child C4/.test((await visitSec.getByText(/fills IMM 5257 for 6 people/).first().getAttribute("title")) ?? ""));
   step("agent copy: no label reads \"(optional) (optional)\"", !(await o.locator("main").textContent()).includes("(optional) (optional)"));
   await state(o, "agent-view-confirmed", [1440, 1024]);
   await visitSec.getByRole("button", { name: /^Edit When will the visit end/ }).click();
@@ -234,7 +237,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.getByRole("dialog").getByLabel("Transit").check();
   await state(o, "agent-edit-dialog", [1440]);
   await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await idle(o);
-  step("agent pass: an edit saves with a message naming every form it fills (P-45)", await shows(o.getByText(/Saved\. It fills IMM 5257 for Sample Applicant C/).last()));
+  step("agent pass: an edit saves with a message naming every form it fills (P-45)", await shows(o.getByText(/Saved\. It fills IMM 5257 for \d+ people \(\d+ form fields\)/).last()));
   step("keyboard (review minor): closing the dialog returns the focus to its Edit button", await until(o, () => (document.activeElement?.getAttribute("aria-label") ?? "").startsWith("Edit Are you applying")));
   // Conflict: the client changes the amount while the officer's dialog is open
   await visitSec.getByRole("button", { name: /^Edit How much money/ }).click();
@@ -269,6 +272,26 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   const dl = o.waitForEvent("download", { timeout: WAIT });
   await imm.getByRole("button", { name: /^Download the copy/ }).first().click();
   step("forms pass: the copy downloads as a PDF", await dl.then(async (d) => /\.pdf$/.test(d.suggestedFilename())).catch(() => false));
+  step("P-71 fail-guard: while facts are missing, Filed and Validated copy uploaded back are disabled and say why", await imm.getByRole("button", { name: "Filed" }).isDisabled() && await shows(imm.getByText(/Not yet: \d+ facts? to confirm before filing: confirm/)));
+  // Confirm every required fact IMM 5257 reads for the principal (Sample values by type), as the officer would.
+  const sample = (q) => q.options?.length ? q.options[0].key : q.shape.phone ? { country_code: "1", number: "5550100" } : q.value_type === "yes_no" ? false
+    : q.value_type === "date" ? (q.shape.datePrecision === "month" ? "1990-01" : "1990-01-01") : q.value_type === "number" ? "1000"
+    : q.value_type === "address" ? { street_name: "Sample Road", city: "Sample City", country: "Canada" } : /email/.test(q.fact) ? "client.a@example.com" : "SAMPLE";
+  for (let pass = 0; pass < 3; pass++) {
+    const av = (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body;
+    const todo = av.sections.flatMap((x) => x.questions).filter((q) => q.required && !q.hidden && !q.group && q.fills.some((f) => f.form === "IMM 5257" && f.person === "Sample Applicant C") && !q.answer?.confirmed);
+    if (!todo.length) break;
+    for (const q of todo) await call("PUT", `/runtime/cases/${caseId}/answers/${q.subjectId}/${q.fact}`, { value: sample(q), expectedId: q.answer?.id ?? null }, "user-O");
+    const fresh = (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body;
+    for (const sec of fresh.sections.filter((x) => todo.some((q) => q.subjectId === x.subjectId))) {
+      const seen = sec.questions.flatMap((q) => [q.answer?.id, ...q.rows.map((r) => r.answer?.id)]).filter(Boolean);
+      if (seen.length) await call("POST", `/runtime/cases/${caseId}/sections/${sec.section}/confirm`, { subjectId: sec.subjectId, seen }, "user-O");
+    }
+  }
+  await o.reload(); await idle(o);
+  step("P-71 pass: with every required fact confirmed, IMM 5257 is ready to file and the earlier copy is out of date", await shows(imm.getByText("Ready to file")) && await shows(imm.getByText("Out of date")));
+  await imm.getByRole("button", { name: "Generate a new copy" }).click();
+  await shows(imm.getByText("Generated", { exact: true }));
   await imm.getByRole("button", { name: "Filed" }).click();
   await state(o, "forms-lock-confirm", [1440]);
   await imm.getByRole("group", { name: "Lock this copy" }).getByRole("button", { name: "Lock", exact: true }).click();
@@ -282,7 +305,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("forms RT-15 pass: after the visit end changes, the filed copy is stale, names the fact and keeps its file", await shows(imm.getByText(/Stale · Filed/)) && await shows(imm.getByText(/Facts changed after this copy was locked; the locked file is kept as it was\. Changed: When will the visit end\?/)));
   await state(o, "forms-stale", [1440, 1024]);
   await imm.getByRole("button", { name: "Generate a new copy" }).click();
-  step("forms RT-15 pass: a new copy is made only when asked; the filed copy stays in view beside it", await shows(imm.getByText("Generated", { exact: true })) && await shows(imm.getByText(/Stale · Filed/)));
+  step("forms RT-15 pass: a new copy is made only when asked; the filed copy stays in view beside it", await shows(imm.getByText("Generated", { exact: true }).first()) && await shows(imm.getByText(/Stale · Filed/)));
 
   // Budgets (STANDARDS §9): first view < 1 s; an in-page change (a person's tab) < 200 ms
   let t = Date.now(); await o.goto(`${BASE}/cases/${caseId}`); await o.getByRole("heading", { name: "Application details" }).waitFor(); const agentMs = Date.now() - t;

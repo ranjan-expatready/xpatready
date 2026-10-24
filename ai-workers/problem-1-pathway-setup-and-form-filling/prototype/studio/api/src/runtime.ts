@@ -7,7 +7,7 @@
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import type { z } from "zod";
-import { ConfirmSection, NewCase, NewPerson, NewRow, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
+import { ConfirmSection, fillsText, NewCase, NewPerson, NewRow, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView, checkValue, isClientField, type Answer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
@@ -215,7 +215,7 @@ export class Runtime {
     const ans = rowKey ? q?.rows.find((x) => x.row === rowKey)?.answer : q?.answer;
     const fills = q?.fills ?? [];
     return { answer: ans ?? { id: newId, problems: checkValue(s, fieldKey, b.value) }, fills,
-      message: fills.length ? `Saved. It fills ${fills.map((f) => `${f.form} for ${f.person} (${f.boxes} form field${f.boxes > 1 ? "s" : ""})`).join(", ")}.` : "Saved." };
+      message: fills.length ? `Saved. It fills ${fillsText(fills, true)}.` : "Saved." };
   }
 
   /** Adds a row to a person's repeating group (or the application's, for a case-level group). Rows of one group are

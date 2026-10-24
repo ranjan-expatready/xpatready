@@ -8,7 +8,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api, getActor, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Notice, Pill } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LOCK_KINDS, type CaseForm, type FormCopy } from "../../../contracts/runtime";
+import { LOCK_KINDS, notReady, type CaseForm, type FormCopy } from "../../../contracts/runtime";
 import { noRetryOnRefusal } from "./questionnaire";
 
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -63,7 +63,10 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
     catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); }
     setLocking(null); await refresh(); setWorking(false);
   }
-  const canLock = latest && latest.status === "GENERATED" && !latest.locked && !latest.out_of_date;
+  // P-71: a copy is filed or uploaded back only when the form is ready to file; until then the buttons say why.
+  const lockable = latest && latest.status === "GENERATED" && !latest.locked && !latest.out_of_date;
+  const canLock = lockable && f.readiness.ready;
+  const lockBlocked = lockable && !f.readiness.ready ? notReady(f.readiness.missing.length) : null;
   return (
     <li className="space-y-2 px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -77,7 +80,7 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
         </Button>
       </div>
       <p className="text-[13px] text-text-muted">A copy made now writes {f.draft.written_now} of {f.draft.mapped} form fields from confirmed answers{f.draft.unconfirmed ? `; ${f.draft.unconfirmed} answered but not confirmed stay blank` : ""}.</p>
-      {latest ? <CopyLine c={latest} canLock={!!canLock} locking={locking} setLocking={setLocking} lock={lock} working={working} /> : null}
+      {latest ? <CopyLine c={latest} canLock={!!canLock} lockBlocked={lockBlocked} locking={locking} setLocking={setLocking} lock={lock} working={working} /> : null}
       {locked && locked !== latest ? <CopyLine c={locked} canLock={false} locking={null} setLocking={() => {}} lock={lock} working={working} /> : null}
       {earlier.length ? (
         <details className="text-[13px]">
@@ -89,7 +92,7 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
   );
 }
 
-function CopyLine({ c, canLock, locking, setLocking, lock, working, compact }: { c: FormCopy; canLock: boolean; locking: keyof typeof LOCK_KINDS | null; setLocking: (k: keyof typeof LOCK_KINDS | null) => void; lock: (id: string, k: keyof typeof LOCK_KINDS) => Promise<void>; working: boolean; compact?: boolean }) {
+function CopyLine({ c, canLock, lockBlocked = null, locking, setLocking, lock, working, compact }: { c: FormCopy; canLock: boolean; lockBlocked?: string | null; locking: keyof typeof LOCK_KINDS | null; setLocking: (k: keyof typeof LOCK_KINDS | null) => void; lock: (id: string, k: keyof typeof LOCK_KINDS) => Promise<void>; working: boolean; compact?: boolean }) {
   const toast = useToast();
   async function download() {
     try {
@@ -105,11 +108,16 @@ function CopyLine({ c, canLock, locking, setLocking, lock, working, compact }: {
         <CopyState c={c} />
         <span className="text-text-muted">Copy of {when(c.created_at)}{c.counts ? ` · ${c.counts.written} form fields written${c.counts.by_hand ? `, ${c.counts.by_hand} by hand` : ""}` : ""}{c.intact ? " · read back and checked" : ""}</span>
         {c.status === "GENERATED" ? <Button size="sm" variant="ghost" onClick={() => void download()} aria-label={`Download the copy of ${when(c.created_at)}`}><Download aria-hidden />Download</Button> : null}
+        {lockBlocked ? <>
+          <Button size="sm" variant="secondary" disabled aria-describedby={`lock-why-${c.id}`}><Lock aria-hidden />Validated copy uploaded back</Button>
+          <Button size="sm" variant="secondary" disabled aria-describedby={`lock-why-${c.id}`}><Lock aria-hidden />Filed</Button>
+        </> : null}
         {canLock && !locking ? <>
           <Button size="sm" variant="secondary" onClick={() => setLocking("validated_copy_uploaded")}><Lock aria-hidden />Validated copy uploaded back</Button>
           <Button size="sm" variant="secondary" onClick={() => setLocking("filed")}><Lock aria-hidden />Filed</Button>
         </> : null}
       </div>
+      {lockBlocked ? <p id={`lock-why-${c.id}`} className="text-[13px] text-text-muted">Not yet: {lockBlocked}</p> : null}
       {!compact && locking ? (
         <div role="group" aria-label="Lock this copy" className="flex flex-wrap items-center gap-2 text-[13px]">
           <span>Lock this copy as “{LOCK_KINDS[locking]}”? A locked copy never changes; a later answer marks it stale.</span>

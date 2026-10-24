@@ -130,3 +130,17 @@ export type CaseForm = {
   form: string; title: string; subject_id: string; person: string; draft: { written_now: number; mapped: number; unconfirmed: number };
   readiness: { ready: boolean; missing: { fact: string; label: string; about: string; answered: boolean }[] }; copies: FormCopy[];
 };
+
+/** Which forms an answer fills, short enough for a household (Lead, R1d early look): one line per form, the person named
+ *  when there is one, else how many people ("IMM 5257 for 6 people"); with counts, the form fields it fills (P-63). */
+export function fillsText(fills: { form: string; person: string; boxes: number }[], counts = false): string {
+  const byForm = new Map<string, { person: string; boxes: number }[]>();
+  for (const f of fills) byForm.set(f.form, [...(byForm.get(f.form) ?? []), f]);
+  return [...byForm].map(([form, list]) => {
+    const n = list.reduce((s, x) => s + x.boxes, 0), fields = counts ? ` (${n} form field${n === 1 ? "" : "s"})` : "";
+    return `${form} for ${list.length === 1 ? list[0].person : `${list.length} people`}${fields}`;
+  }).join(", ");
+}
+
+/** Why a copy cannot be locked yet (P-71, Lead R1d early look): the same words in the API and on the button. */
+export const notReady = (n: number) => `${n} fact${n === 1 ? "" : "s"} to confirm before filing: confirm ${n === 1 ? "it" : "them"}, then generate a new copy.`;

@@ -11,7 +11,7 @@ import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { z } from "zod";
-import { GenerateCopy, LockCopy, LOCK_KINDS, type CaseForm, type FormCopy } from "../../contracts/runtime.ts";
+import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type FormCopy } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
 import { changedFacts, formCoverage, inputHash, readiness, type FormFact } from "../../engine/runtime/forms.ts";
@@ -27,6 +27,7 @@ const parse = <S extends z.ZodType>(schema: S, input: unknown): z.infer<S> => { 
 const conflict = (detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Not possible now", status: 409, detail }, HttpStatus.CONFLICT); };
 const ROLE: Record<string, string> = { principal: "principal applicant", spouse_or_partner: "spouse or partner", child: "child" };
 const unique = (e: unknown) => (e as { code?: string }).code === "P2002";
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** A malformed id in the URL is "not found", never a database error. */
 const idOf = (id: string, what: string) => (UUID.test(id) ? id : fail(`No such ${what}.`, HttpStatus.NOT_FOUND));
@@ -178,6 +179,10 @@ export class CaseForms implements OnModuleInit {
     const cov = formCoverage(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId);
     const changed = changedFacts((x.snapshot.factsJson as Stored).facts, cov?.facts ?? []);
     if (changed.length) conflict(`This copy is out of date (${changed.length} fact${changed.length === 1 ? "" : "s"} changed since it was made); generate a new copy and lock that one.`);
+    // P-71 (Lead, R1d early look): a copy is filed or uploaded back only when its form is ready to file.
+    const who = c.participants.find((p) => p.subjectId === x.subjectId)!;
+    const ready = readiness(caseView(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, "agent"), x.formNumber, who.subject.label);
+    if (!ready.ready) conflict(notReady(ready.missing.length));
     const n = await this.db.formInstance.updateMany({ where: { id, status: "GENERATED", lockedAt: null }, data: { lockedKind: b.kind, lockedAt: new Date(), lockedBy: actor.id } });
     if (n.count !== 1) conflict("Someone locked this copy at the same moment.");
     await this.audit.log(c.workspaceId, actor.id, "locked", "form copy", x.formNumber, `${actor.name} locked copy ${short(id)} of ${x.formNumber} on case ${short(x.caseId)}: ${LOCK_KINDS[b.kind]}`);
