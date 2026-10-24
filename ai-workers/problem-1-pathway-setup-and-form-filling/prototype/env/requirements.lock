@@ -1,0 +1,7 @@
+# Prototype Python environment (AIW-D257 pypdf; AIW-D259 cryptography pin; zxing-cpp founder yes 19 Oct under AIW-D258). Install with
+# --require-hashes --no-deps --only-binary :all: ; macOS arm64, CPython 3.14.
+pypdf==6.19.0 --hash=sha256:7e5d6e730e7dae87d560a2cee218b852f6498c8be61966f3cd02ead971e48d14
+cryptography==49.0.0 --hash=sha256:966fe0e9c67490071f14c0d2b1cb2dfb3023c5ce39457343931415f08382f2db
+cffi==2.0.0 --hash=sha256:c654de545946e0db659b3400168c9ad31b5d29593291482c43e3564effbcee13
+pycparser==3.0 --hash=sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992
+zxing-cpp==3.1.1 --hash=sha256:037cbcaeb0cb12497fc15ced23f6b778fce8a6a1d1bbffddbffd004c6225744d
