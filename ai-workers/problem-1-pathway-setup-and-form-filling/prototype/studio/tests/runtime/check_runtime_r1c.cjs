@@ -138,6 +138,15 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("client: removing an entry asks first, then removes it (history kept)", await gone(c.getByRole("region", { name: "Entry 2" })) && await shows(c.getByText("Entry removed. Its answers are kept in the case history.")));
   await saveAndContinue(c);
   step("client pass: the fixed part saves and moves on", await shows(c.getByText(/^Part 3 of \d+/)), await c.getByRole("alert").allTextContents());
+  // PR 10 review (1): Back with a refused save stays on the part with the typing and the reason
+  await c.getByRole("button", { name: "Back", exact: true }).click();
+  await shows(c.getByText(/^Part 2 of \d+/));
+  await c.getByLabel(/How much money/).fill("");
+  await c.getByRole("button", { name: "Back", exact: true }).click();
+  step("back fail-guard (PR 10 review): a refused save on Back keeps the client on the part, with what they typed and the reason, focused", await shows(c.getByRole("alert").filter({ hasText: "There is a problem" }).getByRole("link", { name: /money.*changed but not cleared/i })) && await shows(c.getByText(/^Part 2 of \d+/)) && (await c.getByLabel(/How much money/).inputValue()) === "" && await until(c, () => document.activeElement?.textContent?.startsWith("There is a problem") ?? false));
+  await c.getByLabel(/How much money/).fill("5000");
+  await saveAndContinue(c);
+  step("back pass: once fixed, the part saves and moves on again", await shows(c.getByText(/^Part 3 of \d+/)));
   v = (await call("GET", `/runtime/cases/${caseId}/questionnaire`, undefined, "user-P")).body;
   const host = qOf(v, "The application", "case.visit_contact_address_in_canada");
   step("data: the repeating group holds one live entry with its address in parts; the fixed values are stored clean", host?.rows.length === 1 && host.rows[0].answer?.value?.city === "Toronto" && qOf(v, "The application", "case.funds_available_cad")?.answer?.value === "5000" && qOf(v, "The application", "case.intended_stay_to")?.answer?.value === "2027-07-31" && v.checks.length === 0, v.checks);
@@ -231,6 +240,14 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   t = Date.now(); await o.getByRole("tab", { name: /^Sample Applicant C/ }).click(); await o.getByRole("heading", { name: "Travel and identity documents" }).waitFor(); const tabMs = Date.now() - t;
   t = Date.now(); await c.goto(`${BASE}/cases/${caseId}/questionnaire?part=3`); await c.getByText(/^Part 3 of \d+/).waitFor(); const partMs = Date.now() - t;
   if (!process.env.R1C_SLOW) step(`budget: first view of the case page (${agentMs} ms) and of a client part (${partMs} ms) under 1 s; a person's tab (${tabMs} ms) under 200 ms`, agentMs < 1000 && partMs < 1000 && tabMs < 200, { agentMs, partMs, tabMs });
+
+  // PR 10 review (2): the case list reaches every case, a page at a time ("Load more" through the API's cursor)
+  const vvId = (await call("GET", `/runtime/cases/${caseId}`, undefined, "user-O")).body.combination_id;
+  for (let i = 0; i < 51; i++) await call("POST", "/runtime/cases", { combinationId: vvId, reference: `R1C-PAGE-${run}-${String(i).padStart(2, "0")}`, clientActor: "user-P", principal: { displayName: "Sample Paged Applicant" } }, "user-O");
+  await o.goto(`${BASE}/cases`); await idle(o);
+  step("case list fail-guard (PR 10 review): the first page shows 50 cases and offers Load more", await shows(o.getByText("50 cases shown")) && await shows(o.getByRole("button", { name: "Load more" })));
+  await o.getByRole("button", { name: "Load more" }).click();
+  step("case list pass: Load more appends the next page and keeps the first; the oldest case is reachable", await gone(o.getByText("50 cases shown")) && await shows(o.getByRole("link", { name: `R1C-${run}`, exact: true })) && await shows(o.getByRole("link", { name: `R1C-PAGE-${run}-50` })));
 
   step("no page errors in either browser", errors.length === 0, errors.slice(0, 3));
   fs.writeFileSync(path.join(SHOTS, "axe.json"), JSON.stringify(axeLog, null, 1));

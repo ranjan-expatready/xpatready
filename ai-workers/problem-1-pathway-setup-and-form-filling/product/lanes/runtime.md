@@ -9,11 +9,12 @@ current_item: R1-thin-slice
 current_slice: R1c
 stage: CHECK
 owner: Lead
-next_action: Lead re-checks R1c: check_runtime_r1c.cjs now waits for state (build-notes-r1c "Lead check FIX"); 75/75 on three fresh copies, 74/74 throttled (R1C_SLOW=6). Then R1d.
+next_action: R1c accepted; PR 10 review defects fixed (Back keeps a refused draft; case list Load more). Wait for the Lead: PR #10 merged → sync main → BUILD R1d.
 blocked_by: none
 updated: 2026-10-24
 
 ## Log (last 10 lines)
+- 2026-10-24 · Builder (cloud): PR 10 review: Back keeps a refused draft (Major), case list Load more (Minor), each with a test caught by mutation; journey 79/79, API 97/97, run-suites green; waiting for #10 merge before R1d.
 - 2026-10-24 · Builder (cloud): Lead check FIX: journey flakiness root cause = the check read state immediately; now waits for state (no sleeps); reproduced and fixed under R1C_SLOW=6 (60 → 74/74); 75/75 ×3 fresh copies, API 97/97; Lead answers recorded (union date plan item); CHECK owner Lead.
 - 2026-10-24 · Builder (cloud): FIX R1c done: review M1–M6 and break M1–M4 plus 11 Minors fixed with tests; journey 75/75, API 97/97, engine 29/29, run-suites --demo green; copies stopped; CHECK owner Lead.
 - 2026-10-24 · Builder (cloud): CHECK R1c: review 7/10, Ship after fixes (M1–M6); FIX in progress (rules named after save, group intro, conflict dialog, first answerer kept, country suggestions, wrapping tabs); break report pending.
@@ -23,4 +24,3 @@ updated: 2026-10-24
 - 2026-10-24 · Builder (cloud): applied Lead note 2026-10-24 22:00; merged main (cd97cb6), cloud-setup; FIX D1 (Confirm section ignores a removed row's answers) and D2 (ageOn refuses impossible and future dates), pass and fail tests each failing on the old code; engine 23/23, API 87/87, run-suites green; BUILD R1c next, owner Builder.
 - 2026-10-24 · Builder: applied Lead note 2026-10-24; merged main (conflicts resolved for main), S-9 (release publishes answer lists; main's new check refused the visitor visa), P-78 wording; setup 11/11, API 85/85, engine 20/20, regressions green; copies stopped; CHECK owner Lead.
 - 2026-10-23 · Builder: CHECK → FIX → CHECK: review 7.5/10 (2 Must, 5 Major), break 4 Major + 11 Minor, all fixed with tests; fresh copy setup 11/11, API 84/84, engine 20/20; regressions green; owner Lead.
-- 2026-10-23 · Builder: applied Lead note 2026-10-23 18:00; BUILD R1a done: visitor visa released in runtime_r1 through the product (10/10, 0 errors), case core 60/60, regressions green (forms 106/106 with keep-alive off); shared S-1, S-2, S-6, S-7; CHECK started.

@@ -66,6 +66,16 @@ function CaseList() {
   const actor = useActorId();
   const cases = useApi<{ cases: CaseRow[]; next: string | null }>(["runtime", "cases", actor], "/runtime/cases", { retry: noRetryOnRefusal });
   const [open, setOpen] = React.useState(false);
+  // Later pages through the API's cursor, appended below the first (PR 10 review): page 1 stays live, later ones are kept.
+  const [more, setMore] = React.useState<{ rows: CaseRow[]; next: string | null } | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const next = more ? more.next : cases.data?.next ?? null;
+  async function loadMore() {
+    if (!next || loading) return;
+    setLoading(true);
+    try { const page = await api<{ cases: CaseRow[]; next: string | null }>(`/runtime/cases?after=${encodeURIComponent(next)}`); setMore((m) => ({ rows: [...(m?.rows ?? []), ...page.cases], next: page.next })); } finally { setLoading(false); }
+  }
+  const rows = [...(cases.data?.cases ?? []), ...(more?.rows ?? [])].filter((c, i, all) => all.findIndex((x) => x.id === c.id) === i);
   if (cases.isError && (cases.error as ApiError).status === 403) return <Notice title="Cases are for the case officer">Clients open their questionnaire from the link their officer sends. Switch to the case officer to see the cases.</Notice>;
   return (
     <div className="mx-auto max-w-5xl space-y-4">
@@ -74,8 +84,9 @@ function CaseList() {
         <Button onClick={() => setOpen(true)}><Plus aria-hidden />Open a case</Button>
       </div>
       {cases.isLoading ? <Skeleton className="h-40 w-full" /> : cases.isError ? <Notice tone="danger" title="Cases could not be loaded">{(cases.error as Error).message}</Notice>
-        : !cases.data!.cases.length ? <Notice title="No cases yet">Open a case for a released combination; then add the family and send the client their questionnaire.</Notice>
-        : <Table head={["Reference", "Combination", "Status", "Opened"]}>{cases.data!.cases.map((c) => <tr key={c.id}><td><Link className="font-medium text-text-link hover:underline" to={`/cases/${c.id}`}>{c.reference}</Link></td><td>{c.combination}</td><td><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></td><td>{new Date(c.created_at).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" })}</td></tr>)}</Table>}
+        : !rows.length ? <Notice title="No cases yet">Open a case for a released combination; then add the family and send the client their questionnaire.</Notice>
+        : <Table head={["Reference", "Combination", "Status", "Opened"]}>{rows.map((c) => <tr key={c.id}><td><Link className="font-medium text-text-link hover:underline" to={`/cases/${c.id}`}>{c.reference}</Link></td><td>{c.combination}</td><td><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></td><td>{new Date(c.created_at).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" })}</td></tr>)}</Table>}
+      {rows.length ? <div className="flex items-center gap-3 text-[13px] text-text-muted"><span>{rows.length} case{rows.length === 1 ? "" : "s"} shown</span>{next ? <Button size="sm" variant="secondary" busy={loading} onClick={() => void loadMore()}>Load more</Button> : null}</div> : null}
       {open ? <NewCaseDialog close={() => setOpen(false)} /> : null}
     </div>
   );

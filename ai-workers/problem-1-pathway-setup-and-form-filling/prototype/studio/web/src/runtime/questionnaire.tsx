@@ -361,7 +361,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   return (
     <div className="mx-auto max-w-xl">
       <div className="mb-3 flex items-center justify-between gap-3 text-sm">
-        <button className="flex min-h-11 items-center gap-1 font-medium text-text-link hover:underline" disabled={status === "saving"} onClick={async () => { if (d.dirty.length) await save(); go(index > 0 ? index - 1 : null); }}><ArrowLeft className="size-4" aria-hidden />Back</button>
+        <button className="flex min-h-11 items-center gap-1 font-medium text-text-link hover:underline" disabled={status === "saving"} onClick={async () => { if (d.dirty.length && !(await save())) { setSummary(true); setFocusSummary((n) => n + 1); return; } go(index > 0 ? index - 1 : null); }}><ArrowLeft className="size-4" aria-hidden />Back</button>
         <span role="status" className={cn("text-[13px]", status === "failed" ? "text-text-danger" : "text-text-ok")}>{status === "saving" ? "Saving…" : status === "saved" ? "✓ Saved" : status === "failed" ? "Some answers were not saved" : d.dirty.length ? "" : part.answered ? "✓ Saved" : ""}</span>
       </div>
       <p className="text-[13px] text-text-muted">Part {index + 1} of {total} · {part.title}</p>
