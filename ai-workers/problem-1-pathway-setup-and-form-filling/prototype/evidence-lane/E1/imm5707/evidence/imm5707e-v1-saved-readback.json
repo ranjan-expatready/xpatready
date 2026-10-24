@@ -1,0 +1,24 @@
+{
+ "form": "IMM 5707 (01-2023)",
+ "official_sha256": "6e59d35048ef3995e1d4583f08c38a710a351e23b1cc0fbfe517d82f38cb20ef",
+ "saved_sha256": "6d1fcfa2c495b54c03c0d31ead78abebe085fdef4160c00d90b5fa3c493f2442",
+ "bytes": {
+  "official": 2366133,
+  "as_written": 2367211,
+  "adobe_saved": 2366439
+ },
+ "official_prefix_kept": false,
+ "as_written_prefix_kept": false,
+ "signatures": {
+  "/UR3": {
+   "same_byte_range_as_official": true,
+   "verify": "verified"
+  }
+ },
+ "signatures_missing": [],
+ "poppler_syntax_errors": 0,
+ "written_values": 39,
+ "unchanged_before_save": 39,
+ "unchanged_after_save": 39,
+ "differences": {}
+}
