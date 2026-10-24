@@ -18,3 +18,7 @@ How checked: diff `main...a145246` (26 files; `p5/page_fields.py` new, `p5/fill.
 * **D3, QA-15, QA-30, QA-34:** per build notes with tests; qa retests at the next after-merge.
 * **Answers:** (1) the evidence lane re-checks one F5 file in Adobe (extended features kept, values unchanged) — Mac, next evidence stage. (2) QA-15 → the qa lane marks it in `qa/BUGS.md`. (3) form code naming "IMM 5257 1" vs "IMM 5257 SCH1": a form's official code is an immigration value → expert question; unchanged until then. (4) stub runs writing the shared p2 ledger → backlog B33.
 * Capability or scaffolding (P-33): page fields drawn exactly and the oath as a person step are capability (the filed PDF); the fake launcher is scaffolding.
+
+## Correction and the qa Minors pass (24 Oct, cloud Lead) — **Result: MERGED**
+Correction to the slice 2b record above: QA-30 and QA-34 were not in a145246; they landed in c0bf023 (fake launcher fenced to `var/isolated-*`, coverage api 95.73/79.09). qa Minors pass 5df6e22: QA-27 plain words, QA-31 a LIVE screen-map draft is cancellable, QA-32 retry after a mid-run cancel reuses finished parts, QA-33 reuse compares the kind of box; review 6/10 and break 2+2 Majors fixed (cancel honoured up to the paid call on every path; reset during a screen-map draft no longer crashes; Retry only where the server retries, `ai.tsx` one line accepted). Lead run: 20/20 suites green; launch paths 52/52, slice 2 53/53, slice 2b 60/60; coverage per lane api 95.89/79.67.
+**Next:** F2 (working extension, P-66) after a Lead concept; the lane waits.

@@ -186,6 +186,17 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   r = await call("POST", "/ai/plan", { scope: { kind: "source", ids: [att(sv, "imm5257e.pdf")] }, mode: "LIVE", draftAgain: true });
   const t2 = r.body.targets?.[0];
   ok("A4 reuse (API): the Super visa's IMM 5257 reuses every field the earlier edition maps; only the fields it left open go to the AI, with a smaller worst case", t2?.a4?.reused === t2?.a4?.total - openRows && t2.a4.to_ai === openRows && t2.a4.reused_from[0] === "IMM 5257 (01-2020)" && t2.worst_usd > 0 && t2.worst_usd < 5, { reused: t2?.a4?.reused, to_ai: t2?.a4?.to_ai, worst: t2?.worst_usd, open: openRows });
+  // QA-33 (server half, review 6 of the qa Minors pass): the earlier edition's kind of box comes from its inventory.
+  const earlierInv = sql("select inventory_file from form_edition where edition_label = 'IMM 5257 (01-2020)'");
+  const kindInv = JSON.parse(readFileSync(join(PROTOTYPE, "..", earlierInv), "utf8"));
+  const mappedPaths = new Set(sql("select data_path from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 5257 (01-2020)' and m.outcome = 'mapped'").split("\n"));
+  const kindBox = kindInv.fields.find((f: { data_path?: string; ui?: string; options_resolved?: unknown[] }) => f.data_path && mappedPaths.has(f.data_path) && f.ui === "textEdit" && !f.options_resolved?.length);
+  kindBox.ui = "dateTimeEdit";
+  const kindFile = join(STUDIO, "var", `kind-changed-${Date.now()}.inventory.json`); writeFileSync(kindFile, JSON.stringify(kindInv));
+  sql(`update form_edition set inventory_file = '${kindFile.replace(join(PROTOTYPE, "..") + "/", "")}' where edition_label = 'IMM 5257 (01-2020)'`);
+  const tKind = (await call("POST", "/ai/plan", { scope: { kind: "source", ids: [att(sv, "imm5257e.pdf")] }, mode: "LIVE", draftAgain: true })).body.targets?.[0];
+  sql(`update form_edition set inventory_file = '${earlierInv}' where edition_label = 'IMM 5257 (01-2020)'`);
+  ok("QA-33 (API): a form field that was a date box in the earlier edition and is a text box now is not reused; every other field still is", tKind?.a4?.reused === t2.a4.reused - 1, { before: t2.a4.reused, after: tKind?.a4?.reused, field: kindBox?.caption });
   sql("update form_field_map set outcome = 'not_a_fact', reason = 'test: closed by a person' where outcome = 'unresolved' and form_edition_id = (select id from form_edition where edition_label = 'IMM 5257 (01-2020)')");
   r = await call("POST", "/ai/plan", { scope: { kind: "source", ids: [att(sv, "imm5257e.pdf")] }, mode: "LIVE", draftAgain: true });
   ok("A4 reuse: when every field is reused the plan says so: no AI call, US$0", r.body.targets?.[0]?.worst_usd === 0 && r.body.targets[0].a4?.parts.length === 0 && /no AI call, US\$0/.test(r.body.targets[0].why), r.body.targets?.[0]?.why);

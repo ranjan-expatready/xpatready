@@ -248,6 +248,61 @@ async function main() {
   const [del, ansr] = await Promise.all([call("DELETE", `/runtime/cases/${fresh}/groups/${freshPrincipal}/rows/${rowK}`, undefined, CLIENT), call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.employment_employer_name`, { value: "Sample Employer R", expectedId: null, row: rowK }, CLIENT)]);
   const lost = ansr.status === 200 && sql(`select count(*) from client_fact_record where row_key='${rowK}' and tombstone`) === "1" && sql(`select count(*) from client_canonical_answer where row_key='${rowK}'`) === "0";
   ok("FIX B11 fail-guard: removing a row while answering into it never reports a saved answer that is lost", del.status === 200 && !lost, [del.status, ansr.status]);
+  // PR 7 review D1: a removed row's answers no longer block "Confirm section"; they stay stored, unverified
+  const d1Row = (await call("POST", `/runtime/cases/${fresh}/groups/${freshPrincipal}/rows`, { group: "employment_history" }, CLIENT)).body.row;
+  const d1Ans = await call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.employment_employer_name`, { value: "Sample Employer D1", expectedId: null, row: d1Row }, CLIENT);
+  await call("DELETE", `/runtime/cases/${fresh}/groups/${freshPrincipal}/rows/${d1Row}`, undefined, CLIENT);
+  const freshSeen = async () => (await call("GET", `/runtime/cases/${fresh}/questionnaire?mode=agent`, undefined, OFFICER)).body.sections.filter((x: { subjectId: string; section: string }) => x.subjectId === freshPrincipal && x.section === "employment_history").flatMap((x: { questions: Q[] }) => x.questions).flatMap((q: Q) => (q.group ? q.rows.map((r) => r.answer?.id) : [q.answer?.id])).filter(Boolean) as string[];
+  const d1Seen = await freshSeen();
+  const liveRow = radds[1].body.row;
+  await call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.employment_employer_name`, { value: "Sample Employer D1 live", expectedId: null, row: liveRow }, CLIENT);
+  r = await call("POST", `/runtime/cases/${fresh}/sections/employment_history/confirm`, { subjectId: freshPrincipal, seen: d1Seen }, OFFICER);
+  ok("D1 fail: an answer arriving in a live row after the officer looked is still refused (409) and named", r.status === 409 && r.body?.changed?.includes("person.employment_employer_name"), r.body);
+  r = await call("POST", `/runtime/cases/${fresh}/sections/employment_history/confirm`, { subjectId: freshPrincipal, seen: [...await freshSeen(), d1Ans.body?.answer?.id].filter(Boolean) }, OFFICER);
+  ok("D1 pass: after a row is removed the section can be confirmed; the removed row's answer stays stored and unverified (history kept)", d1Ans.status === 200 && r.status === 201 && r.body.confirmed >= 1 && sql(`select count(*) from client_canonical_answer where row_key='${d1Row}' and status='DECLARED' and superseded_by_id is null`) === "1" && sql(`select count(*) from client_canonical_answer where row_key='${d1Row}' and status='VERIFIED'`) === "0", { answer: d1Ans.status, confirm: r.status, body: r.body });
+  // qa QA-25: control characters are refused anywhere in an answer (tab, line feed, carriage return allowed)
+  const ctl = await Promise.all([
+    call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.other_family_name`, { value: "Sample\u0007Name", expectedId: null }, CLIENT),
+    call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.mailing_address`, { value: { street_name: "Sample\u0001Road", city: "Toronto", country: "Canada" }, expectedId: null }, CLIENT),
+    call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.other_given_names`, { value: "Sample\u007fName", expectedId: null }, CLIENT),
+  ]);
+  ok("QA-25 fail: a bell, a control character inside an address part, or DEL is refused (400) with a plain reason, not stored", ctl.every((x) => x.status === 400 && /control characters/.test(x.body?.detail ?? "")) && sql(`select count(*) from client_canonical_answer where subject_id='${freshPrincipal}' and canonical_field_key in ('person.other_family_name','person.mailing_address','person.other_given_names')`) === "0", ctl.map((x) => x.status));
+  r = await call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.criminal_history_details`, { value: "Line one\n\tLine two\r\nLine three", expectedId: null }, CLIENT);
+  ok("QA-25 pass: long text keeps its line breaks and tabs", r.status === 200, r.status);
+  // qa QA-26: refusals about ids say what to send, never "Invalid UUID"
+  const ids = await Promise.all([
+    call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.other_family_name`, { value: "Sample", expectedId: "abc" }, CLIENT),
+    call("POST", `/runtime/cases/${fresh}/sections/contact/confirm`, { subjectId: freshPrincipal, seen: ["abc"] }, OFFICER),
+    call("POST", `/runtime/cases/${fresh}/sections/contact/confirm`, { subjectId: "abc", seen: [] }, OFFICER),
+    call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.employment_employer_name`, { value: "Sample", expectedId: null, row: "abc" }, CLIENT),
+    call("POST", "/runtime/cases", { combinationId: "abc", reference: `R1A-ID-${run}`, clientActor: CLIENT, principal: { displayName: "Sample" } }, OFFICER),
+  ]);
+  ok("QA-26 fail: every refused id (answer seen, reviewed answers, person, row, combination) is a 400 in plain words, never \"Invalid UUID\"", ids.every((x) => x.status === 400 && !/invalid uuid/i.test(JSON.stringify(x.body))), ids.map((x) => x.body?.detail));
+  ok("QA-26 pass: the stale-id refusal says what to send", /id of the answer you saw/.test(ids[0].body?.detail ?? "") && /reviewed answer/.test(ids[1].body?.detail ?? ""), [ids[0].body?.detail, ids[1].body?.detail]);
+  // qa QA-28: pressing "Add child" twice adds one child
+  const twice = await Promise.all([0, 1].map(() => call("POST", `/runtime/cases/${fresh}/people`, { role: "child", displayName: "Sample Child QA28", idempotencyKey: `qa28-${run}` }, OFFICER)));
+  ok("QA-28 pass: two presses with one key add one child and both answer with that child", twice.every((x) => x.status === 201 && x.body.subject_id === twice[0].body.subject_id) && sql(`select count(*) from case_participant p join answer_subject s on s.id = p.subject_id where p.case_id='${fresh}' and s.label='Sample Child QA28'`) === "1", twice.map((x) => [x.status, x.body?.subject_id]));
+  r = await call("POST", `/runtime/cases/${fresh}/people`, { role: "child", displayName: "Another Child QA28", idempotencyKey: `qa28-${run}` }, OFFICER);
+  ok("QA-28 fail: the same key for a different person is refused (409); nobody is added", r.status === 409 && sql(`select count(*) from answer_subject where label='Another Child QA28'`) === "0", r.body?.detail);
+  // R1c break report: hostile text never reaches the database as a 500; rules compare numbers; release data fixes
+  // A 5,000-deep value, written as text (the test's own JSON.stringify would overflow building it).
+  const deepest = (async () => { const res = await fetch(`http://localhost:${PORT}/api/runtime/cases/${fresh}/answers/${freshPrincipal}/person.other_family_name`, { method: "PUT", headers: { "content-type": "application/json", "x-actor": CLIENT, connection: "close" }, body: `{"value":${"[".repeat(5000)}"x"${"]".repeat(5000)},"expectedId":null}` }); return { status: res.status, body: await res.json().catch(() => null) }; })();
+  const hostile = await Promise.all([
+    call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.other_family_name`, { value: "a\ud800b", expectedId: null }, CLIENT),
+    deepest,
+    call("POST", `/runtime/cases/${fresh}/people`, { role: "child", displayName: "Sample", idempotencyKey: "abcdefgh\u0000" }, OFFICER),
+    call("POST", "/runtime/cases", { combinationId: vv, reference: "REF\u202eabc", clientActor: CLIENT, principal: { displayName: "Sample\u007f" } }, OFFICER),
+  ]);
+  ok("R1c break m1–m4 fail: a lone surrogate, a 5,000-deep value, a NUL in an idempotency key, a bidi override or DEL in a reference or name are 400 with plain words, never 500", hostile.every((x) => x.status === 400), hostile.map((x) => [x.status, x.body?.detail?.slice(0, 60)]));
+  r = await call("POST", "/runtime/cases", { combinationId: vv, reference: `R1C-ok-${run}`, clientActor: CLIENT, principal: { displayName: "Sample Applicant É 漢字 👩‍👧" } }, OFFICER);
+  ok("R1c break m4 pass: accents, other scripts and emoji with joiners stay allowed in names", r.status === 201, r.body?.detail);
+  const fv = (await call("GET", `/runtime/cases/${fresh}/questionnaire?mode=agent`, undefined, OFFICER)).body;
+  const caseSubj = fv.case.people.find((p: { role: string }) => p.role === "case").subject_id;
+  await call("PUT", `/runtime/cases/${fresh}/answers/${caseSubj}/case.funds_available_cad`, { value: "000", expectedId: null }, CLIENT);
+  const fv2 = (await call("GET", `/runtime/cases/${fresh}/questionnaire`, undefined, CLIENT)).body;
+  ok("R1c break m9 fail-guard: an amount of \"000\" triggers the funds-above-0 check (numbers compare as numbers)", fv2.checks.some((c: { id: string }) => c.id === "VV_FUNDS_ABOVE_ZERO"), fv2.checks);
+  const qf = (f: string) => fv.sections.flatMap((x: { questions: Q[] }) => x.questions).filter((q: Q) => q.fact === f);
+  ok("R1c break M2/M4 pass: present occupation and current residence country are asked once per person; the union date is not required of a single applicant", qf("person.occupation").every((q: Q) => q.group === null) && qf("person.current_residence_country").every((q: Q) => q.group === null) && qf("relationship.start_date").every((q: Q) => q.required === false), { occupation: qf("person.occupation").map((q: Q) => q.group), start: qf("relationship.start_date").map((q: Q) => q.required) });
   const dbRefuses = (q: string) => { try { sql(q); return false; } catch { return true; } };
   const pinId = sql(`select id from pack_work_pin where case_id='${caseId}'`), relId = sql(`select config_release_id from pack_work_pin where case_id='${caseId}'`);
   ok("FIX B4 fail (database): a case's pin cannot be changed, and its release or combination cannot be deleted", dbRefuses(`update pack_work_pin set content_hash='x' where id='${pinId}'`) && dbRefuses(`delete from config_release where id='${relId}'`) && dbRefuses(`delete from combination where id='${vv}'`));

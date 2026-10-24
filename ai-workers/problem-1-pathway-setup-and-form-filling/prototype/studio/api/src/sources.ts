@@ -4,7 +4,7 @@
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { execFile, spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
@@ -19,7 +19,7 @@ import { checkedOutput, explainRun, failedOurCheck, isProviderLimit, sameDraftIn
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 import { reconvertFile } from "../../../p2/reconvert.ts";
 import { addFormLine, resolveKey } from "./form-lines.ts";
-import { ACTORS, Audit, Db, fail, need, NODE, OFFICIAL, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
+import { ACTORS, Audit, Db, fail, need, NODE, OFFICIAL, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
 const ACTOR_BY_ID = (id: string) => ACTORS.find((a) => a.id === id) ?? ACTORS[0];
 /** The library revision a comparison was made against: every definition key, version and status. A different revision
  *  at apply time means the comparison is stale (D280). */
@@ -32,6 +32,18 @@ const run = promisify(execFile);
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 const KIND: Record<string, string> = { forms: "Form", checklists: "Document checklist", instructions: "Instructions", "web-pages": "Web page" };
 const JOBS = join(PROTOTYPE, "p2", "jobs"), RUNS = join(PROTOTYPE, "p2", "runs");
+/** Scaffolding (QA-34, P-69): an isolated test copy may start with STUDIO_FAKE_LAUNCHER naming the test fixture
+ *  tests/fixtures/fake-launch.mjs, which stands in for the guarded launcher so the paid-call refusal and provider-limit
+ *  paths are tested at US$0. Honoured only inside an isolated copy's own working folder (var/isolated-*) and only when the
+ *  path resolves (links followed, relative to where launches run) to that one fixture: any other path is ignored and the
+ *  guarded p2/launch.ts runs (PR 10 review). The demo and every real run always use p2/launch.ts. */
+export const FAKE_LAUNCHER = join(STUDIO, "tests", "fixtures", "fake-launch.mjs");
+export function launcherFor(requested: string | undefined, varRoot: string): string {
+  const guarded = join(PROTOTYPE, "p2", "launch.ts");
+  if (!requested || !/[/\\]isolated-[a-z0-9_]+$/.test(varRoot)) return guarded;
+  try { return realpathSync(resolve(ROOT, requested)) === realpathSync(FAKE_LAUNCHER) ? FAKE_LAUNCHER : guarded; } catch { return guarded; }
+}
+const LAUNCHER = launcherFor(process.env.STUDIO_FAKE_LAUNCHER, VAR_ROOT);
 const PROMPTS = join(PROTOTYPE, "p2", "prompts");
 const EDITION = /^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/;
 const TITLES: Record<string, string> = { "IMM 5257": "Application for Temporary Resident Visa", "IMM 1295": "Application for Work Permit made Outside of Canada", "IMM 5707": "Family Information", "IMM 5409": "Statutory Declaration of Common-law Union", "IMM 5476": "Use of a Representative", "IMM 5475": "Authority to Release Personal Information to a Designated Individual", "IMM 5257 SCH1": "Schedule 1: Background/Declaration" };
@@ -40,7 +52,11 @@ const TITLES: Record<string, string> = { "IMM 5257": "Application for Temporary 
 export class Sources {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {
     // A job left "running" by a stopped server can never finish: say so instead of showing it as running forever.
-    void this.db.draftingJob.updateMany({ where: { status: "RUNNING" }, data: { status: "FAILED", message: "The studio server stopped while this step was running; start it again.", finishedAt: new Date() } }).catch(() => undefined);
+    void this.db.draftingJob.updateMany({ where: { status: "RUNNING" }, data: { status: "FAILED", message: "The studio server stopped while this step was running; start it again.", finishedAt: new Date() } })
+      // A screen-map draft's own AI work (QA-31) ends with it.
+      .then(() => this.db.aiBatch.updateMany({ where: { operation: "screen_map", status: { in: ["QUEUED", "RUNNING"] }, cancelRequested: true }, data: { status: "CANCELLED", message: "Cancelled; the studio server stopped before the draft ended.", finishedAt: new Date() } }))
+      .then(() => this.db.aiBatch.updateMany({ where: { operation: "screen_map", status: { in: ["QUEUED", "RUNNING"] } }, data: { status: "FAILED", message: "The studio server stopped while this draft was running.", finishedAt: new Date() } }))
+      .catch(() => undefined);
   }
 
   /** Attaches a file to a combination as a source and says whether AI may read it (only approved official files, by
@@ -168,10 +184,13 @@ export class Sources {
     const eds = (def?.editions ?? []).filter((e) => e.channel !== "ONLINE" && e.sha256 !== exceptSha).sort(compareEditions).reverse();
     const out = new Map<string, Prior>();
     for (const e of eds) {
-      let options = new Map<string, unknown>();
-      try { options = new Map((JSON.parse(readFileSync(join(SOLUTION, e.inventoryFile!), "utf8")).fields as { data_path?: string; options_resolved?: unknown; options?: unknown }[]).filter((f) => f.data_path).map((f) => [f.data_path!, f.options_resolved ?? f.options ?? null])); } catch { continue; } // no inventory: nothing to compare choices with, so nothing reused
+      let options = new Map<string, unknown>(), kinds = new Map<string, string | null>();
+      try {
+        const fs = (JSON.parse(readFileSync(join(SOLUTION, e.inventoryFile!), "utf8")).fields as { data_path?: string; options_resolved?: unknown; options?: unknown; ui?: string | null }[]).filter((f) => f.data_path);
+        options = new Map(fs.map((f) => [f.data_path!, f.options_resolved ?? f.options ?? null])); kinds = new Map(fs.map((f) => [f.data_path!, f.ui ?? null])); // QA-33: the kind of box too
+      } catch { continue; } // no inventory: nothing to compare choices with, so nothing reused
       for (const m of effective(await this.db.formFieldMap.findMany({ where: { formEditionId: e.id } }), (x) => x.dataPath, "published"))
-        if (!out.has(m.dataPath)) out.set(m.dataPath, { data_path: m.dataPath, caption: m.caption, outcome: m.outcome, fact: m.canonicalFieldKey, person: m.person, transform: m.transform, row: m.row, condition: m.condition, confidence: m.confidence, edition: e.editionLabel, options: options.get(m.dataPath) ?? null });
+        if (!out.has(m.dataPath)) out.set(m.dataPath, { data_path: m.dataPath, caption: m.caption, outcome: m.outcome, fact: m.canonicalFieldKey, person: m.person, transform: m.transform, row: m.row, condition: m.condition, confidence: m.confidence, edition: e.editionLabel, options: options.get(m.dataPath) ?? null, ui: kinds.get(m.dataPath) ?? null });
     }
     return [...out.values()];
   }
@@ -250,7 +269,7 @@ export class Sources {
    *  is compared with the library like any draft. A part that fails fails the step: nothing is applied. */
   async runParts(id: string, a: { id: string; workspaceId: string }, split: NonNullable<Awaited<ReturnType<Sources["draftSplit"]>>>, mode: "stub" | "live") {
     const { plan, parts } = split;
-    const state = parts.map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, job_id: p.jobId, status: "queued" as string, run_file: null as string | null, cost_usd: 0, error: null as string | null, saved: false }));
+    const state = parts.map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, job_id: p.jobId, status: "queued" as string, run_file: null as string | null, cost_usd: 0, error: null as string | null, saved: false, limit: false }));
     const reusedWords = plan.reused.length ? `${plan.reused.length} of ${plan.total} form fields reused from ${split.reusedFrom.join(", ")} without AI; ` : "";
     const progress = async () => {
       const done = state.filter((s) => s.status === "done").length, fieldsDone = state.filter((s) => s.status === "done").reduce((x, s) => x + s.fields, 0);
@@ -273,11 +292,12 @@ export class Sources {
       const p = parts.find((x) => x.index === s.index)!;
       if (p.saved_run) { s.status = "done"; s.saved = true; s.run_file = `prototype/p2/runs/${p.saved_run}`; return; } // its saved answer, US$0
       if (p.repeats_failed_run) { s.status = "failed"; s.error = `a new paid call would repeat run ${p.repeats_failed_run}, which asked exactly this and whose answer failed our own check; a person maps this part, or the rule is reviewed`; return; }
-      const live = await this.launchOnce(s.job_id, "live"), lj = lastJson(live.out);
-      if (!lj?.run_file) { s.status = "failed"; s.error = String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).slice(0, 300) || "the launcher stopped without a reason"; return; }
+      const live = await this.launchOnce(s.job_id, "live", wanted), lj = lastJson(live.out);
+      if (live.cancelled) { s.status = "not started"; s.error = "cancelled before its AI call (after its stub pass); nothing was sent"; return; }
+      if (!lj?.run_file) { s.status = "failed"; s.error = String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).slice(0, 300) || "the launcher stopped without a reason"; s.limit = /usage limit/i.test(s.error); return; }
       const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
       s.run_file = String(lj.run_file).replace(`${SOLUTION}/`, ""); s.cost_usd = rec.drafting_run?.usage?.cost_usd ?? 0;
-      if (!/^completed/.test(rec.drafting_run?.status ?? "") || rec.contract_valid !== true) { s.status = "failed"; s.error = explainRun(rec).message; return; }
+      if (!/^completed/.test(rec.drafting_run?.status ?? "") || rec.contract_valid !== true) { s.status = "failed"; s.error = explainRun(rec).message; s.limit = isProviderLimit(rec); return; }
       s.status = "done";
     };
     try {
@@ -294,6 +314,12 @@ export class Sources {
       }
       const failed = state.filter((s) => s.status !== "done");
       if (failed.length) {
+        // Every part refused by the provider's account limit: BLOCKED, as for a whole-form draft (QA-34 tests found the
+        // parts path said FAILED for the same refusal); nothing was drafted, and the way out is the same.
+        if (failed.every((f) => f.limit)) {
+          await this.db.draftingJob.update({ where: { id }, data: { status: "BLOCKED", costUsd: cost, finishedAt: new Date(), message: `Blocked by the AI provider's account usage limit: ${failed.length} of ${parts.length} parts were refused before any processing. Nothing was drafted or applied. Cost US$${cost.toFixed(2)}. Use a saved AI answer, or try again once access is restored.` } });
+          return;
+        }
         await this.db.draftingJob.update({ where: { id }, data: { status: "FAILED", costUsd: cost, finishedAt: new Date(), message: `${failed.length} of ${parts.length} parts did not finish (${failed.map((f) => `part ${f.index}: ${f.error}`).join("; ").slice(0, 500)}). Nothing was applied. Cost US$${cost.toFixed(2)}.` } });
         return;
       }
@@ -301,6 +327,8 @@ export class Sources {
         await this.db.draftingJob.update({ where: { id }, data: { status: "COMPLETED", costUsd: 0, finishedAt: new Date(), message: `Stub pass completed for all ${parts.length} parts: the guarded path works for each part. ${reusedWords ? `${reusedWords[0].toUpperCase()}${reusedWords.slice(1).replace(/; $/, ". ")}` : ""}A stub has no AI content, so there is nothing to compare.` } });
         return;
       }
+      // Cancelled while the last part's AI call ran: its answer is not compared or applied (as the cancel says).
+      if (!(await wanted())) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", costUsd: cost, finishedAt: new Date(), message: `Cancelled while the AI ran: the parts' answers were not compared or applied. Cost US$${cost.toFixed(2)}.` } }); return; }
       // One answer: the reused entries and every part's checked answer (p2/convert rules per part), in form order.
       // One record: the reused entries and every part's checked answer (p2/convert rules per part), in form order
       // (engine/parts.ts assembleMerged; every form field reused → no part, labelled as no AI).
@@ -323,12 +351,17 @@ export class Sources {
   }
 
   private launching: Promise<unknown> = Promise.resolve();
+  /** The step is still wanted: it exists (no reset removed it), it runs, and nobody cancelled its AI work. */
+  async stillWanted(id: string) { const j = await this.db.draftingJob.findUnique({ where: { id }, include: { batch: true } }); return !!j && j.status === "RUNNING" && !j.batch?.cancelRequested; }
   /** One run of the guarded launcher (p2/launch.ts) for a job file: the only way the Studio starts a drafting call. One
    *  launch at a time in this server, and a launch the experiment ledger refused because another runner (another copy)
    *  holds it is started again after a pause: refused before any call, so nothing was spent (break B3). */
-  async launchOnce(jobId: string, mode: "stub" | "live"): Promise<{ code: number; out: string; err: string }> {
+  async launchOnce(jobId: string, mode: "stub" | "live", wanted?: () => Promise<boolean>): Promise<{ code: number; out: string; err: string; cancelled?: boolean }> {
     const turn = this.launching.then(async () => {
       for (let n = 0; ; n++) {
+        // A cancel is honoured up to the moment a paid call starts (QA-31 break M1): a live launch can wait its turn behind
+        // other launches, or for the ledger, for minutes; the step is asked again right before each attempt.
+        if (mode === "live" && wanted && !(await wanted())) return { code: 0, out: "", err: "", cancelled: true };
         const r = await this.launchProcess(jobId, mode);
         if (n >= 60 || !/ledger locked/i.test(r.out + r.err)) return r;
         await new Promise((res) => setTimeout(res, 2_000));
@@ -340,7 +373,7 @@ export class Sources {
 
   private launchProcess(jobId: string, mode: "stub" | "live"): Promise<{ code: number; out: string; err: string }> {
     return new Promise((res) => {
-      const p = spawn(NODE, [join(PROTOTYPE, "p2", "launch.ts"), "--job", jobId, `--${mode}`], { cwd: ROOT, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
+      const p = spawn(NODE, [LAUNCHER, "--job", jobId, `--${mode}`], { cwd: ROOT, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
       let out = "", err = "";
       p.stdout.on("data", (d) => (out += d)); p.stderr.on("data", (d) => (err += d));
       p.on("close", (code) => res({ code: code ?? 1, out, err }));
@@ -358,7 +391,8 @@ export class Sources {
       if (mode === "stub") { await this.db.draftingJob.update({ where: { id }, data: { status: "COMPLETED", message: "Stub pass completed: the guarded path works. A stub has no AI content, so there is nothing to compare.", detail: { job_id: jobId, steps }, finishedAt: new Date(), costUsd: 0 } }); return; }
       const took = this.savedRuns(jobId).find((r) => r.duration_ms)?.duration_ms;
       await this.db.draftingJob.update({ where: { id }, data: { message: `Calling the AI (guarded path; Claude Opus 5.5; up to US$5). ${took ? `The last real run of this form took about ${Math.max(1, Math.round(took / 60_000))} minutes.` : "A large form can take several minutes."} The whole form is drafted in one call, so there is no part-by-part progress yet.`, detail: { job_id: jobId, steps } } });
-      const live = await this.launchOnce(jobId, "live");
+      const live = await this.launchOnce(jobId, "live", () => this.stillWanted(id));
+      if (live.cancelled) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", costUsd: 0, finishedAt: new Date(), message: "Cancelled before it started its AI call (after the stub pass): nothing was sent. US$0.", detail: { job_id: jobId, steps } } }); return; }
       const lj = lastJson(live.out);
       steps.push({ step: "live call", exit: live.code, result: lj, error: live.code ? live.err.slice(-800) : undefined });
       if (!lj?.run_file) {
@@ -383,6 +417,8 @@ export class Sources {
         return;
       }
       await this.db.draftingJob.update({ where: { id }, data: { runId: rec.drafting_run?.run_id, runFile, costUsd: rec.drafting_run?.usage?.cost_usd ?? null, detail: { job_id: jobId, steps } } });
+      // Cancelled while the AI call ran: the answer stays in its run record, but is not compared or applied.
+      if (!(await this.stillWanted(id))) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", finishedAt: new Date(), message: `Cancelled while the AI call ran: its answer was kept in the run record but not compared or applied. Cost US$${Number(rec.drafting_run?.usage?.cost_usd ?? 0).toFixed(2)}.` } }); return; }
       await this.ingest(id, attachmentId);
     } catch (e) {
       await this.db.draftingJob.update({ where: { id }, data: { status: "FAILED", message: (e as Error).message.slice(0, 500), detail: { job_id: jobId, steps }, finishedAt: new Date() } });

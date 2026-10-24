@@ -2,6 +2,7 @@
 // persona may do (duties) and refuses the rest with a plain reason, which screens show as feedback.
 import { QueryClient, useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import * as React from "react";
+import type { SessionView } from "../../../contracts/programs";
 
 let actor = (() => { try { return localStorage.getItem("xr-actor") ?? "user-A"; } catch { return "user-A"; } })();
 const listeners = new Set<() => void>();
@@ -28,6 +29,18 @@ export async function api<T = any>(path: string, init: RequestInit & { json?: un
 export const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 2_000, refetchOnWindowFocus: false } } });
 export function useApi<T = any>(key: unknown[], path: string | null, opts: Partial<UseQueryOptions<T>> = {}) {
   return useQuery<T>({ queryKey: key, queryFn: () => api<T>(path!), enabled: !!path, ...opts });
+}
+/** Who the simulated person is, for pages that show author-only things (QA-22; break m1, m3): `known` once the session
+ *  answered or failed, or after 4 s without an answer, so a hung request never hides the page; `failed` when it is known
+ *  but there is no person (an error or an empty answer), so pages use neutral words, not the non-author's. */
+export function useSessionView() {
+  const actorId = useActorId();
+  const session = useApi<SessionView>(["session", actorId], "/session");
+  const [late, setLate] = React.useState(false);
+  React.useEffect(() => { setLate(false); const t = setTimeout(() => setLate(true), 4000); return () => clearTimeout(t); }, [actorId]);
+  const known = session.isError || !session.isPending || late;
+  const failed = known && !session.data?.actor;
+  return { session, known, failed, canAuthor: (session.data?.actor?.duties ?? []).includes("author") };
 }
 export function useAction<V = any, R = any>(fn: (v: V) => Promise<R>, opts: { success?: string | ((r: R) => string); invalidate?: unknown[][]; onDone?: (r: R) => void } = {}) {
   const qc = useQueryClient();

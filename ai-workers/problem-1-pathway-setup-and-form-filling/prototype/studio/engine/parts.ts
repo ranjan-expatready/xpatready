@@ -1,7 +1,7 @@
 // A4 (Lead check, accepted 23 Oct; F1 slice 2): a form's field map is drafted reuse first, in parts, and merged. Rules,
 // no AI, no database:
 //  1. reuse first: a form field a released earlier edition of the same form already maps (same data path, same caption,
-//     and for a choice field the same codes) takes that mapping, and the AI never sees it;
+//     same kind of box (QA-33), and for a choice field the same codes) takes that mapping, and the AI never sees it;
 //  2. split: the form fields left are grouped by form section ("Part1.SponsorDetails") and packed into parts of at most
 //     `maxFields`, so each AI call is small and the parts run side by side (the bounded queue); a repeating row group is
 //     never split, so one person's row stays in one call;
@@ -16,7 +16,10 @@ export type InvGroup = { data_path?: string | null; occur?: unknown; fixed_row?:
 /** A mapping an earlier edition of the same form holds (its newest version). */
 export type Prior = { data_path: string; caption: string | null; outcome: string; fact: string | null; person: string | null; transform: string | null; row: number | null; condition: string | null; confidence?: string | null; edition: string;
   /** The earlier edition's own choices for this form field (its inventory), so codes are reused only where they are the same. */
-  options?: unknown };
+  options?: unknown;
+  /** The earlier edition's kind of box (its inventory "ui": textEdit, dateTimeEdit, choiceList…): a date box that became a
+   *  text box takes another transform, so it is not reused (QA-33). Left out by callers that do not know it. */
+  ui?: string | null };
 export type Reused = FieldMapEntry & { reused_from: string };
 export type Part = { index: number; count: number; sections: string[]; fields: InvField[] };
 export type DraftPlan = { total: number; reused: Reused[]; leftover: number; parts: Part[] };
@@ -39,7 +42,8 @@ export function planDraft(inv: { fields: InvField[]; groups?: InvGroup[] }, prio
     // A choice field keeps its mapping only when its codes are the earlier edition's own (an inline code list in the
     // transform would otherwise copy old codes onto a new list; review 4).
     const sameChoices = canonical((f.options_resolved ?? f.options ?? null) as never) === canonical((p?.options ?? null) as never);
-    if (p && ["mapped", "not_a_fact", "never_filled"].includes(p.outcome) && normLabel(p.caption) === normLabel(f.caption) && sameChoices && (p.outcome !== "mapped" || fact)) {
+    const sameKind = p?.ui === undefined || (p.ui ?? null) === ((f.ui as string | null | undefined) ?? null);
+    if (p && ["mapped", "not_a_fact", "never_filled"].includes(p.outcome) && normLabel(p.caption) === normLabel(f.caption) && sameChoices && sameKind && (p.outcome !== "mapped" || fact)) {
       reused.push({ data_path: f.data_path!, outcome: p.outcome, person: p.person, row: p.row, fact, transform: p.transform, condition: p.condition, confidence: p.confidence ?? "medium",
         unresolved_reason: p.outcome === "mapped" ? null : `as in ${p.edition}`, evidence_quote: f.caption ?? f.data_path!, reused_from: p.edition });
     } else left.push(f);

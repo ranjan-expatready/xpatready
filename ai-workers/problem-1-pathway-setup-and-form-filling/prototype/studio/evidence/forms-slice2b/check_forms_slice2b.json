@@ -1,9 +1,9 @@
 {
- "at": "2026-10-24T19:08:14.083Z",
+ "at": "2026-10-24T21:16:15.666Z",
  "port": 4452,
  "database": "xr_studio_forms_s2b",
  "paid_calls": 0,
- "pass": 44,
+ "pass": 60,
  "fail": 0,
  "log": [
   {
@@ -316,6 +316,19 @@
    "ok": true
   },
   {
+   "name": "QA-33: a form field that is the same kind of box as in the earlier edition is reused",
+   "ok": true
+  },
+  {
+   "name": "QA-33 fail: the earlier edition's date box that is a text box now (UCI) is not reused: the AI or a person drafts it",
+   "ok": true,
+   "detail": "UCI"
+  },
+  {
+   "name": "QA-33: a prior that does not know its kind of box (older callers) is compared on caption and choices as before",
+   "ok": true
+  },
+  {
    "name": "QA-15 (API): a capture started with 'imm 5257' is the library's IMM 5257 (one form, one code)",
    "ok": true,
    "detail": {
@@ -344,6 +357,93 @@
    "name": "QA-15 (break m5): a trailing separator leaves no trailing space ('ee_profile_' is EE PROFILE)",
    "ok": true,
    "detail": "EE PROFILE"
+  },
+  {
+   "name": "QA-34: the capture list takes odd paging values safely (default page, never a negative offset)",
+   "ok": true,
+   "detail": 200
+  },
+  {
+   "name": "QA-34 fail: adding screens with no file is refused in plain words",
+   "ok": true,
+   "detail": "Choose at least one saved screen or template file."
+  },
+  {
+   "name": "QA-34 fail: an empty file is refused and nothing is added",
+   "ok": true,
+   "detail": [
+    {
+     "file": "empty.html",
+     "outcome": "refused",
+     "message": "The file is empty."
+    }
+   ]
+  },
+  {
+   "name": "QA-34 fail: the review document does not exist before the capture is finished (404, plain words)",
+   "ok": true,
+   "detail": 404
+  },
+  {
+   "name": "QA-34 fail: finishing a capture with no screen is refused with the next step",
+   "ok": true,
+   "detail": "Add at least one screen before finishing the capture."
+  },
+  {
+   "name": "QA-34: a file name carrying a number is not kept (renamed), and the same file again is a duplicate, not a second screen",
+   "ok": true,
+   "detail": {
+    "first": {
+     "file": "page-47200d7b.html",
+     "outcome": "added",
+     "message": "1 screen read (9 questions): Personal details."
+    },
+    "again": "duplicate"
+   }
+  },
+  {
+   "name": "QA-34 fail: an open capture can be neither approved nor returned (409, plain words)",
+   "ok": true,
+   "detail": [
+    "This capture is open; only a held capture can be approved.",
+    "Only a held capture can be returned."
+   ]
+  },
+  {
+   "name": "QA-34 fail: a held capture cannot be finished again",
+   "ok": true,
+   "detail": "This capture is held; only an open capture can be finished."
+  },
+  {
+   "name": "QA-34 fail: the person who captured it cannot return it to themselves (a second person reviews)",
+   "ok": true,
+   "detail": "A second person reviews a capture: the person who captured it cannot return it to themselves."
+  },
+  {
+   "name": "QA-34: a held capture can be abandoned with a note, once; abandoning again is refused",
+   "ok": true,
+   "detail": [
+    "ABANDONED",
+    409
+   ]
+  },
+  {
+   "name": "QA-34 fail: a screen map is never drafted for a PDF edition",
+   "ok": true,
+   "detail": "Screen maps are drafted for online versions; a PDF edition's field map is drafted from its file."
+  },
+  {
+   "name": "QA-34 fail: filling a form for a person it does not apply to is a 404 in plain words",
+   "ok": true,
+   "detail": "IMM 1295 does not apply to that person in this draft."
+  },
+  {
+   "name": "QA-34: with no mode the fill uses the latest release (or says plainly why it cannot)",
+   "ok": true,
+   "detail": {
+    "status": 201,
+    "label": "Released version 1"
+   }
   },
   {
    "name": "D3 setup: the Visitor visa files IMM 5257 through the IRCC Portal",
@@ -387,7 +487,7 @@
   {
    "name": "D3 fail: when other inputs are open too, a new live draft is refused until the waiting proposals are decided (nothing paid)",
    "ok": true,
-   "detail": "A finished AI draft of this online version has 2 proposals waiting (job be4b496d-83ea-4162-ba51-8e632048a99d): accept them, or map those inputs by hand, before a new draft. A new draft now would pay again for inputs that draft already answered."
+   "detail": "A finished AI draft of this online version has 2 proposals waiting (job b78a4569-64b4-46b8-b2c5-7bc23a2db5d8): accept them, or map those inputs by hand, before a new draft. A new draft now would pay again for inputs that draft already answered."
   },
   {
    "name": "D3: once its proposals are accepted nothing waits: a new live draft of what is still open asks for its worst case again",

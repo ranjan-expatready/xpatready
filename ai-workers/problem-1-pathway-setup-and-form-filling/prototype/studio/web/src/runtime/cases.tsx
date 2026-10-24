@@ -1,0 +1,206 @@
+// Case area (runtime lane, R1c): the firm's case officer and the client, outside the configuration studio. Routes under
+// /cases: the officer's case list, one case (people + agent view), and the client's questionnaire (SQR, phone first).
+// The people are simulated (demo chrome: the "Acting as" switch is not for porting); the server decides what each may do.
+import * as React from "react";
+import { Link, Route, Routes, useNavigate, useParams } from "react-router-dom";
+import { ArrowLeft, ExternalLink, Plus, UserPlus, X } from "lucide-react";
+import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
+import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { noRetryOnRefusal, Questionnaire, useCaseView, type CaseInfo, type CasePerson } from "./questionnaire";
+
+/** Simulated case people (api/src/core.ts RUNTIME_ACTORS); the switch is demo chrome. */
+const PEOPLE = [
+  { id: "user-O", name: "Case officer", role: "Firm staff" },
+  { id: "user-P", name: "Client A", role: "Client" },
+  { id: "user-Q", name: "Client B", role: "Client" },
+] as const;
+const isOfficer = (id: string) => id === "user-O";
+const isClient = (id: string) => id === "user-P" || id === "user-Q";
+const ROLE: Record<CasePerson["role"], string> = { case: "Application", principal: "Principal applicant", spouse_or_partner: "Spouse or partner", child: "Child" };
+
+export function RuntimeApp() {
+  const actor = useActorId();
+  // Arriving from the studio as a configuration person: act as the case officer (configuration people reach no case).
+  React.useLayoutEffect(() => { if (!PEOPLE.some((p) => p.id === getActor())) setActor("user-O"); }, [actor]);
+  if (!PEOPLE.some((p) => p.id === actor)) return null;
+  return (
+    <div className="flex min-h-full flex-col">
+      <header className="sticky top-0 z-30 flex h-14 min-w-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
+        <Link to={isClient(actor) ? "#" : "/cases"} className="flex shrink-0 items-center" aria-label="Cases home">
+          <img src="/brand/expat-ready-notagline-dark.svg" alt="Expat Ready" className="h-6 dark:hidden" />
+          <img src="/brand/expat-ready-notagline.svg" alt="Expat Ready" className="hidden h-6 dark:block" />
+        </Link>
+        <span className="hidden h-6 w-px bg-border sm:block" />
+        <p className="hidden text-sm font-semibold sm:block">{isClient(actor) ? "Your application" : "Cases"}</p>
+        <div className="ml-auto flex min-w-0 items-center gap-2">
+          <label className="flex min-w-0 items-center gap-2 rounded-lg border border-dashed border-warn bg-surface px-2 py-1" title="Simulated people for the prototype: not part of the product">
+            <span className="hidden whitespace-nowrap text-[11px] text-text-muted md:inline">Acting as (simulated)</span>
+            <select className="min-w-0 bg-transparent text-xs font-medium outline-none" value={actor} onChange={(e) => setActor(e.target.value)} aria-label="Simulated person">
+              {PEOPLE.map((p) => <option key={p.id} value={p.id}>{p.name} · {p.role}</option>)}
+            </select>
+          </label>
+          <Link to="/" onClick={() => setActor("user-A")} className="hidden whitespace-nowrap text-xs text-text-link hover:underline md:inline">Product Studio</Link>
+        </div>
+      </header>
+      <main className="min-w-0 flex-1 px-4 py-5 md:px-6">
+        <Routes>
+          <Route index element={<CaseList />} />
+          <Route path=":id" element={<CasePage />} />
+          <Route path=":id/questionnaire" element={<ClientPage />} />
+          <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/cases">Back to cases</Link></Notice>} />
+        </Routes>
+      </main>
+      <Toaster />
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ officer: cases
+
+type CaseRow = { id: string; reference: string; combination: string; status: string; created_at: string };
+type ReleaseRow = { combination: string; combination_id: string; version: number; released_at: string };
+
+function CaseList() {
+  const actor = useActorId();
+  const cases = useApi<{ cases: CaseRow[]; next: string | null }>(["runtime", "cases", actor], "/runtime/cases", { retry: noRetryOnRefusal });
+  const [open, setOpen] = React.useState(false);
+  // Later pages through the API's cursor, appended below the first (PR 10 review): page 1 stays live, later ones are kept.
+  const [more, setMore] = React.useState<{ rows: CaseRow[]; next: string | null } | null>(null);
+  const [loading, setLoading] = React.useState(false);
+  const next = more ? more.next : cases.data?.next ?? null;
+  async function loadMore() {
+    if (!next || loading) return;
+    setLoading(true);
+    try { const page = await api<{ cases: CaseRow[]; next: string | null }>(`/runtime/cases?after=${encodeURIComponent(next)}`); setMore((m) => ({ rows: [...(m?.rows ?? []), ...page.cases], next: page.next })); } finally { setLoading(false); }
+  }
+  const rows = [...(cases.data?.cases ?? []), ...(more?.rows ?? [])].filter((c, i, all) => all.findIndex((x) => x.id === c.id) === i);
+  if (cases.isError && (cases.error as ApiError).status === 403) return <Notice title="Cases are for the case officer">Clients open their questionnaire from the link their officer sends. Switch to the case officer to see the cases.</Notice>;
+  return (
+    <div className="mx-auto max-w-5xl space-y-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div><h1 className="text-2xl font-semibold">Cases</h1><p className="text-sm text-text-muted">Each case works from one released configuration, frozen when the case opens.</p></div>
+        <Button onClick={() => setOpen(true)}><Plus aria-hidden />Open a case</Button>
+      </div>
+      {cases.isLoading ? <Skeleton className="h-40 w-full" /> : cases.isError ? <Notice tone="danger" title="Cases could not be loaded">{(cases.error as Error).message}</Notice>
+        : !rows.length ? <Notice title="No cases yet">Open a case for a released combination; then add the family and send the client their questionnaire.</Notice>
+        : <Table head={["Reference", "Combination", "Status", "Opened"]}>{rows.map((c) => <tr key={c.id}><td><Link className="font-medium text-text-link hover:underline" to={`/cases/${c.id}`}>{c.reference}</Link></td><td>{c.combination}</td><td><Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill></td><td>{new Date(c.created_at).toLocaleDateString("en-CA", { day: "numeric", month: "short", year: "numeric" })}</td></tr>)}</Table>}
+      {rows.length ? <div className="flex items-center gap-3 text-[13px] text-text-muted"><span>{rows.length} case{rows.length === 1 ? "" : "s"} shown</span>{next ? <Button size="sm" variant="secondary" busy={loading} onClick={() => void loadMore()}>Load more</Button> : null}</div> : null}
+      {open ? <NewCaseDialog close={() => setOpen(false)} /> : null}
+    </div>
+  );
+}
+
+function NewCaseDialog({ close }: { close: () => void }) {
+  const releases = useApi<ReleaseRow[]>(["releases"], "/releases");
+  const nav = useNavigate();
+  const key = React.useMemo(() => crypto.randomUUID(), []);
+  const combos = [...new Map((releases.data ?? []).map((r) => [r.combination_id, r])).values()];
+  const [f, setF] = React.useState({ combinationId: "", reference: "", principal: "", clientActor: "user-P" });
+  const [errors, setErrors] = React.useState<Record<string, string>>({});
+  const create = useAction(() => api<CaseInfo>("/runtime/cases", { method: "POST", json: { combinationId: f.combinationId || combos[0]?.combination_id, reference: f.reference, clientActor: f.clientActor, principal: { displayName: f.principal }, idempotencyKey: key } }), { success: "Case opened", invalidate: [["runtime"]], onDone: (c) => nav(`/cases/${c.id}`) });
+  const submit = () => create.mutate(undefined, { onError: (e) => { const p = e instanceof ApiError ? e.problem.errors ?? [] : []; setErrors(Object.fromEntries(p.map((x) => [x.field.split(".")[0], x.message]))); } });
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title="Open a case" description="The case works from the combination's latest release, frozen now: a later release never changes it." guard
+      footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={create.isPending} disabled={!combos.length} onClick={submit}>Open case</Button></>}>
+      <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+        {releases.isLoading ? <Skeleton className="h-9 w-full" /> : !combos.length ? <Notice tone="warn" title="Nothing is released yet">A case opens only on a released combination.</Notice> : (
+          <Field label="Combination (released)" error={errors.combinationId}>
+            <Select value={f.combinationId || combos[0].combination_id} onChange={(e) => setF({ ...f, combinationId: e.target.value })}>{combos.map((c) => <option key={c.combination_id} value={c.combination_id}>{c.combination} · release {c.version}</option>)}</Select>
+          </Field>
+        )}
+        <Field label="Case reference" hint="Your firm's reference, at least 3 characters" error={errors.reference}><Input value={f.reference} onChange={(e) => setF({ ...f, reference: e.target.value })} /></Field>
+        <Field label="Principal applicant's name" hint="Shown to the client as written; Sample names only in the prototype" error={errors.principal}><Input value={f.principal} onChange={(e) => setF({ ...f, principal: e.target.value })} /></Field>
+        <Field label="Client login that answers" error={errors.clientActor}><Select value={f.clientActor} onChange={(e) => setF({ ...f, clientActor: e.target.value })}><option value="user-P">Client A (simulated)</option><option value="user-Q">Client B (simulated)</option></Select></Field>
+        <button type="submit" hidden />
+      </form>
+    </Dialog>
+  );
+}
+
+// ------------------------------------------------------------------ officer: one case
+
+function CasePage() {
+  const { id } = useParams();
+  const actor = useActorId();
+  const view = useCaseView(id!, "agent");
+  const [adding, setAdding] = React.useState<"spouse_or_partner" | "child" | null>(null);
+  if (!isOfficer(actor)) return <Notice title="This page is for the case officer">As a client, open <Link className="text-text-link underline" to={`/cases/${id}/questionnaire`}>your questionnaire</Link>.</Notice>;
+  if (view.isLoading) return <div className="space-y-3"><Skeleton className="h-8 w-1/3" /><Skeleton className="h-24 w-full" /></div>;
+  if (view.isError) return <Notice tone="danger" title="This case could not be opened">{(view.error as Error).message}</Notice>;
+  const v = view.data!, c = v.case, people = c.people.filter((p) => p.role !== "case");
+  const client = PEOPLE.find((p) => p.id === c.client);
+  return (
+    <div className="mx-auto max-w-7xl space-y-5">
+      <nav aria-label="Path" className="flex items-center gap-1 text-[13px] text-text-muted"><Link to="/cases" className="inline-flex items-center gap-1 hover:underline"><ArrowLeft className="size-3.5" aria-hidden />Cases</Link><span aria-hidden>›</span><span className="text-text">{c.reference}</span></nav>
+      <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+        <div className="min-w-0 flex-1">
+          <h1 className="flex flex-wrap items-center gap-2 text-2xl font-semibold [overflow-wrap:anywhere]">{c.reference}<Pill>{c.status === "OPEN" ? "Open" : c.status}</Pill><Pill tone="info" title={`Frozen when the case opened (${new Date(c.pin.pinned_at).toLocaleString("en-CA")}); a later release never changes this case`}>Release {c.pin.release_version}</Pill></h1>
+          <p className="mt-1 text-sm text-text-muted">{v.summary.questions} questions for this household · {v.summary.answered} answered · {v.summary.confirmed} confirmed · {v.summary.missing} required not answered · {v.summary.not_asked} questions of the release not asked here (no form of this case reads them)</p>
+        </div>
+        <div className="rounded-lg border border-border bg-surface-raised p-3 text-sm">
+          <p className="font-medium">Client's questionnaire</p>
+          <p className="text-xs text-text-muted">{client?.name ?? "The client"} answers on their phone, for everyone travelling.</p>
+          <Link to={`/cases/${c.id}/questionnaire`} onClick={() => setActor(c.client)} className="mt-1.5 inline-flex items-center gap-1 text-[13px] font-medium text-text-link hover:underline">Open it as {client?.name ?? "the client"} (simulated)<ExternalLink className="size-3.5" aria-hidden /></Link>
+        </div>
+      </div>
+      <section aria-labelledby="people" className="rounded-xl border border-border bg-surface-raised">
+        <header className="flex flex-wrap items-center gap-2 border-b border-border px-4 py-3">
+          <h2 id="people" className="text-base font-semibold">People on this case</h2>
+          <span className="flex-1" />
+          <Button size="sm" variant="secondary" onClick={() => setAdding("spouse_or_partner")}><UserPlus aria-hidden />Add spouse or partner</Button>
+          <Button size="sm" variant="secondary" onClick={() => setAdding("child")}><UserPlus aria-hidden />Add child</Button>
+        </header>
+        <ul className="flex flex-wrap gap-2 px-4 py-3">
+          {people.map((p) => <li key={p.subject_id} className="flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><span className="text-xs text-text-muted">{ROLE[p.role]}</span>{p.applies ? null : <Pill title="Not travelling: asked only what the principal's forms need about them">Not travelling</Pill>}</li>)}
+        </ul>
+      </section>
+      <Questionnaire caseId={c.id} mode="agent" />
+      {adding ? <AddPersonDialog caseId={c.id} role={adding} close={() => setAdding(null)} /> : null}
+    </div>
+  );
+}
+
+function AddPersonDialog({ caseId, role, close }: { caseId: string; role: "spouse_or_partner" | "child"; close: () => void }) {
+  const [name, setName] = React.useState("");
+  const [error, setError] = React.useState<string | null>(null);
+  const key = React.useMemo(() => crypto.randomUUID(), []); // one person per dialog, however often Add is pressed (QA-28)
+  const add = useAction(() => api(`/runtime/cases/${caseId}/people`, { method: "POST", json: { role, displayName: name, idempotencyKey: key } }), { success: `${role === "child" ? "Child" : "Spouse or partner"} added: their questions are now asked`, invalidate: [["runtime"]], onDone: close });
+  const submit = () => add.mutate(undefined, { onError: (e) => setError(e instanceof ApiError ? e.field("displayName") ?? e.message : e.message) });
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={role === "child" ? "Add a child" : "Add a spouse or partner"} description="Within the limits of this case's release. Their questions are added to the client's questionnaire at once."
+      footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={add.isPending} onClick={submit}>Add</Button></>}>
+      <form onSubmit={(e) => { e.preventDefault(); submit(); }}>
+        <Field label="Name" hint="Sample names only in the prototype" error={error}><Input value={name} onChange={(e) => { setName(e.target.value); setError(null); }} autoFocus /></Field>
+        <button type="submit" hidden />
+      </form>
+    </Dialog>
+  );
+}
+
+// ------------------------------------------------------------------ client: the questionnaire
+
+function ClientPage() {
+  const { id } = useParams();
+  const actor = useActorId();
+  if (!isClient(actor)) return (
+    <Notice title="This is the client's questionnaire" action={<Button size="sm" variant="secondary" onClick={() => setActor("user-P")}>Act as Client A</Button>}>
+      As the case officer, review and change answers on <Link className="text-text-link underline" to={`/cases/${id}`}>the case page</Link>.
+    </Notice>
+  );
+  return <Questionnaire caseId={id!} mode="sqr" />;
+}
+
+function Toaster() {
+  const t = useToast();
+  return (
+    <div className="pointer-events-none fixed inset-x-4 bottom-4 z-[100] flex flex-col gap-2 sm:left-auto sm:w-96" aria-live="polite">
+      {t.list.map((x) => (
+        <div key={x.id} className={cn("pointer-events-auto flex items-start gap-3 rounded-lg border border-border border-l-4 bg-surface-raised px-4 py-3 text-sm shadow-lg", x.tone === "ok" ? "border-l-ok" : x.tone === "danger" ? "border-l-danger" : "border-l-primary")}>
+          <p className="flex-1">{x.text}</p><button className="text-text-muted" aria-label="Dismiss" onClick={() => t.drop(x.id)}><X className="size-4" /></button>
+        </div>
+      ))}
+    </div>
+  );
+}

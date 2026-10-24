@@ -59,3 +59,6 @@ Accepted as the builder proposed: reuse first, split by section groups through t
 **Next:** DEMO. The founder walks Screen 01 on :4400 as author and as reviewer: catalogue, a combination page, add a form through the intake, the saved AI answer, the review of AI proposals, the release guard. D17/D20 evidence is recorded here.
 
 ## RCIC walkthrough
+
+## Lead check of the small FIX after DONE (24 Oct, cloud Lead) — **Result: MERGED**
+QA-4 (downloads under a dot-folder; a gone file a plain 404), QA-20 (Portal select fits at 400 px), QA-22 (Programs waits for the person before author-only words), CHECK round K1 and m1–m5; `check_screen01_smallfix.cjs` 23/23 (system Chrome since 1072a06, CI green). Lead run with the other lanes: 20/20 suites green.

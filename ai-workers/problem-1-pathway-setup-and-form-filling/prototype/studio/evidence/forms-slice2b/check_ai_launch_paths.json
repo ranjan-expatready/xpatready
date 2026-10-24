@@ -1,0 +1,387 @@
+{
+ "at": "2026-10-24T21:14:00.690Z",
+ "port": 4453,
+ "database": "xr_studio_forms_fl",
+ "paid_calls": 0,
+ "pass": 55,
+ "fail": 0,
+ "log": [
+  {
+   "name": "setup: IMM 5409 on the Visitor visa plans one whole-form live call (no parts, nothing reused)",
+   "ok": true,
+   "detail": "Read the form on this computer, then a guarded live call (stub pass first; up to 2 attempts)."
+  },
+  {
+   "name": "QA-30: a draft request with no mode is a plain 400 naming the three ways, never a 500",
+   "ok": true,
+   "detail": {
+    "status": 400,
+    "message": "Choose how to draft this form: live, replay or stub (\"live\" is a paid AI call, \"replay\" a saved run, \"stub\" no AI, US$0)."
+   }
+  },
+  {
+   "name": "QA-30 fail: an unknown mode is refused the same way",
+   "ok": true,
+   "detail": "Choose how to draft this form: live, replay or stub (\"live\" is a paid AI call, \"replay\" a saved run, \"stub\" no AI, US$0)."
+  },
+  {
+   "name": "QA-30 fail: the mode check does not let a reviewer (no author duty) start a draft",
+   "ok": true,
+   "detail": 403
+  },
+  {
+   "name": "stub refused: the step FAILS with the guard's reason and the live call is never made",
+   "ok": true,
+   "detail": {
+    "status": "FAILED",
+    "message": "stub pass failed: guard: the inventory changed since it was admitted",
+    "calls": 1
+   }
+  },
+  {
+   "name": "provider limit before the call (no run record): BLOCKED, no cost, the way out said",
+   "ok": true,
+   "detail": {
+    "status": "BLOCKED",
+    "message": "Blocked by the AI provider's account usage limit (no cost): Anthropic API: account usage limit reached. Use a saved AI answer, or try again once access is restored."
+   }
+  },
+  {
+   "name": "the launcher stops with no reason: FAILED, and the message is never empty (it names the exit)",
+   "ok": true,
+   "detail": "The AI step did not run: the launcher stopped (exit 3) without giving a reason. Nothing was drafted or applied."
+  },
+  {
+   "name": "the launcher fails with an error: FAILED with its last lines, not BLOCKED (not a provider limit)",
+   "ok": true,
+   "detail": "The AI step did not run: TypeError: cannot read the job file     at main (launch.ts:12). Nothing was drafted or applied."
+  },
+  {
+   "name": "a ledger lock (another paid call running) is waited out and the launch tried again, once the lock is free",
+   "ok": true,
+   "detail": {
+    "calls": [
+     "stub",
+     "live",
+     "live"
+    ],
+    "message": "The AI step did not run: budget: the experiment cap is reached. Nothing was drafted or applied."
+   }
+  },
+  {
+   "name": "provider limit after the call (run record): BLOCKED, US$0, the request id named, the ledger correction tried (AIW-D273)",
+   "ok": true,
+   "detail": {
+    "status": "BLOCKED",
+    "cost": 0,
+    "message": "Blocked by the AI provider: the account's monthly usage limit refused the call before any processing (request req_fake123). Nothing was drafted or billed; the l"
+   }
+  },
+  {
+   "name": "run record refused: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The AI declined to draft this form. Nothing was applied. Cost US$0.42. Run fake-thkyam."
+  },
+  {
+   "name": "run record timed_out: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The AI did not answer in time. Nothing was applied. Cost US$0.42. Run fake-pdl6z0."
+  },
+  {
+   "name": "run record budget_exceeded: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The run would have gone over its spending cap, so it stopped. Nothing was applied. Run fake-p9arwz."
+  },
+  {
+   "name": "run record provider_error (not a limit): FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The AI provider returned an error: 529 overloaded. Nothing was drafted or applied. Cost US$0.42. Run fake-kzi5uu."
+  },
+  {
+   "name": "run record invalid_output cut at the limit: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The AI's answer was cut off at the output limit (4000 of 4000 output tokens). Nothing was applied. Cost US$0.30. Run fake-ws2k3s."
+  },
+  {
+   "name": "run record invalid_output in another shape: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The AI answered, but not in the agreed shape ({\"entries\":\"missing\"}). Nothing was applied. Cost US$0.42. Run fake-delvva."
+  },
+  {
+   "name": "run record completed, entries break our rules: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "AI answered 1 form field. 1 entry broke our entry rules (form field 1: field name \"Person.Name\" breaks the naming rule). Nothing was applied. Cost US$0.42. Run fake-1qf3zh."
+  },
+  {
+   "name": "run record completed, the run record failed our check: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "AI answered. The answer failed our check of the run record. Nothing was applied. Cost US$0.42. Run fake-e1pnga."
+  },
+  {
+   "name": "run record an unknown status: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The AI step ended without a usable draft (status weird). Nothing was applied. Cost US$0.42. Run fake-6etf8s."
+  },
+  {
+   "name": "a run file that cannot be read: FAILED with the reason, the step never stays RUNNING",
+   "ok": true,
+   "detail": "ENOENT: no such file or directory, open '/home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/isolated-forms_fl/no-such-run.json'"
+  },
+  {
+   "name": "setup: IMM 5406 plans a live draft (read first, then in parts)",
+   "ok": true,
+   "detail": "Read the form on this computer, then a guarded live call in 2 parts (50 of 50 form fields) (stub pass first; up to 2 attempts per part)."
+  },
+  {
+   "name": "parts: every part refused by the provider's account limit is BLOCKED (as a whole-form draft is), no cost, the way out said",
+   "ok": true,
+   "detail": {
+    "status": "BLOCKED",
+    "message": "Blocked by the AI provider's account usage limit: 2 of 2 parts were refused before any processing. Nothing was drafted or applied. Cost US$0.00. Use a saved AI answer, or try again once access is restored."
+   }
+  },
+  {
+   "name": "parts fail: a part whose stub pass is refused FAILS with the guard's reason, and no live call is made",
+   "ok": true,
+   "detail": {
+    "status": "FAILED",
+    "message": "2 of 2 parts did not finish (part 1: stub pass failed: guard: part not in its parent inventory; part 2: stub pass failed: guard: part not in its parent inventory). Nothing was applied. Cost US$0.00."
+   }
+  },
+  {
+   "name": "parts fail: a launcher that stops with no reason says so for each part (never an empty reason), FAILED not BLOCKED",
+   "ok": true,
+   "detail": "2 of 2 parts did not finish (part 1: the launcher stopped without a reason; part 2: the launcher stopped without a reason). Nothing was applied. Cost US$0.00."
+  },
+  {
+   "name": "parts fail: a run record that is not a usable draft FAILS each part in plain words, and the cost of both calls is summed",
+   "ok": true,
+   "detail": {
+    "status": "FAILED",
+    "cost": 0.84,
+    "message": "2 of 2 parts did not finish (part 1: The AI did not answer in time. Nothing was applied. Cost US$0.42.; part 2: The AI did not answer in time. Nothing was applied. Cost US$0.42.). Nothing was applied."
+   }
+  },
+  {
+   "name": "parts: a provider limit found in the run records also gives BLOCKED",
+   "ok": true,
+   "detail": {
+    "status": "BLOCKED",
+    "message": "Blocked by the AI provider's account usage limit: 2 of 2 parts were refused before any processing. Nothing was drafted or applied. Cost US$0.84. Use a saved AI "
+   }
+  },
+  {
+   "name": "parts fail: an unreadable run file ends the step FAILED with the reason (never left RUNNING)",
+   "ok": true,
+   "detail": "ENOENT: no such file or directory, open '/home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/isolated-forms_fl/no-such-run.json'"
+  },
+  {
+   "name": "QA-32 / M1: a draft in parts cancelled during part 1's stub pass ends CANCELLED, and no part makes its paid call",
+   "ok": true,
+   "detail": {
+    "status": "CANCELLED",
+    "parts": [
+     "not started",
+     "not started"
+    ],
+    "calls": [
+     "stub"
+    ]
+   }
+  },
+  {
+   "name": "QA-32 (review 2): the AI work page is told the cancelled step can be retried (its Retry button follows the server's rule)",
+   "ok": true,
+   "detail": true
+  },
+  {
+   "name": "QA-32: the parts not sent can be retried: the retry is accepted and starts a second attempt of the step",
+   "ok": true,
+   "detail": {
+    "status": 201,
+    "message": "Retrying 1 step",
+    "retried": "1"
+   }
+  },
+  {
+   "name": "QA-32 fail: a step that ran to its end is not retried (and not offered), and the refusal says how to draft again",
+   "ok": true,
+   "detail": {
+    "job": "COMPLETED",
+    "status": 400,
+    "message": "Nothing to retry: every step finished or ran to its end. To draft a form anew, start its draft again."
+   }
+  },
+  {
+   "name": "M1 whole form: a cancel during the stub pass means the paid call is never made: CANCELLED before its AI call, US$0, retryable",
+   "ok": true,
+   "detail": {
+    "status": "CANCELLED",
+    "message": "Cancelled before it started its AI call (after the stub pass): nothing was sent. US$0.",
+    "calls": [
+     "stub"
+    ]
+   }
+  },
+  {
+   "name": "M1 whole form (break m1): a cancel during the paid call keeps its cost but never compares or applies its answer",
+   "ok": true,
+   "detail": {
+    "status": "CANCELLED",
+    "message": "Cancelled while the AI call ran: its answer was kept in the run record but not compared or applied. Cost US$0.42."
+   }
+  },
+  {
+   "name": "QA-27: an empty body → 400 in plain words (no validator text)",
+   "ok": true,
+   "detail": "Name the combination this is drafted for. Choose STUB or LIVE: STUB runs no AI (US$0), LIVE is a paid AI call."
+  },
+  {
+   "name": "QA-27: a combination that is not an id → 400 in plain words (no validator text)",
+   "ok": true,
+   "detail": "Name the combination this is drafted for."
+  },
+  {
+   "name": "QA-27: mode in lower case → 400 in plain words (no validator text)",
+   "ok": true,
+   "detail": "Choose STUB or LIVE: STUB runs no AI (US$0), LIVE is a paid AI call."
+  },
+  {
+   "name": "QA-27: a worst case sent as text → 400 in plain words (no validator text)",
+   "ok": true,
+   "detail": "Send the worst case you were shown as a number of US dollars, for example 0.42."
+  },
+  {
+   "name": "QA-27: a negative worst case → 400 in plain words (no validator text)",
+   "ok": true,
+   "detail": "The worst case is never below US$0: send the amount you were shown."
+  },
+  {
+   "name": "QA-27: a list instead of one object → 400 in plain words (no validator text)",
+   "ok": true,
+   "detail": "Send the details as one JSON object, not a list."
+  },
+  {
+   "name": "QA-27: accept with the inputs as text, not a list → 400 saying how to list them",
+   "ok": true,
+   "detail": "List the inputs to accept, for example [\"birthCity\"]; leave it out to accept every proposal."
+  },
+  {
+   "name": "QA-27 (review 4): a list body on accept is refused without the start's example",
+   "ok": true,
+   "detail": "Send the details as one JSON object, not a list."
+  },
+  {
+   "name": "QA-27 fail: a well-formed start is not refused by the new words; a stub (US$0) makes no AI work entry (break m5)",
+   "ok": true,
+   "detail": {
+    "status": 201,
+    "batch": null
+   }
+  },
+  {
+   "name": "QA-31: a live screen-map draft is its own AI work and can be cancelled: cancelled during its stub pass, the paid call is never made (US$0)",
+   "ok": true,
+   "detail": {
+    "batch": true,
+    "cancel": 201,
+    "status": "CANCELLED",
+    "message": "Cancelled after the stub pass: the AI call was not made. Nothing was drafted. US$0.",
+    "calls": [
+     "stub"
+    ]
+   }
+  },
+  {
+   "name": "QA-31: its AI work ends CANCELLED (not left running), with a heading and its step not offered for retry (review 2)",
+   "ok": true,
+   "detail": {
+    "status": "CANCELLED",
+    "label": "Screen-map draft with AI",
+    "retryable": false
+   }
+  },
+  {
+   "name": "QA-31 fail: a screen-map draft is not 'retried' through the field-map retry; the refusal says where to start it again",
+   "ok": true,
+   "detail": "A screen-map draft is started again from its online version (draft with AI), not retried here."
+  },
+  {
+   "name": "QA-31 fail: cancelling it again, once finished, is a 409 in plain words",
+   "ok": true,
+   "detail": "This AI work has already finished."
+  },
+  {
+   "name": "QA-31 / break M1: a cancel while the live launch waits for the ledger is honoured: no second launch, CANCELLED, US$0",
+   "ok": true,
+   "detail": {
+    "status": "CANCELLED",
+    "calls": [
+     "stub",
+     "live"
+    ]
+   }
+  },
+  {
+   "name": "QA-31 / break m1: cancelled during the paid call: CANCELLED with its cost, and its proposals cannot be accepted",
+   "ok": true,
+   "detail": {
+    "status": "CANCELLED",
+    "cost": 0.31,
+    "accept": 409
+   }
+  },
+  {
+   "name": "QA-31 fail: a live screen-map draft that is not cancelled ends as it ended (FAILED here), and so does its AI work, never CANCELLED",
+   "ok": true,
+   "detail": {
+    "job": "FAILED",
+    "batch": "FAILED"
+   }
+  },
+  {
+   "name": "none of these paths wrote to the shared spend ledger (no reservation, no correction line)",
+   "ok": true
+  },
+  {
+   "name": "nothing was applied: IMM 5409 has no map rows from these drafts",
+   "ok": true
+  },
+  {
+   "name": "PR 10: STUDIO_FAKE_LAUNCHER naming another script is ignored: it never runs, the fake log stays empty, and the guarded launcher's stub pass runs (US$0)",
+   "ok": true,
+   "detail": {
+    "status": "COMPLETED",
+    "message": "Stub pass completed: the guarded path works. A stub has no AI content, so there is nothing to compare.",
+    "ran": false,
+    "fakeCalls": 0
+   }
+  },
+  {
+   "name": "PR 10: STUDIO_FAKE_LAUNCHER naming a link named like the fixture is ignored: it never runs, the fake log stays empty, and the guarded launcher's stub pass runs (US$0)",
+   "ok": true,
+   "detail": {
+    "status": "COMPLETED",
+    "message": "Stub pass completed: the guarded path works. A stub has no AI content, so there is nothing to compare.",
+    "ran": false,
+    "fakeCalls": 0
+   }
+  },
+  {
+   "name": "PR 10 fail: the fixture itself, named as the suite's usage line names it, is still honoured",
+   "ok": true,
+   "detail": {
+    "status": "COMPLETED",
+    "calls": 1
+   }
+  },
+  {
+   "name": "break M2: a reset while a screen-map draft runs leaves the server running (the draft ends nowhere, quietly)",
+   "ok": true,
+   "detail": {
+    "reset": 201,
+    "session": 200
+   }
+  }
+ ]
+}

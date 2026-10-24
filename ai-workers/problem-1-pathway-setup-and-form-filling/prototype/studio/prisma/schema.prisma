@@ -1025,11 +1025,15 @@ model CaseParticipant {
   /// travelling with the application (a combination participant that "applies")
   applies     Boolean @default(true)
   order       Int
+  /// The add-person request's key and fingerprint (QA-28): the same key again returns this person, never a second one.
+  idempotencyKey         String? @map("idempotency_key")
+  idempotencyFingerprint String? @map("idempotency_fingerprint") @db.VarChar(64)
 
   case    Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
   subject AnswerSubject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
 
   @@unique([caseId, order])
+  @@unique([caseId, idempotencyKey])
   @@map("case_participant")
 }
 

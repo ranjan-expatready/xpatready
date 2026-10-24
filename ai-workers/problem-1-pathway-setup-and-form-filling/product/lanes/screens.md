@@ -1,26 +1,26 @@
 # Lane: screens — Milestone 2 screens
 
 ## From the Lead
-2026-10-24 20:20 (Lead, cloud): **Screen 01 is DONE** (qa after-merge on db468e3: 9/10, no Major in scope). Set stage FIX, owner Builder, for one small pass while Screen 02 waits for the founder's walk of its draft: **QA-4** (Major, lane copies only: `res.download` in `api/src/main.ts:66, :79` needs `dotfiles: "allow"`, so source and filled-PDF downloads work under `.claude/worktrees/`), **QA-20** (combination page 13 px too wide at 400 px: the Portal select in the Filing · Portal row), **QA-22** (the author briefly sees non-author text and a disabled New combination while the session loads: treat the page as loading until the person is known, `programs.tsx:47`; qa check `check_qa22_author_flash.cjs`). Each with a test. Then CHECK (reviewer + breaker) → owner Lead. For Screen 03 later: F-R1c-1 from runtime (`engine/render.ts` sorts questions by label, not by the release's placement order) and the authoring of section checks (RT-7). First sync main (`git fetch origin main && git merge origin/main`), then run `product/tools/cloud-setup.sh` in a cloud copy. Stop isolated copies at the end.
+2026-10-24 21:10 (Lead, cloud): small FIX after DONE **merged** (QA-4, QA-20, QA-22; smallfix 23/23 with system Chrome). Waiting: Screen 02 DESIGN starts after the founder walks the Screen 02 draft and the Lead writes the concept (P-61–P-63, A4 progress screen). For Screen 03 later: F-R1c-1 (render.ts order) and RT-7 check authoring.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_screen: 01-programs-catalogue
 stage: CHECK
 owner: Lead
-next_action: Lead check of the small FIX (build-notes "Small FIX after the merge" + "CHECK round 3"), merge (new migration 20261024090000: prisma generate + migrate deploy; existing duplicate names keep no key and are listed by the query in the migration), then the qa after-merge; Screen 01 DONE when it passes.
+next_action: Lead check of the small FIX on its exact commit (build-notes "Fixes: small FIX after Screen 01 DONE" and its "CHECK round on 12af01a"; review.md, break-report.md), then merge; no migration.
 then: Screen 02 DESIGN (Lead concept with P-61–P-63 and the A4 progress screen; builder feasibility challenge).
 blocked_by: none
 updated: 2026-10-24
 
 ## Log (last 10 lines)
+- 2026-10-24 · 01 · CHECK · Lead: CI red on check_screen01_smallfix (browser launch): now launches channel "chrome" like the other browser suites; 23/23 on a fresh copy. Still CHECK, owner Lead.
+- 2026-10-24 · 01 · FIX → CHECK · QA-4, QA-20, QA-22 and the CHECK round (K1, m1–m5, review should 1–2) fixed; all 16 suites PASS on dfa9162 (smallfix 23/23, browser 136, API 135, rules 67). AI US$0.
+- 2026-10-24 · 01 · CHECK → FIX · reviewer Ship 9/10 (0 Must, 3 Should), breaker 1 Major (K1 keyboard on Portal/Filed as) + 5 Minor: K1, m1–m5, Should 1–2 fixed; smallfix 23/23 (10 new checks fail on 12af01a). review.md earlier rounds → review-earlier.md.
+- 2026-10-24 · 01 · DONE → FIX · applied Lead note 2026-10-24 20:20 (sent to this session; on PR #9): QA-4, QA-20, QA-22 each reproduced, fixed and tested (check_screen01_smallfix.cjs 11/11); full suites running; CHECK next.
 - 2026-10-24 · 01 · FIX → CHECK · QA-14 one name per parent in the database (normalised key, partial unique index, app keys other scripts), QA-17 dates on steps, L1 (cause: wrong database; checks now verify it), L2 waits, L3 type errors 39 → 0; CHECK round 3: reviewer Ship 9/10, breaker 0 Major/7 Minor, all fixed. Rules 67, API 135, browser 136, channels 42, grounding 29, forms 106. AI US$0.
 - 2026-10-24 · 01 · CHECK → FIX · applied Lead note 2026-10-24 (merged 1cb174a6; small FIX: QA-14, QA-17, L1–L3).
 - 2026-10-23 · 01 · FIX → CHECK · P-74 extension: C1.6 channel per line + filing method (row and page), C1.7 portal + default channel, C2.7 add an online form (awaiting a second person; continue/abandon), C2.10 what drafting reads per form, C3.10; CHECK round 2 (reviewer 8/10, 2 Must; breaker 3 Major) fixed: portal reviewed, version checks, no stuck captures. Rules 65, API 130, channels 42, browser 135, race safe. AI US$0.
 - 2026-10-23 · 01 · FIX → CHECK · One pass: QA-1 release gate (both routes, per person, rolled back if the draft moves during release), QA-13 re-add restores the line, QA-3/5/6/7/9/10/11/12, P-63 words, step said once, default channel; reviewer Ship after fixes 8.5/10 (2 Must, 5 Should) and breaker 4 Major/9 Minor fixed in the same pass. Rules 63, API 130, browser 118, race 7/7, grounding 29, forms 106, scale 17/17. AI US$0.
 - 2026-10-23 · 01 · DEMO → FIX · applied Lead note 2026-10-23 17:05 (founder: close Screen 01 in one FIX pass, qa retest, then DONE). Lane copy bound to screens.
 - 2026-10-23 · 01 · CHECK → DEMO · Lead: AI repair A1–A3, A6 confirmed (lead-check.md); :4400 restarted on the repaired build; A4 accepted (forms lane backend, Screen 02 progress screen); restart-script finding carried.
-- 2026-10-23 · 01 · CHECK · Founder decided P-62 (setup model) and P-63 (form field words). No stage change; workflow package next, then Lead recheck of the AI repair.
-- 2026-10-23 · 01 · CHECK · Founder decided P-61 (online forms); Lead proposed P-62 (end-to-end setup model). No stage change; Lead recheck of the AI repair still next.
-- 2026-10-23 · 01 · CHECK · Lead: founder chose local git + 4 lanes (R-75, workflow package pending); P-61 online forms proposed (R-76). Lead recheck of the AI repair still next.
-- 2026-10-23 · 01 · FIX → CHECK · AI drafting repair (P-60, no control cut): one fact naming rule in contracts, v2 prompt/schema and studio; entries checked one by one (bad entry → needs a person, rest kept); plain FAILED messages; four IMM 1344 answers recovered at US$0 (233/233 kept; browser: saved answer → 161 mapped, 44 to decide); paid repeat of a failed run refused; printed edition sent to the AI. A4 proposal for the Lead. Suites: AI drafting 48/48, rules 54/54, engine 38/38, grounding 29/29, orchestration 22/22, API 94/94, browser 101/101 (quiet machine). AI US$0.
