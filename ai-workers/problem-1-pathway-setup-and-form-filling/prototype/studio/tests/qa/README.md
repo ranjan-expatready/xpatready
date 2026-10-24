@@ -1,6 +1,6 @@
 # qa lane checks (independent tester, P-68)
 
-Written by the qa lane only; never app code. Each finding in `product/qa/BUGS.md` has a check here that **fails while the finding is open and passes when fixed** (QA-2 now passes: closed). Ports 4470–4479, databases `xr_studio_qa_*`; never :4400. No model call.
+Written by the qa lane only; never app code. Each finding in `product/qa/BUGS.md` has a check here that **fails while the finding is open and passes when fixed** (closed findings' checks now pass: QA-1, 2, 5, 13, 16). Ports 4470–4479, databases `xr_studio_qa_*`; never :4400, except the read-only QA-19 check (GET requests only). No model call.
 
 | Check | Bug | Run (from `prototype/studio/`) |
 |---|---|---|
@@ -12,7 +12,9 @@ Written by the qa lane only; never app code. Each finding in `product/qa/BUGS.md
 | `check_qa14_name_race.ts` | QA-14 the same name created at once is stored twice | `zsh tools/isolated.sh qa_race 4479 start && tsx tests/qa/check_qa14_name_race.ts 4479 xr_studio_qa_race` |
 | `check_qa_f1_probe.ts` | F1 slice 1 API probes (C2.5, C3.5, C3.8); QA-15 lower-case form code | `tsx tests/qa/check_qa_f1_probe.ts 4472` (starts its own copy) |
 | `check_qa16_box_words.ts` | QA-16 "box" words on screens and in messages (P-63) | `tsx tests/qa/check_qa16_box_words.ts` (static, no server) |
-| QA-8, QA-9 | AI sandbox in lane copies; stale builder checks | the builder suites themselves: `tests/check_ai_orchestration.ts`, `tests/check_studio_browser.cjs`, `tests/fixtures/scale_100.ts` + `tests/check_catalogue_scale.cjs` |
+| `check_qa19_demo_leftovers.ts` | QA-19 old stored step texts on the shared demo (read-only, GET only) | `tsx tests/qa/check_qa19_demo_leftovers.ts 4400` |
+| `check_qa_s01_channels.cjs` | Screen 01 forms features C1.6, C1.7, C2.7, C2.10; QA-20 at 400 px | see its header; `QA_HEADED=1` shows the browser |
+| QA-8, QA-21 | AI sandbox in lane copies; racy builder check | the builder suites themselves: `tests/check_ai_orchestration.ts`, `tests/check_screen01_browser.cjs` |
 | `check_qa_m2_journeys.cjs` | M2 journeys J1–J8 (author, reviewer, approver; QA-1 in the browser, QA-6, QA-7, QA-10, QA-11) | see its header; `QA_HEADED=1` shows the browser |
 
 Harness (scaffolding, never product):
