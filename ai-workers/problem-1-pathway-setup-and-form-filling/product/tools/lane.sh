@@ -76,8 +76,9 @@ case "$1" in
     mkdir -p "$HERE/.claude" && echo "$2" > "$HERE/.claude/lane" && echo "bound to $2" ;;
   setup)
     [ "$(whoami_)" = lead ] && { echo "main copy: nothing to link"; exit 0; }
-    # A cloud clone (no .tools anywhere): the one-time cloud setup installs runtimes, packages and the database (P-82).
-    [ -e "$HERE/.tools" ] || [ -e "$MAIN/.tools" ] || [ "$(uname -s)" != Linux ] || bash "$HERE/$P/product/tools/cloud-setup.sh" || exit 5
+    # A cloud clone (Linux, not a Mac lane worktree): run the cloud setup every time. It is idempotent (seconds when
+    # done) and finishes what an interrupted run left, or restarts a database a container restart stopped (P-82).
+    if [ "$HERE" = "$MAIN" ] && [ "$(uname -s)" = Linux ]; then bash "$HERE/$P/product/tools/cloud-setup.sh" || exit 5; fi
     # .tools stays optional (P-82): link it when the primary copy has one (Mac node runtime, venv, PDFs, pg data).
     [ -e "$HERE/.tools" ] || { [ -e "$MAIN/.tools" ] && ln -s "$MAIN/.tools" "$HERE/.tools" && echo "linked .tools"; }
     # Packages: every copy installs its own from the committed lockfile (P-82); a prisma generate here can
