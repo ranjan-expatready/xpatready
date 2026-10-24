@@ -127,7 +127,13 @@ async function main() {
   const spouse = (await call("POST", `/runtime/cases/${A.id}/people`, { role: "spouse_or_partner", displayName: "Sample Spouse Ä" })).body.subject_id as string;
   const c1 = await addChild(A.id, "Sample Child Ω"), c2 = await addChild(A.id, "Sample Child Ω");
   ok("C6.2 two children with the same display name (twins, or a double click) are both added as separate people", c1.status === 201 && c2.status === 201 && c1.body.subject_id !== c2.body.subject_id, [c1.status, c2.status]);
-  note("C6.2 gap: adding a person has no idempotency key, so a double click on \"Add child\" adds the child twice (only the release's maximum stops it)");
+  // QA-28 (fixed on 12e7207 with an idempotency key): a double click sends the same key twice at once → one person.
+  const kc = `qa-dbl-${run}`, K = await open("K"); // its own case, so the children limit of case A is untouched
+  const [dbl1, dbl2] = await Promise.all([addChild(K.id, "Sample Child Dbl", { idempotencyKey: kc }), addChild(K.id, "Sample Child Dbl", { idempotencyKey: kc })]);
+  const dblRows = Number(sql(`select count(*) from case_participant where case_id='${K.id}' and idempotency_key='${kc}'`));
+  ok("QA-28 a double click on Add child (the same idempotency key sent twice at once) adds one person; both answers name it", dbl1.status < 300 && dbl2.status < 300 && dbl1.body?.subject_id === dbl2.body?.subject_id && dblRows === 1, { statuses: [dbl1.status, dbl2.status], rows: dblRows });
+  const dbl3 = refusal("add person, key reused", await addChild(K.id, "Sample Child Other", { idempotencyKey: kc }));
+  ok("QA-28 the same key with a different person is refused (409) and adds nothing", dbl3.status === 409, { status: dbl3.status, detail: dbl3.body?.detail });
   const child = c1.body.subject_id as string, child2 = c2.body.subject_id as string;
   r = refusal("person applies wrong type", await addChild(A.id, "Sample Child T", { applies: "yes" }));
   ok("C6.2 'travelling' given as text is a 400 field error in plain words (not the library's default wording)", r.status === 400 && r.body?.errors?.[0]?.field === "applies" && !ZOD_OR_TECH.test(r.body?.errors?.[0]?.message ?? ""), r.body?.errors);
