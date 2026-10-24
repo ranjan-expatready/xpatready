@@ -19,3 +19,18 @@
 | QA-17 | UX · Minor | C1.4 | 65826022 | db468e38, 24 Oct | a step moved two days back reads "Oct 22, 6:18 p.m.", today's "today 6:18 p.m." (`reports/2026-10-24-after-merge-2/QA-17-recent-steps.png`) |
 | QA-8 | Bug · Major | C3.1, C3.3 | 141194dc | db468e38 (forms slice 2, `--preserve-symlinks`), 24 Oct | `check_ai_orchestration.ts` 22/22 in a lane copy under `.claude/worktrees/` with the main copy's `node_modules` linked (the failing set-up); 22/22 in the plain copy |
 | QA-21 | Bug · Minor | suites | e742bc59 | db468e38 (screens L2 waits), 24 Oct | `check_screen01_browser.cjs` 136/136 in two full suite runs in the qa copy |
+| QA-4 | Bug · Major | all (lane copies) | 141194dc | 12e7207 (screens small FIX), 24 Oct | `check_qa4_page_address.ts` in a lane copy under `.claude/worktrees/`: pages 5/5 and a stored source downloads (200 application/pdf) |
+| QA-20 | Bug · Minor | C1.6, C1.7 | e742bc59 | 12e7207, 24 Oct | `check_qa_s01_channels.cjs` 19/19: combination page with channels 400 px wide at 400 px, 1024 at 1024 |
+| QA-22 | UX · Minor | C1.1 | db468e38 | 12e7207, 24 Oct | `check_qa22_author_flash.cjs` (session held 1.5 s): skeleton until the person is known, then the author's own message; New combination not disabled for the author |
+| QA-15 | UX · Minor | C2.5 | 65826022 | 12e7207 (forms slice 2b), 24 Oct | `check_qa_f1_probe.ts` 26/26 (lower-case form code accepted at capture start) |
+| QA-23 | Bug · Major | C6.6 (D1) | db468e38 | 12e7207 (runtime R1c), 24 Oct | `check_qa_r1a_probe.ts`: after a row is removed, Confirm section with every shown answer → 201 |
+| QA-24 | Bug · Major | C6.10, C6.6 (D2) | db468e38 | 12e7207, 24 Oct | impossible and future birth dates no longer count as a minor; the principal's answer for that child does not reach IMM 5257/5707 as a confirmed fact; an unconfirmed birth date also holds the answer (probe NOTE) |
+| QA-25 | Bug · Minor | C6.3 | db468e38 | 12e7207, 24 Oct | terminal escape and bell in a typed answer refused or flagged (`check_qa_r1a_probe.ts`) |
+| QA-28 | Gap · Minor | C6.2 | db468e38 | 12e7207, 24 Oct | the same idempotency key sent twice at once adds one child (201, 201, one row); the key with a different person → 409 plain; in the browser a double-clicked Add adds one child (`check_qa_r1c_walk.cjs`) |
+| QA-27 | UX · Minor | C3.1, C3.9 | db468e38 | 12e7207, 24 Oct | `check_qa_s2_probe.ts`: the six screen-map start and accept refusals in plain words |
+| QA-29 | Bug · Major | C3.9 (D3) | db468e38 | 12e7207, 24 Oct | a LIVE start with proposals waiting returns the waiting draft (reused, US$0): no new job, no ledger line (`check_qa_s2_probe.ts`); a STUB start still makes a free second pass (note) |
+| QA-30 | Bug · Minor | C3.1 | db468e38 | 12e7207, 24 Oct | draft request with no mode → 400 "Choose how to draft this form: live, replay or stub …" |
+| QA-31 | Gap · Minor | C3.9 | db468e38 | 12e7207, 24 Oct | LIVE screen-map drafts now have AI work and the one cancel: retested through the builders' `check_ai_launch_paths.ts` 55/55 (fake launcher, US$0) run by qa on 12e7207 and the code (`forms.ts:499`, `:557`); qa did not write its own LIVE-cancel probe (one-run budget). A STUB pass has nothing to cancel (by design) |
+| QA-32 | UX · Minor | C3.3 | db468e38 | 12e7207, 24 Oct | retry after a mid-run cancel runs a new step (201) and finishes at US$0 (`check_qa_s2_probe.ts`) |
+| QA-33 | Gap · Minor | C3.1 | db468e38 | 12e7207, 24 Oct | a field that changed from date to text between editions is not reused (`check_qa_s2_probe.ts`) |
+| QA-34 | Gap · Major | coverage | db468e38 | 12e7207, 24 Oct | api 95.95% lines / 80.95% branches (floor 95 / 79) with the fake-launcher suite |

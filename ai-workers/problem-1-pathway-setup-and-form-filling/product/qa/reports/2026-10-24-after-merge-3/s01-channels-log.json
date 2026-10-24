@@ -1,0 +1,93 @@
+[
+  {
+    "name": "C1.7 the author picks the portal; C1.6 IMM 1295 set to Online; filing reads 'Mixed: online and PDF'",
+    "ok": true,
+    "detail": "Filing: Mixed: online and "
+  },
+  {
+    "name": "C1.6 an Online line with no approved online version 'Blocks release' and says how to fix it",
+    "ok": true
+  },
+  {
+    "name": "C1.6/C1.7 both are draft changes the review will show",
+    "ok": true,
+    "detail": "2 draft changes"
+  },
+  {
+    "name": "axe: combination page with channels",
+    "ok": true,
+    "detail": "clean"
+  },
+  {
+    "name": "C2.7 the panel pre-fills this combination's portal and the Online line's form code",
+    "ok": true,
+    "detail": "IMM 1295"
+  },
+  {
+    "name": "C2.7 a lower-case code in the panel ('imm 1295') is accepted or explained on the field (QA-15)",
+    "ok": true,
+    "detail": "no code message"
+  },
+  {
+    "name": "C2.7 a screen holding an answer is refused, nothing kept, no half-made capture left open",
+    "ok": true,
+    "detail": "0 open; nothing was kept."
+  },
+  {
+    "name": "C2.7 blank screens are captured; after closing the panel the combination lists the form 'Awaiting a second person'",
+    "ok": true,
+    "detail": "Online forms added here (1) · 2 abandoned, not shownIMM 1295Application for a work permit (Sample) · IRCC PortalAwaiting a second personNot used until a second "
+  },
+  {
+    "name": "C2.7 the author who captured it cannot approve (server)",
+    "ok": true,
+    "detail": "A second person approves a capture: the person who captured the screens cannot approve them (P-57 as amended by P-66)."
+  },
+  {
+    "name": "C2.7 a second person approves (review screen is Screen 02: by API)",
+    "ok": true
+  },
+  {
+    "name": "C2.7 after approval the page no longer says 'Awaiting'; the Online line's problem changes to the next step",
+    "ok": true,
+    "detail": "Blocks release IMM 1295 is filed Online and has an approved online version from the IRCC Portal, but no screen map yet: draft and accept it (no AI)."
+  },
+  {
+    "name": "C2.10 the Sources tab says what drafting reads for each form, 'PDF first (default)'",
+    "ok": true,
+    "detail": "PDF first (default)"
+  },
+  {
+    "name": "C2.10 the author changes it to 'Online screens only'; stored on the library form",
+    "ok": true,
+    "detail": "ONLINE_ONLY"
+  },
+  {
+    "name": "axe: sources tab",
+    "ok": true,
+    "detail": "clean"
+  },
+  {
+    "name": "C2.10 the approver sees the choice read-only (no select)",
+    "ok": true
+  },
+  {
+    "name": "C1.6 the approver cannot change how a form is filed",
+    "ok": true
+  },
+  {
+    "name": "1024 px: combination page with channels has no sideways scroll",
+    "ok": true,
+    "detail": "page 1024 px wide"
+  },
+  {
+    "name": "400 px: combination page with channels has no sideways scroll",
+    "ok": true,
+    "detail": "page 400 px wide"
+  },
+  {
+    "name": "no page errors",
+    "ok": true,
+    "detail": "none"
+  }
+]
