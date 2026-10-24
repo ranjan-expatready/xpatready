@@ -16,6 +16,7 @@ updated: 2026-10-23
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-24 · Lead · PR #5 merged (be10fa7): CI runs every suite on every push (first GitHub run 11/11 green after the L2 wait port), graph in CI, automatic pull at session start. Scheduled Lead set up and paused (founder: until the weekly usage resets).
 - 2026-10-24 · Lead · Founder decided P-84 (scheduled cloud Lead every 4 hours), P-85 (full suites on every push: `tools/run-suites.sh`, 11/11 green on main in 6 min) and P-86 (generated traceability graph `tools/graph.mjs`: 0 hard gaps; 22 untested routes, 7 pages no browser test opens, 5 Works capabilities no test names, 1 unused component → qa lane).
 - 2026-10-24 · cloud · PR #4 merged (3c3d578): cloud sessions live. Follow-up: session start pulls a clean copy automatically (no manual git pull, Mac or cloud); one-Lead check in the lead skill; lane.sh branch skips a lane's merged old branches.
 - 2026-10-24 · cloud · Cloud sessions work end to end (PR from claude/modest-cerf-yunauq): setup from a fresh clone, lane bind to its branch, app, suites green (Screen 01 browser 136/136). Mac-only: evidence lane, sources/code reading, OCR (B31). Lanes sync main once before their first cloud run.
