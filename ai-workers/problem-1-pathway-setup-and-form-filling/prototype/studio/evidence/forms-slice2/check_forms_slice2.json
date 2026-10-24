@@ -1,0 +1,381 @@
+{
+ "at": "2026-10-23T13:20:42.200Z",
+ "port": 4451,
+ "database": "xr_studio_forms_s2",
+ "paid_calls": 0,
+ "pass": 52,
+ "fail": 0,
+ "log": [
+  {
+   "name": "A4 split: IMM 1344's 233 form fields go to parts of at most 60, by section group, each field exactly once",
+   "ok": true,
+   "detail": [
+    "1:60:Part1.Header+Part1.SponsorDetails",
+    "2:48:Part1.SponsorContactInfo",
+    "3:60:Part1.SponsorResidency+Part1.SponsorEA+Part1.CoSigner",
+    "4:53:Part1.CoSigner",
+    "5:12:Part2.Signatures+Barcodes.DateLastValidated+barcodeValues.TextField1"
+   ]
+  },
+  {
+   "name": "A4 split fail: a repeating row is never cut between parts (one person's row stays in one call)",
+   "ok": true,
+   "detail": [
+    2,
+    3
+   ]
+  },
+  {
+   "name": "A4 reuse: a form field an earlier edition maps (same data path, same caption) is reused without AI, through merges",
+   "ok": true
+  },
+  {
+   "name": "A4 reuse fail: a changed caption, or an earlier entry left open, is not reused",
+   "ok": true
+  },
+  {
+   "name": "A4 merge: reused entries and every part's entries in one answer; a meaning named twice in different parts is flagged",
+   "ok": true,
+   "detail": [
+    {
+     "a": "person.city_of_birth",
+     "b": "person.birth_city",
+     "parts": [
+      1,
+      2
+     ],
+     "why": "the same words in another order"
+    }
+   ]
+  },
+  {
+   "name": "A4 merge fail: two names inside one part, or unrelated names, are not flagged (each part is reviewed as drafted)",
+   "ok": true
+  },
+  {
+   "name": "A4 merge fail (review 3): part 1's answer for part 2's form field is set aside; a form field its part did not answer stays open with the reason",
+   "ok": true,
+   "detail": {
+    "set_aside": [
+     {
+      "part": 1,
+      "data_path": "b"
+     }
+    ],
+    "unanswered": [
+     "b",
+     "c"
+    ]
+   }
+  },
+  {
+   "name": "A4 reuse fail (review 4): a choice field whose codes differ from the earlier edition's is not reused; with the same codes it is, at the earlier row's own confidence",
+   "ok": true
+  },
+  {
+   "name": "A4 merge on a saved real answer (IMM 5257, sliced into its 5 parts, no model call): every form field once, the one a part left out stays open, needs-person entries kept",
+   "ok": true,
+   "detail": {
+    "parts": 5,
+    "unanswered": [
+     "form1[0].Page1[0].PersonalDetails[0].CWADates[0].FromYr[0]"
+    ],
+    "needs_person": 0
+   }
+  },
+  {
+   "name": "A4 ingest: a near-duplicate proposal is flagged for a person (reason and evidence); a reused field is not",
+   "ok": true
+  },
+  {
+   "name": "screen_map: a proposal for an open input names a library field (merged ids redirect), with our own transform, never the AI's",
+   "ok": true,
+   "detail": [
+    {
+     "input": "birthCity",
+     "label": "Place of birth › City or town",
+     "ai_confidence": "medium",
+     "fact": "person.place_of_birth_city",
+     "person": "form_subject",
+     "transform": "as_is",
+     "outcome": "mapped",
+     "why": "AI proposed person.place_of_birth_city (person.town_of_birth was merged into person.place_of_birth_city) for form_subject (medium; \"birthCity\")"
+    },
+    {
+     "input": "consent",
+     "label": "I agree",
+     "ai_confidence": "medium",
+     "fact": null,
+     "person": null,
+     "transform": null,
+     "outcome": "not_a_fact",
+     "why": "AI: not a fact (portal mechanics)"
+    }
+   ]
+  },
+  {
+   "name": "screen_map fail: an answer for an input that was not asked is ignored; an input with no answer stays open",
+   "ok": true
+  },
+  {
+   "name": "screen_map fail: a field not in the library, a field that does not suit the input (text for a year), and a bad name all stay open with the reason",
+   "ok": true,
+   "detail": [
+    "AI proposed person.unknown_field, which is not in the library: a person creates it (or picks another) first",
+    "AI proposed person.family_name, which holds a text; this input is a date part (YYYY)",
+    "AI proposed a field named \"Person.Bad Name\" breaks the naming rule (area.name in lower case: the area is person, relationship, case, organisation or representative; the name starts with a letter and uses only lower-case letters, digits and underscores (at most 80 characters in all)): a person names the field"
+   ]
+  },
+  {
+   "name": "screen_map fail: a person outside the agreed list is not accepted",
+   "ok": true
+  },
+  {
+   "name": "screen_map live branch (hand-written records, no model call): a usable answer gives proposals; unreadable or refused answers give a plain message and no proposal",
+   "ok": true
+  },
+  {
+   "name": "F2: a signature box is recognised (IMM 1344 sponsor's and principal's signatures; a typed-name box elsewhere); its date and buttons are not",
+   "ok": true
+  },
+  {
+   "name": "F1: a Canada/US telephone written to IMM 1344 gives the person step 'tick Canada/US' (its number boxes show only after that click)",
+   "ok": true,
+   "detail": [
+    "Question 3 Telephone number: after the form's first Validate, tick \"Canada/US\" a",
+    "Sign: each signer types their own name in \"Sponsor's signature\" and \"Signature o"
+   ]
+  },
+  {
+   "name": "F1 fail: an international number (country code 91, 'Other') needs no such step",
+   "ok": true
+  },
+  {
+   "name": "F1 fail (break M4): a '+1' number the writer left as international (switch 0, country code 1, international box) needs no step; the switch written ticked does",
+   "ok": true
+  },
+  {
+   "name": "F2 (break m9): a signature field with no caption is a signature; 'Date of signature' is a date, written as usual",
+   "ok": true
+  },
+  {
+   "name": "F3 (break m10): postal codes with an en dash, an underscore or full-width letters, under 'Post code', are written A1A 1A1",
+   "ok": true
+  },
+  {
+   "name": "option maps (break m11): a code list in any step of a transform ('code_list:…; uppercase') counts as codes",
+   "ok": true
+  },
+  {
+   "name": "F2: IMM 1344's mandatory signatures give the step 'each signer types their name, then Validate'; IMM 1295's optional signature box gives none",
+   "ok": true
+  },
+  {
+   "name": "F3: a Canadian postal code is written in the form's own format (M5V0A1 → M5V 0A1)",
+   "ok": true
+  },
+  {
+   "name": "F3 fail: other values, and postal codes of other countries, are written unchanged",
+   "ok": true
+  },
+  {
+   "name": "F4: IMM 0008's empty first dependant block (shown by default, mandatory boxes) gives 'Remove Dependant' as a person step; the repeating block that starts with no rows does not",
+   "ok": true,
+   "detail": [
+    "Remove the empty block depPrime with the form's own \"Remove Dependant\" button (and confirm"
+   ]
+  },
+  {
+   "name": "F4 fail: a dependant block that receives values is kept (no step)",
+   "ok": true
+  },
+  {
+   "name": "option maps: a text form field (country_name_text) and a derived yes/no field (derive:Y if …) on a field with an answer list need none",
+   "ok": true
+  },
+  {
+   "name": "option maps fail: a form field with codes of its own (code_list, also after a 'select …' step) still needs one",
+   "ok": true
+  },
+  {
+   "name": "fill: a text form field fed by a field on an answer list writes the value's label, never its key",
+   "ok": true
+  },
+  {
+   "name": "A4 plan: IMM 5257 (242 form fields) is planned in parts by section group, none reused yet, US$0 in stub mode",
+   "ok": true,
+   "detail": {
+    "parts": [
+     60,
+     49,
+     56,
+     54,
+     23
+    ],
+    "why": "The guarded stub pass in 5 parts (242 of 242 form fields): no network, no cost, no AI content."
+   }
+  },
+  {
+   "name": "A4 (break B3): two drafts in parts at the same moment both finish: launches take turns, none is refused 'ledger locked'",
+   "ok": true,
+   "detail": [
+    "COMPLETED",
+    "COMPLETED",
+    "Stub pass completed for all 5 parts: the guarded path works for each part. A stub has no AI content, so there is nothing"
+   ]
+  },
+  {
+   "name": "A4 (break M1): the part jobs that ran name their content (…-p1of5-<12 hex>)",
+   "ok": true,
+   "detail": [
+    "57e-p1of5-c205b8760b33",
+    "57e-p2of5-9bf0d1004385",
+    "57e-p3of5-3e05ddcac0a8",
+    "57e-p4of5-e4a3cc59505f",
+    "57e-p5of5-e46e25b85b7e"
+   ]
+  },
+  {
+   "name": "A4 run: every part passes the guarded stub path, one at a time, each recorded with its sections and form fields",
+   "ok": true,
+   "detail": "Stub pass completed for all 5 parts: the guarded path works for each part. A stub has no AI content, so there is nothing to compare."
+  },
+  {
+   "name": "A4 guard: each part reached the AI step only as an admitted part of the official inventory (inventory_part, parent named)",
+   "ok": true,
+   "detail": [
+    {
+     "file": "prototype/p2/parts/imm5257e.p1of5-c205b8760b33.part.json",
+     "sha256": "95e422206e72175cb7b2a797d882cb45c0679ff8f99de65b1e09a7c417863be4",
+     "kind": "inventory_part"
+    }
+   ]
+  },
+  {
+   "name": "A4 guard fail: a part whose form field was changed (a planted instruction) is refused before any prompt exists",
+   "ok": true,
+   "detail": "{\"exit\":2,\"refused\":\"inventory part prototype/p2/parts/imm5257e.p1of5-c205b8760b33.part.json not admitted: a form field is not in the parent inventory as it is there\"}"
+  },
+  {
+   "name": "A4 cancel (break M2): parts not yet started are not sent after a cancel",
+   "ok": true,
+   "detail": {
+    "cancel": 201,
+    "status": "CANCELLED",
+    "notStarted": 4,
+    "message": "Cancelled: 1 of 5 parts ran before the cancel; the rest were not sent. Nothing was applied. Cost US$0.00."
+   }
+  },
+  {
+   "name": "setup: IMM 5257's field map is in the library from the saved real answer (replayed, US$0)",
+   "ok": true
+  },
+  {
+   "name": "A4 reuse fail (review 4): mappings nobody has released yet are never reused",
+   "ok": true,
+   "detail": {
+    "reused": 0
+   }
+  },
+  {
+   "name": "A4 reuse (API): the Super visa's IMM 5257 reuses every field the earlier edition maps; only the fields it left open go to the AI, with a smaller worst case",
+   "ok": true,
+   "detail": {
+    "reused": 228,
+    "to_ai": 14,
+    "worst": 0.57,
+    "open": 14
+   }
+  },
+  {
+   "name": "A4 reuse: when every field is reused the plan says so: no AI call, US$0",
+   "ok": true,
+   "detail": "Every one of its 242 form fields is reused from IMM 5257 (01-2020) (same data path and caption): no AI call, US$0; a person reviews the result."
+  },
+  {
+   "name": "A4 reuse run: completed without any AI call or cost, the record labelled as reuse (not AI), compared with the library for a person",
+   "ok": true,
+   "detail": "Every form field reused from IMM 5257 (01-2020) without AI (US$0) as studio-fieldmap-imm5257e-reused-20261023t132038491z-3e65f0. 161 of 242 boxes mapped; 84 fields: 84 reuse, 0 new, 0 ambiguous, 0 conflicting."
+  },
+  {
+   "name": "A4 reuse apply: the reused form fields enter the library as code matches (origin CODE_MATCH, 'as released in IMM 5257 (01-2020)'), never as AI",
+   "ok": true,
+   "detail": {
+    "status": 201,
+    "origins": "CODE_MATCH"
+   }
+  },
+  {
+   "name": "screen_map fail: drafted only for a combination that files the form",
+   "ok": true,
+   "detail": "Applicant outside Canada does not file IMM 5257."
+  },
+  {
+   "name": "screen_map fail: a live draft is refused until its worst case is confirmed to the cent (nothing spent unseen)",
+   "ok": true,
+   "detail": "A live screen-map draft costs at most US$0.29 (4 inputs, up to 2 attempts): send that amount as confirmWorstUsd to go ahead."
+  },
+  {
+   "name": "screen_map fail: the reviewer (no author duty) cannot start it",
+   "ok": true
+  },
+  {
+   "name": "screen_map fail (review 2): two starts at the same moment make one job; the other is refused",
+   "ok": true,
+   "detail": [
+    201,
+    409
+   ]
+  },
+  {
+   "name": "screen_map: the stub pass admits the approved screens and only the open inputs (an admitted part of the screen inventory), US$0",
+   "ok": true,
+   "detail": {
+    "message": "Stub pass completed: the guarded path admitted the approved screens and the 4 open inputs. A stub has no AI content, so there is nothing to accept.",
+    "admitted": [
+     {
+      "file": "prototype/p2/parts/imm-5257-ircc_portal-d6375ca38c3b.open-2b5137bf3928.part.json",
+      "sha256": "e015a8dcc87de1427fbc6eba47cd48804eb41114af73a7f6de7e1d5582cdb777",
+      "kind": "inventory_part"
+     }
+    ]
+   }
+  },
+  {
+   "name": "screen_map fail: a stub pass has nothing to accept",
+   "ok": true,
+   "detail": "This draft has no proposals to accept (a stub pass, or it did not finish)."
+  },
+  {
+   "name": "screen_map accept: a person accepts one proposal now (a new draft version, origin AI_PROPOSAL) and the rest later (break m13); then nothing is left to accept",
+   "ok": true,
+   "detail": {
+    "accepted": "not_a_fact:AI_PROPOSAL",
+    "firstStatus": "COMPLETED",
+    "rest": {
+     "accepted": 1,
+     "left_as_they_were": []
+    },
+    "again": 409
+   }
+  },
+  {
+   "name": "fill: no signature box is ever written; an Indian postal code stays as written and an Indian number needs no person step",
+   "ok": true,
+   "detail": {
+    "postal": "110001",
+    "steps": []
+   }
+  },
+  {
+   "name": "fill (F3, F1): a Canadian postal code is written as the form keeps it (M5V 0A1); a Canada/US number gives the person step 'tick Canada/US'",
+   "ok": true,
+   "detail": {
+    "postal": "M5V 0A1",
+    "steps": [
+     "this telephone number: after the form's first Validate, tick \"Canada/US\" again. "
+    ]
+   }
+  }
+ ]
+}

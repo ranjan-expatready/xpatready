@@ -3,16 +3,19 @@
 // and caps), a labelled replay of a saved real run, comparison with the shared library and the person's decisions.
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { execFile, spawn } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
 import { normalize, type LibraryField } from "../../engine/normalize.ts";
-import { EXPERIMENT_CAP_USD, RUN_CAP_USD } from "../../../p2/policy.ts";
-import { subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
+import { EXPERIMENT_CAP_USD, LABEL, PARTS_DIR, RUN_CAP_USD } from "../../../p2/policy.ts";
+import { canonical } from "../../../contracts/rules.ts";
+import { costUsd } from "../../../p2/ledger.ts";
+import { effective, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE } from "../../engine/snapshot.ts";
+import { assembleMerged, flagNearDuplicates, partOutputTokens, planDraft, type DraftPlan, type Prior } from "../../engine/parts.ts";
 import { compareEditions } from "../../engine/programs.ts";
-import { checkedOutput, explainRun, failedOurCheck, isProviderLimit, sameDraftInputs, type DraftInputs } from "../../engine/ai-run.ts";
+import { checkedOutput, explainRun, failedOurCheck, isProviderLimit, sameDraftInputs, type DraftInputs, type FieldMapAnswer } from "../../engine/ai-run.ts";
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 import { reconvertFile } from "../../../p2/reconvert.ts";
 import { addFormLine, resolveKey } from "./form-lines.ts";
@@ -157,6 +160,66 @@ export class Sources {
     try { return JSON.parse(readFileSync(join(SOLUTION, rel), "utf8")).summary?.sha256 === a.sha256 ? rel : null; } catch { return null; }
   }
 
+  /** A4: the released mappings earlier editions of the same form hold in the library (the newest released version of
+   *  each form field; a newer edition wins for the same data path), with that edition's own choices for the field. A
+   *  draft nobody has released yet is never reused (review 4). Never this file's own edition. */
+  async priorMaps(workspaceId: string, formKey: string, exceptSha: string): Promise<Prior[]> {
+    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey } }, include: { editions: true } });
+    const eds = (def?.editions ?? []).filter((e) => e.channel !== "ONLINE" && e.sha256 !== exceptSha).sort(compareEditions).reverse();
+    const out = new Map<string, Prior>();
+    for (const e of eds) {
+      let options = new Map<string, unknown>();
+      try { options = new Map((JSON.parse(readFileSync(join(SOLUTION, e.inventoryFile!), "utf8")).fields as { data_path?: string; options_resolved?: unknown; options?: unknown }[]).filter((f) => f.data_path).map((f) => [f.data_path!, f.options_resolved ?? f.options ?? null])); } catch { continue; } // no inventory: nothing to compare choices with, so nothing reused
+      for (const m of effective(await this.db.formFieldMap.findMany({ where: { formEditionId: e.id } }), (x) => x.dataPath, "published"))
+        if (!out.has(m.dataPath)) out.set(m.dataPath, { data_path: m.dataPath, caption: m.caption, outcome: m.outcome, fact: m.canonicalFieldKey, person: m.person, transform: m.transform, row: m.row, condition: m.condition, confidence: m.confidence, edition: e.editionLabel, options: options.get(m.dataPath) ?? null });
+    }
+    return [...out.values()];
+  }
+
+  /** A4: the draft of one form, reuse first and in parts: null when one call over the whole form is all there is (no
+   *  reuse, one part), so the whole-form job and its saved answers stay as they were. With `write`, the part files and
+   *  their guarded jobs are written (p2/parts, p2/jobs); the guard admits a part only as an exact subset. */
+  async draftSplit(a: { workspaceId: string; officialFile: string | null; inventoryFile: string | null; sha256: string; edition: string | null }, printedEdition: string | null, write: boolean) {
+    const invRel = this.inventoryOf(a);
+    if (!invRel || !a.officialFile) return null;
+    const invBytes = readFileSync(join(SOLUTION, invRel)), inv = JSON.parse(invBytes.toString("utf8"));
+    const formKey = (printedEdition ?? a.edition ?? "").split(" (")[0];
+    // A merged field redirects; a field retired (or missing) is never reused (break m6): the AI or a person maps it.
+    const newest = new Map<string, { status: string; mergedIntoKey: string | null }>();
+    for (const r of await this.db.canonicalField.findMany({ where: { workspaceId: a.workspaceId }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, status: true, mergedIntoKey: true } })) if (!newest.has(r.canonicalFieldKey)) newest.set(r.canonicalFieldKey, r);
+    const live = (k: string) => { let key = k; for (let n = 0; n < 5 && newest.get(key)?.mergedIntoKey; n++) key = newest.get(key)!.mergedIntoKey!; const f = newest.get(key); return f && f.status !== "RETIRED" ? key : null; };
+    const plan = planDraft(inv, await this.priorMaps(a.workspaceId, formKey, a.sha256), { redirect: live });
+    if (!plan.reused.length && plan.parts.length <= 1) return null;
+    const whole = this.ensureJobFile({ officialFile: a.officialFile, inventoryFile: invRel }, printedEdition);
+    const invSha = sha(invBytes), stem = basename(invRel).replace(/\.inventory\.json$/, "");
+    const parts = plan.parts.map((p) => {
+      const body = { contract: "inventory-part/v1", parent: { file: invRel, sha256: invSha }, part: { index: p.index, count: p.count, section: p.sections.join(", ") }, summary: inv.summary, groups: inv.groups, presence_scripts: inv.presence_scripts, fields: p.fields };
+      const bytes = JSON.stringify(body, null, 1) + "\n";
+      const file = `${stem}.p${p.index}of${p.count}-${sha(canonical(p.fields as never)).slice(0, 12)}.part.json`;
+      // The part's job id names its content, so two drafts at once (two copies, or a library change between them) never
+      // run each other's part files (break M1).
+      const jobId = `${whole.jobId}-p${p.index}of${p.count}-${sha(canonical(p.fields as never)).slice(0, 12)}`;
+      const settings = { ...whole.settings, max_output_tokens: partOutputTokens(p.fields.length), timeout_ms: 600_000 };
+      const job = { job_id: jobId, kind: "field_map", combination: "studio", configuration_version: "studio-add-form", template: "field-map-part.v1.md", output_schema: "field-map-output.v2.schema.json", ...(whole.known ? { known: whole.known } : {}), inputs: [{ file: `prototype/p2/parts/${file}`, sha256: sha(bytes) }], settings };
+      if (write) {
+        mkdirSync(PARTS_DIR, { recursive: true });
+        if (!existsSync(join(PARTS_DIR, file)) || readFileSync(join(PARTS_DIR, file), "utf8") !== bytes) writeFileSync(join(PARTS_DIR, file), bytes);
+        const jobFile = join(JOBS, `${jobId}.json`), text = JSON.stringify(job, null, 1) + "\n";
+        if (!existsSync(jobFile) || readFileSync(jobFile, "utf8") !== text) writeFileSync(jobFile, text);
+      }
+      // Worst case exactly as the ledger reserves it: the part's request bound and its own output limit, per attempt. A
+      // part with a valid saved answer for exactly these inputs costs nothing (review 5: a retry pays only what failed).
+      const inputSha = sha(bytes);
+      const draftInputs: DraftInputs = { inputSha, templateSha: sha(readFileSync(join(PROMPTS, job.template))), schemaSha: sha(readFileSync(join(PROMPTS, job.output_schema))), model: settings.model, effort: settings.effort, maxOutputTokens: settings.max_output_tokens, known: job.known ?? null };
+      const saved = existsSync(RUNS) ? this.savedRuns(jobId, inputSha).find((r) => r.valid && sameDraftInputs(r.envelope, draftInputs)) : undefined;
+      const repeats = saved ? null : this.repeatsFailedRun(jobId, draftInputs);
+      const worst = saved || repeats ? 0 : Math.min(RUN_CAP_USD, costUsd(settings.model, bytes.length + 8_000, settings.max_output_tokens) * settings.max_attempts);
+      return { index: p.index, count: p.count, sections: p.sections, fields: p.fields.length, paths: p.fields.map((f) => f.data_path!), jobId, file, inputSha, saved_run: saved?.file ?? null, repeats_failed_run: repeats?.run_id ?? null, worst_usd: Math.round(worst * 100) / 100 };
+    });
+    return { plan: { total: plan.total, reused: plan.reused, leftover: plan.leftover } as Omit<DraftPlan, "parts">, parts, wholeJobId: whole.jobId, inventoryFile: invRel, inventorySha: invSha,
+      reusedFrom: [...new Set(plan.reused.map((r) => r.reused_from))], worst_usd: Math.round(parts.reduce((x, p) => x + p.worst_usd, 0) * 100) / 100 };
+  }
+
   /** The edition printed on the file, as the intake read it into the library (P-51); else the approved list's label. */
   async printedEdition(a: { workspaceId: string; sha256: string; edition: string | null }) {
     return (await this.db.formEdition.findFirst({ where: { workspaceId: a.workspaceId, sha256: a.sha256 }, select: { editionLabel: true } }))?.editionLabel ?? a.edition;
@@ -174,12 +237,108 @@ export class Sources {
     }
     if (a.status !== "READ" && a.status !== "DRAFTED") throw new Error(`The form is ${a.status.toLowerCase().replace(/_/g, " ")}; it cannot be drafted.`);
     if (j.mode === "REPLAY") return this.useSaved(id, a.id);
-    const { jobId } = this.ensureJobFile(a, await this.printedEdition(a));
+    const printed = await this.printedEdition(a);
+    const split = await this.draftSplit(a, printed, true);
+    if (split) return this.runParts(id, a, split, j.mode === "LIVE" ? "live" : "stub");
+    const { jobId } = this.ensureJobFile(a, printed);
     await this.db.draftingJob.update({ where: { id }, data: { message: j.mode === "LIVE" ? "Stub pass of the guarded launch path, then the AI call" : "Stub pass of the guarded launch path (no network, no cost)", detail: { job_id: jobId, steps: [] } } });
     await this.launch(id, a.id, jobId, j.mode === "LIVE" ? "live" : "stub");
   }
 
-  private launchOnce(jobId: string, mode: "stub" | "live"): Promise<{ code: number; out: string; err: string }> {
+  /** A4: the parts of one form's draft, one at a time (each: the guarded stub pass, then for live the paid call), with
+   *  progress per part; then one merged answer (reused entries + the parts' answers, near-duplicate names flagged) that
+   *  is compared with the library like any draft. A part that fails fails the step: nothing is applied. */
+  async runParts(id: string, a: { id: string; workspaceId: string }, split: NonNullable<Awaited<ReturnType<Sources["draftSplit"]>>>, mode: "stub" | "live") {
+    const { plan, parts } = split;
+    const state = parts.map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, job_id: p.jobId, status: "queued" as string, run_file: null as string | null, cost_usd: 0, error: null as string | null, saved: false }));
+    const reusedWords = plan.reused.length ? `${plan.reused.length} of ${plan.total} form fields reused from ${split.reusedFrom.join(", ")} without AI; ` : "";
+    const progress = async () => {
+      const done = state.filter((s) => s.status === "done").length, fieldsDone = state.filter((s) => s.status === "done").reduce((x, s) => x + s.fields, 0);
+      const running = state.filter((s) => s.status === "running").map((s) => s.index);
+      await this.db.draftingJob.update({ where: { id }, data: { message: `${reusedWords}${mode === "live" ? "AI draft" : "stub pass"} in ${parts.length} part${parts.length === 1 ? "" : "s"}: part ${done} of ${parts.length} done · ${fieldsDone} of ${plan.leftover} form fields${running.length ? ` (running: part ${running.join(" and ")})` : ""}.`,
+        detail: { job_id: split.wholeJobId, a4: { total: plan.total, reused: plan.reused.length, reused_from: split.reusedFrom, leftover: plan.leftover, parts: state } } } });
+    };
+    const lastJson = (s: string) => { for (const l of s.trim().split("\n").reverse()) { try { return JSON.parse(l); } catch { /* not JSON */ } } return null; };
+    // A cancel or a reset stops the parts not yet started (break M2): each would otherwise be a paid call.
+    const wanted = async () => { const j = await this.db.draftingJob.findUnique({ where: { id }, include: { batch: true } }); return !!j && !j.batch?.cancelRequested && j.status === "RUNNING"; };
+    const runPart = async (s: (typeof state)[number]) => {
+      // STUDIO_PART_PAUSE_MS (isolated test server only, like STUDIO_FAULT_SOURCE): a pause before each part, so a cancel
+      // can be shown to stop the parts not yet started. The demo server never sets it.
+      if (process.env.STUDIO_PART_PAUSE_MS) await new Promise((r) => setTimeout(r, Number(process.env.STUDIO_PART_PAUSE_MS)));
+      if (!(await wanted())) { s.status = "not started"; s.error = "cancelled or reset before this part started; nothing was sent"; return; }
+      s.status = "running"; await progress();
+      const stub = await this.launchOnce(s.job_id, "stub"), sj = lastJson(stub.out);
+      if (stub.code !== 0) { s.status = "failed"; s.error = `stub pass failed: ${this.plainRefusal(String(sj?.refused ?? stub.err).slice(-300))}`; return; }
+      if (mode === "stub") { s.status = "done"; s.run_file = sj?.run_file ? String(sj.run_file).replace(`${SOLUTION}/`, "") : null; return; }
+      const p = parts.find((x) => x.index === s.index)!;
+      if (p.saved_run) { s.status = "done"; s.saved = true; s.run_file = `prototype/p2/runs/${p.saved_run}`; return; } // its saved answer, US$0
+      if (p.repeats_failed_run) { s.status = "failed"; s.error = `a new paid call would repeat run ${p.repeats_failed_run}, which asked exactly this and whose answer failed our own check; a person maps this part, or the rule is reviewed`; return; }
+      const live = await this.launchOnce(s.job_id, "live"), lj = lastJson(live.out);
+      if (!lj?.run_file) { s.status = "failed"; s.error = String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).slice(0, 300) || "the launcher stopped without a reason"; return; }
+      const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
+      s.run_file = String(lj.run_file).replace(`${SOLUTION}/`, ""); s.cost_usd = rec.drafting_run?.usage?.cost_usd ?? 0;
+      if (!/^completed/.test(rec.drafting_run?.status ?? "") || rec.contract_valid !== true) { s.status = "failed"; s.error = explainRun(rec).message; return; }
+      s.status = "done";
+    };
+    try {
+      await progress();
+      const queue = [...state];
+      // One part at a time: the experiment ledger admits one paid call at a time (p2/runner.ts holds its lock for the
+      // call; break B3), so parts side by side would refuse each other. Parts stay small and each reports progress.
+      for (let s = queue.shift(); s; s = queue.shift()) { await runPart(s); if (await this.db.draftingJob.findUnique({ where: { id } })) await progress(); }
+      if (!(await this.db.draftingJob.findUnique({ where: { id } }))) return; // removed by a reset while running
+      const cost = Math.round(state.reduce((x, s) => x + s.cost_usd, 0) * 100) / 100;
+      if (state.some((s) => s.status === "not started")) {
+        await this.db.draftingJob.update({ where: { id }, data: { status: "CANCELLED", costUsd: cost, finishedAt: new Date(), message: `Cancelled: ${state.filter((s) => s.status === "done").length} of ${parts.length} parts ran before the cancel; the rest were not sent. Nothing was applied. Cost US$${cost.toFixed(2)}.` } });
+        return;
+      }
+      const failed = state.filter((s) => s.status !== "done");
+      if (failed.length) {
+        await this.db.draftingJob.update({ where: { id }, data: { status: "FAILED", costUsd: cost, finishedAt: new Date(), message: `${failed.length} of ${parts.length} parts did not finish (${failed.map((f) => `part ${f.index}: ${f.error}`).join("; ").slice(0, 500)}). Nothing was applied. Cost US$${cost.toFixed(2)}.` } });
+        return;
+      }
+      if (mode === "stub" && parts.length) {
+        await this.db.draftingJob.update({ where: { id }, data: { status: "COMPLETED", costUsd: 0, finishedAt: new Date(), message: `Stub pass completed for all ${parts.length} parts: the guarded path works for each part. ${reusedWords ? `${reusedWords[0].toUpperCase()}${reusedWords.slice(1).replace(/; $/, ". ")}` : ""}A stub has no AI content, so there is nothing to compare.` } });
+        return;
+      }
+      // One answer: the reused entries and every part's checked answer (p2/convert rules per part), in form order.
+      // One record: the reused entries and every part's checked answer (p2/convert rules per part), in form order
+      // (engine/parts.ts assembleMerged; every form field reused → no part, labelled as no AI).
+      const lib = new Map((await this.db.canonicalField.findMany({ where: { workspaceId: a.workspaceId }, orderBy: { version: "desc" } })).map((r) => [r.canonicalFieldKey, { meaning: r.meaning, valueType: r.valueType }]));
+      const runId = `${split.wholeJobId}-${parts.length ? "merged" : "reused"}-${new Date().toISOString().replace(/[-:.]/g, "").toLowerCase()}-${randomBytes(3).toString("hex")}`;
+      const envelope = assembleMerged(state.map((s, i) => ({ part: s.index, sections: s.sections, fields: parts[i].paths, run_file: s.run_file, rec: JSON.parse(readFileSync(join(SOLUTION, s.run_file!), "utf8")) })), plan.reused,
+        { runId, reusedFrom: split.reusedFrom, inventoryFile: split.inventoryFile, inventorySha: split.inventorySha, label: LABEL, library: lib });
+      const dir = join(VAR("demo"), "merged-runs"); mkdirSync(dir, { recursive: true });
+      const file = join(dir, `${runId}.json`); writeFileSync(file, JSON.stringify(envelope, null, 1) + "\n");
+      await this.db.draftingJob.update({ where: { id }, data: { runId, runFile: file.replace(`${SOLUTION}/`, ""), costUsd: cost } });
+      await this.ingest(id, a.id);
+    } catch (e) {
+      await this.db.draftingJob.update({ where: { id }, data: { status: "FAILED", message: (e as Error).message.slice(0, 500), finishedAt: new Date() } });
+    }
+  }
+
+  /** A launcher refusal in plain words: its own reason, with the single-use ticket explained once. */
+  plainRefusal(why: string) {
+    return /launch ticket|screening digest/i.test(why) ? `the guarded launch refused this start (its single-use screening check did not match this run; start it again): ${why}` : why;
+  }
+
+  private launching: Promise<unknown> = Promise.resolve();
+  /** One run of the guarded launcher (p2/launch.ts) for a job file: the only way the Studio starts a drafting call. One
+   *  launch at a time in this server, and a launch the experiment ledger refused because another runner (another copy)
+   *  holds it is started again after a pause: refused before any call, so nothing was spent (break B3). */
+  async launchOnce(jobId: string, mode: "stub" | "live"): Promise<{ code: number; out: string; err: string }> {
+    const turn = this.launching.then(async () => {
+      for (let n = 0; ; n++) {
+        const r = await this.launchProcess(jobId, mode);
+        if (n >= 60 || !/ledger locked/i.test(r.out + r.err)) return r;
+        await new Promise((res) => setTimeout(res, 2_000));
+      }
+    });
+    this.launching = turn.catch(() => undefined);
+    return turn;
+  }
+
+  private launchProcess(jobId: string, mode: "stub" | "live"): Promise<{ code: number; out: string; err: string }> {
     return new Promise((res) => {
       const p = spawn(NODE, [join(PROTOTYPE, "p2", "launch.ts"), "--job", jobId, `--${mode}`], { cwd: ROOT, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
       let out = "", err = "";
@@ -265,6 +424,8 @@ export class Sources {
     const seen = new Set<string>(); const library: LibraryField[] = []; const redirects = new Map<string, string>();
     for (const r of rows) if (!seen.has(r.canonicalFieldKey)) { seen.add(r.canonicalFieldKey); if (r.mergedIntoKey) redirects.set(r.canonicalFieldKey, r.mergedIntoKey); else if (r.status !== "RETIRED") library.push({ key: r.canonicalFieldKey, meaning: r.meaning, valueType: r.valueType, status: r.status, aliases: r.aliases }); }
     const items = normalize(out.canonical_fields, entries, library, redirects);
+    // A4: the same meaning proposed under two names in different parts is flagged for a person, never merged silently.
+    flagNearDuplicates(items, rec.merged?.near_duplicates ?? []);
     const affected = await this.dependents(a.workspaceId, [...new Set(items.flatMap((i) => [i.matchedKey, ...i.candidates.map((c) => c.key)]).filter(Boolean) as string[])]);
     if (opts.recompare && job.status !== "COMPLETED") fail("Only a draft waiting for review can be compared again.", HttpStatus.CONFLICT);
     await this.db.normalizationItem.deleteMany({ where: { jobId } });
@@ -288,7 +449,7 @@ export class Sources {
     const n = (o: string) => items.filter((i) => i.outcome === o).length;
     const needsPerson = (rec.conversion?.needs_person ?? []).length;
     const counts = { needs_person: needsPerson, boxes: out.entries.length, mapped: out.entries.filter((e: any) => e.outcome === "mapped").length, unresolved: out.entries.filter((e: any) => e.outcome === "unresolved").length, never_filled: out.entries.filter((e: any) => e.outcome === "never_filled").length, not_a_fact: out.entries.filter((e: any) => e.outcome === "not_a_fact").length, proposed_fields: items.length, reuse: n("REUSE"), new: n("NEW"), ambiguous: n("AMBIGUOUS"), conflict: n("CONFLICT") };
-    await this.db.draftingJob.update({ where: { id: jobId }, data: { status: "COMPLETED", finishedAt: opts.recompare ? job.finishedAt : new Date(), message: `${job.mode === "REPLAY" ? `Saved AI answer from run ${job.runId}${rec.reconverted ? ", re-checked with today's rules" : ""} (no model call, US$0). ` : `Live AI draft ${job.runId}. `}${counts.mapped} of ${counts.boxes} form fields mapped${needsPerson ? ` (${needsPerson} sent to a person: field name or entry rules)` : ""}; ${counts.proposed_fields} fields: ${counts.reuse} reuse, ${counts.new} new, ${counts.ambiguous} ambiguous, ${counts.conflict} conflicting.`, detail: { ...(job.detail as any), counts, form_edition_drafted: out.form_edition, conversion: rec.conversion ?? null, label: rec.label, usage: rec.drafting_run?.usage ?? null, prompt: rec.drafting_run?.settings?.prompt_version, library_revision: revision, ...(opts.recompare ? { recompared: { at: new Date().toISOString(), by: opts.recompare.id, kept, reopened } } : {}) } } });
+    await this.db.draftingJob.update({ where: { id: jobId }, data: { status: "COMPLETED", finishedAt: opts.recompare ? job.finishedAt : new Date(), message: `${job.mode === "REPLAY" ? `Saved AI answer from run ${job.runId}${rec.reconverted ? ", re-checked with today's rules" : ""} (no model call, US$0). ` : `${rec.merged && !rec.merged.parts.length ? `Every form field reused from ${rec.merged.reused_from.join(", ")} without AI (US$0) as ${job.runId}` : `Live AI draft ${job.runId}`}${rec.merged?.parts.length ? ` in ${rec.merged.parts.length} parts${rec.merged.reused ? `, ${rec.merged.reused} form fields reused without AI` : ""}${rec.merged.near_duplicates.length ? `, ${rec.merged.near_duplicates.length} near-duplicate names flagged` : ""}` : ""}. `}${counts.mapped} of ${counts.boxes} form fields mapped${needsPerson ? ` (${needsPerson} sent to a person: field name or entry rules)` : ""}; ${counts.proposed_fields} fields: ${counts.reuse} reuse, ${counts.new} new, ${counts.ambiguous} ambiguous, ${counts.conflict} conflicting.`, detail: { ...(job.detail as any), counts, form_edition_drafted: out.form_edition, conversion: rec.conversion ?? null, label: rec.label, usage: rec.drafting_run?.usage ?? null, prompt: rec.drafting_run?.settings?.prompt_version, library_revision: revision, ...(opts.recompare ? { recompared: { at: new Date().toISOString(), by: opts.recompare.id, kept, reopened } } : {}) } } });
     if (opts.recompare) await this.audit.log(job.workspaceId, opts.recompare.id, "re-compared", "AI draft", job.runId, `${opts.recompare.name} compared ${a.edition}'s AI draft with the current library again (no AI call): ${kept} decisions kept, ${reopened} to decide again`);
     await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "DRAFTED", statusDetail: `AI draft ready to review: ${counts.reuse} reuse, ${counts.new} new, ${counts.ambiguous} ambiguous, ${counts.conflict} conflicting.` } });
     return this.job(jobId);
@@ -396,7 +557,8 @@ export class Sources {
           outcome: returned ? "unresolved" : e.outcome, person: e.person ?? null, row: e.row ?? null, canonicalFieldKey: returned ? null : (d?.decidedKey ?? e.fact ?? null),
           // A part of a composite library value (address) reads that value through the executor's part transformation.
           transform: !returned && d?.decidedKey && d.decidedKey !== e.fact && (d.evidence as any)?.recommendation?.transform && (d.evidence as any).recommendation.key === d.decidedKey ? (d.evidence as any).recommendation.transform : e.transform ?? null, condition: e.condition ?? null, confidence: e.confidence ?? null,
-          evidenceQuote: e.evidence_quote ?? null, reason: returned ? `returned by ${d!.decidedBy}: ${d!.decisionNote}` : e.unresolved_reason ?? null, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", draftingRunId: job.runId, updatedBy: actor.id };
+          // A4: an entry reused from an earlier edition of the form is a code match (no AI saw it), and says where from.
+          evidenceQuote: e.reused_from ? `${e.evidence_quote ?? ""} (as released in ${e.reused_from})`.slice(0, 500) : e.evidence_quote ?? null, reason: returned ? `returned by ${d!.decidedBy}: ${d!.decisionNote}` : e.unresolved_reason ?? null, version: 1, status: "DRAFT", origin: e.reused_from ? "CODE_MATCH" : "AI_PROPOSAL", draftingRunId: job.runId, updatedBy: actor.id };
       }) });
       // On the combination already: kept as it is; removed earlier: added back (QA-13).
       await addFormLine(tx, { workspaceId: ws, combinationId: job.combinationId, govFormDefId: def.id, formKey, who: b.who, origin: "AI_PROPOSAL", by: actor.id, sourceQuote: `${item.edition}: ${item.applicability}` });

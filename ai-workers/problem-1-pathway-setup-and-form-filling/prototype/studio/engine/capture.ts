@@ -5,40 +5,27 @@
 //  - the field-by-field difference between two versions (P-66 §2.3: added, removed, reworded, rule or choice changes);
 //  - the readable review document for the immigration expert (HTML; the API prints it to PDF).
 // A record can never carry an answer: the contract has no place for one and noAnswers() refuses any that slipped in.
-import { Ajv } from "ajv";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { canonical, sha256 } from "../../contracts/rules.ts";
+// The record's identity (fingerprint) and its "no answer" check live in prototype/contracts/portal-capture.ts, shared
+// with the guarded drafting path, which admits an approved screen inventory only with this fingerprint (F1 slice 2).
+import { captureSchemaErrors, fingerprint, noAnswers, structure, type CaptureInput, type CaptureRecord } from "../../contracts/portal-capture.ts";
 import { CAPTURE_CONTRACT, CHANNEL_WORDS, portalLabel } from "../contracts/forms.ts";
 
-export type CaptureOption = { code: string; label: string };
-export type CaptureInput = { id: string; label: string; type: string; required: boolean; order: number; group?: string; part?: "YYYY" | "MM" | "DD"; help?: string; max_length?: number; min_length?: number; pattern?: string; options?: CaptureOption[] };
-export type CaptureScreen = { key: string; order: number; title: string; source: { way: string; file: string; sha256: string }; inputs: CaptureInput[] };
-export type CaptureRecord = { contract: typeof CAPTURE_CONTRACT; portal: string; form: string; title: string; application_type?: string | null; way: string; screens: CaptureScreen[] };
-
-const schema = JSON.parse(readFileSync(join(import.meta.dirname, "..", "..", "contracts", "portal-capture.v1.schema.json"), "utf8"));
-const check = new Ajv({ allErrors: true, strict: false }).compile(schema);
+export { fingerprint, noAnswers, structure };
+export type { CaptureInput, CaptureOption, CaptureRecord, CaptureScreen } from "../../contracts/portal-capture.ts";
 
 /** Contract errors in plain words ("screen 2, input 3: …"); empty when the record is valid. */
 export function contractProblems(r: unknown): string[] {
-  if (check(r)) {
+  const errors = captureSchemaErrors(r);
+  if (!errors.length) {
     // The element id is each input's identity in the capture (review 5): it appears once.
     const ids = (r as CaptureRecord).screens.flatMap((s) => s.inputs.map((i) => i.id));
     const dup = [...new Set(ids.filter((id, n) => ids.indexOf(id) !== n))];
     return dup.length ? [`the element id ${dup.slice(0, 3).join(", ")} appears more than once (each input has its own id)`] : [];
   }
-  return (check.errors ?? []).slice(0, 8).map((e) => {
+  return errors.slice(0, 8).map((e) => {
     const at = e.instancePath.replace(/^\/screens\/(\d+)/, (_m, n) => `screen ${Number(n) + 1}`).replace(/\/inputs\/(\d+)/, (_m, n) => `, input ${Number(n) + 1}`).replace(/^\//, "");
     return `${at || "record"}: ${e.keyword === "additionalProperties" ? `"${(e.params as { additionalProperty?: string }).additionalProperty}" is not part of a capture (a capture holds structure only)` : e.message}`;
   });
-}
-
-const ANSWER_KEYS = new Set(["value", "values", "answer", "answers", "selected", "checked", "default", "default_value", "entered"]);
-/** Every place a record carries something that looks like an answer (defence in depth beside the contract). */
-export function noAnswers(x: unknown, path = ""): string[] {
-  if (Array.isArray(x)) return x.flatMap((v, i) => noAnswers(v, `${path}[${i}]`));
-  if (!x || typeof x !== "object") return [];
-  return Object.entries(x).flatMap(([k, v]) => (ANSWER_KEYS.has(k.toLowerCase()) ? [`${path}.${k}`] : noAnswers(v, `${path}.${k}`)));
 }
 
 /** Screens in the order they were added; each keeps its source file's checksum (the file itself is not kept). */
@@ -50,14 +37,6 @@ export function buildRecord(meta: { portal: string; form: string; title: string;
 }
 
 const norm = (s: string | undefined) => (s ?? "").replace(/\s+/g, " ").trim();
-type Json = Parameters<typeof canonical>[0];
-/** What the fingerprint covers: the structure a person fills, in order. Not the source files, ways or dates. */
-export function structure(r: CaptureRecord): Json {
-  return { portal: r.portal, form: r.form, screens: [...r.screens].sort((a, b) => a.order - b.order).map((s) => ({ title: norm(s.title), inputs: [...s.inputs].sort((a, b) => a.order - b.order).map((i) => ({
-    id: i.id, label: norm(i.label), type: i.type, required: i.required, group: norm(i.group) || null, part: i.part ?? null, help: norm(i.help) || null, max_length: i.max_length ?? null, pattern: i.pattern ?? null,
-    ...(i.min_length != null ? { min_length: i.min_length } : {}), options: (i.options ?? []).map((o) => [o.code, norm(o.label)]) })) })) };
-}
-export const fingerprint = (r: CaptureRecord) => sha256(canonical(structure(r)));
 
 export type Difference = { input: string; screen: string; change: "added" | "removed" | "reworded" | "moved" | "type" | "required" | "rules" | "options"; was?: unknown; now?: unknown };
 /** Field-by-field difference between an approved version and a new capture, by the page's own input id. */

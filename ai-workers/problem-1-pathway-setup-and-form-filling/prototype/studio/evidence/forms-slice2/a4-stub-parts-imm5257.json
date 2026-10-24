@@ -1,0 +1,179 @@
+{
+ "plan": {
+  "combinationId": "bcd780a1-2fcc-4836-a741-76f21a95808e",
+  "combination": "Visitor visa",
+  "program": "Visitor visa",
+  "attachmentId": "1eeaffb6-9b8c-45f8-91c6-96427e70bb4d",
+  "source": "IMM 5257 (09-2023)",
+  "expected_usd": 0,
+  "worst_usd": 0,
+  "action": "draft",
+  "read_first": false,
+  "fingerprint": "4329aa4458378811d2a4bbc11b25513da6dd4e39e6bef52efceb572e1b311494",
+  "a4": {
+   "total": 242,
+   "reused": 0,
+   "reused_from": [],
+   "to_ai": 242,
+   "parts": [
+    {
+     "index": 1,
+     "sections": [
+      "Page1.Header",
+      "Page1.ButtonsHeader",
+      "Page1.PersonalDetails"
+     ],
+     "fields": 60,
+     "worst_usd": 1.87,
+     "saved_answer": false,
+     "repeats_failed_run": null
+    },
+    {
+     "index": 2,
+     "sections": [
+      "Page1.PersonalDetails",
+      "Page1.MaritalStatus",
+      "Page2.MaritalStatus"
+     ],
+     "fields": 49,
+     "worst_usd": 1.41,
+     "saved_answer": false,
+     "repeats_failed_run": null
+    },
+    {
+     "index": 3,
+     "sections": [
+      "Page2.natID",
+      "Page2.USCard",
+      "Page2.ContactInformation"
+     ],
+     "fields": 56,
+     "worst_usd": 1.58,
+     "saved_answer": false,
+     "repeats_failed_run": null
+    },
+    {
+     "index": 4,
+     "sections": [
+      "Page3.DetailsOfVisit",
+      "Page3.Contacts_Row2",
+      "Page3.Education",
+      "Page3.Occupation"
+     ],
+     "fields": 54,
+     "worst_usd": 1.64,
+     "saved_answer": false,
+     "repeats_failed_run": null
+    },
+    {
+     "index": 5,
+     "sections": [
+      "Page3.BackgroundInfo",
+      "Page3.BackgroundInfo2",
+      "Page3.PageWrapper",
+      "Page3.Consent1",
+      "Page3.ButtonsFooter",
+      "Page5.TextField1"
+     ],
+     "fields": 23,
+     "worst_usd": 0.73,
+     "saved_answer": false,
+     "repeats_failed_run": null
+    }
+   ]
+  },
+  "why": "The guarded stub pass in 5 parts (242 of 242 form fields): no network, no cost, no AI content.",
+  "action_label": "Draft field map"
+ },
+ "job": {
+  "status": "COMPLETED",
+  "message": "Stub pass completed for all 5 parts: the guarded path works for each part. A stub has no AI content, so there is nothing to compare.",
+  "a4": {
+   "parts": [
+    {
+     "error": null,
+     "index": 1,
+     "saved": false,
+     "fields": 60,
+     "job_id": "studio-fieldmap-imm5257e-p1of5-c205b8760b33",
+     "status": "done",
+     "cost_usd": 0,
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p1of5-c205b8760b33-stub-20261023t132005410z-b8544d.json",
+     "sections": [
+      "Page1.Header",
+      "Page1.ButtonsHeader",
+      "Page1.PersonalDetails"
+     ]
+    },
+    {
+     "error": null,
+     "index": 2,
+     "saved": false,
+     "fields": 49,
+     "job_id": "studio-fieldmap-imm5257e-p2of5-9bf0d1004385",
+     "status": "done",
+     "cost_usd": 0,
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p2of5-9bf0d1004385-stub-20261023t132008902z-a99c11.json",
+     "sections": [
+      "Page1.PersonalDetails",
+      "Page1.MaritalStatus",
+      "Page2.MaritalStatus"
+     ]
+    },
+    {
+     "error": null,
+     "index": 3,
+     "saved": false,
+     "fields": 56,
+     "job_id": "studio-fieldmap-imm5257e-p3of5-3e05ddcac0a8",
+     "status": "done",
+     "cost_usd": 0,
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p3of5-3e05ddcac0a8-stub-20261023t132012358z-74289b.json",
+     "sections": [
+      "Page2.natID",
+      "Page2.USCard",
+      "Page2.ContactInformation"
+     ]
+    },
+    {
+     "error": null,
+     "index": 4,
+     "saved": false,
+     "fields": 54,
+     "job_id": "studio-fieldmap-imm5257e-p4of5-e4a3cc59505f",
+     "status": "done",
+     "cost_usd": 0,
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p4of5-e4a3cc59505f-stub-20261023t132015755z-864cc4.json",
+     "sections": [
+      "Page3.DetailsOfVisit",
+      "Page3.Contacts_Row2",
+      "Page3.Education",
+      "Page3.Occupation"
+     ]
+    },
+    {
+     "error": null,
+     "index": 5,
+     "saved": false,
+     "fields": 23,
+     "job_id": "studio-fieldmap-imm5257e-p5of5-e46e25b85b7e",
+     "status": "done",
+     "cost_usd": 0,
+     "run_file": "prototype/p2/runs/studio-fieldmap-imm5257e-p5of5-e46e25b85b7e-stub-20261023t132019159z-a0d7eb.json",
+     "sections": [
+      "Page3.BackgroundInfo",
+      "Page3.BackgroundInfo2",
+      "Page3.PageWrapper",
+      "Page3.Consent1",
+      "Page3.ButtonsFooter",
+      "Page5.TextField1"
+     ]
+    }
+   ],
+   "total": 242,
+   "reused": 0,
+   "leftover": 242,
+   "reused_from": []
+  }
+ }
+}

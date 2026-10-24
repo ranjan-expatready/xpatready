@@ -13,6 +13,8 @@ export function pathCodeSha(job: Job): string {
   const h = createHash("sha256");
   for (const f of PATH_CODE) h.update(f).update(readFileSync(join(PROTOTYPE, "p2", f)));
   h.update("contracts/fact-key.ts").update(readFileSync(join(PROTOTYPE, "contracts", "fact-key.ts"))); // the naming rule convert.ts checks
+  // F1 slice 2: the screen-inventory admission (guard.ts) recomputes the capture fingerprint with this code and contract.
+  for (const f of ["portal-capture.ts", "portal-capture.v1.schema.json", "rules.ts"]) h.update(`contracts/${f}`).update(readFileSync(join(PROTOTYPE, "contracts", f)));
   // The job without its input list: the inputs are admitted afresh by the guard on every run (a chained job
   // names different parent drafts in stub and live mode), while kind, template, schema and settings must match.
   const { inputs: _inputs, ...rest } = JSON.parse(readFileSync(join(JOBS_DIR, `${job.job_id}.json`), "utf8"));

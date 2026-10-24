@@ -1,0 +1,1 @@
+{"canonical_fields": [{"id": "person.stub_field", "meaning": "stub caller output; no model was called", "value_type": "text"}], "entries": [{"input": "STUB-no-model-called", "outcome": "unresolved", "person": "none", "fact": null, "transform": null, "confidence": "low", "unresolved_reason": "stub caller: no model was called, so nothing was drafted", "evidence_quote": "stub"}]}

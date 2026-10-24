@@ -3,7 +3,7 @@
 // validator rules for channels and option maps (P-62 §5.3, no AI) run on the snapshot, with everything else in
 // engine/validate.ts, at review and release.
 import { CHANNEL_WORDS, SIGNATURE_WORDS, portalLabel, type Channel } from "../contracts/forms.ts";
-import { optionMapProblems, type OptionMap } from "./options.ts";
+import { hasCodes, optionMapProblems, type OptionMap } from "./options.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
 
@@ -70,7 +70,8 @@ export function channelProblems(s: Snapshot, today = new Date()): Problem[] {
   }
   for (const m of mapsOf(s)) for (const e of m.entries) {
     const values = e.outcome === "mapped" && e.fact ? lists.get(e.fact) : undefined;
-    if (!values) continue;
+    // Only a form field with codes of its own needs an option map; a derived or text field writes the value itself.
+    if (!values || (!e.option_map && !hasCodes(e.transform))) continue;
     for (const p of optionMapProblems(values, e.option_map)) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `${e.caption ?? e.data_path} (${e.fact}): ${p}.` });
   }
   return out;
