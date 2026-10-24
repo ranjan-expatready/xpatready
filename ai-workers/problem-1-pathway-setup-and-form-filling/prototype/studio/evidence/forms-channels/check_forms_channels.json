@@ -1,5 +1,5 @@
 {
- "at": "2026-10-24T18:49:46.027Z",
+ "at": "2026-10-24T19:07:00.271Z",
  "port": 4450,
  "database": "xr_studio_forms_f1",
  "paid_calls": 0,
@@ -246,8 +246,8 @@
    "name": "finish answers before the review document is printed (printed in the background; HTML until the PDF exists)",
    "ok": true,
    "detail": {
-    "ms": 28,
-    "review_file": "prototype/studio/var/isolated-forms_f1/workspaces/demo/portal-twins/IMM5257-ircc_portal-eedc54b0-d6375ca38c3b.review.html"
+    "ms": 25,
+    "review_file": "prototype/studio/var/isolated-forms_f1/workspaces/demo/portal-twins/IMM5257-ircc_portal-9f76871a-d6375ca38c3b.review.html"
    }
   },
   {
@@ -273,7 +273,7 @@
    "name": "approval: a second person makes it an online version, re-check date set (Sample 180 days)",
    "ok": true,
    "detail": {
-    "id": "8c792608-8487-48ce-9f2b-2a03abd8ff62",
+    "id": "ce132d05-5fff-4a89-8a37-965e64c8a0a9",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -360,8 +360,8 @@
    "name": "concurrency: two screens added at the same moment are both kept, or one is refused with 409; never 'added' and lost",
    "ok": true,
    "detail": [
-    201,
     409,
+    201,
     1
    ]
   },
@@ -545,7 +545,7 @@
    "name": "confirm: a second person confirms the identical re-capture; the re-check date runs from it, once",
    "ok": true,
    "detail": {
-    "id": "8c792608-8487-48ce-9f2b-2a03abd8ff62",
+    "id": "ce132d05-5fff-4a89-8a37-965e64c8a0a9",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
     "channel": "ONLINE",
     "portal": "ircc_portal",

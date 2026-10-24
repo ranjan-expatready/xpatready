@@ -36,7 +36,7 @@ export const NewCapture = z.object({
   portal: z.enum(PORTAL_KEYS, { message: "Choose one of the portals." }),
   // QA-15: any case and the usual separators ("imm 5257", "IMM-5257", "imm_5257"); the API stores it as the library
   // writes it (capitals, one space), so it is the same form.
-  form: z.string().trim().regex(/^[A-Za-z][A-Za-z0-9 _-]{1,30}$/, "A form code: letters, then numbers, for example IMM 5257 or EE PROFILE."),
+  form: z.string().trim().regex(/^[A-Za-z][A-Za-z0-9 _-]{1,30}$/, "A form code starts with a letter, for example IMM 5257 or EE PROFILE."),
   title: z.string().trim().min(3, "Give the form's title as the portal shows it.").max(200),
   applicationType: z.string().trim().max(200).optional(),
   /** Screen 01 "Add an online form" (C2.7): the combination it is added from; the online version stays a library one. */

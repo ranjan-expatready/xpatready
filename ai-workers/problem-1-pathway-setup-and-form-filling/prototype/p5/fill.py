@@ -30,7 +30,9 @@ r0 = E.open_reader(orig)
 parts = {k: v.get_object().get_data() for k, v in E.xfa_streams(r0).items()}
 values = {k: str(v) for k, v in req["values"].items()}
 page_values = {k: str(v) for k, v in (req.get("page_fields") or {}).items()}
-out, pages, notes = PF.write_filled(orig, E.new_datasets(parts["datasets"], values), page_values)
+# Static or dynamic from the file itself (break m2): a dynamic form gets no page field set, whatever the request names.
+static = PF.is_static(r0)
+out, pages, notes = PF.write_filled(orig, E.new_datasets(parts["datasets"], values), page_values if static else {})
 dest = Path(req["out"])
 dest.parent.mkdir(parents=True, exist_ok=True)
 dest.write_bytes(out)
@@ -41,7 +43,7 @@ with tempfile.TemporaryDirectory() as t:
 pop = E.poppler_check(dest)
 seen = PF.read_page_fields(again, list(pages["set"]))
 page_bad = [{"name": k, "wrote": v, "read": seen.get(k)} for k, v in pages["set"].items() if seen.get(k) != v]
-kind = "static" if pages["set"] or pages["not_set"] else ("dynamic" if page_values else "none")
+kind = ("static" if static else "dynamic") if page_values else "none"
 page_report = {"form_kind": kind, "requested": len(page_values), "written": len(pages["set"]), "read_back_equal": len(pages["set"]) - len(page_bad),
                "mismatches": page_bad[:10], "not_set": pages["not_set"], "without_page_field": len(pages["unmatched"]) if kind == "static" else 0,
                # Shown outside Adobe: every box written on a static form has its page field set with an appearance.

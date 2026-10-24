@@ -49,7 +49,7 @@ const CHANNEL_TX = { timeout: 20_000, maxWait: 10_000 };
 /** Two saves that both made a new version of a released line: the database keeps one; the other is a 409. */
 const raced = (e: unknown): never => { if ((e as { code?: string } | null)?.code === "P2002") conflict("This line was changed at the same moment: refresh to see it."); throw e; };
 /** A form code as the library writes it: capitals, one space between its parts ("IMM-5257" → "IMM 5257"). */
-const formCode = (s: string) => s.trim().toUpperCase().replace(/[\s_-]+/g, " ");
+const formCode = (s: string) => s.toUpperCase().replace(/[\s_-]+/g, " ").trim(); // trimmed last: "ee_profile_" → "EE PROFILE" (break m5)
 const compact = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
 const slug = (s: string) => normLabel(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "screen";
 /** A screen and its question, said once ("Date of birth › Year"; a radio group's legend is its question). */
@@ -486,7 +486,8 @@ export class Forms {
       const active = await tx.draftingJob.findFirst({ where: { workspaceId: ed.workspaceId, kind: "screen_map", status: { in: ["QUEUED", "RUNNING"] }, detail: { path: ["edition_id"], equals: ed.id } } });
       if (active) conflict("A screen-map draft of this online version is already running.");
       // D3, again under the lock: a draft that finished while this start waited is reused, not paid for twice.
-      if (b.mode === "LIVE" && (await this.waitingDraft(tx, ed.id, first.leftovers.map((x) => x.input)))) return null;
+      // The open inputs are read again here, under the lock (break m6): a person may have mapped some meanwhile.
+      if (b.mode === "LIVE") { const w = await this.waitingDraft(tx, ed.id, (await this.leftoverJob(ed, false)).leftovers.map((x) => x.input)); if (w) return w; }
       // The job files are written here, under the lock, and the worst case confirmed is the one of exactly these files
       // (review 11: it was checked against a plan made before the files were rewritten).
       plan = await this.leftoverJob(ed, true);
@@ -494,7 +495,9 @@ export class Forms {
       const { jobId, leftovers } = plan;
       return tx.draftingJob.create({ data: { workspaceId: ed.workspaceId, combinationId: comb.id, kind: "screen_map", mode: b.mode, status: "RUNNING", message: `${b.mode === "LIVE" ? "Stub pass, then the AI call" : "Stub pass of the guarded path (no network, no cost)"} for ${leftovers.length} open input${leftovers.length === 1 ? "" : "s"} of ${ed.editionLabel}`, startedBy: actor.id, detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, sent_inputs: leftovers.map((x) => x.input), worst_usd: b.mode === "LIVE" ? plan.worst : 0 }) } });
     });
-    if (!j) return this.reuseDraft(actor, (await this.waitingDraft(this.db, ed.id, first.leftovers.map((x) => x.input)))!, ed, comb.id);
+    // A draft found waiting under the lock is the one returned: never looked up again after the commit (break m6: an
+    // accept landing in between made that second look-up empty, a 500).
+    if ("waiting" in j) return this.reuseDraft(actor, j, ed, comb.id);
     const { jobId, leftovers } = plan;
     await this.audit.log(ed.workspaceId, actor.id, "started", "screen-map draft", ed.editionLabel, `${actor.name} started the ${b.mode === "LIVE" ? `live (worst case US$${plan.worst.toFixed(2)})` : "stub (US$0)"} screen-map draft of ${leftovers.length} open inputs of ${ed.editionLabel}`, undefined, comb.id);
     void this.runLeftovers(j.id, ed, jobId, leftovers, b.mode === "LIVE" ? "live" : "stub");

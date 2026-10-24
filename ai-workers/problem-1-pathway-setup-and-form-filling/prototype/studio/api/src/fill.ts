@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import { runTransform } from "../../../p5/transforms.ts";
 import { codeForValue, hasCodes, labelForText, type ListValue, type OptionMap } from "../../engine/options.ts";
-import { inFormFormat, isSignatureBox, oathBoxes, personSteps } from "../../engine/form-steps.ts";
+import { byAPerson, inFormFormat, personSteps } from "../../engine/form-steps.ts";
 import { Audit, Db, fail, PROTOTYPE, PY, ROOT, SOLUTION, VAR, type Actor } from "./core.ts";
 import { Studio } from "./studio.ts";
 
@@ -41,11 +41,10 @@ export class Fill {
     const values: Record<string, string> = {};
     // F1 slice 2 (evidence lane F2, F3): a signature is never typed by the product; values go in the form's own format.
     const write = (path: string, v: string) => (values[path] = inFormFormat(box.get(path) ?? {}, v));
-    // F1 slice 2b (evidence lane F6): the oath block is completed at the oath, whatever is mapped to it.
-    const oath = new Set(oathBoxes(inv.fields as { data_path?: string | null; som?: string | null }[]).map((x) => x.data_path ?? x.som));
+    // F1 slice 2 and 2b (evidence lane F2, F6): a signature or the oath block is never written, whatever is mapped to it.
     const boxes = cov!.boxes.map((r: any) => {
-      if (isSignatureBox(box.get(r.box) ?? {})) return { ...r, result: "by a person", why: "a signature: the person types their own name before the form's Validate; the product never types it" };
-      if (oath.has(r.box)) return { ...r, result: "by a person", why: "the oath: completed when the declaration is made, by the person who administers it; the product never fills it" };
+      const person = byAPerson(inv.fields, box.get(r.box) ?? { data_path: r.box });
+      if (person) return { ...r, result: "by a person", why: person };
       if (r.coverage !== "confirmed fact") return { ...r, result: "not written", why: r.coverage === "answered on screen" ? "answered on screen, not confirmed" : r.detail };
       // A form field on an answer list takes its own code from its option map (the team's ENUM map, onMissing REFUSE).
       const e = entryOf.get(r.box), list = e?.fact ? listOf.get(e.fact) : undefined;
@@ -74,7 +73,7 @@ export class Fill {
     const pdf = readFileSync(out);
     const art = await this.db.generatedArtifact.create({ data: { workspaceId: (await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } })).workspaceId, kind: "filled_pdf", path: out.replace(`${ROOT}/`, ""), sha256: sha(pdf), createdBy: actor.id,
       detail: { form: b.form, person: b.person, mode: view.mode, configuration_sha256: view.sha256, written: Object.keys(values).length, intact: report.intact, read_back_equal: report.read_back_equal, signatures: report.signatures, page_fields: report.page_fields, report_file: `${base}.report.json`, person_steps: steps } } });
-    await this.audit.log(art.workspaceId, actor.id, "filled", "PDF", b.form, `${actor.name} filled ${b.form} for ${cov!.person_label} from confirmed sample facts: ${Object.keys(values).length} form fields written, read back ${report.read_back_equal}/${report.written}${report.page_fields?.form_kind === "static" ? `, page fields ${report.page_fields.read_back_equal}/${report.page_fields.requested} shown outside Adobe` : ""}, ${report.intact ? "intact" : "NOT intact"} (${view.label})`);
+    await this.audit.log(art.workspaceId, actor.id, "filled", "PDF", b.form, `${actor.name} filled ${b.form} for ${cov!.person_label} from confirmed sample facts: ${Object.keys(values).length} form fields written, read back ${report.read_back_equal}/${report.written}${report.page_fields?.form_kind === "static" ? (report.page_fields.shown_outside_adobe ? ", every value also shown outside Adobe" : `, ${report.page_fields.read_back_equal} of ${report.page_fields.requested} values shown outside Adobe (the others only in Adobe)`) : ""}, ${report.intact ? "intact" : "NOT intact"} (${view.label})`);
     return { artifact_id: art.id, label: view.label, configuration_sha256: view.sha256, form: b.form, person: b.person, person_label: cov!.person_label, report, boxes, person_steps: steps,
       counts: { written: boxes.filter((x: any) => x.result === "written").length, by_hand: boxes.filter((x: any) => x.result === "by hand").length, blank: boxes.filter((x: any) => x.result === "blank").length, not_written: boxes.filter((x: any) => x.result === "not written").length, by_a_person: boxes.filter((x: { result: string }) => x.result === "by a person").length } };
   }

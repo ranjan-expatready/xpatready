@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { factKeyProblem } from "../../contracts/fact-key.ts";
 import { NewCapture } from "../contracts/forms.ts";
-import { isOathBox, isSignatureBox, oathBoxes, personSteps } from "../engine/form-steps.ts";
+import { byAPerson, isOathBox, isSignatureBox, oathBoxes, personSteps } from "../engine/form-steps.ts";
 import { screenMapProposals } from "../engine/twin.ts";
 
 const PORT = Number(process.argv[2] ?? 4452), DB = process.argv[3] ?? "xr_studio_forms_s2b";
@@ -65,6 +65,17 @@ const shown = (pdf: string) => { try { return execFileSync("pdftotext", ["-layou
   const moved = inv5409.fields.map((f) => (f.data_path === `${S5}City[0]` ? { ...f, caption: "City" } : f));
   ok("F6 fail: without the 'Declared before me' box the block is found only through the administrator's boxes (no guessing)", oathBoxes(moved).map((f) => f.data_path).join() === `${S5}AdminDecl[0],${S5}SignatureAdminDecl[0]`, oathBoxes(moved).map((f) => f.data_path));
   ok("F6 with F2: the administrator's signature is both an oath box and a signature box; neither is ever written", isOathBox(inv5409.fields, { data_path: `${S5}SignatureAdminDecl[0]` }) && isSignatureBox(inv5409.fields.find((f) => f.data_path === `${S5}SignatureAdminDecl[0]`)!));
+  const box = (p: string) => inv5409.fields.find((f) => f.data_path === p)!;
+  ok("F6 (fill rule, review 5): a mapped oath box is 'by a person' for the oath, a declarant's signature for signing; a name box may be written", /^the oath/.test(byAPerson(inv5409.fields, box(`${S5}City[0]`)) ?? "") && /^a signature/.test(byAPerson(inv5409.fields, box(`${S5}SignatureDecl[0]`)) ?? "") && byAPerson(inv5409.fields, box(`${S5}NameDecl[0]`)) === null);
+  // Review 2: static forms mark nothing required, yet are signed: each signature is listed for the person.
+  const sign5409 = steps5409.find((s) => s.finding === "F2");
+  ok("F2 on a static form (review 2): IMM 5409 lists both declarants' signatures (not the administrator's: that is the oath), signed by hand", sign5409?.boxes.join() === `${S5}SignatureDecl[0],${S5}SignaturePartner[0]` && /by hand on the printed form/.test(sign5409.say), sign5409);
+  const inv5476s = inventory("imm5476e");
+  const sign5476 = personSteps(inv5476s.fields, {}, inv5476s.groups ?? []).find((s) => s.finding === "F2");
+  ok("F2 on a static form (review 2): IMM 5476 lists its signature boxes for the person", (sign5476?.boxes.length ?? 0) >= 2 && sign5476!.boxes.every((b) => isSignatureBox(inv5476s.fields.find((f) => f.data_path === b)!)), sign5476?.boxes);
+  const inv1344 = inventory("imm1344e");
+  const sign1344 = personSteps(inv1344.fields, {}, inv1344.groups ?? []).find((s) => s.finding === "F2");
+  ok("F2 fail: a form that marks its signatures required (IMM 1344) keeps listing only those, with 'types their own name, then Validate'", !!sign1344 && sign1344.boxes.every((b) => inv1344.fields.find((f) => f.data_path === b)?.required) && /types their own name/.test(sign1344.say));
 
   // ──────────────────────────────────────────── F5: page fields on static forms (the filler, no server)
   const ev = JSON.parse(readFileSync(join(PROTOTYPE, "evidence-lane", "E1", "imm5409", "values.complete.json"), "utf8")).values as Record<string, string>;
@@ -92,11 +103,34 @@ const shown = (pdf: string) => { try { return execFileSync("pdftotext", ["-layou
   const p1295 = inv1295.fields.find((f) => f.data_path && f.ui === "textEdit")!;
   const r1295 = filler("imm1295e.pdf", { [p1295.data_path!]: "EXAMPLE" }, { [p1295.som!]: "EXAMPLE" }, "imm1295");
   ok("F5 fail: a dynamic form (IMM 1295) has no page fields for its boxes: none set, said 'dynamic', the file intact as before", r1295.page_fields?.form_kind === "dynamic" && r1295.page_fields.written === 0 && r1295.intact === true, { pf: r1295.page_fields, error: r1295.error });
+  // Break M1, M2 / review 1: a page field is set only when it can draw the value exactly; "shown" means drawn.
+  const first = "IMM_5409[0].Page1[0].Info[0].FirstName[0]", country = "IMM_5409[0].Page1[0].Info[0].Country[0]", other = "IMM_5409[0].Page1[0].Section4[0].TextField2[0]";
+  const hostile = { [first]: "ŁUKASZ ŻÓŁĆ", [country]: "भारत", [other]: "line one\nline two" };
+  const rh = filler("imm5409e.pdf", hostile, hostile, "imm5409-hostile");
+  const why = (n: string) => rh.page_fields?.not_set?.find((x: { name: string }) => x.name === n)?.why ?? "";
+  ok("F5 fail (break M1): letters the page font cannot draw (Polish Ł, Devanagari) are not drawn as '?': left unset with the reason, not 'shown outside Adobe'", /cannot draw/.test(why(first)) && /cannot draw/.test(why(country)) && rh.page_fields.shown_outside_adobe === false && !shown(rh.out).includes("?UKASZ"), rh.page_fields?.not_set);
+  ok("F5 fail (break M2): several lines in a one-line page field are not cut to the first line: left unset with the reason", /several lines/.test(why(other)) && !shown(rh.out).includes("line one"));
+  ok("F5 (break M1): those values are still in the form data, read back exactly, and the file is intact (Adobe shows them)", rh.read_back_equal === 3 && rh.intact === true, { data: rh.read_back_equal, intact: rh.intact });
+  const long = { [first]: "CLIENTA " + "EXAMPLE".repeat(10) };
+  const rl = filler("imm5409e.pdf", long, long, "imm5409-long");
+  ok("F5 fail (break M2, m4): a name longer than the page field's width is not drawn cut off at both ends: left unset, 'too long'", /too long/.test(rl.page_fields?.not_set?.[0]?.why ?? "") && rl.page_fields.written === 0, rl.page_fields?.not_set);
+  const unit = "IMM_5476[0].Page1[0].SectionB[0].question7[0].unit[0]";
+  const rm = filler("imm5476e.pdf", { [unit]: "UNIT 123456789" }, { [unit]: "UNIT 123456789" }, "imm5476-maxlen");
+  ok("F5 fail (break m3): a value longer than the page field's maximum length (IMM 5476 unit, 10) is not set", /maximum length|10 characters/.test(rm.page_fields?.not_set?.[0]?.why ?? ""), rm.page_fields?.not_set);
+  const accents = { [first]: "JOSÉ FRANÇOIS MÜLLER" };
+  const ra = filler("imm5409e.pdf", accents, accents, "imm5409-accents");
+  ok("F5: letters the font does have (é, ç, ü) are drawn and read back from the drawing itself", ra.page_fields?.read_back_equal === 1 && ra.page_fields.shown_outside_adobe === true && shown(ra.out).includes("JOSÉ FRANÇOIS MÜLLER"), ra.page_fields);
+  const zero = filler("imm5409e.pdf", { [radio]: "0" }, { [radio]: "0" }, "imm5409-zero");
+  ok("F5 fail (break m1): a radio value that is not one of its options ('0') never turns on the widget that happens to be named /0 (Yes)", zero.page_fields?.written === 0 && zero.page_fields.not_set?.length === 1, zero.page_fields);
+  const unknown = filler("imm5409e.pdf", { [first]: "X" }, { "IMM_5409[0].Nowhere[0]": "X" }, "imm5409-unknown");
+  ok("F5 fail (break m2, review 6): static is read from the file: a static form whose names all miss is 'static', with the miss counted, not 'dynamic'", unknown.page_fields?.form_kind === "static" && unknown.page_fields.without_page_field === 1 && unknown.page_fields.shown_outside_adobe === false, unknown.page_fields);
+  const sig1295 = filler("imm1295e.pdf", { [p1295.data_path!]: "EXAMPLE" }, { [p1295.som!]: "EXAMPLE", "IMM_1295[0].Page1[0].Sig[0]": "X" }, "imm1295-sig");
+  ok("F5 fail (break m2): a dynamic form stays 'dynamic' and untouched even when a request names one of its few page fields", sig1295.page_fields?.form_kind === "dynamic" && sig1295.page_fields.written === 0 && sig1295.intact === true, sig1295.page_fields);
 
   // ──────────────────────────────────────────── QA-15: form codes in any case (contract, no server)
   const cap = (form: string) => NewCapture.safeParse({ portal: "ircc_portal", form, title: "Visitor visa" }).success;
   ok("QA-15: 'imm 5257', 'Imm-5257', 'imm_5257' and 'ee profile' pass the capture contract", ["imm 5257", "Imm-5257", "imm_5257", "ee profile", "IMM 5257"].every(cap));
-  ok("QA-15 fail: a code that starts with a digit, holds other signs or is one letter is refused, with the reason on the field", !cap("5257") && !cap("imm 5257!") && !cap("I") && /A form code: letters, then numbers/.test(NewCapture.safeParse({ portal: "ircc_portal", form: "5257", title: "Visitor visa" }).error?.issues[0].message ?? ""));
+  ok("QA-15 fail: a code that starts with a digit, holds other signs or is one letter is refused, with the reason on the field", !cap("5257") && !cap("imm 5257!") && !cap("I") && /A form code starts with a letter/.test(NewCapture.safeParse({ portal: "ircc_portal", form: "5257", title: "Visitor visa" }).error?.issues[0].message ?? ""));
 
   // ──────────────────────────────────────────── through the API (isolated copy, US$0)
   await call("POST", "/demo/load");
@@ -105,7 +139,9 @@ const shown = (pdf: string) => { try { return execFileSync("pdftotext", ["-layou
   let r = await call("POST", "/captures", { portal: "ircc_portal", form: "imm 5257", title: "Visitor visa (Sample)" });
   ok("QA-15 (API): a capture started with 'imm 5257' is the library's IMM 5257 (one form, one code)", r.status === 201 && r.body.form === "IMM 5257" && sql("select count(*) from gov_form_def where form_key ilike 'imm%5257'") === "1", { status: r.status, form: r.body?.form });
   const c2 = await call("POST", "/captures", { portal: "ircc_portal", form: "5257", title: "Visitor visa (Sample)" });
-  ok("QA-15 fail (API): '5257' is refused with the contract's words", c2.status === 400 && /letters, then numbers/.test(JSON.stringify(c2.body)), c2.body);
+  ok("QA-15 fail (API): '5257' is refused with the contract's words", c2.status === 400 && /starts with a letter/.test(JSON.stringify(c2.body)), c2.body);
+  const ee = await call("POST", "/captures", { portal: "ircc_portal", form: "ee_profile_", title: "Express Entry profile (Sample)" });
+  ok("QA-15 (break m5): a trailing separator leaves no trailing space ('ee_profile_' is EE PROFILE)", ee.status === 201 && ee.body.form === "EE PROFILE", ee.body?.form);
 
   // D3: a finished draft whose proposals are waiting is reused (US$0), never paid for again.
   const capId = r.body.id as string;
@@ -149,6 +185,11 @@ const shown = (pdf: string) => { try { return execFileSync("pdftotext", ["-layou
   const art = f.artifact_id ? sql(`select detail->'page_fields'->>'form_kind' from generated_artifact where id='${f.artifact_id}'`) : "";
   ok("F5 (API): the fill report and the artifact say whether page fields were set; IMM 1295 is dynamic (none), still intact", f.report?.page_fields?.form_kind === "dynamic" && f.report.page_fields.requested > 0 && art === "dynamic" && f.report.intact === true, { pf: f.report?.page_fields, art });
   ok("F6 fail (API): IMM 1295 has no oath block: no box is 'the oath' and no F6 step", !f.boxes.some((b: { why?: string }) => /the oath/.test(b.why ?? "")) && !f.person_steps.some((s: { finding: string }) => s.finding === "F6"));
+  // Review 4 / break: a static form through the API (IMM 5476 for the work permit family's principal).
+  const g = (await call("POST", `/combinations/${wp}/fill`, { form: "IMM 5476", person: "principal", mode: "draft" })).body;
+  const shownApi = g.artifact_id ? shown(join(ROOT, sql(`select path from generated_artifact where id='${g.artifact_id}'`))) : "";
+  ok("F5 (API, review 4): IMM 5476 filled through the API is static: every value written is drawn on its page field, read back, intact", g.report?.page_fields?.form_kind === "static" && g.report.page_fields.requested > 0 && g.report.page_fields.read_back_equal === g.report.page_fields.written && g.report.intact === true && shownApi.length > 0, { pf: g.report?.page_fields, error: g.message });
+  ok("F2 (API, review 2): the IMM 5476 fill lists its signatures for the person; none is written", g.person_steps?.some((s: { finding: string }) => s.finding === "F2") && !g.boxes?.some((b: { result: string; why?: string }) => b.result === "written" && /signature/.test(b.why ?? "")), g.person_steps?.map((s: { finding: string }) => s.finding));
 
   // ──────────────────────────────────────────── evidence for the Lead and reset
   const out = join(STUDIO, "evidence", "forms-slice2b"); mkdirSync(out, { recursive: true });

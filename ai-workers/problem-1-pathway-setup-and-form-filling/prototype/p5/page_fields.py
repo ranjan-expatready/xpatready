@@ -3,13 +3,19 @@ viewer that does not run XFA (Preview, browsers, possibly an upload checker). Wr
 page fields empty until the file was opened and saved in Adobe. This module sets the page fields of the boxes written,
 with their appearances, in the same append-only update as the form data, so the as-written file shows its values
 everywhere. A dynamic form has no page fields for its boxes: nothing is set and the report says so.
-  * text fields: the value with an appearance drawn in the field's own font and size (pypdf's text appearance);
+  * text fields: the value with an appearance drawn in the field's own font and size (pypdf's text appearance), only
+    when the page can draw it as it is: every letter in the font's encoding (WinAnsi: no Polish Ł, no Devanagari), one
+    line, within the field's width and its maximum length. Otherwise the page field is left empty and the reason
+    reported (the value stays in the form data, which Adobe shows): a "?" or a cut-off name is never drawn (break M1, M2);
   * radio groups and check boxes: the widget whose own option is the value is turned on, the others off; a value with
     no such widget is left unset and reported (never guessed);
   * every new or changed object is encrypted with the document's own key, as the form data stream is (E5 route), and
-    the AcroForm dictionary itself is never changed (no NeedAppearances flag: the appearances are real).
+    the AcroForm dictionary itself is never changed (no NeedAppearances flag: the appearances are real);
+  * the read-back reads what each appearance draws (the string in its text operator, decoded), not only the stored value.
+Static or dynamic is read from the file: a static form has text or choice page fields, a dynamic one has none.
 Uses pypdf private internals like the E5 writer: demonstration-only (implementation design §8)."""
 import io
+import re
 
 import pypdf
 from pypdf.generic import NameObject, TextStringObject
@@ -45,6 +51,53 @@ def _ft(f):
     return None
 
 
+def is_static(doc):
+    """A static form keeps text or choice page fields; a dynamic form draws everything from XFA and has none."""
+    return any(_ft(f) in ("/Tx", "/Ch") for f in terminal_fields(doc).values())
+
+
+def _inherited(f, key):
+    while f is not None:
+        if key in f:
+            return f[key]
+        f = f.get("/Parent").get_object() if "/Parent" in f else None
+    return None
+
+
+def _font(doc, f):
+    """(font dictionary, size) from the field's default appearance (/DA), looked up in its or the form's resources."""
+    da = str(_inherited(f, "/DA") or _root(doc)["/AcroForm"].get("/DA") or "")
+    m = re.search(r"/([^\s/]+)\s+([\d.]+)\s+Tf", da)
+    if not m:
+        return None, 0.0
+    dr = _inherited(f, "/DR") or _root(doc)["/AcroForm"].get("/DR") or {}
+    font = dr.get_object().get("/Font", {}).get(f"/{m.group(1)}") if dr else None
+    return (font.get_object() if font is not None else None), float(m.group(2))
+
+
+def drawable(doc, f, value):
+    """None when the page field can draw the value exactly; otherwise the reason it cannot (then it is not set)."""
+    if re.search(r"[\r\n\t]", value):
+        return "several lines: the page field draws one line (the value is in the form data, which Adobe shows)"
+    maxlen = _inherited(f, "/MaxLen")
+    if maxlen is not None and len(value) > int(maxlen):
+        return f"longer than the page field's {int(maxlen)} characters"
+    font, size = _font(doc, f)
+    enc = str(font.get("/Encoding")) if font is not None else ""
+    try:
+        data = value.encode("cp1252") if enc == "/WinAnsiEncoding" else value.encode("ascii")
+    except UnicodeEncodeError:
+        return "letters the page font cannot draw (it would print ?); the value is in the form data, which Adobe shows"
+    if size and font is not None:
+        first, widths = int(font.get("/FirstChar", 0)), [float(w) for w in font.get("/Widths", [])]
+        # Standard 14 fonts carry no widths here: 0.6 em a letter (Courier exactly, Helvetica wider than most letters).
+        width = sum((widths[b - first] if 0 <= b - first < len(widths) else 600.0) if widths else 600.0 for b in data) * size / 1000
+        rect = [float(x) for x in _widgets(f)[0]["/Rect"]]
+        if width > abs(rect[2] - rect[0]) - 4:
+            return "too long for the page field's width (it would be cut off); the value is in the form data, which Adobe shows"
+    return None
+
+
 def _widgets(f):
     kids = [k.get_object() for k in f.get("/Kids", [])]
     return kids or [f]
@@ -66,13 +119,21 @@ def set_page_fields(w, page_values):
             continue
         ft = _ft(f)
         if ft == "/Tx":
-            text[name] = value
+            why = drawable(w, f, value)
+            if why:
+                not_set.append({"name": name, "value": value, "why": why})
+            else:
+                text[name] = value
         elif ft == "/Btn":
             opts = [str(o) for o in f.get("/Opt", [])]
             kids = _widgets(f)
             # The widget whose own option is the value: by /Opt (radio groups, as the form exports it), else by its
             # on-state name (a check box whose on-state is the value).
-            pick = kids[opts.index(value)] if value in opts and opts.index(value) < len(kids) else next((k for k in kids if _on_state(k) == f"/{value}"), None)
+            # (A field with /Opt is matched by /Opt only: "0" is not the widget whose on-state happens to be named /0, m1.)
+            if opts:
+                pick = kids[opts.index(value)] if value in opts and opts.index(value) < len(kids) else None
+            else:
+                pick = next((k for k in kids if _on_state(k) == f"/{value}"), None)
             if pick is None or _on_state(pick) is None:
                 not_set.append({"name": name, "value": value, "why": "no page widget has this value as its own option"})
                 continue
@@ -128,10 +189,37 @@ def read_page_fields(pdf_bytes, names):
             if on and kids[on[0]]["/AS"] not in kids[on[0]].get("/AP", {}).get("/N", {}):
                 out[name] = None
         else:
+            # What each widget's appearance draws (the strings of its text operators), which must equal the stored value.
             v = f.get("/V")
-            has_ap = all("/N" in k.get("/AP", {}) for k in _widgets(f))
-            out[name] = (str(v) if isinstance(v, (TextStringObject, str)) else None) if has_ap else None
+            drawn = [_drawn(k) for k in _widgets(f)]
+            stored = str(v) if isinstance(v, (TextStringObject, str)) else None
+            out[name] = stored if stored is not None and all(d == stored for d in drawn) else (drawn[0] if drawn and drawn[0] is not None else None)
     return out
+
+
+_ESC = {"n": "\n", "r": "\r", "t": "\t", "b": "\b", "f": "\f", "(": "(", ")": ")", "\\": "\\"}
+
+
+def _drawn(widget):
+    """The text a widget's normal appearance draws: its literal strings shown with Tj, decoded (WinAnsi)."""
+    ap = widget.get("/AP", {}).get("/N")
+    if ap is None:
+        return None
+    data = ap.get_object().get_data()
+    out = []
+    for m in re.finditer(rb"\(((?:\\.|[^\\)])*)\)\s*Tj", data, re.S):
+        raw, buf, i = m.group(1), bytearray(), 0
+        while i < len(raw):
+            c = raw[i:i + 1]
+            if c == b"\\" and i + 1 < len(raw):
+                n = raw[i + 1:i + 2].decode("latin-1")
+                buf += _ESC.get(n, n).encode("latin-1")
+                i += 2
+            else:
+                buf += c
+                i += 1
+        out.append(bytes(buf).decode("cp1252", "replace"))
+    return "".join(out)
 
 
 def write_filled(original_bytes, ds_bytes, page_values):

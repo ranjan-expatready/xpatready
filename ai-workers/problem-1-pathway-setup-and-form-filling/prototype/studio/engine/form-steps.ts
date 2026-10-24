@@ -48,6 +48,12 @@ export function oathBoxes(fields: Box[]): Box[] {
   for (const f of fields) if (/\badminister(ed|s)? the (solemn )?declaration\b/i.test(f.caption ?? "") && f.ui !== "button" && !out.includes(f)) out.push(f);
   return out;
 }
+/** Why the product never writes this box (F2 a signature, F6 the oath), or null when it may. */
+export function byAPerson(fields: Box[], b: Box): string | null {
+  if (isSignatureBox(b)) return "a signature: the person signs it themselves; the product never signs";
+  if (isOathBox(fields, b)) return "the oath: completed when the declaration is made, by the person who administers it; the product never fills it";
+  return null;
+}
 /** F6: true when the box belongs to the oath block of its form (see oathBoxes). */
 export function isOathBox(fields: Box[], b: Box): boolean {
   return oathBoxes(fields).some((o) => pathOf(o) === pathOf(b));
@@ -70,9 +76,16 @@ export function personSteps(fields: Box[], written: Record<string, string>, grou
     const question = fields.find((f) => pathOf(f).startsWith(`${block}.`) && /telephone|phone|fax/i.test(f.caption ?? ""))?.caption ?? "this telephone number";
     if (filedNA) steps.push({ finding: "F1", kind: "tick_canada_us", boxes: [pathOf(sw), ...na], say: `${question}: after the form's first Validate, tick "Canada/US" again. The number is already written and the switch is written ticked, but Validate clears the switch while the number boxes are hidden; the click shows them with the number in place.` });
   }
-  // F2: every required signature box: the person types their own name, then validates.
-  const sigs = fields.filter((f) => isSignatureBox(f) && f.required);
-  if (sigs.length) steps.push({ finding: "F2", kind: "sign", boxes: sigs.map(pathOf), say: `Sign: each signer types their own name in ${sigs.map((s) => `"${s.caption ?? last(pathOf(s))}"`).join(" and ")} (the form treats the typed name as the signature), then runs the form's Validate. The product never types a signature.` });
+  // F2: every required signature box: the person types their own name, then validates. A form that marks nothing
+  // required (the static IMM 5409 and IMM 5476) still has signatures: each one is listed, signed by the person on the
+  // printed form (review 2 of slice 2b). The oath's own signature is the F6 step's.
+  const oathPaths = new Set(oathBoxes(fields).map(pathOf));
+  const marksRequired = fields.some((f) => f.required);
+  const sigs = fields.filter((f) => isSignatureBox(f) && (marksRequired ? f.required : true) && !oathPaths.has(pathOf(f)));
+  const named = sigs.map((s) => `"${s.caption || last(pathOf(s))}"`).join(" and ");
+  if (sigs.length) steps.push({ finding: "F2", kind: "sign", boxes: sigs.map(pathOf), say: marksRequired
+    ? `Sign: each signer types their own name in ${named} (the form treats the typed name as the signature), then runs the form's Validate. The product never types a signature.`
+    : `Sign: each signer signs ${named} themselves, by hand on the printed form. The product never signs.` });
   // F4: a block the form shows by default (not a repeating group that starts with no rows, such as IMM 0008's
   // "dependants") with its own "Remove …" button, required boxes and no value written.
   const startsEmpty = new Set(groups.filter((g) => g.data_path && g.occur && String(g.occur.min ?? "") === "0").map((g) => g.data_path!));
