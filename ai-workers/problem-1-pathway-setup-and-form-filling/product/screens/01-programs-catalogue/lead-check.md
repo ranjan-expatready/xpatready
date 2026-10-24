@@ -20,6 +20,8 @@ How checked: diff `main...4d12036b` (145 files); build-notes "Fixes", "CHECK →
 
 **Handed back (Minor, next pass):** L1 grounding "finding 3 at release" 404 on submit (also on main: find the cause, fix the check or the code); L2 browser C2.7 step waits for the online-forms list to refresh before asserting; L3 six type errors in `check_screen01_api.ts` (a build note said "type check clean": report the command and count). Lane's own open Minor items stay listed (deny by default without `x-actor`; two saves with the same `baseRevision` at once; planted-instruction PDF intake wording). Stored step logs from 21 Oct still say "data boxes" (history text, not a screen string; leave).
 
+**Suites on main after the merge (1cb174a6, main copy, fresh databases):** rules 65 · engine 38 · AI drafting 48 · API 130 · channels 42 · race safe · forms channels 106 · scale 17/17 · **older studio browser 40/40 and AI orchestration 22/22** (so QA-4 and QA-8 are lane-copy only) · grounding 28/29 (L1, pre-existing) · Screen 01 browser 133/135 at machine load ~30 (C2.7 list and P-50 header path: timing, L2) · types web clean, api test-file errors (L3). Test outputs restored afterwards; nothing committed from the run.
+
 **After merge:** main migrated (`20261023210000`), client generated, web rebuilt; :4400 restarted on 1cb174a6 with the founder's OK (backup `xr_studio_demo-before-screen01-merge-20261024-0939.dump`); data unchanged (21 + 8). qa lane: `/qa after-merge` on 1cb174a6; Screen 01 is DONE when it passes (founder decision 23 Oct).
 
 ## Lead recheck of the AI drafting repair (23 Oct) — **Result: DEMO**
