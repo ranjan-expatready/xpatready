@@ -37,7 +37,7 @@ export const NewCase = z.object({
 export const NewPerson = z.object({
   role: z.enum(["spouse_or_partner", "child"], { message: "A person joins as a spouse or partner, or as a child." }),
   displayName: text("Give the person a display name.", 2, 120),
-  applies: z.boolean().default(true),
+  applies: z.boolean({ message: "Say whether the person is travelling (true or false)." }).default(true),
   /** The same key again answers with the person already added (a double press adds one person, QA-28). */
   idempotencyKey: idemKey.optional(),
 });

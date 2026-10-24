@@ -24,8 +24,11 @@ const ROLE: Record<CasePerson["role"], string> = { case: "Application", principa
 export function RuntimeApp() {
   const actor = useActorId();
   // Arriving from the studio as a configuration person: act as the case officer (configuration people reach no case).
-  React.useLayoutEffect(() => { if (!PEOPLE.some((p) => p.id === getActor())) setActor("user-O"); }, [actor]);
-  if (!PEOPLE.some((p) => p.id === actor)) return null;
+  // The switch re-renders this page itself (qa QA-35): the person hook subscribes only after this effect, so its
+  // notice of the switch would be lost and the page would stay blank.
+  const [, switched] = React.useState(0);
+  React.useLayoutEffect(() => { if (!PEOPLE.some((p) => p.id === getActor())) { setActor("user-O"); switched((n) => n + 1); } }, [actor]);
+  if (!PEOPLE.some((p) => p.id === getActor())) return null;
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-30 flex h-14 min-w-0 items-center gap-3 border-b border-border bg-surface-raised px-4">

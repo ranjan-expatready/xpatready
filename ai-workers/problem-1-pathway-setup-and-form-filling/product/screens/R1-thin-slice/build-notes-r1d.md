@@ -32,6 +32,15 @@ Plan §9 row R1d and §8 RT-13…RT-17: IMM 5257 (and the case's other PDF forms
 * Mutation checks: removing the out-of-date lock refusal fails "RT-16 fail: an out-of-date copy cannot be locked"; a blind `changedFacts` fails three RT-15/16 checks.
 * Order on one copy: setup 13/13 → journey 93/93 → R1d 25/25 → R1a 97/97 (R1a `--reset` clears the workspace, so R1d runs before it). `run-suites.sh --demo` 20/20 green; explicit any 437 (baseline).
 
+## qa items on R1c done first in this pass (Lead, 24 Oct; qa after-merge 3)
+| qa | Fix | Test (each fails when its fix is removed) |
+|---|---|---|
+| QA-35 Major: the Demo menu's "Open the case area" gave the author a blank page | the case area re-renders itself after switching to the case officer (the person hook subscribed too late to hear the switch) | journey "QA-35 fail-guard": the author enters from the studio's Demo menu, as a person does |
+| QA-36 Minor: Back stored "2027-02-31" and said "✓ Saved" | one way to leave a part for Back and Save and continue (Lead decision, P-47): the answer is saved and flagged, the part stays with the summary, the status says "Saved: N answers need a fix", and the summary offers "leave them for now and go back / continue" | journey "QA-36 fail-guard" and three "QA-36 pass" lines |
+| QA-37 Minor: "(3 boxes)" | "form fields" in the edit dialog and the save message (P-63) | journey "QA-37"; API "QA-37 pass" |
+| QA-26 rest: "applies" as text | plain words: "Say whether the person is travelling (true or false)." | API "QA-26 fail: applies" |
+Journey 99/99, R1d 25/25, R1a 99/99, engine 36/36; `run-suites.sh --demo` 20/20.
+
 ## Known gaps
 1. Restart recovery of the queue is written, not tested by a suite (a restart mid-generation).
 2. "By hand" counts a confirmed value whose form field has no code for it (option map); the copy lists them, the officer writes them in Adobe.

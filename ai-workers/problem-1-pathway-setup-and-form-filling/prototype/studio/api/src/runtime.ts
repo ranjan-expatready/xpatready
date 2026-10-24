@@ -215,7 +215,7 @@ export class Runtime {
     const ans = rowKey ? q?.rows.find((x) => x.row === rowKey)?.answer : q?.answer;
     const fills = q?.fills ?? [];
     return { answer: ans ?? { id: newId, problems: checkValue(s, fieldKey, b.value) }, fills,
-      message: fills.length ? `Saved. It fills ${fills.map((f) => `${f.form} for ${f.person} (${f.boxes} box${f.boxes > 1 ? "es" : ""})`).join(", ")}.` : "Saved." };
+      message: fills.length ? `Saved. It fills ${fills.map((f) => `${f.form} for ${f.person} (${f.boxes} form field${f.boxes > 1 ? "s" : ""})`).join(", ")}.` : "Saved." };
   }
 
   /** Adds a row to a person's repeating group (or the application's, for a case-level group). Rows of one group are

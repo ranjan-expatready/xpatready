@@ -59,6 +59,14 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   /** Save and continue: every save ends by reloading the questionnaire view; wait for that, then for the button to be free. */
   const saveAndContinue = async (p) => { const reloaded = p.waitForResponse((r) => r.request().method() === "GET" && /\/questionnaire/.test(r.url()), { timeout: WAIT }); await p.getByRole("button", { name: "Save and continue" }).click(); await reloaded; await p.waitForFunction(() => !document.querySelector("button[aria-busy]"), undefined, { timeout: WAIT }); await idle(p); await frames(p); };
 
+  // ── 0. qa QA-35: the configuration author enters the case area from the studio's Demo menu, as a person does
+  const author = await open("user-A", 1440, 900);
+  await author.goto(`${BASE}/`); await idle(author);
+  await author.getByRole("button", { name: /Demo/ }).click();
+  await author.getByRole("menuitem", { name: /Open the case area/ }).click();
+  step("QA-35 fail-guard: from the studio's Demo menu the case area opens as the case officer (not a blank page)", await shows(author.getByRole("heading", { level: 1, name: "Cases" })) && await shows(author.getByLabel("Simulated person")));
+  await author.close();
+
   // ── 1. The officer opens a case and adds the family (desktop)
   const o = await open("user-O", 1440, 900);
   await o.goto(`${BASE}/cases`); await idle(o);
@@ -147,6 +155,20 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await c.getByLabel(/How much money/).fill("5000");
   await saveAndContinue(c);
   step("back pass: once fixed, the part saves and moves on again", await shows(c.getByText(/^Part 3 of \d+/)));
+  // qa QA-36 (Lead decision, P-47): Back and Save and continue leave a part the same way
+  await c.getByRole("button", { name: "Back", exact: true }).click(); await shows(c.getByText(/^Part 2 of \d+/));
+  const start2 = c.getByRole("group", { name: /When will the visit start/ });
+  await start2.getByLabel("Day").fill("31"); await start2.getByLabel("Month").fill("2");
+  await c.getByRole("button", { name: "Back", exact: true }).click();
+  step("QA-36 fail-guard: Back with an impossible date saves it, flags it on the part and says it needs a fix (never a plain \"✓ Saved\")", await shows(c.getByText(/^Part 2 of \d+/)) && await shows(c.getByRole("alert").getByRole("link", { name: /visit start.*real date/i })) && await shows(c.getByText("Saved: 1 answer needs a fix")) && await gone(c.getByText("✓ Saved")));
+  v = (await call("GET", `/runtime/cases/${caseId}/questionnaire`, undefined, "user-P")).body;
+  step("QA-36 pass: the answer is stored (never lost) and flagged underneath", qOf(v, "The application", "case.intended_stay_from")?.answer?.value === "2027-02-31" && qOf(v, "The application", "case.intended_stay_from")?.answer?.problems.length === 1);
+  await c.getByRole("button", { name: "leave them for now and go back" }).click();
+  step("QA-36 pass: the person may still leave in the direction they chose", await shows(c.getByText(/^Part 1 of \d+/)));
+  await saveAndContinue(c);
+  await start2.getByLabel("Day").fill("3"); await start2.getByLabel("Month").fill("7");
+  await saveAndContinue(c);
+  step("QA-36 pass: fixed, the part moves on with \"✓ Saved\"", await shows(c.getByText(/^Part 3 of \d+/)));
   v = (await call("GET", `/runtime/cases/${caseId}/questionnaire`, undefined, "user-P")).body;
   const host = qOf(v, "The application", "case.visit_contact_address_in_canada");
   step("data: the repeating group holds one live entry with its address in parts; the fixed values are stored clean", host?.rows.length === 1 && host.rows[0].answer?.value?.city === "Toronto" && qOf(v, "The application", "case.funds_available_cad")?.answer?.value === "5000" && qOf(v, "The application", "case.intended_stay_to")?.answer?.value === "2027-07-31" && v.checks.length === 0, v.checks);
@@ -208,6 +230,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("agent checks: Confirm section still confirms (warn, not block) and says the check is still open", await shows(o.getByText(/1 check still open: The visit ends before it starts/)));
   await state(o, "agent-section-check", [1440]);
   await o.locator("section").filter({ has: o.getByRole("heading", { name: "Application details" }) }).getByRole("button", { name: /^Edit Are you applying/ }).click();
+  step("QA-37 (P-63): the edit dialog says \"form fields\", never \"boxes\"", await shows(o.getByRole("dialog").getByText(/\(\d+ form fields?\)/).first()) && !/\bbox(es)?\b/.test(await o.getByRole("dialog").textContent()));
   await o.getByRole("dialog").getByLabel("Transit").check();
   await state(o, "agent-edit-dialog", [1440]);
   await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await idle(o);
