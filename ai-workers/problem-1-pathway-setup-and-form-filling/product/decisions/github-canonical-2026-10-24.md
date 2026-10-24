@@ -31,7 +31,9 @@ Checklist so any agent can resume. Status: `[x]` done · `[ ]` pending · `[!]` 
 - [x] push migration/github-canonical (push-guard ran clean) · PR #1 open · CI: guard pass (both events), checks pass (guard self-match + createdb user + suite DATABASE_URL fixed in-flight)
 
 ## Phase 3 — cut-over (founder merges PR first)
-- [ ] rename Xpatready → Xpatready-old-2026-10-24; Xpatready-gh → Xpatready
-- [ ] checkout main + pull; recreate lane worktrees from origin branches; lane.sh setup each
-- [ ] :4400 starts on the same database; stop using devin-walk mirror dirs
-- [ ] final report: changes, backups, undo
+- [x] founder delegated merge to Devin; PR #1 merged to main (8e613e3, merge commit)
+- [x] renamed Xpatready → Xpatready-old-2026-10-24 (kept); Xpatready-gh → Xpatready; checkout main + pull = 8e613e3
+- [x] PG stopped cleanly, real pg18-data re-copied consistent, restarted on new path :54329 — 113 xr_studio_* DBs, demo schema 34 tables
+- [x] 7 lane worktrees recreated from origin branches at same tips; lane.sh bind + setup each (bind→whoami verified, .tools linked, hooks wired)
+- [x] :4400 up from new folder on same xr_studio_demo DB; devin-walk mirror{,2,3} → *-RETIRED-2026-10-24 (kept)
+- [x] final report sent to founder
