@@ -15,7 +15,7 @@ const BASE = process.argv[2] ?? "http://localhost:4475", DB = process.argv[3] ??
 const ROOT = path.resolve(__dirname, "..", "..", "..", "..");
 const OFFICIAL = path.join(ROOT, "official-sources", "ircc");
 const DAY = new Date().toISOString().slice(0, 10);
-const OUT = path.join(ROOT, "product", "qa", "reports", `${DAY}-milestone`); fs.mkdirSync(OUT, { recursive: true });
+const OUT = path.join(ROOT, "product", "qa", "reports", `${DAY}-${process.env.QA_MODE ?? "milestone"}`); fs.mkdirSync(OUT, { recursive: true });
 const log = [], axeLog = [], timings = {}; let shotN = 0;
 const step = (name, ok, detail) => { log.push({ name, ok: ok === null ? null : !!ok, detail: detail === undefined ? undefined : String(detail).slice(0, 500) }); console.log(`${ok === null ? "NOTE" : ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).slice(0, 220)}` : ""}`); };
 const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
