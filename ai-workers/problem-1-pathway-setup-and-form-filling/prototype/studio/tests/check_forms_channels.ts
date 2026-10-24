@@ -125,8 +125,8 @@ const capture = async (screens: string[], title = "Application for a visitor vis
   ok("intake fail: a saved portal screen with one answered question is refused too, and not stored", one.outcome === "refused" && sql("select count(*) from source_attachment where file_name='intake-one-question-answered.html'") === "0" && sql("select coalesce(max(stored_path),'') from intake_item where file_name='intake-one-question-answered.html'") === "", one.message);
 
   // ──────────────────────────────────────────── captures: refusal, contract, second person, identity
-  r = await call("POST", "/captures", { portal: "nowhere", form: "imm 5257", title: "x" });
-  ok("capture fail: an unknown portal, a lower-case code and a short title are refused with field errors", r.status === 400 && r.body.errors?.length === 3, r.body.errors?.map((e: { field: string }) => e.field));
+  r = await call("POST", "/captures", { portal: "nowhere", form: "5257", title: "x" });
+  ok("capture fail: an unknown portal, a code that starts with a digit and a short title are refused with field errors (a lower-case code is accepted: QA-15, slice 2b)", r.status === 400 && r.body.errors?.length === 3, r.body.errors?.map((e: { field: string }) => e.field));
   const bad = await capture(["imm5257-online-s1-personal-with-answers.html"]);
   ok("capture fail: a screen with a typed name and a chosen option is refused and nothing of it is kept", bad.added.body.results[0].outcome === "refused" && bad.added.body.capture.questions === 0 && /holds an answer/.test(bad.added.body.results[0].message) && !readdirSync(join(STUDIO, "var", `isolated-${DB.replace("xr_studio_", "")}`, "workspaces", "demo", "capture-reading")).length, bad.added.body.results[0].message);
   ok("no file of a capture is kept on disk, refused or added (only checksums and structure)", !JSON.stringify(sql("select files from portal_capture")).includes("SAMPLE-PERSON") && !sql("select record::text from portal_capture").includes("SAMPLE-PERSON"));

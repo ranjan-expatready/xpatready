@@ -1,12 +1,12 @@
 {
- "at": "2026-10-24T05:08:18.529Z",
+ "at": "2026-10-24T18:46:30.526Z",
  "pass": 42,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 9.399
+   "detail": 7.001
   },
   {
    "name": "C1.6 pass: every line shows its channel (PDF upload today) and the combination its filing method",
@@ -123,7 +123,7 @@
    "name": "C2.7 pass: blank screens added and finished from the combination show \"Awaiting a second person\" there",
    "ok": true,
    "detail": {
-    "id": "e4803e64-62ac-4cdd-8beb-65a37a976afe",
+    "id": "12b5cd26-b05a-439b-bada-9f059de0c380",
     "form": "IMM 5707",
     "title": "Family information (online)",
     "portal": "ircc_portal",
@@ -131,7 +131,7 @@
     "status": "HELD",
     "statusWords": "Awaiting a second person",
     "detail": "Held for a second person: a new online version. Not used until approved.",
-    "at": "2026-10-24T05:08:15.110Z"
+    "at": "2026-10-24T18:46:28.800Z"
    }
   },
   {

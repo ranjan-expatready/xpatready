@@ -49,7 +49,7 @@ const CHANNEL_TX = { timeout: 20_000, maxWait: 10_000 };
 /** Two saves that both made a new version of a released line: the database keeps one; the other is a 409. */
 const raced = (e: unknown): never => { if ((e as { code?: string } | null)?.code === "P2002") conflict("This line was changed at the same moment: refresh to see it."); throw e; };
 /** A form code as the library writes it: capitals, one space between its parts ("IMM-5257" → "IMM 5257"). */
-const formCode = (s: string) => s.trim().toUpperCase().replace(/[\s_-]+/g, " ");
+const formCode = (s: string) => s.toUpperCase().replace(/[\s_-]+/g, " ").trim(); // trimmed last: "ee_profile_" → "EE PROFILE" (break m5)
 const compact = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
 const slug = (s: string) => normLabel(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "screen";
 /** A screen and its question, said once ("Date of birth › Year"; a radio group's legend is its question). */
@@ -475,6 +475,8 @@ export class Forms {
     const comb = await this.db.combination.findUniqueOrThrow({ where: { id: b.combinationId } });
     if (comb.workspaceId !== ed.workspaceId || !(await this.db.combinationForm.findFirst({ where: { combinationId: comb.id, lineageKey: ed.form.formKey } }))) fail(`${comb.label} does not file ${ed.form.formKey}.`, HttpStatus.NOT_FOUND);
     const first = await this.leftoverJob(ed, false);
+    // D3 (PR 7 review): a finished draft whose proposals are still waiting is reused at US$0, never paid for again.
+    if (b.mode === "LIVE") { const w = await this.waitingDraft(this.db, ed.id, first.leftovers.map((x) => x.input)); if (w) return this.reuseDraft(actor, w, ed, comb.id); }
     if (b.mode === "LIVE" && b.confirmWorstUsd !== first.worst) conflict(`A live screen-map draft costs at most US$${first.worst.toFixed(2)} (${first.leftovers.length} inputs, up to 2 attempts): send that amount as confirmWorstUsd to go ahead.`);
     let plan = first;
     // One draft per online version at a time, decided under a lock on the version: two starts at the same moment make
@@ -483,17 +485,50 @@ export class Forms {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`screen_map:${ed.id}`}))`;
       const active = await tx.draftingJob.findFirst({ where: { workspaceId: ed.workspaceId, kind: "screen_map", status: { in: ["QUEUED", "RUNNING"] }, detail: { path: ["edition_id"], equals: ed.id } } });
       if (active) conflict("A screen-map draft of this online version is already running.");
+      // D3, again under the lock: a draft that finished while this start waited is reused, not paid for twice.
+      // The open inputs are read again here, under the lock (break m6): a person may have mapped some meanwhile.
+      if (b.mode === "LIVE") { const w = await this.waitingDraft(tx, ed.id, (await this.leftoverJob(ed, false)).leftovers.map((x) => x.input)); if (w) return w; }
       // The job files are written here, under the lock, and the worst case confirmed is the one of exactly these files
       // (review 11: it was checked against a plan made before the files were rewritten).
       plan = await this.leftoverJob(ed, true);
       if (b.mode === "LIVE" && b.confirmWorstUsd !== plan.worst) conflict(`The open inputs changed: a live screen-map draft now costs at most US$${plan.worst.toFixed(2)}; confirm that amount.`);
       const { jobId, leftovers } = plan;
-      return tx.draftingJob.create({ data: { workspaceId: ed.workspaceId, combinationId: comb.id, kind: "screen_map", mode: b.mode, status: "RUNNING", message: `${b.mode === "LIVE" ? "Stub pass, then the AI call" : "Stub pass of the guarded path (no network, no cost)"} for ${leftovers.length} open input${leftovers.length === 1 ? "" : "s"} of ${ed.editionLabel}`, startedBy: actor.id, detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, worst_usd: b.mode === "LIVE" ? plan.worst : 0 }) } });
+      return tx.draftingJob.create({ data: { workspaceId: ed.workspaceId, combinationId: comb.id, kind: "screen_map", mode: b.mode, status: "RUNNING", message: `${b.mode === "LIVE" ? "Stub pass, then the AI call" : "Stub pass of the guarded path (no network, no cost)"} for ${leftovers.length} open input${leftovers.length === 1 ? "" : "s"} of ${ed.editionLabel}`, startedBy: actor.id, detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, sent_inputs: leftovers.map((x) => x.input), worst_usd: b.mode === "LIVE" ? plan.worst : 0 }) } });
     });
+    // A draft found waiting under the lock is the one returned: never looked up again after the commit (break m6: an
+    // accept landing in between made that second look-up empty, a 500).
+    if ("waiting" in j) return this.reuseDraft(actor, j, ed, comb.id);
     const { jobId, leftovers } = plan;
     await this.audit.log(ed.workspaceId, actor.id, "started", "screen-map draft", ed.editionLabel, `${actor.name} started the ${b.mode === "LIVE" ? `live (worst case US$${plan.worst.toFixed(2)})` : "stub (US$0)"} screen-map draft of ${leftovers.length} open inputs of ${ed.editionLabel}`, undefined, comb.id);
     void this.runLeftovers(j.id, ed, jobId, leftovers, b.mode === "LIVE" ? "live" : "stub");
     return this.sources.job(j.id);
+  }
+
+  /** D3: the latest finished screen-map draft of this online version whose proposals are not all decided: a proposal
+   *  (mapped or "not a fact") not yet accepted, for an input still open. When the inputs open now are not all ones it
+   *  was sent, a new draft would pay for some of them again: refused until its proposals are decided (accepted, or the
+   *  inputs mapped by hand). Returns null when nothing is waiting. */
+  private async waitingDraft(db: Pick<Db, "draftingJob">, editionId: string, open: string[]) {
+    const jobs = await db.draftingJob.findMany({ where: { kind: "screen_map", status: "COMPLETED", detail: { path: ["edition_id"], equals: editionId } }, orderBy: { startedAt: "desc" } });
+    const openNow = new Set(open);
+    for (const j of jobs) {
+      const d = (j.detail ?? {}) as { proposals?: AiProposal[]; accepted_inputs?: string[]; sent_inputs?: string[] };
+      if (!d.proposals) continue;
+      const accepted = new Set(d.accepted_inputs ?? []);
+      const waiting = d.proposals.filter((p) => p.outcome !== "unresolved" && !accepted.has(p.input) && openNow.has(p.input));
+      if (!waiting.length) continue;
+      const sent = new Set(d.sent_inputs ?? d.proposals.map((p) => p.input));
+      const notSent = open.filter((i) => !sent.has(i));
+      if (notSent.length) conflict(`A finished AI draft of this online version has ${waiting.length} proposal${waiting.length === 1 ? "" : "s"} waiting (job ${j.id}): accept them, or map those inputs by hand, before a new draft. A new draft now would pay again for inputs that draft already answered.`);
+      return { job: j, waiting: waiting.length };
+    }
+    return null;
+  }
+
+  /** D3: the waiting draft is returned instead of a new paid call (US$0), with an audit line. */
+  private async reuseDraft(actor: Actor, w: { job: { id: string }; waiting: number }, ed: FormEdition, combinationId: string) {
+    await this.audit.log(ed.workspaceId, actor.id, "reused", "screen-map draft", ed.editionLabel, `${actor.name} asked for a new live screen-map draft of ${ed.editionLabel}; the finished draft with ${w.waiting} proposal${w.waiting === 1 ? "" : "s"} waiting was reused (no AI call, US$0)`, undefined, combinationId);
+    return { ...(await this.sources.job(w.job.id)), reused: true, reused_message: `No new AI call (US$0): the finished draft of these inputs still has ${w.waiting} proposal${w.waiting === 1 ? "" : "s"} waiting. Accept them, or map those inputs by hand; a new draft is possible once they are decided.` };
   }
 
   private async runLeftovers(id: string, ed: FormEdition, jobId: string, leftovers: { input: string; type: string; part: string | null; label: string }[], mode: "stub" | "live") {
@@ -510,7 +545,7 @@ export class Forms {
       const r = readScreenRun(rec, leftovers, library, factKeyProblem);
       if (!r.ok) { await done({ status: "FAILED", costUsd: r.cost, runId: rec.drafting_run?.run_id, message: r.message }); return; }
       const { ok: _ok, cost, message, ...out } = r;
-      await done({ status: "COMPLETED", costUsd: cost, runId: rec.drafting_run?.run_id, runFile: String(lj.run_file).replace(`${SOLUTION}/`, ""), detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, ...out }), message });
+      await done({ status: "COMPLETED", costUsd: cost, runId: rec.drafting_run?.run_id, runFile: String(lj.run_file).replace(`${SOLUTION}/`, ""), detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, sent_inputs: leftovers.map((x) => x.input), ...out }), message });
     } catch (e) {
       await done({ status: "FAILED", message: (e as Error).message.slice(0, 400) });
     }

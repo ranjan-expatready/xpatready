@@ -1,0 +1,47 @@
+{
+ "written_with_page_fields": {
+  "form_file": "imm5409e.pdf",
+  "source_sha256": "b9ad80be2043636e4cc55188b4e115c53261deeecca403b354230224605ae0b3",
+  "output": "(temporary)",
+  "output_sha256": "4cddc898389c3ca1efd9d1ab7fc825e895b9efc5a75bbea3c046b2f691f89873",
+  "bytes": 1485402,
+  "original_bytes_kept": true,
+  "written": 18,
+  "read_back_equal": 18,
+  "mismatches": [],
+  "other_data_leaves_changed": 0,
+  "other_parts_unchanged": true,
+  "signatures": {
+   "/UR3": "verified"
+  },
+  "poppler_syntax_errors": 0,
+  "page_fields": {
+   "form_kind": "static",
+   "requested": 18,
+   "written": 18,
+   "read_back_equal": 18,
+   "mismatches": [],
+   "not_set": [],
+   "without_page_field": 0,
+   "shown_outside_adobe": true
+  },
+  "writer_notes": [
+   "37 appended objects encrypted with the document key (private pypdf API)",
+   "/Encrypt and /Info copied into the appended trailer (cross-reference stream dictionary)"
+  ],
+  "intact": true
+ },
+ "data_only": {
+  "page_fields": {
+   "form_kind": "none",
+   "requested": 0,
+   "written": 0,
+   "read_back_equal": 0,
+   "mismatches": [],
+   "not_set": [],
+   "without_page_field": 0,
+   "shown_outside_adobe": false
+  },
+  "read_back_equal": 18
+ }
+}

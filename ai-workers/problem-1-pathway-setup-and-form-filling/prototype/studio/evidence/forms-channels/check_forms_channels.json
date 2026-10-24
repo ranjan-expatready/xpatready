@@ -1,7 +1,7 @@
 {
- "at": "2026-10-24T05:07:56.265Z",
- "port": 4449,
- "database": "xr_studio_screens_forms",
+ "at": "2026-10-24T19:07:00.271Z",
+ "port": 4450,
+ "database": "xr_studio_forms_f1",
  "paid_calls": 0,
  "fixtures": "Sample (tests/fixtures/portal/README.md)",
  "pass": 106,
@@ -166,8 +166,8 @@
    "name": "a configuration without channels keeps its fingerprint (draft equals its release after the migration)",
    "ok": true,
    "detail": {
-    "wpRelease": "52b4c9159c9c4969dee69944a438b541ea93e70c8c61abe02ddf05fb928ae290",
-    "wpDraft": "52b4c9159c9c4969dee69944a438b541ea93e70c8c61abe02ddf05fb928ae290"
+    "wpRelease": "4eef83f16ab10c5bdac941963cc49f3329473ec697e11f57dfb296559e566605",
+    "wpDraft": "4eef83f16ab10c5bdac941963cc49f3329473ec697e11f57dfb296559e566605"
    }
   },
   {
@@ -201,7 +201,7 @@
    "detail": "This is a saved portal screen, not a guide: add it to a portal capture (with its portal), where it is checked for answers and approved by a second person. Nothing was added or attached."
   },
   {
-   "name": "capture fail: an unknown portal, a lower-case code and a short title are refused with field errors",
+   "name": "capture fail: an unknown portal, a code that starts with a digit and a short title are refused with field errors (a lower-case code is accepted: QA-15, slice 2b)",
    "ok": true,
    "detail": [
     "portal",
@@ -247,7 +247,7 @@
    "ok": true,
    "detail": {
     "ms": 25,
-    "review_file": "prototype/studio/var/isolated-screens_forms/workspaces/demo/portal-twins/IMM5257-ircc_portal-88003379-d6375ca38c3b.review.html"
+    "review_file": "prototype/studio/var/isolated-forms_f1/workspaces/demo/portal-twins/IMM5257-ircc_portal-9f76871a-d6375ca38c3b.review.html"
    }
   },
   {
@@ -273,7 +273,7 @@
    "name": "approval: a second person makes it an online version, re-check date set (Sample 180 days)",
    "ok": true,
    "detail": {
-    "id": "da257601-4dfa-412e-b660-87b2845bd7a9",
+    "id": "ce132d05-5fff-4a89-8a37-965e64c8a0a9",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -360,8 +360,8 @@
    "name": "concurrency: two screens added at the same moment are both kept, or one is refused with 409; never 'added' and lost",
    "ok": true,
    "detail": [
-    201,
     409,
+    201,
     1
    ]
   },
@@ -545,7 +545,7 @@
    "name": "confirm: a second person confirms the identical re-capture; the re-check date runs from it, once",
    "ok": true,
    "detail": {
-    "id": "da257601-4dfa-412e-b660-87b2845bd7a9",
+    "id": "ce132d05-5fff-4a89-8a37-965e64c8a0a9",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -580,8 +580,8 @@
    "name": "Forms library: IMM 5257 shows both channels and its online version",
    "ok": true,
    "detail": [
-    "PDF",
-    "Online"
+    "Online",
+    "PDF"
    ]
   },
   {
