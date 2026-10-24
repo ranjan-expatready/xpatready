@@ -12,11 +12,11 @@ P="ai-workers/problem-1-pathway-setup-and-form-filling"
 HERE="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not in the repository"; exit 2; }
 MAIN="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
 whoami_() {
-  # lead only on branch main in the primary copy (P-82); a lane branch prefix (screens/, forms/, evidence/,
+  # lead only on branch main (P-82: the Mac's main copy, or a cloud clone checked out on main); a lane branch prefix (screens/, forms/, evidence/,
   # runtime/, qa/, or the existing claude/<lane>-* branches and <lane>-* worktree names) maps to that lane;
   # anything else is unbound, never lead.
   local br; br=$(git -C "$HERE" branch --show-current 2>/dev/null)
-  [ "$HERE" = "$MAIN" ] && [ "$br" = main ] && { echo lead; return; }
+  [ "$br" = main ] && { echo lead; return; }
   [ -f "$HERE/.claude/lane" ] && { cat "$HERE/.claude/lane"; return; }
   case "$br" in
     screens/*|claude/screens-*) echo screens;;
@@ -40,6 +40,11 @@ table_() {
       [ "$(cat "$wt/.claude/lane" 2>/dev/null)" = "$ln" ] || continue
       t=$(git -C "$wt" log -1 --format=%ct 2>/dev/null || echo 0); [ "$t" -gt "$best" ] && { best=$t; f="$wt/$P/product/lanes/$ln.md"; }
     done
+    # Cloud lane sessions (P-82) push origin/<lane>/* or origin/claude/<lane>-*: a newer lane file there wins.
+    for rb in $(git -C "$MAIN" for-each-ref --format='%(refname:short)' "refs/remotes/origin/$ln/" "refs/remotes/origin/claude/$ln-*"); do
+      t=$(git -C "$MAIN" log -1 --format=%ct "$rb" 2>/dev/null || echo 0); [ "$t" -gt "$best" ] || continue
+      tmpf=$(mktemp); tmps="$tmps $tmpf"; git -C "$MAIN" show "$rb:$P/product/lanes/$ln.md" > "$tmpf" 2>/dev/null && { best=$t; f="$tmpf"; }
+    done
     note() { awk '/^## From the Lead/{on=1; next} /^Command:/{on=0} on' "$1"; }
     pending=""; [ "$f" != "$m" ] && [ "$(note "$m")" != "$(note "$f")" ] && pending="Lead note waiting for sync · "
     item=$(field current_screen "$f"); [ -n "$item" ] || item=$(field current_item "$f")
@@ -48,16 +53,19 @@ table_() {
     bl=$(field blocked_by "$f"); [ -n "$bl" ] && [ "${bl%% *}" != none ] && nx="Blocked: ${bl:0:80}"
     echo "| $ln | $item | $(field stage "$f") | $(field owner "$f") | $pending$nx |"
   done
+  rm -f $tmps
 }
 case "$1" in
   whoami) whoami_ ;;
   bind)
-    [ "$HERE" = "$MAIN" ] && { echo "This is the Lead's main copy; lanes run in their own copies."; exit 2; }
+    [ "$(whoami_)" = lead ] && { echo "This is the Lead's main copy; lanes run in their own copies."; exit 2; }
     echo " $LANES " | grep -q " $2 " || { echo "Lane must be one of: $LANES"; exit 2; }
     cur=$(whoami_); [ "$cur" != unbound ] && [ "$cur" != "$2" ] && { echo "This copy is already the $cur lane. Type: /next $cur"; exit 3; }
     mkdir -p "$HERE/.claude" && echo "$2" > "$HERE/.claude/lane" && echo "bound to $2" ;;
   setup)
-    [ "$HERE" = "$MAIN" ] && { echo "main copy: nothing to link"; exit 0; }
+    [ "$(whoami_)" = lead ] && { echo "main copy: nothing to link"; exit 0; }
+    # A cloud clone (no .tools anywhere): the one-time cloud setup installs runtimes, packages and the database (P-82).
+    [ -e "$HERE/.tools" ] || [ -e "$MAIN/.tools" ] || [ "$(uname -s)" != Linux ] || bash "$HERE/$P/product/tools/cloud-setup.sh" || exit 5
     # .tools stays optional (P-82): link it when the primary copy has one (Mac node runtime, venv, PDFs, pg data).
     [ -e "$HERE/.tools" ] || { [ -e "$MAIN/.tools" ] && ln -s "$MAIN/.tools" "$HERE/.tools" && echo "linked .tools"; }
     # Packages: every copy installs its own from the committed lockfile (P-82); a prisma generate here can
@@ -66,7 +74,7 @@ case "$1" in
     [ -d "$HERE/$SN/node_modules" ] || { echo "installing studio packages (npm ci)"; (cd "$HERE/$SN" && npm ci); }
     git config core.hooksPath .githooks && echo "hooks: core.hooksPath=.githooks" ;;
   sync)
-    [ "$HERE" = "$MAIN" ] && { echo "main copy: nothing to sync"; exit 0; }
+    [ "$(whoami_)" = lead ] && { echo "main copy: nothing to sync"; exit 0; }
     git -C "$HERE" diff --quiet && git -C "$HERE" diff --cached --quiet || { echo "Commit this lane's work before syncing."; exit 3; }
     git -C "$HERE" fetch -q origin 2>/dev/null || true
     ref=main; git -C "$HERE" rev-parse -q --verify refs/remotes/origin/main >/dev/null 2>&1 && ref=origin/main

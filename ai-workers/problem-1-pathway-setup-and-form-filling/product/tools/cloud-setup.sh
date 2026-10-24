@@ -28,6 +28,12 @@ echo "node $(node -v) / npm $(npm -v)"
 echo "== packages (npm ci)"
 [ -d "$STUDIO/node_modules/.bin" ] && echo "already installed" || (cd "$STUDIO" && npm ci --no-fund --no-audit)
 
+echo "== prototype packages (contracts and AI runner, AIW-D259; prototype/node_modules links here)"
+PN="$ROOT/.tools/solution-1-prototype/node"; PSRC="$P/prototype/env/node"
+if [ -d "$PN/node_modules/ajv" ]; then echo "already installed"
+elif [ -f "$PSRC/package-lock.json" ]; then mkdir -p "$PN" && cp "$PSRC/package.json" "$PSRC/package-lock.json" "$PN/" && (cd "$PN" && npm ci --no-fund --no-audit)
+else echo "WARNING: $PSRC/package-lock.json is missing (the Mac's .tools/solution-1-prototype/node lock, P-82): the API cannot start"; fi
+
 echo "== zsh and locale"
 command -v zsh >/dev/null || apt zsh
 locale -a 2>/dev/null | grep -qi '^en_US.utf8$' || { apt locales; $SUDO locale-gen en_US.UTF-8 >/dev/null; }

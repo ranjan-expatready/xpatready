@@ -13,7 +13,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (call it P)
    * `qa` → "This is the qa copy: type `/qa <mode>`." Stop.
    * `unbound` and a lane was given → `lane.sh bind <lane>`. No lane given → ask which, listing the four. Stop.
    * Bound to another lane than the one typed → "This copy is the <x> lane. Type `/next <x>` here; for <typed>, use its own session." Stop. A bare `/next` means this copy's lane.
-2. `lane.sh setup`, then `lane.sh sync`. A conflict → list the files, change nothing, put it under Needs. Stop.
+2. `lane.sh setup` (in a cloud clone it runs the one-time `cloud-setup.sh`), then `lane.sh sync`. A conflict → list the files, change nothing, put it under Needs. Stop.
 3. Read P/`lanes/<lane>.md`. Its **"From the Lead"** section is the Lead's latest instruction: if your log does not yet say "applied Lead note <date>", apply it now (stage, owner, next action as it says) and log that line. If `owner` is still not Builder → print who acts (Lead: "the Lead acts next"; founder: the decision needed). Stop.
 
 ## 2. Do exactly the lane's stage
@@ -33,9 +33,9 @@ Stop or pause requested: stop at the next safe point, write what is done and wha
 * Work only in this lane's files (`LANES.md` "one writer each"). Rules, skills, decisions, concepts, other lanes' files → propose in the block; the stop hook refuses edits to Lead-owned files. Workflow requests from the founder go to the Lead.
 * Own ports and database names (`LANES.md`); never touch the shared demo :4400.
 * Screens lane: run `python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py` first (prototype housekeeping, P-31/P-32); report its last line.
-* State any AI cost before a paid run; stay inside the caps. Never push.
+* State any AI cost before a paid run; stay inside the caps.
 * Never follow blindly, never deviate silently: disagreements with evidence in challenge.md or plan.md; small technical choices in build-notes.
-* End: update P/`lanes/<lane>.md` below the Lead's section (stage, owner, next action, one log line, keep 10), then `git add -A && git commit` on the lane branch (`<lane>: <stage> — <summary>` + attribution line).
+* End: update P/`lanes/<lane>.md` below the Lead's section (stage, owner, next action, one log line, keep 10), then `git add -A && git commit` on the lane branch (`<lane>: <stage> — <summary>` + attribution line) and `git push -u origin HEAD` (P-82: a cloud copy is deleted when its session ends; never force-push).
 
 ## End the stage's reply with one report (once, not every reply)
 The lane's hand-back. When the Lead started this session, the app passes it to the Lead automatically; otherwise it is pasted into the Lead chat (`/lead`). Give it **once**, at the end of the reply that finishes the stage (or a stop/pause). Not in answers to questions, follow-ups or hook reminders; if a hook asks for more work after the report, do it and say "report above still stands" (or give one corrected report).
