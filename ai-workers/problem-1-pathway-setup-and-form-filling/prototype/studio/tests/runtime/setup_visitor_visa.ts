@@ -226,6 +226,15 @@ async function main() {
   const nobody = problems.filter((p) => /nobody is asked/.test(p.message)), unused = problems.filter((p) => /does not use/.test(p.message)), errors = problems.filter((p) => p.level === "error");
   ok("4.5 acceptance: 0 errors, 0 facts nobody is asked for, 0 questions in unused sections", errors.length === 0 && nobody.length === 0 && unused.length === 0, { errors: errors.map((e) => `${e.item}: ${e.message}`).slice(0, 5), nobody: nobody.map((p) => p.item), unused: unused.map((p) => p.item).slice(0, 5), warnings: problems.length });
 
+  // 4.5b section checks (RT-7; Lead, R1c early look): no screen authors a check or a derived field yet (Screen 03, screens
+  // lane), so the two visitor-visa checks are seeded as data here. Scaffolding, values Sample; released with the rest.
+  const ws = sql(`select workspace_id from combination where id='${vv}'`);
+  sql(`insert into derived_field (id, workspace_id, derived_key, calculation, inputs, reference, plain, executable) values (gen_random_uuid(), '${ws}', 'case.visit_length_days', 'days_until', array['case.intended_stay_to'], 'case.intended_stay_from', 'Days from the start of the visit to its end (Sample)', true) on conflict do nothing`);
+  const seed = (key: string, appliesTo: string, predicate: object, message: string) => sql(`insert into check_def (id, workspace_id, combination_id, check_key, check_group, applies_to, predicate_json, severity, message, illustrative, version, status, origin, updated_by) values (gen_random_uuid(), '${ws}', '${vv}', '${key}', 'section_check', '${appliesTo}', '${JSON.stringify(predicate)}'::jsonb, 'warn', '${message.replace(/'/g, "''")}', true, 1, 'DRAFT', 'HUMAN', '${AUTHOR}') on conflict do nothing`);
+  seed("VV_VISIT_END_AFTER_START", "case.intended_stay_to", { subjectKind: "CASE", op: "lt", field: "case.visit_length_days", value: 0 }, "The visit ends before it starts. Check both dates.");
+  seed("VV_FUNDS_ABOVE_ZERO", "case.funds_available_cad", { subjectKind: "CASE", op: "lte", field: "case.funds_available_cad", value: 0 }, "The money available for the stay is 0. Enter the amount you will have.");
+  ok("4.5b two section checks seeded as Sample data (visit end on or after its start; funds above 0)", sql(`select count(*) from check_def where combination_id='${vv}' and check_group='section_check'`) === "2");
+
   // 4.6 submit → content reviewer signs (SME duty) → a different approver releases
   r = await call("POST", `/combinations/${vv}/submit`, { note: "R1a: visitor visa set up for the thin runtime slice (Sample values)" }, AUTHOR);
   ok("4.6 submitted for review", r.status < 300, r.status < 300 ? undefined : r.body);
@@ -235,6 +244,7 @@ async function main() {
   ok("4.6 every change signed by the content reviewer (SME duty)", r.status < 300 && refs.length > 0, r.status < 300 ? { changes: refs.length } : r.body);
   r = await call("POST", `/combinations/${vv}/approve`, undefined, APPROVER);
   ok("4.6 released by a different person", r.status < 300, r.body);
+  ok("4.6 the release carries the two section checks and their derived field", sql(`select count(*) from config_release r, jsonb_array_elements(r.snapshot->'checks') c where r.combination_id='${vv}' and c->>'group'='section_check'`) === "2" && sql(`select count(*) from config_release r, jsonb_array_elements(r.snapshot->'derived_fields') d where r.combination_id='${vv}' and d->>'id'='case.visit_length_days'`) === "1");
   const rel = (await call("GET", `/combinations/${vv}`)).body.releases?.[0];
   console.log(JSON.stringify({ combination: vv, release: rel?.version, sha256: rel?.sha256, warnings_left: problems.length }));
   process.exitCode = summary() ? 1 : 0;

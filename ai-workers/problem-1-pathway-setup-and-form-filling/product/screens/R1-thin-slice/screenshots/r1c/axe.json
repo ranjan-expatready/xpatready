@@ -16,27 +16,35 @@
   "violations": []
  },
  {
-  "state": "05-client-group-remove-confirm",
+  "state": "05-client-section-checks",
   "violations": []
  },
  {
-  "state": "06-client-answering-for-spouse",
+  "state": "06-client-group-remove-confirm",
   "violations": []
  },
  {
-  "state": "07-client-resume",
+  "state": "07-client-answering-for-spouse",
   "violations": []
  },
  {
-  "state": "08-agent-view-confirmed",
+  "state": "08-client-resume",
   "violations": []
  },
  {
-  "state": "09-agent-edit-dialog",
+  "state": "09-agent-view-confirmed",
   "violations": []
  },
  {
-  "state": "10-agent-conflict",
+  "state": "10-agent-section-check",
+  "violations": []
+ },
+ {
+  "state": "11-agent-edit-dialog",
+  "violations": []
+ },
+ {
+  "state": "12-agent-conflict",
   "violations": []
  }
 ]

@@ -12,7 +12,7 @@ import { Button, Dialog, Input, Notice, Pill, Select, Textarea } from "@/compone
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import type { QuestionnaireView, ViewAnswer, ViewQuestion, ViewSection } from "../../../contracts/runtime";
+import type { QuestionnaireView, ViewAnswer, ViewCheck, ViewQuestion, ViewSection } from "../../../contracts/runtime";
 
 export type CasePerson = { subject_id: string; role: "case" | "principal" | "spouse_or_partner" | "child"; label: string; applies: boolean };
 export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; people: CasePerson[] };
@@ -96,18 +96,19 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stri
 // ------------------------------------------------------------------ one question (both modes)
 
 /** One question's input, labelled, with its checks under it (server problems first, then a refused save). */
-export function QuestionField({ q, draft, onChange, errors, idBase, compact }: { q: Question; draft: unknown; onChange: (d: unknown) => void; errors: string[]; idBase: string; compact?: boolean }) {
+export function QuestionField({ q, draft, onChange, errors, warnings = [], idBase, compact }: { q: Question; draft: unknown; onChange: (d: unknown) => void; errors: string[]; warnings?: string[]; idBase: string; compact?: boolean }) {
   const k = kindOf(q), noteId = `${idBase}-note`, invalid = errors.length > 0;
   const hint = [q.required ? null : "Optional", q.note].filter(Boolean).join(" · ");
-  const control = { id: idBase, "aria-invalid": invalid || undefined, "aria-describedby": invalid || hint ? noteId : undefined };
+  const control = { id: idBase, "aria-invalid": invalid || undefined, "aria-describedby": invalid || warnings.length || hint ? noteId : undefined };
   const label = <>{q.label}{q.required ? null : <span className="font-normal text-text-muted"> (optional)</span>}</>;
   const notes = (
     <>
       {errors.map((e, i) => <p key={i} id={i === 0 ? noteId : undefined} className="flex items-start gap-1 text-[13px] font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />{e}</p>)}
-      {!invalid && q.note ? <p id={noteId} className="text-xs text-text-muted">{q.note}</p> : null}
+      {warnings.map((w, i) => <p key={`w${i}`} id={!invalid && i === 0 ? noteId : undefined} className="flex items-start gap-1 text-[13px] font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />{w}</p>)}
+      {!invalid && !warnings.length && q.note ? <p id={noteId} className="text-xs text-text-muted">{q.note}</p> : null}
     </>
   );
-  const box = cn("flex flex-col gap-1.5", invalid && "border-l-4 border-danger pl-3", !compact && "py-1");
+  const box = cn("flex flex-col gap-1.5", invalid ? "border-l-4 border-danger pl-3" : warnings.length ? "border-l-4 border-warn pl-3" : null, !compact && "py-1");
   if (k === "yes_no" || k === "radio") {
     const opts = k === "yes_no" ? [{ key: "true", label: "Yes" }, { key: "false", label: "No" }] : q.options!;
     const cur = k === "yes_no" ? (draft === undefined ? "" : String(draft)) : String(draft ?? "");
@@ -222,7 +223,8 @@ const passedKey = (caseId: string) => `xr-passed-${caseId}`;
 function passedParts(caseId: string): Set<string> { try { return new Set(JSON.parse(localStorage.getItem(passedKey(caseId)) ?? "[]") as string[]); } catch { return new Set(); } }
 function markPassed(caseId: string, s: Section) { try { const x = passedParts(caseId); x.add(`${s.subjectId}|${s.section}`); localStorage.setItem(passedKey(caseId), JSON.stringify([...x])); } catch { /* private window: the part stays "Optional" */ } }
 
-function partState(s: Section, passed: Set<string>) {
+function partState(s: Section, passed: Set<string>, checks: ViewCheck[] = []) {
+  if (checks.some((c) => c.subjectId === s.subjectId && c.section === s.section)) return { tone: "warn", text: "Check answers", done: false };
   const invalid = s.questions.some((q) => (q.group ? q.rows.some((r) => r.answer?.problems.length) : q.answer?.problems.length));
   if (invalid) return { tone: "danger", text: "Needs fixing", done: false };
   if (s.missing.length) return { tone: s.answered ? "warn" : "neutral", text: s.answered ? `${s.missing.length} to answer` : "Not started", done: false };
@@ -242,8 +244,8 @@ function Sqr({ view }: { view: View }) {
 
 function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) {
   const passed = passedParts(view.case.id);
-  const parts = view.sections, done = parts.filter((s) => partState(s, passed).done).length;
-  const next = parts.findIndex((s) => !partState(s, passed).done);
+  const parts = view.sections, done = parts.filter((s) => partState(s, passed, view.checks).done).length;
+  const next = parts.findIndex((s) => !partState(s, passed, view.checks).done);
   const people = [...new Map(parts.map((s) => [s.subjectId, s.about_label])).entries()];
   return (
     <div className="mx-auto max-w-xl space-y-5">
@@ -261,7 +263,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
           <h2 id={`p-${id}`} className="mb-2 text-base font-semibold">{label === "The application" ? "About the application" : `About ${label}`}</h2>
           <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface-raised">
             {parts.map((s, i) => [s, i] as const).filter(([s]) => s.subjectId === id).map(([s, i]) => {
-              const st = partState(s, passed);
+              const st = partState(s, passed, view.checks);
               return (
                 <li key={s.section}>
                   <button className="flex min-h-12 w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-text/5 focus-visible:outline-2 focus-visible:outline-primary" onClick={() => open(i)}>
@@ -296,8 +298,11 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   React.useEffect(() => { if (focusSummary) summaryRef.current?.focus(); }, [focusSummary]);
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
 
+  const partChecks = view.checks.filter((c) => c.subjectId === part.subjectId && c.section === part.section);
+  const checksOf = (q: Question, row?: string) => (row ? [] : partChecks.filter((c) => c.fact === q.fact).map((c) => c.message));
   const problemsOf = (q: Question, row?: string) => [...(errors[keyOf(q, row)] ? [errors[keyOf(q, row)]] : []), ...(keyOf(q, row) in errors ? [] : cellAnswer(q, row)?.problems ?? [])];
-  const listed = cells.filter(({ q, row }) => problemsOf(q, row).length);
+  const listed = cells.filter(({ q, row }) => problemsOf(q, row).length || checksOf(q, row).length);
+  const errorsListed = listed.some(({ q, row }) => problemsOf(q, row).length);
 
   async function save(): Promise<boolean> {
     setStatus("saving");
@@ -318,7 +323,8 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
     const fresh = qc.getQueriesData<View>({ queryKey: ["runtime", "view", caseId, "sqr"] })[0]?.[1];
     const now = fresh?.sections.find((s) => s.subjectId === part.subjectId && s.section === part.section) ?? part;
     const invalid = now.questions.some((q) => (q.group ? q.rows.some((r) => r.answer?.problems.length) : q.answer?.problems.length));
-    if (!ok || invalid) { setSummary(true); setFocusSummary((n) => n + 1); return; }
+    const flagged = (fresh?.checks ?? view.checks).some((c) => c.subjectId === part.subjectId && c.section === part.section);
+    if (!ok || invalid || flagged) { setSummary(true); setFocusSummary((n) => n + 1); return; }
     markPassed(caseId, part);
     go(index + 1 < total ? index + 1 : null);
   }
@@ -328,7 +334,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   async function removeRow(row: string) {
     try { await api(`/runtime/cases/${caseId}/groups/${part.subjectId}/rows/${row}`, { method: "DELETE" }); setRemoving(null); await refresh(); toast.push({ tone: "ok", text: "Entry removed. Its answers are kept in the case history." }); } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
   }
-  const field = (q: Question, row?: string) => <QuestionField key={keyOf(q, row)} q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} />;
+  const field = (q: Question, row?: string) => <QuestionField key={keyOf(q, row)} q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} warnings={checksOf(q, row)} />;
   const confirmWords = [...new Set(cells.map(({ q, row }) => cellAnswer(q, row)?.why).filter(Boolean))];
 
   return (
@@ -341,10 +347,10 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
       <div className="mb-4 mt-1.5 h-1.5 rounded-full bg-text/10" aria-hidden><div className="h-1.5 rounded-full bg-primary" style={{ width: `${(100 * (index + 1)) / total}%` }} /></div>
 
       {summary && listed.length ? (
-        <div ref={summaryRef} tabIndex={-1} role="alert" aria-labelledby="problem-title" className="mb-4 rounded-lg border-2 border-danger bg-surface-raised p-4 outline-none">
-          <p id="problem-title" className="font-semibold text-text-danger">There is a problem</p>
+        <div ref={summaryRef} tabIndex={-1} role="alert" aria-labelledby="problem-title" className={cn("mb-4 rounded-lg border-2 bg-surface-raised p-4 outline-none", errorsListed ? "border-danger" : "border-warn")}>
+          <p id="problem-title" className={cn("font-semibold", errorsListed ? "text-text-danger" : "text-text-warn")}>{errorsListed ? "There is a problem" : "Check these answers"}</p>
           <ul className="mt-1 space-y-1 text-sm">
-            {listed.map(({ q, row }) => <li key={keyOf(q, row)}><a className="font-medium text-text-danger underline" href={`#f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} onClick={(e) => { e.preventDefault(); document.getElementById(`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`)?.focus(); }}>{q.label}{row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""}{/[?:]$/.test(q.label) ? " " : ": "}{problemsOf(q, row)[0]}</a></li>)}
+            {listed.map(({ q, row }) => <li key={keyOf(q, row)}><a className={cn("font-medium underline", problemsOf(q, row).length ? "text-text-danger" : "text-text-warn")} href={`#f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} onClick={(e) => { e.preventDefault(); document.getElementById(`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`)?.focus(); }}>{q.label}{row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""}{/[?:]$/.test(q.label) ? " " : ": "}{problemsOf(q, row)[0] ?? checksOf(q, row)[0]}</a></li>)}
           </ul>
           <p className="mt-2 text-xs text-text-muted">Your other answers are saved. You can fix these now, or <button className="font-medium text-text-link underline" onClick={() => go(index + 1 < total ? index + 1 : null)}>leave them for now and continue</button>.</p>
         </div>
@@ -420,6 +426,7 @@ function AgentView({ view }: { view: View }) {
       </nav>
       <div className="min-w-0 space-y-4">
         <p className="text-[13px] text-text-muted">Click Edit on any answer to change it. A change updates every form that uses it, with a message, and needs the section confirmed again.</p>
+        {view.checks.filter((c) => c.subjectId === who && !c.section).map((c) => <Notice key={c.id} tone="warn" title="Check">{c.message}</Notice>)}
         {mine.map((s) => <AgentSection key={`${s.subjectId}|${s.section}`} view={view} s={s} edit={(q, row) => setEditing({ q, row })} />)}
       </div>
     </TabsContent>
@@ -437,11 +444,12 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
   const seen = s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer?.id) : [q.answer?.id])).filter((x): x is string => !!x);
   const open = s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer])).filter((a) => a && a.status !== "VERIFIED").length;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", view.case.id] });
+  const checks = view.checks.filter((c) => c.subjectId === s.subjectId && c.section === s.section);
   async function confirm() {
     setBusy(true);
     try {
       const r = await api<{ confirmed: number; missing: string[] }>(`/runtime/cases/${view.case.id}/sections/${s.section}/confirm`, { method: "POST", json: { subjectId: s.subjectId, seen } });
-      toast.push({ tone: "ok", text: `${s.title} for ${s.about_label}: ${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}` });
+      toast.push({ tone: checks.length ? "info" : "ok", text: `${s.title} for ${s.about_label}: ${r.confirmed} answer${r.confirmed === 1 ? "" : "s"} confirmed.${r.missing.length ? ` Still unanswered: ${r.missing.length}.` : ""}${checks.length ? ` ${checks.length} check${checks.length === 1 ? "" : "s"} still open: ${checks.map((c) => c.message).join(" ")}` : ""}` });
     } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
     await refresh();
     setBusy(false);
@@ -458,6 +466,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} /></div>
               <p className="text-xs text-text-muted">{a.channel === "questionnaire" ? "questionnaire" : a.channel === "confirm_section" ? "confirmed section" : "agent view"} · {WHO[a.by] ?? "someone"} · {when(a.at)}{q.fills.length ? ` · fills ${q.fills.map((f) => `${f.form} for ${f.person}`).join(", ")}` : ""}</p>
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
+              {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}
             </>
           ) : <span className="text-text-muted">{q.required ? "Not answered" : "Not answered (optional)"}{q.collected_from !== "client_questionnaire" ? " · the officer enters this from a document or record" : ""}</span>}
           {q.note ? <p className="text-xs text-text-warn">{q.note}</p> : null}
@@ -475,12 +484,14 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           <Pill title="Answers given, and how many of them the officer has confirmed">{s.answered} answered · {s.confirmed} confirmed</Pill>
           {s.missing.length ? <Pill tone="warn" title={`Required and not answered: ${s.missing.join("; ")}`}>{s.missing.length} missing</Pill> : null}
           {s.invalid ? <Pill tone="danger" title="Answers that do not pass their checks">{s.invalid} to fix</Pill> : null}
+          {checks.length ? <Pill tone="warn" title={checks.map((c) => c.message).join(" ")}>{checks.length} to check</Pill> : null}
         </span>
         <span className="flex-1" />
         <Button size="sm" variant={open > 0 ? "default" : "secondary"} disabled={!seen.length} busy={busy} onClick={() => void confirm()} title={seen.length ? "Confirm the answers shown in this section; an answer that changed since you looked is refused, never confirmed unseen" : "Nothing answered yet in this section"}>
           <Check aria-hidden />Confirm section
         </Button>
       </header>
+      {checks.length ? <div className="border-b border-border px-4 py-2"><Notice tone="warn" title={`Check before confirming${checks.some((c) => c.illustrative) ? " (Sample check)" : ""}`}>{checks.map((c) => c.message).join(" ")}</Notice></div> : null}
       <div>{single.map((q) => line(q))}</div>
       {grouped.length ? (
         <div className="border-t border-border bg-surface/60 px-4 py-3">

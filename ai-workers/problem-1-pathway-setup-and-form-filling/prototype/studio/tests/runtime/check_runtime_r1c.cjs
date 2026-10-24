@@ -18,6 +18,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
 
 (async () => {
   fs.mkdirSync(SHOTS, { recursive: true });
+  for (const f of fs.readdirSync(SHOTS)) if (f.endsWith(".png")) fs.unlinkSync(path.join(SHOTS, f)); // numbering is per run
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const errors = [];
   const open = async (actor, width, height) => {
@@ -75,8 +76,9 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("client: the overview says what to do and how saving works", await c.getByRole("heading", { name: "Your questionnaire" }).isVisible() && await c.getByText(/0 of \d+ parts done/).isVisible());
   await state(c, "client-overview", [390]);
   await c.getByRole("button", { name: /^Start/ }).click(); await idle(c);
+  step("labels: answers read as the form's map labels them (\"Visitor visa\", not the code \"VisitorVisa\")", await c.getByRole("group", { name: /visitor visa or a transit visa/ }).getByLabel("Visitor visa").count() === 1 && await c.getByText("VisitorVisa").count() === 0);
   step("client: part 1 is about the application, answered once", await c.getByText("Answered once for the whole application.").isVisible() && await c.getByText(/^Part 1 of \d+/).isVisible());
-  await c.getByRole("group", { name: /visitor visa or a transit visa/ }).getByLabel("VisitorVisa").check();
+  await c.getByRole("group", { name: /visitor visa or a transit visa/ }).getByLabel("Visitor visa").check();
   const lang = c.getByRole("group", { name: /Official language/ });
   await lang.getByRole("radio").first().check();
   await state(c, "client-part-radio", [390]);
@@ -101,7 +103,15 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   let v = (await call("GET", `/runtime/cases/${caseId}/questionnaire`, undefined, "user-P")).body;
   const qOf = (view, subjectLabel, fact) => view.sections.filter((s) => s.about_label === subjectLabel).flatMap((s) => s.questions).find((q) => q.fact === fact);
   step("data: validation never blocks saving (P-47): the invalid date and amount are stored and flagged, the start date is stored clean", qOf(v, "The application", "case.intended_stay_to")?.answer?.value === "2027-02-31" && qOf(v, "The application", "case.funds_available_cad")?.answer?.problems.length === 1 && qOf(v, "The application", "case.intended_stay_from")?.answer?.problems.length === 0);
-  await end.getByLabel("Day").fill("28"); await c.getByLabel(/How much money/).fill("5000");
+  // RT-7 section checks (Sample data): a visit ending before it starts and no money are flagged, saved, never blocked
+  await end.getByLabel("Day").fill("28"); await c.getByLabel(/How much money/).fill("0");
+  await saveAndContinue(c);
+  const checkBox = c.getByRole("alert").filter({ hasText: "Check these answers" });
+  step("checks fail-guard: a visit ending before it starts and an amount of 0 keep the part open with \"Check these answers\", linked to both fields", await checkBox.isVisible() && await checkBox.getByRole("link", { name: /visit end.*ends before it starts/i }).isVisible() && await checkBox.getByRole("link", { name: /money.*is 0/i }).isVisible() && await c.getByText(/^Part 2 of \d+/).isVisible());
+  await state(c, "client-section-checks", [390]);
+  v = (await call("GET", `/runtime/cases/${caseId}/questionnaire`, undefined, "user-P")).body;
+  step("checks: the answers behind the warnings are stored (warn, never block, P-71)", qOf(v, "The application", "case.intended_stay_to")?.answer?.value === "2027-02-28" && v.checks.length === 2, v.checks.map((x) => x.id));
+  await end.getByLabel("Day").fill("31"); await end.getByLabel("Month").fill("7"); await c.getByLabel(/How much money/).fill("5000");
   await c.getByRole("button", { name: "Add an entry" }).click(); await idle(c);
   const entry = c.getByRole("region", { name: "Entry 1" });
   await entry.getByLabel("Name of a person or organisation you will visit").fill("Sample Host C");
@@ -118,7 +128,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("client pass: the fixed part saves and moves on", await c.getByText(/^Part 3 of \d+/).isVisible(), await c.getByRole("alert").allTextContents());
   v = (await call("GET", `/runtime/cases/${caseId}/questionnaire`, undefined, "user-P")).body;
   const host = qOf(v, "The application", "case.visit_contact_address_in_canada");
-  step("data: the repeating group holds one live entry with its address in parts; the fixed values are stored clean", host?.rows.length === 1 && host.rows[0].answer?.value?.city === "Toronto" && qOf(v, "The application", "case.funds_available_cad")?.answer?.value === "5000" && qOf(v, "The application", "case.intended_stay_to")?.answer?.problems.length === 0);
+  step("data: the repeating group holds one live entry with its address in parts; the fixed values are stored clean", host?.rows.length === 1 && host.rows[0].answer?.value?.city === "Toronto" && qOf(v, "The application", "case.funds_available_cad")?.answer?.value === "5000" && qOf(v, "The application", "case.intended_stay_to")?.answer?.value === "2027-07-31" && v.checks.length === 0, v.checks);
   // Answering for the spouse (P-78 words come from the server after saving)
   await c.getByRole("button", { name: "Back", exact: true }).click(); await c.getByRole("button", { name: "Back", exact: true }).click(); await c.getByRole("button", { name: "Back", exact: true }).click(); await idle(c);
   await c.getByRole("region", { name: "About Sample Spouse C" }).getByRole("button", { name: /Personal details/ }).click(); await idle(c);
@@ -149,11 +159,19 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await visitSec.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
   step("agent pass: Confirm section confirms the visit's answers (Confirmed, history kept)", await o.getByText(/Your visit for The application: \d+ answers? confirmed/).isVisible() && await visitSec.getByText("Confirmed", { exact: true }).first().isVisible());
   await state(o, "agent-view-confirmed", [1440, 1024]);
+  await visitSec.getByRole("button", { name: /^Edit When will the visit end/ }).click();
+  const endEdit = o.getByRole("dialog").getByRole("group", { name: /visit end/ });
+  await endEdit.getByLabel("Day").fill("1"); await endEdit.getByLabel("Month").fill("7");
+  await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await idle(o);
+  step("agent checks: a date the officer corrects to before the start shows \"1 to check\" and the message on the section and the row", await visitSec.getByText("1 to check").isVisible() && await visitSec.getByText("The visit ends before it starts. Check both dates.").count() >= 2);
+  await visitSec.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
+  step("agent checks: Confirm section still confirms (warn, not block) and says the check is still open", await o.getByText(/1 check still open: The visit ends before it starts/).isVisible());
+  await state(o, "agent-section-check", [1440]);
   await o.locator("section").filter({ has: o.getByRole("heading", { name: "Application details" }) }).getByRole("button", { name: /^Edit Are you applying/ }).click();
   await o.getByRole("dialog").getByLabel("Transit").check();
   await state(o, "agent-edit-dialog", [1440]);
   await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await idle(o);
-  step("agent pass: an edit saves with a message naming every form it fills (P-45)", await o.getByText(/Saved\. It fills IMM 5257 for Sample Applicant C/).isVisible());
+  step("agent pass: an edit saves with a message naming every form it fills (P-45)", await o.getByText(/Saved\. It fills IMM 5257 for Sample Applicant C/).last().isVisible());
   // Conflict: the client changes the amount while the officer's dialog is open
   await visitSec.getByRole("button", { name: /^Edit How much money/ }).click();
   await o.getByRole("dialog").getByLabel(/How much money/).fill("7000");

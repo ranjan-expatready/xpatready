@@ -88,7 +88,10 @@ export type ViewQuestion = {
   fills: { form: string; person: string; boxes: number }[];
 };
 export type ViewSection = { subjectId: string; about_label: string; section: string; title: string; questions: ViewQuestion[]; answered: number; confirmed: number; invalid: number; missing: string[] };
+/** A section check the case's answers trigger (RT-7, release data): a warning on the person's answers, never a block
+ *  (P-71). fact and section place it on the question it concerns; null when the check names no one question. */
+export type ViewCheck = { id: string; severity: string; message: string; subjectId: string; about_label: string; fact: string | null; section: string | null; illustrative: boolean };
 export type QuestionnaireView = {
-  mode: "sqr" | "agent"; sections: ViewSection[]; checks: unknown; forms: { form: string; person: string; applies: boolean | string }[];
+  mode: "sqr" | "agent"; sections: ViewSection[]; checks: ViewCheck[]; forms: { form: string; person: string; applies: boolean | string }[];
   summary: { not_asked: number; questions: number; answered: number; confirmed: number; missing: number };
 };

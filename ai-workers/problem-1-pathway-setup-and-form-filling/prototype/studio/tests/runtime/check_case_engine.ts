@@ -3,7 +3,7 @@
 // generated households, answers and values.
 //   tsx studio/tests/runtime/check_case_engine.ts
 import fc from "fast-check";
-import { ageOn, caseView, checkValue, confirmation, knownOf, shapeOf, type Answer, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { ageOn, caseView, checkValue, confirmation, optionsOf, knownOf, shapeOf, type Answer, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { recorder } from "./api.ts";
 
@@ -110,6 +110,18 @@ ok("fail: the representative's facts are never the client's own", !confirmation(
   const got = facts(ordered);
   ok("R1c pass: a section asks its questions in the release's placement order", got[0] === "person.marital_status" && got[got.length - 1] === "person.family_name", got);
   ok("R1c fail-guard: without placement orders the order is the common renderer's (by label), so the order above comes from the placements", facts(S)[0] !== "person.marital_status", facts(S));
+}
+// ── R1c (Lead, early look): answers carry the field map's labels; checks the answers trigger land on their question
+{
+  const mapped = { ...S, field_maps: S.field_maps.map((m) => ({ ...m, entries: m.entries.map((e) => e.fact === "person.marital_status" ? { ...e, transform: "code_list:t.marital (Married person=01, Never married=02)", option_map: { map: { married: "01", single: "02" } } } : e) })) } as unknown as Snapshot;
+  ok("R1c labels pass: a map's \"Label=code\" names the answer through its option map, and joined words read as words", JSON.stringify(optionsOf(mapped, "person.marital_status")?.map((o) => o.label)) === '["Married person","Never married"]' && optionsOf(S, "case.visa_type")?.[0].label === "Visitor visa" && optionsOf(S, "case.visa_type")?.[0].key === "VisitorVisa");
+  ok("R1c labels fail-guard: without a map label the answer list's own label stays; the stored key never changes", optionsOf(S, "person.marital_status")?.[0].label === "Married" && optionsOf(mapped, "person.marital_status")?.[0].key === "married");
+  const withCheck = { ...S, derived_fields: [{ id: "case.stay_days", calculation: "days_until", inputs: ["case.funds"], reference: "case.visa_type", executable: true }], checks: [{ id: "T_FUNDS", group: "section_check", applies_to: "case.funds", condition: { subjectKind: "CASE", op: "lte", field: "case.funds", value: 0 }, severity: "warn", message: "No money", illustrative: true }] } as unknown as Snapshot;
+  const caseSubject = people.find((p) => p.role === "case")!.subjectId;
+  const at = (v: unknown) => caseView(withCheck, people, v === undefined ? [] : [ans(caseSubject, "case.funds", v)], [], "sqr", TODAY).checks;
+  const hit = at(0);
+  ok("R1c checks pass: a triggered check is placed on its question and the application's section, in the client's view too", hit.length === 1 && hit[0].fact === "case.funds" && hit[0].section === "visit" && hit[0].subjectId === caseSubject, hit);
+  ok("R1c checks fail-guard: a passing value or a missing answer triggers nothing", at(5000).length === 0 && at(undefined).length === 0, [at(5000), at(undefined)]);
 }
 // ── PR 7 review D2: ageOn gives no age for a date that is not real or is in the future
 ok("D2 pass: a real past birth date gives the age in whole years (birthday today counts)", ageOn("2015-02-28", TODAY) === 11 && ageOn("2008-10-23", TODAY) === 18 && ageOn("2008-10-24", TODAY) === 17 && ageOn("2024-02-29", TODAY) === 2 && ageOn("2026-10-23", TODAY) === 0);

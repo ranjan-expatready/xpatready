@@ -45,6 +45,13 @@ Plan §9 row R1c: one component, SQR and agent modes, §5 types, messages, save 
 | QA-28 | "Add child" twice added two children | optional `idempotencyKey` on add-person, stored per case (migration `20261024200000_runtime_r1c_people_key`, expand only, rollback in its header); same key returns the same person, a different request with it → 409; simultaneous presses serialised by the case lock; the dialog sends one key per opening | API "QA-28 pass" (two simultaneous presses, one child) and "QA-28 fail" (same key, other name → 409) |
 Order for run-suites: the R1c journey runs right after `setup_visitor_visa.ts` and before `check_runtime_r1a.ts` (that suite publishes a release 2 that adds a question).
 
+## After the early look (Lead, 24 Oct: Go with changes)
+| Change | Where | Tests |
+|---|---|---|
+| (a) RT-7: two visitor-visa section checks seeded as Sample data (visit end on or after its start, via a `days_until` derived field; funds above 0), released with the rest; shown in the SQR (message under the field, "Check these answers" summary, part stays open, overview "Check answers") and the agent view ("N to check", a notice before confirming, the message on the row, Confirm section says the check is still open). Warn, never block (P-71) | `setup_visitor_visa.ts` 4.5b; `engine/runtime/case.ts` checks on their question; `ViewCheck` in the contract | setup "4.5b" and "4.6 … carries the two section checks"; engine "R1c checks" pass and fail-guard; journey "checks fail-guard", "agent checks" |
+| (c) answers carry the field map's label ("Visitor visa", "Female"); joined export values read as words where no map labels them; stored keys unchanged | `optionsOf` in `engine/runtime/case.ts` | engine "R1c labels" pass and fail-guard; journey "labels" |
+| (b) S-10 accepted; (d) run-suites by the Lead at merge | | |
+
 ## Checks run
 * `tests/runtime/check_runtime_r1c.cjs` (new; usage line in the file): **53/53**: officer opens a case (field errors, second spouse refused), client at 390 px (radio, select, dates, money, error summary with focus and links, invalid values stored and flagged underneath, repeating entry with remove confirmation, answering for, P-78 words, leave and resume), roles in the browser, agent view (source, Confirm section, edit message naming IMM 5257, 409 conflict, officer-only passport number never in the client's view), axe WCAG 2.2 A/AA on 10 states (0 violations, `screenshots/r1c/axe.json`), no sideways scroll at 390/1024/1440, budgets: case page 83 ms, client part 93 ms, person tab 62 ms.
 * Mutation checks: removing the summary focus fails "the summary takes the focus"; removing the person-by-person order fails "part 2 is the visit".
@@ -56,5 +63,5 @@ Strong: one component (D-renderer), data-driven kinds, states (empty entry, load
 ## Known gaps
 1. "Done" for optional-only parts is per device; the server needs a "nothing to add" answer (M3).
 2. After Confirm section, the source shows the officer, not who first answered (the confirmed version keeps `from`; the view does not read it).
-3. RT-7 (above). 4. A part saves its answers one request each (fine at today's sizes, ~40 ms each); a batch save would cut round trips.
+3. RT-7 authoring through the product (Screen 03, screens lane); R1 seeds two Sample checks. 4. A part saves its answers one request each (fine at today's sizes, ~40 ms each); a batch save would cut round trips.
 Screenshots: `screenshots/r1c/` (390 for the client, 1440 and 1024 for the officer). AI cost: US$0 (no model call).

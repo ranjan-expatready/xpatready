@@ -4,7 +4,7 @@
 // what the release preview shows. No I/O; every output says why.
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
-import { Address, CONFIRM_WORDS, MINOR, Phone, type QuestionnaireView } from "../../contracts/runtime.ts";
+import { Address, CONFIRM_WORDS, MINOR, Phone, type QuestionnaireView, type ViewCheck } from "../../contracts/runtime.ts";
 
 export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
 export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string };
@@ -65,6 +65,31 @@ export function shapeOf(s: Snapshot, field: string) {
   return { maxLength: maxes.length ? Math.min(...maxes) : 500, datePrecision: dayNeeded ? "day" as const : "month" as const, phone: ts.some((t) => /phone_part/.test(t)), money: ts.some((t) => /CAD/.test(t)), choices };
 }
 
+
+/** "VisitorVisa" → "Visitor visa": a PDF export value written as joined words, read as a person writes it. */
+const words = (x: string) => /^[A-Z][a-z]+(?:[A-Z][a-z]+)+$/.test(x) ? x.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/ ([A-Z])/g, (_, c: string) => ` ${c.toLowerCase()}`) : x;
+
+/** The labels a field's answers carry on its forms (the first form that labels them): from a field map's
+ *  "code_list:… (Label=code, …)" through its option map (answer key → code). A list without "=code" names its codes
+ *  by their labels ("Female", "VisitorVisa"). Where no map labels an answer, the answer list's own label stays. */
+export function optionsOf(s: Snapshot, field: string): { key: string; label: string }[] | null {
+  const entries = (s.field_maps as { entries: { fact?: string | null; transform?: string | null; option_map?: { map?: Record<string, string> } | null }[] }[]).flatMap((m) => m.entries.filter((e) => e.fact === field));
+  const labelOf = (key: string) => {
+    for (const e of entries) {
+      const list = /^code_list:\S+ \(([^)]*)\)/.exec(e.transform ?? "")?.[1];
+      if (!list) continue;
+      const pairs = list.split(";")[0].split(",").map((x) => x.trim()).filter(Boolean).map((x) => { const [l, c] = x.split("="); return { label: l.trim(), code: (c ?? l).trim() }; });
+      const code = e.option_map?.map?.[key] ?? key;
+      const hit = pairs.find((p) => p.code === code);
+      if (hit && !/^\d+$/.test(hit.label)) return words(hit.label);
+    }
+    return null;
+  };
+  const listed = fieldOf(s, field)?.answer_list?.values;
+  if (listed) return listed.map((v) => ({ key: v.key, label: labelOf(v.key) ?? v.label }));
+  const choices = shapeOf(s, field).choices;
+  return choices ? choices.map((c) => ({ key: c, label: labelOf(c) ?? words(c) })) : null;
+}
 
 /** Characters as a person counts them (an emoji is one), not UTF-16 units. */
 const chars = (x: string) => [...x].length;
@@ -180,8 +205,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const current = answers.filter((a) => a.subjectId === subjectId && a.field === q.fact);
     const live = group ? rows.filter((x) => x.subjectId === subjectId && x.group === group).sort(byOrder) : [];
     const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, problems: checkValue(s, q.fact, a.value, today), ...confirm.get(a.id)! } : null;
-    const listed = shapeOf(s, q.fact).choices;
-    const options = fieldOf(s, q.fact)?.answer_list?.values ?? (listed ? listed.map((c) => ({ key: c, label: c })) : null);
+    const options = optionsOf(s, q.fact);
     return {
       subjectId, about_label: q.about_label, fact: q.fact, label: q.label, meaning: q.meaning, value_type: q.value_type, shape: shapeOf(s, q.fact), section: q.section, section_title: q.section_title,
       collected_from: q.collected_from, required, hidden, why: q.why, group, capacity: q.rows.length || null,
@@ -199,6 +223,12 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const missing = qs.filter((q) => q.required && !q.hidden && (q.group ? q.rows.some((x) => !x.answer) : !q.answer)).map((q) => q.label);
     return { ...sec, questions: qs, answered: answered.length, confirmed: answered.filter((a) => a.confirmed).length, invalid: answered.filter((a) => a.problems.length).length, missing };
   });
-  return { mode, sections, checks: r.checks, forms: r.forms.map((f) => ({ form: f.form, person: f.person_label, applies: f.applies })), summary: { not_asked: notAsked, questions: questions.length, answered: sections.reduce((n, x) => n + x.answered, 0), confirmed: sections.reduce((n, x) => n + x.confirmed, 0), missing: sections.reduce((n, x) => n + x.missing.length, 0) } };
+  // Checks the answers trigger, on the question they concern; in the client's view only those on the client's parts.
+  const shown = new Set(sections.map((x) => `${x.subjectId}|${x.section}`));
+  const checks: ViewCheck[] = (r.checks as { id: string; severity: string; message: string; person: string; person_label: string; applies_to: string | null; illustrative: boolean }[]).map((c) => {
+    const subjectId = c.person === "case" ? caseSubject.subjectId : c.person, fact = c.applies_to && placementOf(s, c.applies_to) ? c.applies_to : null;
+    return { id: c.id, severity: c.severity, message: c.message, subjectId, about_label: c.person === "case" ? caseSubject.label : c.person_label, fact, section: fact ? placementOf(s, fact)!.section_id : null, illustrative: c.illustrative };
+  }).filter((c) => mode === "agent" || (c.section !== null && shown.has(`${c.subjectId}|${c.section}`)));
+  return { mode, sections, checks, forms: r.forms.map((f) => ({ form: f.form, person: f.person_label, applies: f.applies })), summary: { not_asked: notAsked, questions: questions.length, answered: sections.reduce((n, x) => n + x.answered, 0), confirmed: sections.reduce((n, x) => n + x.confirmed, 0), missing: sections.reduce((n, x) => n + x.missing.length, 0) } };
 }
 export type CaseView = ReturnType<typeof caseView>;
