@@ -1,14 +1,14 @@
 {
- "at": "2026-10-23T13:18:21.103Z",
- "port": 4449,
- "database": "xr_studio_screens_aiorch",
+ "at": "2026-10-24T18:44:05.730Z",
+ "port": 4403,
+ "database": "xr_studio_aiorch",
  "paid_calls": 0,
  "test_switches": [
   "STUDIO_FAULT_SOURCE=imm5475e.pdf (phase 1)",
   "STUDIO_HOLD_QUEUE=1 (phase 2)"
  ],
- "pass": 19,
- "fail": 3,
+ "pass": 22,
+ "fail": 0,
  "log": [
   {
    "name": "plan before launch: per target action and reason, cost, nothing started",
@@ -53,15 +53,15 @@
   },
   {
    "name": "one failed step does not discard its siblings: batch is PARTIAL",
-   "ok": false,
+   "ok": true,
    "detail": {
     "status": "PARTIAL",
-    "message": "4 done, 2 failed, 0 cancelled · spent US$0.00"
+    "message": "5 done, 1 failed, 0 cancelled · spent US$0.00"
    }
   },
   {
    "name": "the failure is labelled as the induced test fault",
-   "ok": false
+   "ok": true
   },
   {
    "name": "retry re-runs only the failed step (attempts 2 and 3), never the completed ones",
@@ -70,14 +70,14 @@
   {
    "name": "retries are bounded: a fourth attempt is refused and handed to a person",
    "ok": true,
-   "detail": "2 steps have reached 3 attempts; it needs a person, not another retry."
+   "detail": "1 step has reached 3 attempts; it needs a person, not another retry."
   },
   {
    "name": "spend bound: a live launch whose worst case exceeds the person's limit is refused before anything is queued (no model call)",
    "ok": true,
    "detail": {
-    "worst": 4.42,
-    "message": "The worst case (US$4.42) is above this launch's limit (US$1.00). Narrow the selection or raise the limit."
+    "worst": 7.23,
+    "message": "The worst case (US$7.23) is above this launch's limit (US$1.00). Narrow the selection or raise the limit."
    }
   },
   {
@@ -101,9 +101,9 @@
   },
   {
    "name": "after a server restart the queued steps resume and finish",
-   "ok": false,
+   "ok": true,
    "detail": [
-    "FAILED"
+    "COMPLETED"
    ]
   },
   {
@@ -128,7 +128,7 @@
    "name": "compare again (no AI call) keeps every decision that still holds, including the person's change",
    "ok": true,
    "detail": {
-    "at": "2026-10-23T13:18:20.783Z",
+    "at": "2026-10-24T18:44:05.282Z",
     "by": "user-A",
     "kept": 84,
     "reopened": 0

@@ -27,3 +27,5 @@ WITHDRAWN 23 Oct by the founder (P-60): - 2026-10-23 · 01 · CHECK · Founder r
 - 2026-10-23 · Lead · Founder decided P-80 (held PDF approved in the product by a second person; amends P-57); Screen 02 draft updated.
 - 2026-10-23 · Lead · :4400 restarted on main 13629dfc with the forms database update (founder OK); backup taken; data unchanged; lane apps untouched.
 - 2026-10-24 · Lead · Stray test combination removed from :4400 (founder OK; history event added; backup kept); Individual 21, Corporate 8.
+- 2026-10-24 · Lead · P-81 private GitHub repository through a filtered mirror; waiting on founder steps (repository, tool install, settings).
+- 2026-10-24 · all · Every lane finished its stage overnight and waits on the Lead check: screens (Screen 01 with channels), forms slice 2, runtime R1a, evidence; qa waiting. Screen 01 is checked first.

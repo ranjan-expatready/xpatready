@@ -1,0 +1,449 @@
+{
+ "at": "2026-10-24T19:08:14.083Z",
+ "port": 4452,
+ "database": "xr_studio_forms_s2b",
+ "paid_calls": 0,
+ "pass": 44,
+ "fail": 0,
+ "log": [
+  {
+   "name": "F6: IMM 5409's oath block is the place declared, the administrator's name, title and signature, and the date (10 boxes)",
+   "ok": true,
+   "detail": [
+    "IMM_5409[0].Page1[0].Section5[0].City[0]",
+    "IMM_5409[0].Page1[0].Section5[0].AdminDecl[0]",
+    "IMM_5409[0].Page1[0].Section5[0].County[0]",
+    "IMM_5409[0].Page1[0].Section5[0].Province[0]",
+    "IMM_5409[0].Page1[0].Section5[0].Country[0]",
+    "IMM_5409[0].Page1[0].Section5[0].Title[0]",
+    "IMM_5409[0].Page1[0].Section5[0].Day[0]",
+    "IMM_5409[0].Page1[0].Section5[0].Month[0]",
+    "IMM_5409[0].Page1[0].Section5[0].Year[0]",
+    "IMM_5409[0].Page1[0].Section5[0].SignatureAdminDecl[0]"
+   ]
+  },
+  {
+   "name": "F6 fail: the declarants' own names and signatures, the jurisdiction and the links are not oath boxes",
+   "ok": true
+  },
+  {
+   "name": "F6: filling IMM 5409 gives the person step 'at the oath' listing those boxes, said in plain words",
+   "ok": true,
+   "detail": "At the oath: the place where it is declared, the title, name and signature of the person who administers the declaration, and the date (\"Declared before me at (City, Town, Village)\", \"Name of the person who administered the declaration\", \"county of (if applicable)\", \"in the province/state/territory of\", \"in (country)\", \"Title\", \"this (day)\", \"day of (month)\", \"of the year\", \"Signature of the person who administered the declaration\") are completed when the declaration is made, then the form's Validate passes. The product never fills them."
+  },
+  {
+   "name": "F6 fail: forms with no solemn declaration (IMM 5476, IMM 1295, IMM 1344, IMM 5707) get no oath step",
+   "ok": true
+  },
+  {
+   "name": "F6 fail: without the 'Declared before me' box the block is found only through the administrator's boxes (no guessing)",
+   "ok": true,
+   "detail": [
+    "IMM_5409[0].Page1[0].Section5[0].AdminDecl[0]",
+    "IMM_5409[0].Page1[0].Section5[0].SignatureAdminDecl[0]"
+   ]
+  },
+  {
+   "name": "F6 with F2: the administrator's signature is both an oath box and a signature box; neither is ever written",
+   "ok": true
+  },
+  {
+   "name": "F6 (fill rule, review 5): a mapped oath box is 'by a person' for the oath, a declarant's signature for signing; a name box may be written",
+   "ok": true
+  },
+  {
+   "name": "F2 on a static form (review 2): IMM 5409 lists both declarants' signatures (not the administrator's: that is the oath), signed by hand",
+   "ok": true,
+   "detail": {
+    "finding": "F2",
+    "kind": "sign",
+    "boxes": [
+     "IMM_5409[0].Page1[0].Section5[0].SignatureDecl[0]",
+     "IMM_5409[0].Page1[0].Section5[0].SignaturePartner[0]"
+    ],
+    "say": "Sign: each signer signs \"Signature of declarant\" and \"Signature of declarant's partner\" themselves, by hand on the printed form. The product never signs."
+   }
+  },
+  {
+   "name": "F2 on a static form (review 2): IMM 5476 lists its signature boxes for the person",
+   "ok": true,
+   "detail": [
+    "IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[0]",
+    "IMM_5476[0].Page1[0].SectionB[0].question8[0].signatrureApplicant[1]",
+    "IMM_5476[0].Page1[0].sectionD[0].signatrureApplicant[0]",
+    "IMM_5476[0].Page1[0].sectionE[0].signatrureApplicant[0]",
+    "IMM_5476[0].Page1[0].sectionE[0].signatrureApplicant[1]"
+   ]
+  },
+  {
+   "name": "F2 fail: a form that marks its signatures required (IMM 1344) keeps listing only those, with 'types their own name, then Validate'",
+   "ok": true
+  },
+  {
+   "name": "F5: IMM 5409 (static) as written: the 18 values are in the form data AND its page fields, each read back by a fresh reader",
+   "ok": true,
+   "detail": {
+    "data": 18,
+    "pf": {
+     "form_kind": "static",
+     "requested": 18,
+     "written": 18,
+     "read_back_equal": 18,
+     "mismatches": [],
+     "not_set": [],
+     "without_page_field": 0,
+     "shown_outside_adobe": true
+    }
+   }
+  },
+  {
+   "name": "F5: the as-written file is still intact: original bytes kept, nothing else changed, the IRCC usage-rights signature verifies, poppler opens it cleanly",
+   "ok": true,
+   "detail": {
+    "intact": true,
+    "sigs": {
+     "/UR3": "verified"
+    }
+   }
+  },
+  {
+   "name": "F5: a viewer without XFA (poppler) shows the values on the page: names, place, years and dates",
+   "ok": true
+  },
+  {
+   "name": "F5 fail (the finding reproduced): written as before (form data only), the same viewer shows none of the values",
+   "ok": true,
+   "detail": {
+    "form_kind": "none",
+    "requested": 0,
+    "written": 0,
+    "read_back_equal": 0,
+    "mismatches": [],
+    "not_set": [],
+    "without_page_field": 0,
+    "shown_outside_adobe": false
+   }
+  },
+  {
+   "name": "F5 fail: a choice value with no widget of its own on the page is not guessed: left unset, reported, not 'shown outside Adobe'",
+   "ok": true,
+   "detail": {
+    "form_kind": "static",
+    "requested": 1,
+    "written": 0,
+    "read_back_equal": 0,
+    "mismatches": [],
+    "not_set": [
+     {
+      "name": "IMM_5409[0].Page1[0].Section2[0].yesno[0]",
+      "value": "9",
+      "why": "no page widget has this value as its own option"
+     }
+    ],
+    "without_page_field": 0,
+    "shown_outside_adobe": false
+   }
+  },
+  {
+   "name": "F5: a radio group's page field turns on the widget of the value written (Yes = 1), read back as 1",
+   "ok": true,
+   "detail": {
+    "form_kind": "static",
+    "requested": 1,
+    "written": 1,
+    "read_back_equal": 1,
+    "mismatches": [],
+    "not_set": [],
+    "without_page_field": 0,
+    "shown_outside_adobe": true
+   }
+  },
+  {
+   "name": "F5: IMM 5476 (the other static form) shows its values outside Adobe too, intact",
+   "ok": true,
+   "detail": {
+    "pf": {
+     "form_kind": "static",
+     "requested": 3,
+     "written": 3,
+     "read_back_equal": 3,
+     "mismatches": [],
+     "not_set": [],
+     "without_page_field": 0,
+     "shown_outside_adobe": true
+    }
+   }
+  },
+  {
+   "name": "F5 fail: a dynamic form (IMM 1295) has no page fields for its boxes: none set, said 'dynamic', the file intact as before",
+   "ok": true,
+   "detail": {
+    "pf": {
+     "form_kind": "dynamic",
+     "requested": 1,
+     "written": 0,
+     "read_back_equal": 0,
+     "mismatches": [],
+     "not_set": [],
+     "without_page_field": 0,
+     "shown_outside_adobe": false
+    }
+   }
+  },
+  {
+   "name": "F5 fail (break M1): letters the page font cannot draw (Polish Ł, Devanagari) are not drawn as '?': left unset with the reason, not 'shown outside Adobe'",
+   "ok": true,
+   "detail": [
+    {
+     "name": "IMM_5409[0].Page1[0].Info[0].FirstName[0]",
+     "value": "ŁUKASZ ŻÓŁĆ",
+     "why": "letters the page font cannot draw (it would print ?); the value is in the form data, which Adobe shows"
+    },
+    {
+     "name": "IMM_5409[0].Page1[0].Info[0].Country[0]",
+     "value": "भारत",
+     "why": "letters the page font cannot draw (it would print ?); the value is in the form data, which Adobe shows"
+    },
+    {
+     "name": "IMM_5409[0].Page1[0].Section4[0].TextField2[0]",
+     "value": "line one\nline two",
+     "why": "several lines: the page field draws one line (the value is in the form data, which Adobe shows)"
+    }
+   ]
+  },
+  {
+   "name": "F5 fail (break M2): several lines in a one-line page field are not cut to the first line: left unset with the reason",
+   "ok": true
+  },
+  {
+   "name": "F5 (break M1): those values are still in the form data, read back exactly, and the file is intact (Adobe shows them)",
+   "ok": true,
+   "detail": {
+    "data": 3,
+    "intact": true
+   }
+  },
+  {
+   "name": "F5 fail (break M2, m4): a name longer than the page field's width is not drawn cut off at both ends: left unset, 'too long'",
+   "ok": true,
+   "detail": [
+    {
+     "name": "IMM_5409[0].Page1[0].Info[0].FirstName[0]",
+     "value": "CLIENTA EXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLEEXAMPLE",
+     "why": "too long for the page field's width (it would be cut off); the value is in the form data, which Adobe shows"
+    }
+   ]
+  },
+  {
+   "name": "F5 fail (break m3): a value longer than the page field's maximum length (IMM 5476 unit, 10) is not set",
+   "ok": true,
+   "detail": [
+    {
+     "name": "IMM_5476[0].Page1[0].SectionB[0].question7[0].unit[0]",
+     "value": "UNIT 123456789",
+     "why": "longer than the page field's 10 characters"
+    }
+   ]
+  },
+  {
+   "name": "F5: letters the font does have (é, ç, ü) are drawn and read back from the drawing itself",
+   "ok": true,
+   "detail": {
+    "form_kind": "static",
+    "requested": 1,
+    "written": 1,
+    "read_back_equal": 1,
+    "mismatches": [],
+    "not_set": [],
+    "without_page_field": 0,
+    "shown_outside_adobe": true
+   }
+  },
+  {
+   "name": "F5 fail (break m1): a radio value that is not one of its options ('0') never turns on the widget that happens to be named /0 (Yes)",
+   "ok": true,
+   "detail": {
+    "form_kind": "static",
+    "requested": 1,
+    "written": 0,
+    "read_back_equal": 0,
+    "mismatches": [],
+    "not_set": [
+     {
+      "name": "IMM_5409[0].Page1[0].Section2[0].yesno[0]",
+      "value": "0",
+      "why": "no page widget has this value as its own option"
+     }
+    ],
+    "without_page_field": 0,
+    "shown_outside_adobe": false
+   }
+  },
+  {
+   "name": "F5 fail (break m2, review 6): static is read from the file: a static form whose names all miss is 'static', with the miss counted, not 'dynamic'",
+   "ok": true,
+   "detail": {
+    "form_kind": "static",
+    "requested": 1,
+    "written": 0,
+    "read_back_equal": 0,
+    "mismatches": [],
+    "not_set": [],
+    "without_page_field": 1,
+    "shown_outside_adobe": false
+   }
+  },
+  {
+   "name": "F5 fail (break m2): a dynamic form stays 'dynamic' and untouched even when a request names one of its few page fields",
+   "ok": true,
+   "detail": {
+    "form_kind": "dynamic",
+    "requested": 2,
+    "written": 0,
+    "read_back_equal": 0,
+    "mismatches": [],
+    "not_set": [],
+    "without_page_field": 0,
+    "shown_outside_adobe": false
+   }
+  },
+  {
+   "name": "QA-15: 'imm 5257', 'Imm-5257', 'imm_5257' and 'ee profile' pass the capture contract",
+   "ok": true
+  },
+  {
+   "name": "QA-15 fail: a code that starts with a digit, holds other signs or is one letter is refused, with the reason on the field",
+   "ok": true
+  },
+  {
+   "name": "QA-15 (API): a capture started with 'imm 5257' is the library's IMM 5257 (one form, one code)",
+   "ok": true,
+   "detail": {
+    "status": 201,
+    "form": "IMM 5257"
+   }
+  },
+  {
+   "name": "QA-15 fail (API): '5257' is refused with the contract's words",
+   "ok": true,
+   "detail": {
+    "type": "https://expatready.local/problems/validation",
+    "title": "Some details need fixing",
+    "status": 400,
+    "detail": "A form code starts with a letter, for example IMM 5257 or EE PROFILE.",
+    "message": "A form code starts with a letter, for example IMM 5257 or EE PROFILE.",
+    "errors": [
+     {
+      "field": "form",
+      "message": "A form code starts with a letter, for example IMM 5257 or EE PROFILE."
+     }
+    ]
+   }
+  },
+  {
+   "name": "QA-15 (break m5): a trailing separator leaves no trailing space ('ee_profile_' is EE PROFILE)",
+   "ok": true,
+   "detail": "EE PROFILE"
+  },
+  {
+   "name": "D3 setup: the Visitor visa files IMM 5257 through the IRCC Portal",
+   "ok": true,
+   "detail": {
+    "added": "form_line",
+    "form": "IMM 5257",
+    "edition": "IMM 5257 online · IRCC Portal · 2026-10-24"
+   }
+  },
+  {
+   "name": "D3 setup: the stub draft of the open inputs finished and named the inputs it was sent",
+   "ok": true,
+   "detail": {
+    "status": "COMPLETED",
+    "open": 13,
+    "sent": 13
+   }
+  },
+  {
+   "name": "D3: a live start while that draft's proposals wait reuses it: no new job, no AI call, US$0, said plainly (no cost confirmation needed)",
+   "ok": true,
+   "detail": {
+    "status": 201,
+    "reused": true,
+    "msg": "No new AI call (US$0): the finished draft of these inputs still has 2 proposals waiting. Accept them, or map those inputs by hand; a new draft is possible once they are decided."
+   }
+  },
+  {
+   "name": "D3: the reuse is in the history (who asked, which version, US$0)",
+   "ok": true
+  },
+  {
+   "name": "D3 fail: two live starts at the same moment are both answered with the waiting draft, never a paid job",
+   "ok": true,
+   "detail": [
+    201,
+    201
+   ]
+  },
+  {
+   "name": "D3 fail: when other inputs are open too, a new live draft is refused until the waiting proposals are decided (nothing paid)",
+   "ok": true,
+   "detail": "A finished AI draft of this online version has 2 proposals waiting (job be4b496d-83ea-4162-ba51-8e632048a99d): accept them, or map those inputs by hand, before a new draft. A new draft now would pay again for inputs that draft already answered."
+  },
+  {
+   "name": "D3: once its proposals are accepted nothing waits: a new live draft of what is still open asks for its worst case again",
+   "ok": true,
+   "detail": "A live screen-map draft costs at most US$0.40 (11 inputs, up to 2 attempts): send that amount as confirmWorstUsd to go ahead."
+  },
+  {
+   "name": "D3 fail: a stub start (free) is never turned into a reuse",
+   "ok": true,
+   "detail": {
+    "status": 201
+   }
+  },
+  {
+   "name": "F5 (API): the fill report and the artifact say whether page fields were set; IMM 1295 is dynamic (none), still intact",
+   "ok": true,
+   "detail": {
+    "pf": {
+     "form_kind": "dynamic",
+     "requested": 64,
+     "written": 0,
+     "read_back_equal": 0,
+     "mismatches": [],
+     "not_set": [],
+     "without_page_field": 0,
+     "shown_outside_adobe": false
+    },
+    "art": "dynamic"
+   }
+  },
+  {
+   "name": "F6 fail (API): IMM 1295 has no oath block: no box is 'the oath' and no F6 step",
+   "ok": true
+  },
+  {
+   "name": "F5 (API, review 4): IMM 5476 filled through the API is static: every value written is drawn on its page field, read back, intact",
+   "ok": true,
+   "detail": {
+    "pf": {
+     "form_kind": "static",
+     "requested": 16,
+     "written": 16,
+     "read_back_equal": 16,
+     "mismatches": [],
+     "not_set": [],
+     "without_page_field": 0,
+     "shown_outside_adobe": true
+    }
+   }
+  },
+  {
+   "name": "F2 (API, review 2): the IMM 5476 fill lists its signatures for the person; none is written",
+   "ok": true,
+   "detail": [
+    "F2"
+   ]
+  }
+ ]
+}

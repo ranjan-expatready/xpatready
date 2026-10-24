@@ -1,12 +1,12 @@
 {
- "at": "2026-10-24T05:05:58.977Z",
+ "at": "2026-10-24T18:46:16.327Z",
  "pass": 135,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 14.771
+   "detail": 6.894
   },
   {
    "name": "BR-1 pass: Individual shows only Individual programs; Corporate only Corporate",
@@ -280,7 +280,7 @@
    "name": "QA-1 pass: submitted and signed, the combination will be released",
    "ok": true,
    "detail": {
-    "combinationId": "18aa9685-9c6a-4ebf-8a32-63111e075fc7",
+    "combinationId": "e7f42fa6-0de3-4d0c-9a21-9c1c4dc89af5",
     "label": "Spouse of a student",
     "path": [
      "Work permits",
@@ -965,7 +965,7 @@
   {
    "name": "performance: a filtered catalogue answers in under 200 ms with the sample data",
    "ok": true,
-   "detail": "12 ms"
+   "detail": "7 ms"
   },
   {
    "name": "QA-6 fail: a name of symbols only is refused on its field in plain words; nothing is created",
@@ -1004,7 +1004,7 @@
     "label": "With an LMIA",
     "combinations": 1,
     "hasSetup": true,
-    "combinationId": "bed9eac8-948e-42c4-961b-13c7394dce58"
+    "combinationId": "5cc623f7-f094-421b-872a-2093b35851bf"
    }
   },
   {
@@ -1015,17 +1015,17 @@
   {
    "name": "QA-5 pass: a time the app writes is stored as the real moment, whatever the database's own zone",
    "ok": true,
-   "detail": "0 s; database zone Asia/Kolkata"
+   "detail": "0 s; database zone America/Toronto"
   },
   {
    "name": "QA-5: the app still shows it at the real time",
    "ok": true,
-   "detail": "2026-10-24T05:05:37.589Z"
+   "detail": "2026-10-24T18:46:09.420Z"
   },
   {
    "name": "QA-5 condition: the database's own zone is not UTC on this machine, so the check above is a real test of the fix",
    "ok": true,
-   "detail": "Asia/Kolkata"
+   "detail": "America/Toronto"
   },
   {
    "name": "QA-12 pass: after the sample load the Demo menu says the sample inputs are loaded",
@@ -1038,7 +1038,7 @@
    "detail": [
     [
      201,
-     19.193
+     6.087
     ],
     [
      409,

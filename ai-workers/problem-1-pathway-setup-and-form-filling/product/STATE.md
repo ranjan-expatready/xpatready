@@ -8,14 +8,16 @@ updated: 2026-10-23
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
-| screens | 01-programs-catalogue | CHECK | Lead | Lead note waiting for sync · Lead check of the small FIX (build-notes "Small FIX after the merge" + "CHECK round 3"), merge (new migrati… |
-| forms | F1-forms-channels | CHECK | Lead | Lead note waiting for sync · Lead check of slice 2 on the merged commit (main and Screen 01 merged in; conflicts in fill.ts, forms.ts, s… |
+| screens | 01-programs-catalogue | FIX | Builder | Lead note waiting for sync · Finish the small FIX (QA-4, QA-20, QA-22 fixed with check_screen01_smallfix.cjs; full suite run in progress… |
+| forms | F1-forms-channels | CHECK | Lead | Lead note waiting for sync · Lead check of slice 2b after its FIX: build-notes "Slice 2b" and "Slice 2b fixes", review-slice2b.md, break… |
 | evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead: check IMM 5409 (prototype/evidence-lane/E1/imm5409/STATUS.md); send F5 (static forms: page fields sta… |
-| runtime | R1-thin-slice | CHECK | Lead | Lead note waiting for sync · Lead checks R1a on the new commit (merged with main 24 Oct; build-notes "Fixes" and "After the 24 Oct merge… |
-| qa | after-merge Screen 01 (1cb174a6, main e742bc59) | WAITING | Lead | Lead note waiting for sync · Lead reads qa/reports/2026-10-24-after-merge.md (Screen 01 ready from qa: 0 Critical, 3 Major open outside … |
+| runtime | R1-thin-slice (R1c) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead early look at R1c, the renderer (screens/R1-thin-slice/build-notes-r1c.md, screenshots screenshots/r1c… |
+| qa | after-merge on main db468e38 (Screen 01 small FIX, forms slice 2, runtime R1a, evidence IMM 5409) | WAITING | Lead | Lead note waiting for sync · Lead reads qa/reports/2026-10-24-after-merge-2.md (no Blocker or Critical; Screen 01 passes from qa), assig… |
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-24 · Lead (cloud) · Forms slice 2b checked and merged (PR #9; F5 shown outside Adobe, reproduced by the Lead); runtime R1c EARLY-LOOK → Go with changes, CHECK next; forms next: qa Minors; evidence next on the Mac: Adobe re-check of an F5 file, then IMM 5476.
+- 2026-10-24 · Lead (cloud) · **Screen 01 DONE** on qa's after-merge (db468e3, 9/10); qa report merged, QA-22–34 assigned; runtime building R1c (D1, D2 fixed, CI green), forms building 2b (D3, QA-30, QA-34 added); screens small FIX QA-4, QA-20, QA-22 next.
 - 2026-10-24 · Lead (cloud) · PR #7 merged (db468e3); founder gave all open approvals; qa, runtime and forms sessions started in the cloud; :4400 restart with demo reset, the US$12 drafts and evidence IMM 5476 wait for a Mac session.
 - 2026-10-24 · Lead (cloud) · Merged Screen 01 small FIX, forms slice 2, runtime R1a and evidence IMM 5409 on `claude/zen-sagan-oztxto` (not yet on main); 16/16 suites green on the result after the Lead fixed the suite runner (slice 2 server setting; runtime and drafting-guard suites now in CI; ES-module test folders). Next: qa after-merge → Screen 01 DONE; forms 2b, runtime R1c, evidence IMM 5476.
 - 2026-10-24 · Lead · PR #5 merged (be10fa7): CI runs every suite on every push (first GitHub run 11/11 green after the L2 wait port), graph in CI, automatic pull at session start. Scheduled Lead set up and paused (founder: until the weekly usage resets).
@@ -24,5 +26,3 @@ updated: 2026-10-23
 - 2026-10-24 · cloud · Cloud sessions work end to end (PR from claude/modest-cerf-yunauq): setup from a fresh clone, lane bind to its branch, app, suites green (Screen 01 browser 136/136). Mac-only: evidence lane, sources/code reading, OCR (B31). Lanes sync main once before their first cloud run.
 - 2026-10-24 · Devin · P-82 cut-over complete: GitHub is the source of truth; this folder is a clean clone on main (PR #1 merged); 7 lane worktrees on origin branches; :4400 live on the same xr_studio_demo DB. P-83 merged (PR #2): 26 official blank PDFs committed.
 - 2026-10-24 · screens · CHECK → merged · Lead check of Screen 01 (channels, filing method, portal, online forms, release gate, words) merged 1cb174a6; :4400 restarted; DONE after qa retest. Evidence IMM 1295 merged. All builder lanes working again.
-- 2026-10-24 · all · Every lane finished its stage overnight and waits on the Lead check: screens (Screen 01 with channels), forms slice 2, runtime R1a, evidence; qa waiting. Screen 01 is checked first.
-- 2026-10-24 · Lead · P-81 private GitHub repository through a filtered mirror; waiting on founder steps (repository, tool install, settings).
