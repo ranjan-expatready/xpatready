@@ -24,6 +24,8 @@ ai-workers/problem-1-pathway-setup-and-form-filling/inputs/meeting-*/
 .claude/lane
 .claude/worktrees/
 *.lock
+# P-82: the hash-pinned Python locks (Mac and Linux) are needed by every clone
+!ai-workers/problem-1-pathway-setup-and-form-filling/prototype/env/requirements*.lock
 
 # devin local config
 .devin/

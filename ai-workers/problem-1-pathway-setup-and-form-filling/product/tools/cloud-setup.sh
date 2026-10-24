@@ -1,64 +1,88 @@
 #!/usr/bin/env bash
-# Cloud session setup (P-82): makes an ordinary GitHub clone runnable — Node 24, packages (npm ci),
-# PostgreSQL 18 with the studio and lane databases, the schema (prisma migrate), and the official IRCC
-# PDFs fetched by manifest checksum (P-31). Playwright browsers are preinstalled in the cloud image:
-# they are never installed here. Run once at the start of a cloud session:  bash product/tools/cloud-setup.sh
+# Cloud session setup (P-82): makes an ordinary GitHub clone runnable — Node 24, packages (npm ci), the Python
+# form helpers (hash-pinned lock for this platform), PostgreSQL 18 with the studio and lane databases, the schema,
+# zsh (start.sh and the studio tools are zsh scripts), and a check that the official PDFs committed under
+# official-sources/ match their manifest checksums (P-83). Playwright browsers are preinstalled in the cloud image:
+# never installed here. Safe to run again. Run once at the start of a cloud session:
+#   bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/cloud-setup.sh
 set -e
 ROOT="$(git rev-parse --show-toplevel)"; cd "$ROOT"
 P="ai-workers/problem-1-pathway-setup-and-form-filling"; STUDIO="$P/prototype/studio"
 NODE_VER=24.21.0; PGPORT="${PGPORT:-54329}"
+SUDO=""; [ "$(id -u)" = 0 ] || SUDO="sudo -n"
+apt_ready=""; apt() { command -v apt-get >/dev/null || return 1; [ -n "$apt_ready" ] || { $SUDO apt-get update -qq; apt_ready=1; }
+  # Never prompt: a cloud image may already carry a config file (e.g. /etc/zsh/zshrc), so keep the existing one.
+  $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq -o Dpkg::Options::=--force-confdef \
+    -o Dpkg::Options::=--force-confold "$@" </dev/null >/dev/null; }
 
 echo "== node $NODE_VER"
-if ! command -v node >/dev/null || [ "$(node -v)" != "v$NODE_VER" ]; then
-  # Install under .tools — the path start.sh/lane.sh already prepend, so it persists across shells.
+if [ ! -x "$ROOT/.tools/node-v$NODE_VER/bin/node" ] && [ "$(node -v 2>/dev/null)" != "v$NODE_VER" ]; then
+  # Under .tools: the path start.sh, lane.sh and the studio tools already prepend.
   mkdir -p "$ROOT/.tools"
   curl -fsSL "https://nodejs.org/dist/v$NODE_VER/node-v$NODE_VER-linux-x64.tar.xz" | tar -xJ -C "$ROOT/.tools"
   mv "$ROOT/.tools/node-v$NODE_VER-linux-x64" "$ROOT/.tools/node-v$NODE_VER"
-  export PATH="$ROOT/.tools/node-v$NODE_VER/bin:$PATH"
 fi
+[ -x "$ROOT/.tools/node-v$NODE_VER/bin/node" ] && export PATH="$ROOT/.tools/node-v$NODE_VER/bin:$PATH"
 echo "node $(node -v) / npm $(npm -v)"
 
 echo "== packages (npm ci)"
-(cd "$STUDIO" && npm ci)
+[ -d "$STUDIO/node_modules/.bin" ] && echo "already installed" || (cd "$STUDIO" && npm ci --no-fund --no-audit)
 
-echo "== python venv (form intake/fill helpers — api PY path)"
+echo "== zsh and locale"
+command -v zsh >/dev/null || apt zsh
+locale -a 2>/dev/null | grep -qi '^en_US.utf8$' || { apt locales; $SUDO locale-gen en_US.UTF-8 >/dev/null; }
+command -v zsh >/dev/null && echo "zsh $(zsh --version | cut -d' ' -f2)"
+
+echo "== python helpers (api PY path, hash-pinned)"
 VENV="$ROOT/.tools/solution-1-prototype/.venv"
+case "$(uname -s)" in Linux) LOCK="$P/prototype/env/requirements-linux.lock";; *) LOCK="$P/prototype/env/requirements.lock";; esac
 if [ ! -x "$VENV/bin/python" ]; then
+  [ -f "$LOCK" ] || { echo "missing $LOCK"; exit 1; }
   mkdir -p "$ROOT/.tools/solution-1-prototype"
-  python3 -m venv "$VENV" 2>/dev/null || { sudo -n apt-get install -y -qq python3-venv >/dev/null && python3 -m venv "$VENV"; }
-  "$VENV/bin/pip" install -q -r "$P/prototype/env/requirements.lock"
+  python3 -m venv "$VENV" 2>/dev/null || { apt python3-venv && python3 -m venv "$VENV"; }
+  "$VENV/bin/pip" install -q --require-hashes --no-deps --only-binary :all: -r "$LOCK"
 fi
+"$VENV/bin/python" -c "import pypdf, cryptography, zxingcpp; print('pypdf', pypdf.__version__)"
+
 echo "== postgresql 18 on 127.0.0.1:$PGPORT"
 PGBIN=""
-for c in /usr/lib/postgresql/18/bin /opt/homebrew/opt/postgresql@18/bin; do [ -x "$c/psql" ] && PGBIN="$c"; done
-if [ -z "$PGBIN" ]; then
-  if command -v apt-get >/dev/null; then
-    # Ubuntu's stock repos carry an older major: add the official PGDG repository for 18.
-    sudo -n apt-get update -qq && sudo -n apt-get install -y -qq postgresql-common >/dev/null
-    [ -x /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh ] &&       sudo -n /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
-    sudo -n apt-get update -qq && sudo -n apt-get install -y -qq postgresql-18
-    PGBIN=/usr/lib/postgresql/18/bin
-  elif command -v brew >/dev/null; then
-    brew install postgresql@18 >/dev/null && PGBIN="$(brew --prefix)/opt/postgresql@18/bin"
-  fi
+for c in /usr/lib/postgresql/18/bin /opt/homebrew/opt/postgresql@18/bin; do [ -x "$c/pg_ctl" ] && PGBIN="$c"; done
+if [ -z "$PGBIN" ] && command -v apt-get >/dev/null; then
+  # Ubuntu's stock repositories carry an older major: the official PGDG repository has 18.
+  apt postgresql-common
+  [ -x /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh ] && $SUDO /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
+  apt_ready=""; apt postgresql-18; PGBIN=/usr/lib/postgresql/18/bin
 fi
-[ -n "$PGBIN" ] && [ -x "$PGBIN/psql" ] || { echo "postgresql 18 not found and could not be installed"; exit 1; }
-export PATH="$PGBIN:$PATH"
+[ -n "$PGBIN" ] && [ -x "$PGBIN/pg_ctl" ] || { echo "postgresql 18 not found and could not be installed"; exit 1; }
 PGDATA="$ROOT/.tools/solution-1-prototype/pg18-data"
-if ! pg_ctl -D "$PGDATA" status >/dev/null 2>&1; then
-  [ -d "$PGDATA" ] || { mkdir -p "$PGDATA"; initdb -D "$PGDATA" -U xr_studio -A trust >/dev/null; }
-  pg_ctl -D "$PGDATA" -o "-p $PGPORT -k /tmp -h 127.0.0.1" -l "$PGDATA/server.log" -w start >/dev/null
-  echo "cluster started"
-else echo "cluster already running"; fi
+if [ "$(id -u)" = 0 ]; then
+  # Cloud sessions run as root and PostgreSQL refuses root: the cluster belongs to the postgres user, and a pg_ctl
+  # on PATH runs as that user, so start.sh, stop.sh and isolated.sh work unchanged. Client tools are linked as is.
+  RUN="runuser -u postgres --"
+  printf '#!/bin/sh\n# cloud-setup.sh: PostgreSQL refuses root; run pg_ctl as the postgres user.\nexec runuser -u postgres -- %s/pg_ctl "$@"\n' "$PGBIN" > /usr/local/bin/pg_ctl
+  chmod +x /usr/local/bin/pg_ctl
+  for t in psql createdb dropdb pg_dump pg_restore; do ln -sf "$PGBIN/$t" "/usr/local/bin/$t"; done
+  mkdir -p "$PGDATA"; chown postgres "$PGDATA"; chmod 700 "$PGDATA"
+else RUN=""; export PATH="$PGBIN:$PATH"; fi
+if [ ! -f "$PGDATA/PG_VERSION" ]; then
+  $RUN "$PGBIN/initdb" -D "$PGDATA" -U xr_studio -A trust -E UTF8 >/dev/null && echo "cluster created"
+fi
+if $RUN "$PGBIN/pg_ctl" -D "$PGDATA" status >/dev/null 2>&1; then echo "cluster already running"; else
+  $RUN "$PGBIN/pg_ctl" -D "$PGDATA" -o "-p $PGPORT -k /tmp -h 127.0.0.1" -l "$PGDATA/server.log" -w start >/dev/null && echo "cluster started"
+fi
+# start.sh starts the cluster without -o: keep the port and address in the cluster's own configuration.
+grep -q "^port = $PGPORT" "$PGDATA/postgresql.conf" 2>/dev/null || $RUN sh -c "printf '%s\n' \"port = $PGPORT\" \"listen_addresses = '127.0.0.1'\" \"unix_socket_directories = '/tmp'\" >> '$PGDATA/postgresql.conf'"
 for db in xr_studio_demo xr_studio_screens xr_studio_forms xr_studio_evidence xr_studio_runtime xr_studio_qa; do
-  createdb -h 127.0.0.1 -p "$PGPORT" -U xr_studio "$db" 2>/dev/null || true
+  "$PGBIN/createdb" -h 127.0.0.1 -p "$PGPORT" -U xr_studio "$db" 2>/dev/null || true
 done
-psql -h 127.0.0.1 -p "$PGPORT" -U xr_studio -d postgres -c "ALTER USER xr_studio CREATEDB;" >/dev/null
 
 echo "== schema"
-(cd "$STUDIO" && DATABASE_URL="postgresql://xr_studio@127.0.0.1:$PGPORT/xr_studio_demo" ./node_modules/.bin/prisma migrate deploy && ./node_modules/.bin/prisma generate)
+(cd "$STUDIO" && DATABASE_URL="postgresql://xr_studio@127.0.0.1:$PGPORT/xr_studio_demo" ./node_modules/.bin/prisma migrate deploy >/dev/null && ./node_modules/.bin/prisma generate >/dev/null && echo "migrations applied, client generated")
 
-echo "== official IRCC PDFs (manifest checksums, P-31)"
-python3 "$P/official-sources/fetch_official_sources.py"
+echo "== official PDFs (committed, P-83; checked against the manifest checksums, P-31)"
+if out=$(python3 "$P/official-sources/fetch_official_sources.py" 2>&1); then echo "$out" | tail -1
+else echo "$out" | grep -E '^FAIL' | head -5; echo "$out" | tail -1
+  echo "WARNING: official PDFs missing or different from the manifest; forms and evidence work needs them (ask the Lead)"; fi
 
-echo "cloud setup done — studio: zsh $STUDIO/start.sh (or DATABASE_URL + tsx api/src/main.ts for a lane copy)"
+git config core.hooksPath .githooks
+echo "cloud setup done — studio on :4400:  zsh $STUDIO/start.sh   (lane copies: zsh $STUDIO/tools/isolated.sh <name> <port> start)"

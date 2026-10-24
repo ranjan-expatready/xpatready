@@ -16,6 +16,7 @@ updated: 2026-10-23
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-24 · cloud · Cloud setup fixed (work in progress, branch claude/modest-cerf-yunauq): PostgreSQL as the postgres user, zsh, Linux Python lock, PDF fetch no longer stops setup; verified from a blank copy. Next: API start in the cloud, cloud lane binding, then a PR. Official blank PDFs (P-83) come by the founder's Devin agent PR.
 - 2026-10-24 · screens · CHECK → merged · Lead check of Screen 01 (channels, filing method, portal, online forms, release gate, words) merged 1cb174a6; :4400 restarted; DONE after qa retest. Evidence IMM 1295 merged. All builder lanes working again.
 - 2026-10-24 · all · Every lane finished its stage overnight and waits on the Lead check: screens (Screen 01 with channels), forms slice 2, runtime R1a, evidence; qa waiting. Screen 01 is checked first.
 - 2026-10-24 · Lead · P-81 private GitHub repository through a filtered mirror; waiting on founder steps (repository, tool install, settings).
