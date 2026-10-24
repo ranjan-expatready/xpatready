@@ -1,12 +1,20 @@
 .DS_Store
 node_modules/
+# P-82: these stay on the Mac only — never tracked, never pushed
+sources/
 code/
 archive/
+*.pdf
+*.zip
+*.tar.gz
+*.dump
+*.sql.gz
+.env
+.env.*
+.tools/
 __pycache__/
 .playwright-mcp/
 # Lanes setup (P-64, 23 Oct): never commit secrets, local tools, databases, logs, installed packages or generated runs
-/.tools
-/*.zip
 **/studio/var/
 **/web/dist/
 **/test-results/
@@ -16,3 +24,6 @@ ai-workers/problem-1-pathway-setup-and-form-filling/inputs/meeting-*/
 .claude/lane
 .claude/worktrees/
 *.lock
+
+# devin local config
+.devin/

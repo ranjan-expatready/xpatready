@@ -11,18 +11,19 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 | **evidence** | own worktree | Fills each real form and checks it in Adobe (P-46, P-65 fill trial); AI scoring set. Never app code | `/next evidence` | 4460–4469 · `evidence_*` |
 | **runtime** | own worktree | Thin end-to-end slice (P-67), then M3 runtime: case, people, answers, renderer, agent view, fill from case facts | `/next runtime` | 4430–4439 · `runtime_*` |
 | **qa** | own worktree, synced to `main` | Independent testing of `main`: `qa/` (capabilities, bugs, reports) and `prototype/studio/tests/qa/`. Never app code | `/qa <mode>` | 4470–4479 · `qa_*` |
+**A lane runs on the Mac or in the cloud** — each an ordinary clone, pull at start, push at end; one session per lane at a time. The evidence lane and anything needing `sources/` or `code/` runs on the Mac (those folders are Mac-only, P-82).
 **The founder uses one chat: the Lead (`/lead`).** The Lead starts or continues each lane's session itself (own worktree; prompt `/next <lane>` or `/qa <mode>`), is told when a stage ends, checks it, and asks the founder only for decisions, walkthroughs, paid-AI go-aheads and installs. The founder may open a lane session to watch, or a qa session to test together (`/qa with-me`).
 **Fresh context, any time:** state lives in files and commits, never in a chat. A long Lead chat → the Lead says so; open a new chat and type `/lead`. A lane session is disposable: the Lead starts a fresh one per stage when its context is long, cut from the lane's branch (or `main` once merged); `/next` binds the new copy.
 
 ## The one loop
-1. A lane does **one stage**, commits on its branch, updates `lanes/<lane>.md` below the Lead's section, ends with one **Paste to Lead** block.
+1. A lane does **one stage**, commits on its branch, pushes the branch, updates `lanes/<lane>.md` below the Lead's section, ends with one **Paste to Lead** block.
 2. The Lead checks it (on the exact commit), records, and writes the lane's **"From the Lead"** note on `main`: the only part of a lane file the Lead writes (top of the file, replaced each time, dated). The lane applies it at its next sync and logs "applied Lead note <date>".
 3. Passed work is merged into `main` by the Lead (standing founder OK, 23 Oct; every merge reported). After merging app code the Lead sends `/qa after-merge`. Every lane syncs `main` at the start of its next stage.
 
 ## Guards every command runs first (no wrong step can do harm)
 * `lane.sh whoami` says which copy this is; a command in the wrong copy prints the right command and stops.
 * The lane file says who acts; if it is not this lane's builder, the command says who acts and stops.
-* `lane.sh sync` merges `main` first; a conflict stops the stage and is reported. `lane.sh setup` links the main copy's tools and packages.
+* `lane.sh sync` merges `main` first; a conflict stops the stage and is reported. `lane.sh setup` links the main copy's tools when present and runs `npm ci` when packages are missing.
 * The stop hook refuses a lane's changes to Lead-owned files (rules, skills, agents, settings, decisions, other lanes' files) and asks for a commit at the end of a stage.
 * `lane.sh status` (every copy, uncommitted files, behind `main`) and `lane.sh table` (the lanes table) are the Lead's view; `lane.sh state` writes the table into `STATE.md`.
 
@@ -39,9 +40,9 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 A lane needing a rule, decision or concept change proposes it in its block; it never edits Lead files. A founder request about the workflow made in a lane session is passed to the Lead.
 
 ## Running the app in a lane
-Each lane uses its own ports and database names (table above), never the shared demo (:4400, main copy only): `zsh prototype/studio/tools/isolated.sh <lane>_<name> <port> start`. Stop every isolated copy at the end of each stage (`isolated.sh <name> <port> stop`): idle copies slow every lane's browser checks (qa, 24 Oct).
+Each lane uses its own ports and database names (table above), never the shared demo (:4400, main copy only): `zsh prototype/studio/tools/isolated.sh <lane>_<name> <port> start`.
 
 ## Saving work
 * A commit at the end of every stage on the lane branch (`<lane>: <stage> — <summary>` with the attribution line). The Lead commits `main` after recording.
+* Push only your own branch at the end of a stage; never force-push. The push guard (`.githooks/pre-push`, CI) refuses excluded paths, PDFs, secrets and personal names (P-82).
 * Never commit secrets, databases, logs or installed packages (`.gitignore`). Never commit, push or open pull requests in the team's repositories.
-* GitHub (private repository, pull requests, tests run on every pull request) needs the founder's approval; until then pushing stays blocked. Plan: `LEAD.md` open items.

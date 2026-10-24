@@ -2,7 +2,7 @@
 # Stop hook (lane-aware, P-64, P-68): before a session stops, (1) a lane copy has not changed Lead-owned files (rules,
 # skills, agents, other lanes' files), (2) its state file (main copy: STATE.md; a lane copy: lanes/<lane>.md) is updated
 # when product or app files changed, and a finished stage (state file changed) is committed; (3) rules files pass
-# check-docs; (4) explicit any in live code does not rise.
+# check-docs; (4) explicit any in live code does not rise (skipped when studio packages are not installed).
 input=$(cat); [ "$(printf '%s' "$input" | jq -r '.stop_hook_active // false' 2>/dev/null)" = "true" ] && exit 0
 # The session's own copy (a lane worktree or the main copy) comes from the hook input: in lane sessions the desktop app
 # points $CLAUDE_PROJECT_DIR at the main copy, so the script's own location is not enough (forms lane report, 23 Oct).
@@ -38,8 +38,18 @@ docs=$(bash "$PH/tools/check-docs.sh" 2>&1) || reasons="$reasons- Rules files ne
 $docs
 "
 # (4) STANDARDS §7 "no any": the explicit-any count in live code may only fall (Lead check 23 Oct, item 2).
-NODE="$ROOT/.tools/node-v24.21.0/bin/node"; [ -x "$NODE" ] || NODE=$(command -v node)
-if [ -n "$NODE" ]; then anyc=$("$NODE" "$APP/tools/count-any.mjs" 2>&1) || reasons="$reasons- $anyc
+# Skips with a one-line note when the studio packages are not installed (fresh clone before npm ci, P-82).
+if [ -f "$APP/node_modules/typescript/lib/typescript.js" ]; then
+  NODE="$ROOT/.tools/node-v24.21.0/bin/node"; [ -x "$NODE" ] || NODE=$(command -v node)
+  if [ -n "$NODE" ]; then anyc=$("$NODE" "$APP/tools/count-any.mjs" 2>&1) || reasons="$reasons- $anyc
 "; fi
-[ -z "$reasons" ] && exit 0
+else
+  echo "stop-check: no studio packages ($APP/node_modules/typescript missing) — skipping the any-count (run npm ci)" >&2
+fi
+# Unpushed commits warn, never block (P-82: push at the end of your own branch).
+unpushed=""
+ahead=$(git rev-list --count @{upstream}..HEAD 2>/dev/null) && [ "$ahead" -gt 0 ] && unpushed="$ahead unpushed commit(s) on $(git branch --show-current 2>/dev/null) — push at the end of your stage (push only your own branch)"
+[ -z "$reasons" ] && { [ -n "$unpushed" ] && jq -n --arg m "note: $unpushed" '{systemMessage:$m}'; exit 0; }
+[ -n "$unpushed" ] && reasons="$reasons- note: $unpushed (warning only — not blocking)
+"
 jq -n --arg r "$reasons" '{decision:"block",reason:$r}'

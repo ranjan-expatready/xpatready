@@ -2,18 +2,32 @@
 # Lanes (P-64, product/LANES.md): which lane this copy is, binding it, making it runnable, syncing it, and the status of all.
 #   lane.sh whoami            -> lead | screens | forms | evidence | runtime | qa | unbound
 #   lane.sh bind <lane>       bind this lane copy (git worktree) to a lane, once
-#   lane.sh setup             link the main copy's tools and node_modules into this lane copy (idempotent)
+#   lane.sh setup             make this copy runnable: link .tools when present, npm ci when node_modules is missing
 #   lane.sh sync              merge main into this lane copy; stops on a conflict
 #   lane.sh status            one line per lane copy (its own lane file, and who acts according to main)
 #   lane.sh table             the lanes table from each lane's newest copy (else main); STATE.md and the Lead's replies use it
-#   lane.sh state             rewrite the generated table in STATE.md (main copy only)
+#   lane.sh state             rewrite the generated table in STATE.md (main copy only, on branch main)
 LANES="screens forms evidence runtime qa"
 P="ai-workers/problem-1-pathway-setup-and-form-filling"
 HERE="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not in the repository"; exit 2; }
 MAIN="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
 whoami_() {
-  if [ "$HERE" = "$MAIN" ]; then echo lead; return; fi
-  [ -f "$HERE/.claude/lane" ] && cat "$HERE/.claude/lane" || echo unbound
+  # lead only on branch main in the primary copy (P-82); a lane branch prefix (screens/, forms/, evidence/,
+  # runtime/, qa/, or the existing claude/<lane>-* branches and <lane>-* worktree names) maps to that lane;
+  # anything else is unbound, never lead.
+  local br; br=$(git -C "$HERE" branch --show-current 2>/dev/null)
+  [ "$HERE" = "$MAIN" ] && [ "$br" = main ] && { echo lead; return; }
+  [ -f "$HERE/.claude/lane" ] && { cat "$HERE/.claude/lane"; return; }
+  case "$br" in
+    screens/*|claude/screens-*) echo screens;;
+    forms/*|claude/forms-*) echo forms;;
+    evidence/*|claude/evidence-*) echo evidence;;
+    runtime/*|claude/runtime-*) echo runtime;;
+    qa/*|claude/qa-*) echo qa;;
+    *) case "$(basename "$HERE")" in
+         screens-*) echo screens;; forms-*) echo forms;; evidence-*) echo evidence;;
+         runtime-*) echo runtime;; qa-*) echo qa;; *) echo unbound;; esac;;
+  esac
 }
 field() { grep -m1 "^$1:" "$2" 2>/dev/null | cut -d' ' -f2-; }
 table_() {
@@ -44,22 +58,20 @@ case "$1" in
     mkdir -p "$HERE/.claude" && echo "$2" > "$HERE/.claude/lane" && echo "bound to $2" ;;
   setup)
     [ "$HERE" = "$MAIN" ] && { echo "main copy: nothing to link"; exit 0; }
-    for rel in .tools "$P/prototype/node_modules" "$P/prototype/studio/node_modules" "$P/prototype/studio/web/node_modules"; do
-      [ -e "$MAIN/$rel" ] || continue
-      [ -e "$HERE/$rel" ] || { mkdir -p "$(dirname "$HERE/$rel")"; ln -s "$MAIN/$rel" "$HERE/$rel"; echo "linked $rel"; }
-    done
-    # Lanes that change the schema get their own copy-on-write clone of the studio packages: `prisma generate` in a
-    # linked copy rewrites the client the shared demo (:4400) uses (forms lane finding, 23 Oct). Never committed.
-    SN="$P/prototype/studio/node_modules"
-    case "$(whoami_)" in forms|runtime)
-      if [ -L "$HERE/$SN" ]; then src=$(cd "$HERE/$SN" && pwd -P); rm "$HERE/$SN" && cp -c -R "$src" "$HERE/$SN" \
-        && git -C "$HERE" update-index --skip-worktree "$SN" && echo "cloned studio packages (own database client)"; fi ;;
-    esac ;;
+    # .tools stays optional (P-82): link it when the primary copy has one (Mac node runtime, venv, PDFs, pg data).
+    [ -e "$HERE/.tools" ] || { [ -e "$MAIN/.tools" ] && ln -s "$MAIN/.tools" "$HERE/.tools" && echo "linked .tools"; }
+    # Packages: every copy installs its own from the committed lockfile (P-82); a prisma generate here can
+    # never touch another copy's client, so the copy-on-write clone step is gone.
+    SN="$P/prototype/studio"
+    [ -d "$HERE/$SN/node_modules" ] || { echo "installing studio packages (npm ci)"; (cd "$HERE/$SN" && npm ci); }
+    git config core.hooksPath .githooks && echo "hooks: core.hooksPath=.githooks" ;;
   sync)
     [ "$HERE" = "$MAIN" ] && { echo "main copy: nothing to sync"; exit 0; }
     git -C "$HERE" diff --quiet && git -C "$HERE" diff --cached --quiet || { echo "Commit this lane's work before syncing."; exit 3; }
-    git -C "$HERE" merge --no-edit main >/dev/null 2>&1 && echo "in sync with main ($(git -C "$HERE" rev-parse --short main))" || {
-      echo "CONFLICT merging main:"; git -C "$HERE" diff --name-only --diff-filter=U; exit 4; } ;;
+    git -C "$HERE" fetch -q origin 2>/dev/null || true
+    ref=main; git -C "$HERE" rev-parse -q --verify refs/remotes/origin/main >/dev/null 2>&1 && ref=origin/main
+    git -C "$HERE" merge --no-edit "$ref" >/dev/null 2>&1 && echo "in sync with $ref ($(git -C "$HERE" rev-parse --short "$ref"))" || {
+      echo "CONFLICT merging $ref:"; git -C "$HERE" diff --name-only --diff-filter=U; exit 4; } ;;
   status)
     git -C "$MAIN" worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt; do
       [ "$wt" = "$MAIN" ] && continue
@@ -75,5 +87,5 @@ case "$1" in
     [ "$HERE" = "$MAIN" ] || { echo "Only the Lead's main copy writes STATE.md."; exit 2; }
     S="$MAIN/$P/product/STATE.md"; t=$(mktemp); tb=$(mktemp); table_ > "$tb"
     awk -v tf="$tb" '/<!-- lanes:start -->/{print; while ((getline l < tf) > 0) print l; skip=1; next} /<!-- lanes:end -->/{skip=0} !skip' "$S" > "$t" && mv "$t" "$S" && rm -f "$tb" && echo "STATE.md table regenerated" ;;
-  *) sed -n 2,9p "$0"; exit 2 ;;
+  *) sed -n 2,10p "$0"; exit 2 ;;
 esac
