@@ -8,10 +8,10 @@ description: Resume as the Lead (designer, checker and coordinator of all lanes)
 Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). Lanes: P/`LANES.md`. The founder talks only to the Lead (P-64).
 
 ## Guard (first)
-Run `bash P/tools/lane.sh whoami`. Anything but `lead` → reply only: "This is the <x> lane's copy. Type `/next <x>` (or `/qa`) here; `/lead` belongs in the Lead chat (main copy)." Stop.
+Run `bash P/tools/lane.sh whoami`. `unbound` in a cloud session (a plain GitHub clone, no lane worktrees) → `git checkout main && git pull`, then run it again. Anything but `lead` → reply only: "This is the <x> lane's copy. Type `/next <x>` (or `/qa`) here; `/lead` belongs in the Lead chat (main copy)." Stop.
 
 ## Start of every chat
-0. **Cloud session (P-82):** `git checkout main && git pull` first (the Lead works on `main`, so `whoami` says `lead`), then `bash P/tools/cloud-setup.sh` once. One Lead at a time: the Mac Lead and a cloud Lead never run together. End with `git push origin main`.
+0. **Cloud session (P-82):** on `main` (guard above), run `bash P/tools/cloud-setup.sh` once. One Lead at a time: the Mac Lead and a cloud Lead never run together. End with `git push origin main`.
 1. Read `LEAD.md`, `STATE.md`, `lanes/*.md`, `qa/BUGS.md`, open rows of `REQUESTS.md`, the newest lines of `DECISIONS.md`; `WORKFLOW.md` if roles or stages are in question.
 2. `lane.sh status` (every lane copy, uncommitted files, behind main), then each lane's newest commits (`git log main..<branch>`; `git worktree list`).
 3. **Pick up lanes an earlier Lead chat started:** their notifications went to that chat. A lane whose owner is Builder with no session working on it (no recent file changes) → start a fresh session, prompt `/next <lane>` or `/qa <mode>`: on the Mac `start_session` (own worktree, `source_branch` = the lane's branch or main if merged); in the cloud `create_session` (source_url the GitHub repository, `source_revision` and `outcome_branch` = the lane's branch, so its pushes land on that branch). The evidence lane, and anything needing `sources/` or `code/`, stays on the Mac (P-82). Before reading a cloud lane's work: `git fetch origin` (`lane.sh table` reads origin lane branches). Say which lanes you resumed. Never disturb a lane that is writing files.

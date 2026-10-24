@@ -1,7 +1,8 @@
 #!/bin/bash
 # Lanes (P-64, product/LANES.md): which lane this copy is, binding it, making it runnable, syncing it, and the status of all.
 #   lane.sh whoami            -> lead | screens | forms | evidence | runtime | qa | unbound
-#   lane.sh bind <lane>       bind this lane copy (git worktree) to a lane, once
+#   lane.sh bind <lane>       bind this lane copy (git worktree, or a cloud clone: checks out the lane's newest branch) once
+#   lane.sh branch <lane>     the lane's newest branch on origin (<lane>/* or claude/<lane>-*)
 #   lane.sh setup             make this copy runnable: link .tools when present, npm ci when node_modules is missing
 #   lane.sh sync              merge main into this lane copy; stops on a conflict
 #   lane.sh status            one line per lane copy (its own lane file, and who acts according to main)
@@ -28,6 +29,9 @@ whoami_() {
          screens-*) echo screens;; forms-*) echo forms;; evidence-*) echo evidence;;
          runtime-*) echo runtime;; qa-*) echo qa;; *) echo unbound;; esac;;
   esac
+}
+lane_branch() {  # newest origin branch of a lane, short name without origin/
+  git -C "$HERE" for-each-ref --sort=-committerdate --format='%(refname:short)' "refs/remotes/origin/$1/" "refs/remotes/origin/claude/$1-*" | head -1 | sed 's#^origin/##'
 }
 field() { grep -m1 "^$1:" "$2" 2>/dev/null | cut -d' ' -f2-; }
 table_() {
@@ -61,6 +65,14 @@ case "$1" in
     [ "$(whoami_)" = lead ] && { echo "This is the Lead's main copy; lanes run in their own copies."; exit 2; }
     echo " $LANES " | grep -q " $2 " || { echo "Lane must be one of: $LANES"; exit 2; }
     cur=$(whoami_); [ "$cur" != unbound ] && [ "$cur" != "$2" ] && { echo "This copy is already the $cur lane. Type: /next $cur"; exit 3; }
+    # A cloud clone on a session branch (P-82): continue on the lane's own branch so its pushes reach the Lead.
+    if [ "$HERE" = "$MAIN" ] && [ "$cur" = unbound ]; then
+      git -C "$HERE" fetch -q origin 2>/dev/null; lb=$(lane_branch "$2")
+      if [ -n "$lb" ]; then
+        git -C "$HERE" diff --quiet && git -C "$HERE" diff --cached --quiet || { echo "Commit or discard local changes before binding."; exit 3; }
+        git -C "$HERE" checkout -q -B "$lb" "origin/$lb" && git -C "$HERE" branch -q -u "origin/$lb" && echo "on the $2 lane's branch $lb"
+      else echo "no $2 branch on origin yet: this branch becomes the lane's branch ($(git -C "$HERE" branch --show-current))"; fi
+    fi
     mkdir -p "$HERE/.claude" && echo "$2" > "$HERE/.claude/lane" && echo "bound to $2" ;;
   setup)
     [ "$(whoami_)" = lead ] && { echo "main copy: nothing to link"; exit 0; }
@@ -89,8 +101,13 @@ case "$1" in
       up=$(git -C "$wt" log -1 --format='%cd' --date=format:'%d %b %H:%M' 2>/dev/null)
       dirty=$(git -C "$wt" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
       echo "$ln | stage: ${st:-?} | owner: ${ow:-?} | last commit: ${up:-none} | uncommitted: $dirty | behind main: $(git -C "$wt" rev-list --count HEAD..main 2>/dev/null) | $wt"
+    done
+    # Lanes pushed from the cloud or another machine (P-82): their newest branch on origin.
+    for ln in $LANES; do lb=$(lane_branch "$ln"); [ -n "$lb" ] || continue
+      echo "$ln | origin/$lb | last commit: $(git -C "$HERE" log -1 --format='%cd' --date=format:'%d %b %H:%M' "origin/$lb") | behind main: $(git -C "$HERE" rev-list --count "origin/$lb..origin/main" 2>/dev/null)"
     done ;;
   table) table_ ;;
+  branch) lane_branch "$2" ;;
   state)
     [ "$HERE" = "$MAIN" ] || { echo "Only the Lead's main copy writes STATE.md."; exit 2; }
     S="$MAIN/$P/product/STATE.md"; t=$(mktemp); tb=$(mktemp); table_ > "$tb"

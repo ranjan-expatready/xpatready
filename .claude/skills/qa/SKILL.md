@@ -9,7 +9,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). Lane r
 
 ## 0. Guard (first)
 `bash P/tools/lane.sh whoami`:
-* `lead` (main copy) → you are the Lead routing a founder request: continue the qa session (`SendMessage`) or start one (`start_session`, own worktree, `source_branch` main, prompt `/qa <mode>`); tell the founder it is running. Stop.
+* `lead` (main copy) → you are the Lead routing a founder request: continue the qa session (`SendMessage`) or start one, prompt `/qa <mode>` (Mac: `start_session`, own worktree, `source_branch` main; cloud: `create_session`, `source_revision` and `outcome_branch` = the qa lane's branch); tell the founder it is running. Stop.
 * `unbound` → `lane.sh bind qa`. Another lane → "This is the <x> lane; /qa runs in the qa copy." Stop.
 * `qa` → `lane.sh setup`, `lane.sh sync` (you test what is on `main`), read P/`lanes/qa.md` and its "From the Lead" note.
 
@@ -41,7 +41,7 @@ Screenshot each decision point and every defect (`P/qa/reports/<date>-<mode>/`).
 * D17 and D20 need an intended user: you may simulate, never award them.
 
 ## 5. Hand back
-Update P/`lanes/qa.md` (stage WAITING, owner Lead, next action, one log line), commit on your branch (`qa: <mode> — <summary>` + attribution line), end with one block:
+Update P/`lanes/qa.md` (stage WAITING, owner Lead, next action, one log line), commit on your branch (`qa: <mode> — <summary>` + attribution line) and push it (P-82), end with one block:
 ```
 Paste to Lead
 Lane: qa · Run: <mode> on main <short hash> · Commit: <short hash>

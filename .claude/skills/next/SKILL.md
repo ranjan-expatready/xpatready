@@ -13,7 +13,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (call it P)
    * `qa` → "This is the qa copy: type `/qa <mode>`." Stop.
    * `unbound` and a lane was given → `lane.sh bind <lane>`. No lane given → ask which, listing the four. Stop.
    * Bound to another lane than the one typed → "This copy is the <x> lane. Type `/next <x>` here; for <typed>, use its own session." Stop. A bare `/next` means this copy's lane.
-2. `lane.sh setup` (in a cloud clone it runs the one-time `cloud-setup.sh`), then `lane.sh sync`. A conflict → list the files, change nothing, put it under Needs. Stop.
+2. `lane.sh setup` (in a cloud clone it runs the one-time `cloud-setup.sh`), then `lane.sh sync`. A lane branch older than P-82's cloud support answers "main copy: nothing to sync" in the cloud: run `git merge --no-edit origin/main` once, then setup and sync again. A conflict → list the files, change nothing, put it under Needs. Stop.
 3. Read P/`lanes/<lane>.md`. Its **"From the Lead"** section is the Lead's latest instruction: if your log does not yet say "applied Lead note <date>", apply it now (stage, owner, next action as it says) and log that line. If `owner` is still not Builder → print who acts (Lead: "the Lead acts next"; founder: the decision needed). Stop.
 
 ## 2. Do exactly the lane's stage
