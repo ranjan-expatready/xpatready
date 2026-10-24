@@ -1,7 +1,7 @@
 # Lane: evidence — proof that filled forms pass, and an AI scoring set
 
 ## From the Lead
-2026-10-23 (Lead): IMM 5257 checked and merged (186/186 slots, 0 problems, 67/67 unchanged, reproduced by the Lead): the P-65 fill trial passes for R1, so the runtime lane may fill IMM 5257 directly. Next: the team's trial list, IMM 1295 → 5707 → 5409 → 5476, one commit and one report each.
+2026-10-24 (Lead): IMM 1295 checked and merged (1d0d363c): saved file hash matches, barcode compare rerun by the Lead is identical (186/186 slots, 0 problems, 91 written values accounted). Set stage BUILD, owner Builder: IMM 5707 (trial list 2/4), then 5409, 5476, one commit and one EARLY-LOOK report each.
 
 Command: `/next evidence` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
