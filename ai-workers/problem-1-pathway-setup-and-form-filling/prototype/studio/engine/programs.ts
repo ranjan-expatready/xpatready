@@ -2,14 +2,14 @@
 // startable check, SA-1B-90/91, BR-8), its single status (In setup · Not ready · Ready), the counts the row shows
 // (BR-10: every question any person on the row could be asked), when its sources were last checked (BR-11) and its one
 // next action (BR-13). The API calls these with snapshots it built; tests call them directly.
-import type { MissingItem, NextAction, Status } from "../contracts/programs.ts";
+import { sharedStep, type MissingItem, type NextAction, type Status } from "../contracts/programs.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
 
 type Participant = { role: string; label: string; min: number; max: number; applies?: boolean };
 /** The parts of a snapshot these rules read (the snapshot's own lists are untyped until the team's contract lands). */
 type Placement = { section_id: string; fact: string; repeats: string; rule_only?: boolean | null };
-type FormLine = { form_number: string; form_kind?: string | null };
+type FormLine = { form_number: string; form_kind?: string | null; channel?: string };
 type FieldMap = { form_number: string; entries: unknown[] };
 type DocumentLine = { base_or_conditional: string };
 const applicants = (ps: Participant[]) => ps.filter((p) => p.role !== "representative" && p.applies !== false && p.max > 0);
@@ -38,17 +38,19 @@ export function setupActionOf(r: SetupState): NextAction | null {
   return null;
 }
 
-/** The startable check on a configuration (BR-8): every form has a current edition with its boxes mapped, every person
- *  role that files has questions, and every rule resolves (no error from the validator). An empty list = startable.
- *  Each line is one cause with the step that moves it (founder finding F2). While a setup step is waiting (sources to
- *  add, forms to add from the library or draft, AI work to see or review), that step moves every setup line, so each
- *  of them names it in the same words as the next step; the lines come in the order of those steps. */
+/** The startable check on a configuration (BR-8): every form has a current edition with its form fields mapped, every
+ *  person role that files has questions, and every rule resolves (no error from the validator). An empty list =
+ *  startable. Each line is one cause with the step that moves it (founder finding F2). While a setup step is waiting
+ *  (sources to add, forms to add from the library or draft, AI work to see or review), that step moves every setup
+ *  line, so each of them names it in the same words as the next step; the lines come in the order of those steps.
+ *  A step is said once (Lead note 23 Oct): when every line has the same step, the lines carry only their causes and
+ *  the screen names the step once under the list (sharedStep); a line whose step is its own still says it. */
 export function missingItems(s: Snapshot, participants: Participant[], problems: Problem[], setup?: SetupState): MissingItem[] {
-  const out: MissingItem[] = [];
+  const out: (MissingItem & { cause: string })[] = [];
   const pending = setup ? setupActionOf(setup) : null;
-  const line = (code: MissingItem["code"], cause: string, own: string, why = ""): MissingItem => {
+  const line = (code: MissingItem["code"], cause: string, own: string, why = "") => {
     const step = pending?.label ?? own;
-    return { code, step, text: `${cause} Next step: ${step}${pending ? "" : why}.` };
+    return { code, step, cause, text: `${cause} Next step: ${step}${pending ? "" : why}.` };
   };
   const forms = s.forms as FormLine[];
   if (!forms.length) {
@@ -56,16 +58,24 @@ export function missingItems(s: Snapshot, participants: Participant[], problems:
     out.push(n ? line("no_forms", `${plural(n, "form")} attached as sources, 0 set up.`, "Add sources")
       : line("no_forms", "No forms yet.", "Add sources", " (add the forms this application files)"));
   }
-  const unmapped = forms.filter((f) => (f.form_kind ?? "data_form") === "data_form" && !(s.field_maps as FieldMap[]).some((m) => m.form_number === f.form_number && m.entries.length)).map((f) => f.form_number);
-  if (unmapped.length) out.push(line("form_without_edition", `No boxes mapped yet for ${unmapped.join(", ")}.`, "Draft setup", " (AI maps the boxes from the form)"));
+  // A line filed Online is filled from its online version's screen map: when that is missing, the filing line below says
+  // so with its own step, never "map the PDF's form fields" (review round 2, should 2).
+  const online = new Set(forms.filter((f) => f.channel === "ONLINE").map((f) => f.form_number));
+  const unmapped = forms.filter((f) => (f.form_kind ?? "data_form") === "data_form" && !online.has(f.form_number) && !(s.field_maps as FieldMap[]).some((m) => m.form_number === f.form_number && m.entries.length)).map((f) => f.form_number);
+  if (unmapped.length) out.push(line("form_without_edition", `No form fields mapped yet for ${unmapped.join(", ")}.`, "Draft setup", " (AI maps the form fields from the form)"));
   // Founder finding F2: one cause, one line, with what to do next (not one line per person role).
   const roles = personQuestions(s).length ? [] : applicants(participants).map((p) => p.label);
   // With its forms set up, questions come from the library's placements for the fields the forms read; AI drafting maps
   // boxes and never writes questions (api/src/ai.ts), so the step is a person's: add them on the Configuration tab.
   if (roles.length) out.push(line("role_without_questions", `No questions yet for ${roles.join(", ")}.`, "Add questions", " (Configuration › Questions and sections)"));
-  const errors = problems.filter((p) => p.level === "error");
-  if (errors.length) out.push({ code: "rule_problem", step: "Fix on the Configuration tab", text: `${errors.length} rule${errors.length === 1 ? " does" : "s do"} not resolve (first: ${errors[0].item}: ${errors[0].message}). Next step: fix ${errors.length === 1 ? "it" : "them"} on the Configuration tab.` });
-  return out;
+  // How a form is filed (a channel without a portal, without an approved online version or its screen map): its own line.
+  const isFiling = (p: Problem) => p.where === "Forms" || (p.where.startsWith("Field map") && online.has(p.item));
+  const filing = problems.filter((p) => p.level === "error" && isFiling(p));
+  if (filing.length) { const cause = `${plural(filing.length, "form")} cannot be filed as set (first: ${filing[0].message})`; out.push({ code: "filing_problem", step: "Change how it is filed", cause, text: `${cause} Next step: change how ${filing.length === 1 ? "it is" : "they are"} filed (Overview › Forms), or add what it needs.` }); }
+  const errors = problems.filter((p) => p.level === "error" && !isFiling(p));
+  if (errors.length) { const cause = `${errors.length} rule${errors.length === 1 ? " does" : "s do"} not resolve (first: ${errors[0].item}: ${errors[0].message}).`; out.push({ code: "rule_problem", step: "Fix on the Configuration tab", cause, text: `${cause} Next step: fix ${errors.length === 1 ? "it" : "them"} on the Configuration tab.` }); }
+  const shared = sharedStep(out);
+  return out.map(({ cause, ...m }) => (shared ? { ...m, text: cause } : m));
 }
 
 /** One status per row (challenge O2 as trimmed by P-26): never released → In setup; released and passing the startable

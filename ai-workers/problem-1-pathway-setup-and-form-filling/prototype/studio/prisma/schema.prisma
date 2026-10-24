@@ -150,6 +150,7 @@ model Combination {
   program      ProgramDef            @relation(fields: [programDefId], references: [id], onDelete: Restrict)
   attachments  SourceAttachment[]
   forms        CombinationForm[]
+  captures     PortalCapture[]
   sections     SqrSectionSelection[]
   requirements DocumentRequirement[]
   rules        Predicate[]
@@ -201,6 +202,9 @@ model GovFormDef {
   displayName String  @map("display_name")
   /// "data_form" (an XFA form the system fills) or "document" (a checklist or instructions)
   formKind    String  @default("data_form") @map("form_kind")
+  /// Which source drafting reads for this form (P-62 §1, C2.10): PDF_FIRST (the PDF version first, then the online
+  /// screens for what differs; the default) or ONLINE_ONLY (the online screens alone: the PDF version is not reused).
+  draftFrom   String  @default("PDF_FIRST") @map("draft_from")
 
   editions FormEdition[]
   usedBy   CombinationForm[]
@@ -460,8 +464,13 @@ model PortalCapture {
   approvedAt      DateTime? @map("approved_at") @db.Timestamptz
   decisionNote    String?   @map("decision_note")
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  /// The combination an author added this online form from (Screen 01 "Add an online form", C2.7); null when it was
+  /// captured from the library. The online version itself belongs to the library, not to the combination.
+  combinationId   String?   @map("combination_id") @db.Uuid
+  combination     Combination? @relation(fields: [combinationId], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, formKey, portalKey])
+  @@index([combinationId])
   @@map("portal_capture")
 }
 

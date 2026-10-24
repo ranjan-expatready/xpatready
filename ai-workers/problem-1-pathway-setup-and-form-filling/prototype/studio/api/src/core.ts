@@ -21,7 +21,9 @@ export const VAR = (ws: string) => join(VAR_ROOT, "workspaces", ws);
 
 @Injectable()
 export class Db extends PrismaClient {
-  constructor() { super({ adapter: new PrismaPg({ connectionString: DATABASE_URL }) }); }
+  // The driver adapter sends times without a zone; the session time zone is UTC so PostgreSQL stores the real moment,
+  // whatever the server's own zone (QA-5: it was Asia/Kolkata, so every write landed 5 h 30 min early).
+  constructor() { super({ adapter: new PrismaPg({ connectionString: DATABASE_URL, options: "-c TimeZone=UTC" }) }); }
 }
 
 /** Simulated people (labelled "Simulated" on every screen). Roles follow the team's staff roles; the SME is a duty of

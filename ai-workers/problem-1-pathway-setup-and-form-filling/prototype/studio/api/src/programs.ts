@@ -8,12 +8,15 @@ import type { z } from "zod";
 import { AddLineBody, CatalogueQuery, cleanLabel, CreateCombinationBody, CreateNodeBody, CreatePathBody, DEFAULT_PARTICIPANTS, LEVEL_NAME, normalizeLabel, problemFromZod, ReleaseBody,
   type CatalogueGroup, type CatalogueLeaf, type CatalogueNode, type CatalogueResponse, type CombinationSummary, type ParticipantLine, type Status } from "../../contracts/programs.ts";
 import { manifest } from "../../engine/import.ts";
+import { channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
+import { CAPTURE_STATUS_WORDS, CHANNEL_WORDS, portalLabel, type Channel } from "../../contracts/forms.ts";
 import { checkedOf, comparePaths, compareStatus, isLive, missingItems, needsWork, newestEdition, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
-import { buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
+import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
 import { diff, validate } from "../../engine/validate.ts";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Audit, Db, need, ROOT, Workspace, type Actor } from "./core.ts";
+import { addFormLine } from "./form-lines.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 
@@ -28,7 +31,7 @@ const problem = (status: number, title: string, detail: string, extra: Record<st
 
 /** The derived definitions a snapshot carries, as the validator reads them. */
 const derivedOf = (s: Snapshot) => (s.derived_fields as { id: string; calculation: string }[]).map((d) => ({ id: d.id, calculation: d.calculation }));
-type SnapForm = { form_number: string; form_kind?: string | null };
+type SnapForm = { form_number: string; form_kind?: string | null; channel?: Channel; status?: string; condition_plain?: string | null };
 
 type Row = {
   leaf: CatalogueLeaf; pathway: string; changes: number; errors: number; firstError: string | null; hasContent: boolean;
@@ -110,7 +113,7 @@ export class Programs {
         held.length && next !== "see_new_edition" ? `New edition waiting: ${held.map((x) => x.edition).join(", ")}` : null, newToday ? "New today" : null].filter(Boolean).join(" · ");
       if (!c) {
         rows.push({ pathway, changes: 0, errors: 0, firstError: null, hasContent: false, searchText: path.join(" "), docNames: [],
-          leaf: { ...base, combinationId: null, forms: [], counts: null, status: "IN_SETUP", statusText: "Not started", missing: [{ code: "not_started", step: "Add sources", text: "Not started: no setup yet. Next step: Add sources." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: true, live: false, held: [], note: noteOf(0, "start") } });
+          leaf: { ...base, combinationId: null, forms: [], filing: null, counts: null, status: "IN_SETUP", statusText: "Not started", missing: [{ code: "not_started", step: "Add sources", text: "Not started: no setup yet. Next step: Add sources." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: true, live: false, held: [], note: noteOf(0, "start") } });
         continue;
       }
       const { snapshot } = snaps.get(c.id)! as { snapshot: Snapshot };
@@ -133,7 +136,7 @@ export class Programs {
       const sourceForms = c.attachments.filter((x) => x.recognised && x.kind === "Form" && !formCodes.has((x.edition ?? "").split(" (")[0]));
       const draftable = sourceForms.filter((x) => !mapped.has(x.sha256) && !["COMPLETED", "QUEUED", "RUNNING", "APPLIED"].includes(latestPerSource.get(x.id)?.status ?? "")).length;
       const fromLibrary = [...new Set(sourceForms.filter((x) => mapped.has(x.sha256)).map((x) => (x.edition ?? "").split(" (")[0]))];
-      const forms = [...snapForms.map((f) => { const document = (f.form_kind ?? "data_form") !== "data_form"; return { code: f.form_number, document, drafted: document || (snapshot.field_maps as { form_number: string }[]).some((m) => m.form_number === f.form_number) }; }), ...sourceForms.map((x) => ({ code: (x.edition ?? x.officialFile ?? "Form").split(" (")[0], drafted: false, document: false, inLibrary: mapped.has(x.sha256) }))]
+      const forms = [...snapForms.map((f) => { const document = (f.form_kind ?? "data_form") !== "data_form"; return { code: f.form_number, document, channel: f.channel ?? "PDF_UPLOAD", drafted: document || (snapshot.field_maps as { form_number: string }[]).some((m) => m.form_number === f.form_number) }; }), ...sourceForms.map((x) => ({ code: (x.edition ?? x.officialFile ?? "Form").split(" (")[0], drafted: false, document: false, inLibrary: mapped.has(x.sha256) }))]
         .filter((f, i, all) => all.findIndex((y) => y.code === f.code) === i).sort((x, y) => x.code.localeCompare(y.code));
       // The missing list and the next step read the same setup state, so they name the same step (Lead check item 1).
       const setup = { exists: true, forms: forms.length, sources: new Set(sourceForms.map((x) => (x.edition ?? x.officialFile ?? x.id).split(" (")[0])).size, draftable, fromLibrary, running, proposals };
@@ -150,7 +153,7 @@ export class Programs {
       const nextAction = nextActionOf({ ...setup, status, changes, missing, held: held.length });
       rows.push({ pathway, changes, errors: errors.length, firstError: errors[0] ? `${errors[0].item}: ${errors[0].message}` : null, hasContent, docNames,
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
-        leaf: { ...base, combinationId: c.id, forms, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
+        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
           missing, aiProposals, aiRunning: running, release: rel ? { pack: rel.packVersion?.version ?? 1, at: rel.releasedAt.toISOString() } : null, checked,
           nextAction, needs: needsWork({ status, nextAction }), live: isLive({ status }), held, note: noteOf(aiProposals, nextAction?.kind, held) } });
     }
@@ -218,30 +221,59 @@ export class Programs {
     };
   }
 
-  /** The shared draft (P-23): every combination whose draft differs from its released snapshot, with what blocks it. */
-  async draft() {
+  /** The shared draft (P-23): every combination whose draft differs from its released snapshot, with what blocks it: a
+   *  problem in the draft, a review step not done yet (submitted, unchanged since, expert changes signed; QA-1), or, for
+   *  the person about to release, that they changed or submitted it themselves (BR-14, break M2), so the page never
+   *  says "Will be released" for a row the server will refuse. `summary` (the draft bar on every page) skips the checks. */
+  async draft(actor?: Actor | null, summary = false) {
     const workspaceId = await this.ws.id();
     const { rows } = await this.rows();
     const last = await this.db.packVersion.findFirst({ where: { workspaceId }, orderBy: { version: "desc" } });
     const changed = rows.filter((r) => r.changes > 0);
+    const why = new Map<string, { why: string | null; self?: boolean }>();
+    if (!summary && changed.length) {
+      const snaps = await buildSnapshots(this.db, workspaceId, changed.map((r) => r.leaf.combinationId!), "draft");
+      const gates = await this.studio.releaseGates(changed.map((r) => ({ combinationId: r.leaf.combinationId!, sha256: (snaps.get(r.leaf.combinationId!) as { sha256: string }).sha256 })));
+      for (const r of changed) {
+        const id = r.leaf.combinationId!;
+        if (r.errors) { why.set(id, { why: r.firstError }); continue; }
+        const gate = gates.get(id)!;
+        if (!gate.ok) { why.set(id, { why: gate.why }); continue; }
+        if (actor && (actor.duties as readonly string[]).includes("approve")) {
+          if (gate.sub.submittedBy === actor.id) { why.set(id, { why: "You submitted it, so a different person releases it (BR-14).", self: true }); continue; }
+          const { snapshot } = snaps.get(id) as { snapshot: Snapshot };
+          if ((await this.studio.draftAuthors(id, snapshot, workspaceId)).includes(actor.id)) { why.set(id, { why: "You changed it, so a different person releases it (BR-14).", self: true }); continue; }
+        }
+        why.set(id, { why: null });
+      }
+    } else for (const r of changed) why.set(r.leaf.combinationId!, { why: r.errors ? r.firstError : null });
     return {
       changes: changed.reduce((s, r) => s + r.changes, 0),
-      rows: changed.map((r) => ({ combinationId: r.leaf.combinationId, label: r.leaf.label, path: r.leaf.path, changes: r.changes, held: r.errors > 0, why: r.firstError, released: !!r.leaf.release })),
+      rows: changed.map((r) => { const w = why.get(r.leaf.combinationId!)!; return { combinationId: r.leaf.combinationId, label: r.leaf.label, path: r.leaf.path, changes: r.changes, held: !!w.why, why: w.why, self: !!w.self, released: !!r.leaf.release }; }),
       last: last ? { version: last.version, at: last.releasedAt, approver: last.approverId } : null,
       next: (last?.version ?? 0) + 1,
     };
   }
 
-  /** POST /pack/release: one release for the whole shared draft. A different person from every author releases
-   *  (BR-14); rows whose draft has errors are held back and listed; the rest get a frozen snapshot in the new version. */
+  /** POST /pack/release: one release for the whole shared draft. Rows that are held back (a problem, review not done,
+   *  or changed or submitted by the person releasing: BR-14) stay at their last release and are listed; the rest get a
+   *  frozen snapshot in the new version. Nothing releasable only because of the releaser's own work is a 403. */
   async release(actor: Actor, body: unknown) {
     need(actor, "approve");
     const b = parse(ReleaseBody, body);
-    const d = await this.draft();
+    const d = await this.draft(actor);
     if (!d.changes) throw problem(409, "Nothing to release", "The shared draft has no changes since the last release.");
     if (b.expectedChanges !== d.changes) throw problem(409, "The draft changed", `The draft now has ${d.changes} changes, not ${b.expectedChanges}. Review the list again, then release.`);
     const include = d.rows.filter((r) => !r.held);
-    if (!include.length) throw problem(409, "Every change is held back", `Fix the problems first: ${d.rows.map((r) => `${r.label}: ${r.why}`).join(" · ")}`);
+    if (!include.length) {
+      const mine = d.rows.filter((r) => r.self).map((r) => r.label);
+      if (mine.length) {
+        await this.audit.log(await this.ws.id(), actor.id, "refused", "release", null, `Release refused: ${actor.name} changed or submitted ${mine.join(", ")}`);
+        throw problem(403, "A different person must release", `You changed or submitted ${mine.slice(0, 3).join(", ")}${mine.length > 3 ? ` and ${mine.length - 3} more` : ""}, so a different person releases ${mine.length === 1 ? "it" : "them"} (BR-14).`);
+      }
+      const shown = d.rows.slice(0, 5).map((r) => `${r.label}: ${r.why}`).join(" · ");
+      throw problem(409, "Every change is held back", `Nothing can be released yet. ${shown}${d.rows.length > 5 ? ` · and ${d.rows.length - 5} more (see Review and release)` : ""}`);
+    }
     const out = await this.studio.releaseRows(actor, include.map((r) => r.combinationId!));
     this.cache = null;
     return { ...out, held: d.rows.filter((r) => r.held).map((r) => ({ label: r.label, why: r.why })) };
@@ -287,7 +319,8 @@ export class Programs {
   }
 
   /** POST /combinations/:id/lines {kind: FORM}: "+ Add" picks a form already in the library (BR-12, P-25). A form whose
-   *  edition has its boxes mapped becomes a form line; one without a map is attached as a source for AI to draft. */
+   *  edition has its field map becomes a form line, filed on the channel the library supports for the combination's
+   *  portal (F1); one without a field map is attached as a source for AI to draft. A removed form can be added again. */
   async addLine(actor: Actor, combinationId: string, body: unknown) {
     need(actor, "author");
     const b = parse(AddLineBody, body);
@@ -295,16 +328,26 @@ export class Programs {
     if (!c) throw problem(404, "Not found", "That combination does not exist.");
     const form = await this.db.govFormDef.findFirst({ where: { workspaceId: c.workspaceId, formKey: b.formKey }, include: { editions: { include: { _count: { select: { maps: true } } } } } });
     if (!form) throw problem(404, "Not in the library", `${b.formKey} is not in the library. Upload the IRCC PDF to add it.`, { errors: [{ field: "formKey", message: "Choose a form from the library." }] });
-    const current = newestEdition(form.editions.filter((e) => e._count.maps > 0));
-    const already = await this.db.combinationForm.findFirst({ where: { combinationId, lineageKey: form.formKey, status: { not: "RETIRED" } } });
-    if (already) throw problem(409, "Already on this combination", `${form.formKey} is already one of this combination's forms.`, { errors: [{ field: "formKey", message: "Already added." }] });
+    const current = newestEdition(form.editions.filter((e) => e._count.maps > 0 && e.channel !== "ONLINE"));
     if (current) {
-      await this.db.combinationForm.create({ data: { workspaceId: c.workspaceId, combinationId, govFormDefId: form.id, lineageKey: form.formKey, who: "each_applicant", attachMode: "COMBINATION_MANDATORY", version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id, sourceQuote: `${current.editionLabel}: added from the library` } });
+      const r = await addFormLine(this.db, { workspaceId: c.workspaceId, combinationId, govFormDefId: form.id, formKey: form.formKey, origin: "HUMAN", by: actor.id, sourceQuote: `${current.editionLabel}: added from the library` });
+      if (r === "already") throw problem(409, "Already on this combination", `${form.formKey} is already one of this combination's forms.`, { errors: [{ field: "formKey", message: "Already added." }] });
       await this.audit.log(c.workspaceId, actor.id, "reused", "form", form.formKey, `${actor.name} added ${current.editionLabel} to "${c.label}" from the library`, undefined, combinationId);
       this.cache = null;
       return { added: "form_line", form: form.formKey, edition: current.editionLabel };
     }
-    const latest = newestEdition(form.editions);
+    // A form the library has only as an approved online version for this combination's portal is filed Online (C2.7).
+    const onlineHere = c.portalKey ? form.editions.find((e) => e.channel === "ONLINE" && e.portalKey === c.portalKey) : undefined;
+    if (onlineHere) {
+      const r = await addFormLine(this.db, { workspaceId: c.workspaceId, combinationId, govFormDefId: form.id, formKey: form.formKey, origin: "HUMAN", by: actor.id, sourceQuote: `${onlineHere.editionLabel}: added from the library` });
+      if (r === "already") throw problem(409, "Already on this combination", `${form.formKey} is already one of this combination's forms.`, { errors: [{ field: "formKey", message: "Already added." }] });
+      await this.audit.log(c.workspaceId, actor.id, "reused", "form", form.formKey, `${actor.name} added ${form.formKey} (online version ${onlineHere.editionLabel}) to "${c.label}" from the library`, undefined, combinationId);
+      this.cache = null;
+      return { added: "form_line", form: form.formKey, edition: onlineHere.editionLabel };
+    }
+    const latest = newestEdition(form.editions.filter((e) => e.channel !== "ONLINE"));
+    const onlineElsewhere = form.editions.find((e) => e.channel === "ONLINE");
+    if (!latest?.storedPath && onlineElsewhere) throw problem(409, "Choose the portal first", c.portalKey ? `${form.formKey} is in the library only as an online version from the ${portalLabel(onlineElsewhere.portalKey)}, not from this combination's ${portalLabel(c.portalKey)}. Add an online form from this combination's portal, or upload the IRCC PDF.` : `${form.formKey} is in the library only as an online version (${portalLabel(onlineElsewhere.portalKey)}). Choose this combination's portal first, then add it; or upload the IRCC PDF.`);
     if (!latest?.storedPath) throw problem(409, "No file for this form", `${form.formKey} has no stored file to attach. Upload the IRCC PDF.`);
     const r = await this.sources.attach(actor, combinationId, { originalname: latest.officialFile ?? `${form.formKey}.pdf`, buffer: readFileSync(resolve(ROOT, latest.storedPath)) }, "MANUAL");
     this.cache = null;
@@ -321,7 +364,7 @@ export class Programs {
     const kids = (k: string) => nodes.filter((n) => n.parentNodeKey === k).sort((a, b) => a.label.localeCompare(b.label, "en-CA", { sensitivity: "base" }));
     const leafOf = new Map(rows.map((r) => [r.leaf.nodeKey, r.leaf]));
     const under = (k: string): number => (leafOf.has(k) ? 1 : 0) + kids(k).reduce((s, n) => s + under(n.programNodeKey), 0);
-    const opt = (n: ProgramDef) => ({ key: n.programNodeKey, label: n.label, combinations: under(n.programNodeKey), hasSetup: !!leafOf.get(n.programNodeKey)?.combinationId });
+    const opt = (n: ProgramDef) => ({ key: n.programNodeKey, label: n.label, combinations: under(n.programNodeKey), hasSetup: !!leafOf.get(n.programNodeKey)?.combinationId, combinationId: leafOf.get(n.programNodeKey)?.combinationId ?? null });
     return {
       pathway: pw,
       programs: top ? kids(top.programNodeKey).map((p) => ({ ...opt(p), categories: kids(p.programNodeKey).map((c) => ({ ...opt(c), subCategories: kids(c.programNodeKey).map(opt) })) })) : [],
@@ -407,11 +450,31 @@ export class Programs {
     if (!c) throw problem(404, "Not found", "That combination does not exist (it may have been removed by a reset).");
     const { rows } = await this.rows();
     const row = rows.find((r) => r.leaf.combinationId === combinationId);
-    const forms = await this.db.combinationForm.findMany({ where: { combinationId, status: { not: "RETIRED" } }, include: { form: { include: { editions: { include: { _count: { select: { maps: true } } } } } } } });
-    const lines = [...new Map(forms.sort((x, y) => y.version - x.version).map((f) => [f.lineageKey, f])).values()];
+    // The draft's lines: the newest version of each lineage, unless that version removes it (CHECK M4: an older version
+    // of a removed form, or a superseded one, is never shown as the current line).
+    const forms = await this.db.combinationForm.findMany({ where: { combinationId, status: { not: "SUPERSEDED" } }, orderBy: { version: "desc" }, include: { form: { include: { editions: { include: { _count: { select: { maps: true } } } } } } } });
+    const newest = new Map<string, (typeof forms)[number]>();
+    for (const f of forms) if (!newest.has(f.lineageKey)) newest.set(f.lineageKey, f);
+    const lines = [...newest.values()].filter((f) => f.status !== "RETIRED");
+    // Channels (C1.6, C1.7): each line's channel and its default for this portal, the derived filing method, and the
+    // channel problems the validator raises at release, from the same draft snapshot the review uses.
+    const { snapshot } = await buildSnapshot(this.db, c.workspaceId, combinationId, "draft");
+    const view = channelsView(snapshot);
+    // Each line's default for this portal (C1.7): Online where the library has an approved online version from it. One
+    // query for all lines (break round 2 m7), the same rule as defaultChannelFor.
+    const onlineForms = new Set(c.portalKey ? (await this.db.formEdition.findMany({ where: { govFormDefId: { in: lines.map((f) => f.govFormDefId) }, channel: "ONLINE", portalKey: c.portalKey }, select: { govFormDefId: true } })).map((e) => e.govFormDefId) : []);
+    const captures = await this.db.portalCapture.findMany({ where: { combinationId }, orderBy: { createdAt: "desc" } });
     return {
       row: row?.leaf ?? null, changes: row?.changes ?? 0, allowedLocations: c.program.allowedLocations, participants: c.participants,
-      forms: lines.map((f) => { const e = newestEdition(f.form.editions.filter((x) => x._count.maps > 0)); return { code: f.form.formKey, title: f.form.displayName, document: f.form.formKind !== "data_form", who: f.who, when: f.attachMode === "COMBINATION_MANDATORY" ? "always" : f.conditionPlain ?? "only if", edition: e?.editionLabel ?? null, boxes: e?._count.maps ?? 0 }; }),
+      portal: c.portalKey, portalLabel: c.portalKey ? portalLabel(c.portalKey) : null, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: view.filing_method,
+      channelProblems: channelProblems(snapshot).filter((p) => p.where === "Forms"),
+      onlineForms: captures.map((x) => ({ id: x.id, form: x.formKey, title: x.title, portal: x.portalKey, portalLabel: portalLabel(x.portalKey), status: x.status, statusWords: CAPTURE_STATUS_WORDS[x.status] ?? x.status, detail: x.statusDetail, at: x.createdAt })),
+      forms: lines.sort((x, y) => x.lineageKey.localeCompare(y.lineageKey)).map((f) => {
+        const online = f.channel === "ONLINE";
+        const e = newestEdition(f.form.editions.filter((x) => x._count.maps > 0 && (online ? x.channel === "ONLINE" && x.portalKey === c.portalKey : x.channel !== "ONLINE")));
+        return { code: f.form.formKey, title: f.form.displayName, document: f.form.formKind !== "data_form", who: f.who, when: f.attachMode === "COMBINATION_MANDATORY" ? "always" : f.conditionPlain ?? "only if", edition: e?.editionLabel ?? null, boxes: e?._count.maps ?? 0,
+          channel: f.channel, channelWords: CHANNEL_WORDS[f.channel], defaultChannel: onlineForms.has(f.govFormDefId) ? "ONLINE" : "PDF_UPLOAD", signature: view.lines.find((l) => l.form === f.lineageKey)?.signature ?? null };
+      }),
       sources: c.attachments.map((x) => ({ id: x.id, kind: x.kind, name: x.edition ?? x.fileName, status: x.status, detail: x.statusDetail, at: x.createdAt })),
       held: await this.heldFor(c.workspaceId, combinationId, new Set((row?.leaf.forms ?? []).map((f) => f.code))),
     };

@@ -6,7 +6,7 @@
 import fc from "fast-check";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { CreateCombinationBody, CreateNodeBody, normalizeLabel } from "../contracts/programs.ts";
+import { CreateCombinationBody, CreateNodeBody, CreatePathBody, labelProblem, normalizeLabel, problemFromZod, sharedStep } from "../contracts/programs.ts";
 import { checkedOf, compareEditions, compareStatus, editionMonth, isLive, missingItems, needsWork, newestEdition, nextActionOf, rowCounts, setupActionOf, statusOf, STATUS_TEXT, type SetupState } from "../engine/programs.ts";
 import { validate } from "../engine/validate.ts";
 import { CatalogueQuery } from "../contracts/programs.ts";
@@ -45,10 +45,10 @@ ok("BR-8: a released row that fails is Not ready, never Ready", statusOf(true, m
 ok("BR-8: a row never released is In setup, whatever it holds", statusOf(false, []) === "IN_SETUP" && statusOf(false, m) === "IN_SETUP");
 const noMap = { ...full, field_maps: full.field_maps.filter((x: any) => x.form_number !== "IMM 1295") } as Snapshot;
 m = missingItems(noMap, people, []);
-ok("BR-8 fail: a form without a current edition with mapped boxes is missing", m.some((x) => x.code === "form_without_edition" && /IMM 1295/.test(x.text)), m.map((x) => x.text));
+ok("BR-8 fail: a form without a current edition with mapped form fields is missing", m.some((x) => x.code === "form_without_edition" && /IMM 1295/.test(x.text)), m.map((x) => x.text));
 m = missingItems(full, people, [{ level: "error", where: "Rules", item: "R-01", message: "reads person.x, which is not in the library" }, { level: "warning", where: "Forms", item: "-", message: "w" }]);
 ok("BR-8 fail: a rule that does not resolve is missing (warnings are not)", m.length === 1 && m[0].code === "rule_problem", m.map((x) => x.text));
-ok("BR-8: checklists (document kind) need no box map", missingItems({ ...full, forms: [...full.forms, { form_number: "IMM 9999", form_kind: "document" }] } as Snapshot, people, []).length === 0);
+ok("BR-8: checklists (document kind) need no field map", missingItems({ ...full, forms: [...full.forms, { form_number: "IMM 9999", form_kind: "document" }] } as Snapshot, people, []).length === 0);
 
 // ---------------------------------------------------------------- BR-10 counts
 const k = rowCounts(full, people);
@@ -90,10 +90,10 @@ const visitor = setupOf({ forms: 2, sources: 2, draftable: 0, fromLibrary: ["IMM
 m = missingItems(empty, people, [], visitor);
 const head = nextActionOf({ ...visitor, status: "IN_SETUP", changes: 0, missing: m });
 ok("item 1 pass: Visitor visa — header \"Add 1 form from the library\" = first missing line's step; sources and set-up forms counted apart",
-  head?.label === "Add 1 form from the library" && m[0].step === head.label && m[0].text === "2 forms attached as sources, 0 set up. Next step: Add 1 form from the library." && m.every((x) => x.step === head.label), m.map((x) => x.text));
+  head?.label === "Add 1 form from the library" && m[0].step === head.label && m[0].text === "2 forms attached as sources, 0 set up." && m.every((x) => x.step === head.label), m.map((x) => x.text));
 ok("item 1 fail: the old contradiction (\"No forms yet … Add sources\" while forms are attached) is gone", !m.some((x) => /No forms yet|Add sources/.test(x.text)), m.map((x) => x.text));
 m = missingItems(empty, people, [], setupOf({}));
-ok("item 1: nothing attached → \"No forms yet\" and Add sources, the same as the header", m[0].text === "No forms yet. Next step: Add sources." && nextActionOf({ ...setupOf({}), status: "IN_SETUP", changes: 0, missing: m })?.label === m[0].step, m.map((x) => x.text));
+ok("item 1: nothing attached → \"No forms yet\" and Add sources, the same as the header", m[0].text === "No forms yet." && sharedStep(m) === "Add sources" && nextActionOf({ ...setupOf({}), status: "IN_SETUP", changes: 0, missing: m })?.label === m[0].step, m.map((x) => x.text));
 fc.assert(fc.property(fc.nat(4), fc.nat(3), fc.nat(3), fc.boolean(), fc.nat(5), fc.boolean(), (sources, lib, draftable, running, proposals, released) => {
   const st = setupOf({ forms: sources, sources, draftable, fromLibrary: Array.from({ length: lib }, (_, i) => `IMM ${i}`), running: running ? "b" : null, proposals: proposals ? [{ job: "j", n: proposals }] : [] });
   const miss = missingItems(empty, people, [], st);
@@ -101,9 +101,36 @@ fc.assert(fc.property(fc.nat(4), fc.nat(3), fc.nat(3), fc.boolean(), fc.nat(5), 
   const a = nextActionOf({ ...st, status, changes: 0, missing: miss });
   const pending = setupActionOf(st);
   // A waiting setup step is the header and every setup line's step; otherwise the header points at the list.
-  return pending ? a?.label === pending.label && miss[0].step === a.label : a?.kind === "see_missing" && miss.every((x) => x.step && /Next step: /.test(x.text));
+  // The step is said once: shared by every line → no line repeats it; otherwise each line says its own.
+  const once = sharedStep(miss) ? miss.every((x) => !/Next step/.test(x.text)) : miss.every((x) => x.text.endsWith(".") && (miss.length === 1 || /Next step: /.test(x.text)));
+  return once && (pending ? a?.label === pending.label && miss[0].step === a.label : a?.kind === "see_missing" && miss.every((x) => x.step && /Next step: /.test(x.text)));
 }), { numRuns: 400 });
 ok("item 1 property: header step = first missing line's step on every setup state, else See N missing (400 runs)", true);
+
+// ---------------------------------------------------------------- Lead note 23 Oct: the next step is said once
+m = missingItems(empty, people, [], visitor);
+ok("step once pass: every line shares the step → the lines carry only causes and the step is named once (sharedStep)", m.length > 1 && sharedStep(m) === "Add 1 form from the library" && m.every((x) => !/Next step/.test(x.text)), m.map((x) => x.text));
+m = missingItems(empty, people, []);
+ok("step once fail: lines with different steps each keep their own (nothing is merged away)", sharedStep(m) === null && m.length === 2 && m.every((x) => /Next step: /.test(x.text)) && new Set(m.map((x) => x.step)).size === 2, m.map((x) => x.text));
+ok("step once: a single line keeps its step in the sentence (nothing to repeat)", sharedStep([{ step: "Add sources" }]) === null && missingItems({ ...empty, sections: full.sections, placements: full.placements } as Snapshot, people, [], setupOf({})).every((x) => /Next step: Add sources\./.test(x.text)));
+
+// ---------------------------------------------------------------- round 2: filing problems are their own missing line
+{
+  const withOnline = { ...full, forms: full.forms.map((f: any, i: number) => (i === 0 ? { ...f, channel: "ONLINE" } : f)) } as Snapshot;
+  const probs = [{ level: "error" as const, where: "Forms", item: (full.forms[0] as any).form_number, message: "is filed Online, but this combination has no portal yet: choose the portal it is filed through." }];
+  const mm = missingItems(withOnline, people, probs);
+  ok("round 2 pass: an Online line's problem is one \"cannot be filed as set\" line with its own step", mm.length === 1 && mm[0].code === "filing_problem" && mm[0].step === "Change how it is filed", mm.map((x) => x.text));
+  ok("round 2 fail: it is not reported as unmapped PDF form fields or as a rule that does not resolve", !mm.some((x) => x.code === "form_without_edition" || x.code === "rule_problem"));
+}
+
+// ---------------------------------------------------------------- QA-6, QA-7 the name rules, one place for server and page
+ok("QA-6 fail: a name of symbols only is refused in plain words (it has nothing to compare or key)", !CreateNodeBody.safeParse({ kind: "PROGRAM", parentKey: "individual", label: "!!!" }).success && labelProblem("!!!") === "Use letters or digits in the name, not only punctuation.");
+ok("QA-6 pass: letters in any script, digits and punctuation around them are kept", ["Résidence temporaire", "Visa d'été — 日本語", "H-1B", "2027"].every((x) => labelProblem(x) === null && CreateNodeBody.safeParse({ kind: "PROGRAM", parentKey: "individual", label: x }).success));
+const longName = CreatePathBody.safeParse({ pathway: "INDIVIDUAL", program: { create: "A".repeat(60) + " " + "B".repeat(70) }, category: { create: "Long test" } });
+ok("QA-7: a name over 120 characters is refused on its level's field with the message the page shows", !longName.success && problemFromZod(longName.error).errors?.[0]?.field === "program.create" && problemFromZod(longName.error).errors?.[0]?.message === "Keep the name under 120 characters." && labelProblem("A".repeat(121)) === "Keep the name under 120 characters.");
+ok("QA-7 pass: exactly 120 characters is accepted", labelProblem("A".repeat(120)) === null);
+ok("break m2 pass: names that differ only in vowel signs (Hindi, Thai) are different names", normalizeLabel("किसान वीज़ा") !== normalizeLabel("कसान वज़ा") && normalizeLabel("วีซ่า") !== normalizeLabel("วซา"));
+ok("break m2 fail: a name of combining marks only is refused; direction controls are removed before storing", labelProblem("\u0301\u0301") !== null && CreateNodeBody.parse({ kind: "PROGRAM", parentKey: "individual", label: "BR \u202Easiv" }).label === "BR asiv");
 
 // ---------------------------------------------------------------- Lead check item 3: only this combination's warnings
 const lib = [{ key: "person.x", valueType: "text" }];

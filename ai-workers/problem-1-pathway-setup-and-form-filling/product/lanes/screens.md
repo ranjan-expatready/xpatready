@@ -12,14 +12,17 @@
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_screen: 01-programs-catalogue
-stage: DEMO
-owner: Founder (with Lead)
-next_action: Founder walks Screen 01 on :4400 (restarted 13:40 on the repaired build) as author and as reviewer, with the Lead (`screens/01-programs-catalogue/lead-check.md`). Then DONE or FIX. Carried to the next fix pass: restart script must restart only its own port (lead-check finding 1).
+stage: CHECK
+owner: Lead
+next_action: Lead check of the closing pass and its P-74 extension (build-notes: "Fixes (one FIX pass…)", "CHECK → FIX", "Extension (P-74)", "CHECK round 2 → FIX"), merge (new migration 20261023210000: prisma generate + migrate deploy), then the qa lane retests QA-1/3/5/6/7/9/10/11/12/13 and C1.6, C1.7, C2.7, C2.10, C3.10 before DONE. Open for the Lead: deny by default, atomic baseRevision on other editors, intake wording (m9), capture reading inside the request (forms lane).
 then: Screen 02 DESIGN (Lead concept with P-61–P-63 and the A4 progress screen; builder feasibility challenge).
 blocked_by: none
 updated: 2026-10-23
 
 ## Log (last 10 lines)
+- 2026-10-23 · 01 · FIX → CHECK · P-74 extension: C1.6 channel per line + filing method (row and page), C1.7 portal + default channel, C2.7 add an online form (awaiting a second person; continue/abandon), C2.10 what drafting reads per form, C3.10; CHECK round 2 (reviewer 8/10, 2 Must; breaker 3 Major) fixed: portal reviewed, version checks, no stuck captures. Rules 65, API 130, channels 42, browser 135, race safe. AI US$0.
+- 2026-10-23 · 01 · FIX → CHECK · One pass: QA-1 release gate (both routes, per person, rolled back if the draft moves during release), QA-13 re-add restores the line, QA-3/5/6/7/9/10/11/12, P-63 words, step said once, default channel; reviewer Ship after fixes 8.5/10 (2 Must, 5 Should) and breaker 4 Major/9 Minor fixed in the same pass. Rules 63, API 130, browser 118, race 7/7, grounding 29, forms 106, scale 17/17. AI US$0.
+- 2026-10-23 · 01 · DEMO → FIX · applied Lead note 2026-10-23 17:05 (founder: close Screen 01 in one FIX pass, qa retest, then DONE). Lane copy bound to screens.
 - 2026-10-23 · 01 · CHECK → DEMO · Lead: AI repair A1–A3, A6 confirmed (lead-check.md); :4400 restarted on the repaired build; A4 accepted (forms lane backend, Screen 02 progress screen); restart-script finding carried.
 - 2026-10-23 · 01 · CHECK · Founder decided P-62 (setup model) and P-63 (form field words). No stage change; workflow package next, then Lead recheck of the AI repair.
 - 2026-10-23 · 01 · CHECK · Founder decided P-61 (online forms); Lead proposed P-62 (end-to-end setup model). No stage change; Lead recheck of the AI repair still next.
@@ -27,6 +30,3 @@ updated: 2026-10-23
 - 2026-10-23 · 01 · FIX → CHECK · AI drafting repair (P-60, no control cut): one fact naming rule in contracts, v2 prompt/schema and studio; entries checked one by one (bad entry → needs a person, rest kept); plain FAILED messages; four IMM 1344 answers recovered at US$0 (233/233 kept; browser: saved answer → 161 mapped, 44 to decide); paid repeat of a failed run refused; printed edition sent to the AI. A4 proposal for the Lead. Suites: AI drafting 48/48, rules 54/54, engine 38/38, grounding 29/29, orchestration 22/22, API 94/94, browser 101/101 (quiet machine). AI US$0.
 - 2026-10-23 · 01 · FIX · Lead gave the founder parallel-work options (R-74); no stage change. Builder AI repair still next.
 - 2026-10-23 · 01 · FIX · Lead published the executive report for the founder (R-73). No stage change; builder AI repair still next.
-- 2026-10-23 · 01 · CHECK → FIX · Founder: no quality control is cut (P-60); Option 1 withdrawn. Lead fixed the snapshot hook (92 s → 2 s). Builder: AI drafting repair A1–A4, A6 (lead-ai-check.md), then all suites, Lead recheck, DEMO.
-- 2026-10-23 · 01 · CHECK (on hold) · Lead recheck: items 1–6 confirmed in the browser on fresh :4420; browser suite on fresh :4405 100/101 (only filter 280 ms > 200 ms, load 17→35). AI drafting cause found (`screens/01-programs-catalogue/lead-ai-check.md`). Lead advises a lean gate, not Option 1; stage and hold left as the builder set them.
-- 2026-10-23 · 01 · FIX → CHECK · Six Lead-check items fixed: one setup-step function feeds the row, header and missing list (+ "Add questions" wording, AI never writes questions); Screen 01 files typed with contract response types, `any` ratchet (439) in the stop check; warnings scoped to what the combination reads and linked; plural, Questions tile, LMIA note. Rules 54/54, API 94/94, engine 38/38; browser 100/101 at load ~10 (only the 200 ms view-change budget; machine load 9–31 from other apps); rerun on a quiet machine. AI US$0. :4400 data untouched.

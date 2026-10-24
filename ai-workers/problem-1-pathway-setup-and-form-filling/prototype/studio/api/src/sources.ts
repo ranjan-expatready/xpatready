@@ -15,7 +15,7 @@ import { compareEditions } from "../../engine/programs.ts";
 import { checkedOutput, explainRun, failedOurCheck, isProviderLimit, sameDraftInputs, type DraftInputs } from "../../engine/ai-run.ts";
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 import { reconvertFile } from "../../../p2/reconvert.ts";
-import { defaultChannelFor, resolveKey } from "./form-lines.ts";
+import { addFormLine, resolveKey } from "./form-lines.ts";
 import { ACTORS, Audit, Db, fail, need, NODE, OFFICIAL, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
 const ACTOR_BY_ID = (id: string) => ACTORS.find((a) => a.id === id) ?? ACTORS[0];
 /** The library revision a comparison was made against: every definition key, version and status. A different revision
@@ -60,8 +60,8 @@ export class Sources {
     if (item) {
       kind = KIND[item.path.split("/")[0]] ?? "Official file"; edition = item.edition;
       const known = await this.db.formEdition.findFirst({ where: { workspaceId: c.workspaceId, sha256: hash, maps: { some: {} } } });
-      if (known) { status = "IN_LIBRARY"; detail = `Recognised: ${item.edition}. Its boxes are already mapped in the library, so no AI drafting is needed.`; }
-      else if (kind === "Form") { status = "RECOGNISED"; detail = `Recognised: ${item.edition}, an approved official form. Next: AI drafts its box map.`; }
+      if (known) { status = "IN_LIBRARY"; detail = `Recognised: ${item.edition}. Its form fields are already mapped in the library, so no AI drafting is needed.`; }
+      else if (kind === "Form") { status = "RECOGNISED"; detail = `Recognised: ${item.edition}, an approved official form. Next: AI drafts its field map.`; }
       else { status = "ATTACHED"; detail = `Recognised: ${item.edition}, an approved official source. Kept as a source document; its text supports requirements and citations.`; }
     }
     const a = await this.db.sourceAttachment.create({ data: { workspaceId: c.workspaceId, combinationId, kind, fileName: safe, storedPath: stored.replace(`${ROOT}/`, ""), sha256: hash, bytes: file.buffer.length, recognised: !!item, officialFile: item?.file ?? null, edition, approval: item?.approval ?? null, status, statusDetail: detail, uploadedVia: via, uploadedBy: actor.id } });
@@ -74,14 +74,14 @@ export class Sources {
     const a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: attachmentId } });
     if (!a.recognised || !a.officialFile) fail("Only recognised official forms are read.");
     if (a.kind !== "Form") fail("This is a checklist or instructions, not a fillable form; it is kept as a source.");
-    const job = await this.db.draftingJob.create({ data: { workspaceId: a.workspaceId, combinationId: a.combinationId, attachmentId, kind: "read_form", mode: "LOCAL", status: "RUNNING", message: "Reading the form's boxes on this computer (no AI)", startedBy: actor.id } });
+    const job = await this.db.draftingJob.create({ data: { workspaceId: a.workspaceId, combinationId: a.combinationId, attachmentId, kind: "read_form", mode: "LOCAL", status: "RUNNING", message: "Reading the form's fields on this computer (no AI)", startedBy: actor.id } });
     try {
       const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "read_form.py"), a.officialFile!], { cwd: ROOT, timeout: 120_000 });
       const r = JSON.parse(stdout.trim().split("\n").pop()!);
       if (!r.ok) throw new Error(r.error ?? r.status);
-      await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "READ", statusDetail: `Read: ${r.summary.entry_fields_bound} data boxes, ${r.summary.required_fields} required, ${r.summary.choice_fields_with_options} with answer lists, ${r.summary.row_groups_fixed} repeating rows, ${r.summary.barcodes} barcodes. Next: draft its field map with AI.`, inventoryFile: r.inventory_file, inventorySummary: r.summary } });
-      await this.db.draftingJob.update({ where: { id: job.id }, data: { status: "COMPLETED", message: `Read ${r.summary.entry_fields_bound} data boxes on this computer (no AI)${String(r.status).includes("DIFFERS") ? "; the stored box list differs from this file and was kept as it was" : ""}.`, detail: r, finishedAt: new Date() } });
-      await this.audit.log(a.workspaceId, actor.id, "read", "form", a.officialFile, `${actor.name} read ${a.edition}: ${r.summary.entry_fields_bound} data boxes (${r.status})`);
+      await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "READ", statusDetail: `Read: ${r.summary.entry_fields_bound} form fields, ${r.summary.required_fields} required, ${r.summary.choice_fields_with_options} with answer lists, ${r.summary.row_groups_fixed} repeating rows, ${r.summary.barcodes} barcodes. Next: draft its field map with AI.`, inventoryFile: r.inventory_file, inventorySummary: r.summary } });
+      await this.db.draftingJob.update({ where: { id: job.id }, data: { status: "COMPLETED", message: `Read ${r.summary.entry_fields_bound} form fields on this computer (no AI)${String(r.status).includes("DIFFERS") ? "; the stored form field list differs from this file and was kept as it was" : ""}.`, detail: r, finishedAt: new Date() } });
+      await this.audit.log(a.workspaceId, actor.id, "read", "form", a.officialFile, `${actor.name} read ${a.edition}: ${r.summary.entry_fields_bound} form fields (${r.status})`);
       return { ok: true, summary: r.summary };
     } catch (e) {
       await this.db.draftingJob.update({ where: { id: job.id }, data: { status: "FAILED", message: (e as Error).message.slice(0, 400), finishedAt: new Date() } });
@@ -168,7 +168,7 @@ export class Sources {
     const j = await this.db.draftingJob.findUniqueOrThrow({ where: { id } });
     let a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: j.attachmentId! } });
     if (a.status === "RECOGNISED" || a.status === "READ_FAILED") {
-      await this.db.draftingJob.update({ where: { id }, data: { message: "Reading the form's boxes on this computer (no AI)" } });
+      await this.db.draftingJob.update({ where: { id }, data: { message: "Reading the form's fields on this computer (no AI)" } });
       await this.read(ACTOR_BY_ID(j.startedBy), a.id);
       a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: a.id } });
     }
@@ -288,7 +288,7 @@ export class Sources {
     const n = (o: string) => items.filter((i) => i.outcome === o).length;
     const needsPerson = (rec.conversion?.needs_person ?? []).length;
     const counts = { needs_person: needsPerson, boxes: out.entries.length, mapped: out.entries.filter((e: any) => e.outcome === "mapped").length, unresolved: out.entries.filter((e: any) => e.outcome === "unresolved").length, never_filled: out.entries.filter((e: any) => e.outcome === "never_filled").length, not_a_fact: out.entries.filter((e: any) => e.outcome === "not_a_fact").length, proposed_fields: items.length, reuse: n("REUSE"), new: n("NEW"), ambiguous: n("AMBIGUOUS"), conflict: n("CONFLICT") };
-    await this.db.draftingJob.update({ where: { id: jobId }, data: { status: "COMPLETED", finishedAt: opts.recompare ? job.finishedAt : new Date(), message: `${job.mode === "REPLAY" ? `Saved AI answer from run ${job.runId}${rec.reconverted ? ", re-checked with today's rules" : ""} (no model call, US$0). ` : `Live AI draft ${job.runId}. `}${counts.mapped} of ${counts.boxes} boxes mapped${needsPerson ? ` (${needsPerson} sent to a person: field name or entry rules)` : ""}; ${counts.proposed_fields} fields: ${counts.reuse} reuse, ${counts.new} new, ${counts.ambiguous} ambiguous, ${counts.conflict} conflicting.`, detail: { ...(job.detail as any), counts, form_edition_drafted: out.form_edition, conversion: rec.conversion ?? null, label: rec.label, usage: rec.drafting_run?.usage ?? null, prompt: rec.drafting_run?.settings?.prompt_version, library_revision: revision, ...(opts.recompare ? { recompared: { at: new Date().toISOString(), by: opts.recompare.id, kept, reopened } } : {}) } } });
+    await this.db.draftingJob.update({ where: { id: jobId }, data: { status: "COMPLETED", finishedAt: opts.recompare ? job.finishedAt : new Date(), message: `${job.mode === "REPLAY" ? `Saved AI answer from run ${job.runId}${rec.reconverted ? ", re-checked with today's rules" : ""} (no model call, US$0). ` : `Live AI draft ${job.runId}. `}${counts.mapped} of ${counts.boxes} form fields mapped${needsPerson ? ` (${needsPerson} sent to a person: field name or entry rules)` : ""}; ${counts.proposed_fields} fields: ${counts.reuse} reuse, ${counts.new} new, ${counts.ambiguous} ambiguous, ${counts.conflict} conflicting.`, detail: { ...(job.detail as any), counts, form_edition_drafted: out.form_edition, conversion: rec.conversion ?? null, label: rec.label, usage: rec.drafting_run?.usage ?? null, prompt: rec.drafting_run?.settings?.prompt_version, library_revision: revision, ...(opts.recompare ? { recompared: { at: new Date().toISOString(), by: opts.recompare.id, kept, reopened } } : {}) } } });
     if (opts.recompare) await this.audit.log(job.workspaceId, opts.recompare.id, "re-compared", "AI draft", job.runId, `${opts.recompare.name} compared ${a.edition}'s AI draft with the current library again (no AI call): ${kept} decisions kept, ${reopened} to decide again`);
     await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "DRAFTED", statusDetail: `AI draft ready to review: ${counts.reuse} reuse, ${counts.new} new, ${counts.ambiguous} ambiguous, ${counts.conflict} conflicting.` } });
     return this.job(jobId);
@@ -338,7 +338,7 @@ export class Sources {
       const problem = exists ? null : newKeyProblem(key);
       if (problem) fail(`A new key is area.name in lower case: ${problem}.`);
     }
-    if (b.decision === "RETURNED" && !b.note?.trim()) fail("Say why it goes back, so the boxes show the reason.");
+    if (b.decision === "RETURNED" && !b.note?.trim()) fail("Say why it goes back, so its form fields show the reason.");
     const u = await this.db.normalizationItem.update({ where: { id: itemId }, data: { decision: b.decision, decidedKey: b.decision === "RETURNED" || b.decision === "PENDING" ? null : decidedKey, decidedBy: b.decision === "PENDING" ? null : actor.id, decisionNote: b.note ?? (b.meaning ? `meaning: ${b.meaning}` : null), decidedAt: b.decision === "PENDING" ? null : new Date(),
       ...(b.meaning ? { proposedMeaning: b.meaning } : {}), ...(b.valueType ? { proposedType: b.valueType } : {}) } });
     await this.audit.log(job.workspaceId, actor.id, "decided", "AI proposal", it.proposedKey, `${actor.name} ${b.decision.toLowerCase()} ${it.proposedKey}${decidedKey && decidedKey !== it.proposedKey ? ` → ${decidedKey}` : ""}${b.note ? `: ${b.note}` : ""}`);
@@ -398,15 +398,15 @@ export class Sources {
           transform: !returned && d?.decidedKey && d.decidedKey !== e.fact && (d.evidence as any)?.recommendation?.transform && (d.evidence as any).recommendation.key === d.decidedKey ? (d.evidence as any).recommendation.transform : e.transform ?? null, condition: e.condition ?? null, confidence: e.confidence ?? null,
           evidenceQuote: e.evidence_quote ?? null, reason: returned ? `returned by ${d!.decidedBy}: ${d!.decisionNote}` : e.unresolved_reason ?? null, version: 1, status: "DRAFT", origin: "AI_PROPOSAL", draftingRunId: job.runId, updatedBy: actor.id };
       }) });
-      const existing = await tx.combinationForm.findFirst({ where: { combinationId: job.combinationId, lineageKey: formKey } });
-      if (!existing) await tx.combinationForm.create({ data: { workspaceId: ws, combinationId: job.combinationId, govFormDefId: def.id, lineageKey: formKey, who: b.who ?? "each_applicant", attachMode: "COMBINATION_MANDATORY", version: 1, status: "DRAFT", origin: "AI_PROPOSAL", updatedBy: actor.id, sourceQuote: `${item.edition}: ${item.applicability}`.slice(0, 500), channel: await defaultChannelFor(tx, job.combinationId, def.id) } });
+      // On the combination already: kept as it is; removed earlier: added back (QA-13).
+      await addFormLine(tx, { workspaceId: ws, combinationId: job.combinationId, govFormDefId: def.id, formKey, who: b.who, origin: "AI_PROPOSAL", by: actor.id, sourceQuote: `${item.edition}: ${item.applicability}` });
       // Claimed inside the transaction: a second apply of the same draft (double click, two people) changes nothing.
       const claimed = await tx.draftingJob.updateMany({ where: { id: jobId, status: "COMPLETED" }, data: { status: "APPLIED", message: `${job.message} Applied to the draft by ${actor.name}.` } });
       if (!claimed.count) fail("Already applied.", HttpStatus.CONFLICT);
-      await tx.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `Field map applied to the draft (${out.entries.length} boxes; ${created} new field definitions). Review and release it.` } });
+      await tx.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `Field map applied to the draft (${out.entries.length} form fields; ${created} new field definitions). Review and release it.` } });
       return { formKey, edition: item.edition, boxes: out.entries.length, new_fields: created, returned: job.items.filter((i) => i.decision === "RETURNED").length };
     });
-    await this.audit.log(ws, actor.id, "applied", "AI draft", job.runId, `${actor.name} applied the reviewed AI draft of ${item.edition} to the draft: ${res.boxes} boxes, ${res.new_fields} new fields, ${res.returned} returned`, undefined, job.combinationId);
+    await this.audit.log(ws, actor.id, "applied", "AI draft", job.runId, `${actor.name} applied the reviewed AI draft of ${item.edition} to the draft: ${res.boxes} form fields, ${res.new_fields} new fields, ${res.returned} returned`, undefined, job.combinationId);
     return res;
   }
 
@@ -424,9 +424,10 @@ export class Sources {
     const a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: attachmentId } });
     if (!manifest().some((i) => i.sha256 === a.sha256)) fail("This file is held until its source is verified. It cannot be reused from the library.", HttpStatus.CONFLICT);
     const ed = await this.db.formEdition.findFirst({ where: { workspaceId: a.workspaceId, sha256: a.sha256, maps: { some: {} } }, include: { form: true } });
-    if (!ed) fail("This form's boxes are not mapped in the library yet; read it and draft its field map.");
-    if (await this.db.combinationForm.findFirst({ where: { combinationId: a.combinationId, lineageKey: ed!.form.formKey } })) fail(`${ed!.form.formKey} is already part of this combination.`, HttpStatus.CONFLICT);
-    await this.db.combinationForm.create({ data: { workspaceId: a.workspaceId, combinationId: a.combinationId, govFormDefId: ed!.form.id, lineageKey: ed!.form.formKey, who: b.who ?? "each_applicant", attachMode: "COMBINATION_MANDATORY", version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id, sourceQuote: `${ed!.editionLabel}: reused from the library`, channel: await defaultChannelFor(this.db, a.combinationId, ed!.form.id) } });
+    if (!ed) fail("This form's fields are not mapped in the library yet; read it and draft its field map.");
+    // A form removed from this combination can be reused again (QA-13): only the line's newest version counts.
+    const added = await addFormLine(this.db, { workspaceId: a.workspaceId, combinationId: a.combinationId, govFormDefId: ed!.form.id, formKey: ed!.form.formKey, who: b.who, origin: "HUMAN", by: actor.id, sourceQuote: `${ed!.editionLabel}: reused from the library` });
+    if (added === "already") fail(`${ed!.form.formKey} is already part of this combination.`, HttpStatus.CONFLICT);
     const comp = await this.db.combination.findUniqueOrThrow({ where: { id: a.combinationId } });
     await this.audit.log(a.workspaceId, actor.id, "reused", "form", ed!.form.formKey, `${actor.name} added ${ed!.editionLabel} to "${comp.label}" from the library (no AI drafting; its released field map is shared)`, undefined, a.combinationId);
     return { ok: true, form: ed!.form.formKey };

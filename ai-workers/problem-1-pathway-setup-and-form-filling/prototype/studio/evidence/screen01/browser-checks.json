@@ -1,17 +1,17 @@
 {
- "at": "2026-10-23T06:08:22.286Z",
+ "at": "2026-10-23T14:19:07.948Z",
  "timings": {
-  "cold_first_view_ms": 700,
-  "first_view_ms": 108,
-  "filter_ms": 74
+  "cold_first_view_ms": 193,
+  "first_view_ms": 93,
+  "filter_ms": 13
  },
- "pass": 101,
+ "pass": 135,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load through the form intake",
    "ok": true,
-   "detail": "5.104"
+   "detail": "3.723"
   },
   {
    "name": "setup: one replay of a saved real AI run on Super visa (no model call, US$0)",
@@ -19,14 +19,14 @@
    "detail": "studio-fieldmap-imm5257e-live-20261021t060247723z.json"
   },
   {
-   "name": "setup: one row released but not startable (Not ready), released by a second person",
+   "name": "setup: one row submitted, then released but not startable (Not ready), by a second person",
    "ok": true,
    "detail": "2"
   },
   {
    "name": "performance: first view under 1 s with the sample data (app files cached)",
    "ok": true,
-   "detail": "108 ms (cold browser 700 ms)"
+   "detail": "93 ms (cold browser 193 ms)"
   },
   {
    "name": "P-49: Needs work is the default view, with its count",
@@ -79,9 +79,9 @@
    "ok": true
   },
   {
-   "name": "F3: \"Add N forms from the library\" has a tooltip naming the forms: reuses box maps, no AI, draft only",
+   "name": "F3: \"Add N forms from the library\" has a tooltip naming the forms: reuses field maps, no AI, draft only",
    "ok": true,
-   "detail": "IMM 5476, IMM 5475: reuses box maps already in the library. No AI. Adds to the draft only; nothing changes for firms until release."
+   "detail": "IMM 5476, IMM 5475: reuses field maps already in the library. No AI. Adds to the draft only; nothing changes for firms until release."
   },
   {
    "name": "review #7: Tab from the active row reaches its status chip, which explains itself",
@@ -95,7 +95,7 @@
   {
    "name": "performance: changing the view answers under 200 ms",
    "ok": true,
-   "detail": "74 ms"
+   "detail": "13 ms"
   },
   {
    "name": "F1: Live shows every row whose status is Live",
@@ -171,7 +171,7 @@
   {
    "name": "regression: \"Show all\" keeps the All view after the search box settles (no stale URL rewrite)",
    "ok": true,
-   "detail": "http://localhost:4433/?f=all"
+   "detail": "http://localhost:4448/?f=all"
   },
   {
    "name": "item 5: Corporate shows the demo names (LMIA › High-wage position, Low-wage position, Global Talent Stream, In-home caregiver)",
@@ -189,12 +189,12 @@
   {
    "name": "keyboard: one tab stop, ↑/↓/Home/End move, Enter opens the combination page (P-50)",
    "ok": true,
-   "detail": "Spouse of a skilled worker → http://localhost:4433/c/f3a87e9a-d3bd-4ba1-a8f8-458533a0807a"
+   "detail": "Spouse of a student → http://localhost:4448/c/28c2510b-6865-43cf-bbd6-86f8f45352da"
   },
   {
    "name": "P-50: Back keeps the view (All), highlights the opened row and restores the scroll",
    "ok": true,
-   "detail": "{\"url\":\"?f=all&sel=individual.work_permits.open.spouse_worker\",\"sel\":\"Spouse of a skilled worker\",\"y\":663,\"focus\":\"Spouse of a skilled worker\",\"scrollBefore\":663}"
+   "detail": "{\"url\":\"?f=all&sel=individual.work_permits.open.spouse_student\",\"sel\":\"Spouse of a student\",\"y\":695,\"focus\":\"Spouse of a student\",\"scrollBefore\":695}"
   },
   {
    "name": "axe: programs-back-row-highlighted has no WCAG A/AA violation",
@@ -206,14 +206,19 @@
    "ok": true
   },
   {
+   "name": "review should 5: the browser's Back button returns to the list with the opened row highlighted and focused",
+   "ok": true,
+   "detail": "{\"sel\":\"Super visa\",\"focus\":\"Super visa\",\"url\":\"?f=all&sel=individual.visitors.super_visa\"}"
+  },
+  {
    "name": "P-50: the page header carries the full path, every level a link (Programs › Individual › Visitors › Visitor visa)",
    "ok": true,
    "detail": "Programs › Individual › Visitors › Visitor visa"
   },
   {
-   "name": "item 1: Visitor visa — row step = header step = first missing line's step; sources and set-up forms counted apart",
+   "name": "item 1: Visitor visa — row step = header step = the missing list's one shared step (said once); sources and set-up forms counted apart",
    "ok": true,
-   "detail": "Add 1 form from the library | Add 1 form from the library | 2 forms attached as sources, 0 set up. Next step: Add 1 form from the library. | No questions yet for Applicant, Spouse or partner (travelling), Child (travelling). Next step: Add 1 form from the library."
+   "detail": "Add 1 form from the library | Add 1 form from the library | 2 forms attached as sources, 0 set up. | No questions yet for Applicant, Spouse or partner (travelling), Child (travelling)."
   },
   {
    "name": "item 3: a combination with no setup shows no warnings (\"no problems\")",
@@ -327,7 +332,7 @@
   {
    "name": "source-trust: the held unapproved edition does not change a Live row or expose edition-impact review",
    "ok": true,
-   "detail": "Work permits › Employer-specific work permitWith an LMIASupported by: Corporate › LMIALiveOpen"
+   "detail": "Work permits › Employer-specific work permitWith an LMIASupported by: Corporate › LMIAFiled: PDF onlyLiveOpen"
   },
   {
    "name": "axe: programs-live-row-unverified-source-held has no WCAG A/AA violation",
@@ -381,7 +386,7 @@
    "detail": "No questions yet for Principal applicant, Spouse or partner, Dependent child. Next step: Add questions (Configuration › Questions and sections)."
   },
   {
-   "name": "F2: one cause, one line, each with its next step (no line per person role)",
+   "name": "F2: one cause, one line; the next step said once (under the list when shared, else on each line); no line per person role",
    "ok": true,
    "detail": "No questions yet for Principal applicant, Spouse or partner, Dependent child. Next step: Add questions (Configuration › Questions and sections)."
   },
@@ -458,6 +463,152 @@
   {
    "name": "1024 px: new-combination-path-builder has no sideways scroll",
    "ok": true
+  },
+  {
+   "name": "QA-7: a 131-character program name shows \"Keep the name under 120 characters.\" on its field, and Create is not offered",
+   "ok": true,
+   "detail": "Keep the name under 120 characters."
+  },
+  {
+   "name": "axe: new-combination-name-too-long has no WCAG A/AA violation",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "1024 px: new-combination-name-too-long has no sideways scroll",
+   "ok": true
+  },
+  {
+   "name": "QA-6: a name of symbols only says to use letters or digits; nothing can be created",
+   "ok": true,
+   "detail": "Use letters or digits in the name, not only punctuation."
+  },
+  {
+   "name": "QA-11: \"Open the existing combination\" opens that combination's page (not the list)",
+   "ok": true,
+   "detail": "http://localhost:4448/c/50699f01-0304-4b73-a426-bd3aef4e922f"
+  },
+  {
+   "name": "QA-1: the shared Release page holds back a combination nobody submitted, saying why",
+   "ok": true,
+   "detail": "Study permitStudy permits › Study permit · first release102Held back: Not submitted for review: submit it on its Review and release tab."
+  },
+  {
+   "name": "QA-1: with nothing reviewed, the approver has nothing to release (button off)",
+   "ok": true
+  },
+  {
+   "name": "axe: release-page-held-not-submitted has no WCAG A/AA violation",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "1024 px: release-page-held-not-submitted has no sideways scroll",
+   "ok": true
+  },
+  {
+   "name": "QA-10: the review tab names who submitted (\"Submitted by Configuration author\"), never an internal id",
+   "ok": true,
+   "detail": "Submitted by Configuration author at "
+  },
+  {
+   "name": "axe: combination-review-submitted-by-name has no WCAG A/AA violation",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "1024 px: combination-review-submitted-by-name has no sideways scroll",
+   "ok": true
+  },
+  {
+   "name": "QA-1: once submitted and signed, the Release page will release it",
+   "ok": true
+  },
+  {
+   "name": "narrow 390 px: the combination's name keeps its width (≥ 200 px), next steps are not clipped, no sideways scroll",
+   "ok": true,
+   "detail": "{\"nameW\":232,\"over\":0,\"clipped\":0}"
+  },
+  {
+   "name": "narrow 512 px: the combination's name keeps its width (≥ 200 px), next steps are not clipped, no sideways scroll",
+   "ok": true,
+   "detail": "{\"nameW\":354,\"over\":0,\"clipped\":0}"
+  },
+  {
+   "name": "C1.6: the Programs row says how the combination is filed",
+   "ok": true
+  },
+  {
+   "name": "C1.6: the combination page shows the filing method and each line's channel",
+   "ok": true
+  },
+  {
+   "name": "C1.6: the author sets a line's channel; the line's signature follows and the filing method stays in C1.6's short words",
+   "ok": true
+  },
+  {
+   "name": "C1.7: the author picks the combination's portal",
+   "ok": true
+  },
+  {
+   "name": "C2.7: \"Add an online form\" opens a right panel with the combination's portal chosen",
+   "ok": true
+  },
+  {
+   "name": "review 2 should 1: a page holding an answer is refused and nothing is left behind (no \"being captured\" row)",
+   "ok": true
+  },
+  {
+   "name": "axe: add-online-form-panel has no WCAG A/AA violation",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "1024 px: add-online-form-panel has no sideways scroll",
+   "ok": true
+  },
+  {
+   "name": "C2.7: the screens are read, checked for answers and sent for approval",
+   "ok": true
+  },
+  {
+   "name": "C2.7: the combination lists the online form as \"Awaiting a second person\"",
+   "ok": true
+  },
+  {
+   "name": "axe: combination-online-form-awaiting has no WCAG A/AA violation",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "1024 px: combination-online-form-awaiting has no sideways scroll",
+   "ok": true
+  },
+  {
+   "name": "C1.6/C1.7: someone without the author duty sees the channels and the portal, but cannot change them",
+   "ok": true
+  },
+  {
+   "name": "C2.10: the sources tab says, per form, what drafting reads (PDF version first by default)",
+   "ok": true
+  },
+  {
+   "name": "C2.10: the author changes it per form and the line says what that means",
+   "ok": true
+  },
+  {
+   "name": "axe: sources-tab-drafting-reads has no WCAG A/AA violation",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "1024 px: sources-tab-drafting-reads has no sideways scroll",
+   "ok": true
+  },
+  {
+   "name": "P-63: no page says \"box\" or \"box map\" (form field, field map)",
+   "ok": true,
+   "detail": "none"
   },
   {
    "name": "no console or page errors",
@@ -540,6 +691,30 @@
   },
   {
    "state": "19-new-combination-path-builder",
+   "violations": []
+  },
+  {
+   "state": "20-new-combination-name-too-long",
+   "violations": []
+  },
+  {
+   "state": "21-release-page-held-not-submitted",
+   "violations": []
+  },
+  {
+   "state": "22-combination-review-submitted-by-name",
+   "violations": []
+  },
+  {
+   "state": "23-add-online-form-panel",
+   "violations": []
+  },
+  {
+   "state": "24-combination-online-form-awaiting",
+   "violations": []
+  },
+  {
+   "state": "25-sources-tab-drafting-reads",
    "violations": []
   }
  ]

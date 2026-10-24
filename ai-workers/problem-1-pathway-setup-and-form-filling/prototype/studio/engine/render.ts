@@ -118,18 +118,18 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     const boxes: BoxRow[] = [];
     let unresolvedBoxes = 0;
     for (const e of map.entries) {
-      if (e.outcome === "unresolved") { unresolvedBoxes++; boxes.push({ box: e.data_path, caption: e.caption ?? "", fact: null, meaning: null, about: null, about_label: "—", row: e.row, coverage: "unresolved", detail: `box needs review: ${e.unresolved_reason ?? "unresolved"}`.slice(0, 220), origin: e.origin }); continue; }
+      if (e.outcome === "unresolved") { unresolvedBoxes++; boxes.push({ box: e.data_path, caption: e.caption ?? "", fact: null, meaning: null, about: null, about_label: "—", row: e.row, coverage: "unresolved", detail: `form field needs review: ${e.unresolved_reason ?? "unresolved"}`.slice(0, 220), origin: e.origin }); continue; }
       if (e.outcome !== "mapped" || !e.fact) continue;
       const p = place.get(e.fact);
       const about = aboutOf(people, f.person, e, p);
       const base = { box: e.data_path, caption: e.caption ?? "", fact: e.fact, meaning: field.get(e.fact)?.meaning ?? null, about, about_label: label(about), row: e.row ?? null, transform: e.transform, origin: e.origin };
-      if (!about) { boxes.push({ ...base, coverage: "unresolved", detail: "that person is not part of this combination; the box stays blank" }); continue; }
+      if (!about) { boxes.push({ ...base, coverage: "unresolved", detail: "that person is not part of this combination; the form field stays blank" }); continue; }
       const k = kkey(about, e.fact, e.row), n = needs.get(`${about}|${e.fact}`) ?? { fact: e.fact, about, rows: new Set<number>(), forms: new Set<string>(), boxes: 0, maybe: false };
       if (e.row !== null && e.row !== undefined) n.rows.add(e.row);
       n.forms.add(f.form); n.boxes++; if (f.applies === "cannot_tell") n.maybe = true; needs.set(`${about}|${e.fact}`, n);
       const kv = known.get(k) ?? (e.row === 0 ? known.get(kkey(about, e.fact)) : undefined);
       if (kv) { boxes.push({ ...base, coverage: kv.status === "confirmed" ? "confirmed fact" : "answered on screen", detail: kv.source, value: kv.value }); continue; }
-      if (!field.has(e.fact)) { boxes.push({ ...base, coverage: "unresolved", detail: "the box reads a field that is not in the library" }); continue; }
+      if (!field.has(e.fact)) { boxes.push({ ...base, coverage: "unresolved", detail: "the form field reads a field that is not in the library" }); continue; }
       const docs = docFacts.get(e.fact);
       if (p?.collected_from === "verified_document" || (docs && !p)) { boxes.push({ ...base, coverage: docs ? "document reading" : "unresolved", detail: docs ? `a supported document can supply it: ${docs.join(", ")}` : "collected from a document, but no supported document type supplies it" }); continue; }
       if (!p) { boxes.push({ ...base, coverage: "unresolved", detail: "no question placement: nobody is asked for this value yet" }); continue; }
@@ -193,7 +193,7 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
     questions.push({ fact, label: p.question_text || f?.meaning || fact, meaning: f?.meaning ?? fact, value_type: f?.value_type ?? "text", about, about_label: label(about), section: p.section_id, section_title: sectionTitle.get(p.section_id) ?? p.section_id, collected_from: p.collected_from, status, value: kv?.value, why, rows, decides, rule_only: !needs.has(key), required });
   };
   for (const d of [...deciders.values()]) pushQ(d.fact, d.about, `decides ${[...d.decides].slice(0, 3).join("; ")}`, [], [...d.decides], false);
-  for (const n of needs.values()) pushQ(n.fact, n.about, `read by ${[...n.forms].join(", ")} (${n.boxes} box${n.boxes > 1 ? "es" : ""})`, [...n.rows].sort(), [], n.maybe);
+  for (const n of needs.values()) pushQ(n.fact, n.about, `read by ${[...n.forms].join(", ")} (${n.boxes} form field${n.boxes > 1 ? "s" : ""})`, [...n.rows].sort(), [], n.maybe);
   // A section the row selects is a line on the row (SA-1B-58): its placed questions are asked even when no form reads
   // them yet, each with its reason (SA-1B-59). Once per case, or for each person who applies.
   const applicants = people.filter((x) => x.applies && x.role !== "representative").map((x) => x.id);

@@ -101,7 +101,7 @@ class AiController {
 class ProgramsController {
   constructor(@Inject(Programs) private readonly p: Programs, @Inject(Sources) private readonly sources: Sources, @Inject(Intake) private readonly intake: Intake) {}
   @Get("catalogue") catalogue(@Query() q: any) { return this.p.catalogue(q); }
-  @Get("draft") draft() { return this.p.draft(); }
+  @Get("draft") draft(@Headers("x-actor") a: H, @Query("summary") summary?: string) { return this.p.draft(actorOf(a), summary === "1"); }
   @Post("pack/release") release(@Headers("x-actor") a: H, @Body() b: any) { return this.p.release(actorOf(a), b); }
   @Post("program-nodes") node(@Headers("x-actor") a: H, @Body() b: any) { return this.p.createNode(actorOf(a), b); }
   @Post("combinations") create(@Headers("x-actor") a: H, @Body() b: any, @Res({ passthrough: true }) res: any) { return this.p.createCombination(actorOf(a), b).then((r) => { res.status(r.created ? 201 : 200); return r; }); }

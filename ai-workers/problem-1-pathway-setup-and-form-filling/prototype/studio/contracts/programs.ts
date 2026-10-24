@@ -19,11 +19,22 @@ export const LEVEL_NAME: Record<string, string> = { PATHWAY: "Pathway", PROGRAM:
 /** BR-6: two names under the same parent are the same when they match ignoring case, spaces and punctuation
  *  ("Open work permit", "open  work-permit"). No fuzzy matching. */
 export function normalizeLabel(label: string): string {
-  return label.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}]+/gu, "");
+  // Combining marks stay (break m2): Hindi or Thai vowel signs make different names ("किसान" is not "कसान").
+  return label.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}\p{M}]+/gu, "");
 }
-export const cleanLabel = (label: string) => label.normalize("NFKC").trim().replace(/\s+/g, " ");
+/** Spaces tidied; invisible direction and format characters removed, so a name shows as it is stored (break m2). */
+export const cleanLabel = (label: string) => label.normalize("NFKC").replace(/\p{Cf}/gu, "").trim().replace(/\s+/g, " ");
 
-const label = z.string().transform(cleanLabel).pipe(z.string().min(1, "Give it a name.").max(120, "Keep the name under 120 characters."));
+/** The limits a name must meet, in the words the field shows (the path builder checks them as you type, QA-6/QA-7). */
+export const LABEL_MAX = 120;
+export function labelProblem(raw: string): string | null {
+  const s = cleanLabel(raw);
+  if (!s) return "Give it a name.";
+  if (s.length > LABEL_MAX) return `Keep the name under ${LABEL_MAX} characters.`;
+  if (!/[\p{L}\p{N}]/u.test(s)) return "Use letters or digits in the name, not only punctuation.";
+  return null;
+}
+const label = z.string().transform(cleanLabel).superRefine((s, ctx) => { const m = labelProblem(s); if (m) ctx.addIssue({ code: "custom", message: m }); });
 
 export const CatalogueQuery = z.object({
   pathway: z.enum(PATHWAYS).default("INDIVIDUAL"),
@@ -100,8 +111,13 @@ export function problemFromZod(e: z.ZodError, title = "Some details need fixing"
 
 // ------------------------------------------------------------------ catalogue response (GET /catalogue)
 /** One cause per line; step is the action that moves it, in the next step's words (the row's next step while a setup
- *  step is waiting), and text is the whole sentence shown. */
-export type MissingItem = { code: "no_forms" | "form_without_edition" | "role_without_questions" | "rule_problem" | "not_started"; step: string; text: string };
+ *  step is waiting), and text is the whole sentence shown (without the step when every line shares it: sharedStep). */
+export type MissingItem = { code: "no_forms" | "form_without_edition" | "role_without_questions" | "filing_problem" | "rule_problem" | "not_started"; step: string; text: string };
+/** The one step every missing line shares, when there is more than one line and they all name it; null otherwise. The
+ *  lines then carry only their causes and the screen names the step once under the list (Lead note 23 Oct). */
+export function sharedStep(missing: { step: string }[]): string | null {
+  return missing.length > 1 && missing.every((m) => m.step === missing[0].step) ? missing[0].step : null;
+}
 export type CatalogueLeaf = {
   kind: "combination";
   nodeKey: string;
@@ -112,7 +128,9 @@ export type CatalogueLeaf = {
   combinationId: string | null;
   /** drafted: the form's boxes are mapped (or it is a checklist, which has none); false = attached, not set up yet.
    *  inLibrary (attached sources only): its boxes are already mapped in the library, so it is added without AI. */
-  forms: { code: string; drafted: boolean; document: boolean; inLibrary?: boolean }[];
+  forms: { code: string; drafted: boolean; document: boolean; inLibrary?: boolean; channel?: "PDF_UPLOAD" | "ONLINE" | "SIGNED_PDF_UPLOAD" }[];
+  /** How the application is filed, worked out from its lines (C1.6, engine/channels.ts filingKind): "PDF only", "Online only" or "Mixed: online and PDF"; null with no lines. */
+  filing: string | null;
   counts: { documents: number; documentsAlways: number; documentsIf: number; questions: number; sections: number; rules: number } | null;
   status: Status;
   statusText: string;
@@ -162,9 +180,17 @@ export type SessionView = { actor: { id: string; name: string; role: string; dut
 /** A file held by the form intake (P-51) that concerns a combination. */
 export type HeldFile = { id: string; file: string; code: string | null; edition: string | null; outcome: string | null; reason: string | null; at: string | Date };
 /** GET /combinations/:id/summary (P-50): the combination page's header and Overview. */
+type Channel = "PDF_UPLOAD" | "ONLINE" | "SIGNED_PDF_UPLOAD";
 export type CombinationSummary = {
   row: CatalogueLeaf | null; changes: number; allowedLocations: string[]; participants: unknown;
-  forms: { code: string; title: string; document: boolean; who: string; when: string; edition: string | null; boxes: number }[];
+  forms: { code: string; title: string; document: boolean; who: string; when: string; edition: string | null; boxes: number; channel: Channel; channelWords: string; defaultChannel: Channel; signature: string | null }[];
+  /** The portal the filing goes through (C1.7) and the derived filing method (C1.6). */
+  portal: string | null; portalLabel: string | null;
+  /** C1.6's words: "PDF only", "Online only", "Mixed: online and PDF"; filingDetail says it line by line. */
+  filing: string; filingDetail: string;
+  channelProblems: ProblemLine[];
+  /** Online forms added from this combination (C2.7), each with its status in plain words ("Awaiting a second person"). */
+  onlineForms: { id: string; form: string; title: string; portal: string; portalLabel: string; status: string; statusWords: string; detail: string | null; at: string | Date }[];
   sources: { id: string; kind: string | null; name: string; status: string; detail: string | null; at: string | Date }[];
   held: HeldFile[];
 };

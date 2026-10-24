@@ -1,6 +1,7 @@
 // Review and release (P-23): one shared draft, one release for everything. Lists every combination whose draft differs
-// from what firms use, what is held back and why, and releases the rest as the next release. A different person from
-// every author releases (BR-14); the server enforces it, the screen says so before anyone tries.
+// from what firms use, what is held back and why, and releases the rest as the next release. A combination is released
+// only after its own review (submitted, unchanged since, expert changes signed; QA-1), and by a different person from
+// every author and submitter (BR-14); the server enforces both, the screen says so before anyone tries.
 import * as React from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,7 +15,7 @@ export function ReleasePage() {
   const qc = useQueryClient(); const toast = useToast();
   const actorId = useActorId();
   const session = useApi<any>(["session", actorId], "/session");
-  const d = useApi<any>(["draft"], "/draft");
+  const d = useApi<any>(["draft", actorId], "/draft"); // per person: your own changes are held back for you (BR-14)
   const [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null), [done, setDone] = React.useState<any>(null);
   const canApprove = (session.data?.actor?.duties ?? []).includes("approve");
   const release = async () => {
@@ -34,7 +35,7 @@ export function ReleasePage() {
       <nav aria-label="Breadcrumb" className="text-xs text-text-muted"><Link to="/" className="hover:underline">Programs</Link> › Review and release</nav>
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Review and release</h1>
-        <p className="mt-1 text-sm text-text-muted">Everyone's changes are in one shared draft. Releasing publishes them together as the next release; firms keep what was approved until then. {x.last ? `Last release: Release ${x.last.version}, ${fmtDate(x.last.at)}.` : "Nothing released yet."}</p>
+        <p className="mt-1 text-sm text-text-muted">Everyone's changes are in one shared draft. Releasing publishes together every combination that has passed its review (submitted, and signed by the content reviewer where an expert must sign); firms keep what was approved until then. {x.last ? `Last release: Release ${x.last.version}, ${fmtDate(x.last.at)}.` : "Nothing released yet."}</p>
       </div>
       {done ? <Notice tone="ok" title={`Release ${done.pack} published`}>{done.rows.map((r: any) => r.label).join(", ")}.{done.held.length ? ` Held back: ${done.held.map((h: any) => h.label).join(", ")}.` : ""} <Link className="text-text-link underline" to="/">Back to Programs</Link></Notice> : null}
       {!x.rows.length ? <EmptyState title="Nothing to release" description="The shared draft has no changes since the last release. Changes appear here as soon as someone edits a combination." action={<Button asChild variant="secondary"><Link to="/">Back to Programs</Link></Button>} /> : (
@@ -49,11 +50,11 @@ export function ReleasePage() {
               </tr>
             ))}
           </Table>
-          {held.length ? <Notice tone="warn" title={`${held.length} held back`}>A combination whose draft has a problem stays at its last release until the problem is fixed.</Notice> : null}
+          {held.length ? <Notice tone="warn" title={`${held.length} held back`}>A held-back combination stays at its last release until its problem is fixed and its review is done. Open it to submit it or see what is waiting.</Notice> : null}
           {err ? <Notice tone="danger" title="Not released">{err}</Notice> : null}
           <div className="flex flex-wrap items-center justify-end gap-3">
-            {!canApprove ? <p className="text-sm text-text-muted">A different person releases. Switch to the Approver (simulated) to release.</p> : <p className="text-sm text-text-muted">You can release only changes you did not make yourself.</p>}
-            <Button disabled={!canApprove || !ok.length || busy} busy={busy} onClick={() => void release()}>Release {ok.length} combination{ok.length === 1 ? "" : "s"} as Release {x.next}</Button>
+            {!canApprove ? <p className="text-sm text-text-muted">A different person releases. Switch to the Approver (simulated) to release.</p> : <p className="text-sm text-text-muted">You can release only changes you did not make or submit yourself.</p>}
+            <Button disabled={!canApprove || !ok.length || busy} busy={busy} onClick={() => void release()}>{ok.length ? `Release ${ok.length} combination${ok.length === 1 ? "" : "s"} as Release ${x.next}` : "Nothing ready to release"}</Button>
           </div>
         </>
       )}

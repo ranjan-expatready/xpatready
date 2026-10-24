@@ -47,7 +47,7 @@ function Shell() {
         <div className="hidden shrink-0 leading-tight sm:block"><p className="text-sm font-semibold">Product Studio</p><p className="text-[11px] text-text-muted">Pathway Configurator</p></div>
         <Pill tone="warn" className="ml-1 hidden xl:inline-flex" title="Working prototype on a local demo database: no sign-in, simulated people, not production">Prototype · demo workspace</Pill>
         <div className="ml-auto flex min-w-0 items-center gap-2">
-          <DemoControls loaded={(session.data?.counts?.programs ?? 0) > 0} />
+          <DemoControls loaded={!!session.data?.sampleLoaded} programsExist={(session.data?.counts?.programs ?? 0) > 0} />
           <PersonaSwitch actors={session.data?.actors ?? []} />
           <ThemeToggle />
         </div>
@@ -95,7 +95,7 @@ function Shell() {
 
 /** The shared draft (P-23): one line on every page with everyone's unreleased changes and the one way to release. */
 function DraftBar() {
-  const d = useApi<any>(["draft"], "/draft", { refetchInterval: 15_000 });
+  const d = useApi<any>(["draft", "summary"], "/draft?summary=1", { refetchInterval: 15_000 }); // counts only (break m7)
   if (!d.data) return null;
   const x = d.data, rows = x.rows.length;
   // Short on purpose (early look item 6): what it is, how many, and the one way to release.
@@ -137,7 +137,7 @@ function ThemeToggle() {
   return <Button variant="ghost" size="icon" aria-label={t === "dark" ? "Use the light theme" : "Use the dark theme"} onClick={() => { const n = t === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = n; try { localStorage.setItem("xr-theme", n); } catch { /* ignore */ } setT(n); }}>{t === "dark" ? <Sun /> : <Moon />}</Button>;
 }
 
-function DemoControls({ loaded }: { loaded: boolean }) {
+function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExist: boolean }) {
   const [resetOpen, setResetOpen] = React.useState(false);
   const navTo = useNavigate();
   const [log, setLog] = React.useState<string[] | null>(null);
@@ -150,7 +150,7 @@ function DemoControls({ loaded }: { loaded: boolean }) {
         <DropdownMenu.Trigger asChild><Button size="sm" variant="secondary" busy={load.isPending}>Demo <ChevronDown /></Button></DropdownMenu.Trigger>
         <DropdownMenu.Portal>
           <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[260px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
-            <DropdownMenu.Item className={item} disabled={loaded} onSelect={() => load.mutate(undefined)}><Upload className="size-4" />{loaded ? "Sample inputs loaded (reset to load again)" : "Load sample inputs"}</DropdownMenu.Item>
+            <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => load.mutate(undefined)}><Upload className="size-4" />{loaded ? "Sample inputs loaded (reset to load again)" : programsExist ? "Load sample inputs (programs exist: reset first)" : "Load sample inputs"}</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={() => setResetOpen(true)}><RotateCcw className="size-4" />Reset demo…</DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>

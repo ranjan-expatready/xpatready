@@ -84,7 +84,7 @@ export function FormPicker({ combinationId, onAdded, have = [] }: { combinationI
     setBusy(code); setErr(null);
     try {
       const r = await api(`/combinations/${combinationId}/lines`, { method: "POST", json: { kind: "FORM", formKey: code } });
-      toast.push({ tone: "ok", text: r.added === "form_line" ? `${r.edition} added` : `${r.edition} attached: its boxes are not mapped yet, so AI can draft them` });
+      toast.push({ tone: "ok", text: r.added === "form_line" ? `${r.edition} added` : `${r.edition} attached: its form fields are not mapped yet, so AI can draft them` });
       void qc.invalidateQueries(); onAdded?.(code);
     } catch (e) { setErr(e instanceof ApiError ? e.field("formKey") ?? e.message : (e as Error).message); }
     finally { setBusy(null); }
@@ -100,7 +100,7 @@ export function FormPicker({ combinationId, onAdded, have = [] }: { combinationI
             return (
               <li key={f.code} className="flex items-center gap-3 px-3 py-2">
                 <span className="mono shrink-0 rounded-md border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-text-link">{f.code}</span>
-                <div className="min-w-0 flex-1"><p className="truncate text-sm" title={f.title}>{f.title}</p><p className="text-xs text-text-muted">{cur.mapped ? `Current edition ${cur.label.replace(`${f.code} `, "")} · ${cur.boxes} boxes mapped` : `Edition ${cur.label.replace(`${f.code} `, "")} · boxes not mapped yet`} · used by {f.usedBy} {f.usedBy === 1 ? "combination" : "combinations"}</p></div>
+                <div className="min-w-0 flex-1"><p className="truncate text-sm" title={f.title}>{f.title}</p><p className="text-xs text-text-muted">{cur.mapped ? `Current edition ${cur.label.replace(`${f.code} `, "")} · ${cur.boxes} form fields mapped` : `Edition ${cur.label.replace(`${f.code} `, "")} · form fields not mapped yet`} · used by {f.usedBy} {f.usedBy === 1 ? "combination" : "combinations"}</p></div>
                 {added ? <Pill tone="ok"><Check className="size-3" /> Added</Pill> : <Button size="sm" variant="secondary" busy={busy === f.code} onClick={() => void add(f.code)} aria-label={`Add ${f.code}`}><Plus /> Add</Button>}
               </li>
             );
