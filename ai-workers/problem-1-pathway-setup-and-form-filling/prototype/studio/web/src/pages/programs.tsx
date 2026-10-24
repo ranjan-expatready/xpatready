@@ -9,8 +9,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, Info, Plus, Search, TriangleAlert, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import type { CatalogueLeaf, CatalogueResponse, NextAction, SessionView } from "../../../contracts/programs";
-import { api, useActorId, useApi, useToast } from "@/lib/api";
+import type { CatalogueLeaf, CatalogueResponse, NextAction } from "../../../contracts/programs";
+import { api, useApi, useSessionView, useToast } from "@/lib/api";
 import { Button, Input, Notice } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,11 +42,8 @@ export function rememberList(nodeKey: string) {
 export function ProgramsPage() {
   const [sp, setSp] = useSearchParams();
   const nav = useNavigate(); const qc = useQueryClient(); const toast = useToast();
-  const actorId = useActorId();
-  const session = useApi<SessionView>(["session", actorId], "/session");
-  const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
   // Until the person is known the page is loading (QA-22): an author must not read "a configuration author adds…" first.
-  const knowsPerson = !!session.data || session.isError;
+  const { known: knowsPerson, failed: noPerson, canAuthor } = useSessionView();
   const pathway = sp.get("pw") === "CORPORATE" ? "CORPORATE" : "INDIVIDUAL";
   const filter = sp.get("f") === "all" ? "all" : sp.get("f") === "live" ? "live" : "needs";
   const program = sp.get("prog") ?? "", under = sp.get("under") ?? "";
@@ -116,7 +113,7 @@ export function ProgramsPage() {
             {typed ? <button type="button" className="absolute right-1 top-1 rounded p-1.5 text-text-muted hover:bg-text/5" aria-label="Clear search" onClick={() => { setTyped(""); set({ q: null }); }}><X className="size-4" /></button>
               : <kbd className="pointer-events-none absolute right-2 top-2 rounded border border-border px-1.5 text-xs text-text-muted">⌘K</kbd>}
           </div>
-          <Tip tip={!knowsPerson ? "Loading…" : canAuthor ? "Build the path Program › Category › Sub-category, picking what exists or creating what is missing." : "Only a configuration author can create combinations. Switch to the Configuration author."}>
+          <Tip tip={!knowsPerson ? "Loading…" : noPerson ? "The studio could not tell who you are: see the notice above, then reload." : canAuthor ? "Build the path Program › Category › Sub-category, picking what exists or creating what is missing." : "Only a configuration author can create combinations. Switch to the Configuration author."}>
             <span><Button disabled={!canAuthor} onClick={() => nav(`/new${pathway === "CORPORATE" ? "?pw=CORPORATE" : ""}`)}><Plus /> New combination</Button></span>
           </Tip>
         </div>
@@ -144,12 +141,12 @@ export function ProgramsPage() {
         {cat.isError ? <Notice tone="danger" title="The programs could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void cat.refetch()}>Try again</Button>}>{(cat.error as Error).message} If it keeps failing, restart the studio.</Notice>
           : cat.isLoading || !knowsPerson ? <ListSkeleton />
           : !rows.length && !q && !program && !under && cat.data?.counts?.all === 0 ? (
-            <EmptyState title={`No combinations in ${PATHWAY_LABEL[pathway]} yet`} description={canAuthor ? "Create the first one with New combination: pick or create its program, category and sub-category." : "A configuration author adds combinations here."}
+            <EmptyState title={`No combinations in ${PATHWAY_LABEL[pathway]} yet`} description={canAuthor ? "Create the first one with New combination: pick or create its program, category and sub-category." : noPerson ? "The studio could not tell who you are, so nothing can be added yet: see the notice above, then reload." : "A configuration author adds combinations here."}
               action={canAuthor ? <Button onClick={() => nav(`/new${pathway === "CORPORATE" ? "?pw=CORPORATE" : ""}`)}><Plus /> New combination</Button> : undefined} />
           ) : !rows.length ? (
             <EmptyState title="Nothing matches" description={[q ? `No combination matches "${q}"` : filter === "live" ? "No combination is Live" : "No combination here", scoped ? `in ${scoped}` : null, q && filter === "live" ? "and is Live" : null].filter(Boolean).join(" ") + "."} action={<Button variant="secondary" onClick={() => { setTyped(""); set({ q: null, prog: null, under: null, f: "all" }); }}>Show all</Button>} />
           ) : <List rows={rows} highlight={sel} q={q} sort={sort} canAuthor={canAuthor} onSort={() => set({ sort: sort === "path" ? "status" : sort === "status" ? "-status" : null })} onOpen={(r) => void open(r)} onAct={step.run} />}
-        {rows.length ? <p className="sr-only" role="status">{rows.length} combination{rows.length === 1 ? "" : "s"} shown</p> : null}
+        {rows.length && knowsPerson ? <p className="sr-only" role="status">{rows.length} combination{rows.length === 1 ? "" : "s"} shown</p> : null}
       </div>
       {step.dialog}
     </TipProvider>

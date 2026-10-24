@@ -1,88 +1,82 @@
-# Screen 01 — review (reviewer agent, 24 Oct, small FIX after the merge)
+# CHECK 24 Oct: small FIX QA-4/QA-20/QA-22 (reviewer agent)
 
-Earlier rounds are in git: round 2 of the closing pass is at `23cd9bf4^`, and older ones before that.
+**Commit reviewed:** `12af01a` on `claude/screens-01-fix-c3010a`. Scope: the four files this pass touched in `910ee40..12af01a` (`api/src/main.ts` download lines and the ENOENT mapping, `components/channels.tsx`, `pages/programs.tsx`, `tests/check_screen01_smallfix.cjs`). The other lanes' merged changes are not reviewed. **Verdict: Ship.** 0 Must, 3 Should. **Journey score 9/10 (pass).** The score is in this file; there is no separate report.
 
-**Commit reviewed:** `23cd9bf4` on `claude/screens-01-fix-c3010a`. Scope: the Lead note of 24 Oct only (QA-14, QA-17, Lead check L1–L3). **Verdict: Ship.** 0 Must, 3 Should. **Journey score 9/10 (pass)** on the two journeys this pass changes (below). I kept it in this file; there is no separate report.
+**How I checked:** I read BUGS QA-4/QA-20, the Lead's QA-22 note, the build notes section "Fixes: small FIX after Screen 01 DONE" and the diff. I used an isolated copy on :4441 (`xr_studio_screens_rv`, fresh start, web build current: `knowsPerson` is in `index-CcnFXWec.js`) and headless Chromium at `/opt/pw-browsers/chromium`. There were no model calls. Afterwards I stopped the copy and dropped its database. I did not touch :4400.
 
-**How I checked:** I read the build notes ("Small FIX after the merge"), BUGS QA-14/QA-17, lead-check L1–L3 and the diff `1cb174a6..23cd9bf4` (prototype; evidence ignored). I ran isolated copies on :4440/:4441 (`xr_studio_screens_rv`, `_rv2`, fresh starts). Model calls were refused (US$0). Afterwards I stopped both copies, dropped the databases and restored the evidence files the suites rewrote.
+## Builder's test, run by me
+`check_screen01_smallfix.cjs 4441 xr_studio_screens_rv` passed **11/11 on two runs**, each on a fresh copy.
 
-## Suites (non-maker run)
-| Suite | Result |
-|---|---|
-| Screen 01 API | **133/133**, including the three QA-14 checks (4 at once → `[201,409,409,409]`; the database refuses "RACE-at once"; another parent is allowed) |
-| qa `check_qa14_name_race.ts` | **PASS**: 20 names × 4 at once, one category each |
-| **Rule removed** (`DROP INDEX program_def_parent_name_key`) | qa race check **FAILS** ("Category 1 x2, Category 4 x2"). The test proves the rule |
-| grounding | **29/29**. With the wrong database (`… 4440 xr_studio_screens_rv2`) it stops at once with the plain reason (L1) |
-| channels | **42/42** |
-| Screen 01 browser | **135/136 twice**, each run failing a different step. Run 1: "Program filter: only Work permits rows" (read before the list refreshed; Should 3). Run 2: "changing the view under 200 ms" took 205 ms at machine load 32 (load, not code). C2.7 (L2) and QA-17 passed both times |
-| Type check | `tsc --noEmit -p api/tsconfig.json` **0 errors**; it covers `tests/*.ts` (9 files listed). `-p web/tsconfig.json` **0** (L3) |
-
-## Items in this pass
-| Item | Result | Evidence |
+## Does each rule's test fail when the rule is removed? (my own mutations)
+| Rule | Mutation | Result |
 |---|---|---|
-| QA-14 one name per parent, enforced in the database | **Fixed for new rows** | Partial unique index on `(workspace_id, COALESCE(parent_node_key,''), name_key)`. Both create routes write `name_key` with `normalizeLabel` (`studio.ts:85`, `programs.ts:60`); no route renames a node. I also raced the screen's own route, `POST /combinations/path` (9 names × 4 at once): one program and one category per name, one combination each, losers refused |
-| QA-17 dates in Recent steps | **Fixed** | Combination page: "today 10:19 a.m." … "Oct 21, 10:53 p.m." for the back-dated step (screenshot in my scratchpad). Also applied to Review step 1 and AI work. The region is now labelled. At 200 % (512 px) the page does not scroll sideways; the table scrolls inside its own box |
-| L1 grounding "finding 3" 404 | **Fixed (test)** | The cause was the wrong database: the check read ids from the database named on its command line, which could be another copy's. The guard in the grounding, API and channels checks stops with the reason; with the right database, 29/29 |
-| L2 C2.7 wait | **Fixed** | `check_screen01_browser.cjs:150` waits for the list; it passed in both runs |
-| L3 type errors | **Fixed** | 0 errors with the command now stated (39 before). The build note corrects its earlier "clean" claim |
+| QA-22 `knowsPerson` | Served the bundle with `s=!!a.data\|\|a.isError` replaced by `s=!0` (pre-fix behaviour); author, session held 1.5 s | Non-author text seen 11 times ("A configuration author adds combinations here"): the test's poll catches it |
+| QA-20 `min-w-0 max-w-full` | Removed both classes from the Portal group at 400 px (author) | Page 413 px wide (the QA-20 figure) |
+| QA-4 `dotfiles: "allow"` | Standalone Express 5.2.1 (studio's copy): `res.download` of a file under `.dot/` | Without the option: error `status 404`, no code (the old 404). With it: 200. A missing file: `{code: ENOENT, status: 404}`. A plain `fs` ENOENT has `status undefined`, so it still reaches the 500 branch |
 
-## Migration `20261024090000` (looked at closely)
-* **Backfill and legacy duplicates.** I replayed it on real duplicates: I dropped the index, raced to make 2 twin pairs, applied the written rollback, then ran `migration.sql` with `ON_ERROR_STOP`. It filled 48 rows and set the newer twin of each pair to null (oldest by `created_at, id`), and the index built. Nothing was deleted. The rollback works as written (§5 met: expand only, rows kept, rollback recorded).
-* **Partial index.** It excludes null and `''`. `IS NOT DISTINCT FROM` in the backfill matches the `COALESCE` in the index. Pathways (parent null) share `''`, which is correct. The partial index is outside `schema.prisma`, the same pattern as `20261021230000`.
-* **SQL vs app normalisation: they differ (Should 1).** The SQL `[:alnum:]` drops combining marks; `normalizeLabel` keeps `\p{M}` (break m2). The two lower-casing steps also differ. Of 19 test labels I compared on this database (en_US.UTF-8, libc), 3 differ: "किसान" → app `किसान` / SQL `कसन`; "कसान" → `कसान` / `कसन`; "İstanbul" → `i̇stanbul` / `istanbul`. This affects only rows that existed before the migration.
+## Each fix, as a person sees it
+* **QA-22 (Programs while `/api/session` is slow).**
+  * Empty catalogue, author: no non-author text in 51 looks. Meanwhile there is a skeleton (8 placeholders), New combination is disabled and its tip reads "Loading…". Then "Create the first one with New combination" appears and the button is enabled.
+  * Populated catalogue: no non-author text for the author or the reviewer (user-C), and no console errors.
+  * Actor switch on Programs (author → reviewer → author at 1024 px): the button goes enabled → disabled → enabled, with nothing stale.
+  * Keyboard: Tab reaches New combination and Enter opens `/new`.
+  * First catalogue row appeared in 295/113/93 ms (budget 1 s).
+  * **Session failure** (session answers 500): after the one retry (about 1.6 s), the red notice "The studio server is not answering" shows. The empty state below it then tells the author "A configuration author adds combinations here." (Should 2).
+* **QA-20 (combination page, Portal row).**
+  * Page width equals the viewport for the author at 400 px (select ends at 363 px) and at 1024 px, and for the reviewer at 400 and 1024 px.
+  * The reviewer at 400 px with the longest portal set ("Representative Permanent Residence Portal", shown as bold text): 400 px.
+  * Programs: 400 px at 400; 512 px at 512 (the 200 % view of 1024).
+* **QA-4 (downloads).**
+  * Source file and filled PDF under a dot-folder: 200 with `attachment`. Unknown id: 404. A filled PDF whose file is gone: 404 "Not found (it may have been removed by a reset)" instead of a 500.
+  * As a person: Sources tab → clicked the first file link → the browser downloaded `imm5257e.pdf`.
+  * Safety: `dotfiles: "allow"` applies only to paths read from the server's own rows (`sources.ts:622`, `fill.ts:76-79`). No request value reaches the path.
+  * The ENOENT branch (`main.ts:148`) needs both `code === "ENOENT"` and `status === 404`, which only the file-sending layer sets. It does not hide other server errors.
+* **Nearby: combination page with a slow session (author).** "A configuration author does this step." (`combination.tsx:91`) was never seen; the author-only controls appear when the session arrives. No other page shows a non-author sentence while loading.
 
-## Issues
-**Should 1: rows that existed before the migration hold a key from a different rule, so BR-6 can refuse a name it allows** (`prisma/migrations/20261024090000_program_name_unique/migration.sql:6`, `api/src/studio.ts:87`).
-* Reproduced on :4440. I created "किसान" and "İstanbul", then rolled the migration back and replayed it. After that, the valid names "कसन" and "Istanbul" are refused 409 with `"किसान" already exists …` / `"İstanbul" already exists …`, although `normalizeLabel` says they differ and the pre-check let them through.
-* The same mismatch flags "किसान" and "कसान" (different under BR-6) as legacy duplicates, so the newer one loses its key.
-* It is also two copies of one rule (STANDARDS §7 "no duplicated logic").
-* **Fix:** fill `name_key` once from the app with `normalizeLabel` (for example at start-up: re-key rows whose key differs, and null the newer twin by the same rule), or have the migration only add the column and leave the fill to the app. In the 409 path, find the twin by comparing `normalizeLabel(label)` of the siblings, not the stored key.
-* **Test:** an old row "किसान" (key filled by the migration), then "कसन" → 201.
-
-**Should 2: a person who loses the race gets a different answer from one who arrives a moment later** (`api/src/studio.ts:88`).
-* On `/combinations/path`, the loser gets 409 with `detail` only. A later duplicate gets 400 with `errors[{field:"program"}]`. On `/program-nodes`, a later duplicate gets 409 with `errors` and `existing`.
-* `new-combination.tsx:63-66` shows the loser's message in the page notice rather than on the Program/Category field, so it is not silent. It does not meet §6 "field-level messages".
-* **Fix:** throw the same Problem Details as the pre-check (field `label`, or the level, plus `existing`).
-
-**Should 3: one more browser step reads the list before it refreshes** (`tests/check_screen01_browser.cjs:142-143`, "Program filter: only Work permits rows"). It failed 1 of 2 runs under load, the same pattern as L2. **Fix:** wait for `prog=` in the URL and for every row to start with `individual.work_permits` before asserting.
+## Issues (ranked)
+1. **Should 1: axe "scrollable-region-focusable" (serious, WCAG 2.1.1) on the combination page at 400 px.** Author: 1 node; reviewer: 2 nodes. It is the table's scroll box (`web/src/components/ui/controls.tsx:138`, `overflow-x-auto` with no focus): a keyboard user cannot scroll the forms table sideways. At 1024 px axe is clean. This is not caused by this pass: `controls.tsx` last changed in `a7e40e0`, and the fix only made the 400 px check reachable. It still breaks STANDARDS "[M] axe-core on every screen state" at 400 px.
+   * Fix: give the box `tabIndex={0}`, `role="region"` and an `aria-label` (or only when it overflows), then add an axe check at 400 px to `check_screen01_smallfix` or the browser suite.
+2. **Should 2: the session-failure fallback still uses author/non-author words.** With the session down, the author reads "A configuration author adds combinations here." under "The studio server is not answering" (`pages/programs.tsx`, the EmptyState description). The header tip says "Only a configuration author can create combinations…". This is the build notes' stated choice and nothing unsafe is allowed. But it is the same wrong statement QA-22 removed, now in the failure state.
+   * Fix: when `session.isError`, use a neutral description and tip, such as "Who you are could not be loaded; see the notice above." Add the failing case to the QA-22 block.
+3. **Should 3 (for the Lead; a graph tool gap): the graph lists `GET /attachments/:id/file` and `GET /artifacts/:id/file` under G3 ("no test reaches").** The new test does reach them, but through ``fetch(`${BASE}${url}`)``, which `product/tools/graph.mjs:73-74` does not parse. The graph does credit the test for C1.1, C1.6, C1.7, C2.1 and C3.1 (G5 dropped from 5 to 3 after this pass).
+   * Fix: call each route with a literal path in the test, or teach the graph to read `fetch` with a template literal.
 
 ## [M] standards touched
-**Met:**
-* §5 uniqueness scoped to the parent, held in the database, and the migration keeps rows with a recorded rollback.
-* §7 strict TypeScript with 0 errors, tests included.
-* Tests fail when the rule is removed.
-* §3 concurrency: duplicates under a race are refused.
+* Rule's test fails when the rule is removed: **met** for all three (mutations above).
+* axe on every screen state: **not met at 400 px** on the combination page (Should 1, existed before this pass). Met at 1024 px.
+* No sideways page scroll at 400 px: **met** (QA-20 closed).
+* Errors are plain, with no server detail in the browser: **met** (a gone file now gets the plain 404 instead of the generic 500).
+* Server authorisation: unchanged. The download routes stay open to any caller, as before; this pass did not change that.
 
-**Not met:**
-* §6 field-level message on the race-loser path (Should 2).
-* §7 one rule in two places, with different results (Should 1).
-
-**P-33:** nothing new. The browser check back-dates a step by SQL to show an older day; that is test set-up, not a product step.
-
-## D scores (dimensions this pass touches; the rest are as in the Lead check of 24 Oct)
+## D scores (dimensions this pass touches)
 | D | Score and evidence |
 |---|---|
-| D2 Data integrity | 4: twins cannot get in, even at the same moment, on both create routes. Old non-Latin rows carry a key from another rule (Should 1) |
-| D4 Rule integrity | 4: BR-6 is held in the database; for old rows the stored key can disagree with BR-6 |
-| D5 Stability and recovery | 5: four at once → one 201 and plain 409s; a wrong-database run stops with the reason |
-| D11 Feedback and state | 4: steps say "today" or the date; the race loser's message sits in the notice, not on the field |
-| D13 Accessibility | 4: "Recent steps" is a labelled region; no sideways page scroll at 1024 px or 200 % (the table scrolls inside its box); no real screen reader |
-| D16 Testability | 4: race and database-refusal checks, proven by removing the rule; type check 0 errors; one flaky browser step remains (Should 3) |
+| D5 Stability and recovery | 5: a gone file is a plain 404; downloads work in lane copies |
+| D11 Feedback and state | 4: skeleton and "Loading…" until the person is known. The session-failure empty state still names a role (Should 2) |
+| D12 Responsive | 5: 400/390/1024 px with no page scroll, as author and reviewer, including the longest portal |
+| D13 Accessibility | 4: keyboard path works; axe serious at 400 px on the table box (Should 1); no real screen reader |
+| D16 Testability | 4: each rule proven by mutation. The graph cannot see the download calls (Should 3) |
 | D17 / D20 | Simulated only |
 
 ## Journey score: 9/10 (scoped to this pass)
-Journeys:
-* **J1** Two authors create the same new program and category at the same moment on "New combination" (API race on the screen's route, 4 at once).
-* **J2** An author opens a combination whose last reading ran three days ago and reads when each step ran (headless Chrome at 1024 px and 512 px).
+Journeys (headless Chromium, not a visible browser):
+* **J1** Author opens Programs while the session is slow (empty, then populated).
+* **J2** Content reviewer does the same.
+* **J3** Session fails.
+* **J4** Author switches persons on Programs.
+* **J5** Author and reviewer read the combination page at 400 and 1024 px.
+* **J6** Author downloads a source file from Sources.
+* **J7** A file is gone (API).
 
 Scores:
-* Task completed 1 · next step obvious 1 ("choose it instead") · plain words 1 · correct data 1 (one row per name; Should 1 affects only old rows) · error recovery 1 · accessibility and sizes 1 · speed 1 · visual quality 1 · trust and sources 1.
-* Feedback and state ½: the race loser's message is not on the field.
-
-I walked headless, not in a visible browser.
+* 1 each: task completed, next step obvious, plain words, correct data, error recovery, speed, visual quality, trust and sources (Sample portals labelled).
+* ½ feedback and state: Should 2.
+* ½ accessibility and sizes: Should 1.
 
 ## What I could not check
-* Whether :4400's database has legacy duplicates. The migration lists them only through the SQL comment `SELECT label, program_node_key FROM program_def WHERE name_key IS NULL;`, which the Lead should run after merging.
-* A real screen reader.
-* The rules, forms, engine, AI drafting and scale suites (this pass did not touch them).
-* AI steps (QA-8).
+* A real lane copy under `.claude/worktrees/`: this cloud copy is not one. QA-4 is proven with the test's `.lane-copy` folder and my Express mutation.
+* A visible-browser walk, a real screen reader, 200 % browser zoom (approximated by a 512 px viewport), and D17/D20 (founder).
+* The other lanes' merged code, and the `tsc` TS1470 errors the build notes mention.
+* Working tree: `break-report.md` shows as modified. That change is not mine (another agent); I did not touch it.
+
+Earlier review (24 Oct, small FIX after the merge): `review-earlier.md`.

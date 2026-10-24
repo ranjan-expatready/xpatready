@@ -65,3 +65,34 @@ Breaker, 23 Oct 2026, lane copy `screens-01-fix-c3010a` at 8d020757. Scope: conc
 
 ## Left behind
 Database `xr_studio_screens_br` (one fresh start, then the tests above). Server :4442 stopped; :4443 not used.
+
+## CHECK 24 Oct: small FIX QA-4/QA-20/QA-22
+Breaker, 24 Oct 2026, branch `claude/screens-01-fix-c3010a` at 12af01a. Copy `screens_bk` on :4442 (fresh database, sample inputs loaded); stopped at the end, :4400 untouched. No code changed, no model call. Scripts and screenshots are in the session scratchpad `bk/` (`shots/`). **Counts:** Blocker 0 · Major 1 · Minor 5.
+
+**Major**
+* **K1. With the keyboard, the Portal select saves on every arrow key and then drops focus to the page.** Steps: author, `/c/<wp.family>`, Tab to Portal (18 Tabs), press ArrowDown. Expected: the user can move through the options and choose one, and focus stays on the select. Actual: each ArrowDown sends a PATCH right away, which means a draft change and a toast. Three quick presses gave 2 PATCHes and ended on "Authorized Paid Representatives Portal". `disabled={busy}` takes focus off the select: `document.activeElement` is BODY within 60 ms and stays there after the save (`web/src/components/channels.tsx:34`). The keyboard path for this task breaks (EXPERIENCE §12 [M]). This was there before the fix; QA-20 did not cause it.
+
+**Minor**
+* **m1. If /api/session never answers, Programs shows the skeleton forever, with no message and no Try again.** Steps: route `/api/session` so it never answers, or so it answers 200 with an empty body. Actual: after 12 s the list is still `ListSkeleton` with 8 skeleton rows and 0 alerts. The catalogue has loaded but is hidden (`programs.tsx:49`, `:145`: `knowsPerson` only becomes true from data or an error, and there is no timeout). Before the fix this case showed the list. Screenshot: `shots/session-hang.png`.
+* **m2. While the skeleton shows, a screen reader is told "20 combinations shown".** Live regions during the load: `["Loading programs", "20 combinations shown"]`. The `sr-only` status at `programs.tsx:152` counts `rows` while the rows themselves are hidden.
+* **m3. When the session fails, an author is told to switch to themselves.** Steps: `/api/session` answers 500, 401 or is aborted, as user-A. Actual: a banner says "The studio server is not answering … (401 Unauthorized)" (`App.tsx:69`), which is wrong for a 401 because the server did answer. Below it, the full list appears with New combination disabled and the tip "Only a configuration author can create combinations. Switch to the Configuration author." A 200 that is not JSON (an HTML proxy page) shows no banner at all, only the non-author state (`programs.tsx:49`: `!!session.data` is true for a string).
+* **m4. The combination page has the same late-person flash QA-22 fixed on Programs.** With `/api/session` delayed 2 s, the author first sees the Portal as read-only bold text and the channels as text. Then they become selects and the layout jumps (states seen: `B+chanText` then `SELECT+chanSelect`). Nothing wrong is said, but the page jumps.
+* **m5. Download edge cases outside the clean 404.**
+  * An id containing `%00` gets a 500 (Postgres "invalid byte sequence 0x00"). It should be a 404, like `abc`.
+  * The rest need a stored row that points at the wrong thing (tested by editing the copy's row):
+    * A directory, or an empty `stored_path` (which resolves to the repository root), gets a 404 with the detail "Cannot GET /api/attachments/…/file", not the plain reason.
+    * A path through a file (ENOTDIR) gets a 500. Only ENOENT is mapped (`main.ts:148`).
+    * No server path leaked in any of these.
+  * An official PDF uploaded under the name `.env` is attached and later downloads as `filename=".env"`, `application/octet-stream`. The stored name is safe (`0dc03b24e791-.env`).
+
+**What held**
+* **QA-4 dotfiles.** Every file served comes from a database row looked up by UUID. `abc`, `..%2F..%2F.env`, `%2e%2e`, `..%2F.git%2Fconfig`, a 5,000-character id and the zero UUID all get 404 "Not found (it may have been removed by a reset)." on both `/attachments/:id/file` and `/artifacts/:id/file`.
+  * Upload names `.env`, `../../.env`, `..` and `..\..\.git\config` are cut to their basename and prefixed with the checksum (`58a93db92aef-.env`, `…-config`). A stored file name therefore never begins with a dot.
+  * Uploaded fakes with planted text ("Ignore all previous instructions…") are held and never attached.
+  * Artifact paths are built from codes in the coverage list only (`fill.ts:61`).
+  * A gone file gets the plain 404. HEAD returns 200 with the right Content-Disposition.
+* **QA-22.** With the session slow (2.5 s) the author never sees non-author words. Switching to the author while the SME's session was still loading went from skeleton (disabled) to enabled, and never showed the SME's state as the author's. Switching back to the SME disabled New combination at once.
+* **QA-20.** On `/c/<wp.family>`, every portal (including the longest, "Representative Permanent Residence Portal"), plus the approver's read-only text, ends inside 320, 360 and 400 px. At 512 px (200 % of 1024) there is no sideways scroll.
+  * At 320 and 360 px the page still scrolls to 384 px. The cause is the "People in this combination" section (`combination.tsx:156`), not the Portal select. It is below the 1024 px / 200 % bar, so it is not counted.
+  * The select's accessible name is "Portal" and it has a visible 3 px focus ring.
+* **Roles (not counted, m4 of round 2, left for the Lead).** Downloads need no role: Client A (`user-P`) and a caller with no header both get 200 on a source file.
