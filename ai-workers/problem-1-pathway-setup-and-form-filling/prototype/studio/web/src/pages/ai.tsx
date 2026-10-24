@@ -48,7 +48,8 @@ export function AiBatchPage() {
   const d = b.data;
   const running = active(d.status) || d.jobs.some((j: any) => active(j.status));
   const latest = new Map<string, any>(); for (const j of d.jobs) { const k = `${j.attachmentId}|${j.kind}`; const cur = latest.get(k); if (!cur || j.attempt > cur.attempt) latest.set(k, j); }
-  const failed = [...latest.values()].filter((j) => j.status === "FAILED" || j.status === "BLOCKED" || (j.status === "CANCELLED" && j.message?.startsWith("Cancelled before")));
+  // The server says which steps its retry runs again (cancelled part-way included, screen-map work never).
+  const failed = [...latest.values()].filter((j) => j.retryable);
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to="/ai" className="hover:underline">AI work</Link><ChevronRight className="size-3" /><span>{d.scopeLabel}</span></nav>

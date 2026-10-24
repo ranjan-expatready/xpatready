@@ -1,5 +1,5 @@
 {
- "at": "2026-10-24T19:58:43.491Z",
+ "at": "2026-10-24T20:30:49.918Z",
  "port": 4452,
  "database": "xr_studio_forms_s2b",
  "paid_calls": 0,
@@ -487,7 +487,7 @@
   {
    "name": "D3 fail: when other inputs are open too, a new live draft is refused until the waiting proposals are decided (nothing paid)",
    "ok": true,
-   "detail": "A finished AI draft of this online version has 2 proposals waiting (job 6d2fcf20-d5c2-47d6-8ed2-699a8429f40b): accept them, or map those inputs by hand, before a new draft. A new draft now would pay again for inputs that draft already answered."
+   "detail": "A finished AI draft of this online version has 2 proposals waiting (job 11f948d2-a1a9-46d3-8de2-c9aaf16df34b): accept them, or map those inputs by hand, before a new draft. A new draft now would pay again for inputs that draft already answered."
   },
   {
    "name": "D3: once its proposals are accepted nothing waits: a new live draft of what is still open asks for its worst case again",

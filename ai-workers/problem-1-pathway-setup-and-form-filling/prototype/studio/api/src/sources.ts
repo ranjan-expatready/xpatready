@@ -46,6 +46,7 @@ export class Sources {
     // A job left "running" by a stopped server can never finish: say so instead of showing it as running forever.
     void this.db.draftingJob.updateMany({ where: { status: "RUNNING" }, data: { status: "FAILED", message: "The studio server stopped while this step was running; start it again.", finishedAt: new Date() } })
       // A screen-map draft's own AI work (QA-31) ends with it.
+      .then(() => this.db.aiBatch.updateMany({ where: { operation: "screen_map", status: { in: ["QUEUED", "RUNNING"] }, cancelRequested: true }, data: { status: "CANCELLED", message: "Cancelled; the studio server stopped before the draft ended.", finishedAt: new Date() } }))
       .then(() => this.db.aiBatch.updateMany({ where: { operation: "screen_map", status: { in: ["QUEUED", "RUNNING"] } }, data: { status: "FAILED", message: "The studio server stopped while this draft was running.", finishedAt: new Date() } }))
       .catch(() => undefined);
   }
@@ -283,7 +284,8 @@ export class Sources {
       const p = parts.find((x) => x.index === s.index)!;
       if (p.saved_run) { s.status = "done"; s.saved = true; s.run_file = `prototype/p2/runs/${p.saved_run}`; return; } // its saved answer, US$0
       if (p.repeats_failed_run) { s.status = "failed"; s.error = `a new paid call would repeat run ${p.repeats_failed_run}, which asked exactly this and whose answer failed our own check; a person maps this part, or the rule is reviewed`; return; }
-      const live = await this.launchOnce(s.job_id, "live"), lj = lastJson(live.out);
+      const live = await this.launchOnce(s.job_id, "live", wanted), lj = lastJson(live.out);
+      if (live.cancelled) { s.status = "not started"; s.error = "cancelled before its AI call (after its stub pass); nothing was sent"; return; }
       if (!lj?.run_file) { s.status = "failed"; s.error = String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).slice(0, 300) || "the launcher stopped without a reason"; s.limit = /usage limit/i.test(s.error); return; }
       const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
       s.run_file = String(lj.run_file).replace(`${SOLUTION}/`, ""); s.cost_usd = rec.drafting_run?.usage?.cost_usd ?? 0;
@@ -317,6 +319,8 @@ export class Sources {
         await this.db.draftingJob.update({ where: { id }, data: { status: "COMPLETED", costUsd: 0, finishedAt: new Date(), message: `Stub pass completed for all ${parts.length} parts: the guarded path works for each part. ${reusedWords ? `${reusedWords[0].toUpperCase()}${reusedWords.slice(1).replace(/; $/, ". ")}` : ""}A stub has no AI content, so there is nothing to compare.` } });
         return;
       }
+      // Cancelled while the last part's AI call ran: its answer is not compared or applied (as the cancel says).
+      if (!(await wanted())) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", costUsd: cost, finishedAt: new Date(), message: `Cancelled while the AI ran: the parts' answers were not compared or applied. Cost US$${cost.toFixed(2)}.` } }); return; }
       // One answer: the reused entries and every part's checked answer (p2/convert rules per part), in form order.
       // One record: the reused entries and every part's checked answer (p2/convert rules per part), in form order
       // (engine/parts.ts assembleMerged; every form field reused → no part, labelled as no AI).
@@ -339,12 +343,17 @@ export class Sources {
   }
 
   private launching: Promise<unknown> = Promise.resolve();
+  /** The step is still wanted: it exists (no reset removed it), it runs, and nobody cancelled its AI work. */
+  async stillWanted(id: string) { const j = await this.db.draftingJob.findUnique({ where: { id }, include: { batch: true } }); return !!j && j.status === "RUNNING" && !j.batch?.cancelRequested; }
   /** One run of the guarded launcher (p2/launch.ts) for a job file: the only way the Studio starts a drafting call. One
    *  launch at a time in this server, and a launch the experiment ledger refused because another runner (another copy)
    *  holds it is started again after a pause: refused before any call, so nothing was spent (break B3). */
-  async launchOnce(jobId: string, mode: "stub" | "live"): Promise<{ code: number; out: string; err: string }> {
+  async launchOnce(jobId: string, mode: "stub" | "live", wanted?: () => Promise<boolean>): Promise<{ code: number; out: string; err: string; cancelled?: boolean }> {
     const turn = this.launching.then(async () => {
       for (let n = 0; ; n++) {
+        // A cancel is honoured up to the moment a paid call starts (QA-31 break M1): a live launch can wait its turn behind
+        // other launches, or for the ledger, for minutes; the step is asked again right before each attempt.
+        if (mode === "live" && wanted && !(await wanted())) return { code: 0, out: "", err: "", cancelled: true };
         const r = await this.launchProcess(jobId, mode);
         if (n >= 60 || !/ledger locked/i.test(r.out + r.err)) return r;
         await new Promise((res) => setTimeout(res, 2_000));
@@ -374,7 +383,8 @@ export class Sources {
       if (mode === "stub") { await this.db.draftingJob.update({ where: { id }, data: { status: "COMPLETED", message: "Stub pass completed: the guarded path works. A stub has no AI content, so there is nothing to compare.", detail: { job_id: jobId, steps }, finishedAt: new Date(), costUsd: 0 } }); return; }
       const took = this.savedRuns(jobId).find((r) => r.duration_ms)?.duration_ms;
       await this.db.draftingJob.update({ where: { id }, data: { message: `Calling the AI (guarded path; Claude Opus 5.5; up to US$5). ${took ? `The last real run of this form took about ${Math.max(1, Math.round(took / 60_000))} minutes.` : "A large form can take several minutes."} The whole form is drafted in one call, so there is no part-by-part progress yet.`, detail: { job_id: jobId, steps } } });
-      const live = await this.launchOnce(jobId, "live");
+      const live = await this.launchOnce(jobId, "live", () => this.stillWanted(id));
+      if (live.cancelled) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", costUsd: 0, finishedAt: new Date(), message: "Cancelled before it started its AI call (after the stub pass): nothing was sent. US$0.", detail: { job_id: jobId, steps } } }); return; }
       const lj = lastJson(live.out);
       steps.push({ step: "live call", exit: live.code, result: lj, error: live.code ? live.err.slice(-800) : undefined });
       if (!lj?.run_file) {
@@ -399,6 +409,8 @@ export class Sources {
         return;
       }
       await this.db.draftingJob.update({ where: { id }, data: { runId: rec.drafting_run?.run_id, runFile, costUsd: rec.drafting_run?.usage?.cost_usd ?? null, detail: { job_id: jobId, steps } } });
+      // Cancelled while the AI call ran: the answer stays in its run record, but is not compared or applied.
+      if (!(await this.stillWanted(id))) { await this.db.draftingJob.updateMany({ where: { id, status: "RUNNING" }, data: { status: "CANCELLED", finishedAt: new Date(), message: `Cancelled while the AI call ran: its answer was kept in the run record but not compared or applied. Cost US$${Number(rec.drafting_run?.usage?.cost_usd ?? 0).toFixed(2)}.` } }); return; }
       await this.ingest(id, attachmentId);
     } catch (e) {
       await this.db.draftingJob.update({ where: { id }, data: { status: "FAILED", message: (e as Error).message.slice(0, 500), detail: { job_id: jobId, steps }, finishedAt: new Date() } });

@@ -120,6 +120,7 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   j = await draft({ live: { exit: 0, out: { run_file: join(VARDIR, "no-such-run.json") } } }, parts);
   ok("parts fail: an unreadable run file ends the step FAILED with the reason (never left RUNNING)", j.status === "FAILED" && /ENOENT|no such file/i.test(j.message), j.message);
   // ──────────────────────────────────────────── QA-32: retry after a mid-run cancel of a draft in parts
+  // (review and break of the qa Minors pass, M1: a cancel during a part's stub pass must stop that part's paid call too)
   scenario({ stub: { exit: 0, out: { ok: true }, sleep_ms: 2500 }, live: { exit: 1, out: { refused: "budget: the experiment cap is reached" } } });
   r = await call("POST", `/attachments/${parts}/draft`, { mode: "live" });
   const mid = r.body.id as string;
@@ -127,7 +128,9 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   const midBatch = (await call("GET", `/jobs/${mid}`)).body.batchId as string;
   await call("POST", `/ai/batches/${midBatch}/cancel`, {});
   const cancelledMid = await finished(mid);
-  ok("QA-32 setup: a draft in parts cancelled while part 1 runs ends CANCELLED with part 2 not sent", cancelledMid.status === "CANCELLED" && cancelledMid.detail?.a4?.parts?.[1]?.status === "not started", { status: cancelledMid.status, parts: cancelledMid.detail?.a4?.parts?.map((x: { status: string }) => x.status) });
+  ok("QA-32 / M1: a draft in parts cancelled during part 1's stub pass ends CANCELLED, and no part makes its paid call", cancelledMid.status === "CANCELLED" && (cancelledMid.detail?.a4?.parts ?? []).every((x: { status: string }) => x.status === "not started") && !calls().some((x) => x.mode === "live"), { status: cancelledMid.status, parts: cancelledMid.detail?.a4?.parts?.map((x: { status: string }) => x.status), calls: calls().map((x) => x.mode) });
+  const midView = await call("GET", `/ai/batches/${midBatch}`);
+  ok("QA-32 (review 2): the AI work page is told the cancelled step can be retried (its Retry button follows the server's rule)", midView.body.jobs?.[0]?.retryable === true, midView.body.jobs?.[0]?.retryable);
   scenario({ live: { exit: 1, out: { refused: "budget: the experiment cap is reached" } } });
   r = await call("POST", `/ai/batches/${midBatch}/retry`, {});
   const retried = sql(`select count(*) from drafting_job where batch_id='${midBatch}' and attempt = 2`);
@@ -136,8 +139,25 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   scenario({ stub: { exit: 0, out: { ok: true } } });
   r = await call("POST", `/attachments/${parts}/draft`, { mode: "stub" });
   const okJob = await finished(r.body.id);
+  const okView = await call("GET", `/ai/batches/${okJob.batchId}`);
   r = await call("POST", `/ai/batches/${okJob.batchId}/retry`, {});
-  ok("QA-32 fail: a step that ran to its end is not retried, and the refusal says how to draft again", okJob.status === "COMPLETED" && r.status === 400 && /Nothing to retry: every step finished or ran to its end\. To draft a form anew, start its draft again/.test(r.body.message), { job: okJob.status, status: r.status, message: r.body?.message });
+  ok("QA-32 fail: a step that ran to its end is not retried (and not offered), and the refusal says how to draft again", okJob.status === "COMPLETED" && okView.body.jobs?.[0]?.retryable === false && r.status === 400 && /Nothing to retry: every step finished or ran to its end\. To draft a form anew, start its draft again/.test(r.body.message), { job: okJob.status, status: r.status, message: r.body?.message });
+
+  // ──────────────────────────────────────────── M1 on a whole-form draft (IMM 5409): cancelled before, or during, its paid call
+  scenario({ stub: { exit: 0, out: { ok: true }, sleep_ms: 2500 }, live: { exit: 1, out: { refused: "should never be called" } } });
+  r = await call("POST", `/attachments/${source}/draft`, { mode: "live" });
+  let wf = r.body.id as string;
+  await until(async () => calls().some((x) => x.mode === "stub"));
+  await call("POST", `/ai/batches/${(await call("GET", `/jobs/${wf}`)).body.batchId}/cancel`, {});
+  let wj = await finished(wf);
+  ok("M1 whole form: a cancel during the stub pass means the paid call is never made: CANCELLED before its AI call, US$0, retryable", wj.status === "CANCELLED" && /before it started its AI call/.test(wj.message) && !calls().some((x) => x.mode === "live") && (wj.costUsd ?? 0) === 0 && (await call("GET", `/ai/batches/${wj.batchId}`)).body.jobs?.[0]?.retryable === true, { status: wj.status, message: wj.message, calls: calls().map((x) => x.mode) });
+  scenario({ live: { exit: 0, sleep_ms: 2500, record: record({ status: "completed" }, { contract_valid: true, raw_output: JSON.stringify({ canonical_fields: [], entries: [] }) }) } });
+  r = await call("POST", `/attachments/${source}/draft`, { mode: "live" });
+  wf = r.body.id as string;
+  await until(async () => calls().some((x) => x.mode === "live"));
+  await call("POST", `/ai/batches/${(await call("GET", `/jobs/${wf}`)).body.batchId}/cancel`, {});
+  wj = await finished(wf);
+  ok("M1 whole form (break m1): a cancel during the paid call keeps its cost but never compares or applies its answer", wj.status === "CANCELLED" && /while the AI call ran: its answer was kept in the run record but not compared or applied\. Cost US\$0\.42/.test(wj.message) && sql(`select count(*) from normalization_item where job_id='${wf}'`) === "0", { status: wj.status, message: wj.message });
 
   // ──────────────────────────────────────────── QA-31 and QA-27: a screen-map draft (online IMM 5257 on the Visitor visa)
   const cap = (await call("POST", "/captures", { portal: "ircc_portal", form: "IMM 5257", title: "Visitor visa (Sample)" })).body.id as string;
@@ -149,34 +169,61 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   await call("PATCH", `/combinations/${vv}/portal`, { portal: "ircc_portal" });
   await call("POST", `/combinations/${vv}/lines`, { kind: "FORM", formKey: "IMM 5257" });
   const SM = `/online-versions/${ed}/screen-map/ai`;
+  const open = sql(`select string_agg(data_path, ',' order by data_path) from form_field_map where form_edition_id='${ed}' and outcome='unresolved'`).split(",").filter(Boolean);
   const bad: [string, unknown][] = [["an empty body", {}], ["a combination that is not an id", { combinationId: "vv.single", mode: "STUB" }], ["mode in lower case", { combinationId: vv, mode: "stub" }], ["a worst case sent as text", { combinationId: vv, mode: "LIVE", confirmWorstUsd: "0.50" }], ["a negative worst case", { combinationId: vv, mode: "LIVE", confirmWorstUsd: -1 }], ["a list instead of one object", [1]]];
   for (const [what, body] of bad) { r = await call("POST", SM, body); ok(`QA-27: ${what} → 400 in plain words (no validator text)`, r.status === 400 && !JARGON.test(r.body.message ?? "") && (r.body.message ?? "").length > 10, r.body?.message); }
   r = await call("POST", `${SM}/accept`, { jobId: "00000000-0000-4000-8000-000000000000", inputs: "birthCity" }, "user-C");
   ok("QA-27: accept with the inputs as text, not a list → 400 saying how to list them", r.status === 400 && /List the inputs to accept/.test(r.body.message) && !JARGON.test(r.body.message), r.body?.message);
+  r = await call("POST", `${SM}/accept`, [1], "user-C");
+  ok("QA-27 (review 4): a list body on accept is refused without the start's example", r.status === 400 && /one JSON object, not a list/.test(r.body.message) && !/combinationId/.test(r.body.message), r.body?.message);
   r = await call("POST", SM, { combinationId: vv, mode: "STUB" });
-  ok("QA-27 fail: a well-formed start is not refused by the new words", r.status === 201, r.body?.message);
+  ok("QA-27 fail: a well-formed start is not refused by the new words; a stub (US$0) makes no AI work entry (break m5)", r.status === 201 && !r.body.batchId, { status: r.status, batch: r.body?.batchId });
   await finished(r.body.id);
   const worst = Number(/US\$([0-9.]+)/.exec((await call("POST", SM, { combinationId: vv, mode: "LIVE" })).body.message ?? "")?.[1]);
+  const startLive = async () => { const x = await call("POST", SM, { combinationId: vv, mode: "LIVE", confirmWorstUsd: worst }); return { job: x.body.id as string, batch: x.body.batchId as string }; };
   scenario({ stub: { exit: 0, out: { ok: true }, sleep_ms: 2500 }, live: { exit: 1, out: { refused: "should never be called" } } });
-  r = await call("POST", SM, { combinationId: vv, mode: "LIVE", confirmWorstUsd: worst });
-  const smJob = r.body.id as string, smBatch = r.body.batchId as string;
-  const c = await call("POST", `/ai/batches/${smBatch}/cancel`, {});
-  const smDone = await finished(smJob);
-  ok("QA-31: a live screen-map draft is its own AI work and can be cancelled: cancelled during its stub pass, the paid call is never made (US$0)", !!smBatch && c.status === 201 && smDone.status === "CANCELLED" && /the AI call was not made/.test(smDone.message) && !calls().some((x) => x.mode === "live") && (smDone.costUsd ?? 0) === 0, { batch: !!smBatch, cancel: c.status, status: smDone.status, message: smDone.message, calls: calls().map((x) => x.mode) });
-  const smb = await call("GET", `/ai/batches/${smBatch}`);
-  ok("QA-31: its AI work ends CANCELLED too (not left running)", smb.body.status === "CANCELLED", smb.body?.status);
-  r = await call("POST", `/ai/batches/${smBatch}/retry`, {});
+  let sm = await startLive();
+  const c = await call("POST", `/ai/batches/${sm.batch}/cancel`, {});
+  let smDone = await finished(sm.job);
+  ok("QA-31: a live screen-map draft is its own AI work and can be cancelled: cancelled during its stub pass, the paid call is never made (US$0)", !!sm.batch && c.status === 201 && smDone.status === "CANCELLED" && /the AI call was not made/.test(smDone.message) && !calls().some((x) => x.mode === "live") && (smDone.costUsd ?? 0) === 0, { batch: !!sm.batch, cancel: c.status, status: smDone.status, message: smDone.message, calls: calls().map((x) => x.mode) });
+  const smb = await call("GET", `/ai/batches/${sm.batch}`);
+  ok("QA-31: its AI work ends CANCELLED (not left running), with a heading and its step not offered for retry (review 2)", smb.body.status === "CANCELLED" && smb.body.operation_label === "Screen-map draft with AI" && smb.body.jobs?.[0]?.retryable === false, { status: smb.body?.status, label: smb.body?.operation_label, retryable: smb.body?.jobs?.[0]?.retryable });
+  r = await call("POST", `/ai/batches/${sm.batch}/retry`, {});
   ok("QA-31 fail: a screen-map draft is not 'retried' through the field-map retry; the refusal says where to start it again", r.status === 409 && /started again from its online version/.test(r.body.message), r.body?.message);
-  r = await call("POST", `/ai/batches/${smBatch}/cancel`, {});
+  r = await call("POST", `/ai/batches/${sm.batch}/cancel`, {});
   ok("QA-31 fail: cancelling it again, once finished, is a 409 in plain words", r.status === 409 && /already finished/.test(r.body.message), r.body?.message);
-  scenario({ stub: { exit: 0, out: { ok: true } } });
-  r = await call("POST", SM, { combinationId: vv, mode: "STUB" });
-  const smOk = await finished(r.body.id);
-  const smOkBatch = await call("GET", `/ai/batches/${r.body.batchId}`);
-  ok("QA-31 fail: a screen-map draft that is not cancelled runs to its end, and its AI work ends COMPLETED", smOk.status === "COMPLETED" && smOkBatch.body.status === "COMPLETED", { job: smOk.status, batch: smOkBatch.body?.status });
+  // Break M1: the live launch waits (here for the ledger, held by another launch); a cancel in that wait is honoured.
+  scenario({ locked_first: true, live: { exit: 1, out: { refused: "should never be called a second time" } } });
+  sm = await startLive();
+  await until(async () => calls().some((x) => x.mode === "live"));
+  await call("POST", `/ai/batches/${sm.batch}/cancel`, {});
+  smDone = await finished(sm.job);
+  ok("QA-31 / break M1: a cancel while the live launch waits for the ledger is honoured: no second launch, CANCELLED, US$0", smDone.status === "CANCELLED" && calls().filter((x) => x.mode === "live").length === 1 && (smDone.costUsd ?? 0) === 0, { status: smDone.status, calls: calls().map((x) => x.mode) });
+  // Break m1: a cancel during the paid call: the answer is kept in its run record, never offered for acceptance.
+  const answer = { canonical_fields: [], entries: [{ input: open[0], outcome: "not_a_fact", person: "none", fact: null, transform: null, confidence: "medium", unresolved_reason: "asked only by the portal", evidence_quote: open[0] }] };
+  scenario({ live: { exit: 0, sleep_ms: 2500, record: record({ status: "completed", usage: { cost_usd: 0.31 } }, { contract_valid: true, raw_output: JSON.stringify(answer) }) } });
+  sm = await startLive();
+  await until(async () => calls().some((x) => x.mode === "live"));
+  await call("POST", `/ai/batches/${sm.batch}/cancel`, {});
+  smDone = await finished(sm.job);
+  r = await call("POST", `${SM}/accept`, { jobId: sm.job }, "user-C");
+  ok("QA-31 / break m1: cancelled during the paid call: CANCELLED with its cost, and its proposals cannot be accepted", smDone.status === "CANCELLED" && smDone.costUsd === 0.31 && /not offered for acceptance/.test(smDone.message) && r.status === 409, { status: smDone.status, cost: smDone.costUsd, accept: r.status });
+  scenario({ live: { exit: 1, out: { refused: "budget: the experiment cap is reached" } } });
+  sm = await startLive();
+  smDone = await finished(sm.job);
+  const smFailed = await call("GET", `/ai/batches/${sm.batch}`);
+  ok("QA-31 fail: a live screen-map draft that is not cancelled ends as it ended (FAILED here), and so does its AI work, never CANCELLED", smDone.status === "FAILED" && smFailed.body.status === "FAILED" && smFailed.body.jobs?.[0]?.retryable === false, { job: smDone.status, batch: smFailed.body?.status });
 
   ok("none of these paths wrote to the shared spend ledger (no reservation, no correction line)", statSync(LEDGER).size === ledgerBefore);
   ok("nothing was applied: IMM 5409 has no map rows from these drafts", sql(`select count(*) from drafting_job where attachment_id='${source}' and status='APPLIED'`) === "0");
+
+  // ──────────────────────────────────────────── break M2: a workspace reset while a screen-map draft runs
+  scenario({ stub: { exit: 0, out: { ok: true }, sleep_ms: 2500 }, live: { exit: 1, out: { refused: "should never be called" } } });
+  await startLive();
+  r = await call("POST", "/demo/reset", { confirm: "RESET" });
+  await new Promise((res) => setTimeout(res, 4000));
+  const alive = await call("GET", "/session").catch(() => ({ status: 0, body: null }));
+  ok("break M2: a reset while a screen-map draft runs leaves the server running (the draft ends nowhere, quietly)", r.status < 300 && alive.status === 200, { reset: r.status, session: alive.status });
 
   // ──────────────────────────────────────────── evidence and reset
   const out = join(STUDIO, "evidence", "forms-slice2b"); mkdirSync(out, { recursive: true });
