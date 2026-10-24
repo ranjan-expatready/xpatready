@@ -6,13 +6,14 @@
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: F1-forms-channels
-stage: BUILD
+stage: CHECK
 owner: Builder
-next_action: BUILD slice 2b (F5 page-field values on static forms, F6 oath block as a person step, QA-15 form-code case, D3 screen-map repeat at US$0), then CHECK.
+next_action: CHECK slice 2b: screen-reviewer and screen-breaker running (review-slice2b.md, break-report-slice2b.md); then FIX or owner Lead.
 blocked_by: none
 updated: 2026-10-24
 
 ## Log (last 10 lines)
+- 2026-10-24 · F1 · BUILD → CHECK (slice 2b) · all suites green on lane ports: slice 2b 28/28, forms channels 106/106 (capture check updated for QA-15), slice 2 52/52, guard 75, launch 53, engine 38, drafting 48, orchestration 22, grounding 29, Screen 01 API 135, channels 42, rules 67, browser 136, race pass, runtime 85, case engine 20; qa F1 probe 26/0 (QA-15 fixed); explicit any 437. US$0. Reviewer and breaker launched.
 - 2026-10-24 · F1 · BUILD (slice 2b) · F5, F6, QA-15, D3 built (521945f); slice 2b 28/28; full suite run in progress (drafting 48, orchestration 22, engine 38, slice 2 52/52; forms channels check updated for QA-15). US$0.
 - 2026-10-24 · F1 · CHECK → BUILD (slice 2b) · applied Lead note 2026-10-24 22:00 (slice 2 merged; cloud clone merged main cd97cb6, cloud-setup.sh run).
 - 2026-10-24 · F1 · CHECK (slice 2) · applied Lead note 2026-10-24: merged main (Screen 01, 1cb174a6), resolved 4 conflicts; all suites green on lane ports: guard 75, launch 53, slice 2 52, F1 106, engine 38, rules 65, drafting 48, API 130, channels 42, release race pass, grounding 29, orchestration 22; explicit any back to 437; lane copies stopped. US$0. Owner → Lead.
@@ -22,4 +23,3 @@ updated: 2026-10-24
 - 2026-10-23 · F1 · FIX (slice 2) · full run: guard 75, engine 38, rules 54, drafting 48, F1 106, API 94, grounding 29, orchestration 22; launch and slice 2 test fixes (ledger lock is not a ticket clash; a test-only pause between parts for the cancel check).
 - 2026-10-23 · F1 · CHECK → FIX (slice 2) · reviewer: ship after fixes, journey 6/10, 1 Must + 5 Major; breaker: 3 Blocker + 4 Major + 13 Minor; fixes written with tests (guard 75/75); suites running. US$0.
 - 2026-10-23 · F1 · CHECK (slice 2) · F1 suite rerun 106/106 after the test-client fix; waiting on reviewer and breaker.
-- 2026-10-23 · F1 · BUILD → CHECK (slice 2) · suites: guard 64/64, launch 53/53, slice 2 38/38, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 22/22 (QA-8 fixed); F1 rerun after a test-client keep-alive fix; reviewer and breaker launched. US$0.

@@ -1,11 +1,11 @@
 {
- "at": "2026-10-24T18:44:31.543Z",
+ "at": "2026-10-24T18:49:46.027Z",
  "port": 4450,
  "database": "xr_studio_forms_f1",
  "paid_calls": 0,
  "fixtures": "Sample (tests/fixtures/portal/README.md)",
- "pass": 105,
- "fail": 1,
+ "pass": 106,
+ "fail": 0,
  "log": [
   {
    "name": "contract: a structure-only record is valid",
@@ -201,10 +201,11 @@
    "detail": "This is a saved portal screen, not a guide: add it to a portal capture (with its portal), where it is checked for answers and approved by a second person. Nothing was added or attached."
   },
   {
-   "name": "capture fail: an unknown portal, a lower-case code and a short title are refused with field errors",
-   "ok": false,
+   "name": "capture fail: an unknown portal, a code that starts with a digit and a short title are refused with field errors (a lower-case code is accepted: QA-15, slice 2b)",
+   "ok": true,
    "detail": [
     "portal",
+    "form",
     "title"
    ]
   },
@@ -245,8 +246,8 @@
    "name": "finish answers before the review document is printed (printed in the background; HTML until the PDF exists)",
    "ok": true,
    "detail": {
-    "ms": 21,
-    "review_file": "prototype/studio/var/isolated-forms_f1/workspaces/demo/portal-twins/IMM5257-ircc_portal-d1e7525f-d6375ca38c3b.review.html"
+    "ms": 28,
+    "review_file": "prototype/studio/var/isolated-forms_f1/workspaces/demo/portal-twins/IMM5257-ircc_portal-eedc54b0-d6375ca38c3b.review.html"
    }
   },
   {
@@ -272,7 +273,7 @@
    "name": "approval: a second person makes it an online version, re-check date set (Sample 180 days)",
    "ok": true,
    "detail": {
-    "id": "375dfe1d-bf44-4744-9a91-1f2ac26fa66b",
+    "id": "8c792608-8487-48ce-9f2b-2a03abd8ff62",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -544,7 +545,7 @@
    "name": "confirm: a second person confirms the identical re-capture; the re-check date runs from it, once",
    "ok": true,
    "detail": {
-    "id": "375dfe1d-bf44-4744-9a91-1f2ac26fa66b",
+    "id": "8c792608-8487-48ce-9f2b-2a03abd8ff62",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
     "channel": "ONLINE",
     "portal": "ircc_portal",
