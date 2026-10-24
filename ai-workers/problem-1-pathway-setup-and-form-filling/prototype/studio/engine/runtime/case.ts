@@ -186,9 +186,9 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const { known, confirm } = knownOf(s, people, answers, rows, today);
   const r = render(s, renderPeople, known);
   const subjectOf = (about: string) => (about === "case" ? caseSubject.subjectId : about.split("/")[0]);
-  const fills = new Map<string, Map<string, { form: string; person: string; boxes: number }>>();
+  const fills = new Map<string, Map<string, { form: string; person: string; subject: string; boxes: number }>>();
   for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about) {
-    const k = `${b.about}|${b.fact}`, m = fills.get(k) ?? new Map(); const e = m.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, boxes: 0 }; e.boxes++; m.set(`${c.form}|${c.person}`, e); fills.set(k, m);
+    const k = `${b.about}|${b.fact}`, m = fills.get(k) ?? new Map(); const e = m.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, subject: c.person, boxes: 0 }; e.boxes++; m.set(`${c.form}|${c.person}`, e); fills.set(k, m);
   }
   // Within one section for one person, questions follow the release's placement order (purpose before its "other"
   // details, "from" before "to"); the common renderer lists them by label.

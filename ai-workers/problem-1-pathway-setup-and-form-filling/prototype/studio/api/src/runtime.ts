@@ -7,7 +7,7 @@
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import type { z } from "zod";
-import { ConfirmSection, NewCase, NewPerson, NewRow, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
+import { ConfirmSection, fillsText, NewCase, NewPerson, NewRow, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView, checkValue, isClientField, type Answer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
@@ -27,7 +27,7 @@ const FIELD_KEY = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+)+$/;
 const short = (id: string) => id.slice(0, 8);
 const unique = (e: unknown) => (e as { code?: string }).code === "P2002";
 
-type Reached = Awaited<ReturnType<Runtime["reach"]>>;
+export type Reached = Awaited<ReturnType<Runtime["reach"]>>;
 
 @Injectable()
 export class Runtime {
@@ -36,7 +36,7 @@ export class Runtime {
   /** The case, if this person may reach it: the officer any case of the workspace, a client only their own (others are
    *  "not found", as the team's cross-tenant rule). Configuration people hold neither duty. The pin must still match
    *  its release's hash: a changed pin or release is refused, never read. */
-  private async reach(actor: Actor, caseId: string, want: "read" | "answer" | "officer") {
+  async reach(actor: Actor, caseId: string, want: "read" | "answer" | "officer") {
     const workspaceId = await this.ws.id();
     const officer = isOfficer(actor), client = (actor.duties as readonly string[]).includes("answer");
     if (!officer && !client) fail(`${actor.name} (simulated) works on configuration, not on cases.`, HttpStatus.FORBIDDEN);
@@ -48,8 +48,8 @@ export class Runtime {
     return c!;
   }
 
-  private snapshotOf(c: Reached) { return c.pins[0].release.snapshot as unknown as Snapshot; }
-  private peopleOf(c: Reached): Participant[] {
+  snapshotOf(c: Reached) { return c.pins[0].release.snapshot as unknown as Snapshot; }
+  peopleOf(c: Reached): Participant[] {
     return c.participants.map((p) => ({ subjectId: p.subjectId, role: p.role as Participant["role"], label: p.subject.label, applies: p.applies }));
   }
 
@@ -153,7 +153,7 @@ export class Runtime {
     return { subject_id: subjectId, applies: b.applies };
   }
 
-  private async state(c: Reached) {
+  async state(c: Reached) {
     const subjects = c.participants.map((p) => p.subjectId);
     const [answers, rows] = await Promise.all([
       this.db.clientCanonicalAnswer.findMany({ where: { subjectId: { in: subjects }, supersededById: null } }),
@@ -215,7 +215,7 @@ export class Runtime {
     const ans = rowKey ? q?.rows.find((x) => x.row === rowKey)?.answer : q?.answer;
     const fills = q?.fills ?? [];
     return { answer: ans ?? { id: newId, problems: checkValue(s, fieldKey, b.value) }, fills,
-      message: fills.length ? `Saved. It fills ${fills.map((f) => `${f.form} for ${f.person} (${f.boxes} box${f.boxes > 1 ? "es" : ""})`).join(", ")}.` : "Saved." };
+      message: fills.length ? `Saved. It fills ${fillsText(fills, true)}.` : "Saved." };
   }
 
   /** Adds a row to a person's repeating group (or the application's, for a case-level group). Rows of one group are

@@ -37,7 +37,7 @@ export const NewCase = z.object({
 export const NewPerson = z.object({
   role: z.enum(["spouse_or_partner", "child"], { message: "A person joins as a spouse or partner, or as a child." }),
   displayName: text("Give the person a display name.", 2, 120),
-  applies: z.boolean().default(true),
+  applies: z.boolean({ message: "Say whether the person is travelling (true or false)." }).default(true),
   /** The same key again answers with the person already added (a double press adds one person, QA-28). */
   idempotencyKey: idemKey.optional(),
 });
@@ -99,7 +99,8 @@ export type ViewQuestion = {
   options: { key: string; label: string }[] | null; note: string | null;
   /** Country names offered while typing a country that has no answer list yet (the release's country list). */
   countries: string[] | null;
-  fills: { form: string; person: string; boxes: number }[];
+  /** Each form this fact fills, for whom (subject: the person's id, so two people with one name never mix) and how many form fields. */
+  fills: { form: string; person: string; subject: string; boxes: number }[];
 };
 export type ViewSection = { subjectId: string; about_label: string; section: string; title: string; questions: ViewQuestion[]; answered: number; confirmed: number; invalid: number; missing: string[] };
 /** A section check the case's answers trigger (RT-7, release data): a warning on the person's answers, never a block
@@ -109,3 +110,50 @@ export type QuestionnaireView = {
   mode: "sqr" | "agent"; sections: ViewSection[]; checks: ViewCheck[]; forms: { form: string; person: string; applies: boolean | string }[];
   summary: { not_asked: number; questions: number; answered: number; confirmed: number; missing: number };
 };
+
+// ------------------------------------------------------------------ R1d: form copies (plan §8 RT-13…RT-17)
+/** "Generate a copy": a new copy each time the officer asks (never on its own); the same key again answers with it. */
+export const GenerateCopy = z.object({ idempotencyKey: idemKey.optional() });
+/** A copy is locked when its validated copy was uploaded back or it was filed; a locked copy never changes (P-65 d). */
+export const LOCK_KINDS = { validated_copy_uploaded: "Validated copy uploaded back", filed: "Filed" } as const;
+export const LockCopy = z.object({ kind: z.enum(["validated_copy_uploaded", "filed"], { message: "Say how the copy was locked: validated copy uploaded back, or filed." }) });
+
+/** One copy as the agent view shows it: its state, whether today's confirmed facts differ from those it read (out of
+ *  date; on a locked copy: stale), and what changed. */
+export type FormCopy = {
+  id: string; status: "QUEUED" | "RUNNING" | "GENERATED" | "FAILED"; created_at: string; created_by: string; finished_at: string | null; error: string | null;
+  locked: { kind: keyof typeof LOCK_KINDS; at: string; by: string } | null; out_of_date: boolean; stale: boolean; changed: string[];
+  counts: { written: number; by_hand: number; blank: number; not_written: number; by_a_person: number } | null; intact: boolean | null; person_steps: string[];
+  /** Form fields the officer writes by hand in Adobe, each with its question and why (review M3). */
+  by_hand: { label: string; why: string }[];
+  /** The copy's file is on disk and unchanged; false: it cannot be handed over (break m1). */
+  file_ok: boolean;
+};
+/** One form for one person on the case: what a copy made now would write (the draft), whether it can be filed (P-71),
+ *  and every copy made, newest first. */
+export type CaseForm = {
+  form: string; title: string; subject_id: string; person: string; draft: { written_now: number; mapped: number; unconfirmed: number };
+  readiness: Readiness; copies: FormCopy[];
+  /** The evidence lane's fill trial for this form passed (P-65 (a)); until it does a copy is "Checked copy, not for filing". */
+  trial_passed: boolean;
+  /** The form no longer applies to this person (for example marked not travelling); its copies stay listed (break M4). */
+  applies: boolean;
+};
+/** P-71: what blocks filing one form for one person. missing: a required fact not answered, answered but not confirmed,
+ *  or confirmed with a problem (it would be written wrong). empty_groups: repeating groups the form reads with no entries
+ *  (shown before filing; whether a group needs one entry is configuration, not known yet). */
+export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" }[]; empty_groups: string[] };
+
+/** Which forms an answer fills, short enough for a household (Lead, R1d early look): one line per form, the person named
+ *  when there is one, else how many people ("IMM 5257 for 6 people"); with counts, the form fields it fills (P-63). */
+export function fillsText(fills: { form: string; person: string; subject?: string; boxes: number }[], counts = false): string {
+  const byForm = new Map<string, { person: string; boxes: number }[]>();
+  for (const f of fills) byForm.set(f.form, [...(byForm.get(f.form) ?? []), f]);
+  return [...byForm].map(([form, list]) => {
+    const n = list.reduce((s, x) => s + x.boxes, 0), fields = counts ? ` (${n} form field${n === 1 ? "" : "s"})` : "";
+    return `${form} for ${list.length === 1 ? list[0].person : `${list.length} people`}${fields}`;
+  }).join(", ");
+}
+
+/** Why a copy cannot be locked yet (P-71, Lead R1d early look): the same words in the API and on the button. */
+export const notReady = (n: number) => `${n} fact${n === 1 ? "" : "s"} to answer or confirm before filing: do that, then generate a new copy.`;

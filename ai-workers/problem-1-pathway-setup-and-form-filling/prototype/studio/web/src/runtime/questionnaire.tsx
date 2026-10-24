@@ -1,7 +1,7 @@
 // Questionnaire renderer (runtime lane, R1c, P-47): one component, two modes, everything drawn from the case's pinned
 // release through the runtime API (engine/runtime/case.ts). SQR: the client on a phone, one part per screen (one
 // section for one person), "answering for", save and resume. Agent view: the case officer on a desktop, every section
-// and person, each fact with its source, confirmation (P-72) and the form boxes it fills; edit in a dialog, "Confirm
+// and person, each fact with its source, confirmation (P-72) and the form fields it fills; edit in a dialog, "Confirm
 // section". Types, limits, answer lists and rules are data; validation never blocks saving (plan §5).
 import * as React from "react";
 import { useSearchParams } from "react-router-dom";
@@ -12,7 +12,7 @@ import { Button, Dialog, Input, Notice, Pill, Select, Textarea } from "@/compone
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import type { QuestionnaireView, ViewAnswer, ViewCheck, ViewQuestion, ViewSection } from "../../../contracts/runtime";
+import { fillsText, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 
 export type CasePerson = { subject_id: string; role: "case" | "principal" | "spouse_or_partner" | "child"; label: string; applies: boolean };
 export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; people: CasePerson[] };
@@ -335,7 +335,12 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
     setStatus(Object.keys(errs).length ? "failed" : "saved");
     return Object.keys(errs).length === 0;
   }
-  async function saveAndContinue() {
+  // One way to leave a part, whichever button (qa QA-36, Lead decision under P-47): what was typed is saved (never lost);
+  // an answer that needs a fix, a check, or an empty required question keeps the person on the part with the summary
+  // and a way to leave anyway in the direction they chose.
+  const [leaveTo, setLeaveTo] = React.useState<{ to: number | null; words: string }>({ to: index + 1 < total ? index + 1 : null, words: "leave them for now and continue" });
+  async function leave(to: number | null, words: string, forward: boolean) {
+    setLeaveTo({ to, words });
     const ok = await save();
     if (!alive.current) return;
     const fresh = qc.getQueriesData<View>({ queryKey: ["runtime", "view", caseId, "sqr"] })[0]?.[1];
@@ -343,9 +348,11 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
     const invalid = now.questions.some((q) => (q.group ? q.rows.some((r) => r.answer?.problems.length) : q.answer?.problems.length));
     const flagged = (fresh?.checks ?? view.checks).some((c) => c.subjectId === part.subjectId && c.section === part.section) || now.missing.length > 0;
     if (!ok || invalid || flagged) { setSummary(true); setFocusSummary((n) => n + 1); return; }
-    markPassed(caseId, part);
-    go(index + 1 < total ? index + 1 : null);
+    if (forward) markPassed(caseId, part);
+    go(to);
   }
+  const saveAndContinue = () => leave(index + 1 < total ? index + 1 : null, "leave them for now and continue", true);
+  const back = () => (d.dirty.length ? leave(index > 0 ? index - 1 : null, "leave them for now and go back", false) : go(index > 0 ? index - 1 : null));
   async function addRow() {
     if (adding) return;
     setAdding(true);
@@ -356,13 +363,15 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
     try { await api(`/runtime/cases/${caseId}/groups/${part.subjectId}/rows/${row}`, { method: "DELETE" }); setRemoving(null); await refresh(); toast.push({ tone: "ok", text: "Entry removed. Its answers are kept in the case history." }); } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
   }
   const field = (q: Question, row?: string) => <QuestionField key={keyOf(q, row)} q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} warnings={warningsOf(q, row)} />;
+  // Saved answers of this part that do not pass their checks (stored and flagged, P-47): never reported as plainly saved.
+  const needFix = cells.filter(({ q, row }) => (cellAnswer(q, row)?.problems.length ?? 0) > 0).length;
   const confirmWords = [...new Set(cells.map(({ q, row }) => cellAnswer(q, row)?.why).filter(Boolean))];
 
   return (
     <div className="mx-auto max-w-xl">
       <div className="mb-3 flex items-center justify-between gap-3 text-sm">
-        <button className="flex min-h-11 items-center gap-1 font-medium text-text-link hover:underline" disabled={status === "saving"} onClick={async () => { if (d.dirty.length && !(await save())) { setSummary(true); setFocusSummary((n) => n + 1); return; } go(index > 0 ? index - 1 : null); }}><ArrowLeft className="size-4" aria-hidden />Back</button>
-        <span role="status" className={cn("text-[13px]", status === "failed" ? "text-text-danger" : "text-text-ok")}>{status === "saving" ? "Saving…" : status === "saved" ? "✓ Saved" : status === "failed" ? "Some answers were not saved" : d.dirty.length ? "" : part.answered ? "✓ Saved" : ""}</span>
+        <button className="flex min-h-11 items-center gap-1 font-medium text-text-link hover:underline" disabled={status === "saving"} onClick={() => void back()}><ArrowLeft className="size-4" aria-hidden />Back</button>
+        <span role="status" className={cn("text-[13px]", status === "failed" || (needFix && !d.dirty.length) ? "text-text-danger" : "text-text-ok")}>{status === "saving" ? "Saving…" : status === "failed" ? "Some answers were not saved" : d.dirty.length ? "" : needFix ? `Saved: ${needFix} answer${needFix === 1 ? " needs" : "s need"} a fix` : status === "saved" || part.answered ? "✓ Saved" : ""}</span>
       </div>
       <p className="text-[13px] text-text-muted">Part {index + 1} of {total} · {part.title}</p>
       <div className="mb-4 mt-1.5 h-1.5 rounded-full bg-text/10" aria-hidden><div className="h-1.5 rounded-full bg-primary" style={{ width: `${(100 * (index + 1)) / total}%` }} /></div>
@@ -373,7 +382,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
           <ul className="mt-1 space-y-1 text-sm">
             {listed.map(({ q, row }) => <li key={keyOf(q, row)}><a className={cn("font-medium underline", problemsOf(q, row).length ? "text-text-danger" : "text-text-warn")} href={`#f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} onClick={(e) => { e.preventDefault(); document.getElementById(`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`)?.focus(); }}>{q.label}{row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""}{/[?:]$/.test(q.label) ? " " : ": "}{problemsOf(q, row)[0] ?? warningsOf(q, row)[0]}{!problemsOf(q, row).length && partChecks.some((c) => c.fact === q.fact && c.illustrative) ? " (Sample check)" : ""}</a></li>)}
           </ul>
-          <p className="mt-2 text-xs text-text-muted">Your other answers are saved. You can fix these now, or <button className="font-medium text-text-link underline" onClick={() => go(index + 1 < total ? index + 1 : null)}>leave them for now and continue</button>.</p>
+          <p className="mt-2 text-xs text-text-muted">Your other answers are saved. You can fix these now, or <button className="font-medium text-text-link underline" onClick={() => go(leaveTo.to)}>{leaveTo.words}</button>.</p>
         </div>
       ) : null}
 
@@ -509,7 +518,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
           {a ? (
             <>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} /></div>
-              <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? ` · fills ${q.fills.map((f) => `${f.form} for ${f.person}`).join(", ")}` : ""}</p>
+              <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? <> · <span title={q.fills.map((f) => `${f.form} for ${f.person}`).join("\n")}>fills {fillsText(q.fills)}</span></> : null}</p>
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
               {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}
             </>
@@ -578,7 +587,7 @@ function EditDialog({ caseId, q, row, close }: { caseId: string; q: Question; ro
     setBusy(false);
   }
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`${a ? "Change" : "Add"}: ${q.label}`} description={`${q.about_label}${row ? ` · entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1}` : ""}${q.fills.length ? ` · fills ${q.fills.map((f) => `${f.form} for ${f.person} (${f.boxes} box${f.boxes > 1 ? "es" : ""})`).join(", ")}` : ""}`}
+    <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`${a ? "Change" : "Add"}: ${q.label}`} description={`${q.about_label}${row ? ` · entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1}` : ""}${q.fills.length ? ` · fills ${fillsText(q.fills, true)}` : ""}`}
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={busy} onClick={() => void save()}>Save</Button></>}>
       <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
         <QuestionField q={q} idBase="edit-field" draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setError(null); }} errors={error ? [error] : a?.problems ?? []} compact officer />

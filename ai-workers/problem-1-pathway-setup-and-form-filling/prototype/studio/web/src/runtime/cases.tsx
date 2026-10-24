@@ -9,6 +9,7 @@ import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { noRetryOnRefusal, Questionnaire, useCaseView, type CaseInfo, type CasePerson } from "./questionnaire";
+import { FormsPanel } from "./forms";
 
 /** Simulated case people (api/src/core.ts RUNTIME_ACTORS); the switch is demo chrome. */
 const PEOPLE = [
@@ -23,8 +24,11 @@ const ROLE: Record<CasePerson["role"], string> = { case: "Application", principa
 export function RuntimeApp() {
   const actor = useActorId();
   // Arriving from the studio as a configuration person: act as the case officer (configuration people reach no case).
-  React.useLayoutEffect(() => { if (!PEOPLE.some((p) => p.id === getActor())) setActor("user-O"); }, [actor]);
-  if (!PEOPLE.some((p) => p.id === actor)) return null;
+  // The switch re-renders this page itself (qa QA-35): the person hook subscribes only after this effect, so its
+  // notice of the switch would be lost and the page would stay blank.
+  const [, switched] = React.useState(0);
+  React.useLayoutEffect(() => { if (!PEOPLE.some((p) => p.id === getActor())) { setActor("user-O"); switched((n) => n + 1); } }, [actor]);
+  if (!PEOPLE.some((p) => p.id === getActor())) return null;
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-30 flex h-14 min-w-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
@@ -156,6 +160,7 @@ function CasePage() {
           {people.map((p) => <li key={p.subject_id} className="flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-sm"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{p.label}</span><span className="text-xs text-text-muted">{ROLE[p.role]}</span>{p.applies ? null : <Pill title="Not travelling: asked only what the principal's forms need about them">Not travelling</Pill>}</li>)}
         </ul>
       </section>
+      <FormsPanel caseId={c.id} />
       <Questionnaire caseId={c.id} mode="agent" />
       {adding ? <AddPersonDialog caseId={c.id} role={adding} close={() => setAdding(null)} /> : null}
     </div>
