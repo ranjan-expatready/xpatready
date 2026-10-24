@@ -13,25 +13,51 @@ import { Button, Field, Input, Notice, Panel, Pill, Select, Table } from "@/comp
 
 const refresh = (qc: ReturnType<typeof useQueryClient>, id: string) => { for (const k of [["combination-summary", id], ["combination", id], ["catalogue"], ["draft"], ["drafting-sources", id], ["config", id]]) void qc.invalidateQueries({ queryKey: k }); };
 
+/** A select that saves what is picked (break K1): a mouse pick saves at once; arrow keys only move the choice, saved
+ *  after a pause or when focus leaves, so one key press is not one save. It stays enabled while saving, so focus stays
+ *  on it. Saves run one at a time, each from the last saved value (the server's version check); a refusal puts the
+ *  saved value back. */
+function usePick<T extends string>(saved: T, save: (v: T, from: T) => Promise<boolean>) {
+  const [value, setValue] = React.useState<T>(saved);
+  const last = React.useRef(saved), key = React.useRef(false), running = React.useRef(false), pending = React.useRef<T | null>(null);
+  const timer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  React.useEffect(() => { last.current = saved; if (!running.current && pending.current === null) setValue(saved); }, [saved]);
+  React.useEffect(() => () => clearTimeout(timer.current), []);
+  const flush = async () => {
+    clearTimeout(timer.current);
+    if (running.current || pending.current === null) return;
+    const v = pending.current; pending.current = null;
+    if (v === last.current) return;
+    running.current = true;
+    const ok = await save(v, last.current).catch(() => false);
+    running.current = false;
+    if (ok) last.current = v; else if (pending.current === null) setValue(last.current);
+    if (pending.current !== null) void flush();
+  };
+  return {
+    value, onKeyDown: () => { key.current = true; }, onPointerDown: () => { key.current = false; }, onBlur: () => { key.current = false; void flush(); },
+    onChange: (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const v = e.target.value as T; setValue(v); pending.current = v;
+      if (key.current) { clearTimeout(timer.current); timer.current = setTimeout(() => void flush(), 800); } else void flush();
+    },
+  };
+}
+
 /** The line under "Forms": the portal the filing goes through (the author chooses it) and the derived filing method. */
 export function FilingLine({ id, sum, canAuthor }: { id: string; sum: CombinationSummary; canAuthor: boolean }) {
   const qc = useQueryClient(); const toast = useToast();
-  const [busy, setBusy] = React.useState(false);
   // The chosen value shows at once and stays while it saves; the server's answer replaces it (or puts it back on error).
-  const [value, setValue] = React.useState(sum.portal ?? "");
-  React.useEffect(() => setValue(sum.portal ?? ""), [sum.portal]);
-  const setPortal = async (portal: string) => {
-    setBusy(true); setValue(portal);
-    try { await api(`/combinations/${id}/portal`, { method: "PATCH", json: { portal: portal || null, from: sum.portal } }); toast.push({ tone: "ok", text: portal ? `Filed through the ${PORTALS.find((p) => p.key === portal)?.label}` : "Portal cleared" }); refresh(qc, id); }
-    catch (e) { setValue(sum.portal ?? ""); toast.push({ tone: "danger", text: (e as Error).message }); } finally { setBusy(false); }
-  };
+  const pick = usePick(sum.portal ?? "", async (portal, from) => {
+    try { await api(`/combinations/${id}/portal`, { method: "PATCH", json: { portal: portal || null, from: from || null } }); toast.push({ tone: "ok", text: portal ? `Filed through the ${PORTALS.find((p) => p.key === portal)?.label}` : "Portal cleared" }); refresh(qc, id); return true; }
+    catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); return false; }
+  });
   return (
     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" data-filing>
       <span title={sum.filingDetail !== sum.filing ? sum.filingDetail : undefined}><span className="text-text-muted">Filing: </span><b className="font-semibold">{sum.filing}</b>{sum.filingDetail !== sum.filing && sum.forms.length ? <span className="sr-only"> ({sum.filingDetail})</span> : null}</span>
-      <span className="flex items-center gap-2">
+      <span className="flex min-w-0 max-w-full items-center gap-2">
         <label htmlFor={`portal-${id}`} className="text-text-muted">Portal</label>
         {canAuthor ? (
-          <Select id={`portal-${id}`} className="h-8 w-auto min-w-0 max-w-full" value={value} disabled={busy} onChange={(e) => void setPortal(e.target.value)}>
+          <Select id={`portal-${id}`} className="h-8 w-auto min-w-0 max-w-full" {...pick}>
             <option value="">No portal yet</option>
             {PORTALS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
           </Select>
@@ -45,19 +71,15 @@ export function FilingLine({ id, sum, canAuthor }: { id: string; sum: Combinatio
 /** "Filed as" for one line: the author picks PDF upload, Online or Signed PDF upload; the default for this portal is marked. */
 export function ChannelCell({ id, line, canAuthor }: { id: string; line: CombinationSummary["forms"][number]; canAuthor: boolean }) {
   const qc = useQueryClient(); const toast = useToast();
-  const [busy, setBusy] = React.useState(false);
-  const [value, setValue] = React.useState<Channel>(line.channel);
-  React.useEffect(() => setValue(line.channel), [line.channel]);
-  const set = async (channel: Channel) => {
-    setBusy(true); setValue(channel);
-    try { await api(`/combinations/${id}/forms/${encodeURIComponent(line.code)}/channel`, { method: "PATCH", json: { channel, from: line.channel } }); toast.push({ tone: "ok", text: `${line.code} filed as ${CHANNEL_WORDS[channel]}` }); refresh(qc, id); }
-    catch (e) { setValue(line.channel); refresh(qc, id); toast.push({ tone: "danger", text: (e as Error).message }); } finally { setBusy(false); }
-  };
+  const pick = usePick<Channel>(line.channel, async (channel, from) => {
+    try { await api(`/combinations/${id}/forms/${encodeURIComponent(line.code)}/channel`, { method: "PATCH", json: { channel, from } }); toast.push({ tone: "ok", text: `${line.code} filed as ${CHANNEL_WORDS[channel]}` }); refresh(qc, id); return true; }
+    catch (e) { refresh(qc, id); toast.push({ tone: "danger", text: (e as Error).message }); return false; }
+  });
   if (line.document) return <span className="text-text-muted">Checklist (not filed)</span>;
   return (
     <div className="flex flex-col gap-0.5">
       {canAuthor ? (
-        <Select aria-label={`How ${line.code} is filed`} className="h-8 w-auto" value={value} disabled={busy} onChange={(e) => void set(e.target.value as Channel)}>
+        <Select aria-label={`How ${line.code} is filed`} className="h-8 w-auto" {...pick}>
           {CHANNELS.map((c) => <option key={c} value={c}>{CHANNEL_WORDS[c]}{c === line.defaultChannel ? " (default)" : ""}</option>)}
         </Select>
       ) : <span>{line.channelWords}</span>}

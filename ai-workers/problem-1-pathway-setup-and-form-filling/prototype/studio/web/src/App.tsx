@@ -2,7 +2,7 @@ import * as React from "react";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Database, FileStack, FileText, Layers, Moon, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { api, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
+import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
@@ -68,7 +68,10 @@ function Shell() {
           </div>
         </nav>
         <main className="min-w-0 flex-1 px-4 py-6 md:px-6">
-          {session.isError ? <Notice tone="danger" title="The studio server is not answering">Start it with studio/start.sh, then reload this page. ({(session.error as Error).message})</Notice> : null}
+          {session.isError ? ((session.error as ApiError).status ?? 500) < 500
+            ? <Notice tone="danger" title="The studio did not accept the simulated person">Pick a person under Simulated person, then reload this page. ({(session.error as Error).message})</Notice>
+            : <Notice tone="danger" title="The studio server is not answering">Start it with studio/start.sh, then reload this page. ({(session.error as Error).message})</Notice>
+            : !session.isPending && !session.data?.actor ? <Notice tone="danger" title="The studio answered without a person">Something between this page and the studio changed its answer. Reload this page; if it stays, restart the studio.</Notice> : null}
           <Routes>
             <Route path="/" element={<ProgramsPage />} />
             <Route path="/new" element={<NewCombinationPage />} />

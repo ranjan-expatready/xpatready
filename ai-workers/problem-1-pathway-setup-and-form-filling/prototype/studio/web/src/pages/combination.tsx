@@ -7,7 +7,7 @@ import { AddFormPanel } from "@/components/forms";
 import { AddOnlineFormPanel, ChannelCell, FilingLine, OnlineForms, UseDefaults } from "@/components/channels";
 import { SHOW_ONLY_STEPS, StepLabel, StepTip, useNextStep } from "@/components/next-step";
 import { StatusChip, TipProvider, fmtWhen } from "@/components/status";
-import { api, useActorId, useAction, useApi } from "@/lib/api";
+import { api, useActorId, useAction, useApi, useSessionView } from "@/lib/api";
 import { Button, Dialog, Notice, Pill, Stat, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
@@ -99,9 +99,8 @@ function Overview({ d, sum, show }: { d: CombinationView; sum: CombinationSummar
   const [edit, setEdit] = React.useState(false);
   const [adding, setAdding] = React.useState(false), [addingOnline, setAddingOnline] = React.useState(false);
   const [resume, setResume] = React.useState<CombinationSummary["onlineForms"][number] | undefined>(undefined);
-  const actorId = useActorId();
-  const session = useApi<SessionView>(["session", actorId], "/session");
-  const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
+  // The forms wait for the person (break m4): an author's selects must not show first as read-only words.
+  const { known, canAuthor } = useSessionView();
   const k = d.draft.counts;
   const errors = d.draft.problems.filter((p) => p.level === "error").length, warnings = d.draft.problems.length - errors;
   const row = sum?.row;
@@ -129,8 +128,8 @@ function Overview({ d, sum, show }: { d: CombinationView; sum: CombinationSummar
       ) : null}
       <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm" aria-labelledby="ov-forms">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="ov-forms" className="font-semibold">Forms</h2>{canAuthor ? <div className="flex gap-2"><Button size="sm" variant="secondary" onClick={() => setAdding(true)}><Plus /> Add form</Button><Button size="sm" variant="secondary" onClick={() => setAddingOnline(true)}><Globe /> Add an online form</Button></div> : null}</div>
-        {sum ? <FilingLine id={d.combination.id} sum={sum} canAuthor={canAuthor} /> : null}
-        {!sum ? <Spinner label="Loading forms" /> : !(sum.forms.length + pending.length) ? <p className="mt-2 text-sm text-text-muted">No forms yet. Add the forms this application files: pick them from the library or upload the IRCC PDFs.</p> : (
+        {sum && known ? <FilingLine id={d.combination.id} sum={sum} canAuthor={canAuthor} /> : null}
+        {!sum || !known ? <Spinner label="Loading forms" /> : !(sum.forms.length + pending.length) ? <p className="mt-2 text-sm text-text-muted">No forms yet. Add the forms this application files: pick them from the library or upload the IRCC PDFs.</p> : (
           <Table className="mt-3" dense head={["Form", "Edition", "Form fields mapped", "Who and when", "Filed as"]}>
             {sum.forms.map((f) => <tr key={f.code}><td><span className="mono font-medium">{f.code}</span> <span className="text-text-muted">{f.title}</span></td><td>{f.edition ?? (f.document ? "checklist" : f.channel === "ONLINE" ? "no online version mapped" : "none mapped")}</td><td className="tabular-nums">{f.document ? "n/a" : f.boxes}</td><td className="text-xs text-text-muted">{f.who.replace(/_/g, " ")} · {f.when}</td><td><ChannelCell id={d.combination.id} line={f} canAuthor={canAuthor} /></td></tr>)}
             {pending.map((f) => <tr key={f.code}><td><span className="mono font-medium">{f.code}</span></td><td colSpan={4} className="text-xs text-text-muted">{f.inLibrary ? "Attached as a source. Its form fields are already mapped in the library, so it is added without AI." : "Attached as a source. Its form fields are not mapped yet; AI drafts them."}</td></tr>)}
