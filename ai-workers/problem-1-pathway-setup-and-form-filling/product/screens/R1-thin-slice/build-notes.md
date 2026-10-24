@@ -44,7 +44,8 @@ tsx prototype/studio/tests/runtime/check_case_engine.ts            (engine unit 
 |---|---|---|---|
 | S-1 | `api/src/core.ts` | unknown or missing actor → 401; runtime actors added (studio persona list unchanged) | granted; tested |
 | S-2 | `api/src/main.ts` | register `RuntimeController` and `Runtime` (2 lines) | plan §10; needed for any endpoint |
-| S-6 | `api/src/studio.ts` | release transaction timeout 60 s (separate commit c5f92d49) | **for Lead review**: a whole new form published 339 draft rows; Prisma's 5 s default refused it every time (500); the release then took 9.3 s |
+| S-6 | `api/src/studio.ts` | release transaction timeout | **superseded** at the 24 Oct merge by main's `RELEASE_TX` (30 s); the visitor-visa release fits it |
+| S-9 | `api/src/studio.ts` publishRow | a release publishes the answer lists its fields take (separate commit 3fe0b6ff) | **for Lead review**: main's after-release check (published = reviewed) refused every combination with a person-made answer list, because lists stayed DRAFT; tested ("S-9" check) |
 | S-7 | `api/src/demo.ts` | reset deletes cases, then people (with their answers and rows); the reset preview lists them | for Lead review; tested (`--reset`) |
 | S-8 | `api/src/main.ts` | `GET /api/activity` needs a configuration or officer duty (review Must 1) | for Lead review; tested |
 | — | `prisma/schema.prisma` | back-relations on `Combination`, `ConfigRelease`, `CanonicalField` (one line each) and the runtime block | needed by Prisma |
@@ -61,6 +62,11 @@ tsx prototype/studio/tests/runtime/check_case_engine.ts            (engine unit 
 ### From the Lead during R1a (23 Oct)
 * F-R1-1 workaround accepted; the validator defect is scheduled in forms slice 2 (then relink the 3 fields in `NO_LIST_YET`).
 * IMM 5257's fill trial passed in Adobe (186/186 barcode slots, reproduced by the Lead): R1d fills IMM 5257 directly; the "Checked copy, not for filing" label (RT-14) is no longer needed for it; "ready to file" stays blocked only by missing or conflicting facts (P-71).
+
+### After the 24 Oct merge (Screen 01 on main; P-76…P-79)
+* Conflicts: `studio.ts` (release timeout: main's `RELEASE_TX` kept) and three other lanes' evidence files (main's kept). Lane database client regenerated after the merge (it predated main's new columns).
+* P-78 (founder: confirmed by who answered) matches the built default; wording now "Answered by the principal for an adult: confirmed once that person confirms on their own link or the officer presses Confirm section". An adult's own link (P-40) is not built in R1a.
+* Suites on lane ports after the merge: setup 11/11; API 85/85 (S-9 added); engine 20/20; regressions Screen 01 API 130/130, engine 38/38, Screen 01 rules 65/65, forms channels 106/106 (keep-alive off, F-R1-4). Lane copies stopped.
 
 ### Not in R1a (next slices)
 RT-7 section checks (the visitor-visa release has no cross-field checks yet: add as data in R1c), RT-13…RT-16 (fill, out of date, lock, trigger: R1d), the renderer (R1c), "Report a mapping problem" (P-73, M3/M4).
