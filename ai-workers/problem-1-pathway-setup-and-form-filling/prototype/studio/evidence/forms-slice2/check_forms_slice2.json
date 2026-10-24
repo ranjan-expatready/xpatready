@@ -1,9 +1,9 @@
 {
- "at": "2026-10-24T19:07:54.227Z",
+ "at": "2026-10-24T20:30:27.103Z",
  "port": 4451,
  "database": "xr_studio_forms_s2",
  "paid_calls": 0,
- "pass": 52,
+ "pass": 53,
  "fail": 0,
  "log": [
   {
@@ -288,6 +288,15 @@
    }
   },
   {
+   "name": "QA-33 (API): a form field that was a date box in the earlier edition and is a text box now is not reused; every other field still is",
+   "ok": true,
+   "detail": {
+    "before": 228,
+    "after": 227,
+    "field": "UCI"
+   }
+  },
+  {
    "name": "A4 reuse: when every field is reused the plan says so: no AI call, US$0",
    "ok": true,
    "detail": "Every one of its 242 form fields is reused from IMM 5257 (01-2020) (same data path and caption): no AI call, US$0; a person reviews the result."
@@ -295,7 +304,7 @@
   {
    "name": "A4 reuse run: completed without any AI call or cost, the record labelled as reuse (not AI), compared with the library for a person",
    "ok": true,
-   "detail": "Every form field reused from IMM 5257 (01-2020) without AI (US$0) as studio-fieldmap-imm5257e-reused-20261024t190750031z-86c867. 161 of 242 form fields mapped; 84 fields: 84 reuse, 0 new, 0 ambiguous, 0 conflicting."
+   "detail": "Every form field reused from IMM 5257 (01-2020) without AI (US$0) as studio-fieldmap-imm5257e-reused-20261024t203022796z-a5bc90. 161 of 242 form fields mapped; 84 fields: 84 reuse, 0 new, 0 ambiguous, 0 conflicting."
   },
   {
    "name": "A4 reuse apply: the reused form fields enter the library as code matches (origin CODE_MATCH, 'as released in IMM 5257 (01-2020)'), never as AI",
@@ -323,8 +332,8 @@
    "name": "screen_map fail (review 2): two starts at the same moment make one job; the other is refused",
    "ok": true,
    "detail": [
-    201,
-    409
+    409,
+    201
    ]
   },
   {
@@ -335,7 +344,7 @@
     "admitted": [
      {
       "file": "prototype/p2/parts/imm-5257-ircc_portal-d6375ca38c3b.open-2b5137bf3928.part.json",
-      "sha256": "febc1056f205cb8e4b8668fcf89717bf125866c6d6c0757341c6895ca3f8b335",
+      "sha256": "f6ca7e6face02a4e71006d1afb71e7503696ed9506167ec7973400bbb14de5bc",
       "kind": "inventory_part"
      }
     ]

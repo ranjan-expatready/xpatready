@@ -15,7 +15,7 @@
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Query, Res, UploadedFiles, UseInterceptors } from "@nestjs/common";
 import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 import { promisify } from "node:util";
@@ -80,6 +80,9 @@ const screensOf = (record: Prisma.JsonValue): DraftScreen[] => ((record as { scr
   .map((x) => ("source" in x ? { title: x.title, inputs: x.inputs, file: x.source.file, sha256: x.source.sha256, way: x.source.way } : x));
 /** A request body checked against its contract; a mismatch is a 400 Problem Details with field errors. */
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
+  // QA-27: a list where one set of details is expected is refused in plain words (text, numbers and broken JSON are
+  // refused earlier, by the body parser).
+  if (Array.isArray(input)) fail("Send the details as one JSON object, not a list.");
   const r = schema.safeParse(input ?? {});
   if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST);
   return r.data;
@@ -493,14 +496,19 @@ export class Forms {
       plan = await this.leftoverJob(ed, true);
       if (b.mode === "LIVE" && b.confirmWorstUsd !== plan.worst) conflict(`The open inputs changed: a live screen-map draft now costs at most US$${plan.worst.toFixed(2)}; confirm that amount.`);
       const { jobId, leftovers } = plan;
-      return tx.draftingJob.create({ data: { workspaceId: ed.workspaceId, combinationId: comb.id, kind: "screen_map", mode: b.mode, status: "RUNNING", message: `${b.mode === "LIVE" ? "Stub pass, then the AI call" : "Stub pass of the guarded path (no network, no cost)"} for ${leftovers.length} open input${leftovers.length === 1 ? "" : "s"} of ${ed.editionLabel}`, startedBy: actor.id, detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, sent_inputs: leftovers.map((x) => x.input), worst_usd: b.mode === "LIVE" ? plan.worst : 0 }) } });
+      // QA-31: a live screen-map draft is its own AI work, so the one cancel (POST /ai/batches/:id/cancel) stops it before
+      // its paid call. A stub (no AI, US$0, seconds) has nothing to stop and makes no AI work entry (break m5).
+      const batch = b.mode === "LIVE" ? await tx.aiBatch.create({ data: { workspaceId: ed.workspaceId, idempotencyKey: `screen-map-${randomUUID()}`, operation: "screen_map", scopeKind: "online_version", scopeLabel: ed.editionLabel, mode: b.mode, status: "RUNNING", planSha256: "screen-map",
+        plan: json({ operation_label: "Screen-map draft with AI", capability_note: "The AI proposes the inputs a person left open on an approved online version; a person accepts each proposal. A screen-map draft is started again from its online version, not retried here.", targets: [], totals: { worst_usd: plan.worst, expected_usd: null } }),
+        spendLimitUsd: plan.worst, worstCaseUsd: plan.worst, startedBy: actor.id, message: "Screen-map draft running" } }) : null;
+      return tx.draftingJob.create({ data: { batchId: batch?.id ?? null, workspaceId: ed.workspaceId, combinationId: comb.id, kind: "screen_map", mode: b.mode, status: "RUNNING", message: `${b.mode === "LIVE" ? "Stub pass, then the AI call" : "Stub pass of the guarded path (no network, no cost)"} for ${leftovers.length} open input${leftovers.length === 1 ? "" : "s"} of ${ed.editionLabel}`, startedBy: actor.id, detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, sent_inputs: leftovers.map((x) => x.input), worst_usd: b.mode === "LIVE" ? plan.worst : 0 }) } });
     });
     // A draft found waiting under the lock is the one returned: never looked up again after the commit (break m6: an
     // accept landing in between made that second look-up empty, a 500).
     if ("waiting" in j) return this.reuseDraft(actor, j, ed, comb.id);
     const { jobId, leftovers } = plan;
     await this.audit.log(ed.workspaceId, actor.id, "started", "screen-map draft", ed.editionLabel, `${actor.name} started the ${b.mode === "LIVE" ? `live (worst case US$${plan.worst.toFixed(2)})` : "stub (US$0)"} screen-map draft of ${leftovers.length} open inputs of ${ed.editionLabel}`, undefined, comb.id);
-    void this.runLeftovers(j.id, ed, jobId, leftovers, b.mode === "LIVE" ? "live" : "stub");
+    void this.runLeftovers(j.id, ed, jobId, leftovers, b.mode === "LIVE" ? "live" : "stub").catch(() => undefined); // never an unhandled rejection (break M2)
     return this.sources.job(j.id);
   }
 
@@ -533,18 +541,30 @@ export class Forms {
 
   private async runLeftovers(id: string, ed: FormEdition, jobId: string, leftovers: { input: string; type: string; part: string | null; label: string }[], mode: "stub" | "live") {
     const lastJson = (s: string) => { for (const l of s.trim().split("\n").reverse()) { try { return JSON.parse(l); } catch { /* not JSON */ } } return null; };
-    const done = (data: Prisma.DraftingJobUpdateInput) => this.db.draftingJob.update({ where: { id }, data: { finishedAt: new Date(), ...data } });
+    // The job ends, and its AI work (batch) with it: cancelled when a cancel was asked for, else as the job ended. A job a
+    // workspace reset removed meanwhile ends nowhere, quietly (break M2: the update threw, and the server process exited).
+    const done = async (data: Prisma.DraftingJobUpdateInput) => {
+      const j = await this.db.draftingJob.update({ where: { id }, data: { finishedAt: new Date(), ...data } }).catch(() => null);
+      if (j?.batchId) { const b = await this.db.aiBatch.findUnique({ where: { id: j.batchId } }); if (b) await this.db.aiBatch.update({ where: { id: b.id }, data: { status: b.cancelRequested ? "CANCELLED" : j.status === "COMPLETED" ? "COMPLETED" : "FAILED", finishedAt: new Date(), message: `${j.status.toLowerCase()} · spent US$${(j.costUsd ?? 0).toFixed(2)}` } }).catch(() => null); }
+      return j;
+    };
+    const wanted = () => this.sources.stillWanted(id);
     try {
+      if (!(await wanted())) { await done({ status: "CANCELLED", costUsd: 0, message: "Cancelled before it started: nothing was sent. US$0." }); return; }
       const stub = await this.sources.launchOnce(jobId, "stub"), sj = lastJson(stub.out);
       if (stub.code !== 0) { await done({ status: "FAILED", message: `Stub pass failed: ${this.sources.plainRefusal(String(sj?.refused ?? stub.err).slice(-400))}. Nothing was drafted.` }); return; }
       if (mode === "stub") { await done({ status: "COMPLETED", costUsd: 0, message: `Stub pass completed: the guarded path admitted the approved screens and the ${leftovers.length} open inputs. A stub has no AI content, so there is nothing to accept.` }); return; }
-      const live = await this.sources.launchOnce(jobId, "live"), lj = lastJson(live.out);
+      // QA-31: a cancel is honoured up to the moment the paid call starts, however long the launch waits for its turn.
+      const live = await this.sources.launchOnce(jobId, "live", wanted), lj = lastJson(live.out);
+      if (live.cancelled) { await done({ status: "CANCELLED", costUsd: 0, message: "Cancelled after the stub pass: the AI call was not made. Nothing was drafted. US$0." }); return; }
       if (!lj?.run_file) { await done({ status: "FAILED", message: `The AI step did not run: ${String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).slice(0, 400)}. Nothing was drafted.` }); return; }
       const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
       const library = (await this.libraryRows(ed.workspaceId)).filter((r) => r.status !== "RETIRED" || r.mergedIntoKey).map((r) => ({ key: r.canonicalFieldKey, valueType: r.valueType, aliases: r.aliases, mergedIntoKey: r.mergedIntoKey, answerListKey: r.answerListKey }));
       const r = readScreenRun(rec, leftovers, library, factKeyProblem);
       if (!r.ok) { await done({ status: "FAILED", costUsd: r.cost, runId: rec.drafting_run?.run_id, message: r.message }); return; }
       const { ok: _ok, cost, message, ...out } = r;
+      // Cancelled while the AI call ran (break m1): the answer is kept in its run record but never offered for acceptance.
+      if (!(await wanted())) { await done({ status: "CANCELLED", costUsd: cost, runId: rec.drafting_run?.run_id, runFile: String(lj.run_file).replace(`${SOLUTION}/`, ""), message: `Cancelled while the AI call ran: its answer is kept in the run record but not offered for acceptance. Cost US$${cost.toFixed(2)}.` }); return; }
       await done({ status: "COMPLETED", costUsd: cost, runId: rec.drafting_run?.run_id, runFile: String(lj.run_file).replace(`${SOLUTION}/`, ""), detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, sent_inputs: leftovers.map((x) => x.input), ...out }), message });
     } catch (e) {
       await done({ status: "FAILED", message: (e as Error).message.slice(0, 400) });

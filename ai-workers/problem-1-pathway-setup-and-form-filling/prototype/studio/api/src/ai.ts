@@ -32,6 +32,12 @@ type Target = { combinationId: string; combination: string; program: string; att
 
 const ACTION_TEXT: Record<Action, string> = { draft: "Draft field map", reuse_saved_output: "Use the saved AI answer (no cost)", reuse_library: "Add from library", skip: "Skip", not_eligible: "Not eligible" };
 
+/** A step the retry runs again: it failed, was blocked, or was cancelled before anything of it was sent (before it
+ *  started, or with parts "not started": QA-32). The batch view says it per step, so the page offers Retry only where the
+ *  server will retry (review of the qa Minors pass, 2). */
+const retryable = (j: { status: string; message: string | null; detail: unknown }) => j.status === "FAILED" || j.status === "BLOCKED"
+  || (j.status === "CANCELLED" && (!!j.message?.startsWith("Cancelled before it started") || ((j.detail as { a4?: { parts?: { status: string }[] } } | null)?.a4?.parts ?? []).some((p) => p.status === "not started")));
+
 @Injectable()
 export class Ai implements OnModuleInit {
   private queue: string[] = [];
@@ -184,6 +190,8 @@ export class Ai implements OnModuleInit {
   /** The source-level button: the same plan and launch with the scope narrowed to one form (D280 one path). */
   async launchSource(actor: Actor, attachmentId: string, mode: "live" | "replay" | "stub", runFile?: string, idempotencyKey?: string) {
     need(actor, "author");
+    // QA-30: a request without a mode (or with another word) is a plain 400, never a 500 from reading a missing value.
+    if (!["live", "replay", "stub"].includes(String(mode))) fail('Choose how to draft this form: live, replay or stub ("live" is a paid AI call, "replay" a saved run, "stub" no AI, US$0).', HttpStatus.BAD_REQUEST);
     const m = mode.toUpperCase() as Mode;
     const scope: Scope = { kind: "source", ids: [attachmentId] };
     const p = await this.plan(scope, m, { draftAgain: true });
@@ -254,7 +262,7 @@ export class Ai implements OnModuleInit {
     const atts = await this.db.sourceAttachment.findMany({ where: { id: { in: b!.jobs.map((j) => j.attachmentId!).filter(Boolean) } }, select: { id: true, edition: true, fileName: true } });
     const plan = b!.plan as any;
     return { ...b, plan: undefined, plan_targets: plan.targets, totals: plan.totals, operation_label: plan.operation_label, capability_note: plan.capability_note,
-      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ id: j.id, combinationId: j.combinationId, combination: j.combination.label, program: j.combination.program.label, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
+      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), id: j.id, combinationId: j.combinationId, combination: j.combination.label, program: j.combination.program.label, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
   }
 
   async batches() {
@@ -282,10 +290,13 @@ export class Ai implements OnModuleInit {
     const batch = await this.db.aiBatch.findUnique({ where: { id }, include: { jobs: true } });
     if (!batch) fail("This AI work no longer exists.", HttpStatus.NOT_FOUND);
     if (batch!.jobs.some((j) => j.status === "QUEUED" || j.status === "RUNNING")) fail("Wait until the running steps finish.", HttpStatus.CONFLICT);
+    if (batch!.operation === "screen_map") fail("A screen-map draft is started again from its online version (draft with AI), not retried here.", HttpStatus.CONFLICT);
     const latest = new Map<string, any>();
     for (const j of batch!.jobs) { const k = `${j.attachmentId}|${j.kind}`; const cur = latest.get(k); if (!cur || j.attempt > cur.attempt) latest.set(k, j); }
-    const redo = [...latest.values()].filter((j) => j.status === "FAILED" || j.status === "BLOCKED" || (j.status === "CANCELLED" && j.message?.startsWith("Cancelled before it started")));
-    if (!redo.length) fail("Nothing to retry: no step failed.");
+    // QA-32: a step cancelled part-way (its later parts "not started") is retried too: its finished parts reuse their
+    // saved answers (US$0) and only the parts never sent are drafted.
+    const redo = [...latest.values()].filter(retryable);
+    if (!redo.length) fail("Nothing to retry: every step finished or ran to its end. To draft a form anew, start its draft again.");
     const over = redo.filter((j) => j.attempt >= MAX_ATTEMPTS_PER_SOURCE);
     if (over.length) fail(`${over.length} step${over.length > 1 ? "s have" : " has"} reached ${MAX_ATTEMPTS_PER_SOURCE} attempts; it needs a person, not another retry.`);
     const worstEach = (batch!.plan as any).targets as any[];
@@ -297,7 +308,7 @@ export class Ai implements OnModuleInit {
       for (const j of redo) ids.push((await this.db.draftingJob.create({ data: { workspaceId: j.workspaceId, combinationId: j.combinationId, attachmentId: j.attachmentId, batchId: id, kind: j.kind, mode: j.mode, status: "QUEUED", fingerprint: j.fingerprint, runFile: j.mode === "REPLAY" ? j.runFile : null, runId: j.mode === "REPLAY" ? j.runId : null, costUsd: j.mode === "LIVE" ? null : 0, attempt: j.attempt + 1, startedBy: actor.id, message: `Queued: retry ${j.attempt + 1} of ${MAX_ATTEMPTS_PER_SOURCE}` } })).id);
     } catch (e) { if ((e as any)?.code === "P2002") fail("One of these forms already has a step running.", HttpStatus.CONFLICT); throw e; }
     await this.db.aiBatch.update({ where: { id }, data: { status: "QUEUED", cancelRequested: false, finishedAt: null, message: `Retrying ${ids.length} step${ids.length > 1 ? "s" : ""}` } });
-    await this.audit.log(batch!.workspaceId, actor.id, "retried", "AI work", id, `${actor.name} retried ${ids.length} failed step${ids.length > 1 ? "s" : ""} of the AI work for ${batch!.scopeLabel} (worst case US$${worst.toFixed(2)}); completed steps were not re-run`);
+    await this.audit.log(batch!.workspaceId, actor.id, "retried", "AI work", id, `${actor.name} retried ${ids.length} step${ids.length > 1 ? "s" : ""} (failed, blocked or cancelled before being sent) of the AI work for ${batch!.scopeLabel} (worst case US$${worst.toFixed(2)}); completed steps were not re-run`);
     this.enqueue(ids);
     return this.batch(id);
   }
