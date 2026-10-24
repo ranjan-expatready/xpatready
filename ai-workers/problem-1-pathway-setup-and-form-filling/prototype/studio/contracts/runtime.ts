@@ -29,11 +29,16 @@ export const NewPerson = z.object({
   role: z.enum(["spouse_or_partner", "child"], { message: "A person joins as a spouse or partner, or as a child." }),
   displayName: text("Give the person a display name.", 2, 120),
   applies: z.boolean().default(true),
+  /** The same key again answers with the person already added (a double press adds one person, QA-28). */
+  idempotencyKey: z.string().trim().min(8, "An idempotency key has at least 8 characters.").max(128).optional(),
 });
 export const UpdatePerson = z.object({ applies: z.boolean({ message: "Say whether the person is travelling (true or false)." }) });
 
 /** Answer values stay small and flat: the largest real value (an address) is a few hundred characters. */
 export const VALUE_LIMITS = { chars: 4000, depth: 3 } as const;
+/** Any text in the value holds a control character other than tab, line feed or carriage return (QA-25). */
+const CONTROL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/;
+const hasControl = (v: unknown): boolean => (typeof v === "string" ? CONTROL.test(v) : !!v && typeof v === "object" && Object.entries(v as Record<string, unknown>).some(([k, x]) => CONTROL.test(k) || hasControl(x)));
 const tooDeep = (v: unknown, d = 0): boolean => d > VALUE_LIMITS.depth || (!!v && typeof v === "object" && Object.values(v as Record<string, unknown>).some((x) => tooDeep(x, d + 1)));
 
 /** One answer. expectedId is the id of the current answer the person saw (null when there was none): a different
@@ -44,8 +49,8 @@ export const PutAnswer = z.object({
     .refine((v) => v !== undefined && v !== null && v !== "", "Give a value (to remove an answer, remove its row or leave it unanswered).")
     .refine((v) => !tooDeep(v), `An answer is at most ${VALUE_LIMITS.depth} levels deep.`)
     .refine((v) => (JSON.stringify(v) ?? "").length <= VALUE_LIMITS.chars, `An answer is at most ${VALUE_LIMITS.chars} characters.`)
-    .refine((v) => !/\\u0000/.test(JSON.stringify(v) ?? ""), "Remove the control characters from this answer."),
-  expectedId: z.string({ message: "Send the id of the answer you saw, or null when there was none." }).uuid().nullable(),
+    .refine((v) => !hasControl(v), "Remove the control characters from this answer (invisible characters pasted with the text)."),
+  expectedId: z.string({ message: "Send the id of the answer you saw, or null when there was none." }).uuid("Send the id of the answer you saw, or null when there was none.").nullable(),
   row: z.string().uuid("Name the row by its id.").optional(),
 });
 
@@ -54,7 +59,7 @@ export const NewRow = z.object({ group: z.string({ message: "Name the repeating 
  *  since is refused with 409 and listed, never confirmed unseen (STANDARDS §4). */
 export const ConfirmSection = z.object({
   subjectId: z.string({ message: "Choose whose section to confirm." }).uuid("Choose whose section to confirm."),
-  seen: z.array(z.string().uuid(), { message: "Send the ids of the answers you reviewed." }).max(500),
+  seen: z.array(z.string().uuid("Each reviewed answer is named by its id, as the questionnaire view gives it."), { message: "Send the ids of the answers you reviewed." }).max(500),
 });
 
 export const Address = z.object({ po_box: z.string().optional(), apt_unit: z.string().optional(), street_number: z.string().optional(), street_name: z.string().optional(), city: z.string().optional(), district: z.string().optional(), province: z.string().optional(), postal_code: z.string().optional(), country: z.string().optional() });

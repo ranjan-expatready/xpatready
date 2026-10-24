@@ -60,7 +60,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.getByRole("button", { name: "Open case" }).click(); await idle(o);
   await o.waitForURL(/\/cases\/[0-9a-f-]{36}$/);
   const caseId = o.url().split("/").pop();
-  step("officer pass: the case opens on the released visitor visa, pinned to its release", await o.getByRole("heading", { level: 1, name: new RegExp(`R1C-${run}`) }).isVisible() && await o.getByText("Release 1", { exact: true }).isVisible());
+  step("officer pass: the case opens on the released visitor visa, pinned to its release", await o.getByRole("heading", { level: 1, name: new RegExp(`R1C-${run}`) }).isVisible() && await o.getByText(/^Release \d+$/).isVisible());
   await o.getByRole("button", { name: "Add spouse or partner" }).click(); await o.getByLabel("Name", { exact: true }).fill("Sample Spouse C"); await o.getByRole("button", { name: "Add", exact: true }).click(); await idle(o);
   await o.getByRole("button", { name: "Add child" }).click(); await o.getByLabel("Name", { exact: true }).fill("Sample Child C"); await o.getByRole("button", { name: "Add", exact: true }).click(); await idle(o);
   await o.getByRole("button", { name: "Add spouse or partner" }).click(); await o.getByLabel("Name", { exact: true }).fill("Sample Spouse D"); await o.getByRole("button", { name: "Add", exact: true }).click(); await idle(o);

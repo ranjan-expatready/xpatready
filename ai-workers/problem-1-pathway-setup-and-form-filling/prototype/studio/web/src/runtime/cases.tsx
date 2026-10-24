@@ -154,7 +154,8 @@ function CasePage() {
 function AddPersonDialog({ caseId, role, close }: { caseId: string; role: "spouse_or_partner" | "child"; close: () => void }) {
   const [name, setName] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
-  const add = useAction(() => api(`/runtime/cases/${caseId}/people`, { method: "POST", json: { role, displayName: name } }), { success: `${role === "child" ? "Child" : "Spouse or partner"} added: their questions are now asked`, invalidate: [["runtime"]], onDone: close });
+  const key = React.useMemo(() => crypto.randomUUID(), []); // one person per dialog, however often Add is pressed (QA-28)
+  const add = useAction(() => api(`/runtime/cases/${caseId}/people`, { method: "POST", json: { role, displayName: name, idempotencyKey: key } }), { success: `${role === "child" ? "Child" : "Spouse or partner"} added: their questions are now asked`, invalidate: [["runtime"]], onDone: close });
   const submit = () => add.mutate(undefined, { onError: (e) => setError(e instanceof ApiError ? e.field("displayName") ?? e.message : e.message) });
   return (
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={role === "child" ? "Add a child" : "Add a spouse or partner"} description="Within the limits of this case's release. Their questions are added to the client's questionnaire at once."

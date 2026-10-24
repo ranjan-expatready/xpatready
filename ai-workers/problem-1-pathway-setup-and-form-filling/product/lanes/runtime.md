@@ -9,11 +9,12 @@ current_item: R1-thin-slice
 current_slice: R1c
 stage: EARLY-LOOK
 owner: Lead
-next_action: Lead early look at R1c, the renderer (`screens/R1-thin-slice/build-notes-r1c.md`, screenshots `screenshots/r1c/`, journey `tests/runtime/check_runtime_r1c.cjs` 53/53); decide RT-7 check authoring (plan "Build discoveries"); add the R1c journey to run-suites. Then R1d.
+next_action: Lead early look at R1c, the renderer (`screens/R1-thin-slice/build-notes-r1c.md`, screenshots `screenshots/r1c/`, journey `tests/runtime/check_runtime_r1c.cjs` 53/53); decide RT-7 check authoring (plan "Build discoveries"); add the R1c journey to run-suites (right after setup, before check_runtime_r1a); QA-25, QA-26, QA-28 fixed. Then R1d.
 blocked_by: none
 updated: 2026-10-24
 
 ## Log (last 10 lines)
+- 2026-10-24 · Builder (cloud): qa Minors in R1c per Lead message: QA-25 (control characters refused), QA-26 (plain id refusals), QA-28 (add-person idempotent, migration); API 93/93, journey 53/53, run-suites green; EARLY-LOOK owner Lead.
 - 2026-10-24 · Builder (cloud): applied Lead note 22:00 (FIX accepted); BUILD R1c: one renderer, SQR at 390 px and agent view at desktop, case area under /cases; journey 53/53 with axe 0 on 10 states; engine 25/25 (placement order), API 87/87, run-suites --demo green; RT-7 blocked on check authoring (build discovery); EARLY-LOOK owner Lead.
 - 2026-10-24 · Builder (cloud): applied Lead note 2026-10-24 22:00; merged main (cd97cb6), cloud-setup; FIX D1 (Confirm section ignores a removed row's answers) and D2 (ageOn refuses impossible and future dates), pass and fail tests each failing on the old code; engine 23/23, API 87/87, run-suites green; BUILD R1c next, owner Builder.
 - 2026-10-24 · Builder: applied Lead note 2026-10-24; merged main (conflicts resolved for main), S-9 (release publishes answer lists; main's new check refused the visitor visa), P-78 wording; setup 11/11, API 85/85, engine 20/20, regressions green; copies stopped; CHECK owner Lead.

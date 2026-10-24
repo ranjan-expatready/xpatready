@@ -37,10 +37,18 @@ Plan §9 row R1c: one component, SQR and agent modes, §5 types, messages, save 
 | F-R1c-2 | Many visitor-visa question texts are field meanings ("Whether the person has…") and some answer labels are codes ("VisitorVisa", "F Female"): configuration data (setup Sample), to be written as questions in Screen 03 | screens / Lead (setup wording) |
 | F-R1c-3 | RT-7 section checks cannot be authored (plan "Build discoveries") | Lead |
 
+## qa Minors riding in R1c (Lead note 24 Oct; `qa/BUGS.md`)
+| qa | Finding | Fix | Tests (pass and fail; each fails when its fix is removed) |
+|---|---|---|---|
+| QA-25 | control characters accepted in typed answers (only NUL was refused) | `contracts/runtime.ts` PutAnswer refuses C0 controls and DEL in any text of the value, keys included; tab, line feed and carriage return stay allowed | API "QA-25 fail" (bell, control inside an address part, DEL → 400, nothing stored) and "QA-25 pass" (long text with line breaks and tabs) |
+| QA-26 | id refusals said "Invalid UUID" | plain messages on `expectedId` and `seen` (the other id fields already had them) | API "QA-26 fail" (answer seen, reviewed answers, person, row, combination: none says Invalid UUID) and "QA-26 pass" |
+| QA-28 | "Add child" twice added two children | optional `idempotencyKey` on add-person, stored per case (migration `20261024200000_runtime_r1c_people_key`, expand only, rollback in its header); same key returns the same person, a different request with it → 409; simultaneous presses serialised by the case lock; the dialog sends one key per opening | API "QA-28 pass" (two simultaneous presses, one child) and "QA-28 fail" (same key, other name → 409) |
+Order for run-suites: the R1c journey runs right after `setup_visitor_visa.ts` and before `check_runtime_r1a.ts` (that suite publishes a release 2 that adds a question).
+
 ## Checks run
 * `tests/runtime/check_runtime_r1c.cjs` (new; usage line in the file): **53/53**: officer opens a case (field errors, second spouse refused), client at 390 px (radio, select, dates, money, error summary with focus and links, invalid values stored and flagged underneath, repeating entry with remove confirmation, answering for, P-78 words, leave and resume), roles in the browser, agent view (source, Confirm section, edit message naming IMM 5257, 409 conflict, officer-only passport number never in the client's view), axe WCAG 2.2 A/AA on 10 states (0 violations, `screenshots/r1c/axe.json`), no sideways scroll at 390/1024/1440, budgets: case page 83 ms, client part 93 ms, person tab 62 ms.
 * Mutation checks: removing the summary focus fails "the summary takes the focus"; removing the person-by-person order fails "part 2 is the visit".
-* Engine 25/25 (placement order pass and fail-guard), API 87/87, `run-suites.sh --demo` every suite green (studio browser 40/40, Screen 01 browser 136/136). Typecheck web clean, api unchanged; explicit any 437 (baseline 437; new files have none).
+* Engine 25/25 (placement order pass and fail-guard), API 93/93 (QA-25, QA-26, QA-28 added), `run-suites.sh --demo` every suite green (studio browser 40/40, Screen 01 browser 136/136). Typecheck web clean, api unchanged; explicit any 437 (baseline 437; new files have none).
 
 ## Self-score (honest, D1–D20 short)
 Strong: one component (D-renderer), data-driven kinds, states (empty entry, loading skeleton, error on field, conflict, read-only refusals), accessibility (axe 0, focus, labels, 44 px targets on phone). Weaker: copy depends on configuration wording (F-R1c-2); no i18n; country and language lists are native selects; no section checks (RT-7); no "nothing to add" answer.

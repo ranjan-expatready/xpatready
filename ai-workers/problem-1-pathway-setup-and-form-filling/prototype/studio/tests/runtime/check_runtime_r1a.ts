@@ -260,6 +260,30 @@ async function main() {
   ok("D1 fail: an answer arriving in a live row after the officer looked is still refused (409) and named", r.status === 409 && r.body?.changed?.includes("person.employment_employer_name"), r.body);
   r = await call("POST", `/runtime/cases/${fresh}/sections/employment_history/confirm`, { subjectId: freshPrincipal, seen: [...await freshSeen(), d1Ans.body?.answer?.id].filter(Boolean) }, OFFICER);
   ok("D1 pass: after a row is removed the section can be confirmed; the removed row's answer stays stored and unverified (history kept)", d1Ans.status === 200 && r.status === 201 && r.body.confirmed >= 1 && sql(`select count(*) from client_canonical_answer where row_key='${d1Row}' and status='DECLARED' and superseded_by_id is null`) === "1" && sql(`select count(*) from client_canonical_answer where row_key='${d1Row}' and status='VERIFIED'`) === "0", { answer: d1Ans.status, confirm: r.status, body: r.body });
+  // qa QA-25: control characters are refused anywhere in an answer (tab, line feed, carriage return allowed)
+  const ctl = await Promise.all([
+    call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.other_family_name`, { value: "Sample\u0007Name", expectedId: null }, CLIENT),
+    call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.mailing_address`, { value: { street_name: "Sample\u0001Road", city: "Toronto", country: "Canada" }, expectedId: null }, CLIENT),
+    call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.other_given_names`, { value: "Sample\u007fName", expectedId: null }, CLIENT),
+  ]);
+  ok("QA-25 fail: a bell, a control character inside an address part, or DEL is refused (400) with a plain reason, not stored", ctl.every((x) => x.status === 400 && /control characters/.test(x.body?.detail ?? "")) && sql(`select count(*) from client_canonical_answer where subject_id='${freshPrincipal}' and canonical_field_key in ('person.other_family_name','person.mailing_address','person.other_given_names')`) === "0", ctl.map((x) => x.status));
+  r = await call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.criminal_history_details`, { value: "Line one\n\tLine two\r\nLine three", expectedId: null }, CLIENT);
+  ok("QA-25 pass: long text keeps its line breaks and tabs", r.status === 200, r.status);
+  // qa QA-26: refusals about ids say what to send, never "Invalid UUID"
+  const ids = await Promise.all([
+    call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.other_family_name`, { value: "Sample", expectedId: "abc" }, CLIENT),
+    call("POST", `/runtime/cases/${fresh}/sections/contact/confirm`, { subjectId: freshPrincipal, seen: ["abc"] }, OFFICER),
+    call("POST", `/runtime/cases/${fresh}/sections/contact/confirm`, { subjectId: "abc", seen: [] }, OFFICER),
+    call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.employment_employer_name`, { value: "Sample", expectedId: null, row: "abc" }, CLIENT),
+    call("POST", "/runtime/cases", { combinationId: "abc", reference: `R1A-ID-${run}`, clientActor: CLIENT, principal: { displayName: "Sample" } }, OFFICER),
+  ]);
+  ok("QA-26 fail: every refused id (answer seen, reviewed answers, person, row, combination) is a 400 in plain words, never \"Invalid UUID\"", ids.every((x) => x.status === 400 && !/invalid uuid/i.test(JSON.stringify(x.body))), ids.map((x) => x.body?.detail));
+  ok("QA-26 pass: the stale-id refusal says what to send", /id of the answer you saw/.test(ids[0].body?.detail ?? "") && /reviewed answer/.test(ids[1].body?.detail ?? ""), [ids[0].body?.detail, ids[1].body?.detail]);
+  // qa QA-28: pressing "Add child" twice adds one child
+  const twice = await Promise.all([0, 1].map(() => call("POST", `/runtime/cases/${fresh}/people`, { role: "child", displayName: "Sample Child QA28", idempotencyKey: `qa28-${run}` }, OFFICER)));
+  ok("QA-28 pass: two presses with one key add one child and both answer with that child", twice.every((x) => x.status === 201 && x.body.subject_id === twice[0].body.subject_id) && sql(`select count(*) from case_participant p join answer_subject s on s.id = p.subject_id where p.case_id='${fresh}' and s.label='Sample Child QA28'`) === "1", twice.map((x) => [x.status, x.body?.subject_id]));
+  r = await call("POST", `/runtime/cases/${fresh}/people`, { role: "child", displayName: "Another Child QA28", idempotencyKey: `qa28-${run}` }, OFFICER);
+  ok("QA-28 fail: the same key for a different person is refused (409); nobody is added", r.status === 409 && sql(`select count(*) from answer_subject where label='Another Child QA28'`) === "0", r.body?.detail);
   const dbRefuses = (q: string) => { try { sql(q); return false; } catch { return true; } };
   const pinId = sql(`select id from pack_work_pin where case_id='${caseId}'`), relId = sql(`select config_release_id from pack_work_pin where case_id='${caseId}'`);
   ok("FIX B4 fail (database): a case's pin cannot be changed, and its release or combination cannot be deleted", dbRefuses(`update pack_work_pin set content_hash='x' where id='${pinId}'`) && dbRefuses(`delete from config_release where id='${relId}'`) && dbRefuses(`delete from combination where id='${vv}'`));
