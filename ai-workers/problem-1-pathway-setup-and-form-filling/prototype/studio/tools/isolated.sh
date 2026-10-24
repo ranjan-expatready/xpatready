@@ -12,8 +12,10 @@ NAME="$1"; PORT="$2"; ACTION="$3"; shift 3 || true
 [[ "$NAME" != "demo" ]] || { echo "refused: 'demo' is the demo workspace"; exit 2; }
 export PATH="$ROOT/.tools/node-v24.21.0/bin:/opt/homebrew/opt/postgresql@18/bin:$PATH"
 DB="xr_studio_$NAME"; URL="postgresql://xr_studio@127.0.0.1:54329/$DB"; VARDIR="$STUDIO/var/isolated-$NAME"
-for pid in $(lsof -ti tcp:$PORT 2>/dev/null); do kill $pid 2>/dev/null || true; done
-for i in {1..40}; do lsof -ti tcp:$PORT >/dev/null 2>&1 || break; sleep 0.25; done
+# Only the server listening on the port is stopped, never a client connected to it (a test that restarts its own copy
+# would otherwise stop itself).
+for pid in $(lsof -ti tcp:$PORT -sTCP:LISTEN 2>/dev/null); do kill $pid 2>/dev/null || true; done
+for i in {1..40}; do lsof -ti tcp:$PORT -sTCP:LISTEN >/dev/null 2>&1 || break; sleep 0.25; done
 if [[ "$ACTION" == "stop" ]]; then echo "stopped $NAME"; exit 0; fi
 pg_ctl -D "$ROOT/.tools/solution-1-prototype/pg18-data" status >/dev/null 2>&1 || { echo "start the demo database first (studio/start.sh)"; exit 1; }
 if [[ "$ACTION" == "start" ]]; then dropdb -h 127.0.0.1 -p 54329 -U xr_studio --if-exists "$DB"; createdb -h 127.0.0.1 -p 54329 -U xr_studio "$DB"; rm -rf "$VARDIR"; fi

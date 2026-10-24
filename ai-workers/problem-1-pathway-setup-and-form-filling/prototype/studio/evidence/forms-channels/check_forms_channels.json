@@ -1,5 +1,5 @@
 {
- "at": "2026-10-24T20:29:31.069Z",
+ "at": "2026-10-24T21:15:04.692Z",
  "port": 4450,
  "database": "xr_studio_forms_f1",
  "paid_calls": 0,
@@ -246,8 +246,8 @@
    "name": "finish answers before the review document is printed (printed in the background; HTML until the PDF exists)",
    "ok": true,
    "detail": {
-    "ms": 23,
-    "review_file": "prototype/studio/var/isolated-forms_f1/workspaces/demo/portal-twins/IMM5257-ircc_portal-7fce5bd7-d6375ca38c3b.review.html"
+    "ms": 27,
+    "review_file": "prototype/studio/var/isolated-forms_f1/workspaces/demo/portal-twins/IMM5257-ircc_portal-154af0a1-d6375ca38c3b.review.html"
    }
   },
   {
@@ -273,7 +273,7 @@
    "name": "approval: a second person makes it an online version, re-check date set (Sample 180 days)",
    "ok": true,
    "detail": {
-    "id": "1160e169-9a55-49b8-b87d-59de53731526",
+    "id": "4d5891a7-10af-4a6b-8602-3c416924f479",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -545,7 +545,7 @@
    "name": "confirm: a second person confirms the identical re-capture; the re-check date runs from it, once",
    "ok": true,
    "detail": {
-    "id": "1160e169-9a55-49b8-b87d-59de53731526",
+    "id": "4d5891a7-10af-4a6b-8602-3c416924f479",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -850,8 +850,8 @@
    "name": "merge fail: the same merge proposed twice at the same moment is stored once",
    "ok": true,
    "detail": [
-    409,
-    201
+    201,
+    409
    ]
   },
   {

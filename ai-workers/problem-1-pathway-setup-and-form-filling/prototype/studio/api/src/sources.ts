@@ -4,7 +4,7 @@
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { execFile, spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
@@ -32,10 +32,18 @@ const run = promisify(execFile);
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 const KIND: Record<string, string> = { forms: "Form", checklists: "Document checklist", instructions: "Instructions", "web-pages": "Web page" };
 const JOBS = join(PROTOTYPE, "p2", "jobs"), RUNS = join(PROTOTYPE, "p2", "runs");
-/** Scaffolding (QA-34, P-69): an isolated test copy may start with STUDIO_FAKE_LAUNCHER, a script that stands in for the
- *  guarded launcher so the paid-call refusal and provider-limit paths are tested at US$0. Never honoured outside an
- *  isolated copy's own working folder (var/isolated-*): the demo and every real run use p2/launch.ts. */
-const LAUNCHER = process.env.STUDIO_FAKE_LAUNCHER && /[/\\]isolated-[a-z0-9_]+$/.test(VAR_ROOT) ? process.env.STUDIO_FAKE_LAUNCHER : join(PROTOTYPE, "p2", "launch.ts");
+/** Scaffolding (QA-34, P-69): an isolated test copy may start with STUDIO_FAKE_LAUNCHER naming the test fixture
+ *  tests/fixtures/fake-launch.mjs, which stands in for the guarded launcher so the paid-call refusal and provider-limit
+ *  paths are tested at US$0. Honoured only inside an isolated copy's own working folder (var/isolated-*) and only when the
+ *  path resolves (links followed, relative to where launches run) to that one fixture: any other path is ignored and the
+ *  guarded p2/launch.ts runs (PR 10 review). The demo and every real run always use p2/launch.ts. */
+export const FAKE_LAUNCHER = join(STUDIO, "tests", "fixtures", "fake-launch.mjs");
+export function launcherFor(requested: string | undefined, varRoot: string): string {
+  const guarded = join(PROTOTYPE, "p2", "launch.ts");
+  if (!requested || !/[/\\]isolated-[a-z0-9_]+$/.test(varRoot)) return guarded;
+  try { return realpathSync(resolve(ROOT, requested)) === realpathSync(FAKE_LAUNCHER) ? FAKE_LAUNCHER : guarded; } catch { return guarded; }
+}
+const LAUNCHER = launcherFor(process.env.STUDIO_FAKE_LAUNCHER, VAR_ROOT);
 const PROMPTS = join(PROTOTYPE, "p2", "prompts");
 const EDITION = /^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/;
 const TITLES: Record<string, string> = { "IMM 5257": "Application for Temporary Resident Visa", "IMM 1295": "Application for Work Permit made Outside of Canada", "IMM 5707": "Family Information", "IMM 5409": "Statutory Declaration of Common-law Union", "IMM 5476": "Use of a Representative", "IMM 5475": "Authority to Release Personal Information to a Designated Individual", "IMM 5257 SCH1": "Schedule 1: Background/Declaration" };
