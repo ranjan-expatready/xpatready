@@ -112,8 +112,22 @@ export class Runtime {
     const limit = limits.find((p) => p.role === b.role);
     if (!limit) fail(`This combination's released configuration has no ${b.role.replace(/_/g, " ")}.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const workspaceId = c.workspaceId;
-    const subjectId = await this.db.$transaction(async (tx) => {
+    // QA-28: the same idempotency key answers with the person it added; a different request with that key is refused.
+    const { idempotencyKey: key, ...request } = b;
+    const fingerprint = createHash("sha256").update(JSON.stringify(request)).digest("hex");
+    const replay = async () => {
+      const again = key ? await this.db.caseParticipant.findFirst({ where: { caseId, idempotencyKey: key }, include: { subject: true } }) : null;
+      if (!again) return null;
+      if (again.idempotencyFingerprint !== fingerprint) fail("This idempotency key was already used to add a different person; nothing was added. Use a new key.", HttpStatus.CONFLICT);
+      return { subject_id: again.subjectId, role: again.role as CaseRole, label: again.subject.label, applies: again.applies, created: false };
+    };
+    const earlier = await replay();
+    if (earlier) return earlier;
+    let subjectId: string | null;
+    try { subjectId = await this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${caseId}::uuid FOR UPDATE`;
+      const same = key ? await tx.caseParticipant.findFirst({ where: { caseId, idempotencyKey: key } }) : null;
+      if (same) return null; // the first press won while this one waited for the lock: answered below
       const now = await tx.caseParticipant.findMany({ where: { caseId } });
       const already = now.filter((p) => p.role === b.role).length;
       if (limit!.max !== undefined && already >= limit!.max) fail(`The release allows at most ${limit!.max} ${(limit!.label ?? b.role).toLowerCase()} on a case; this case has ${already}.`, HttpStatus.UNPROCESSABLE_ENTITY);
@@ -121,11 +135,12 @@ export class Runtime {
       const party = await tx.party.create({ data: { workspaceId, profile: { create: { workspaceId, displayName: b.displayName } } } });
       await tx.partyRelationship.create({ data: { workspaceId, fromPartyId: principal.subject.partyId, toPartyId: party.id, relationshipType: RELATIONSHIP[b.role] } });
       const s = await tx.answerSubject.create({ data: { workspaceId, partyId: party.id, subjectKind: b.role, label: b.displayName } });
-      await tx.caseParticipant.create({ data: { workspaceId, caseId, subjectId: s.id, role: b.role, applies: b.applies, order: Math.max(...now.map((p) => p.order)) + 1 } });
+      await tx.caseParticipant.create({ data: { workspaceId, caseId, subjectId: s.id, role: b.role, applies: b.applies, order: Math.max(...now.map((p) => p.order)) + 1, idempotencyKey: key ?? null, idempotencyFingerprint: key ? fingerprint : null } });
       return s.id;
-    });
+    }); } catch (e) { if (!unique(e)) throw e; subjectId = null; }
+    if (!subjectId) { const same = await replay(); if (same) return same; conflict("Someone added a person to this case at the same moment; refresh and try again."); }
     await this.audit.log(workspaceId, actor.id, "added", "person", caseId, `${actor.name} added a ${b.role.replace(/_/g, " ")} to case ${short(caseId)}`);
-    return { subject_id: subjectId, role: b.role as CaseRole, label: b.displayName, applies: b.applies };
+    return { subject_id: subjectId, role: b.role as CaseRole, label: b.displayName, applies: b.applies, created: true };
   }
 
   async updatePerson(actor: Actor, caseId: string, subjectId: string, body: unknown) {
@@ -144,7 +159,10 @@ export class Runtime {
       this.db.clientCanonicalAnswer.findMany({ where: { subjectId: { in: subjects }, supersededById: null } }),
       this.db.clientFactRecord.findMany({ where: { subjectId: { in: subjects }, supersededById: null, tombstone: false } }),
     ]);
-    const a: Answer[] = answers.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string }; return { id: x.id, subjectId: x.subjectId, field: x.canonicalFieldKey, rowKey: x.rowKey, value: x.valueJson, status: x.status as Answer["status"], channel: src.channel, actor: src.actor, at: src.at }; });
+    // A confirmation version names the answer it confirmed (sourceJson.from): who first answered stays visible (review M4).
+    const fromIds = answers.map((x) => (x.sourceJson as { from?: string }).from).filter((x): x is string => !!x);
+    const firsts = new Map((fromIds.length ? await this.db.clientCanonicalAnswer.findMany({ where: { id: { in: fromIds } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string }]));
+    const a: Answer[] = answers.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string }; const first = src.from ? firsts.get(src.from) : undefined; return { id: x.id, subjectId: x.subjectId, field: x.canonicalFieldKey, rowKey: x.rowKey, value: x.valueJson, status: x.status as Answer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null }; });
     const r: Row[] = rows.map((x) => ({ rowKey: x.rowKey, subjectId: x.subjectId, group: x.groupKey, order: x.order }));
     return { answers: a, rows: r };
   }
@@ -251,8 +269,12 @@ export class Runtime {
     const seen = new Set(b.seen);
     const at = new Date();
     const confirmed = await this.db.$transaction(async (tx) => {
-      const current = await tx.clientCanonicalAnswer.findMany({ where: { subjectId: b.subjectId, supersededById: null, canonicalFieldKey: { in: [...fields] } } });
-      const currentIds = new Set(current.map((a) => a.id));
+      // A removed row's answers stay stored (history) but are no longer read (PR 7 review D1): only answers outside a
+      // row or in a live row are current; a seen id of a removed row's answer is not "changed".
+      const stored = await tx.clientCanonicalAnswer.findMany({ where: { subjectId: b.subjectId, supersededById: null, canonicalFieldKey: { in: [...fields] } } });
+      const live = new Set((await tx.clientFactRecord.findMany({ where: { subjectId: b.subjectId, supersededById: null, tombstone: false }, select: { rowKey: true } })).map((r) => r.rowKey));
+      const current = stored.filter((a) => a.rowKey === null || live.has(a.rowKey));
+      const currentIds = new Set(stored.map((a) => a.id));
       const gone = [...seen].filter((id) => !currentIds.has(id));
       const unseen = current.filter((a) => a.status === "DECLARED" && !seen.has(a.id));
       if (gone.length || unseen.length) {

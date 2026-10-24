@@ -15,9 +15,11 @@ import { JobPage } from "@/pages/job";
 import { FieldsPage, FieldPage, SectionsPage, DocumentTypesPage } from "@/pages/library";
 import { ActivityPage, ReleasesPage } from "@/pages/history";
 import { AiBatchPage, AiWorkPage } from "@/pages/ai";
+import { RuntimeApp } from "@/runtime/cases";
 
 export default function App() {
-  return <BrowserRouter><Shell /></BrowserRouter>;
+  // The case area (runtime lane, R1c) has its own shell: firm and client pages, not the configuration studio.
+  return <BrowserRouter><Routes><Route path="/cases/*" element={<RuntimeApp />} /><Route path="*" element={<Shell />} /></Routes></BrowserRouter>;
 }
 
 function Shell() {
@@ -152,6 +154,7 @@ function DemoControls({ loaded, programsExist }: { loaded: boolean; programsExis
           <DropdownMenu.Content align="end" sideOffset={4} className="z-50 min-w-[260px] rounded-lg border border-border bg-surface-raised p-1 text-sm shadow-lg">
             <DropdownMenu.Item className={item} disabled={loaded || programsExist} onSelect={() => load.mutate(undefined)}><Upload className="size-4" />{loaded ? "Sample inputs loaded (reset to load again)" : programsExist ? "Load sample inputs (programs exist: reset first)" : "Load sample inputs"}</DropdownMenu.Item>
             <DropdownMenu.Item className={item} onSelect={() => setResetOpen(true)}><RotateCcw className="size-4" />Reset demo…</DropdownMenu.Item>
+            <DropdownMenu.Item className={item} onSelect={() => navTo("/cases")}><FileText className="size-4" />Open the case area (runtime preview)</DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
