@@ -5,7 +5,7 @@
 |---|---|---|---|
 | **Founder** (product owner; RCIC reviewer for now, P-17) | The Lead chat only (`/lead`) | Decides product choices (one question at a time, recommendation first), walks built screens as author and RCIC, approves paid AI and installs | Relays work between agents |
 | **Lead** (Claude Code in the main copy, skill `lead`) | `/lead` | Designs (`screen-concept`, helped by the `screen-designer` agent), answers challenges, runs every lane session, checks on the exact commit, merges (standing OK), records decisions, requests and state | Edits app code or a lane's files |
-| **Builder** (Claude Code in a lane copy, `LANES.md`) | `/next <lane>` | Challenges, builds, tests, launches reviewer and breaker, fixes, commits each stage on its branch | Builds before agreement; edits rules, skills or Lead files (stop hook refuses); pushes |
+| **Builder** (Claude Code in a lane copy, `LANES.md`) | `/next <lane>` | Challenges, builds, tests, launches reviewer and breaker, fixes, commits each stage on its branch | Builds before agreement; edits rules, skills or Lead files (stop hook refuses); pushes anything but its own lane branch (push guard gates) |
 | **Reviewer / Breaker** (fresh agents launched by the builder) | `.claude/agents/` | Score (the one journey score per check) and attack | Fix anything; ask for new features |
 | **Tester** (qa lane, skill `qa`) | `/qa <mode>` | Tests what is on `main` like a person and underneath; coverage; bugs, questions, suggestions | Fix app code; build suggestions |
 
