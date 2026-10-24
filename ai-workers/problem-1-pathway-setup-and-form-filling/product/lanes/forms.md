@@ -13,6 +13,7 @@ blocked_by: none
 updated: 2026-10-24
 
 ## Log (last 10 lines)
+- 2026-10-24 · F1 · BUILD (slice 2b) · F5, F6, QA-15, D3 built (521945f); slice 2b 28/28; full suite run in progress (drafting 48, orchestration 22, engine 38, slice 2 52/52; forms channels check updated for QA-15). US$0.
 - 2026-10-24 · F1 · CHECK → BUILD (slice 2b) · applied Lead note 2026-10-24 22:00 (slice 2 merged; cloud clone merged main cd97cb6, cloud-setup.sh run).
 - 2026-10-24 · F1 · CHECK (slice 2) · applied Lead note 2026-10-24: merged main (Screen 01, 1cb174a6), resolved 4 conflicts; all suites green on lane ports: guard 75, launch 53, slice 2 52, F1 106, engine 38, rules 65, drafting 48, API 130, channels 42, release race pass, grounding 29, orchestration 22; explicit any back to 437; lane copies stopped. US$0. Owner → Lead.
 - 2026-10-23 · F1 · FIX → CHECK (slice 2) · every review Must/Major and break Blocker/Major fixed with a test, most minors too; all suites green: guard 75, launch 53, slice 2 52, F1 106, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 22 (lane copy). US$0. Owner → Lead.
@@ -22,5 +23,3 @@ updated: 2026-10-24
 - 2026-10-23 · F1 · CHECK → FIX (slice 2) · reviewer: ship after fixes, journey 6/10, 1 Must + 5 Major; breaker: 3 Blocker + 4 Major + 13 Minor; fixes written with tests (guard 75/75); suites running. US$0.
 - 2026-10-23 · F1 · CHECK (slice 2) · F1 suite rerun 106/106 after the test-client fix; waiting on reviewer and breaker.
 - 2026-10-23 · F1 · BUILD → CHECK (slice 2) · suites: guard 64/64, launch 53/53, slice 2 38/38, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 22/22 (QA-8 fixed); F1 rerun after a test-client keep-alive fix; reviewer and breaker launched. US$0.
-- 2026-10-23 · F1 · BUILD (slice 2) · built QA-8 (--preserve-symlinks), per-run launch tickets (two launches at once collided), guarded parts and screen inventories, A4 reuse-first parts with progress and merge flags, screen_map job, evidence F1–F4 in the filler, runtime-lane option-map defect; guard 64/64, launch 53/53, slice 2 34/35 before the ticket fix; full run in progress. US$0.
-- 2026-10-23 · F1 · CHECK → BUILD (slice 2) · applied Lead note 2026-10-23 17:05 (slice 1 merged d795b019).

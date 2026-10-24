@@ -1,11 +1,11 @@
 {
- "at": "2026-10-24T05:07:56.265Z",
- "port": 4449,
- "database": "xr_studio_screens_forms",
+ "at": "2026-10-24T18:44:31.543Z",
+ "port": 4450,
+ "database": "xr_studio_forms_f1",
  "paid_calls": 0,
  "fixtures": "Sample (tests/fixtures/portal/README.md)",
- "pass": 106,
- "fail": 0,
+ "pass": 105,
+ "fail": 1,
  "log": [
   {
    "name": "contract: a structure-only record is valid",
@@ -166,8 +166,8 @@
    "name": "a configuration without channels keeps its fingerprint (draft equals its release after the migration)",
    "ok": true,
    "detail": {
-    "wpRelease": "52b4c9159c9c4969dee69944a438b541ea93e70c8c61abe02ddf05fb928ae290",
-    "wpDraft": "52b4c9159c9c4969dee69944a438b541ea93e70c8c61abe02ddf05fb928ae290"
+    "wpRelease": "4eef83f16ab10c5bdac941963cc49f3329473ec697e11f57dfb296559e566605",
+    "wpDraft": "4eef83f16ab10c5bdac941963cc49f3329473ec697e11f57dfb296559e566605"
    }
   },
   {
@@ -202,10 +202,9 @@
   },
   {
    "name": "capture fail: an unknown portal, a lower-case code and a short title are refused with field errors",
-   "ok": true,
+   "ok": false,
    "detail": [
     "portal",
-    "form",
     "title"
    ]
   },
@@ -246,8 +245,8 @@
    "name": "finish answers before the review document is printed (printed in the background; HTML until the PDF exists)",
    "ok": true,
    "detail": {
-    "ms": 25,
-    "review_file": "prototype/studio/var/isolated-screens_forms/workspaces/demo/portal-twins/IMM5257-ircc_portal-88003379-d6375ca38c3b.review.html"
+    "ms": 21,
+    "review_file": "prototype/studio/var/isolated-forms_f1/workspaces/demo/portal-twins/IMM5257-ircc_portal-d1e7525f-d6375ca38c3b.review.html"
    }
   },
   {
@@ -273,7 +272,7 @@
    "name": "approval: a second person makes it an online version, re-check date set (Sample 180 days)",
    "ok": true,
    "detail": {
-    "id": "da257601-4dfa-412e-b660-87b2845bd7a9",
+    "id": "375dfe1d-bf44-4744-9a91-1f2ac26fa66b",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -545,7 +544,7 @@
    "name": "confirm: a second person confirms the identical re-capture; the re-check date runs from it, once",
    "ok": true,
    "detail": {
-    "id": "da257601-4dfa-412e-b660-87b2845bd7a9",
+    "id": "375dfe1d-bf44-4744-9a91-1f2ac26fa66b",
     "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
     "channel": "ONLINE",
     "portal": "ircc_portal",
@@ -580,8 +579,8 @@
    "name": "Forms library: IMM 5257 shows both channels and its online version",
    "ok": true,
    "detail": [
-    "PDF",
-    "Online"
+    "Online",
+    "PDF"
    ]
   },
   {
