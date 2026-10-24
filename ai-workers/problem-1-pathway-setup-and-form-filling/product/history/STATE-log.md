@@ -26,3 +26,4 @@ WITHDRAWN 23 Oct by the founder (P-60): - 2026-10-23 · 01 · CHECK · Founder r
 - 2026-10-23 · Lead · Founder decided P-79 (one To review page under Configure); menu, SCREENS 02, Screen 02 draft updated.
 - 2026-10-23 · Lead · Founder decided P-80 (held PDF approved in the product by a second person; amends P-57); Screen 02 draft updated.
 - 2026-10-23 · Lead · :4400 restarted on main 13629dfc with the forms database update (founder OK); backup taken; data unchanged; lane apps untouched.
+- 2026-10-24 · Lead · Stray test combination removed from :4400 (founder OK; history event added; backup kept); Individual 21, Corporate 8.
