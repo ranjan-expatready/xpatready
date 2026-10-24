@@ -52,7 +52,9 @@ fi
 
 echo "== postgresql 18 on 127.0.0.1:$PGPORT"
 PGBIN=""
-for c in /usr/lib/postgresql/18/bin /opt/homebrew/opt/postgresql@18/bin; do [ -x "$c/pg_ctl" ] && PGBIN="$c"; done
+# The real binaries: on Linux never the /opt/homebrew stand-ins this script itself creates below.
+case "$(uname -s)" in Linux) c=/usr/lib/postgresql/18/bin;; *) c=/opt/homebrew/opt/postgresql@18/bin;; esac
+[ -x "$c/pg_ctl" ] && PGBIN="$c"
 if [ -z "$PGBIN" ] && command -v apt-get >/dev/null; then
   # Ubuntu's stock repositories carry an older major: the official PGDG repository has 18.
   apt postgresql-common
@@ -70,20 +72,40 @@ if [ "$(id -u)" = 0 ]; then
   for t in psql createdb dropdb pg_dump pg_restore; do ln -sf "$PGBIN/$t" "/usr/local/bin/$t"; done
   mkdir -p "$PGDATA"; chown postgres "$PGDATA"; chmod 700 "$PGDATA"
 else RUN=""; export PATH="$PGBIN:$PATH"; fi
+if [ "$(uname -s)" = Linux ] && [ "$(id -u)" = 0 ]; then
+  # Compatibility with Mac paths still written in scripts and tests (BACKLOG B32): the Homebrew PostgreSQL tools, the
+  # Google Chrome that Playwright's channel "chrome" opens (the cloud image's Chromium stands in), and the Mac-only
+  # Playwright require path in three browser checks (served by the studio's own playwright package).
+  HB=/opt/homebrew/opt/postgresql@18/bin; mkdir -p "$HB"
+  for t in psql createdb dropdb pg_dump pg_restore; do ln -sf "$PGBIN/$t" "$HB/$t"; done; ln -sf /usr/local/bin/pg_ctl "$HB/pg_ctl"
+  command -v pdftoppm >/dev/null || apt poppler-utils
+  mkdir -p /opt/homebrew/bin; for t in openssl pdftoppm pdftotext pdfinfo python3 tesseract; do
+    command -v "$t" >/dev/null && [ ! -e "/opt/homebrew/bin/$t" ] && ln -sf "$(command -v "$t")" "/opt/homebrew/bin/$t"; done
+  CR=$(ls -d /opt/pw-browsers/chromium-*/chrome-linux*/chrome 2>/dev/null | sort -V | tail -1)
+  [ -x /opt/google/chrome/chrome ] || { [ -n "$CR" ] && mkdir -p /opt/google/chrome && ln -sf "$CR" /opt/google/chrome/chrome && echo "chrome channel -> $CR"; }
+  MACPW=$(grep -rhoE '"/Users/[^"]*/node_modules/playwright"' "$STUDIO/tests" 2>/dev/null | head -1 | tr -d '"')
+  [ -n "$MACPW" ] && [ ! -e "$MACPW" ] && mkdir -p "$(dirname "$MACPW")" && ln -sfn "$ROOT/$STUDIO/node_modules/playwright" "$MACPW"
+fi
 if [ ! -f "$PGDATA/PG_VERSION" ]; then
   $RUN "$PGBIN/initdb" -D "$PGDATA" -U xr_studio -A trust -E UTF8 >/dev/null && echo "cluster created"
 fi
 if $RUN "$PGBIN/pg_ctl" -D "$PGDATA" status >/dev/null 2>&1; then echo "cluster already running"; else
   $RUN "$PGBIN/pg_ctl" -D "$PGDATA" -o "-p $PGPORT -k /tmp -h 127.0.0.1" -l "$PGDATA/server.log" -w start >/dev/null && echo "cluster started"
 fi
-# start.sh starts the cluster without -o: keep the port and address in the cluster's own configuration.
+# start.sh starts the cluster without -o: keep the port and address in the cluster's own configuration. The zone is
+# the Mac's (America/Toronto), so checks that need a database zone other than UTC (QA-5) test the same thing here.
 grep -q "^port = $PGPORT" "$PGDATA/postgresql.conf" 2>/dev/null || $RUN sh -c "printf '%s\n' \"port = $PGPORT\" \"listen_addresses = '127.0.0.1'\" \"unix_socket_directories = '/tmp'\" >> '$PGDATA/postgresql.conf'"
+grep -q "^timezone = 'America/Toronto'" "$PGDATA/postgresql.conf" 2>/dev/null || $RUN sh -c "echo \"timezone = 'America/Toronto'\" >> '$PGDATA/postgresql.conf'"
+$RUN "$PGBIN/pg_ctl" -D "$PGDATA" reload >/dev/null; sleep 1
+echo "database zone: $("$PGBIN/psql" -h 127.0.0.1 -p "$PGPORT" -U xr_studio -d postgres -Atc 'show timezone')"
 for db in xr_studio_demo xr_studio_screens xr_studio_forms xr_studio_evidence xr_studio_runtime xr_studio_qa; do
   "$PGBIN/createdb" -h 127.0.0.1 -p "$PGPORT" -U xr_studio "$db" 2>/dev/null || true
 done
 
 echo "== schema"
 (cd "$STUDIO" && DATABASE_URL="postgresql://xr_studio@127.0.0.1:$PGPORT/xr_studio_demo" ./node_modules/.bin/prisma migrate deploy >/dev/null && ./node_modules/.bin/prisma generate >/dev/null && echo "migrations applied, client generated")
+# Isolated copies (tools/isolated.sh) serve the same web build as :4400; start.sh is the only other builder.
+(cd "$STUDIO/web" && ../node_modules/.bin/vite build >/dev/null 2>&1 && echo "web app built")
 
 echo "== official PDFs (committed, P-83; checked against the manifest checksums, P-31)"
 if out=$(python3 "$P/official-sources/fetch_official_sources.py" 2>&1); then echo "$out" | tail -1
