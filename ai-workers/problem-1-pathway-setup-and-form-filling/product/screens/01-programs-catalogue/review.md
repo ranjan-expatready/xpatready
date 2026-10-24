@@ -1,94 +1,88 @@
-# Screen 01 — review (reviewer agent, 23 Oct, closing FIX pass, second CHECK)
+# Screen 01 — review (reviewer agent, 24 Oct, small FIX after the merge)
 
-Round 1 of this pass is at `c0e8ff98` (git history). Earlier rounds are at `9f3bbf77` and before.
+Earlier rounds are in git: round 2 of the closing pass is at `23cd9bf4^`, and older ones before that.
 
-**Commit reviewed:** `8d020757` on `claude/screens-01-fix-c3010a`. **Verdict: Ship after fixes.** 2 Must, 5 Should. **Journey score 8/10, a pass at the bar** (`journey-test-reviewer-2026-10-23-r2.md`).
+**Commit reviewed:** `23cd9bf4` on `claude/screens-01-fix-c3010a`. Scope: the Lead note of 24 Oct only (QA-14, QA-17, Lead check L1–L3). **Verdict: Ship.** 0 Must, 3 Should. **Journey score 9/10 (pass)** on the two journeys this pass changes (below). I kept it in this file; there is no separate report.
 
-**How I checked:** I read the build notes ("Fixes…", "CHECK → FIX…", "Extension (P-74)"), round 1, the break report, CAPABILITIES C1.6/C1.7/C2.7/C2.10/C3.10, P-61/62/63/66/74 and the diff `c0e8ff98..8d020757`. Walks ran on :4440 (`xr_studio_screens_rv`), suites and probes on fresh :4441 copies (`_rv2`–`_rv9`); all are now stopped and dropped. Model calls were refused, so there was no paid AI.
+**How I checked:** I read the build notes ("Small FIX after the merge"), BUGS QA-14/QA-17, lead-check L1–L3 and the diff `1cb174a6..23cd9bf4` (prototype; evidence ignored). I ran isolated copies on :4440/:4441 (`xr_studio_screens_rv`, `_rv2`, fresh starts). Model calls were refused (US$0). Afterwards I stopped both copies, dropped the databases and restored the evidence files the suites rewrote.
 
-**Suites (outputs in my scratchpad, not the repo):** rules **63/63** · API **130/130** · channels **29/29** · release race **7/7 rounds safe** · browser **133/134 twice** (Should 3).
+## Suites (non-maker run)
+| Suite | Result |
+|---|---|
+| Screen 01 API | **133/133**, including the three QA-14 checks (4 at once → `[201,409,409,409]`; the database refuses "RACE-at once"; another parent is allowed) |
+| qa `check_qa14_name_race.ts` | **PASS**: 20 names × 4 at once, one category each |
+| **Rule removed** (`DROP INDEX program_def_parent_name_key`) | qa race check **FAILS** ("Category 1 x2, Category 4 x2"). The test proves the rule |
+| grounding | **29/29**. With the wrong database (`… 4440 xr_studio_screens_rv2`) it stops at once with the plain reason (L1) |
+| channels | **42/42** |
+| Screen 01 browser | **135/136 twice**, each run failing a different step. Run 1: "Program filter: only Work permits rows" (read before the list refreshed; Should 3). Run 2: "changing the view under 200 ms" took 205 ms at machine load 32 (load, not code). C2.7 (L2) and QA-17 passed both times |
+| Type check | `tsc --noEmit -p api/tsconfig.json` **0 errors**; it covers `tests/*.ts` (9 files listed). `-p web/tsconfig.json` **0** (L3) |
 
-**Mutations** (a scratch copy of `api/`): reverting the re-add restore → API "CHECK must 2" FAILS; dropping `need(author)` from `setChannel` → channels "only an author sets a channel" FAILS. Ignoring `draftFrom` could not be isolated (the capture step does not finish in the scratch copy), so it is not counted.
-
-## Round 1 items and breaker findings: checked
+## Items in this pass
 | Item | Result | Evidence |
 |---|---|---|
-| Must 1 QA-9 committed | **Fixed** | The three files are in `8d020757` (Layout v2 `/new`, `/program-nodes`). I did not rerun the scale suite |
-| Must 2 / m6 re-add resets the line | **Fixed** | Walked on Live "With an LMIA": remove IMM 5409, then re-add it from "+ Add form". It comes back as "couple once · Needed once per couple…", draft changes return to the earlier count, v2 is deleted and v1 PUBLISHED stands. The mutation is caught |
-| Should 1 / M4 removed-form state | **Fixed** | The Overview shows it as an attached source with the add step, and "+ Add form" offers Add |
-| Should 2 gate in `approve` | **Fixed** | `studio.ts:528-531` calls `releaseGate`; plain BR-14 words |
-| Should 3 changed-after-submission | **Fixed** | Tested in the API suite (130) |
-| Should 4 P2002 in the transaction | **Fixed** | `createMany … skipDuplicates`, conditional update/delete (`form-lines.ts:39-49`) |
-| Should 5 browser Back | **Fixed** | Back → `?sel=…super_visa`, row highlighted and focused |
-| Breaker M1 release race | **Fixed** | 0–60 ms: 409 (refused or rolled back); 120–250 ms: the change stays DRAFT; never published unreviewed |
-| Breaker M2 / M3 | **Fixed** | Per-person `/draft` (`programs.ts:241-246`); WHO list check (`form-lines.ts:28`) |
+| QA-14 one name per parent, enforced in the database | **Fixed for new rows** | Partial unique index on `(workspace_id, COALESCE(parent_node_key,''), name_key)`. Both create routes write `name_key` with `normalizeLabel` (`studio.ts:85`, `programs.ts:60`); no route renames a node. I also raced the screen's own route, `POST /combinations/path` (9 names × 4 at once): one program and one category per name, one combination each, losers refused |
+| QA-17 dates in Recent steps | **Fixed** | Combination page: "today 10:19 a.m." … "Oct 21, 10:53 p.m." for the back-dated step (screenshot in my scratchpad). Also applied to Review step 1 and AI work. The region is now labelled. At 200 % (512 px) the page does not scroll sideways; the table scrolls inside its own box |
+| L1 grounding "finding 3" 404 | **Fixed (test)** | The cause was the wrong database: the check read ids from the database named on its command line, which could be another copy's. The guard in the grounding, API and channels checks stops with the reason; with the right database, 29/29 |
+| L2 C2.7 wait | **Fixed** | `check_screen01_browser.cjs:150` waits for the list; it passed in both runs |
+| L3 type errors | **Fixed** | 0 errors with the command now stated (39 before). The build note corrects its earlier "clean" claim |
 
-## Extension (P-74): checked
-| Capability | Result |
-|---|---|
-| C1.6 | **Partly met.** The row and panel show the filing method; "Filed as" per line for the author (read-only for others); signatures in words; draft change only. The words break (Must 2) |
-| C1.7 | **Partly met.** Portal picker with Sample portals labelled; "(default)" per line; "Use the default for N" only on click; channel problems "Blocks release". A portal change is not reviewed (Must 1) |
-| C2.7 | **Met, with one defect.** Saved pages read; answers refused with reason; "Awaiting a second person"; self-approval 403; approved → "+ Add" makes an Online line. The orphan capture is Should 1 |
-| C2.10 | **Met.** Sources tab, per form: "Reads the PDF version (…) first, then the IRCC Portal screens for what differs"; the choice changes words and drafting; words only for the approver |
-| C3.10 | **Met.** No "box" on 24 pages, tabs and both panels |
+## Migration `20261024090000` (looked at closely)
+* **Backfill and legacy duplicates.** I replayed it on real duplicates: I dropped the index, raced to make 2 twin pairs, applied the written rollback, then ran `migration.sql` with `ON_ERROR_STOP`. It filled 48 rows and set the newer twin of each pair to null (oldest by `created_at, id`), and the index built. Nothing was deleted. The rollback works as written (§5 met: expand only, rows kept, rollback recorded).
+* **Partial index.** It excludes null and `''`. `IS NOT DISTINCT FROM` in the backfill matches the `COALESCE` in the index. Pathways (parent null) share `''`, which is correct. The partial index is outside `schema.prisma`, the same pattern as `20261021230000`.
+* **SQL vs app normalisation: they differ (Should 1).** The SQL `[:alnum:]` drops combining marks; `normalizeLabel` keeps `\p{M}` (break m2). The two lower-casing steps also differ. Of 19 test labels I compared on this database (en_US.UTF-8, libc), 3 differ: "किसान" → app `किसान` / SQL `कसन`; "कसान" → `कसान` / `कसन`; "İstanbul" → `i̇stanbul` / `istanbul`. This affects only rows that existed before the migration.
 
 ## Issues
-**Must 1: a portal change bypasses review and is released unlisted.**
-* Cause: `setPortal` (`api/src/forms.ts:441-446`) edits `combination.portal_key` in place. `diff()` leaves `portal` out of its row-details meta (`engine/validate.ts:152`), yet the snapshot carries it (`engine/snapshot.ts:141`).
-* Evidence: on a fresh Live row the draft count went 0 → 0 after a portal change. Walked: Release 2 of "With an LMIA" published `portal = ircc_portal`, while the review list showed only the 2 channel changes and the SME signed without seeing it. This breaks STANDARDS §3.7/§3.8 and BR-14.
-* **Fix:** add `portal` to the diff (a "Filing" change, counted and listed). Test: a portal change on a Live row is 1 draft change and is held until reviewed.
+**Should 1: rows that existed before the migration hold a key from a different rule, so BR-6 can refuse a name it allows** (`prisma/migrations/20261024090000_program_name_unique/migration.sql:6`, `api/src/studio.ts:87`).
+* Reproduced on :4440. I created "किसान" and "İstanbul", then rolled the migration back and replayed it. After that, the valid names "कसन" and "Istanbul" are refused 409 with `"किसान" already exists …` / `"İstanbul" already exists …`, although `normalizeLabel` says they differ and the pre-check let them through.
+* The same mismatch flags "किसान" and "कसान" (different under BR-6) as legacy duplicates, so the newer one loses its key.
+* It is also two copies of one rule (STANDARDS §7 "no duplicated logic").
+* **Fix:** fill `name_key` once from the app with `normalizeLabel` (for example at start-up: re-key rows whose key differs, and null the newer twin by the same rule), or have the migration only add the column and leave the fill to the app. In the 409 path, find the twin by comparing `normalizeLabel(label)` of the siblings, not the stored key.
+* **Test:** an old row "किसान" (key filled by the migration), then "कसन" → 201.
 
-**Must 2: the filing method is a broken sentence on the Programs row and the panel** (`engine/channels.ts:34`, shown by `api/src/programs.ts:156`, `web/src/pages/programs.tsx:243`, `web/src/components/channels.tsx:30`).
-* It shows "PDF only; plus signed pdf upload when Needed when the applicant uses an authorized representative, …": lower-case "pdf", "when Needed when", and the full condition text. The row grows from 44 px to 102 px (EXPERIENCE §2, §5). C1.6 names the values "PDF only · Online only · Mixed".
-* **Fix:** show the short method on the row and panel. Leave the per-line detail to "Filed as" or a tooltip. Add a rule test with a conditional line on another channel.
+**Should 2: a person who loses the race gets a different answer from one who arrives a moment later** (`api/src/studio.ts:88`).
+* On `/combinations/path`, the loser gets 409 with `detail` only. A later duplicate gets 400 with `errors[{field:"program"}]`. On `/program-nodes`, a later duplicate gets 409 with `errors` and `existing`.
+* `new-combination.tsx:63-66` shows the loser's message in the page notice rather than on the Program/Category field, so it is not silent. It does not meet §6 "field-level messages".
+* **Fix:** throw the same Problem Details as the pre-check (field `label`, or the level, plus `existing`).
 
-**Should 1: a refused "Add an online form" leaves an orphan capture.**
-* `channels.tsx:128-136` creates the capture before the screens pass. When no screen is added, it stays OPEN and is listed as "Being captured: add the remaining screens, then finish". No screen can finish or abandon it, and each retry adds another one.
-* **Fix:** abandon it when nothing was added (`POST /captures/:id/abandon`), or offer Continue/Abandon on the row.
+**Should 3: one more browser step reads the list before it refreshes** (`tests/check_screen01_browser.cjs:142-143`, "Program filter: only Work permits rows"). It failed 1 of 2 runs under load, the same pattern as L2. **Fix:** wait for `prog=` in the URL and for every row to start with `individual.work_permits` before asserting.
 
-**Should 2: an Online line's missing items give the wrong cause and step** (`engine/programs.ts:62`, `:69`). They read "1 rule does not resolve (…no screen map yet…). Next step: fix it on the Configuration tab" and "No form fields mapped yet for IMM 5257. Next step: Add 1 form from the library" (journey `J2-3`). **Fix:** make channel problems their own missing item, with a step the person can take ("Change how it is filed" / map its screens).
+## [M] standards touched
+**Met:**
+* §5 uniqueness scoped to the parent, held in the database, and the migration keeps rows with a recorded rollback.
+* §7 strict TypeScript with 0 errors, tests included.
+* Tests fail when the rule is removed.
+* §3 concurrency: duplicates under a race are refused.
 
-**Should 3: the online-form panel keeps a stale portal** (`channels.tsx:114-115`). Opened right after a portal change, it preselects the old portal and never corrects it, because the state is set once and the effect fills only an empty value. Reproduced (APR → LMIA Online shows APR at 0–3 s). The browser suite step "portal chosen" failed 2/2 for me, though the evidence says 134/134. **Fix:** follow `sum.portal` until the user touches the field, and wait for the refetch in the suite.
+**Not met:**
+* §6 field-level message on the race-loser path (Should 2).
+* §7 one rule in two places, with different results (Should 1).
 
-**Should 4: [M] standards not met in the new code.**
-* Migration `20261023210000` has no recorded rollback (§5), and `portal_capture.combination_id` has no foreign key (§3.4).
-* The API accepts a channel (200) and a drafting source on a checklist while the UI says "Checklist (not filed)" (§3.4).
-* Channel, portal and drafting-source saves carry no revision, so a stale save overwrites silently (§4; parallel saves are safe: 409 + 200).
-* **Fix:** add the rollback, the foreign key, refuse on checklists, and send `baseRevision`.
+**P-33:** nothing new. The browser check back-dates a step by SQL to show an older day; that is test set-up, not a product step.
 
-**Should 5: small UI issues.**
-* "Use the default for N forms" sends N sequential PATCHes and can apply only part (`channels.tsx:78`). The edited line jumps to the top of the Forms table (the summary orders by version, `programs.ts:453`; sort by code). The `w-auto` portal select makes the page 13 px wide at 400 px.
-
-## [M] standards (met unless listed)
-**Not met:** Should 4. Deny by default: no or unknown `x-actor` still acts as the author, also on the new PATCHes (left to the Lead in round 1). EXPERIENCE §5: the Review tab's fingerprint and keys (Screen 03, as before). §1 type scale: the `text-[12.5px]` hint and new `text-[13px]` notes (`channels.tsx:40,64,101`).
-
-**Met:** Problem Details with field errors (e.g. capture code in capitals); server duty checks (approver/SME → 403 on channel, portal, capture and drafting source); upload checks (answers refused, nothing kept); axe 0 on the combination page, both panels, the Sources tab, the approver view and the list at 512 px; keyboard path to "Filed as" with a 3 px focus ring; no sideways scroll at 1024 px or 200 %; one request per view (summary 94 ms; it makes one `defaultChannelFor` query per line, small).
-
-**Scaffolding (P-33):** sample load and capture approval used the API. Approval is Screen 02, so it is not a finding here. Everything else used the product's screens.
-
-## D1–D20 (1–5; independent reviewer, browser/script)
+## D scores (dimensions this pass touches; the rest are as in the Lead check of 24 Oct)
 | D | Score and evidence |
 |---|---|
-| D1 Requirement fit | 4: all round-1 items fixed; C2.10 and C3.10 met, C2.7 met with Should 1; C1.6 and C1.7 partly met (Musts) |
-| D2 Data integrity | 3: versioned lines, safe races and an exact restore; the portal is edited in place and released unreviewed (Must 1); no foreign key or revision on the new writes |
-| D3 Reuse | 4: one `addFormLine`, one `releaseGate`/`gateOf`, the F1 engine reused; the drafting source belongs to the library form |
-| D4 Rule integrity | 3: the gate holds on both routes; a portal change escapes the diff that feeds review |
-| D5 Stability and recovery | 4: race rollback, Back restored, reload holds; orphan capture after a refusal |
-| D6 Freshness and governance | 3: audit lines for channel, portal and drafting source; the portal change skips review and sign-off |
-| D7 AI trust | 4: unchanged; AI steps marked; drafting source stated per form; no AI run (QA-8) |
-| D8 Orientation | 4: path, Back highlight, Forms panel clear |
-| D9 Flow | 3: the online-line missing items point to the wrong step; dead-end "Being captured" row |
-| D10 Language | 3: C3.10 clean and the channel words are good; the filing sentence is broken (Must 2); "rule does not resolve" for a filing problem |
-| D11 Feedback and state | 4: toasts, per-file results, "Awaiting a second person", "(default)", "Blocks release" |
-| D12 Visual quality | 3: rows grow to 102 px from the filing sentence; very wide portal select; off-scale 13 px notes |
-| D13 Accessibility | 4: axe 0, keyboard, focus ring, 1024 px and 200 %; 400 px 13 px overflow; no real screen reader |
-| D14 Team look | 4: team controls (Select, Panel, Pill, Table); demo chrome separate |
-| D15 Speed | 4: first view 122–265 ms, filter 25 ms, channel save 90 ms, online form 826 ms |
-| D16 Testability | 4: suites green by a non-maker except one flaky step; 2 of 2 isolated mutations caught; no test covers portal-in-review |
-| D17 First-use | Simulated only. The founder's walk is pending |
-| D18 Provenance | 4: Sample portals labelled, capture approval state, drafting source per form, release by and when |
-| D19 End-to-end | Not yet evidenced beyond configure → release |
-| D20 Pain and wow | Simulated only |
+| D2 Data integrity | 4: twins cannot get in, even at the same moment, on both create routes. Old non-Latin rows carry a key from another rule (Should 1) |
+| D4 Rule integrity | 4: BR-6 is held in the database; for old rows the stored key can disagree with BR-6 |
+| D5 Stability and recovery | 5: four at once → one 201 and plain 409s; a wrong-database run stops with the reason |
+| D11 Feedback and state | 4: steps say "today" or the date; the race loser's message sits in the notice, not on the field |
+| D13 Accessibility | 4: "Recent steps" is a labelled region; no sideways page scroll at 1024 px or 200 % (the table scrolls inside its box); no real screen reader |
+| D16 Testability | 4: race and database-refusal checks, proven by removing the rule; type check 0 errors; one flaky browser step remains (Should 3) |
+| D17 / D20 | Simulated only |
+
+## Journey score: 9/10 (scoped to this pass)
+Journeys:
+* **J1** Two authors create the same new program and category at the same moment on "New combination" (API race on the screen's route, 4 at once).
+* **J2** An author opens a combination whose last reading ran three days ago and reads when each step ran (headless Chrome at 1024 px and 512 px).
+
+Scores:
+* Task completed 1 · next step obvious 1 ("choose it instead") · plain words 1 · correct data 1 (one row per name; Should 1 affects only old rows) · error recovery 1 · accessibility and sizes 1 · speed 1 · visual quality 1 · trust and sources 1.
+* Feedback and state ½: the race loser's message is not on the field.
+
+I walked headless, not in a visible browser.
 
 ## What I could not check
-Capture review on a screen (Screen 02); AI drafting (QA-8); PDF downloads (QA-4); a real screen reader; a headed walk (I used headless Chrome and screenshots); a rerun of the scale suite; c8 coverage; the drafting-source mutation (scratch environment).
+* Whether :4400's database has legacy duplicates. The migration lists them only through the SQL comment `SELECT label, program_node_key FROM program_def WHERE name_key IS NULL;`, which the Lead should run after merging.
+* A real screen reader.
+* The rules, forms, engine, AI drafting and scale suites (this pass did not touch them).
+* AI steps (QA-8).

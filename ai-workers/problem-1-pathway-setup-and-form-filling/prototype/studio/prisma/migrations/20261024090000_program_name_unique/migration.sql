@@ -1,9 +1,11 @@
 -- QA-14 (BR-6 in the database): one name per parent, compared ignoring case, spaces and punctuation. The app writes
 -- name_key with contracts/programs.ts normalizeLabel; existing rows are filled here with the closest SQL equivalent
--- (NFKC, lower case, letters and digits). Rows that were already duplicates keep a null name_key (the oldest keeps the
+-- (lower case, letters and digits) for plain ASCII names. Rows that were already duplicates keep a null name_key (the oldest keeps the
 -- name), so the index can be built on any existing data; they are listed by the query below and left for a person.
 ALTER TABLE "program_def" ADD COLUMN "name_key" TEXT;
-UPDATE "program_def" SET "name_key" = lower(regexp_replace(normalize("label", NFKC), '[^[:alnum:]]+', '', 'g'));
+-- Only plain ASCII names here: SQL and the app agree on them. A name in another script (vowel signs, Greek, Turkish
+-- letters) is keyed by the app itself when the server starts (Programs.backfillNameKeys), with the app's own rule.
+UPDATE "program_def" SET "name_key" = lower(regexp_replace("label", '[^A-Za-z0-9]+', '', 'g')) WHERE "label" ~ '^[\x20-\x7E]*$';
 UPDATE "program_def" p SET "name_key" = NULL
   WHERE EXISTS (SELECT 1 FROM "program_def" o WHERE o."workspace_id" = p."workspace_id" AND o."parent_node_key" IS NOT DISTINCT FROM p."parent_node_key"
                 AND o."name_key" = p."name_key" AND (o."created_at", o."id") < (p."created_at", p."id"));

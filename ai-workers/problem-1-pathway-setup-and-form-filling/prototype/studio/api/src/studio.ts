@@ -76,7 +76,7 @@ export class Studio {
     // Same parent, same name (BR-6: compared ignoring case, spaces and punctuation): point to the existing record.
     const siblings = await this.db.programDef.findMany({ where: { workspaceId, nodeKind: b.kind, parentNodeKey: parent?.programNodeKey ?? null } });
     const dup = siblings.find((x) => normalizeLabel(x.label) === normalizeLabel(label));
-    if (dup) fail(`"${dup.label}" already exists ${parent ? `under ${parent.label}` : "as a pathway"}: choose it instead.`, HttpStatus.CONFLICT);
+    if (dup) { const detail = `"${dup.label}" already exists ${parent ? `under ${parent.label}` : "as a pathway"}: choose it instead.`; throw new HttpException({ type: "https://expatready.local/problems/name-already-used", title: "Name already used", status: 409, detail, errors: [{ field: "label", message: detail }], existing: { key: dup.programNodeKey, label: dup.label } }, HttpStatus.CONFLICT); }
     // The key is internal (BR-6 compares names, never keys): a name with no Latin letters or digits, or one that shares
     // its first 60 characters with a neighbour, still gets a key of its own (break M3).
     let key = b.key ?? `${parent ? `${parent.programNodeKey}.` : ""}${slug(label) || "item"}`;
@@ -86,7 +86,8 @@ export class Studio {
       if ((e as { code?: string }).code !== "P2002") throw e;
       const twin = await this.db.programDef.findFirst({ where: { workspaceId, parentNodeKey: parent?.programNodeKey ?? null, nameKey: normalizeLabel(label) } });
       // The other unique value is the internal key: a different name that made the same key at the same moment.
-      return fail(twin ? `"${twin.label}" already exists ${parent ? `under ${parent.label}` : "as a pathway"}: choose it instead.` : "Another item was created here at the same moment: try again.", HttpStatus.CONFLICT);
+      const detail = twin ? `"${twin.label}" already exists ${parent ? `under ${parent.label}` : "as a pathway"}: choose it instead.` : "Another item was created here at the same moment: try again.";
+      throw new HttpException({ type: "https://expatready.local/problems/name-already-used", title: "Name already used", status: 409, detail, errors: [{ field: "label", message: detail }], ...(twin ? { existing: { key: twin.programNodeKey, label: twin.label } } : {}) }, HttpStatus.CONFLICT);
     });
     await this.audit.log(workspaceId, actor.id, "created", L.name.toLowerCase(), key, `${actor.name} created ${L.name.toLowerCase()} "${n.label}"${parent ? ` under ${parent.label}` : ""}`);
     return n;

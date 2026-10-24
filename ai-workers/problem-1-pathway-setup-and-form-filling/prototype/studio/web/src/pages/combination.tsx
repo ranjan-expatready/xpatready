@@ -160,7 +160,7 @@ function Overview({ d, sum, show }: { d: CombinationView; sum: CombinationSummar
         <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
           <h2 className="font-semibold">Released versions</h2>
           {!d.releases.length ? <p className="mt-2 text-sm text-text-muted">Nothing released yet. Case work only ever uses a released version; drafts are previews.</p> : (
-            <Table className="mt-3" dense head={["Release", "Released", "Approved by", "Basis"]}>{d.releases.map((r) => <tr key={r.id}><td><span className="font-medium">Release {r.release}</span>{r.status === "SUPERSEDED" ? <Pill className="ml-1">superseded</Pill> : null}</td><td>{new Date(r.released_at).toLocaleString()}</td><td>{r.approver}</td><td className="max-w-72 text-xs text-text-muted">{r.basis}</td></tr>)}</Table>
+            <Table className="mt-3" dense head={["Release", "Released", "Approved by", "Basis"]}>{d.releases.map((r) => <tr key={r.id}><td><span className="font-medium">Release {r.release}</span>{r.status === "SUPERSEDED" ? <Pill className="ml-1">superseded</Pill> : null}</td><td>{fmtWhen(r.released_at)}</td><td>{r.approver}</td><td className="max-w-72 text-xs text-text-muted">{r.basis}</td></tr>)}</Table>
           )}
         </section>
       </div>

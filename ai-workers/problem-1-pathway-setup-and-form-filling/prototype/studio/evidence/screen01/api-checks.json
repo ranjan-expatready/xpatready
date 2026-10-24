@@ -1,12 +1,12 @@
 {
- "at": "2026-10-24T04:31:07.069Z",
- "pass": 133,
+ "at": "2026-10-24T05:05:58.977Z",
+ "pass": 135,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 11.843
+   "detail": 14.771
   },
   {
    "name": "BR-1 pass: Individual shows only Individual programs; Corporate only Corporate",
@@ -280,7 +280,7 @@
    "name": "QA-1 pass: submitted and signed, the combination will be released",
    "ok": true,
    "detail": {
-    "combinationId": "1fe810ec-e06b-4ddd-a58b-c35e722fcdae",
+    "combinationId": "18aa9685-9c6a-4ebf-8a32-63111e075fc7",
     "label": "Spouse of a student",
     "path": [
      "Work permits",
@@ -600,10 +600,10 @@
    "name": "source-trust race: repeated unapproved edition uploads remain held once (database guard)",
    "ok": true,
    "detail": [
+    "Held for source verification: IMM 1295 (",
     "Already waiting for a person: checksum n",
     "Already waiting for a person: checksum n",
-    "Already waiting for a person: checksum n",
-    "Held for source verification: IMM 1295 ("
+    "Already waiting for a person: checksum n"
    ]
   },
   {
@@ -810,6 +810,30 @@
    "detail": "ERROR:  duplicate key value violates unique constraint \"program_def_parent_name_key\""
   },
   {
+   "name": "round 3: the request that lost the race gets the field message too (label)",
+   "ok": true,
+   "detail": [
+    [
+     {
+      "field": "label",
+      "message": "\"Race at once\" already exists under Visitors: choose it instead."
+     }
+    ],
+    [
+     {
+      "field": "label",
+      "message": "\"Race at once\" already exists under Visitors: choose it instead."
+     }
+    ],
+    [
+     {
+      "field": "label",
+      "message": "\"Race at once\" already exists under Visitors: choose it instead."
+     }
+    ]
+   ]
+  },
+  {
    "name": "QA-14: the same name under another parent is still allowed",
    "ok": true
   },
@@ -941,7 +965,7 @@
   {
    "name": "performance: a filtered catalogue answers in under 200 ms with the sample data",
    "ok": true,
-   "detail": "13 ms"
+   "detail": "12 ms"
   },
   {
    "name": "QA-6 fail: a name of symbols only is refused on its field in plain words; nothing is created",
@@ -980,7 +1004,7 @@
     "label": "With an LMIA",
     "combinations": 1,
     "hasSetup": true,
-    "combinationId": "4a04b72c-4be8-4b2f-987e-86e516703323"
+    "combinationId": "bed9eac8-948e-42c4-961b-13c7394dce58"
    }
   },
   {
@@ -996,7 +1020,7 @@
   {
    "name": "QA-5: the app still shows it at the real time",
    "ok": true,
-   "detail": "2026-10-24T04:31:05.400Z"
+   "detail": "2026-10-24T05:05:37.589Z"
   },
   {
    "name": "QA-5 condition: the database's own zone is not UTC on this machine, so the check above is a real test of the fix",
@@ -1007,6 +1031,20 @@
    "name": "QA-12 pass: after the sample load the Demo menu says the sample inputs are loaded",
    "ok": true,
    "detail": true
+  },
+  {
+   "name": "round 3: two sample loads at once: one loads, the other is told it is already loading (never a 500)",
+   "ok": true,
+   "detail": [
+    [
+     201,
+     19.193
+    ],
+    [
+     409,
+     "The sample inputs are already loading: wait for them to finish."
+    ]
+   ]
   },
   {
    "name": "QA-12 setup: reset the demo copy",

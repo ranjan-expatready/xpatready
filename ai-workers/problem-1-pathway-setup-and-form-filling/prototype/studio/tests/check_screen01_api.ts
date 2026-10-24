@@ -48,7 +48,8 @@ function pdf(title: string, text: string) {
   // The database this check reads by SQL must be the server's own (Lead check L1: a run whose database argument named
   // another copy's database looked up stale ids and failed with a 404). Stop with the reason instead.
   const served = (await call("GET", "/session")).body?.workspace?.id;
-  if (!served || !sql(`select id from workspace where id='${served}'`)) { console.error(`STOP  the database ${DB} is not the one the server on port ${PORT} uses (its workspace ${served ?? "unknown"} is not in it). Pass the copy's database: tsx <check> ${PORT} xr_studio_<name>.`); process.exit(2); }
+  const inDb = (() => { try { return sql(`select id from workspace where id='${served}'`); } catch { return ""; } })(); // a database that does not exist is "not it" too
+  if (!served || !inDb) { console.error(`STOP  the database ${DB} is not the one the server on port ${PORT} uses (its workspace ${served ?? "unknown"} is not in it). Pass the copy's database: tsx <check> ${PORT} xr_studio_<name>.`); process.exit(2); }
   // One variable for every answer: a call's, or the intake's (which also carries its first result as `one`).
   let r: Awaited<ReturnType<typeof call>> & { one?: any } = await call("POST", "/demo/load");
   ok("setup: sample inputs load", r.status === 201, r.body.seconds);
@@ -320,6 +321,7 @@ function pdf(title: string, text: string) {
   ok("QA-14 pass: the same category sent four times at once is created once; the others are told it exists", raced.filter((x) => x.status === 201).length === 1 && raced.filter((x) => x.status === 409 && /already exists/.test(x.body.message ?? x.body.detail)).length === 3 && sql("select count(*) from program_def where parent_node_key='individual.visitors' and label='Race at once'") === "1", raced.map((x) => x.status));
   const dbRefusal = sqlError(`insert into program_def (id, workspace_id, program_node_key, parent_node_key, node_kind, label, name_key, source_basis, created_by, allowed_locations) select gen_random_uuid(), workspace_id, 'individual.visitors.race_twin', 'individual.visitors', 'STREAM', 'RACE-at once', 'raceatonce', 'ILLUSTRATIVE', 'test', '{}' from program_def where program_node_key='individual.visitors'`);
   ok("QA-14 fail: the database itself refuses a second same-parent name written another way", !!dbRefusal && /program_def_parent_name_key|duplicate key/.test(dbRefusal), dbRefusal);
+  ok("round 3: the request that lost the race gets the field message too (label)", raced.filter((x) => x.status === 409).every((x) => x.body.errors?.[0]?.field === "label" && x.body.existing?.label === "Race at once"), raced.filter((x) => x.status === 409).map((x) => x.body.errors));
   ok("QA-14: the same name under another parent is still allowed", (await call("POST", "/program-nodes", { kind: "STREAM", parentKey: "individual.study_permits", label: "Race at once" })).status === 201);
   const junk = await cat("pathway=INDIVIDUAL&filter=all&under=junk.key&program=nope"), cross = await cat("pathway=INDIVIDUAL&filter=all&under=corporate.lmia");
   ok("m5: a program or path not in this pathway is ignored and the answer says so (no empty contradiction)", junk.under === "" && junk.program === "" && junk.rows.length === junk.counts.all && cross.under === "" && cross.underPath === null, { under: junk.under, program: junk.program, rows: junk.rows.length });
@@ -388,6 +390,9 @@ function pdf(title: string, text: string) {
   // ---------------------------------------------------------------- QA-12 the Demo menu says what was loaded
   let ds = (await call("GET", "/demo/status")).body;
   ok("QA-12 pass: after the sample load the Demo menu says the sample inputs are loaded", ds.loaded === true && (await call("GET", "/session")).body.sampleLoaded === true, ds.loaded);
+  r = await call("POST", "/demo/reset", { confirm: "RESET" });
+  const twoLoads = await Promise.all([call("POST", "/demo/load"), call("POST", "/demo/load")]);
+  ok("round 3: two sample loads at once: one loads, the other is told it is already loading (never a 500)", twoLoads.filter((x) => x.status === 201).length === 1 && twoLoads.some((x) => x.status === 409 && /already loading|already exist/.test(x.body.message ?? x.body.detail)), twoLoads.map((x) => [x.status, x.body?.message ?? x.body?.seconds]));
   r = await call("POST", "/demo/reset", { confirm: "RESET" });
   ok("QA-12 setup: reset the demo copy", r.status === 201, r.body?.message);
   r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { create: "Hand-made" }, category: { create: "One row" } });

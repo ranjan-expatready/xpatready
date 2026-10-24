@@ -140,6 +140,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await p.getByRole("button", { name: /^Status/ }).click(); await idle();
 
   await p.getByRole("button", { name: /^Program:/ }).click(); await p.getByRole("menuitemradio", { name: /Work permits/ }).click(); await idle();
+  await p.waitForFunction(() => location.search.includes("prog=") && [...document.querySelectorAll('[role="row"][data-node]')].every((r) => r.getAttribute("data-node").startsWith("individual.work_permits")), null, { timeout: 5000 }).catch(() => {}); // the filtered list has arrived (review round 3)
   step("Program filter: only Work permits rows, in path order", (await grid().locator('[role="row"][data-node]').evaluateAll((rs) => rs.every((x) => x.getAttribute("data-node").startsWith("individual.work_permits")))) && p.url().includes("prog="));
   await state("programs-program-filter-work-permits");
   await p.getByRole("button", { name: /^Program:/ }).click(); await p.getByRole("menuitemradio", { name: /All programs/ }).click(); await idle();

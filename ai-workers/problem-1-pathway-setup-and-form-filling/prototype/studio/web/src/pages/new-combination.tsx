@@ -65,6 +65,7 @@ export function NewCombinationPage() {
       const mine = errs.filter((x) => fields.has(x.field));
       if (mine.length) setErrors(Object.fromEntries(mine.map((x) => [x.field, x.message])));
       setProblem(mine.length === errs.length && mine.length ? null : (e as Error).message);
+      void opts.refetch(); // someone may have created that level meanwhile: offer it to choose (break round 3)
     } finally { setBusy(false); }
   };
 
