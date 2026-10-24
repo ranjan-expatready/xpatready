@@ -15,6 +15,7 @@ import { Forms, FormsController } from "./forms.ts";
 import { CAPTURE_LIMITS } from "../../contracts/forms.ts";
 import { Intake, MAX_BYTES, MAX_FILES } from "./intake.ts";
 import { Programs } from "./programs.ts";
+import { Runtime, RuntimeController } from "./runtime.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 
@@ -49,7 +50,9 @@ class StudioController {
   @Get("library/document-types") types() { return this.s.documentTypes(); }
   @Post("conditions/check") check(@Body() b: any) { return this.s.checkCondition(b); }
   @Get("releases") releases(@Query("combination") c?: string) { return this.s.releases(c); }
-  @Get("activity") activity() { return this.s.activity(); }
+  // Runtime R1a FIX (review Must 1): the activity feed holds case events, so only configuration people and the case
+  // officer read it; a client or an unknown caller is refused (STANDARDS §6 deny by default).
+  @Get("activity") activity(@Headers("x-actor") a: H) { const actor = actorOf(a); if (!(actor.duties as readonly string[]).some((d) => d === "review" || d === "case")) throw new HttpException("Activity is for staff.", 403); return this.s.activity(); }
 }
 
 @Controller("api")
@@ -150,7 +153,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms] })
+@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime] })
 class AppModule {}
 
 async function main() {
