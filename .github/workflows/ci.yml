@@ -1,6 +1,6 @@
 # CI (P-81, P-82): the push guard on every push and pull request; on pull requests also the rules-file checks,
-# the decision-impact check, the explicit-any count and the engine/contract suites on PostgreSQL 18 with the
-# official IRCC PDFs fetched by manifest checksum.
+# the decision-impact check, the explicit-any count and the engine/contract suites on PostgreSQL 18; the
+# official IRCC PDFs are committed (P-83) and verified by manifest checksum.
 name: ci
 on:
   push:

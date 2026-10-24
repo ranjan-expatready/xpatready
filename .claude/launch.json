@@ -17,7 +17,7 @@
     },
     {
       "name": "p3-review",
-      "runtimeExecutable": "/Users/ranjansingh/Desktop/Xpatready/.tools/node-v24.21.0/bin/node",
+      "runtimeExecutable": "${workspaceFolder}/.tools/node-v24.21.0/bin/node",
       "runtimeArgs": [
         "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p3/server.ts",
         "--port",

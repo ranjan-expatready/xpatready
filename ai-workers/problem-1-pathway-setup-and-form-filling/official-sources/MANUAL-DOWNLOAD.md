@@ -1,5 +1,7 @@
 # Official forms to download by hand (canada.ca refuses scripts)
 
+> In a cloud clone the committed PDFs are already present (P-83) — this file is only for fetching NEW editions on the founder's Mac.
+
 Click each link in your browser; the PDF lands in Downloads. The next `/next` (or `python3 fetch_official_sources.py`) finds each file there by its checksum, whatever its name, and copies it into place. A file that does not match exactly is ignored.
 
 | Form | Link | Used for |
