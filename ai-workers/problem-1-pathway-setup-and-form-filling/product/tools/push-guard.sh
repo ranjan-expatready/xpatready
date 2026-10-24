@@ -21,16 +21,17 @@ GUARD_REL="ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/pus
 bad=0
 check_range() {
   local range="$1" commits
-  commits=$(git rev-list "$range" 2>/dev/null) || return 0
+  # Intentionally unquoted: $range carries several rev-list args (e.g. "HEAD --not --remotes").
+  commits=$(git rev-list $range 2>/dev/null) || return 0
   [ -n "$commits" ] || return 0
   # Paths added, modified, renamed-to or copied-into by the range (deletions are safe, so D is excluded).
   while IFS= read -r f; do
     printf '%s\n' "$f" | grep -iqE "$PATH_RE" && { echo "GUARD: excluded path in $range -> $f"; bad=1; }
   done < <(echo "$commits" | while read -r c; do git diff-tree --no-commit-id -r --diff-filter=AMRC --name-only "$c"; done | sort -u)
   # Added lines only: secrets and personal names.
-  git log -p --format='' "$range" 2>/dev/null | grep -nE '^\+' | grep -ivE '^\+\+\+' | grep -inE -e "$SECRET_RE" | head -5 | while read -r m; do echo "GUARD: possible secret in $range: $m"; done > /tmp/guard-secrets.$$
+  git log -p --format='' $range 2>/dev/null | grep -nE '^\+' | grep -ivE '^\+\+\+' | grep -inE -e "$SECRET_RE" | head -5 | while read -r m; do echo "GUARD: possible secret in $range: $m"; done > /tmp/guard-secrets.$$
   [ -s /tmp/guard-secrets.$$ ] && { cat /tmp/guard-secrets.$$; bad=1; }
-  git log -p --format='' "$range" -- . ":(exclude)$GUARD_REL" 2>/dev/null | grep -nE '^\+' | grep -inE -e "$NAMES_RE" | head -5 | while read -r m; do echo "GUARD: personal name in $range: $m"; done > /tmp/guard-names.$$
+  git log -p --format='' $range -- . ":(exclude)$GUARD_REL" 2>/dev/null | grep -nE '^\+' | grep -inE -e "$NAMES_RE" | head -5 | while read -r m; do echo "GUARD: personal name in $range: $m"; done > /tmp/guard-names.$$
   [ -s /tmp/guard-names.$$ ] && { cat /tmp/guard-names.$$; bad=1; }
   rm -f /tmp/guard-secrets.$$ /tmp/guard-names.$$
 }
