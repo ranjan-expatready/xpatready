@@ -33,8 +33,9 @@ export function ageOn(birth: unknown, today: Date): number | null {
   return age;
 }
 
-/** P-72 with founder question 1 (recommended): VERIFIED is confirmed; a client's own typed answer on a client field
- *  counts as confirmed for the principal, the case and a minor child; everything else waits for "Confirm section". */
+/** P-72 and P-78: VERIFIED is confirmed; the client's (principal's) typed answer on a client field counts as confirmed
+ *  for the principal, the application and a minor child; for an adult it is "answered by the principal" until that
+ *  adult or the officer confirms; everything else waits for "Confirm section". */
 export function confirmation(s: Snapshot, a: Answer, who: Participant | undefined, birthDate: unknown, today: Date): Confirmation {
   if (a.status === "VERIFIED") return { confirmed: true, why: CONFIRM_WORDS.officer };
   if (a.channel !== "questionnaire") return { confirmed: false, why: `${CONFIRM_WORDS.waits} (entered in the agent view)` };
@@ -43,9 +44,9 @@ export function confirmation(s: Snapshot, a: Answer, who: Participant | undefine
   if (who?.role === "child") {
     const age = ageOn(birthDate, today);
     if (age !== null && age < MINOR.underAge) return { confirmed: true, why: `${CONFIRM_WORDS.client_own} (for a child under ${MINOR.underAge})` };
-    return { confirmed: false, why: `${CONFIRM_WORDS.waits} (${age === null ? "the child's date of birth is not answered yet" : `the child is ${age}, an adult`})` };
+    return { confirmed: false, why: age === null ? `${CONFIRM_WORDS.waits} (the child's date of birth is not answered yet)` : `${CONFIRM_WORDS.by_principal} (the child is ${age})` };
   }
-  return { confirmed: false, why: `${CONFIRM_WORDS.waits} (answered for an adult family member)` };
+  return { confirmed: false, why: CONFIRM_WORDS.by_principal };
 }
 
 /** How the forms that read a field write it (from the release's field maps): the precision and limits a value needs. */

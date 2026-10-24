@@ -139,7 +139,7 @@ async function main() {
   ok("RT-10 pass: the client's own answer on a client field counts as confirmed", a?.confirmed === true && /client's own/.test(a.why), a?.why);
   await check(spouse, "person.marital_status", "married");
   a = await conf(spouse, "person.marital_status");
-  ok("RT-10 fail: the client's answer for the adult spouse waits for the officer", a?.confirmed === false && /adult/.test(a.why), a?.why);
+  ok("RT-10 fail (P-78): the principal's answer for the adult spouse shows \"answered by the principal\" and is not confirmed", a?.confirmed === false && /^Answered by the principal for an adult/.test(a.why), a?.why);
   await check(child, "person.marital_status", "single");
   const before = (await conf(child, "person.marital_status"))?.confirmed;
   await check(child, "person.date_of_birth", "2015-05-01", OFFICER);
@@ -196,6 +196,9 @@ async function main() {
   const newer = (await call("POST", "/runtime/cases", { combinationId: vv, reference: `R1A2-${run}`, clientActor: CLIENT_B, principal: { displayName: "Sample Applicant B" } }, OFFICER)).body;
   const newLabel = qs((await call("GET", `/runtime/cases/${newer.id}/questionnaire?mode=agent`, undefined, OFFICER)).body).find((q) => q.fact === "case.visit_purpose")!.label;
   ok("RT-2 pass and fail: after a newer release the open case keeps its release and wording; a new case gets the newer one", !!vp && rel.status === 201 && caseNow.pin.release_version === Number(latest[0]) && labelNow === oldLabel && newer.pin.release_version === Number(latest[0]) + 1 && newLabel.includes(run), { old: caseNow.pin.release_version, new: newer.pin?.release_version, labelNow, newLabel });
+
+  // ── S-9 a release publishes the answer lists its choice fields take (else the published copy differs from the reviewed one)
+  ok("S-9 pass: every answer list the visitor visa's fields take is published with its release; none is left in draft", sql(`select count(*) from answer_list where answer_list_key in (select distinct answer_list_key from canonical_field where answer_list_key is not null) and status = 'DRAFT'`) === "0" && Number(sql("select count(*) from answer_list where status = 'PUBLISHED'")) >= 13);
 
   // ── R1a FIX: review and break-report findings, each with a passing and a failing case
   r = await call("GET", "/activity", undefined, CLIENT); const r2 = await call("GET", "/activity", undefined, null);

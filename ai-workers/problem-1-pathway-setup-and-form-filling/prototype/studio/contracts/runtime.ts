@@ -7,9 +7,10 @@ import { z } from "zod";
 export const ROLES = ["principal", "spouse_or_partner", "child"] as const;
 export type CaseRole = (typeof ROLES)[number];
 
-/** P-72 with founder question 1 (recommended, pending the founder): a client's own typed answers count as confirmed
- *  for the principal and a minor child; an adult's other answers wait for the officer's "Confirm section". The age and
- *  the fact it is read from are Sample until the founder and the immigration expert confirm them. */
+/** P-72 and P-78 (founder, 23 Oct: confirmed by who answered): a person's own answers and the principal's answers for a
+ *  minor child count as confirmed; the principal's answers for an adult show "answered by the principal" and become
+ *  confirmed when that adult confirms on their own link (not built in R1a) or the officer presses "Confirm section".
+ *  The age and the fact it is read from are Sample until the immigration expert confirms them. Unconfirmed: no counsel. */
 export const MINOR = { birthDateField: "person.date_of_birth", underAge: 18 } as const;
 
 /** Text a person types: no NUL or other control characters (PostgreSQL refuses NUL; a refusal must be a 400, not a 500). */
@@ -64,4 +65,5 @@ export const CONFIRM_WORDS = {
   officer: "Confirmed by the officer",
   client_own: "Counts as confirmed: the client's own answer",
   waits: "Waits for the officer's \"Confirm section\"",
+  by_principal: "Answered by the principal for an adult: confirmed once that person confirms on their own link or the officer presses \"Confirm section\"",
 } as const;
