@@ -28,7 +28,7 @@ Checklist so any agent can resume. Status: `[x]` done · `[ ]` pending · `[!]` 
 - [x] run checks: check-docs OK · decision-impact OK (P-82 exempt) · count-any 437/437 baseline · npm ci 403 pkgs · prisma migrate deploy (no pending) + generate · fetch_official_sources (0 pending) · check_engine.ts 38/38
 - [x] start.sh: reused live PG 18 @127.0.0.1:54329 via copied postmaster.pid; spare-port app via `tools/isolated.sh migcheck 4401` (xr_studio_migcheck) — served + stopped; bare 4401 correctly refused (QA-3)
 - [x] recreate one lane worktree (.claude/worktrees/qa-migcheck on claude/qa-e01030); lane.sh bind qa → whoami `qa`; setup linked .tools + studio/node_modules
-- [ ] push migration/github-canonical, open PR, report CI + diffs vs old folder
+- [x] push migration/github-canonical (push-guard ran clean) · PR #1 open · CI: guard pass (both events), checks pass (guard self-match + createdb user + suite DATABASE_URL fixed in-flight)
 
 ## Phase 3 — cut-over (founder merges PR first)
 - [ ] rename Xpatready → Xpatready-old-2026-10-24; Xpatready-gh → Xpatready
