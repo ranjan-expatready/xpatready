@@ -7,7 +7,7 @@
 // cancelled before its paid call, a retry after a mid-run cancel. Every rule has a passing and a failing case.
 //   zsh studio/tools/isolated.sh forms_fl 4453 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_ai_launch_paths.ts 4453 xr_studio_forms_fl
 import { execFileSync } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const PORT = Number(process.argv[2] ?? 4453), DB = process.argv[3] ?? "xr_studio_forms_fl";
@@ -17,8 +17,15 @@ const LEDGER = join(STUDIO, "..", "p2", "ledger", "spend.jsonl");
 const log: { name: string; ok: boolean; detail?: unknown }[] = []; let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 240)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
+/** fetch, sent again once when a kept-alive connection was closed before any reply (the suite restarts its server). */
+const send = async (url: string, init: RequestInit): Promise<Response> => {
+  try { return await fetch(url, init); } catch (e) {
+    if (!/EPIPE|ECONNRESET|UND_ERR_SOCKET/.test((e as { cause?: { code?: string } }).cause?.code ?? "")) throw e;
+    return fetch(url, init);
+  }
+};
 const call = async (method: string, path: string, body?: unknown, actor = "user-A"): Promise<Res> => {
-  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const r = await send(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
   return { status: r.status, body: j };
 };
@@ -216,6 +223,28 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
 
   ok("none of these paths wrote to the shared spend ledger (no reservation, no correction line)", statSync(LEDGER).size === ledgerBefore);
   ok("nothing was applied: IMM 5409 has no map rows from these drafts", sql(`select count(*) from drafting_job where attachment_id='${source}' and status='APPLIED'`) === "0");
+
+  // ──────────────────────────────────────────── PR 10 review: STUDIO_FAKE_LAUNCHER runs only the test fixture
+  // The server is restarted (same database) naming another script, then a link that carries the fixture's file name;
+  // neither may run: a stub draft (US$0) goes through the guarded p2/launch.ts instead.
+  const NAME = DB.replace(/^xr_studio_/, ""), ROOT = join(STUDIO, "..", "..", "..", "..");
+  const marker = join(VARDIR, "rogue-ran");
+  const rogue = join(VARDIR, "rogue-launch.mjs");
+  writeFileSync(rogue, `import { writeFileSync } from "node:fs"; writeFileSync(${JSON.stringify(marker)}, "ran"); console.log(JSON.stringify({ ok: true })); process.exit(0);\n`);
+  const linkDir = join(VARDIR, "tests", "fixtures"); mkdirSync(linkDir, { recursive: true });
+  const disguised = join(linkDir, "fake-launch.mjs"); rmSync(disguised, { force: true }); symlinkSync(rogue, disguised);
+  for (const [label, path] of [["another script", rogue], ["a link named like the fixture", disguised]] as const) {
+    rmSync(marker, { force: true }); writeFileSync(join(VARDIR, "fake-launch.log"), "");
+    execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), NAME, String(PORT), "restart", `STUDIO_FAKE_LAUNCHER=${path}`], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    r = await call("POST", `/attachments/${source}/draft`, { mode: "stub" });
+    const g = r.status === 201 ? await finished(r.body.id) : { status: `not started: ${r.body?.message}` };
+    ok(`PR 10: STUDIO_FAKE_LAUNCHER naming ${label} is ignored: it never runs, the fake log stays empty, and the guarded launcher's stub pass runs (US$0)`, !existsSync(marker) && calls().length === 0 && g.status === "COMPLETED" && /Stub pass completed/.test(g.message ?? ""), { status: g.status, message: g.message, ran: existsSync(marker), fakeCalls: calls().length });
+  }
+  execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), NAME, String(PORT), "restart", "STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs"], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  scenario({ stub: { exit: 0, out: { ok: true } } });
+  r = await call("POST", `/attachments/${source}/draft`, { mode: "stub" });
+  const back = r.status === 201 ? await finished(r.body.id) : null;
+  ok("PR 10 fail: the fixture itself, named as the suite's usage line names it, is still honoured", back?.status === "COMPLETED" && calls().some((x) => x.mode === "stub"), { status: back?.status, calls: calls().length });
 
   // ──────────────────────────────────────────── break M2: a workspace reset while a screen-map draft runs
   scenario({ stub: { exit: 0, out: { ok: true }, sleep_ms: 2500 }, live: { exit: 1, out: { refused: "should never be called" } } });

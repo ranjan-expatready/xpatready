@@ -1,9 +1,9 @@
 {
- "at": "2026-10-24T20:28:12.946Z",
+ "at": "2026-10-24T21:14:00.690Z",
  "port": 4453,
  "database": "xr_studio_forms_fl",
  "paid_calls": 0,
- "pass": 52,
+ "pass": 55,
  "fail": 0,
  "log": [
   {
@@ -80,47 +80,47 @@
   {
    "name": "run record refused: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The AI declined to draft this form. Nothing was applied. Cost US$0.42. Run fake-pfiyyo."
+   "detail": "The AI declined to draft this form. Nothing was applied. Cost US$0.42. Run fake-thkyam."
   },
   {
    "name": "run record timed_out: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The AI did not answer in time. Nothing was applied. Cost US$0.42. Run fake-nkch48."
+   "detail": "The AI did not answer in time. Nothing was applied. Cost US$0.42. Run fake-pdl6z0."
   },
   {
    "name": "run record budget_exceeded: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The run would have gone over its spending cap, so it stopped. Nothing was applied. Run fake-soxmfy."
+   "detail": "The run would have gone over its spending cap, so it stopped. Nothing was applied. Run fake-p9arwz."
   },
   {
    "name": "run record provider_error (not a limit): FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The AI provider returned an error: 529 overloaded. Nothing was drafted or applied. Cost US$0.42. Run fake-lkn68c."
+   "detail": "The AI provider returned an error: 529 overloaded. Nothing was drafted or applied. Cost US$0.42. Run fake-kzi5uu."
   },
   {
    "name": "run record invalid_output cut at the limit: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The AI's answer was cut off at the output limit (4000 of 4000 output tokens). Nothing was applied. Cost US$0.30. Run fake-1gvbr7."
+   "detail": "The AI's answer was cut off at the output limit (4000 of 4000 output tokens). Nothing was applied. Cost US$0.30. Run fake-ws2k3s."
   },
   {
    "name": "run record invalid_output in another shape: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The AI answered, but not in the agreed shape ({\"entries\":\"missing\"}). Nothing was applied. Cost US$0.42. Run fake-fhn247."
+   "detail": "The AI answered, but not in the agreed shape ({\"entries\":\"missing\"}). Nothing was applied. Cost US$0.42. Run fake-delvva."
   },
   {
    "name": "run record completed, entries break our rules: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "AI answered 1 form field. 1 entry broke our entry rules (form field 1: field name \"Person.Name\" breaks the naming rule). Nothing was applied. Cost US$0.42. Run fake-nbbi0a."
+   "detail": "AI answered 1 form field. 1 entry broke our entry rules (form field 1: field name \"Person.Name\" breaks the naming rule). Nothing was applied. Cost US$0.42. Run fake-1qf3zh."
   },
   {
    "name": "run record completed, the run record failed our check: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "AI answered. The answer failed our check of the run record. Nothing was applied. Cost US$0.42. Run fake-t1urk5."
+   "detail": "AI answered. The answer failed our check of the run record. Nothing was applied. Cost US$0.42. Run fake-e1pnga."
   },
   {
    "name": "run record an unknown status: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The AI step ended without a usable draft (status weird). Nothing was applied. Cost US$0.42. Run fake-i58rg3."
+   "detail": "The AI step ended without a usable draft (status weird). Nothing was applied. Cost US$0.42. Run fake-6etf8s."
   },
   {
    "name": "a run file that cannot be read: FAILED with the reason, the step never stays RUNNING",
@@ -346,6 +346,34 @@
   {
    "name": "nothing was applied: IMM 5409 has no map rows from these drafts",
    "ok": true
+  },
+  {
+   "name": "PR 10: STUDIO_FAKE_LAUNCHER naming another script is ignored: it never runs, the fake log stays empty, and the guarded launcher's stub pass runs (US$0)",
+   "ok": true,
+   "detail": {
+    "status": "COMPLETED",
+    "message": "Stub pass completed: the guarded path works. A stub has no AI content, so there is nothing to compare.",
+    "ran": false,
+    "fakeCalls": 0
+   }
+  },
+  {
+   "name": "PR 10: STUDIO_FAKE_LAUNCHER naming a link named like the fixture is ignored: it never runs, the fake log stays empty, and the guarded launcher's stub pass runs (US$0)",
+   "ok": true,
+   "detail": {
+    "status": "COMPLETED",
+    "message": "Stub pass completed: the guarded path works. A stub has no AI content, so there is nothing to compare.",
+    "ran": false,
+    "fakeCalls": 0
+   }
+  },
+  {
+   "name": "PR 10 fail: the fixture itself, named as the suite's usage line names it, is still honoured",
+   "ok": true,
+   "detail": {
+    "status": "COMPLETED",
+    "calls": 1
+   }
   },
   {
    "name": "break M2: a reset while a screen-map draft runs leaves the server running (the draft ends nowhere, quietly)",
