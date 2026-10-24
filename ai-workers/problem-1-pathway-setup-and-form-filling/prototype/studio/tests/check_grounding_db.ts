@@ -16,6 +16,11 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 
 (async () => {
+  // The database this check reads by SQL must be the server's own (Lead check L1: a run whose database argument named
+  // another copy's database looked up stale ids and failed with a 404). Stop with the reason instead.
+  const served = (await call("GET", "/session")).body?.workspace?.id;
+  const inDb = (() => { try { return sql(`select id from workspace where id='${served}'`); } catch { return ""; } })(); // a database that does not exist is "not it" too
+  if (!served || !inDb) { console.error(`STOP  the database ${DB} is not the one the server on port ${PORT} uses (its workspace ${served ?? "unknown"} is not in it). Pass the copy's database: tsx <check> ${PORT} xr_studio_<name>.`); process.exit(2); }
   // ------------------------------------------------------------ finding 1 / D285: levels, scope, duplicates
   // Screen 01 (21 Oct): pathways are fixed values the studio always has; nodes are added with POST /program-nodes
   // (contracts/programs.ts); a combination is created on a last-level node with POST /combinations {nodeKey}.

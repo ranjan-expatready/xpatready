@@ -54,10 +54,20 @@ export class Programs {
 
   /** The two pathways are fixed values (BR-1, SA-1B-50), not content: they exist in every workspace, sample data or not,
    *  so the first program can be added to an empty workspace. */
+  /** Names the migration could not key in SQL (other scripts) get the app's own BR-6 key once per process (QA-14,
+   *  break round 3). A name that would duplicate an earlier one keeps no key, as the migration does for duplicates. */
+  private keyed = false;
+  private async backfillNameKeys(workspaceId: string) {
+    if (this.keyed) return; this.keyed = true;
+    const open = await this.db.programDef.findMany({ where: { workspaceId, nameKey: null }, orderBy: { createdAt: "asc" } });
+    for (const n of open) await this.db.programDef.update({ where: { id: n.id }, data: { nameKey: normalizeLabel(n.label) } }).catch((e) => { if ((e as { code?: string }).code !== "P2002") throw e; });
+  }
+
   async ensurePathways(workspaceId: string) {
+    await this.backfillNameKeys(workspaceId);
     for (const [key, label, clientType, description] of PATHWAY_NODES) {
       if (await this.db.programDef.findFirst({ where: { workspaceId, nodeKind: "PATHWAY", clientType } })) continue;
-      await this.db.programDef.create({ data: { workspaceId, programNodeKey: key, nodeKind: "PATHWAY", label, clientType, description, sourceBasis: "SOURCE_BACKED", createdBy: "system" } }).catch((e) => { if (e?.code !== "P2002") throw e; });
+      await this.db.programDef.create({ data: { workspaceId, programNodeKey: key, nodeKind: "PATHWAY", label, nameKey: normalizeLabel(label), clientType, description, sourceBasis: "SOURCE_BACKED", createdBy: "system" } }).catch((e) => { if (e?.code !== "P2002") throw e; });
     }
   }
 

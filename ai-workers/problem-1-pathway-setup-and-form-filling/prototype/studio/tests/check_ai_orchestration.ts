@@ -33,7 +33,7 @@ const done = (b: any) => b && !["QUEUED", "RUNNING"].includes(b.status) && !b.jo
   const vv = await rowId("vv.single"), sp = await rowId("sp.student"), sv0 = await rowId("sv.super_visa");
   const scope = { kind: "catalogue", ids: [vv, sp, sv0] };
   let r = await call("POST", "/ai/plan", { scope, mode: "STUB" });
-  const plan = r.body; const act = (row: string, src: RegExp) => plan.targets.find((t: any) => t.combinationId === row && src.test(t.source))?.action;
+  const plan = r.body; const act = (row: string | undefined, src: RegExp) => plan.targets.find((t: any) => t.combinationId === row && src.test(t.source))?.action;
   ok("plan before launch: per target action and reason, cost, nothing started", act(vv, /IMM 5257/) === "draft" && act(vv, /IMM 5707/) === "reuse_library" && act(sp, /IMM 5475/) === "reuse_library" && act(sv0, /IMM 5257/) === "skip" && plan.totals.worst_usd === 0 && (await call("GET", "/ai/batches")).body.length === 0, plan.totals);
   ok("the same form in two selected rows is drafted once; the other row waits to reuse it", /Same form as in/.test(plan.targets.find((t: any) => t.combinationId === sv0 && /IMM 5257/.test(t.source)).why));
   r = await call("POST", "/ai/batches", { scope, mode: "STUB", idempotencyKey: key("approver"), planSha256: plan.plan_sha256 }, "user-B");

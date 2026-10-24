@@ -6,7 +6,7 @@ import { CATALOGUE_URL_KEY, STATUS_WORD } from "@/pages/programs";
 import { AddFormPanel } from "@/components/forms";
 import { AddOnlineFormPanel, ChannelCell, FilingLine, OnlineForms, UseDefaults } from "@/components/channels";
 import { SHOW_ONLY_STEPS, StepLabel, StepTip, useNextStep } from "@/components/next-step";
-import { StatusChip, TipProvider } from "@/components/status";
+import { StatusChip, TipProvider, fmtWhen } from "@/components/status";
 import { api, useActorId, useAction, useApi } from "@/lib/api";
 import { Button, Dialog, Notice, Pill, Stat, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
@@ -160,14 +160,14 @@ function Overview({ d, sum, show }: { d: CombinationView; sum: CombinationSummar
         <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
           <h2 className="font-semibold">Released versions</h2>
           {!d.releases.length ? <p className="mt-2 text-sm text-text-muted">Nothing released yet. Case work only ever uses a released version; drafts are previews.</p> : (
-            <Table className="mt-3" dense head={["Release", "Released", "Approved by", "Basis"]}>{d.releases.map((r) => <tr key={r.id}><td><span className="font-medium">Release {r.release}</span>{r.status === "SUPERSEDED" ? <Pill className="ml-1">superseded</Pill> : null}</td><td>{new Date(r.released_at).toLocaleString()}</td><td>{r.approver}</td><td className="max-w-72 text-xs text-text-muted">{r.basis}</td></tr>)}</Table>
+            <Table className="mt-3" dense head={["Release", "Released", "Approved by", "Basis"]}>{d.releases.map((r) => <tr key={r.id}><td><span className="font-medium">Release {r.release}</span>{r.status === "SUPERSEDED" ? <Pill className="ml-1">superseded</Pill> : null}</td><td>{fmtWhen(r.released_at)}</td><td>{r.approver}</td><td className="max-w-72 text-xs text-text-muted">{r.basis}</td></tr>)}</Table>
           )}
         </section>
       </div>
-      <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
-        <h2 className="font-semibold">Recent steps</h2>
+      <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm" aria-labelledby="ov-steps">
+        <h2 id="ov-steps" className="font-semibold">Recent steps</h2>
         {!d.jobs.length ? <p className="mt-2 text-sm text-text-muted">No reading or AI steps yet.</p> : (
-          <Table className="mt-3" dense head={["Step", "Mode", "Status", "Result", "Started"]}>{d.jobs.slice(0, 8).map((j) => <tr key={j.id}><td>{j.kind === "field_map" ? "AI field-map draft" : "Read form"}</td><td><ModePill mode={j.mode} /></td><td><StatusPill status={j.status} /></td><td className="max-w-xl text-xs text-text-muted">{j.message}</td><td className="whitespace-nowrap text-xs">{new Date(j.startedAt).toLocaleTimeString()}</td></tr>)}</Table>
+          <Table className="mt-3" dense head={["Step", "Mode", "Status", "Result", "Started"]}>{d.jobs.slice(0, 8).map((j) => <tr key={j.id}><td>{j.kind === "field_map" ? "AI field-map draft" : "Read form"}</td><td><ModePill mode={j.mode} /></td><td><StatusPill status={j.status} /></td><td className="max-w-xl text-xs text-text-muted">{j.message}</td><td className="whitespace-nowrap text-xs">{fmtWhen(j.startedAt)}</td></tr>)}</Table>
         )}
       </section>
     </div>

@@ -5,7 +5,7 @@
 // runs) instead of re-buying every paid AI draft. Reset removes the disposable workspace's rows and working files and keeps the engine,
 // official originals, fixtures, AI run records, the spend ledger and review evidence, which it fingerprints before
 // and after so "unchanged" is checked, not asserted.
-import { HttpStatus, Inject, Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -44,15 +44,23 @@ export class Demo {
   async load(actor: Actor) {
     need(actor, "author");
     const workspaceId = await this.ws.id();
-    if (await this.db.programDef.count({ where: { workspaceId, nodeKind: { not: "PATHWAY" } } })) fail("Programs already exist in this workspace. Reset the demo first to load the sample inputs.", HttpStatus.CONFLICT);
+    // One load at a time (break round 3): claimed before anything awaits, so a second click while loading is told so,
+    // never a half-load and a 500.
+    if (this.loading) fail("The sample inputs are already loading: wait for them to finish.", HttpStatus.CONFLICT);
+    this.loading = true;
     const t0 = Date.now();
     const log: string[] = [];
-    try { return await this.loadSteps(actor, workspaceId, t0, log); }
+    try {
+      if (await this.db.programDef.count({ where: { workspaceId, nodeKind: { not: "PATHWAY" } } })) fail("Programs already exist in this workspace. Reset the demo first to load the sample inputs.", HttpStatus.CONFLICT);
+      return await this.loadSteps(actor, workspaceId, t0, log);
+    }
     catch (e) {
+      if (e instanceof HttpException && e.getStatus() === HttpStatus.CONFLICT && !log.length) throw e;
       await this.audit.log(workspaceId, actor.id, "failed", "sample inputs", null, `Loading the sample inputs stopped: ${(e as Error).message.slice(0, 300)}`, { log });
       fail(`Loading stopped after: ${log.slice(-1)[0] ?? "the start"}. Reason: ${(e as Error).message.slice(0, 240)}. Reset the demo, then load again.`, HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+    } finally { this.loading = false; }
   }
+  private loading = false;
 
   private async loadSteps(actor: Actor, workspaceId: string, t0: number, log: string[]) {
     const config = JSON.parse(readFileSync(join(RELEASE, "configuration.json"), "utf8"));

@@ -20,10 +20,11 @@ export const LEVEL_NAME: Record<string, string> = { PATHWAY: "Pathway", PROGRAM:
  *  ("Open work permit", "open  work-permit"). No fuzzy matching. */
 export function normalizeLabel(label: string): string {
   // Combining marks stay (break m2): Hindi or Thai vowel signs make different names ("किसान" is not "कसान").
-  return label.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/[^\p{L}\p{N}\p{M}]+/gu, "");
+  return label.normalize("NFKC").toLocaleLowerCase("en-CA").replace(/\p{Default_Ignorable_Code_Point}/gu, "").replace(/[^\p{L}\p{N}\p{M}]+/gu, "");
 }
-/** Spaces tidied; invisible direction and format characters removed, so a name shows as it is stored (break m2). */
-export const cleanLabel = (label: string) => label.normalize("NFKC").replace(/\p{Cf}/gu, "").trim().replace(/\s+/g, " ");
+/** Spaces tidied; invisible direction, format and ignorable characters removed, so a name shows as it is stored and an
+ *  invisible character never makes a look-alike twin (break m2, round 3). */
+export const cleanLabel = (label: string) => label.normalize("NFKC").replace(/[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu, "").trim().replace(/\s+/g, " ");
 
 /** The limits a name must meet, in the words the field shows (the path builder checks them as you type, QA-6/QA-7). */
 export const LABEL_MAX = 120;
