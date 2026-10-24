@@ -1,9 +1,9 @@
 {
- "at": "2026-10-24T19:41:03.959Z",
+ "at": "2026-10-24T19:56:12.555Z",
  "port": 4453,
  "database": "xr_studio_forms_fl",
  "paid_calls": 0,
- "pass": 29,
+ "pass": 45,
  "fail": 0,
  "log": [
   {
@@ -16,13 +16,13 @@
    "ok": true,
    "detail": {
     "status": 400,
-    "message": "Choose how to draft this form: \"live\" (a paid AI call), \"replay\" (a saved run) or \"stub\" (no AI, US$0)."
+    "message": "Choose how to draft this form: live, replay or stub (\"live\" is a paid AI call, \"replay\" a saved run, \"stub\" no AI, US$0)."
    }
   },
   {
    "name": "QA-30 fail: an unknown mode is refused the same way",
    "ok": true,
-   "detail": "Choose how to draft this form: \"live\" (a paid AI call), \"replay\" (a saved run) or \"stub\" (no AI, US$0)."
+   "detail": "Choose how to draft this form: live, replay or stub (\"live\" is a paid AI call, \"replay\" a saved run, \"stub\" no AI, US$0)."
   },
   {
    "name": "QA-30 fail: the mode check does not let a reviewer (no author duty) start a draft",
@@ -80,47 +80,47 @@
   {
    "name": "run record refused: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The AI declined to draft this form. Nothing was applied. Cost US$0.42. Run fake-n7oa4s."
+   "detail": "The AI declined to draft this form. Nothing was applied. Cost US$0.42. Run fake-aeqz72."
   },
   {
    "name": "run record timed_out: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The AI did not answer in time. Nothing was applied. Cost US$0.42. Run fake-2w5ajr."
+   "detail": "The AI did not answer in time. Nothing was applied. Cost US$0.42. Run fake-3ieg55."
   },
   {
    "name": "run record budget_exceeded: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The run would have gone over its spending cap, so it stopped. Nothing was applied. Run fake-580njp."
+   "detail": "The run would have gone over its spending cap, so it stopped. Nothing was applied. Run fake-tbxisb."
   },
   {
    "name": "run record provider_error (not a limit): FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The AI provider returned an error: 529 overloaded. Nothing was drafted or applied. Cost US$0.42. Run fake-ufih4i."
+   "detail": "The AI provider returned an error: 529 overloaded. Nothing was drafted or applied. Cost US$0.42. Run fake-z1rel9."
   },
   {
    "name": "run record invalid_output cut at the limit: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The AI's answer was cut off at the output limit (4000 of 4000 output tokens). Nothing was applied. Cost US$0.30. Run fake-2187mn."
+   "detail": "The AI's answer was cut off at the output limit (4000 of 4000 output tokens). Nothing was applied. Cost US$0.30. Run fake-3ny542."
   },
   {
    "name": "run record invalid_output in another shape: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The AI answered, but not in the agreed shape ({\"entries\":\"missing\"}). Nothing was applied. Cost US$0.42. Run fake-66jnp7."
+   "detail": "The AI answered, but not in the agreed shape ({\"entries\":\"missing\"}). Nothing was applied. Cost US$0.42. Run fake-jupksq."
   },
   {
    "name": "run record completed, entries break our rules: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "AI answered 1 form field. 1 entry broke our entry rules (form field 1: field name \"Person.Name\" breaks the naming rule). Nothing was applied. Cost US$0.42. Run fake-sd4zm0."
+   "detail": "AI answered 1 form field. 1 entry broke our entry rules (form field 1: field name \"Person.Name\" breaks the naming rule). Nothing was applied. Cost US$0.42. Run fake-3dp173."
   },
   {
    "name": "run record completed, the run record failed our check: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "AI answered. The answer failed our check of the run record. Nothing was applied. Cost US$0.42. Run fake-x43rqn."
+   "detail": "AI answered. The answer failed our check of the run record. Nothing was applied. Cost US$0.42. Run fake-9uqzb8."
   },
   {
    "name": "run record an unknown status: FAILED in plain words, nothing applied, the run named",
    "ok": true,
-   "detail": "The AI step ended without a usable draft (status weird). Nothing was applied. Cost US$0.42. Run fake-acinsy."
+   "detail": "The AI step ended without a usable draft (status weird). Nothing was applied. Cost US$0.42. Run fake-i0cjvs."
   },
   {
    "name": "a run file that cannot be read: FAILED with the reason, the step never stays RUNNING",
@@ -174,6 +174,111 @@
    "name": "parts fail: an unreadable run file ends the step FAILED with the reason (never left RUNNING)",
    "ok": true,
    "detail": "ENOENT: no such file or directory, open '/home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/isolated-forms_fl/no-such-run.json'"
+  },
+  {
+   "name": "QA-32 setup: a draft in parts cancelled while part 1 runs ends CANCELLED with part 2 not sent",
+   "ok": true,
+   "detail": {
+    "status": "CANCELLED",
+    "parts": [
+     "failed",
+     "not started"
+    ]
+   }
+  },
+  {
+   "name": "QA-32: the parts not sent can be retried: the retry is accepted and starts a second attempt of the step",
+   "ok": true,
+   "detail": {
+    "status": 201,
+    "message": "Retrying 1 step",
+    "retried": "1"
+   }
+  },
+  {
+   "name": "QA-32 fail: a step that ran to its end is not retried, and the refusal says how to draft again",
+   "ok": true,
+   "detail": {
+    "job": "COMPLETED",
+    "status": 400,
+    "message": "Nothing to retry: every step finished or ran to its end. To draft a form anew, start its draft again."
+   }
+  },
+  {
+   "name": "QA-27: an empty body → 400 in plain words (no validator text)",
+   "ok": true,
+   "detail": "Name the combination this is drafted for. Choose STUB or LIVE: STUB runs no AI (US$0), LIVE is a paid AI call."
+  },
+  {
+   "name": "QA-27: a combination that is not an id → 400 in plain words (no validator text)",
+   "ok": true,
+   "detail": "Name the combination this is drafted for."
+  },
+  {
+   "name": "QA-27: mode in lower case → 400 in plain words (no validator text)",
+   "ok": true,
+   "detail": "Choose STUB or LIVE: STUB runs no AI (US$0), LIVE is a paid AI call."
+  },
+  {
+   "name": "QA-27: a worst case sent as text → 400 in plain words (no validator text)",
+   "ok": true,
+   "detail": "Send the worst case you were shown as a number of US dollars, for example 0.42."
+  },
+  {
+   "name": "QA-27: a negative worst case → 400 in plain words (no validator text)",
+   "ok": true,
+   "detail": "The worst case is never below US$0: send the amount you were shown."
+  },
+  {
+   "name": "QA-27: a list instead of one object → 400 in plain words (no validator text)",
+   "ok": true,
+   "detail": "Send the details as one JSON object, for example {\"combinationId\": \"…\", \"mode\": \"STUB\"}."
+  },
+  {
+   "name": "QA-27: accept with the inputs as text, not a list → 400 saying how to list them",
+   "ok": true,
+   "detail": "List the inputs to accept, for example [\"birthCity\"]; leave it out to accept every proposal."
+  },
+  {
+   "name": "QA-27 fail: a well-formed start is not refused by the new words",
+   "ok": true,
+   "detail": "Stub pass of the guarded path (no network, no cost) for 13 open inputs of IMM 5257 online · IRCC Portal · 2026-10-24"
+  },
+  {
+   "name": "QA-31: a live screen-map draft is its own AI work and can be cancelled: cancelled during its stub pass, the paid call is never made (US$0)",
+   "ok": true,
+   "detail": {
+    "batch": true,
+    "cancel": 201,
+    "status": "CANCELLED",
+    "message": "Cancelled after the stub pass: the AI call was not made. Nothing was drafted. US$0.",
+    "calls": [
+     "stub"
+    ]
+   }
+  },
+  {
+   "name": "QA-31: its AI work ends CANCELLED too (not left running)",
+   "ok": true,
+   "detail": "CANCELLED"
+  },
+  {
+   "name": "QA-31 fail: a screen-map draft is not 'retried' through the field-map retry; the refusal says where to start it again",
+   "ok": true,
+   "detail": "A screen-map draft is started again from its online version (draft with AI), not retried here."
+  },
+  {
+   "name": "QA-31 fail: cancelling it again, once finished, is a 409 in plain words",
+   "ok": true,
+   "detail": "This AI work has already finished."
+  },
+  {
+   "name": "QA-31 fail: a screen-map draft that is not cancelled runs to its end, and its AI work ends COMPLETED",
+   "ok": true,
+   "detail": {
+    "job": "COMPLETED",
+    "batch": "COMPLETED"
+   }
   },
   {
    "name": "none of these paths wrote to the shared spend ledger (no reservation, no correction line)",

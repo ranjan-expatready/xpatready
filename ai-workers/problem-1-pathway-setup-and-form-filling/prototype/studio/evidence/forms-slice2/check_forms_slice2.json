@@ -1,5 +1,5 @@
 {
- "at": "2026-10-24T19:43:13.783Z",
+ "at": "2026-10-24T19:58:21.903Z",
  "port": 4451,
  "database": "xr_studio_forms_s2",
  "paid_calls": 0,
@@ -295,7 +295,7 @@
   {
    "name": "A4 reuse run: completed without any AI call or cost, the record labelled as reuse (not AI), compared with the library for a person",
    "ok": true,
-   "detail": "Every form field reused from IMM 5257 (01-2020) without AI (US$0) as studio-fieldmap-imm5257e-reused-20261024t194309388z-3d02d2. 161 of 242 form fields mapped; 84 fields: 84 reuse, 0 new, 0 ambiguous, 0 conflicting."
+   "detail": "Every form field reused from IMM 5257 (01-2020) without AI (US$0) as studio-fieldmap-imm5257e-reused-20261024t195817753z-ad31e4. 161 of 242 form fields mapped; 84 fields: 84 reuse, 0 new, 0 ambiguous, 0 conflicting."
   },
   {
    "name": "A4 reuse apply: the reused form fields enter the library as code matches (origin CODE_MATCH, 'as released in IMM 5257 (01-2020)'), never as AI",
@@ -335,7 +335,7 @@
     "admitted": [
      {
       "file": "prototype/p2/parts/imm-5257-ircc_portal-d6375ca38c3b.open-2b5137bf3928.part.json",
-      "sha256": "54e235d38122fea4a227fd5feac9e1d4ea1acb0e54264bd07b780c33dc57fb19",
+      "sha256": "6e20d109a6fd8399f759547787aed29cbdc551dc65d69a7757444b05d1537c85",
       "kind": "inventory_part"
      }
     ]

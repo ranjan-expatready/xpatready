@@ -77,7 +77,16 @@ export const LinkAnswerList = z.object({ list: z.string().trim() });
 export const SetOptionMap = z.object({ dataPath: z.string().trim().min(1, "Name the form field."), map: z.record(z.string(), z.string()), unused: z.array(z.string()).default([]) });
 /** The guarded screen_map job for an online version's open inputs (F1 slice 2): STUB proves the path at US$0; LIVE
  *  is a paid call and repeats the worst case the person saw (to the cent), so nothing is spent unseen. */
-export const DraftLeftovers = z.object({ combinationId: z.string().uuid("Name the combination this is drafted for."), mode: z.enum(["STUB", "LIVE"], { message: "Choose STUB or LIVE." }), confirmWorstUsd: z.number().nonnegative().optional() });
-export const AcceptAiProposals = z.object({ jobId: z.string().uuid("Name the screen-map draft (its job id)."), inputs: z.array(z.string()).optional() });
+// QA-27: each field says in plain words what it needs, for a missing value and a wrong kind of value alike (zod's own
+// "expected number, received string" never reaches a person).
+export const DraftLeftovers = z.object({
+  combinationId: z.string({ error: "Name the combination this is drafted for." }).uuid("Name the combination this is drafted for."),
+  mode: z.enum(["STUB", "LIVE"], { error: "Choose STUB or LIVE: STUB runs no AI (US$0), LIVE is a paid AI call." }),
+  confirmWorstUsd: z.number({ error: "Send the worst case you were shown as a number of US dollars, for example 0.42." }).nonnegative("The worst case is never below US$0: send the amount you were shown.").optional(),
+});
+export const AcceptAiProposals = z.object({
+  jobId: z.string({ error: "Name the screen-map draft (its job id)." }).uuid("Name the screen-map draft (its job id)."),
+  inputs: z.array(z.string({ error: "Name each input by its id, for example birthCity." }), { error: "List the inputs to accept, for example [\"birthCity\"]; leave it out to accept every proposal." }).optional(),
+});
 export const NewMerge = z.object({ keep: z.string().trim(), merge: z.string().trim(), reason: z.string().trim().min(10, "Say why the two fields mean the same.").max(1000) });
 export const DecideMerge = z.object({ note: z.string().trim().max(1000).optional() });

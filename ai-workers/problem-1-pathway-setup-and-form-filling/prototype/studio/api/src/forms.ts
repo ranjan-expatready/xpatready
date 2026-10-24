@@ -15,7 +15,7 @@
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Query, Res, UploadedFiles, UseInterceptors } from "@nestjs/common";
 import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join, relative } from "node:path";
 import { promisify } from "node:util";
@@ -80,6 +80,8 @@ const screensOf = (record: Prisma.JsonValue): DraftScreen[] => ((record as { scr
   .map((x) => ("source" in x ? { title: x.title, inputs: x.inputs, file: x.source.file, sha256: x.source.sha256, way: x.source.way } : x));
 /** A request body checked against its contract; a mismatch is a 400 Problem Details with field errors. */
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
+  // QA-27: a list, a number or text where one set of details is expected is refused in plain words.
+  if (input !== undefined && input !== null && (typeof input !== "object" || Array.isArray(input))) fail("Send the details as one JSON object, for example {\"combinationId\": \"…\", \"mode\": \"STUB\"}.");
   const r = schema.safeParse(input ?? {});
   if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST);
   return r.data;
@@ -493,7 +495,10 @@ export class Forms {
       plan = await this.leftoverJob(ed, true);
       if (b.mode === "LIVE" && b.confirmWorstUsd !== plan.worst) conflict(`The open inputs changed: a live screen-map draft now costs at most US$${plan.worst.toFixed(2)}; confirm that amount.`);
       const { jobId, leftovers } = plan;
-      return tx.draftingJob.create({ data: { workspaceId: ed.workspaceId, combinationId: comb.id, kind: "screen_map", mode: b.mode, status: "RUNNING", message: `${b.mode === "LIVE" ? "Stub pass, then the AI call" : "Stub pass of the guarded path (no network, no cost)"} for ${leftovers.length} open input${leftovers.length === 1 ? "" : "s"} of ${ed.editionLabel}`, startedBy: actor.id, detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, sent_inputs: leftovers.map((x) => x.input), worst_usd: b.mode === "LIVE" ? plan.worst : 0 }) } });
+      // QA-31: each screen-map draft is its own AI work, so the one cancel (POST /ai/batches/:id/cancel) stops it: a cancel
+      // during the stub pass means the paid call is never made.
+      const batch = await tx.aiBatch.create({ data: { workspaceId: ed.workspaceId, idempotencyKey: `screen-map-${randomUUID()}`, operation: "screen_map", scopeKind: "online_version", scopeLabel: ed.editionLabel, mode: b.mode, status: "RUNNING", planSha256: "screen-map", plan: json({ targets: [] }), spendLimitUsd: b.mode === "LIVE" ? plan.worst : 0, worstCaseUsd: b.mode === "LIVE" ? plan.worst : 0, startedBy: actor.id, message: "Screen-map draft running" } });
+      return tx.draftingJob.create({ data: { batchId: batch.id, workspaceId: ed.workspaceId, combinationId: comb.id, kind: "screen_map", mode: b.mode, status: "RUNNING", message: `${b.mode === "LIVE" ? "Stub pass, then the AI call" : "Stub pass of the guarded path (no network, no cost)"} for ${leftovers.length} open input${leftovers.length === 1 ? "" : "s"} of ${ed.editionLabel}`, startedBy: actor.id, detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, sent_inputs: leftovers.map((x) => x.input), worst_usd: b.mode === "LIVE" ? plan.worst : 0 }) } });
     });
     // A draft found waiting under the lock is the one returned: never looked up again after the commit (break m6: an
     // accept landing in between made that second look-up empty, a 500).
@@ -533,11 +538,20 @@ export class Forms {
 
   private async runLeftovers(id: string, ed: FormEdition, jobId: string, leftovers: { input: string; type: string; part: string | null; label: string }[], mode: "stub" | "live") {
     const lastJson = (s: string) => { for (const l of s.trim().split("\n").reverse()) { try { return JSON.parse(l); } catch { /* not JSON */ } } return null; };
-    const done = (data: Prisma.DraftingJobUpdateInput) => this.db.draftingJob.update({ where: { id }, data: { finishedAt: new Date(), ...data } });
+    // The job ends, and its AI work (batch) with it: cancelled when a cancel was asked for, else as the job ended.
+    const done = async (data: Prisma.DraftingJobUpdateInput) => {
+      const j = await this.db.draftingJob.update({ where: { id }, data: { finishedAt: new Date(), ...data } });
+      if (j.batchId) { const b = await this.db.aiBatch.findUnique({ where: { id: j.batchId } }); if (b) await this.db.aiBatch.update({ where: { id: b.id }, data: { status: b.cancelRequested ? "CANCELLED" : j.status === "COMPLETED" ? "COMPLETED" : "FAILED", finishedAt: new Date(), message: `${j.status.toLowerCase()} · spent US$${(j.costUsd ?? 0).toFixed(2)}` } }); }
+      return j;
+    };
+    const cancelled = async () => { const j = await this.db.draftingJob.findUnique({ where: { id }, include: { batch: true } }); return !!j?.batch?.cancelRequested; };
     try {
+      if (await cancelled()) { await done({ status: "CANCELLED", costUsd: 0, message: "Cancelled before it started: nothing was sent. US$0." }); return; }
       const stub = await this.sources.launchOnce(jobId, "stub"), sj = lastJson(stub.out);
       if (stub.code !== 0) { await done({ status: "FAILED", message: `Stub pass failed: ${this.sources.plainRefusal(String(sj?.refused ?? stub.err).slice(-400))}. Nothing was drafted.` }); return; }
       if (mode === "stub") { await done({ status: "COMPLETED", costUsd: 0, message: `Stub pass completed: the guarded path admitted the approved screens and the ${leftovers.length} open inputs. A stub has no AI content, so there is nothing to accept.` }); return; }
+      // QA-31: the stop between the stub pass and the paid call.
+      if (await cancelled()) { await done({ status: "CANCELLED", costUsd: 0, message: "Cancelled after the stub pass: the AI call was not made. Nothing was drafted. US$0." }); return; }
       const live = await this.sources.launchOnce(jobId, "live"), lj = lastJson(live.out);
       if (!lj?.run_file) { await done({ status: "FAILED", message: `The AI step did not run: ${String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).slice(0, 400)}. Nothing was drafted.` }); return; }
       const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));

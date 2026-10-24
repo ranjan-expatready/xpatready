@@ -44,7 +44,10 @@ const TITLES: Record<string, string> = { "IMM 5257": "Application for Temporary 
 export class Sources {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {
     // A job left "running" by a stopped server can never finish: say so instead of showing it as running forever.
-    void this.db.draftingJob.updateMany({ where: { status: "RUNNING" }, data: { status: "FAILED", message: "The studio server stopped while this step was running; start it again.", finishedAt: new Date() } }).catch(() => undefined);
+    void this.db.draftingJob.updateMany({ where: { status: "RUNNING" }, data: { status: "FAILED", message: "The studio server stopped while this step was running; start it again.", finishedAt: new Date() } })
+      // A screen-map draft's own AI work (QA-31) ends with it.
+      .then(() => this.db.aiBatch.updateMany({ where: { operation: "screen_map", status: { in: ["QUEUED", "RUNNING"] } }, data: { status: "FAILED", message: "The studio server stopped while this draft was running.", finishedAt: new Date() } }))
+      .catch(() => undefined);
   }
 
   /** Attaches a file to a combination as a source and says whether AI may read it (only approved official files, by
@@ -172,10 +175,13 @@ export class Sources {
     const eds = (def?.editions ?? []).filter((e) => e.channel !== "ONLINE" && e.sha256 !== exceptSha).sort(compareEditions).reverse();
     const out = new Map<string, Prior>();
     for (const e of eds) {
-      let options = new Map<string, unknown>();
-      try { options = new Map((JSON.parse(readFileSync(join(SOLUTION, e.inventoryFile!), "utf8")).fields as { data_path?: string; options_resolved?: unknown; options?: unknown }[]).filter((f) => f.data_path).map((f) => [f.data_path!, f.options_resolved ?? f.options ?? null])); } catch { continue; } // no inventory: nothing to compare choices with, so nothing reused
+      let options = new Map<string, unknown>(), kinds = new Map<string, string | null>();
+      try {
+        const fs = (JSON.parse(readFileSync(join(SOLUTION, e.inventoryFile!), "utf8")).fields as { data_path?: string; options_resolved?: unknown; options?: unknown; ui?: string | null }[]).filter((f) => f.data_path);
+        options = new Map(fs.map((f) => [f.data_path!, f.options_resolved ?? f.options ?? null])); kinds = new Map(fs.map((f) => [f.data_path!, f.ui ?? null])); // QA-33: the kind of box too
+      } catch { continue; } // no inventory: nothing to compare choices with, so nothing reused
       for (const m of effective(await this.db.formFieldMap.findMany({ where: { formEditionId: e.id } }), (x) => x.dataPath, "published"))
-        if (!out.has(m.dataPath)) out.set(m.dataPath, { data_path: m.dataPath, caption: m.caption, outcome: m.outcome, fact: m.canonicalFieldKey, person: m.person, transform: m.transform, row: m.row, condition: m.condition, confidence: m.confidence, edition: e.editionLabel, options: options.get(m.dataPath) ?? null });
+        if (!out.has(m.dataPath)) out.set(m.dataPath, { data_path: m.dataPath, caption: m.caption, outcome: m.outcome, fact: m.canonicalFieldKey, person: m.person, transform: m.transform, row: m.row, condition: m.condition, confidence: m.confidence, edition: e.editionLabel, options: options.get(m.dataPath) ?? null, ui: kinds.get(m.dataPath) ?? null });
     }
     return [...out.values()];
   }

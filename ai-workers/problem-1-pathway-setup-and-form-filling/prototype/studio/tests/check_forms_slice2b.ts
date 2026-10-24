@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { factKeyProblem } from "../../contracts/fact-key.ts";
 import { NewCapture } from "../contracts/forms.ts";
 import { byAPerson, isOathBox, isSignatureBox, oathBoxes, personSteps } from "../engine/form-steps.ts";
+import { planDraft, type Prior } from "../engine/parts.ts";
 import { screenMapProposals } from "../engine/twin.ts";
 
 const PORT = Number(process.argv[2] ?? 4452), DB = process.argv[3] ?? "xr_studio_forms_s2b";
@@ -131,6 +132,14 @@ const shown = (pdf: string) => { try { return execFileSync("pdftotext", ["-layou
   const cap = (form: string) => NewCapture.safeParse({ portal: "ircc_portal", form, title: "Visitor visa" }).success;
   ok("QA-15: 'imm 5257', 'Imm-5257', 'imm_5257' and 'ee profile' pass the capture contract", ["imm 5257", "Imm-5257", "imm_5257", "ee profile", "IMM 5257"].every(cap));
   ok("QA-15 fail: a code that starts with a digit, holds other signs or is one letter is refused, with the reason on the field", !cap("5257") && !cap("imm 5257!") && !cap("I") && /A form code starts with a letter/.test(NewCapture.safeParse({ portal: "ircc_portal", form: "5257", title: "Visitor visa" }).error?.issues[0].message ?? ""));
+
+  // ──────────────────────────────────────────── QA-33: A4 reuse compares the kind of box (no server)
+  const inv5257 = inventory("imm5257e");
+  const uci = inv5257.fields.find((f) => f.data_path && f.ui === "textEdit" && /UCI/i.test(f.caption ?? ""))!;
+  const prior = (ui?: string | null): Prior => ({ data_path: uci.data_path!, caption: uci.caption ?? null, outcome: "mapped", fact: "person.uci", person: "form_subject", transform: "as_is", row: null, condition: null, edition: "IMM 5257 (01-2020)", options: null, ...(ui === undefined ? {} : { ui }) });
+  ok("QA-33: a form field that is the same kind of box as in the earlier edition is reused", planDraft(inv5257, [prior("textEdit")]).reused.length === 1);
+  ok("QA-33 fail: the earlier edition's date box that is a text box now (UCI) is not reused: the AI or a person drafts it", planDraft(inv5257, [prior("dateTimeEdit")]).reused.length === 0, uci.caption);
+  ok("QA-33: a prior that does not know its kind of box (older callers) is compared on caption and choices as before", planDraft(inv5257, [prior(undefined)]).reused.length === 1);
 
   // ──────────────────────────────────────────── through the API (isolated copy, US$0)
   await call("POST", "/demo/load");

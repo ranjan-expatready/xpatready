@@ -1,9 +1,9 @@
 {
- "at": "2026-10-24T19:48:48.963Z",
+ "at": "2026-10-24T19:58:43.491Z",
  "port": 4452,
  "database": "xr_studio_forms_s2b",
  "paid_calls": 0,
- "pass": 57,
+ "pass": 60,
  "fail": 0,
  "log": [
   {
@@ -316,6 +316,19 @@
    "ok": true
   },
   {
+   "name": "QA-33: a form field that is the same kind of box as in the earlier edition is reused",
+   "ok": true
+  },
+  {
+   "name": "QA-33 fail: the earlier edition's date box that is a text box now (UCI) is not reused: the AI or a person drafts it",
+   "ok": true,
+   "detail": "UCI"
+  },
+  {
+   "name": "QA-33: a prior that does not know its kind of box (older callers) is compared on caption and choices as before",
+   "ok": true
+  },
+  {
    "name": "QA-15 (API): a capture started with 'imm 5257' is the library's IMM 5257 (one form, one code)",
    "ok": true,
    "detail": {
@@ -474,7 +487,7 @@
   {
    "name": "D3 fail: when other inputs are open too, a new live draft is refused until the waiting proposals are decided (nothing paid)",
    "ok": true,
-   "detail": "A finished AI draft of this online version has 2 proposals waiting (job 9316904e-5eff-40aa-9e8f-4fa618f43b79): accept them, or map those inputs by hand, before a new draft. A new draft now would pay again for inputs that draft already answered."
+   "detail": "A finished AI draft of this online version has 2 proposals waiting (job 6d2fcf20-d5c2-47d6-8ed2-699a8429f40b): accept them, or map those inputs by hand, before a new draft. A new draft now would pay again for inputs that draft already answered."
   },
   {
    "name": "D3: once its proposals are accepted nothing waits: a new live draft of what is still open asks for its worst case again",

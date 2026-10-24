@@ -185,7 +185,7 @@ export class Ai implements OnModuleInit {
   async launchSource(actor: Actor, attachmentId: string, mode: "live" | "replay" | "stub", runFile?: string, idempotencyKey?: string) {
     need(actor, "author");
     // QA-30: a request without a mode (or with another word) is a plain 400, never a 500 from reading a missing value.
-    if (!["live", "replay", "stub"].includes(String(mode))) fail('Choose how to draft this form: "live" (a paid AI call), "replay" (a saved run) or "stub" (no AI, US$0).', HttpStatus.BAD_REQUEST);
+    if (!["live", "replay", "stub"].includes(String(mode))) fail('Choose how to draft this form: live, replay or stub ("live" is a paid AI call, "replay" a saved run, "stub" no AI, US$0).', HttpStatus.BAD_REQUEST);
     const m = mode.toUpperCase() as Mode;
     const scope: Scope = { kind: "source", ids: [attachmentId] };
     const p = await this.plan(scope, m, { draftAgain: true });
@@ -284,10 +284,14 @@ export class Ai implements OnModuleInit {
     const batch = await this.db.aiBatch.findUnique({ where: { id }, include: { jobs: true } });
     if (!batch) fail("This AI work no longer exists.", HttpStatus.NOT_FOUND);
     if (batch!.jobs.some((j) => j.status === "QUEUED" || j.status === "RUNNING")) fail("Wait until the running steps finish.", HttpStatus.CONFLICT);
+    if (batch!.operation === "screen_map") fail("A screen-map draft is started again from its online version (draft with AI), not retried here.", HttpStatus.CONFLICT);
     const latest = new Map<string, any>();
     for (const j of batch!.jobs) { const k = `${j.attachmentId}|${j.kind}`; const cur = latest.get(k); if (!cur || j.attempt > cur.attempt) latest.set(k, j); }
-    const redo = [...latest.values()].filter((j) => j.status === "FAILED" || j.status === "BLOCKED" || (j.status === "CANCELLED" && j.message?.startsWith("Cancelled before it started")));
-    if (!redo.length) fail("Nothing to retry: no step failed.");
+    // QA-32: a step cancelled part-way (its later parts "not started") is retried too: its finished parts reuse their
+    // saved answers (US$0) and only the parts never sent are drafted.
+    const unsent = (j: { status: string; message: string | null; detail: unknown }) => j.status === "CANCELLED" && (!!j.message?.startsWith("Cancelled before it started") || ((j.detail as { a4?: { parts?: { status: string }[] } } | null)?.a4?.parts ?? []).some((p) => p.status === "not started"));
+    const redo = [...latest.values()].filter((j) => j.status === "FAILED" || j.status === "BLOCKED" || unsent(j));
+    if (!redo.length) fail("Nothing to retry: every step finished or ran to its end. To draft a form anew, start its draft again.");
     const over = redo.filter((j) => j.attempt >= MAX_ATTEMPTS_PER_SOURCE);
     if (over.length) fail(`${over.length} step${over.length > 1 ? "s have" : " has"} reached ${MAX_ATTEMPTS_PER_SOURCE} attempts; it needs a person, not another retry.`);
     const worstEach = (batch!.plan as any).targets as any[];
