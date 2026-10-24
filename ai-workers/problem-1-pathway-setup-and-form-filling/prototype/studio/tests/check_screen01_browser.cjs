@@ -4,7 +4,7 @@
 // keyboard path (pathway → view → list → Enter opens the combination → Back), first-view and filter timings, and the
 // journeys: Needs work / Live / All, status sort, row opens the combination page, clickable path, Back keeps the place
 // and highlights the row, "+ Add form" through the one intake with an approved older edition held, not-started row, non-author.
-//   zsh studio/tools/isolated.sh s01ui 4404 start && node studio/tests/check_screen01_browser.cjs 4404
+//   zsh studio/tools/isolated.sh s01ui 4404 start && node studio/tests/check_screen01_browser.cjs 4404 [xr_studio_s01ui]
 const path = require("node:path"); const fs = require("node:fs");
 const { chromium } = require("/Users/ranjansingh/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
 const AxeBuilder = require("../node_modules/@axe-core/playwright").default;
@@ -244,6 +244,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     const chips = await grid().locator('[data-status="READY"]').count();
     const liveBtn = (await p.getByRole("button", { name: /^Live · / }).textContent()) ?? "";
     await p.getByRole("button", { name: /^Live · / }).click(); await idle();
+    await p.waitForFunction(() => new URL(location.href).searchParams.get("f") === "live" && [...document.querySelectorAll('[role="row"][data-node]')].every((r) => r.querySelector('[data-status="READY"]')), null, { timeout: 5000 }).catch(() => {}); // the view has switched
     const shown = await grid().locator('[role="row"][data-node]').count().catch(() => 0);
     step(`F1: ${pw ? "Corporate" : "Individual"}: the Live count equals the rows showing Live, and the Live view lists them`, Number(liveBtn.split("· ")[1]) === chips && (chips === 0 || shown === chips), `${liveBtn} · chips ${chips} · shown ${shown}`);
   }
@@ -380,6 +381,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await op.getByText(/online form added/).waitFor({ timeout: 30000 }).catch(() => {});
   step("C2.7: the screens are read, checked for answers and sent for approval", /Awaiting a second person/.test(await op.textContent()) && (await op.getByRole("list", { name: "Screen results" }).getByText("Added").count()) === 3);
   await op.getByRole("button", { name: "Close" }).first().click(); await idle();
+  await p.waitForFunction(() => /Awaiting a second person/.test(document.querySelector("[data-online-forms]")?.textContent ?? ""), null, { timeout: 8000 }).catch(() => {}); // Lead check L2: the list refreshes after the panel closes
   step("C2.7: the combination lists the online form as \"Awaiting a second person\"", /IMM 5707.*Awaiting a second person/s.test(await p.locator("[data-online-forms]").textContent()));
   await state("combination-online-form-awaiting");
   await as("user-B");
@@ -393,6 +395,14 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   step("C2.10: the author changes it per form and the line says what that means", /Online screens only, but no online version from the IRCC Portal has been approved yet/.test(await dsrc.textContent()));
   await dsrc.getByRole("combobox", { name: "What drafting reads for IMM 1295" }).selectOption("PDF_FIRST"); await idle();
   await state("sources-tab-drafting-reads");
+
+  // QA-17: "Recent steps" say the day when a step did not run today.
+  const sql17 = (q) => require("node:child_process").execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${process.argv[3] ?? "xr_studio_s01ui"}`, "-Atc", q], { encoding: "utf8" }).trim();
+  const wpJob = sql17(`select id from drafting_job where combination_id='${wpId}' order by started_at limit 1`);
+  if (wpJob) sql17(`update drafting_job set started_at = timestamptz '2026-10-21 17:23:20+00' where id='${wpJob}'`);
+  await p.goto(`${BASE}/c/${wpId}`); await idle();
+  const steps = await p.getByRole("region", { name: "Recent steps" }).textContent().catch(async () => (await p.locator("main").textContent()));
+  step("QA-17: a step run on another day shows its date (\"Oct 21, …\"); one run today says \"today\"", !!wpJob && /Oct 21, \d/.test(steps) && /today \d/.test(steps), (steps.match(/(Oct 21, [^R]{0,12}|today [^R]{0,10})/g) ?? []).slice(0, 3).join(" | "));
 
   // P-63: no "box" on the pages a person reads (form field, field map).
   const boxPages = [];

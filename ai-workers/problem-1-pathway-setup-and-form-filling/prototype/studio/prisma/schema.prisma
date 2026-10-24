@@ -105,6 +105,10 @@ model ProgramDef {
   parentNodeKey  String?         @map("parent_node_key")
   nodeKind       ProgramNodeKind @map("node_kind")
   label          String
+  /// BR-6 in the database (QA-14): the name compared ignoring case, spaces and punctuation (contracts/programs.ts
+  /// normalizeLabel). A partial unique index (migration 20261024090000) keeps one name per parent, also when two people
+  /// create it at the same moment. Null only on rows that were duplicates before the index existed.
+  nameKey        String?         @map("name_key")
   description    String?
   sourceBasis    SourceBasis     @default(SOURCE_BACKED) @map("source_basis")
   /// PATHWAY only (SA-1B-50/51): who the client is, INDIVIDUAL or CORPORATE. Client type comes from the pathway.

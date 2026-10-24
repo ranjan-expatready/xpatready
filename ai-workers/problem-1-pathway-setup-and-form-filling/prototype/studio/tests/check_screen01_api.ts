@@ -45,7 +45,12 @@ function pdf(title: string, text: string) {
 }
 
 (async () => {
-  let r = await call("POST", "/demo/load");
+  // The database this check reads by SQL must be the server's own (Lead check L1: a run whose database argument named
+  // another copy's database looked up stale ids and failed with a 404). Stop with the reason instead.
+  const served = (await call("GET", "/session")).body?.workspace?.id;
+  if (!served || !sql(`select id from workspace where id='${served}'`)) { console.error(`STOP  the database ${DB} is not the one the server on port ${PORT} uses (its workspace ${served ?? "unknown"} is not in it). Pass the copy's database: tsx <check> ${PORT} xr_studio_<name>.`); process.exit(2); }
+  // One variable for every answer: a call's, or the intake's (which also carries its first result as `one`).
+  let r: Awaited<ReturnType<typeof call>> & { one?: any } = await call("POST", "/demo/load");
   ok("setup: sample inputs load", r.status === 201, r.body.seconds);
 
   // ---------------------------------------------------------------- BR-1 pathway is a workspace
@@ -310,6 +315,12 @@ function pdf(title: string, text: string) {
   ok("M3 pass: different names with no Latin letters, or sharing their first 60 characters, are all created with keys of their own", [n1, n2, n3, n4].every((x) => x.status === 201) && new Set([n1, n2, n3, n4].map((x) => x.body.programNodeKey)).size === 4, [n1, n2, n3, n4].map((x) => [x.status, x.body.programNodeKey ?? x.body.detail]));
   const n5 = await call("POST", "/program-nodes", { kind: "PROGRAM", parentKey: "individual", label: "日本語 プログラム" });
   ok("M3 fail: the same name again (ignoring spaces) is still refused (BR-6)", n5.status === 409, n5.body.detail);
+  // QA-14: BR-6 holds in the database, also when the same name arrives four times at the same moment.
+  const raced = await Promise.all(Array.from({ length: 4 }, () => call("POST", "/program-nodes", { kind: "STREAM", parentKey: "individual.visitors", label: "Race at once" })));
+  ok("QA-14 pass: the same category sent four times at once is created once; the others are told it exists", raced.filter((x) => x.status === 201).length === 1 && raced.filter((x) => x.status === 409 && /already exists/.test(x.body.message ?? x.body.detail)).length === 3 && sql("select count(*) from program_def where parent_node_key='individual.visitors' and label='Race at once'") === "1", raced.map((x) => x.status));
+  const dbRefusal = sqlError(`insert into program_def (id, workspace_id, program_node_key, parent_node_key, node_kind, label, name_key, source_basis, created_by, allowed_locations) select gen_random_uuid(), workspace_id, 'individual.visitors.race_twin', 'individual.visitors', 'STREAM', 'RACE-at once', 'raceatonce', 'ILLUSTRATIVE', 'test', '{}' from program_def where program_node_key='individual.visitors'`);
+  ok("QA-14 fail: the database itself refuses a second same-parent name written another way", !!dbRefusal && /program_def_parent_name_key|duplicate key/.test(dbRefusal), dbRefusal);
+  ok("QA-14: the same name under another parent is still allowed", (await call("POST", "/program-nodes", { kind: "STREAM", parentKey: "individual.study_permits", label: "Race at once" })).status === 201);
   const junk = await cat("pathway=INDIVIDUAL&filter=all&under=junk.key&program=nope"), cross = await cat("pathway=INDIVIDUAL&filter=all&under=corporate.lmia");
   ok("m5: a program or path not in this pathway is ignored and the answer says so (no empty contradiction)", junk.under === "" && junk.program === "" && junk.rows.length === junk.counts.all && cross.under === "" && cross.underPath === null, { under: junk.under, program: junk.program, rows: junk.rows.length });
   ok("m4: a search over 120 characters is answered, not refused", (await call("GET", `/catalogue?pathway=INDIVIDUAL&q=${"a".repeat(130)}`)).status === 200);

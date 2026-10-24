@@ -1,5 +1,5 @@
 {
- "at": "2026-10-23T14:19:57.129Z",
+ "at": "2026-10-24T04:35:37.162Z",
  "port": 4449,
  "database": "xr_studio_screens_forms",
  "paid_calls": 0,
@@ -246,8 +246,8 @@
    "name": "finish answers before the review document is printed (printed in the background; HTML until the PDF exists)",
    "ok": true,
    "detail": {
-    "ms": 8,
-    "review_file": "prototype/studio/var/isolated-screens_forms/workspaces/demo/portal-twins/IMM5257-ircc_portal-86ab65fd-d6375ca38c3b.review.html"
+    "ms": 51,
+    "review_file": "prototype/studio/var/isolated-screens_forms/workspaces/demo/portal-twins/IMM5257-ircc_portal-7ae0e19c-d6375ca38c3b.review.html"
    }
   },
   {
@@ -273,12 +273,12 @@
    "name": "approval: a second person makes it an online version, re-check date set (Sample 180 days)",
    "ok": true,
    "detail": {
-    "id": "a8fb8442-5a9e-454b-9e17-4a77731d8c48",
-    "label": "IMM 5257 online · IRCC Portal · 2026-10-23",
+    "id": "41d70373-49d5-4184-aa6f-6b8220fc442c",
+    "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
     "channel": "ONLINE",
     "portal": "ircc_portal",
-    "captured_on": "2026-10-23",
-    "recheck_by": "2027-04-21",
+    "captured_on": "2026-10-24",
+    "recheck_by": "2027-04-22",
     "fingerprint": "d6375ca38c3bb70b1622d381fd8afdba0971ee4a5da445650f4b7290ad74ba36",
     "questions": 13
    }
@@ -290,7 +290,7 @@
   {
    "name": "identity: the same screens saved again (new session token, script, time) are 'already in the library'",
    "ok": true,
-   "detail": "Already in the library: the screens are identical to IMM 5257 online · IRCC Portal · 2026-10-23 (same fingerprint). Nothing new to approve. A second person confirms the screens are unchanged, which renews the online version's re-check date."
+   "detail": "Already in the library: the screens are identical to IMM 5257 online · IRCC Portal · 2026-10-24 (same fingerprint). Nothing new to approve. A second person confirms the screens are unchanged, which renews the online version's re-check date."
   },
   {
    "name": "identity fail: a reworded label and an added option are held with the field-by-field difference",
@@ -316,7 +316,7 @@
   {
    "name": "a returned capture is fixed: the edited screens removed, the right ones added; finish finds them already in the library",
    "ok": true,
-   "detail": "Already in the library: the screens are identical to IMM 5257 online · IRCC Portal · 2026-10-23 (same fingerprint). Nothing new to approve. A second person confirms the screens are unchanged, which renews the online version's re-check date."
+   "detail": "Already in the library: the screens are identical to IMM 5257 online · IRCC Portal · 2026-10-24 (same fingerprint). Nothing new to approve. A second person confirms the screens are unchanged, which renews the online version's re-check date."
   },
   {
    "name": "abandon: a capture given up stays for the audit and takes no more screens",
@@ -360,8 +360,8 @@
    "name": "concurrency: two screens added at the same moment are both kept, or one is refused with 409; never 'added' and lost",
    "ok": true,
    "detail": [
-    409,
     201,
+    409,
     1
    ]
   },
@@ -497,7 +497,7 @@
    "detail": [
     "person.family_name holds a text; this input is a date part (YYYY).",
     "Either map it to a shared field (fact) or mark it not a fact (notAFact), not both.",
-    "IMM 5257 online · IRCC Portal · 2026-10-23 has no input nowhere in its accepted screen map (accept the screen map first)."
+    "IMM 5257 online · IRCC Portal · 2026-10-24 has no input nowhere in its accepted screen map (accept the screen map first)."
    ]
   },
   {
@@ -545,12 +545,12 @@
    "name": "confirm: a second person confirms the identical re-capture; the re-check date runs from it, once",
    "ok": true,
    "detail": {
-    "id": "a8fb8442-5a9e-454b-9e17-4a77731d8c48",
-    "label": "IMM 5257 online · IRCC Portal · 2026-10-23",
+    "id": "41d70373-49d5-4184-aa6f-6b8220fc442c",
+    "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
     "channel": "ONLINE",
     "portal": "ircc_portal",
-    "captured_on": "2026-10-23",
-    "recheck_by": "2027-04-21",
+    "captured_on": "2026-10-24",
+    "recheck_by": "2027-04-22",
     "fingerprint": "d6375ca38c3bb70b1622d381fd8afdba0971ee4a5da445650f4b7290ad74ba36",
     "questions": 13
    }
@@ -559,8 +559,8 @@
    "name": "map input: a person marks each open input 'not a fact' with the reason (a new draft version, origin HUMAN)",
    "ok": true,
    "detail": [
-    "unionDate",
     "serviceLanguage",
+    "unionDate",
     "usedPortalBefore"
    ]
   },
@@ -570,7 +570,7 @@
    "detail": [
     {
      "level": "warning",
-     "where": "Field map IMM 5257 online · IRCC Portal · 2026-10-23",
+     "where": "Field map IMM 5257 online · IRCC Portal · 2026-10-24",
      "item": "IMM 5257",
      "message": "3 choice inputs are not on an answer list yet: filled by matching labels, so a changed label could go unnoticed."
     }
@@ -580,8 +580,8 @@
    "name": "Forms library: IMM 5257 shows both channels and its online version",
    "ok": true,
    "detail": [
-    "Online",
-    "PDF"
+    "PDF",
+    "Online"
    ]
   },
   {
@@ -850,8 +850,8 @@
    "name": "merge fail: the same merge proposed twice at the same moment is stored once",
    "ok": true,
    "detail": [
-    201,
-    409
+    409,
+    201
    ]
   },
   {

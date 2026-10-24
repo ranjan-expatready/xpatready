@@ -131,3 +131,13 @@ Also: author-only buttons on the Sources tab are hidden from other people (break
 | m3 / m4 | "+ Add" of an online-only form says to choose the portal first; drafting words never borrow another portal; form codes written another way find the library form. | channels |
 | Left: m6 (a 9 MB saved page is read inside the request, up to 60 s: the forms lane's capture reader) | — | — |
 **Checks:** rules 65 · API 130 · channels 42 · browser 135 · race safe · engine 38 · AI drafting 48 · grounding 29 · forms channels 106.
+
+### Small FIX after the merge (Lead note 24 Oct): QA-14, QA-17, Lead check L1–L3
+| Item | Fix | Test |
+|---|---|---|
+| **QA-14 Major** same name created twice at once | `program_def.name_key` (the BR-6 normalised name, written by the app) with a partial unique index per parent (migration `20261024090000`; existing rows backfilled in SQL, earlier duplicates keep a null key so the index builds on any data; rollback written). A losing create is a 409 "already exists". | API: 4 at once → 201 + 3×409, the database refuses a twin, another parent allowed; qa `check_qa14_name_race.ts` PASS (20 × 4); migration replayed on data with duplicates |
+| **QA-17 Minor** times without a date | `fmtWhen`: "today 9:57 a.m." or "Oct 21, 10:53 p.m." (year when not this one), on Recent steps, the review step and AI work. | browser (a step back-dated to 21 Oct) |
+| **L1** grounding "finding 3" 404 | Cause: the check reads ids by SQL from the database named on its command line (default `xr_studio_grounding`); run against another copy's server it looked up a stale id. Reproduced (28/29, same message). The database checks (grounding, API, channels) now stop at the start when their database is not the server's. | wrong database → STOP with the reason; right one 29/29 |
+| **L2** browser C2.7 wait | The step waits for the online-forms list to refresh; the Live-count step waits for the view to switch. | browser 136/136 |
+| **L3** type errors | Command `tsc --noEmit -p api/tsconfig.json` (it includes `tests/`): 39 errors before (35 in `check_screen01_api.ts`, 4 in `check_ai_orchestration.ts`), **0** now. My earlier "type check clean" meant `api/src` and `web/src` only; it should have said so. `count-any` 437 (baseline 437). | — |
+**Checks (fresh copies, stopped after):** rules 65 · API 133 · channels 42 · browser 136 · race safe · grounding 29 · forms 106 · engine 38 · AI drafting 48.

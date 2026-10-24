@@ -6,7 +6,7 @@ import { CATALOGUE_URL_KEY, STATUS_WORD } from "@/pages/programs";
 import { AddFormPanel } from "@/components/forms";
 import { AddOnlineFormPanel, ChannelCell, FilingLine, OnlineForms, UseDefaults } from "@/components/channels";
 import { SHOW_ONLY_STEPS, StepLabel, StepTip, useNextStep } from "@/components/next-step";
-import { StatusChip, TipProvider } from "@/components/status";
+import { StatusChip, TipProvider, fmtWhen } from "@/components/status";
 import { api, useActorId, useAction, useApi } from "@/lib/api";
 import { Button, Dialog, Notice, Pill, Stat, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
@@ -164,10 +164,10 @@ function Overview({ d, sum, show }: { d: CombinationView; sum: CombinationSummar
           )}
         </section>
       </div>
-      <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm">
-        <h2 className="font-semibold">Recent steps</h2>
+      <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm" aria-labelledby="ov-steps">
+        <h2 id="ov-steps" className="font-semibold">Recent steps</h2>
         {!d.jobs.length ? <p className="mt-2 text-sm text-text-muted">No reading or AI steps yet.</p> : (
-          <Table className="mt-3" dense head={["Step", "Mode", "Status", "Result", "Started"]}>{d.jobs.slice(0, 8).map((j) => <tr key={j.id}><td>{j.kind === "field_map" ? "AI field-map draft" : "Read form"}</td><td><ModePill mode={j.mode} /></td><td><StatusPill status={j.status} /></td><td className="max-w-xl text-xs text-text-muted">{j.message}</td><td className="whitespace-nowrap text-xs">{new Date(j.startedAt).toLocaleTimeString()}</td></tr>)}</Table>
+          <Table className="mt-3" dense head={["Step", "Mode", "Status", "Result", "Started"]}>{d.jobs.slice(0, 8).map((j) => <tr key={j.id}><td>{j.kind === "field_map" ? "AI field-map draft" : "Read form"}</td><td><ModePill mode={j.mode} /></td><td><StatusPill status={j.status} /></td><td className="max-w-xl text-xs text-text-muted">{j.message}</td><td className="whitespace-nowrap text-xs">{fmtWhen(j.startedAt)}</td></tr>)}</Table>
         )}
       </section>
     </div>

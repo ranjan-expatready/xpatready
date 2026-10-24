@@ -1,5 +1,5 @@
 {
- "at": "2026-10-23T14:19:42.324Z",
+ "at": "2026-10-24T04:33:56.841Z",
  "port": 4449,
  "database": "xr_studio_screens_grounding",
  "pass": 29,
@@ -179,7 +179,7 @@
   {
    "name": "isolated copy: sample inputs load through the normal paths: 2 pathways, 11 programs, 6 combinations set up",
    "ok": true,
-   "detail": 3.534
+   "detail": 25.311
   },
   {
    "name": "a person makes the given-names question conditional (saved as draft)",

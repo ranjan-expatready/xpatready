@@ -57,7 +57,7 @@ export class Programs {
   async ensurePathways(workspaceId: string) {
     for (const [key, label, clientType, description] of PATHWAY_NODES) {
       if (await this.db.programDef.findFirst({ where: { workspaceId, nodeKind: "PATHWAY", clientType } })) continue;
-      await this.db.programDef.create({ data: { workspaceId, programNodeKey: key, nodeKind: "PATHWAY", label, clientType, description, sourceBasis: "SOURCE_BACKED", createdBy: "system" } }).catch((e) => { if (e?.code !== "P2002") throw e; });
+      await this.db.programDef.create({ data: { workspaceId, programNodeKey: key, nodeKind: "PATHWAY", label, nameKey: normalizeLabel(label), clientType, description, sourceBasis: "SOURCE_BACKED", createdBy: "system" } }).catch((e) => { if (e?.code !== "P2002") throw e; });
     }
   }
 

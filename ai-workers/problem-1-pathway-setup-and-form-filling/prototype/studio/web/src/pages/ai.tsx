@@ -1,6 +1,7 @@
 // AI work (D280): every scoped launch with its steps, persisted on the server, so a reload or another screen never loses
 // it. Progress is per step and stated as it is (queued, running, done, failed, cancelled); no invented percentage or ETA.
 import * as React from "react";
+import { fmtWhen } from "@/components/status";
 import { Link, useParams } from "react-router-dom";
 import { ChevronRight, CircleStop, RotateCw, Sparkles } from "lucide-react";
 import { api, useAction, useApi } from "@/lib/api";
@@ -54,7 +55,7 @@ export function AiBatchPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 text-[#7c3aed]" /> {d.operation_label}</h1>
-          <p className="mt-1 text-sm text-text-muted">{d.scopeLabel} · {MODE[d.mode]} · started by {d.startedBy} at {new Date(d.startedAt).toLocaleTimeString()}</p>
+          <p className="mt-1 text-sm text-text-muted">{d.scopeLabel} · {MODE[d.mode]} · started by {d.startedBy}, {fmtWhen(d.startedAt)}</p>
           <div className="mt-2 flex flex-wrap gap-1.5"><BatchStatus s={d.status} /><Pill>{d.jobs.length} step{d.jobs.length === 1 ? "" : "s"}</Pill><Pill>Spent US${d.spent_usd.toFixed(2)} · worst case US${d.worstCaseUsd.toFixed(2)} · limit US${d.spendLimitUsd.toFixed(2)}</Pill></div>
         </div>
         <div className="flex gap-2">

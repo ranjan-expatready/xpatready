@@ -81,7 +81,13 @@ export class Studio {
     // its first 60 characters with a neighbour, still gets a key of its own (break M3).
     let key = b.key ?? `${parent ? `${parent.programNodeKey}.` : ""}${slug(label) || "item"}`;
     if (!b.key) for (let i = 2; await this.db.programDef.findFirst({ where: { workspaceId, programNodeKey: key }, select: { id: true } }); i++) key = `${key.replace(/-\d+$/, "")}-${i}`;
-    const n = await this.db.programDef.create({ data: { workspaceId, programNodeKey: key, parentNodeKey: parent?.programNodeKey ?? null, nodeKind: b.kind, label, description: b.description ?? null, sourceBasis: b.sourceBasis ?? parent?.sourceBasis ?? "SOURCE_BACKED", clientType: b.kind === "PATHWAY" ? b.clientType! : null, allowedLocations: locations, linkLabel: b.linkLabel ?? null, createdBy: actor.id, displayOrder: await this.db.programDef.count({ where: { workspaceId } }) } });
+    // The database keeps one name per parent (QA-14): of two creates at the same moment, one wins and the other is told.
+    const n = await this.db.programDef.create({ data: { workspaceId, programNodeKey: key, parentNodeKey: parent?.programNodeKey ?? null, nodeKind: b.kind, label, nameKey: normalizeLabel(label), description: b.description ?? null, sourceBasis: b.sourceBasis ?? parent?.sourceBasis ?? "SOURCE_BACKED", clientType: b.kind === "PATHWAY" ? b.clientType! : null, allowedLocations: locations, linkLabel: b.linkLabel ?? null, createdBy: actor.id, displayOrder: await this.db.programDef.count({ where: { workspaceId } }) } }).catch(async (e) => {
+      if ((e as { code?: string }).code !== "P2002") throw e;
+      const twin = await this.db.programDef.findFirst({ where: { workspaceId, parentNodeKey: parent?.programNodeKey ?? null, nameKey: normalizeLabel(label) } });
+      // The other unique value is the internal key: a different name that made the same key at the same moment.
+      return fail(twin ? `"${twin.label}" already exists ${parent ? `under ${parent.label}` : "as a pathway"}: choose it instead.` : "Another item was created here at the same moment: try again.", HttpStatus.CONFLICT);
+    });
     await this.audit.log(workspaceId, actor.id, "created", L.name.toLowerCase(), key, `${actor.name} created ${L.name.toLowerCase()} "${n.label}"${parent ? ` under ${parent.label}` : ""}`);
     return n;
   }

@@ -1,17 +1,17 @@
 {
- "at": "2026-10-23T14:19:07.948Z",
+ "at": "2026-10-24T04:30:12.735Z",
  "timings": {
-  "cold_first_view_ms": 193,
-  "first_view_ms": 93,
-  "filter_ms": 13
+  "cold_first_view_ms": 1694,
+  "first_view_ms": 227,
+  "filter_ms": 134
  },
- "pass": 135,
+ "pass": 136,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load through the form intake",
    "ok": true,
-   "detail": "3.723"
+   "detail": "19.469"
   },
   {
    "name": "setup: one replay of a saved real AI run on Super visa (no model call, US$0)",
@@ -26,7 +26,7 @@
   {
    "name": "performance: first view under 1 s with the sample data (app files cached)",
    "ok": true,
-   "detail": "93 ms (cold browser 193 ms)"
+   "detail": "227 ms (cold browser 1694 ms)"
   },
   {
    "name": "P-49: Needs work is the default view, with its count",
@@ -95,7 +95,7 @@
   {
    "name": "performance: changing the view answers under 200 ms",
    "ok": true,
-   "detail": "13 ms"
+   "detail": "134 ms"
   },
   {
    "name": "F1: Live shows every row whose status is Live",
@@ -189,12 +189,12 @@
   {
    "name": "keyboard: one tab stop, ↑/↓/Home/End move, Enter opens the combination page (P-50)",
    "ok": true,
-   "detail": "Spouse of a student → http://localhost:4448/c/28c2510b-6865-43cf-bbd6-86f8f45352da"
+   "detail": "Spouse of a skilled worker → http://localhost:4448/c/8f3b0b2f-bf69-40a4-a892-a3e56bb4a7d8"
   },
   {
    "name": "P-50: Back keeps the view (All), highlights the opened row and restores the scroll",
    "ok": true,
-   "detail": "{\"url\":\"?f=all&sel=individual.work_permits.open.spouse_student\",\"sel\":\"Spouse of a student\",\"y\":695,\"focus\":\"Spouse of a student\",\"scrollBefore\":695}"
+   "detail": "{\"url\":\"?f=all&sel=individual.work_permits.open.spouse_worker\",\"sel\":\"Spouse of a skilled worker\",\"y\":695,\"focus\":\"Spouse of a skilled worker\",\"scrollBefore\":695}"
   },
   {
    "name": "axe: programs-back-row-highlighted has no WCAG A/AA violation",
@@ -486,7 +486,7 @@
   {
    "name": "QA-11: \"Open the existing combination\" opens that combination's page (not the list)",
    "ok": true,
-   "detail": "http://localhost:4448/c/50699f01-0304-4b73-a426-bd3aef4e922f"
+   "detail": "http://localhost:4448/c/d8a55777-fdec-4411-8b65-e675de0f7a49"
   },
   {
    "name": "QA-1: the shared Release page holds back a combination nobody submitted, saying why",
@@ -509,7 +509,7 @@
   {
    "name": "QA-10: the review tab names who submitted (\"Submitted by Configuration author\"), never an internal id",
    "ok": true,
-   "detail": "Submitted by Configuration author at "
+   "detail": "Submitted by Configuration author, today "
   },
   {
    "name": "axe: combination-review-submitted-by-name has no WCAG A/AA violation",
@@ -604,6 +604,11 @@
   {
    "name": "1024 px: sources-tab-drafting-reads has no sideways scroll",
    "ok": true
+  },
+  {
+   "name": "QA-17: a step run on another day shows its date (\"Oct 21, …\"); one run today says \"today\"",
+   "ok": true,
+   "detail": "today 9:57 a.m. | today 9:57 a.m. | today 9:57 a.m."
   },
   {
    "name": "P-63: no page says \"box\" or \"box map\" (form field, field map)",

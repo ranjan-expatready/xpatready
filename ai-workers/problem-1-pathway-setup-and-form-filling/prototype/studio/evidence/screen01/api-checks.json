@@ -1,12 +1,12 @@
 {
- "at": "2026-10-23T14:19:27.524Z",
- "pass": 130,
+ "at": "2026-10-24T04:31:07.069Z",
+ "pass": 133,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 3.677
+   "detail": 11.843
   },
   {
    "name": "BR-1 pass: Individual shows only Individual programs; Corporate only Corporate",
@@ -280,7 +280,7 @@
    "name": "QA-1 pass: submitted and signed, the combination will be released",
    "ok": true,
    "detail": {
-    "combinationId": "b2ce3ed3-8b92-4b82-9a65-a79a2d5d8502",
+    "combinationId": "1fe810ec-e06b-4ddd-a58b-c35e722fcdae",
     "label": "Spouse of a student",
     "path": [
      "Work permits",
@@ -600,10 +600,10 @@
    "name": "source-trust race: repeated unapproved edition uploads remain held once (database guard)",
    "ok": true,
    "detail": [
-    "Held for source verification: IMM 1295 (",
     "Already waiting for a person: checksum n",
     "Already waiting for a person: checksum n",
-    "Already waiting for a person: checksum n"
+    "Already waiting for a person: checksum n",
+    "Held for source verification: IMM 1295 ("
    ]
   },
   {
@@ -795,12 +795,31 @@
    "detail": "\"日本語プログラム\" already exists under Individual. Choose it instead, or give the new one a different name."
   },
   {
+   "name": "QA-14 pass: the same category sent four times at once is created once; the others are told it exists",
+   "ok": true,
+   "detail": [
+    201,
+    409,
+    409,
+    409
+   ]
+  },
+  {
+   "name": "QA-14 fail: the database itself refuses a second same-parent name written another way",
+   "ok": true,
+   "detail": "ERROR:  duplicate key value violates unique constraint \"program_def_parent_name_key\""
+  },
+  {
+   "name": "QA-14: the same name under another parent is still allowed",
+   "ok": true
+  },
+  {
    "name": "m5: a program or path not in this pathway is ignored and the answer says so (no empty contradiction)",
    "ok": true,
    "detail": {
     "under": "",
     "program": "",
-    "rows": 23
+    "rows": 25
    }
   },
   {
@@ -832,6 +851,7 @@
    "ok": true,
    "detail": [
     "Visitors › Extend stay in Canada",
+    "Visitors › Race at once",
     "Visitors › Super visa",
     "Visitors › Visitor visa"
    ]
@@ -921,7 +941,7 @@
   {
    "name": "performance: a filtered catalogue answers in under 200 ms with the sample data",
    "ok": true,
-   "detail": "2 ms"
+   "detail": "13 ms"
   },
   {
    "name": "QA-6 fail: a name of symbols only is refused on its field in plain words; nothing is created",
@@ -960,7 +980,7 @@
     "label": "With an LMIA",
     "combinations": 1,
     "hasSetup": true,
-    "combinationId": "08520481-d97c-44e9-b6e5-ef434916b6ea"
+    "combinationId": "4a04b72c-4be8-4b2f-987e-86e516703323"
    }
   },
   {
@@ -976,7 +996,7 @@
   {
    "name": "QA-5: the app still shows it at the real time",
    "ok": true,
-   "detail": "2026-10-23T14:19:27.118Z"
+   "detail": "2026-10-24T04:31:05.400Z"
   },
   {
    "name": "QA-5 condition: the database's own zone is not UTC on this machine, so the check above is a real test of the fix",

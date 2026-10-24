@@ -28,6 +28,10 @@ const S = ["imm5257-online-s1-personal.html", "imm5257-online-s2-marital.html", 
 const rowOf = async (key: string) => ((await call("GET", "/catalogue?pathway=INDIVIDUAL&filter=all")).body.rows as any[]).find((r) => r.nodeKey === key);
 
 (async () => {
+  // The database this check reads by SQL must be the server's own (Lead check L1: a run whose database argument named
+  // another copy's database looked up stale ids and failed with a 404). Stop with the reason instead.
+  const served = (await call("GET", "/session")).body?.workspace?.id;
+  if (!served || !sql(`select id from workspace where id='${served}'`)) { console.error(`STOP  the database ${DB} is not the one the server on port ${PORT} uses (its workspace ${served ?? "unknown"} is not in it). Pass the copy's database: tsx <check> ${PORT} xr_studio_<name>.`); process.exit(2); }
   let r = await call("POST", "/demo/load");
   ok("setup: sample inputs load", r.status === 201, r.body?.seconds);
   const wp = (await rowOf("individual.work_permits.employer_specific.with_lmia")).combinationId as string;

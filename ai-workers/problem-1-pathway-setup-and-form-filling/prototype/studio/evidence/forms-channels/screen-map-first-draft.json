@@ -1,11 +1,11 @@
 {
  "edition": {
-  "id": "a8fb8442-5a9e-454b-9e17-4a77731d8c48",
-  "label": "IMM 5257 online · IRCC Portal · 2026-10-23",
+  "id": "41d70373-49d5-4184-aa6f-6b8220fc442c",
+  "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
   "channel": "ONLINE",
   "portal": "ircc_portal",
-  "captured_on": "2026-10-23",
-  "recheck_by": "2027-04-21",
+  "captured_on": "2026-10-24",
+  "recheck_by": "2027-04-22",
   "fingerprint": "d6375ca38c3bb70b1622d381fd8afdba0971ee4a5da445650f4b7290ad74ba36",
   "questions": 13
  },
