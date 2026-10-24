@@ -5,14 +5,15 @@
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: after-merge Screen 01 (1cb174a6, main e742bc59)
-stage: WAITING
-owner: Lead
-next_action: Lead reads `qa/reports/2026-10-24-after-merge.md` (Screen 01 ready from qa: 0 Critical, 3 Major open outside its scope), assigns QA-19 to QA-21, answers two questions (demo reset before the walk; QA-14 fix).
+current_item: after-merge on main db468e38 (Screen 01 small FIX, forms slice 2, runtime R1a, evidence IMM 5409)
+stage: RUNNING
+owner: qa
+next_action: qa finishes the run: forms slice 2 API probe, coverage (c8) on a second full suite pass, records and report `qa/reports/2026-10-24-after-merge-2.md`.
 blocked_by: none
 updated: 2026-10-24
 
 ## Log (last 10 lines)
+- 2026-10-24 · applied Lead note 2026-10-24 22:00 (cloud session on claude/qa-e01030); after-merge on db468e38 running: suites 16/16 green; QA-8, QA-14, QA-17 closed; QA-4, QA-20 still open; new QA-22 (author flash) and R1a findings (D1, D2 reproduced).
 - 2026-10-23 · Lead: lane created at the founder's request (R-82, P-68); ports 4470–4479, databases `qa_*`.
 - 2026-10-23 · QA-0 `/qa milestone` on main 141194dc: not ready — QA-1 Critical reproduced (API and browser); 5 Major, 6 Minor (new QA-4–QA-12); red suites: AI drafting, orchestration (lane copy), Studio browser, scale; coverage floor api 93/74, engine 94/85; Screen 01 journey 7.5/10 with a 0. Four capability rows added (Lead note).
 - 2026-10-23 · after-merge on main 65826022 (F1 slice 1): QA-2 closed, QA-4 half fixed, QA-1 still open; slice 1 sound through the API (probe 25/26, suite 106/106); new QA-13–QA-18 (QA-14 name race turns grounding red; QA-18 engine branches 84.7% < 85% floor); browser journeys not reliable at load 22–112.

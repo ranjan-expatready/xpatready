@@ -73,7 +73,9 @@ function pdf(title, text) {
     step("J1 data: a double click creates the path once (one combination, one program, one category)", n === 1 && nodes === "Visitors > Super visa", `${n} combination; ${nodes}`);
     const audit = sql("select string_agg(entity, ', ' order by entity) from audit_event where actor='user-A' and action='created'");
     step("J1 data: the audit has one line per created item, by the author", audit === "category, configuration row, program", audit);
-    step("J1 lands on the new combination's sources with one obvious next step (Add sources)", /Super visa/.test(await main()) && /Next step Add sources/.test(await main()));
+    // The next step loads after the page (its own request): wait up to 5 s as a person would, then read (after-merge 24 Oct, db468e3).
+    await p.waitForFunction(() => /Next step\s+Add sources/.test(document.querySelector("main")?.innerText ?? ""), null, { timeout: 5000 }).catch(() => {});
+    step("J1 lands on the new combination's sources with one obvious next step (Add sources)", /Super visa/.test(await main()) && /Next step Add sources/.test(await main()), (await main()).slice(0, 160));
     await shot("J1-created-sources");
     await go("/");
     step("J1 the catalogue shows the row: Visitors › Super visa · In setup · Add sources", /Visitors Super visa .*In setup Add sources/.test(await main()));
