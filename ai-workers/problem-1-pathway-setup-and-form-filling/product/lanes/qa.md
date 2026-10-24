@@ -13,6 +13,7 @@ blocked_by: none
 updated: 2026-10-24
 
 ## Log (last 10 lines)
+- 2026-10-24 · forms slice 2 probe 45/57 (D3 replayed, 500 on an empty draft request) and R1a probe 59/69 recorded as QA-22–QA-33; coverage pass running.
 - 2026-10-24 · applied Lead note 2026-10-24 22:00 (cloud session on claude/qa-e01030); after-merge on db468e38 running: suites 16/16 green; QA-8, QA-14, QA-17 closed; QA-4, QA-20 still open; new QA-22 (author flash) and R1a findings (D1, D2 reproduced).
 - 2026-10-23 · Lead: lane created at the founder's request (R-82, P-68); ports 4470–4479, databases `qa_*`.
 - 2026-10-23 · QA-0 `/qa milestone` on main 141194dc: not ready — QA-1 Critical reproduced (API and browser); 5 Major, 6 Minor (new QA-4–QA-12); red suites: AI drafting, orchestration (lane copy), Studio browser, scale; coverage floor api 93/74, engine 94/85; Screen 01 journey 7.5/10 with a 0. Four capability rows added (Lead note).
