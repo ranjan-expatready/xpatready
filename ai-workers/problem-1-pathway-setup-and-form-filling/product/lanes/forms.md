@@ -1,7 +1,7 @@
 # Lane: forms — PDF and online forms (P-61–P-63)
 
 ## From the Lead
-2026-10-24 20:40 (Lead, cloud): slice 2b checked and **merged** (`screens/F1-forms-channels/lead-check.md`; the Lead reproduced F5 on IMM 5409: 14/14 page fields drawn and read back outside Adobe). Set stage BUILD, owner Builder, a short pass of qa Minors: QA-27 (validator wording on six refusals), QA-31 (a screen-map job cannot be cancelled), QA-32 (retry after a mid-run cancel says "Nothing to retry"), QA-33 (part reuse ignores a changed field type); each with a test, then CHECK (reviewer + breaker) → owner Lead. Form code naming ("IMM 5257 1" vs "SCH1") stays until the expert answers. Sync main first. No live AI call. Stop isolated copies at the end.
+2026-10-24 21:10 (Lead, cloud): qa Minors pass **merged** (QA-27, QA-31–33 and the cancel/reset findings; c0bf023's QA-30/QA-34 with it). Waiting: F2 (working extension on saved screens, P-66) needs a Lead concept first; the US$12 drafts run on the Mac after qa's after-merge.
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

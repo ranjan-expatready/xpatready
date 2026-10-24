@@ -8,14 +8,15 @@ updated: 2026-10-23
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
-| screens | 01-programs-catalogue | FIX | Builder | Lead note waiting for sync · Finish the small FIX (QA-4, QA-20, QA-22 fixed with check_screen01_smallfix.cjs; full suite run in progress… |
-| forms | F1-forms-channels | CHECK | Lead | Lead note waiting for sync · Lead check of slice 2b after its FIX: build-notes "Slice 2b" and "Slice 2b fixes", review-slice2b.md, break… |
+| screens | 01-programs-catalogue | CHECK | Lead | Lead note waiting for sync · Lead check of the small FIX on its exact commit (build-notes "Fixes: small FIX after Screen 01 DONE" and it… |
+| forms | F1-forms-channels | CHECK | Lead | Lead note waiting for sync · Lead check of the qa Minors pass after its FIX: build-notes "qa Minors pass" (its two lines), review-qa-min… |
 | evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead: check IMM 5409 (prototype/evidence-lane/E1/imm5409/STATUS.md); send F5 (static forms: page fields sta… |
-| runtime | R1-thin-slice (R1c) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead early look at R1c, the renderer (screens/R1-thin-slice/build-notes-r1c.md, screenshots screenshots/r1c… |
+| runtime | R1-thin-slice (R1c) | CHECK | Lead | Lead note waiting for sync · Lead re-checks R1c: check_runtime_r1c.cjs now waits for state (build-notes-r1c "Lead check FIX"); 75/75 on … |
 | qa | after-merge on main db468e38 (Screen 01 small FIX, forms slice 2, runtime R1a, evidence IMM 5409) | WAITING | Lead | Lead note waiting for sync · Lead reads qa/reports/2026-10-24-after-merge-2.md (no Blocker or Critical; Screen 01 passes from qa), assig… |
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-24 · Lead (cloud) · Runtime R1c (journey 75/75 after its FIX), screens small FIX and forms qa Minors checked and merged on the Lead branch; 20/20 suites green; next: PR to main, one qa after-merge, runtime BUILD R1d.
 - 2026-10-24 · Lead (cloud) · Studio `package.json` gets back `"type": "module"` (dropped by the GitHub migration 428a018): type check 15 errors → 0 in a clean clone; every suite green except R1c's journey (runtime FIX). Screens small FIX accepted but CI red on its new browser suite (bundled browser missing on GitHub's runner) → screens uses the system Chrome like the other browser suites.
 - 2026-10-24 · Lead (cloud) · Runtime R1c Lead check → **FIX**: the R1c browser journey gives 69–71/75 on fresh copies (lane reported 75/75; Confirm section, date check and conflict re-save fail every time); diff, S-10 and the migration accepted. Not merged. `run-suites.sh` runs R1c after the visitor-visa setup.
 - 2026-10-24 · Lead (cloud) · Runtime R1c at CHECK (a986e9c: review 7/10 and break 4 Major, all fixed with tests): Lead check in progress; runtime branch merged on the Lead branch, `run-suites.sh` runs `check_runtime_r1c.cjs` after the visitor-visa setup and before R1a; full suites running before a PR. PR #9 merged (262750e).
@@ -25,4 +26,3 @@ updated: 2026-10-23
 - 2026-10-24 · Lead (cloud) · Merged Screen 01 small FIX, forms slice 2, runtime R1a and evidence IMM 5409 on `claude/zen-sagan-oztxto` (not yet on main); 16/16 suites green on the result after the Lead fixed the suite runner (slice 2 server setting; runtime and drafting-guard suites now in CI; ES-module test folders). Next: qa after-merge → Screen 01 DONE; forms 2b, runtime R1c, evidence IMM 5476.
 - 2026-10-24 · Lead · PR #5 merged (be10fa7): CI runs every suite on every push (first GitHub run 11/11 green after the L2 wait port), graph in CI, automatic pull at session start. Scheduled Lead set up and paused (founder: until the weekly usage resets).
 - 2026-10-24 · Lead · Founder decided P-84 (scheduled cloud Lead every 4 hours), P-85 (full suites on every push: `tools/run-suites.sh`, 11/11 green on main in 6 min) and P-86 (generated traceability graph `tools/graph.mjs`: 0 hard gaps; 22 untested routes, 7 pages no browser test opens, 5 Works capabilities no test names, 1 unused component → qa lane).
-- 2026-10-24 · cloud · PR #4 merged (3c3d578): cloud sessions live. Follow-up: session start pulls a clean copy automatically (no manual git pull, Mac or cloud); one-Lead check in the lead skill; lane.sh branch skips a lane's merged old branches.

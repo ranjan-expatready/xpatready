@@ -16,3 +16,7 @@ How checked: diff `main...a986e9c` (71 files; `web/src/runtime/questionnaire.tsx
 * **Accepted:** S-10 (`/cases` route and one Demo-menu item); the expand-only migration (unique key per case, NULLs allowed); the conflict dialog's test exists as asked.
 * **Answers:** union date optional with a warning until cross-person rules (R1d/M3 plan item); "(Sample check)" label kept (AGENTS rule 4).
 **Next:** runtime FIX. Find the root cause (product or check; no added sleeps), 75/75 three times on fresh copies, then CHECK, owner Lead.
+
+## Lead recheck of R1c after its FIX (24 Oct, cloud Lead) — **Result: MERGED (Lead PR after #9)**
+Root cause (lane): the journey read the page right after each action and waited fixed times; under `R1C_SLOW=6` the lane reproduced 60/75. Every step now waits for the state it needs (no sleeps). Lead run on main + R1c + screens small FIX + forms qa Minors, fresh copies through `run-suites.sh --demo`: **20/20 suites green**, `check_runtime_r1c.cjs` **75/75**, R1a 97/97, case engine 29/29. Union date optional with a warning; cross-person rules are a plan item (plan.md "Plan items after R1c"); "(Sample check)" kept.
+**Next:** R1d (fill and never overwrite: `fill-case.ts`, generation, snapshot, stale and lock; RT-13…RT-17) per plan.md §slices, then the R1 journey end to end.
