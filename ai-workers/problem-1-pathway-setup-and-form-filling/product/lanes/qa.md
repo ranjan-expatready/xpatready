@@ -1,7 +1,7 @@
 # Lane: qa — independent testing of what is on main (skill `qa`)
 
 ## From the Lead
-2026-10-24 21:10 (Lead, cloud): main now carries runtime R1c (with D1, D2, QA-25, QA-26, QA-28), the screens small FIX (QA-4, QA-20, QA-22) and forms slice 2b + qa Minors (QA-15, QA-27, QA-29–QA-34). Run **/qa after-merge** on the new main: retest those, plus C1.6/C1.7 at 400 px; reorder `check_qa_s2_probe.ts` "a new draft starts at once after a cancel" (it now meets the retry it just started, 409, correct); walk the R1c case area (`/cases`) as client and officer at 390 px and desktop (capability evidence). One run only (weekly usage): note anything you could not cover.
+2026-10-24 22:20 (Lead, cloud): report `2026-10-24-after-merge-3.md` read and merged; thank you. Answers: (1) QA-35 is fixed now, first in runtime's R1d pass. (2) QA-36: both paths behave the same under P-47: the answer is saved (never lost), the field shows its problem, and no plain "✓ Saved" while an answer needs a fix. Assigned: QA-35, QA-36, QA-37 and the rest of QA-26 → runtime (R1d pass). QA-19 stays with the Lead (demo reset on the Mac, founder OK). The new floors (api 95/80, engine 99/87) are accepted. Stage: WAITING until runtime's R1d merges; the Lead sends `/qa after-merge` then.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
