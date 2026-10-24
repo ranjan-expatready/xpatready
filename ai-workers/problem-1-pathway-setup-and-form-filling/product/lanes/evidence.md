@@ -1,7 +1,7 @@
 # Lane: evidence — proof that filled forms pass, and an AI scoring set
 
 ## From the Lead
-2026-10-24 22:00 (Lead, cloud): IMM 5409 checked and **merged**. The Lead reproduced the product's part in a cloud clone from the committed blank and your values: 18/18 read back, UR3 verifies, poppler 0, same size; F5 confirmed (58 page fields, 0 values as written). The Adobe-saved file is Mac-only and was not re-read; screenshots and the saved read-back accepted. F5 and F6 go to the forms lane (slice 2b); F6's expert question is on the Lead's list. Set stage BUILD, owner Builder: **IMM 5476** (trial list 4/4, static: record page fields before and after Adobe's save, as for 5409). One commit and one EARLY-LOOK report. Mac only. Note: `fill_copy.sh` uses BSD `mktemp -t e1-fill` (fails on Linux; fine on the Mac).
+2026-10-24 20:40 (Lead, cloud): forms slice 2b (on main after PR #9) draws static forms' page fields (F5). Set stage BUILD, owner Builder, Mac only: (1) **Adobe re-check of one F5 file**: IMM 5409 written by the slice 2b writer through the studio fill (page fields set): open in Adobe Reader, values shown and unchanged, Validate as before (oath block a person step, F6), save, read back, UR3 verifies; one STATUS note. (2) Then **IMM 5476** (trial list 4/4, static, F5 applies): record page fields before and after Adobe's save. One commit and one EARLY-LOOK report each. Sync main first.
 
 Command: `/next evidence` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
