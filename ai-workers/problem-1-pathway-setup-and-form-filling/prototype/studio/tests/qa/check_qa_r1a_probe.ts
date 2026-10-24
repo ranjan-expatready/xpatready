@@ -92,8 +92,8 @@ async function main() {
   r = refusal("create malformed JSON", await call("POST", "/runtime/cases", undefined, OFFICER, "{\"combinationId\": "));
   ok("C6.1 a malformed request body is a 400, not a server error", r.status === 400, { status: r.status, detail: r.body?.detail });
   const ref = "Référence — दिल्ली 北京 ✈";
-  r = await call("POST", "/runtime/cases", { combinationId: vv, reference: `${ref} ${run}`, clientActor: CLIENT, principal: { displayName: "José Ñúñez-Østergård" } });
-  ok("C6.1 a non-English reference and principal name are kept exactly", r.status === 201 && r.body.reference === `${ref} ${run}` && r.body.people.some((p: { label: string }) => p.label === "José Ñúñez-Østergård"), { reference: r.body?.reference });
+  r = await call("POST", "/runtime/cases", { combinationId: vv, reference: `${ref} ${run}`, clientActor: CLIENT, principal: { displayName: "Client Á (Sample) — Ærøskøbing Ñandú" } });
+  ok("C6.1 a non-English reference and principal label are kept exactly", r.status === 201 && r.body.reference === `${ref} ${run}` && r.body.people.some((p: { label: string }) => p.label === "Client Á (Sample) — Ærøskøbing Ñandú"), { reference: r.body?.reference });
 
   const A = await open("A");
   const B = await open("B", CLIENT_B);
@@ -167,14 +167,15 @@ async function main() {
   ok("C6.3 an answer with no value is a 400 with the reason", r.status === 400 && r.body?.errors?.[0]?.field === "value", r.body?.errors);
 
   // Non-English and long text: kept exactly, counted as a person counts
-  const names = ["Nguyễn Thị Minh Khai", "محمد عبد الله", "श्रीनिवास रामानुजन", "王小明", "Zoë O'Brien-Łukasiewicz"];
+  // Place and object phrases, never personal names (AGENTS.md rule 5): diacritics, stacked Vietnamese marks, Arabic, Devanagari combining marks, Chinese, Polish letters.
+  const phrases = ["Phố cổ Hội An", "مكتبة المدينة", "राष्ट्रीय पुस्तकालय", "北京火车站", "Café Noël — Łódź-Śródmieście"];
   let kept = 0;
-  for (const [i, n] of names.entries()) {
+  for (const [i, n] of phrases.entries()) {
     const fam = await answer(A.id, i === 0 ? A.principal : i === 1 ? spouse : A.principal, "person.criminal_history_details", n);
     const stored = fam.body?.answer?.id ? sql(`select value_json #>> '{}' from client_canonical_answer where id='${fam.body.answer.id}'`) : "";
     if (fam.status === 200 && stored === n && (fam.body?.answer?.problems ?? []).length === 0) kept++; else note("non-English text", { n, status: fam.status, stored, problems: fam.body?.answer?.problems, detail: fam.body?.detail });
   }
-  ok("C6.3 Vietnamese, Arabic, Devanagari, Chinese and Polish text is accepted and stored exactly", kept === names.length, { kept, of: names.length });
+  ok("C6.3 Vietnamese, Arabic, Devanagari, Chinese and Polish text is accepted and stored exactly", kept === phrases.length, { kept, of: phrases.length });
   const long = "ह".repeat(201);
   let x = await answer(A.id, A.principal, "person.criminal_history_details", long);
   ok("C6.3 201 Devanagari characters in a 200-character box is saved and flagged with the count", x.status === 200 && (x.body?.answer?.problems ?? []).some((p: string) => /200 characters \(it is 201\)/.test(p)), x.body?.answer?.problems);
