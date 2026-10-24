@@ -1,6 +1,6 @@
 # Solution 1: Pathway Setup to Form Filling
 
-**Status, current revision and hash, audit, limitations and acceptance:** [delivery-control.md](delivery-control.md), the one home for them. Which files are current, and what each is for: [`../README.md` §3](../README.md#3-current-files-and-their-purpose). The [reusable process](../../playbook/solution-delivery.md) governs derivation and later changes.
+**Current status and next steps:** [product/STATE.md](product/STATE.md) (lanes, stages, who acts) and [product/LEAD.md](product/LEAD.md). [delivery-control.md](delivery-control.md) is the record of the earlier maker/checker revisions (to 21 Oct), kept for its audit trail; it gives no instructions. Which files are current, and what each is for: [`../README.md` §3](../README.md#3-current-files-and-their-purpose). The [reusable process](../../playbook/solution-delivery.md) governs derivation and later changes.
 
 **Stack / next maker (D276/D277):** default to the verified product stack (captured React/Vite/UI and NestJS/Prisma/PostgreSQL); justify additions against a concrete gap. The founder starts one fresh replacement Claude Code maker after the prior checkpoint/stop, using NEXT and the one coverage record. This Codex chat reviews the exact saved implementation/evidence; no session has been launched by this planning update.
 

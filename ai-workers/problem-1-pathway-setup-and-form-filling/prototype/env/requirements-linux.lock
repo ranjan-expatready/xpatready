@@ -1,0 +1,15 @@
+# Linux (x86_64, cloud sessions and CI) twin of requirements.lock (P-82): the same five packages at the same
+# versions, pinned to their manylinux wheels. SHA-256 values from PyPI's JSON API (24 Oct 2026); pypdf and
+# pycparser are the same py3 wheels as the Mac lock. Install: pip install --require-hashes --no-deps --only-binary :all: -r <this file>
+pypdf==6.19.0 \
+    --hash=sha256:7e5d6e730e7dae87d560a2cee218b852f6498c8be61966f3cd02ead971e48d14
+cryptography==49.0.0 \
+    --hash=sha256:0e959b578856a3924bc0cbb710fc12c387b9412a951389f3ca61704a9e25f325 \
+    --hash=sha256:2afe9051da7ae7bd5905da5a949280c7d2bb75682e188f650a9d0f2756b834c6 \
+    --hash=sha256:cbc77da8c523d5abd028635ba850a6966fcee2c82e2bf65a41d1d8afe0f98be9
+cffi==2.0.0 \
+    --hash=sha256:c8d3b5532fc71b7a77c09192b4a5a200ea992702734a2e9279a37f2478236f26
+pycparser==3.0 \
+    --hash=sha256:b727414169a36b7d524c1c3e31839a521725078d7b2ff038656844266160a992
+zxing-cpp==3.1.1 \
+    --hash=sha256:9cf67341949946307d086b302cefd453fb47bc6d6ddc7d088839e9481982757b

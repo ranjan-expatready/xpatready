@@ -25,15 +25,17 @@ for mf in sorted(glob.glob(os.path.join(root, "*", "manifest.json"))):
         if check: print("PENDING", it["edition"], "->", it["path"]); continue
         os.makedirs(os.path.dirname(path), exist_ok=True); part = path + ".part"
         if it["sha256"] in dl:
-            import shutil; shutil.copyfile(dl[it["sha256"]], path); it["status"] = "ok"
-            it["downloaded_utc"] = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") + " (by hand, from Downloads)"
-            changed = True; ok += 1; print("OK   ", it["edition"], "(found in Downloads)"); continue
+            import shutil; shutil.copyfile(dl[it["sha256"]], path); ok += 1; print("OK   ", it["edition"], "(found in Downloads)")
+            if not str(it.get("status", "")).startswith("ok"):
+                it["status"] = "ok"; it["downloaded_utc"] = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ") + " (by hand, from Downloads)"; changed = True
+            continue
         r = subprocess.run(["curl", "-sSfL", "--max-time", "120", "-o", part, it["url"]])
         got = hashlib.sha256(open(part, "rb").read()).hexdigest() if r.returncode == 0 and os.path.exists(part) else None
         if got == it["sha256"]:
-            os.replace(part, path); it["status"] = "ok"
-            it["downloaded_utc"] = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-            changed = True; ok += 1; print("OK   ", it["edition"])
+            os.replace(part, path); ok += 1; print("OK   ", it["edition"])
+            # A file the manifest already records as ok is only restored: the manifest stays as committed (P-83).
+            if not str(it.get("status", "")).startswith("ok"):
+                it["status"] = "ok"; it["downloaded_utc"] = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"); changed = True
         else:
             if os.path.exists(part): os.remove(part)
             bad += 1; print("FAIL ", it["edition"], "(download failed: the site did not answer; tried again at the next /next)" if got is None else "(checksum differs: possible new edition; ask the Lead)")

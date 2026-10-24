@@ -5,7 +5,7 @@ The Lead is Claude Code in the main copy, started with `/lead` (skill `lead`). I
 ## Standing context
 * Founder = product owner and, for now, the RCIC reviewer (P-17); talks only to the Lead; decisions one at a time with a recommendation (skill grilling).
 * Visual pages: "Programme map" https://claude.ai/artifact/8UHw3EhbcHTUXWoqABdLdG (source `design/programme-map.html`; data block at the bottom; republish the same file after changes), "Pathway Configurator Screens" (Screen 1 boards), "Pathway Configurator Status Report" (R-73).
-* Standing merge OK after the Lead check (23 Oct). Restart :4400 only with the founder's OK. Never push.
+* Standing merge OK after the Lead check (23 Oct). Restart :4400 only with the founder's OK. Push `main` after every Lead commit (P-82); never force-push.
 
 ## Open items the Lead is holding
 | Item | Waiting on | Next step |
@@ -21,6 +21,7 @@ The Lead is Claude Code in the main copy, started with `/lead` (skill `lead`). I
 | Spend: up to US$12 for AI drafts of IMM 0008/5669/5406 | Founder | Ask when forms slice 2 (A4 backend) is ready, so the runs are cheaper |
 | Expert questions | Founder to relay | (1) Schedule A for paper spousal sponsorship: IMM 5669 or eIMM 5669; (2) one structure-only portal capture by a licensed representative (P-66); (3) form channels per demo combination (P-61); (4) may a tool pre-validate before the person types the signature, and must they re-validate after (E1b F2) |
 | GitHub source of truth (P-81, P-82) | Founder merges the migration PR | DONE 24 Oct: private repo live; the mirror pushed main and every lane branch; settings allow `git push` and `gh pr create` (force, delete, secrets and repo admin still denied); studio lockfile and CI added on branch `migration/github-canonical` (`decisions/github-canonical-2026-10-24.md`). Founder: review and merge the PR on GitHub; then the Lead cuts over (folder rename, lane worktrees recreated, mirror retired) |
+| Cloud sessions (P-82, P-83) | Founder merges the cloud PR | Rehearsed 24 Oct from a fresh GitHub clone: `cloud-setup.sh` (about a minute), `/next` bind to the lane's branch, isolated copies, Screen 01 browser 136/136, rules 67/67, engine 38/38, Screen 01 API and forms checks green. One-time: a lane runs in the cloud only after its branch has synced `main` once (older `lane.sh` calls a cloud clone the Lead's copy). Mac-only: evidence lane (Adobe), `sources/`/`code/` reading, document OCR (`sips`, B31). One Lead at a time |
 | Screen 02 concept | Lead (screen-designer agent may draft) | P-61–P-63, A4 progress screen, new-edition impact; after Screen 01 DONE |
 | Intended user for D17/D20 | Founder arranging | Founder chose a content publisher from the team (24 Oct) and arranges who; files name the role only. Lead prepares the unaided M2 walk script and books it when Screens 01–04 pass their checks |
 | Static analysis gaps (R-70), shared-library audit | Screen 02–04 concepts | `history/SHARED-LIBRARY-AUDIT-2026-10-23.md` unreviewed |

@@ -38,6 +38,7 @@ Owner: the Lead. Source: the requirements trace of 23 Oct (`history/TRACE-SA01B-
 | B27 | Field map export and re-import, all or nothing | SA-1-31 | S |
 | B30 | Website and campaign entry links per program or combination with Source and Campaign recorded; a verdict shown to the prospect (out of prototype scope, P-77) | SA-1B-77–84, P-76, P-77 | M |
 | B29 | General country-level PQR built automatically from released combinations' PQRs, opening the program the person chooses; prospect-facing use (M3) (P-76) | SA-1B-77–84, P-76 | M |
+| B31 | Mac paths out of code and tests (P-82): find `psql`, `openssl`, `pdftotext`, `pdftoppm`, `tesseract` on PATH instead of `/opt/homebrew/...` (16 test files, `p1/e5_roundtrip.py`, `p5/reader/local.ts`); `require("../node_modules/playwright")` instead of the Mac user's Codex path in three browser checks (also a personal name in the repo, AGENTS rule 5); replace macOS `sips` in the local OCR reader so document OCR runs in the cloud. `cloud-setup.sh` covers all but `sips` with stand-ins until then. Each lane fixes the files it owns when it next touches them | P-82 | S |
 Outside SA-01B and therefore outside the POC (P-70): SA-01 country and pack container slices (SA-01.00–.02, .09–.11, SA-1-64, 66, 67), duplicate-person search (AG-02, one-pager 6.2).
 
 ## Planned but missing from the tester's checklist (added through the qa lane's Lead note)
