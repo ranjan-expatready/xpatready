@@ -1,0 +1,58 @@
+# CI (P-81, P-82): the push guard on every push and pull request; on pull requests also the rules-file checks,
+# the decision-impact check, the explicit-any count and the engine/contract suites on PostgreSQL 18 with the
+# official IRCC PDFs fetched by manifest checksum.
+name: ci
+on:
+  push:
+  pull_request:
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: push guard (excluded paths, PDFs, secrets, personal names)
+        run: |
+          G="ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/push-guard.sh"; chmod +x "$G"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            "$G" "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
+          else
+            "$G" --unpushed HEAD
+          fi
+  checks:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version-file: .nvmrc }
+      - uses: actions/setup-python@v5
+        with: { python-version: '3' }
+      - name: PostgreSQL 18 (PGDG)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-18
+          PGB=/usr/lib/postgresql/18/bin
+          sudo -u postgres "$PGB/initdb" -D /tmp/pg18 -A trust -U xr_studio
+          sudo -u postgres "$PGB/pg_ctl" -D /tmp/pg18 -o "-p 54329 -k /tmp" -l /tmp/pg18.log -w start
+          sudo -u postgres "$PGB/createdb" -h 127.0.0.1 -p 54329 xr_studio_demo
+      - name: npm ci
+        run: npm ci
+        working-directory: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+      - name: schema
+        run: |
+          export DATABASE_URL="postgresql://xr_studio@127.0.0.1:54329/xr_studio_demo"
+          ./node_modules/.bin/prisma migrate deploy && ./node_modules/.bin/prisma generate
+        working-directory: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+      - name: official IRCC PDFs (manifest checksums, P-31)
+        run: python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py
+      - name: rules files, decision impact, any-count
+        run: |
+          P=ai-workers/problem-1-pathway-setup-and-form-filling/product
+          bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && \
+          node ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/count-any.mjs
+      - name: engine and contract suites
+        run: |
+          S=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
+          "$S/node_modules/.bin/tsx" --tsconfig "$S/api/tsconfig.json" "$S/tests/check_engine.ts"

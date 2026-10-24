@@ -1,0 +1,15 @@
+#!/bin/bash
+# Pre-push guard (P-82): installed by lane.sh setup (core.hooksPath=.githooks). Runs product/tools/push-guard.sh
+# on every ref being pushed; a push containing an excluded path, a PDF, a secret or a personal name is refused.
+ROOT="$(git rev-parse --show-toplevel)"; GUARD="$ROOT/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/push-guard.sh"
+[ -x "$GUARD" ] || { echo "push guard missing at $GUARD — push refused (restore it or run lane.sh setup)"; exit 1; }
+rc=0
+while read -r lref lsha rref rsha; do
+  case "$lsha" in *[!0]*) ;; *) continue;; esac          # local delete: nothing to check
+  if [ "$rsha" = "0000000000000000000000000000000000000000" ]; then
+    "$GUARD" --unpushed "$lsha" || rc=1
+  else
+    "$GUARD" "$rsha..$lsha" || rc=1
+  fi
+done
+exit $rc
