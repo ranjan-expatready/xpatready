@@ -16,6 +16,7 @@ updated: 2026-10-23
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-24 · cloud · PR #4 merged (3c3d578): cloud sessions live. Follow-up: session start pulls a clean copy automatically (no manual git pull, Mac or cloud); one-Lead check in the lead skill; lane.sh branch skips a lane's merged old branches.
 - 2026-10-24 · cloud · Cloud sessions work end to end (PR from claude/modest-cerf-yunauq): setup from a fresh clone, lane bind to its branch, app, suites green (Screen 01 browser 136/136). Mac-only: evidence lane, sources/code reading, OCR (B31). Lanes sync main once before their first cloud run.
 - 2026-10-24 · screens · CHECK → merged · Lead check of Screen 01 (channels, filing method, portal, online forms, release gate, words) merged 1cb174a6; :4400 restarted; DONE after qa retest. Evidence IMM 1295 merged. All builder lanes working again.
 - 2026-10-24 · all · Every lane finished its stage overnight and waits on the Lead check: screens (Screen 01 with channels), forms slice 2, runtime R1a, evidence; qa waiting. Screen 01 is checked first.
