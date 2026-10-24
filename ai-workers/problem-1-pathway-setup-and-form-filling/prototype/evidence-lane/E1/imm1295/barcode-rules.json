@@ -1,0 +1,82 @@
+{
+ "note": "IMM 1295 (09-2023) barcode rules: P1 revision 3's rules for this edition (copied unchanged from tools/selftest-imm1295-rules.json, which the compare tool's self-test proves). P1 revision 3 rules for IMM 1295 (09-2023), transcribed from p1/barcode_positions.py for the self-test; evidence for each rule is named there",
+ "form_file": "imm1295e.pdf",
+ "inventory": "p1/inventory/imm1295e.inventory.json",
+ "manifests": [
+  "barcode1",
+  "barcode2",
+  "barcode3",
+  "barcode4",
+  "barcode5"
+ ],
+ "derived": [
+  {
+   "rule": "date split into hidden year/month/day boxes (template: validateDateWithHiddenFields on the visible date)",
+   "kind": "date_split",
+   "from": [
+    "form1[0].Page1[0].MaritalStatus[0].SectionA[0].DateOfMarriage[0]"
+   ],
+   "to": [
+    "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromYr[0]",
+    "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromMM[0]",
+    "form1[0].Page1[0].MaritalStatus[0].SectionA[0].MarriageDate[0].FromDD[0]"
+   ]
+  },
+  {
+   "rule": "date split into hidden year/month/day boxes (template: IssueDate validate calls validateDateWithHiddenFields(..., IssueYYYY, IssueMM, IssueDD))",
+   "kind": "date_split",
+   "from": [
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDate[0].IssueDate[0]"
+   ],
+   "to": [
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueYYYY[0]",
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueMM[0]",
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].IssueDD[0]"
+   ]
+  },
+  {
+   "rule": "date split into hidden year/month/day boxes (template: ExpiryDate validate, hidden expiryYYYY/MM/DD)",
+   "kind": "date_split",
+   "from": [
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].ExpiryDate[0]"
+   ],
+   "to": [
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryYYYY[0]",
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryMM[0]",
+    "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Passport[0].expiryDD[0]"
+   ]
+  },
+  {
+   "rule": "full telephone number calculated into the hidden, read-only ActualNumber box (template: phone script on Phone)",
+   "kind": "phone_join",
+   "from": [
+    "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].NumberCountry[0]",
+    "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].IntlNumber[0].IntlNumber[0]"
+   ],
+   "to": [
+    "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].ActualNumber[0]"
+   ]
+  }
+ ],
+ "cleared": {
+  "form1[0].Page2[0].MaritalStatus[0].SectionA[0].Languages[0].languages[0].lov[0]": "'language most at ease' applies only when ableToCommunicate is 'Both'; otherwise the form's script sets lov.rawValue = null"
+ },
+ "not_encoded": {
+  "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].CanadaUS[0]": [
+   "control_not_encoded",
+   "telephone format switch (Canada/US number boxes): chooses which boxes apply; the number itself is encoded through ActualNumber"
+  ],
+  "form1[0].Page2[0].ContactInformation[0].contact[0].PhoneNumbers[0].Phone[0].Other[0]": [
+   "control_not_encoded",
+   "telephone format switch (other-country number boxes): chooses which boxes apply; the number itself is encoded through ActualNumber"
+  ],
+  "form1[0].Page1[0].PersonalDetails[0].AliasName[0].AliasNameIndicator[0].AliasNameIndicator[0]": [
+   "answer_not_in_manifest",
+   "Question 2 A (other names used?): the form's barcode1-5 manifests list the alias name boxes but not this yes/no answer"
+  ],
+  "form1[0].Page4[0].Consent0[0].Choice[0]": [
+   "answer_not_in_manifest",
+   "Question 6 (ill treatment of prisoners or civilians, looting or desecration): not listed in any of the form's barcode1-5 manifests; the answer stays in the saved form data only"
+  ]
+ }
+}
