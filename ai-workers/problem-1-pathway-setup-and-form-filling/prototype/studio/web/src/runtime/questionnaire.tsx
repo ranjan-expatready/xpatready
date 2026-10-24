@@ -241,7 +241,7 @@ function Sqr({ view }: { view: View }) {
   const [params, setParams] = useSearchParams();
   const parts = view.sections;
   const raw = params.get("part");
-  const index = raw === null ? null : Math.min(Math.max(Number(raw) - 1 || 0, 0), parts.length - 1);
+  const index = raw === null ? null : Math.min(Math.max(Math.floor(Number(raw)) - 1 || 0, 0), parts.length - 1);
   const go = (i: number | null) => { setParams(i === null ? {} : { part: String(i + 1) }); window.scrollTo({ top: 0 }); };
   if (index === null) return <SqrOverview view={view} open={go} />;
   return <SqrPart key={`${parts[index].subjectId}|${parts[index].section}`} view={view} index={index} go={go} />;
@@ -265,7 +265,7 @@ function SqrOverview({ view, open }: { view: View; open: (i: number) => void }) 
       </div>
       {people.map(([id, label]) => (
         <section key={id} aria-labelledby={`p-${id}`}>
-          <h2 id={`p-${id}`} className="mb-2 text-base font-semibold">{label === "The application" ? "About the application" : `About ${label}`}</h2>
+          <h2 id={`p-${id}`} className="mb-2 text-base font-semibold [overflow-wrap:anywhere]">{label === "The application" ? "About the application" : `About ${label}`}</h2>
           <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface-raised">
             {parts.map((s, i) => [s, i] as const).filter(([s]) => s.subjectId === id).map(([s, i]) => {
               const st = partState(s, passed, view.checks);
@@ -304,6 +304,12 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   const summaryRef = React.useRef<HTMLDivElement>(null);
   const [focusSummary, setFocusSummary] = React.useState(0);
   React.useEffect(() => { if (focusSummary) summaryRef.current?.focus(); }, [focusSummary]);
+  // The part's heading takes the focus when the part opens (keyboard and screen readers hear where they are).
+  const headingRef = React.useRef<HTMLHeadingElement>(null);
+  React.useEffect(() => { headingRef.current?.focus({ preventScroll: true }); }, []);
+  // A save that finishes after the person left this part (Back, another part) never moves them (break report m6).
+  const alive = React.useRef(true);
+  React.useEffect(() => () => { alive.current = false; }, []);
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
 
   const partChecks = view.checks.filter((c) => c.subjectId === part.subjectId && c.section === part.section);
@@ -331,6 +337,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   }
   async function saveAndContinue() {
     const ok = await save();
+    if (!alive.current) return;
     const fresh = qc.getQueriesData<View>({ queryKey: ["runtime", "view", caseId, "sqr"] })[0]?.[1];
     const now = fresh?.sections.find((s) => s.subjectId === part.subjectId && s.section === part.section) ?? part;
     const invalid = now.questions.some((q) => (q.group ? q.rows.some((r) => r.answer?.problems.length) : q.answer?.problems.length));
@@ -354,7 +361,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   return (
     <div className="mx-auto max-w-xl">
       <div className="mb-3 flex items-center justify-between gap-3 text-sm">
-        <button className="flex min-h-11 items-center gap-1 font-medium text-text-link hover:underline" onClick={() => go(index > 0 ? index - 1 : null)}><ArrowLeft className="size-4" aria-hidden />Back</button>
+        <button className="flex min-h-11 items-center gap-1 font-medium text-text-link hover:underline" disabled={status === "saving"} onClick={async () => { if (d.dirty.length) await save(); go(index > 0 ? index - 1 : null); }}><ArrowLeft className="size-4" aria-hidden />Back</button>
         <span role="status" className={cn("text-[13px]", status === "failed" ? "text-text-danger" : "text-text-ok")}>{status === "saving" ? "Saving…" : status === "saved" ? "✓ Saved" : status === "failed" ? "Some answers were not saved" : d.dirty.length ? "" : part.answered ? "✓ Saved" : ""}</span>
       </div>
       <p className="text-[13px] text-text-muted">Part {index + 1} of {total} · {part.title}</p>
@@ -364,14 +371,14 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
         <div ref={summaryRef} tabIndex={-1} role="alert" aria-labelledby="problem-title" className={cn("mb-4 rounded-lg border-2 bg-surface-raised p-4 outline-none", errorsListed ? "border-danger" : "border-warn")}>
           <p id="problem-title" className={cn("font-semibold", errorsListed ? "text-text-danger" : "text-text-warn")}>{errorsListed ? "There is a problem" : "Check these answers"}</p>
           <ul className="mt-1 space-y-1 text-sm">
-            {listed.map(({ q, row }) => <li key={keyOf(q, row)}><a className={cn("font-medium underline", problemsOf(q, row).length ? "text-text-danger" : "text-text-warn")} href={`#f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} onClick={(e) => { e.preventDefault(); document.getElementById(`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`)?.focus(); }}>{q.label}{row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""}{/[?:]$/.test(q.label) ? " " : ": "}{problemsOf(q, row)[0] ?? warningsOf(q, row)[0]}</a></li>)}
+            {listed.map(({ q, row }) => <li key={keyOf(q, row)}><a className={cn("font-medium underline", problemsOf(q, row).length ? "text-text-danger" : "text-text-warn")} href={`#f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} onClick={(e) => { e.preventDefault(); document.getElementById(`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`)?.focus(); }}>{q.label}{row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""}{/[?:]$/.test(q.label) ? " " : ": "}{problemsOf(q, row)[0] ?? warningsOf(q, row)[0]}{!problemsOf(q, row).length && partChecks.some((c) => c.fact === q.fact && c.illustrative) ? " (Sample check)" : ""}</a></li>)}
           </ul>
           <p className="mt-2 text-xs text-text-muted">Your other answers are saved. You can fix these now, or <button className="font-medium text-text-link underline" onClick={() => go(index + 1 < total ? index + 1 : null)}>leave them for now and continue</button>.</p>
         </div>
       ) : null}
 
-      <h1 className="text-2xl font-semibold">{part.title}</h1>
-      <p className="mt-1 text-sm">
+      <h1 ref={headingRef} tabIndex={-1} className="text-2xl font-semibold outline-none [overflow-wrap:anywhere]">{part.title}</h1>
+      <p className="mt-1 text-sm [overflow-wrap:anywhere]">
         {person?.role === "case" ? "Answered once for the whole application." : <>Answering for <b>{part.about_label}</b>{person && person.role !== "principal" ? ` (${ROLE_WORDS[person.role]})` : " (you)"}.</>}
       </p>
       {confirmWords.length === 1 ? <p className="mt-1 text-xs text-text-muted">{confirmWords[0]}.</p> : null}
@@ -442,7 +449,7 @@ function AgentView({ view }: { view: View }) {
     <div className="space-y-4">
       <Tabs value={who} onValueChange={setWho}>
         <TabsList aria-label="Whose answers" className="h-auto flex-wrap">
-          {people.map(([id, label]) => { const m = view.sections.filter((s) => s.subjectId === id).reduce((n, s) => n + s.missing.length, 0); return <TabsTrigger key={id} value={id} title={m ? `${m} required question(s) not answered` : "Every required question answered"}>{label}{m ? <span className="ml-1.5 text-[11px] text-text-muted">{m} missing</span> : null}</TabsTrigger>; })}
+          {people.map(([id, label]) => { const m = view.sections.filter((s) => s.subjectId === id).reduce((n, s) => n + s.missing.length, 0); return <TabsTrigger key={id} value={id} className="h-auto max-w-full whitespace-normal text-left [overflow-wrap:anywhere]" title={m ? `${m} required question(s) not answered` : "Every required question answered"}>{label}{m ? <span className="ml-1.5 text-[11px] text-text-muted">{m} missing</span> : null}</TabsTrigger>; })}
         </TabsList>
     <TabsContent value={who} className="grid gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
       <nav aria-label="Sections" className="hidden lg:block">
@@ -501,7 +508,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
         <div className="min-w-0 text-sm">
           {a ? (
             <>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} /></div>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="min-w-0 font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} /></div>
               <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? ` · fills ${q.fills.map((f) => `${f.form} for ${f.person}`).join(", ")}` : ""}</p>
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
               {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}

@@ -160,7 +160,9 @@ export function knownOf(s: Snapshot, people: Participant[], answers: Answer[], r
     if (a.rowKey && !index.has(a.rowKey)) continue; // a removed row's answers stay stored and are never read
     const c = confirmation(s, a, people.find((p) => p.subjectId === a.subjectId), birth(a.subjectId), today);
     confirm.set(a.id, c);
-    const v = { value: a.value, status: c.confirmed ? "confirmed" as const : "answered" as const, source: `${a.channel} by ${a.actor}` };
+    // A number answered as digits ("000", "0.0") is read as the number it is, so rules compare numbers (break report m9).
+    const value = fieldOf(s, a.field)?.value_type === "number" && typeof a.value === "string" && /^\d+(\.\d+)?$/.test(a.value.trim()) ? Number(a.value) : a.value;
+    const v = { value, status: c.confirmed ? "confirmed" as const : "answered" as const, source: `${a.channel} by ${a.actor}` };
     const row = a.rowKey ? index.get(a.rowKey)! : undefined;
     known.set(kkey(about(a.subjectId), a.field, row), v);
     if (row === 0 && !known.has(kkey(about(a.subjectId), a.field))) known.set(kkey(about(a.subjectId), a.field), v);

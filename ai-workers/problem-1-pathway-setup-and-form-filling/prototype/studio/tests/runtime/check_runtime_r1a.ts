@@ -284,6 +284,25 @@ async function main() {
   ok("QA-28 pass: two presses with one key add one child and both answer with that child", twice.every((x) => x.status === 201 && x.body.subject_id === twice[0].body.subject_id) && sql(`select count(*) from case_participant p join answer_subject s on s.id = p.subject_id where p.case_id='${fresh}' and s.label='Sample Child QA28'`) === "1", twice.map((x) => [x.status, x.body?.subject_id]));
   r = await call("POST", `/runtime/cases/${fresh}/people`, { role: "child", displayName: "Another Child QA28", idempotencyKey: `qa28-${run}` }, OFFICER);
   ok("QA-28 fail: the same key for a different person is refused (409); nobody is added", r.status === 409 && sql(`select count(*) from answer_subject where label='Another Child QA28'`) === "0", r.body?.detail);
+  // R1c break report: hostile text never reaches the database as a 500; rules compare numbers; release data fixes
+  // A 5,000-deep value, written as text (the test's own JSON.stringify would overflow building it).
+  const deepest = (async () => { const res = await fetch(`http://localhost:${PORT}/api/runtime/cases/${fresh}/answers/${freshPrincipal}/person.other_family_name`, { method: "PUT", headers: { "content-type": "application/json", "x-actor": CLIENT, connection: "close" }, body: `{"value":${"[".repeat(5000)}"x"${"]".repeat(5000)},"expectedId":null}` }); return { status: res.status, body: await res.json().catch(() => null) }; })();
+  const hostile = await Promise.all([
+    call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.other_family_name`, { value: "a\ud800b", expectedId: null }, CLIENT),
+    deepest,
+    call("POST", `/runtime/cases/${fresh}/people`, { role: "child", displayName: "Sample", idempotencyKey: "abcdefgh\u0000" }, OFFICER),
+    call("POST", "/runtime/cases", { combinationId: vv, reference: "REF\u202eabc", clientActor: CLIENT, principal: { displayName: "Sample\u007f" } }, OFFICER),
+  ]);
+  ok("R1c break m1–m4 fail: a lone surrogate, a 5,000-deep value, a NUL in an idempotency key, a bidi override or DEL in a reference or name are 400 with plain words, never 500", hostile.every((x) => x.status === 400), hostile.map((x) => [x.status, x.body?.detail?.slice(0, 60)]));
+  r = await call("POST", "/runtime/cases", { combinationId: vv, reference: `R1C-ok-${run}`, clientActor: CLIENT, principal: { displayName: "Sample Applicant É 漢字 👩‍👧" } }, OFFICER);
+  ok("R1c break m4 pass: accents, other scripts and emoji with joiners stay allowed in names", r.status === 201, r.body?.detail);
+  const fv = (await call("GET", `/runtime/cases/${fresh}/questionnaire?mode=agent`, undefined, OFFICER)).body;
+  const caseSubj = fv.case.people.find((p: { role: string }) => p.role === "case").subject_id;
+  await call("PUT", `/runtime/cases/${fresh}/answers/${caseSubj}/case.funds_available_cad`, { value: "000", expectedId: null }, CLIENT);
+  const fv2 = (await call("GET", `/runtime/cases/${fresh}/questionnaire`, undefined, CLIENT)).body;
+  ok("R1c break m9 fail-guard: an amount of \"000\" triggers the funds-above-0 check (numbers compare as numbers)", fv2.checks.some((c: { id: string }) => c.id === "VV_FUNDS_ABOVE_ZERO"), fv2.checks);
+  const qf = (f: string) => fv.sections.flatMap((x: { questions: Q[] }) => x.questions).filter((q: Q) => q.fact === f);
+  ok("R1c break M2/M4 pass: present occupation and current residence country are asked once per person; the union date is not required of a single applicant", qf("person.occupation").every((q: Q) => q.group === null) && qf("person.current_residence_country").every((q: Q) => q.group === null) && qf("relationship.start_date").every((q: Q) => q.required === false), { occupation: qf("person.occupation").map((q: Q) => q.group), start: qf("relationship.start_date").map((q: Q) => q.required) });
   const dbRefuses = (q: string) => { try { sql(q); return false; } catch { return true; } };
   const pinId = sql(`select id from pack_work_pin where case_id='${caseId}'`), relId = sql(`select config_release_id from pack_work_pin where case_id='${caseId}'`);
   ok("FIX B4 fail (database): a case's pin cannot be changed, and its release or combination cannot be deleted", dbRefuses(`update pack_work_pin set content_hash='x' where id='${pinId}'`) && dbRefuses(`delete from config_release where id='${relId}'`) && dbRefuses(`delete from combination where id='${vv}'`));

@@ -63,6 +63,8 @@ const PLACES: Place[] = [
   { key: "case.visit_contact_address_in_canada", section: VISIT, repeats: "per_row", q: "Their address in Canada" },
   // The library placed this one per row (a residence-history row); IMM 5257 asks it once per person (R1c review M2).
   { key: "person.current_residence_country", section: "residence_history", repeats: "per_person", q: "Country or territory where you live now" },
+  // Same for the present occupation IMM 5707 reads once per person (break report M2).
+  { key: "person.occupation", section: "employment_history", repeats: "per_person", q: "Your present occupation" },
   { key: "person.current_residence_status", section: "residence_history", repeats: "per_person", q: "Your status in the country where you live now" },
   { key: "person.current_residence_status_other", section: "residence_history", repeats: "per_person", q: "Describe that status", when: { field: "person.current_residence_status", is: "other" } },
   { key: "person.current_residence_status_from", section: "residence_history", repeats: "per_person", q: "That status started on" },
@@ -104,6 +106,9 @@ const RULES: Rule[] = [
     "person.applying_from_status", "person.applying_from_status_from", "person.applying_from_status_to", "person.current_residence_status_to",
     "person.education_province_state", "person.occupation_province_state", "person.previous_residence_status_other"].map((key): Rule => ({ key, effect: "OPTIONAL", when: "always", plain: "optional: only some people have it" })),
   ...["person.national_id_country_of_issue", "person.national_id_issue_date", "person.national_id_expiry_date"].map((key): Rule => ({ key, effect: "REQUIRE", when: { answered: "person.national_id_number" }, plain: "required when a national identity document number is given" })),
+  // The union date is asked once for the application; a rule there cannot read the principal's marital status yet, so it
+  // would stay required for a single applicant (break report M4). Optional until the rule can (question for the Lead).
+  { key: "relationship.start_date", effect: "OPTIONAL", when: "always", plain: "optional for now: needed for a married or common-law applicant; the officer enters it from the certificate" },
   { key: "person.us_pr_card_expiry_date", effect: "REQUIRE", when: { answered: "person.us_green_card_number" }, plain: "required when a US permanent resident card number is given" },
 ];
 

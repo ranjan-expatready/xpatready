@@ -151,7 +151,8 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("rules pass: the client may still leave them for now (warn, never block)", (await c.getByRole("heading", { level: 1 }).textContent()) !== "Background declarations");
   await c.goto(`${BASE}/cases/${caseId}/questionnaire`); await idle(c);
   await c.getByRole("region", { name: "About Sample Applicant C" }).getByRole("button", { name: /Residence and immigration status/ }).click(); await idle(c);
-  step("residence (review M2): the country where the client lives now is asked once for the person, with the release's countries offered", await c.getByLabel("Country or territory where you live now").isVisible() && !!(await c.getByLabel("Country or territory where you live now").getAttribute("list")) && await c.getByRole("heading", { name: "Entries" }).count() === 0);
+  step("residence (review M2): the country where the client lives now is asked once for the person, with the release's countries offered", await c.getByLabel("Country or territory where you live now").isVisible() && await c.getByLabel("Country or territory where you live now").evaluate((e) => e.tagName === "SELECT" || !!e.getAttribute("list")) && await c.getByRole("heading", { name: "Entries" }).count() === 0);
+  step("countries (review M5): a country with no answer list yet offers the release's countries while typing", !!(await c.getByLabel("Country or territory you are applying from").getAttribute("list")));
   step("copy (review M5): the client never sees the configuration note about answer lists", await c.getByText(/forms slice 2/).count() === 0);
   // Leave and resume
   await c.getByRole("button", { name: "Save and come back later" }).click(); await idle(c);

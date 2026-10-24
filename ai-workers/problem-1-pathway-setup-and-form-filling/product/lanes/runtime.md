@@ -7,13 +7,14 @@ Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes 
 
 current_item: R1-thin-slice
 current_slice: R1c
-stage: FIX
-owner: Builder
-next_action: FIX R1c: review 7/10 (no Must, Majors M1–M6) fixes written, tests added; waiting for the break report, then rebuild, run every suite, CHECK owner Lead.
+stage: CHECK
+owner: Lead
+next_action: Lead checks R1c after FIX (build-notes-r1c "Fixes"; review-r1c.md, break-report-r1c.md); answer: union date rule (break M4), Sample label on client checks; add check_runtime_r1c.cjs to run-suites right after setup. Then R1d.
 blocked_by: none
 updated: 2026-10-24
 
 ## Log (last 10 lines)
+- 2026-10-24 · Builder (cloud): FIX R1c done: review M1–M6 and break M1–M4 plus 11 Minors fixed with tests; journey 75/75, API 97/97, engine 29/29, run-suites --demo green; copies stopped; CHECK owner Lead.
 - 2026-10-24 · Builder (cloud): CHECK R1c: review 7/10, Ship after fixes (M1–M6); FIX in progress (rules named after save, group intro, conflict dialog, first answerer kept, country suggestions, wrapping tabs); break report pending.
 - 2026-10-24 · Builder (cloud): applied Lead early-look answer (Go with changes): RT-7 two Sample checks seeded and shown in both modes, map labels on answers; engine 29/29, journey 62/62; CHECK started.
 - 2026-10-24 · Builder (cloud): qa Minors in R1c per Lead message: QA-25 (control characters refused), QA-26 (plain id refusals), QA-28 (add-person idempotent, migration); API 93/93, journey 53/53, run-suites green; EARLY-LOOK owner Lead.
@@ -23,5 +24,3 @@ updated: 2026-10-24
 - 2026-10-23 · Builder: CHECK → FIX → CHECK: review 7.5/10 (2 Must, 5 Major), break 4 Major + 11 Minor, all fixed with tests; fresh copy setup 11/11, API 84/84, engine 20/20; regressions green; owner Lead.
 - 2026-10-23 · Builder: applied Lead note 2026-10-23 18:00; BUILD R1a done: visitor visa released in runtime_r1 through the product (10/10, 0 errors), case core 60/60, regressions green (forms 106/106 with keep-alive off); shared S-1, S-2, S-6, S-7; CHECK started.
 - 2026-10-23 · Builder: applied Lead note 2026-10-23 17:05; synced main (9f3bbf77); fresh challenge in `challenge.md` (1 Blocker closed by plan §4.5, 9 Major accepted with fixes, M2.2 disproved); plan.md final with P-71–P-73, PLAN → owner Lead.
-- 2026-10-23 · Builder: copy bound to runtime, synced with main (bea563ba); plan.md drafted (facts, setup, types, records, team mapping, back-end table, slices, ownership); fresh challenge running.
-- 2026-10-23 · Lead: lane created (P-67, founder 23 Oct); concept `screens/R1-thin-slice/concept.md`; ports 4430–4439, databases `runtime_*`.

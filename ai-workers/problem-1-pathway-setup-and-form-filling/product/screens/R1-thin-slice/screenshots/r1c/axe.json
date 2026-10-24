@@ -28,23 +28,27 @@
   "violations": []
  },
  {
-  "state": "08-client-resume",
+  "state": "08-client-required-named",
   "violations": []
  },
  {
-  "state": "09-agent-view-confirmed",
+  "state": "09-client-resume",
   "violations": []
  },
  {
-  "state": "10-agent-section-check",
+  "state": "10-agent-view-confirmed",
   "violations": []
  },
  {
-  "state": "11-agent-edit-dialog",
+  "state": "11-agent-section-check",
   "violations": []
  },
  {
-  "state": "12-agent-conflict",
+  "state": "12-agent-edit-dialog",
+  "violations": []
+ },
+ {
+  "state": "13-agent-conflict",
   "violations": []
  }
 ]
