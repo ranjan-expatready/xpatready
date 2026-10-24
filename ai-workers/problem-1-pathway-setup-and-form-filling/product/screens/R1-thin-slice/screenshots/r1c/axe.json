@@ -50,5 +50,17 @@
  {
   "state": "13-agent-conflict",
   "violations": []
+ },
+ {
+  "state": "14-forms-generated",
+  "violations": []
+ },
+ {
+  "state": "15-forms-lock-confirm",
+  "violations": []
+ },
+ {
+  "state": "16-forms-stale",
+  "violations": []
  }
 ]

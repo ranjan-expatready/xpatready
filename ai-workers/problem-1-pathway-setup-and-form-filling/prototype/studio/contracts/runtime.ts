@@ -109,3 +109,24 @@ export type QuestionnaireView = {
   mode: "sqr" | "agent"; sections: ViewSection[]; checks: ViewCheck[]; forms: { form: string; person: string; applies: boolean | string }[];
   summary: { not_asked: number; questions: number; answered: number; confirmed: number; missing: number };
 };
+
+// ------------------------------------------------------------------ R1d: form copies (plan §8 RT-13…RT-17)
+/** "Generate a copy": a new copy each time the officer asks (never on its own); the same key again answers with it. */
+export const GenerateCopy = z.object({ idempotencyKey: idemKey.optional() });
+/** A copy is locked when its validated copy was uploaded back or it was filed; a locked copy never changes (P-65 d). */
+export const LOCK_KINDS = { validated_copy_uploaded: "Validated copy uploaded back", filed: "Filed" } as const;
+export const LockCopy = z.object({ kind: z.enum(["validated_copy_uploaded", "filed"], { message: "Say how the copy was locked: validated copy uploaded back, or filed." }) });
+
+/** One copy as the agent view shows it: its state, whether today's confirmed facts differ from those it read (out of
+ *  date; on a locked copy: stale), and what changed. */
+export type FormCopy = {
+  id: string; status: "QUEUED" | "RUNNING" | "GENERATED" | "FAILED"; created_at: string; created_by: string; finished_at: string | null; error: string | null;
+  locked: { kind: keyof typeof LOCK_KINDS; at: string; by: string } | null; out_of_date: boolean; stale: boolean; changed: string[];
+  counts: { written: number; by_hand: number; blank: number; not_written: number; by_a_person: number } | null; intact: boolean | null; person_steps: string[];
+};
+/** One form for one person on the case: what a copy made now would write (the draft), whether it can be filed (P-71),
+ *  and every copy made, newest first. */
+export type CaseForm = {
+  form: string; title: string; subject_id: string; person: string; draft: { written_now: number; mapped: number; unconfirmed: number };
+  readiness: { ready: boolean; missing: { fact: string; label: string; about: string; answered: boolean }[] }; copies: FormCopy[];
+};
