@@ -1,0 +1,14 @@
+{
+  "private": true,
+  "description": "Prototype toolchain (AIW-D259) for clones without the Mac's .tools/solution-1-prototype/node: cloud-setup.sh installs it there with npm ci. Top-level versions as prototype/env/README.md; the Mac's own lock stays authoritative on the Mac (P-82).",
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
+    "zod": "4.4.3",
+    "ajv": "8.20.0"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "tsx": "4.23.15",
+    "@types/node": "24.19.1"
+  }
+}

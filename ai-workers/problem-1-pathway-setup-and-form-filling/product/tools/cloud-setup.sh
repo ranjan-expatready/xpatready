@@ -73,7 +73,7 @@ if [ "$(id -u)" = 0 ]; then
   mkdir -p "$PGDATA"; chown postgres "$PGDATA"; chmod 700 "$PGDATA"
 else RUN=""; export PATH="$PGBIN:$PATH"; fi
 if [ "$(uname -s)" = Linux ] && [ "$(id -u)" = 0 ]; then
-  # Compatibility with Mac paths still written in scripts and tests (BACKLOG B32): the Homebrew PostgreSQL tools, the
+  # Compatibility with Mac paths still written in scripts and tests (BACKLOG B31): the Homebrew PostgreSQL tools, the
   # Google Chrome that Playwright's channel "chrome" opens (the cloud image's Chromium stands in), and the Mac-only
   # Playwright require path in three browser checks (served by the studio's own playwright package).
   HB=/opt/homebrew/opt/postgresql@18/bin; mkdir -p "$HB"
