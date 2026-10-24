@@ -8,14 +8,15 @@ updated: 2026-10-23
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
-| screens | 01-programs-catalogue | CHECK | Lead | Lead note waiting for sync · Lead check of the closing pass and its P-74 extension (build-notes: "Fixes (one FIX pass…)", "CHECK → FIX",… |
+| screens | 01-programs-catalogue | FIX | Builder | Small FIX (Lead note 24 Oct): QA-14 same-parent names unique in the database (normalised name), QA-17 Recen… |
 | forms | F1-forms-channels | CHECK | Lead | Lead check of slice 2 on the exact commit: build-notes "Slice 2" and "Slice 2 fixes" (finding → fix → test)… |
-| evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check IMM 1295 (prototype/evidence-lane/E1/imm1295/STATUS.md); then /next evidence for IMM 5707 (tria… |
-| runtime | R1-thin-slice | CHECK | Lead | Lead note waiting for sync · Lead checks R1a after FIX (build-notes "Fixes"; review and break report) and the shared files S-1, S-2, S-6… |
-| qa | after-merge F1 slice 1 (65826022) | WAITING | Lead | Lead reads qa/reports/2026-10-23-after-merge.md, assigns QA-13 to QA-18, answers three questions (quiet win… |
+| evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check IMM 5707 (prototype/evidence-lane/E1/imm5707/STATUS.md); then /next evidence for IMM 5409 (tria… |
+| runtime | R1-thin-slice | CHECK | Lead | Lead checks R1a after FIX (build-notes "Fixes"; review and break report) and the shared files S-1, S-2, S-6… |
+| qa | after-merge F1 slice 1 (65826022) | WAITING | Lead | Lead note waiting for sync · Lead reads qa/reports/2026-10-23-after-merge.md, assigns QA-13 to QA-18, answers three questions (quiet win… |
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-24 · screens · CHECK → merged · Lead check of Screen 01 (channels, filing method, portal, online forms, release gate, words) merged 1cb174a6; :4400 restarted; DONE after qa retest. Evidence IMM 1295 merged. All builder lanes working again.
 - 2026-10-24 · all · Every lane finished its stage overnight and waits on the Lead check: screens (Screen 01 with channels), forms slice 2, runtime R1a, evidence; qa waiting. Screen 01 is checked first.
 - 2026-10-24 · Lead · P-81 private GitHub repository through a filtered mirror; waiting on founder steps (repository, tool install, settings).
 - 2026-10-24 · Lead · Stray test combination removed from :4400 (founder OK; history event added; backup kept); Individual 21, Corporate 8.
@@ -25,4 +26,3 @@ updated: 2026-10-23
 - 2026-10-23 · runtime · Founder decided P-78 (family answers confirmed by who answered; adult's answers given by the principal wait for that adult or the officer); R1 builds as planned.
 - 2026-10-23 · Lead · P-77: prototype PQR answers flow into the SQR; staff eligibility page on the R1 rules engine with Sample gates; runtime lane R2 after R1.
 - 2026-10-23 · Lead · Founder decided P-76 (PQR model, option C with AI-drafted picks, approved in the combination's release). Prepare application designer draft committed; all four design drafts ready for walkthrough.
-- 2026-10-23 18:25 · Lead · Design helper drafts arriving: Screen 02 and extension done; Prepare application board and Screen 03 still being written (committed as work in progress). P-75: no dates, counted progress (M2 5/37).
