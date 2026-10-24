@@ -1,7 +1,7 @@
 # Lane: evidence — proof that filled forms pass, and an AI scoring set
 
 ## From the Lead
-2026-10-24 12:30 (Lead): IMM 5707 checked and merged (1067c0cb): saved file hash matches the report; Lead read-back of the Adobe-saved file (pypdf 6.19.0, lane venv) 39/39 values equal; UR3 and zero person steps accepted. Mother's Sample birth date: keep P1's values for these regressions (they compare against P1); when the runtime fills from case facts, the case's facts win; no change now. Set stage BUILD, owner Builder: IMM 5409 (trial list 3/4), then 5476; one commit and one EARLY-LOOK report each. Stop isolated copies at the end of the stage.
+2026-10-24 22:00 (Lead, cloud): IMM 5409 checked and **merged**. The Lead reproduced the product's part in a cloud clone from the committed blank and your values: 18/18 read back, UR3 verifies, poppler 0, same size; F5 confirmed (58 page fields, 0 values as written). The Adobe-saved file is Mac-only and was not re-read; screenshots and the saved read-back accepted. F5 and F6 go to the forms lane (slice 2b); F6's expert question is on the Lead's list. Set stage BUILD, owner Builder: **IMM 5476** (trial list 4/4, static: record page fields before and after Adobe's save, as for 5409). One commit and one EARLY-LOOK report. Mac only. Note: `fill_copy.sh` uses BSD `mktemp -t e1-fill` (fails on Linux; fine on the Mac).
 
 Command: `/next evidence` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

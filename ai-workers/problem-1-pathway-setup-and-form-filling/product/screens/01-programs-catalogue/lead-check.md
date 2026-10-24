@@ -1,5 +1,15 @@
 # Screen 01 — Lead checks (from 23 Oct; earlier Lead checks are in `review.md`)
 
+## Lead check of the small FIX after the merge (24 Oct, cloud Lead) — **Result: MERGED (8726714 on the session branch)**; DONE after the qa retest
+How checked: diff `main...910ee40` (45 files; migration `20261024090000_program_name_unique`, `programs.ts`, `contracts/programs.ts`, `fmtWhen`, tests); build-notes "Small FIX after the merge" and "CHECK round 3" (reviewer Ship 9/10, breaker 0 Major); no CI run existed for the lane's commit (pushed before the CI suites job, P-85), so the Lead ran `tools/run-suites.sh --demo` on main + this lane in a cloud clone (fresh databases, US$0).
+* **Suites (main + screens):** 11/11 green — rules 67 · engine 38 · AI drafting 48 · orchestration 22/22 · API 135 · channels 42 · release race safe · forms channels 106 · **grounding 29/29** (L1 closed) · Screen 01 browser **136/136** (L2 closed, QA-21 is the same wait) · studio browser 40/40. Re-run after forms, runtime and evidence merged in: still green (see the F1 and R1 checks).
+* **QA-14 closed, independently:** qa's own `check_qa14_name_race.ts` on an isolated copy: 20 names × 4 at once → exactly one 201 and three 409 each. (In a clean clone the qa and runtime test folders needed `"type": "module"`, added by the Lead, test-only.)
+* **Migration read:** the SQL key (lower case, ASCII letters and digits) equals `normalizeLabel` for printable ASCII; other scripts are keyed by the app at start; earlier duplicates keep a null key and stay listed by the query in the migration. Rollback written. Accepted.
+* **QA-17, L3:** dates on steps when not today; `tsc -p api/tsconfig.json` 0 errors (command now named).
+* Capability or scaffolding (P-33): the database uniqueness and the dated steps are capability; the database guard in the checks is scaffolding.
+* **Open, not blocking:** QA-20 (combination page 13 px too wide at 400 px) → the screens lane's next pass. QA-19 (old step texts and early times on :4400) clears with a demo reset: founder's OK, before the walk.
+**Next:** the qa lane's `/qa after-merge` on the new main; Screen 01 is DONE when it passes.
+
 ## Lead check of the closing fix pass and the forms decisions (24 Oct) — **Result: MERGED (1cb174a6)**; DONE after the qa retest
 How checked: diff `main...4d12036b` (145 files); build-notes "Fixes", "CHECK → FIX", "Extension (P-74)", "CHECK round 2"; reviewer rounds 1–2 (Ship after fixes, journey 8.5 and 8/10) and break reports; every suite rerun by the Lead on the exact commit in an isolated copy (`.claude/worktrees/lead-check-s01`, ports 4420–4429, fresh databases, no model call, US$0); Lead walk on a fresh sample copy.
 

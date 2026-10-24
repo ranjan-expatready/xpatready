@@ -1,7 +1,7 @@
 # Lane: screens — Milestone 2 screens
 
 ## From the Lead
-2026-10-24 (Lead): Screen 01 checked and **merged (1cb174a6)**; :4400 runs it. Screen 01 becomes DONE when qa's after-merge passes. Set stage FIX, owner Builder, for one small pass: QA-14 (same-parent names unique in the database, normalised name), QA-17 (Recent steps show the date when not today), and the Lead check's L1–L3 (`screens/01-programs-catalogue/lead-check.md`: grounding 'finding 3' 404, browser C2.7 wait, six type errors in check_screen01_api.ts). Then CHECK (reviewer + breaker) → owner Lead. Screen 02 DESIGN starts when the founder has walked the Screen 02 draft (P-79, P-80 already decided). For Screen 03 later: P-76 PQR (BR-14 updated in the draft), C4.2, C4.7, C4.8. Stop your isolated copies at the end of each stage (LANES.md).
+2026-10-24 22:00 (Lead, cloud): small FIX checked and **merged** (QA-14 closed by qa's own replay, QA-17, L1–L3; `screens/01-programs-catalogue/lead-check.md`). Screen 01 becomes DONE when the qa lane's after-merge on the new main passes. Stage: waiting, owner Lead — Screen 02 DESIGN starts after the founder walks the Screen 02 draft. Carry into your next pass: QA-20 (combination page 13 px too wide at 400 px, the Filing · Portal row). Already on main for you: `run-suites.sh` reads `start KEY=VALUE` and runs the runtime and drafting-guard suites; `actorOf` now refuses an unknown or missing person (runtime S-1, closes your "deny by default" item). Sync main before your next stage.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

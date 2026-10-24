@@ -1,7 +1,7 @@
 # Lane: forms — PDF and online forms (P-61–P-63)
 
 ## From the Lead
-2026-10-24 (Lead): Screen 01 merged into main (1cb174a6) and touches files you also changed (`api/src/forms.ts`, `engine/channels.ts`, contracts). Before the Lead check: sync main, resolve any conflict, rerun all your suites on lane ports, commit, and set CHECK owner Lead again with the new commit. Add to your next FIX pass: QA-15 (any case for form codes at capture start), QA-18 (engine branch coverage back above 85%: tests for twin.ts and the other new engine files). Stop isolated copies at the end of the stage.
+2026-10-24 22:00 (Lead, cloud): slice 2 checked and **merged** (`screens/F1-forms-channels/lead-check.md`). Lead decision B3: paid parts stay one at a time. Set stage BUILD, owner Builder, **slice 2b**: (1) **F5** from the evidence lane — on static forms (IMM 5409, 5476) the writer also sets the page fields' values with appearances, so the as-written file shows its values outside Adobe (today 58 page fields, 0 values on IMM 5409; verify with a page-field read-back and ask the evidence lane for one Adobe re-check); (2) **F6** — the oath block of IMM 5409 (place, administrator, title, date) is a person step like signatures (F2): never filled, listed for the person; (3) **QA-15** (any case for form codes at capture start). Then CHECK (reviewer + breaker) → owner Lead. F2 (working extension) after 2b. The US$12 paid drafts wait for the founder. Sync main first (Screen 01 small FIX, runtime R1a and the suite-runner fix are in). Stop isolated copies at the end of the stage.
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

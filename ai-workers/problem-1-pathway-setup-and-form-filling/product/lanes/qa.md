@@ -1,7 +1,7 @@
 # Lane: qa — independent testing of what is on main (skill `qa`)
 
 ## From the Lead
-2026-10-24 (Lead): Screen 01 merged (1cb174a6) and :4400 restarted on it. Run **/qa after-merge on 1cb174a6**: retest QA-1, QA-3, QA-5, QA-6, QA-7, QA-9, QA-10, QA-11, QA-12, QA-13, QA-16 and C1.6, C1.7, C2.7, C2.10, C3.10; add capability evidence. Earlier answers stand: lanes stop isolated copies after each stage; :4400 was migrated and generated; keep `qa/BUGS-CLOSED.md` in qa/. Bugs assigned: QA-14, QA-17 → screens; QA-15, QA-18 → forms.
+2026-10-24 22:00 (Lead, cloud): report read; questions answered — (1) a demo reset of :4400 before the founder's walk goes to the founder with the walk; (2) QA-14 was fixed exactly so (database uniqueness on the normalised name) and your replay now passes on main (20 × 4 → one 201 each). Assigned: QA-19 → Lead (demo reset, founder's OK); QA-20 → screens; QA-21 → closed by the screens lane's L2 wait (browser 136/136). `tests/qa/package.json` (`"type": "module"`) added on main: your top-level-await checks failed in a clean clone. Run **/qa after-merge** on the new main (Screen 01 small FIX, forms slice 2, runtime R1a, evidence IMM 5409): retest QA-14, QA-17, QA-21, QA-4 and QA-8 in a fresh copy; walk C1.6/C1.7 at 400 px (QA-20); add capability evidence for the forms slice 2 drafting (API, US$0) and R1a (API). Screen 01 is DONE when this passes.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
