@@ -159,7 +159,10 @@ export class Runtime {
       this.db.clientCanonicalAnswer.findMany({ where: { subjectId: { in: subjects }, supersededById: null } }),
       this.db.clientFactRecord.findMany({ where: { subjectId: { in: subjects }, supersededById: null, tombstone: false } }),
     ]);
-    const a: Answer[] = answers.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string }; return { id: x.id, subjectId: x.subjectId, field: x.canonicalFieldKey, rowKey: x.rowKey, value: x.valueJson, status: x.status as Answer["status"], channel: src.channel, actor: src.actor, at: src.at }; });
+    // A confirmation version names the answer it confirmed (sourceJson.from): who first answered stays visible (review M4).
+    const fromIds = answers.map((x) => (x.sourceJson as { from?: string }).from).filter((x): x is string => !!x);
+    const firsts = new Map((fromIds.length ? await this.db.clientCanonicalAnswer.findMany({ where: { id: { in: fromIds } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string }]));
+    const a: Answer[] = answers.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string }; const first = src.from ? firsts.get(src.from) : undefined; return { id: x.id, subjectId: x.subjectId, field: x.canonicalFieldKey, rowKey: x.rowKey, value: x.valueJson, status: x.status as Answer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null }; });
     const r: Row[] = rows.map((x) => ({ rowKey: x.rowKey, subjectId: x.subjectId, group: x.groupKey, order: x.order }));
     return { answers: a, rows: r };
   }

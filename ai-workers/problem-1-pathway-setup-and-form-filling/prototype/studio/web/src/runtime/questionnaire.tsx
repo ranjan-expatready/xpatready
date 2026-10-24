@@ -96,16 +96,19 @@ const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stri
 // ------------------------------------------------------------------ one question (both modes)
 
 /** One question's input, labelled, with its checks under it (server problems first, then a refused save). */
-export function QuestionField({ q, draft, onChange, errors, warnings = [], idBase, compact }: { q: Question; draft: unknown; onChange: (d: unknown) => void; errors: string[]; warnings?: string[]; idBase: string; compact?: boolean }) {
+export function QuestionField({ q, draft, onChange, errors, warnings = [], idBase, compact, officer }: { q: Question; draft: unknown; onChange: (d: unknown) => void; errors: string[]; warnings?: string[]; idBase: string; compact?: boolean; officer?: boolean }) {
   const k = kindOf(q), noteId = `${idBase}-note`, invalid = errors.length > 0;
-  const hint = [q.required ? null : "Optional", q.note].filter(Boolean).join(" · ");
+  const note = officer ? q.note : null; // a configuration note ("no answer list yet") is for the officer, not the client
+  const hint = [q.required ? null : "Optional", note].filter(Boolean).join(" · ");
   const control = { id: idBase, "aria-invalid": invalid || undefined, "aria-describedby": invalid || warnings.length || hint ? noteId : undefined };
-  const label = <>{q.label}{q.required ? null : <span className="font-normal text-text-muted"> (optional)</span>}</>;
+  const label = <>{q.label}{q.required || /\(optional\)\s*$/i.test(q.label) ? null : <span className="font-normal text-text-muted"> (optional)</span>}</>;
+  const listId = q.countries ? `${idBase}-countries` : undefined;
+  const countryList = q.countries ? <datalist id={listId}>{q.countries.map((c) => <option key={c} value={c} />)}</datalist> : null;
   const notes = (
     <>
       {errors.map((e, i) => <p key={i} id={i === 0 ? noteId : undefined} className="flex items-start gap-1 text-[13px] font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />{e}</p>)}
       {warnings.map((w, i) => <p key={`w${i}`} id={!invalid && i === 0 ? noteId : undefined} className="flex items-start gap-1 text-[13px] font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />{w}</p>)}
-      {!invalid && !warnings.length && q.note ? <p id={noteId} className="text-xs text-text-muted">{q.note}</p> : null}
+      {!invalid && !warnings.length && note ? <p id={noteId} className="text-xs text-text-muted">{note}</p> : null}
     </>
   );
   const box = cn("flex flex-col gap-1.5", invalid ? "border-l-4 border-danger pl-3" : warnings.length ? "border-l-4 border-warn pl-3" : null, !compact && "py-1");
@@ -141,10 +144,11 @@ export function QuestionField({ q, draft, onChange, errors, warnings = [], idBas
             <label key={part} className={cn("flex flex-col gap-1 text-xs text-text-muted", w)}>
               {l}
               <Input value={p[part] ?? ""} onChange={(e) => set(part, e.target.value)} aria-invalid={invalid || undefined} className="h-10 text-base sm:h-9 sm:text-sm"
-                inputMode={k === "date" || k === "month" || part === "country_code" || part === "number" ? "numeric" : undefined} autoComplete="off" maxLength={k === "date" || k === "month" ? (part === "y" ? 4 : 2) : undefined} />
+                inputMode={k === "date" || k === "month" || part === "country_code" || part === "number" ? "numeric" : undefined} autoComplete="off" maxLength={k === "date" || k === "month" ? (part === "y" ? 4 : 2) : undefined} list={part === "country" ? listId : undefined} />
             </label>
           ))}
         </div>
+        {countryList}
         {notes}
       </fieldset>
     );
@@ -160,7 +164,8 @@ export function QuestionField({ q, draft, onChange, errors, warnings = [], idBas
     <div className={cn(k === "number" && q.shape.money && "flex items-center gap-2")}>
       {k === "number" && q.shape.money ? <span className="text-sm text-text-muted">CAD $</span> : null}
       <Input {...control} value={String(draft ?? "")} onChange={(e) => onChange(e.target.value)} className="h-11 text-base sm:h-9 sm:text-sm"
-        type={k === "email" ? "email" : "text"} inputMode={k === "number" ? "numeric" : k === "email" ? "email" : undefined} autoComplete="off" />
+        type={k === "email" ? "email" : "text"} inputMode={k === "number" ? "numeric" : k === "email" ? "email" : undefined} autoComplete="off" list={listId} />
+      {countryList}
     </div>
   );
   const len = typeof draft === "string" ? [...draft].length : 0;
@@ -285,9 +290,12 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   const caseId = view.case.id, part = view.sections[index], total = view.sections.length;
   const qc = useQueryClient(), toast = useToast();
   const person = view.case.people.find((p) => p.subject_id === part.subjectId);
-  const single = part.questions.filter((q) => !q.group), grouped = part.questions.filter((q) => q.group);
+  // A question a rule hides is not asked (its answer, if any, is kept and not used); rules apply on each save.
+  const asked = part.questions.filter((q) => !q.hidden);
+  const single = asked.filter((q) => !q.group), grouped = asked.filter((q) => q.group);
   const rows = grouped[0]?.rows ?? [];
-  const cells = React.useMemo(() => part.questions.flatMap((q): Cell[] => (q.group ? q.rows.map((r) => ({ q, row: r.row })) : [{ q }])), [part]);
+  const cells = React.useMemo(() => part.questions.filter((q) => !q.hidden).flatMap((q): Cell[] => (q.group ? q.rows.map((r) => ({ q, row: r.row })) : [{ q }])), [part]);
+  const [adding, setAdding] = React.useState(false);
   const d = useDrafts(cells);
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [status, setStatus] = React.useState<"idle" | "saving" | "saved" | "failed">("idle");
@@ -301,7 +309,10 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   const partChecks = view.checks.filter((c) => c.subjectId === part.subjectId && c.section === part.section);
   const checksOf = (q: Question, row?: string) => (row ? [] : partChecks.filter((c) => c.fact === q.fact).map((c) => c.message));
   const problemsOf = (q: Question, row?: string) => [...(errors[keyOf(q, row)] ? [errors[keyOf(q, row)]] : []), ...(keyOf(q, row) in errors ? [] : cellAnswer(q, row)?.problems ?? [])];
-  const listed = cells.filter(({ q, row }) => problemsOf(q, row).length || checksOf(q, row).length);
+  // After a Save and continue, required questions still unanswered are named too (warn: the client may leave them).
+  const missingOf = (q: Question, row?: string) => (summary && q.required && !cellAnswer(q, row) && !d.dirty.some((x) => x.q === q && x.row === row) ? ["Answer this question, or leave it for now."] : []);
+  const warningsOf = (q: Question, row?: string) => [...checksOf(q, row), ...missingOf(q, row)];
+  const listed = cells.filter(({ q, row }) => problemsOf(q, row).length || warningsOf(q, row).length);
   const errorsListed = listed.some(({ q, row }) => problemsOf(q, row).length);
 
   async function save(): Promise<boolean> {
@@ -323,18 +334,21 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
     const fresh = qc.getQueriesData<View>({ queryKey: ["runtime", "view", caseId, "sqr"] })[0]?.[1];
     const now = fresh?.sections.find((s) => s.subjectId === part.subjectId && s.section === part.section) ?? part;
     const invalid = now.questions.some((q) => (q.group ? q.rows.some((r) => r.answer?.problems.length) : q.answer?.problems.length));
-    const flagged = (fresh?.checks ?? view.checks).some((c) => c.subjectId === part.subjectId && c.section === part.section);
+    const flagged = (fresh?.checks ?? view.checks).some((c) => c.subjectId === part.subjectId && c.section === part.section) || now.missing.length > 0;
     if (!ok || invalid || flagged) { setSummary(true); setFocusSummary((n) => n + 1); return; }
     markPassed(caseId, part);
     go(index + 1 < total ? index + 1 : null);
   }
   async function addRow() {
+    if (adding) return;
+    setAdding(true);
     try { await api(`/runtime/cases/${caseId}/groups/${part.subjectId}/rows`, { method: "POST", json: { group: part.section } }); await refresh(); } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
+    setAdding(false);
   }
   async function removeRow(row: string) {
     try { await api(`/runtime/cases/${caseId}/groups/${part.subjectId}/rows/${row}`, { method: "DELETE" }); setRemoving(null); await refresh(); toast.push({ tone: "ok", text: "Entry removed. Its answers are kept in the case history." }); } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
   }
-  const field = (q: Question, row?: string) => <QuestionField key={keyOf(q, row)} q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} warnings={checksOf(q, row)} />;
+  const field = (q: Question, row?: string) => <QuestionField key={keyOf(q, row)} q={q} idBase={`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setStatus("idle"); }} errors={problemsOf(q, row)} warnings={warningsOf(q, row)} />;
   const confirmWords = [...new Set(cells.map(({ q, row }) => cellAnswer(q, row)?.why).filter(Boolean))];
 
   return (
@@ -350,7 +364,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
         <div ref={summaryRef} tabIndex={-1} role="alert" aria-labelledby="problem-title" className={cn("mb-4 rounded-lg border-2 bg-surface-raised p-4 outline-none", errorsListed ? "border-danger" : "border-warn")}>
           <p id="problem-title" className={cn("font-semibold", errorsListed ? "text-text-danger" : "text-text-warn")}>{errorsListed ? "There is a problem" : "Check these answers"}</p>
           <ul className="mt-1 space-y-1 text-sm">
-            {listed.map(({ q, row }) => <li key={keyOf(q, row)}><a className={cn("font-medium underline", problemsOf(q, row).length ? "text-text-danger" : "text-text-warn")} href={`#f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} onClick={(e) => { e.preventDefault(); document.getElementById(`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`)?.focus(); }}>{q.label}{row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""}{/[?:]$/.test(q.label) ? " " : ": "}{problemsOf(q, row)[0] ?? checksOf(q, row)[0]}</a></li>)}
+            {listed.map(({ q, row }) => <li key={keyOf(q, row)}><a className={cn("font-medium underline", problemsOf(q, row).length ? "text-text-danger" : "text-text-warn")} href={`#f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} onClick={(e) => { e.preventDefault(); document.getElementById(`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`)?.focus(); }}>{q.label}{row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""}{/[?:]$/.test(q.label) ? " " : ": "}{problemsOf(q, row)[0] ?? warningsOf(q, row)[0]}</a></li>)}
           </ul>
           <p className="mt-2 text-xs text-text-muted">Your other answers are saved. You can fix these now, or <button className="font-medium text-text-link underline" onClick={() => go(index + 1 < total ? index + 1 : null)}>leave them for now and continue</button>.</p>
         </div>
@@ -366,6 +380,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
         {single.map((q) => field(q))}
         {grouped.length ? (
           <div className="space-y-3">
+            <GroupIntro questions={grouped} />
             {rows.length === 0 ? <p className="rounded-lg border border-dashed border-border-strong p-3 text-sm text-text-muted">Nothing added yet. Add an entry if this applies; leave it empty if it does not.</p> : null}
             {rows.map((r) => (
               <section key={r.row} aria-label={`Entry ${r.index + 1}`} className="space-y-4 rounded-xl border border-border bg-surface-raised p-4">
@@ -379,14 +394,24 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
                 {grouped.map((q) => field(q, r.row))}
               </section>
             ))}
-            <Button type="button" variant="secondary" className="h-11" onClick={() => void addRow()}><Plus aria-hidden />{rows.length ? "Add another" : "Add an entry"}</Button>
+            <Button type="button" variant="secondary" className="h-11" busy={adding} onClick={() => void addRow()}><Plus aria-hidden />{rows.length ? "Add another" : "Add an entry"}</Button>
           </div>
         ) : null}
         <div className="space-y-2 pt-2">
           <Button type="submit" className="h-11 w-full text-base" busy={status === "saving"}>Save and continue</Button>
-          <Button type="button" variant="ghost" className="h-11 w-full" disabled={status === "saving"} onClick={async () => { if (await save()) { toast.push({ tone: "ok", text: "Saved. You can close this page and continue later." }); go(null); } else setSummary(true); }}>Save and come back later</Button>
+          <Button type="button" variant="ghost" className="h-11 w-full" disabled={status === "saving"} onClick={async () => { if (await save()) { toast.push({ tone: "ok", text: "Saved. You can close this page and continue later." }); go(null); } else { setSummary(true); setFocusSummary((n) => n + 1); } }}>Save and come back later</Button>
         </div>
       </form>
+    </div>
+  );
+}
+
+/** What one entry of a repeating group asks (the release names no group; its questions say what an entry is). */
+function GroupIntro({ questions }: { questions: Question[] }) {
+  return (
+    <div>
+      <h2 className="text-base font-semibold">Entries</h2>
+      <p className="text-[13px] text-text-muted">Each entry asks: {questions.map((q) => q.label.replace(/[?.]$/, "")).join("; ")}.</p>
     </div>
   );
 }
@@ -398,11 +423,17 @@ function ConfirmPill({ a }: { a: Answer }) {
   const text = a.status === "VERIFIED" ? "Confirmed" : a.confirmed ? "Counts as confirmed" : /principal/.test(a.why) ? "Answered by the principal" : "To confirm";
   return <Pill tone={tone} title={a.why}>{tone === "warn" ? null : <Check className="size-3" aria-hidden />}{text}</Pill>;
 }
+const CHANNEL: Record<string, string> = { questionnaire: "questionnaire", agent_view: "agent view", confirm_section: "confirmed section" };
 const WHO: Record<string, string> = { "user-O": "Case officer", "user-P": "Client A", "user-Q": "Client B" };
 const when = (at: string) => new Date(at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 function AgentView({ view }: { view: View }) {
-  const [editing, setEditing] = React.useState<{ q: Question; row?: string } | null>(null);
+  const [editing, setEditing] = React.useState<{ subjectId: string; fact: string; row?: string } | null>(null);
+  const opener = React.useRef<HTMLElement | null>(null);
+  const openEdit = (q: Question, row?: string) => { opener.current = document.activeElement as HTMLElement | null; setEditing({ subjectId: q.subjectId, fact: q.fact, row }); };
+  const closeEdit = () => { setEditing(null); requestAnimationFrame(() => opener.current?.focus()); };
+  // The dialog reads the question from the current view, so a newer answer (after a 409) is what it shows.
+  const editQ = editing ? view.sections.flatMap((s) => s.questions).find((q) => q.subjectId === editing.subjectId && q.fact === editing.fact) : undefined;
   const people = [...new Map(view.sections.map((s) => [s.subjectId, s.about_label])).entries()];
   // One person at a time (one row of tabs): a household's answers are long; each person's sections stay together.
   const [who, setWho] = React.useState(() => people[0]?.[0] ?? "");
@@ -410,7 +441,7 @@ function AgentView({ view }: { view: View }) {
   return (
     <div className="space-y-4">
       <Tabs value={who} onValueChange={setWho}>
-        <TabsList aria-label="Whose answers">
+        <TabsList aria-label="Whose answers" className="h-auto flex-wrap">
           {people.map(([id, label]) => { const m = view.sections.filter((s) => s.subjectId === id).reduce((n, s) => n + s.missing.length, 0); return <TabsTrigger key={id} value={id} title={m ? `${m} required question(s) not answered` : "Every required question answered"}>{label}{m ? <span className="ml-1.5 text-[11px] text-text-muted">{m} missing</span> : null}</TabsTrigger>; })}
         </TabsList>
     <TabsContent value={who} className="grid gap-6 lg:grid-cols-[14rem_minmax(0,1fr)]">
@@ -427,11 +458,11 @@ function AgentView({ view }: { view: View }) {
       <div className="min-w-0 space-y-4">
         <p className="text-[13px] text-text-muted">Click Edit on any answer to change it. A change updates every form that uses it, with a message, and needs the section confirmed again.</p>
         {view.checks.filter((c) => c.subjectId === who && !c.section).map((c) => <Notice key={c.id} tone="warn" title="Check">{c.message}</Notice>)}
-        {mine.map((s) => <AgentSection key={`${s.subjectId}|${s.section}`} view={view} s={s} edit={(q, row) => setEditing({ q, row })} />)}
+        {mine.map((s) => <AgentSection key={`${s.subjectId}|${s.section}`} view={view} s={s} edit={openEdit} />)}
       </div>
     </TabsContent>
       </Tabs>
-      {editing ? <EditDialog caseId={view.case.id} q={editing.q} row={editing.row} close={() => setEditing(null)} /> : null}
+      {editing && editQ ? <EditDialog caseId={view.case.id} q={editQ} row={editing.row} close={closeEdit} /> : null}
     </div>
   );
 }
@@ -454,17 +485,24 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
     await refresh();
     setBusy(false);
   }
-  async function addRow() { try { await api(`/runtime/cases/${view.case.id}/groups/${s.subjectId}/rows`, { method: "POST", json: { group: s.section } }); await refresh(); } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); } }
+  const [adding, setAdding] = React.useState(false);
+  async function addRow() { if (adding) return; setAdding(true); try { await api(`/runtime/cases/${view.case.id}/groups/${s.subjectId}/rows`, { method: "POST", json: { group: s.section } }); await refresh(); } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); } setAdding(false); }
   const line = (q: Question, row?: string) => {
     const a = cellAnswer(q, row);
+    if (q.hidden) return (
+      <div key={keyOf(q, row)} className="grid gap-x-4 gap-y-1 border-t border-border px-4 py-2.5 first:border-t-0 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]">
+        <div className="text-[13px] text-text-muted">{q.label}</div>
+        <div className="text-[13px] text-text-muted">Not asked now: a rule hides it.{a ? " The earlier answer is kept and not used." : ""}</div>
+      </div>
+    );
     return (
       <div key={keyOf(q, row)} className="grid gap-x-4 gap-y-1 border-t border-border px-4 py-2.5 first:border-t-0 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)_auto]">
-        <div className="text-[13px] text-text-muted">{q.label}{q.required ? null : <span> (optional)</span>}</div>
+        <div className="text-[13px] text-text-muted">{q.label}{q.required || /\(optional\)\s*$/i.test(q.label) ? null : <span> (optional)</span>}</div>
         <div className="min-w-0 text-sm">
           {a ? (
             <>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="font-medium [overflow-wrap:anywhere]">{shown(q, a.value)}</span><ConfirmPill a={a} /></div>
-              <p className="text-xs text-text-muted">{a.channel === "questionnaire" ? "questionnaire" : a.channel === "confirm_section" ? "confirmed section" : "agent view"} · {WHO[a.by] ?? "someone"} · {when(a.at)}{q.fills.length ? ` · fills ${q.fills.map((f) => `${f.form} for ${f.person}`).join(", ")}` : ""}</p>
+              <p className="text-xs text-text-muted">{a.answered ? `${CHANNEL[a.answered.channel] ?? "answered"} · ${WHO[a.answered.by] ?? "someone"} · ${when(a.answered.at)} · confirmed by ${WHO[a.by] ?? "someone"} ${when(a.at)}` : `${CHANNEL[a.channel] ?? "answered"} · ${WHO[a.by] ?? "someone"} · ${when(a.at)}`}{q.fills.length ? ` · fills ${q.fills.map((f) => `${f.form} for ${f.person}`).join(", ")}` : ""}</p>
               {a.problems.map((p, i) => <p key={i} className="flex items-start gap-1 text-xs font-medium text-text-danger"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{p}</p>)}
               {row ? null : checks.filter((c) => c.fact === q.fact).map((c) => <p key={c.id} className="flex items-start gap-1 text-xs font-medium text-text-warn"><AlertCircle className="mt-0.5 size-3 shrink-0" aria-hidden />{c.message}</p>)}
             </>
@@ -494,7 +532,8 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
       {checks.length ? <div className="border-b border-border px-4 py-2"><Notice tone="warn" title={`Check before confirming${checks.some((c) => c.illustrative) ? " (Sample check)" : ""}`}>{checks.map((c) => c.message).join(" ")}</Notice></div> : null}
       <div>{single.map((q) => line(q))}</div>
       {grouped.length ? (
-        <div className="border-t border-border bg-surface/60 px-4 py-3">
+        <div className="space-y-2 border-t border-border bg-surface/60 px-4 py-3">
+          <GroupIntro questions={grouped} />
           {rows.length === 0 ? <p className="text-[13px] text-text-muted">No entries.</p> : null}
           {rows.map((r) => (
             <div key={r.row} className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
@@ -502,7 +541,7 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
               {grouped.map((q) => line(q, r.row))}
             </div>
           ))}
-          <Button size="sm" variant="secondary" onClick={() => void addRow()}><Plus aria-hidden />Add an entry</Button>
+          <Button size="sm" variant="secondary" busy={adding} onClick={() => void addRow()}><Plus aria-hidden />Add an entry</Button>
         </div>
       ) : null}
     </section>
@@ -527,7 +566,7 @@ function EditDialog({ caseId, q, row, close }: { caseId: string; q: Question; ro
       close();
     } catch (e) {
       setError(refusal(e));
-      if (e instanceof ApiError && e.status === 409) await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] });
+      if (e instanceof ApiError && e.status === 409) { await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] }); d.reset(); }
     }
     setBusy(false);
   }
@@ -535,7 +574,7 @@ function EditDialog({ caseId, q, row, close }: { caseId: string; q: Question; ro
     <Dialog open onOpenChange={(o) => { if (!o) close(); }} title={`${a ? "Change" : "Add"}: ${q.label}`} description={`${q.about_label}${row ? ` · entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1}` : ""}${q.fills.length ? ` · fills ${q.fills.map((f) => `${f.form} for ${f.person} (${f.boxes} box${f.boxes > 1 ? "es" : ""})`).join(", ")}` : ""}`}
       footer={<><Button variant="ghost" onClick={close}>Cancel</Button><Button busy={busy} onClick={() => void save()}>Save</Button></>}>
       <form onSubmit={(e) => { e.preventDefault(); void save(); }}>
-        <QuestionField q={q} idBase="edit-field" draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setError(null); }} errors={error ? [error] : a?.problems ?? []} compact />
+        <QuestionField q={q} idBase="edit-field" draft={d.get(q, row)} onChange={(v) => { d.set(q, row, v); setError(null); }} errors={error ? [error] : a?.problems ?? []} compact officer />
         {a ? <p className="mt-3 text-xs text-text-muted">Now: {shown(q, a.value)} ({a.why}).</p> : null}
         <button type="submit" hidden />
       </form>

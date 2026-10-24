@@ -61,6 +61,8 @@ const PLACES: Place[] = [
   { key: "case.visit_contact_name", section: VISIT, repeats: "per_row", q: "Name of a person or organisation you will visit" },
   { key: "case.visit_contact_relationship", section: VISIT, repeats: "per_row", q: "Their relationship to you" },
   { key: "case.visit_contact_address_in_canada", section: VISIT, repeats: "per_row", q: "Their address in Canada" },
+  // The library placed this one per row (a residence-history row); IMM 5257 asks it once per person (R1c review M2).
+  { key: "person.current_residence_country", section: "residence_history", repeats: "per_person", q: "Country or territory where you live now" },
   { key: "person.current_residence_status", section: "residence_history", repeats: "per_person", q: "Your status in the country where you live now" },
   { key: "person.current_residence_status_other", section: "residence_history", repeats: "per_person", q: "Describe that status", when: { field: "person.current_residence_status", is: "other" } },
   { key: "person.current_residence_status_from", section: "residence_history", repeats: "per_person", q: "That status started on" },

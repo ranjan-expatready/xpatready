@@ -7,7 +7,7 @@ import { subjectKindOf, type Snapshot } from "../snapshot.ts";
 import { Address, CONFIRM_WORDS, MINOR, Phone, type QuestionnaireView, type ViewCheck } from "../../contracts/runtime.ts";
 
 export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
-export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string };
+export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
 export type Row = { rowKey: string; subjectId: string; group: string; order: number };
 export type Confirmation = { confirmed: boolean; why: string };
 
@@ -193,6 +193,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   const first = new Map<string, number>();
   r.questions.forEach((q, i) => { if (!first.has(`${q.section}|${q.about}`)) first.set(`${q.section}|${q.about}`, i); });
   const placed = (fact: string) => placementOf(s, fact)?.order ?? Number.MAX_SAFE_INTEGER;
+  const countries = (s.canonical_fields as FieldDef[]).find((f) => f.answer_list?.key === "country")?.answer_list?.values.map((v) => v.label) ?? null;
   const needed = r.questions.filter((q) => !q.about.includes("/") && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
     .sort((a, b) => first.get(`${a.section}|${a.about}`)! - first.get(`${b.section}|${b.about}`)! || placed(a.fact) - placed(b.fact));
   const notAsked = r.questions.filter((q) => !q.about.includes("/")).length - needed.length;
@@ -204,7 +205,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const group = p?.repeats === "per_row" ? q.section : null;
     const current = answers.filter((a) => a.subjectId === subjectId && a.field === q.fact);
     const live = group ? rows.filter((x) => x.subjectId === subjectId && x.group === group).sort(byOrder) : [];
-    const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, problems: checkValue(s, q.fact, a.value, today), ...confirm.get(a.id)! } : null;
+    const one = (a: Answer | undefined) => a ? { id: a.id, value: a.value, status: a.status, channel: a.channel, by: a.actor, at: a.at, answered: a.origin ? { channel: a.origin.channel, by: a.origin.actor, at: a.origin.at } : null, problems: checkValue(s, q.fact, a.value, today), ...confirm.get(a.id)! } : null;
     const options = optionsOf(s, q.fact);
     return {
       subjectId, about_label: q.about_label, fact: q.fact, label: q.label, meaning: q.meaning, value_type: q.value_type, shape: shapeOf(s, q.fact), section: q.section, section_title: q.section_title,
@@ -214,6 +215,7 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
       options,
       note: !options && (q.value_type === "code" || q.value_type === "country") ? "No answer list yet (forms slice 2): the officer checks this answer before confirming the section." : null,
       fills: [...(fills.get(`${q.about}|${q.fact}`)?.values() ?? [])],
+      countries: !options && (q.value_type === "country" || q.value_type === "address") ? countries : null,
     };
   });
   const sections = [...new Map(questions.map((q) => [`${q.subjectId}|${q.section}`, { subjectId: q.subjectId, about_label: q.about_label, section: q.section, title: q.section_title }])).values()].map((sec) => {

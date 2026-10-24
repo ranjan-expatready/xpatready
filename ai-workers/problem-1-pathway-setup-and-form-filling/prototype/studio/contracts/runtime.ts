@@ -75,7 +75,8 @@ export const CONFIRM_WORDS = {
 
 /** The questionnaire view (GET /api/runtime/cases/:id/questionnaire): what the engine computes and the web renderer
  *  reads, one shape for both (engine/runtime/case.ts caseView returns it). */
-export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; problems: string[]; confirmed: boolean; why: string };
+/** answered: who first gave the answer, when this version is the officer's confirmation of it (review M4). */
+export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; answered: { channel: string; by: string; at: string } | null; problems: string[]; confirmed: boolean; why: string };
 export type ViewQuestion = {
   subjectId: string; about_label: string; fact: string; label: string; meaning: string; value_type: string;
   shape: { maxLength: number; datePrecision: "day" | "month"; phone: boolean; money: boolean; choices: string[] | null };
@@ -85,6 +86,8 @@ export type ViewQuestion = {
   answer: ViewAnswer | null;
   rows: { row: string; index: number; fits: boolean; answer: ViewAnswer | null }[];
   options: { key: string; label: string }[] | null; note: string | null;
+  /** Country names offered while typing a country that has no answer list yet (the release's country list). */
+  countries: string[] | null;
   fills: { form: string; person: string; boxes: number }[];
 };
 export type ViewSection = { subjectId: string; about_label: string; section: string; title: string; questions: ViewQuestion[]; answered: number; confirmed: number; invalid: number; missing: string[] };

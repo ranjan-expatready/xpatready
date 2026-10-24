@@ -112,6 +112,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   v = (await call("GET", `/runtime/cases/${caseId}/questionnaire`, undefined, "user-P")).body;
   step("checks: the answers behind the warnings are stored (warn, never block, P-71)", qOf(v, "The application", "case.intended_stay_to")?.answer?.value === "2027-02-28" && v.checks.length === 2, v.checks.map((x) => x.id));
   await end.getByLabel("Day").fill("31"); await end.getByLabel("Month").fill("7"); await c.getByLabel(/How much money/).fill("5000");
+  step("groups (review M2): a repeating group says what an entry asks", await c.getByRole("heading", { name: "Entries" }).isVisible() && await c.getByText(/Each entry asks: Name of a person or organisation you will visit; Their relationship to you; Their address in Canada/).isVisible());
   await c.getByRole("button", { name: "Add an entry" }).click(); await idle(c);
   const entry = c.getByRole("region", { name: "Entry 1" });
   await entry.getByLabel("Name of a person or organisation you will visit").fill("Sample Host C");
@@ -138,6 +139,20 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await c.getByRole("button", { name: "Back", exact: true }).click(); await idle(c);
   step("client: after saving, the part says the adult's answers wait for that adult or the officer (P-78)", await c.getByText(/Answered by the principal for an adult/).isVisible());
   await state(c, "client-answering-for-spouse", [390, 1440]);
+  // Rules after saving (review M1): "yes" to criminal history makes its details required; the part names what is missing
+  await c.goto(`${BASE}/cases/${caseId}/questionnaire`); await idle(c);
+  await c.getByRole("region", { name: "About Sample Applicant C" }).getByRole("button", { name: /Background declarations/ }).click(); await idle(c);
+  await c.getByRole("group", { name: /ever committed, was arrested/ }).getByLabel("Yes").check();
+  await saveAndContinue(c);
+  const missingBox = c.getByRole("alert").filter({ hasText: "Check these answers" });
+  step("rules fail-guard (review M1): after yes, the empty details question is named in the summary and the part stays open", await missingBox.getByRole("link", { name: /Details of criminal history.*Answer this question/ }).isVisible() && await c.getByRole("heading", { level: 1, name: "Background declarations" }).isVisible());
+  await state(c, "client-required-named", [390]);
+  await missingBox.getByRole("button", { name: "leave them for now and continue" }).click(); await idle(c);
+  step("rules pass: the client may still leave them for now (warn, never block)", (await c.getByRole("heading", { level: 1 }).textContent()) !== "Background declarations");
+  await c.goto(`${BASE}/cases/${caseId}/questionnaire`); await idle(c);
+  await c.getByRole("region", { name: "About Sample Applicant C" }).getByRole("button", { name: /Residence and immigration status/ }).click(); await idle(c);
+  step("residence (review M2): the country where the client lives now is asked once for the person, with the release's countries offered", await c.getByLabel("Country or territory where you live now").isVisible() && !!(await c.getByLabel("Country or territory where you live now").getAttribute("list")) && await c.getByRole("heading", { name: "Entries" }).count() === 0);
+  step("copy (review M5): the client never sees the configuration note about answer lists", await c.getByText(/forms slice 2/).count() === 0);
   // Leave and resume
   await c.getByRole("button", { name: "Save and come back later" }).click(); await idle(c);
   await c.reload(); await idle(c);
@@ -149,7 +164,8 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await c.goto(`${BASE}/cases/${caseId}`); await idle(c);
   step("roles fail: the client cannot open the officer's case page", await c.getByText("This page is for the case officer").isVisible());
 
-  // ── 3. The officer reviews in the agent view
+  // ── 3. The officer reviews in the agent view (a household of four children, the release's limit: review M6)
+  for (const n of [2, 3, 4]) await call("POST", `/runtime/cases/${caseId}/people`, { role: "child", displayName: `Sample Child C${n} with a rather long name` }, "user-O");
   await o.reload(); await idle(o);
   await o.getByRole("tab", { name: /^Sample Spouse C/ }).click(); 
   const spouseMarital = o.locator("section", { has: o.getByRole("heading", { name: "Personal details" }) }).filter({ hasText: "for Sample Spouse C" });
@@ -158,6 +174,8 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   const visitSec = o.locator("section").filter({ has: o.getByRole("heading", { name: "Your visit" }) });
   await visitSec.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
   step("agent pass: Confirm section confirms the visit's answers (Confirmed, history kept)", await o.getByText(/Your visit for The application: \d+ answers? confirmed/).isVisible() && await visitSec.getByText("Confirmed", { exact: true }).first().isVisible());
+  step("agent source (review M4): a confirmed answer still says who first answered it", await visitSec.getByText(/questionnaire · Client A · .* · confirmed by Case officer/).first().isVisible());
+  step("agent copy: no label reads \"(optional) (optional)\"", !(await o.locator("main").textContent()).includes("(optional) (optional)"));
   await state(o, "agent-view-confirmed", [1440, 1024]);
   await visitSec.getByRole("button", { name: /^Edit When will the visit end/ }).click();
   const endEdit = o.getByRole("dialog").getByRole("group", { name: /visit end/ });
@@ -172,6 +190,8 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await state(o, "agent-edit-dialog", [1440]);
   await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await idle(o);
   step("agent pass: an edit saves with a message naming every form it fills (P-45)", await o.getByText(/Saved\. It fills IMM 5257 for Sample Applicant C/).last().isVisible());
+  await o.waitForTimeout(150);
+  step("keyboard (review minor): closing the dialog returns the focus to its Edit button", await o.evaluate(() => (document.activeElement?.getAttribute("aria-label") ?? "").startsWith("Edit Are you applying")));
   // Conflict: the client changes the amount while the officer's dialog is open
   await visitSec.getByRole("button", { name: /^Edit How much money/ }).click();
   await o.getByRole("dialog").getByLabel(/How much money/).fill("7000");
@@ -180,7 +200,10 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await idle(o);
   step("agent fail: a stale edit is refused (409) in the dialog and says what happened; nothing is overwritten", await o.getByRole("dialog").getByText(/Someone changed this answer after you opened it/).isVisible() && (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body.sections.flatMap((s) => s.questions).find((q) => q.fact === "case.funds_available_cad").answer.value === "6000");
   await state(o, "agent-conflict", [1440]);
-  await o.getByRole("dialog").getByRole("button", { name: "Cancel" }).click();
+  step("agent conflict (review M3): the dialog now shows the newer answer", await o.getByRole("dialog").getByLabel(/How much money/).inputValue() === "6000");
+  await o.getByRole("dialog").getByLabel(/How much money/).fill("7000");
+  await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await idle(o);
+  step("agent conflict pass (review M3): saving again from the newer answer works", await o.getByRole("dialog").count() === 0 && (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body.sections.flatMap((s) => s.questions).find((q) => q.fact === "case.funds_available_cad").answer.value === "7000");
   // Officer-only fact: the passport number, typed from the document
   await o.getByRole("tab", { name: /^Sample Applicant C/ }).click(); 
   const travel = o.locator("section").filter({ has: o.getByRole("heading", { name: "Travel and identity documents" }) }).filter({ hasText: "for Sample Applicant C" });

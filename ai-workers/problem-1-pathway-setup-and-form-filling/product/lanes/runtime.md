@@ -7,13 +7,14 @@ Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes 
 
 current_item: R1-thin-slice
 current_slice: R1c
-stage: CHECK
+stage: FIX
 owner: Builder
-next_action: CHECK of R1c: screen-reviewer and screen-breaker (incl. QA-25, QA-26, QA-28), fix what they find, then CHECK owner Lead.
+next_action: FIX R1c: review 7/10 (no Must, Majors M1–M6) fixes written, tests added; waiting for the break report, then rebuild, run every suite, CHECK owner Lead.
 blocked_by: none
 updated: 2026-10-24
 
 ## Log (last 10 lines)
+- 2026-10-24 · Builder (cloud): CHECK R1c: review 7/10, Ship after fixes (M1–M6); FIX in progress (rules named after save, group intro, conflict dialog, first answerer kept, country suggestions, wrapping tabs); break report pending.
 - 2026-10-24 · Builder (cloud): applied Lead early-look answer (Go with changes): RT-7 two Sample checks seeded and shown in both modes, map labels on answers; engine 29/29, journey 62/62; CHECK started.
 - 2026-10-24 · Builder (cloud): qa Minors in R1c per Lead message: QA-25 (control characters refused), QA-26 (plain id refusals), QA-28 (add-person idempotent, migration); API 93/93, journey 53/53, run-suites green; EARLY-LOOK owner Lead.
 - 2026-10-24 · Builder (cloud): applied Lead note 22:00 (FIX accepted); BUILD R1c: one renderer, SQR at 390 px and agent view at desktop, case area under /cases; journey 53/53 with axe 0 on 10 states; engine 25/25 (placement order), API 87/87, run-suites --demo green; RT-7 blocked on check authoring (build discovery); EARLY-LOOK owner Lead.
