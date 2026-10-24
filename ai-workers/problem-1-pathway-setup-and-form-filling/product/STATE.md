@@ -16,6 +16,7 @@ updated: 2026-10-23
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-24 · Lead (cloud) · Runtime R1d EARLY-LOOK (IMM 5257 filled from confirmed facts, copies never rewritten, lock, stale) → Go with changes: P-71 blocks Lock/Filed while facts are missing; "box" → "form field"; shorter "fills …" lists. `run-suites.sh` runs R1d after R1c, before R1a. Expert question 7 (IMM 5707 per applicant).
 - 2026-10-24 · Lead (cloud) · PR #10 merged (12e7207: runtime R1c, screens small FIX, forms qa Minors); qa after-merge on it: ready, 1 Major (QA-35) and 3 Minors to runtime's R1d pass; 15 of 17 retested findings closed; coverage floors raised (api 95/80, engine 99/87).
 - 2026-10-24 · Lead (cloud) · Runtime R1c (journey 75/75 after its FIX), screens small FIX and forms qa Minors checked and merged on the Lead branch; 20/20 suites green; next: PR to main, one qa after-merge, runtime BUILD R1d.
 - 2026-10-24 · Lead (cloud) · Studio `package.json` gets back `"type": "module"` (dropped by the GitHub migration 428a018): type check 15 errors → 0 in a clean clone; every suite green except R1c's journey (runtime FIX). Screens small FIX accepted but CI red on its new browser suite (bundled browser missing on GitHub's runner) → screens uses the system Chrome like the other browser suites.
@@ -25,4 +26,3 @@ updated: 2026-10-23
 - 2026-10-24 · Lead (cloud) · **Screen 01 DONE** on qa's after-merge (db468e3, 9/10); qa report merged, QA-22–34 assigned; runtime building R1c (D1, D2 fixed, CI green), forms building 2b (D3, QA-30, QA-34 added); screens small FIX QA-4, QA-20, QA-22 next.
 - 2026-10-24 · Lead (cloud) · PR #7 merged (db468e3); founder gave all open approvals; qa, runtime and forms sessions started in the cloud; :4400 restart with demo reset, the US$12 drafts and evidence IMM 5476 wait for a Mac session.
 - 2026-10-24 · Lead (cloud) · Merged Screen 01 small FIX, forms slice 2, runtime R1a and evidence IMM 5409 on `claude/zen-sagan-oztxto` (not yet on main); 16/16 suites green on the result after the Lead fixed the suite runner (slice 2 server setting; runtime and drafting-guard suites now in CI; ES-module test folders). Next: qa after-merge → Screen 01 DONE; forms 2b, runtime R1c, evidence IMM 5476.
-- 2026-10-24 · Lead · PR #5 merged (be10fa7): CI runs every suite on every push (first GitHub run 11/11 green after the L2 wait port), graph in CI, automatic pull at session start. Scheduled Lead set up and paused (founder: until the weekly usage resets).
