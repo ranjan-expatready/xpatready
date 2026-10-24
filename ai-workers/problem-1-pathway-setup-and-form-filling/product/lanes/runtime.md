@@ -1,7 +1,7 @@
 # Lane: runtime — the thin end-to-end slice, then M3 runtime (P-67)
 
 ## From the Lead
-2026-10-24 21:10 (Lead, cloud): R1c FIX checked and **merged** (journey 75/75 on the Lead's fresh copy; 20/20 suites). Next stage BUILD R1d (fill and never overwrite: plan §slices, RT-13…RT-17; IMM 5257 filled from confirmed facts only, with the stale and lock rules), then EARLY-LOOK. Sync main first. Paid AI none. Stop isolated copies at the end.
+2026-10-24 21:10 (Lead, cloud): R1c FIX checked and **merged** (journey 75/75 on the Lead's fresh copy; 20/20 suites). First in the R1d pass: qa QA-35 (blank case area from the Demo menu), QA-36 (Back and Save and continue behave the same under P-47), QA-37 ("boxes" → "form fields"), the rest of QA-26; each with a test. R1d EARLY-LOOK (24 Oct 22:25): Go with changes: P-71 blocks Lock, Filed and "validated copy uploaded back" while the form is not ready to file (UI disabled with the reason; API 409); "box" → "form field" in the save message; summarise long "fills …" lists; IMM 5707 per person stays (expert question). Then CHECK (reviewer + breaker) → owner Lead. Next stage BUILD R1d (fill and never overwrite: plan §slices, RT-13…RT-17; IMM 5257 filled from confirmed facts only, with the stale and lock rules), then EARLY-LOOK. Sync main first. Paid AI none. Stop isolated copies at the end.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
