@@ -16,6 +16,7 @@ updated: 2026-10-23
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-24 · Lead · Stray test combination removed from :4400 (founder OK; history event added; backup kept); Individual 21, Corporate 8.
 - 2026-10-23 · Lead · :4400 restarted on main 13629dfc with the forms database update (founder OK); backup taken; data unchanged; lane apps untouched.
 - 2026-10-23 · Lead · Founder decided P-80 (held PDF approved in the product by a second person; amends P-57); Screen 02 draft updated.
 - 2026-10-23 · Lead · Founder decided P-79 (one To review page under Configure); menu, SCREENS 02, Screen 02 draft updated.
@@ -25,4 +26,3 @@ updated: 2026-10-23
 - 2026-10-23 18:25 · Lead · Design helper drafts arriving: Screen 02 and extension done; Prepare application board and Screen 03 still being written (committed as work in progress). P-75: no dates, counted progress (M2 5/37).
 - 2026-10-23 17:45 · all · Founder go for the parallel plan (`PLAN.md`, dated). Merged: QA-0 (a983e7b4), forms F1 slice 1 (d795b019, Lead rerun 106/106), evidence IMM 0008 (86dbcde6, 462/462 reproduced). Lead walk found QA-13. P-74: every decision gets capability rows the same day (`tools/decision-impact.sh`). Running: screens 01 fix (+ channels, online sources, words), forms slice 2, runtime plan→build, evidence IMM 5257, qa after-merge; design helper drafting Prepare application, Screens 02–03, extension.
 - 2026-10-23 · all · New Lead chat: independent audit (`history/AUDIT-2026-10-23.md`). Founder agreed P-65, turned on Computer use for the evidence lane, chose a runtime lane after forms slice 1 (P-67), asked for an independent tester (qa lane, P-68) and approved c8 coverage (P-69). Merged the forms naming fix (a449e50c) and evidence E1b fill (ca7fc03d). Fresh evidence session started.
-- 2026-10-23 · Handover to a fresh Lead chat: main committed; forms slice 1 running in its session; evidence E1b waits on Computer use; Screen 01 waits on the founder walkthrough; P-65 and US$12 PDF-twin spend await the founder.
