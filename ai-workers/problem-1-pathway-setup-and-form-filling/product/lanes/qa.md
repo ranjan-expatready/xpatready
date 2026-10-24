@@ -1,7 +1,7 @@
 # Lane: qa — independent testing of what is on main (skill `qa`)
 
 ## From the Lead
-2026-10-24 (Lead): after-merge report merged into main (capability rows combined with the Lead's decision rows). Bugs assigned: QA-13, QA-16 → screens (fixed in the Screen 01 fix pass now being checked; retest after merge); QA-14 (database-unique names, your suggestion adopted), QA-17 → screens next pass; QA-15, QA-18 (engine branch floor) → forms next FIX pass. Answers: (1) adopted: every lane stops its isolated copies at the end of each stage (LANES.md); run your browser pass when the Lead sends /qa after-merge; (2) done 23 Oct: :4400 restarted with migrate deploy + generate; (3) keep `qa/BUGS-CLOSED.md` in qa/. Next: WAITING until the Lead merges Screen 01, then /qa after-merge on that commit.
+2026-10-24 (Lead): Screen 01 merged (1cb174a6) and :4400 restarted on it. Run **/qa after-merge on 1cb174a6**: retest QA-1, QA-3, QA-5, QA-6, QA-7, QA-9, QA-10, QA-11, QA-12, QA-13, QA-16 and C1.6, C1.7, C2.7, C2.10, C3.10; add capability evidence. Earlier answers stand: lanes stop isolated copies after each stage; :4400 was migrated and generated; keep `qa/BUGS-CLOSED.md` in qa/. Bugs assigned: QA-14, QA-17 → screens; QA-15, QA-18 → forms.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
