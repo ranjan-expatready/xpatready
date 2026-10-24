@@ -16,6 +16,7 @@ updated: 2026-10-23
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-24 · Lead (cloud) · Runtime R1c at CHECK (a986e9c: review 7/10 and break 4 Major, all fixed with tests): Lead check in progress; runtime branch merged on the Lead branch, `run-suites.sh` runs `check_runtime_r1c.cjs` after the visitor-visa setup and before R1a; full suites running before a PR. PR #9 merged (262750e).
 - 2026-10-24 · Lead (cloud) · Forms slice 2b checked and merged (PR #9; F5 shown outside Adobe, reproduced by the Lead); runtime R1c EARLY-LOOK → Go with changes, CHECK next; forms next: qa Minors; evidence next on the Mac: Adobe re-check of an F5 file, then IMM 5476.
 - 2026-10-24 · Lead (cloud) · **Screen 01 DONE** on qa's after-merge (db468e3, 9/10); qa report merged, QA-22–34 assigned; runtime building R1c (D1, D2 fixed, CI green), forms building 2b (D3, QA-30, QA-34 added); screens small FIX QA-4, QA-20, QA-22 next.
 - 2026-10-24 · Lead (cloud) · PR #7 merged (db468e3); founder gave all open approvals; qa, runtime and forms sessions started in the cloud; :4400 restart with demo reset, the US$12 drafts and evidence IMM 5476 wait for a Mac session.
@@ -25,4 +26,3 @@ updated: 2026-10-23
 - 2026-10-24 · cloud · PR #4 merged (3c3d578): cloud sessions live. Follow-up: session start pulls a clean copy automatically (no manual git pull, Mac or cloud); one-Lead check in the lead skill; lane.sh branch skips a lane's merged old branches.
 - 2026-10-24 · cloud · Cloud sessions work end to end (PR from claude/modest-cerf-yunauq): setup from a fresh clone, lane bind to its branch, app, suites green (Screen 01 browser 136/136). Mac-only: evidence lane, sources/code reading, OCR (B31). Lanes sync main once before their first cloud run.
 - 2026-10-24 · Devin · P-82 cut-over complete: GitHub is the source of truth; this folder is a clean clone on main (PR #1 merged); 7 lane worktrees on origin branches; :4400 live on the same xr_studio_demo DB. P-83 merged (PR #2): 26 official blank PDFs committed.
-- 2026-10-24 · screens · CHECK → merged · Lead check of Screen 01 (channels, filing method, portal, online forms, release gate, words) merged 1cb174a6; :4400 restarted; DONE after qa retest. Evidence IMM 1295 merged. All builder lanes working again.
