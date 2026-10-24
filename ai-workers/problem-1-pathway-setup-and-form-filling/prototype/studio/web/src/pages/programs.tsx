@@ -45,6 +45,8 @@ export function ProgramsPage() {
   const actorId = useActorId();
   const session = useApi<SessionView>(["session", actorId], "/session");
   const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
+  // Until the person is known the page is loading (QA-22): an author must not read "a configuration author adds…" first.
+  const knowsPerson = !!session.data || session.isError;
   const pathway = sp.get("pw") === "CORPORATE" ? "CORPORATE" : "INDIVIDUAL";
   const filter = sp.get("f") === "all" ? "all" : sp.get("f") === "live" ? "live" : "needs";
   const program = sp.get("prog") ?? "", under = sp.get("under") ?? "";
@@ -114,7 +116,7 @@ export function ProgramsPage() {
             {typed ? <button type="button" className="absolute right-1 top-1 rounded p-1.5 text-text-muted hover:bg-text/5" aria-label="Clear search" onClick={() => { setTyped(""); set({ q: null }); }}><X className="size-4" /></button>
               : <kbd className="pointer-events-none absolute right-2 top-2 rounded border border-border px-1.5 text-xs text-text-muted">⌘K</kbd>}
           </div>
-          <Tip tip={canAuthor ? "Build the path Program › Category › Sub-category, picking what exists or creating what is missing." : "Only a configuration author can create combinations. Switch to the Configuration author."}>
+          <Tip tip={!knowsPerson ? "Loading…" : canAuthor ? "Build the path Program › Category › Sub-category, picking what exists or creating what is missing." : "Only a configuration author can create combinations. Switch to the Configuration author."}>
             <span><Button disabled={!canAuthor} onClick={() => nav(`/new${pathway === "CORPORATE" ? "?pw=CORPORATE" : ""}`)}><Plus /> New combination</Button></span>
           </Tip>
         </div>
@@ -140,7 +142,7 @@ export function ProgramsPage() {
         {q && cat.data?.otherPathwayMatches ? <p className="text-sm text-text-muted" role="status">{cat.data.otherPathwayMatches} more {cat.data.otherPathwayMatches === 1 ? "match" : "matches"} in {PATHWAY_LABEL[pathway === "INDIVIDUAL" ? "CORPORATE" : "INDIVIDUAL"]}. <button type="button" className="text-text-link underline" onClick={() => set({ pw: pathway === "INDIVIDUAL" ? "CORPORATE" : null, prog: null, under: null })}>Switch</button></p> : null}
 
         {cat.isError ? <Notice tone="danger" title="The programs could not be loaded" action={<Button size="sm" variant="secondary" onClick={() => void cat.refetch()}>Try again</Button>}>{(cat.error as Error).message} If it keeps failing, restart the studio.</Notice>
-          : cat.isLoading ? <ListSkeleton />
+          : cat.isLoading || !knowsPerson ? <ListSkeleton />
           : !rows.length && !q && !program && !under && cat.data?.counts?.all === 0 ? (
             <EmptyState title={`No combinations in ${PATHWAY_LABEL[pathway]} yet`} description={canAuthor ? "Create the first one with New combination: pick or create its program, category and sub-category." : "A configuration author adds combinations here."}
               action={canAuthor ? <Button onClick={() => nav(`/new${pathway === "CORPORATE" ? "?pw=CORPORATE" : ""}`)}><Plus /> New combination</Button> : undefined} />

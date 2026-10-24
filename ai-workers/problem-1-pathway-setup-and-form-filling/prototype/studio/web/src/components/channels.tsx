@@ -28,7 +28,7 @@ export function FilingLine({ id, sum, canAuthor }: { id: string; sum: Combinatio
   return (
     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" data-filing>
       <span title={sum.filingDetail !== sum.filing ? sum.filingDetail : undefined}><span className="text-text-muted">Filing: </span><b className="font-semibold">{sum.filing}</b>{sum.filingDetail !== sum.filing && sum.forms.length ? <span className="sr-only"> ({sum.filingDetail})</span> : null}</span>
-      <span className="flex items-center gap-2">
+      <span className="flex min-w-0 max-w-full items-center gap-2">
         <label htmlFor={`portal-${id}`} className="text-text-muted">Portal</label>
         {canAuthor ? (
           <Select id={`portal-${id}`} className="h-8 w-auto min-w-0 max-w-full" value={value} disabled={busy} onChange={(e) => void setPortal(e.target.value)}>

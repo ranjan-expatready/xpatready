@@ -6,14 +6,15 @@
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_screen: 01-programs-catalogue
-stage: CHECK
-owner: Lead
-next_action: Lead check of the small FIX (build-notes "Small FIX after the merge" + "CHECK round 3"), merge (new migration 20261024090000: prisma generate + migrate deploy; existing duplicate names keep no key and are listed by the query in the migration), then the qa after-merge; Screen 01 DONE when it passes.
+stage: FIX
+owner: Builder
+next_action: Finish the small FIX (QA-4, QA-20, QA-22 fixed with check_screen01_smallfix.cjs; full suite run in progress), then CHECK (reviewer + breaker) → owner Lead.
 then: Screen 02 DESIGN (Lead concept with P-61–P-63 and the A4 progress screen; builder feasibility challenge).
 blocked_by: none
 updated: 2026-10-24
 
 ## Log (last 10 lines)
+- 2026-10-24 · 01 · DONE → FIX · applied Lead note 2026-10-24 20:20 (sent to this session; on PR #9): QA-4, QA-20, QA-22 each reproduced, fixed and tested (check_screen01_smallfix.cjs 11/11); full suites running; CHECK next.
 - 2026-10-24 · 01 · FIX → CHECK · QA-14 one name per parent in the database (normalised key, partial unique index, app keys other scripts), QA-17 dates on steps, L1 (cause: wrong database; checks now verify it), L2 waits, L3 type errors 39 → 0; CHECK round 3: reviewer Ship 9/10, breaker 0 Major/7 Minor, all fixed. Rules 67, API 135, browser 136, channels 42, grounding 29, forms 106. AI US$0.
 - 2026-10-24 · 01 · CHECK → FIX · applied Lead note 2026-10-24 (merged 1cb174a6; small FIX: QA-14, QA-17, L1–L3).
 - 2026-10-23 · 01 · FIX → CHECK · P-74 extension: C1.6 channel per line + filing method (row and page), C1.7 portal + default channel, C2.7 add an online form (awaiting a second person; continue/abandon), C2.10 what drafting reads per form, C3.10; CHECK round 2 (reviewer 8/10, 2 Must; breaker 3 Major) fixed: portal reviewed, version checks, no stuck captures. Rules 65, API 130, channels 42, browser 135, race safe. AI US$0.
@@ -23,4 +24,3 @@ updated: 2026-10-24
 - 2026-10-23 · 01 · CHECK · Founder decided P-62 (setup model) and P-63 (form field words). No stage change; workflow package next, then Lead recheck of the AI repair.
 - 2026-10-23 · 01 · CHECK · Founder decided P-61 (online forms); Lead proposed P-62 (end-to-end setup model). No stage change; Lead recheck of the AI repair still next.
 - 2026-10-23 · 01 · CHECK · Lead: founder chose local git + 4 lanes (R-75, workflow package pending); P-61 online forms proposed (R-76). Lead recheck of the AI repair still next.
-- 2026-10-23 · 01 · FIX → CHECK · AI drafting repair (P-60, no control cut): one fact naming rule in contracts, v2 prompt/schema and studio; entries checked one by one (bad entry → needs a person, rest kept); plain FAILED messages; four IMM 1344 answers recovered at US$0 (233/233 kept; browser: saved answer → 161 mapped, 44 to decide); paid repeat of a failed run refused; printed edition sent to the AI. A4 proposal for the Lead. Suites: AI drafting 48/48, rules 54/54, engine 38/38, grounding 29/29, orchestration 22/22, API 94/94, browser 101/101 (quiet machine). AI US$0.

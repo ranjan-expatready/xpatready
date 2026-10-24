@@ -63,7 +63,8 @@ class SourcesController {
   upload(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: any[]) { return this.intake.intake(actorOf(a), files, id); }
   @Post("combinations/:id/attachments/sample") sample(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.intake.sample(actorOf(a), id, b.officialFile); }
   @Get("combinations/:id/attachments") list(@Param("id") id: string) { return this.s.attachmentsOf(id); }
-  @Get("attachments/:id/file") async file(@Param("id") id: string, @Res() res: any) { const d = await this.s.download(id); res.download(d.path, d.name); }
+  // dotfiles "allow" (QA-4): stored paths are the server's own, and a lane copy under .claude/worktrees/ made every download a 404.
+  @Get("attachments/:id/file") async file(@Param("id") id: string, @Res() res: any) { const d = await this.s.download(id); res.download(d.path, d.name, { dotfiles: "allow" }); }
   @Post("attachments/:id/read") read(@Headers("x-actor") a: H, @Param("id") id: string) { return this.s.read(actorOf(a), id); }
   @Get("attachments/:id/draft-options") opts(@Param("id") id: string) { return this.s.draftOptions(id); }
   @Post("attachments/:id/draft") draft(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.ai.launchSource(actorOf(a), id, b.mode, b.runFile, b.idempotencyKey); }
@@ -76,7 +77,7 @@ class SourcesController {
   @Get("ledger") ledger() { return this.s.ledger(); }
   @Get("official-library") official() { return this.s.officialLibrary(); }
   @Post("combinations/:id/fill") fill(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.f.fill(actorOf(a), id, b); }
-  @Get("artifacts/:id/file") async artifact(@Param("id") id: string, @Res() res: any) { const d = await this.f.artifact(id); res.download(d.path, d.name); }
+  @Get("artifacts/:id/file") async artifact(@Param("id") id: string, @Res() res: any) { const d = await this.f.artifact(id); res.download(d.path, d.name, { dotfiles: "allow" }); }
 }
 
 @Controller("api/demo")
@@ -143,8 +144,8 @@ class ProblemErrors implements ExceptionFilter {
       return send(status, status === 403 ? "Not allowed" : status === 404 ? "Not found" : status === 409 ? "Conflict" : "Request refused", detail, typeof body === "object" && body.existingId ? { existingId: body.existingId } : {});
     }
     if (e?.code === "P2002") return send(409, "Already exists", "Already in progress or already exists: the database refused a duplicate. Refresh to see the current state.");
-    // A malformed id (not a UUID) is simply not found (review #4).
-    if (e?.code === "P2025" || e?.code === "P2023" || e?.name === "NotFoundError" || /Error creating UUID|invalid input syntax for type uuid/i.test(String(e?.message))) return send(404, "Not found", "Not found (it may have been removed by a reset).");
+    // A malformed id (not a UUID) is simply not found (review #4); so is a stored file that is gone (a download, QA-4).
+    if (e?.code === "P2025" || (e?.code === "ENOENT" && e?.status === 404) || e?.code === "P2023" || e?.name === "NotFoundError" || /Error creating UUID|invalid input syntax for type uuid/i.test(String(e?.message))) return send(404, "Not found", "Not found (it may have been removed by a reset).");
     const db = String(e?.message ?? "").match(/combination_level: ([^\n"]+)/);
     if (db) return send(409, "Not allowed at this level", `${db[1].trim()} (refused by the database).`);
     // The detail goes to the server log only: never a database call, a stack or a server path in the browser (review #4).
