@@ -9,6 +9,7 @@ How checked: diff `main...910ee40` (45 files; migration `20261024090000_program_
 * Capability or scaffolding (P-33): the database uniqueness and the dated steps are capability; the database guard in the checks is scaffolding.
 * **Open, not blocking:** QA-20 (combination page 13 px too wide at 400 px) → the screens lane's next pass. QA-19 (old step texts and early times on :4400) clears with a demo reset: founder's OK, before the walk.
 **Next:** the qa lane's `/qa after-merge` on the new main; Screen 01 is DONE when it passes.
+**Result 24 Oct 20:20: DONE.** qa after-merge on main db468e3 (`qa/reports/2026-10-24-after-merge-2.md`): QA-14, QA-17, QA-21 closed; M2 journeys 47/47 in 2 of 4 runs (one qa check timing, fixed; one QA-22); Screen 01 journey 9/10, no 0, no Major in scope. Open Minors QA-20, QA-22 and lane-copy QA-4 → screens small FIX. D17/D20 stay with the intended user's walk.
 
 ## Lead check of the closing fix pass and the forms decisions (24 Oct) — **Result: MERGED (1cb174a6)**; DONE after the qa retest
 How checked: diff `main...4d12036b` (145 files); build-notes "Fixes", "CHECK → FIX", "Extension (P-74)", "CHECK round 2"; reviewer rounds 1–2 (Ship after fixes, journey 8.5 and 8/10) and break reports; every suite rerun by the Lead on the exact commit in an isolated copy (`.claude/worktrees/lead-check-s01`, ports 4420–4429, fresh databases, no model call, US$0); Lead walk on a fresh sample copy.
