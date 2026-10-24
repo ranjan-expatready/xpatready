@@ -81,7 +81,7 @@ async function main() {
 
   // ── P-71 (Lead, R1d early look): a copy is locked only when its form is ready to file
   r = await call("POST", `/runtime/form-copies/${first}/lock`, { kind: "filed" }, OFFICER);
-  ok("P-71 fail: a copy of a form not ready to file cannot be filed or locked (409), with the reason", r.status === 409 && /facts? to confirm before filing: confirm/.test(r.body?.detail ?? ""), r.body?.detail);
+  ok("P-71 fail: a copy of a form not ready to file cannot be filed or locked (409), with the reason", r.status === 409 && /facts? to answer or confirm before filing: do that, then generate a new copy/.test(r.body?.detail ?? ""), r.body?.detail);
   // Confirm every required fact IMM 5257 reads for the principal (Sample values by type), then make a new copy.
   const sample = (q: { value_type: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; fact: string }) => q.options?.length ? q.options[0].key : q.shape.phone ? { country_code: "1", number: "5550100" }
     : q.value_type === "yes_no" ? false : q.value_type === "date" ? (q.shape.datePrecision === "month" ? "1990-01" : "1990-01-01") : q.value_type === "number" ? "1000"

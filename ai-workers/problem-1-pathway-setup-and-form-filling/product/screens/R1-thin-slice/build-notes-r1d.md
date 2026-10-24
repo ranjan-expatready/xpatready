@@ -72,7 +72,7 @@ Also: the journey's states wait until no button is busy before the screenshot an
 | review minors 1–2 | "Added or changed:"; "stays"/"stay"; "to answer or confirm" | journey and R1d wording checks |
 Not fixed, recorded: review minor 5 (lock race: readiness checked before the `updateMany`, whose WHERE does not cover the facts: a fact saved in the same instant can make a just-locked copy stale at once, which the stale rule then shows); review minor 6 (no retry, backoff or cancel for the job; known gap 1); non-Latin names written into IMM 5257 (expert question).
 Environment note (cloud): the database role is a superuser here, so the triggers are the guard; they hold for superusers too (only `session_replication_role = replica` skips them).
-Fresh copy, suite order: setup 13/13 → journey 107/107 → R1d 38/38 → R1a 99/99; engine 39/39; explicit any 437 (baseline).
+Fresh copy, suite order: setup 13/13 → journey 107/107 → R1d 38/38 → R1a 99/99; engine 39/39; `run-suites.sh --demo` 21/21 green; explicit any 437 (baseline); AI cost US$0.
 
 ## Known gaps
 1. Restart recovery of the queue is written, not tested by a suite (a restart mid-generation).

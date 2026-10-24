@@ -265,14 +265,14 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.goto(`${BASE}/cases/${caseId}`); await idle(o);
   const forms = o.locator("section", { has: o.getByRole("heading", { name: "Forms", exact: true }) });
   const imm = forms.getByRole("listitem").filter({ has: o.getByRole("heading", { name: /IMM 5257 for Sample Applicant C/ }) });
-  step("forms: IMM 5257 for the principal says what a copy made now writes and what blocks filing", await shows(imm.getByText(/Confirmed answers for \d+ of \d+ form fields/)) && await shows(imm.getByText(/facts? to confirm before filing|Ready to file/)));
+  step("forms: IMM 5257 for the principal says what a copy made now writes and what blocks filing", await shows(imm.getByText(/Confirmed answers for \d+ of \d+ form fields/)) && await shows(imm.getByText(/facts? to answer or confirm before filing|Ready to file/)));
   await imm.getByRole("button", { name: "Generate a copy" }).click();
   step("forms RT-13 pass: the copy is generated in the background, then shown as generated, read back and checked", await shows(imm.getByText("Generated", { exact: true })) && await shows(imm.getByText(/form fields written.* · read back and checked/)));
   await state(o, "forms-generated", [1440, 1024]);
   const dl = o.waitForEvent("download", { timeout: WAIT });
   await imm.getByRole("button", { name: /^Download the copy/ }).first().click();
   step("forms pass: the copy downloads as a PDF", await dl.then(async (d) => /\.pdf$/.test(d.suggestedFilename())).catch(() => false));
-  step("P-71 fail-guard: while facts are missing, Filed and Validated copy uploaded back are disabled and say why", await imm.getByRole("button", { name: "Filed" }).isDisabled() && await shows(imm.getByText(/Not yet: \d+ facts? to confirm before filing: confirm/)));
+  step("P-71 fail-guard: while facts are missing, Filed and Validated copy uploaded back are disabled and say why", await imm.getByRole("button", { name: "Filed" }).isDisabled() && await shows(imm.getByText(/Not yet: \d+ facts? to answer or confirm before filing: do that/)));
   await imm.getByText(/^What blocks filing \(\d+\)$/).click();
   step("review M3 pass: what blocks filing is listed on the page (question, whose, why), not only in a tooltip", await shows(imm.getByRole("listitem").filter({ hasText: /\(Sample Applicant C\): (not answered|not confirmed|needs a fix)$/ }).first()));
   step("review M1 fail-guard: IMM 5257's fill trial passed, so its copies are not marked \"Checked copy, not for filing\"", await gone(imm.getByText("Checked copy, not for filing")));
@@ -312,7 +312,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await endEdit2.getByLabel("Day").fill("30"); await endEdit2.getByLabel("Month").fill("7");
   await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await gone(o.getByRole("dialog"));
   await visitSec.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
-  step("forms RT-15 pass: after the visit end changes, the filed copy is stale, names the fact and keeps its file", await shows(imm.getByText(/Stale · Filed/)) && await shows(imm.getByText(/Facts changed after this copy was locked; the locked file is kept as it was\. Changed: When will the visit end\?/)));
+  step("forms RT-15 pass: after the visit end changes, the filed copy is stale, names the fact and keeps its file", await shows(imm.getByText(/Stale · Filed/)) && await shows(imm.getByText(/Facts changed after this copy was locked; the locked file is kept as it was\. Added or changed: When will the visit end\?/)));
   await state(o, "forms-stale", [1440, 1024]);
   await imm.getByRole("button", { name: "Generate a new copy" }).click();
   step("forms RT-15 pass: a new copy is made only when asked; the filed copy stays in view beside it", await shows(imm.getByText("Generated", { exact: true }).first()) && await shows(imm.getByText(/Stale · Filed/)));

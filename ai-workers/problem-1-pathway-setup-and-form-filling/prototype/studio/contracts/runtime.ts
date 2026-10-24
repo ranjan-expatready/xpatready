@@ -156,4 +156,4 @@ export function fillsText(fills: { form: string; person: string; subject?: strin
 }
 
 /** Why a copy cannot be locked yet (P-71, Lead R1d early look): the same words in the API and on the button. */
-export const notReady = (n: number) => `${n} fact${n === 1 ? "" : "s"} to confirm before filing: confirm ${n === 1 ? "it" : "them"}, then generate a new copy.`;
+export const notReady = (n: number) => `${n} fact${n === 1 ? "" : "s"} to answer or confirm before filing: do that, then generate a new copy.`;
