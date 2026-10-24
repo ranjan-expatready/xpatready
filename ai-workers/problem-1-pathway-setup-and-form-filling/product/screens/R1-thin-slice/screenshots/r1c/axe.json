@@ -1,0 +1,42 @@
+[
+ {
+  "state": "01-officer-case-new",
+  "violations": []
+ },
+ {
+  "state": "02-client-overview",
+  "violations": []
+ },
+ {
+  "state": "03-client-part-radio",
+  "violations": []
+ },
+ {
+  "state": "04-client-error-summary",
+  "violations": []
+ },
+ {
+  "state": "05-client-group-remove-confirm",
+  "violations": []
+ },
+ {
+  "state": "06-client-answering-for-spouse",
+  "violations": []
+ },
+ {
+  "state": "07-client-resume",
+  "violations": []
+ },
+ {
+  "state": "08-agent-view-confirmed",
+  "violations": []
+ },
+ {
+  "state": "09-agent-edit-dialog",
+  "violations": []
+ },
+ {
+  "state": "10-agent-conflict",
+  "violations": []
+ }
+]

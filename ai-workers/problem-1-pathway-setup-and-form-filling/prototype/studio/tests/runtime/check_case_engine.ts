@@ -103,6 +103,14 @@ prop("property: confirmed = officer-verified, or the client's own typed answer f
 }), 300);
 ok("fail: a client's answer for a fact the officer takes from a document never counts as confirmed", !confirmation(S, ans("p", "person.family_name", "X"), who("p"), null, TODAY).confirmed);
 ok("fail: the representative's facts are never the client's own", !confirmation(S, ans("p", "representative.membership_id", "X", { channel: "questionnaire" }), who("p"), null, TODAY).confirmed);
+// ── R1c: questions follow the release's placement order within a section (not the labels' alphabetical order)
+{
+  const ordered = { ...S, placements: S.placements.map((p) => ({ ...p, order: p.fact === "person.marital_status" ? 1 : p.fact === "person.family_name" ? 3 : 2 })) } as unknown as Snapshot;
+  const facts = (snap: Snapshot) => caseView(snap, people, [], [], "agent", TODAY).sections.find((x) => x.subjectId === "p" && x.section === "personal")!.questions.map((q) => q.fact);
+  const got = facts(ordered);
+  ok("R1c pass: a section asks its questions in the release's placement order", got[0] === "person.marital_status" && got[got.length - 1] === "person.family_name", got);
+  ok("R1c fail-guard: without placement orders the order is the common renderer's (by label), so the order above comes from the placements", facts(S)[0] !== "person.marital_status", facts(S));
+}
 // ── PR 7 review D2: ageOn gives no age for a date that is not real or is in the future
 ok("D2 pass: a real past birth date gives the age in whole years (birthday today counts)", ageOn("2015-02-28", TODAY) === 11 && ageOn("2008-10-23", TODAY) === 18 && ageOn("2008-10-24", TODAY) === 17 && ageOn("2024-02-29", TODAY) === 2 && ageOn("2026-10-23", TODAY) === 0);
 ok("D2 fail: an impossible or future birth date gives no age", [ "2015-02-30", "2023-02-29", "2015-13-01", "2015-00-10", "2026-10-24", "2030-01-01"].every((d) => ageOn(d, TODAY) === null));

@@ -67,3 +67,23 @@ export const CONFIRM_WORDS = {
   waits: "Waits for the officer's \"Confirm section\"",
   by_principal: "Answered by the principal for an adult: confirmed once that person confirms on their own link or the officer presses \"Confirm section\"",
 } as const;
+
+/** The questionnaire view (GET /api/runtime/cases/:id/questionnaire): what the engine computes and the web renderer
+ *  reads, one shape for both (engine/runtime/case.ts caseView returns it). */
+export type ViewAnswer = { id: string; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; by: string; at: string; problems: string[]; confirmed: boolean; why: string };
+export type ViewQuestion = {
+  subjectId: string; about_label: string; fact: string; label: string; meaning: string; value_type: string;
+  shape: { maxLength: number; datePrecision: "day" | "month"; phone: boolean; money: boolean; choices: string[] | null };
+  section: string; section_title: string; collected_from: string; required: boolean; hidden: boolean; why: string;
+  /** The repeating group (its section) when the question is asked per row; capacity is the rows the forms hold. */
+  group: string | null; capacity: number | null;
+  answer: ViewAnswer | null;
+  rows: { row: string; index: number; fits: boolean; answer: ViewAnswer | null }[];
+  options: { key: string; label: string }[] | null; note: string | null;
+  fills: { form: string; person: string; boxes: number }[];
+};
+export type ViewSection = { subjectId: string; about_label: string; section: string; title: string; questions: ViewQuestion[]; answered: number; confirmed: number; invalid: number; missing: string[] };
+export type QuestionnaireView = {
+  mode: "sqr" | "agent"; sections: ViewSection[]; checks: unknown; forms: { form: string; person: string; applies: boolean | string }[];
+  summary: { not_asked: number; questions: number; answered: number; confirmed: number; missing: number };
+};

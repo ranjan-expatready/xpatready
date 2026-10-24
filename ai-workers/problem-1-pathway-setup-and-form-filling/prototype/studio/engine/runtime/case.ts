@@ -4,7 +4,7 @@
 // what the release preview shows. No I/O; every output says why.
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
-import { Address, CONFIRM_WORDS, MINOR, Phone } from "../../contracts/runtime.ts";
+import { Address, CONFIRM_WORDS, MINOR, Phone, type QuestionnaireView } from "../../contracts/runtime.ts";
 
 export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
 export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string };
@@ -17,7 +17,7 @@ const CLIENT_SOURCES = new Set(["client_questionnaire", "profile_record"]);
 const CLIENT_KINDS = new Set(["PERSON", "RELATIONSHIP", "CASE"]);
 
 /** The parts of a released placement and field this engine reads (the snapshot keeps them as loose JSON). */
-type Placement = { fact: string; section_id: string; repeats: string; collected_from: string; condition?: unknown; condition_effect?: string | null };
+type Placement = { fact: string; section_id: string; order?: number; repeats: string; collected_from: string; condition?: unknown; condition_effect?: string | null };
 type FieldDef = { id: string; value_type?: string; item_version?: number; answer_list?: { key: string; values: { key: string; label: string }[] } };
 const placementOf = (s: Snapshot, field: string): Placement | undefined => (s.placements as Placement[]).find((p) => p.fact === field);
 const fieldOf = (s: Snapshot, field: string): FieldDef | undefined => (s.canonical_fields as FieldDef[]).find((f) => f.id === field);
@@ -153,7 +153,7 @@ export type Mode = "sqr" | "agent";
  *  box of a form that applies, or decides whether a form, document or question applies. Questions the release places in
  *  a selected section but nothing of this case reads are not asked (counted in the summary). SQR mode shows the
  *  client's fields only; agent mode shows every needed fact. */
-export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date()) {
+export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date()): QuestionnaireView {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const caseSubject = people.find((p) => p.role === "case")!;
   const { known, confirm } = knownOf(s, people, answers, rows, today);
@@ -163,7 +163,13 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
   for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about) {
     const k = `${b.about}|${b.fact}`, m = fills.get(k) ?? new Map(); const e = m.get(`${c.form}|${c.person}`) ?? { form: c.form, person: c.person_label, boxes: 0 }; e.boxes++; m.set(`${c.form}|${c.person}`, e); fills.set(k, m);
   }
-  const needed = r.questions.filter((q) => !q.about.includes("/") && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0));
+  // Within one section for one person, questions follow the release's placement order (purpose before its "other"
+  // details, "from" before "to"); the common renderer lists them by label.
+  const first = new Map<string, number>();
+  r.questions.forEach((q, i) => { if (!first.has(`${q.section}|${q.about}`)) first.set(`${q.section}|${q.about}`, i); });
+  const placed = (fact: string) => placementOf(s, fact)?.order ?? Number.MAX_SAFE_INTEGER;
+  const needed = r.questions.filter((q) => !q.about.includes("/") && (fills.has(`${q.about}|${q.fact}`) || q.decides.length > 0))
+    .sort((a, b) => first.get(`${a.section}|${a.about}`)! - first.get(`${b.section}|${b.about}`)! || placed(a.fact) - placed(b.fact));
   const notAsked = r.questions.filter((q) => !q.about.includes("/")).length - needed.length;
   const questions = needed.filter((q) => mode === "agent" || isClientField(s, q.fact)).map((q) => {
     const subjectId = subjectOf(q.about), p = placementOf(s, q.fact);
