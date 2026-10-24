@@ -8,14 +8,15 @@ updated: 2026-10-23
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
-| screens | 01-programs-catalogue | FIX | Builder | Lead note waiting for sync · One fix pass closing Screen 01 (Lead note 17:05): QA-1, QA-13, QA-7, QA-9, QA-3/5/6/10/11/12, P-63 field wo… |
-| forms | F1-forms-channels | BUILD | Builder | Lead note waiting for sync · slice 2 (backend path): guard link-hop fix first (QA-8), A4 backend, guarded admission of screen inventorie… |
-| evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check E1b IMM 5257 (prototype/evidence-lane/E1/imm5257/STATUS.md) and decide the P-65 gate for R1; se… |
-| runtime | R1-thin-slice | PLAN | Lead | Lead checks screens/R1-thin-slice/plan.md and challenge.md (verdict Build after these changes; no open Bloc… |
-| qa | QA-0 baseline | WAITING | Lead | Lead reads qa/reports/2026-10-23-milestone.md, assigns QA-4 to QA-12 to lanes, answers the three questions;… |
+| screens | 01-programs-catalogue | CHECK | Lead | Lead note waiting for sync · Lead check of the closing pass and its P-74 extension (build-notes: "Fixes (one FIX pass…)", "CHECK → FIX",… |
+| forms | F1-forms-channels | CHECK | Lead | Lead check of slice 2 on the exact commit: build-notes "Slice 2" and "Slice 2 fixes" (finding → fix → test)… |
+| evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check IMM 1295 (prototype/evidence-lane/E1/imm1295/STATUS.md); then /next evidence for IMM 5707 (tria… |
+| runtime | R1-thin-slice | CHECK | Lead | Lead note waiting for sync · Lead checks R1a after FIX (build-notes "Fixes"; review and break report) and the shared files S-1, S-2, S-6… |
+| qa | after-merge F1 slice 1 (65826022) | WAITING | Lead | Lead reads qa/reports/2026-10-23-after-merge.md, assigns QA-13 to QA-18, answers three questions (quiet win… |
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-24 · all · Every lane finished its stage overnight and waits on the Lead check: screens (Screen 01 with channels), forms slice 2, runtime R1a, evidence; qa waiting. Screen 01 is checked first.
 - 2026-10-24 · Lead · P-81 private GitHub repository through a filtered mirror; waiting on founder steps (repository, tool install, settings).
 - 2026-10-24 · Lead · Stray test combination removed from :4400 (founder OK; history event added; backup kept); Individual 21, Corporate 8.
 - 2026-10-23 · Lead · :4400 restarted on main 13629dfc with the forms database update (founder OK); backup taken; data unchanged; lane apps untouched.
@@ -25,4 +26,3 @@ updated: 2026-10-23
 - 2026-10-23 · Lead · P-77: prototype PQR answers flow into the SQR; staff eligibility page on the R1 rules engine with Sample gates; runtime lane R2 after R1.
 - 2026-10-23 · Lead · Founder decided P-76 (PQR model, option C with AI-drafted picks, approved in the combination's release). Prepare application designer draft committed; all four design drafts ready for walkthrough.
 - 2026-10-23 18:25 · Lead · Design helper drafts arriving: Screen 02 and extension done; Prepare application board and Screen 03 still being written (committed as work in progress). P-75: no dates, counted progress (M2 5/37).
-- 2026-10-23 17:45 · all · Founder go for the parallel plan (`PLAN.md`, dated). Merged: QA-0 (a983e7b4), forms F1 slice 1 (d795b019, Lead rerun 106/106), evidence IMM 0008 (86dbcde6, 462/462 reproduced). Lead walk found QA-13. P-74: every decision gets capability rows the same day (`tools/decision-impact.sh`). Running: screens 01 fix (+ channels, online sources, words), forms slice 2, runtime plan→build, evidence IMM 5257, qa after-merge; design helper drafting Prepare application, Screens 02–03, extension.
