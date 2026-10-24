@@ -30,3 +30,4 @@ WITHDRAWN 23 Oct by the founder (P-60): - 2026-10-23 · 01 · CHECK · Founder r
 - 2026-10-24 · Lead · P-81 private GitHub repository through a filtered mirror; waiting on founder steps (repository, tool install, settings).
 - 2026-10-24 · all · Every lane finished its stage overnight and waits on the Lead check: screens (Screen 01 with channels), forms slice 2, runtime R1a, evidence; qa waiting. Screen 01 is checked first.
 - 2026-10-24 · screens · CHECK → merged · Lead check of Screen 01 (channels, filing method, portal, online forms, release gate, words) merged 1cb174a6; :4400 restarted; DONE after qa retest. Evidence IMM 1295 merged. All builder lanes working again.
+- 2026-10-24 · Devin · P-82 cut-over complete: GitHub is the source of truth; this folder is a clean clone on main (PR #1 merged); 7 lane worktrees on origin branches; :4400 live on the same xr_studio_demo DB. P-83 merged (PR #2): 26 official blank PDFs committed.

@@ -16,6 +16,7 @@ updated: 2026-10-23
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-24 · Lead (cloud) · Runtime R1c Lead check → **FIX**: the R1c browser journey gives 69–71/75 on fresh copies (lane reported 75/75; Confirm section, date check and conflict re-save fail every time); diff, S-10 and the migration accepted. Not merged. `run-suites.sh` runs R1c after the visitor-visa setup.
 - 2026-10-24 · Lead (cloud) · Runtime R1c at CHECK (a986e9c: review 7/10 and break 4 Major, all fixed with tests): Lead check in progress; runtime branch merged on the Lead branch, `run-suites.sh` runs `check_runtime_r1c.cjs` after the visitor-visa setup and before R1a; full suites running before a PR. PR #9 merged (262750e).
 - 2026-10-24 · Lead (cloud) · Forms slice 2b checked and merged (PR #9; F5 shown outside Adobe, reproduced by the Lead); runtime R1c EARLY-LOOK → Go with changes, CHECK next; forms next: qa Minors; evidence next on the Mac: Adobe re-check of an F5 file, then IMM 5476.
 - 2026-10-24 · Lead (cloud) · **Screen 01 DONE** on qa's after-merge (db468e3, 9/10); qa report merged, QA-22–34 assigned; runtime building R1c (D1, D2 fixed, CI green), forms building 2b (D3, QA-30, QA-34 added); screens small FIX QA-4, QA-20, QA-22 next.
@@ -25,4 +26,3 @@ updated: 2026-10-23
 - 2026-10-24 · Lead · Founder decided P-84 (scheduled cloud Lead every 4 hours), P-85 (full suites on every push: `tools/run-suites.sh`, 11/11 green on main in 6 min) and P-86 (generated traceability graph `tools/graph.mjs`: 0 hard gaps; 22 untested routes, 7 pages no browser test opens, 5 Works capabilities no test names, 1 unused component → qa lane).
 - 2026-10-24 · cloud · PR #4 merged (3c3d578): cloud sessions live. Follow-up: session start pulls a clean copy automatically (no manual git pull, Mac or cloud); one-Lead check in the lead skill; lane.sh branch skips a lane's merged old branches.
 - 2026-10-24 · cloud · Cloud sessions work end to end (PR from claude/modest-cerf-yunauq): setup from a fresh clone, lane bind to its branch, app, suites green (Screen 01 browser 136/136). Mac-only: evidence lane, sources/code reading, OCR (B31). Lanes sync main once before their first cloud run.
-- 2026-10-24 · Devin · P-82 cut-over complete: GitHub is the source of truth; this folder is a clean clone on main (PR #1 merged); 7 lane worktrees on origin branches; :4400 live on the same xr_studio_demo DB. P-83 merged (PR #2): 26 official blank PDFs committed.
