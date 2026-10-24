@@ -10,15 +10,24 @@ NODE_VER=24.21.0; PGPORT="${PGPORT:-54329}"
 
 echo "== node $NODE_VER"
 if ! command -v node >/dev/null || [ "$(node -v)" != "v$NODE_VER" ]; then
-  mkdir -p "$HOME/.local"
-  curl -fsSL "https://nodejs.org/dist/v$NODE_VER/node-v$NODE_VER-linux-x64.tar.xz" | tar -xJ -C "$HOME/.local"
-  export PATH="$HOME/.local/node-v$NODE_VER-linux-x64/bin:$PATH"
+  # Install under .tools — the path start.sh/lane.sh already prepend, so it persists across shells.
+  mkdir -p "$ROOT/.tools"
+  curl -fsSL "https://nodejs.org/dist/v$NODE_VER/node-v$NODE_VER-linux-x64.tar.xz" | tar -xJ -C "$ROOT/.tools"
+  mv "$ROOT/.tools/node-v$NODE_VER-linux-x64" "$ROOT/.tools/node-v$NODE_VER"
+  export PATH="$ROOT/.tools/node-v$NODE_VER/bin:$PATH"
 fi
 echo "node $(node -v) / npm $(npm -v)"
 
 echo "== packages (npm ci)"
 (cd "$STUDIO" && npm ci)
 
+echo "== python venv (form intake/fill helpers — api PY path)"
+VENV="$ROOT/.tools/solution-1-prototype/.venv"
+if [ ! -x "$VENV/bin/python" ]; then
+  mkdir -p "$ROOT/.tools/solution-1-prototype"
+  python3 -m venv "$VENV" 2>/dev/null || { sudo -n apt-get install -y -qq python3-venv >/dev/null && python3 -m venv "$VENV"; }
+  "$VENV/bin/pip" install -q -r "$P/prototype/env/requirements.lock"
+fi
 echo "== postgresql 18 on 127.0.0.1:$PGPORT"
 PGBIN=""
 for c in /usr/lib/postgresql/18/bin /opt/homebrew/opt/postgresql@18/bin; do [ -x "$c/psql" ] && PGBIN="$c"; done
@@ -38,7 +47,7 @@ export PATH="$PGBIN:$PATH"
 PGDATA="$ROOT/.tools/solution-1-prototype/pg18-data"
 if ! pg_ctl -D "$PGDATA" status >/dev/null 2>&1; then
   [ -d "$PGDATA" ] || { mkdir -p "$PGDATA"; initdb -D "$PGDATA" -U xr_studio -A trust >/dev/null; }
-  pg_ctl -D "$PGDATA" -o "-p $PGPORT -k /tmp" -l "$PGDATA/server.log" -w start >/dev/null
+  pg_ctl -D "$PGDATA" -o "-p $PGPORT -k /tmp -h 127.0.0.1" -l "$PGDATA/server.log" -w start >/dev/null
   echo "cluster started"
 else echo "cluster already running"; fi
 for db in xr_studio_demo xr_studio_screens xr_studio_forms xr_studio_evidence xr_studio_runtime xr_studio_qa; do

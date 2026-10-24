@@ -68,8 +68,10 @@ case "$1" in
   sync)
     [ "$HERE" = "$MAIN" ] && { echo "main copy: nothing to sync"; exit 0; }
     git -C "$HERE" diff --quiet && git -C "$HERE" diff --cached --quiet || { echo "Commit this lane's work before syncing."; exit 3; }
-    git -C "$HERE" merge --no-edit main >/dev/null 2>&1 && echo "in sync with main ($(git -C "$HERE" rev-parse --short main))" || {
-      echo "CONFLICT merging main:"; git -C "$HERE" diff --name-only --diff-filter=U; exit 4; } ;;
+    git -C "$HERE" fetch -q origin 2>/dev/null || true
+    ref=main; git -C "$HERE" rev-parse -q --verify refs/remotes/origin/main >/dev/null 2>&1 && ref=origin/main
+    git -C "$HERE" merge --no-edit "$ref" >/dev/null 2>&1 && echo "in sync with $ref ($(git -C "$HERE" rev-parse --short "$ref"))" || {
+      echo "CONFLICT merging $ref:"; git -C "$HERE" diff --name-only --diff-filter=U; exit 4; } ;;
   status)
     git -C "$MAIN" worktree list --porcelain | awk '/^worktree /{print $2}' | while read -r wt; do
       [ "$wt" = "$MAIN" ] && continue

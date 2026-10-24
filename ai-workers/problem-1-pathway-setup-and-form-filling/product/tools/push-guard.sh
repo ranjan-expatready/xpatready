@@ -9,7 +9,7 @@ set -u
 HERE="$(git rev-parse --show-toplevel)"; cd "$HERE" || exit 2
 
 # Never on GitHub (P-81): sources/, code/, archive/, local tools, databases/dumps, archives, env/secret files, every PDF.
-PATH_RE='^(sources|code|archive|\.tools)/|\.(pdf|zip|tar\.gz|dump|sql\.gz)$|(^|/)\.env(\.|$)'
+PATH_RE='(^|/)(sources|code|archive|\.tools)/|\.(pdf|zip|tar\.gz|dump|sql\.gz)$|(^|/)\.env(\.|$)'
 # Secrets: private keys and the well-known token shapes, plus high-entropy key=value assignments.
 SECRET_RE='-----BEGIN [A-Z ]*PRIVATE KEY|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{22}|sk-[A-Za-z0-9_-]{20}|xox[baprs]-[A-Za-z0-9-]{10}|AIza[0-9A-Za-z_-]{35}|(password|passwd|api[_-]?key|secret|token)[[:space:]]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9._~+/=-]{16,}'
 # Personal names (AGENTS.md rule 5: roles, not names). Edit this list when a name must be added.
@@ -22,7 +22,7 @@ bad=0
 check_range() {
   local range="$1" commits
   # Intentionally unquoted: $range carries several rev-list args (e.g. "HEAD --not --remotes").
-  commits=$(git rev-list $range 2>/dev/null) || return 0
+  commits=$(git rev-list $range 2>/dev/null) || { echo "GUARD: unresolvable range '$range' — refusing"; bad=1; return; }
   [ -n "$commits" ] || return 0
   # Paths added, modified, renamed-to or copied-into by the range (deletions are safe, so D is excluded).
   while IFS= read -r f; do
