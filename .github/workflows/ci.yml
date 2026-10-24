@@ -36,7 +36,7 @@ jobs:
           PGB=/usr/lib/postgresql/18/bin
           sudo -u postgres "$PGB/initdb" -D /tmp/pg18 -A trust -U xr_studio
           sudo -u postgres "$PGB/pg_ctl" -D /tmp/pg18 -o "-p 54329 -k /tmp" -l /tmp/pg18.log -w start
-          sudo -u postgres "$PGB/createdb" -h 127.0.0.1 -p 54329 xr_studio_demo
+          sudo -u postgres "$PGB/createdb" -h 127.0.0.1 -p 54329 -U xr_studio xr_studio_demo
       - name: npm ci
         run: npm ci
         working-directory: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
@@ -53,6 +53,7 @@ jobs:
           bash "$P/tools/check-docs.sh" && bash "$P/tools/decision-impact.sh" && \
           node ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tools/count-any.mjs
       - name: engine and contract suites
+        env: { DATABASE_URL: postgresql://xr_studio@127.0.0.1:54329/xr_studio_demo }
         run: |
           S=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
           "$S/node_modules/.bin/tsx" --tsconfig "$S/api/tsconfig.json" "$S/tests/check_engine.ts"
