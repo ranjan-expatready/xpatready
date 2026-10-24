@@ -143,8 +143,49 @@ const shown = (pdf: string) => { try { return execFileSync("pdftotext", ["-layou
   const ee = await call("POST", "/captures", { portal: "ircc_portal", form: "ee_profile_", title: "Express Entry profile (Sample)" });
   ok("QA-15 (break m5): a trailing separator leaves no trailing space ('ee_profile_' is EE PROFILE)", ee.status === 201 && ee.body.form === "EE PROFILE", ee.body?.form);
 
+  const capFirst = r.body.id as string; // the IMM 5257 capture, used by D3 below
+  // ──────────────────────────────────────────── QA-34: capture and fill refusals no suite reached (P-69 coverage floor)
+  const raw = async (path: string, files: [string, Uint8Array<ArrayBuffer>][]) => {
+    const fd = new FormData(); for (const [n, b] of files) fd.append("files", new Blob([b]), n);
+    const x = await fetch(`http://localhost:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd });
+    return { status: x.status, body: await x.json() };
+  };
+  const listed = await call("GET", "/captures?take=abc&skip=-5");
+  ok("QA-34: the capture list takes odd paging values safely (default page, never a negative offset)", listed.status === 200 && Array.isArray(listed.body) && listed.body.length >= 1, listed.status);
+  const k = (await call("POST", "/captures", { portal: "ircc_portal", form: "IMM 5532", title: "Relationship information (Sample)" })).body.id as string;
+  r = await raw(`/captures/${k}/screens`, []);
+  ok("QA-34 fail: adding screens with no file is refused in plain words", r.status === 400 && /at least one saved screen/.test(r.body.message), r.body?.message);
+  r = await raw(`/captures/${k}/screens`, [["empty.html", new Uint8Array()]]);
+  ok("QA-34 fail: an empty file is refused and nothing is added", r.status === 201 && r.body.results?.[0]?.outcome === "refused" && /empty/.test(r.body.results[0].message), r.body?.results);
+  r = await call("GET", `/captures/${k}/review`);
+  ok("QA-34 fail: the review document does not exist before the capture is finished (404, plain words)", r.status === 404, r.status);
+  r = await call("POST", `/captures/${k}/finish`);
+  ok("QA-34 fail: finishing a capture with no screen is refused with the next step", r.status === 400 && /Add at least one screen/.test(r.body.message), r.body?.message);
+  const page = new Uint8Array(readFileSync(join(FIX, "portal", "imm5257-online-s1-personal.html"))) as Uint8Array<ArrayBuffer>;
+  r = await raw(`/captures/${k}/screens`, [["client 1234567 page.html", page]]);
+  const again = await raw(`/captures/${k}/screens`, [["same.html", page]]);
+  ok("QA-34: a file name carrying a number is not kept (renamed), and the same file again is a duplicate, not a second screen", r.body.results?.[0]?.outcome === "added" && !/1234567/.test(JSON.stringify(r.body)) && again.body.results?.[0]?.outcome === "duplicate", { first: r.body.results?.[0], again: again.body.results?.[0]?.outcome });
+  r = await call("POST", `/captures/${k}/approve`, undefined, "user-C");
+  const ret = await call("POST", `/captures/${k}/return`, { note: "The second screen of the form is missing from this capture." }, "user-C");
+  ok("QA-34 fail: an open capture can be neither approved nor returned (409, plain words)", r.status === 409 && ret.status === 409, [r.body?.message, ret.body?.message]);
+  await call("POST", `/captures/${k}/finish`);
+  r = await call("POST", `/captures/${k}/finish`);
+  ok("QA-34 fail: a held capture cannot be finished again", r.status === 409 && /only an open capture can be finished/.test(r.body.message), r.body?.message);
+  r = await call("POST", `/captures/${k}/return`, { note: "The second screen of the form is missing from this capture." });
+  ok("QA-34 fail: the person who captured it cannot return it to themselves (a second person reviews)", r.status === 403, r.body?.message);
+  r = await call("POST", `/captures/${k}/abandon`, { note: "test: not needed" });
+  const twice = await call("POST", `/captures/${k}/abandon`, {});
+  ok("QA-34: a held capture can be abandoned with a note, once; abandoning again is refused", r.status === 201 && r.body.status === "ABANDONED" && twice.status === 409, [r.body?.status, twice.status]);
+  const pdfEd = sql("select id from form_edition where channel = 'PDF' limit 1");
+  r = await call("POST", `/online-versions/${pdfEd}/screen-map/draft`);
+  ok("QA-34 fail: a screen map is never drafted for a PDF edition", r.status === 400 && /online versions/.test(r.body.message), r.body?.message);
+  r = await call("POST", `/combinations/${wp}/fill`, { form: "IMM 1295", person: "nobody", mode: "draft" });
+  ok("QA-34 fail: filling a form for a person it does not apply to is a 404 in plain words", r.status === 404 && /does not apply to that person/.test(r.body.message), r.body?.message);
+  r = await call("POST", `/combinations/${wp}/fill`, { form: "IMM 1295", person: "principal" });
+  ok("QA-34: with no mode the fill uses the latest release (or says plainly why it cannot)", (r.status === 201 && r.body.label) || (r.status >= 400 && r.status < 500 && typeof r.body.message === "string"), { status: r.status, label: r.body?.label, message: r.body?.message });
+
   // D3: a finished draft whose proposals are waiting is reused (US$0), never paid for again.
-  const capId = r.body.id as string;
+  const capId = capFirst;
   await upload(`/captures/${capId}/screens`, ["imm5257-online-s1-personal.html", "imm5257-online-s2-marital.html", "imm5257-online-s3-language.html"]);
   await call("POST", `/captures/${capId}/finish`);
   const ed = (await call("POST", `/captures/${capId}/approve`, undefined, "user-C")).body.edition.id as string;

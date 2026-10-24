@@ -184,6 +184,8 @@ export class Ai implements OnModuleInit {
   /** The source-level button: the same plan and launch with the scope narrowed to one form (D280 one path). */
   async launchSource(actor: Actor, attachmentId: string, mode: "live" | "replay" | "stub", runFile?: string, idempotencyKey?: string) {
     need(actor, "author");
+    // QA-30: a request without a mode (or with another word) is a plain 400, never a 500 from reading a missing value.
+    if (!["live", "replay", "stub"].includes(String(mode))) fail('Choose how to draft this form: "live" (a paid AI call), "replay" (a saved run) or "stub" (no AI, US$0).', HttpStatus.BAD_REQUEST);
     const m = mode.toUpperCase() as Mode;
     const scope: Scope = { kind: "source", ids: [attachmentId] };
     const p = await this.plan(scope, m, { draftAgain: true });

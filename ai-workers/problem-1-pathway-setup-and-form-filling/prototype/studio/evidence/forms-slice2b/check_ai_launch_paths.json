@@ -1,0 +1,187 @@
+{
+ "at": "2026-10-24T19:41:03.959Z",
+ "port": 4453,
+ "database": "xr_studio_forms_fl",
+ "paid_calls": 0,
+ "pass": 29,
+ "fail": 0,
+ "log": [
+  {
+   "name": "setup: IMM 5409 on the Visitor visa plans one whole-form live call (no parts, nothing reused)",
+   "ok": true,
+   "detail": "Read the form on this computer, then a guarded live call (stub pass first; up to 2 attempts)."
+  },
+  {
+   "name": "QA-30: a draft request with no mode is a plain 400 naming the three ways, never a 500",
+   "ok": true,
+   "detail": {
+    "status": 400,
+    "message": "Choose how to draft this form: \"live\" (a paid AI call), \"replay\" (a saved run) or \"stub\" (no AI, US$0)."
+   }
+  },
+  {
+   "name": "QA-30 fail: an unknown mode is refused the same way",
+   "ok": true,
+   "detail": "Choose how to draft this form: \"live\" (a paid AI call), \"replay\" (a saved run) or \"stub\" (no AI, US$0)."
+  },
+  {
+   "name": "QA-30 fail: the mode check does not let a reviewer (no author duty) start a draft",
+   "ok": true,
+   "detail": 403
+  },
+  {
+   "name": "stub refused: the step FAILS with the guard's reason and the live call is never made",
+   "ok": true,
+   "detail": {
+    "status": "FAILED",
+    "message": "stub pass failed: guard: the inventory changed since it was admitted",
+    "calls": 1
+   }
+  },
+  {
+   "name": "provider limit before the call (no run record): BLOCKED, no cost, the way out said",
+   "ok": true,
+   "detail": {
+    "status": "BLOCKED",
+    "message": "Blocked by the AI provider's account usage limit (no cost): Anthropic API: account usage limit reached. Use a saved AI answer, or try again once access is restored."
+   }
+  },
+  {
+   "name": "the launcher stops with no reason: FAILED, and the message is never empty (it names the exit)",
+   "ok": true,
+   "detail": "The AI step did not run: the launcher stopped (exit 3) without giving a reason. Nothing was drafted or applied."
+  },
+  {
+   "name": "the launcher fails with an error: FAILED with its last lines, not BLOCKED (not a provider limit)",
+   "ok": true,
+   "detail": "The AI step did not run: TypeError: cannot read the job file     at main (launch.ts:12). Nothing was drafted or applied."
+  },
+  {
+   "name": "a ledger lock (another paid call running) is waited out and the launch tried again, once the lock is free",
+   "ok": true,
+   "detail": {
+    "calls": [
+     "stub",
+     "live",
+     "live"
+    ],
+    "message": "The AI step did not run: budget: the experiment cap is reached. Nothing was drafted or applied."
+   }
+  },
+  {
+   "name": "provider limit after the call (run record): BLOCKED, US$0, the request id named, the ledger correction tried (AIW-D273)",
+   "ok": true,
+   "detail": {
+    "status": "BLOCKED",
+    "cost": 0,
+    "message": "Blocked by the AI provider: the account's monthly usage limit refused the call before any processing (request req_fake123). Nothing was drafted or billed; the l"
+   }
+  },
+  {
+   "name": "run record refused: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The AI declined to draft this form. Nothing was applied. Cost US$0.42. Run fake-n7oa4s."
+  },
+  {
+   "name": "run record timed_out: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The AI did not answer in time. Nothing was applied. Cost US$0.42. Run fake-2w5ajr."
+  },
+  {
+   "name": "run record budget_exceeded: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The run would have gone over its spending cap, so it stopped. Nothing was applied. Run fake-580njp."
+  },
+  {
+   "name": "run record provider_error (not a limit): FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The AI provider returned an error: 529 overloaded. Nothing was drafted or applied. Cost US$0.42. Run fake-ufih4i."
+  },
+  {
+   "name": "run record invalid_output cut at the limit: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The AI's answer was cut off at the output limit (4000 of 4000 output tokens). Nothing was applied. Cost US$0.30. Run fake-2187mn."
+  },
+  {
+   "name": "run record invalid_output in another shape: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The AI answered, but not in the agreed shape ({\"entries\":\"missing\"}). Nothing was applied. Cost US$0.42. Run fake-66jnp7."
+  },
+  {
+   "name": "run record completed, entries break our rules: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "AI answered 1 form field. 1 entry broke our entry rules (form field 1: field name \"Person.Name\" breaks the naming rule). Nothing was applied. Cost US$0.42. Run fake-sd4zm0."
+  },
+  {
+   "name": "run record completed, the run record failed our check: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "AI answered. The answer failed our check of the run record. Nothing was applied. Cost US$0.42. Run fake-x43rqn."
+  },
+  {
+   "name": "run record an unknown status: FAILED in plain words, nothing applied, the run named",
+   "ok": true,
+   "detail": "The AI step ended without a usable draft (status weird). Nothing was applied. Cost US$0.42. Run fake-acinsy."
+  },
+  {
+   "name": "a run file that cannot be read: FAILED with the reason, the step never stays RUNNING",
+   "ok": true,
+   "detail": "ENOENT: no such file or directory, open '/home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/isolated-forms_fl/no-such-run.json'"
+  },
+  {
+   "name": "setup: IMM 5406 plans a live draft (read first, then in parts)",
+   "ok": true,
+   "detail": "Read the form on this computer, then a guarded live call in 2 parts (50 of 50 form fields) (stub pass first; up to 2 attempts per part)."
+  },
+  {
+   "name": "parts: every part refused by the provider's account limit is BLOCKED (as a whole-form draft is), no cost, the way out said",
+   "ok": true,
+   "detail": {
+    "status": "BLOCKED",
+    "message": "Blocked by the AI provider's account usage limit: 2 of 2 parts were refused before any processing. Nothing was drafted or applied. Cost US$0.00. Use a saved AI answer, or try again once access is restored."
+   }
+  },
+  {
+   "name": "parts fail: a part whose stub pass is refused FAILS with the guard's reason, and no live call is made",
+   "ok": true,
+   "detail": {
+    "status": "FAILED",
+    "message": "2 of 2 parts did not finish (part 1: stub pass failed: guard: part not in its parent inventory; part 2: stub pass failed: guard: part not in its parent inventory). Nothing was applied. Cost US$0.00."
+   }
+  },
+  {
+   "name": "parts fail: a launcher that stops with no reason says so for each part (never an empty reason), FAILED not BLOCKED",
+   "ok": true,
+   "detail": "2 of 2 parts did not finish (part 1: the launcher stopped without a reason; part 2: the launcher stopped without a reason). Nothing was applied. Cost US$0.00."
+  },
+  {
+   "name": "parts fail: a run record that is not a usable draft FAILS each part in plain words, and the cost of both calls is summed",
+   "ok": true,
+   "detail": {
+    "status": "FAILED",
+    "cost": 0.84,
+    "message": "2 of 2 parts did not finish (part 1: The AI did not answer in time. Nothing was applied. Cost US$0.42.; part 2: The AI did not answer in time. Nothing was applied. Cost US$0.42.). Nothing was applied."
+   }
+  },
+  {
+   "name": "parts: a provider limit found in the run records also gives BLOCKED",
+   "ok": true,
+   "detail": {
+    "status": "BLOCKED",
+    "message": "Blocked by the AI provider's account usage limit: 2 of 2 parts were refused before any processing. Nothing was drafted or applied. Cost US$0.84. Use a saved AI "
+   }
+  },
+  {
+   "name": "parts fail: an unreadable run file ends the step FAILED with the reason (never left RUNNING)",
+   "ok": true,
+   "detail": "ENOENT: no such file or directory, open '/home/user/xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/isolated-forms_fl/no-such-run.json'"
+  },
+  {
+   "name": "none of these paths wrote to the shared spend ledger (no reservation, no correction line)",
+   "ok": true
+  },
+  {
+   "name": "nothing was applied: IMM 5409 has no map rows from these drafts",
+   "ok": true
+  }
+ ]
+}

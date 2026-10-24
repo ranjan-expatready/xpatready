@@ -1,9 +1,9 @@
 {
  "plan": {
-  "combinationId": "fbcadc6e-5839-41f8-b8a7-f43169858bc9",
+  "combinationId": "827fd157-83ef-4301-9c36-c5dc93595571",
   "combination": "Super visa",
   "program": "Super visa",
-  "attachmentId": "b9138e7f-4aae-4ae2-9bf2-5f3936a0cff1",
+  "attachmentId": "c5ababce-3954-4d5e-a30b-c1b5ec527134",
   "source": "IMM 5257 (09-2023)",
   "expected_usd": null,
   "worst_usd": 0.57,
@@ -38,7 +38,7 @@
  },
  "job": {
   "status": "COMPLETED",
-  "message": "Every form field reused from IMM 5257 (01-2020) without AI (US$0) as studio-fieldmap-imm5257e-reused-20261024t190750031z-86c867. 161 of 242 form fields mapped; 84 fields: 84 reuse, 0 new, 0 ambiguous, 0 conflicting.",
+  "message": "Every form field reused from IMM 5257 (01-2020) without AI (US$0) as studio-fieldmap-imm5257e-reused-20261024t194309388z-3d02d2. 161 of 242 form fields mapped; 84 fields: 84 reuse, 0 new, 0 ambiguous, 0 conflicting.",
   "cost": 0
  }
 }

@@ -19,7 +19,7 @@ import { checkedOutput, explainRun, failedOurCheck, isProviderLimit, sameDraftIn
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 import { reconvertFile } from "../../../p2/reconvert.ts";
 import { addFormLine, resolveKey } from "./form-lines.ts";
-import { ACTORS, Audit, Db, fail, need, NODE, OFFICIAL, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
+import { ACTORS, Audit, Db, fail, need, NODE, OFFICIAL, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
 const ACTOR_BY_ID = (id: string) => ACTORS.find((a) => a.id === id) ?? ACTORS[0];
 /** The library revision a comparison was made against: every definition key, version and status. A different revision
  *  at apply time means the comparison is stale (D280). */
@@ -32,6 +32,10 @@ const run = promisify(execFile);
 const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 const KIND: Record<string, string> = { forms: "Form", checklists: "Document checklist", instructions: "Instructions", "web-pages": "Web page" };
 const JOBS = join(PROTOTYPE, "p2", "jobs"), RUNS = join(PROTOTYPE, "p2", "runs");
+/** Scaffolding (QA-34, P-69): an isolated test copy may start with STUDIO_FAKE_LAUNCHER, a script that stands in for the
+ *  guarded launcher so the paid-call refusal and provider-limit paths are tested at US$0. Never honoured outside an
+ *  isolated copy's own working folder (var/isolated-*): the demo and every real run use p2/launch.ts. */
+const LAUNCHER = process.env.STUDIO_FAKE_LAUNCHER && /[/\\]isolated-[a-z0-9_]+$/.test(VAR_ROOT) ? process.env.STUDIO_FAKE_LAUNCHER : join(PROTOTYPE, "p2", "launch.ts");
 const PROMPTS = join(PROTOTYPE, "p2", "prompts");
 const EDITION = /^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/;
 const TITLES: Record<string, string> = { "IMM 5257": "Application for Temporary Resident Visa", "IMM 1295": "Application for Work Permit made Outside of Canada", "IMM 5707": "Family Information", "IMM 5409": "Statutory Declaration of Common-law Union", "IMM 5476": "Use of a Representative", "IMM 5475": "Authority to Release Personal Information to a Designated Individual", "IMM 5257 SCH1": "Schedule 1: Background/Declaration" };
@@ -250,7 +254,7 @@ export class Sources {
    *  is compared with the library like any draft. A part that fails fails the step: nothing is applied. */
   async runParts(id: string, a: { id: string; workspaceId: string }, split: NonNullable<Awaited<ReturnType<Sources["draftSplit"]>>>, mode: "stub" | "live") {
     const { plan, parts } = split;
-    const state = parts.map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, job_id: p.jobId, status: "queued" as string, run_file: null as string | null, cost_usd: 0, error: null as string | null, saved: false }));
+    const state = parts.map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, job_id: p.jobId, status: "queued" as string, run_file: null as string | null, cost_usd: 0, error: null as string | null, saved: false, limit: false }));
     const reusedWords = plan.reused.length ? `${plan.reused.length} of ${plan.total} form fields reused from ${split.reusedFrom.join(", ")} without AI; ` : "";
     const progress = async () => {
       const done = state.filter((s) => s.status === "done").length, fieldsDone = state.filter((s) => s.status === "done").reduce((x, s) => x + s.fields, 0);
@@ -274,10 +278,10 @@ export class Sources {
       if (p.saved_run) { s.status = "done"; s.saved = true; s.run_file = `prototype/p2/runs/${p.saved_run}`; return; } // its saved answer, US$0
       if (p.repeats_failed_run) { s.status = "failed"; s.error = `a new paid call would repeat run ${p.repeats_failed_run}, which asked exactly this and whose answer failed our own check; a person maps this part, or the rule is reviewed`; return; }
       const live = await this.launchOnce(s.job_id, "live"), lj = lastJson(live.out);
-      if (!lj?.run_file) { s.status = "failed"; s.error = String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).slice(0, 300) || "the launcher stopped without a reason"; return; }
+      if (!lj?.run_file) { s.status = "failed"; s.error = String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).slice(0, 300) || "the launcher stopped without a reason"; s.limit = /usage limit/i.test(s.error); return; }
       const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
       s.run_file = String(lj.run_file).replace(`${SOLUTION}/`, ""); s.cost_usd = rec.drafting_run?.usage?.cost_usd ?? 0;
-      if (!/^completed/.test(rec.drafting_run?.status ?? "") || rec.contract_valid !== true) { s.status = "failed"; s.error = explainRun(rec).message; return; }
+      if (!/^completed/.test(rec.drafting_run?.status ?? "") || rec.contract_valid !== true) { s.status = "failed"; s.error = explainRun(rec).message; s.limit = isProviderLimit(rec); return; }
       s.status = "done";
     };
     try {
@@ -294,6 +298,12 @@ export class Sources {
       }
       const failed = state.filter((s) => s.status !== "done");
       if (failed.length) {
+        // Every part refused by the provider's account limit: BLOCKED, as for a whole-form draft (QA-34 tests found the
+        // parts path said FAILED for the same refusal); nothing was drafted, and the way out is the same.
+        if (failed.every((f) => f.limit)) {
+          await this.db.draftingJob.update({ where: { id }, data: { status: "BLOCKED", costUsd: cost, finishedAt: new Date(), message: `Blocked by the AI provider's account usage limit: ${failed.length} of ${parts.length} parts were refused before any processing. Nothing was drafted or applied. Cost US$${cost.toFixed(2)}. Use a saved AI answer, or try again once access is restored.` } });
+          return;
+        }
         await this.db.draftingJob.update({ where: { id }, data: { status: "FAILED", costUsd: cost, finishedAt: new Date(), message: `${failed.length} of ${parts.length} parts did not finish (${failed.map((f) => `part ${f.index}: ${f.error}`).join("; ").slice(0, 500)}). Nothing was applied. Cost US$${cost.toFixed(2)}.` } });
         return;
       }
@@ -340,7 +350,7 @@ export class Sources {
 
   private launchProcess(jobId: string, mode: "stub" | "live"): Promise<{ code: number; out: string; err: string }> {
     return new Promise((res) => {
-      const p = spawn(NODE, [join(PROTOTYPE, "p2", "launch.ts"), "--job", jobId, `--${mode}`], { cwd: ROOT, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
+      const p = spawn(NODE, [LAUNCHER, "--job", jobId, `--${mode}`], { cwd: ROOT, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
       let out = "", err = "";
       p.stdout.on("data", (d) => (out += d)); p.stderr.on("data", (d) => (err += d));
       p.on("close", (code) => res({ code: code ?? 1, out, err }));
