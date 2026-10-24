@@ -95,3 +95,10 @@ Every finding fixed, each with a passing and a failing test (`check_runtime_r1a.
 | B16 references, list, audit | unique reference per workspace (409); case list paged (`take`, `after`); audit lines name a case by its short id, never the typed reference |
 | Minor: zod wording, unused contract exports, RT-17 log | plain messages for missing fields; `Address` and `Phone` validate address and phone answers; RT-17 also checks the typed reference |
 Not changed: a save recomputes the whole view (median 182 ms, p95 503 ms with a 6-person household, breaker): within budget for R1; R1c may return only the changed section.
+
+## Fixes (FIX after the Lead check, 24 Oct: PR 7 review D1, D2 in `lead-check.md`)
+| Finding | Fix | Tests (pass and fail; each fails on the old code) |
+|---|---|---|
+| D1 (Major) Confirm section blocked for good by a removed row's answers | `confirmSection` (`api/src/runtime.ts`) counts only answers outside a row or in a live row; a removed row's answers stay stored and DECLARED (history kept), and their ids in `seen` are not "changed" | `check_runtime_r1a.ts` "D1 pass" (row answered, removed, section confirms 201, removed answer still stored and unverified) and "D1 fail" (an answer arriving in a live row after the officer looked is still refused, 409, named) |
+| D2 (Minor) `ageOn` gives an age for an impossible or future birth date | `ageOn` (`engine/runtime/case.ts`) uses `realDate` and returns null after the given day; the child's "waits" wording says "not answered yet, or is not a real past date" | `check_case_engine.ts` "D2 pass" (ages including 29 Feb and birthday today) and two "D2 fail" lines (2015-02-30, 2023-02-29, month 13 or 0, tomorrow, 2030 give no age; such a child's answer is not counted as confirmed) |
+Results (cloud clone, `cloud-setup.sh`, runtime copy on :4430): engine 23/23, API 87/87, setup 11/11; `run-suites.sh` every suite green (exit 0); explicit any 437 (baseline 437). Other lanes' evidence files rewritten by the regression run were restored to main's.

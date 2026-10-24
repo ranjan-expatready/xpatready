@@ -248,6 +248,18 @@ async function main() {
   const [del, ansr] = await Promise.all([call("DELETE", `/runtime/cases/${fresh}/groups/${freshPrincipal}/rows/${rowK}`, undefined, CLIENT), call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.employment_employer_name`, { value: "Sample Employer R", expectedId: null, row: rowK }, CLIENT)]);
   const lost = ansr.status === 200 && sql(`select count(*) from client_fact_record where row_key='${rowK}' and tombstone`) === "1" && sql(`select count(*) from client_canonical_answer where row_key='${rowK}'`) === "0";
   ok("FIX B11 fail-guard: removing a row while answering into it never reports a saved answer that is lost", del.status === 200 && !lost, [del.status, ansr.status]);
+  // PR 7 review D1: a removed row's answers no longer block "Confirm section"; they stay stored, unverified
+  const d1Row = (await call("POST", `/runtime/cases/${fresh}/groups/${freshPrincipal}/rows`, { group: "employment_history" }, CLIENT)).body.row;
+  const d1Ans = await call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.employment_employer_name`, { value: "Sample Employer D1", expectedId: null, row: d1Row }, CLIENT);
+  await call("DELETE", `/runtime/cases/${fresh}/groups/${freshPrincipal}/rows/${d1Row}`, undefined, CLIENT);
+  const freshSeen = async () => (await call("GET", `/runtime/cases/${fresh}/questionnaire?mode=agent`, undefined, OFFICER)).body.sections.filter((x: { subjectId: string; section: string }) => x.subjectId === freshPrincipal && x.section === "employment_history").flatMap((x: { questions: Q[] }) => x.questions).flatMap((q: Q) => (q.group ? q.rows.map((r) => r.answer?.id) : [q.answer?.id])).filter(Boolean) as string[];
+  const d1Seen = await freshSeen();
+  const liveRow = radds[1].body.row;
+  await call("PUT", `/runtime/cases/${fresh}/answers/${freshPrincipal}/person.employment_employer_name`, { value: "Sample Employer D1 live", expectedId: null, row: liveRow }, CLIENT);
+  r = await call("POST", `/runtime/cases/${fresh}/sections/employment_history/confirm`, { subjectId: freshPrincipal, seen: d1Seen }, OFFICER);
+  ok("D1 fail: an answer arriving in a live row after the officer looked is still refused (409) and named", r.status === 409 && r.body?.changed?.includes("person.employment_employer_name"), r.body);
+  r = await call("POST", `/runtime/cases/${fresh}/sections/employment_history/confirm`, { subjectId: freshPrincipal, seen: [...await freshSeen(), d1Ans.body?.answer?.id].filter(Boolean) }, OFFICER);
+  ok("D1 pass: after a row is removed the section can be confirmed; the removed row's answer stays stored and unverified (history kept)", d1Ans.status === 200 && r.status === 201 && r.body.confirmed >= 1 && sql(`select count(*) from client_canonical_answer where row_key='${d1Row}' and status='DECLARED' and superseded_by_id is null`) === "1" && sql(`select count(*) from client_canonical_answer where row_key='${d1Row}' and status='VERIFIED'`) === "0", { answer: d1Ans.status, confirm: r.status, body: r.body });
   const dbRefuses = (q: string) => { try { sql(q); return false; } catch { return true; } };
   const pinId = sql(`select id from pack_work_pin where case_id='${caseId}'`), relId = sql(`select config_release_id from pack_work_pin where case_id='${caseId}'`);
   ok("FIX B4 fail (database): a case's pin cannot be changed, and its release or combination cannot be deleted", dbRefuses(`update pack_work_pin set content_hash='x' where id='${pinId}'`) && dbRefuses(`delete from config_release where id='${relId}'`) && dbRefuses(`delete from combination where id='${vv}'`));

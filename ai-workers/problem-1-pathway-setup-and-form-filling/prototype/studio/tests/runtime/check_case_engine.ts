@@ -3,7 +3,7 @@
 // generated households, answers and values.
 //   tsx studio/tests/runtime/check_case_engine.ts
 import fc from "fast-check";
-import { caseView, checkValue, confirmation, knownOf, shapeOf, type Answer, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { ageOn, caseView, checkValue, confirmation, knownOf, shapeOf, type Answer, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { recorder } from "./api.ts";
 
@@ -103,6 +103,10 @@ prop("property: confirmed = officer-verified, or the client's own typed answer f
 }), 300);
 ok("fail: a client's answer for a fact the officer takes from a document never counts as confirmed", !confirmation(S, ans("p", "person.family_name", "X"), who("p"), null, TODAY).confirmed);
 ok("fail: the representative's facts are never the client's own", !confirmation(S, ans("p", "representative.membership_id", "X", { channel: "questionnaire" }), who("p"), null, TODAY).confirmed);
+// ── PR 7 review D2: ageOn gives no age for a date that is not real or is in the future
+ok("D2 pass: a real past birth date gives the age in whole years (birthday today counts)", ageOn("2015-02-28", TODAY) === 11 && ageOn("2008-10-23", TODAY) === 18 && ageOn("2008-10-24", TODAY) === 17 && ageOn("2024-02-29", TODAY) === 2 && ageOn("2026-10-23", TODAY) === 0);
+ok("D2 fail: an impossible or future birth date gives no age", [ "2015-02-30", "2023-02-29", "2015-13-01", "2015-00-10", "2026-10-24", "2030-01-01"].every((d) => ageOn(d, TODAY) === null));
+ok("D2 fail: a child with an impossible or future birth date does not get the principal's answer counted as confirmed", ["2015-02-30", "2030-01-01"].every((d) => { const c = confirmation(S, ans("c0", "person.criminal_history", true, { channel: "questionnaire" }), who("c0"), d, TODAY); return !c.confirmed && /not a real past date/.test(c.why); }));
 
 // ── field checks
 prop("property: a full date is accepted only if real (and a birth date not in the future); a month-only field refuses a full date", fc.property(fc.integer({ min: 1900, max: 2100 }), fc.integer({ min: 1, max: 12 }), fc.integer({ min: 1, max: 31 }), (y, m, d) => {

@@ -23,11 +23,15 @@ const placementOf = (s: Snapshot, field: string): Placement | undefined => (s.pl
 const fieldOf = (s: Snapshot, field: string): FieldDef | undefined => (s.canonical_fields as FieldDef[]).find((f) => f.id === field);
 export const isClientField = (s: Snapshot, field: string) => CLIENT_SOURCES.has(placementOf(s, field)?.collected_from ?? "") && CLIENT_KINDS.has(subjectKindOf(field));
 
-/** Age in whole years on a day, from an ISO date; null when the date is not a real date. */
+const realDate = (y: number, m: number, d: number) => { const t = new Date(Date.UTC(y, m - 1, d)); return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d && y >= 1900 && y <= 2100; };
+
+/** Age in whole years on a day, from an ISO date; null when the date is not a real date or is after that day
+ *  (PR 7 review D2: an impossible or future birth date never gives an age). */
 export function ageOn(birth: unknown, today: Date): number | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(birth ?? ""));
   if (!m) return null;
   const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  if (!realDate(y, mo, d) || Date.UTC(y, mo - 1, d) > Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())) return null;
   let age = today.getUTCFullYear() - y;
   if (today.getUTCMonth() + 1 < mo || (today.getUTCMonth() + 1 === mo && today.getUTCDate() < d)) age--;
   return age;
@@ -44,7 +48,7 @@ export function confirmation(s: Snapshot, a: Answer, who: Participant | undefine
   if (who?.role === "child") {
     const age = ageOn(birthDate, today);
     if (age !== null && age < MINOR.underAge) return { confirmed: true, why: `${CONFIRM_WORDS.client_own} (for a child under ${MINOR.underAge})` };
-    return { confirmed: false, why: age === null ? `${CONFIRM_WORDS.waits} (the child's date of birth is not answered yet)` : `${CONFIRM_WORDS.by_principal} (the child is ${age})` };
+    return { confirmed: false, why: age === null ? `${CONFIRM_WORDS.waits} (the child's date of birth is not answered yet, or is not a real past date)` : `${CONFIRM_WORDS.by_principal} (the child is ${age})` };
   }
   return { confirmed: false, why: CONFIRM_WORDS.by_principal };
 }
@@ -61,7 +65,6 @@ export function shapeOf(s: Snapshot, field: string) {
   return { maxLength: maxes.length ? Math.min(...maxes) : 500, datePrecision: dayNeeded ? "day" as const : "month" as const, phone: ts.some((t) => /phone_part/.test(t)), money: ts.some((t) => /CAD/.test(t)), choices };
 }
 
-const realDate = (y: number, m: number, d: number) => { const t = new Date(Date.UTC(y, m - 1, d)); return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d && y >= 1900 && y <= 2100; };
 
 /** Characters as a person counts them (an emoji is one), not UTF-16 units. */
 const chars = (x: string) => [...x].length;

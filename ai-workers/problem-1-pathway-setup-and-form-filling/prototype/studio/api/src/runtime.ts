@@ -251,8 +251,12 @@ export class Runtime {
     const seen = new Set(b.seen);
     const at = new Date();
     const confirmed = await this.db.$transaction(async (tx) => {
-      const current = await tx.clientCanonicalAnswer.findMany({ where: { subjectId: b.subjectId, supersededById: null, canonicalFieldKey: { in: [...fields] } } });
-      const currentIds = new Set(current.map((a) => a.id));
+      // A removed row's answers stay stored (history) but are no longer read (PR 7 review D1): only answers outside a
+      // row or in a live row are current; a seen id of a removed row's answer is not "changed".
+      const stored = await tx.clientCanonicalAnswer.findMany({ where: { subjectId: b.subjectId, supersededById: null, canonicalFieldKey: { in: [...fields] } } });
+      const live = new Set((await tx.clientFactRecord.findMany({ where: { subjectId: b.subjectId, supersededById: null, tombstone: false }, select: { rowKey: true } })).map((r) => r.rowKey));
+      const current = stored.filter((a) => a.rowKey === null || live.has(a.rowKey));
+      const currentIds = new Set(stored.map((a) => a.id));
       const gone = [...seen].filter((id) => !currentIds.has(id));
       const unseen = current.filter((a) => a.status === "DECLARED" && !seen.has(a.id));
       if (gone.length || unseen.length) {
