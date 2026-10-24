@@ -88,3 +88,10 @@ Reports: `review-r1c.md`, `break-report-r1c.md`. Each fix has a test; journey 75
 **Fix:** every step waits for the state it needs, never a fixed time: an element shown or gone, a field's value, the focus, or the data underneath; Save and continue waits for the questionnaire reload that ends every save, then for the button to be free; leave-and-resume waits for the overview before reloading; a resize waits two animation frames. The budget step is skipped only when `R1C_SLOW` is set (throttled timings are not budgets).
 **Evidence:** throttled `R1C_SLOW=6` 74/74 (budget skipped); at normal speed on three fresh copies in a row, as `run-suites.sh` runs it (setup → journey → API): setup 13/13, journey 75/75, API 97/97 each time; `run-suites.sh` green after merging main.
 **Lead answers recorded:** union date optional for now with a warning; cross-person rules go to the R1d/M3 plan (`plan.md` "Plan items after R1c"); "(Sample check)" stays on the client's checks until the immigration expert confirms (AGENTS rule 4).
+
+## PR 10 review (Lead, 24 Oct): two defects
+| Finding | Fix | Test (each fails when its fix is removed) |
+|---|---|---|
+| Major: Back saved, ignored a refusal and left the part, losing the typing | Back leaves only when the save succeeded; a refusal keeps the part, shows the summary and moves the focus to it | journey "back fail-guard (PR 10 review)" (cleared amount → stays, value and reason shown, focus on the summary) and "back pass" |
+| Minor: the case list read only the first page (case 51+ unreachable) | "Load more" through the API's `next`/`after` cursor; later pages appended, the first kept; "N cases shown" | journey "case list fail-guard" (50 shown + Load more) and "case list pass" (the oldest case reachable after Load more) |
+Journey 79/79 on a fresh copy, API 97/97, `run-suites.sh` green.
