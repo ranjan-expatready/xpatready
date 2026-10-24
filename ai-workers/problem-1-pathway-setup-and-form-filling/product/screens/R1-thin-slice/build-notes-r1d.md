@@ -50,6 +50,30 @@ Journey 99/99, R1d 25/25, R1a 99/99, engine 36/36; `run-suites.sh --demo` 20/20.
 | (4) IMM 5707 per person | stays as the release places it (expert question on the Lead's list) | |
 Also: the journey's states wait until no button is busy before the screenshot and axe (a contrast flag was caught mid-transition). Journey 102/102 twice on fresh copies, R1d 27/27, R1a 99/99, engine 36/36; `run-suites.sh --demo` 20/20.
 
+## Fixes (CHECK → FIX): review-r1d.md (7/10, Ship after fixes) and break-report-r1d.md (0 Blocker, 7 Major, 6 Minor)
+| Finding | Fix | Test (each fails when its fix is removed) |
+|---|---|---|
+| review M1: a form whose fill trial has not passed could be Ready and Filed (P-65 a) | `trialPassed(form)` reads the evidence lane's own record (`evidence-lane/E1/<form>/STATUS.md`, its "## Verdict": "Passes …" or "The product's part passes …", never "… does not pass …"); the forms list carries `trial_passed`; the row shows "Checked copy, not for filing" and the lock buttons are disabled with the reason; the API refuses the lock (409). Today IMM 0008, 1295, 5257, 5409 and 5707 pass; IMM 1344 ("passes in Adobe … does not pass from the product's file alone") does not; a form with no record does not | R1d "review M1" (mutation: dropping "does not pass" makes IMM 1344 fileable); journey "review M1 fail-guard" |
+| review M2: no test for "an unconfirmed fact blocks ready" | engine RT-14 cases: every required fact answered, one not confirmed → not ready, reason "not confirmed" | engine "RT-14 fail (review M2)" (it passed with the rule removed before; now caught) |
+| review M3 / break m3: the blocking facts only in a tooltip; by-hand form fields unnamed | "What blocks filing (N)" opens a list on the row: question, whose, why (not answered, not confirmed, needs a fix); a copy lists "To write by hand in Adobe: question (reason)"; long lists show 5 and "and N more" | journey "review M3 pass" |
+| review M4: the draft count did not match the copy | worded as what it counts: "Confirmed answers for N of M form fields; K answered but not confirmed stay blank. A copy also lists the form fields to write by hand." | journey "forms: … says" |
+| review M5 / break m2: focus lost when locking | the confirmation takes the focus; Cancel gives it back to the button pressed (found again by its kind, since the buttons are drawn again); after locking, the form's heading takes it | journey "review M5 pass" ×2 and "break m2 pass" (it failed first: the stored element was gone) |
+| break M1: download read the file twice (hash checked on one read, other bytes sent) | one `readFileSync`; those bytes are hashed and sent | code reading (a swap race is not reproducible by a suite) |
+| break M2: a flagged answer ("1991-02-31") counted as ready | readiness: a confirmed answer with a problem is "needs a fix" and blocks | engine "RT-14 fail (break M2)" (mutation caught) |
+| break M3: required groups with no rows never block | **not blocking** (same rule as the questionnaire, `case.ts`): the row says "No entries yet in: …. Add them if they apply before filing." Whether IMM 5257 needs at least one employment or contact row is the immigration expert's question. **Lead decision** if it should block | |
+| break M4: a person marked not travelling hid their filed copy | a form that stops applying stays in view while it has copies (`applies: false`, "no longer applies …; its copies are kept"); Generate disabled, API 422 | R1d "break M4 pass" |
+| break M5 / m5: DELETE of a copy or its snapshot; INSERT of a fabricated generated copy; workspace change; backdated lock | migration `20261024233000_runtime_r1d_guard`: no DELETE while the case exists (the demo reset still deletes cases); a new copy must be QUEUED and empty; `workspace_id` immutable; a lock stamped within 300 s of now | R1d "break M5" ×2 and "break m5 (database)" (mutation: dropping the delete trigger fails them) |
+| break M6: two children with the same name shared readiness | readiness matched by the person's id (`fills[].subject`), not the label | engine "RT-14 pass (break M6)" (mutation caught) |
+| break M7: a job error could crash the queue | `drain()` catches per job; `run()` marks the copy FAILED only while RUNNING (`updateMany`), so a deleted case cannot throw | code reading; restart recovery stays known gap 1 |
+| break m1: a missing file gave 500 | 404 "missing from the working files"; the copy shows "File missing" with no Download (`file_ok`) | R1d "break m1 fail" and "pass" (mutation caught) |
+| break m4: body validated before the role | `copyFor` (who) before `parse(LockCopy)` (what) | R1d "break m4 fail" |
+| break m5: a path leading outside the working files | the real path must lie under the working files (`VAR_ROOT`), else 409 | R1d "break m5 fail" (a symbolic link with the same bytes) |
+| break m6: no cap per case; malformed form names echoed | at most 5 copies of one case queued or running (429 in plain words); a form name must look like "IMM 5257", else 404 "No such form." | R1d "break m6" ×2 (mutation: cap 99 fails it) |
+| review minors 1–2 | "Added or changed:"; "stays"/"stay"; "to answer or confirm" | journey and R1d wording checks |
+Not fixed, recorded: review minor 5 (lock race: readiness checked before the `updateMany`, whose WHERE does not cover the facts: a fact saved in the same instant can make a just-locked copy stale at once, which the stale rule then shows); review minor 6 (no retry, backoff or cancel for the job; known gap 1); non-Latin names written into IMM 5257 (expert question).
+Environment note (cloud): the database role is a superuser here, so the triggers are the guard; they hold for superusers too (only `session_replication_role = replica` skips them).
+Fresh copy, suite order: setup 13/13 → journey 107/107 → R1d 38/38 → R1a 99/99; engine 39/39; explicit any 437 (baseline).
+
 ## Known gaps
 1. Restart recovery of the queue is written, not tested by a suite (a restart mid-generation).
 2. "By hand" counts a confirmed value whose form field has no code for it (option map); the copy lists them, the officer writes them in Adobe.

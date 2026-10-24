@@ -150,11 +150,20 @@ ok("fail: the representative's facts are never the client's own", !confirmation(
   }), 200);
   ok("RT-15 fail-guard: factsOf keeps only confirmed facts with a field, in form-field order", JSON.stringify(factsOf([{ box: "b", caption: "", fact: "x", meaning: null, about: "p", about_label: "", row: null, coverage: "confirmed fact", detail: "", value: 1 }, { box: "a", caption: "", fact: "y", meaning: null, about: "p", about_label: "", row: null, coverage: "confirmed fact", detail: "", value: 2 }, { box: "c", caption: "", fact: "z", meaning: null, about: "p", about_label: "", row: null, coverage: "answered on screen", detail: "", value: 3 }]).map((f) => f.box)) === '["a","b"]');
   const view = caseView(S, ppl, [], [], "agent", TODAY);
-  const need = readiness(view, "F 1", "Applicant");
+  const need = readiness(view, "F 1", "p");
   ok("RT-14 fail: a form with a required fact unconfirmed is not ready to file, and names it (P-71)", !need.ready && need.missing.some((m) => m.fact === "person.family_name"), need.missing.map((m) => m.fact));
-  const all = qs(view).filter((q) => q.required && !q.hidden && q.fills.some((f) => f.form === "F 1" && f.person === "Applicant")).map((q) => ans(q.subjectId, q.fact, q.value_type === "yes_no" ? false : q.value_type === "date" ? "1990-01-01" : "X", { status: "VERIFIED", channel: "confirm_section" }));
-  const done = readiness(caseView(S, ppl, all, [], "agent", TODAY), "F 1", "Applicant");
+  const all = qs(view).filter((q) => q.required && !q.hidden && q.fills.some((f) => f.form === "F 1" && f.subject === "p")).map((q) => ans(q.subjectId, q.fact, q.options?.length ? q.options[0].key : q.value_type === "yes_no" ? false : q.value_type === "date" ? (q.shape.datePrecision === "month" ? "1990-01" : "1990-01-01") : q.value_type === "number" ? "1000" : "X", { status: "VERIFIED", channel: "confirm_section" }));
+  const done = readiness(caseView(S, ppl, all, [], "agent", TODAY), "F 1", "p");
   ok("RT-14 pass: with every required fact confirmed the form is ready to file; optional facts left empty do not block", done.ready, done.missing);
+  const answeredOnly = all.map((a) => ({ ...a, status: "DECLARED" as const, channel: "agent_view" }));
+  const unconf = readiness(caseView(S, ppl, answeredOnly, [], "agent", TODAY), "F 1", "p");
+  ok("RT-14 fail (review M2): facts answered but not confirmed still block filing, named \"not confirmed\"", !unconf.ready && unconf.missing.some((m) => m.reason === "not confirmed"), unconf.missing.map((m) => m.reason));
+  const wrong = all.map((a) => (a.field === "person.date_of_birth" ? { ...a, value: "1991-02-31" } : a));
+  const fix = readiness(caseView(S, ppl, wrong, [], "agent", TODAY), "F 1", "p");
+  ok("RT-14 fail (break M2): a confirmed answer that fails its check (1991-02-31) blocks filing as \"needs a fix\"", !fix.ready && fix.missing.some((m) => m.fact === "person.date_of_birth" && m.reason === "needs a fix"), fix.missing);
+  const twins = [...ppl, { subjectId: "c0", role: "child" as const, label: "Applicant", applies: true }];
+  const tw = caseView(S, twins, all, [], "agent", TODAY);
+  ok("RT-14 pass (break M6): readiness matches the person by id, so another person with the same name never blocks", readiness(tw, "F 1", "p").ready && !readiness(tw, "F 1", "c0").ready);
 }
 // ── PR 7 review D2: ageOn gives no age for a date that is not real or is in the future
 ok("D2 pass: a real past birth date gives the age in whole years (birthday today counts)", ageOn("2015-02-28", TODAY) === 11 && ageOn("2008-10-23", TODAY) === 18 && ageOn("2008-10-24", TODAY) === 17 && ageOn("2024-02-29", TODAY) === 2 && ageOn("2026-10-23", TODAY) === 0);

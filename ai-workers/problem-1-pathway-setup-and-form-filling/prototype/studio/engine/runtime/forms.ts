@@ -4,7 +4,7 @@
 import { createHash } from "node:crypto";
 import { render, type BoxRow, type Person, type Role } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
-import type { QuestionnaireView } from "../../contracts/runtime.ts";
+import type { QuestionnaireView, Readiness } from "../../contracts/runtime.ts";
 import { knownOf, type Answer, type Participant, type Row } from "./case.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
@@ -43,10 +43,16 @@ export function changedFacts(then: FormFact[], now: FormFact[]): string[] {
 }
 
 /** P-71: a form is blocked from filing only by its own Validate (steps a person does on the PDF: shown, not computed
- *  here) and by missing or unconfirmed facts it needs: a required question (not hidden) that fills this form for this
- *  person and has no confirmed answer. Optional facts left empty do not block. */
-export function readiness(view: QuestionnaireView, form: string, personLabel: string) {
-  const needs = view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.person === personLabel) && q.required && !q.hidden);
-  const missing = needs.filter((q) => (q.group ? q.rows.some((r) => !r.answer?.confirmed) : !q.answer?.confirmed)).map((q) => ({ fact: q.fact, label: q.label, about: q.about_label, answered: q.group ? q.rows.some((r) => !!r.answer) : !!q.answer }));
-  return { ready: missing.length === 0, missing };
+ *  here) and by missing or conflicting facts it needs: a required question (not hidden) that fills this form for this
+ *  person (matched by the person's id) with an answer that is missing, not confirmed, or confirmed with a problem (it
+ *  would be written wrong: review and break report M2). Optional facts left empty do not block. */
+export function readiness(view: QuestionnaireView, form: string, subjectId: string): Readiness {
+  const reads = view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden);
+  const reason = (a: { confirmed: boolean; problems: string[] } | null | undefined) => (!a ? "not answered" as const : a.problems.length ? "needs a fix" as const : !a.confirmed ? "not confirmed" as const : null);
+  const missing = reads.filter((q) => q.required).flatMap((q) => {
+    const r = q.group ? q.rows.map((x) => reason(x.answer)).find(Boolean) ?? null : reason(q.answer);
+    return r ? [{ fact: q.fact, label: q.label, about: q.about_label, reason: r }] : [];
+  });
+  const empty_groups = [...new Set(reads.filter((q) => q.group && q.required && q.rows.length === 0).map((q) => q.section_title))];
+  return { ready: missing.length === 0, missing, empty_groups };
 }

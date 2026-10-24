@@ -99,7 +99,8 @@ export type ViewQuestion = {
   options: { key: string; label: string }[] | null; note: string | null;
   /** Country names offered while typing a country that has no answer list yet (the release's country list). */
   countries: string[] | null;
-  fills: { form: string; person: string; boxes: number }[];
+  /** Each form this fact fills, for whom (subject: the person's id, so two people with one name never mix) and how many form fields. */
+  fills: { form: string; person: string; subject: string; boxes: number }[];
 };
 export type ViewSection = { subjectId: string; about_label: string; section: string; title: string; questions: ViewQuestion[]; answered: number; confirmed: number; invalid: number; missing: string[] };
 /** A section check the case's answers trigger (RT-7, release data): a warning on the person's answers, never a block
@@ -123,17 +124,29 @@ export type FormCopy = {
   id: string; status: "QUEUED" | "RUNNING" | "GENERATED" | "FAILED"; created_at: string; created_by: string; finished_at: string | null; error: string | null;
   locked: { kind: keyof typeof LOCK_KINDS; at: string; by: string } | null; out_of_date: boolean; stale: boolean; changed: string[];
   counts: { written: number; by_hand: number; blank: number; not_written: number; by_a_person: number } | null; intact: boolean | null; person_steps: string[];
+  /** Form fields the officer writes by hand in Adobe, each with its question and why (review M3). */
+  by_hand: { label: string; why: string }[];
+  /** The copy's file is on disk and unchanged; false: it cannot be handed over (break m1). */
+  file_ok: boolean;
 };
 /** One form for one person on the case: what a copy made now would write (the draft), whether it can be filed (P-71),
  *  and every copy made, newest first. */
 export type CaseForm = {
   form: string; title: string; subject_id: string; person: string; draft: { written_now: number; mapped: number; unconfirmed: number };
-  readiness: { ready: boolean; missing: { fact: string; label: string; about: string; answered: boolean }[] }; copies: FormCopy[];
+  readiness: Readiness; copies: FormCopy[];
+  /** The evidence lane's fill trial for this form passed (P-65 (a)); until it does a copy is "Checked copy, not for filing". */
+  trial_passed: boolean;
+  /** The form no longer applies to this person (for example marked not travelling); its copies stay listed (break M4). */
+  applies: boolean;
 };
+/** P-71: what blocks filing one form for one person. missing: a required fact not answered, answered but not confirmed,
+ *  or confirmed with a problem (it would be written wrong). empty_groups: repeating groups the form reads with no entries
+ *  (shown before filing; whether a group needs one entry is configuration, not known yet). */
+export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" }[]; empty_groups: string[] };
 
 /** Which forms an answer fills, short enough for a household (Lead, R1d early look): one line per form, the person named
  *  when there is one, else how many people ("IMM 5257 for 6 people"); with counts, the form fields it fills (P-63). */
-export function fillsText(fills: { form: string; person: string; boxes: number }[], counts = false): string {
+export function fillsText(fills: { form: string; person: string; subject?: string; boxes: number }[], counts = false): string {
   const byForm = new Map<string, { person: string; boxes: number }[]>();
   for (const f of fills) byForm.set(f.form, [...(byForm.get(f.form) ?? []), f]);
   return [...byForm].map(([form, list]) => {

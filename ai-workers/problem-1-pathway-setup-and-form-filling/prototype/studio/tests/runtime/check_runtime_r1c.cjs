@@ -265,7 +265,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await o.goto(`${BASE}/cases/${caseId}`); await idle(o);
   const forms = o.locator("section", { has: o.getByRole("heading", { name: "Forms", exact: true }) });
   const imm = forms.getByRole("listitem").filter({ has: o.getByRole("heading", { name: /IMM 5257 for Sample Applicant C/ }) });
-  step("forms: IMM 5257 for the principal says what a copy made now writes and what blocks filing", await shows(imm.getByText(/A copy made now writes \d+ of \d+ form fields from confirmed answers/)) && await shows(imm.getByText(/facts? to confirm before filing|Ready to file/)));
+  step("forms: IMM 5257 for the principal says what a copy made now writes and what blocks filing", await shows(imm.getByText(/Confirmed answers for \d+ of \d+ form fields/)) && await shows(imm.getByText(/facts? to confirm before filing|Ready to file/)));
   await imm.getByRole("button", { name: "Generate a copy" }).click();
   step("forms RT-13 pass: the copy is generated in the background, then shown as generated, read back and checked", await shows(imm.getByText("Generated", { exact: true })) && await shows(imm.getByText(/form fields written.* · read back and checked/)));
   await state(o, "forms-generated", [1440, 1024]);
@@ -273,6 +273,9 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await imm.getByRole("button", { name: /^Download the copy/ }).first().click();
   step("forms pass: the copy downloads as a PDF", await dl.then(async (d) => /\.pdf$/.test(d.suggestedFilename())).catch(() => false));
   step("P-71 fail-guard: while facts are missing, Filed and Validated copy uploaded back are disabled and say why", await imm.getByRole("button", { name: "Filed" }).isDisabled() && await shows(imm.getByText(/Not yet: \d+ facts? to confirm before filing: confirm/)));
+  await imm.getByText(/^What blocks filing \(\d+\)$/).click();
+  step("review M3 pass: what blocks filing is listed on the page (question, whose, why), not only in a tooltip", await shows(imm.getByRole("listitem").filter({ hasText: /\(Sample Applicant C\): (not answered|not confirmed|needs a fix)$/ }).first()));
+  step("review M1 fail-guard: IMM 5257's fill trial passed, so its copies are not marked \"Checked copy, not for filing\"", await gone(imm.getByText("Checked copy, not for filing")));
   // Confirm every required fact IMM 5257 reads for the principal (Sample values by type), as the officer would.
   const sample = (q) => q.options?.length ? q.options[0].key : q.shape.phone ? { country_code: "1", number: "5550100" } : q.value_type === "yes_no" ? false
     : q.value_type === "date" ? (q.shape.datePrecision === "month" ? "1990-01" : "1990-01-01") : q.value_type === "number" ? "1000"
@@ -292,10 +295,17 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("P-71 pass: with every required fact confirmed, IMM 5257 is ready to file and the earlier copy is out of date", await shows(imm.getByText("Ready to file")) && await shows(imm.getByText("Out of date")));
   await imm.getByRole("button", { name: "Generate a new copy" }).click();
   await shows(imm.getByText("Generated", { exact: true }));
+  const focused = (l) => l.evaluate((el) => el === document.activeElement).catch(() => false);
+  const lockBtn = imm.getByRole("group", { name: "Lock this copy" }).getByRole("button", { name: "Lock", exact: true });
+  await imm.getByRole("button", { name: "Filed" }).click();
+  step("review M5 pass: asking to lock moves the keyboard focus to the Lock confirmation", await shows(lockBtn) && await eventually(() => focused(lockBtn)));
+  await imm.getByRole("group", { name: "Lock this copy" }).getByRole("button", { name: "Cancel" }).click();
+  step("break m2 pass: Cancel gives the focus back to the button pressed", await gone(lockBtn) && await eventually(() => focused(imm.getByRole("button", { name: "Filed" }))));
   await imm.getByRole("button", { name: "Filed" }).click();
   await state(o, "forms-lock-confirm", [1440]);
-  await imm.getByRole("group", { name: "Lock this copy" }).getByRole("button", { name: "Lock", exact: true }).click();
+  await lockBtn.click();
   step("forms RT-16 pass: locking asks first, then shows the copy as Filed", await shows(imm.getByText("Filed", { exact: true })) && await gone(imm.getByRole("button", { name: "Filed" })));
+  step("review M5 pass: after locking, the focus is on the form's heading, not lost to the page", await eventually(() => focused(imm.getByRole("heading", { name: /IMM 5257 for Sample Applicant C/ }))));
   await o.getByRole("tab", { name: /^The application/ }).click();
   await visitSec.getByRole("button", { name: /^Edit When will the visit end/ }).click();
   const endEdit2 = o.getByRole("dialog").getByRole("group", { name: /visit end/ });

@@ -47,6 +47,7 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
   const qc = useQueryClient(), toast = useToast();
   const [working, setWorking] = React.useState(false);
   const [locking, setLocking] = React.useState<keyof typeof LOCK_KINDS | null>(null);
+  const heading = React.useRef<HTMLHeadingElement>(null);
   // The latest copy, and the latest locked one (the copy that was filed or uploaded back) always in view.
   const latest = f.copies[0], locked = f.copies.find((c) => c.locked);
   const earlier = f.copies.filter((c) => c !== latest && c !== locked);
@@ -62,24 +63,37 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
     try { await api(`/runtime/form-copies/${id}/lock`, { method: "POST", json: { kind } }); toast.push({ tone: "ok", text: `Copy locked: ${LOCK_KINDS[kind]}. It never changes; a later answer marks it stale.` }); }
     catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); }
     setLocking(null); await refresh(); setWorking(false);
+    heading.current?.focus(); // the lock buttons are gone: the focus goes to the form's heading, not the page (review M5)
   }
-  // P-71: a copy is filed or uploaded back only when the form is ready to file; until then the buttons say why.
-  const lockable = latest && latest.status === "GENERATED" && !latest.locked && !latest.out_of_date;
-  const canLock = lockable && f.readiness.ready;
-  const lockBlocked = lockable && !f.readiness.ready ? notReady(f.readiness.missing.length) : null;
+  // P-71 and P-65 (a): a copy is filed or uploaded back only when the form is ready to file and its fill trial passed;
+  // until then the buttons say why.
+  const lockable = latest && latest.status === "GENERATED" && !latest.locked && !latest.out_of_date && latest.file_ok;
+  const why = !f.trial_passed ? `${f.form}'s fill trial has not passed yet: this is a checked copy, not for filing.` : !f.readiness.ready ? notReady(f.readiness.missing.length) : null;
+  const canLock = lockable && !why;
+  const lockBlocked = lockable && why ? why : null;
+  const missing = f.readiness.missing;
   return (
     <li className="space-y-2 px-4 py-3">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <FileText className="size-4 text-text-muted" aria-hidden />
-        <h3 className="text-sm font-semibold">{f.form} <span className="font-normal text-text-muted">for</span> <span className="[overflow-wrap:anywhere]">{f.person}</span></h3>
-        {f.readiness.ready ? <Pill tone="ok" title="Every required fact this form reads is confirmed (the form's own Validate still runs in Adobe)"><Check className="size-3" aria-hidden />Ready to file</Pill>
-          : <Pill tone="warn" title={f.readiness.missing.slice(0, 12).map((m) => `${m.label} (${m.about})`).join("; ")}>{f.readiness.missing.length} fact{f.readiness.missing.length === 1 ? "" : "s"} to confirm before filing</Pill>}
+        <h3 ref={heading} tabIndex={-1} className="text-sm font-semibold outline-none">{f.form} <span className="font-normal text-text-muted">for</span> <span className="[overflow-wrap:anywhere]">{f.person}</span></h3>
+        {!f.trial_passed ? <Pill tone="warn" title="The evidence lane's fill trial for this form has not passed (P-65)">Checked copy, not for filing</Pill> : null}
+        {f.readiness.ready ? <Pill tone="ok" title="Every required fact this form reads is confirmed and passes its checks (the form's own Validate still runs in Adobe)"><Check className="size-3" aria-hidden />Ready to file</Pill>
+          : <Pill tone="warn">{missing.length} fact{missing.length === 1 ? "" : "s"} to confirm before filing</Pill>}
         <span className="flex-1" />
-        <Button size="sm" variant={!latest || latest.out_of_date || latest.status === "FAILED" ? "default" : "secondary"} busy={working || (latest ? busy(latest) : false)} onClick={() => void generate()}>
+        <Button size="sm" variant={!latest || latest.out_of_date || latest.status === "FAILED" ? "default" : "secondary"} disabled={!f.applies} busy={working || (latest ? busy(latest) : false)} onClick={() => void generate()}>
           <RefreshCw aria-hidden />{latest ? "Generate a new copy" : "Generate a copy"}
         </Button>
       </div>
-      <p className="text-[13px] text-text-muted">A copy made now writes {f.draft.written_now} of {f.draft.mapped} form fields from confirmed answers{f.draft.unconfirmed ? `; ${f.draft.unconfirmed} answered but not confirmed stay blank` : ""}.</p>
+      {!f.applies ? <p className="text-[13px] text-text-muted">This form no longer applies to {f.person} (for example, not travelling); its copies are kept.</p> : null}
+      <p className="text-[13px] text-text-muted">Confirmed answers for {f.draft.written_now} of {f.draft.mapped} form fields{f.draft.unconfirmed ? `; ${f.draft.unconfirmed} answered but not confirmed stay blank` : ""}. A copy also lists the form fields to write by hand.</p>
+      {missing.length ? (
+        <details className="text-[13px]">
+          <summary className="cursor-pointer text-text-link">What blocks filing ({missing.length})</summary>
+          <ul className="mt-1 list-disc space-y-0.5 pl-6">{missing.map((m) => <li key={`${m.fact}|${m.about}`}>{m.label} <span className="text-text-muted">({m.about}): {m.reason}</span></li>)}</ul>
+        </details>
+      ) : null}
+      {f.readiness.empty_groups.length ? <p className="text-[13px] text-text-muted">No entries yet in: {f.readiness.empty_groups.join(", ")}. Add them if they apply before filing.</p> : null}
       {latest ? <CopyLine c={latest} canLock={!!canLock} lockBlocked={lockBlocked} locking={locking} setLocking={setLocking} lock={lock} working={working} /> : null}
       {locked && locked !== latest ? <CopyLine c={locked} canLock={false} locking={null} setLocking={() => {}} lock={lock} working={working} /> : null}
       {earlier.length ? (
@@ -92,8 +106,25 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
   );
 }
 
+const FIRST = 5;
+/** A list that may be long (38 newly confirmed facts): the first few, the rest behind "more". */
+function Few({ items }: { items: string[] }) {
+  if (items.length <= FIRST) return <>{items.join(", ")}</>;
+  return <>{items.slice(0, FIRST).join(", ")} <details className="inline"><summary className="inline cursor-pointer text-text-link">and {items.length - FIRST} more</summary>{items.slice(FIRST).join(", ")}</details></>;
+}
+
 function CopyLine({ c, canLock, lockBlocked = null, locking, setLocking, lock, working, compact }: { c: FormCopy; canLock: boolean; lockBlocked?: string | null; locking: keyof typeof LOCK_KINDS | null; setLocking: (k: keyof typeof LOCK_KINDS | null) => void; lock: (id: string, k: keyof typeof LOCK_KINDS) => Promise<void>; working: boolean; compact?: boolean }) {
   const toast = useToast();
+  const confirmRef = React.useRef<HTMLButtonElement>(null);
+  const buttons = React.useRef<Partial<Record<keyof typeof LOCK_KINDS, HTMLButtonElement | null>>>({}), back = React.useRef<keyof typeof LOCK_KINDS | null>(null);
+  // Keyboard (review M5, break m2): the confirmation takes the focus; Cancel gives it back to the button pressed (drawn
+  // again once the confirmation closes, so it is found by its kind, not kept as an element).
+  React.useEffect(() => {
+    if (locking) confirmRef.current?.focus();
+    else if (back.current) { buttons.current[back.current]?.focus(); back.current = null; }
+  }, [locking]);
+  const ask = (kind: keyof typeof LOCK_KINDS) => () => setLocking(kind);
+  const cancel = () => { back.current = locking; setLocking(null); };
   async function download() {
     try {
       const r = await fetch(`/api/runtime/form-copies/${c.id}/file`, { headers: { "x-actor": getActor() } });
@@ -107,25 +138,27 @@ function CopyLine({ c, canLock, lockBlocked = null, locking, setLocking, lock, w
       <div className="flex flex-wrap items-center gap-2 text-[13px]">
         <CopyState c={c} />
         <span className="text-text-muted">Copy of {when(c.created_at)}{c.counts ? ` · ${c.counts.written} form fields written${c.counts.by_hand ? `, ${c.counts.by_hand} by hand` : ""}` : ""}{c.intact ? " · read back and checked" : ""}</span>
-        {c.status === "GENERATED" ? <Button size="sm" variant="ghost" onClick={() => void download()} aria-label={`Download the copy of ${when(c.created_at)}`}><Download aria-hidden />Download</Button> : null}
+        {c.status === "GENERATED" && c.file_ok ? <Button size="sm" variant="ghost" onClick={() => void download()} aria-label={`Download the copy of ${when(c.created_at)}`}><Download aria-hidden />Download</Button> : null}
+        {c.status === "GENERATED" && !c.file_ok ? <Pill tone="danger" title="The file is missing from the working files">File missing</Pill> : null}
         {lockBlocked ? <>
           <Button size="sm" variant="secondary" disabled aria-describedby={`lock-why-${c.id}`}><Lock aria-hidden />Validated copy uploaded back</Button>
           <Button size="sm" variant="secondary" disabled aria-describedby={`lock-why-${c.id}`}><Lock aria-hidden />Filed</Button>
         </> : null}
         {canLock && !locking ? <>
-          <Button size="sm" variant="secondary" onClick={() => setLocking("validated_copy_uploaded")}><Lock aria-hidden />Validated copy uploaded back</Button>
-          <Button size="sm" variant="secondary" onClick={() => setLocking("filed")}><Lock aria-hidden />Filed</Button>
+          <Button ref={(b) => { buttons.current.validated_copy_uploaded = b; }} size="sm" variant="secondary" onClick={ask("validated_copy_uploaded")}><Lock aria-hidden />Validated copy uploaded back</Button>
+          <Button ref={(b) => { buttons.current.filed = b; }} size="sm" variant="secondary" onClick={ask("filed")}><Lock aria-hidden />Filed</Button>
         </> : null}
       </div>
       {lockBlocked ? <p id={`lock-why-${c.id}`} className="text-[13px] text-text-muted">Not yet: {lockBlocked}</p> : null}
       {!compact && locking ? (
         <div role="group" aria-label="Lock this copy" className="flex flex-wrap items-center gap-2 text-[13px]">
           <span>Lock this copy as “{LOCK_KINDS[locking]}”? A locked copy never changes; a later answer marks it stale.</span>
-          <Button size="sm" busy={working} onClick={() => void lock(c.id, locking)}>Lock</Button>
-          <Button size="sm" variant="ghost" onClick={() => setLocking(null)}>Cancel</Button>
+          <Button ref={confirmRef} size="sm" busy={working} onClick={() => void lock(c.id, locking)}>Lock</Button>
+          <Button size="sm" variant="ghost" onClick={cancel}>Cancel</Button>
         </div>
       ) : null}
-      {!compact && (c.out_of_date || c.stale) ? <p className="flex items-start gap-1 text-[13px] text-text-warn"><AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />{c.stale ? "Facts changed after this copy was locked; the locked file is kept as it was." : "Facts changed since this copy was made; generate a new copy to file it."} Changed: {c.changed.join(", ")}.</p> : null}
+      {!compact && (c.out_of_date || c.stale) ? <p className="flex items-start gap-1 text-[13px] text-text-warn"><AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden /><span>{c.stale ? "Facts changed after this copy was locked; the locked file is kept as it was." : "Facts changed since this copy was made; generate a new copy to file it."} Changed: <Few items={c.changed} />.</span></p> : null}
+      {!compact && c.status === "GENERATED" && c.by_hand.length ? <p className="text-[13px] text-text-muted">To write by hand in Adobe: <Few items={c.by_hand.map((b) => `${b.label}${b.why ? ` (${b.why})` : ""}`)} />.</p> : null}
       {!compact && c.status === "FAILED" ? <p className="text-[13px] text-text-danger">{c.error}</p> : null}
       {!compact && c.status === "GENERATED" && c.person_steps.length ? <p className="text-[13px] text-text-muted">Before filing, on the PDF: {c.person_steps.join(" ")}</p> : null}
     </div>

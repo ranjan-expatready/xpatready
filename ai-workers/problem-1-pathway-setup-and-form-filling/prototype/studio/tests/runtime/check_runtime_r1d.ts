@@ -5,10 +5,12 @@
 //   zsh studio/tools/isolated.sh runtime_r1 4430 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4430 xr_studio_runtime_r1
 //   tsx studio/tests/runtime/check_runtime_r1d.ts 4430 xr_studio_runtime_r1
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { copyFileSync, readFileSync, renameSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { request } from "node:http";
 import { join } from "node:path";
 import { client, recorder } from "./api.ts";
+import { trialPassed } from "../../api/src/fill-case.ts";
 
 const PORT = Number(process.argv[2] ?? 4430), DB = process.argv[3] ?? "xr_studio_runtime_r1";
 const { call, sql, until } = client(PORT, DB);
@@ -21,9 +23,9 @@ const bytes = (path: string, actor: string) => new Promise<{ status: number; bod
   const req = request({ host: "127.0.0.1", port: PORT, path: `/api${path}`, headers: { "x-actor": actor }, agent: false }, (res) => { const c: Buffer[] = []; res.on("data", (x: Buffer) => c.push(x)); res.on("end", () => resolve({ status: res.statusCode ?? 0, body: Buffer.concat(c) })); });
   req.on("error", reject); req.end();
 });
-type Copy = { id: string; status: string; locked: { kind: string } | null; out_of_date: boolean; stale: boolean; changed: string[]; counts: { written: number; not_written: number } | null; intact: boolean | null };
+type Copy = { id: string; status: string; locked: { kind: string } | null; out_of_date: boolean; stale: boolean; changed: string[]; counts: { written: number; not_written: number } | null; intact: boolean | null; file_ok: boolean };
 type Q = { subjectId: string; fact: string; value_type: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; required: boolean; hidden: boolean; group: string | null; fills: { form: string; person: string }[]; answer: { confirmed: boolean } | null };
-type Form = { form: string; subject_id: string; person: string; draft: { written_now: number; mapped: number; unconfirmed: number }; readiness: { ready: boolean; missing: { fact: string }[] }; copies: Copy[] };
+type Form = { form: string; subject_id: string; applies: boolean; person: string; draft: { written_now: number; mapped: number; unconfirmed: number }; readiness: { ready: boolean; missing: { fact: string }[] }; copies: Copy[] };
 
 async function main() {
   const vv = sql("select id from combination where combination_key='vv.single'");
@@ -137,6 +139,44 @@ async function main() {
   const audit = sql(`select coalesce(string_agg(summary || ' ' || coalesce(detail::text, ''), ' '), '') from audit_event where entity = 'form copy'`);
   ok("RT-17 pass: queued, generated and locked copies are in the audit trail", /asked for a new copy of IMM 5257/.test(audit) && /generated: \d+ form fields written/.test(audit) && /locked copy/.test(audit));
   ok("RT-17 fail-guard: no answer value or typed name appears in the audit of copies", !["SAMPLED", "SAMPLEP123", "SAMPLEP999", "APPLICANTE", "1990-04-13", "Sample Applicant D", "Sample Spouse D"].some((x) => audit.includes(x)));
+
+  // ── CHECK → FIX (review-r1d.md, break-report-r1d.md): each fix with a test
+  const refusedWith = (q: string, why: RegExp) => { try { sql(q); return false; } catch (e) { return why.test((e as Error).message); } };
+  r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%20%3Cb%3Ex%3C%2Fb%3E/${P}/generate`, {}, OFFICER);
+  ok("break m6 fail: a malformed form name is 404 and never echoed back", r.status === 404 && !/<b>/.test(JSON.stringify(r.body)), r.body?.detail);
+  r = await call("POST", `/runtime/form-copies/${second}/lock`, { kind: "printed" }, CLIENT);
+  ok("break m4 fail: the client sending a wrong lock kind is told 403 (who may lock), not 400 (what was sent)", r.status === 403, r.status);
+  ok("break M5 fail (database): a copy and the facts it read cannot be deleted while their case exists",
+    refusedWith(`delete from form_instance where id='${spouseCopy}'`, /runtime_copy_no_delete/) && refusedWith(`delete from answer_snapshot where id=(select snapshot_id from form_instance where id='${spouseCopy}')`, /runtime_copy_no_delete/));
+  ok("break M5 fail (database): a copy cannot be inserted already generated (it starts queued and empty)",
+    refusedWith(`insert into form_instance (id, workspace_id, case_id, subject_id, form_number, config_release_id, snapshot_id, status, path, created_by) select gen_random_uuid(), workspace_id, case_id, subject_id, form_number, config_release_id, snapshot_id, 'GENERATED', 'x.pdf', created_by from form_instance where id='${spouseCopy}'`, /runtime_form_instance_insert/));
+  ok("break m5 fail (database): a copy keeps its workspace, and a lock cannot be backdated",
+    refusedWith(`update form_instance set workspace_id=gen_random_uuid() where id='${spouse2}'`, /keeps what it is a copy of/)
+    && refusedWith(`update form_instance set locked_kind='filed', locked_at=now() - interval '1 day', locked_by='user-O' where id='${spouse2}'`, /stamped when it is made/));
+  // The file: missing (break m1), outside the working files (break m5), changed on disk.
+  const p2 = join(ROOT, sql(`select path from form_instance where id='${second}'`)), aside = `${p2}.aside`;
+  renameSync(p2, aside);
+  const missingOk = (await bytes(`/runtime/form-copies/${second}/file`, OFFICER)).status === 404 && (await formOf("IMM 5257", P)).copies.find((x) => x.id === second)!.file_ok === false;
+  const outside = join(tmpdir(), `r1d-${run}.pdf`); copyFileSync(aside, outside); symlinkSync(outside, p2);
+  const outsideOk = (await bytes(`/runtime/form-copies/${second}/file`, OFFICER)).status === 409;
+  rmSync(p2); rmSync(outside); renameSync(aside, p2);
+  ok("break m1 fail: a copy whose file is missing is 404 to download and shows \"file missing\" (file_ok false)", missingOk);
+  ok("break m5 fail: a copy's file that leads outside the working files (a link) is not handed over (409), even with the same bytes", outsideOk);
+  ok("break m1 pass: with its file back, the copy downloads again", (await bytes(`/runtime/form-copies/${second}/file`, OFFICER)).status === 200);
+  // A person marked not travelling keeps their copies in view (break M4); no new copy for them.
+  await call("PATCH", `/runtime/cases/${caseId}/people/${spouse}`, { applies: false }, OFFICER);
+  f = await formOf("IMM 5257", spouse);
+  r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${spouse}/generate`, { idempotencyKey: `gen-${run}-gone` }, OFFICER);
+  ok("break M4 pass: a person marked not travelling still shows the form with its copies, marked as no longer applying; a new copy is refused (422)", !!f && f.applies === false && f.copies.length === 2 && r.status === 422, { applies: f?.applies, copies: f?.copies.length, status: r.status });
+  await call("PATCH", `/runtime/cases/${caseId}/people/${spouse}`, { applies: true }, OFFICER);
+  // One case cannot fill the queue (break m6): the sixth copy waiting at once is refused (429).
+  const burst: { status: number; body: { id?: string } }[] = [];
+  for (let i = 0; i < 6; i++) burst.push(await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-burst-${i}` }, OFFICER));
+  ok("break m6 fail: at most 5 copies of one case wait or run at once; the next is 429 in plain words", burst.slice(0, 5).every((x) => x.status === 202) && burst[5].status === 429, burst.map((x) => x.status));
+  for (const x of burst) if (x.body.id) await done(x.body.id);
+  // P-65 (a), review M1: the fill trial verdict gates filing, per form.
+  ok("review M1: a form whose fill trial passed is fileable; one with no trial record, or a verdict that the product's file does not pass, is not",
+    trialPassed("IMM 5257") && !trialPassed("IMM 9999") && !trialPassed("IMM 1344"), { imm1344: trialPassed("IMM 1344") });
   process.exitCode = summary() ? 1 : 0;
 }
 main().catch((e) => { console.error(e); process.exitCode = 1; });
