@@ -15,7 +15,8 @@ Written by the qa lane only; never app code. Each finding in `product/qa/BUGS.md
 | `check_qa19_demo_leftovers.ts` | QA-19 old stored step texts on the shared demo (read-only, GET only) | `tsx tests/qa/check_qa19_demo_leftovers.ts 4400` |
 | `check_qa14_variants.ts` | QA-14 follow-up: spelling variants of one name sent at once (category, sub-category) | `zsh tools/isolated.sh qa_race 4479 start && tsx tests/qa/check_qa14_variants.ts 4479 xr_studio_qa_race` |
 | `check_qa22_author_flash.cjs` | QA-22 the author is told they cannot author while the session loads | `zsh tools/isolated.sh qa_j5 4477 start && node tests/qa/check_qa22_author_flash.cjs http://localhost:4477` (empty copy) |
-| `check_qa_r1a_probe.ts` | R1a runtime API probes (C6.1–C6.3, C6.6, C6.10); QA-23 (D1), QA-24 (D2), QA-25, QA-26 | see its header (setup_visitor_visa.ts first) |
+| `check_qa_r1a_probe.ts` | R1a runtime API probes (C6.1–C6.3, C6.6, C6.10); QA-23 (D1), QA-24 (D2), QA-25, QA-26, QA-28 | see its header (setup_visitor_visa.ts first) |
+| `check_qa_s2_probe.ts` | forms slice 2 API probes (C3.1, C3.3, C3.9); QA-27, QA-29 (D3), QA-30–QA-33 | `tsx tests/qa/check_qa_s2_probe.ts 4472` (starts its own copy with `STUDIO_PART_PAUSE_MS=3000`; US$0) |
 | `check_qa_s01_channels.cjs` | Screen 01 forms features C1.6, C1.7, C2.7, C2.10; QA-20 at 400 px | see its header; `QA_HEADED=1` shows the browser |
 | QA-8, QA-21 | AI sandbox in lane copies; racy builder check | the builder suites themselves: `tests/check_ai_orchestration.ts`, `tests/check_screen01_browser.cjs` |
 | `check_qa_m2_journeys.cjs` | M2 journeys J1–J8 (author, reviewer, approver; QA-1 in the browser, QA-6, QA-7, QA-10, QA-11) | see its header; `QA_HEADED=1` shows the browser |
