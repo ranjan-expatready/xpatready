@@ -30,8 +30,12 @@ whoami_() {
          runtime-*) echo runtime;; qa-*) echo qa;; *) echo unbound;; esac;;
   esac
 }
-lane_branch() {  # newest origin branch of a lane, short name without origin/
-  git -C "$HERE" for-each-ref --sort=-committerdate --format='%(refname:short)' "refs/remotes/origin/$1/" "refs/remotes/origin/claude/$1-*" | head -1 | sed 's#^origin/##'
+lane_branch() {  # the lane's newest origin branch with work not yet in main (else its newest), short name
+  local rb first=""; for rb in $(git -C "$HERE" for-each-ref --sort=-committerdate --format='%(refname:short)' "refs/remotes/origin/$1/" "refs/remotes/origin/claude/$1-*"); do
+    [ -n "$first" ] || first="$rb"
+    git -C "$HERE" merge-base --is-ancestor "$rb" origin/main 2>/dev/null && continue
+    echo "${rb#origin/}"; return; done
+  [ -n "$first" ] && echo "${first#origin/}"
 }
 field() { grep -m1 "^$1:" "$2" 2>/dev/null | cut -d' ' -f2-; }
 table_() {

@@ -72,19 +72,21 @@ if [ "$(id -u)" = 0 ]; then
   for t in psql createdb dropdb pg_dump pg_restore; do ln -sf "$PGBIN/$t" "/usr/local/bin/$t"; done
   mkdir -p "$PGDATA"; chown postgres "$PGDATA"; chmod 700 "$PGDATA"
 else RUN=""; export PATH="$PGBIN:$PATH"; fi
-if [ "$(uname -s)" = Linux ] && [ "$(id -u)" = 0 ]; then
+if [ "$(uname -s)" = Linux ]; then
   # Compatibility with Mac paths still written in scripts and tests (BACKLOG B31): the Homebrew PostgreSQL tools, the
-  # Google Chrome that Playwright's channel "chrome" opens (the cloud image's Chromium stands in), and the Mac-only
-  # Playwright require path in three browser checks (served by the studio's own playwright package).
-  HB=/opt/homebrew/opt/postgresql@18/bin; mkdir -p "$HB"
-  for t in psql createdb dropdb pg_dump pg_restore; do ln -sf "$PGBIN/$t" "$HB/$t"; done; ln -sf /usr/local/bin/pg_ctl "$HB/pg_ctl"
+  # Google Chrome that Playwright's channel "chrome" opens (the cloud image's Chromium stands in where Chrome is
+  # missing), and the Mac-only Playwright require path in three browser checks (served by the studio's playwright).
+  # As root (cloud) or with sudo (CI runners).
+  HB=/opt/homebrew/opt/postgresql@18/bin; $SUDO mkdir -p "$HB" /opt/homebrew/bin
+  for t in psql createdb dropdb pg_dump pg_restore; do $SUDO ln -sf "$PGBIN/$t" "$HB/$t"; done
+  if [ "$(id -u)" = 0 ]; then ln -sf /usr/local/bin/pg_ctl "$HB/pg_ctl"; else $SUDO ln -sf "$PGBIN/pg_ctl" "$HB/pg_ctl"; fi
   command -v pdftoppm >/dev/null || apt poppler-utils
-  mkdir -p /opt/homebrew/bin; for t in openssl pdftoppm pdftotext pdfinfo python3 tesseract; do
-    command -v "$t" >/dev/null && [ ! -e "/opt/homebrew/bin/$t" ] && ln -sf "$(command -v "$t")" "/opt/homebrew/bin/$t"; done
+  for t in openssl pdftoppm pdftotext pdfinfo python3 tesseract; do
+    command -v "$t" >/dev/null && [ ! -e "/opt/homebrew/bin/$t" ] && $SUDO ln -sf "$(command -v "$t")" "/opt/homebrew/bin/$t"; done
   CR=$(ls -d /opt/pw-browsers/chromium-*/chrome-linux*/chrome 2>/dev/null | sort -V | tail -1)
-  [ -x /opt/google/chrome/chrome ] || { [ -n "$CR" ] && mkdir -p /opt/google/chrome && ln -sf "$CR" /opt/google/chrome/chrome && echo "chrome channel -> $CR"; }
+  [ -x /opt/google/chrome/chrome ] || { [ -n "$CR" ] && $SUDO mkdir -p /opt/google/chrome && $SUDO ln -sf "$CR" /opt/google/chrome/chrome && echo "chrome channel -> $CR"; }
   MACPW=$(grep -rhoE '"/Users/[^"]*/node_modules/playwright"' "$STUDIO/tests" 2>/dev/null | head -1 | tr -d '"')
-  [ -n "$MACPW" ] && [ ! -e "$MACPW" ] && mkdir -p "$(dirname "$MACPW")" && ln -sfn "$ROOT/$STUDIO/node_modules/playwright" "$MACPW"
+  [ -n "$MACPW" ] && [ ! -e "$MACPW" ] && $SUDO mkdir -p "$(dirname "$MACPW")" && $SUDO ln -sfn "$ROOT/$STUDIO/node_modules/playwright" "$MACPW"
 fi
 if [ ! -f "$PGDATA/PG_VERSION" ]; then
   $RUN "$PGBIN/initdb" -D "$PGDATA" -U xr_studio -A trust -E UTF8 >/dev/null && echo "cluster created"

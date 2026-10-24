@@ -380,6 +380,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await op.getByText(/online form added/).waitFor({ timeout: 30000 }).catch(() => {});
   step("C2.7: the screens are read, checked for answers and sent for approval", /Awaiting a second person/.test(await op.textContent()) && (await op.getByRole("list", { name: "Screen results" }).getByText("Added").count()) === 3);
   await op.getByRole("button", { name: "Close" }).first().click(); await idle();
+  await p.waitForFunction(() => /Awaiting a second person/.test(document.querySelector("[data-online-forms]")?.textContent ?? ""), null, { timeout: 8000 }).catch(() => {}); // Lead check L2: the list refreshes after the panel closes
   step("C2.7: the combination lists the online form as \"Awaiting a second person\"", /IMM 5707.*Awaiting a second person/s.test(await p.locator("[data-online-forms]").textContent()));
   await state("combination-online-form-awaiting");
   await as("user-B");

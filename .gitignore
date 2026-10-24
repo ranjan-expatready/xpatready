@@ -18,6 +18,8 @@ archive/
 .env.*
 .tools
 __pycache__/
+# P-86: regenerated in a second by product/tools/graph.mjs; GRAPH.md (--write, qa lane) is the committed summary
+ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/graph.json
 .playwright-mcp/
 # Lanes setup (P-64, 23 Oct): never commit secrets, local tools, databases, logs, installed packages or generated runs
 **/studio/var/

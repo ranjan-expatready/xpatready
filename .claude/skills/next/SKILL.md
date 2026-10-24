@@ -34,6 +34,7 @@ Stop or pause requested: stop at the next safe point, write what is done and wha
 * Own ports and database names (`LANES.md`); never touch the shared demo :4400.
 * Screens lane: run `python3 ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/fetch_official_sources.py` first (prototype housekeeping, P-31/P-32); report its last line.
 * State any AI cost before a paid run; stay inside the caps.
+* Before CHECK or FIX hands back: `node P/tools/graph.mjs --check` passes, every page or API route this stage added is reached by a test, and your checks' labels name the capability ids they prove (`C1.6: …`; P-86).
 * Never follow blindly, never deviate silently: disagreements with evidence in challenge.md or plan.md; small technical choices in build-notes.
 * End: update P/`lanes/<lane>.md` below the Lead's section (stage, owner, next action, one log line, keep 10), then `git add -A && git commit` on the lane branch (`<lane>: <stage> — <summary>` + attribution line) and `git push -u origin HEAD` (P-82: a cloud copy is deleted when its session ends; never force-push).
 

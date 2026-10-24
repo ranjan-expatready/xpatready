@@ -1,6 +1,7 @@
 # CI (P-81, P-82): the push guard on every push and pull request; on pull requests also the rules-file checks,
 # the decision-impact check, the explicit-any count and the engine/contract suites on PostgreSQL 18; the
-# official IRCC PDFs are committed (P-83) and verified by manifest checksum.
+# official IRCC PDFs are committed (P-83) and verified by manifest checksum. On every push (P-85): the full studio
+# suites (product/tools/run-suites.sh, the same script the Lead and lanes run) on a machine set up by cloud-setup.sh.
 name: ci
 on:
   push:
@@ -57,3 +58,29 @@ jobs:
         run: |
           S=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
           "$S/node_modules/.bin/tsx" --tsconfig "$S/api/tsconfig.json" "$S/tests/check_engine.ts"
+  suites:
+    # P-85: every push (lane branches, main, pull request heads); a newer push to the same branch cancels the older run.
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    concurrency: { group: "suites-${{ github.ref }}", cancel-in-progress: true }
+    steps:
+      - uses: actions/checkout@v4
+      - name: set up like a cloud session (cloud-setup.sh)
+        run: bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/cloud-setup.sh
+      - name: graph (P-86; fails on a page calling a missing API route or a missing decision)
+        run: node ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/graph.mjs --check
+      - name: studio suites (run-suites.sh --demo; no model call, US$0)
+        run: |
+          bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/run-suites.sh --demo | tee suites.md
+          exit ${PIPESTATUS[0]}
+      - name: summary
+        if: always()
+        run: '[ -f suites.md ] && cat suites.md >> "$GITHUB_STEP_SUMMARY" || true'
+      - name: logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: suite-logs
+          path: ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/var/suites/
+          retention-days: 14

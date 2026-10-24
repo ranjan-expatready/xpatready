@@ -13,5 +13,7 @@ You did not build this screen. Use only saved files, the running app and the tes
 
 **Write `screens/NN/review.md`** (under 100 lines): Verdict (Ship / Ship after fixes / Rework) · D1–D20 scores with one line of evidence each (D17 and D20 "simulated only" unless an intended user walked it) · issues ranked, each Must or Should, with file:line or screenshot and the fix · what you could not check. Edit nothing else (the Lead check and the founder's walkthrough live in `lead-check.md`).
 
+**Graph (P-86):** run `node ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/graph.mjs` and read `ai-workers/problem-1-pathway-setup-and-form-filling/product/qa/GRAPH.md` for this screen: every element must serve a capability of this screen (else it is scaffolding or misplaced); its pages and API routes without a test, and capabilities it claims that no test names, are findings.
+
 **Capability or scaffolding (P-33):** a demo step that works only through scaffolding (sample loader, script, replay) instead of the product's own screen is a Major finding.
 **Scope (P-26):** check only what the concept's "What gets built" section lists. Anything on its "Not built" line is not a finding, and "the team's screen has it" is never a finding.
