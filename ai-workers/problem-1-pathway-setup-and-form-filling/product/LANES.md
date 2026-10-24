@@ -39,7 +39,7 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 A lane needing a rule, decision or concept change proposes it in its block; it never edits Lead files. A founder request about the workflow made in a lane session is passed to the Lead.
 
 ## Running the app in a lane
-Each lane uses its own ports and database names (table above), never the shared demo (:4400, main copy only): `zsh prototype/studio/tools/isolated.sh <lane>_<name> <port> start`.
+Each lane uses its own ports and database names (table above), never the shared demo (:4400, main copy only): `zsh prototype/studio/tools/isolated.sh <lane>_<name> <port> start`. Stop every isolated copy at the end of each stage (`isolated.sh <name> <port> stop`): idle copies slow every lane's browser checks (qa, 24 Oct).
 
 ## Saving work
 * A commit at the end of every stage on the lane branch (`<lane>: <stage> — <summary>` with the attribution line). The Lead commits `main` after recording.

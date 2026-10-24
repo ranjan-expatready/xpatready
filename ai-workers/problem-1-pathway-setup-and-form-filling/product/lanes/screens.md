@@ -7,6 +7,8 @@
 
 2026-10-23 18:40 (Lead): no change to the Screen 01 fix pass. For Screen 02 later: founder decided P-79 (one "To review" page first under Configure, also listing combinations waiting for release as links); PRODUCT §3 menu, SCREENS 02 and the Screen 02 draft updated; capability C5.3. Also P-80: a held PDF is approved in the product by a second person (uploader records the IRCC page; approval adds its checksum to the approved list); capability C2.3.
 
+2026-10-24 (Lead): next pass after Screen 01 merges: QA-14 (same-parent names unique in the database, normalised name) and QA-17 (Recent steps show the date when not today). QA-13 and QA-16 are retested by qa after the merge.
+
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_screen: 01-programs-catalogue
