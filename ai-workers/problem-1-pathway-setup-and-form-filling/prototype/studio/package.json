@@ -1,6 +1,7 @@
 {
   "name": "solution-1-studio-node",
   "private": true,
+  "type": "module",
   "description": "Product Studio prototype toolchain (founder yes 21 Oct 2026 under AIW-D258/D276): exact team-pinned versions; lockfile carries integrity hashes.",
   "engines": {
     "node": "24.21.0"
