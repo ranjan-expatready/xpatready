@@ -100,7 +100,7 @@ case "$1" in
       [ -n "$mo" ] && [ "$mo" != "$ow" ] && ow="$ow (main says: $mo)"
       up=$(git -C "$wt" log -1 --format='%cd' --date=format:'%d %b %H:%M' 2>/dev/null)
       dirty=$(git -C "$wt" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-      echo "$ln | stage: ${st:-?} | owner: ${ow:-?} | last commit: ${up:-none} | uncommitted: $dirty | behind main: $(git -C "$wt" rev-list --count HEAD..main 2>/dev/null) | $wt"
+      echo "$ln | stage: ${st:-?} | owner: ${ow:-?} | last commit: ${up:-none} | uncommitted: $dirty | behind main: $(git -C "$wt" rev-list --count HEAD..origin/main 2>/dev/null || git -C "$wt" rev-list --count HEAD..main 2>/dev/null) | $wt"
     done
     # Lanes pushed from the cloud or another machine (P-82): their newest branch on origin.
     for ln in $LANES; do lb=$(lane_branch "$ln"); [ -n "$lb" ] || continue

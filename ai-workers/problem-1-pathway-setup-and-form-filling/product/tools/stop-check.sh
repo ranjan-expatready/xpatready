@@ -15,7 +15,8 @@ reasons=""
 LANE=$(bash "$PH/tools/lane.sh" whoami 2>/dev/null); case "$LANE" in lead|unbound) SF="$PH/STATE.md";; *) SF="$PH/lanes/$LANE.md";; esac
 # (1) Lead-owned files: a lane proposes changes in its block; it never edits them (founder requests about the workflow go to the Lead).
 if [ "$LANE" != lead ] && [ "$LANE" != unbound ]; then
-  base=$(git merge-base main HEAD 2>/dev/null || git merge-base origin/main HEAD 2>/dev/null)
+  # GitHub's main is the truth (P-82): a lane syncs origin/main, so compare with it before a local main that may lag.
+  base=$(git merge-base origin/main HEAD 2>/dev/null || git merge-base main HEAD 2>/dev/null)
   touched=$( { [ -n "$base" ] && git diff --name-only "$base" HEAD; git status --porcelain | cut -c4- | tr -d '"'; } 2>/dev/null | sort -u)
   lead=$(printf '%s\n' "$touched" | grep -E "^(\.claude/(skills|agents|settings)|CLAUDE\.md$|AGENTS\.md$|$PH/[^/]+\.md$|$PH/(decisions|domain|tools|design)/|$PH/screens/[^/]+/(concept|lead-check)\.md$|$PH/lanes/)" | grep -v -x "$SF" | head -8)
   [ -n "$lead" ] && reasons="- This $LANE lane changed Lead-owned files (LANES.md, 'Files: one writer each'). Undo these changes (git checkout main -- <file>, or revert the commit) and propose them in your $BLOCK block instead:
