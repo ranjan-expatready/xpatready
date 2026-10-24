@@ -5,6 +5,7 @@ sources/
 code/
 archive/
 *.pdf
+!ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/**/*.pdf
 *.zip
 *.tar.gz
 *.dump
