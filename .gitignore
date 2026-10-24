@@ -4,6 +4,10 @@ node_modules/
 sources/
 code/
 archive/
+# also as links (a lane copy may link them, P-64)
+/sources
+/code
+/archive
 *.pdf
 !ai-workers/problem-1-pathway-setup-and-form-filling/official-sources/**/*.pdf
 *.zip
@@ -12,7 +16,7 @@ archive/
 *.sql.gz
 .env
 .env.*
-.tools/
+.tools
 __pycache__/
 .playwright-mcp/
 # Lanes setup (P-64, 23 Oct): never commit secrets, local tools, databases, logs, installed packages or generated runs
