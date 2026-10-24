@@ -98,7 +98,7 @@ export class Ai implements OnModuleInit {
       expected_usd: targets.some((t) => t.action === "draft" && t.expected_usd === null) ? null : round(targets.reduce((a, t) => a + (t.expected_usd ?? 0), 0)), worst_usd: round(targets.reduce((a, t) => a + t.worst_usd, 0)) };
     const ledger = this.sources.ledger();
     const plan_sha256 = sha(JSON.stringify({ mode, scope: scope.kind, targets: targets.map((t) => [t.combinationId, t.attachmentId, t.action, t.run_file ?? null, t.fingerprint ?? null]) }));
-    return { operation: "draft_field_maps", operation_label: "Draft field maps for added forms", capability_note: "AI drafts each form's field map (which fact fills each box). Questions, sections, document requirements and rules are not AI-drafted here: people author them, and AI field maps only propose library fields.", scope: { ...scope, label }, mode, targets: targets.map((t) => ({ ...t, action_label: ACTION_TEXT[t.action] })), totals, ledger, per_run_cap_usd: RUN_CAP_USD, plan_sha256 };
+    return { operation: "draft_field_maps", operation_label: "Draft field maps for added forms", capability_note: "AI drafts each form's field map (which fact fills each form field). Questions, sections, document requirements and rules are not AI-drafted here: people author them, and AI field maps only propose library fields.", scope: { ...scope, label }, mode, targets: targets.map((t) => ({ ...t, action_label: ACTION_TEXT[t.action] })), totals, ledger, per_run_cap_usd: RUN_CAP_USD, plan_sha256 };
   }
 
   /** Expected cost from the newest real run of the same input; worst case exactly as the ledger reserves it. */

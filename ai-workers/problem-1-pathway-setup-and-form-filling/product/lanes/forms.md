@@ -1,7 +1,7 @@
 # Lane: forms — PDF and online forms (P-61–P-63)
 
 ## From the Lead
-2026-10-23 17:05 (Lead): slice 1 merged into main (d795b019). **BUILD slice 2** (backend path), as agreed in `screens/F1-forms-channels/challenge.md` §2 and "Added to slice 2": the guard's link-hop fix first (`p2/guard.ts`, with a test; QA-8: AI steps fail in every lane copy); the A4 backend (reuse first, split by section groups, per-part progress, merge flags near-duplicates); guarded admission of screen inventories and the `screen_map` job for leftovers; the evidence lane's findings F1–F3 (phone boxes' shown state or a person step, never type signatures, write values in the form's own format: `prototype/evidence-lane/E1/imm1344/STATUS.md`) and IMM 0008's empty-dependant-block finding; one pass and one fail test per rule. **US$0 only:** stub and saved answers; the paid IMM 0008/5669/5406 drafts wait for the founder's go after A4 is in. Then CHECK (reviewer + breaker) → owner Lead. The extension (F2) is being drafted as a concept by the Lead's design helper; you will challenge it after slice 2.
+2026-10-24 (Lead): Screen 01 merged into main (1cb174a6) and touches files you also changed (`api/src/forms.ts`, `engine/channels.ts`, contracts). Before the Lead check: sync main, resolve any conflict, rerun all your suites on lane ports, commit, and set CHECK owner Lead again with the new commit. Add to your next FIX pass: QA-15 (any case for form codes at capture start), QA-18 (engine branch coverage back above 85%: tests for twin.ts and the other new engine files). Stop isolated copies at the end of the stage.
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

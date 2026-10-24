@@ -23,7 +23,7 @@ export function FormsPage() {
             <tr key={f.code}>
               <td className="mono whitespace-nowrap">{f.code}</td>
               <td>{f.title}{f.kind !== "data_form" ? <Pill tone="neutral" className="ml-2">Checklist or instructions</Pill> : null}</td>
-              <td>{f.editions.length ? f.editions.map((e) => <p key={e.label} className="whitespace-nowrap">{e.label.replace(`${f.code} `, "")} · {e.mapped ? `${e.boxes} boxes mapped` : "boxes not mapped yet"}{e.approved ? "" : " · not an approved official file"}</p>) : <span className="text-text-muted">no edition stored</span>}</td>
+              <td>{f.editions.length ? f.editions.map((e) => <p key={e.label} className="whitespace-nowrap">{e.label.replace(`${f.code} `, "")} · {e.mapped ? `${e.boxes} form fields mapped` : "form fields not mapped yet"}{e.approved ? "" : " · not an approved official file"}</p>) : <span className="text-text-muted">no edition stored</span>}</td>
               <td className="tabular-nums">{f.usedBy} {f.usedBy === 1 ? "combination" : "combinations"}</td>
             </tr>
           ))}

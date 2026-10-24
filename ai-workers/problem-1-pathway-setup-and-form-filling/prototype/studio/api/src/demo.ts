@@ -36,7 +36,9 @@ export class Demo {
 
   async status() {
     const workspaceId = await this.ws.id();
-    return { loaded: (await this.db.programDef.count({ where: { workspaceId, nodeKind: { not: "PATHWAY" } } })) > 0, scope: await this.scope(workspaceId), preserved: this.preserved() };
+    // loaded: the sample inputs are in this workspace; programsExist: something blocks loading them (QA-12).
+    const [sample, programs] = await Promise.all([this.db.auditEvent.count({ where: { workspaceId, action: "loaded", entity: "sample inputs" } }), this.db.programDef.count({ where: { workspaceId, nodeKind: { not: "PATHWAY" } } })]);
+    return { loaded: sample > 0, programsExist: programs > 0, scope: await this.scope(workspaceId), preserved: this.preserved() };
   }
 
   async load(actor: Actor) {
@@ -69,7 +71,7 @@ export class Demo {
       const authors = [rel.author.user_id];
       const pack = await this.db.packVersion.create({ data: { workspaceId, version: 1, authorIds: authors, approverId: rel.approver.user_id, summary: { rows: 1, via: "imported reviewed release", imported_from: "p3/releases/c1-v3" } } });
       await this.db.configRelease.create({ data: { workspaceId, combinationId: comp.id, version: 1, status: "RELEASED", snapshot: snapshot as any, sha256, packVersionId: pack.id, summary: { imported_from: "p3/releases/c1-v3", c1_v3_sha256: rel.configuration_sha256, drafting_runs: rel.drafting_run_ids, counts }, authorId: rel.author.user_id, submitterId: rel.submitter.user_id, approverId: rel.approver.user_id, basis: "Imported reviewed release: AI-drafted under the guarded path, reviewed and approved by a second person. Prototype only; not specialist-confirmed." } });
-      for (const a of await this.db.sourceAttachment.findMany({ where: { combinationId: comp.id, status: { in: ["READ", "RECOGNISED"] } } })) await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `${a.edition}: its box map from the reviewed release is in the library.` } });
+      for (const a of await this.db.sourceAttachment.findMany({ where: { combinationId: comp.id, status: { in: ["READ", "RECOGNISED"] } } })) await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "IN_LIBRARY", statusDetail: `${a.edition}: its field map from the reviewed release is in the library.` } });
       log.push(`  ${path}: started from the reviewed work-permit release (${Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(", ")}); recorded as Release 1`);
     };
     for (const p of sample.programs) {
@@ -102,7 +104,7 @@ export class Demo {
     const rows: Record<string, number> = {
       "Pathways and programs": await t.programDef.count({ where: ws }), Combinations: await t.combination.count({ where: ws }), Releases: await t.packVersion.count({ where: ws }), "Source attachments": await t.sourceAttachment.count({ where: ws }), "Form intake records": await t.intakeItem.count({ where: ws }),
       "Field definitions (all versions)": await t.canonicalField.count({ where: ws }), Sections: await t.logicalSection.count({ where: ws }), "Question placements": await t.sectionQuestion.count({ where: ws }),
-      "Forms and editions": (await t.govFormDef.count({ where: ws })) + (await t.formEdition.count({ where: ws })), "Form map boxes": await t.formFieldMap.count({ where: ws }),
+      "Forms and editions": (await t.govFormDef.count({ where: ws })) + (await t.formEdition.count({ where: ws })), "Field map entries (form fields)": await t.formFieldMap.count({ where: ws }),
       "Forms in combinations": await t.combinationForm.count({ where: ws }), "Document types and requirements": (await t.documentType.count({ where: ws })) + (await t.documentRequirement.count({ where: ws })),
       "Rules (conditions)": await t.predicate.count({ where: ws }), Checks: await t.check.count({ where: ws }), "Derived fields": await t.derivedField.count({ where: ws }),
       "AI and reading steps": await t.draftingJob.count({ where: ws }), "AI proposals and decisions": await t.normalizationItem.count({ where: ws }),

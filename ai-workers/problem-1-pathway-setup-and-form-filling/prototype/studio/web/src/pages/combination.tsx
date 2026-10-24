@@ -1,9 +1,10 @@
 import * as React from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import type { CatalogueLeaf, CombinationSummary, CombinationView, HeldFile, ParticipantLine, SessionView } from "../../../contracts/programs";
-import { ArrowRight, ChevronRight, Pencil, Plus } from "lucide-react";
+import { sharedStep, type CatalogueLeaf, type CombinationSummary, type CombinationView, type HeldFile, type ParticipantLine, type SessionView } from "../../../contracts/programs";
+import { ArrowRight, ChevronRight, Globe, Pencil, Plus } from "lucide-react";
 import { CATALOGUE_URL_KEY, STATUS_WORD } from "@/pages/programs";
 import { AddFormPanel } from "@/components/forms";
+import { AddOnlineFormPanel, ChannelCell, FilingLine, OnlineForms, UseDefaults } from "@/components/channels";
 import { SHOW_ONLY_STEPS, StepLabel, StepTip, useNextStep } from "@/components/next-step";
 import { StatusChip, TipProvider } from "@/components/status";
 import { api, useActorId, useAction, useApi } from "@/lib/api";
@@ -96,7 +97,8 @@ function NextStep({ row }: { row: CatalogueLeaf }) {
 
 function Overview({ d, sum, show }: { d: CombinationView; sum: CombinationSummary | undefined; show: string | null }) {
   const [edit, setEdit] = React.useState(false);
-  const [adding, setAdding] = React.useState(false);
+  const [adding, setAdding] = React.useState(false), [addingOnline, setAddingOnline] = React.useState(false);
+  const [resume, setResume] = React.useState<CombinationSummary["onlineForms"][number] | undefined>(undefined);
   const actorId = useActorId();
   const session = useApi<SessionView>(["session", actorId], "/session");
   const canAuthor = (session.data?.actor?.duties ?? []).includes("author");
@@ -115,6 +117,7 @@ function Overview({ d, sum, show }: { d: CombinationView; sum: CombinationSummar
         <section ref={missingRef} tabIndex={-1} aria-labelledby="ov-missing" className={cn("rounded-xl border border-danger/30 bg-danger/5 p-4 outline-none", show === "missing" && "ring-[3px] ring-danger/30")}>
           <h2 id="ov-missing" className="font-semibold">{row?.release ? `Why firms cannot use it (${missing.length})` : `Missing before firms can use it (${missing.length})`}</h2>
           <ul className="mt-2 space-y-1 text-sm">{missing.map((m, i) => <li key={i} className="flex gap-2"><span aria-hidden className="mt-1.5 size-1.5 shrink-0 rounded-full bg-danger" />{m.text}</li>)}</ul>
+          {sharedStep(missing) ? <p className="mt-2 text-sm" data-shared-step>Next step for all of these: <b className="font-semibold">{sharedStep(missing)}</b>.</p> : null}
         </section>
       ) : null}
       {held.length ? (
@@ -125,17 +128,22 @@ function Overview({ d, sum, show }: { d: CombinationView; sum: CombinationSummar
         </section>
       ) : null}
       <section className="rounded-xl border border-border bg-surface-raised p-5 shadow-sm" aria-labelledby="ov-forms">
-        <div className="flex items-center justify-between gap-3"><h2 id="ov-forms" className="font-semibold">Forms</h2>{canAuthor ? <Button size="sm" variant="secondary" onClick={() => setAdding(true)}><Plus /> Add form</Button> : null}</div>
+        <div className="flex flex-wrap items-center justify-between gap-3"><h2 id="ov-forms" className="font-semibold">Forms</h2>{canAuthor ? <div className="flex gap-2"><Button size="sm" variant="secondary" onClick={() => setAdding(true)}><Plus /> Add form</Button><Button size="sm" variant="secondary" onClick={() => setAddingOnline(true)}><Globe /> Add an online form</Button></div> : null}</div>
+        {sum ? <FilingLine id={d.combination.id} sum={sum} canAuthor={canAuthor} /> : null}
         {!sum ? <Spinner label="Loading forms" /> : !(sum.forms.length + pending.length) ? <p className="mt-2 text-sm text-text-muted">No forms yet. Add the forms this application files: pick them from the library or upload the IRCC PDFs.</p> : (
-          <Table className="mt-3" dense head={["Form", "Edition", "Boxes mapped", "Who and when"]}>
-            {sum.forms.map((f) => <tr key={f.code}><td><span className="mono font-medium">{f.code}</span> <span className="text-text-muted">{f.title}</span></td><td>{f.edition ?? (f.document ? "checklist" : "none mapped")}</td><td className="tabular-nums">{f.document ? "n/a" : f.boxes}</td><td className="text-xs text-text-muted">{f.who.replace(/_/g, " ")} · {f.when}</td></tr>)}
-            {pending.map((f) => <tr key={f.code}><td><span className="mono font-medium">{f.code}</span></td><td colSpan={3} className="text-xs text-text-muted">{f.inLibrary ? "Attached as a source. Its boxes are already mapped in the library, so it is added without AI." : "Attached as a source. Its boxes are not mapped yet; AI drafts them."}</td></tr>)}
+          <Table className="mt-3" dense head={["Form", "Edition", "Form fields mapped", "Who and when", "Filed as"]}>
+            {sum.forms.map((f) => <tr key={f.code}><td><span className="mono font-medium">{f.code}</span> <span className="text-text-muted">{f.title}</span></td><td>{f.edition ?? (f.document ? "checklist" : f.channel === "ONLINE" ? "no online version mapped" : "none mapped")}</td><td className="tabular-nums">{f.document ? "n/a" : f.boxes}</td><td className="text-xs text-text-muted">{f.who.replace(/_/g, " ")} · {f.when}</td><td><ChannelCell id={d.combination.id} line={f} canAuthor={canAuthor} /></td></tr>)}
+            {pending.map((f) => <tr key={f.code}><td><span className="mono font-medium">{f.code}</span></td><td colSpan={4} className="text-xs text-text-muted">{f.inLibrary ? "Attached as a source. Its form fields are already mapped in the library, so it is added without AI." : "Attached as a source. Its form fields are not mapped yet; AI drafts them."}</td></tr>)}
           </Table>
         )}
-        {adding ? <AddFormPanel combinationId={d.combination.id} label={d.combination.label} have={(row?.forms ?? []).map((f) => f.code)} onClose={() => setAdding(false)} /> : null}
+        {sum ? <UseDefaults id={d.combination.id} sum={sum} canAuthor={canAuthor} /> : null}
+        {sum?.channelProblems.length ? <ul className="mt-3 space-y-1 text-sm" aria-label="Filing problems">{sum.channelProblems.map((p, i) => <li key={i} className="flex gap-2"><Pill tone={p.level === "error" ? "danger" : "warn"}>{p.level === "error" ? "Blocks release" : "Warning"}</Pill>{p.message}</li>)}</ul> : null}
+        {sum ? <OnlineForms id={d.combination.id} sum={sum} canAuthor={canAuthor} onContinue={(o) => { setResume(o); setAddingOnline(true); }} /> : null}
+        {adding ? <AddFormPanel combinationId={d.combination.id} label={d.combination.label} have={(sum?.forms ?? []).map((f) => f.code)} onClose={() => setAdding(false)} /> : null}
+        {addingOnline && sum ? <AddOnlineFormPanel key={resume?.id ?? "new"} resume={resume} id={d.combination.id} sum={sum} codes={[...new Set([...sum.forms.filter((f) => !f.document).map((f) => f.code), ...pending.map((f) => f.code)])]} onClose={() => { setAddingOnline(false); setResume(undefined); }} /> : null}
       </section>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Forms" value={k.forms} sub={`${k.map_boxes} mapped boxes`} />
+        <Stat label="Forms" value={k.forms} sub={`${k.map_boxes} mapped form fields`} />
         {/* The row's own count (BR-10), so the tile never contradicts the missing list; the words say what it counts. */}
         <Stat label="Questions" value={row?.counts?.questions ?? 0} sub={`questions across all people (each person role counted) · ${k.sections} sections · ${k.fields} fields`} />
         <Stat label="Documents" value={k.document_requirements} sub="base and conditional requirements" />

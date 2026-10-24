@@ -69,9 +69,13 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   // A released row that firms cannot use (Not ready): a form but no questions, released by a second person.
   const ss = (await api("/combinations", { method: "POST", data: { nodeKey: "individual.work_permits.open.spouse_student" } })).body.combination;
   await api(`/combinations/${ss.id}/lines`, { method: "POST", data: { kind: "FORM", formKey: "IMM 1295" } });
+  // A release needs its review first (QA-1): the author submits, the content reviewer signs any expert change.
+  await api(`/combinations/${ss.id}/submit`, { method: "POST", data: {} });
+  const ssSme = ((await api(`/combinations/${ss.id}/review`)).body.submission?.changeSummary ?? []).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);
+  if (ssSme.length) await api(`/combinations/${ss.id}/signoff`, { method: "POST", actor: "user-C", data: { items: ssSme, action: "signed" } });
   const dr = (await api("/draft")).body;
   r = await api("/pack/release", { method: "POST", actor: "user-B", data: { expectedChanges: dr.changes } });
-  step("setup: one row released but not startable (Not ready), released by a second person", r.status === 201, r.body?.detail ?? r.body?.pack);
+  step("setup: one row submitted, then released but not startable (Not ready), by a second person", r.status === 201, r.body?.detail ?? r.body?.pack);
 
   // ======================================================== Programs: Needs work (default)
   // Cold = first page of a freshly launched headless browser (bundle download and parse included); the budget is checked
@@ -104,7 +108,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const libBtn = grid().locator('[data-next-step="add_from_library"]').first();
   await libBtn.focus(); await p.waitForTimeout(400);
   const libTip = (await p.getByRole("tooltip").first().textContent().catch(() => "")) ?? "";
-  step("F3: \"Add N forms from the library\" has a tooltip naming the forms: reuses box maps, no AI, draft only", /IMM \d{4}.*reuses box maps already in the library\. No AI\. Adds to the draft only; nothing changes for firms until release\./.test(libTip), libTip);
+  step("F3: \"Add N forms from the library\" has a tooltip naming the forms: reuses field maps, no AI, draft only", /IMM \d{4}.*reuses field maps already in the library\. No AI\. Adds to the draft only; nothing changes for firms until release\./.test(libTip), libTip);
   await grid().locator('[role="row"][tabindex="0"]').first().focus();
   await p.keyboard.press("Tab"); await p.waitForTimeout(300);
   step("review #7: Tab from the active row reaches its status chip, which explains itself", (await p.evaluate(() => document.activeElement?.getAttribute("data-status"))) !== null && /firms can|released|setup|startable/i.test((await p.getByRole("tooltip").first().textContent().catch(() => "")) ?? ""));
@@ -168,6 +172,11 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const back = await p.evaluate(() => ({ url: location.search, sel: document.querySelector('[role="row"][aria-selected="true"]')?.getAttribute("data-label"), y: Math.round(window.scrollY), focus: document.activeElement?.getAttribute("data-label") }));
   step("P-50: Back keeps the view (All), highlights the opened row and restores the scroll", back.url.includes("f=all") && back.sel === focusedLabel && Math.abs(back.y - scrollBefore) < 40 && back.focus === focusedLabel, JSON.stringify({ ...back, scrollBefore }));
   await state("programs-back-row-highlighted", { viewport: true });
+  // Review should 5: the browser's own Back button does the same.
+  await row("Super visa").click(); await p.waitForURL(/\/c\//); await idle(); // a row already set up (opening a not-started one would start it)
+  await p.goBack(); await grid().waitFor(); await idle(); await p.waitForTimeout(200);
+  const backBtn = await p.evaluate(() => ({ sel: document.querySelector('[role="row"][aria-selected="true"]')?.getAttribute("data-label"), focus: document.activeElement?.getAttribute("data-label"), url: location.search }));
+  step("review should 5: the browser's Back button returns to the list with the opened row highlighted and focused", backBtn.sel === "Super visa" && backBtn.focus === "Super visa" && backBtn.url.includes("f=all"), JSON.stringify(backBtn));
 
   // ======================================================== the combination page (row target)
   await p.goto(`${BASE}/?f=all`); await idle();
@@ -179,7 +188,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await p.getByRole("region", { name: /Missing before firms can use it/ }).locator("li").first().waitFor();
   const vvHeadStep = (await p.locator("main [data-next-step]").first().textContent()).trim();
   const vvMiss = await p.getByRole("region", { name: /Missing before firms can use it/ }).locator("li").allTextContents();
-  step("item 1: Visitor visa — row step = header step = first missing line's step; sources and set-up forms counted apart", vvRowStep === "Add 1 form from the library" && vvHeadStep === vvRowStep && vvMiss[0]?.trim() === `2 forms attached as sources, 0 set up. Next step: ${vvRowStep}.` && !vvMiss.some((x) => /No forms yet|Add sources/.test(x)), `${vvRowStep} | ${vvHeadStep} | ${vvMiss.join(" | ")}`);
+  step("item 1: Visitor visa — row step = header step = the missing list's one shared step (said once); sources and set-up forms counted apart", vvRowStep === "Add 1 form from the library" && vvHeadStep === vvRowStep && vvMiss[0]?.trim() === "2 forms attached as sources, 0 set up." && (await p.locator("[data-shared-step]").textContent()) === `Next step for all of these: ${vvRowStep}.` && !vvMiss.some((x) => /Next step/.test(x)) && !vvMiss.some((x) => /No forms yet|Add sources/.test(x)), `${vvRowStep} | ${vvHeadStep} | ${vvMiss.join(" | ")}`);
   // Lead check items 3 and 5: no warnings on a combination with no setup; the Questions tile says what it counts.
   const vvTiles = await p.locator("main").textContent();
   step("item 3: a combination with no setup shows no warnings (\"no problems\")", !/\d+ warnings?/.test(vvTiles) && /no problems/.test(vvTiles));
@@ -260,7 +269,8 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await p.getByRole("region", { name: /Missing before firms can use it|Why firms cannot use it/ }).locator("li").first().waitFor(); // the list arrives with the page summary
   const miss = await p.getByRole("region", { name: /Missing before firms can use it|Why firms cannot use it/ }).locator("li").allTextContents();
   step("See N missing opens the combination page with each missing item", miss.length >= 1, miss.join(" | "));
-  step("F2: one cause, one line, each with its next step (no line per person role)", miss.every((x) => /Next step: /.test(x)) && !miss.some((x) => /has no questions/.test(x)) && miss.filter((x) => /No questions yet for/.test(x)).length <= 1, miss.join(" | "));
+  const shared = await p.locator("[data-shared-step]").count();
+  step("F2: one cause, one line; the next step said once (under the list when shared, else on each line); no line per person role", (shared ? miss.length > 1 && !miss.some((x) => /Next step/.test(x)) : miss.every((x) => /Next step: /.test(x))) && !miss.some((x) => /has no questions/.test(x)) && miss.filter((x) => /No questions yet for/.test(x)).length <= 1, miss.join(" | "));
   await state("combination-page-show-missing");
 
   // A not-started row opens a page too (the author starts it); a non-author is told who does.
@@ -294,6 +304,103 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const placeholdersFit = await p.locator('input[role="combobox"]').evaluateAll((xs) => xs.every((x) => { const c = document.createElement("canvas").getContext("2d"); c.font = getComputedStyle(x).font; return c.measureText(x.placeholder).width <= x.clientWidth - 24; }));
   step("review #10: a path back to Programs, no stray hint under Pathway, placeholders not cut", await p.getByRole("navigation", { name: "Path" }).getByRole("link", { name: "Programs" }).count() === 1 && !/^exists$/m.test(await p.locator("main").innerText()) && placeholdersFit);
   await state("new-combination-path-builder");
+
+  // ======================================================== fix pass (Lead note 23 Oct): QA-6, QA-7, QA-11, QA-1, QA-10, P-63
+  const level = async (i, text, choose = /^Create/) => {
+    const box = p.locator('main input[placeholder="Choose or type"]').nth(i);
+    await box.click(); await box.fill(text); await p.waitForTimeout(250);
+    const opt = p.getByRole("option", { name: choose }).first();
+    if (await opt.count()) await opt.click();
+    await idle();
+  };
+  await p.goto(`${BASE}/new`); await idle();
+  await level(0, "A".repeat(60) + " " + "B".repeat(70)); await level(1, "Long test");
+  const longMsg = await p.locator("#pk-program-hint").textContent();
+  step("QA-7: a 131-character program name shows \"Keep the name under 120 characters.\" on its field, and Create is not offered", longMsg === "Keep the name under 120 characters." && await p.getByRole("button", { name: "Create and add sources" }).isDisabled() && (await api("/path-options?pathway=INDIVIDUAL")).body.programs.every((x) => x.label.length <= 120), longMsg);
+  await state("new-combination-name-too-long", { viewport: true });
+  await p.goto(`${BASE}/new`); await idle();
+  await level(0, "!!!"); await level(1, "???");
+  const symMsg = await p.locator("#pk-program-hint").textContent();
+  step("QA-6: a name of symbols only says to use letters or digits; nothing can be created", /letters or digits/.test(symMsg) && await p.getByRole("button", { name: "Create and add sources" }).isDisabled(), symMsg);
+  await p.goto(`${BASE}/new`); await idle();
+  await level(0, "Work permits", /^Work permits/); await level(1, "Employer-specific", /^Employer-specific/); await level(2, "With an LMIA", /^With an LMIA/);
+  const wpId = (await cat("pathway=INDIVIDUAL&filter=all")).rows.find((x) => x.nodeKey === "individual.work_permits.employer_specific.with_lmia").combinationId;
+  await p.getByRole("button", { name: "Open the existing combination" }).click(); await p.waitForURL(/\/c\//, { timeout: 5000 }).catch(() => {}); await idle();
+  step("QA-11: \"Open the existing combination\" opens that combination's page (not the list)", p.url().endsWith(`/c/${wpId}`), p.url());
+  // QA-1 on the shared Release page: a changed combination nobody submitted is held back with the reason.
+  await p.goto(`${BASE}/release`); await idle();
+  const relRow = p.getByRole("row", { name: /Study permit/ }).first();
+  const relText = (await relRow.textContent()) ?? "";
+  step("QA-1: the shared Release page holds back a combination nobody submitted, saying why", /Held back: Not submitted for review/.test(relText), relText);
+  await as("user-B"); await idle();
+  step("QA-1: with nothing reviewed, the approver has nothing to release (button off)", await p.getByRole("button", { name: "Nothing ready to release" }).isDisabled());
+  await state("release-page-held-not-submitted");
+  await as("user-A");
+  await api(`/combinations/${st.combinationId}/submit`, { method: "POST", data: {} });
+  const stSme = ((await api(`/combinations/${st.combinationId}/review`)).body.submission?.changeSummary ?? []).filter((x) => x.needs_sme).map((x) => `${x.kind}|${x.key}`);
+  if (stSme.length) await api(`/combinations/${st.combinationId}/signoff`, { method: "POST", actor: "user-C", data: { items: stSme, action: "signed" } });
+  await p.goto(`${BASE}/c/${st.combinationId}/review`); await idle();
+  const stepText = await p.locator("main").textContent();
+  step("QA-10: the review tab names who submitted (\"Submitted by Configuration author\"), never an internal id", /Submitted by Configuration author/.test(stepText) && !/user-[A-Z]\b/.test(stepText), (stepText.match(/Submitted by [^0-9]{0,30}/) ?? [""])[0]);
+  await state("combination-review-submitted-by-name");
+  await p.goto(`${BASE}/release`); await idle();
+  step("QA-1: once submitted and signed, the Release page will release it", /Will be released/.test((await p.getByRole("row", { name: /Study permit/ }).first().textContent()) ?? ""));
+  // QA-9 scale finding: below 640 px (a phone, or 200 % zoom) the next step moves under the name; the name keeps its width.
+  for (const w of [390, 512]) {
+    await p.setViewportSize({ width: w, height: 844 }); await p.goto(`${BASE}/?f=all`); await grid().waitFor(); await idle();
+    const narrow = await p.evaluate(() => { const c = document.querySelector('[role="row"][data-node] [role="gridcell"]'); const steps = [...document.querySelectorAll('[role="row"][data-node] [role="gridcell"]:nth-child(3)')]; return { nameW: Math.round(c.getBoundingClientRect().width), over: document.documentElement.scrollWidth - innerWidth, clipped: steps.filter((x) => x.scrollWidth > x.clientWidth + 1).length }; });
+    step(`narrow ${w} px: the combination's name keeps its width (≥ 200 px), next steps are not clipped, no sideways scroll`, narrow.nameW >= 200 && narrow.over <= 0 && narrow.clipped === 0, JSON.stringify(narrow));
+  }
+  await p.setViewportSize({ width: 1440, height: 900 });
+  // ======================================================== P-74: forms decisions visible (C1.6, C1.7, C2.7, C2.10)
+  await p.goto(`${BASE}/?f=all`); await idle();
+  step("C1.6: the Programs row says how the combination is filed", /Filed: PDF only/.test(await row("With an LMIA").textContent()));
+  await p.goto(`${BASE}/c/${wpId}`); await idle();
+  const forms = p.getByRole("region", { name: "Forms" });
+  step("C1.6: the combination page shows the filing method and each line's channel", /Filing: PDF only/.test(await forms.textContent()) && await forms.getByRole("combobox", { name: /^How IMM \d+.* is filed$/ }).count() >= 6);
+  await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("SIGNED_PDF_UPLOAD"); await idle();
+  await p.waitForFunction(() => /signed by hand, scanned/.test(document.querySelector('[aria-labelledby="ov-forms"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
+  step("C1.6: the author sets a line's channel; the line's signature follows and the filing method stays in C1.6's short words", /Filing: PDF only/.test(await p.locator("[data-filing]").textContent()) && /some signed by hand/.test((await p.locator("[data-filing] [title]").getAttribute("title")) ?? "") && /signed by hand, scanned/.test(await forms.textContent()));
+  await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("PDF_UPLOAD"); await idle();
+  await forms.getByRole("combobox", { name: "Portal" }).selectOption("ircc_portal"); await idle();
+  await p.waitForFunction(() => /IRCC Portal/.test(document.querySelector("main")?.textContent ?? "") && !document.querySelector("[data-filing] select:disabled"), null, { timeout: 5000 }).catch(() => {});
+  step("C1.7: the author picks the combination's portal", (await forms.getByRole("combobox", { name: "Portal" }).inputValue()) === "ircc_portal");
+  await forms.getByRole("button", { name: "Add an online form" }).click();
+  const op = p.getByRole("dialog", { name: "Add an online form" }); await op.waitFor();
+  for (let i = 0; i < 25 && (await op.getByRole("combobox", { name: "Portal" }).inputValue()) !== "ircc_portal"; i++) await p.waitForTimeout(200); // the summary refresh after the portal save
+  step("C2.7: \"Add an online form\" opens a right panel with the combination's portal chosen", (await op.getByRole("combobox", { name: "Portal" }).inputValue()) === "ircc_portal");
+  await op.getByLabel("Form code").fill("IMM 5707"); await op.getByLabel("Title as the portal shows it").fill("Family information (online)");
+  await op.getByLabel("Choose blank screens").setInputFiles(path.join(__dirname, "fixtures", "portal", "imm5257-online-s1-personal-with-answers.html"));
+  await op.getByRole("button", { name: "Add and send for approval" }).click();
+  await op.getByText(/nothing was kept/).waitFor({ timeout: 30000 }).catch(() => {}); await idle();
+  step("review 2 should 1: a page holding an answer is refused and nothing is left behind (no \"being captured\" row)", /nothing was kept/.test(await op.textContent()) && !/Being captured/.test((await p.locator("[data-online-forms]").textContent().catch(() => "")) ?? ""));
+  await op.getByLabel("Choose blank screens").setInputFiles(["imm5257-online-s1-personal.html", "imm5257-online-s2-marital.html", "imm5257-online-s3-language.html"].map((f) => path.join(__dirname, "fixtures", "portal", f)));
+  await state("add-online-form-panel", { viewport: true });
+  await op.getByRole("button", { name: "Add and send for approval" }).click();
+  await op.getByText(/online form added/).waitFor({ timeout: 30000 }).catch(() => {});
+  step("C2.7: the screens are read, checked for answers and sent for approval", /Awaiting a second person/.test(await op.textContent()) && (await op.getByRole("list", { name: "Screen results" }).getByText("Added").count()) === 3);
+  await op.getByRole("button", { name: "Close" }).first().click(); await idle();
+  step("C2.7: the combination lists the online form as \"Awaiting a second person\"", /IMM 5707.*Awaiting a second person/s.test(await p.locator("[data-online-forms]").textContent()));
+  await state("combination-online-form-awaiting");
+  await as("user-B");
+  step("C1.6/C1.7: someone without the author duty sees the channels and the portal, but cannot change them", await forms.getByRole("combobox").count() === 0 && /IRCC Portal/.test(await forms.textContent()) && await forms.getByRole("button", { name: "Add an online form" }).count() === 0);
+  await as("user-A");
+  await p.goto(`${BASE}/c/${wpId}/sources`); await idle();
+  const dsrc = p.locator("[data-drafting-sources]");
+  step("C2.10: the sources tab says, per form, what drafting reads (PDF version first by default)", /Reads the PDF version \(IMM 1295/.test(await dsrc.textContent()) && (await dsrc.getByRole("combobox", { name: "What drafting reads for IMM 1295" }).inputValue()) === "PDF_FIRST");
+  await dsrc.getByRole("combobox", { name: "What drafting reads for IMM 1295" }).selectOption("ONLINE_ONLY"); await idle();
+  await p.waitForFunction(() => /Online screens only, but no online version/.test(document.querySelector("[data-drafting-sources]")?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
+  step("C2.10: the author changes it per form and the line says what that means", /Online screens only, but no online version from the IRCC Portal has been approved yet/.test(await dsrc.textContent()));
+  await dsrc.getByRole("combobox", { name: "What drafting reads for IMM 1295" }).selectOption("PDF_FIRST"); await idle();
+  await state("sources-tab-drafting-reads");
+
+  // P-63: no "box" on the pages a person reads (form field, field map).
+  const boxPages = [];
+  for (const u of ["/?f=all", `/c/${wpId}`, `/c/${wpId}/configuration`, `/c/${wpId}/sources`, "/library/forms", "/library/fields", "/release"]) {
+    await p.goto(`${BASE}${u}`); await idle();
+    if (/\bbox(es)?\b|box map/i.test(await p.locator("main").innerText())) boxPages.push(u);
+  }
+  step("P-63: no page says \"box\" or \"box map\" (form field, field map)", boxPages.length === 0, boxPages.join(", ") || "none");
 
   step("no console or page errors", errs.length === 0, errs.slice(0, 3).join(" | "));
   fs.writeFileSync(path.join(EVID, "browser-checks.json"), JSON.stringify({ at: new Date().toISOString(), timings, pass: log.filter((x) => x.ok).length, fail: log.filter((x) => !x.ok).length, log, axe: axeLog }, null, 1));

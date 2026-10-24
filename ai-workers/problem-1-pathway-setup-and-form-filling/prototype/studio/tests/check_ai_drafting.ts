@@ -86,7 +86,7 @@ ok("A1 the AI output schema itself refuses the bad name (the guard the AI now wr
 
 // ---------------------------------------------------------------- A2: plain failure messages
 const old = explainRun(json(join(RUNS, saved[3])));
-ok("A2 the old IMM 1344 failure in plain words: boxes answered, which box, nothing applied, cost", old.status === "FAILED" && /^AI answered 233 boxes\. 1 entry broke our entry rules \(box 115: field name "person\.became_pr_as_sponsored_partner_within_5_years" breaks the naming rule\)\. Nothing was applied\. Cost US\$1\.51\.$/.test(old.message), old.message);
+ok("A2 the old IMM 1344 failure in plain words: boxes answered, which box, nothing applied, cost", old.status === "FAILED" && /^AI answered 233 form fields\. 1 entry broke our entry rules \(form field 115: field name "person\.became_pr_as_sponsored_partner_within_5_years" breaks the naming rule\)\. Nothing was applied\. Cost US\$1\.51\.$/.test(old.message), old.message);
 const limit = explainRun({ drafting_run: { status: "provider_error", attempts: [{ error: "400 {\"type\":\"error\",\"error\":{\"message\":\"You have reached your specified API usage limits.\"}}" }] } });
 ok("A2 BLOCKED only for a provider limit", limit.status === "BLOCKED" && /usage limit/.test(limit.message));
 const cut = explainRun({ output_errors: "stopped at max_tokens", drafting_run: { status: "invalid_output", usage: { output_tokens: 32000, cost_usd: 0.8 }, settings: { max_output_tokens: 32000 } } });

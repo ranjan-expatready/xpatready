@@ -111,7 +111,7 @@ function pdf(title: string, text: string) {
   }
   ok("item 1 pass: on every sample row the row's next step = the page header = the first missing line's step", agree.length > 20 && !disagree.length, disagree.length ? disagree : `${agree.length} rows`);
   const vv1 = await leaf("individual.visitors.visitor_visa");
-  ok("item 1: Visitor visa counts sources and set-up forms apart, in the next step's words", vv1.missing[0]?.text === `2 forms attached as sources, 0 set up. Next step: ${vv1.nextAction?.label}.` && vv1.nextAction?.label === "Add 1 form from the library", vv1.missing.map((m: any) => m.text));
+  ok("item 1: Visitor visa counts sources and set-up forms apart; the shared next step is said once (not under each line)", vv1.missing[0]?.text === "2 forms attached as sources, 0 set up." && vv1.missing.every((m: any) => m.step === vv1.nextAction?.label && !/Next step/.test(m.text)) && vv1.nextAction?.label === "Add 1 form from the library", vv1.missing.map((m: any) => m.text));
 
   let wp = await leaf("individual.work_permits.employer_specific.with_lmia");
   ok("BR-8 pass: the reviewed work-permit row is Ready (in Release 1, startable)", wp.status === "READY" && wp.release?.pack === 1 && wp.missing.length === 0, wp.statusText);
@@ -123,8 +123,60 @@ function pdf(title: string, text: string) {
   ok("BR-12 fail: the same form twice is refused", r.status === 409, r.body.detail);
   r = await call("POST", `/combinations/${ss.combinationId}/lines`, { kind: "FORM", formKey: "IMM 9999" });
   ok("BR-12 fail: + Add never creates a form: unknown codes are refused", r.status === 404 && r.body.errors?.[0]?.field === "formKey", r.body.detail);
+  // QA-13: a form removed from the draft can be added again (it was a 409 "the database refused a duplicate").
+  await call("PATCH", `/combinations/${ss.combinationId}/forms/${encodeURIComponent("IMM 1295")}`, { who: "principal_applicant" });
+  r = await call("PATCH", `/combinations/${ss.combinationId}/forms/${encodeURIComponent("IMM 1295")}`, { retire: true });
+  ok("QA-13 setup: the author removes the form line again", r.status < 300, r.body?.detail ?? r.body?.message);
+  r = await call("PATCH", `/combinations/${ss.combinationId}/forms/${encodeURIComponent("IMM 1295")}`, { retire: true });
+  ok("break m5 fail: a removed line cannot be removed or edited again (add it back first)", r.status === 409 && /removed/.test(r.body.message) && sql(`select count(*) from combination_form where combination_id='${ss.combinationId}' and lineage_key='IMM 1295'`) === "1", r.body.message);
+  ok("break M4: the combination page no longer lists a removed form", !(await call("GET", `/combinations/${ss.combinationId}/summary`)).body.forms.some((f: any) => f.code === "IMM 1295"));
+  r = await call("POST", `/combinations/${ss.combinationId}/lines`, { kind: "FORM", formKey: "IMM 1295" });
+  ok("QA-13 pass: a removed form is added again (the pending removal is undone in place)", r.status === 201 && r.body.added === "form_line" && sql(`select string_agg(version || ':' || status, ',' order by version) from combination_form where combination_id='${ss.combinationId}' and lineage_key='IMM 1295'`) === "1:DRAFT", sql(`select string_agg(version || ':' || status, ',' order by version) from combination_form where combination_id='${ss.combinationId}' and lineage_key='IMM 1295'`));
+  r = await call("POST", `/combinations/${ss.combinationId}/lines`, { kind: "FORM", formKey: "IMM 1295" });
+  ok("QA-13 fail: added back, it is on the combination again, so a second add is still refused", r.status === 409, r.body.detail);
+  ok("CHECK must 2: adding back restores the line as it was (its who kept, not reset to the default)", sql(`select who from combination_form where combination_id='${ss.combinationId}' and lineage_key='IMM 1295'`) === "principal_applicant");
+  await call("PATCH", `/combinations/${ss.combinationId}/forms/${encodeURIComponent("IMM 1295")}`, { who: "each_applicant" });
+  const vvId = (await leaf("individual.visitors.visitor_visa")).combinationId;
+  const att5707 = sql(`select id from source_attachment where combination_id='${vvId}' and edition like 'IMM 5707%' limit 1`);
+  r = await call("POST", `/attachments/${att5707}/reuse`, { who: "<script>alert(1)</script>" });
+  ok("break M3 fail: reusing a form with a \"who\" that is not on the list is refused; nothing is added", r.status === 400 && sql(`select count(*) from combination_form where combination_id='${vvId}' and lineage_key='IMM 5707'`) === "0", r.body.message);
+  ok("F1: \"+ Add line\" gives the line its default channel (PDF upload: this combination has no portal)", sql(`select channel from combination_form where combination_id='${ss.combinationId}' and lineage_key='IMM 1295'`) === "PDF_UPLOAD");
+  // A change that needs the expert's sign-off (a document requirement), so every review step of QA-1 is exercised.
+  const types = (await call("GET", "/library/document-types")).body as any[];
+  r = await call("POST", `/combinations/${ss.combinationId}/requirements`, { documentTypeKey: types[0].documentTypeKey, attachMode: "COMBINATION_MANDATORY", appliesToRoles: "principal_applicant" });
+  ok("QA-1 setup: the author adds a document requirement (needs the SME duty)", r.status < 300, r.body?.detail ?? r.body?.lineageKey);
   let d = (await call("GET", "/draft")).body;
   ok("P-23: the shared draft lists the changed combination with its change count", d.rows.length === 1 && d.rows[0].label === "Spouse of a student" && d.changes > 0 && d.next === 2, { changes: d.changes, rows: d.rows.map((x: any) => x.label) });
+  ok("QA-1: a combination nobody submitted is held back on the shared draft, and says why", d.rows[0].held && /Not submitted for review/.test(d.rows[0].why), d.rows[0].why);
+  r = await call("POST", "/pack/release", { expectedChanges: d.changes }, "user-B");
+  const noRelease = () => sql(`select count(*) from config_release where combination_id='${ss.combinationId}'`) === "0";
+  ok("QA-1 fail: the shared release refuses a draft nobody submitted (no release, nobody recorded as submitter)", r.status === 409 && /held back/.test(r.body.title) && noRelease(), r.body.detail);
+  r = await call("POST", `/combinations/${ss.combinationId}/submit`, {});
+  ok("QA-1 setup: the author submits it for review", r.status === 201, r.body?.message);
+  d = (await call("GET", "/draft")).body;
+  ok("QA-1: submitted but the expert change unsigned is still held back, with the reason", d.rows[0].held && /SME sign-off/.test(d.rows[0].why), d.rows[0].why);
+  r = await call("POST", `/combinations/${ss.combinationId}/signoff`, { items: [], action: "returned", note: "nothing named" }, "user-C");
+  ok("break m1 fail: a sign-off or return must name at least one change", r.status === 400, r.body.message);
+  const firstItem = ((await call("GET", `/combinations/${ss.combinationId}/review`)).body.submission?.changeSummary ?? []).map((x: any) => `${x.kind}|${x.key}`)[0];
+  r = await call("POST", `/combinations/${ss.combinationId}/signoff`, { items: [firstItem], action: "signed" }, "user-A");
+  ok("break m1 fail: the person who submitted does not sign their own submission", r.status === 403, r.body.message);
+  r = await call("POST", "/pack/release", { expectedChanges: d.changes }, "user-B");
+  ok("QA-1 fail: the shared release refuses unsigned expert changes", r.status === 409 && noRelease(), r.body.detail);
+  // The server refuses even when the screen is skipped: releaseRows is asked for the row directly through the gate.
+  const review = (await call("GET", `/combinations/${ss.combinationId}/review`)).body;
+  const sme = (review.submission?.changeSummary ?? []).filter((x: any) => x.needs_sme).map((x: any) => `${x.kind}|${x.key}`);
+  r = await call("POST", `/combinations/${ss.combinationId}/signoff`, { items: sme, action: "signed" }, "user-C");
+  ok("QA-1 setup: the content reviewer signs the expert changes", r.status === 201 && sme.length > 0, sme);
+  d = (await call("GET", "/draft")).body;
+  ok("QA-1 pass: submitted and signed, the combination will be released", !d.rows[0].held && d.rows[0].why === null, d.rows[0]);
+  // Should 3: changed after submission → held; the same content again → the submission holds again (same fingerprint).
+  await call("PATCH", `/combinations/${ss.combinationId}/forms/${encodeURIComponent("IMM 1295")}`, { who: "principal_applicant" });
+  d = (await call("GET", "/draft")).body;
+  r = await call("POST", `/combinations/${ss.combinationId}/approve`, {}, "user-B");
+  ok("QA-1 fail: changed after it was submitted is held back on the Release page and refused by the combination's own release", d.rows[0].held && /changed after it was submitted/.test(d.rows[0].why) && r.status === 409 && noRelease(), [d.rows[0].why, r.body.message]);
+  await call("PATCH", `/combinations/${ss.combinationId}/forms/${encodeURIComponent("IMM 1295")}`, { who: "each_applicant" });
+  d = (await call("GET", "/draft")).body;
+  ok("QA-1 pass: back to exactly what was submitted, it is ready again", !d.rows[0].held, d.rows[0].why);
   r = await call("POST", "/pack/release", { expectedChanges: d.changes }, "user-A");
   ok("BR-14 fail: the author cannot release (the server refuses)", r.status === 403, r.body.detail);
   r = await call("POST", "/pack/release", { expectedChanges: d.changes + 1 }, "user-B");
@@ -135,8 +187,22 @@ function pdf(title: string, text: string) {
   r = await call("POST", "/pack/release", { expectedChanges: d.changes }, "user-B");
   ok("BR-14 fail: someone who changed the draft cannot release it (self-approval refused)", r.status === 403 && /different person/.test(r.body.title), r.body.detail);
   sql(`delete from audit_event where summary='test edit'`);
+  // The submitter cannot release either: the submission is recorded as the approver persona's for this one try.
+  sql(`update review_submission set submitted_by='user-B' where combination_id='${ss.combinationId}' and status='SUBMITTED'`);
+  const asB = (await call("GET", "/draft", undefined, "user-B")).body;
+  ok("break M2: for the approver who submitted it, the Release page holds the row back and says why (never \"Will be released\")", asB.rows[0].held && /You submitted it/.test(asB.rows[0].why) && !(await call("GET", "/draft", undefined, "user-C")).body.rows[0].held, asB.rows[0].why);
   r = await call("POST", "/pack/release", { expectedChanges: d.changes }, "user-B");
-  ok("P-23/BR-14 pass: a different person releases the whole draft as Release 2", r.status === 201 && r.body.pack === 2 && r.body.rows.length === 1, r.body);
+  ok("BR-14 fail: the person who submitted it cannot release it", r.status === 403 && /submitted/.test(r.body.detail) && noRelease(), r.body.detail);
+  sql(`update review_submission set submitted_by='user-A' where combination_id='${ss.combinationId}' and status='SUBMITTED'`);
+  r = await call("POST", "/pack/release", { expectedChanges: d.changes }, "user-B");
+  ok("P-23/BR-14 pass: a different person releases the reviewed draft as Release 2", r.status === 201 && r.body.pack === 2 && r.body.rows.length === 1, r.body);
+  ok("QA-1: the release records the real submitter and approver, and the submission is closed as approved", sql(`select submitter_id || '/' || approver_id from config_release where combination_id='${ss.combinationId}'`) === "user-A/user-B" && sql(`select status from review_submission where combination_id='${ss.combinationId}' order by submitted_at desc limit 1`) === "APPROVED");
+  // QA-13 after a release: removing the released form and adding it back makes a new version, never a duplicate.
+  r = await call("PATCH", `/combinations/${ss.combinationId}/forms/${encodeURIComponent("IMM 1295")}`, { retire: true });
+  const lineState = () => sql(`select string_agg(version || ':' || status, ',' order by version) from combination_form where combination_id='${ss.combinationId}' and lineage_key='IMM 1295'`);
+  ok("QA-13: removing a released form is a removal in the draft (a retired new version), not a no-op", r.status < 300 && lineState() === "1:PUBLISHED,2:RETIRED" && !(await call("GET", `/combinations/${ss.combinationId}/config?mode=draft`)).body.snapshot.forms.some((f: any) => f.form_number === "IMM 1295"), lineState());
+  r = await call("POST", `/combinations/${ss.combinationId}/lines`, { kind: "FORM", formKey: "IMM 1295" });
+  ok("CHECK must 2: added back before the removal is released, the released line stands again unchanged (no draft change)", r.status === 201 && lineState() === "1:PUBLISHED" && !(await call("GET", "/draft")).body.rows.some((x: any) => x.combinationId === ss.combinationId), lineState());
   ss = await leaf("individual.work_permits.open.spouse_student");
   ok("BR-8 fail: released but not startable is Not ready, with each missing item", ss.status === "NOT_READY" && ss.release.pack === 2 && ss.missing.some((m: any) => m.code === "role_without_questions"), ss.missing.map((m: any) => m.text));
   wp = await leaf("individual.work_permits.employer_specific.with_lmia");
@@ -285,6 +351,38 @@ function pdf(title: string, text: string) {
   ok("authorisation: the reviewer persona cannot change a combination", r.status === 403);
   const t0 = Date.now(); await call("GET", "/catalogue?pathway=INDIVIDUAL&filter=in_setup"); const ms = Date.now() - t0;
   ok("performance: a filtered catalogue answers in under 200 ms with the sample data", ms < 200, `${ms} ms`);
+
+  // ---------------------------------------------------------------- QA-6, QA-7 names; QA-11 the existing combination
+  r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { create: "!!!" }, category: { create: "???" } });
+  ok("QA-6 fail: a name of symbols only is refused on its field in plain words; nothing is created", r.status === 400 && r.body.errors?.some((e: any) => e.field === "program.create" && /letters or digits/.test(e.message)) && sql("select count(*) from program_def where label in ('!!!','???')") === "0", r.body.errors);
+  r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { create: "A".repeat(60) + " " + "B".repeat(70) }, category: { create: "Long test" } });
+  ok("QA-7 fail: a 131-character name is refused with \"Keep the name under 120 characters.\" on the Program field", r.status === 400 && r.body.errors?.[0]?.field === "program.create" && r.body.errors[0].message === "Keep the name under 120 characters." && sql("select count(*) from program_def where length(label) > 120") === "0", r.body.errors);
+  r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { create: "R\u00e9sidence temporaire" }, category: { create: "Visa d'\u00e9t\u00e9 \u2014 \u65e5\u672c\u8a9e" } });
+  ok("QA-6 pass: names in any script with punctuation around letters are created as typed", r.status === 201 && r.body.created === true, r.body?.nodeKey ?? r.body?.detail);
+  const opts = (await call("GET", "/path-options?pathway=INDIVIDUAL")).body;
+  const wpOpt = opts.programs.find((x: any) => x.key === "individual.work_permits")?.categories.find((x: any) => x.key === "individual.work_permits.employer_specific")?.subCategories.find((x: any) => x.key === "individual.work_permits.employer_specific.with_lmia");
+  ok("QA-11 pass: the path builder knows the existing combination's id, so \"Open the existing combination\" opens its page", wpOpt?.hasSetup && wpOpt.combinationId === wp.combinationId, wpOpt);
+  const noSetup = opts.programs.flatMap((p: any) => p.categories).find((c: any) => !c.hasSetup && !c.subCategories.length);
+  ok("QA-11 fail: a level without setup has no combination to open", !!noSetup && noSetup.combinationId === null, noSetup?.key);
+
+  // ---------------------------------------------------------------- QA-5 stored times are the real moment
+  const label5 = `Time probe ${Date.now()}`;
+  await call("POST", "/program-nodes", { kind: "STREAM", parentKey: "individual.work_permits", label: label5 });
+  const skew = Number(sql(`select extract(epoch from (now() - at))::int from audit_event where summary like '%${label5}%' order by at desc limit 1`));
+  ok("QA-5 pass: a time the app writes is stored as the real moment, whatever the database's own zone", Math.abs(skew) < 120, `${skew} s; database zone ${sql("show timezone")}`);
+  const shownAt = ((await call("GET", "/activity")).body as any[]).find((a) => a.summary?.includes(label5))?.at;
+  ok("QA-5: the app still shows it at the real time", Math.abs(Date.now() - Date.parse(shownAt)) < 120_000, shownAt);
+  ok("QA-5 condition: the database's own zone is not UTC on this machine, so the check above is a real test of the fix", sql("show timezone") !== "UTC" && sql("show timezone") !== "Etc/UTC", sql("show timezone"));
+
+  // ---------------------------------------------------------------- QA-12 the Demo menu says what was loaded
+  let ds = (await call("GET", "/demo/status")).body;
+  ok("QA-12 pass: after the sample load the Demo menu says the sample inputs are loaded", ds.loaded === true && (await call("GET", "/session")).body.sampleLoaded === true, ds.loaded);
+  r = await call("POST", "/demo/reset", { confirm: "RESET" });
+  ok("QA-12 setup: reset the demo copy", r.status === 201, r.body?.message);
+  r = await call("POST", "/combinations/path", { pathway: "INDIVIDUAL", program: { create: "Hand-made" }, category: { create: "One row" } });
+  ds = (await call("GET", "/demo/status")).body;
+  const ses = (await call("GET", "/session")).body;
+  ok("QA-12 fail: a combination made by hand is not \"sample inputs loaded\"; the menu says programs exist (reset first)", r.status === 201 && ds.loaded === false && ds.programsExist === true && ses.sampleLoaded === false && ses.counts.programs > 0, { loaded: ds.loaded, programsExist: ds.programsExist, sampleLoaded: ses.sampleLoaded });
 
   const out = join(import.meta.dirname, "..", "evidence", "screen01"); mkdirSync(out, { recursive: true });
   writeFileSync(join(out, "api-checks.json"), JSON.stringify({ at: new Date().toISOString(), pass, fail, log }, null, 1));

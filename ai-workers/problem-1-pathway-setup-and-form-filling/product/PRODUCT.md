@@ -23,7 +23,7 @@ Immigration values come from the immigration expert; sample content is labelled 
 ## 3. Left menu — only this prototype's screens (P-04)
 | Group | Items (exact words) |
 |---|---|
-| Configure | **Programs** |
+| Configure | **To review** (P-79) · **Programs** |
 | Shared library | **Fields** · **Sections** · **Document types** · **Forms** · **Checks** · **Rules** (read-only central list, P-37) |
 | History | **AI work** · **Releases** · **Activity** |
 The team merges these into the product's menus. A new item needs a screen in `SCREENS.md` and a decision. Case officer and client menus are defined when their milestones start.

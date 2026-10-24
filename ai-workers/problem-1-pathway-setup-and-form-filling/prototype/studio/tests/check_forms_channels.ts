@@ -56,7 +56,7 @@ const capture = async (screens: string[], title = "Application for a visitor vis
     && filingMethod([{ form_number: "A", channel: "ONLINE" }, { form_number: "B" }]) === "Online + PDF uploads"
     && filingMethod([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", channel: "SIGNED_PDF_UPLOAD" }]) === "Online + signed PDF uploads");
   ok("filing method: a channel only a conditional line adds is said with its condition",
-    filingMethod([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", status: "conditional", condition_plain: "the applicant has a representative" }]) === "Online only; plus pdf upload when the applicant has a representative", filingMethod([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", status: "conditional", condition_plain: "the applicant has a representative" }]));
+    filingMethod([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", status: "conditional", condition_plain: "the applicant has a representative" }]) === "Online only; plus PDF upload when the applicant has a representative", filingMethod([{ form_number: "A", channel: "ONLINE" }, { form_number: "B", status: "conditional", condition_plain: "the applicant has a representative" }]));
   const sexList = [{ key: "female", label: "Female" }, { key: "male", label: "Male" }, { key: "another_gender", label: "Another gender" }, { key: "unknown", label: "Unknown" }];
   const online = draftOptionMap(sexList, [{ code: "FEMALE", label: "Female" }, { code: "MALE", label: "Male" }, { code: "ANOTHER", label: "Another gender" }, { code: "UNKNOWN", label: "Unknown" }]);
   ok("option map (online): every value finds the portal's own code, by label", online.unmatched.length === 0 && online.optionMap.map.another_gender === "ANOTHER" && optionMapProblems(sexList.map((v) => v.key), online.optionMap).length === 0, online.optionMap.map);
@@ -112,7 +112,10 @@ const capture = async (screens: string[], title = "Application for a visitor vis
   const kinds14 = readdirSync(OFFICIAL, { recursive: true }).map(String).filter((f) => /\.html?$/.test(f)).map((f) => JSON.parse(execFileSync(PYTHON, ["-I", join(STUDIO, "tools", "read_form_identity.py"), join(OFFICIAL, f)], { encoding: "utf8" }).trim().split("\n").pop()!).kind as string);
   ok("intake pass: every IRCC public page in the official library still reads as a guide or checklist (none as a portal screen)", kinds14.length >= 10 && kinds14.every((k) => k === "guide" || k === "checklist"), kinds14);
   const fd1 = new FormData(); fd1.append("files", new Blob([new Uint8Array(readFileSync(join(FIX, "intake-one-question-answered.html")))]), "intake-one-question-answered.html"); fd1.append("combinationId", vv);
-  const one = (await (await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd1 })).json()).results[0];
+  // The Python reads above block this process for many seconds, so the server may have closed the idle keep-alive
+  // socket (EPIPE on reuse): send once more on a fresh one (test harness only; the request itself is unchanged).
+  const post1 = () => fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd1 });
+  const one = (await (await post1().catch(post1)).json()).results[0];
   ok("intake fail: a saved portal screen with one answered question is refused too, and not stored", one.outcome === "refused" && sql("select count(*) from source_attachment where file_name='intake-one-question-answered.html'") === "0" && sql("select coalesce(max(stored_path),'') from intake_item where file_name='intake-one-question-answered.html'") === "", one.message);
 
   // ──────────────────────────────────────────── captures: refusal, contract, second person, identity

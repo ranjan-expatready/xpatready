@@ -24,12 +24,16 @@ export const CATALOGUE_SCROLL_KEY = "xr-catalogue-scroll";
 export const PATHWAY_LABEL: Record<string, string> = { INDIVIDUAL: "Individual", CORPORATE: "Corporate and employers" };
 export const STATUS_WORD = { IN_SETUP: "In setup", NOT_READY: "Not ready", READY: "Live" } as const;
 const VIEWS = [["needs", "Needs work"], ["live", "Live"], ["all", "All"]] as const;
-const GRID = "grid grid-cols-[minmax(0,1fr)_128px_210px] items-center gap-3";
+// Below 640 px (a phone, or 200 % zoom on a small screen) the next step moves under the name and status, so the
+// combination's name keeps its width (QA-9 scale check: at 390 px the fixed columns left it 0 px wide).
+const GRID = "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 sm:grid-cols-[minmax(0,1fr)_128px_210px] sm:gap-y-3";
 
-/** Remembers the list as it is now, with this row as the one to highlight on Back. */
+/** Remembers the list as it is now, with this row as the one to highlight on Back: the page's own "Programs" link and
+ *  the browser's Back button (the list's history entry gets the row too; review should 5). */
 export function rememberList(nodeKey: string) {
   try {
     const u = new URL(location.href); u.searchParams.set("sel", nodeKey);
+    if (u.pathname === "/") window.history.replaceState(window.history.state, "", `${u.pathname}${u.search}`);
     sessionStorage.setItem(CATALOGUE_URL_KEY, `${u.pathname}${u.search}`);
     sessionStorage.setItem(CATALOGUE_SCROLL_KEY, String(Math.round(window.scrollY)));
   } catch { /* private window: Back still opens the list */ }
@@ -218,7 +222,7 @@ function List({ rows, highlight, q, sort, canAuthor, onSort, onOpen, onAct }: { 
             <button type="button" onClick={onSort} className="inline-flex items-center gap-1 rounded outline-none hover:text-text focus-visible:ring-[3px] focus-visible:ring-ring/50">Status <SortIcon className="size-3.5" aria-hidden /></button>
           </Tip>
         </span>
-        <span role="columnheader">Next step</span>
+        <span role="columnheader" className="sr-only sm:not-sr-only">Next step</span>
       </div>
       {rows.map((r, i) => {
         const active = current?.nodeKey === r.nodeKey, lit = highlight === r.nodeKey, ti = active ? 0 : -1;
@@ -236,6 +240,7 @@ function List({ rows, highlight, q, sort, canAuthor, onSort, onOpen, onAct }: { 
               {parents ? <span className="break-words text-xs text-text-muted">{parents}</span> : null}
               <b className="break-words font-semibold">{r.label}</b>
               {r.note ? <span className="break-words text-xs text-text-muted">{r.note}</span> : null}
+              {r.filing ? <span className="break-words text-xs text-text-muted" data-filing>Filed: {r.filing}</span> : null}
               {q && r.matches.some((m) => m !== "name") ? <span className="text-xs text-text-muted">Matches: {r.matches.filter((m) => m !== "name").join(", ")}</span> : null}
             </div>
             <div role="gridcell" className="flex items-center gap-1.5">
@@ -243,7 +248,7 @@ function List({ rows, highlight, q, sort, canAuthor, onSort, onOpen, onAct }: { 
               <StatusChip tabIndex={ti} status={r.status} text={STATUS_WORD[r.status]} />
               {r.checked?.overdue ? <Tip focusable={ti} tip="Check overdue: compare with IRCC's published forms and guides."><span role="img" aria-label="Check overdue" className="inline-flex rounded outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"><TriangleAlert className="size-4 text-text-warn" aria-hidden /></span></Tip> : null}
             </div>
-            <div role="gridcell">
+            <div role="gridcell" className="col-span-2 sm:col-span-1">
               {label && (canAuthor || !authorOnly) ? (
                 <StepTip a={a}><button type="button" tabIndex={ti} data-next-step={a?.kind ?? "open"} onClick={(e) => { e.stopPropagation(); onAct(r, a); }} className="inline-flex items-center gap-1 text-left text-sm font-semibold text-text-link outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50">{a ? <StepLabel a={a} /> : label}</button></StepTip>
               ) : label ? <span className="text-sm text-text-muted" title="A configuration author does this step.">{label}</span> : null}

@@ -1,19 +1,40 @@
 {
- "at": "2026-10-21T08:37:49.035Z",
- "seconds": 167,
- "programs": 105,
- "rows": 371,
+ "at": "2026-10-23T13:02:00.833Z",
+ "database": "xr_studio_screens_scale",
+ "seconds": 144,
+ "programs": 111,
+ "rows": 393,
  "synthetic_programs": 100,
  "synthetic_rows": 364,
  "released": 122,
+ "release_refused": 0,
+ "release_refused_first": [],
  "draft_changes_after_release": 41,
  "in_review": 22,
  "injected_problems": 28,
- "catalogue_server_ms": {
-  "queries": 3800,
-  "snapshots": 13603,
-  "summaries": 2289,
-  "total": 19692
+ "counts": {
+  "INDIVIDUAL": {
+   "needs": 271,
+   "live": 1,
+   "all": 272,
+   "ready": 1,
+   "not_ready": 84,
+   "in_setup": 187,
+   "ai_proposals": 0
+  },
+  "CORPORATE": {
+   "needs": 121,
+   "live": 0,
+   "all": 121,
+   "ready": 0,
+   "not_ready": 38,
+   "in_setup": 83,
+   "ai_proposals": 0
+  }
  },
- "payload_bytes": 357183
+ "catalogue_server_ms": {
+  "rows": 11387,
+  "total": 11522
+ },
+ "payload_bytes": 634935
 }

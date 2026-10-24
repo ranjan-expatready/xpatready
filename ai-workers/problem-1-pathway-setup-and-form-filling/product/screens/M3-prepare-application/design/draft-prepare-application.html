@@ -68,11 +68,11 @@ main{flex:1;min-width:0;padding:20px 24px 48px}
 .items{border-right:1px solid var(--border);padding:8px 0}
 .group h2{margin:12px 16px 4px;font-size:12px;font-weight:600;color:var(--muted);display:flex;gap:6px}
 .group .none{margin:0 16px 4px;font-size:12px;color:var(--muted)}
-.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;padding:8px 12px 8px 13px;cursor:pointer;min-height:44px}
+.item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;background:none;border:0;border-left:3px solid transparent;padding:8px 12px 8px 13px;cursor:pointer;min-height:44px}
 .item:hover{background:var(--surface)}
 .item[aria-current=true]{background:var(--primary-50);border-left-color:var(--primary)}
-.item .t1{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.item .t2{grid-column:1/-1;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .t1{font-weight:600;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .t2{max-width:100%;font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .detail{padding:16px 20px;min-width:0}
 .dhead{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
 .dhead h2{margin:0;font-family:var(--head);font-size:18px}
@@ -377,7 +377,7 @@ function page(){
   const s=sc();
   const head=`<div class="pagehead"><div style="flex:1;min-width:0"><h1>Prepare application ${CN}</h1>
     <p class="sub">Everything to file for this application. Answers come from the agent view; only confirmed facts fill a form.</p></div>
-    <button class="btn" data-a="panel" data-k="record"${S.view==='loading'||S.view==='error'?' disabled':''}>Edit filing record</button></div>
+    <button class="btn" data-a="panel" data-k="record"${S.view==='loading'||S.view==='error'?' disabled':''}>${ro()?'View filing record':'Edit filing record'}</button></div>
     <nav class="tabs" aria-label="Case"><a href="#">Overview</a><a href="#">Agent view</a><a href="#">Documents</a><a href="#" class="on" aria-current="page">Prepare application</a>${L('x','Other tabs: not on this board')}</nav>`;
   if(S.view==='loading') return `<div class="card">${head}<div class="work"><div class="items" aria-busy="true"><span class="sr-only">Loading the filing</span>${'<div class="skel"></div>'.repeat(9)}</div><div class="detail">${'<div class="skel" style="height:22px"></div>'.repeat(6)}</div></div></div>`;
   if(S.view==='error') return `<div class="card">${head}<div style="padding:48px 20px;text-align:center"><h2 style="font-size:18px;margin:0">This filing could not be loaded</h2><p class="sub">Nothing was changed. Check your connection and try again.</p><p><button class="btn" data-a="view" data-k="working">Try again</button></p></div></div>`;
@@ -418,7 +418,7 @@ function list(){
     const its=items().filter(i=>i.group===g);
     const body=its.length?its.map(it=>{const st=status(it);const cur=S.sel[S.scen]===it.id;
       return `<div role="listitem"><button class="item" aria-current="${cur}" data-a="sel" data-k="${it.id}">
-        <span class="t1">${esc(itemName(it))} · ${PEOPLE[it.person]}</span>${chip(st)}
+        <span class="t1" title="${esc(itemName(it))} · ${PEOPLE[it.person]}">${esc(itemName(it))} · ${PEOPLE[it.person]}</span>${chip(st)}
         <span class="t2" title="${esc(it.title)}">${esc(it.group==='docs'?roleOf(it.person):it.title)}${st.prog?' · '+st.prog:''}${it.filled&&it.group!=='online'?` · ${it.filled[0]} of ${it.filled[1]} filled`:''}</span></button></div>`;}).join('')
       :`<p class="none">None in this filing</p>`;
     const extra=(g==='docs'&&s.docsNote)?`<p class="none">${esc(s.docsNote)}</p>`:'';
@@ -448,8 +448,8 @@ function online(it){
     const fillDis=scr.recapture||scr.manual;
     const fillTip=scr.recapture?'The portal screen changed. The extension fills nothing here until the content team re-captures it.':scr.manual?'Background and declaration questions are always answered by the representative on screen.':'Fills the open portal screen in your own session, then reads every value back.';
     let warn='';
-    if(scr.recapture) warn=`<div class="finding warn" style="margin-top:12px"><span class="ico">⚑</span><div><strong>This portal screen changed on ${esc(scr.recapture.when)} (found by ${esc(scr.recapture.by)}).</strong><ul style="margin:4px 0 0;padding-left:18px">${scr.recapture.diffs.map(d=>`<li>${esc(d)} <span class="sample">Sample</span></li>`).join('')}</ul><p>The content team has a “Re-capture needed” task. Until then: copy the answers below, check them against the screen, and answer the new question on screen.</p></div></div>`;
-    if(scr.changed) warn=`<div class="finding warn" style="margin-top:12px"><span class="ico">↻</span><div><strong>${esc(scr.changed.fact)} changed on ${esc(scr.changed.when)}, after this screen was entered.</strong><p>The portal still holds ${esc(scr.changed.was)}. ExpatReady never changes what is already in the portal: correct it there, then tick the screen again.</p></div></div>`;
+    if(scr.recapture) warn=`<div class="finding warn" style="margin-top:12px"><span class="ico">⚑</span><div><strong>This portal screen changed ${scr.recapture.when==='today'?'today':'on '+esc(scr.recapture.when)} (found by ${esc(scr.recapture.by)}).</strong><ul style="margin:4px 0 0;padding-left:18px">${scr.recapture.diffs.map(d=>`<li>${esc(d)} <span class="sample">Sample</span></li>`).join('')}</ul><p>The content team has a “Re-capture needed” task. Until then: copy the answers below, check them against the screen, and answer the new question on screen.</p></div></div>`;
+    if(scr.changed) warn=`<div class="finding warn" style="margin-top:12px"><span class="ico">↻</span><div><strong>${esc(scr.changed.fact)} changed ${scr.changed.when==='today'?'today':'on '+esc(scr.changed.when)}, after this screen was entered.</strong><p>The portal still holds ${esc(scr.changed.was)}. ExpatReady never changes what is already in the portal: correct it there, then tick the screen again.</p></div></div>`;
     return `<div class="screen"><header>
       <span class="n${scr.entered&&!scr.changed?' done':''}" aria-hidden="true">${ix+1}</span>
       <button class="name" data-a="toggle" data-k="${scr.id}" aria-expanded="${!!open}">${esc(scr.name)} <span class="sample">screen name Sample</span></button>

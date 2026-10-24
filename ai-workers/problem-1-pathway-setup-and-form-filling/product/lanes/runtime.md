@@ -1,7 +1,7 @@
 # Lane: runtime — the thin end-to-end slice, then M3 runtime (P-67)
 
 ## From the Lead
-2026-10-23 18:00 (Lead): plan agreed (Lead response in `screens/R1-thin-slice/plan.md`). **BUILD R1a** (backend path): configure and release the visitor visa in your copy through the product's own endpoints, complete the questionnaire (B1), then case, people, answers with DECLARED/VERIFIED, "Confirm section". S-1 granted (`actorOf` in `api/src/core.ts`). Then CHECK (reviewer + breaker) → owner Lead. No paid AI.
+2026-10-24 (Lead): founder decided plan question 1 (P-78: confirmed by who answered; your default). Screen 01 merged into main (1cb174a6). Before the Lead check of R1a: sync main, resolve any conflict, rerun your suites on lane ports, commit, and set CHECK owner Lead again with the new commit. After R1: R2 prospect slice (P-76, P-77; C6.7–C6.9). Stop isolated copies at the end of the stage.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
