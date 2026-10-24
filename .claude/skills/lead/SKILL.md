@@ -12,7 +12,7 @@ Run `bash P/tools/lane.sh whoami`. `unbound` in a cloud session (a plain GitHub 
 
 ## Start of every chat
 0. **Cloud session (P-82):** on `main` (guard above), run `bash P/tools/cloud-setup.sh` once. End with `git push origin main`.
-0b. **One Lead at a time (Mac or cloud):** if `git log -1 --format='%cr %s' origin/main` shows a `lead:` commit from the last 30 minutes that this chat did not make, ask the founder whether another Lead chat is still running before changing anything.
+0b. **One Lead at a time (Mac or cloud):** `git log origin/main --since=30.minutes --format='%h %s' | grep ' lead:'` lists a commit this chat did not make → ask the founder whether another Lead chat is still running before changing anything.
 1. Read `LEAD.md`, `STATE.md`, `lanes/*.md`, `qa/BUGS.md`, open rows of `REQUESTS.md`, the newest lines of `DECISIONS.md`; `WORKFLOW.md` if roles or stages are in question.
 2. `lane.sh status` (every lane copy, uncommitted files, behind main), then each lane's newest commits (`git log main..<branch>`; `git worktree list`).
 3. **Pick up lanes an earlier Lead chat started** (their notifications went to that chat): a lane owned by Builder with no session working (no recent changes) → a fresh session, prompt `/next <lane>` or `/qa <mode>`: Mac `start_session` (own worktree, `source_branch` = its branch or main); cloud `create_session` (`source_revision` and `outcome_branch` = `lane.sh branch <lane>`). Evidence and anything needing `sources/` or `code/` stay on the Mac (P-82). `git fetch origin` first. Name the lanes resumed; never disturb a lane writing files.
