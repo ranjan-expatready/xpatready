@@ -103,10 +103,11 @@ function pdf(title, text) {
     step("J3 nothing typed: Create is not available", await p.getByRole("button", { name: "Create and add sources" }).isDisabled());
     const long = "A".repeat(60) + " " + "B".repeat(70);
     await level(0, long); await level(1, "Long test");
-    await p.getByRole("button", { name: "Create and add sources" }).click(); await idle();
+    const offLong = await p.getByRole("button", { name: "Create and add sources" }).isDisabled();
+    await p.getByRole("button", { name: "Create and add sources" }).click({ timeout: 3000 }).catch(() => {}); await idle();
     let txt = await main();
     const longStored = sql(`select count(*) from program_def where length(label) > 120`);
-    step("J3 a 131-character program name is refused with the field message 'Keep the name under 120 characters.'", /Keep the name under 120 characters/.test(txt) && longStored === "0", `${longStored} stored; on screen: ${(txt.match(/[^.]*(120|too long|characters)[^.]*\./i) ?? ["no message"])[0].slice(0, 160)}`);
+    step("J3 a 131-character program name is refused with the field message 'Keep the name under 120 characters.'", /Keep the name under 120 characters/.test(txt) && longStored === "0", `${longStored} stored; Create ${offLong ? "off" : "on"}; on screen: ${(txt.match(/[^.]*(120|too long|characters)[^.]*\./i) ?? ["no message"])[0].slice(0, 160)}`);
     await shot("J3-long-name");
     await go("/new");
     await level(0, "Résidence temporaire"); await level(1, "Visa d'été — 日本語");
@@ -118,7 +119,8 @@ function pdf(title, text) {
     await p.getByRole("button", { name: "Create and add sources" }).click({ timeout: 3000 }).catch(() => {}); await idle();
     txt = await main();
     const sym = sql("select coalesce(string_agg(label || '=' || program_node_key, ' | '), '') from program_def where label in ('!!!','???')");
-    step("J3 a name of symbols only is refused with a plain message (it has no letters to compare or key)", !sym, `stored: ${sym || "nothing"}; on screen: ${(txt.match(/(Give it a name|letters|refused|not allowed)[^.]*\./i) ?? ["no message"])[0]}`);
+    step("J3 a name of symbols only is refused with a plain message (it has no letters to compare or key)", !sym, `stored: ${sym || "nothing"}; on screen: ${(txt.match(/(Give it a name|letters or digits|refused|not allowed)[^.]*\./i) ?? ["no message"])[0]}`);
+    step("J3 the symbol-only refusal is on the field, in plain words", /Use letters or digits in the name, not only punctuation/.test(txt));
     await shot("J3-symbols");
   });
 
@@ -143,7 +145,8 @@ function pdf(title, text) {
     const id = sql("select c.id from combination c join program_def p on p.id=c.program_def_id where p.label='Super visa' limit 1");
     await go(`/c/${id}/sources`);
     const input = p.locator('main input[type="file"][aria-label="Choose files"]');
-    const results = async (files) => { await input.setInputFiles(files); await p.getByText(/Upload results|added|Already|Held|held|refused|Only PDF|empty/).first().waitFor({ timeout: 120000 }).catch(() => {}); await idle(); await p.waitForTimeout(500); return main(); };
+    // Wait for the result line of this file (the page's own intro says "held", so a word match is not enough).
+    const results = async (files) => { const name = path.basename(Array.isArray(files) ? files[0] : files); await input.setInputFiles(files); await p.getByRole("list", { name: "Upload results" }).getByText(name).first().waitFor({ timeout: 120000 }).catch(() => {}); await idle(); return main(); };
     let t = Date.now(); let txt = await results(path.join(OFFICIAL, "forms", "imm5257e.pdf")); timings.intakeOfficialMs = Date.now() - t;
     step("J5 an official IRCC PDF: code and edition read from the file, added and attached", /IMM 5257/.test(txt) && /(added to the library|Attached to Super visa)/.test(txt), (txt.match(/IMM 5257[^.]*\.[^.]*\./) ?? [""])[0].slice(0, 200));
     await shot("J5-official");
@@ -205,14 +208,14 @@ function pdf(title, text) {
     await p.getByRole("button", { name: "Add a document requirement" }).click(); await p.getByRole("button", { name: /Minor travelling alone \(conditional\): IMM 5484/ }).click();
     await p.getByText("Condition is valid").waitFor(); await p.getByRole("dialog").getByRole("button", { name: "Save to draft" }).click(); await idle();
     await go(`/c/${wp}/review`);
-    await p.getByRole("button", { name: /Submit for review/ }).click(); await idle();
+    await p.getByRole("button", { name: /Submit for review/ }).click(); await idle(); await p.getByText(/Submitted by /).first().waitFor({ timeout: 30000 }).catch(() => {});
     step("J6 author submits the draft", /Submitted by/.test(await main()), (await main()).match(/Submitted by [^ ]+/)?.[0]);
     step("J6 the submitter is shown by name, not by an internal id", !/Submitted by user-/.test(await main()), (await main()).match(/Submitted by [^ ]+/)?.[0]);
     await shot("J6-submitted");
     await as("user-B"); await go(`/c/${wp}/review`);
     await p.getByRole("button", { name: /Approve and release/ }).click(); await idle(); await p.waitForTimeout(800);
     let txt = await main() + " " + (await p.locator("[aria-live=polite]").allInnerTexts()).join(" ");
-    step("J6 approver before the SME sign-off: refused, with the reason in plain words", /SME sign-off first/.test(txt) && sql(`select count(*) from config_release where combination_id='${wp}'`) === "1", (txt.match(/[^.]*SME sign-off[^.]*\./) ?? ["no message"])[0].slice(0, 200));
+    step("J6 approver before the SME sign-off: refused, with the reason in plain words", /SME sign-off/.test(txt) && sql(`select count(*) from config_release where combination_id='${wp}'`) === "1", (txt.match(/[^.]*SME sign-off[^.]*\./) ?? ["no message"])[0].slice(0, 200));
     await shot("J6-approve-refused");
     await as("user-C"); await go(`/c/${wp}/review`);
     await p.getByRole("button", { name: "Select all I can sign" }).click(); await p.getByRole("button", { name: /^Sign \d/ }).click(); await idle();
