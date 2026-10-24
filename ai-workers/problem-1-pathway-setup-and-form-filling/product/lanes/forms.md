@@ -6,13 +6,14 @@
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: F1-forms-channels
-stage: CHECK
-owner: Lead
-next_action: Lead check of slice 2 on the merged commit (main and Screen 01 merged in; conflicts in fill.ts, forms.ts, sources.ts, check_forms_channels.ts resolved: this lane's code with main's P-63 words and both import lists): build-notes "Slice 2" and "Slice 2 fixes", review-slice2.md, break-report-slice2.md; rerun the suites (slice 2 server with STUDIO_PART_PAUSE_MS=3000). Decide: parallel paid parts need a ledger change; founder go for the IMM 0008/5669/5406 paid drafts. Next FIX pass: QA-15, QA-18.
+stage: BUILD
+owner: Builder
+next_action: BUILD slice 2b (F5 page-field values on static forms, F6 oath block as a person step, QA-15 form-code case, D3 screen-map repeat at US$0), then CHECK.
 blocked_by: none
-updated: 2026-10-23
+updated: 2026-10-24
 
 ## Log (last 10 lines)
+- 2026-10-24 · F1 · CHECK → BUILD (slice 2b) · applied Lead note 2026-10-24 22:00 (slice 2 merged; cloud clone merged main cd97cb6, cloud-setup.sh run).
 - 2026-10-24 · F1 · CHECK (slice 2) · applied Lead note 2026-10-24: merged main (Screen 01, 1cb174a6), resolved 4 conflicts; all suites green on lane ports: guard 75, launch 53, slice 2 52, F1 106, engine 38, rules 65, drafting 48, API 130, channels 42, release race pass, grounding 29, orchestration 22; explicit any back to 437; lane copies stopped. US$0. Owner → Lead.
 - 2026-10-23 · F1 · FIX → CHECK (slice 2) · every review Must/Major and break Blocker/Major fixed with a test, most minors too; all suites green: guard 75, launch 53, slice 2 52, F1 106, engine 38, rules 54, drafting 48, API 94, grounding 29, orchestration 22 (lane copy). US$0. Owner → Lead.
 - 2026-10-23 · F1 · FIX (slice 2) · slice 2 suite 52/52 (evidence committed); final full run in progress.
