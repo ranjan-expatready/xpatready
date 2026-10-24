@@ -16,17 +16,13 @@ updated: 2026-10-23
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-24 · Lead · PR #5 merged (be10fa7): CI runs every suite on every push (first GitHub run 11/11 green after the L2 wait port), graph in CI, automatic pull at session start. Scheduled Lead set up and paused (founder: until the weekly usage resets).
 - 2026-10-24 · Lead · Founder decided P-84 (scheduled cloud Lead every 4 hours), P-85 (full suites on every push: `tools/run-suites.sh`, 11/11 green on main in 6 min) and P-86 (generated traceability graph `tools/graph.mjs`: 0 hard gaps; 22 untested routes, 7 pages no browser test opens, 5 Works capabilities no test names, 1 unused component → qa lane).
 - 2026-10-24 · cloud · PR #4 merged (3c3d578): cloud sessions live. Follow-up: session start pulls a clean copy automatically (no manual git pull, Mac or cloud); one-Lead check in the lead skill; lane.sh branch skips a lane's merged old branches.
 - 2026-10-24 · cloud · Cloud sessions work end to end (PR from claude/modest-cerf-yunauq): setup from a fresh clone, lane bind to its branch, app, suites green (Screen 01 browser 136/136). Mac-only: evidence lane, sources/code reading, OCR (B31). Lanes sync main once before their first cloud run.
+- 2026-10-24 · Devin · P-82 cut-over complete: GitHub is the source of truth; this folder is a clean clone on main (PR #1 merged); 7 lane worktrees on origin branches; :4400 live on the same xr_studio_demo DB. P-83 merged (PR #2): 26 official blank PDFs committed.
 - 2026-10-24 · screens · CHECK → merged · Lead check of Screen 01 (channels, filing method, portal, online forms, release gate, words) merged 1cb174a6; :4400 restarted; DONE after qa retest. Evidence IMM 1295 merged. All builder lanes working again.
 - 2026-10-24 · all · Every lane finished its stage overnight and waits on the Lead check: screens (Screen 01 with channels), forms slice 2, runtime R1a, evidence; qa waiting. Screen 01 is checked first.
 - 2026-10-24 · Lead · P-81 private GitHub repository through a filtered mirror; waiting on founder steps (repository, tool install, settings).
 - 2026-10-24 · Lead · Stray test combination removed from :4400 (founder OK; history event added; backup kept); Individual 21, Corporate 8.
 - 2026-10-23 · Lead · :4400 restarted on main 13629dfc with the forms database update (founder OK); backup taken; data unchanged; lane apps untouched.
-- 2026-10-23 · Lead · Founder decided P-80 (held PDF approved in the product by a second person; amends P-57); Screen 02 draft updated.
-- 2026-10-23 · Lead · Founder decided P-79 (one To review page under Configure); menu, SCREENS 02, Screen 02 draft updated.
-- 2026-10-23 · runtime · Founder decided P-78 (family answers confirmed by who answered; adult's answers given by the principal wait for that adult or the officer); R1 builds as planned.
-- 2026-10-23 · Lead · P-77: prototype PQR answers flow into the SQR; staff eligibility page on the R1 rules engine with Sample gates; runtime lane R2 after R1.
-- 2026-10-23 · Lead · Founder decided P-76 (PQR model, option C with AI-drafted picks, approved in the combination's release). Prepare application designer draft committed; all four design drafts ready for walkthrough.
-- 2026-10-24 · Devin · P-82 cut-over complete: GitHub is the source of truth; this folder is a clean clone on main (PR #1 merged); 7 lane worktrees on origin branches; :4400 live on the same xr_studio_demo DB. P-83 merged (PR #2): 26 official blank PDFs committed.
