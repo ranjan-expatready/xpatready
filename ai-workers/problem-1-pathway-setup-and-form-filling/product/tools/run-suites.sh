@@ -53,6 +53,8 @@ if [ -f "$RT/check_runtime_r1a.ts" ]; then
   if zsh "$S/tools/isolated.sh" runtime_r1 4430 start >/dev/null 2>&1 && $TSX "$RT/setup_visitor_visa.ts" 4430 xr_studio_runtime_r1 > "$OUT/setup_visitor_visa.log" 2>&1; then
     # R1c's browser journey first: it publishes a release 2 that R1a expects (runtime lane, 24 Oct).
     [ -f "$RT/check_runtime_r1c.cjs" ] && run check_runtime_r1c.cjs runtime_r1 node "$RT/check_runtime_r1c.cjs" 4430
+    # R1d next on the same copy (it fills forms from the cases R1c made); R1a last: its --reset empties the workspace.
+    [ -f "$RT/check_runtime_r1d.ts" ] && run check_runtime_r1d.ts runtime_r1 $TSX "$RT/check_runtime_r1d.ts" 4430 xr_studio_runtime_r1
     run check_runtime_r1a.ts runtime_r1 $TSX "$RT/check_runtime_r1a.ts" 4430 xr_studio_runtime_r1 --reset
   else rows+=("| check_runtime_r1a.ts | FAIL | | isolated copy runtime_r1 or setup_visitor_visa.ts failed (see setup_visitor_visa.log) |"); fail=1; fi
   zsh "$S/tools/isolated.sh" runtime_r1 4430 stop >/dev/null 2>&1

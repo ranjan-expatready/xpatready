@@ -1,0 +1,246 @@
+{
+  "base": "http://localhost:4477",
+  "db": "xr_studio_qa_j6",
+  "at": "2026-10-24T22:11:41.650Z",
+  "timings": {
+    "firstViewEmptyMs": 990,
+    "createMs": 266,
+    "intakeOfficialMs": 522,
+    "filterMs": 181,
+    "warmFirstViewMs": 757,
+    "filterNoPadMs": 26,
+    "loadSampleMs": 6435,
+    "approveMs": 398
+  },
+  "axe": [
+    {
+      "state": "empty catalogue",
+      "violations": []
+    }
+  ],
+  "log": [
+    {
+      "name": "J1 author: the empty catalogue says what to do first",
+      "ok": true,
+      "detail": "990 ms"
+    },
+    {
+      "name": "J1 axe: empty catalogue",
+      "ok": true,
+      "detail": "clean"
+    },
+    {
+      "name": "J1 the path builder opens with the pathway preset to the tab the author was on",
+      "ok": true
+    },
+    {
+      "name": "J1 a screen reader hears each level's name (Program, Category), not only the placeholder 'Choose or type'",
+      "ok": true,
+      "detail": "{\"Program\":1,\"Category\":1}"
+    },
+    {
+      "name": "J1 keyboard: Enter on the only suggestion ('Create \"Visitors\"') chooses it",
+      "ok": true,
+      "detail": "chosen"
+    },
+    {
+      "name": "J1 the preview says exactly what will be created",
+      "ok": true,
+      "detail": "Will be created as Individual › Visitors › Super visa"
+    },
+    {
+      "name": "J1 data: a double click creates the path once (one combination, one program, one category)",
+      "ok": true,
+      "detail": "1 combination; Visitors > Super visa"
+    },
+    {
+      "name": "J1 data: the audit has one line per created item, by the author",
+      "ok": true,
+      "detail": "category, configuration row, program"
+    },
+    {
+      "name": "J1 lands on the new combination's sources with one obvious next step (Add sources)",
+      "ok": true,
+      "detail": "Programs Individual Visitors Super visa Super visa In setup Not released yet · cases opened inside Canada or outside Canada · people: Principal applicant, Spous"
+    },
+    {
+      "name": "J1 the catalogue shows the row: Visitors › Super visa · In setup · Add sources",
+      "ok": true
+    },
+    {
+      "name": "J2 a differently written existing program is recognised, with a plain message",
+      "ok": true
+    },
+    {
+      "name": "J2 a differently written existing category is recognised",
+      "ok": true
+    },
+    {
+      "name": "J2 choosing the existing path says the combination exists and offers to open it",
+      "ok": true
+    },
+    {
+      "name": "J2 'Create and add sources' cannot make a second copy",
+      "ok": true,
+      "detail": "button disabled"
+    },
+    {
+      "name": "J2 'Open the existing combination' opens the one that exists",
+      "ok": true,
+      "detail": "http://localhost:4477/c/55435b96-3133-4e36-9c0e-50ecf9902f14"
+    },
+    {
+      "name": "J3 nothing typed: Create is not available",
+      "ok": true
+    },
+    {
+      "name": "J3 a 131-character program name is refused with the field message 'Keep the name under 120 characters.'",
+      "ok": true,
+      "detail": "0 stored; Create off; on screen:  Pathway Individual Corporate and employers Program Keep the name under 120 characters."
+    },
+    {
+      "name": "J3 French and Japanese names are kept exactly as typed",
+      "ok": true,
+      "detail": "Résidence temporaire | Visa d'été — 日本語"
+    },
+    {
+      "name": "J3 a name of symbols only is refused with a plain message (it has no letters to compare or key)",
+      "ok": true,
+      "detail": "stored: nothing; on screen: letters or digits in the name, not only punctuation."
+    },
+    {
+      "name": "J3 the symbol-only refusal is on the field, in plain words",
+      "ok": true
+    },
+    {
+      "name": "J4 approver: 'New combination' is still offered (the server decides)",
+      "ok": null,
+      "detail": "disabled"
+    },
+    {
+      "name": "J4 approver: creating is refused by the server, nothing stored, and the screen says why in plain words",
+      "ok": true,
+      "detail": "0 stored; Only a configuration author can create combinations Switch to the Configuration author with \"Acting as\" at the top."
+    },
+    {
+      "name": "J4 approver by direct call: refused with 403 and a Problem Details body",
+      "ok": true,
+      "detail": "403 Approver (simulated) does not hold the author duty"
+    },
+    {
+      "name": "J5 an official IRCC PDF: code and edition read from the file, added and attached",
+      "ok": true,
+      "detail": "IMM 5257 (09-2023) Added to the library Form · Application for visitor visa (temporary resident visa) · published 2026-06-04 · imm5257e.pdf IMM 5257 (09-2023) added to the library as a new form (read "
+    },
+    {
+      "name": "J5 the same file again: 'Already in the library', nothing duplicated",
+      "ok": true,
+      "detail": "Already in the library Form · Application for visitor visa (temporary resident visa) · imm5257e."
+    },
+    {
+      "name": "J5 an older edition of the same form is kept aside with a plain reason",
+      "ok": true,
+      "detail": "Older edition: not used Form · APPLICATION FOR TEMPORARY RESIDENT VISA · published 2019-04-18 · imm5257e-pre-2023.pdf Older edition: not used."
+    },
+    {
+      "name": "J5 a file not on the approved list (synthetic newer edition) is held before library, attachment or AI, with the reason",
+      "ok": true,
+      "detail": "Held for a person Form · (12-2027) · synthetic-imm5257-2027.pdf Held for source verification: IMM 5257 (12-2027) is not on the approved source list."
+    },
+    {
+      "name": "J5 a non-PDF named .pdf is refused in plain words, nothing read",
+      "ok": true
+    },
+    {
+      "name": "J5 an empty file is refused in plain words",
+      "ok": true
+    },
+    {
+      "name": "J5 data: the held items are listed for a person to decide",
+      "ok": true,
+      "detail": "[{\"id\":\"205f2f74-dfa1-4c99-9081-2996faeeeb58\",\"file\":\"synthetic-imm5257-2027.pdf\",\"kind\":\"form\",\"code\":\"IMM 5257\",\"title\":\"(12-2027)\",\"edition\":\"IMM 5257 (12-2027)\",\"published\":null,\"outcome\":\"held\",\""
+    },
+    {
+      "name": "J8 reload on a combination page keeps the page (through the QA-4 page proxy)",
+      "ok": true
+    },
+    {
+      "name": "J8 Back returns to the list with the same filter (All)",
+      "ok": true,
+      "detail": "aria-pressed=true"
+    },
+    {
+      "name": "J8 1024 px: the catalogue has no sideways scroll",
+      "ok": true
+    },
+    {
+      "name": "J8 400 px: the catalogue has no sideways scroll",
+      "ok": true
+    },
+    {
+      "name": "J8 keyboard only: Tab reaches 'New combination' and Enter opens the path builder",
+      "ok": true
+    },
+    {
+      "name": "J8 speed (warm, with network idle): first view 757 ms (< 1 s) · filter 26 ms (< 200 ms); cold first view 990 ms recorded",
+      "ok": true
+    },
+    {
+      "name": "J6 setup: sample inputs loaded through the Demo menu",
+      "ok": true,
+      "detail": "6 s"
+    },
+    {
+      "name": "J6 author submits the draft",
+      "ok": true,
+      "detail": "Submitted by Configuration"
+    },
+    {
+      "name": "J6 the submitter is shown by name, not by an internal id",
+      "ok": true,
+      "detail": "Submitted by Configuration"
+    },
+    {
+      "name": "J6 approver before the SME sign-off: refused, with the reason in plain words",
+      "ok": true,
+      "detail": " Release refused: 2 changes need the content reviewer's SME sign-off."
+    },
+    {
+      "name": "J6 content reviewer (SME duty) signs the changes (recorded with the SME duty)",
+      "ok": true,
+      "detail": "2 SME sign-offs by the content reviewer"
+    },
+    {
+      "name": "J6 the author cannot approve their own change (button off)",
+      "ok": true
+    },
+    {
+      "name": "J6 the author by direct call: refused",
+      "ok": true,
+      "detail": "403 Configuration author (simulated) does not hold the approve duty"
+    },
+    {
+      "name": "J6 a second person releases: version 2 with author, submitter and approver recorded",
+      "ok": true,
+      "detail": "2 user-A/user-A/user-B"
+    },
+    {
+      "name": "J6 the catalogue shows the row Live in the new release",
+      "ok": true
+    },
+    {
+      "name": "J7 the draft bar offers 'Review and release' to everyone",
+      "ok": true
+    },
+    {
+      "name": "J7 QA-1: the shared Release page refuses changes nobody submitted or signed",
+      "ok": true,
+      "detail": "before v2; after v2 submitter user-A; "
+    },
+    {
+      "name": "no page errors in the whole run",
+      "ok": true,
+      "detail": "none"
+    }
+  ]
+}

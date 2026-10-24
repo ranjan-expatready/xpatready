@@ -20,6 +20,7 @@ const STUDIO = join(import.meta.dirname, "..", ".."), PROTOTYPE = join(STUDIO, "
 const FIX = join(STUDIO, "tests", "fixtures", "portal"), SCRATCH = join(STUDIO, "var", `isolated-${NAME}`, "qa-probe");
 const SETTINGS = ["STUDIO_PART_PAUSE_MS=3000"];
 let pass = 0, fail = 0;
+const note = (name: string, detail?: unknown) => console.log(`NOTE  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`);
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 300)}` : ""}`); };
 type Res = { status: number; body: any; ctype: string };
 const call = async (method: string, path: string, body?: unknown, actor: string | null = "user-A"): Promise<Res> => {
@@ -91,16 +92,19 @@ const ledger = () => { const lines = readFileSync(join(PROTOTYPE, "p2", "ledger"
   ok("A4 cancel mid-run: a cancel, then a second cancel at once, end in one CANCELLED step with the parts not sent", c1.status === 201 && c2.status < 500 && stopped.status === "CANCELLED" && (stopped.detail?.a4?.parts ?? []).some((p: { status: string }) => p.status === "not started"), { c1: c1.status, c2: said(c2), status: stopped.status, message: stopped.message?.slice(0, 140) });
   r = await call("POST", `/ai/batches/${batchOf(vvJob.id)}/cancel`, {});
   ok("A4 cancel: cancelling finished work → 409 plain", problem(r, 409), said(r));
-  r = await call("POST", `/ai/batches/${batchOf(vvJob.id)}/retry`, {});
-  ok("A4 retry after a mid-run cancel: the parts not sent can be retried (or the refusal says to draft again) — today 'Nothing to retry: no step failed', which contradicts the step's own 'the rest were not sent' (api/src/ai.ts retry: only 'Cancelled before it started' counts)", r.status < 300 || /draft (it )?again|not sent/i.test(r.body?.detail ?? ""), said(r));
   r = await call("POST", `/attachments/${vvAtt}/draft`, { mode: "stub" });
   ok("A4 after a cancel: a new draft of the same form starts at once (the cancelled step does not block it)", r.status === 201, said(r));
   const vv2 = r.body; await call("POST", `/ai/batches/${batchOf(vv2.id)}/cancel`, {});
   const vv2done = await finished(vv2.id);
   ok("A4 cancel before any part started (within the pause): CANCELLED, every part 'not started', US$0", vv2done.status === "CANCELLED" && (vv2done.detail?.a4?.parts ?? []).every((p: { status: string }) => p.status === "not started" || p.status === "queued") && (vv2done.costUsd ?? 0) === 0, { status: vv2done.status, parts: vv2done.detail?.a4?.parts?.map((p: { status: string }) => p.status), message: vv2done.message?.slice(0, 120) });
+  // After the new draft is settled (Lead note 24 Oct 21:10: a retry first would make the new draft meet it, 409, correctly).
+  r = await call("POST", `/ai/batches/${batchOf(vvJob.id)}/retry`, {});
+  ok("A4 retry after a mid-run cancel (QA-32): the parts not sent can be retried, or the refusal says to draft again (on 12e7207 the retry runs)", r.status < 300 || /draft (it )?again|not sent/i.test(r.body?.detail ?? ""), said(r));
 
   // ─────────────────────────────── A4 reuse: an earlier edition from the saved real answer (replay, US$0), then stale plans
-  r = await call("POST", `/attachments/${vvAtt}/draft`, { mode: "replay" });
+  // The retry above starts a new step (stub, US$0): a replay of the same form waits for it (409 "already queued or running").
+  for (let k = 0; k < 60; k++) { r = await call("POST", `/attachments/${vvAtt}/draft`, { mode: "replay" }); if (r.status !== 409) break; await new Promise((res) => setTimeout(res, 1000)); }
+  ok("A4 after the retried step finishes, a replay of the same form starts", r.status === 201, said(r));
   const rep = await finished(r.body.id);
   await call("POST", `/jobs/${rep.id}/accept-clean`, { outcome: "REUSE" }); await call("POST", `/jobs/${rep.id}/accept-clean`, { outcome: "NEW" });
   for (const i of (await call("GET", `/jobs/${rep.id}`)).body.items.filter((x: { decision: string }) => x.decision === "PENDING")) await call("POST", `/jobs/${rep.id}/items/${i.id}`, { decision: "ACCEPTED" });
@@ -168,16 +172,21 @@ const ledger = () => { const lines = readFileSync(join(PROTOTYPE, "p2", "ledger"
   const answer = { canonical_fields: [], entries: opened.slice(0, 2).map((i) => ({ input: i, outcome: "not_a_fact", person: "none", fact: null, transform: null, confidence: "medium", unresolved_reason: "asked only by the portal (hand-written check answer)", evidence_quote: i })) };
   const props = screenMapProposals(answer, opened.map((i) => ({ input: i, type: "text", part: null, label: i })), [], factKeyProblem);
   sql(`update drafting_job set run_id = 'qa-hand-written-answer', detail = detail || '${JSON.stringify(props).replace(/'/g, "''")}'::jsonb where id = '${sm1.id}'`);
-  r = await call("POST", SM, { combinationId: vv, mode: "LIVE", confirmWorstUsd: Math.round((worst1 + 1.37) * 100) / 100 }); // deliberately wrong: refused before anything runs
-  ok("D3: with a completed draft's proposals undecided, a LIVE start is refused because of them (not only for its cost)", r.status === 409 && /propos|accept|return|decide/i.test(r.body.detail), said(r));
+  // D3 as fixed on 12e7207 (forms.ts reuseDraft, one of the Lead's two options): a LIVE start returns the waiting draft at US$0.
+  const ledgerLines = () => readFileSync(join(STUDIO, "..", "p2", "ledger", "spend.jsonl"), "utf8").split("\n").filter(Boolean).length;
+  const smBefore = smJobs(), ledgerBefore = ledgerLines();
+  r = await call("POST", SM, { combinationId: vv, mode: "LIVE", confirmWorstUsd: Math.round((worst1 + 1.37) * 100) / 100 }); // a wrong amount on purpose: nothing may be paid either way
+  ok("D3: with a completed draft's proposals undecided, a LIVE start makes no new AI call: the waiting draft is returned (reused, US$0), no new job, no ledger line", (r.status === 201 && r.body?.reused === true && r.body?.id === sm1.id || problem(r, 409)) && smJobs() === smBefore && ledgerLines() === ledgerBefore, { status: r.status, reused: r.body?.reused, same: r.body?.id === sm1.id, message: r.body?.reused_message ?? r.body?.detail, jobs: [smBefore, smJobs()], ledger: [ledgerBefore, ledgerLines()] });
   r = await call("POST", SM, { combinationId: vv, mode: "STUB" });
-  ok("D3: with a completed draft's proposals undecided, a new start is refused (409) — today it starts a second job, so LIVE would pay again for the same inputs (api/src/forms.ts draftLeftovers: the guard sees only QUEUED/RUNNING)", r.status === 409, { status: r.status, jobs: smJobs() });
+  note("D3: a STUB start with proposals waiting starts a second (free) pass", { status: r.status, jobs: smJobs() });
   if (r.status === 201) await finished(r.body.id);
   r = await call("POST", `${SM}/accept`, { jobId: sm1.id, inputs: [] }, "user-C");
   ok("accept: an empty list of inputs accepts nothing (409 plain)", problem(r, 409), said(r));
   r = await call("POST", `${SM}/accept`, { jobId: sm1.id, inputs: [opened[0]] }, "user-A");
   ok("accept: the author (who also holds review) may accept a proposal; it becomes a draft version, origin AI_PROPOSAL", r.status === 201 && r.body.accepted === 1 && sql(`select origin from form_field_map where form_edition_id='${ed}' and data_path='${opened[0]}' order by version desc limit 1`) === "AI_PROPOSAL", said(r));
 
+  // Decide the draft's other waiting proposal, so a LIVE start is priced again instead of reusing it (D3).
+  await call("POST", `${SM}/accept`, { jobId: sm1.id, inputs: [opened[1]] }, "user-A");
   // ─────────────────────────────── stale: a worst case confirmed before the open inputs changed
   r = await call("POST", SM, { combinationId: vv, mode: "LIVE" });
   const worstA = Number(/US\$([0-9.]+)/.exec(r.body.detail)?.[1]);
@@ -199,7 +208,9 @@ const ledger = () => { const lines = readFileSync(join(PROTOTYPE, "p2", "ledger"
   r = await call("POST", SM, { combinationId: vv, mode: "STUB" });
   ok("restart: a new start is possible afterwards (the old job does not block it)", r.status === 201, said(r));
   const smRun = r.body?.id;
-  ok("cancel: a screen_map job can be stopped (STANDARDS §4 [M] cancel; a LIVE one runs a stub pass, then a paid call, with no stop in between) — today it has no batch and no cancel endpoint", !!(await call("GET", `/jobs/${smRun}`)).body?.batchId, { batchId: (await call("GET", `/jobs/${smRun}`)).body?.batchId ?? null });
+  // QA-31 as fixed on 12e7207: only a LIVE draft is AI work with a batch and the one cancel; a STUB pass (no AI, US$0) has nothing to stop.
+  // The LIVE cancel is covered by the builders' check_ai_launch_paths.ts (fake launcher), not here (it would need a paid call or that launcher).
+  note("cancel: a STUB screen-map job has no AI work entry to cancel (by design, break m5)", { batchId: (await call("GET", `/jobs/${runningId}`)).body?.batchId ?? null });
   await finished(smRun);
 
   sql("update form_edition set sha256 = repeat('0', 64), edition_label = 'IMM 5257 (01-2020)' where edition_label = 'IMM 5257 (09-2023)' and channel = 'PDF'");
