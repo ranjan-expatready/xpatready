@@ -228,6 +228,14 @@ async function main() {
   const needed = new Set<string>((cfg.placements as { section_id: string }[]).map((p) => p.section_id));
   for (const s of selections.filter((s) => needed.has(s) || s === VISIT || s === PREVIOUS)) await call("POST", `/combinations/${vv}/sections/${s}`, undefined, AUTHOR);
 
+  // Screen 02 slice 2 (K1, B1): every form field of the applied draft has a decision (here "not a fact": the thin slice
+  // fills only mapped fields), and a second person approves the new shared fields before any release carries them.
+  // Committed by the screens lane with the rules (Lead note 25 Oct 08:30, one-off; record: screens/02-ai-work/runtime-setup-patch.md).
+  for (const j of ((await call("GET", `/combinations/${vv}`)).body.jobs ?? []).filter((x: { kind: string; status: string }) => x.kind === "field_map" && x.status === "APPLIED")) {
+    const ff = (await call("GET", `/jobs/${j.id}/form-fields`)).body;
+    for (const f of ff.fields.filter((x: { outcome: string }) => x.outcome === "unresolved")) await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: f.dataPath, decision: "not_a_fact", reason: "Not filled from case facts in the thin slice (Sample)." }, AUTHOR);
+  }
+  for (const c of (await call("GET", "/library/changes?status=WAITING")).body) await call("POST", `/library/changes/${c.id}/approve`, {}, REVIEWER);
   const o = (await call("GET", `/combinations/${vv}`)).body;
   const problems = o.draft.problems as { level: string; item: string; message: string }[];
   const nobody = problems.filter((p) => /nobody is asked/.test(p.message)), unused = problems.filter((p) => /does not use/.test(p.message)), errors = problems.filter((p) => p.level === "error");
