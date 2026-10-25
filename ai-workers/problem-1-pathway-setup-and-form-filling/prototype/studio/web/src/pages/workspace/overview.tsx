@@ -46,7 +46,7 @@ export function OverviewTab({ d, sum, show }: { d: CombinationView; sum: Combina
         <Stat label="Questions" value={row?.counts?.questions ?? 0} sub={`questions across all people (each person role counted) · ${k.sections} sections · ${k.fields} fields`} />
         <Stat label="Documents" value={k.document_requirements} sub="base and conditional requirements" />
         {/* Only this combination's own problems (Lead check item 3), each listed on Review and release. */}
-        <Stat label="Rules and checks" value={`${k.rules} · ${k.checks}`} tone={errors ? "danger" : undefined}
+        <Stat label="Rules and checks" value={`${k.rules} rule${k.rules === 1 ? "" : "s"} · ${k.checks} check${k.checks === 1 ? "" : "s"}`} tone={errors ? "danger" : undefined}
           sub={errors || warnings ? <Link className="text-text-link underline" to={`/c/${id}/review`}>{errors ? `${errors} problem${errors === 1 ? "" : "s"} to fix` : `${warnings} warning${warnings === 1 ? "" : "s"}`}: see them</Link> : "no problems"} />
       </div>
       <div className="grid gap-5 lg:grid-cols-2">

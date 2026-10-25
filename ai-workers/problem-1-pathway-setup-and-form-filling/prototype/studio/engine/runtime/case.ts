@@ -20,10 +20,15 @@ const CLIENT_KINDS = new Set(["PERSON", "RELATIONSHIP", "CASE"]);
 
 /** The parts of a released placement and field this engine reads (the snapshot keeps them as loose JSON). */
 type Placement = { fact: string; section_id: string; order?: number; repeats: string; collected_from: string; condition?: unknown; condition_effect?: string | null };
-type FieldDef = { id: string; value_type?: string; item_version?: number; answer_list?: { key: string; values: { key: string; label: string }[] } };
+type FieldDef = { id: string; value_type?: string; item_version?: number; filled_by?: "CLIENT" | "CASE_OFFICER"; answer_list?: { key: string; values: { key: string; label: string }[] } };
 const placementOf = (s: Snapshot, field: string): Placement | undefined => (s.placements as Placement[]).find((p) => p.fact === field);
 const fieldOf = (s: Snapshot, field: string): FieldDef | undefined => (s.canonical_fields as FieldDef[]).find((f) => f.id === field);
-export const isClientField = (s: Snapshot, field: string) => CLIENT_SOURCES.has(placementOf(s, field)?.collected_from ?? "") && CLIENT_KINDS.has(subjectKindOf(field));
+/** Screen 03 S2 (B2): the shared field's own "filled by" wins over its placement's source when the library sets it. */
+export const isClientField = (s: Snapshot, field: string) => {
+  const by = fieldOf(s, field)?.filled_by, placed = placementOf(s, field);
+  if (by === "CASE_OFFICER" || !placed) return false;
+  return (by === "CLIENT" || CLIENT_SOURCES.has(placed.collected_from)) && CLIENT_KINDS.has(subjectKindOf(field));
+};
 
 const realDate = (y: number, m: number, d: number) => { const t = new Date(Date.UTC(y, m - 1, d)); return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d && y >= 1900 && y <= 2100; };
 

@@ -376,6 +376,9 @@ model CanonicalField {
   mergedIntoKey     String?          @map("merged_into_key")
   /// F1 (challenge point 3): the answer list a choice field takes its values from (the team's CanonicalField.enumSetId).
   answerListKey     String?          @map("answer_list_key")
+  /// Screen 03 S2 (B2): CLIENT or CASE_OFFICER fills this field everywhere it is used; null: worked out from its placement
+  /// (contracts/workspace.ts filledByOf). Background and declaration questions stay with the client.
+  filledBy          String?          @map("filled_by")
   updatedBy         String           @map("updated_by")
   updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 

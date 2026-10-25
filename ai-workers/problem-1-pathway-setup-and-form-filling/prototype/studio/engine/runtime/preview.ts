@@ -6,6 +6,7 @@ import { render, type Person, type Role } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
 import { caseView, knownOf, type Answer, type Participant } from "./case.ts";
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
+import { MINOR } from "../../contracts/runtime.ts";
 import { FAMILIES, type FamilyKey, type PreviewView } from "../../contracts/workspace.ts";
 
 type Line = { role: string; label?: string; min?: number; max?: number };
@@ -26,7 +27,21 @@ export function familyPeople(participants: Line[], family: FamilyKey): Participa
     { subjectId: "principal", role: "principal", label: label("principal", "Principal applicant"), applies: true },
     ...(f.spouse ? [{ subjectId: "spouse", role: "spouse_or_partner" as const, label: label("spouse_or_partner", "Spouse or partner"), applies: true }] : []),
     ...Array.from({ length: f.children }, (_, i) => ({ subjectId: `child-${i + 1}`, role: "child" as const, label: `${label("child", "Child")} ${i + 1}`, applies: true })),
+    // A combination with a sponsor (Sample role, S2) previews every family with one; the sponsor files no application.
+    ...(limits(participants, "sponsor").max ? [{ subjectId: "sponsor", role: "sponsor" as const, label: label("sponsor", "Sponsor"), applies: false }] : []),
   ];
+}
+
+/** Sample ages of a family's people (Lead early look S1, change 1), so a line's minimum age shows working: adults 38 and
+ *  36, children 8 then 16, a sponsor 45. Never a real person; the date is worked out from `today` a month before the birthday. */
+export const SAMPLE_AGES: Record<string, number> = { principal: 38, spouse: 36, "child-1": 8, "child-2": 16, sponsor: 45 };
+export function sampleBirthDates(s: Snapshot, people: Participant[], today: Date): Answer[] {
+  if (!(s.canonical_fields as { id: string }[]).some((f) => f.id === MINOR.birthDateField)) return [];
+  return people.filter((p) => SAMPLE_AGES[p.subjectId] !== undefined).map((p) => {
+    const d = new Date(Date.UTC(today.getUTCFullYear() - SAMPLE_AGES[p.subjectId], today.getUTCMonth(), today.getUTCDate()));
+    d.setUTCMonth(d.getUTCMonth() - 1);
+    return { id: `sample:${p.subjectId}|${MINOR.birthDateField}`, subjectId: p.subjectId, field: MINOR.birthDateField, rowKey: null, value: d.toISOString().slice(0, 10), status: "VERIFIED" as const, channel: "sample_family", actor: "sample", at: today.toISOString() };
+  });
 }
 
 /** Tweaks are answers typed on the preview ("subject|fact" → yes or no): declared, never confirmed. */
@@ -44,12 +59,12 @@ export function previewFamily(s: Snapshot, family: FamilyKey, person: string, mo
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const ids = new Set(people.map((p) => p.subjectId));
   const kept = Object.fromEntries(Object.entries(tweaks).filter(([k, v]) => ids.has(k.split("|")[0]) && typeof v === "boolean"));
-  const answers = tweakAnswers(kept, today);
+  const sample = sampleBirthDates(s, people, today), answers = [...sample, ...tweakAnswers(kept, today)];
   const questionnaire = caseView(s, people, answers, [], mode, today);
   const r = render(s, renderPeople, knownOf(s, people, answers, [], today).known, { today });
   // The tweaks: yes/no questions that decide what applies, from the family before any tweak (so a tweak never vanishes
   // once answered).
-  const base = render(s, renderPeople, knownOf(s, people, [], [], today).known, { today });
+  const base = render(s, renderPeople, knownOf(s, people, sample, [], today).known, { today });
   const subjectOf = (about: string) => (about === "case" ? "case" : about.split("/")[0]);
   const tweakList = base.deciders.filter((d) => d.value_type === "yes_no" && !d.about.includes("/") && ids.has(subjectOf(d.about))).map((d) => {
     const key = `${subjectOf(d.about)}|${d.fact}`;

@@ -8,7 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { ConditionBuilder, plainCondition, type FieldInfo } from "@/components/conditions";
 import { cn } from "@/lib/utils";
 
-const WHO: [string, string][] = [["each_applicant", "Each applicant"], ["principal_applicant", "Principal applicant"], ["spouse_or_partner", "Spouse or partner"], ["couple_once", "Once per couple"], ["each_dependent_child", "Each child"], ["each_person", "Each person"], ["case", "The application (once)"], ["representative", "The representative"]];
+const WHO: [string, string][] = [["each_applicant", "Each applicant"], ["principal_applicant", "Principal applicant"], ["spouse_or_partner", "Spouse or partner"], ["couple_once", "Once per couple"], ["each_dependent_child", "Each child"], ["each_person", "Each person"], ["case", "The application (once)"], ["representative", "The representative"], ["sponsor", "The sponsor (Sample role)"]];
 export const whoLabel = (w: string) => WHO.find(([v]) => v === w)?.[1] ?? w;
 /** Revision tokens of the draft rows the editors open (sent back so a concurrent change is refused, not overwritten). */
 const RevCtx = React.createContext<Record<string, string>>({});

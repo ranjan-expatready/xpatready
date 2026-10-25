@@ -14,7 +14,7 @@ import { api, ApiError, useSessionView, useToast } from "@/lib/api";
 import { Button, Field, Input, Notice, Panel, Pill, Select, Table } from "@/components/ui/controls";
 import { useQueryClient } from "@tanstack/react-query";
 
-const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative"];
+const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative", "sponsor"];
 
 export function FormsTab({ id, label, sum, lines }: { id: string; label: string; sum: CombinationSummary; lines: WorkspaceFormLine[] }) {
   const { known, canAuthor } = useSessionView();
@@ -72,6 +72,8 @@ function LinePanel({ id, line, portal, onClose }: { id: string; line: WorkspaceF
   const [cond, setCond] = React.useState<unknown>(null), [plain, setPlain] = React.useState(line.when === "always" ? "" : line.when);
   const [errors, setErrors] = React.useState<Record<string, string>>({}), [conflict, setConflict] = React.useState<string | null>(null), [busy, setBusy] = React.useState(false);
   const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ["combination", id] }), qc.invalidateQueries({ queryKey: ["combination-summary", id] }), qc.invalidateQueries({ queryKey: ["config", id] })]);
+  // A field's error goes as soon as that field is edited (Lead early look S1, change 2); the others stay until fixed.
+  const clear = (k: string) => setErrors((e) => { if (!(k in e)) return e; const { [k]: _gone, ...rest } = e; void _gone; return rest; });
   const num = (v: string) => (v.trim() === "" ? null : /^\d+$/.test(v.trim()) ? Number(v.trim()) : NaN);
   async function save(body: Record<string, unknown>, done: string) {
     setBusy(true); setErrors({}); setConflict(null);
@@ -105,16 +107,16 @@ function LinePanel({ id, line, portal, onClose }: { id: string; line: WorkspaceF
           <Select data-field="who" value={who} onChange={(e) => setWho(e.target.value)}>{WHO.map((w) => <option key={w} value={w}>{whoLabel(w)}</option>)}</Select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Copies" hint="For each person it names." error={errors.copies}><Input data-field="copies" inputMode="numeric" value={copies} onChange={(e) => setCopies(e.target.value)} aria-invalid={!!errors.copies || undefined} /></Field>
-          <Field label="Minimum age" hint="Empty: any age." error={errors.minAge}><Input data-field="minAge" inputMode="numeric" placeholder="None" value={minAge} onChange={(e) => setMinAge(e.target.value)} aria-invalid={!!errors.minAge || undefined} /></Field>
+          <Field label="Copies" hint="For each person it names." error={errors.copies}><Input data-field="copies" inputMode="numeric" value={copies} onChange={(e) => { setCopies(e.target.value); clear("copies"); }} aria-invalid={!!errors.copies || undefined} /></Field>
+          <Field label="Minimum age" hint="Empty: any age." error={errors.minAge}><Input data-field="minAge" inputMode="numeric" placeholder="None" value={minAge} onChange={(e) => { setMinAge(e.target.value); clear("minAge"); }} aria-invalid={!!errors.minAge || undefined} /></Field>
         </div>
         <Field label="Only if" error={errors.condition}>
-          <Select data-field="condition" value={mode} onChange={(e) => setMode(e.target.value)}><option value="COMBINATION_MANDATORY">Always, for this combination</option><option value="ANSWER_CONDITIONAL">Only when a condition is true</option></Select>
+          <Select data-field="condition" value={mode} onChange={(e) => { setMode(e.target.value); clear("condition"); }}><option value="COMBINATION_MANDATORY">Always, for this combination</option><option value="ANSWER_CONDITIONAL">Only when a condition is true</option></Select>
         </Field>
         {mode === "ANSWER_CONDITIONAL" ? (
           <div className="space-y-3 rounded-lg border border-border p-3">
             {line.when !== "always" ? <p className="text-xs text-text-muted">Now: only if {line.when}. Build a new condition below to replace it, or leave it as it is.</p> : null}
-            <ConditionBuilder value={cond} onChange={setCond} fields={fields.list} />
+            <ConditionBuilder value={cond} onChange={(c) => { setCond(c); clear("condition"); }} fields={fields.list} />
             <Field label="In plain words" hint="Shown to staff and clients as the reason."><Input value={plain} onChange={(e) => setPlain(e.target.value)} /></Field>
           </div>
         ) : null}
@@ -122,7 +124,7 @@ function LinePanel({ id, line, portal, onClose }: { id: string; line: WorkspaceF
           <p className="text-sm">{line.channelWords} <span className="text-xs text-text-muted">· change it in the Channel column</span></p>
         </Field>
         <Field label="Signed by" hint="Sample list until the immigration expert confirms it. How it is signed comes from the channel." error={errors.signedBy}>
-          <Select data-field="signedBy" value={signedBy} onChange={(e) => setSignedBy(e.target.value)}><option value="">Not set</option>{SIGNED_BY.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}</Select>
+          <Select data-field="signedBy" value={signedBy} onChange={(e) => { setSignedBy(e.target.value); clear("signedBy"); }}><option value="">Not set</option>{SIGNED_BY.map((x) => <option key={x.key} value={x.key}>{x.label}</option>)}</Select>
         </Field>
         <Field label="Field map"><p className="text-sm">{line.document ? "A checklist: no form fields." : `${line.edition ?? "No version mapped"} · ${line.boxes} form fields mapped`}</p></Field>
       </div>

@@ -11,7 +11,7 @@ export const TABS = [
   { key: "overview", label: "Overview" },
   { key: "forms", label: "Forms" },
   { key: "pqr", label: "PQR", slice: "S4" },
-  { key: "sqr", label: "SQR", slice: "S2" },
+  { key: "sqr", label: "SQR" },
   { key: "documents", label: "Documents", slice: "S3" },
   { key: "rules", label: "Rules", slice: "S4" },
   { key: "preview", label: "Preview by person" },
@@ -42,6 +42,17 @@ export const FormLineEdit = z.object({
   signedBy: z.enum(SIGNED_BY.map((x) => x.key) as [string, ...string[]], { error: "Choose who signs it from the list." }).nullable().optional(),
 });
 
+/** B2, RD-6: who fills a shared field. Null in the library means "as placed": the client for a questionnaire or profile
+ *  placement, the case officer for a document, record or working view. */
+export const FILLED_BY = { CLIENT: "Client", CASE_OFFICER: "Case officer" } as const;
+export type FilledBy = keyof typeof FILLED_BY;
+export const filledByOf = (field: { filled_by?: string | null } | undefined, placement: { collected_from?: string } | undefined): FilledBy =>
+  field?.filled_by === "CLIENT" || field?.filled_by === "CASE_OFFICER" ? field.filled_by : placement && ["client_questionnaire", "profile_record"].includes(placement.collected_from ?? "") ? "CLIENT" : "CASE_OFFICER";
+/** Background and declaration questions stay with the client (concept BR-9). Sample list until the immigration expert
+ *  confirms which library sections these are. */
+export const CLIENT_ONLY_SECTIONS = ["background_declarations", "background_medical", "security_history"] as const;
+export const SetFilledBy = z.object({ filledBy: z.enum(["CLIENT", "CASE_OFFICER"], { error: "Choose Client or Case officer." }).nullable() });
+
 /** Sample families for Preview by person (P-37: preset families, then tweaks). Each is offered when the combination's
  *  people allow it; the people are Sample, never a real household. */
 export const FAMILIES = [
@@ -70,9 +81,21 @@ export type PreviewView = {
   people: PreviewPerson[]; questionnaire: QuestionnaireView; documents: PreviewDocument[]; forms: PreviewForm[]; tweaks: PreviewTweak[];
 };
 
+/** The SQR tab (S2): one role's questions as a case asks them; coverage per role (BR-7). */
+export type SqrQuestion = { fact: string; label: string; asked_as: string | null; meaning: string; filled_by: FilledBy; filled_by_set: boolean; client_only: boolean; needed_by: string[]; rule: string | null; group: boolean; required: boolean; where_used: number };
+export type SqrSection = { id: string; title: string; selected: boolean; questions: SqrQuestion[] };
+export type SqrRole = { role: string; label: string; person: string; questions: number; gaps: number };
+export type SqrView = {
+  roles: SqrRole[]; role: string; person: string;
+  coverage: { needed: number; client: number; officer: number; gaps: { fact: string; role: string; forms: string[]; boxes: number; why: string }[] };
+  sections: SqrSection[]; not_asked: number;
+};
+
+
 /** GET /combinations/:id/workspace?tab= — one request per tab view (concept §6). */
 export type WorkspaceView =
   | { tab: "overview"; asked: string; view: CombinationView; summary: CombinationSummary }
   | { tab: "forms"; asked: string; summary: CombinationSummary; lines: WorkspaceFormLine[] }
   | { tab: "preview"; asked: string; preview: PreviewView | null; empty: string | null }
-  | { tab: Exclude<TabKey, "overview" | "forms" | "preview">; asked: string };
+  | { tab: "sqr"; asked: string; sqr: SqrView | null; available: { key: string; title: string }[]; phone: QuestionnaireView | null; empty: string | null }
+  | { tab: Exclude<TabKey, "overview" | "forms" | "preview" | "sqr">; asked: string };

@@ -4,9 +4,9 @@ import { HttpException, HttpStatus, Inject, Injectable } from "@nestjs/common";
 import type { ReviewSubmission } from "@prisma/client";
 import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
-import { buildSnapshot, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
+import { buildSnapshot, buildSnapshots, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
-import { FormLineEdit } from "../../contracts/workspace.ts";
+import { CLIENT_ONLY_SECTIONS, FormLineEdit, SetFilledBy } from "../../contracts/workspace.ts";
 import { checkCondition, diff, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
 import { cleanLabel, normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
@@ -14,7 +14,7 @@ import { newKeyProblem } from "../../../contracts/fact-key.ts";
 
 const VALUE_TYPES = Object.keys(VALUE_TYPE_TO_DATA_TYPE);
 const COLLECTED = ["client_questionnaire", "verified_document", "staff_working_view", "profile_record", "existing_record"];
-export const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative"];
+export const WHO = ["each_applicant", "principal_applicant", "spouse_or_partner", "couple_once", "each_dependent_child", "each_person", "case", "representative", "sponsor"];
 
 /** Business level names over the team's stored node kinds (see createNode). */
 export const LEVEL: Record<string, { name: string; parent: string | null }> = { PATHWAY: { name: "Pathway", parent: null }, PROGRAM: { name: "Program", parent: "PATHWAY" }, STREAM: { name: "Category", parent: "PROGRAM" }, CATEGORY: { name: "Sub-category", parent: "STREAM" } };
@@ -133,7 +133,7 @@ export class Studio {
    *  applicability on one row, not a separate row (grounding audit finding 1). */
   checkParticipants(list: any[]) {
     if (!Array.isArray(list) || !list.length) fail("Add at least the principal applicant.");
-    const roles = new Set(["principal", "spouse_or_partner", "child", "representative", "parent"]);
+    const roles = new Set(["principal", "spouse_or_partner", "child", "representative", "parent", "sponsor"]); // sponsor: Sample role, immigration expert to confirm (Screen 03 S2)
     if (!list.some((p) => p.role === "principal")) fail("A configuration row needs a principal applicant role.");
     return list.map((p) => {
       if (!roles.has(p.role)) fail(`Unknown participant role ${p.role}.`);
@@ -286,7 +286,7 @@ export class Studio {
     return f;
   }
 
-  async updateField(actor: Actor, key: string, b: { meaning?: string; valueType?: string; note?: string; retire?: boolean }) {
+  async updateField(actor: Actor, key: string, b: { meaning?: string; valueType?: string; note?: string; retire?: boolean; filledBy?: string | null }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const workspaceId = await this.ws.id();
     const rows = await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } });
@@ -297,10 +297,29 @@ export class Studio {
     if (b.valueType !== undefined) { if (!VALUE_TYPES.includes(b.valueType)) fail("Unknown value type."); changes.valueType = b.valueType; changes.dataType = VALUE_TYPE_TO_DATA_TYPE[b.valueType]; }
     if (b.note !== undefined) changes.note = b.note;
     if (b.retire) changes.status = "RETIRED";
+    // Screen 03 S2 (B2): who fills the shared field, everywhere it is used. Background and declaration questions stay with
+    // the client. Until the screens lane's library change approval merges, this is a draft version like any field edit.
+    if (b.filledBy !== undefined) {
+      const f = SetFilledBy.safeParse({ filledBy: b.filledBy });
+      if (!f.success) throw new HttpException(problemFromZod(f.error), HttpStatus.BAD_REQUEST);
+      if (f.data.filledBy === "CASE_OFFICER") {
+        const placed = await this.db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: key, sectionKey: { in: [...CLIENT_ONLY_SECTIONS] } }, select: { sectionKey: true } });
+        if (placed.length) throw new HttpException({ type: "https://expatready.local/problems/client-only", title: "The client answers this", status: 422, detail: "Background and declaration questions stay with the client: the case officer cannot fill this field.", errors: [{ field: "filledBy", message: "Background and declaration questions stay with the client." }] }, HttpStatus.UNPROCESSABLE_ENTITY);
+      }
+      changes.filledBy = f.data.filledBy;
+    }
     const { row, created } = await revise(this.db.canonicalField, rows, changes, actor.id, (r) => ({ ...strip(r), origin: "HUMAN" }));
     if (b.retire && !created) await this.db.canonicalField.update({ where: { id: row.id }, data: { status: "RETIRED" } });
     await this.audit.log(workspaceId, actor.id, "updated", "field", key, `${actor.name} ${b.retire ? "retired" : "changed"} field ${key} (draft v${row.version})`, changes);
-    return row;
+    return b.filledBy !== undefined ? { ...row, where_used: await this.whereUsed(workspaceId, key) } : row;
+  }
+
+  /** The combinations whose draft uses a shared field (asked, or read by a form field): "changes it in N combinations". */
+  async whereUsed(workspaceId: string, key: string): Promise<{ combinations: number; labels: string[] }> {
+    const comps = await this.db.combination.findMany({ where: { workspaceId }, select: { id: true, label: true } });
+    const snaps = await buildSnapshots(this.db, workspaceId, comps.map((c) => c.id), "draft");
+    const labels = comps.filter((c) => (snaps.get(c.id)?.snapshot.canonical_fields as { id: string }[] | undefined)?.some((f) => f.id === key)).map((c) => c.label);
+    return { combinations: labels.length, labels };
   }
 
   async placeField(actor: Actor, key: string, b: { sectionKey: string; collectedFrom: string; repeats: string; tier?: string; questionText?: string; helpText?: string; condition?: any; conditionEffect?: string | null; conditionPlain?: string; ruleOnly?: boolean }) {

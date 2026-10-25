@@ -47,7 +47,7 @@ export function PreviewTab({ p, empty, fetching, studio }: { p: PreviewView | nu
           <div className="mt-1 flex flex-wrap gap-x-6 gap-y-2">
             {mineTweaks.map((t) => (
               <label key={t.key} className="flex items-center gap-2 text-sm">
-                <span>{t.label} <span className="text-text-muted">({t.about})</span></span>
+                <span>{t.label}{t.subjectId === "case" ? <span className="text-text-muted"> (the application)</span> : null}</span>
                 <select className="h-8 rounded-md border border-border-strong bg-surface-raised px-2 text-sm" value={t.value === null ? "" : String(t.value)} onChange={(e) => setTweak(t.key, e.target.value === "" ? null : e.target.value === "true")} aria-label={`${t.label} for ${t.about}`}>
                   <option value="">Not answered</option><option value="true">Yes</option><option value="false">No</option>
                 </select>

@@ -55,6 +55,12 @@ const ws = (id, q, actor) => call("GET", `/combinations/${id}/workspace?${new UR
   await call("POST", `/runtime/cases/${kase.id}/people`, { role: "child", displayName: "Sample Child S", applies: true }, officer);
   const people = (await call("GET", `/runtime/cases/${kase.id}`, undefined, officer)).body.people;
   const roleOf = new Map(people.map((p) => [p.subject_id, p.role]));
+  // The same Sample dates of birth the preview gives its family (engine/runtime/preview.ts SAMPLE_AGES: 38, 36, 8).
+  const dob = (years) => { const t = new Date(); const d = new Date(Date.UTC(t.getUTCFullYear() - years, t.getUTCMonth(), t.getUTCDate())); d.setUTCMonth(d.getUTCMonth() - 1); return d.toISOString().slice(0, 10); };
+  for (const [role, years] of [["principal", 38], ["spouse_or_partner", 36], ["child", 8]]) {
+    const who = people.find((p) => p.role === role).subject_id;
+    await call("PUT", `/runtime/cases/${kase.id}/answers/${who}/person.date_of_birth`, { value: dob(years), expectedId: null }, officer);
+  }
   // Each person's parts in order, each part's questions in order (the flat list's people order follows how subject ids
   // sort, random in a case; both the case page and the preview show one person at a time).
   const shape = (view, role) => ["case", "principal", "spouse_or_partner", "child"].map((r) => `${r}: ${view.sections.filter((s) => role(s.subjectId) === r).map((s) => `${s.section}[${s.questions.map((q) => `${q.fact}${q.required ? "*" : ""}${q.hidden ? "~" : ""}`).join(",")}]`).join(" ")}`);
@@ -86,8 +92,8 @@ const ws = (id, q, actor) => call("GET", `/combinations/${id}/workspace?${new UR
     ok(`C1.4, C4.3: axe (${width}) Overview: no serious or critical violation`, !(await axe(p, `overview-${width}`)).length, axeLog.at(-1).violations); await shot(p, "overview");
     await p.goto(`${BASE}/c/${vv}/whatever`); await p.waitForURL(/\/overview$/);
     ok(`C1.4: BR-1 fail (${width}): an unknown tab in the address opens Overview`, p.url().endsWith(`/c/${vv}/overview`));
-    await p.goto(`${BASE}/c/${vv}/configuration`); await p.waitForURL(/\/sqr$/); await p.getByText(/Rebuilt in slice S2/).waitFor();
-    ok(`C1.4: BR-1 (${width}): the old Configuration address opens SQR, with today's editor until S2`, (await p.getByText("Rebuilt in slice S2").count()) === 1);
+    await p.goto(`${BASE}/c/${vv}/configuration`); await p.waitForURL(/\/sqr$/); await p.getByRole("group", { name: "Person role" }).waitFor();
+    ok(`C1.4: BR-1 (${width}): the old Configuration address opens the SQR tab (built in S2)`, (await p.getByRole("group", { name: "Person role" }).count()) === 1);
     // Forms
     const t1 = Date.now(); await p.getByRole("tab", { name: "Forms" }).click(); await p.getByRole("button", { name: "Edit the IMM 5707 line" }).waitFor();
     ok(`C1.4: Forms (${width}): tab switch and the lines shown in ${Date.now() - t1} ms (budget 1000 ms in the browser)`, Date.now() - t1 < 1000);

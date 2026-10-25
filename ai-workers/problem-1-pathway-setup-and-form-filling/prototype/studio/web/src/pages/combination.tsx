@@ -16,6 +16,7 @@ import { SourcesTab } from "@/pages/sources";
 import { ConfigurationTab } from "@/pages/configuration";
 import { OverviewTab } from "@/pages/workspace/overview";
 import { FormsTab } from "@/pages/workspace/forms";
+import { SqrTab } from "@/pages/workspace/sqr";
 import { PreviewTab, usePreviewParams } from "@/pages/workspace/preview";
 import { PreviewTab as OldPreviewTab } from "@/pages/preview";
 import { ReviewTab } from "@/pages/review";
@@ -71,13 +72,12 @@ export function CombinationPage() {
         {row ? <NextStep row={row} /> : null}
       </div>
       {c.basis_note ? <Notice tone={c.source_basis === "ILLUSTRATIVE" ? "warn" : "info"}>{c.basis_note}</Notice> : null}
-      <div role="tablist" aria-label="Combination" className="flex gap-1 overflow-x-auto border-b border-border">
+      <div role="tablist" aria-label="Combination" className="flex flex-wrap gap-x-1 border-b border-border">
         {TABS.map((t) => <Link key={t.key} role="tab" aria-selected={tab === t.key} to={`/c/${id}/${t.key}`} title={"slice" in t ? `Rebuilt in ${t.slice}; today's page until then` : undefined} className={cn("whitespace-nowrap border-b-2 px-3 py-2 text-sm", tab === t.key ? "border-primary font-medium text-text" : "border-transparent text-text-muted hover:text-text")}>{t.label}{t.key === "review" && errorCount ? <span className="ml-1.5 rounded bg-danger/12 px-1 text-xs text-text-danger">{errorCount}</span> : null}</Link>)}
       </div>
       <div role="tabpanel" aria-label={TABS.find((t) => t.key === tab)!.label}>
         {tab === "preview" && sp.get("view") === "studio" ? <StudioPreview d={d} id={id!} />
-          : tab === "overview" || tab === "forms" || tab === "preview" ? <WorkspaceTab id={id!} tab={tab} label={c.label} show={sp.get("show")} />
-          : tab === "sqr" ? <Later slice="S2" what="the questionnaire by person role, with needed-fact coverage"><ConfigurationTab key="sqr" d={d} areas={["questions", "checks"]} /></Later>
+          : tab === "overview" || tab === "forms" || tab === "preview" || tab === "sqr" ? <WorkspaceTab id={id!} tab={tab} label={c.label} show={sp.get("show")} />
           : tab === "documents" ? <Later slice="S3" what="document lines with whose, only if and accepted documents"><ConfigurationTab key="documents" d={d} areas={["documents"]} /></Later>
           : tab === "rules" ? <Later slice="S4" what="every rule in one list: from the library, this combination's lines, checks and problems"><ConfigurationTab key="rules" d={d} areas={["rules", "checks"]} /></Later>
           : tab === "pqr" ? <Notice title="Pre-qualification questions come in slice S4">The PQR tab marks the questions of this combination's SQR that a prospect is asked (P-76, option C: questions only, never an eligibility result). Until then nothing here changes what a prospect sees.</Notice>
@@ -101,15 +101,17 @@ function Later({ slice, what, children }: { slice: string; what: string; childre
 
 /** Overview, Forms and Preview by person: one request per tab view (concept §6). Under the ["combination", id] key, so
  *  every save that refreshes the combination refreshes the open tab too. */
-function WorkspaceTab({ id, tab, label, show }: { id: string; tab: "overview" | "forms" | "preview"; label: string; show: string | null }) {
+function WorkspaceTab({ id, tab, label, show }: { id: string; tab: "overview" | "forms" | "preview" | "sqr"; label: string; show: string | null }) {
   const pp = usePreviewParams();
-  const qs = new URLSearchParams({ tab, ...(tab === "preview" ? Object.fromEntries(Object.entries(pp).filter(([, v]) => v)) : {}) }).toString();
+  const [sp] = useSearchParams();
+  const qs = new URLSearchParams({ tab, ...(tab === "preview" ? Object.fromEntries(Object.entries(pp).filter(([, v]) => v)) : {}), ...(tab === "sqr" && sp.get("role") ? { role: sp.get("role")! } : {}) }).toString();
   const w = useApi<WorkspaceView>(["combination", id, "workspace", qs], `/combinations/${id}/workspace?${qs}`, { placeholderData: (prev) => (prev?.tab === tab ? prev : undefined) });
   if (w.isLoading) return <Spinner label={`Loading ${tab === "preview" ? "the preview" : tab}`} />;
   if (w.isError || !w.data) return <ErrorState title="This tab could not be loaded" description={(w.error as Error | null)?.message ?? "No answer from the studio."} action={<button className="text-text-link underline" onClick={() => void w.refetch()}>Try again</button>} />;
   const v = w.data;
   if (v.tab === "overview") return <OverviewTab d={v.view} sum={v.summary} show={show} />;
   if (v.tab === "forms") return <FormsTab id={id} label={label} sum={v.summary} lines={v.lines} />;
+  if (v.tab === "sqr") return <SqrTab id={id} v={v} />;
   if (v.tab === "preview") return <PreviewTab p={v.preview} empty={v.empty} fetching={w.isFetching} studio={<Link className="text-text-link underline" to={`/c/${id}/preview?view=studio`}>Open the studio preview</Link>} />;
   return null;
 }

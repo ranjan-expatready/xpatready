@@ -5,7 +5,7 @@
 import { CALCULATIONS, evaluate, type PredicateNode, type Truth } from "../../contracts/rules.ts";
 import type { Snapshot } from "./snapshot.ts";
 
-export type Role = "principal" | "spouse_or_partner" | "child" | "representative" | "parent";
+export type Role = "principal" | "spouse_or_partner" | "child" | "representative" | "parent" | "sponsor";
 export type Person = { id: string; role: Role; label: string; applies: boolean };
 /** Known values: key `${about}|${fact}` or `${about}|${fact}|${row}`. status: confirmed (existing sample record or
  *  staff-verified) or answered (a preview answer typed on screen; never confirmed). */
@@ -36,6 +36,7 @@ export function subjectsFor(people: Person[], who: string, subjectKind?: string)
     case "each_dependent_child": return children;
     case "each_person": return people.filter((p) => p.role !== "representative").map((p) => p.id);
     case "representative": return find(people, "representative").map((p) => p.id);
+    case "sponsor": return find(people, "sponsor").map((p) => p.id); // Screen 03 S2: Sample role, immigration expert to confirm
     case "case": return ["case"];
     default: return [];
   }
@@ -148,6 +149,9 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
       if (kv) { boxes.push({ ...base, coverage: kv.status === "confirmed" ? "confirmed fact" : "answered on screen", detail: kv.source, value: kv.value }); continue; }
       if (!field.has(e.fact)) { boxes.push({ ...base, coverage: "unresolved", detail: "the form field reads a field that is not in the library" }); continue; }
       const docs = docFacts.get(e.fact);
+      // Screen 03 S2 (B2): a field the library says the case officer fills is the officer's, wherever it is placed.
+      if (p && field.get(e.fact)?.filled_by === "CASE_OFFICER") { boxes.push({ ...base, coverage: "staff working view", detail: `${sectionTitle.get(p.section_id) ?? p.section_id}; filled by the case officer` }); continue; }
+      if (p && field.get(e.fact)?.filled_by === "CLIENT") { boxes.push({ ...base, coverage: "client question", detail: `${sectionTitle.get(p.section_id) ?? p.section_id}; the client fills it` }); continue; }
       if (p?.collected_from === "verified_document" || (docs && !p)) { boxes.push({ ...base, coverage: docs ? "document reading" : "unresolved", detail: docs ? `a supported document can supply it: ${docs.join(", ")}` : "collected from a document, but no supported document type supplies it" }); continue; }
       if (!p) { boxes.push({ ...base, coverage: "unresolved", detail: "no question placement: nobody is asked for this value yet" }); continue; }
       const cov: Coverage = p.collected_from === "client_questionnaire" ? "client question" : p.collected_from === "profile_record" || p.collected_from === "existing_record" ? "client profile" : "staff working view";

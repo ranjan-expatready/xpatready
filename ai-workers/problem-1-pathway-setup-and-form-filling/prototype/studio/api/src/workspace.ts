@@ -3,15 +3,16 @@
 // (Studio.combination, Programs.summary) so nothing is worked out twice; Preview by person reads the draft (or the
 // latest release) through the runtime's caseView (engine/runtime/preview.ts, BR-15).
 import { Controller, Get, HttpStatus, Inject, Injectable, Param, Query } from "@nestjs/common";
-import { buildSnapshot, type Snapshot } from "../../engine/snapshot.ts";
+import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
 import { previewFamily } from "../../engine/runtime/preview.ts";
+import { largest, sqrView } from "../../engine/runtime/sqr.ts";
 import { signedByLabel, tabOf, type FamilyKey, type WorkspaceFormLine, type WorkspaceView } from "../../contracts/workspace.ts";
 import { Db, fail } from "./core.ts";
 import { Programs } from "./programs.ts";
 import { Studio } from "./studio.ts";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-type Q = { tab?: string; family?: string; person?: string; mode?: string; tweaks?: string; release?: string };
+type Q = { tab?: string; family?: string; person?: string; mode?: string; tweaks?: string; release?: string; role?: string };
 
 @Injectable()
 export class WorkspaceViews {
@@ -25,6 +26,7 @@ export class WorkspaceViews {
     if (tab === "overview") return { tab, asked, view: (await this.studio.combination(id)) as never, summary: await this.programs.summary(id) };
     if (tab === "forms") return { tab, asked, ...(await this.forms(id)) };
     if (tab === "preview") return { tab, asked, ...(await this.preview(id, c!.workspaceId, q)) };
+    if (tab === "sqr") return { tab, asked, ...(await this.sqr(id, c!.workspaceId, q)) };
     return { tab, asked };
   }
 
@@ -41,6 +43,23 @@ export class WorkspaceViews {
       return [{ ...f, line: r.lineageKey, copies: r.copies, minAge: r.minAge, signedBy: r.signedBy, signedByLabel: signedByLabel(r.signedBy), revision: r.updatedAt.toISOString(), version: r.version, status: r.status }];
     });
     return { summary, lines };
+  }
+
+  /** The SQR tab (S2): one person role's questionnaire as a case asks it, coverage per role, the library sections that
+   *  can be added, and the phone preview of what that person sees. Where-used counts every combination's draft. */
+  private async sqr(id: string, workspaceId: string, q: Q) {
+    const snapshot = (await buildSnapshot(this.db, workspaceId, id, "draft")).snapshot;
+    const comps = await this.db.combination.findMany({ where: { workspaceId }, select: { id: true } });
+    const snaps = await buildSnapshots(this.db, workspaceId, comps.map((x) => x.id), "draft");
+    const whereUsed = new Map<string, number>();
+    for (const x of snaps.values()) for (const f of x.snapshot.canonical_fields as { id: string }[]) whereUsed.set(f.id, (whereUsed.get(f.id) ?? 0) + 1);
+    const sections = await this.db.logicalSection.findMany({ where: { workspaceId, status: { not: "RETIRED" } }, orderBy: [{ displayOrder: "asc" }, { version: "desc" }] });
+    const chosen = new Set((snapshot.sections as { id: string }[]).map((x) => x.id)), seen = new Set<string>();
+    const available = sections.filter((x) => !chosen.has(x.sectionKey) && !seen.has(x.sectionKey) && seen.add(x.sectionKey)).map((x) => ({ key: x.sectionKey, title: x.title }));
+    if (!snapshot.forms.length && !snapshot.sections.length) return { sqr: null, available, phone: null, empty: "No questionnaire yet. Add forms on the Forms tab: the questions each person needs come from the facts their forms read. You can also add a library section here." };
+    const sqr = sqrView(snapshot, q.role, whereUsed);
+    const phone = previewFamily(snapshot, largest(snapshot).family, sqr.person, "sqr", {}, new Date()).questionnaire;
+    return { sqr, available, phone, empty: null };
   }
 
   /** Preview by person: an unsaved case of a Sample family, read by caseView (never saved, never a real person). */

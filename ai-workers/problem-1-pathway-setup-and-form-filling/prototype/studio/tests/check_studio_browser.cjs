@@ -274,6 +274,18 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const after = await api(`/combinations/${scratch}/preview?mode=draft&profile=none`);
   const emailBoxes = after.coverage.flatMap((c) => c.boxes).filter((x) => x.fact === "person.email");
   step("B6: without any screen-code change the email boxes now come from a client question", emailBoxes.length > 0 && emailBoxes.every((x) => x.coverage === "client question"), `${emailBoxes.length} boxes`);
+  // Screen 03 S2 (BR-7): release is blocked until every needed fact is asked. The SQR tab lists the IMM 5476 facts nobody is
+  // asked for yet; the author places each one, as the "Place it in a section" link on that tab leads to (test data, P-33).
+  await go(`/c/${scratch}/sqr`); await p.getByRole("list", { name: "Facts nobody is asked for" }).waitFor();
+  const sqr0 = await api(`/combinations/${scratch}/workspace?tab=sqr`);
+  const roles = sqr0.sqr.roles.map((r) => r.role), gapsB = new Map();
+  for (const role of roles) for (const g of (await api(`/combinations/${scratch}/workspace?tab=sqr&role=${role}`)).sqr.coverage.gaps) gapsB.set(g.fact, g);
+  step("B6b: the SQR tab names the facts IMM 5476 needs that nobody is asked for (they block release)", gapsB.size > 0, `${gapsB.size} facts`);
+  await shot("B6b-sqr-gaps.png");
+  const secKey = (await api("/library/sections")).find((x) => x.title === "Contact details").key;
+  for (const fact of gapsB.keys()) await api(`/library/fields/${encodeURIComponent(fact)}/placement`, { method: "POST", data: { sectionKey: secKey, collectedFrom: "client_questionnaire", repeats: fact.startsWith("case.") ? "once_per_case" : "per_person" } });
+  const after2 = await api(`/combinations/${scratch}`);
+  step("B6b: once each is placed, nothing blocks release for a missing question", !after2.draft.problems.some((x) => x.where === "SQR"), after2.draft.problems.filter((x) => x.where === "SQR").length);
   await go(`/c/${scratch}/review`);
   await click(btn("Submit for review"));
   await as("user-C"); await click(btn("Select all I can sign")); await click(btn(/^Sign/));

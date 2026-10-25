@@ -1,0 +1,14 @@
+[
+ {
+  "state": "sqr-gap-1024",
+  "violations": []
+ },
+ {
+  "state": "sqr-gap-1440",
+  "violations": []
+ },
+ {
+  "state": "sqr-filled-by-dialog",
+  "violations": []
+ }
+]

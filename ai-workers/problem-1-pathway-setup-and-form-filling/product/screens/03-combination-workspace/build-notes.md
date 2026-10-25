@@ -49,3 +49,40 @@ D1 job 4 · D2 data 4 · D3 rules 4 · D4 contract 4 · D5 states 3 (loading, em
 
 ## Known gaps (next slices)
 S2: SQR tab, coverage as a release block, filled by, Sponsor role. S3: Documents, links, "this document alone". S4: copy and bulk, PQR, Rules tab, Review and release. FINISH: Sample filled PDF per form in the per-person view, 200 % zoom pass. Carried: RT-7 check authoring.
+
+---
+
+# Slice S2 (runtime lane, 25 Oct): SQR tab, coverage as a release block, filled by, Sponsor
+
+Lead note 08:45: S1 early look GO, five changes first, then S2 as agreed. Answers applied: the coverage gate counts what a case on the release asks, and a selected section is not required. C1.8 is in CAPABILITIES. US$0.
+
+## S1 early-look changes (each tested)
+| # | Change | Where | Test |
+|---|---|---|---|
+| 1 | Sample family people have Sample dates of birth (38, 36, children 8 and 16, sponsor 45; a month before the birthday, from today). A configuration with no date-of-birth field gets none, so the line stays "cannot tell". | `engine/runtime/preview.ts` `sampleBirthDates` | engine ×4; browser: in "Couple, two children" the 8-year-old does not get IMM 5707 from 18, the adult does |
+| 2 | A field's error clears as soon as that field is edited | `pages/workspace/forms.tsx` `clear()` | browser |
+| 3 | The deciding answers name the person once, in the box title | `pages/workspace/preview.tsx` | browser |
+| 4 | "Rules and checks" says "0 rules · 2 checks" | `pages/workspace/overview.tsx` | browser at 1440 and 1024 |
+| 5 | The tab row wraps, so Sources is on screen at 1024 | `pages/combination.tsx` | browser: every tab's right edge is within the viewport |
+
+## What S2 built
+| Element | Where | Rule |
+|---|---|---|
+| SQR tab | `engine/runtime/sqr.ts` `sqrView`: the largest Sample family through `caseView` (agent mode). Per person role: questions by section, each with asked as, filled by (and whether it is set or "as placed"), needed by (forms), rule (read-only, "Open in the library"), where used. Coverage: needed = client + officer + gaps. API `GET …/workspace?tab=sqr&role=` returns the view, the library sections that can be added and the phone view. Web: `pages/workspace/sqr.tsx` with role chips, the coverage box, section rows that open, Add or Remove section (existing routes) and the phone view on the right. | C4.1, BR-7, BR-8 |
+| Coverage blocks release | `engine/validate.ts`: one error per role and fact ("SQR"), naming the role, the field's meaning, the forms and the three fixes. The older "nobody is asked for it" warning is not repeated for those facts. A field that is not in the library stays the existing Field map error. Submit and approve already refuse errors. | BR-7 (P-62 §2, §5.3) |
+| Filled by | Migration `20261025090000_screen03_filled_by` (expand only: `canonical_field.filled_by` CLIENT or CASE_OFFICER, null = "as placed"). `PATCH /library/fields/:key {filledBy}` goes through `revise()` (a draft version) and answers `where_used` (combinations and labels). Fields placed in the background, medical-background and security-history sections are refused (422 on the field; Sample list, `contracts/workspace.ts CLIENT_ONLY_SECTIONS`). Engine: the field's own choice wins in `isClientField` (client questionnaire) and in the renderer's coverage. Web: a select per question, with a confirm dialog "This changes the shared field everywhere" and "Change it in N combinations". | B2, RD-6, BR-9; Lead: `revise()` until LibraryChange merges |
+| Sponsor | The role is accepted in the contract, `checkParticipants`, the people editor (files no application) and `render` (`who: "sponsor"`). Preview families include a sponsor when the combination has the role. The Sample "Applicant outside Canada" now has a Sponsor (Sample, for the immigration expert). | Lead, 25 Oct |
+
+## Checks run
+* `tests/check_screen03_engine.ts`: **46/46** (gate pass and fail per role, SQR view counts, a role outside the family such as the representative, filled by both ways and in the renderer's coverage, sponsor, Sample ages). Six mutations tried (gate as a warning, filled by ignored in the client questionnaire and in the renderer, no extra roles, no sponsor, no Sample ages); each is caught.
+* `tests/check_screen03_s2.cjs` (new, own copy runtime_s32 :4433): **32/32**. It makes a real gap: an online-only Sample form, IMM 9001 (capture, second person, screen map), whose screen field is mapped to a new shared field nobody is asked for. The gap shows on the SQR tab, on Review and release (one error per role), and submitting is refused; placing the field clears it. API checks also cover filled by (pass, the client-only refusal 422, unknown value 400, non-author 403, back to null) and the Sponsor role (Sample data; an unknown role is refused). Browser checks at 1024 and 1440 cover the five changes, the filled-by dialog, read-only and empty states; axe: 0 serious or critical. Screenshots are in `screenshots/slice2/`.
+* `tests/check_screen03_s1.cjs` gains Sample dates of birth on the real case, so the preview-versus-case comparison still compares like with like.
+* `run-suites.sh --demo`: see the hand-back.
+
+* `check_studio_browser.cjs` gains step B6b. Its from-scratch configuration was released with 42 new IMM 5476 fields that nobody is asked for, and the gate now refuses that. The step reads the gaps from the SQR tab and places each fact, as an author would: the data is fixed, never the rule. The step also found that the representative's facts were gaps with no chip on the SQR tab. `sqrView` now gives every role of the combination a person.
+
+## Build discovery (in challenge.md)
+An Online line still reads the PDF field map when the form also has a PDF version (`render.ts` takes the first map for the form code). An online-only screen field is therefore neither asked by a case nor a gap. The fix I propose (choose the map by the line's channel) changes what a case on an Online release asks, so it needs a Lead decision. Not changed here.
+
+## Known gaps (next slices)
+The SQR tab does not yet edit a question's placement or text: that is the library's job (Screen 04), and the rows link to the field. Answers carried by a link (Q1) come with S3. A case cannot add a Sponsor yet (runtime M3). The sponsor's own forms need the immigration expert.

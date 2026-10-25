@@ -60,7 +60,7 @@ export type CreateNodeBody = z.infer<typeof CreateNodeBody>;
 
 const LOCATIONS = ["inside_canada", "outside_canada"] as const;
 export const Participant = z.object({
-  role: z.enum(["principal", "spouse_or_partner", "child", "representative", "parent"]),
+  role: z.enum(["principal", "spouse_or_partner", "child", "representative", "parent", "sponsor"]),
   label: z.string().trim().min(1).max(60),
   min: z.number().int().min(0).max(9),
   max: z.number().int().min(0).max(9),

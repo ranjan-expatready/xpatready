@@ -5,9 +5,13 @@
 import { render } from "../engine/render.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { caseView } from "../engine/runtime/case.ts";
-import { familiesFor, familyPeople, previewFamily, tweakAnswers } from "../engine/runtime/preview.ts";
+import { familiesFor, familyPeople, previewFamily, sampleBirthDates, tweakAnswers } from "../engine/runtime/preview.ts";
 import { FormLineEdit, tabOf } from "../contracts/workspace.ts";
 import { coverageGaps } from "../engine/coverage.ts";
+import { validate } from "../engine/validate.ts";
+import { isClientField } from "../engine/runtime/case.ts";
+import { sqrView } from "../engine/runtime/sqr.ts";
+import { filledByOf } from "../contracts/workspace.ts";
 
 let pass = 0, fail = 0;
 const ok = (name: string, c: boolean, detail?: unknown) => { c ? pass++ : fail++; console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 200)}` : ""}`); };
@@ -38,6 +42,7 @@ const S = {
     { form_number: "F 1", title: "Main form", who: "each_applicant", status: "always" },
     { form_number: "F 2", title: "Previous marriage", who: "each_applicant", status: "conditional", condition: { subjectKind: "EACH_APPLICANT", op: "eq", field: "person.previously_married", value: true }, condition_plain: "Was previously married is Yes", channel: "ONLINE" },
     { form_number: "F 3", title: "Adult child's form", who: "each_dependent_child", status: "always", min_age: 18 },
+    { form_number: "F 4", title: "Adults' form", who: "each_applicant", status: "always", min_age: 18 },
   ],
   field_maps: [
     { form_number: "F 1", form_edition: "F 1 (2026)", entries: ["person.status_start", "person.status_end", "person.date_of_birth", "person.family_name"].map((fact, i) => ({ data_path: `b${i}`, outcome: "mapped", fact, person: "form_subject", row: null })) },
@@ -64,7 +69,8 @@ const S = {
 {
   for (const fam of ["single", "couple", "family2"] as const) for (const mode of ["sqr", "agent"] as const) {
     const p = previewFamily(S, fam, "principal", mode, { "principal|person.previously_married": true }, TODAY);
-    const same = caseView(S, familyPeople(S.combination.participants, fam), tweakAnswers({ "principal|person.previously_married": true }, TODAY), [], mode, TODAY);
+    const fp = familyPeople(S.combination.participants, fam);
+    const same = caseView(S, fp, [...sampleBirthDates(S, fp, TODAY), ...tweakAnswers({ "principal|person.previously_married": true }, TODAY)], [], mode, TODAY);
     ok(`C4.3: BR-15 pass: the preview of family "${fam}" (${mode}) is exactly the case view of the same people and answers`, JSON.stringify(p.questionnaire) === JSON.stringify(same));
   }
   const yes = previewFamily(S, "single", "principal", "agent", { "principal|person.previously_married": true }, TODAY);
@@ -89,6 +95,17 @@ const S = {
   ok("C1.8 (proposed): min age: the line says why (\"from age 18\")", /from age 18/.test(render(S, [{ id: "c", role: "child", label: "C", applies: true }], new Map(), { today: TODAY }).forms.find((f) => f.form === "F 3")!.why));
 }
 
+// ── Lead early look S1, change 1: Sample family people have Sample ages, so a minimum age shows working in Preview
+{
+  const forms = (id: string) => previewFamily(S, "family2", id, "agent", {}, TODAY).forms.map((f) => f.form);
+  ok("C1.8: preview pass: the 8-year-old Sample child does not get a line that starts at 18; the adult principal does", !forms("child-1").includes("F 4") && !forms("child-1").includes("F 3") && forms("principal").includes("F 4"), { child: forms("child-1"), adult: forms("principal") });
+  ok("C1.8: preview pass: the 16-year-old does not get it either, and no Sample person shows \"Cannot tell yet\" for age", !forms("child-2").includes("F 4") && !["principal", "spouse", "child-1", "child-2"].some((id) => previewFamily(S, "family2", id, "agent", {}, TODAY).forms.some((f) => f.applies === "cannot_tell" && /from age/.test(f.why))));
+  const ages = sampleBirthDates(S, familyPeople(S.combination.participants, "family2"), TODAY).map((a) => `${a.subjectId}=${a.value}`);
+  ok("C1.8: the Sample dates of birth are 38, 36, 8 and 16 years before today (a month before the birthday)", ages.join() === "principal=1988-09-25,spouse=1990-09-25,child-1=2018-09-25,child-2=2010-09-25", ages);
+  const noDob = { ...S, canonical_fields: S.canonical_fields.filter((f: { id: string }) => f.id !== "person.date_of_birth") } as unknown as Snapshot;
+  ok("C1.8: fail-guard: a configuration without a date-of-birth field gets no Sample dates, so the line stays \"cannot tell\" (as a case with no date)", !sampleBirthDates(noDob, familyPeople(S.combination.participants, "family2"), TODAY).length);
+}
+
 // ── Sample families the combination allows (P-37)
 ok("C4.3: families pass: a combination with an optional spouse and up to 3 children offers all four families", familiesFor(S.combination.participants).length === 4);
 ok("C4.3: families fail: no spouse role → only the single family; a required spouse → no single family", familiesFor([{ role: "principal", min: 1, max: 1 }]).map((f) => f.key).join() === "single" && !familiesFor([{ role: "principal", min: 1, max: 1 }, { role: "spouse_or_partner", min: 1, max: 1 }]).some((f) => f.key === "single"));
@@ -111,6 +128,44 @@ ok("C1.8 (proposed): line edit fail: copies outside 1–9, a fraction, an age ou
   ok("C4.1: BR-7 fail: a form field reading a fact not in the library is a gap (F 1 and F 3 named)", coverageGaps(notInLibrary).some((x) => x.fact === "person.family_name" && x.forms.join() === "F 1,F 3"));
   const officer = { ...S, placements: S.placements.map((p: { fact: string }) => p.fact === "person.family_name" ? { ...p, collected_from: "verified_document" } : p) } as unknown as Snapshot;
   ok("C4.1: BR-7 pass: a fact the officer takes from a document is covered, even when no document type supplies it yet", coverageGaps(officer).length === 0);
+}
+
+// ── S2: coverage blocks release (BR-7), per role, naming the fact and the fixes
+{
+  const lib = (S.canonical_fields as { id: string; value_type: string }[]).map((f) => ({ key: f.id, valueType: f.value_type }));
+  const sqrErrors = (snap: Snapshot) => validate(snap, lib, []).filter((p) => p.where === "SQR" && p.level === "error");
+  ok("C4.1: gate pass: a configuration where every needed fact is asked has no SQR release problem", sqrErrors(S).length === 0, sqrErrors(S));
+  const unplaced = { ...S, placements: S.placements.filter((p: { fact: string }) => p.fact !== "person.status_end") } as unknown as Snapshot;
+  const e = sqrErrors(unplaced);
+  ok("C4.1: gate fail: a needed fact nobody is asked for blocks release once per role, naming the role, the fact, the form and the three fixes", e.length === 3 && e.every((x) => x.item === "person.status_end" && /needed by F 1 but nobody is asked for it/.test(x.message) && /library section.*case officer.*linked case/.test(x.message)) && e.some((x) => x.message.startsWith("Principal applicant:")), e.map((x) => x.message));
+  ok("C4.1: gate: the older \"nobody is asked for it\" warning is not repeated for a fact that is now an error", !validate(unplaced, lib, []).some((p) => p.level === "warning" && p.item === "person.status_end"));
+  const sv = sqrView(unplaced, "child", new Map([["person.status_start", 3]]), TODAY);
+  ok("C4.1: SQR view: the child's coverage counts add up and name the gap; the role chips carry it", sv.role === "child" && sv.coverage.client + sv.coverage.officer + sv.coverage.gaps.length === sv.coverage.needed && sv.coverage.gaps[0]?.fact === "person.status_end" && sv.roles.find((r) => r.role === "child")!.gaps === 1, sv.coverage);
+  const q = sv.sections.flatMap((x) => x.questions).find((x) => x.fact === "person.status_start")!;
+  ok("C4.1: SQR view: a question says who fills it, which forms need it and where else the field is used", q.filled_by === "CLIENT" && q.needed_by.join() === "F 1" && q.where_used === 3 && !q.filled_by_set);
+  ok("C4.1: SQR view: an unknown role falls back to the first role", sqrView(S, "nobody", new Map(), TODAY).role === "principal");
+  const withRep = { ...unplaced, combination: { ...S.combination, participants: [...S.combination.participants, { role: "representative", label: "Representative", min: 0, max: 1, applies: false }] }, canonical_fields: [...S.canonical_fields, { id: "representative.licence", meaning: "Licence number", value_type: "text" }], field_maps: S.field_maps.map((m: { form_number: string; entries: unknown[] }) => m.form_number === "F 1" ? { ...m, entries: [...m.entries, { data_path: "rep", outcome: "mapped", fact: "representative.licence", person: "representative", row: null }] } : m) } as unknown as Snapshot;
+  const rep = sqrView(withRep, "representative", new Map(), TODAY);
+  ok("C4.1: SQR view: a role outside the family (the representative) has its own chip, so its gap can be seen and fixed there", rep.roles.some((r) => r.role === "representative" && r.gaps === 1) && rep.role === "representative" && rep.coverage.gaps.some((g) => g.fact === "representative.licence"), rep.roles);
+}
+
+// ── S2: filled by (B2): the shared field's choice wins over its placement
+{
+  const officer = { ...S, canonical_fields: S.canonical_fields.map((f: { id: string }) => f.id === "person.family_name" ? { ...f, filled_by: "CASE_OFFICER" } : f) } as unknown as Snapshot;
+  ok("C4.1 B2: pass: the case officer fills a field set so; it leaves the client's questionnaire and counts as officer-covered", !isClientField(officer, "person.family_name") && isClientField(S, "person.family_name") && !caseView(officer, familyPeople(S.combination.participants, "single"), [], [], "sqr", TODAY).sections.some((x) => x.questions.some((qq) => qq.fact === "person.family_name")) && coverageGaps(officer).length === 0);
+  const client = { ...S, placements: S.placements.map((p: { fact: string }) => p.fact === "person.family_name" ? { ...p, collected_from: "verified_document" } : p), canonical_fields: S.canonical_fields.map((f: { id: string }) => f.id === "person.family_name" ? { ...f, filled_by: "CLIENT" } : f) } as unknown as Snapshot;
+  const cov = render(officer, [{ id: "principal", role: "principal", label: "P", applies: true }], new Map(), { today: TODAY }).coverage.flatMap((c) => c.boxes).find((b) => b.fact === "person.family_name" && b.about === "principal");
+  ok("C4.1 B2: pass: the form field's coverage says the case officer fills it (not a client question)", cov?.coverage === "staff working view" && /filled by the case officer/.test(cov.detail), cov);
+  ok("C4.1 B2: pass: a field set to the client is asked of the client even when placed as from a document", isClientField(client, "person.family_name"));
+  ok("C4.1 B2: fail-guard: with no choice it follows the placement (questionnaire → client, document → officer)", filledByOf(undefined, { collected_from: "client_questionnaire" }) === "CLIENT" && filledByOf(undefined, { collected_from: "verified_document" }) === "CASE_OFFICER" && filledByOf({ filled_by: "CASE_OFFICER" }, { collected_from: "client_questionnaire" }) === "CASE_OFFICER");
+}
+
+// ── S2: Sponsor (Sample role, expert to confirm)
+{
+  const withSponsor = { ...S, combination: { ...S.combination, participants: [...S.combination.participants, { role: "sponsor", label: "Sponsor", min: 1, max: 1, applies: false }] }, forms: [...S.forms, { form_number: "F 9", title: "Sponsor's form", who: "sponsor", status: "always" }] } as unknown as Snapshot;
+  const pv = previewFamily(withSponsor, "single", "sponsor", "agent", {}, TODAY);
+  ok("C4.1 Sponsor: pass: every Sample family of a combination with a sponsor has one, who gets the sponsor's form and no applicant's form", pv.people.some((p) => p.subjectId === "sponsor") && pv.forms.map((f) => f.form).join() === "F 9");
+  ok("C4.1 Sponsor: fail-guard: a combination without the role has no sponsor", !previewFamily(S, "single", "sponsor", "agent", {}, TODAY).people.some((p) => p.subjectId === "sponsor"));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
