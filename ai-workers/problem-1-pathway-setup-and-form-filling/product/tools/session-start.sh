@@ -5,6 +5,8 @@ input=$(cat 2>/dev/null); cwd=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/
 ROOT=$(git -C "${cwd:-.}" rev-parse --show-toplevel 2>/dev/null) || ROOT="$(cd "$(dirname "$0")/../../../.." && pwd)"
 PH="$ROOT/ai-workers/problem-1-pathway-setup-and-form-filling/product"
 cd "$ROOT" || exit 0; LANE=$(bash "$PH/tools/lane.sh" whoami 2>/dev/null)
+# P-87: the pre-push hook refuses pushes to main; switch it on in every copy (GitHub cannot lock main on this plan).
+[ -n "$(git config core.hooksPath)" ] || git config core.hooksPath .githooks 2>/dev/null
 # Pull at start (P-82): refresh origin and warn when this branch is behind; never fails the hook.
 # A clean copy is fast-forwarded to its upstream here, so the founder never has to pull by hand (Mac or cloud).
 behind=""

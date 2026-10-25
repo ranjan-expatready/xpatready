@@ -1,7 +1,7 @@
 # Lane: qa — independent testing of what is on main (skill `qa`)
 
 ## From the Lead
-2026-10-25 03:20 (Lead, cloud): after-merge on 8aef175 read and **merged** (ready; 0 Blocker/Critical/Major; QA-26, 35, 36, 37 closed; R1d walk 35/35). QA-19 stays with the Lead: the :4400 demo reset on the Mac clears it. Not covered (recorded): officer's Confirm section and None apply by click, Adobe check and browser download of a copy, a real Online release, 200% zoom and a screen reader. Stage: **waiting**. No new run until the Lead sends a note (weekly usage).
+2026-10-25 (Lead, cloud): **full development mode (P-89): keep finding errors.** First move QA-19 to `BUGS-CLOSED.md` (passed its check on the Mac after the founder's demo reset, 25 Oct). Then run **`/qa explore` on main** across Screen 01 (catalogue, combination page, intake, release), the forms channels and the R1 slice (cases, questionnaire, forms panel), aiming at the gaps your last report listed (officer's Confirm section and None apply by click, a real Online release, 200% zoom, keyboard-only paths) and the graph's untested routes (`tools/graph.mjs`). Log every finding in `BUGS.md` with its lane; ask questions through the Lead. Stage after: WAITING, owner Lead.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

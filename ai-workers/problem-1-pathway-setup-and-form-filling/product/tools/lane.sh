@@ -8,16 +8,18 @@
 #   lane.sh status            one line per lane copy (its own lane file, and who acts according to main)
 #   lane.sh table             the lanes table from each lane's newest copy (else main); STATE.md and the Lead's replies use it
 #   lane.sh state             rewrite the generated table in STATE.md (main copy only, on branch main)
+#   lane.sh leads             Lead commits on main in the last 30 minutes and on other claude/* branches not yet in main (one Lead at a time, P-87)
 LANES="screens forms evidence runtime qa"
 P="ai-workers/problem-1-pathway-setup-and-form-filling"
 HERE="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not in the repository"; exit 2; }
 MAIN="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
 whoami_() {
-  # lead only on branch main (P-82: the Mac's main copy, or a cloud clone checked out on main); a lane branch prefix (screens/, forms/, evidence/,
+  # lead on branch main or lead/* (P-82, P-87: the Mac's main copy, or a cloud clone checked out on main); a lane branch prefix (screens/, forms/, evidence/,
   # runtime/, qa/, or the existing claude/<lane>-* branches and <lane>-* worktree names) maps to that lane;
   # anything else is unbound, never lead.
   local br; br=$(git -C "$HERE" branch --show-current 2>/dev/null)
   [ "$br" = main ] && { echo lead; return; }
+  case "$br" in lead/*) echo lead; return;; esac
   [ -f "$HERE/.claude/lane" ] && { cat "$HERE/.claude/lane"; return; }
   case "$br" in
     screens/*|claude/screens-*) echo screens;;
@@ -43,7 +45,8 @@ table_() {
   for ln in $LANES; do
     m="$MAIN/$P/product/lanes/$ln.md"; [ -f "$m" ] || continue
     # Read the lane's newest copy (its own state between merges); flag a Lead note it has not synced yet.
-    f="$m"; best=0
+    # main's own copy competes too: a lane branch already merged must not win over a newer Lead note.
+    f="$m"; best=$(git -C "$MAIN" log -1 --format=%ct -- "$P/product/lanes/$ln.md" 2>/dev/null); best=${best:-0}
     for wt in $(git -C "$MAIN" worktree list --porcelain | awk '/^worktree /{print $2}'); do
       [ "$(cat "$wt/.claude/lane" 2>/dev/null)" = "$ln" ] || continue
       t=$(git -C "$wt" log -1 --format=%ct 2>/dev/null || echo 0); [ "$t" -gt "$best" ] && { best=$t; f="$wt/$P/product/lanes/$ln.md"; }
@@ -117,5 +120,11 @@ case "$1" in
     [ "$HERE" = "$MAIN" ] || { echo "Only the Lead's main copy writes STATE.md."; exit 2; }
     S="$MAIN/$P/product/STATE.md"; t=$(mktemp); tb=$(mktemp); table_ > "$tb"
     awk -v tf="$tb" '/<!-- lanes:start -->/{print; while ((getline l < tf) > 0) print l; skip=1; next} /<!-- lanes:end -->/{skip=0} !skip' "$S" > "$t" && mv "$t" "$S" && rm -f "$tb" && echo "STATE.md table regenerated" ;;
-  *) sed -n 2,10p "$0"; exit 2 ;;
+  leads)
+    git -C "$HERE" fetch -q origin 2>/dev/null; me=$(git -C "$HERE" branch --show-current)
+    git -C "$HERE" log origin/main --since=30.minutes --format='main %h %cr %s' | grep ' lead:'
+    for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/); do
+      [ "$b" = "origin/$me" ] || git -C "$HERE" log "origin/main..$b" --no-merges --format="$b %h %cr %s" | grep -m1 ' lead:'
+    done; true ;;
+  *) sed -n 2,11p "$0"; exit 2 ;;
 esac

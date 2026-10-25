@@ -1,7 +1,7 @@
 # Lane: screens — Milestone 2 screens
 
 ## From the Lead
-2026-10-24 21:10 (Lead, cloud): small FIX after DONE **merged** (QA-4, QA-20, QA-22; smallfix 23/23 with system Chrome). Waiting: Screen 02 DESIGN starts after the founder walks the Screen 02 draft and the Lead writes the concept (P-61–P-63, A4 progress screen). For Screen 03 later: F-R1c-1 (render.ts order) and RT-7 check authoring. Next time this lane works (small, before Screen 02 BUILD): `check_screen01_browser.cjs` ended in a TimeoutError once on GitHub's runner (CI run 40157656563 on PR 14, 25 Oct; the suite logs are in that run's `suite-logs` artifact), while it passed 136/136 three times in a row on the same commit in the cloud Lead copy. Find the step that timed out and make it wait for the state it needs (as runtime did for R1c), with no fixed sleeps.
+2026-10-25 (Lead, cloud): **full development mode (P-89).** Screen 01 is DONE (the founder walked it, 25 Oct). Set current_screen 02-ai-work, stage **DESIGN**, owner Builder. (1) First, small: `check_screen01_browser.cjs` timed out once on GitHub's runner (CI run 40157656563, PR 14; logs in its `suite-logs` artifact) while it passed 136/136 three times on the same commit: find the step and make it wait for the state it needs, no fixed sleeps. (2) Then DESIGN: the short feasibility challenge (skill screen-challenge) of `screens/02-ai-work/concept.md` (agreed by the Lead; its Lead decisions at the top) and its board `design/draft-ai-work.html`; owner Lead. The Lead answers the same day and sets BUILD; EARLY-LOOK and DEMO are the Lead's (P-89). Screen 03 is the runtime lane's: do not touch its tabs.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

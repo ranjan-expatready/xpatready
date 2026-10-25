@@ -5,11 +5,11 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 ## Who runs where
 | Lane | Copy and branch | What it owns | Command | Ports · databases |
 |---|---|---|---|---|
-| **Lead** | main copy, `main` | Concepts, decisions, requests, checks, merges, rules, skills, `STATE.md`, shared demo :4400 | `/lead` | 4420–4429 · `lead_*` |
+| **Lead** | main copy on `lead/*` (cloud: its session branch); every change to `main` by PR, merged by the Lead (P-87) | Concepts, decisions, requests, checks, merges, rules, skills, `STATE.md`, shared demo :4400 | `/lead` | 4420–4429 · `lead_*` |
 | **screens** | own worktree | Milestone 2 screens, screen path (`WORKFLOW.md`) | `/next screens` | 4440–4449 · `screens_*` |
 | **forms** | own worktree | PDF and online forms (P-61–P-66): intake, form versions, field and screen maps, answer lists, capture, extension | `/next forms` | 4450–4459 · `forms_*` |
 | **evidence** | own worktree | Fills each real form and checks it in Adobe (P-46, P-65 fill trial); AI scoring set. Never app code | `/next evidence` | 4460–4469 · `evidence_*` |
-| **runtime** | own worktree | Thin end-to-end slice (P-67), then M3 runtime: case, people, answers, renderer, agent view, fill from case facts | `/next runtime` | 4430–4439 · `runtime_*` |
+| **runtime** | own worktree | Thin end-to-end slice (P-67); in M2, Screen 03 on the screen path (P-89); then M3 runtime: case, people, answers, renderer, agent view, fill from case facts | `/next runtime` | 4430–4439 · `runtime_*` |
 | **qa** | own worktree, synced to `main` | Independent testing of `main`: `qa/` (capabilities, bugs, reports) and `prototype/studio/tests/qa/`. Never app code | `/qa <mode>` | 4470–4479 · `qa_*` |
 **A lane runs on the Mac or in the cloud** — each an ordinary clone, pull at start (automatic: the session-start hook fast-forwards a clean copy), push at end; one session per lane at a time. The evidence lane and anything needing `sources/` or `code/` runs on the Mac (those folders are Mac-only, P-82).
 **The founder uses one chat: the Lead (`/lead`).** The Lead starts or continues each lane's session itself (prompt `/next <lane>` or `/qa <mode>`; on the Mac an own worktree, in the cloud a session on the lane's branch — skill `lead`), is told when a stage ends, checks it, and asks the founder only for decisions, walkthroughs, paid-AI go-aheads and installs. The founder may open a lane session to watch, or a qa session to test together (`/qa with-me`).

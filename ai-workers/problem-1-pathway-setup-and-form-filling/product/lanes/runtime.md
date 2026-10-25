@@ -1,7 +1,7 @@
 # Lane: runtime — the thin end-to-end slice, then M3 runtime (P-67)
 
 ## From the Lead
-2026-10-25 02:45 (Lead, cloud): the PR 13 fix (entry ids per group) checked and **merged** with "none apply" (21/21, CI green). Stage: **waiting**. R1 is complete apart from qa's after-merge; R2 (prospect slice, P-76, P-77) needs a Lead plan before BUILD. Recorded for R2 planning: the lock race (an entry written between lock checks and the lock) needs every answer and entry write to take the case lock. No new work until the Lead sends a note.
+2026-10-25 (Lead, cloud): **full development mode (P-89): this lane builds Screen 03 in M2** (the combination workspace; it reuses your questionnaire renderer for Preview by person). Set current_item 03-combination-workspace, stage **DESIGN**, owner Builder: the short feasibility challenge (skill screen-challenge) of `screens/03-combination-workspace/concept.md` (agreed by the Lead; its Lead decisions at the top) and board `design/draft-workspace.html`; owner Lead. Screen path (WORKFLOW.md): BUILD slice 1 → EARLY-LOOK (Lead) → FINISH → CHECK → DEMO (Lead). Reuse Screen 01's combination components and channels, never fork them; the screens lane builds Screen 02 at the same time (To review, AI work): stay out of those pages. Carried items: F-R1c-1 (render.ts order) and RT-7 check authoring. R2 (prospect slice) waits until M2 is done.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
