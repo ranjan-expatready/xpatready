@@ -42,6 +42,7 @@ Owner: the Lead. Source: the requirements trace of 23 Oct (`history/TRACE-SA01B-
 | B32 | One plain-words map for validator (zod) refusals in the Problem Details filter, instead of per contract (qa QA-26, QA-27 suggestion) | STANDARDS plain words | S |
 | B33 | Suite tooling (qa suggestions 24 Oct): an opt-in coverage mode that leaves the drafting sandbox suites out of the preload; suites write screenshots, evidence and ledger by-products under `var/` unless asked, so a run leaves a clean tree | P-85 | S |
 | B34 | **Start from a starter set:** a new workspace can load a reviewed starter set of programs, forms and shared library items instead of building from nothing (scout SC-1, Major; benchmark: Docketwise, INSZoom) | `scout/reports/2026-10-25-firm-admin-day-one.md` | founder decides (M2 or later) | the team's content; Screen 04 | M |
+| B35 | **Reset one combination** for the demo story, not the whole workspace (founder's ask, via Devin `history/devin/2026-10-25-ux-audit.md` §A3); today Demo › Reset is workspace-wide, then "Load sample inputs" | founder | founder decides; Lead recommends workspace reset is enough for M2 | demo.ts | S |
 Outside SA-01B and therefore outside the POC (P-70): SA-01 country and pack container slices (SA-01.00–.02, .09–.11, SA-1-64, 66, 67), duplicate-person search (AG-02, one-pager 6.2).
 
 ## Planned but missing from the tester's checklist (added through the qa lane's Lead note)
