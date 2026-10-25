@@ -48,22 +48,22 @@ table_() {
     m="$MAIN/$P/product/lanes/$ln.md"; [ -f "$m" ] || continue
     # Stage, owner and next action come from the lane's own newest copy: main's file is newer whenever the Lead edits
     # its note, but its lane fields are only as fresh as the lane's last merged commit. A candidate (a worktree or a
-    # pushed branch) wins only when it is in neither origin/main nor this copy, and its lane file carries a lane commit
-    # newer than the lane's last commit this copy already has. The Lead note itself is compared below.
-    f="$m"; rel="$P/product/lanes/$ln.md"
-    lanet() { git -C "$1" log --no-merges --format='%ct %s' "${2:-HEAD}" -- "$rel" 2>/dev/null | grep -v '^[0-9]* lead' | head -1 | cut -d' ' -f1; }
-    best=$(lanet "$MAIN"); best=${best:-0}
-    contained() { git -C "$MAIN" merge-base --is-ancestor "$1" HEAD 2>/dev/null || git -C "$MAIN" merge-base --is-ancestor "$1" origin/main 2>/dev/null; }
+    # pushed branch) counts only when its newest lane commit on this file (not "lead:") is in neither this copy nor
+    # origin/main: decided by ancestry, never by timestamps. Among several candidates the newest commit wins, ties by
+    # name. The Lead note itself is compared below.
+    f="$m"; rel="$P/product/lanes/$ln.md"; best=-1; bestn=""
+    lanec() { git -C "$1" log --no-merges --format='%H %ct %s' "${2:-HEAD}" -- "$rel" 2>/dev/null | grep -v '^[0-9a-f]* [0-9]* lead' | head -1 | cut -d' ' -f1-2; }
+    known() { git -C "$MAIN" merge-base --is-ancestor "$1" HEAD 2>/dev/null || git -C "$MAIN" merge-base --is-ancestor "$1" origin/main 2>/dev/null; }
+    pick() { set -- $1 "$2" "$3"; [ -n "$1" ] || return 1; known "$1" && return 1
+      { [ "$2" -gt "$best" ] || { [ "$2" -eq "$best" ] && [[ "$3" > "$bestn" ]]; }; } || return 1; best=$2; bestn=$3; }
     for wt in $(git -C "$MAIN" worktree list --porcelain | awk '/^worktree /{print $2}'); do
       [ "$(cat "$wt/.claude/lane" 2>/dev/null)" = "$ln" ] || continue
-      contained "$(git -C "$wt" rev-parse HEAD)" && continue
-      t=$(lanet "$wt"); [ "${t:-0}" -gt "$best" ] && { best=$t; f="$wt/$rel"; }
+      pick "$(lanec "$wt")" "$wt" && f="$wt/$rel"
     done
     # Cloud lane sessions (P-82) push origin/<lane>/* or origin/claude/<lane>-*.
     for rb in $(git -C "$MAIN" for-each-ref --format='%(refname:short)' "refs/remotes/origin/$ln/" "refs/remotes/origin/claude/$ln-*"); do
-      contained "$rb" && continue
-      t=$(lanet "$MAIN" "$rb"); [ "${t:-0}" -gt "$best" ] || continue
-      tmpf=$(mktemp); tmps="$tmps $tmpf"; git -C "$MAIN" show "$rb:$rel" > "$tmpf" 2>/dev/null && { best=$t; f="$tmpf"; }
+      pick "$(lanec "$MAIN" "$rb")" "$rb" || continue
+      tmpf=$(mktemp); tmps="$tmps $tmpf"; git -C "$MAIN" show "$rb:$rel" > "$tmpf" 2>/dev/null && f="$tmpf"
     done
     note() { awk '/^## From the Lead/{on=1; next} /^Command:/{on=0} on' "$1"; }
     pending=""; [ "$f" != "$m" ] && [ "$(note "$m")" != "$(note "$f")" ] && pending="Lead note waiting for sync · "

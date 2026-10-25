@@ -28,7 +28,7 @@ The Lead is Claude Code in the main copy, started with `/lead` (skill `lead`). I
 
 ## Watch list (check at every Lead check)
 * P-26 scope test on every finding; P-33 capability or scaffolding on every element; P-60 no control cut.
-* **Demo story (P-93, `DEMO.md`):** every DEMO row has an owner; a feature is DONE only when its row shows in the story; the M2 gate walk is the finished story.
+* **Demo story (P-93, `DEMO.md`):** every DEMO row has an owner; a feature is DONE only when its row shows in the story; the M2 gate walk is the configured checkpoint (C10.1), the M3 gate the finished story (C10.2).
 * Before any screen or slice starts BUILD: a fresh re-check of its agreed concept against `main` and the open lane branches that day (R-109). Mac-only work goes to the founder as a Goose prompt in `GOOSE-TASKS.md` (R-108).
 * Rerun suites on the exact commit before any merge; maker counts are claims, not evidence.
 * Lanes must not build on decisions the founder has not agreed (Definition of Ready).

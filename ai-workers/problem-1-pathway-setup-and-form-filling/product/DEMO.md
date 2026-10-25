@@ -32,8 +32,8 @@ People: Applicant · Spouse (travelling) · Child under 18 (the principal answer
 
 ## Checkpoints (Demo menu)
 1. **Reset to blank:** sources only (the official files committed under `official-sources/`). Replays rows 1–10 from nothing.
-2. **Configured:** A and B released (A release 1 all PDF; A release 2 mixed), with the library they built.
-3. **Finished story:** the family case answered and confirmed, the PDFs filled (barcodes), one portal screen fillable, documents listed.
+2. **Configured (the M2 gate, C10.1):** A and B released (A release 1 all PDF; A release 2 mixed), with the library they built, and the thin family case on release 1 with IMM 5257 filled (rows 1–12, 17).
+3. **Finished story (the M3 gate, C10.2):** the family case on both releases, online fill, the filing with portal sheet, filled PDFs and signed copies, documents listed (rows 13–16, 18).
 AI in every checkpoint is the saved answers (US$0, labelled "replay"); a live run happens only with the founder's go (Goose task on the Mac).
 
 ## Rules for every lane
