@@ -79,9 +79,9 @@ Tests: one pass + one fail per BR-1..16 (e.g. BR-9 retire with one draft use →
 Q1–Q3 settled (Lead decisions above); no founder question open.
 
 ## Definition of Ready (WORKFLOW.md)
-- [ ] Board agreed (Lead clicks through at READY; short form relabelled Needed)
+- [x] Board agreed for slice 1 (Lead, 25 Oct, Mac: views 1 and the lists; the approver view 2 is replaced by the link to To review, recheck Lead response)
 - [x] Every element labelled Needed / Not built and Capability / Scaffolding (§6b, board labels)
-- [ ] Data and API needs known (§6 lists them; one shared `similar` route with Screen 02 to agree with the forms lane)
+- [x] Data and API needs known for slice 1 (`LibraryChange` on main since the Screen 02 merge); the shared `similar` route is agreed with the forms lane at slice 2
 - [x] Every decision it relies on agreed (Q1–Q3 by P-52, P-53, P-37, P-70; K1–K6 Lead)
 - [x] No open questions
 - [x] Capability rows added for K3 (P-74)

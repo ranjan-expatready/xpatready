@@ -6,6 +6,7 @@
 #   tools/scout.sh save          after such a session: commit the scout's files, stop the app, push
 #   tools/scout.sh scope <sha>   refuse a scout commit that changes more than its own files and small fixes (pre-push)
 #   tools/scout.sh busy <file>   "free", or the lanes whose open branch changes this file
+#   tools/scout.sh branch        the branch the next run uses: the newest unmerged scout/* on GitHub (either engine), else a fresh name
 # Settings (environment): SCOUT_MODEL (default kimi-k3), SCOUT_TURNS (default 200).
 set -u
 P="ai-workers/problem-1-pathway-setup-and-form-filling"; PP="$P/product"; PS="$P/prototype/studio"
@@ -49,25 +50,45 @@ scope() {  # the effective change of a scout tip against main (merges of main ex
   [ "$bad" = 0 ] && echo "scout scope: clean ($total app lines)" || { echo "scout scope: REFUSED (P-91: scout/ files, tests/scout/ and small fixes only)"; return 1; }
 }
 
+latest() {  # the newest scout branch on GitHub with commits main lacks (either engine's), or nothing
+  local r
+  for r in $(git -C "$HERE" for-each-ref --sort=-committerdate --format='%(refname:short)' 'refs/remotes/origin/scout/*'); do
+    [ "$(git -C "$HERE" rev-list --count "origin/main..$r")" -gt 0 ] && { echo "${r#origin/}"; return; }
+  done
+}
+fresh() {  # a scout branch name used neither here nor on GitHub
+  local b="scout/$(date +%Y-%m-%d)"
+  git -C "$HERE" show-ref -q "refs/heads/$b" || git -C "$HERE" show-ref -q "refs/remotes/origin/$b" && b="$b-$(date +%H%M)"
+  echo "$b"
+}
+
 # The scout's own copy: ../xpatready-scout, a git worktree of the main copy on scout/<date>, fresh from origin/main
 # (a worktree, not a second clone, so it shares the Mac's .tools: node, the PostgreSQL cluster, PDFs).
 prepare() {  # create or refresh the scout copy, build it and start its app on :4480; leaves the working directory there
-  local day br pgd
+  local day br pgd lb
   day=$(date +%Y-%m-%d); WT="$(dirname "$MAIN")/xpatready-scout"
   git -C "$MAIN" fetch -q origin || { echo "cannot reach GitHub; try again later"; exit 3; }
-  if [ ! -d "$WT" ]; then   # a branch left by a removed copy keeps its name, so pick a free one
-    br="scout/$day"; git -C "$MAIN" show-ref -q "refs/heads/$br" && br="scout/$day-$(date +%H%M)"
-    git -C "$MAIN" worktree add -q "$WT" -b "$br" origin/main && echo "scout copy created: $WT" || exit 3
+  lb=$(latest)   # P-95: the other engine (Goose or Devin) may have left unmerged work: resume it, never start beside it
+  if [ ! -d "$WT" ]; then
+    if [ -n "$lb" ]; then
+      if git -C "$MAIN" show-ref -q "refs/heads/$lb"; then git -C "$MAIN" worktree add -q "$WT" "$lb" || exit 3
+      else git -C "$MAIN" worktree add -q "$WT" -b "$lb" "origin/$lb" || exit 3; fi
+    else
+      br=$(fresh); git -C "$MAIN" worktree add -q "$WT" -b "$br" origin/main || exit 3
+    fi
+    echo "scout copy created: $WT"
   fi
   cd "$WT" || exit 3
   git diff --quiet && git diff --cached --quiet || { echo "The scout copy has unsaved work: run 'tools/scout.sh save' (or open $WT and commit or discard it), then run again."; exit 3; }
   BR=$(git branch --show-current)
-  if git merge-base --is-ancestor HEAD origin/main 2>/dev/null; then   # the last branch is merged (or empty): start today's
-    BR="scout/$day"; git show-ref -q "refs/heads/$BR" && BR="scout/$day-$(date +%H%M)"
-    git checkout -q -b "$BR" origin/main
-  else
-    git merge -q --no-edit origin/main || { echo "Merging main into $BR conflicts; tell the Lead."; exit 4; }
+  if git merge-base --is-ancestor HEAD origin/main 2>/dev/null && [ "$lb" != "$BR" ]; then   # this branch is merged (or empty)
+    if [ -n "$lb" ]; then BR="$lb"; git checkout -q "$BR" 2>/dev/null || git checkout -q -b "$BR" "origin/$BR"
+    else BR=$(fresh); git checkout -q -b "$BR" origin/main; fi
+  elif [ -n "$lb" ] && [ "$lb" != "$BR" ]; then
+    echo "Two unmerged scout branches ($BR here, $lb on GitHub): tell the Lead to merge one first."; exit 4
   fi
+  if git show-ref -q "refs/remotes/origin/$BR"; then git merge -q --no-edit "origin/$BR" || { echo "Merging origin/$BR into this copy conflicts; tell the Lead."; exit 4; }; fi
+  git merge -q --no-edit origin/main || { echo "Merging main into $BR conflicts; tell the Lead."; exit 4; }
   mkdir -p .claude && echo scout > .claude/lane
   bash "$PP/tools/lane.sh" setup >/dev/null || exit 5
   # As start.sh does: the database cluster running, the Prisma client generated, the web app built (a fresh copy has none).
@@ -126,6 +147,7 @@ run() {
 case "${1:-run}" in
   scope) scope "${2:-HEAD}" ;;
   busy) busy "$2" ;;
+  branch) git -C "$HERE" fetch -q origin; b=$(latest); echo "${b:-$(fresh)}" ;;
   run) shift; run "${1:-next}" ;;
   open) open_ ;;
   save) save ;;

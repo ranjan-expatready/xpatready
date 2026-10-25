@@ -122,6 +122,7 @@ export class Demo {
       Cases: await t.case.count({ where: ws }), "People on cases": await t.party.count({ where: ws }), "Case answers (all versions) and rows": (await t.clientCanonicalAnswer.count({ where: ws })) + (await t.clientFactRecord.count({ where: ws })),
       // F1 (forms lane): portal captures, answer lists and field merges
       "Portal captures, answer lists and merges": (await t.portalCapture.count({ where: ws })) + (await t.answerList.count({ where: ws })) + (await t.fieldMerge.count({ where: ws })),
+      "Library changes and sources approved in the product": (await t.libraryChange.count({ where: ws })) + (await t.approvedSource.count({ where: ws })),
     };
     const dir = VAR("demo");
     const files = existsSync(dir) ? this.walk(dir) : [];
@@ -164,6 +165,7 @@ export class Demo {
       await tx.canonicalField.deleteMany({ where: ws }); await tx.logicalSection.deleteMany({ where: ws }); await tx.sectionQuestion.deleteMany({ where: ws }); await tx.documentType.deleteMany({ where: ws }); await tx.derivedField.deleteMany({ where: ws });
       await tx.sampleFact.deleteMany({ where: ws }); await tx.sampleProfile.deleteMany({ where: ws }); await tx.generatedArtifact.deleteMany({ where: ws }); await tx.auditEvent.deleteMany({ where: ws });
       await tx.portalCapture.deleteMany({ where: ws }); await tx.answerList.deleteMany({ where: ws }); await tx.fieldMerge.deleteMany({ where: ws }); // F1 (forms lane)
+      await tx.libraryChange.deleteMany({ where: ws }); await tx.approvedSource.deleteMany({ where: ws }); // Screen 02 slice 2
       await tx.recaptureTask.deleteMany({ where: ws }); await tx.extensionSession.deleteMany({ where: ws }); await tx.extensionPairing.deleteMany({ where: ws }); // F2 (forms lane): the browser extension's tasks, sessions and codes; a reset signs every extension out
       await tx.workspace.delete({ where: { id: workspaceId } });
     });

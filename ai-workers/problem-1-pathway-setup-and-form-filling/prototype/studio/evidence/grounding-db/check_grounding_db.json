@@ -1,8 +1,8 @@
 {
- "at": "2026-10-24T18:45:51.869Z",
- "port": 4402,
- "database": "xr_studio_grounding",
- "pass": 29,
+ "at": "2026-10-25T11:40:18.704Z",
+ "port": 4440,
+ "database": "xr_studio_screens_g",
+ "pass": 30,
  "fail": 0,
  "log": [
   {
@@ -87,6 +87,10 @@
    "name": "server permission: the content reviewer cannot edit the draft",
    "ok": true,
    "detail": "Content reviewer (simulated) does not hold the author duty"
+  },
+  {
+   "name": "the new document type is approved by a second person (no release carries an unreviewed library item)",
+   "ok": true
   },
   {
    "name": "first release: submit, SME sign-off, second-person approval",
@@ -179,7 +183,7 @@
   {
    "name": "isolated copy: sample inputs load through the normal paths: 2 pathways, 11 programs, 6 combinations set up",
    "ok": true,
-   "detail": 5.825
+   "detail": 6.225
   },
   {
    "name": "a person makes the given-names question conditional (saved as draft)",

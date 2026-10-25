@@ -103,7 +103,7 @@ const capture = async (screens: string[], title = "Application for a visitor vis
   const jobId = r.body?.id;
   await until(async () => (await call("GET", `/jobs/${jobId}`)).body?.status === "COMPLETED");
   await call("POST", `/jobs/${jobId}/accept-clean`, { outcome: "REUSE" }); await call("POST", `/jobs/${jobId}/accept-clean`, { outcome: "NEW" });
-  for (const i of (await call("GET", `/jobs/${jobId}`)).body.items.filter((x: { decision: string }) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED" });
+  for (const i of (await call("GET", `/jobs/${jobId}`)).body.items.filter((x: { decision: string }) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit (BR-7)." });
   r = await call("POST", `/jobs/${jobId}/apply`, {});
   const pdfMapped = Number(sql("select count(*) from form_field_map m join form_edition e on e.id=m.form_edition_id where e.edition_label like 'IMM 5257 (%' and m.outcome='mapped'"));
   ok("setup: IMM 5257's PDF field map comes from the saved real AI draft (replayed, no model call)", r.status === 201 && pdfMapped > 100 && sql("select count(*) from drafting_job where mode='LIVE'") === "0", { applied: r.status, mapped: pdfMapped });

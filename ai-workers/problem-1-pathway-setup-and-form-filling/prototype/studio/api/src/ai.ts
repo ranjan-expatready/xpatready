@@ -18,6 +18,14 @@ import { join } from "node:path";
 import { costUsd } from "../../../p2/ledger.ts";
 import { EXPERIMENT_CAP_USD, RUN_CAP_USD } from "../../../p2/policy.ts";
 import { ACTORS, Audit, Db, fail, need, PROTOTYPE, Workspace, type Actor } from "./core.ts";
+/** A person by name on every AI work view (Screen 02 board view 10): never an internal id. */
+const personName = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "A person";
+/** A4 (Screen 02 slice 2, challenge point 5): a step's parts as it ran them, read-only, in plain counts. */
+type PartState = { index: number; sections: string[]; fields: number; status: string; cost_usd?: number; error?: string | null };
+const partsOf = (detail: unknown) => ((detail as { a4?: { parts?: PartState[] } } | null)?.a4?.parts ?? []).map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, status: p.status, cost_usd: p.cost_usd ?? 0, message: p.error ?? null }));
+type A4 = { total: number; reused: number; leftover: number };
+const a4Of = (detail: unknown): A4 | null => { const a = (detail as { a4?: A4 } | null)?.a4; return a ? { total: a.total, reused: a.reused, leftover: a.leftover } : null; };
+const partsLine = (all: ReturnType<typeof partsOf>) => { if (!all.length) return null; const n = (s: string) => all.filter((p) => p.status === s).length; return `${all.length} part${all.length === 1 ? "" : "s"} · ${[n("done") && `${n("done")} done`, n("failed") && `${n("failed")} failed`, n("running") && `${n("running")} running`, n("queued") && `${n("queued")} queued`, n("not started") && `${n("not started")} not started`].filter(Boolean).join(", ")}`; };
 import { Sources } from "./sources.ts";
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -89,14 +97,14 @@ export class Ai implements OnModuleInit {
         const all = prepared ? this.sources.savedRuns(prepared.jobId, prepared.inputSha) : [];
         // A3: a saved answer is used before paying again; one that failed only our own check is re-checked first.
         const usable = all.find((r) => r.valid) ?? all.find((r) => r.recheckable);
-        const savedWhy = (r: NonNullable<typeof usable>) => `Saved AI answer from run ${r.run_id} (same form; prompt ${r.prompt ?? "unknown"}${r.recheckable ? "; it failed an earlier check and is re-checked with today's rules first" : r.rechecked ? "; re-checked with today's rules" : ""}): no model call, US$0.`;
+        const savedWhy = (r: NonNullable<typeof usable>) => `Saved AI answer for this same form${r.recheckable ? " (it failed an earlier check and is re-checked with today's rules first)" : r.rechecked ? " (re-checked with today's rules)" : ""}: no model call, US$0.`;
         if (mode === "REPLAY") {
           if (!usable) { targets.push({ ...base, action: "not_eligible", read_first, why: read_first ? "No saved AI answer to use (the form has not been read yet)." : "No saved AI answer for this form; run it live." }); continue; }
           targets.push({ ...base, action: "reuse_saved_output", read_first, run_file: usable.file, fingerprint, why: savedWhy(usable) }); continue;
         }
         if (mode === "LIVE" && usable && !opts.draftAgain) { targets.push({ ...base, action: "reuse_saved_output", read_first, run_file: usable.file, fingerprint, why: savedWhy(usable) }); continue; }
         const repeat = mode === "LIVE" && prepared ? this.sources.repeatsFailedRun(prepared.jobId, prepared.draftInputs) : null;
-        if (repeat) { targets.push({ ...base, action: "not_eligible", read_first, why: `A new paid call is refused: run ${repeat.run_id} asked the AI exactly this (same form, prompt, settings) and its answer failed our own check, so asking again would repeat it. Use the saved AI answer instead (no cost): it is re-checked with today's rules.` }); continue; }
+        if (repeat) { targets.push({ ...base, action: "not_eligible", read_first, why: `A new paid call is refused: an earlier run asked the AI exactly this (same form, prompt, settings) and its answer failed our own check, so asking again would repeat it. Use the saved AI answer instead (no cost): it is re-checked with today's rules.` }); continue; }
         // A4: reuse first and in parts when the library already maps some of this form's fields or the form is large.
         const split = inventoryFile ? await this.sources.draftSplit(a, await this.sources.printedEdition(a), false) : null;
         const a4 = split ? { total: split.plan.total, reused: split.plan.reused.length, reused_from: split.reusedFrom, to_ai: split.plan.leftover, parts: split.parts.map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, worst_usd: p.worst_usd, saved_answer: !!p.saved_run, repeats_failed_run: p.repeats_failed_run })) } : undefined;
@@ -261,14 +269,14 @@ export class Ai implements OnModuleInit {
     if (!b) fail("This AI work no longer exists (the demo workspace may have been reset).", HttpStatus.NOT_FOUND);
     const atts = await this.db.sourceAttachment.findMany({ where: { id: { in: b!.jobs.map((j) => j.attachmentId!).filter(Boolean) } }, select: { id: true, edition: true, fileName: true } });
     const plan = b!.plan as any;
-    return { ...b, plan: undefined, plan_targets: plan.targets, totals: plan.totals, operation_label: plan.operation_label, capability_note: plan.capability_note,
-      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), id: j.id, combinationId: j.combinationId, combination: j.combination.label, program: j.combination.program.label, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
+    return { ...b, started_by_name: personName(b!.startedBy), plan: undefined, plan_targets: plan.targets, totals: plan.totals, operation_label: plan.operation_label, capability_note: plan.capability_note,
+      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), parts: partsOf(j.detail), a4: a4Of(j.detail), id: j.id, combinationId: j.combinationId, combination: j.combination.label, program: j.combination.program.label, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
   }
 
   async batches() {
     const workspaceId = await this.ws.id();
-    const list = await this.db.aiBatch.findMany({ where: { workspaceId }, orderBy: { startedAt: "desc" }, take: 50, include: { jobs: { select: { status: true, costUsd: true } } } });
-    return list.map((b) => ({ id: b.id, scopeKind: b.scopeKind, scopeLabel: b.scopeLabel, mode: b.mode, status: b.status, message: b.message, startedBy: b.startedBy, startedAt: b.startedAt, finishedAt: b.finishedAt, worstCaseUsd: b.worstCaseUsd, steps: b.jobs.length, spent_usd: round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), counts: b.jobs.reduce((m: Record<string, number>, j) => ({ ...m, [j.status]: (m[j.status] ?? 0) + 1 }), {}) }));
+    const list = await this.db.aiBatch.findMany({ where: { workspaceId }, orderBy: { startedAt: "desc" }, take: 50, include: { jobs: { select: { status: true, costUsd: true, detail: true } } } });
+    return list.map((b) => ({ id: b.id, scopeKind: b.scopeKind, scopeLabel: b.scopeLabel, mode: b.mode, status: b.status, message: b.message, startedBy: b.startedBy, started_by_name: personName(b.startedBy), startedAt: b.startedAt, finishedAt: b.finishedAt, worstCaseUsd: b.worstCaseUsd, steps: b.jobs.length, parts: partsLine(b.jobs.flatMap((j) => partsOf(j.detail))), spent_usd: round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), counts: b.jobs.reduce((m: Record<string, number>, j) => ({ ...m, [j.status]: (m[j.status] ?? 0) + 1 }), {}) }));
   }
 
   async cancel(actor: Actor, id: string) {
