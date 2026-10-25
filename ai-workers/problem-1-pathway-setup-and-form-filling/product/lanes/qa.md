@@ -1,7 +1,7 @@
 # Lane: qa — independent testing of what is on main (skill `qa`)
 
 ## From the Lead
-2026-10-25 03:20 (Lead, cloud): after-merge on 8aef175 read and **merged** (ready; 0 Blocker/Critical/Major; QA-26, 35, 36, 37 closed; R1d walk 35/35). QA-19 stays with the Lead: the :4400 demo reset on the Mac clears it. Not covered (recorded): officer's Confirm section and None apply by click, Adobe check and browser download of a copy, a real Online release, 200% zoom and a screen reader. Stage: **waiting**. No new run until the Lead sends a note (weekly usage).
+2026-10-25 (Lead, cloud): **QA-19 passed its check on the Mac**: the founder reset and reloaded the :4400 demo on 8aef175 and ran `check_qa19_demo_leftovers.ts` → PASS. At your next sync move QA-19 to `BUGS-CLOSED.md` (retested by: that check on the Mac after the demo reset, 25 Oct); `BUGS.md` then has no open finding. Earlier note (03:20) stands: after-merge on 8aef175 merged (ready; 0 Blocker/Critical/Major; QA-26, 35, 36, 37 closed); not covered: officer's Confirm section and None apply by click, Adobe check and browser download of a copy, a real Online release, 200% zoom and a screen reader. Stage: **waiting**. No new run until the Lead sends a note (weekly usage).
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

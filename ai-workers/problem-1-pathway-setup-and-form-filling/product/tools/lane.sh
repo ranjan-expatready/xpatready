@@ -8,6 +8,7 @@
 #   lane.sh status            one line per lane copy (its own lane file, and who acts according to main)
 #   lane.sh table             the lanes table from each lane's newest copy (else main); STATE.md and the Lead's replies use it
 #   lane.sh state             rewrite the generated table in STATE.md (main copy only, on branch main)
+#   lane.sh leads             Lead commits on main in the last 30 minutes and on other claude/* branches not yet in main (one Lead at a time, P-87)
 LANES="screens forms evidence runtime qa"
 P="ai-workers/problem-1-pathway-setup-and-form-filling"
 HERE="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not in the repository"; exit 2; }
@@ -117,5 +118,11 @@ case "$1" in
     [ "$HERE" = "$MAIN" ] || { echo "Only the Lead's main copy writes STATE.md."; exit 2; }
     S="$MAIN/$P/product/STATE.md"; t=$(mktemp); tb=$(mktemp); table_ > "$tb"
     awk -v tf="$tb" '/<!-- lanes:start -->/{print; while ((getline l < tf) > 0) print l; skip=1; next} /<!-- lanes:end -->/{skip=0} !skip' "$S" > "$t" && mv "$t" "$S" && rm -f "$tb" && echo "STATE.md table regenerated" ;;
-  *) sed -n 2,10p "$0"; exit 2 ;;
+  leads)
+    git -C "$HERE" fetch -q origin 2>/dev/null; me=$(git -C "$HERE" branch --show-current)
+    git -C "$HERE" log origin/main --since=30.minutes --format='main %h %cr %s' | grep ' lead:'
+    for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/); do
+      [ "$b" = "origin/$me" ] || git -C "$HERE" log "origin/main..$b" --no-merges --format="$b %h %cr %s" | grep -m1 ' lead:'
+    done; true ;;
+  *) sed -n 2,11p "$0"; exit 2 ;;
 esac

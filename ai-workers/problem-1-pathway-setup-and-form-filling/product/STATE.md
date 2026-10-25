@@ -3,7 +3,7 @@
 current_milestone: M2 — Super Admin configuration (Screens 01–04 + forms channels F1), with the thin runtime slice R1 (P-67) and independent qa (P-68) alongside
 lanes: `LANES.md` · the founder types `/lead` only; the Lead runs `/next screens|forms|evidence|runtime` and `/qa <mode>` sessions
 journey and gaps: `history/AUDIT-2026-10-23.md` · capabilities and bugs: `qa/CAPABILITIES.md`, `qa/BUGS.md`
-updated: 2026-10-23
+updated: 2026-10-25
 
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
@@ -16,6 +16,7 @@ updated: 2026-10-23
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-25 · Lead (cloud) · Founder's Mac report: :4400 on 8aef175 after a demo reset, QA-19 check PASS (qa closes it at its next sync); PR #14 merged (e404fcc on main); Mac tools recorded (Playwright Chromium, agent-browser); US$12 drafts Mac-only; P-87: cloud Lead on its own branch, to `main` by PR. All lanes waiting; next work needs Lead concepts (Screen 02, F2, R2).
 - 2026-10-25 · Lead (cloud) · PR #13 merged (8aef175); qa after-merge on it: ready, 0 Blocker/Critical/Major, no new findings, QA-26/35/36/37 closed, coverage api 96/81 · engine 99/88 → **R1 thin slice complete**; runtime waits for an R2 plan; QA-19 clears with the :4400 demo reset (Mac).
 - 2026-10-25 · Lead (cloud) · PR #12 merged (e619113: runtime R1d, never-overwrite forms, P-71 gate); "none apply" for required groups and its PR 13 fix (entry ids per group, so an added blank entry makes a filed copy stale) checked (21/21) and merged; runtime waits for an R2 plan; qa after-merge next.
 - 2026-10-25 · Lead (cloud) · Runtime R1d checked and merged on the Lead branch (forms panel, P-71 gate, never-overwrite triggers; 21/21 suites); next: PR, one qa after-merge; runtime builds the "none apply" fact for required groups.
@@ -25,4 +26,3 @@ updated: 2026-10-23
 - 2026-10-24 · Lead (cloud) · Studio `package.json` gets back `"type": "module"` (dropped by the GitHub migration 428a018): type check 15 errors → 0 in a clean clone; every suite green except R1c's journey (runtime FIX). Screens small FIX accepted but CI red on its new browser suite (bundled browser missing on GitHub's runner) → screens uses the system Chrome like the other browser suites.
 - 2026-10-24 · Lead (cloud) · Runtime R1c Lead check → **FIX**: the R1c browser journey gives 69–71/75 on fresh copies (lane reported 75/75; Confirm section, date check and conflict re-save fail every time); diff, S-10 and the migration accepted. Not merged. `run-suites.sh` runs R1c after the visitor-visa setup.
 - 2026-10-24 · Lead (cloud) · Runtime R1c at CHECK (a986e9c: review 7/10 and break 4 Major, all fixed with tests): Lead check in progress; runtime branch merged on the Lead branch, `run-suites.sh` runs `check_runtime_r1c.cjs` after the visitor-visa setup and before R1a; full suites running before a PR. PR #9 merged (262750e).
-- 2026-10-24 · Lead (cloud) · Forms slice 2b checked and merged (PR #9; F5 shown outside Adobe, reproduced by the Lead); runtime R1c EARLY-LOOK → Go with changes, CHECK next; forms next: qa Minors; evidence next on the Mac: Adobe re-check of an F5 file, then IMM 5476.
