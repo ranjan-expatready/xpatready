@@ -1036,7 +1036,6 @@ export class FormsController {
   @Post("captures/:id/screens") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: CAPTURE_LIMITS.fileMb * 1024 * 1024, files: CAPTURE_LIMITS.files } }))
   screens(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: Upload[]) { return this.f.addScreens(actorOf(a), id, files); }
   @Delete("captures/:id/screens/:order") removeScreen(@Headers("x-actor") a: H, @Param("id") id: string, @Param("order") o: string) { return this.f.removeScreen(actorOf(a), id, Number(o)); }
-  @Post("captures/:id/extension-screens") addExtensionScreen(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.addExtensionScreen(actorOf(a), id, b); }
   @Post("captures/:id/abandon") abandon(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.abandon(actorOf(a), id, b); }
   @Post("captures/:id/confirm") confirm(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.confirmRecheck(actorOf(a), id); }
   @Post("captures/:id/finish") finish(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.finish(actorOf(a), id); }

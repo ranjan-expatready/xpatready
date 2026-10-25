@@ -1,0 +1,138 @@
+// The browser extension's API (forms lane F2b; P-90; plan §7 XT-1…XT-4, BR-15; Lead decision Q1; challenge M7).
+//   Studio side (the simulated sign-in, x-actor): a one-time pairing code; the person's extension sessions; revoke.
+//   Extension side (only its own token, never x-actor): exchange the code for a token; who am I; sign out; capture.
+// The token is opaque (32 random bytes), kept only as its sha256, bound to the person, the firm (workspace), the
+// modes their duties give (capture: the author duty, Sample; fill: the case duty) and the extension's fixed id, which
+// every request's Origin must match. Codes are single-use, 5 minutes; tokens 8 hours (Sample); five wrong codes from
+// one address in 5 minutes refuse further tries for 5 minutes (STANDARDS §8). Answers and tokens are never logged.
+// The Studio's sign-in is the simulated x-actor header: pairing proves the flow, not the security (Scaffolding, P-33).
+import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Ip, Param, Post } from "@nestjs/common";
+import { createHash, randomBytes, randomInt } from "node:crypto";
+import { CODE_ALPHABET, EXTENSION_PUBLIC_KEY, MODES, NewExtensionCapture, NewPairing, NewSession, PAIRING } from "../../contracts/extension.ts";
+import { problemFromZod } from "../../contracts/programs.ts";
+import { ACTORS, actorOf, Audit, bearerOf, Db, fail, RUNTIME_ACTORS, Workspace, type Actor } from "./core.ts";
+import { Forms } from "./forms.ts";
+
+type H = string | undefined;
+type Mode = (typeof MODES)[number];
+/** Chrome's id of an extension: the first 128 bits of the sha256 of its public key, written with the letters a–p. */
+export const extensionIdOf = (keyB64: string) => [...createHash("sha256").update(Buffer.from(keyB64, "base64")).digest("hex").slice(0, 32)].map((h) => String.fromCharCode(97 + parseInt(h, 16))).join("");
+export const EXTENSION_ID = process.env.STUDIO_EXTENSION_ID || extensionIdOf(EXTENSION_PUBLIC_KEY);
+export const EXTENSION_ORIGIN = `chrome-extension://${EXTENSION_ID}`;
+const sha = (s: string) => createHash("sha256").update(s).digest("hex");
+const unauthorized = (detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/extension-sign-in", title: "Sign in again", status: 401, detail }, HttpStatus.UNAUTHORIZED); };
+const parse = <T>(schema: { safeParse: (b: unknown) => { success: true; data: T } | { success: false; error: unknown } }, body: unknown): T => {
+  const r = schema.safeParse(body ?? {});
+  if (!r.success) throw new HttpException(problemFromZod(r.error as never), HttpStatus.BAD_REQUEST);
+  return r.data;
+};
+/** The modes a person's duties give: capture for the author duty (the capture duty, Sample), fill for the case duty. */
+export const modesOf = (a: Actor): Mode[] => [...((a.duties as readonly string[]).includes("author") ? ["capture" as const] : []), ...((a.duties as readonly string[]).includes("case") ? ["fill" as const] : [])];
+export type Signed = { actor: Actor; modes: Mode[]; sessionId: string; workspaceId: string };
+
+@Injectable()
+export class Extension {
+  private wrong = new Map<string, number[]>();
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Forms) private readonly forms: Forms) {}
+
+  /** XT-1: a code for the signed-in Studio person, shown once, kept hashed. */
+  async pair(actor: Actor, body: unknown) {
+    parse(NewPairing, body);
+    const modes = modesOf(actor);
+    if (!modes.length) fail(`${actor.name} (simulated) holds neither the capture duty nor the case duty, so the extension has nothing to do for them.`, HttpStatus.FORBIDDEN);
+    const workspaceId = await this.ws.id();
+    const open = await this.db.extensionPairing.count({ where: { person: actor.id, usedAt: null, expiresAt: { gt: new Date() } } });
+    if (open >= PAIRING.openCodes) fail(`${open} codes are still open: use one in the extension, or wait ${PAIRING.codeMinutes} minutes for them to end.`, HttpStatus.TOO_MANY_REQUESTS);
+    const code = Array.from({ length: 8 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join("");
+    const expiresAt = new Date(Date.now() + PAIRING.codeMinutes * 60_000);
+    await this.db.extensionPairing.create({ data: { workspaceId, person: actor.id, modes, codeHash: sha(code), expiresAt } });
+    await this.audit.log(workspaceId, actor.id, "paired", "browser extension", null, `${actor.name} asked for a code to connect the browser extension (${modes.join(" and ")})`);
+    return { code, expires_at: expiresAt.toISOString(), modes, message: `Connect the browser extension: enter this code in the extension within ${PAIRING.codeMinutes} minutes.` };
+  }
+
+  /** XT-2: the extension exchanges a code for its token (once). Five wrong codes from one address pause tries. */
+  async session(body: unknown, origin: H, ip: string) {
+    const now = Date.now(), win = PAIRING.wrongWindowMinutes * 60_000;
+    const tries = (this.wrong.get(ip) ?? []).filter((t) => now - t < win);
+    if (tries.length >= PAIRING.wrongTries) fail(`Too many wrong codes: try again in ${PAIRING.wrongWindowMinutes} minutes, with a new code from the Studio.`, HttpStatus.TOO_MANY_REQUESTS);
+    const b = parse(NewSession, body);
+    if (b.extensionId !== EXTENSION_ID || origin !== EXTENSION_ORIGIN) unauthorized("This is not the ExpatReady extension the Studio knows.");
+    const p = await this.db.extensionPairing.findUnique({ where: { codeHash: sha(b.code) } });
+    if (!p || p.usedAt || p.expiresAt.getTime() <= now) { this.wrong.set(ip, [...tries, now]); unauthorized("That code is wrong, already used or more than 5 minutes old: ask the Studio for a new one."); }
+    const token = randomBytes(32).toString("base64url");
+    const expiresAt = new Date(now + PAIRING.sessionHours * 3_600_000);
+    // The code is spent under its own row: two exchanges at the same moment give one session (the other is refused).
+    const s = await this.db.$transaction(async (tx) => {
+      const used = await tx.extensionPairing.updateMany({ where: { id: p!.id, usedAt: null }, data: { usedAt: new Date() } });
+      if (!used.count) unauthorized("That code was just used: ask the Studio for a new one.");
+      return tx.extensionSession.create({ data: { workspaceId: p!.workspaceId, person: p!.person, modes: p!.modes, extensionId: b.extensionId, tokenHash: sha(token), pairingId: p!.id, expiresAt } });
+    });
+    const actor = actorOf(s.person);
+    await this.audit.log(s.workspaceId, s.person, "connected", "browser extension", null, `${actor.name} connected the browser extension (${s.modes.join(" and ")}; until ${expiresAt.toISOString().slice(0, 16).replace("T", " ")} UTC)`);
+    return { token, expires_at: expiresAt.toISOString(), modes: s.modes, person: { id: actor.id, name: actor.name, role: actor.role } };
+  }
+
+  /** XT-2/XT-3: the person an extension request stands for. Only the token; its session must be live, from the fixed
+   *  extension's origin, and hold the mode the route needs. */
+  async signed(auth: H, origin: H, xActor: H, mode?: Mode): Promise<Signed> {
+    const token = bearerOf(auth);
+    if (!token) unauthorized(xActor ? "The extension's routes take only the extension's own sign-in, never the Studio's." : "Connect the browser extension first: enter a code from the Studio.");
+    if (origin !== EXTENSION_ORIGIN) unauthorized("This request did not come from the ExpatReady extension.");
+    const s = await this.db.extensionSession.findUnique({ where: { tokenHash: sha(token!) } });
+    if (!s || s.revokedAt || s.expiresAt.getTime() <= Date.now() || `chrome-extension://${s.extensionId}` !== origin) unauthorized("The extension's session ended: connect it again with a new code from the Studio.");
+    const actor = [...ACTORS, ...RUNTIME_ACTORS].find((x) => x.id === s!.person);
+    if (!actor) unauthorized("The person this session was for is not known any more.");
+    // The duty is checked again on every request: a session never outlives the duty it was given for.
+    const modes = (s!.modes as Mode[]).filter((m) => modesOf(actor!).includes(m));
+    if (mode && !modes.includes(mode)) fail(mode === "capture" ? `${actor!.name} (simulated) is not given the capture duty: the extension cannot capture screens for them.` : `${actor!.name} (simulated) is not given the case duty: the extension cannot fill screens for them.`, HttpStatus.FORBIDDEN);
+    return { actor: actor!, modes, sessionId: s!.id, workspaceId: s!.workspaceId };
+  }
+
+  async me(sig: Signed) {
+    const s = await this.db.extensionSession.findUniqueOrThrow({ where: { id: sig.sessionId } });
+    return { person: { id: sig.actor.id, name: sig.actor.name, role: sig.actor.role }, modes: sig.modes, expires_at: s.expiresAt.toISOString() };
+  }
+  async signOut(sig: Signed) {
+    await this.db.extensionSession.update({ where: { id: sig.sessionId }, data: { revokedAt: new Date() } });
+    await this.audit.log(sig.workspaceId, sig.actor.id, "disconnected", "browser extension", null, `${sig.actor.name} signed the browser extension out`);
+  }
+  /** The Studio person's own sessions (never another person's), newest first. */
+  async sessions(actor: Actor) {
+    const rows = await this.db.extensionSession.findMany({ where: { person: actor.id }, orderBy: { createdAt: "desc" }, take: 20 });
+    const now = Date.now();
+    return rows.map((s) => ({ id: s.id, modes: s.modes, created_at: s.createdAt.toISOString(), expires_at: s.expiresAt.toISOString(), state: s.revokedAt ? "signed out" : s.expiresAt.getTime() <= now ? "ended" : "connected" }));
+  }
+  async revoke(actor: Actor, id: string) {
+    const r = await this.db.extensionSession.updateMany({ where: { id, person: actor.id, revokedAt: null }, data: { revokedAt: new Date() } });
+    if (!r.count) fail("No connected extension session of yours has that id.", HttpStatus.NOT_FOUND);
+    await this.audit.log(await this.ws.id(), actor.id, "disconnected", "browser extension", null, `${actor.name} disconnected a browser extension session from the Studio`);
+  }
+
+  // ─── capture (BR-4, BR-15): the Studio's capture flow, for the token's person, extension captures only
+  async ownCapture(sig: Signed, id: string) {
+    const c = await this.db.portalCapture.findFirst({ where: { id, workspaceId: sig.workspaceId, way: "extension", capturedBy: sig.actor.id } });
+    if (!c) fail("No capture of yours with that id was started in the extension.", HttpStatus.NOT_FOUND);
+    return c!;
+  }
+  startCapture(sig: Signed, body: unknown) { return this.forms.createCapture(sig.actor, { ...parse(NewExtensionCapture, body), way: "extension" }); }
+  async addScreen(sig: Signed, id: string, body: unknown) { await this.ownCapture(sig, id); return this.forms.addExtensionScreen(sig.actor, id, body); }
+  async capture(sig: Signed, id: string) { await this.ownCapture(sig, id); return this.forms.capture(id); }
+  async finish(sig: Signed, id: string) { await this.ownCapture(sig, id); return this.forms.finish(sig.actor, id); }
+}
+
+@Controller("api/extension")
+export class ExtensionController {
+  constructor(@Inject(Extension) private readonly x: Extension) {}
+  // Studio (x-actor)
+  @Post("pairings") pair(@Headers("x-actor") a: H, @Body() b: unknown) { return this.x.pair(actorOf(a), b); }
+  @Get("sessions") sessions(@Headers("x-actor") a: H) { return this.x.sessions(actorOf(a)); }
+  @Delete("sessions/:id") @HttpCode(204) async revoke(@Headers("x-actor") a: H, @Param("id") id: string) { await this.x.revoke(actorOf(a), id); }
+  // Extension (its token only)
+  @Post("sessions") session(@Body() b: unknown, @Headers("origin") o: H, @Ip() ip: string) { return this.x.session(b, o, ip); }
+  @Get("session") async me(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { return this.x.me(await this.x.signed(t, o, a)); }
+  @Delete("session") @HttpCode(204) async signOut(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { await this.x.signOut(await this.x.signed(t, o, a)); }
+  @Post("captures") async start(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Body() b: unknown) { return this.x.startCapture(await this.x.signed(t, o, a, "capture"), b); }
+  @Get("captures/:id") async capture(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string) { return this.x.capture(await this.x.signed(t, o, a, "capture"), id); }
+  @Post("captures/:id/screens") async screen(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.addScreen(await this.x.signed(t, o, a, "capture"), id, b); }
+  @Post("captures/:id/finish") @HttpCode(200) async finish(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string) { return this.x.finish(await this.x.signed(t, o, a, "capture"), id); }
+}

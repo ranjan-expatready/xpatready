@@ -17,3 +17,21 @@ export const ExtensionInput = z.object({
 export const ExtensionScreen = z.object({ title: z.string().trim().min(1, "The screen has no heading.").max(300), inputs: z.array(ExtensionInput).min(1, "No questions on this screen.").max(RULES.max_inputs) }).strict();
 export type ExtensionScreen = z.infer<typeof ExtensionScreen>;
 export const AddExtensionScreen = z.object({ screen: ExtensionScreen, revision: z.number().int().min(0, "Send the capture's revision you were shown.") }).strict();
+
+// ─── F2b: pairing and sessions (Lead decision Q1; plan §7 XT-1…XT-3; challenge M7)
+/** The extension's public key (manifest "key"): it fixes the extension's id, so the API can name the one origin it
+ *  answers and the one extension a token is bound to. The private key was never kept (an unpacked or managed install
+ *  needs none); a store listing (team, M3) gets its own id, set with STUDIO_EXTENSION_ID (api/src/extension.ts). */
+export const EXTENSION_PUBLIC_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApy5qbK2+9ydQGaawucAd8zmZ09yi20vJ/zO5qP+QFV6IGvGrbehQK56E/rsjB8eZ2IOY1sOU8qkdn6AmBPHrY32RQnCVfT0FkTQzMuavHh/4peIp3F+gjUMeaza9WqNdfhhVwn/80iwPIU2gXPfy3URmoXpBoQM90J6mDA1zpREASlHy8gzGA38eSLhzczzcctQ6mh/1Mh647pXcPAt/SbEMaatlEVbfJlNa4xto8R9JOFAldv5Kw7LLS1WKeY5VQIa4FM0yiG05vy69XZBATJuitELSfpC3j6xHiCFMoeCBeFjcruy1JOCxwR5Ya3UMUC8M2BXwkjsUO4Ci4ZoN7QIDAQAB";
+export const PAIRING = { codeMinutes: 5, sessionHours: 8, openCodes: 5, wrongTries: 5, wrongWindowMinutes: 5 } as const; // Sample
+/** No 0/O, 1/I/L: a code is read off one screen and typed into another. */
+export const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+export const MODES = ["capture", "fill"] as const;
+export const NewPairing = z.object({}).strict();
+export const NewSession = z.object({
+  code: z.string({ error: "Enter the 8-character code the Studio shows." }).trim().toUpperCase().regex(new RegExp(`^[${CODE_ALPHABET}]{8}$`), "Enter the 8-character code the Studio shows."),
+  extensionId: z.string({ error: "The extension did not say who it is." }).regex(/^[a-p]{32}$/, "The extension did not say who it is."),
+}).strict();
+export const NewExtensionCapture = z.object({
+  portal: z.string(), form: z.string(), title: z.string(), applicationType: z.string().optional(), combinationId: z.string().optional(),
+}).strict();

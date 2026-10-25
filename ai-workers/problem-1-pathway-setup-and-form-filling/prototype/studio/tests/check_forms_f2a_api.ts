@@ -19,8 +19,11 @@ const PY = join(STUDIO, "..", "..", "..", "..", ".tools", "solution-1-prototype"
 const log: { name: string; ok: boolean; detail?: unknown }[] = []; let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 240)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
-const call = async (method: string, path: string, body?: unknown, actor = "user-A"): Promise<Res> => {
-  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+const ORIGIN = "chrome-extension://ipomjnfjkniidipddghocobgcfecebaf";
+/** actor: a simulated Studio person (x-actor), or { token } for the browser extension (its token and origin only). */
+const call = async (method: string, path: string, body?: unknown, actor: string | { token: string } = "user-A"): Promise<Res> => {
+  const who: Record<string, string> = typeof actor === "string" ? { "x-actor": actor } : { authorization: `Bearer ${actor.token}`, origin: ORIGIN };
+  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { ...who, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
   return { status: r.status, body: j };
 };
@@ -77,10 +80,13 @@ const meta = { portal: "ircc_portal", form: "IMM 5257", title: "Visitor visa", w
   await call("POST", `/captures/${v1.id}/finish`); const ap = await call("POST", `/captures/${v1.id}/approve`, undefined, "user-C");
   ok("setup: IMM 5257's online version v1 approved from four saved screens", ap.status < 300, ap.body?.status ?? ap.body);
 
-  const start = (actor = "user-A") => call("POST", "/captures", { portal: "ircc_portal", form: "IMM 5257", title: "Application for a visitor visa (online)", applicationType: "Visitor visa", way: "extension" }, actor);
+  // The capturer connects the extension (F2b): a code from the Studio, exchanged once for the extension's token.
+  const code = (await call("POST", "/extension/pairings", {})).body.code;
+  const ext = { token: (await call("POST", "/extension/sessions", { code, extensionId: ORIGIN.slice(19) }, { token: "" })).body.token as string };
+  const start = () => call("POST", "/extension/captures", { portal: "ircc_portal", form: "IMM 5257", title: "Application for a visitor visa (online)", applicationType: "Visitor visa" }, ext);
   let c = (await start()).body;
   ok("C2.9: BR-4 a capture with the browser extension starts open, way extension, saying only the screens seen are compared", c.way === "extension" && c.status === "OPEN" && /only the screens seen are compared/.test(c.status_detail), c.status_detail);
-  const add = async (screen: unknown, rev = c.revision, actor = "user-A", id = c.id) => call("POST", `/captures/${id}/extension-screens`, { screen, revision: rev }, actor);
+  const add = async (screen: unknown, rev = c.revision, actor: string | { token: string } = ext, id = c.id) => call("POST", `/extension/captures/${id}/screens`, { screen, revision: rev }, actor);
   let r = await add(s1);
   ok("C2.9: BR-4 \"Capture this screen\": s1 added (screen 1 captured · go to the next screen)", r.status === 201 && r.body.result.outcome === "added" && /Screen 1 captured/.test(r.body.result.message), r.body.result);
   const rev1 = r.body.capture.revision;
@@ -94,20 +100,20 @@ const meta = { portal: "ircc_portal", form: "IMM 5257", title: "Visitor visa", w
   ok("C2.9: BR-1 fail: a label holding a passport-like code is refused (422) in words, nothing kept", r.status === 422 && /passport-like code/.test(r.body.message), r.body.message);
   r = await add({ ...s3, extra: 1 }, rev1);
   ok("C2.9: BR-1 fail: a key the contract does not name is refused, never ignored", r.status === 400, r.status);
-  r = await add(s3, rev1, "user-B");
-  ok("C2.9: roles fail: a person without the capture duty (author) cannot add a screen (403)", r.status === 403, r.status);
-  r = await add(s3, rev1, "nobody");
-  ok("C2.9: roles fail: an unknown person is refused (401)", r.status === 401, r.status);
+  r = await call("POST", "/extension/pairings", {}, "user-B");
+  ok("C2.9: BR-15 roles fail: a person without the capture duty (author) gets no code for the extension (403)", r.status === 403, r.body.message);
+  r = await add(s3, rev1, "user-A");
+  ok("C2.9: M7 fail: the extension's screen route takes no Studio sign-in (x-actor alone is 401)", r.status === 401 && /never the Studio's/.test(r.body.message), r.body.message);
   const saved = (await call("POST", "/captures", { portal: "ircc_portal", form: "IMM 5257", title: "Application for a visitor visa (online)" })).body;
-  r = await add(s3, saved.revision, "user-A", saved.id);
-  ok("C2.9: fail: a capture from saved pages takes no extension screen (409); an extension capture takes no saved page", r.status === 409 && (await upload(`/captures/${c.id}/screens`, [S2])).status === 409, r.body.message);
+  r = await add(s3, saved.revision, ext, saved.id);
+  ok("C2.9: fail: a capture from saved pages takes no extension screen (404: not an extension capture of yours); an extension capture takes no saved page (409)", r.status === 404 && (await upload(`/captures/${c.id}/screens`, [S2])).status === 409, r.body.message);
   r = await add(s3, rev1);
-  const fin = await call("POST", `/captures/${c.id}/finish`);
+  const fin = await call("POST", `/extension/captures/${c.id}/finish`, undefined, ext);
   ok("C2.9: Q2 a capture that saw s1 and s3 unchanged is already in the library: 2 compared, 2 not seen this time, nothing removed", fin.body.status === "IN_LIBRARY" && /2 not seen this time/.test(fin.body.status_detail), fin.body.status_detail);
 
   c = (await start()).body;
   r = await add(rw); r = await add(s3, r.body.capture.revision);
-  const held = await call("POST", `/captures/${c.id}/finish`);
+  const held = await call("POST", `/extension/captures/${c.id}/finish`, undefined, ext);
   const diff = held.body.difference as { input: string; change: string }[];
   ok("C2.9: Q2 a capture that saw s1 reworded is held with only s1's differences; the screens not seen are never \"removed\"", held.body.status === "HELD" && diff.length > 0 && diff.every((x) => x.change !== "removed") && diff.some((x) => x.input === "familyName" && x.change === "reworded") && /1 changed\); 2 not seen this time; 0 added/.test(held.body.status_detail), { status: held.body.status_detail, diff });
   const { readFileSync } = await import("node:fs");
