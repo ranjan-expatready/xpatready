@@ -128,7 +128,8 @@ case "$1" in
     for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/); do
       [ "$b" = "origin/$me" ] || git -C "$HERE" log "origin/main..$b" --no-merges --format="$b %h %cr %s" | grep -m1 ' lead:'
     done; true ;;
-  inbox)  # findings dropped for the Lead (inbox/README.md): files on main, then unmerged devin/* branches
+  inbox)  # findings dropped for the Lead (inbox/README.md): files on main, then unmerged devin/* branches.
+    # Acknowledged = merged: the Lead merges each checker branch into its own PR, so a handled branch drops out here.
     git -C "$HERE" fetch -q origin 2>/dev/null
     git -C "$HERE" ls-tree --name-only origin/main "$P/product/inbox/" | grep -v '/README.md$' | sed 's|^|main |'
     for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/devin/); do
