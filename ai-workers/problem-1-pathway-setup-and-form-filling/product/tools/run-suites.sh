@@ -24,7 +24,8 @@ run() {  # $1 file, $2 label, rest: command
   if timeout 1200 "$@" > "$log" 2>&1; then st=PASS; else st=FAIL; fail=1; fi
   local last; last=$(grep -E "passed|/[0-9]+ passed|[0-9]+ passed" "$log" | tail -1 | cut -c1-90)
   [ -n "$last" ] || last="$(grep -c '^PASS' "$log") checks passed"
-  [ "$st" = FAIL ] && last="$(grep -m1 -E '^FAIL|Error|STOP' "$log" | cut -c1-90)"
+  # A failing check's own line first: "Error" also appears inside PASS lines that quote an expected error.
+  [ "$st" = FAIL ] && last="$( (grep -m1 -E '^(FAIL|STOP)' "$log" || grep -m1 -E 'Error' "$log") | cut -c1-90)"
   rows+=("| $f | $st | $((SECONDS - t0)) s | ${last:-see $log} |")
 }
 for path in "$S"/tests/check_*.ts "$S"/tests/check_*.cjs; do
