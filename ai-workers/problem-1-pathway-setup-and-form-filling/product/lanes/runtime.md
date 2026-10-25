@@ -7,14 +7,14 @@ Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes 
 
 current_item: R1-thin-slice
 current_slice: R1d
-stage: FIX
-owner: Builder
-next_action: PR #12 review fixes (Online forms not offered, lock checks the file, cap under a case lock) written with tests, R1d 43/43; run-suites --demo running; then tell the Lead the commit. After the Lead PR merges: BUILD the "none apply" fact.
+stage: WAIT
+owner: Lead
+next_action: Wait for the Lead PR (#12) to merge (the Lead says when); then BUILD the "none apply" fact for required repeating groups (API, client and agent views, readiness; a test each), then CHECK owner Lead, then stop.
 blocked_by: none
 updated: 2026-10-24
 
 ## Log (last 10 lines)
-- 2026-10-25 · Builder (cloud): PR #12 review (Lead): 3 fill-case defects fixed with tests caught by mutation (Online filing line → 422 and not listed; lock refuses a missing or changed file 409; cap counted under FOR UPDATE); R1d 43/43.
+- 2026-10-25 · Builder (cloud): PR #12 review (Lead): 3 fill-case defects fixed with tests caught by mutation (Online filing line → 422 and not listed; lock refuses a missing or changed file 409; cap counted under FOR UPDATE); R1d 43/43, run-suites --demo 21/21 at be16c22; told the Lead; WAIT.
 - 2026-10-24 · Builder (cloud): Lead accepted R1d (3d47004, 21/21); answers recorded: an empty required group that applies blocks ready to file, cleared by a confirmed "none apply" fact (P-71, P-72); STATUS.md verdict is the trial record (IMM 1344 not passed, IMM 5707 passed). Waiting for the Lead PR merge.
 - 2026-10-24 · Builder (cloud): FIX R1d done: review minors 1–2 wording too; fresh copy journey 107/107, R1d 38/38, R1a 99/99, engine 39/39; run-suites --demo 21/21; any 437; copies stopped; CHECK owner Lead.
 - 2026-10-24 · Builder (cloud): CHECK R1d: review 7/10 (5 Majors), break 7 Majors 6 Minors; FIX: trial gate per form, readiness (needs a fix, by id), blocking list on the page, focus, delete/insert guards, file checks, cap per case; R1d 38/38, journey 107/107, R1a 99/99, engine 39/39; mutations caught.
