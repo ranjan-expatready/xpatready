@@ -15,6 +15,7 @@ blocked_by: none
 updated: 2026-10-25
 
 ## Log (last 10 lines)
-- 2026-10-25 · Scout (Goose) · charter firm-admin-day-one: full walk on :4480 (create program›category›sub from nothing, attach sample forms, review/release, 390px/keyboard/200% zoom, API probes); report + 5 findings; fix SC-2 (New-combination option count now reads "used by n"; check passes); SC-4 check kept failing as evidence
+- 2026-10-25 · Scout (Goose) · founder's standing lens added to BRIEF: "AI everywhere it helps — draft, find duplicates, flag constraints and problems; the person decides"; every future run judges each step against it; folded into SC-1's suggestion
+- 2026-10-25 · Scout (Goose) · charter firm-admin-day-one: full walk on :4480 (create program›category›sub from nothing, attach sample forms, review/release, 390px/keyboard/200% zoom, API probes); report + 5 findings; SC-2 fix proven then reverted (new-combination.tsx busy on screens — scope guard worked; ready patch in the report); SC-4 check kept failing as evidence
 - 2026-10-25 · Scout (Goose) · first session: BRIEF written with the founder, CHARTERS re-ordered (brief order), NOW.md handover card created, setup review + P1–P7, smoke test passed (shell, files, app :4480, API auth, playwright MCP, scope guard)
 - 2026-10-25 · Lead · lane created (P-91); no run yet

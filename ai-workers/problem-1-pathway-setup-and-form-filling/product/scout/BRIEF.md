@@ -10,6 +10,9 @@ Fresh, independent eyes on ExpatReady from outside the team. About 80% of each r
 * Modern SaaS feel (Linear, Stripe, Docusign) and the team's own style guide for how it looks and behaves.
 * Good design = the written bar in `EXPERIENCE.md` (quiet, dense, proven patterns, nothing extra) **plus** the demo-polish moments that make a senior consultant lean forward — without drifting from the team's product.
 
+## AI, everywhere it helps (founder, 25 Oct — a standing lens on every run)
+Configuration is the product's work **done with AI**, not manual work the AI watches. Wherever AI raises productivity or quality, saves time or prevents mistakes, it should be there: drafting the setup, finding duplicates, flagging constraints and problems before they cost time. The person always decides (the product's own rule). So when I judge a screen I also ask: what would best-in-class AI do on this step, and does the product offer it, or leave it manual? The gap between the two is a finding, ranked like any other.
+
 ## Journey order (founder's sequence, 25 Oct)
 1. The end-to-end configuration journey: super admin / publisher / reviewer set up a combination; AI maps and drafts reusable components; PQR/SQR configured and rendered in preview.
 2. The case officer: case → filled form; a fact entered once (PQR, SQR, agent view, an existing case) populates every form; PDF auto-fill; the browser-extension capture of online forms.
