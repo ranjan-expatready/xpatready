@@ -41,6 +41,8 @@ export const NewCapture = z.object({
   applicationType: z.string().trim().max(200).optional(),
   /** Screen 01 "Add an online form" (C2.7): the combination it is added from; the online version stays a library one. */
   combinationId: z.string().uuid("Choose an existing combination.").optional(),
+  /** F2: "extension" for a capture made screen by screen in the browser extension (it adds to the current version, Q2). */
+  way: z.enum(["saved_page", "extension"], { error: "A capture is made from saved pages (or the template) or with the browser extension." }).optional(),
 });
 export const ReturnCapture = z.object({ note: z.string().trim().min(5, "Say what is wrong, so the person who captured it can fix it.").max(1000) });
 export const AbandonCapture = z.object({ note: z.string().trim().max(1000).optional() });
@@ -63,9 +65,12 @@ export const ResolveInput = z.object({
   fact: z.string().trim().regex(/^[a-z][a-z0-9_]*\.[a-z0-9_.]+$/, "A shared field id, for example person.place_of_birth_city.").optional(),
   person: z.string().trim().regex(/^[a-z][a-z0-9_]{1,40}$/).optional(),
   notAFact: z.literal(true).optional(),
+  /** F2c (Q3, BR-9): a declaration or background question the representative answers on the portal themself; the
+   *  extension never fills it. Set by the immigration expert role (SME duty), approved by a second person with the map. */
+  answerOnScreen: z.literal(true).optional(),
   reason: z.string().trim().min(5, "Say why it is not a fact.").max(500).optional(),
-}).refine((b) => !!b.fact !== !!b.notAFact, { message: "Either map it to a shared field (fact) or mark it not a fact (notAFact), not both.", path: ["fact"] })
-  .refine((b) => !b.notAFact || !!b.reason, { message: "Say why it is not a fact.", path: ["reason"] });
+}).refine((b) => [!!b.fact, !!b.notAFact, !!b.answerOnScreen].filter(Boolean).length === 1, { message: "Map it to a shared field (fact), mark it not a fact (notAFact), or mark it answered on screen (answerOnScreen): one of the three.", path: ["fact"] })
+  .refine((b) => !(b.notAFact || b.answerOnScreen) || !!b.reason, { message: "Say why.", path: ["reason"] });
 export const NewAlias = z.object({ alias: z.string().trim().min(2).max(200) });
 export const NewAnswerList = z.object({
   key: z.string().trim().regex(/^[a-z][a-z0-9_]{1,60}$/, "A list key in lower case, for example sex or marital_status."),
@@ -75,6 +80,28 @@ export const NewAnswerList = z.object({
 export const LinkAnswerList = z.object({ list: z.string().trim() });
 /** A person sets one form field's option map: value key → the form's code; codes no value fills are listed as unused. */
 export const SetOptionMap = z.object({ dataPath: z.string().trim().min(1, "Name the form field."), map: z.record(z.string(), z.string()), unused: z.array(z.string()).default([]) });
+/** F1-P (Screen 02 Q3, SA-1B-11, 12, 27): what a list on a form holds, and what happens when the case has more rows
+ *  than the form has room for. Words are Sample until the immigration expert confirms them. Never a silent cut. */
+export const LIST_PURPOSES = [
+  { key: "current", label: "Current" },
+  { key: "for_post", label: "For the post applied for" },
+  { key: "all", label: "All" },
+  { key: "latest", label: "Latest" },
+  { key: "date_range", label: "In a date range" },
+] as const;
+export const LIST_PURPOSE_KEYS = LIST_PURPOSES.map((p) => p.key) as unknown as [string, ...string[]];
+export const LIST_OVERFLOWS = [
+  { key: "extra_sheet", label: "Continue on an extra sheet" },
+  { key: "flag_officer", label: "Flag for the officer" },
+] as const;
+export const LIST_OVERFLOW_KEYS = LIST_OVERFLOWS.map((p) => p.key) as unknown as [string, ...string[]];
+export const SetListPurpose = z.object({
+  dataPath: z.string({ error: "Name the form field." }).trim().min(1, "Name the form field."),
+  kind: z.enum(LIST_PURPOSE_KEYS, { error: `Choose what the list holds: ${LIST_PURPOSES.map((p) => p.label).join(", ")}.` }),
+  overflow: z.enum(LIST_OVERFLOW_KEYS, { error: "Choose what happens when there are more rows than the form has room for: continue on an extra sheet, or flag for the officer." }),
+});
+export type ListPurpose = { kind: string; overflow: string };
+
 /** The guarded screen_map job for an online version's open inputs (F1 slice 2): STUB proves the path at US$0; LIVE
  *  is a paid call and repeats the worst case the person saw (to the cent), so nothing is spent unseen. */
 // QA-27: each field says in plain words what it needs, for a missing value and a wrong kind of value alike (zod's own

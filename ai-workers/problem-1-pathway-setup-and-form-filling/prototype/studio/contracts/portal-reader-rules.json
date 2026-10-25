@@ -1,0 +1,80 @@
+{
+  "$comment": "F2a (plan E-6, BR-2): the rules both portal-screen readers follow, so they cannot drift: tools/read_portal_capture.py (saved pages, Python) and extension/src/reader.ts (the live page, in the browser). Patterns are written for both regex engines: ASCII classes only (no \\w, no \\b), compiled with re.ASCII in Python. A change here changes both readers; the conformance test (tests/check_forms_f2a.ts) reads every fixture with both.",
+  "skip_types": [
+    "hidden",
+    "submit",
+    "button",
+    "reset",
+    "image",
+    "search",
+    "password"
+  ],
+  "types": [
+    "text",
+    "date",
+    "select",
+    "radio",
+    "checkbox",
+    "textarea",
+    "number",
+    "email",
+    "tel",
+    "file"
+  ],
+  "parts": {
+    "year": "YYYY",
+    "yyyy": "YYYY",
+    "month": "MM",
+    "mm": "MM",
+    "day": "DD",
+    "dd": "DD"
+  },
+  "aria_controls": [
+    "radio",
+    "checkbox",
+    "switch",
+    "textbox",
+    "combobox",
+    "listbox",
+    "spinbutton",
+    "slider",
+    "radiogroup",
+    "menuitemradio",
+    "menuitemcheckbox",
+    "option"
+  ],
+  "skip_containers": [
+    "script",
+    "style",
+    "noscript",
+    "template"
+  ],
+  "max_inputs": 500,
+  "client_data": [
+    {
+      "pattern": "[A-Za-z0-9_.+-]+@[A-Za-z0-9_-]+\\.[A-Za-z0-9_.]+",
+      "what": "an email address"
+    },
+    {
+      "pattern": "(?<![A-Za-z0-9_-])[0-9](?:[ -]?[0-9]){7,}(?![A-Za-z0-9_-])",
+      "what": "a long number (an identifier such as a UCI or an application number)"
+    },
+    {
+      "pattern": "(?<![A-Za-z0-9_])[A-Z]{1,2}[0-9]{6,9}(?![A-Za-z0-9_])",
+      "what": "a passport-like code"
+    }
+  ],
+  "label_answer": {
+    "pattern": ":\\s*\\S{2,}",
+    "what": "its label has text after the colon, which may be an answer shown as text"
+  },
+  "placeholder": {
+    "pattern": "^\\s*(?:-+\\s*)?(?:please\\s+)?(?:select|choose)(?![A-Za-z0-9_])",
+    "ignore_case": true
+  },
+  "required_marks": {
+    "prefix": "^\\*\\s*",
+    "suffix": "\\s*\\(required\\)\\s*$",
+    "ignore_case": true
+  }
+}

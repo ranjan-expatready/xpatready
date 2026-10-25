@@ -1,0 +1,5 @@
+{
+  "$comment": "Sample (P-90, plan §7): the exact portal hosts the production extension may run on, and the ExpatReady API origin. To be confirmed by the immigration expert from a real representative session; never a wildcard (*.gc.ca) and never <all_urls>. The .invalid names cannot resolve, so a production build made before the expert answers cannot touch any real site.",
+  "portal_hosts": ["ircc-portal.sample.invalid", "apr-portal.sample.invalid"],
+  "api_origin": "https://studio.sample.invalid"
+}
