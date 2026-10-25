@@ -9,6 +9,7 @@
 #   lane.sh table             the lanes table from each lane's newest copy (else main); STATE.md and the Lead's replies use it
 #   lane.sh state             rewrite the generated table in STATE.md (main copy only, on branch main)
 #   lane.sh leads             Lead commits on main in the last 30 minutes and on other claude/* branches not yet in main (one Lead at a time, P-87)
+#   lane.sh inbox             findings dropped for the Lead: files in product/inbox/ on main and unmerged devin/* branches (inbox/README.md)
 LANES="screens forms evidence runtime qa scout"
 P="ai-workers/problem-1-pathway-setup-and-form-filling"
 HERE="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not in the repository"; exit 2; }
@@ -127,5 +128,12 @@ case "$1" in
     for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/); do
       [ "$b" = "origin/$me" ] || git -C "$HERE" log "origin/main..$b" --no-merges --format="$b %h %cr %s" | grep -m1 ' lead:'
     done; true ;;
-  *) sed -n 2,11p "$0"; exit 2 ;;
+  inbox)  # findings dropped for the Lead (inbox/README.md): files on main, then unmerged devin/* branches
+    git -C "$HERE" fetch -q origin 2>/dev/null
+    git -C "$HERE" ls-tree --name-only origin/main "$P/product/inbox/" | grep -v '/README.md$' | sed 's|^|main |'
+    for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/devin/); do
+      git -C "$HERE" merge-base --is-ancestor "$b" origin/main 2>/dev/null && continue
+      echo "$b $(git -C "$HERE" log -1 --format='%h %cr' "$b") · $(git -C "$HERE" diff --name-only "origin/main...$b" | tr '\n' ' ')"
+    done; true ;;
+  *) sed -n 2,12p "$0"; exit 2 ;;
 esac

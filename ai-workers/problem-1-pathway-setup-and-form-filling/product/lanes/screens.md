@@ -2,6 +2,7 @@
 
 ## From the Lead
 2026-10-25 09:30 (Lead, cloud): **FIX continues, with five more items from the Screen 03 and 04 re-checks** (`screens/04-shared-library/recheck-2026-10-25.md`, `screens/03-combination-workspace/recheck-2026-10-25.md`), each verified and fixed with a fail-before test in this pass: (1) one combination's approval publishes only the approved library changes it uses; library-only changes go out through the shared Release page; (2) the release refusal covers every new library item the combination uses (sections and document types too); (3) a returned new field can be withdrawn or edited and resent, never freezing a release (your breaker's Blocker); (4) the old "Add a field" route cannot skip the second person; (5) a database rule behind the duplicate-name check. Decisions: the To review page is the one place library changes are approved (Screen 04's drawer shows status and links there); AI drafting of PQR picks (C4.7) is yours, later, through Draft setup. The runtime setup patch stays on your branch (one-off). **Your branch merges before runtime's.** Then CHECK as usual.
+* 09:50: also in this FIX, from the scout (SC-2): the existing-name option in `new-combination.tsx` reads "used by n" instead of a bare count glued to the name; the scout's check is `tests/scout/check_sc2_sc4_1025.cjs` (its SC-2 part must pass).
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
