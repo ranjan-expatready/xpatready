@@ -1,0 +1,524 @@
+[
+  {
+    "label": "Programs (Screen 01)",
+    "route": "/",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 0,
+        "wide": []
+      },
+      "1024": {
+        "over": 0,
+        "wide": []
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "Programs"
+      ],
+      "h2": []
+    }
+  },
+  {
+    "label": "Combination · Visitor visa (in setup)",
+    "route": "/c/73f0c8c2-65fc-46df-a099-bd3835fcf625",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 0,
+        "wide": [
+          "a.whitespace-nowrap→455",
+          "a.whitespace-nowrap→611",
+          "table.w-full→511",
+          "thead.bg-surface→511",
+          "tr.→511",
+          "th.border-b→511",
+          "tbody.[&_td]:border-b→511",
+          "td.whitespace-nowrap→511"
+        ]
+      },
+      "1024": {
+        "over": 0,
+        "wide": []
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "Visitor visa"
+      ],
+      "h2": [
+        "Missing before firms can use it (2)",
+        "Forms",
+        "People in this combination",
+        "Released versions",
+        "Recent steps"
+      ]
+    }
+  },
+  {
+    "label": "Combination · LMIA (Live, Release 1)",
+    "route": "/c/ab801bad-2339-4c84-a946-667a4c992c63",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 0,
+        "wide": [
+          "a.whitespace-nowrap→455",
+          "a.whitespace-nowrap→611",
+          "table.w-full→622",
+          "thead.bg-surface→622",
+          "tr.→622",
+          "th.border-b→423",
+          "th.border-b→622",
+          "tbody.[&_td]:border-b→622",
+          "td.text-xs→423",
+          "td.→622"
+        ]
+      },
+      "1024": {
+        "over": 0,
+        "wide": []
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "With an LMIA"
+      ],
+      "h2": [
+        "Forms",
+        "People in this combination",
+        "Released versions",
+        "Recent steps"
+      ]
+    }
+  },
+  {
+    "label": "Combination · LMIA configuration",
+    "route": "/c/ab801bad-2339-4c84-a946-667a4c992c63/configuration",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 22,
+        "wide": [
+          "a.whitespace-nowrap→456",
+          "a.whitespace-nowrap→612",
+          "button.rounded-lg→422",
+          "table.w-full→510",
+          "thead.bg-surface→510",
+          "tr.→510",
+          "th.border-b→422",
+          "th.border-b→510",
+          "tbody.[&_td]:border-b→510",
+          "td.text-xs→422"
+        ]
+      },
+      "1024": {
+        "over": 0,
+        "wide": []
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "With an LMIA"
+      ],
+      "h2": []
+    }
+  },
+  {
+    "label": "Library · Fields",
+    "route": "/library/fields",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 0,
+        "wide": [
+          "table.w-full→926",
+          "thead.bg-surface→926",
+          "tr.→926",
+          "th.border-b→446",
+          "th.border-b→564",
+          "th.border-b→633",
+          "th.border-b→693",
+          "th.border-b→799",
+          "th.border-b→926",
+          "tbody.[&_td]:border-b→926"
+        ]
+      },
+      "1024": {
+        "over": 0,
+        "wide": [
+          "table.w-full→1158",
+          "thead.bg-surface→1158",
+          "tr.→1158",
+          "th.border-b→1031",
+          "th.border-b→1158",
+          "tbody.[&_td]:border-b→1158",
+          "td.text-xs→1031",
+          "td.→1158",
+          "span.flex→1146",
+          "span.inline-flex→1068"
+        ]
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "Canonical fields"
+      ],
+      "h2": []
+    }
+  },
+  {
+    "label": "Library · Sections",
+    "route": "/library/sections",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 0,
+        "wide": [
+          "table.w-full→569",
+          "thead.bg-surface→569",
+          "tr.→569",
+          "th.border-b→442",
+          "th.border-b→569",
+          "tbody.[&_td]:border-b→569",
+          "td.→442",
+          "td.→569",
+          "span.inline-flex→557"
+        ]
+      },
+      "1024": {
+        "over": 0,
+        "wide": []
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "Sections"
+      ],
+      "h2": []
+    }
+  },
+  {
+    "label": "Library · Document types",
+    "route": "/library/documents",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 0,
+        "wide": [
+          "table.w-full→649",
+          "thead.bg-surface→649",
+          "tr.→649",
+          "th.border-b→522",
+          "th.border-b→649",
+          "tbody.[&_td]:border-b→649",
+          "td.max-w-lg→522",
+          "td.→649",
+          "span.inline-flex→637"
+        ]
+      },
+      "1024": {
+        "over": 0,
+        "wide": []
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "Document types"
+      ],
+      "h2": []
+    }
+  },
+  {
+    "label": "Library · Forms",
+    "route": "/library/forms",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 0,
+        "wide": [
+          "table.w-full→704",
+          "thead.bg-surface→704",
+          "tr.→704",
+          "th.border-b→591",
+          "th.border-b→704",
+          "tbody.[&_td]:border-b→704",
+          "td.→591",
+          "p.whitespace-nowrap→579",
+          "td.tabular-nums→704"
+        ]
+      },
+      "1024": {
+        "over": 0,
+        "wide": []
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "Forms"
+      ],
+      "h2": []
+    }
+  },
+  {
+    "label": "Library · Checks",
+    "route": "/library/checks",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 0,
+        "wide": []
+      },
+      "1024": {
+        "over": 0,
+        "wide": []
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "Checks"
+      ],
+      "h2": []
+    }
+  },
+  {
+    "label": "AI work (Screen 02)",
+    "route": "/ai",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 0,
+        "wide": []
+      },
+      "1024": {
+        "over": 0,
+        "wide": []
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "AI work"
+      ],
+      "h2": []
+    }
+  },
+  {
+    "label": "Review and release",
+    "route": "/release",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 0,
+        "wide": []
+      },
+      "1024": {
+        "over": 0,
+        "wide": []
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "Review and release"
+      ],
+      "h2": []
+    }
+  },
+  {
+    "label": "Releases",
+    "route": "/releases",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 0,
+        "wide": [
+          "table.w-full→586",
+          "thead.bg-surface→586",
+          "tr.→586",
+          "th.border-b→408",
+          "th.border-b→500",
+          "th.border-b→586",
+          "tbody.[&_td]:border-b→586",
+          "td.text-xs→408",
+          "td.text-xs→500",
+          "td.max-w-md→586"
+        ]
+      },
+      "1024": {
+        "over": 0,
+        "wide": []
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "Releases"
+      ],
+      "h2": []
+    }
+  },
+  {
+    "label": "Activity",
+    "route": "/activity",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 0,
+        "wide": [
+          "table.w-full→494",
+          "thead.bg-surface→494",
+          "tr.→494",
+          "th.border-b→494",
+          "tbody.[&_td]:border-b→494",
+          "td.text-xs→494",
+          "span.inline-flex→462",
+          "span.inline-flex→436",
+          "span.inline-flex→434",
+          "span.inline-flex→461"
+        ]
+      },
+      "1024": {
+        "over": 0,
+        "wide": []
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "Activity"
+      ],
+      "h2": []
+    }
+  },
+  {
+    "label": "Runtime case area",
+    "route": "/cases",
+    "navErr": null,
+    "axe": {
+      "count": 0,
+      "violations": []
+    },
+    "overflow": {
+      "400": {
+        "over": 0,
+        "wide": []
+      },
+      "1024": {
+        "over": 0,
+        "wide": []
+      },
+      "1440": {
+        "over": 0,
+        "wide": []
+      }
+    },
+    "copy": {
+      "h1": [
+        "Cases"
+      ],
+      "h2": []
+    }
+  }
+]

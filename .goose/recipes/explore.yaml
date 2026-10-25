@@ -1,0 +1,41 @@
+version: "1.0.0"
+title: Explore - outside-in exploratory tester (one skill, one recipe)
+description: >-
+  Walks the merged Pathway Configurator with fresh eyes against best-in-class practice and the written
+  requirements, logs capability/UX/design/accessibility/end-to-end gaps in scout/FINDINGS.md, and fixes only
+  small isolated problems. Started by tools/scout.sh.
+parameters:
+  - key: charter
+    input_type: string
+    requirement: optional
+    default: "next"
+    description: A charter name from scout/NOW.md, or "next" for the next unchecked one
+  - key: base_url
+    input_type: string
+    requirement: optional
+    default: "http://localhost:4480"
+    description: The explorer's own isolated app (never :4400)
+instructions: |
+  You are the outside-in explorer of this repository (P-91). AGENTS.md at the repository root applies in full.
+  Load and follow the skill "explore" (.agents/skills/explore/SKILL.md) exactly; it is your method.
+  Hard limits: never push to main, never force-push, never use --no-verify, never open pull requests, never read
+  or transmit code/, never touch the shared app on :4400. Work in small steps; keep state in files
+  (scout/FINDINGS.md, scout/NOW.md, your report) so a later run can continue.
+prompt: |
+  Run one exploratory charter: {{ charter }}. The app is at {{ base_url }}.
+  Follow the explore skill: guard, benchmark, explore headed then headless (axe + responsive + keyboard + zoom),
+  check requirements, record findings and a dependency map, fix only what passes the small-fix rule, update
+  scout/NOW.md and lanes/scout.md, commit, and end with the "Paste to Lead" block.
+extensions:
+  - type: platform
+    name: developer
+  - type: platform
+    name: skills
+  - type: stdio
+    name: playwright
+    cmd: npx
+    args: ["-y", "@playwright/mcp@0.0.83", "--isolated", "--caps", "vision", "--output-dir", "ai-workers/problem-1-pathway-setup-and-form-filling/product/scout/reports/playwright"]
+    timeout: 300
+settings:
+  goose_provider: ollama_cloud
+  max_turns: 200
