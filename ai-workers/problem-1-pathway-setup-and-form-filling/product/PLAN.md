@@ -12,12 +12,14 @@ Owner: the Lead. Founder rule (23 Oct): no dates; show progress. Progress is **c
 ## Order of work per lane (now → next → after)
 | Lane | Now | Next | After |
 |---|---|---|---|
-| screens | Screen 01 fix pass: 13 bugs; channels, portal, online sources, drafting source per form, "form field" words (C1.6, C1.7, C2.7, C2.10, C3.10) | Screen 02 (AI work, capture review, screen maps, new-edition impact) once its concept is agreed | Screen 03 (workspace: SQR, PQR, documents, rules, preview by channel, links, release), then Screen 04 (library) |
-| forms | Slice 2: sandbox fix, faster drafting by parts (A4), AI for leftover portal questions, Adobe findings | Slice 3: AI drafts sections, document requirements, rules and checks from checklists (C2.6, C3.4) | Extension capture mode (M2, C2.9), then fill mode (M3, C7.4) |
-| runtime | R1a: configure and release the visitor visa, complete its questionnaire, case, people, answers, confirm by section | R1b: one renderer for client questions and the agent view | R1c: IMM 5257 from case facts, stale signed copies; then Prepare application (M3) |
-| evidence | IMM 5257 fill trial | IMM 1295, 5707, 5409, 5476 | IMM 5532, 5406; 5669 after the expert answers |
-| qa | After every merge: retest, new findings | Screen 01 retest before it is closed | Milestone runs at each gate |
-| Lead | Agree the drafts (Prepare application, Screens 02–03, extension); check and merge every lane | Screen 04 concept | Each milestone gate |
+| screens | Screen 02 FIX (breaker + re-check items), then merge (first) | Screen 04 shared library (board redrawn after the 25 Oct re-check) | PQR picks by AI through Draft setup (C4.7) |
+| forms | F2 extension: re-score, sync, then merge | Drafting guard admits ApprovedSource files (P-80) | Slice 3: AI drafts sections, documents, rules and checks from checklists (C2.6, C3.4) |
+| runtime | Screen 03 S2 (S1 fixes, SQR tab; "filled by" and coverage block after the screens merge) | S3 documents and links, S4 copy, bulk, PQR, Rules, Review and release | R2 / Prepare application (M3) |
+| m3 (P-94) | DESIGN challenge of Prepare application (`screens/M3-prepare-application/`) | BUILD in new files: portal sheet, filled PDFs with Validate, signed copies, documents, filing record | merge after runtime's Screen 03 |
+| evidence (Mac) | IMM 5476 in Adobe (Goose task G4) | IMM 5532, 5406 | IMM 5669 after the expert answers |
+| qa | Stood down until the next app merge | `/qa after-merge` on each merge | `/qa milestone` at the M2 gate |
+| scout (Mac) | `firm-admin-day-one` (Goose task G2) | Charters in `scout/CHARTERS.md` order | — |
+| Lead | Check and merge screens, forms, runtime; Goose tasks for Mac work | A re-check of every concept before its BUILD (R-109) | M2 gate with the founder's end-to-end walk |
 
 ## Gates (WORKFLOW.md)
 Screen 01 closed when its fix pass passes the reviewer, breaker and tester. **M2 accepted** when all 37 M2 capabilities work, the tester's milestone run is clean, an intended user has walked it (D17/D20) and the founder has walked it as author and reviewer. **R1 shown** when the founder has walked case → answers → agent view → IMM 5257. **M3** the same gate for officer, agent and client. Then the demo loop on 3 + 2 combinations.

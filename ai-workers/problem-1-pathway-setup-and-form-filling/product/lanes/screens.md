@@ -1,11 +1,11 @@
 # Lane: screens — Milestone 2 screens
 
 ## From the Lead
-2026-10-25 08:30 (Lead, cloud): **Screen 02 slices 2 and 3 received (76d4e0f); CHECK continues**, owner Builder. Your three asks:
-1. **Runtime setup patch: commit it on your branch in this CHECK round** (`tests/runtime/setup_visitor_visa.ts`, exactly as in `screens/02-ai-work/runtime-setup-patch.md`). The K1 and B1 rules and the setup that satisfies them must merge together, and no other lane branch touches that file. This is a one-off exception to "lanes edit only their own files"; the runtime lane is told. Keep `runtime-setup-patch.md` as the record. CHECK passes only with the runtime suites green on your head (r1a, r1c, r1d and the setup).
-2. **Paid runs for "Describe it" and the K2 checklist:** they stay without AI or on the stub for now. The Lead asks the founder; the one live run happens on the Mac (paid AI is Mac-only, LANES.md).
-3. **Drafting guard and ApprovedSource files:** goes to the forms lane after its F2 CHECK. Not yours.
-Then CHECK as usual (reviewer, breaker, full suites), hand back for the Lead check.
+2026-10-25 09:30 (Lead, cloud): **FIX continues, with five more items from the Screen 03 and 04 re-checks** (`screens/04-shared-library/recheck-2026-10-25.md`, `screens/03-combination-workspace/recheck-2026-10-25.md`), each verified and fixed with a fail-before test in this pass: (1) one combination's approval publishes only the approved library changes it uses; library-only changes go out through the shared Release page; (2) the release refusal covers every new library item the combination uses (sections and document types too); (3) a returned new field can be withdrawn or edited and resent, never freezing a release (your breaker's Blocker); (4) the old "Add a field" route cannot skip the second person; (5) a database rule behind the duplicate-name check. Decisions: the To review page is the one place library changes are approved (Screen 04's drawer shows status and links there); AI drafting of PQR picks (C4.7) is yours, later, through Draft setup. The runtime setup patch stays on your branch (one-off). **Your branch merges before runtime's.** Then CHECK as usual.
+* 09:50: also in this FIX, from the scout (SC-2): the existing-name option in `new-combination.tsx` reads "used by n" instead of a bare count glued to the name; the scout's check is `tests/scout/check_sc2_sc4_1025.cjs` (its SC-2 part must pass).
+* 10:00: after this merge, small, from Devin §E: one-line help on each channel option (PDF upload, Signed PDF upload, Online) and on "Drafting reads"; wording in `history/devin/2026-10-25-ux-audit.md` §E.
+* 10:15 (P-93, `DEMO.md`): a feature is DONE only when its `DEMO.md` row shows in the demo story. Yours: rows 1 (held file), 3–7 and 17. Provide them as a seed function in your own file for the runtime lane's D1.
+* 11:30 (Devin drop 4, `history/devin/2026-10-25-devin-orphan-map.md`): in the same §E wording pass, rename the drafting-source control to "Reading inputs" (or similar) — the drafting source and the filing channel are two axes sharing "PDF/online", the most confusing label pair in the app. The dead-endpoint candidates are BACKLOG B36, not this pass.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

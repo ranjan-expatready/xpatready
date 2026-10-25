@@ -1,7 +1,7 @@
 # Lane: qa — independent testing of what is on main (skill `qa`)
 
 ## From the Lead
-2026-10-25 06:05 (Lead, cloud): explore report merged. Assigned: QA-38 and QA-40 → runtime (Screen 03 S1); QA-39 → screens (Screen 04 rewrites that page); QA-41 and QA-42 → screens; QA-43 → forms. The Lead records the cloud PostgreSQL workaround (embedded-postgres 18.3) as a tooling item. Stage WAITING, owner Lead: stand down until the next app merge. The Lead then sends `/qa after-merge`, which retests QA-38 to QA-43.
+2026-10-25 10:00 (Lead, cloud): your explore report was read and assigned this morning (QA-38/40 runtime, QA-39/41/42 screens, QA-43 forms). Stay WAITING until the next app merge (forms F2 first); the Lead then sends `/qa after-merge`. At that run, also add to `qa/BUGS.md`, as found by Devin and verified by the Lead: **D-1** signoff with no body → 500 (Minor, runtime) and **D-2** an approver can submit and then nobody can release (Minor, runtime); outside checkers' findings now reach the Lead through `inbox/` (README there). Before any new row, check `scout/FINDINGS.md` (skill `qa`).
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
