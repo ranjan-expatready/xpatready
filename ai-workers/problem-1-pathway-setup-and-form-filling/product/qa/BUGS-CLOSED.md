@@ -34,3 +34,7 @@
 | QA-32 | UX · Minor | C3.3 | db468e38 | 12e7207, 24 Oct | retry after a mid-run cancel runs a new step (201) and finishes at US$0 (`check_qa_s2_probe.ts`) |
 | QA-33 | Gap · Minor | C3.1 | db468e38 | 12e7207, 24 Oct | a field that changed from date to text between editions is not reused (`check_qa_s2_probe.ts`) |
 | QA-34 | Gap · Major | coverage | db468e38 | 12e7207, 24 Oct | api 95.95% lines / 80.95% branches (floor 95 / 79) with the fake-launcher suite |
+| QA-35 | Bug · Major | C6.1 | 12e7207 | 8aef175 (runtime R1d), 25 Oct | `check_qa_r1c_walk.cjs`: Demo menu "Open the case area" and `/cases` typed as the author both show the case area as the officer |
+| QA-36 | Bug · Minor | C6.2 | 12e7207 | 8aef175, 25 Oct | as decided by the Lead (P-47, save and flag): Back with 31 Feb keeps the part, the summary and the typing; status "Saved: 1 answer needs a fix", not "✓ Saved"; stored flagged (`check_qa_r1c_walk.cjs`) |
+| QA-37 | UX · Minor | C3.10 | 12e7207 | 8aef175, 25 Oct | `check_qa16_box_words.ts`: 0 in the web app, 0 in API messages |
+| QA-26 | UX · Minor | C6.2, C6.3, C6.6 | db468e38 | 8aef175, 25 Oct | `check_qa_r1a_probe.ts` 71/71: `applies` as text → "Say whether the person is travelling (true or false)." |
