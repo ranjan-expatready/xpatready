@@ -340,7 +340,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await endEdit2.getByLabel("Day").fill("30"); await endEdit2.getByLabel("Month").fill("7");
   await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await gone(o.getByRole("dialog"));
   await visitSec.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
-  step("forms RT-15 pass: after the visit end changes, the filed copy is stale, names the fact and keeps its file", await shows(imm.getByText(/Stale · Filed/)) && await shows(imm.getByText(/Facts changed after this copy was locked; the locked file is kept as it was\. Added or changed: When will the visit end\?/)));
+  step("forms RT-15 pass: after the visit end changes, the filed copy is stale, names the fact and keeps its file", await shows(imm.getByText(/Stale · Filed/)) && await shows(imm.getByText(/Facts changed after this copy was locked; the locked file is kept as it was\. Added, changed or removed: When will the visit end\?/)));
   await state(o, "forms-stale", [1440, 1024]);
   await imm.getByRole("button", { name: "Generate a new copy" }).click();
   step("forms RT-15 pass: a new copy is made only when asked; the filed copy stays in view beside it", await shows(imm.getByText("Generated", { exact: true }).first()) && await shows(imm.getByText(/Stale · Filed/)));

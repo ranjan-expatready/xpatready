@@ -33,7 +33,8 @@ export function factsOf(boxes: BoxRow[]): FormFact[] {
     .sort((a, b) => a.box.localeCompare(b.box));
 }
 
-/** The input hash of a copy: the same confirmed facts give the same hash, whatever order they were read in. */
+/** The input hash of a copy: the same confirmed facts give the same hash, whatever order they were read in. Facts
+ *  only: the groups a copy read are kept beside them (GroupFact) and compared by changedGroups, not hashed. */
 export function inputHash(facts: FormFact[]): string {
   const sorted = [...facts].sort((a, b) => a.box.localeCompare(b.box)).map((f) => [f.box, f.fact, f.about, f.row, f.value]);
   return createHash("sha256").update(JSON.stringify(sorted)).digest("hex");
@@ -74,7 +75,8 @@ export function readiness(view: QuestionnaireView, form: string, subjectId: stri
  *  was confirmed and whether there were entries. A group answer fills no form field, so it is kept beside the facts. */
 export type GroupFact = { key: string; title: string; none: boolean; entries: boolean;
   /** The live entries (their row ids), so an entry added or removed after the copy is a change (PR 13 review); absent on
-   *  copies made before it was kept. */
+   *  copies made before it was kept (those still miss an added blank entry). Errs safe: an entry removed and added again
+   *  with the same answers, or one past the form's room, is a change though the PDF would read the same. */
   rows?: string[] };
 export function groupFacts(view: QuestionnaireView, form: string, subjectId: string): GroupFact[] {
   const read = new Set(view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden).map((q) => `${q.subjectId}|${q.section}`));

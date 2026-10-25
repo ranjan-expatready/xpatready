@@ -208,7 +208,7 @@ export class CaseForms implements OnModuleInit {
     const cov = formCoverage(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId);
     const lockView = caseView(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, "agent", new Date(), groups);
     const changed = [...changedFacts((x.snapshot.factsJson as Stored).facts, cov?.facts ?? []), ...changedGroups((x.snapshot.factsJson as Stored).groups, groupFacts(lockView, x.formNumber, x.subjectId))];
-    if (changed.length) conflict(`This copy is out of date (${changed.length} fact${changed.length === 1 ? "" : "s"} changed since it was made); generate a new copy and lock that one.`);
+    if (changed.length) conflict(`This copy is out of date (${changed.length} change${changed.length === 1 ? "" : "s"} since it was made); generate a new copy and lock that one.`);
     // P-71 (Lead, R1d early look): a copy is filed or uploaded back only when its form is ready to file.
     const ready = readiness(lockView, x.formNumber, x.subjectId);
     if (!ready.ready) conflict(notReady(ready.missing.length));
