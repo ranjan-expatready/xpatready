@@ -5,6 +5,7 @@
 * 09:50: also in this FIX, from the scout (SC-2): the existing-name option in `new-combination.tsx` reads "used by n" instead of a bare count glued to the name; the scout's check is `tests/scout/check_sc2_sc4_1025.cjs` (its SC-2 part must pass).
 * 10:00: after this merge, small, from Devin §E: one-line help on each channel option (PDF upload, Signed PDF upload, Online) and on "Drafting reads"; wording in `history/devin/2026-10-25-ux-audit.md` §E.
 * 10:15 (P-93, `DEMO.md`): a feature is DONE only when its `DEMO.md` row shows in the demo story. Yours: rows 1 (held file), 3–7 and 17. Provide them as a seed function in your own file for the runtime lane's D1.
+* 11:30 (Devin drop 4, `history/devin/2026-10-25-devin-orphan-map.md`): in the same §E wording pass, rename the drafting-source control to "Reading inputs" (or similar) — the drafting source and the filing channel are two axes sharing "PDF/online", the most confusing label pair in the app. The dead-endpoint candidates are BACKLOG B36, not this pass.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
