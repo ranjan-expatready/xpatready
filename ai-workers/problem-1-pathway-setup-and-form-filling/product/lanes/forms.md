@@ -7,12 +7,13 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 
 current_item: F2-extension
 stage: CHECK
-owner: Builder
-next_action: Lead items: main synced, demo reset drops extension sessions (f2b 39/39), panel button after a changed screen (f2d 37/37); CI on the head; fresh reviewer re-score (review-2.md, journey ≥ 8); then owner Lead.
+owner: Lead
+next_action: Lead merges F2 by PR (review-2.md: Ship, journey 9.5/10, 0 Must/Major, 3 Minor); then /qa after-merge
 blocked_by: none
 updated: 2026-10-25
 
 ## Log (last 10 lines)
+- 2026-10-25 · F2 · CHECK · fresh reviewer re-score on 1b93a45: Ship, journey 9.5/10, 0 Must, 0 Major, 3 Minor (in-memory per-address code limit; m1, m7 kept on purpose); f1p 16, f2a 34, f2a_api 34, f2b 39, f2c 36, f2c_fill 17, f2d 37. US$0. Owner → Lead.
 - 2026-10-25 · F2 · CHECK · applied Lead note 2026-10-25 09:30 (MERGE after three items; main b2c0710 synced): demo reset deletes extension rows (f2b 39/39), "Check this screen again" after a changed screen (f2d 37/37); reviewer re-score launched. US$0.
 - 2026-10-25 · F2 · FIX → CHECK · full run-suites on dada3e7: 27 suites green (f1p 16, f2a 34, f2a_api 34, f2b 36, f2c 36, f2c_fill 17, f2d 36); copy clean. US$0. Owner → Lead.
 - 2026-10-25 · F2 · CHECK → FIX · reviewer: ship after fixes, journey 7/10 (1 Must = wrong-person fill via screen identity), 1 Major (capture lost on panel reload), 9 Minor; breaker: 2 Blocker (identity collision; Next during fill), 4 Major, 7 Minor; all fixed with tests (f2a_api 34, f2b 36, f2c 36, f2c_fill 17, f2d 36) except E-1 step id (no page has one) and two by-design answers. US$0.
@@ -22,4 +23,3 @@ updated: 2026-10-25
 - 2026-10-25 · F2 · BUILD (F2b) · pairing code → opaque token bound to person, modes, fixed extension id (ipomjnfj…); token-only extension routes incl. capture, CORS for that origin only, revoke, 5 wrong codes → 429; migration (pairing, session, recapture task); check_forms_f2b 33/33, f2a_api on tokens 29/29; any ratchet 437. US$0.
 - 2026-10-25 · F2 · BUILD (F2a) · shared reader rules (Python output unchanged on 15 fixtures), extension reader, conformance 34/34 (stop rule not triggered); screen identity from the heading, reuse only same input on same screen (B1), extension-screens endpoint, Q2 merge with last seen per screen: check_forms_f2a_api 29/29; full suite run in progress. US$0.
 - 2026-10-25 · F2 · BUILD (F1-P) · list purpose and overflow on a field map (PATCH editions/:id/list-purposes, snapshot, release warning), QA-43 404, check_ai_launch_paths robust (restart waits, refused connection retried, FAIL line on a stop) and leaves the repository as it was (56/56); check_forms_f1p 16/16; all 22 suites green on PostgreSQL 16 (18 not installable here). US$0.
-- 2026-10-25 · F2 · PLAN → BUILD · applied Lead note 2026-10-25 06:15 (plan agreed, S-1…S-5 granted, five purposes named; main 0127f2c synced).
