@@ -1012,6 +1012,7 @@ model AnswerSubject {
   participant  CaseParticipant?
   answers      ClientCanonicalAnswer[]
   records      ClientFactRecord[]
+  groupAnswers ClientGroupAnswer[]
 
   @@map("answer_subject")
 }
@@ -1060,6 +1061,29 @@ model ClientFactRecord {
 
   @@index([subjectId, groupKey])
   @@map("client_fact_record")
+}
+
+/// "None apply" for one repeating group of one subject (Lead, R1d answer to break M3, P-71/P-72): a fact like any other,
+/// answered, confirmed and changed like an answer. Append-only; noneApply false records "entries apply" (the change back).
+model ClientGroupAnswer {
+  id             String    @id @default(uuid()) @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  subjectId      String    @map("subject_id") @db.Uuid
+  groupKey       String    @map("group_key")
+  noneApply      Boolean   @map("none_apply")
+  status         String
+  supersededById String?   @map("superseded_by_id") @db.Uuid
+  sourceJson     Json      @map("source_json")
+  verifiedBy     String?   @map("verified_by")
+  verifiedAt     DateTime? @map("verified_at") @db.Timestamptz
+  effectiveAt    DateTime  @default(now()) @map("effective_at") @db.Timestamptz
+
+  subject      AnswerSubject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  supersededBy ClientGroupAnswer?  @relation("ClientGroupAnswerChain", fields: [supersededById], references: [id], onDelete: Cascade)
+  supersedes   ClientGroupAnswer[] @relation("ClientGroupAnswerChain")
+
+  @@index([subjectId, groupKey])
+  @@map("client_group_answer")
 }
 
 /// One answer about one subject for one shared field (and one row of a group). Append-only: a change inserts a new row

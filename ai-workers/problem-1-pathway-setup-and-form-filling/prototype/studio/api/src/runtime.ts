@@ -7,9 +7,9 @@
 import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Put, Query } from "@nestjs/common";
 import { createHash, randomUUID } from "node:crypto";
 import type { z } from "zod";
-import { ConfirmSection, fillsText, NewCase, NewPerson, NewRow, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
+import { ConfirmSection, fillsText, NewCase, NewPerson, NewRow, NoneApply, PutAnswer, UpdatePerson, type CaseRole } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { caseView, checkValue, isClientField, type Answer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { caseView, checkValue, isClientField, type Answer, type GroupAnswer, type Mode, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { actorOf, Audit, Db, fail, need, Workspace, type Actor } from "./core.ts";
 
@@ -19,6 +19,8 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
   if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST);
   return r.data;
 }
+/** A rule refuses the request (nobody else changed anything): 409 "Not possible now" (break r1d-none-apply m4). */
+const refused = (detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/not-possible", title: "Not possible now", status: 409, detail }, HttpStatus.CONFLICT); };
 const conflict = (detail: string, extra: Record<string, unknown> = {}): never => { throw new HttpException({ type: "https://expatready.local/problems/stale-answer", title: "Changed by someone else", status: 409, detail, ...extra }, HttpStatus.CONFLICT); };
 const fieldError = (field: string, message: string): never => { throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: message, errors: [{ field, message }] }, HttpStatus.BAD_REQUEST); };
 const RELATIONSHIP: Record<string, string> = { spouse_or_partner: "SPOUSE_OR_PARTNER", child: "CHILD" };
@@ -155,23 +157,27 @@ export class Runtime {
 
   async state(c: Reached) {
     const subjects = c.participants.map((p) => p.subjectId);
-    const [answers, rows] = await Promise.all([
+    const [answers, rows, groupRows] = await Promise.all([
       this.db.clientCanonicalAnswer.findMany({ where: { subjectId: { in: subjects }, supersededById: null } }),
       this.db.clientFactRecord.findMany({ where: { subjectId: { in: subjects }, supersededById: null, tombstone: false } }),
+      this.db.clientGroupAnswer.findMany({ where: { subjectId: { in: subjects }, supersededById: null } }),
     ]);
     // A confirmation version names the answer it confirmed (sourceJson.from): who first answered stays visible (review M4).
     const fromIds = answers.map((x) => (x.sourceJson as { from?: string }).from).filter((x): x is string => !!x);
     const firsts = new Map((fromIds.length ? await this.db.clientCanonicalAnswer.findMany({ where: { id: { in: fromIds } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string }]));
     const a: Answer[] = answers.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string }; const first = src.from ? firsts.get(src.from) : undefined; return { id: x.id, subjectId: x.subjectId, field: x.canonicalFieldKey, rowKey: x.rowKey, value: x.valueJson, status: x.status as Answer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null }; });
     const r: Row[] = rows.map((x) => ({ rowKey: x.rowKey, subjectId: x.subjectId, group: x.groupKey, order: x.order }));
-    return { answers: a, rows: r };
+    const gFrom = groupRows.map((x) => (x.sourceJson as { from?: string }).from).filter((x): x is string => !!x);
+    const gFirsts = new Map((gFrom.length ? await this.db.clientGroupAnswer.findMany({ where: { id: { in: gFrom } }, select: { id: true, sourceJson: true } }) : []).map((x) => [x.id, x.sourceJson as { channel: string; actor: string; at: string }]));
+    const groups: GroupAnswer[] = groupRows.map((x) => { const src = x.sourceJson as { channel: string; actor: string; at: string; from?: string }; const first = src.from ? gFirsts.get(src.from) : undefined; return { id: x.id, subjectId: x.subjectId, group: x.groupKey, noneApply: x.noneApply, status: x.status as GroupAnswer["status"], channel: src.channel, actor: src.actor, at: src.at, origin: first ? { channel: first.channel, actor: first.actor, at: first.at } : null }; });
+    return { answers: a, rows: r, groups };
   }
 
   async view(actor: Actor, caseId: string, mode: Mode) {
     const c = await this.reach(actor, caseId, "read");
     if (mode === "agent" && !isOfficer(actor)) fail("The agent view is for the case officer.", HttpStatus.FORBIDDEN);
-    const { answers, rows } = await this.state(c);
-    return { case: await this.get(actor, caseId), ...caseView(this.snapshotOf(c), this.peopleOf(c), answers, rows, mode) };
+    const { answers, rows, groups } = await this.state(c);
+    return { case: await this.get(actor, caseId), ...caseView(this.snapshotOf(c), this.peopleOf(c), answers, rows, mode, new Date(), groups) };
   }
 
   /** Saves one answer: append-only (the old row is stamped superseded by the new one, in one transaction). A client
@@ -220,25 +226,60 @@ export class Runtime {
 
   /** Adds a row to a person's repeating group (or the application's, for a case-level group). Rows of one group are
    *  numbered one at a time (a transaction lock), and the database refuses two live rows in one place. */
-  async addRow(actor: Actor, caseId: string, subjectId: string, body: unknown) {
-    const c = await this.reach(actor, caseId, "answer");
-    const b = parse(NewRow, body);
+  /** Who may write a repeating group of a person on this case: the group exists, belongs to that kind of subject, and
+   *  the client writes it only when it holds a client field. */
+  private groupFor(actor: Actor, c: Reached, subjectId: string, groupKey: string) {
     const who = c.participants.find((p) => p.subjectId === subjectId);
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
     const s = this.snapshotOf(c);
-    const group = (s.placements as { fact: string; section_id: string; repeats: string }[]).filter((p) => p.section_id === b.group && p.repeats === "per_row");
+    const group = (s.placements as { fact: string; section_id: string; repeats: string }[]).filter((p) => p.section_id === groupKey && p.repeats === "per_row");
     if (!group.length) fail("That section has no repeating group.", HttpStatus.NOT_FOUND);
     const caseLevel = group.every((p) => p.fact.startsWith("case."));
     if (caseLevel !== (who!.role === "case")) fail(caseLevel ? "This group is asked once for the application, not for a person." : "This group is asked for a person, not for the application.", HttpStatus.UNPROCESSABLE_ENTITY);
     if (!isOfficer(actor) && !group.some((p) => isClientField(s, p.fact))) fail("The officer fills this group.", HttpStatus.FORBIDDEN);
+    return who!;
+  }
+
+  async addRow(actor: Actor, caseId: string, subjectId: string, body: unknown) {
+    const c = await this.reach(actor, caseId, "answer");
+    const b = parse(NewRow, body);
+    this.groupFor(actor, c, subjectId, b.group);
     const id = randomUUID();
     await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${subjectId}|${b.group}`}))`;
+      // "None apply" stands until someone says entries apply: an entry is never added beside it (never contradict silently).
+      if ((await tx.clientGroupAnswer.findFirst({ where: { subjectId, groupKey: b.group, supersededById: null } }))?.noneApply) refused("\"None apply\" is recorded for this group; change it to \"entries apply\" first, then add the entries.");
       const live = await tx.clientFactRecord.findMany({ where: { subjectId, groupKey: b.group, supersededById: null } });
       await tx.clientFactRecord.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey: b.group, rowKey: id, order: live.length ? Math.max(...live.map((x) => x.order)) + 1 : 0, sourceJson: { channel: isOfficer(actor) ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() } } });
     });
     await this.audit.log(c.workspaceId, actor.id, "added", "row", b.group, `${actor.name} added a row to ${b.group} on case ${short(caseId)}`);
     return { row: id, group: b.group };
+  }
+
+  /** "None apply" for a repeating group (Lead, break M3, P-71/P-72), or "entries apply" to change it back: a new version
+   *  each time (append-only), checked against the version the person saw, never beside live entries. It waits for
+   *  confirmation by the same rule as an answer to the group (the client's own answer counts for the principal). */
+  async noneApply(actor: Actor, caseId: string, subjectId: string, groupKey: string, body: unknown) {
+    const c = await this.reach(actor, caseId, "answer");
+    const b = parse(NoneApply, body);
+    const who = this.groupFor(actor, c, subjectId, groupKey);
+    const id = randomUUID();
+    const changed = await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${subjectId}|${groupKey}`}))`;
+      const cur = await tx.clientGroupAnswer.findFirst({ where: { subjectId, groupKey, supersededById: null } });
+      // The answer already stands (even from an older view: break m5), or "entries apply" with nothing said before
+      // (break m1: it would record nothing new): nothing is saved.
+      if ((cur && cur.noneApply === b.noneApply) || (!cur && !b.noneApply)) return false;
+      if ((cur?.id ?? null) !== b.expectedId) conflict("Someone answered this at the same moment; nothing was saved. Look at their answer and try again.");
+      const entries = await tx.clientFactRecord.count({ where: { subjectId, groupKey, supersededById: null, tombstone: false } });
+      if (b.noneApply && entries) refused(`This group has ${entries} entr${entries === 1 ? "y" : "ies"}; remove ${entries === 1 ? "it" : "them"} first, then say none apply.`);
+      if (cur) { const n = await tx.clientGroupAnswer.updateMany({ where: { id: cur.id, supersededById: null }, data: { supersededById: id } }); if (n.count !== 1) conflict("Someone answered this at the same moment; nothing was saved. Look at their answer and try again."); }
+      await tx.clientGroupAnswer.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey, noneApply: b.noneApply, status: "DECLARED", sourceJson: { channel: isOfficer(actor) ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() } } });
+      return true;
+    });
+    if (changed) await this.audit.log(c.workspaceId, actor.id, "answered", "group", groupKey, `${actor.name} recorded that ${b.noneApply ? "no entries apply" : "entries apply"} in ${groupKey} for the ${who.role.replace(/_/g, " ")} on case ${short(caseId)}`);
+    const v = await this.view(actor, caseId, isOfficer(actor) ? "agent" : "sqr");
+    return { saved: changed, group: v.sections.find((x) => x.subjectId === subjectId && x.section === groupKey)?.group ?? null };
   }
 
   /** Removing a row inserts a tombstone version of it; its answers stay stored and are no longer read (team rule). */
@@ -274,12 +315,20 @@ export class Runtime {
       const stored = await tx.clientCanonicalAnswer.findMany({ where: { subjectId: b.subjectId, supersededById: null, canonicalFieldKey: { in: [...fields] } } });
       const live = new Set((await tx.clientFactRecord.findMany({ where: { subjectId: b.subjectId, supersededById: null, tombstone: false }, select: { rowKey: true } })).map((r) => r.rowKey));
       const current = stored.filter((a) => a.rowKey === null || live.has(a.rowKey));
-      const currentIds = new Set(stored.map((a) => a.id));
+      // The section's "none apply", when it is a repeating group (Lead, break M3), is confirmed with its answers.
+      // With entries, the entries answer the group: its earlier "entries apply" is neither shown nor confirmed (review m6).
+      const entries = await tx.clientFactRecord.count({ where: { subjectId: b.subjectId, groupKey: section, supersededById: null, tombstone: false } });
+      const held = await tx.clientGroupAnswer.findFirst({ where: { subjectId: b.subjectId, groupKey: section, supersededById: null } });
+      const ga = entries ? null : held; // its id, when sent, is still a current id (never "changed")
+      const currentIds = new Set([...stored.map((a) => a.id), ...(held ? [held.id] : [])]);
       const gone = [...seen].filter((id) => !currentIds.has(id));
       const unseen = current.filter((a) => a.status === "DECLARED" && !seen.has(a.id));
-      if (gone.length || unseen.length) {
+      const gaUnseen = !!ga && ga.status === "DECLARED" && !seen.has(ga.id);
+      if (gone.length || unseen.length || gaUnseen) {
         const changed = await tx.clientCanonicalAnswer.findMany({ where: { id: { in: gone } }, select: { canonicalFieldKey: true } });
-        conflict("Some answers in this section changed or arrived after you reviewed it; nothing was confirmed. Review them and confirm again.", { changed: [...new Set([...changed, ...unseen].map((a) => a.canonicalFieldKey))] });
+        // The group is named only when it is a group and its own answer changed (break m2), never for another person's id.
+        const groupGone = gone.length && await tx.clientGroupAnswer.count({ where: { id: { in: gone }, subjectId: b.subjectId, groupKey: section } });
+        conflict("Some answers in this section changed or arrived after you reviewed it; nothing was confirmed. Review them and confirm again.", { changed: [...new Set([...changed, ...unseen].map((a) => a.canonicalFieldKey)), ...(gaUnseen || groupGone ? [`group:${section}`] : [])] });
       }
       const open = current.filter((a) => a.status === "DECLARED");
       for (const a of open) {
@@ -288,7 +337,13 @@ export class Runtime {
         if (n.count !== 1) conflict("An answer in this section changed while confirming; nothing was confirmed. Review it and confirm again.", { changed: [a.canonicalFieldKey] });
         await tx.clientCanonicalAnswer.create({ data: { id, workspaceId: a.workspaceId, partyId: a.partyId, subjectId: a.subjectId, canonicalFieldId: a.canonicalFieldId, canonicalFieldKey: a.canonicalFieldKey, rowKey: a.rowKey, valueJson: a.valueJson as object, status: "VERIFIED", sourceJson: { channel: "confirm_section", actor: actor.id, at: at.toISOString(), from: a.id }, verifiedBy: actor.id, verifiedAt: at } });
       }
-      return open.length;
+      if (ga?.status === "DECLARED") {
+        const id = randomUUID();
+        const n = await tx.clientGroupAnswer.updateMany({ where: { id: ga.id, supersededById: null }, data: { supersededById: id } });
+        if (n.count !== 1) conflict("An answer in this section changed while confirming; nothing was confirmed. Review it and confirm again.", { changed: [`group:${section}`] });
+        await tx.clientGroupAnswer.create({ data: { id, workspaceId: ga.workspaceId, subjectId: ga.subjectId, groupKey: ga.groupKey, noneApply: ga.noneApply, status: "VERIFIED", sourceJson: { channel: "confirm_section", actor: actor.id, at: at.toISOString(), from: ga.id }, verifiedBy: actor.id, verifiedAt: at } });
+      }
+      return open.length + (ga?.status === "DECLARED" ? 1 : 0);
     });
     await this.audit.log(c.workspaceId, actor.id, "confirmed", "section", section, `${actor.name} confirmed ${confirmed} answer${confirmed === 1 ? "" : "s"} in ${section} on case ${short(caseId)}`);
     const v = await this.view(actor, caseId, "agent");
@@ -316,6 +371,7 @@ export class RuntimeController {
   @Patch("cases/:id/people/:subject") updatePerson(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Body() b: unknown) { return this.r.updatePerson(actorOf(a), id, s, b); }
   @Get("cases/:id/questionnaire") view(@Headers("x-actor") a: H, @Param("id") id: string, @Query("mode") m?: string) { return this.r.view(actorOf(a), id, m === "agent" ? "agent" : "sqr"); }
   @Put("cases/:id/answers/:subject/:field") answer(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("field") f: string, @Body() b: unknown) { return this.r.putAnswer(actorOf(a), id, s, f, b); }
+  @Put("cases/:id/groups/:subject/:group/none-apply") noneApply(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("group") g: string, @Body() b: unknown) { return this.r.noneApply(actorOf(a), id, s, g, b); }
   @Post("cases/:id/groups/:subject/rows") addRow(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Body() b: unknown) { return this.r.addRow(actorOf(a), id, s, b); }
   @Delete("cases/:id/groups/:subject/rows/:row") removeRow(@Headers("x-actor") a: H, @Param("id") id: string, @Param("subject") s: string, @Param("row") r: string) { return this.r.removeRow(actorOf(a), id, s, r); }
   @Post("cases/:id/sections/:section/confirm") confirm(@Headers("x-actor") a: H, @Param("id") id: string, @Param("section") s: string, @Body() b: unknown) { return this.r.confirmSection(actorOf(a), id, s, b); }

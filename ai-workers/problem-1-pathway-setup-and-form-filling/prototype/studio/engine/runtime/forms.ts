@@ -4,7 +4,7 @@
 import { createHash } from "node:crypto";
 import { render, type BoxRow, type Person, type Role } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
-import type { QuestionnaireView, Readiness } from "../../contracts/runtime.ts";
+import { groupLabel, type QuestionnaireView, type Readiness } from "../../contracts/runtime.ts";
 import { knownOf, type Answer, type Participant, type Row } from "./case.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
@@ -52,7 +52,8 @@ export function changedFacts(then: FormFact[], now: FormFact[]): string[] {
 /** P-71: a form is blocked from filing only by its own Validate (steps a person does on the PDF: shown, not computed
  *  here) and by missing or conflicting facts it needs: a required question (not hidden) that fills this form for this
  *  person (matched by the person's id) with an answer that is missing, not confirmed, or confirmed with a problem (it
- *  would be written wrong: review and break report M2). Optional facts left empty do not block. */
+ *  would be written wrong: review and break report M2). A required repeating group the form reads with no entries
+ *  blocks too, until "none apply" is answered and confirmed for it (Lead, break M3). Optional facts left empty do not. */
 export function readiness(view: QuestionnaireView, form: string, subjectId: string): Readiness {
   const reads = view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden);
   const reason = (a: { confirmed: boolean; problems: string[] } | null | undefined) => (!a ? "not answered" as const : a.problems.length ? "needs a fix" as const : !a.confirmed ? "not confirmed" as const : null);
@@ -60,6 +61,30 @@ export function readiness(view: QuestionnaireView, form: string, subjectId: stri
     const r = q.group ? q.rows.map((x) => reason(x.answer)).find(Boolean) ?? null : reason(q.answer);
     return r ? [{ fact: q.fact, label: q.label, about: q.about_label, reason: r }] : [];
   });
-  const empty_groups = [...new Set(reads.filter((q) => q.group && q.required && q.rows.length === 0).map((q) => q.section_title))];
-  return { ready: missing.length === 0, missing, empty_groups };
+  const read = new Set(reads.map((q) => `${q.subjectId}|${q.section}`));
+  for (const sec of view.sections) {
+    if (!sec.group?.required || sec.group.rows > 0 || !read.has(`${sec.subjectId}|${sec.section}`)) continue;
+    const na = sec.group.none_apply, r = !na || !na.value ? "not answered" as const : !na.confirmed ? "not confirmed" as const : null;
+    if (r) missing.push({ fact: `group:${sec.section}`, label: groupLabel(sec.title), about: sec.about_label, reason: r });
+  }
+  return { ready: missing.length === 0, missing };
+}
+
+/** The repeating groups a form reads for one person, as a copy saw them (break r1d-none-apply M1): whether "none apply"
+ *  was confirmed and whether there were entries. A group answer fills no form field, so it is kept beside the facts. */
+export type GroupFact = { key: string; title: string; none: boolean; entries: boolean };
+export function groupFacts(view: QuestionnaireView, form: string, subjectId: string): GroupFact[] {
+  const read = new Set(view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden).map((q) => `${q.subjectId}|${q.section}`));
+  return view.sections.filter((s) => s.group && read.has(`${s.subjectId}|${s.section}`))
+    .map((s) => ({ key: `${s.subjectId}|${s.section}`, title: s.title, none: s.group!.rows === 0 && !!s.group!.none_apply?.value && s.group!.none_apply.confirmed, entries: s.group!.rows > 0 }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+}
+/** The groups whose "none apply" or entries changed since a copy was made, named as the forms panel names them. A copy
+ *  made before groups were kept (no record) compares nothing. */
+export function changedGroups(then: GroupFact[] | undefined, now: GroupFact[]): string[] {
+  if (!then) return [];
+  const a = new Map(then.map((g) => [g.key, g])), b = new Map(now.map((g) => [g.key, g]));
+  const out = new Set<string>();
+  for (const k of new Set([...a.keys(), ...b.keys()])) { const x = a.get(k), y = b.get(k); if (!x || !y || x.none !== y.none || x.entries !== y.entries) out.add(`Entries in "${(x ?? y)!.title}"`); }
+  return [...out].sort();
 }

@@ -93,7 +93,6 @@ function FormRow({ caseId, f }: { caseId: string; f: CaseForm }) {
           <ul className="mt-1 list-disc space-y-0.5 pl-6">{missing.map((m) => <li key={`${m.fact}|${m.about}`}>{m.label} <span className="text-text-muted">({m.about}): {m.reason}</span></li>)}</ul>
         </details>
       ) : null}
-      {f.readiness.empty_groups.length ? <p className="text-[13px] text-text-muted">No entries yet in: {f.readiness.empty_groups.join(", ")}. Add them if they apply before filing.</p> : null}
       {latest ? <CopyLine c={latest} canLock={!!canLock} lockBlocked={lockBlocked} locking={locking} setLocking={setLocking} lock={lock} working={working} /> : null}
       {locked && locked !== latest ? <CopyLine c={locked} canLock={false} locking={null} setLocking={() => {}} lock={lock} working={working} /> : null}
       {earlier.length ? (
