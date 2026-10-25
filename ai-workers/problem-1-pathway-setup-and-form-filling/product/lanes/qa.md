@@ -1,14 +1,14 @@
 # Lane: qa — independent testing of what is on main (skill `qa`)
 
 ## From the Lead
-2026-10-25 02:00 (Lead, cloud): main now carries runtime R1d (forms panel, P-71 gate, never-overwrite) with its PR 12 fixes, the qa R1c fixes (QA-35–37, QA-26 rest) and "none apply" for required groups. Run **/qa after-merge** on the new main: retest QA-35, QA-36, QA-37, QA-26; walk the forms panel (generate, out of date, lock refused while not ready, stale after a change; online forms not offered) and "none apply" (add, withdraw, confirm, readiness) as client and officer at 390 and 1440 px. One run only (weekly usage); list what you could not cover.
+2026-10-25 03:20 (Lead, cloud): after-merge on 8aef175 read and **merged** (ready; 0 Blocker/Critical/Major; QA-26, 35, 36, 37 closed; R1d walk 35/35). QA-19 stays with the Lead: the :4400 demo reset on the Mac clears it. Not covered (recorded): officer's Confirm section and None apply by click, Adobe check and browser download of a copy, a real Online release, 200% zoom and a screen reader. Stage: **waiting**. No new run until the Lead sends a note (weekly usage).
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: after-merge on main 12e7207 (runtime R1c, screens small FIX, forms slice 2b + qa Minors)
+current_item: after-merge on main 8aef175 (runtime R1d forms panel and none apply; qa R1c fixes)
 stage: WAITING
 owner: Lead
-next_action: Lead reads `qa/reports/2026-10-24-after-merge-3.md` (no Blocker or Critical; 15 findings closed), assigns QA-35 (Major, blank case area from the Demo menu), QA-36, QA-37 and the rest of QA-26 to runtime, answers two questions (QA-35 fix now or next stage; should Back apply Save and continue's checks).
+next_action: Lead reads `qa/reports/2026-10-25-after-merge.md` (ready: no Blocker, Critical or Major; QA-26, 35, 36, 37 closed; only QA-19 open). No questions.
 blocked_by: none
 updated: 2026-10-24
 
@@ -20,3 +20,4 @@ updated: 2026-10-24
 - 2026-10-24 · applied Lead note 2026-10-24 22:00 (cloud session). after-merge on main db468e38: suites 16/16 (run 2 under coverage 15/16: p2 guard vs the coverage preload, 75/75 without); QA-8, 14, 17, 21 closed; QA-4, QA-20 open; forms slice 2 probe 45/57, R1a probe 59/69; new QA-22–QA-34 (Majors: QA-23 D1, QA-24 D2, QA-29 D3, QA-34 api coverage 93.97/77.67 < floor); engine floor 99/86; Screen 01 9/10. US$0.
 - 2026-10-24 · Lead request (PR #9 review): personal names in `check_qa_r1a_probe.ts` replaced with place and object phrases of the same scripts (rule 5); probe rerun 59/69 ×2, unchanged. QA-15 marked fixed on the forms branch (a145246), retest pending: closed only after a retest on main.
 - 2026-10-24 · applied Lead note 2026-10-24 21:10. after-merge on main 12e7207 (one run): suites 19/20 + p2 guard 75/75 plain; closed QA-4, 15, 20, 22–25, 27–34; QA-26 2 of 3; R1c walk 24/27 (officer and client, 1440 and 390 px); new QA-35 Major (blank case area from the Demo menu), QA-36, QA-37 Minor; coverage api 95.95/80.95, engine 99.39/87.53, floor 95/80 · 99/87. US$0.
+- 2026-10-25 · applied Lead note 2026-10-25 02:00. after-merge on main 8aef175 (one run): suites 20/21 + p2 guard 75/75 plain; closed QA-26, 35, 36 (Lead's save-and-flag), 37; R1d walk 35/35 (forms panel, P-71, stale after filing, none apply, online not offered; 1440/390 px); R1c walk 27/27; journeys 47/47; coverage api 96.25/81.55, engine 99.42/88.24, floor 96/81 · 99/88; open: QA-19 only. US$0.

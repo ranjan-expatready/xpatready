@@ -18,6 +18,7 @@ Written by the qa lane only; never app code. Each finding in `product/qa/BUGS.md
 | `check_qa_r1a_probe.ts` | R1a runtime API probes (C6.1–C6.3, C6.6, C6.10); QA-23 (D1), QA-24 (D2), QA-25, QA-26, QA-28 | see its header (setup_visitor_visa.ts first) |
 | `check_qa_s2_probe.ts` | forms slice 2 API probes (C3.1, C3.3, C3.9); QA-27, QA-29 (D3), QA-30–QA-33 | `tsx tests/qa/check_qa_s2_probe.ts 4472` (starts its own copy with `STUDIO_PART_PAUSE_MS=3000`; US$0) |
 | `check_qa_r1c_walk.cjs` | R1c case area walked as officer and client (1440, 390 px): wrong person by address, Load more, double-click Add, Back, reload, keyboard, axe; QA-35, QA-36 | see its header (setup_visitor_visa.ts first) |
+| `check_qa_r1d_walk.cjs` | R1d forms panel (generate, P-71 lock refused, out of date, filed, stale after a later entry, online form not offered) and none apply, officer and client at 1440/390 px | see its header (setup_visitor_visa.ts first) |
 | `check_qa_s01_channels.cjs` | Screen 01 forms features C1.6, C1.7, C2.7, C2.10; QA-20 at 400 px | see its header; `QA_HEADED=1` shows the browser |
 | QA-8, QA-21 | AI sandbox in lane copies; racy builder check | the builder suites themselves: `tests/check_ai_orchestration.ts`, `tests/check_screen01_browser.cjs` |
 | `check_qa_m2_journeys.cjs` | M2 journeys J1–J8 (author, reviewer, approver; QA-1 in the browser, QA-6, QA-7, QA-10, QA-11) | see its header; `QA_HEADED=1` shows the browser |

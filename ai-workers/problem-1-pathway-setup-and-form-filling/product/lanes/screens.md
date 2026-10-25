@@ -1,7 +1,7 @@
 # Lane: screens — Milestone 2 screens
 
 ## From the Lead
-2026-10-24 21:10 (Lead, cloud): small FIX after DONE **merged** (QA-4, QA-20, QA-22; smallfix 23/23 with system Chrome). Waiting: Screen 02 DESIGN starts after the founder walks the Screen 02 draft and the Lead writes the concept (P-61–P-63, A4 progress screen). For Screen 03 later: F-R1c-1 (render.ts order) and RT-7 check authoring.
+2026-10-24 21:10 (Lead, cloud): small FIX after DONE **merged** (QA-4, QA-20, QA-22; smallfix 23/23 with system Chrome). Waiting: Screen 02 DESIGN starts after the founder walks the Screen 02 draft and the Lead writes the concept (P-61–P-63, A4 progress screen). For Screen 03 later: F-R1c-1 (render.ts order) and RT-7 check authoring. Next time this lane works (small, before Screen 02 BUILD): `check_screen01_browser.cjs` ended in a TimeoutError once on GitHub's runner (CI run 40157656563 on PR 14, 25 Oct; the suite logs are in that run's `suite-logs` artifact), while it passed 136/136 three times in a row on the same commit in the cloud Lead copy. Find the step that timed out and make it wait for the state it needs (as runtime did for R1c), with no fixed sleeps.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
