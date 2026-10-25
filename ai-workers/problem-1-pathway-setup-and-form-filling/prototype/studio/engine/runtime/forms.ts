@@ -20,6 +20,13 @@ export function formCoverage(s: Snapshot, people: Participant[], answers: Answer
   return { ...cov, facts: factsOf(cov.boxes) };
 }
 
+/** The forms a case fills as PDFs: the release files them as a PDF (its filing line is not Online) and has their
+ *  official file and form field map. A form filed Online goes on its portal sheet, never in a PDF (PR #12 review 1). */
+export function pdfForms(s: Snapshot): Set<string> {
+  const online = new Set((s.forms as { form_number: string; channel?: string }[]).filter((f) => f.channel === "ONLINE").map((f) => f.form_number));
+  return new Set((s.field_maps as { form_number: string; channel?: string; official_file?: string }[]).filter((m) => m.channel !== "ONLINE" && m.official_file && !online.has(m.form_number)).map((m) => m.form_number));
+}
+
 /** The confirmed facts among a form's boxes, in form-field order. */
 export function factsOf(boxes: BoxRow[]): FormFact[] {
   return boxes.filter((b) => b.coverage === "confirmed fact" && b.fact).map((b) => ({ box: b.box, fact: b.fact!, about: b.about ?? "", row: b.row, value: b.value }))

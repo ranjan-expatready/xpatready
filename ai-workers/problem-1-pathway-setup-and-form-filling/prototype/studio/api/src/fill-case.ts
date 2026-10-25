@@ -14,7 +14,7 @@ import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type FormCopy } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
-import { changedFacts, formCoverage, inputHash, readiness, type FormFact } from "../../engine/runtime/forms.ts";
+import { changedFacts, formCoverage, inputHash, pdfForms, readiness, type FormFact } from "../../engine/runtime/forms.ts";
 import type { BoxRow } from "../../engine/render.ts";
 import { actorOf, Audit, Db, fail, PROTOTYPE, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
 import { writeForm } from "./fill.ts";
@@ -73,7 +73,7 @@ export class CaseForms implements OnModuleInit {
     const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
     const { answers, rows } = await this.runtime.state(c);
     const view = caseView(s, people, answers, rows, "agent");
-    const pdf = new Set((s.field_maps as { form_number: string; channel?: string; official_file?: string }[]).filter((m) => m.channel !== "ONLINE" && m.official_file).map((m) => m.form_number));
+    const pdf = pdfForms(s);
     const titles = new Map((s.forms as { form_number: string; title?: string }[]).map((f) => [f.form_number, f.title ?? f.form_number]));
     const copies = await this.db.formInstance.findMany({ where: { caseId }, orderBy: { createdAt: "desc" }, include: { snapshot: true } });
     const labels = new Map(view.sections.flatMap((x) => x.questions).map((q) => [q.fact, q.label]));
@@ -114,16 +114,19 @@ export class CaseForms implements OnModuleInit {
     if (b.idempotencyKey) { const again = await this.db.formInstance.findFirst({ where: { caseId, idempotencyKey: b.idempotencyKey } }); if (again) return this.answerFor(again, form, subjectId); }
     const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
     const { answers, rows } = await this.runtime.state(c);
-    const map = (s.field_maps as { form_number: string; channel?: string; official_file?: string }[]).find((m) => m.form_number === form && m.channel !== "ONLINE" && m.official_file);
-    if (!map) fail(`${form} has no PDF to fill in this case's release.`, HttpStatus.NOT_FOUND);
+    if ((s.forms as { form_number: string; channel?: string }[]).some((f) => f.form_number === form && f.channel === "ONLINE"))
+      fail(`${form} is filed Online in this case's release: its answers go on the portal sheet, not in a PDF.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    if (!pdfForms(s).has(form)) fail(`${form} has no PDF to fill in this case's release.`, HttpStatus.NOT_FOUND);
     const cov = formCoverage(s, people, answers, rows, form, subjectId);
     if (!cov || cov.applies === false) fail(`${form} does not apply to that person on this case.`, HttpStatus.UNPROCESSABLE_ENTITY);
-    const active = await this.db.formInstance.count({ where: { caseId, status: { in: ["QUEUED", "RUNNING"] } } });
-    if (active >= ACTIVE_PER_CASE) throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Busy", status: 429, detail: `${active} copies of this case are being generated; wait for them, then ask again.` }, HttpStatus.TOO_MANY_REQUESTS);
     const stored: Stored = { facts: cov!.facts, boxes: cov!.boxes };
     let copy;
     try {
       copy = await this.db.$transaction(async (tx) => {
+        // The cap is counted under a lock on the case row, so simultaneous requests are counted one after another (PR #12 review 3).
+        await tx.$queryRaw`SELECT id FROM runtime_case WHERE id = ${caseId}::uuid FOR UPDATE`;
+        const active = await tx.formInstance.count({ where: { caseId, status: { in: ["QUEUED", "RUNNING"] } } });
+        if (active >= ACTIVE_PER_CASE) throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Busy", status: 429, detail: `${active} copies of this case are being generated; wait for them, then ask again.` }, HttpStatus.TOO_MANY_REQUESTS);
         const snap = await tx.answerSnapshot.create({ data: { workspaceId: c.workspaceId, caseId, subjectId, formNumber: form, inputHash: inputHash(cov!.facts), factsJson: stored as object } });
         return tx.formInstance.create({ data: { workspaceId: c.workspaceId, caseId, subjectId, formNumber: form, configReleaseId: c.pins[0].configReleaseId, snapshotId: snap.id, idempotencyKey: b.idempotencyKey ?? null, createdBy: actor.id } });
       });
@@ -208,10 +211,24 @@ export class CaseForms implements OnModuleInit {
     const ready = readiness(caseView(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, "agent"), x.formNumber, x.subjectId);
     if (!ready.ready) conflict(notReady(ready.missing.length));
     if (!trialPassed(x.formNumber)) conflict(`${x.formNumber}'s fill trial has not passed yet: this is a checked copy, not for filing (P-65).`);
+    // Only the file that was made is ever locked: it must still be there with the bytes recorded (PR #12 review 2), since
+    // a locked copy can never be corrected afterwards.
+    this.checkedFile(x, HttpStatus.CONFLICT);
     const n = await this.db.formInstance.updateMany({ where: { id, status: "GENERATED", lockedAt: null }, data: { lockedKind: b.kind, lockedAt: new Date(), lockedBy: actor.id } });
     if (n.count !== 1) conflict("Someone locked this copy at the same moment.");
     await this.audit.log(c.workspaceId, actor.id, "locked", "form copy", x.formNumber, `${actor.name} locked copy ${short(id)} of ${x.formNumber} on case ${short(x.caseId)}: ${LOCK_KINDS[b.kind]}`);
     return this.copy(actor, id);
+  }
+
+  /** The copy's file as it was made: present (else `missing`, 404 to download, 409 to lock), inside the working files,
+   *  and with the hash recorded. One read: the bytes checked are the bytes used. */
+  private checkedFile(x: { path: string | null; sha256: string | null }, missing: HttpStatus) {
+    const path = join(ROOT, x.path ?? "");
+    if (!x.path || !existsSync(path)) fail("This copy's file is missing from the working files; generate a new copy.", missing);
+    if (!realpathSync(path).startsWith(realpathSync(VAR_ROOT) + "/")) fail("This copy's file is not in the working files; it is not handed over.", HttpStatus.CONFLICT);
+    const bytes = readFileSync(path);
+    if (createHash("sha256").update(bytes).digest("hex") !== x.sha256) fail("This copy's file changed on disk since it was made; generate a new copy.", HttpStatus.CONFLICT);
+    return bytes;
   }
 
   /** The copy's bytes, checked against the hash recorded when it was made, and those same bytes are what is sent (break
@@ -219,11 +236,7 @@ export class CaseForms implements OnModuleInit {
   async file(actor: Actor, id: string) {
     const { x } = await this.copyFor(actor, id);
     if (x.status !== "GENERATED" || !x.path) fail("This copy has no file.", HttpStatus.NOT_FOUND);
-    const path = join(ROOT, x.path!);
-    if (!existsSync(path)) fail("This copy's file is missing from the working files; generate a new copy.", HttpStatus.NOT_FOUND);
-    if (!realpathSync(path).startsWith(realpathSync(VAR_ROOT) + "/")) fail("This copy's file is not in the working files; it is not handed over.", HttpStatus.CONFLICT);
-    const bytes = readFileSync(path);
-    if (createHash("sha256").update(bytes).digest("hex") !== x.sha256) fail("This copy's file changed on disk since it was made; it is not handed over.", HttpStatus.CONFLICT);
+    const bytes = this.checkedFile(x, HttpStatus.NOT_FOUND);
     return { bytes, name: `${x.formNumber.replace(/\s+/g, "")}-copy-${short(x.id)}.pdf` };
   }
 }

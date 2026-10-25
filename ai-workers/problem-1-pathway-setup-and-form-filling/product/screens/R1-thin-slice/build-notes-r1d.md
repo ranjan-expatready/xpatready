@@ -78,6 +78,14 @@ Fresh copy, suite order: setup 13/13 → journey 107/107 → R1d 38/38 → R1a 9
 1. Break M3 (P-71): an empty required repeating group that applies **blocks** ready to file. The person may record "none apply" for the group: a fact like any other, confirmed per P-72, which clears the block. Built next, after the Lead PR merges.
 2. The evidence lane's `STATUS.md` verdict is the fill-trial record for now (IMM 1344 not passed, IMM 5707 passed, as read). A machine-readable trial record comes later.
 
+## PR #12 review (Lead, 25 Oct): three defects in `api/src/fill-case.ts`
+| Finding | Fix | Test (each fails when its fix is removed; mutation run 38/43) |
+|---|---|---|
+| 1 Major: forms chosen by `field_maps[].channel` only, so a form the release files Online was offered and every copy FAILED | `pdfForms(snapshot)` (engine): a PDF form only when its filing line (`forms[].channel`) is not Online and it has an official file and map; used by the list and by generate; generate answers 422 "IMM 5257 is filed Online in this case's release: its answers go on the portal sheet, not in a PDF." | R1d "PR #12 review 1 fail" and "pass-guard" (fixture: a copy of the release with IMM 5257 Online, pinned by a new case, then moved to version -1 so later suites keep the real release) |
+| 2 Major: lock did not check the file, so a missing or changed file could be Filed and never corrected | lock runs the download's file check (`checkedFile`: present, inside the working files, same sha256) before locking: 409 in plain words | R1d "PR #12 review 2" ×3 (missing, changed bytes, then the same copy locks with its file back) |
+| 3 Minor: the five-active cap was counted outside the insert transaction | inside the transaction: `SELECT … FOR UPDATE` on the case row, then count, then insert | R1d "PR #12 review 3": six simultaneous distinct-key presses → at most 5 accepted, the rest 429, rows = accepted |
+R1d 43/43 on a fresh copy.
+
 ## Known gaps
 1. Restart recovery of the queue is written, not tested by a suite (a restart mid-generation).
 2. "By hand" counts a confirmed value whose form field has no code for it (option map); the copy lists them, the officer writes them in Adobe.

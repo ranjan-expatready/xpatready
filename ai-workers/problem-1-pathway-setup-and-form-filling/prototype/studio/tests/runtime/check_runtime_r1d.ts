@@ -5,7 +5,7 @@
 //   zsh studio/tools/isolated.sh runtime_r1 4430 start && tsx studio/tests/runtime/setup_visitor_visa.ts 4430 xr_studio_runtime_r1
 //   tsx studio/tests/runtime/check_runtime_r1d.ts 4430 xr_studio_runtime_r1
 import { createHash } from "node:crypto";
-import { copyFileSync, readFileSync, renameSync, rmSync, symlinkSync } from "node:fs";
+import { appendFileSync, copyFileSync, readFileSync, renameSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { request } from "node:http";
 import { join } from "node:path";
@@ -169,11 +169,42 @@ async function main() {
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${spouse}/generate`, { idempotencyKey: `gen-${run}-gone` }, OFFICER);
   ok("break M4 pass: a person marked not travelling still shows the form with its copies, marked as no longer applying; a new copy is refused (422)", !!f && f.applies === false && f.copies.length === 2 && r.status === 422, { applies: f?.applies, copies: f?.copies.length, status: r.status });
   await call("PATCH", `/runtime/cases/${caseId}/people/${spouse}`, { applies: true }, OFFICER);
-  // One case cannot fill the queue (break m6): the sixth copy waiting at once is refused (429).
-  const burst: { status: number; body: { id?: string } }[] = [];
-  for (let i = 0; i < 6; i++) burst.push(await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-burst-${i}` }, OFFICER));
-  ok("break m6 fail: at most 5 copies of one case wait or run at once; the next is 429 in plain words", burst.slice(0, 5).every((x) => x.status === 202) && burst[5].status === 429, burst.map((x) => x.status));
-  for (const x of burst) if (x.body.id) await done(x.body.id);
+  // One case cannot fill the queue (break m6), counted under a lock on the case (PR #12 review 3): six simultaneous
+  // presses with distinct keys give at most five copies; the others are 429 in plain words.
+  const burst: { status: number; body: { id?: string; detail?: string } }[] = await Promise.all([0, 1, 2, 3, 4, 5].map((i) => call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-burst-${i}` }, OFFICER)));
+  const accepted = burst.filter((x) => x.status === 202);
+  ok("break m6 / PR #12 review 3 fail: six simultaneous presses with distinct keys make at most 5 copies; the rest are 429 in plain words",
+    accepted.length <= 5 && burst.every((x) => x.status === 202 || (x.status === 429 && /being generated; wait for them/.test(x.body.detail ?? ""))) && burst.some((x) => x.status === 429)
+    && Number(sql(`select count(*) from form_instance where case_id='${caseId}' and idempotency_key like 'gen-${run}-burst-%'`)) === accepted.length, burst.map((x) => x.status));
+  for (const x of accepted) await done(x.body.id!);
+  // PR #12 review 2: only the file that was made is locked: a missing or changed file is refused (409), the copy stays unlocked.
+  const lockMe = accepted[0].body.id!, pl = join(ROOT, sql(`select path from form_instance where id='${lockMe}'`)), keep = `${pl}.keep`;
+  copyFileSync(pl, keep); rmSync(pl);
+  const lockMissing = await call("POST", `/runtime/form-copies/${lockMe}/lock`, { kind: "filed" }, OFFICER);
+  copyFileSync(keep, pl); appendFileSync(pl, "%changed");
+  const lockChanged = await call("POST", `/runtime/form-copies/${lockMe}/lock`, { kind: "filed" }, OFFICER);
+  copyFileSync(keep, pl); rmSync(keep);
+  ok("PR #12 review 2 fail: a copy whose file is missing cannot be locked (409 in plain words)", lockMissing.status === 409 && /missing from the working files/.test(lockMissing.body?.detail ?? ""), lockMissing.body?.detail);
+  ok("PR #12 review 2 fail: a copy whose file changed on disk cannot be locked (409 in plain words); it stays unlocked", lockChanged.status === 409 && /changed on disk/.test(lockChanged.body?.detail ?? "") && sql(`select locked_at is null from form_instance where id='${lockMe}'`) === "t", lockChanged.body?.detail);
+  r = await call("POST", `/runtime/form-copies/${lockMe}/lock`, { kind: "filed" }, OFFICER);
+  ok("PR #12 review 2 pass: with its file as it was made, the same copy locks", r.status === 201 && r.body.locked?.kind === "filed", r.body?.detail ?? r.status);
+
+  // PR #12 review 1: a form the release files Online is not offered as a PDF, even when its PDF form field map exists.
+  // Fixture: a copy of this release whose IMM 5257 filing line is Online, pinned by a new case, then moved below the
+  // real release (version -1) so later suites keep opening cases on the real one.
+  const rel = JSON.parse(sql(`select json_build_object('id', id, 'v', version) from config_release where combination_id='${vv}' order by version desc limit 1`));
+  const cols = sql(`select string_agg(quote_ident(column_name), ',' order by ordinal_position) from information_schema.columns where table_name='config_release'`).split(",");
+  const pick = cols.map((c) => c === "id" ? "gen_random_uuid()" : c === "version" ? `${rel.v + 1}` : c === "snapshot"
+    ? `jsonb_set(snapshot, '{forms}', (select jsonb_agg(case when f->>'form_number' = 'IMM 5257' then f || '{"channel":"ONLINE"}' else f end) from jsonb_array_elements(snapshot->'forms') f))` : c);
+  const onlineRel = sql(`insert into config_release (${cols.join(",")}) select ${pick.join(",")} from config_release where id='${rel.id}' returning id`).split("\n")[0];
+  const oc = await open(`R1D-ONLINE-${run}`);
+  sql(`update config_release set version = -1 where id='${onlineRel}'`);
+  const oP: string = oc.people.find((p: { role: string }) => p.role === "principal").subject_id;
+  const ol = (await call("GET", `/runtime/cases/${oc.id}/forms`, undefined, OFFICER)).body.forms as Form[];
+  r = await call("POST", `/runtime/cases/${oc.id}/forms/IMM%205257/${oP}/generate`, { idempotencyKey: `gen-${run}-online` }, OFFICER);
+  ok("PR #12 review 1 fail: a case whose release files IMM 5257 Online offers no IMM 5257 copy; asking for one is 422 in plain words, nothing queued",
+    !ol.some((x) => x.form === "IMM 5257") && r.status === 422 && /filed Online in this case's release: its answers go on the portal sheet/.test(r.body?.detail ?? "") && sql(`select count(*) from form_instance where case_id='${oc.id}'`) === "0", { forms: ol.map((x) => x.form), status: r.status, detail: r.body?.detail });
+  ok("PR #12 review 1 pass-guard: the case's other PDF forms are still offered, and the real release is the latest again", ol.length > 0 && sql(`select id from config_release where combination_id='${vv}' order by version desc limit 1`) === rel.id, ol.map((x) => x.form));
   // P-65 (a), review M1: the fill trial verdict gates filing, per form.
   ok("review M1: a form whose fill trial passed is fileable; one with no trial record, or a verdict that the product's file does not pass, is not",
     trialPassed("IMM 5257") && !trialPassed("IMM 9999") && !trialPassed("IMM 1344"), { imm1344: trialPassed("IMM 1344") });
