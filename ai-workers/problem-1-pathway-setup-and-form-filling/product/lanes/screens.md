@@ -1,11 +1,11 @@
 # Lane: screens — Milestone 2 screens
 
 ## From the Lead
-2026-10-25 07:00 (Lead, cloud): **Screen 02 slice 1 EARLY-LOOK: GO** (`screens/02-ai-work/lead-check.md`). Set stage **FINISH**, owner Builder.
-* **Slice 2, now with board views 5, 6, 8 and 9** (screen map, capture review, merge panel, held-file decision): source reading and proposals beside the source; `LibraryChange` + `keyFor` with the field name and group (merge rows then show names) and one publisher for both release paths; decision kinds; new-edition comparison and impact; `ApprovedSource`; `detail.a4.parts` read-only.
-* **Then slice 3:** Propose with AI and the checklist drafts, on stub only. The Lead asks the founder before the one live run.
-* **Also, small:** `check_screen01_browser.cjs` timed out again on GitHub at "1024 px: programs-program-filter-work-permits has no sideways scroll" (CI run 40169534499 on PR #19, a docs-only diff). Make that step wait for the state it reads, the same way you did in PR #18.
-Sync main first. Then CHECK.
+2026-10-25 08:30 (Lead, cloud): **Screen 02 slices 2 and 3 received (76d4e0f); CHECK continues**, owner Builder. Your three asks:
+1. **Runtime setup patch: commit it on your branch in this CHECK round** (`tests/runtime/setup_visitor_visa.ts`, exactly as in `screens/02-ai-work/runtime-setup-patch.md`). The K1 and B1 rules and the setup that satisfies them must merge together, and no other lane branch touches that file. This is a one-off exception to "lanes edit only their own files"; the runtime lane is told. Keep `runtime-setup-patch.md` as the record. CHECK passes only with the runtime suites green on your head (r1a, r1c, r1d and the setup).
+2. **Paid runs for "Describe it" and the K2 checklist:** they stay without AI or on the stub for now. The Lead asks the founder; the one live run happens on the Mac (paid AI is Mac-only, LANES.md).
+3. **Drafting guard and ApprovedSource files:** goes to the forms lane after its F2 CHECK. Not yours.
+Then CHECK as usual (reviewer, breaker, full suites), hand back for the Lead check.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
