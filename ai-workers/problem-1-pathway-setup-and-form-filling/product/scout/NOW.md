@@ -3,23 +3,24 @@
 **New session? Read `AGENTS.md`, the scout skill (guard + section 0), this card, then `BRIEF.md`. Work only in `../xpatready-scout`, app `http://localhost:4480`. Never `main`, never `code/`, never `:4400`.**
 
 ## The exact prompt to paste in a new Goose session (copy from here)
-> You are the scout, outside-in tester of the Pathway Configurator. Follow `.agents/skills/scout/SKILL.md` exactly: run the guard (`bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/lane.sh whoami` — must print `scout`), then read `scout/NOW.md` first, then the lane's "From the Lead" note, `scout/BRIEF.md`, `scout/CHARTERS.md`, `scout/FINDINGS.md`. Work only inside this copy (xpatready-scout); the app is http://localhost:4480; never `main`, never `code/`, never `:4400`, never push to main or open PRs. Task: `<charter or "continue from NOW.md" with me>`. End by updating `scout/NOW.md` and `lanes/scout.md`, and give the "Paste to Lead" block; tell the founder to run `tools/scout.sh save`.
+> You are the scout, outside-in tester of the Pathway Configurator. Follow `.agents/skills/scout/SKILL.md` exactly: run the guard (`bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/lane.sh whoami` — must print `scout`), then read `scout/NOW.md` first, then the lane's "From the Lead" note, `scout/BRIEF.md`, `scout/CHARTERS.md`, `scout/FINDINGS.md`. Work only inside this copy (xpatready-scout); the app is http://localhost:4480; never `main`, never `code/`, never `:4400`, never push to main or open PRs. Task: `<charter or "continue from NOW.md" with me>`. First run `bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/scout.sh open` yourself (refreshes this copy, starts the app). If you have no browser tools (`browser_take_screenshot`), stop and tell the founder to do the one-time setup in `scout/NOW.md`. When the founder says "wrap up": update `scout/NOW.md` and `lanes/scout.md`, commit your files, run `bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/scout.sh save` yourself, and give the "Paste to Lead" block.
 
 ## Where things stand (updated at the end of every session or run)
 - 2026-10-25 · first session with the founder (skill 0b): brief agreed and written (`BRIEF.md`), charters re-ordered with the founder, setup review `reports/2026-10-25-setup-review.md`, smoke test done. Branch `scout/2026-10-25-1328`.
-- Next: the founder runs `tools/scout.sh save`; the Lead answers the setup review. Next charter by brief order: `firm-admin-day-one`.
+- 25 Oct: the Lead merged the session and accepted P1–P8 (answers at the end of the setup review). Next charter by brief order: `firm-admin-day-one`.
 
 ## The founder's ritual (the only thing to remember — agreed 25 Oct)
+0. **Once only:** give Goose the browser tools. Goose Desktop: Extensions → Add custom extension → type Command-line (STDIO), command `npx -y @playwright/mcp@0.0.83 --isolated --caps vision`. Terminal: `goose configure` → Add Extension → Command-line Extension, same command. From then on every Goose session has them.
 1. Open **Goose** (Desktop app or terminal) **in the folder `xpatready-scout` (next to the main xpatready copy, e.g. on the Desktop)** — nothing else.
 2. Say one sentence, e.g. *"Scout: run charter firm-admin-day-one"* or *"Scout: continue from NOW.md with me."*
 3. The scout itself does everything with its tools (`scout.sh` machinery): refreshes its copy from GitHub, starts the app on :4480, runs the charter, and **when the founder says "wrap up"** commits, stops the app and pushes. No terminal commands from the founder, no copying folders, no scripts to learn.
 Honest limits: **one scout session at a time** (files are shared state; the save guard blocks a second); a run with **no Goose window open at all** still needs the one terminal command `scout.sh <charter>` — ask the Lead about a scheduler if even that should go.
 
 ## How to resume (mechanics, for the agent)
-1. Mac, main copy: `bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/scout.sh open` (session in Goose) or `… <charter>` (unattended run), then `… save` afterwards.
+1. In a session (the ritual): run `bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/scout.sh open` yourself first, and `… save` yourself on "wrap up". Unattended (no Goose window): the founder runs `… scout.sh <charter>` in the main copy; it saves and pushes by itself.
 2. In-session: guard `bash product/tools/lane.sh whoami` → must print `scout`; read the lane's "From the Lead" note, `BRIEF.md`, `CHARTERS.md`, `FINDINGS.md`; run the charter per the skill.
 3. End of every session/run: update this card (stand + next), update `lanes/scout.md` below the Lead's note, commit on the scout branch, hand the Lead the Paste block.
 
 ## Open items for the Lead (from the setup review)
-- See `reports/2026-10-25-setup-review.md` "Proposals the Lead answers" (P1–P7).
+- None open: P1–P8 answered by the Lead on 25 Oct (end of `reports/2026-10-25-setup-review.md`).
 - Founder asked for a scout operating guide (parallel work, sessions, disagreements) — guidance given in session 25 Oct; summary lives in this card's "How to resume".

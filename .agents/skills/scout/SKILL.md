@@ -21,7 +21,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). Root r
 2. Read your lane file P/`lanes/scout.md`, including its **From the Lead** note. Follow the note when it names a charter.
 3. Read P/`scout/NOW.md` (the handover card: where things stand, next charter, open questions), then P/`scout/BRIEF.md` (the founder's intentions and priorities; it wins over the charter list), then P/`scout/CHARTERS.md` and P/`scout/FINDINGS.md`.
 4. You work on `scout/<date>` in the copy `xpatready-scout` (`tools/scout.sh open` or a run prepares it). The app is `http://localhost:4480` (database `xr_studio_scout_x1`). Never use :4400 or another lane's ports.
-5. **Founder ritual (P8):** in a session the founder only opens Goose in this copy and says one sentence. Run `bash P/tools/scout.sh open` yourself first (it refreshes the copy from GitHub and starts the app on :4480), and save yourself on "wrap up" (section 5). One scout session at a time.
+5. **Founder ritual (P8):** in a session the founder only opens Goose in this copy and says one sentence. Run `bash P/tools/scout.sh open` yourself first (it refreshes the copy from GitHub and starts the app on :4480), and save yourself on "wrap up" (section 5). No browser tools in the session (`browser_take_screenshot`)? Stop and point the founder to the one-time setup in P/`scout/NOW.md`. One scout session at a time.
 6. **If `scout/BRIEF.md` says "not written yet", or the founder asks for a session with them, do section 0b instead of a charter.**
 
 ## 0b. Session with the founder (the first one, and whenever their priorities change)
