@@ -7,10 +7,10 @@
 
 Command: on the Mac, `bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/scout.sh open` (a session with the founder in Goose), `… scout.sh save` afterwards, or `… scout.sh [charter]` (an unattended run). This lane writes everything below; the Lead writes only the section above.
 
-current_item: charter firm-admin-day-one done — report scout/reports/2026-10-25-firm-admin-day-one.md (5 findings SC-1..SC-5 with priorities P2/P3; fix SC-2 shipped, 1 line)
+current_item: charter firm-admin-day-one done — report scout/reports/2026-10-25-firm-admin-day-one.md (5 findings SC-1..SC-5 with priorities P2/P3; SC-2 fix written+proven but reverted — new-combination.tsx busy on screens; ready patch noted)
 stage: WAITING
 owner: Lead
-next_action: Lead reads scout/reports/2026-10-25-firm-admin-day-one.md and triages SC-1 (Major: no onboarding/starter library), SC-3, SC-4, SC-5; question: may scout add the "start from sample set" button as a small fix, or is it product work? Setup review P1–P7 still open. Next charter: release-review
+next_action: Lead reads scout/reports/2026-10-25-firm-admin-day-one.md and triages SC-1 (Major: no onboarding/starter library), SC-2 (1-line patch ready), SC-3, SC-4, SC-5; question: may scout add the "start from sample set" button as a small fix, or is it product work? Setup review P1–P7 still open. Next charter: release-review
 blocked_by: none
 updated: 2026-10-25
 

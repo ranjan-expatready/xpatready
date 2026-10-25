@@ -8,7 +8,7 @@ Every judgment cites a best-in-class line below and its evidence (screenshots in
 2. One Major (P2): the workspace starts completely blank — no onboarding, no starter library to import; a real firm must hand-build everything (SC-1).
 3. Three small wording gaps confuse a first-timer: a bare "1" next to an existing name (fixed, SC-2), unexplained approval codes D229/D257 in the form picker (SC-3), "Filing: No forms yet" next to "2 forms attached" (SC-4).
 4. Trust passes: the second-person release rule is enforced on screen (author cannot approve), audit trail records every attach, the AI launch dialog shows costs and provenance.
-5. One fix shipped (SC-2, 1 line, test passes). One open question for you in the lane note: may scout add a "sample starter set" button as a small fix next run, or is that product work?
+5. SC-2's one-line fix is written and proven (its check passed), but the scope guard blocked shipping it — `new-combination.tsx` is being changed by the screens lane right now — so it goes to the Lead as a ready patch instead. One open question for you in the lane note: may scout add a "sample starter set" button as a small fix next run, or is that product work?
 
 ## The benchmark (what best-in-class does for this job)
 Sources: Docketwise, INSZoom and LawLogix practice for immigration case-management; SaaS onboarding norms (Linear, Stripe) for first-run guidance; Nielsen 3 (user control/words) and WCAG 2.2 AA naming rules.
@@ -38,12 +38,12 @@ Sources: Docketwise, INSZoom and LawLogix practice for immigration case-manageme
 | # | Sev · Prio | One line | Status |
 |---|---|---|---|
 | SC-1 | Major · P2 | No onboarding or starter library: a firm configures everything from zero | Sent to Lead |
-| SC-2 | Minor · P3 | Duplicate option showed a bare count "1" glued to the name | **Fixed (scout, 1 line; check passes)** |
+| SC-2 | Minor · P3 | Duplicate option showed a bare count "1" glued to the name | Sent to Lead (demo fix proven, reverted — file busy on screens) |
 | SC-3 | Minor · P3 | Sample-form picker shows unexplained approval codes (D229/D257), no filter | Sent to Lead |
 | SC-4 | Minor · P3 | "Filing: No forms yet" contradicts "2 forms attached as sources, 0 set up" | Sent to Lead (failing check kept as evidence) |
 | SC-5 | Idea · P3 | "source-backed" jargon in the combination subtitle | Sent to Lead |
 
-Checks: `tests/scout/check_sc2_sc4_1025.cjs` (SC-2 passes after the fix; SC-4 fails until the wording changes — evidence, not noise).
+Checks: `tests/scout/check_sc2_sc4_1025.cjs` (both fail today; SC-2's passed with the scout's demo fix before it was reverted because the file belongs to the screens lane this week).
 Dedupe with qa: QA-38/39/40/41/42/43 untouched (runtime/library/keyboard/words, different evidence); no overlap.
 
 ## Dependency map (charter scope)
