@@ -1,0 +1,80 @@
+# Screen 04 — Shared library · concept draft (screen-designer, 25 Oct; for the Lead)
+
+Board: `design/draft-library.html` (one file, 10 views, 44 states; "Show labels" shows Capability or Scaffolding, Needed or Not built, and the decision each element follows or lacks). All counts, editions, dates, check values and costs are **Sample**; form codes and titles are IRCC's; nothing here is confirmed by the immigration expert. Unconfirmed: no counsel. Where this draft and the board differ, this draft wins.
+
+## 1. Job and journey
+A content publisher sees what the shared library holds (fields, sections, document types, forms, checks), where each item is used, whether AI or a person made it, and how much a combination reused versus added; adds a missing item by describing it; adds forms to the library; and removes what is no longer needed, without breaking anything in use. Personas: Configuration author; Content reviewer (second person). Activities 3.1, 3.4; SA-1B-1..24, 26..32 (the trace in `history/TRACE-SA01B-2026-10-23.md`; SA-01B itself is Mac-only and was not read). Capabilities: C3.6, C3.7 (Not built), C2.1, C2.4 (door 2), C2.11, C3.5 (aliases shown), C3.10; links to C9.1 (impact review on Screen 02).
+
+## 2. Ten layers (exists · team · new)
+| Layer | In our app | Team code | New for Screen 04 |
+|---|---|---|---|
+| Masters | Field (versions, aliases, merges), section, document type (name, category, facts), form, edition, online version, portal | Canonical fields, form editions (read-only) | Status Retired; "not meaning-checked" mark; document type attributes from MASTERS §5 that the drawer shows |
+| Links | Field map, placement, section picks, requirement lines | `form-field-maps` | Where-used read model across all of them; "reused vs new" per combination (first combination that brought the item in) |
+| Configuration | — (lines live on Screen 03) | — | None |
+| Rules | Fact rules on placements, checks per combination | Predicates | None authored here (P-28); shown read-only |
+| Engine | — | — | In-use guard (P-52 L1–L6) as one pure function used by every route |
+| Contract | `GET /library/fields`, `/fields/:key`, `/sections`, `/document-types`, `/forms`, `/forms/:code/editions`; `POST /intake`; `/library/merges` | — | §6 |
+| Screen | `library.tsx` (typed-key "Add a field", inline section add, field page with edit forms), `library-forms.tsx` (intake + 4-column list), Checks placeholder | none | Five library lists + drawers, Describe panel, Forms list per P-51 |
+| AI assist | Field-map drafting (Screen 02) | — | Draft from a description + meaning verdict (one call, cost shown) |
+| Governance | Release; author ≠ approver | Approval dialog | Second person approves new, deleted, retired, restored items (from To review) |
+
+## 3. Business rules (each: one pass and one fail test)
+* BR-1 No edit of a definition on this screen; changes come from AI proposals (Screen 02), Describe what you need, or Delete · Retire · Restore (P-28, SCREENS 04; **Q1**). The current Field page's edit forms and typed-key dialog go (P-52 page "Built today").
+* BR-2 Every row shows where used (counts say what they count, each linked), origin ("AI · from IMM 5257 · accepted 18 Oct" or "Person · described") and a calculated status: Released · Draft · Waiting for a second person · Retired (STANDARDS §3.5, P-11, RULES-MODEL §1, EXPERIENCE §2.5, §2.7).
+* BR-3 Fields are grouped by section, searchable by name, meaning, alias or form code (P-37).
+* BR-4 With a combination chosen, each item is "Reused" (in the library before this combination) or "New here", with the totals ("146 · 112 reused · 34 new") (SCREENS 04, PRODUCT §1).
+* BR-5 Describe what you need (Field, Section; Document type per **Q2**): one plain-words box; AI drafts the item and shows the closest items with a verdict Use existing · Probably not needed · New is justified; Use existing creates nothing; Add new needs a reason when AI disagreed; keys generated, never typed (P-34, P-53 items 1–3).
+* BR-6 Exact duplicate (same generated key, same normalised name within subject and group, or an alias) is refused without AI, on the field, with a link to the existing item (P-34 layer 1, P-53 item 5, P-65).
+* BR-7 Cost shown before the AI call; AI failure spends nothing and keeps the text; with AI off a short form still adds the item marked "not meaning-checked" (P-53 item 6, STANDARDS §4; see K6).
+* BR-8 A new, deleted, retired or restored item is a draft change; a different person approves it (server, 403 for the maker); release publishes (P-52 L4, P-53 item 4, P-79).
+* BR-9 Delete only an item never released and used nowhere (L1); a released item is retired (L2); retire refused while used by any current setup, listing every use with a link (L3, L6); the same for AI-made items (L5).
+* BR-10 Retired items are hidden from pickers, AI proposals and Describe matches; earlier releases and open cases keep them; the list shows them only under "Retired" (L2).
+* BR-11 Add forms (door 2): one or many files through the shared intake of Screen 01 (`FormIntake`): added · already in the library · held: new edition (→ Screen 02 impact) · held for source check (→ To review, P-80) · held for a person (unreadable); library only, nothing attached (P-51, P-32, P-57).
+* BR-12 Forms list columns: Code · Title (+ channels) · Edition as printed · Published · Field map · Used by · Status; "Not mapped yet" until a combination first uses it, mapped once and reused (P-51, P-63, P-41, P-61). Forms are retired, never deleted.
+* BR-13 Each form shows every edition and online version; a new edition waiting shows on the row, the menu badge and the drawer, and opens Screen 02's impact review; an online version past its re-check date shows "Re-check due" (orange) with Re-capture · Confirm unchanged (P-32, P-38, P-61 §5, C2.11, EXPERIENCE §2.11).
+* BR-14 Drawers show fact rules, validation and checks that read the item as sentences with their source, read-only (P-12, RULES-MODEL §2, §7).
+* BR-15 Checks list: kind (Field validation · Consistency · Document validity · AI review), what it reads, value per combination, when it runs, where used, origin; read-only (RULES-MODEL §7).
+* BR-16 Aliases shown on a field; a merged-away field says "Merged into …" and redirects; proposing and approving merges stays on Screen 02 (P-65, P-28; K5). Words P-63; keys only under "Details for the team" (PRODUCT §4).
+
+## 4. Layout (Library list pattern, EXPERIENCE §3; team tokens; board views 1–10)
+Shell as Screens 02/03 (menu with To review first, P-79). Each library page: crumbs · title · one-line description · one primary action (Describe what you need; Forms: Add forms) · `FilterLayout`: search + Combination ▾ + Origin ▾, status chips with counts · bare table, 44 px rows, identifier first, status last. Row → right panel (540 px, sections not tabs: Definition · Rules and checks · Where used · History · Details for the team); footer Close left, one action right. Describe and Add forms are right panels too (P-48: never a centred modal for anything with a field). Views: 1 Fields · 2 Field drawer · 3 Describe · 4 Sections · 5 Document types · 6 Forms · 7 Add forms · 8 Form drawer · 9 Checks · 10 Rules (**Q3**).
+**States drawn:** empty (teaches the first action) · loading (skeleton + status) · normal · long names (one line, full on hover) · nothing matches · filtered to a combination · running (AI drafting with the real count compared) · verdicts ×3 · exact duplicate (on the field) · AI off · AI failed · retire refused (every use linked) · retire / delete confirm in-page · waiting (maker) · second person (approve / return with reason) · retired → restore · conflict 409 (Reload) · read-only (no author duty) · error (Try again) · intake results (all five outcomes) · new edition waiting · re-check due.
+
+## 5. Copy (plain, front-loaded; P-63)
+* Empty fields: "Fields arrive when a combination's forms are read: AI proposes them on To review, a person accepts, and they appear here with the form they came from. To add one yourself, describe what you need."
+* Describe hint: "Write it in your own words … AI drafts the field and checks whether the library already has one that means the same. About US$0.01."
+* Duplicate: "A field with this name already exists for family members: "Relationship to principal applicant". Open it, or say what is different about the one you need."
+* Retire refused: "Date of birth cannot be retired while it is used. Remove or replace it in these places first, then retire it: …" · Maker: "You added this. A different person approves it; it is listed for them on To review."
+* Not mapped yet (tooltip): "AI maps it once, when a combination first uses it; every later combination reuses the map." · Re-check due: "Online versions change without a new edition. Capture the screens again, or confirm they are unchanged."
+
+## 6. Contract and tests
+Keep: `GET /library/fields|sections|document-types|forms`, `GET /library/forms/:code/editions`, `POST /intake` (no `combinationId` = library only), `GET /intake/held`, `GET /library/merges`, `POST /captures/:id/confirm`. New (screens lane; zod in contracts; Problem Details; server authorisation; cursor pagination):
+`GET /library/:kind?q=&section=&origin=&status=&combination=&cursor=` → rows with `usedBy {forms, combinations, sections}`, `origin`, `status`, and with `combination` a `reuse {total, reused, new}` and per row `inCombination: REUSED|NEW` · `GET /library/:kind/:key` → definition, rules, checks, whereUsed[], history[], aliases[], version · `POST /library/:kind/similar {description}` → `{draft, matches[], verdict, reason, costUsd}` (shared with Screen 02's `/library/fields/similar`: one route) · `POST /library/:kind {draft, decision: USE_EXISTING|ADD_NEW, reason?, meaningChecked}` → 201 draft, 409 exact duplicate {existingKey} · `POST /library/:kind/:key/{delete|retire|restore} {reason, version}` → 409 `{uses[]}` when in use · `POST /library/:kind/:key/{approve|return}` → 403 for the maker · `GET /library/checks` · `GET /library/rules` (if Q3). Remove `POST /library/fields` with a typed key.
+Tests: one pass + one fail per BR-1..16 (e.g. BR-9 retire with one draft use → 409 listing it / after removal → draft change; BR-8 maker approve → 403 / reviewer → 200; BR-6 "Relationship  To Principal applicant" → 409 without an AI call; BR-11 five fixture files → five outcomes, nothing attached). Keyboard: list → row (Enter) → drawer → Retire → confirm → Escape returns focus to the row; Describe → Tab through verdict → Add new with reason. axe on every state; 1024 px and 200 % zoom; first view < 1 s, filter and search < 200 ms with Sample data; one request per view.
+
+## 6b. Capability or scaffolding (P-33) · Needed or Not built (P-26)
+* **Capability · Needed:** the five lists with where used, origin, status and reuse per combination; drawers; Describe what you need (Field, Section; Document type if Q2); exact-duplicate block; meaning verdict; Delete · Retire · Restore with the in-use guard (if Q1); second-person approve/return; Add forms with all intake outcomes; Forms list columns; editions and online versions; re-check due; Checks list; Rules list (if Q3).
+* **Scaffolding (never ported):** Demo menu, Acting as, Prototype badge, Sample counts and values, replayed AI verdicts in tests.
+* **Not built:** Replace with… (merge execution, P-52); meaning-change impact for library items (P-34 §4); translations; accept rate of AI review findings (M3 data); substitute-set editing (K4); field groups and purposes (B1, SA-1B-6, 11).
+
+## Decisions followed, missing or in conflict
+* Followed: P-11, P-12, P-23, P-28, P-32, P-34, P-37, P-38, P-41, P-48, P-51, P-52, P-53, P-57, P-58, P-61–P-63, P-65, P-79, P-80; EXPERIENCE §2–§5; RULES-MODEL §1, §2, §7.
+* **K1 (Lead):** SCREENS 04 says "box map"; P-63 retired the word: column is "Field map".
+* **K2 (Lead):** approval of new, deleted, retired, restored items: the To review row (P-79) opens this screen's drawer in approver state; no separate page.
+* **K3 gap (P-74):** no capability rows for the Forms library door 2 + list (P-51), library lists with where used, origin and reuse per combination (P-37, SCREENS 04), or the Checks list (P-14). Suggest C3.12–C3.14.
+* **K4 conflict:** Screen 03 §8 expects "Substitute-set authoring (Screen 04)"; SCREENS 04 says no direct editing. Draft: sets drafted inside Describe for a document type and shown read-only; editing an existing set Not built.
+* **K5:** merges are built (F1) and reviewed in Screen 02's panel; here aliases and "Merged into" only (P-28 no merge execution).
+* **K6 conflict:** P-53 item 6 says the no-AI short form works; the P-34 page lists it as Not built (team). Board draws it labelled Not built; Lead to choose.
+
+## 7. Questions for the Lead (recommendation first)
+1. **What may a person change on Screen 04?** *Recommend:* add through Describe what you need and Delete · Retire · Restore (P-52, C3.7, an M2 capability) as draft changes a different person approves; no editing of wording, type or placement here (wording lives on Screen 03 placements, meaning changes go through impact review). *Alternative:* strictly read-only as SCREENS 04 / P-28 say (C3.7 then has no screen), or also P-34 §4's direct wording edits.
+2. **Describe what you need for Document type too?** *Recommend:* yes, as P-53 and the P-52 page say; Screen 03 BR-10 already sends a missing document type here. *Alternative:* Field and Section only (SCREENS 04, P-34 row); Screen 03 then has no path for a missing type.
+3. **Shared library › Rules list?** *Recommend:* yes, read-only, last slice: every rule as a sentence with kind, where it lives, source, origin and where used, reusing Screen 03's rule-sentence component (P-37, PRODUCT §3). *Alternative:* drop the menu item; rules show only in drawers and each combination's Rules tab.
+
+## Definition of Ready (WORKFLOW.md)
+- [ ] Board agreed (draft board exists; not yet clicked through by the Lead)
+- [x] Every element labelled Needed / Not built and Capability / Scaffolding (§6b, board labels)
+- [ ] Data and API needs known (§6 lists them; one shared `similar` route with Screen 02 to agree with the forms lane)
+- [ ] Every decision it relies on agreed (Q1–Q3; K1–K6 Lead)
+- [ ] No open questions (three open)
+- [ ] Capability rows added for K3 (P-74)
