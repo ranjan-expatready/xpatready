@@ -6,10 +6,13 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { effective } from "../../engine/snapshot.ts";
-import { actorOf, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { ACTORS, actorOf, Audit, Db, fail, need, revise, strip, VAR, Workspace, type Actor } from "./core.ts";
 import { changeView, decideChange } from "./library-changes.ts";
 import { Intake } from "./intake.ts";
 import { Impact } from "./impact.ts";
+import { Programs } from "./programs.ts";
 
 type H = string | undefined;
 /** K1: a PDF form field is mapped, "not a fact", or "filled by hand" with a reason. */
@@ -56,6 +59,46 @@ export class Screen02 {
     return { edition: { id: ed!.id, label: ed!.editionLabel, form: ed!.form.formKey }, fields: rows.map((r) => ({ dataPath: r.dataPath, caption: r.caption, heading: r.heading, outcome: r.outcome, outcome_word: word[r.outcome] ?? r.outcome, field: r.canonicalFieldKey, reason: r.reason, status: r.status, carried: r.outcome === "unresolved" && r.status === "PUBLISHED" })) };
   }
 
+  /** Board view 5: an online version's screen map, as drafted without AI (proposals waiting for a person) or as accepted
+   *  (its field map rows, with what is still open). */
+  async screenMap(editionId: string) {
+    const ed = await this.db.formEdition.findUnique({ where: { id: editionId }, include: { form: true } }).catch(() => null);
+    if (!ed || ed.channel !== "ONLINE") fail("This online version does not exist.", HttpStatus.NOT_FOUND);
+    const rows = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed!.id } }), (m) => m.dataPath, "draft");
+    const names = new Map((await this.db.canonicalField.findMany({ where: { workspaceId: ed!.workspaceId }, orderBy: { version: "asc" }, select: { canonicalFieldKey: true, label: true } })).map((f) => [f.canonicalFieldKey, f.label ?? f.canonicalFieldKey]));
+    const base = { edition: { id: ed!.id, label: ed!.editionLabel, form: ed!.form.formKey } };
+    if (rows.length) return { ...base, state: "accepted" as const, inputs: rows.map((r) => ({ input: r.dataPath, label: r.caption, screen: r.heading, outcome: r.outcome, field: r.canonicalFieldKey, field_label: r.canonicalFieldKey ? names.get(r.canonicalFieldKey) ?? r.canonicalFieldKey : null, why: r.reason ?? r.evidenceQuote })) };
+    const file = join(VAR("demo"), "screen-maps", `${ed!.id}.json`);
+    if (!existsSync(file)) return { ...base, state: "not_drafted" as const, inputs: [] };
+    const d = JSON.parse(readFileSync(file, "utf8")) as { pdf_edition: string | null; counts: Record<string, number>; proposals: { input: string; label: string; screen: string; group: string | null; outcome: string; method: string | null; fact: string | null; from: string | null; why: string }[] };
+    return { ...base, state: "drafted" as const, pdf_edition: d.pdf_edition, counts: d.counts,
+      inputs: d.proposals.map((p) => ({ input: p.input, label: p.group ? `${p.group} › ${p.label}` : p.label, screen: p.screen, outcome: p.outcome, method: p.method, field: p.fact, field_label: p.fact ? names.get(p.fact) ?? p.fact : null, why: p.from ?? p.why })) };
+  }
+
+  /** Board view 8: one proposed merge with both fields by name, meaning and use. */
+  async merge(id: string) {
+    const m = await this.db.fieldMerge.findUnique({ where: { id } }).catch(() => null);
+    if (!m) fail("This merge does not exist.", HttpStatus.NOT_FOUND);
+    const one = async (key: string) => {
+      const f = await this.db.canonicalField.findFirst({ where: { workspaceId: m!.workspaceId, canonicalFieldKey: key }, orderBy: { version: "desc" } });
+      const maps = await this.db.formFieldMap.count({ where: { workspaceId: m!.workspaceId, canonicalFieldKey: key, status: { in: ["DRAFT", "PUBLISHED"] } } });
+      const placements = await this.db.sectionQuestion.count({ where: { workspaceId: m!.workspaceId, canonicalFieldKey: key, status: { in: ["DRAFT", "PUBLISHED"] } } });
+      return { key, label: f?.label ?? key, meaning: f?.meaning ?? null, value_type: f?.valueType ?? null, aliases: f?.aliases ?? [], form_fields: maps, questions: placements };
+    };
+    const who = (id?: string | null) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
+    return { id: m!.id, status: m!.status, reason: m!.reason, proposed_by: who(m!.proposedBy), proposed_by_id: m!.proposedBy, proposed_at: m!.proposedAt, decided_by: who(m!.decidedBy), decision_note: m!.decisionNote, goes: await one(m!.mergeKey), stays: await one(m!.keepKey) };
+  }
+
+  /** The form fields of the edition an AI draft was applied to (K1 decisions beside the proposals). */
+  async jobFormFields(jobId: string) {
+    const job = await this.db.draftingJob.findUnique({ where: { id: jobId } }).catch(() => null);
+    if (!job?.attachmentId) fail("This AI draft has no source form.", HttpStatus.NOT_FOUND);
+    const a = await this.db.sourceAttachment.findUnique({ where: { id: job!.attachmentId! } });
+    const ed = a ? await this.db.formEdition.findFirst({ where: { workspaceId: a.workspaceId, sha256: a.sha256 } }) : null;
+    if (!ed) return { edition: null, fields: [] };
+    return this.formFields(ed.id);
+  }
+
   async libraryChanges(status?: string) {
     const workspaceId = await this.ws.id();
     return (await this.db.libraryChange.findMany({ where: { workspaceId, ...(status ? { status } : {}) }, orderBy: { proposedAt: "desc" }, take: 200 })).map(changeView);
@@ -74,11 +117,42 @@ export class Screen02 {
   }
 }
 
+const STOP = new Set(["the", "and", "for", "from", "with", "who", "are", "that", "this", "applied", "apply", "application", "applying", "person", "people", "outside", "inside", "canada", "visa"]);
+const words = (s: string) => [...new Set(s.toLowerCase().normalize("NFKD").replace(/[\u0300-\u036f]/g, "").split(/[^a-z0-9]+/).filter((w) => w.length >= 3 && !STOP.has(w)).map((w) => w.replace(/s$/, "")))];
+
+/** Board view 11 (P-37, P-41): "Describe it" proposes the combination's path. Until the founder's OK for paid runs, the
+ *  proposal is made without AI: the words of the description are matched with the existing paths (US$0), labelled so,
+ *  and nothing is created until the author confirms. */
+export async function proposePath(programs: Programs, body: { pathway?: string; description?: string }) {
+  const description = String(body?.description ?? "").trim().slice(0, 400);
+  if (description.length < 8) fail("Describe the application in a few words (at least 8 characters).");
+  const opts = await programs.pathOptions(body?.pathway === "CORPORATE" ? "CORPORATE" : "INDIVIDUAL");
+  const want = words(description);
+  const leaves = opts.programs.flatMap((p) => p.categories.flatMap((c) => (c.subCategories.length ? c.subCategories.map((s) => ({ p, c, s })) : [{ p, c, s: null as null | (typeof c.subCategories)[number] }])));
+  const scored = leaves.map((l) => {
+    const path = [l.p.label, l.c.label, ...(l.s ? [l.s.label] : [])];
+    const have = words(path.join(" ")), own = words((l.s ?? l.c).label);
+    const hits = have.filter((w) => want.includes(w)), ownHits = own.filter((w) => want.includes(w));
+    return { l, path, hits, score: hits.length + ownHits.length * 2 + (own.length && ownHits.length === own.length ? 2 : 0) };
+  }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score || a.path.join().localeCompare(b.path.join()));
+  const best = scored[0];
+  if (!best) return { mode: "no_ai", cost_usd: 0, proposal: null, why: "No existing program, category or sub-category matches these words. Build the path by hand below." };
+  const leaf = best.l.s ?? best.l.c;
+  const close = scored[1] && scored[1].score === best.score;
+  return { mode: "no_ai", cost_usd: 0, why: `Matched by the words ${best.hits.map((w) => `"${w}"`).join(", ")} (no AI).`, confidence: close ? "Medium" : "High",
+    proposal: { pathway: opts.pathway, path: best.path, program: { key: best.l.p.key, label: best.l.p.label }, category: { key: best.l.c.key, label: best.l.c.label }, subCategory: best.l.s ? { key: best.l.s.key, label: best.l.s.label } : null, exists: !!leaf.hasSetup, combinationId: leaf.combinationId ?? null },
+    others: scored.slice(1, 3).map((x) => x.path.join(" › ")) };
+}
+
 @Controller("api")
 export class Screen02Controller {
-  constructor(@Inject(Screen02) private readonly s: Screen02, @Inject(Intake) private readonly intake: Intake, @Inject(Impact) private readonly impact: Impact) {}
+  constructor(@Inject(Screen02) private readonly s: Screen02, @Inject(Intake) private readonly intake: Intake, @Inject(Impact) private readonly impact: Impact, @Inject(Programs) private readonly programs: Programs) {}
+  @Post("path-proposal") pathProposal(@Headers("x-actor") a: H, @Body() b: any) { need(actorOf(a), "author"); return proposePath(this.programs, b ?? {}); }
+  @Get("jobs/:id/form-fields") jobFormFields(@Param("id") id: string) { return this.s.jobFormFields(id); }
   @Get("editions/:id/form-fields") formFields(@Param("id") id: string) { return this.s.formFields(id); }
   @Post("editions/:id/form-fields/decision") decide(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.decideFormField(actorOf(a), id, b); }
+  @Get("online-versions/:id/screen-map") screenMap(@Param("id") id: string) { return this.s.screenMap(id); }
+  @Get("library/merges/:id") merge(@Param("id") id: string) { return this.s.merge(id); }
   @Get("library/changes") changes(@Query("status") status?: string) { return this.s.libraryChanges(status || undefined); }
   @Get("library/changes/:id") change(@Param("id") id: string) { return this.s.libraryChange(id); }
   @Post("library/changes/:id/approve") approve(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.decideLibraryChange(actorOf(a), id, "approve", b?.note); }

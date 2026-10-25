@@ -23,12 +23,12 @@ export function AiWorkPage() {
     <div className="mx-auto max-w-6xl space-y-4">
       <div><h1 className="text-xl font-semibold">AI work</h1><p className="mt-1 text-sm text-text-muted">Every AI launch from the catalogue, a program, a combination or a source, with what each step did and cost. Decisions happen in <Link className="text-text-link underline" to="/review">To review</Link>: nothing reaches a draft until a person decides.</p></div>
       {!list.data!.length ? <EmptyState title="No AI work yet" description="Start it from Programs (select combinations, then AI configuration…), a program's menu, a combination, or a form on Sources and forms." /> : (
-        <Table head={["Scope", "How", "Steps", "Status", "Spent / worst case", "Started"]}>
+        <Table head={["Scope", "How", "Steps and parts", "Status", "Spent / worst case", "Started"]}>
           {list.data!.map((b) => (
             <tr key={b.id}>
               <td><Link className="font-medium text-text-link hover:underline" to={`/ai/${b.id}`}>{b.scopeLabel}</Link><p className="text-xs text-text-muted">{b.scopeKind}</p></td>
               <td>{MODE[b.mode] ?? b.mode}</td>
-              <td className="text-xs">{b.steps} · {Object.entries(b.counts).map(([k, n]) => `${n} ${(STATUS[k]?.[1] ?? k).toLowerCase()}`).join(", ")}</td>
+              <td className="text-xs">{b.steps} step{b.steps === 1 ? "" : "s"} · {Object.entries(b.counts).map(([k, n]) => `${n} ${(STATUS[k]?.[1] ?? k).toLowerCase()}`).join(", ")}{b.parts ? <p className="text-text-muted">{b.parts}</p> : null}</td>
               <td><BatchStatus s={b.status} /></td>
               <td className="whitespace-nowrap text-xs">US${b.spent_usd.toFixed(2)} / US${b.worstCaseUsd.toFixed(2)}</td>
               <td className="whitespace-nowrap text-xs text-text-muted">{fmtWhen(b.startedAt)} · {b.started_by_name}</td>
@@ -78,7 +78,24 @@ export function AiBatchPage() {
             <td>{j.kind === "field_map" && j.status === "COMPLETED" && j.mode !== "STUB" ? <Link className="whitespace-nowrap text-sm font-medium text-text-link hover:underline" to={`/c/${j.combinationId}/jobs/${j.id}`}>Review proposals</Link> : j.status === "APPLIED" && j.kind === "field_map" ? <Link className="text-xs text-text-link hover:underline" to={`/c/${j.combinationId}/jobs/${j.id}`}>Applied</Link> : null}</td>
           </tr>))}
       </Table>
+      {d.jobs.filter((j: any) => j.parts.length).map((j: any) => <Parts key={j.id} job={j} />)}
       <p className="text-xs text-text-muted">{d.capability_note}</p>
     </div>
+  );
+}
+
+const PART: Record<string, [string, string]> = { queued: ["neutral", "Queued"], running: ["ai", "Running"], done: ["ok", "Done"], failed: ["danger", "Failed"], "not started": ["neutral", "Not started"] };
+/** A4 (board view 3): one count bar and the parts table of a step drafted in parts, in real counts. */
+function Parts({ job }: { job: any }) {
+  const done = job.parts.filter((p: any) => p.status === "done"), fields = done.reduce((s: number, p: any) => s + p.fields, 0), total = job.a4?.leftover ?? job.parts.reduce((s: number, p: any) => s + p.fields, 0);
+  return (
+    <section aria-label={`Parts of ${job.source}`} className="space-y-2 rounded-lg border border-border bg-surface-raised p-4" data-parts>
+      <h2 className="font-semibold">{job.source}: part {done.length} of {job.parts.length} · {fields} of {total} form fields</h2>
+      {job.a4?.reused ? <p className="text-sm text-text-muted">{job.a4.reused} of {job.a4.total} form fields reused from the library without AI.</p> : null}
+      <div className="h-2 overflow-hidden rounded-full bg-surface-sunken" role="progressbar" aria-label="Form fields drafted" aria-valuemin={0} aria-valuemax={total} aria-valuenow={fields}><div className="h-full bg-primary" style={{ width: `${total ? Math.round((fields / total) * 100) : 0}%` }} /></div>
+      <Table dense head={["Part", "Sections", "Form fields", "Status", "Cost"]}>
+        {job.parts.map((p: any) => { const [t, w] = PART[p.status] ?? ["neutral", p.status]; return <tr key={p.index}><td>{p.index}</td><td className="text-xs">{p.sections.join(", ")}</td><td className="tabular-nums">{p.fields}</td><td><Pill tone={t}>{w}</Pill>{p.message ? <p className="max-w-xs text-xs text-text-muted">{p.message}</p> : null}</td><td className="text-xs">US${Number(p.cost_usd).toFixed(2)}</td></tr>; })}
+      </Table>
+    </section>
   );
 }

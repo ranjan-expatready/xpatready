@@ -19,10 +19,25 @@ export function JobPage() {
   const [filter, setFilter] = React.useState<(typeof FILTERS)[number][0]>("decide");
   const [applyOpen, setApplyOpen] = React.useState(false);
   const recompare = useAction(() => api(`/jobs/${jobId}/recompare`, { method: "POST" }), { success: (r: any) => `Compared again with the current library (no AI call): ${r.detail?.recompared?.kept ?? 0} decisions kept, ${r.detail?.recompared?.reopened ?? 0} to decide again`, invalidate: [["job", jobId]] });
+  // Board view 4 keys: J / K move between proposals, A accepts the one in focus, N opens its new-field form.
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null;
+      if (e.metaKey || e.ctrlKey || e.altKey || (t && (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) || t.isContentEditable))) return;
+      const cards = [...document.querySelectorAll<HTMLElement>("article[data-proposal]")];
+      if (!cards.length) return;
+      const at = cards.findIndex((c) => c.contains(document.activeElement));
+      const k = e.key.toLowerCase();
+      if (k === "j" || k === "k") { e.preventDefault(); cards[Math.max(0, Math.min(cards.length - 1, at < 0 ? 0 : at + (k === "j" ? 1 : -1)))].focus(); }
+      else if ((k === "a" || k === "n") && at >= 0) { const b = cards[at].querySelector<HTMLButtonElement>(k === "a" ? "[data-accept]" : "[data-new]"); if (b && !b.disabled) { e.preventDefault(); b.click(); } }
+    };
+    window.addEventListener("keydown", onKey); return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const clean = useAction((outcome: "REUSE" | "NEW") => api(`/jobs/${jobId}/accept-clean`, { method: "POST", json: { outcome } }), { success: (r: any) => `${r.accepted} ${r.outcome === "REUSE" ? "exact reuse matches" : "new definitions"} accepted`, invalidate: [["job", jobId]] });
   if (j.isLoading) return <Spinner label="Loading the AI draft" />;
   if (j.isError) return <ErrorState title="This AI draft could not be opened" description={(j.error as Error).message} />;
   const job = j.data;
+  if (job.kind === "checklist_draft") return <ChecklistJob job={job} combinationId={id!} />;
   const items = job.items as any[];
   const c = job.detail?.counts;
   const pending = items.filter((i) => i.decision === "PENDING");
@@ -59,6 +74,7 @@ export function JobPage() {
               <Button variant="secondary" onClick={() => clean.mutate("NEW")} busy={clean.isPending && clean.variables === "NEW"} disabled={!items.some((i) => i.outcome === "NEW" && i.decision === "PENDING" && !i.candidates.some((c: any) => c.score >= 0.55))} title="New definitions with no similar library field; anything close to an existing field needs its own decision"><CheckCheck /> Accept clean new definitions ({items.filter((i) => i.outcome === "NEW" && i.decision === "PENDING" && !i.candidates.some((c: any) => c.score >= 0.55)).length})</Button>
             </div> : null}
           </div>
+          <p className="text-xs text-text-muted" data-keys>Keys: <kbd className="rounded border border-border px-1">J</kbd> / <kbd className="rounded border border-border px-1">K</kbd> next and previous proposal · <kbd className="rounded border border-border px-1">A</kbd> accept · <kbd className="rounded border border-border px-1">N</kbd> name it as a new shared field.</p>
           <div className="space-y-3">{shown.map((i) => <ItemCard key={i.id} item={i} jobId={jobId!} locked={job.status !== "COMPLETED"} />)}{!shown.length ? <p className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-text-muted">Nothing in this view.</p> : null}</div>
         </>
       ) : null}
@@ -70,6 +86,7 @@ export function JobPage() {
           </div>
         </div>
       ) : null}
+      {job.status === "APPLIED" ? <FormFieldDecisions jobId={jobId!} /> : null}
       {applyOpen ? <ApplyDialog job={job} onClose={() => setApplyOpen(false)} onDone={() => nav(`/c/${id}/preview`)} /> : null}
     </div>
   );
@@ -84,7 +101,7 @@ function ItemCard({ item, jobId, locked }: { item: any; jobId: string; locked: b
   const dep = (k: string) => item.affected?.[k];
   const decided = item.decision !== "PENDING";
   return (
-    <article className={cn("rounded-xl border bg-surface-raised p-4 shadow-sm", decided ? "border-border opacity-90" : item.outcome === "CONFLICT" ? "border-danger/40" : item.outcome === "AMBIGUOUS" ? "border-warn/50" : "border-border")}>
+    <article data-proposal={item.id} tabIndex={0} aria-label={`${OUTCOME[item.outcome][1]}: ${item.proposedKey}`} className={cn("rounded-xl border bg-surface-raised p-4 shadow-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", decided ? "border-border opacity-90" : item.outcome === "CONFLICT" ? "border-danger/40" : item.outcome === "AMBIGUOUS" ? "border-warn/50" : "border-border")}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2"><Pill tone={tone}>{label}</Pill><code className="mono font-semibold">{item.proposedKey}</code><Pill>{item.proposedType}</Pill>{item.matchedKey && item.matchedKey !== item.proposedKey ? <span className="text-xs text-text-muted">closest: <code className="mono">{item.matchedKey}</code></span> : null}</div>
@@ -92,7 +109,7 @@ function ItemCard({ item, jobId, locked }: { item: any; jobId: string; locked: b
           <p className="mt-1 text-xs text-text-muted">{item.reason}</p>
           {!decided && item.decisionNote ? <p className="mt-1 text-xs font-medium text-text-warn">{item.decisionNote}</p> : null}
         </div>
-        {decided ? <div className="text-right text-xs"><Pill tone={item.decision === "RETURNED" ? "warn" : "ok"}>{item.decision === "ACCEPTED" ? "Accepted" : item.decision === "CHANGED" ? "Changed" : "Returned"}</Pill><p className="mt-1">{item.decidedKey ? <>uses <code className="mono">{item.decidedKey}</code></> : item.decisionNote}</p><p className="text-text-muted">by {item.decidedBy}</p>{!locked ? <button className="mt-1 text-text-link underline" onClick={() => decide.mutate({ decision: "PENDING" })}>undo</button> : null}</div> : null}
+        {decided ? <div className="text-right text-xs"><Pill tone={item.decision === "RETURNED" ? "warn" : "ok"}>{item.decision === "ACCEPTED" ? "Accepted" : item.decision === "CHANGED" ? "Changed" : item.decision === "NEW" ? "New shared field" : "Returned"}</Pill>{item.decision === "NEW" && item.payload?.label ? <p className="mt-1 font-medium">"{item.payload.label}" · a second person approves it on To review</p> : null}<p className="mt-1">{item.decidedKey ? <>uses <code className="mono">{item.decidedKey}</code></> : item.decisionNote}</p><p className="text-text-muted">by {item.decidedBy}</p>{!locked ? <button className="mt-1 text-text-link underline" onClick={() => decide.mutate({ decision: "PENDING" })}>undo</button> : null}</div> : null}
       </div>
       <div className="mt-3 grid gap-3 lg:grid-cols-3">
         <div className="rounded-lg bg-surface p-3">
@@ -119,14 +136,14 @@ function ItemCard({ item, jobId, locked }: { item: any; jobId: string; locked: b
       </div>
       {!decided && !locked ? (
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-          <Button size="sm" onClick={() => decide.mutate({ decision: "ACCEPTED" })} busy={decide.isPending && !mode}>{rec?.action === "reuse" ? <GitMerge /> : <Plus />} {rec?.text ?? "Accept"}</Button>
+          <Button size="sm" data-accept onClick={() => decide.mutate({ decision: "ACCEPTED" })} busy={decide.isPending && !mode}>{rec?.action === "reuse" ? <GitMerge /> : <Plus />} {rec?.text ?? "Accept"}</Button>
           <Button size="sm" variant="secondary" onClick={() => setMode(mode === "other" ? null : "other")}>Use another library field</Button>
-          {rec?.action !== "create_new" ? <Button size="sm" variant="secondary" onClick={() => setMode(mode === "new" ? null : "new")}>Create a new definition</Button> : <Button size="sm" variant="secondary" onClick={() => setMode(mode === "new" ? null : "new")}>Edit before creating</Button>}
+          <Button size="sm" variant="secondary" data-new onClick={() => setMode(mode === "new" ? null : "new")}>{rec?.action !== "create_new" ? "Create a new shared field" : "Name it as a new shared field"}</Button>
           <Button size="sm" variant="ghost" onClick={() => setMode(mode === "return" ? null : "return")}><CornerUpLeft /> Return</Button>
         </div>
       ) : null}
       {mode === "other" ? <div className="mt-3 flex flex-wrap items-end gap-2"><Field label="Library field key" className="w-96"><Input className="mono" value={key} onChange={(e) => setKey(e.target.value)} list={`c-${item.id}`} /></Field><datalist id={`c-${item.id}`}>{item.candidates.map((cd: any) => <option key={cd.key} value={cd.key}>{cd.meaning}</option>)}</datalist><Button size="sm" onClick={() => decide.mutate({ decision: "CHANGED", key })} busy={decide.isPending}>Use this field</Button></div> : null}
-      {mode === "new" ? <div className="mt-3 grid gap-2 md:grid-cols-[1fr_2fr_auto_auto] md:items-end"><Field label="New key"><Input className="mono" value={key === item.candidates?.[0]?.key ? item.proposedKey : key} onChange={(e) => setKey(e.target.value)} /></Field><Field label="Meaning"><Input value={meaning} onChange={(e) => setMeaning(e.target.value)} /></Field><Field label="Type"><Select value={type} onChange={(e) => setType(e.target.value)}>{["text", "date", "yes_no", "code", "country", "number", "address", "phone", "email"].map((t) => <option key={t}>{t}</option>)}</Select></Field><Button size="sm" onClick={() => decide.mutate({ decision: "CHANGED", key: key === item.candidates?.[0]?.key ? item.proposedKey : key, meaning, valueType: type })} busy={decide.isPending}>Create</Button></div> : null}
+      {mode === "new" ? <NewFieldForm item={item} busy={decide.isPending} onSave={(b) => decide.mutate({ decision: "NEW", ...b })} error={decide.error?.message ?? null} /> : null}
       {mode === "return" ? <div className="mt-3 flex items-end gap-2"><Field label="Why it goes back (shown on its form fields as unresolved)" className="flex-1"><Textarea className="min-h-10" value={note} onChange={(e) => setNote(e.target.value)} /></Field><Button size="sm" variant="destructive" onClick={() => decide.mutate({ decision: "RETURNED", note })} busy={decide.isPending}>Return</Button></div> : null}
     </article>
   );
@@ -145,5 +162,87 @@ function ApplyDialog({ job, onClose, onDone }: { job: any; onClose: () => void; 
         <Field label="Form title" hint="Optional; defaults to the official title."><Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Application for Temporary Resident Visa" /></Field>
       </div>
     </Dialog>
+  );
+}
+
+/** BR-7: a new shared field from a proposal. The person types its name and meaning (never a key: it is generated from
+ *  the group and the name); a reason is needed when the library already has a field that could fit. */
+function NewFieldForm({ item, busy, onSave, error }: { item: any; busy: boolean; onSave: (b: { label: string; meaning: string; valueType: string; reason: string }) => void; error: string | null }) {
+  const guess = item.proposedKey.split(".").slice(-1)[0].replace(/_/g, " ");
+  const [label, setLabel] = React.useState(guess.charAt(0).toUpperCase() + guess.slice(1)), [meaning, setMeaning] = React.useState(item.proposedMeaning), [type, setType] = React.useState(item.proposedType), [reason, setReason] = React.useState("");
+  const close = (item.candidates ?? []).find((c: any) => c.score >= 0.55);
+  return (
+    <div className="mt-3 space-y-2 rounded-lg border border-border p-3" data-new-field>
+      <div className="grid gap-2 md:grid-cols-[1fr_2fr_auto]">
+        <Field label="Name"><Input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={120} /></Field>
+        <Field label="Meaning"><Input value={meaning} onChange={(e) => setMeaning(e.target.value)} /></Field>
+        <Field label="Kind of value"><Select value={type} onChange={(e) => setType(e.target.value)}>{["text", "date", "yes_no", "code", "country", "number", "address", "phone", "email"].map((t) => <option key={t}>{t}</option>)}</Select></Field>
+      </div>
+      <Field label={close ? `Why is this not "${close.key}"? (needed)` : "Reason (optional)"} hint={close ? "The library already has a field that could fit; say why this one means something else." : undefined}><Textarea className="min-h-10" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} /></Field>
+      {error ? <p role="alert" className="text-sm text-text-danger">{error}</p> : null}
+      <div className="flex items-center justify-between gap-2"><p className="text-xs text-text-muted">The key is made from the group and the name. A second person approves the new field on To review before any release carries it.</p><Button size="sm" busy={busy} onClick={() => onSave({ label, meaning, valueType: type, reason })}>Create the shared field</Button></div>
+    </div>
+  );
+}
+
+/** K1: after apply, every form field that no shared field fills needs a decision before release: "not a fact" or
+ *  "filled by hand", each with a reason. Form fields carried from an earlier release only warn. */
+function FormFieldDecisions({ jobId }: { jobId: string }) {
+  const q = useApi<any>(["job-form-fields", jobId], `/jobs/${jobId}/form-fields`);
+  const [open, setOpen] = React.useState<string | null>(null), [kind, setKind] = React.useState<"not_a_fact" | "by_hand">("not_a_fact"), [reason, setReason] = React.useState("");
+  const decide = useAction((dataPath: string) => api(`/editions/${q.data.edition.id}/form-fields/decision`, { method: "POST", json: { dataPath, decision: kind, reason } }), { success: (r: any) => `Decided: ${r.outcome === "by_hand" ? "filled by hand" : "not a fact"}`, invalidate: [["job-form-fields", jobId], ["combination"], ["draft"], ["catalogue"]], onDone: () => { setOpen(null); setReason(""); } });
+  if (!q.data?.edition) return null;
+  const open_ = q.data.fields.filter((f: any) => f.outcome === "unresolved");
+  const decided = q.data.fields.filter((f: any) => f.outcome === "by_hand" || (f.outcome === "not_a_fact" && f.status === "DRAFT"));
+  return (
+    <section aria-labelledby="ff-decide" className="space-y-3 rounded-xl border border-border bg-surface-raised p-4" data-form-field-decisions>
+      <div><h2 id="ff-decide" className="font-semibold">Form fields with no decision ({open_.length})</h2>
+        <p className="text-sm text-text-muted">Each form field is mapped to a shared field, marked "not a fact" (nothing is filled from case facts), or "filled by hand" with a reason. {open_.some((f: any) => !f.carried) ? "Release waits until every new one is decided." : open_.length ? "These come from an earlier release: decide them when you can." : "Every form field has a decision."}</p></div>
+      <ul className="divide-y divide-border text-sm">{open_.slice(0, 50).map((f: any) => (
+        <li key={f.dataPath} className="py-2" data-form-field={f.dataPath}>
+          <div className="flex flex-wrap items-center justify-between gap-2"><span><b className="font-medium">{f.caption || f.dataPath}</b>{f.heading ? <span className="text-text-muted"> · {f.heading}</span> : null}{f.carried ? <Pill className="ml-2">Not decided yet (from an earlier release)</Pill> : null}{f.reason ? <span className="block text-xs text-text-muted">{f.reason}</span> : null}</span>
+            <Button size="sm" variant="secondary" onClick={() => { setOpen(open === f.dataPath ? null : f.dataPath); setReason(""); }}>Decide</Button></div>
+          {open === f.dataPath ? (
+            <div className="mt-2 grid gap-2 md:grid-cols-[auto_1fr_auto] md:items-end">
+              <Field label="Decision"><Select value={kind} onChange={(e) => setKind(e.target.value as any)}><option value="not_a_fact">Not a fact</option><option value="by_hand">Filled by hand</option></Select></Field>
+              <Field label="Reason"><Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder={kind === "by_hand" ? "Who fills it and why" : "Signature, office use, a document…"} /></Field>
+              <Button size="sm" busy={decide.isPending} onClick={() => decide.mutate(f.dataPath)}>Save</Button>
+            </div>
+          ) : null}
+        </li>))}</ul>
+      {open_.length > 50 ? <p className="text-xs text-text-muted">Showing 50 of {open_.length}.</p> : null}
+      {decided.length ? <p className="text-xs text-text-muted">{decided.length} decided in this draft.</p> : null}
+    </section>
+  );
+}
+
+/** K2 (Screen 02 slice 3): a checklist draft. Each proposal is a document requirement (or a section, rule or check) with
+ *  the checklist's own words beside it; a person accepts or returns each, then applies them to the draft. */
+function ChecklistJob({ job, combinationId }: { job: any; combinationId: string }) {
+  const nav = useNavigate();
+  const items = job.items as any[];
+  const decide = useAction((v: { id: string; decision: string; note?: string }) => api(`/jobs/${job.id}/items/${v.id}`, { method: "POST", json: { decision: v.decision, note: v.note } }), { invalidate: [["job", job.id]] });
+  const apply = useAction(() => api(`/jobs/${job.id}/apply-checklist`, { method: "POST" }), { success: (r: any) => `${r.added} document requirement${r.added === 1 ? "" : "s"} added to the draft${r.skipped.length ? `; not applied: ${r.skipped.length}` : ""}`, invalidate: [["job", job.id], ["combination"], ["draft"], ["catalogue"]], onDone: () => nav(`/c/${combinationId}`) });
+  const pending = items.filter((i) => i.decision === "PENDING").length;
+  const [back, setBack] = React.useState<string | null>(null), [note, setNote] = React.useState("");
+  return (
+    <div className="mx-auto max-w-5xl space-y-5">
+      <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to={`/c/${combinationId}`} className="hover:underline">Combination</Link><ChevronRight className="size-3" /><span>Checklist draft</span></nav>
+      <div><h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 text-[#7c3aed]" /> {job.attachment?.edition ?? "Checklist"}: proposed document requirements</h1>
+        <div className="mt-2 flex flex-wrap gap-1.5"><ModePill mode={job.mode} /><StatusPill status={job.status} /><Pill>US${Number(job.costUsd ?? 0).toFixed(2)}</Pill></div>
+        <p className="mt-2 max-w-3xl text-sm text-text-muted">{job.message}</p></div>
+      {!items.length ? <Notice title="Nothing proposed">The stub pass proves the path only; a live draft proposes each document requirement with the checklist's words beside it.</Notice> : (
+        <ul className="space-y-3">{items.map((i) => { const p = i.payload ?? {}; return (
+          <li key={i.id} className="rounded-xl border border-border bg-surface-raised p-4" data-checklist-item={i.kind}>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div><Pill tone="info">{i.kind.replace("_", " ")}</Pill> <b className="ml-1">{p.document_type ?? i.proposedMeaning}</b><p className="mt-1 text-sm">{p.who ? `For ${String(p.who).replace(/_/g, " ")}` : null}{p.base_or_conditional === "conditional" ? ` · when ${p.condition_plain}` : " · always"}</p></div>
+              {i.decision !== "PENDING" ? <Pill tone={i.decision === "RETURNED" ? "warn" : "ok"}>{i.decision === "ACCEPTED" ? "Accepted" : "Returned"}</Pill> : job.status === "COMPLETED" ? <div className="flex gap-2"><Button size="sm" onClick={() => decide.mutate({ id: i.id, decision: "ACCEPTED" })}>Accept</Button><Button size="sm" variant="ghost" onClick={() => { setBack(back === i.id ? null : i.id); setNote(""); }}>Return</Button></div> : null}
+            </div>
+            {back === i.id ? <div className="mt-2 flex items-end gap-2"><Field label="Why it goes back" className="flex-1"><Input value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} /></Field><Button size="sm" variant="secondary" disabled={note.trim().length < 3} onClick={() => { decide.mutate({ id: i.id, decision: "RETURNED", note }); setBack(null); }}>Return it</Button></div> : null}
+            {i.sourceQuote ? <blockquote className="mt-2 border-l-2 border-border pl-3 text-sm text-text-muted">"{i.sourceQuote}"</blockquote> : null}
+          </li>); })}</ul>
+      )}
+      {job.status === "COMPLETED" && items.length ? <div className="flex items-center justify-end gap-3"><p className="text-sm text-text-muted">{pending ? `${pending} still to decide` : "Every proposal decided"}</p><Button disabled={!!pending} busy={apply.isPending} onClick={() => apply.mutate(undefined)}>Apply to the draft</Button></div> : null}
+    </div>
   );
 }

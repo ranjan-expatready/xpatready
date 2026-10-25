@@ -20,6 +20,10 @@ import { EXPERIMENT_CAP_USD, RUN_CAP_USD } from "../../../p2/policy.ts";
 import { ACTORS, Audit, Db, fail, need, PROTOTYPE, Workspace, type Actor } from "./core.ts";
 /** A person by name on every AI work view (Screen 02 board view 10): never an internal id. */
 const personName = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "A person";
+/** A4 (Screen 02 slice 2, challenge point 5): a step's parts as it ran them, read-only, in plain counts. */
+type PartState = { index: number; sections: string[]; fields: number; status: string; cost_usd?: number; error?: string | null };
+const partsOf = (detail: unknown) => ((detail as { a4?: { parts?: PartState[] } } | null)?.a4?.parts ?? []).map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, status: p.status, cost_usd: p.cost_usd ?? 0, message: p.error ?? null }));
+const partsLine = (all: ReturnType<typeof partsOf>) => { if (!all.length) return null; const n = (s: string) => all.filter((p) => p.status === s).length; return `${all.length} part${all.length === 1 ? "" : "s"} · ${[n("done") && `${n("done")} done`, n("failed") && `${n("failed")} failed`, n("running") && `${n("running")} running`, n("queued") && `${n("queued")} queued`, n("not started") && `${n("not started")} not started`].filter(Boolean).join(", ")}`; };
 import { Sources } from "./sources.ts";
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -264,13 +268,13 @@ export class Ai implements OnModuleInit {
     const atts = await this.db.sourceAttachment.findMany({ where: { id: { in: b!.jobs.map((j) => j.attachmentId!).filter(Boolean) } }, select: { id: true, edition: true, fileName: true } });
     const plan = b!.plan as any;
     return { ...b, started_by_name: personName(b!.startedBy), plan: undefined, plan_targets: plan.targets, totals: plan.totals, operation_label: plan.operation_label, capability_note: plan.capability_note,
-      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), id: j.id, combinationId: j.combinationId, combination: j.combination.label, program: j.combination.program.label, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
+      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), parts: partsOf(j.detail), a4: (j.detail as { a4?: { total: number; reused: number; leftover: number } } | null)?.a4 ? { total: (j.detail as any).a4.total, reused: (j.detail as any).a4.reused, leftover: (j.detail as any).a4.leftover } : null, id: j.id, combinationId: j.combinationId, combination: j.combination.label, program: j.combination.program.label, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
   }
 
   async batches() {
     const workspaceId = await this.ws.id();
-    const list = await this.db.aiBatch.findMany({ where: { workspaceId }, orderBy: { startedAt: "desc" }, take: 50, include: { jobs: { select: { status: true, costUsd: true } } } });
-    return list.map((b) => ({ id: b.id, scopeKind: b.scopeKind, scopeLabel: b.scopeLabel, mode: b.mode, status: b.status, message: b.message, startedBy: b.startedBy, started_by_name: personName(b.startedBy), startedAt: b.startedAt, finishedAt: b.finishedAt, worstCaseUsd: b.worstCaseUsd, steps: b.jobs.length, spent_usd: round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), counts: b.jobs.reduce((m: Record<string, number>, j) => ({ ...m, [j.status]: (m[j.status] ?? 0) + 1 }), {}) }));
+    const list = await this.db.aiBatch.findMany({ where: { workspaceId }, orderBy: { startedAt: "desc" }, take: 50, include: { jobs: { select: { status: true, costUsd: true, detail: true } } } });
+    return list.map((b) => ({ id: b.id, scopeKind: b.scopeKind, scopeLabel: b.scopeLabel, mode: b.mode, status: b.status, message: b.message, startedBy: b.startedBy, started_by_name: personName(b.startedBy), startedAt: b.startedAt, finishedAt: b.finishedAt, worstCaseUsd: b.worstCaseUsd, steps: b.jobs.length, parts: partsLine(b.jobs.flatMap((j) => partsOf(j.detail))), spent_usd: round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), counts: b.jobs.reduce((m: Record<string, number>, j) => ({ ...m, [j.status]: (m[j.status] ?? 0) + 1 }), {}) }));
   }
 
   async cancel(actor: Actor, id: string) {

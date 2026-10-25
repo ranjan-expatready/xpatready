@@ -7,7 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles } from "lucide-react";
 import { api, ApiError, useToast } from "@/lib/api";
-import { Button, Dialog, Field, Input, Notice, Pill } from "@/components/ui/controls";
+import { Button, Field, Input, Notice, Panel, Pill } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
@@ -44,7 +44,8 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
   const runnable = p ? p.totals.steps : 0;
   const groups = p ? Object.values(p.targets.reduce((m: any, t: any) => { (m[t.combinationId] ??= { label: t.combination, program: t.program, items: [] }).items.push(t); return m; }, {})) as any[] : [];
   return (
-    <Dialog wide open onOpenChange={(o) => !o && onClose()} title="AI configuration" description={p ? `${p.operation_label} · ${p.scope.label}` : scope.label ?? "Preparing the plan"}
+    // Screen 02 board view 2 (Draft setup): the team's right panel (P-48), the plan and its cost before any paid run (BR-3).
+    <Panel open onOpenChange={(o) => !o && onClose()} title={scope.kind === "combination" ? "Draft setup" : "AI configuration"} description={p ? `${p.operation_label} · ${p.scope.label}` : scope.label ?? "Preparing the plan"}
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={start} busy={busy} disabled={!p || !runnable || plan.isFetching || !(Number(limit) >= 0)}><Sparkles /> {p ? `Start ${runnable} step${runnable === 1 ? "" : "s"}${p.totals.worst_usd ? `, up to US$${p.totals.worst_usd.toFixed(2)}` : ", US$0"}` : "Start"}</Button></>}>
       <div className="space-y-4">
         <fieldset className="grid gap-2 md:grid-cols-3" aria-label="How the AI runs">
@@ -55,6 +56,7 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
             </label>
           ))}
         </fieldset>
+        {p ? <p className="rounded-lg border border-border bg-surface px-3 py-2 text-sm" data-cost-line>{mode === "LIVE" ? <>Expected {p.totals.expected_usd === null ? "unknown" : `US$${p.totals.expected_usd.toFixed(2)}`} · worst case US${p.totals.worst_usd.toFixed(2)} (each form capped at US${p.per_run_cap_usd}) · Spent so far US${(p.ledger.cap_usd - p.ledger.remaining_usd).toFixed(2)} of US${p.ledger.cap_usd}.</> : mode === "REPLAY" ? "Replay of saved real runs: no model call, US$0." : "Stub pass: no network, no cost, no AI content."}</p> : null}
         {p ? <p className="text-xs text-text-muted">{p.capability_note}</p> : null}
         {plan.isLoading ? <Spinner label="Working out what would run" /> : plan.isError ? <Notice tone="danger" title="The plan could not be made">{(plan.error as Error).message}</Notice> : p ? (
           <>
@@ -85,13 +87,32 @@ export function AiLaunchDialog({ scope, onClose, initialMode = "LIVE" }: { scope
             </div>
           </>
         ) : null}
+        {scope.kind === "combination" && scope.ids.length === 1 ? <Checklists combinationId={scope.ids[0]} onOpen={(jobId) => { onClose(); nav(`/c/${scope.ids[0]}/jobs/${jobId}`); }} /> : null}
         {err ? <Notice tone="danger" title="Not started">{err}</Notice> : null}
-        <p className="text-xs text-text-muted">AI output is a proposal: a person decides each item, applies it to the draft, and release stays a separate approval. A sent AI call cannot be recalled by Cancel.</p>
+        <p className="text-xs text-text-muted">AI output is a proposal: a person decides each item on To review, applies it to the draft, and release stays a separate approval. A sent AI call cannot be recalled by Cancel.</p>
       </div>
-    </Dialog>
+    </Panel>
   );
 }
 
 function Count({ n, l, tone }: { n: React.ReactNode; l: string; tone?: string }) {
   return <div className={cn("rounded-lg border border-border px-3 py-2", tone === "ai" && "border-[#7c3aed]/40")}><p className="text-base font-semibold">{n}</p><p className="text-[11px] text-text-muted">{l}</p></div>;
+}
+
+/** K2 (Screen 02 slice 3): the combination's official checklists, drafted into document requirements on the same review
+ *  path. Only the stub pass runs until the founder agrees the live run's cost. */
+function Checklists({ combinationId, onOpen }: { combinationId: string; onOpen: (jobId: string) => void }) {
+  const list = useQuery<any[]>({ queryKey: ["attachments", combinationId], queryFn: () => api(`/combinations/${combinationId}/attachments`) });
+  const [busy, setBusy] = React.useState<string | null>(null), [err, setErr] = React.useState<string | null>(null);
+  const checklists = (list.data ?? []).filter((a) => a.recognised && a.kind === "Document checklist");
+  if (!checklists.length) return null;
+  const run = async (id: string) => { setBusy(id); setErr(null); try { const j = await api<any>(`/attachments/${id}/draft-checklist`, { method: "POST", json: { mode: "stub" } }); onOpen(j.id); } catch (e) { setErr((e as Error).message); } finally { setBusy(null); } };
+  return (
+    <section aria-labelledby="ck-h" className="space-y-2 rounded-lg border border-border p-3" data-checklists>
+      <h3 id="ck-h" className="text-sm font-semibold">Checklists: document requirements</h3>
+      <p className="text-xs text-text-muted">AI drafts each checklist's document requirements with its own words beside them; a person decides each one. A live draft waits for the founder's OK on its cost (Sample estimate under US$0.50, capped at US$5): until then the stub pass shows the path, with no AI content.</p>
+      <ul className="space-y-1 text-sm">{checklists.map((a) => <li key={a.id} className="flex items-center justify-between gap-2"><span>{a.edition ?? a.fileName}</span><Button size="sm" variant="secondary" busy={busy === a.id} onClick={() => void run(a.id)}>Stub pass · US$0</Button></li>)}</ul>
+      {err ? <p role="alert" className="text-sm text-text-danger">{err}</p> : null}
+    </section>
+  );
 }

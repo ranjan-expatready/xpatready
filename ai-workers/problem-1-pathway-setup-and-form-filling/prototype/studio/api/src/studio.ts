@@ -575,7 +575,7 @@ export class Studio {
       return { ...out, pack: pack.version, library };
     }, RELEASE_TX);
     await this.audit.log(c.workspaceId, actor.id, "released", "configuration", c.combinationKey, `${actor.name} approved and released "${c.label}" in Release ${release.pack}; ${Object.entries(release.n).filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(", ") || "no draft rows"} published`, { sha256, published: release.n, pack_version: release.pack }, id);
-    return { version: release.version, pack: release.pack, sha256, published: release.n };
+    return { version: release.version, pack: release.pack, sha256, published: release.n, library: release.library };
   }
 
   /** The review steps a draft must have passed before anyone releases it, wherever the release is started (QA-1): it was
