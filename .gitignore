@@ -36,3 +36,7 @@ ai-workers/problem-1-pathway-setup-and-form-filling/inputs/meeting-*/
 
 # devin local config
 .devin/
+
+# Scout lane (P-91): the browser tool output and Goose memory stay local
+ai-workers/problem-1-pathway-setup-and-form-filling/product/scout/reports/playwright/
+.goose/memory/

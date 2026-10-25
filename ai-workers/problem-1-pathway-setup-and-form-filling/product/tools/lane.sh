@@ -1,6 +1,6 @@
 #!/bin/bash
 # Lanes (P-64, product/LANES.md): which lane this copy is, binding it, making it runnable, syncing it, and the status of all.
-#   lane.sh whoami            -> lead | screens | forms | evidence | runtime | qa | unbound
+#   lane.sh whoami            -> lead | screens | forms | evidence | runtime | qa | scout | unbound
 #   lane.sh bind <lane>       bind this lane copy (git worktree, or a cloud clone: checks out the lane's newest branch) once
 #   lane.sh branch <lane>     the lane's newest branch on origin (<lane>/* or claude/<lane>-*)
 #   lane.sh setup             make this copy runnable: link .tools when present, npm ci when node_modules is missing
@@ -9,7 +9,7 @@
 #   lane.sh table             the lanes table from each lane's newest copy (else main); STATE.md and the Lead's replies use it
 #   lane.sh state             rewrite the generated table in STATE.md (main copy only, on branch main)
 #   lane.sh leads             Lead commits on main in the last 30 minutes and on other claude/* branches not yet in main (one Lead at a time, P-87)
-LANES="screens forms evidence runtime qa"
+LANES="screens forms evidence runtime qa scout"
 P="ai-workers/problem-1-pathway-setup-and-form-filling"
 HERE="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not in the repository"; exit 2; }
 MAIN="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
@@ -27,6 +27,7 @@ whoami_() {
     evidence/*|claude/evidence-*) echo evidence;;
     runtime/*|claude/runtime-*) echo runtime;;
     qa/*|claude/qa-*) echo qa;;
+    scout/*) echo scout;;
     *) case "$(basename "$HERE")" in
          screens-*) echo screens;; forms-*) echo forms;; evidence-*) echo evidence;;
          runtime-*) echo runtime;; qa-*) echo qa;; *) echo unbound;; esac;;
