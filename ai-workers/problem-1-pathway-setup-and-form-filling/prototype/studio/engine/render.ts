@@ -149,9 +149,6 @@ export function render(s: Snapshot, people: Person[], known: Known, opts: { docu
       if (kv) { boxes.push({ ...base, coverage: kv.status === "confirmed" ? "confirmed fact" : "answered on screen", detail: kv.source, value: kv.value }); continue; }
       if (!field.has(e.fact)) { boxes.push({ ...base, coverage: "unresolved", detail: "the form field reads a field that is not in the library" }); continue; }
       const docs = docFacts.get(e.fact);
-      // Screen 03 S2 (B2): a field the library says the case officer fills is the officer's, wherever it is placed.
-      if (p && field.get(e.fact)?.filled_by === "CASE_OFFICER") { boxes.push({ ...base, coverage: "staff working view", detail: `${sectionTitle.get(p.section_id) ?? p.section_id}; filled by the case officer` }); continue; }
-      if (p && field.get(e.fact)?.filled_by === "CLIENT") { boxes.push({ ...base, coverage: "client question", detail: `${sectionTitle.get(p.section_id) ?? p.section_id}; the client fills it` }); continue; }
       if (p?.collected_from === "verified_document" || (docs && !p)) { boxes.push({ ...base, coverage: docs ? "document reading" : "unresolved", detail: docs ? `a supported document can supply it: ${docs.join(", ")}` : "collected from a document, but no supported document type supplies it" }); continue; }
       if (!p) { boxes.push({ ...base, coverage: "unresolved", detail: "no question placement: nobody is asked for this value yet" }); continue; }
       const cov: Coverage = p.collected_from === "client_questionnaire" ? "client question" : p.collected_from === "profile_record" || p.collected_from === "existing_record" ? "client profile" : "staff working view";

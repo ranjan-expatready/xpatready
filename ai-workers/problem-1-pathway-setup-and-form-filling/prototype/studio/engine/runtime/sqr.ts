@@ -38,7 +38,7 @@ export function sqrView(s: Snapshot, roleIn: string | undefined, whereUsed: Map<
   });
   const role = roles.some((x) => x.role === roleIn) ? roleIn! : roles[0]?.role ?? "principal";
   const person = firstOf.get(role)?.subjectId ?? "principal";
-  const field = new Map((s.canonical_fields as { id: string; meaning?: string; filled_by?: string }[]).map((f) => [f.id, f]));
+  const field = new Map((s.canonical_fields as { id: string; meaning?: string }[]).map((f) => [f.id, f]));
   const place = new Map((s.placements as { fact: string; section_id: string; question_text?: string | null; collected_from?: string; condition_plain?: string | null; condition_effect?: string | null }[]).map((p) => [p.fact, p]));
   const selected = new Set((s.sections as { id: string }[]).map((x) => x.id));
   const titles = new Map((s.sections as { id: string; title: string }[]).map((x) => [x.id, x.title]));
@@ -49,7 +49,7 @@ export function sqrView(s: Snapshot, roleIn: string | undefined, whereUsed: Map<
     for (const q of part.questions) {
       if (sec.questions.some((x) => x.fact === q.fact)) continue;
       const p = place.get(q.fact), f = field.get(q.fact);
-      sec.questions.push({ fact: q.fact, label: q.label, asked_as: p?.question_text ?? null, meaning: f?.meaning ?? q.fact, filled_by: filledByOf(f, p), filled_by_set: !!f?.filled_by,
+      sec.questions.push({ fact: q.fact, label: q.label, asked_as: p?.question_text ?? null, meaning: f?.meaning ?? q.fact, filled_by: filledByOf(p),
         client_only: (CLIENT_ONLY_SECTIONS as readonly string[]).includes(p?.section_id ?? ""), needed_by: [...new Set(q.fills.map((x) => x.form))], rule: p?.condition_plain ? `${(p.condition_effect ?? "SHOW").toLowerCase()} when ${p.condition_plain}` : null,
         group: !!q.group, required: q.required, where_used: whereUsed.get(q.fact) ?? 0 });
     }
@@ -64,7 +64,7 @@ export function sqrView(s: Snapshot, roleIn: string | undefined, whereUsed: Map<
   for (const c of r.coverage) for (const b of c.boxes) if (b.fact && b.about && mine(person)(b.about.split("/")[0]) && !b.about.includes("/")) needed.set(b.fact, b.coverage);
   const gaps = gapsAll.filter((g) => g.role === role || (role === "principal" && g.role === "the application"));
   const gapFacts = new Set(gaps.map((g) => g.fact));
-  const client = [...needed.keys()].filter((f) => !gapFacts.has(f) && filledByOf(field.get(f), place.get(f)) === "CLIENT").length;
+  const client = [...needed.keys()].filter((f) => !gapFacts.has(f) && filledByOf(place.get(f)) === "CLIENT").length;
   return { roles, role, person, coverage: { needed: needed.size, client, officer: needed.size - client - [...needed.keys()].filter((f) => gapFacts.has(f)).length, gaps }, sections, not_asked: view.summary.not_asked };
 }
 

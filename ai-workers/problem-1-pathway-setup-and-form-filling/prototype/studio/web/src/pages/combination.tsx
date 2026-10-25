@@ -55,7 +55,7 @@ export function CombinationPage() {
     sum.data?.portalLabel ?? null,
     d.allowed_locations?.length ? `cases opened ${d.allowed_locations.map((l) => l === "inside_canada" ? "inside Canada" : "outside Canada").join(" or ")}` : null,
     `people: ${roleSummary(c.participants)}`,
-    c.source_basis === "ILLUSTRATIVE" ? "Sample (illustrative)" : "source-backed",
+    c.source_basis === "ILLUSTRATIVE" ? "Sample (illustrative)" : null, // SC-5: no "source-backed" jargon in the subtitle
   ].filter(Boolean).join(" · ");
   return (
     <TipProvider>

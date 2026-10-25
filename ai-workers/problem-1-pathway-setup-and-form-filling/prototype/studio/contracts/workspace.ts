@@ -42,16 +42,16 @@ export const FormLineEdit = z.object({
   signedBy: z.enum(SIGNED_BY.map((x) => x.key) as [string, ...string[]], { error: "Choose who signs it from the list." }).nullable().optional(),
 });
 
-/** B2, RD-6: who fills a shared field. Null in the library means "as placed": the client for a questionnaire or profile
- *  placement, the case officer for a document, record or working view. */
+/** B2, RD-6: who fills a question is its placement's source (S2 FIX: the interim library "filled by" is gone; a change
+ *  goes through the shared library as an approved library change): the client for a questionnaire or profile
+ *  placement, and always for a background or declaration section; the case officer for a document, record or working view. */
 export const FILLED_BY = { CLIENT: "Client", CASE_OFFICER: "Case officer" } as const;
 export type FilledBy = keyof typeof FILLED_BY;
-export const filledByOf = (field: { filled_by?: string | null } | undefined, placement: { collected_from?: string } | undefined): FilledBy =>
-  field?.filled_by === "CLIENT" || field?.filled_by === "CASE_OFFICER" ? field.filled_by : placement && ["client_questionnaire", "profile_record"].includes(placement.collected_from ?? "") ? "CLIENT" : "CASE_OFFICER";
+export const filledByOf = (placement: { collected_from?: string; section_id?: string } | undefined): FilledBy =>
+  placement && ((CLIENT_ONLY_SECTIONS as readonly string[]).includes(placement.section_id ?? "") || ["client_questionnaire", "profile_record"].includes(placement.collected_from ?? "")) ? "CLIENT" : "CASE_OFFICER";
 /** Background and declaration questions stay with the client (concept BR-9). Sample list until the immigration expert
  *  confirms which library sections these are. */
 export const CLIENT_ONLY_SECTIONS = ["background_declarations", "background_medical", "security_history"] as const;
-export const SetFilledBy = z.object({ filledBy: z.enum(["CLIENT", "CASE_OFFICER"], { error: "Choose Client or Case officer." }).nullable() });
 
 /** Sample families for Preview by person (P-37: preset families, then tweaks). Each is offered when the combination's
  *  people allow it; the people are Sample, never a real household. */
@@ -82,7 +82,7 @@ export type PreviewView = {
 };
 
 /** The SQR tab (S2): one role's questions as a case asks them; coverage per role (BR-7). */
-export type SqrQuestion = { fact: string; label: string; asked_as: string | null; meaning: string; filled_by: FilledBy; filled_by_set: boolean; client_only: boolean; needed_by: string[]; rule: string | null; group: boolean; required: boolean; where_used: number };
+export type SqrQuestion = { fact: string; label: string; asked_as: string | null; meaning: string; filled_by: FilledBy; client_only: boolean; needed_by: string[]; rule: string | null; group: boolean; required: boolean; where_used: number };
 export type SqrSection = { id: string; title: string; selected: boolean; questions: SqrQuestion[] };
 export type SqrRole = { role: string; label: string; person: string; questions: number; gaps: number };
 export type SqrView = {

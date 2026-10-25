@@ -39,21 +39,31 @@ const sql = (q) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1:54329/$
   const badRole = await call("PATCH", `/combinations/${fsOut}`, { participants: [...fo, { role: "cousin", label: "Cousin", min: 0, max: 1 }] });
   ok("C4.1 Sponsor fail: a role not on the list is refused in plain words", badRole.status === 400 && /Unknown participant role cousin/.test(JSON.stringify(badRole.body)), badRole.body);
 
-  // ───────────── B2 filled by: the shared field, everywhere it is used
+  // ───────────── S2 FIX: filled by is the placement's source, read-only (re-check Blocker); the interim field write is gone
   const lang = "person.native_language";
-  r = await call("PATCH", `/library/fields/${lang}`, { filledBy: "CASE_OFFICER" });
   let q = (await ws(vv, { tab: "sqr" })).body.sqr.sections.flatMap((x) => x.questions).find((x) => x.fact === lang);
-  const phone = (await ws(vv, { tab: "sqr" })).body.phone.sections.flatMap((x) => x.questions).map((x) => x.fact);
-  ok("C4.1 B2 pass: \"filled by the case officer\" is saved as a draft of the shared field, says how many combinations use it, and leaves the client's questionnaire", r.status === 200 && r.body.status === "DRAFT" && r.body.where_used.combinations >= 1 && q.filled_by === "CASE_OFFICER" && q.filled_by_set && !phone.includes(lang), { where: r.body.where_used, q });
+  r = await call("PATCH", `/library/fields/${lang}`, { filledBy: "CASE_OFFICER" });
+  ok("C4.1 B2 fail: \"filled by\" is not changed field by field — refused in plain words, pointing at the shared library (400)", r.status === 400 && /shared library/i.test(r.body?.detail ?? "") && /shared library/i.test(r.body?.errors?.[0]?.message ?? ""), [r.status, r.body?.detail]);
+  ok("C4.1 B2 pass: the SQR question still says who fills it from its placement, with the where-used count", q.filled_by === "CLIENT" && q.where_used >= 1, q);
   const decl = (await call("GET", `/combinations/${vv}/config?mode=draft`)).body.snapshot.placements.find((p) => p.section_id === "background_declarations")?.fact;
-  r = await call("PATCH", `/library/fields/${decl}`, { filledBy: "CASE_OFFICER" });
-  ok("C4.1 B2 fail: a background or declaration question stays with the client (422, on the field)", r.status === 422 && r.body.errors?.[0]?.field === "filledBy" && /stay with the client/.test(r.body.detail), [decl, r.status]);
-  r = await call("PATCH", `/library/fields/${lang}`, { filledBy: "SOMEONE" });
-  const r2 = await call("PATCH", `/library/fields/${lang}`, { filledBy: "CLIENT" }, "user-B");
-  ok("C4.1 B2 fail: an unknown value is a 400 with a message; a person without the author duty is refused (403)", r.status === 400 && r.body.errors?.[0]?.message === "Choose Client or Case officer." && r2.status === 403);
-  await call("PATCH", `/library/fields/${lang}`, { filledBy: null });
-  q = (await ws(vv, { tab: "sqr" })).body.sqr.sections.flatMap((x) => x.questions).find((x) => x.fact === lang);
-  ok("C4.1 B2 pass: back to \"as placed\" (null): the client answers it again", q.filled_by === "CLIENT" && !q.filled_by_set);
+  const qd = (await ws(vv, { tab: "sqr" })).body.sqr.sections.flatMap((x) => x.questions).find((x) => x.fact === decl);
+  ok("C4.1 B2 pass: a background or declaration question stays with the client however it is collected", !decl || (qd?.filled_by === "CLIENT" && qd?.client_only === true), qd);
+
+  // ───────────── S2 FIX: audit D-1 and D-2
+  r = await call("POST", `/combinations/${vv}/signoff`, undefined);
+  ok("C4.1 D-1 fail: signoff with no body is a 400 in plain words, never a TypeError 500", r.status === 400 && !!r.body?.detail, [r.status, r.body?.detail]);
+  r = await call("POST", `/combinations/${vv}/submit`, {}, "user-B");
+  ok("C4.1 D-2 fail: only the author submits — an approver is refused (403)", r.status === 403 && /author duty/.test(JSON.stringify(r.body)), [r.status, r.body]);
+  r = await call("POST", `/combinations/${vv}/submit`, {}, "user-C");
+  ok("C4.1 D-2 fail: the content reviewer (review + SME duty, no author duty) is refused too", r.status === 403, r.status);
+
+  // ───────────── S2 FIX: SC-4 — one filing status: pending sources are named for what they are
+  const leaf = await call("POST", "/program-nodes", { kind: "STREAM", label: "S2 pending stream", parentKey: "individual.visitors" });
+  const fresh = await call("POST", "/combinations", { nodeKey: leaf.body?.nodeKey ?? "individual.visitors.s2_pending_stream" });
+  const freshId = fresh.body?.combination?.id;
+  await call("POST", `/combinations/${freshId}/attachments/sample`, { officialFile: "imm5409e.pdf" });
+  const fsum = (await call("GET", `/combinations/${freshId}/summary`)).body;
+  ok("C1.6 SC-4 pass: with a form attached as a source and none set up, the filing words say so (never \"No forms yet\")", fsum.pending_sources === 1 && /attached as source/.test(fsum.filing) && !/No forms yet/.test(fsum.filing), { filing: fsum.filing, pending: fsum.pending_sources });
 
   // ───────────── BR-7: a real gap blocks release (an online screen field mapped to a field nobody is asked for)
   // An online-only Sample form (no PDF version in the library, so its screen map is the one a case reads; see build
@@ -91,7 +101,7 @@ const sql = (q) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1:54329/$
     ok(`C1.4, C4.1: axe (${width}) SQR with a gap: no serious or critical violation`, !(await axe(p, `sqr-gap-${width}`)).length, axeLog.at(-1).violations); await shot(p, "sqr-gap");
     const tabs = await p.getByRole("tablist", { name: "Combination" }).getByRole("tab").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().right)));
     ok(`C1.4 (${width}): S1 change 5: every tab, Sources included, is on screen (the row wraps instead of hiding tabs)`, tabs.length === 9 && tabs.every((x) => x <= width), tabs);
-    await p.getByRole("tab", { name: "Review and release" }).click(); await p.getByText(new RegExp(GAP.replace(/\./g, "\\."))).first().waitFor();
+    await p.getByRole("tab", { name: "Review and release" }).click(); await p.waitForURL("**/review"); await p.getByText(/nobody is asked for it/).first().waitFor();
     ok(`C4.1 BR-7 (${width}): Review and release lists the gap as a problem that blocks release`, /nobody is asked for it/.test(await p.locator("main").innerText())); await shot(p, "review-gap-blocks");
     if (width === 1440) {
       // place the field: the gap closes, the problem goes
@@ -99,16 +109,10 @@ const sql = (q) => execFileSync(PSQL, [`postgresql://xr_studio@127.0.0.1:54329/$
       await p.goto(`${BASE}/c/${vv}/sqr`); await p.getByRole("group", { name: "Person role" }).waitFor();
       ok("C4.1 BR-7 pass: once the field is placed in a section, the gap and the release problem are gone", (await p.getByRole("list", { name: "Facts nobody is asked for" }).count()) === 0 && !(await call("GET", `/combinations/${vv}`)).body.draft.problems.some((x) => x.where === "SQR"));
       await shot(p, "sqr");
-      // filled by, with the where-used confirmation
+      // S2 FIX: filled by is read-only, from the placement, with the where-used count
       const row = p.locator(`tr[data-fact="${lang}"]`); if (!(await row.count())) await p.getByRole("button", { name: /Languages/ }).click();
-      await p.getByRole("combobox", { name: /^Who fills Native language/ }).selectOption("CASE_OFFICER");
-      const dlg = p.getByRole("dialog"); await dlg.waitFor();
-      ok("C4.1 B2 (browser): changing who fills a shared field first says it changes the field everywhere, and in how many combinations", /This changes the shared field everywhere/.test(await dlg.innerText()) && (await dlg.getByRole("button", { name: /^Change it in \d+ combination/ }).count()) === 1);
-      ok("C4.1: axe filled-by dialog: no serious or critical violation", !(await axe(p, "sqr-filled-by-dialog")).length, axeLog.at(-1).violations); await shot(p, "sqr-filled-by-dialog");
-      await dlg.getByRole("button", { name: /^Change it in/ }).click(); await dlg.waitFor({ state: "detached" });
-      await p.waitForFunction((f) => document.querySelector(`tr[data-fact="${f}"]`)?.textContent?.includes("Case officer") && !document.querySelector(`tr[data-fact="${f}"]`)?.textContent?.includes("as placed"), lang, { timeout: 8000 }).catch(() => {});
-      ok("C4.1 B2 pass (browser): saved; the row says the case officer fills it (no longer \"as placed\")", !/as placed/.test(await p.locator(`tr[data-fact="${lang}"]`).innerText()));
-      await call("PATCH", `/library/fields/${lang}`, { filledBy: null });
+      const rowText = await row.innerText();
+      ok("C4.1 B2 (browser): \"Filled by\" is read-only — no control, the words point at the shared library and name the where-used count", (await row.getByRole("combobox").count()) === 0 && /Client/.test(rowText) && /Changes go through the shared library/.test(rowText) && /used in \d+ combination/.test(rowText), rowText.slice(0, 160));
       // S1 change 2: a field's error clears when it is edited
       await p.goto(`${BASE}/c/${vv}/forms`); await p.getByRole("button", { name: "Edit the IMM 5707 line" }).click();
       const d = p.getByRole("dialog"); await d.waitFor();

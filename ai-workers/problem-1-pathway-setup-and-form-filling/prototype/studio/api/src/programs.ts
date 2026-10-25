@@ -474,9 +474,15 @@ export class Programs {
     // query for all lines (break round 2 m7), the same rule as defaultChannelFor.
     const onlineForms = new Set(c.portalKey ? (await this.db.formEdition.findMany({ where: { govFormDefId: { in: lines.map((f) => f.govFormDefId) }, channel: "ONLINE", portalKey: c.portalKey }, select: { govFormDefId: true } })).map((e) => e.govFormDefId) : []);
     const captures = await this.db.portalCapture.findMany({ where: { combinationId }, orderBy: { createdAt: "desc" } });
+    // SC-4: the filing words never contradict the sources count — forms attached as sources but not yet set up are
+    // named for what they are, never "No forms yet".
+    const lineCodes = new Set(lines.map((f) => f.form.formKey));
+    const pendingSources = (row?.leaf.forms ?? []).filter((f) => !f.document && !lineCodes.has(f.code));
+    const noFiled = !(snapshot.forms as SnapForm[]).some((f) => (f.form_kind ?? "data_form") === "data_form");
+    const filing = noFiled && pendingSources.length ? `${pendingSources.length} attached as source${pendingSources.length === 1 ? "" : "s"} · none set up yet` : filingKind(snapshot.forms as SnapForm[]);
     return {
       row: row?.leaf ?? null, changes: row?.changes ?? 0, allowedLocations: c.program.allowedLocations, participants: c.participants,
-      portal: c.portalKey, portalLabel: c.portalKey ? portalLabel(c.portalKey) : null, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: view.filing_method,
+      portal: c.portalKey, portalLabel: c.portalKey ? portalLabel(c.portalKey) : null, filing, filingDetail: noFiled && pendingSources.length ? filing : view.filing_method, pending_sources: pendingSources.length,
       channelProblems: channelProblems(snapshot).filter((p) => p.where === "Forms"),
       onlineForms: captures.map((x) => ({ id: x.id, form: x.formKey, title: x.title, portal: x.portalKey, portalLabel: portalLabel(x.portalKey), status: x.status, statusWords: CAPTURE_STATUS_WORDS[x.status] ?? x.status, detail: x.statusDetail, at: x.createdAt })),
       forms: lines.sort((x, y) => x.lineageKey.localeCompare(y.lineageKey)).map((f) => {

@@ -6,7 +6,7 @@ import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, buildSnapshots, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
-import { CLIENT_ONLY_SECTIONS, FormLineEdit, SetFilledBy } from "../../contracts/workspace.ts";
+import { CLIENT_ONLY_SECTIONS, FormLineEdit } from "../../contracts/workspace.ts";
 import { checkCondition, diff, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
 import { cleanLabel, normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
@@ -286,7 +286,7 @@ export class Studio {
     return f;
   }
 
-  async updateField(actor: Actor, key: string, b: { meaning?: string; valueType?: string; note?: string; retire?: boolean; filledBy?: string | null }) {
+  async updateField(actor: Actor, key: string, b: { meaning?: string; valueType?: string; note?: string; retire?: boolean }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const workspaceId = await this.ws.id();
     const rows = await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key } });
@@ -297,21 +297,14 @@ export class Studio {
     if (b.valueType !== undefined) { if (!VALUE_TYPES.includes(b.valueType)) fail("Unknown value type."); changes.valueType = b.valueType; changes.dataType = VALUE_TYPE_TO_DATA_TYPE[b.valueType]; }
     if (b.note !== undefined) changes.note = b.note;
     if (b.retire) changes.status = "RETIRED";
-    // Screen 03 S2 (B2): who fills the shared field, everywhere it is used. Background and declaration questions stay with
-    // the client. Until the screens lane's library change approval merges, this is a draft version like any field edit.
-    if (b.filledBy !== undefined) {
-      const f = SetFilledBy.safeParse({ filledBy: b.filledBy });
-      if (!f.success) throw new HttpException(problemFromZod(f.error), HttpStatus.BAD_REQUEST);
-      if (f.data.filledBy === "CASE_OFFICER") {
-        const placed = await this.db.sectionQuestion.findMany({ where: { workspaceId, canonicalFieldKey: key, sectionKey: { in: [...CLIENT_ONLY_SECTIONS] } }, select: { sectionKey: true } });
-        if (placed.length) throw new HttpException({ type: "https://expatready.local/problems/client-only", title: "The client answers this", status: 422, detail: "Background and declaration questions stay with the client: the case officer cannot fill this field.", errors: [{ field: "filledBy", message: "Background and declaration questions stay with the client." }] }, HttpStatus.UNPROCESSABLE_ENTITY);
-      }
-      changes.filledBy = f.data.filledBy;
-    }
+    // S2 FIX (re-check Blocker): who fills a question is its placement's collectedFrom, which the renderer reads; the
+    // interim filledBy write through revise() is gone. A change is a library change a second person approves (the
+    // screens lane's LibraryChange), so the field is refused here until that record merges.
+    if ("filledBy" in (b as object)) throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: "“Filled by” is not changed field by field: changes go through the shared library.", errors: [{ field: "filledBy", message: "Changes go through the shared library." }] }, HttpStatus.BAD_REQUEST);
     const { row, created } = await revise(this.db.canonicalField, rows, changes, actor.id, (r) => ({ ...strip(r), origin: "HUMAN" }));
     if (b.retire && !created) await this.db.canonicalField.update({ where: { id: row.id }, data: { status: "RETIRED" } });
     await this.audit.log(workspaceId, actor.id, "updated", "field", key, `${actor.name} ${b.retire ? "retired" : "changed"} field ${key} (draft v${row.version})`, changes);
-    return b.filledBy !== undefined ? { ...row, where_used: await this.whereUsed(workspaceId, key) } : row;
+    return row;
   }
 
   /** The combinations whose draft uses a shared field (asked, or read by a form field): "changes it in N combinations". */
@@ -513,7 +506,7 @@ export class Studio {
   }
 
   async submit(actor: Actor, id: string, note?: string) {
-    need(actor, "review");
+    need(actor, "author"); // audit D-2: only the author submits (an approver submitting deadlocks release, BR-14)
     const c = await this.db.combination.findUniqueOrThrow({ where: { id } });
     const { snapshot, sha256 } = await buildSnapshot(this.db, c.workspaceId, id, "draft");
     const last = await this.db.configRelease.findFirst({ where: { combinationId: id }, orderBy: { version: "desc" } });
@@ -527,23 +520,26 @@ export class Studio {
     return s;
   }
 
-  async signoff(actor: Actor, id: string, b: { items: string[]; action: "signed" | "returned"; note?: string }) {
+  async signoff(actor: Actor, id: string, body?: { items?: string[]; action?: "signed" | "returned"; note?: string }) {
+    const b = body ?? {}; // audit D-1: no body is a 400 in plain words, never a TypeError
     const c = await this.db.combination.findUniqueOrThrow({ where: { id } });
     const sub = await this.db.reviewSubmission.findFirst({ where: { combinationId: id, status: "SUBMITTED" }, orderBy: { submittedAt: "desc" } });
     if (!sub) fail("Nothing is waiting for review.");
     // A sign-off names at least one item, and the person who submitted does not sign their own submission (break m1).
     if (!b.items?.length) fail("Choose the changes you sign or return.");
-    if (b.action === "signed" && sub!.submittedBy === actor.id) fail("You submitted this, so a different person signs it.", HttpStatus.FORBIDDEN);
+    if (b.action !== "signed" && b.action !== "returned") fail("Say whether you are signing these changes or returning them to the author.");
+    const items = b.items as string[], action = b.action as "signed" | "returned";
+    if (action === "signed" && sub!.submittedBy === actor.id) fail("You submitted this, so a different person signs it.", HttpStatus.FORBIDDEN);
     const changes = sub!.changeSummary as any[];
     const needsSme = (ref: string) => changes.find((x) => `${x.kind}|${x.key}` === ref)?.needs_sme;
-    for (const ref of b.items) {
+    for (const ref of items) {
       if (!changes.some((x) => `${x.kind}|${x.key}` === ref)) fail(`${ref} is not in this submission.`);
       need(actor, needsSme(ref) ? "sme" : "review");
     }
-    if (b.action === "returned" && !b.note?.trim()) fail("Say why you are returning it, so the author can correct it.");
-    await this.db.reviewSignoff.createMany({ data: b.items.map((itemRef) => ({ workspaceId: c.workspaceId, submissionId: sub!.id, itemRef, duty: needsSme(itemRef) ? "sme" : "review", actorId: actor.id, action: b.action, note: b.note ?? null })) });
-    if (b.action === "returned") await this.db.reviewSubmission.update({ where: { id: sub!.id }, data: { status: "RETURNED", decidedBy: actor.id, decidedAt: new Date(), decisionNote: b.note } });
-    await this.audit.log(c.workspaceId, actor.id, b.action, "configuration", c.combinationKey, `${actor.name} ${b.action === "signed" ? "signed" : "returned"} ${b.items.length} item${b.items.length > 1 ? "s" : ""} of "${c.label}"${b.note ? `: ${b.note}` : ""}`);
+    if (action === "returned" && !b.note?.trim()) fail("Say why you are returning it, so the author can correct it.");
+    await this.db.reviewSignoff.createMany({ data: items.map((itemRef) => ({ workspaceId: c.workspaceId, submissionId: sub!.id, itemRef, duty: needsSme(itemRef) ? "sme" : "review", actorId: actor.id, action, note: b.note ?? null })) });
+    if (action === "returned") await this.db.reviewSubmission.update({ where: { id: sub!.id }, data: { status: "RETURNED", decidedBy: actor.id, decidedAt: new Date(), decisionNote: b.note } });
+    await this.audit.log(c.workspaceId, actor.id, action, "configuration", c.combinationKey, `${actor.name} ${action === "signed" ? "signed" : "returned"} ${items.length} item${items.length > 1 ? "s" : ""} of "${c.label}"${b.note ? `: ${b.note}` : ""}`);
     return { ok: true };
   }
 

@@ -5,6 +5,7 @@
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
 import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
+import { CLIENT_ONLY_SECTIONS } from "../../contracts/workspace.ts";
 
 export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
 export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
@@ -20,14 +21,15 @@ const CLIENT_KINDS = new Set(["PERSON", "RELATIONSHIP", "CASE"]);
 
 /** The parts of a released placement and field this engine reads (the snapshot keeps them as loose JSON). */
 type Placement = { fact: string; section_id: string; order?: number; repeats: string; collected_from: string; condition?: unknown; condition_effect?: string | null };
-type FieldDef = { id: string; value_type?: string; item_version?: number; filled_by?: "CLIENT" | "CASE_OFFICER"; answer_list?: { key: string; values: { key: string; label: string }[] } };
+type FieldDef = { id: string; value_type?: string; item_version?: number; answer_list?: { key: string; values: { key: string; label: string }[] } };
 const placementOf = (s: Snapshot, field: string): Placement | undefined => (s.placements as Placement[]).find((p) => p.fact === field);
 const fieldOf = (s: Snapshot, field: string): FieldDef | undefined => (s.canonical_fields as FieldDef[]).find((f) => f.id === field);
-/** Screen 03 S2 (B2): the shared field's own "filled by" wins over its placement's source when the library sets it. */
+/** Who fills a question is its placement's source (S2 FIX: the interim library "filled by" is gone). Background and
+ *  declaration sections stay with the client however the question is collected. */
 export const isClientField = (s: Snapshot, field: string) => {
-  const by = fieldOf(s, field)?.filled_by, placed = placementOf(s, field);
-  if (by === "CASE_OFFICER" || !placed) return false;
-  return (by === "CLIENT" || CLIENT_SOURCES.has(placed.collected_from)) && CLIENT_KINDS.has(subjectKindOf(field));
+  const placed = placementOf(s, field);
+  if (!placed) return false;
+  return ((CLIENT_ONLY_SECTIONS as readonly string[]).includes(placed.section_id) || CLIENT_SOURCES.has(placed.collected_from)) && CLIENT_KINDS.has(subjectKindOf(field));
 };
 
 const realDate = (y: number, m: number, d: number) => { const t = new Date(Date.UTC(y, m - 1, d)); return t.getUTCFullYear() === y && t.getUTCMonth() === m - 1 && t.getUTCDate() === d && y >= 1900 && y <= 2100; };

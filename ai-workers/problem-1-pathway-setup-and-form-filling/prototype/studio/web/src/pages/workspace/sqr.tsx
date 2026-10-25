@@ -1,16 +1,17 @@
 // Screen 03 SQR tab (S2, concept §4): person-role chips with counts; needed-fact coverage with what blocks release (BR-7);
 // the library sections as rows that open to their questions (asked as · filled by · needed by · rule); and, on the right,
-// the phone view of what that person is asked. "Filled by" changes the shared field everywhere (B2): it says how many
-// combinations use it before it is saved. Rules are the library's, read-only here (BR-8). One request per view:
+// the phone view of what that person is asked. "Filled by" is the placement's source, read-only here (S2 FIX: a change
+// goes through the shared library as an approved change); the where-used count stays. Rules are the library's,
+// read-only here (BR-8). One request per view:
 // GET /combinations/:id/workspace?tab=sqr&role=.
 import * as React from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { FILLED_BY, type FilledBy, type WorkspaceView } from "../../../../contracts/workspace";
+import { FILLED_BY, type WorkspaceView } from "../../../../contracts/workspace";
 import { PreviewQuestions } from "@/runtime/questionnaire";
 import { api, ApiError, useSessionView, useToast } from "@/lib/api";
-import { Button, Dialog, Field, Notice, Pill, Select, Table } from "@/components/ui/controls";
+import { Button, Field, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { cn } from "@/lib/utils";
 
 type Sqr = Extract<WorkspaceView, { tab: "sqr" }>;
@@ -23,7 +24,6 @@ export function SqrTab({ id, v }: { id: string; v: Sqr }) {
   const qc = useQueryClient(), toast = useToast();
   const [open, setOpen] = React.useState<Set<string>>(() => new Set(v.sqr?.sections.filter((x) => x.questions.length).slice(0, 1).map((x) => x.id) ?? []));
   const [add, setAdd] = React.useState(""), [busy, setBusy] = React.useState(false);
-  const [changing, setChanging] = React.useState<{ q: Q; to: FilledBy } | null>(null);
   const refresh = () => Promise.all([qc.invalidateQueries({ queryKey: ["combination", id] }), qc.invalidateQueries({ queryKey: ["config", id] })]);
   async function section(key: string, on: boolean) {
     setBusy(true);
@@ -83,13 +83,8 @@ export function SqrTab({ id, v }: { id: string; v: Sqr }) {
                             <td className="max-w-56"><span className="font-medium">{q.label}</span>{q.required ? null : <span className="text-text-muted"> (optional)</span>}{q.group ? <span className="text-xs text-text-muted"> · each entry</span> : null}</td>
                             <td className="max-w-56 text-xs">{q.asked_as ?? <span className="text-text-muted">uses the field's meaning</span>}</td>
                             <td className="text-xs">
-                              {canAuthor ? (
-                                <Select aria-label={`Who fills ${q.label}`} className="h-8 w-36 text-xs" value={q.filled_by} disabled={q.client_only && q.filled_by === "CLIENT"} title={q.client_only ? "Background and declaration questions stay with the client" : `Shared field: used in ${q.where_used} combination${q.where_used === 1 ? "" : "s"}`}
-                                  onChange={(e) => setChanging({ q, to: e.target.value as FilledBy })}>
-                                  {(Object.keys(FILLED_BY) as FilledBy[]).map((k) => <option key={k} value={k}>{FILLED_BY[k]}</option>)}
-                                </Select>
-                              ) : FILLED_BY[q.filled_by]}
-                              {q.client_only ? <span className="mt-0.5 block text-[11px] text-text-muted">stays with the client</span> : !q.filled_by_set ? <span className="mt-0.5 block text-[11px] text-text-muted">as placed</span> : null}
+                              {FILLED_BY[q.filled_by]}
+                              <span className="mt-0.5 block text-[11px] text-text-muted">{q.client_only ? "stays with the client" : `Changes go through the shared library${q.where_used ? ` · used in ${q.where_used} combination${q.where_used === 1 ? "" : "s"}` : ""}`}</span>
                             </td>
                             <td className="text-xs">{q.needed_by.length ? q.needed_by.join(", ") : <span className="text-text-muted">decides what applies</span>}</td>
                             <td className="max-w-48 text-xs">{q.rule ? <>{q.rule} · <Link className="text-text-link underline" to={`/library/fields/${encodeURIComponent(q.fact)}`}>Open in the library</Link></> : <span className="text-text-muted">—</span>}</td>
@@ -110,29 +105,6 @@ export function SqrTab({ id, v }: { id: string; v: Sqr }) {
           <p className="text-center text-xs text-text-muted">The shared questionnaire renderer, Sample family, nothing saved.</p>
         </aside>
       </div>
-      {changing ? <FilledByDialog q={changing.q} to={changing.to} onClose={() => setChanging(null)} onDone={refresh} /> : null}
     </div>
-  );
-}
-
-/** B2: "Filled by" is the shared field's, so the change is confirmed with how many combinations it reaches. */
-function FilledByDialog({ q, to, onClose, onDone }: { q: Q; to: FilledBy; onClose: () => void; onDone: () => Promise<unknown> }) {
-  const toast = useToast();
-  const [busy, setBusy] = React.useState(false), [error, setError] = React.useState<string | null>(null);
-  async function save() {
-    setBusy(true); setError(null);
-    try {
-      const r = await api<{ where_used?: { combinations: number } }>(`/library/fields/${encodeURIComponent(q.fact)}`, { method: "PATCH", json: { filledBy: to } });
-      toast.push({ tone: "ok", text: `${q.label}: ${FILLED_BY[to].toLowerCase()} fills it now, in ${r.where_used?.combinations ?? q.where_used} combination${(r.where_used?.combinations ?? q.where_used) === 1 ? "" : "s"} (draft).` });
-      await onDone(); onClose();
-    } catch (e) { setError(e instanceof ApiError ? e.field("filledBy") ?? e.message : (e as Error).message); }
-    setBusy(false);
-  }
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()} title={`${FILLED_BY[to]} fills "${q.label}"`} description="This changes the shared field everywhere."
-      footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button busy={busy} onClick={() => void save()}>Change it in {q.where_used} combination{q.where_used === 1 ? "" : "s"}</Button></>}>
-      <p className="text-sm">{to === "CASE_OFFICER" ? "The client is no longer asked this; the case officer fills it in the agent view." : "The client is asked this in the questionnaire."} It is a draft change of the shared field, released with each combination that uses it.</p>
-      {error ? <Notice tone="danger" className="mt-3" title="Not changed">{error}</Notice> : null}
-    </Dialog>
   );
 }

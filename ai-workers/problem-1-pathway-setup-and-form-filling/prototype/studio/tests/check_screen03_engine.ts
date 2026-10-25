@@ -142,22 +142,29 @@ ok("C1.8 (proposed): line edit fail: copies outside 1–9, a fraction, an age ou
   const sv = sqrView(unplaced, "child", new Map([["person.status_start", 3]]), TODAY);
   ok("C4.1: SQR view: the child's coverage counts add up and name the gap; the role chips carry it", sv.role === "child" && sv.coverage.client + sv.coverage.officer + sv.coverage.gaps.length === sv.coverage.needed && sv.coverage.gaps[0]?.fact === "person.status_end" && sv.roles.find((r) => r.role === "child")!.gaps === 1, sv.coverage);
   const q = sv.sections.flatMap((x) => x.questions).find((x) => x.fact === "person.status_start")!;
-  ok("C4.1: SQR view: a question says who fills it, which forms need it and where else the field is used", q.filled_by === "CLIENT" && q.needed_by.join() === "F 1" && q.where_used === 3 && !q.filled_by_set);
+  ok("C4.1: SQR view: a question says who fills it, which forms need it and where else the field is used", q.filled_by === "CLIENT" && q.needed_by.join() === "F 1" && q.where_used === 3);
   ok("C4.1: SQR view: an unknown role falls back to the first role", sqrView(S, "nobody", new Map(), TODAY).role === "principal");
   const withRep = { ...unplaced, combination: { ...S.combination, participants: [...S.combination.participants, { role: "representative", label: "Representative", min: 0, max: 1, applies: false }] }, canonical_fields: [...S.canonical_fields, { id: "representative.licence", meaning: "Licence number", value_type: "text" }], field_maps: S.field_maps.map((m: { form_number: string; entries: unknown[] }) => m.form_number === "F 1" ? { ...m, entries: [...m.entries, { data_path: "rep", outcome: "mapped", fact: "representative.licence", person: "representative", row: null }] } : m) } as unknown as Snapshot;
   const rep = sqrView(withRep, "representative", new Map(), TODAY);
   ok("C4.1: SQR view: a role outside the family (the representative) has its own chip, so its gap can be seen and fixed there", rep.roles.some((r) => r.role === "representative" && r.gaps === 1) && rep.role === "representative" && rep.coverage.gaps.some((g) => g.fact === "representative.licence"), rep.roles);
 }
 
-// ── S2: filled by (B2): the shared field's choice wins over its placement
+// ── S2 FIX: filled by is the placement's source (the interim library "filled by" is gone; background and declaration
+// sections stay with the client however the question is collected)
 {
-  const officer = { ...S, canonical_fields: S.canonical_fields.map((f: { id: string }) => f.id === "person.family_name" ? { ...f, filled_by: "CASE_OFFICER" } : f) } as unknown as Snapshot;
-  ok("C4.1 B2: pass: the case officer fills a field set so; it leaves the client's questionnaire and counts as officer-covered", !isClientField(officer, "person.family_name") && isClientField(S, "person.family_name") && !caseView(officer, familyPeople(S.combination.participants, "single"), [], [], "sqr", TODAY).sections.some((x) => x.questions.some((qq) => qq.fact === "person.family_name")) && coverageGaps(officer).length === 0);
-  const client = { ...S, placements: S.placements.map((p: { fact: string }) => p.fact === "person.family_name" ? { ...p, collected_from: "verified_document" } : p), canonical_fields: S.canonical_fields.map((f: { id: string }) => f.id === "person.family_name" ? { ...f, filled_by: "CLIENT" } : f) } as unknown as Snapshot;
+  const officer = { ...S, placements: S.placements.map((p: { fact: string }) => p.fact === "person.family_name" ? { ...p, collected_from: "staff_working_view" } : p) } as unknown as Snapshot;
+  ok("C4.1 B2: pass: a staff-working-view placement is the officer's: it leaves the client's questionnaire and counts as officer-covered", !isClientField(officer, "person.family_name") && isClientField(S, "person.family_name") && !caseView(officer, familyPeople(S.combination.participants, "single"), [], [], "sqr", TODAY).sections.some((x) => x.questions.some((qq) => qq.fact === "person.family_name")) && coverageGaps(officer).length === 0);
   const cov = render(officer, [{ id: "principal", role: "principal", label: "P", applies: true }], new Map(), { today: TODAY }).coverage.flatMap((c) => c.boxes).find((b) => b.fact === "person.family_name" && b.about === "principal");
-  ok("C4.1 B2: pass: the form field's coverage says the case officer fills it (not a client question)", cov?.coverage === "staff working view" && /filled by the case officer/.test(cov.detail), cov);
-  ok("C4.1 B2: pass: a field set to the client is asked of the client even when placed as from a document", isClientField(client, "person.family_name"));
-  ok("C4.1 B2: fail-guard: with no choice it follows the placement (questionnaire → client, document → officer)", filledByOf(undefined, { collected_from: "client_questionnaire" }) === "CLIENT" && filledByOf(undefined, { collected_from: "verified_document" }) === "CASE_OFFICER" && filledByOf({ filled_by: "CASE_OFFICER" }, { collected_from: "client_questionnaire" }) === "CASE_OFFICER");
+  ok("C4.1 B2: pass: the form field's coverage says the case officer fills it (not a client question)", cov?.coverage === "staff working view", cov);
+  const docClient = { ...S, placements: S.placements.map((p: { fact: string; section_id: string }) => p.fact === "person.family_name" ? { ...p, collected_from: "verified_document" } : p) } as unknown as Snapshot;
+  ok("C4.1 B2: pass: collected from a document is the officer's, not the client's", !isClientField(docClient, "person.family_name"));
+  const declSection = (S.placements as { section_id: string }[]).find((p) => p.section_id === "background_declarations");
+  if (declSection) {
+    const declFact = (S.placements as { fact: string; section_id: string }[]).find((p) => p.section_id === "background_declarations")!.fact;
+    const declOfficer = { ...S, placements: S.placements.map((p: { fact: string; section_id: string }) => p.fact === declFact ? { ...p, collected_from: "staff_working_view" } : p) } as unknown as Snapshot;
+    ok("C4.1 B2: fail-guard: a background or declaration question stays with the client however it is collected", isClientField(declOfficer, declFact) && filledByOf({ collected_from: "staff_working_view", section_id: "background_declarations" }) === "CLIENT");
+  }
+  ok("C4.1 B2: fail-guard: the placement decides (questionnaire or profile → client, document or working view → officer)", filledByOf({ collected_from: "client_questionnaire" }) === "CLIENT" && filledByOf({ collected_from: "profile_record" }) === "CLIENT" && filledByOf({ collected_from: "verified_document" }) === "CASE_OFFICER" && filledByOf({ collected_from: "staff_working_view" }) === "CASE_OFFICER" && filledByOf(undefined) === "CASE_OFFICER");
 }
 
 // ── S2: Sponsor (Sample role, expert to confirm)

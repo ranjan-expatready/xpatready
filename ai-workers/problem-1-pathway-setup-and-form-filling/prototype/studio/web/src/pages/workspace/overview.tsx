@@ -41,7 +41,7 @@ export function OverviewTab({ d, sum, show }: { d: CombinationView; sum: Combina
         </section>
       ) : null}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Forms" value={<Link className="hover:underline" to={`/c/${id}/forms`}>{k.forms}</Link>} sub={sum.forms.length ? `${online} online · ${signed} signed PDF upload${signed === 1 ? "" : "s"} · ${k.map_boxes} mapped form fields` : "No forms yet. Add them on Forms."} />
+        <Stat label="Forms" value={<Link className="hover:underline" to={`/c/${id}/forms`}>{k.forms}</Link>} sub={<span data-filing>{sum.forms.length ? `${online} online · ${signed} signed PDF upload${signed === 1 ? "" : "s"} · ${k.map_boxes} mapped form fields` : sum.pending_sources ? `${sum.pending_sources} attached as source${sum.pending_sources === 1 ? "" : "s"} · none set up yet` : "No forms yet. Add them on Forms."}</span>} />
         {/* The row's own count (BR-10), so the tile never contradicts the missing list; the words say what it counts. */}
         <Stat label="Questions" value={row?.counts?.questions ?? 0} sub={`questions across all people (each person role counted) · ${k.sections} sections · ${k.fields} fields`} />
         <Stat label="Documents" value={k.document_requirements} sub="base and conditional requirements" />

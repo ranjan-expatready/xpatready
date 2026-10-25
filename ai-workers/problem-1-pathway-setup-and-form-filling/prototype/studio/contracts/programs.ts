@@ -187,8 +187,11 @@ export type CombinationSummary = {
   forms: { code: string; title: string; document: boolean; who: string; when: string; edition: string | null; boxes: number; channel: Channel; channelWords: string; defaultChannel: Channel; signature: string | null }[];
   /** The portal the filing goes through (C1.7) and the derived filing method (C1.6). */
   portal: string | null; portalLabel: string | null;
-  /** C1.6's words: "PDF only", "Online only", "Mixed: online and PDF"; filingDetail says it line by line. */
+  /** C1.6's words: "PDF only", "Online only", "Mixed: online and PDF"; filingDetail says it line by line. Forms
+   *  attached as sources but not yet set up are named for what they are, never "No forms yet" (SC-4). */
   filing: string; filingDetail: string;
+  /** Forms attached as sources and not yet set up as lines (SC-4). */
+  pending_sources: number;
   channelProblems: ProblemLine[];
   /** Online forms added from this combination (C2.7), each with its status in plain words ("Awaiting a second person"). */
   onlineForms: { id: string; form: string; title: string; portal: string; portalLabel: string; status: string; statusWords: string; detail: string | null; at: string | Date }[];

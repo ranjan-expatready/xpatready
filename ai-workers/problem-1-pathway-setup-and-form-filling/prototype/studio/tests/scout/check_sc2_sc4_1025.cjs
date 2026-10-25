@@ -32,9 +32,10 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   } else step("SC-2: combination found to test against", false, "no program label");
 
   // SC-4: on a combination whose forms are all still sources, "Filing" must not read "No forms yet".
+  // (runtime S2 FIX: the overview's Forms stat carries data-filing; "attached as sources" is the missing line's words.)
   await p.goto(`${BASE}/c/${cid}`, { waitUntil: "networkidle" }); await p.waitForTimeout(600);
   const filing = await p.locator("[data-filing]").innerText().catch(() => "");
-  const hasPending = await p.locator("text=Attached as a source").count().catch(() => 0);
+  const hasPending = await p.locator("text=/attached as source/i").count().catch(() => 0);
   if (hasPending) step("SC-4: Filing sentence distinguishes sources from set-up forms", !/Filing:\s*No forms yet/i.test(filing), filing.trim().slice(0, 120));
   else step("SC-4: combination has forms pending as sources to test against", false, "no pending sources");
   await b.close();
