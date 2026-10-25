@@ -15,7 +15,7 @@ A **simple working prototype** of one ExpatReady capability: a content publisher
 
 ## 2. Sources of truth (in this order)
 1. Team requirements: newest `sources/drive-snapshot-*/02-functional-requirements/` — above all SA-01B v1.5 and SA-01B-REDESIGN-DECISIONS (18 Oct).
-2. Product decisions: `DECISIONS.md` (P-01 …); history in `../../decisions.md` (older; P-decisions win where newer).
+2. Product decisions: `DECISIONS.md` (P-01 …); older history locally in `archive/ai-workers-before-cleanup-2026-10-25/ai-workers/decisions.md` (P-decisions win where newer).
 3. Solution page: `../solution-1-one-pager.html` (activity IDs 1.1 … 10.4 = journey steps; authoring data `../../tools/s3/s3_data.py`).
 4. Team code: newest `code/ERv2-frontend@*` and `code/ERv2-sanitized@*` (read-only), incl. `docs/style-guide/` and `src/styles/tokens.css`.
 Immigration values come from the immigration expert; sample content is labelled **Sample**.

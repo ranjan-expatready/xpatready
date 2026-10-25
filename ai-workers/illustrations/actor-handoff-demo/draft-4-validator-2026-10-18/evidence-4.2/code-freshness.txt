@@ -1,8 +1,0 @@
-Independent validator, 18 October 2026. Read-only project freshness script, rerun with network access after sandbox networking failed.
-ERv2-frontend@85623d4-2026-10-14 | tracked dev: 85623d4 (2026-10-13T18:30:38Z) | MATCH
-ERv2-sanitized@b48e4ce-2026-10-15 | tracked dev: b48e4ce (2026-10-14T15:24:51Z) | MATCH
-expat-ready-api@c4117a3-2026-10-09 | tracked main: c4117a3 (2026-07-30T22:03:29Z) | MATCH
-expat-ready-ui@6d7f636-2026-10-09 | tracked main: 6d7f636 (2026-07-30T22:03:29Z) | MATCH
-ERv2 main reference heads differ from dev by design: frontend 0c1df16, backend 6ff8706; neither is the tracked capture branch.
-Newest local Drive snapshot: drive-snapshot-2026-10-13-1535. Separate connector check is in drive-freshness.json.
-No remote writes or commits.

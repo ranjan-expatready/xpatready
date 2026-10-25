@@ -13,4 +13,4 @@ Open Claude Code **here, at this folder's root** (hooks, skills and agents live 
 * Builder lanes: the reply that finishes a `/next` stage ends with one "Paste to Lead" block (skill `next`). Other replies (questions, follow-ups, hook reminders) do not repeat it. The Lead ends with a "Paste to <lane> lane" block only when a builder must act and the Lead could not send it (skill `lead`).
 
 ## Folders
-`product/` living rules and state · `prototype/studio/` the app · `sources/`, `code/` read-only references (newest only) · `ai-workers/` other files, `playbook/`, `delivery-reset-2026-10-21/` earlier records · `archive/` history.
+`product/` living rules and state · `prototype/studio/` the app · `sources/`, `code/` read-only references (newest only) · `ai-workers/` this build and its requirements drafts · `archive/` earlier records, kept locally (P-95 cleanup 25 Oct).
