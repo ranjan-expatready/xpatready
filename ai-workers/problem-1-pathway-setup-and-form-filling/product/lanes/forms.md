@@ -1,7 +1,7 @@
 # Lane: forms — PDF and online forms (P-61–P-63)
 
 ## From the Lead
-2026-10-24 21:10 (Lead, cloud): qa Minors pass **merged** (QA-27, QA-31–33 and the cancel/reset findings; c0bf023's QA-30/QA-34 with it). Waiting: F2 (working extension on saved screens, P-66) needs a Lead concept first; the US$12 drafts run on the Mac after qa's after-merge.
+2026-10-25 (Lead, cloud): **full development mode (P-89); the founder approved the F2 browser extension (P-90).** Set current_item F2-extension, stage **PLAN**, owner Builder: `screens/F2-extension/plan.md` from `screens/F2-extension/concept.md` (Lead decisions at the top): a fresh agent's challenge first (skill screen-challenge), then the back-end table, team-model mapping, slices; record `@types/chrome` in ENVIRONMENT.md through the Lead when installed. Also, if Screen 02 needs it: the field-map purpose and overflow in the F1 contract (Screen 02 concept, Q3). Owner Lead after PLAN; the Lead agrees and sets BUILD.
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

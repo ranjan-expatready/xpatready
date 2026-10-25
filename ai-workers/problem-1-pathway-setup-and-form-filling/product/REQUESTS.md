@@ -89,3 +89,7 @@ Twenty fully handled rows between R-01 and R-29 moved to `history/REQUESTS-handl
 | R-100 | 25 Oct | Best-in-class stability and quality across cloud, Mac and team clones: GitHub the source of truth, several agents review each PR; every change by PR, the Lead merges everything | P-87; branch rule on `main` (founder switches on) | Partly (branch rule pending) |
 | R-101 | 25 Oct | AI drafts: do the call in the demo and see it; reuse earlier results where they exist | Studio Replay mode (saved real runs, US$0) for 8 forms; IMM 0008, 5669, 5406 need one live run each on the Mac (R-98), then replay | Open (Mac run) |
 | R-102 | 25 Oct | Team members clone the repo, stay in sync with GitHub, and see and run the app | P-87 (sync by PR), P-88 (shared app on the Mac) | Handled |
+| R-103 | 25 Oct | GitHub plan cannot be upgraded: work around the branch lock without extra engineering for anyone | Pre-push refusal of `main` (P-87); the session-start hook sets the hooks in every Claude Code copy | Handled |
+| R-104 | 25 Oct | Screen 01 walkthrough seen: consider Screen 01 done | `screens/01-programs-catalogue/lead-check.md` "RCIC walkthrough"; RETRO 25 Oct | Handled |
+| R-105 | 25 Oct | Full development mode: parallel design, build, qa and checks until M2 is done, then one end-to-end walkthrough; ask questions as they come; skip team readiness | P-89; lane notes 25 Oct | Open (M2) |
+| R-106 | 25 Oct | Build the F2 browser extension | P-90; forms lane PLAN | Open |
