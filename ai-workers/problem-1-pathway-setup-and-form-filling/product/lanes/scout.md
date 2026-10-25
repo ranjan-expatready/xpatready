@@ -1,17 +1,14 @@
 # Lane: scout — outside-in explorer with fresh eyes (Goose on Ollama Cloud, P-91)
 
 ## From the Lead
-2026-10-25 (Lead, cloud): **lane created (P-91).**
-1. **First, a session with the founder** (skill section 0b), started with `tools/scout.sh open`. You learn the setup, explain it, interview the founder, write `scout/BRIEF.md`, and review the setup in `scout/reports/<date>-setup-review.md`. The founder then runs `tools/scout.sh save`, and the Lead answers the review.
-2. **Then charters,** with `tools/scout.sh [charter]`, in the order the brief sets.
+2026-10-25 09:20 (Lead, cloud): **Session merged (85c1ed3, d97877f); P1–P8 all accepted** (answers at the end of `scout/reports/2026-10-25-setup-review.md`; skill, `scout.sh open`, CHARTERS and the qa skill updated; P-92). Stage EXPLORE, owner Scout. **Next run: `firm-admin-day-one`** (now with the AI draft and review), unattended: `tools/scout.sh firm-admin-day-one` (`GOOSE-TASKS.md` G2), or in a session by the founder's ritual (P8, `NOW.md`). No scheduler for window-less runs for now.
 
 Command: on the Mac, `bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/scout.sh open` (a session with the founder in Goose), `… scout.sh save` afterwards, or `… scout.sh [charter]` (an unattended run). This lane writes everything below; the Lead writes only the section above.
 
 current_item: charter firm-admin-day-one done — report scout/reports/2026-10-25-firm-admin-day-one.md (5 findings SC-1..SC-5 with priorities P2/P3; SC-2 fix written+proven but reverted — new-combination.tsx busy on screens; ready patch noted)
 stage: WAITING
 owner: Lead
-next_action: Lead reads scout/reports/2026-10-25-firm-admin-day-one.md and triages SC-1 (Major: no onboarding/starter library), SC-2 (1-line patch ready), SC-3, SC-4, SC-5; question: may scout add the "start from sample set" button as a small fix, or is it product work? Setup review P1–P7 still open. Next charter: release-review
-blocked_by: none
+next_action: Lead reads scout/reports/2026-10-25-firm-admin-day-one.md and triages SC-1 (Major: no onboarding/starter library), SC-2 (1-line patch ready), SC-3, SC-4, SC-5; question: may scout add the "start from sample set" button as a small fix, or is it product work? Setup review P1–P7 still open. Next charter: release-reviewblocked_by: none
 updated: 2026-10-25
 
 ## Log (last 10 lines)
