@@ -5,14 +5,15 @@
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
-current_item: F1-forms-channels
-stage: CHECK
-owner: Lead
-next_action: Lead check of the qa Minors pass after its FIX: build-notes "qa Minors pass" (its two lines), review-qa-minors.md, break-report-qa-minors.md; rerun run-suites.sh. Note: web/src/pages/ai.tsx got a one-line change (Retry follows the server's retryable flag); qa's check_qa_s2_probe.ts needs its order changed after a cancel+retry. Then F2; the US$12 paid drafts wait for the founder.
+current_item: F2-extension
+stage: PLAN
+owner: Builder
+next_action: finish screens/F2-extension/plan.md: fold in the fresh challenge (challenge.md, running), builder's response, questions; then owner Lead.
 blocked_by: none
-updated: 2026-10-24
+updated: 2026-10-25
 
 ## Log (last 10 lines)
+- 2026-10-25 · F2 · CHECK → PLAN · applied Lead note 2026-10-25 (P-89, P-90; main 8360565 synced); fresh challenger running; plan.md drafted (measured facts F-1…F-11, records, engine, back-end table, slices F1-P + F2a–F2d); MV3 extension loads in the installed Chromium (probe). Cloud setup: postgresql-18 apt source refused (403), not needed for PLAN. US$0.
 - 2026-10-24 · F1 · CHECK (qa Minors) · Lead request (PR 10 review): STUDIO_FAKE_LAUNCHER runs only the test fixture (resolved path), tested by restarting the copy with another script and a disguised link (launch paths 55/55); isolated.sh now stops only the listening server; all suites green. US$0. Owner → Lead.
 - 2026-10-24 · F1 · CHECK → FIX → CHECK (qa Minors) · breaker: 2 Major (paid call after a cancel while the launch waited; reset crash), 6 Minor; every Major and most Minors fixed with a test (cancel honoured up to the paid call on every path; answer of a call cancelled mid-way never applied; retryable per step; reset safe); launch paths 52/52, slice 2 53/53, all suites green, api coverage 95.89/79.67. US$0. Owner → Lead.
 - 2026-10-24 · F1 · CHECK (qa Minors) · reviewer: ship after fixes, journey 6/10, 0 Must, 2 Major (a cancel during a part's stub pass still makes its paid call; AI work page not updated), 6 Minor; breaker running. US$0.
@@ -22,4 +23,3 @@ updated: 2026-10-24
 - 2026-10-24 · F1 · CHECK → FIX → CHECK (slice 2b) · breaker: 0 Blocker, 2 Major, 7 Minor; every Major and most Minors fixed with a test (page fields set only when drawn exactly, read back from the drawing; sign step on static forms; D3 under-lock race; static read from the file); slice 2b 44/44, all suites green, qa probe 26/0, any 437. US$0. Owner → Lead.
 - 2026-10-24 · F1 · CHECK (slice 2b) · reviewer: ship after fixes, journey 7.5/10, 0 Must, 2 Major (page fields drawn with ? or cut off still reported shown; no sign step on static forms), 5 Minor; breaker running. US$0.
 - 2026-10-24 · F1 · BUILD → CHECK (slice 2b) · all suites green on lane ports: slice 2b 28/28, forms channels 106/106 (capture check updated for QA-15), slice 2 52/52, guard 75, launch 53, engine 38, drafting 48, orchestration 22, grounding 29, Screen 01 API 135, channels 42, rules 67, browser 136, race pass, runtime 85, case engine 20; qa F1 probe 26/0 (QA-15 fixed); explicit any 437. US$0. Reviewer and breaker launched.
-- 2026-10-24 · F1 · BUILD (slice 2b) · F5, F6, QA-15, D3 built (521945f); slice 2b 28/28; full suite run in progress (drafting 48, orchestration 22, engine 38, slice 2 52/52; forms channels check updated for QA-15). US$0.
