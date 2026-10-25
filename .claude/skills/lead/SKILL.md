@@ -10,7 +10,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). Lanes:
 ## Guard (first)
 Run `bash P/tools/lane.sh whoami`. `unbound` in the cloud (own `claude/*` session branch) → **cloud Lead (P-87)**: `git fetch origin && git merge --ff-only origin/main` (refused: ask the founder), `echo lead > .claude/lane` (gitignored), run it again. Anything but `lead` → reply only: "This is the <x> lane's copy. Type `/next <x>` (or `/qa`) here; `/lead` belongs in the Lead chat (main copy)." Stop.
 
-**Where the Lead commits (P-87):** Mac: `main`. Cloud: its session branch, pushed, one PR to `main` the founder merges after green CI; read "on/push `main`" below as that. Lanes see its notes after the merge; a builder needed sooner gets the note with `/next <lane>`.
+**Where the Lead commits (P-87):** Mac: `main`. Cloud: its session branch, one PR to `main`, merged after green CI; read "on/push `main`" below as that. Lanes sync `origin/main`: hand back or send `/qa after-merge` only once that PR is merged.
 
 ## Start of every chat
 0. **Cloud session (P-82):** run `bash P/tools/cloud-setup.sh` once.
