@@ -1,0 +1,30 @@
+# Scout setup review — 25 Oct 2026 (first session, skill 0b step 5)
+
+The scout's critical review of the Lead's setup, against the agreed brief (`BRIEF.md`). Ranked: where I agree, where I disagree, and what I would change. The Lead answers each proposal (P1–P5).
+
+## Where I agree — strong as designed
+1. **Benchmark first, then explore.** Writing "what a best-in-class product does for this job" before touching the app forces outside-in thinking instead of re-deriving our own spec. Exactly how a senior QA/UX consultant would work.
+2. **One charter per run, done well.** Matches the brief's "signal over noise"; prevents the shallow skim that produces junk findings.
+3. **Headed first, headless second, evidence or it didn't happen.** Snapshot → act → screenshot, a failing test per Bug/Incomplete, duplicates of `qa/BUGS.md` never counted as findings. This is the trust contract the founder confirmed, made structural.
+4. **The scout≠qa split.** qa = conformance against our own decisions; scout = expectation against the market and real users. Two different questions; one cannot substitute for the other.
+5. **The small-fix gate.** 40 app lines, own files only, `busy` check against open lanes, tsc clean, test that failed before and passes after, pre-push `scope` refusal. Tight enough that the fixer cannot quietly become a fourth builder lane.
+6. **State in files, Lead triages, Lead merges by PR.** Consistent with how every other lane works; the scout adds no new exception to learn.
+
+## Where I disagree or see risks — and what I would change (ranked)
+1. **R1 · Charter order vs build state (medium risk of noisy early reports).** The founder's order puts journeys 2–4 (case officer, online filing, client phone) early; several of those capabilities are mid-build in the runtime/forms lanes. Early runs will surface "Missing" findings that are already scheduled. *Change (adopted in practice, no Lead answer needed): every finding names the relevant qa/CAPABILITIES row and is labelled "on the plan" where one exists — the Lead only triages what the plan does not already contain.*
+2. **R2 · The configuration journey's core moment is under-chartered.** `firm-admin-day-one` ends at "attach forms", but the production flow (P-32) and the founder's journey 1 hinge on **AI drafting and the person's proposal review** (upload → AI maps → accept/edit/reject). *Change: P2 below — fold the AI-draft-and-review step into `firm-admin-day-one`'s benchmark questions (or give it its own charter).*
+3. **R3 · Goose/kimi-k3 is a weaker operator than Claude Code for long headed-browser loops.** Risk: loop stalls, shallow screenshots, or over-eager "fixes". Mitigations already exist (200-turn cap, `--max-tool-repetitions 3`, work kept on failure, scope guard); *change: P5 below — report turns used per run so the Lead sees when a run was cut short.*
+4. **R4 · Overlap runs one way only today.** The scout reads `qa/BUGS.md` before logging; but qa has no equivalent instruction to check `scout/FINDINGS.md`, so a bug could live twice. *Change: P3.*
+5. **R5 · Interactive `open` sessions (like this one) have no Playwright tools — the recipe has them, the session doesn't.** A session with the founder cannot do the headed walk the skill requires. *Change: P4.*
+
+## Proposals the Lead answers
+- **P1 (founder request R-107 follow-up): adopt `scout/NOW.md`** (written today) as the handover card — where things stand, next charter, how to resume; updated at every session/run end; new sessions read it after the guard. Add one line to the skill §0 and the recipe instructions.
+- **P2: extend `firm-admin-day-one`'s benchmark questions** with the AI-draft-and-person-review loop (upload → AI proposals → accept/edit/reject), per the brief's journey 1 and P-32.
+- **P3: one line in lane notes or the qa skill:** before logging a new BUGS row, qa checks `scout/FINDINGS.md`, as the scout already does for qa — findings live in one place.
+- **P4: `scout.sh open` prints (or the Lead's session prompt includes) how to start the session with the recipe's Playwright extension**, so sessions with the founder can test headedly as the skill requires.
+- **P5: the run's Paste block gains "turns used"** (and the report notes if a run hit the turn cap), so cost and cut-short runs are visible.
+- **P6 (founder, 25 Oct session): the scout's disagreements need teeth without a veto.** When a scout finding says "scout disagrees with decision P-n or behaviour X", the Lead routes it to the founder before that decision is acted on further, and a scout **Blocker** at a merge or milestone gate pauses it exactly like a qa Blocker until triaged. The scout never edits a decision itself.
+- **P7 (founder, 25 Oct session): make saving automatic.** Rule change for the scout skill: at the end of every session the scout itself commits its files and, on the founder's word "wrap up", runs `tools/scout.sh save` from inside the scout copy (the script already works from there and pushes only the scout branch after the scope guard). The founder's manual step disappears; unattended `scout.sh <charter>` runs already save and push themselves.
+
+## What I would not change
+Charter granularity (14+1 journeys is the right grain), the FINDINGS.md schema, the screenshot-per-decision-point rule, the "fix only when all four hold" rule, and the Lead-merge-by-PR hand-off. The design is honest about what an outside agent can and cannot safely do; my review adds edges, not a rewrite.
