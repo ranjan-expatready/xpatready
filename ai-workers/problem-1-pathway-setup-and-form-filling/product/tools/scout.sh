@@ -15,7 +15,7 @@ LINES_MAX=40
 
 busy() {  # which open lane branches change this file
   local f="$1" out="" ln lb
-  for ln in screens forms evidence runtime qa; do
+  for ln in screens forms evidence runtime m3 qa; do
     lb=$(bash "$HERE/$PP/tools/lane.sh" branch "$ln"); [ -n "$lb" ] || continue
     git -C "$HERE" merge-base --is-ancestor "origin/$lb" origin/main 2>/dev/null && continue
     git -C "$HERE" diff --name-only "origin/main...origin/$lb" 2>/dev/null | grep -qxF "$f" && out="$out $ln"

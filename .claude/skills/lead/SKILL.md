@@ -16,11 +16,11 @@ Run `bash P/tools/lane.sh whoami` (Mac: on `lead/<date>` from `origin/main`). `u
 0. **Cloud session (P-82):** run `bash P/tools/cloud-setup.sh` once.
 0b. **One Lead at a time (Mac or cloud):** `bash P/tools/lane.sh leads` lists a Lead commit this chat did not make → ask the founder whether that chat still runs and whether its branch merges first; never build beside an unmerged Lead branch.
 1. Read `LEAD.md`, `STATE.md`, `lanes/*.md`, `qa/BUGS.md`, open rows of `REQUESTS.md`, the newest lines of `DECISIONS.md`; `WORKFLOW.md` if roles or stages are in question.
-2. `lane.sh status`, then each lane's newest commits (`git log main..<branch>`; `git worktree list`).
-3. **Pick up lanes an earlier Lead chat started:** a lane owned by Builder with no session working (no recent changes) → a fresh session, prompt `/next <lane>` or `/qa <mode>`: Mac `start_session` (own worktree, `source_branch` = its branch or main); cloud `create_session` (`source_revision` and `outcome_branch` = `lane.sh branch <lane>`). Evidence and anything needing `sources/` or `code/` stay on the Mac (P-82). Name the lanes resumed; never disturb a lane writing files.
+2. `lane.sh status`, each lane's newest commits (`git log main..<branch>`), and `lane.sh inbox`: drain it (`inbox/README.md`).
+3. **Pick up lanes:** a lane owned by Builder with no session working → a fresh session, prompt `/next <lane>` or `/qa <mode>`: Mac `start_session` (own worktree, `source_branch` = its branch or main); cloud `create_session` (`source_revision`, `outcome_branch` = `lane.sh branch <lane>`; none yet: `main` and a new `claude/<lane>-<word>`). Evidence and anything needing `sources/` or `code/` stay on the Mac (P-82). Name the lanes resumed; never disturb a lane writing files.
 4. **Top of every reply: the lanes table** (`lane.sh table`) and one progress line (`tools/progress.sh`: capabilities that work per milestone; never dates, P-75), then what changed and what was merged, then at most three things needed from the founder, each with a recommendation, in plain business words, one question at a time.
 
-## Acting on a lane's Paste to Lead (arrives by itself from sessions the Lead started, or pasted by the founder)
+## Acting on a lane's Paste to Lead (sent by lane sessions, or pasted by the founder)
 * **CHALLENGE / PLAN:** answer every objection under "Lead response" (accept, or reject with the reason, as honest about your design as theirs); product choices go to the founder (skill grilling); when settled write "Agreed <date>". Build only on decisions the founder has agreed.
 * **Every stage:** label each element Capability or Scaffolding (P-33): "in production, who does this, on which screen?"
 * **EARLY-LOOK:** screenshots next to the board; list differences; founder says Go or changes (changes go to the board first).

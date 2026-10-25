@@ -14,7 +14,7 @@ Register of screens and slices. **Stages live only in `lanes/*.md`** (`lane.sh t
 | 06 | **Releases** — review and release change set, expert confirmations, approver ≠ author | 4.4, 5.1, 5.2, 5.3 | 1B-38, 39 | Existing Release button only (P-28) | Audit F2: review list must include every behaviour-bearing change (roles, document facts, derived fields) |
 | 07 | **Activity** — audit trail and freshness (next review due) | 10.1 | 1B-39, 40 | Dropped (P-28) | — |
 
-## Demo combinations (P-29) — run through 03b in this order
+## Demo combinations (P-29) — superseded by `DEMO.md` (P-93: one story, every mechanism); kept as the longer list for later
 | # | Workspace | Combination | Forms (official PDFs) | Why it is in |
 |---|---|---|---|---|
 | 1 | Individual | Visitors › Visitor visa (applicant, spouse, children) | IMM 5257 + Schedule 1, IMM 5707, IMM 5476 | Already proven live; principal, spouse, child |

@@ -121,21 +121,21 @@ footer { font-size: 12px; color: var(--muted); }
 
 <script>
 const D = {
-  asof: "Updated 24 Oct 2026. Source files: product/PLAN.md, STATE.md, qa/CAPABILITIES.md, qa/BUGS.md, DECISIONS.md, BACKLOG.md.",
+  asof: "Updated 25 Oct 2026. Source files: product/PLAN.md, STATE.md, DEMO.md, qa/CAPABILITIES.md, qa/BUGS.md, DECISIONS.md, BACKLOG.md.",
   summary: [
-    ["M2 progress (counted)", "5 of 37 work", "6 partial · 3 broken · 2 not tested · 21 not built"],
-    ["R1 and M3", "0 of 7 · 0 of 12", "Runtime build starting; M3 design drafts in"],
-    ["Lanes running", "5 of 5", "screens fix, forms slice 2, runtime, evidence IMM 5257, qa retest"],
-    ["Merged today", "Forms slice 1", "Portal capture back end, twin, channels, answer lists, aliases; plus tester baseline"],
-    ["Adobe acceptance", "IMM 1344 and 0008 pass", "after a person step each; 149/149 and 462/462 barcode slots"],
-    ["Open bugs", "1 Critical · 7 Major", "Screen 01 fix pass running now"]
+    ["M2 progress (counted on main)", "12 of 44 work", "9 partial · 1 not tested · 22 not built; about 10 more built and in their final checks"],
+    ["R1 and M3", "5 of 8 · 0 of 15", "R1 thin slice works; M3 design starts in the new m3 lane (P-94)"],
+    ["Lanes running", "4 build + qa + 2 on the Mac", "screens Screen 02 check, forms extension re-score, runtime Screen 03, m3 design; scout and evidence on the Mac"],
+    ["Merged today", "Lead PRs #20–#24", "Screen 03 early look, cloud database, CI browser, scout session, Devin audit, inbox, demo story"],
+    ["Merge order", "forms → screens → runtime", "They share the release path; m3 merges after runtime"],
+    ["Open bugs", "0 Critical · 1 Major on main", "QA-38 (fixed on the runtime branch); D-1, D-2 from Devin go to runtime"]
   ],
   solutions: { head: ["Decision", "What it is", "Built", "Where you will see it", "Order"], rows: [
     ["Portal forms as sources (P-61, P-66)", "Capture each portal screen's structure, never values: extension capture mode (primary), saved blank page or template (fallbacks); a second person approves; builds the portal twin", "<span class='chip s-ok'>Back end merged</span>", "Screen 01: \"Add an online form\" on the combination; Screen 02: review and approve the capture", "Screen 01 now; Screen 02 next"],
     ["Channel per form and filing method (P-61, P-62)", "Each form is PDF upload, Online with its portal, or Signed PDF upload; the combination is PDF only, Online only or Mixed; lines default to Online where IRCC files online", "<span class='chip s-ok'>Back end merged</span>", "Screen 01 row and combination page; Screen 03 Forms tab", "Screen 01 now"],
     ["PDF or online as the base for shared fields (P-62 §1)", "Drafting reads the PDF version first, then the online screens for what differs; the author can change it per form; every shared field shows its source", "<span class='chip s-none'>Not built</span>", "Screen 01 sources tab (choice); Screen 02 (per field)", "Screen 01 now; Screen 02 next"],
     ["Mapping portal questions (P-62, P-65)", "Reuse the PDF version's field map first, then aliases; AI only for leftovers; a person accepts", "<span class='chip s-warn'>Reuse built; AI leftovers in slice 2</span>", "Screen 02 screen-map review", "Forms slice 2 now"],
-    ["Browser extension (P-66)", "Capture mode for the content team (setup, M2); fill mode for agents, one portal screen per click in the representative's own session (M3); form health", "<span class='chip s-brand'>Plan drafted</span>", "Extension side panel on a saved portal screen", "After forms slices 2–3"],
+    ["Browser extension (P-66, P-90)", "Capture mode for the content team: portal screens read structure only, checked before sending, a second person approves. Fill mode for agents: one portal screen from confirmed facts, read back, never Next or Submit; a changed screen fills nothing and opens Re-capture needed", "<span class='chip s-brand'>Built; merging after its re-score</span>", "Extension side panel; Studio Browser extension page", "Merge now; real portal after the expert's addresses"],
     ["Application workspace (P-62 §6)", "One Prepare application view per filing; the channel decides what the agent sees: portal sheet, filled PDF with Validate, or print-sign-upload", "<span class='chip s-brand'>Board ready</span>", "Clickable board for PDF, online and mixed", "Walk the board with the Lead; build after R1"],
     ["Agent view, facts once (P-47, P-72)", "Every fact per person with source and status; only confirmed facts fill; confirm by section", "<span class='chip s-brand'>Runtime lane building</span>", "R1 thin slice on the visitor visa", "Runtime now"],
     ["Pre-qualification flow (P-76, P-77)", "PQR answers flow into the SQR marked please confirm; staff eligibility page from rules as data with Sample gates", "<span class='chip s-none'>Not built</span>", "Runtime: prospect slice on the visitor visa", "Runtime, after R1"],
@@ -155,31 +155,33 @@ const D = {
     { n: "9", t: "Handle changes", d: "New editions, portal changes, changed answers; never overwrite signed work", c: [["warn","New editions held, no way forward yet"],["brand","Stale-never-overwrite in R1"],["none","Impact review, re-capture, form health"]], caps: "C9.1–C9.3" }
   ],
   milestones: { head: ["Milestone", "Scope", "Status", "Progress (counted)"], rows: [
-    ["Screen 01 closed", "Programs, path builder, combination page, channels, portal, online sources", "<span class='chip s-brand'>Fix pass running</span>", "Closes when reviewer, breaker and tester pass it"],
-    ["M2 · Super Admin setup", "Screens 01–04, forms channels, capture, release, preview by person", "<span class='chip s-brand'>In progress</span>", "<b>5 of 37</b> work · 6 partial · 3 broken"],
-    ["R1 · thin runtime slice", "Visitor visa: case, people, answers once, renderer, agent view, IMM 5257 from case facts", "<span class='chip s-brand'>Building</span>", "<b>0 of 7</b> work"],
-    ["M3 · case, agent and client", "Prepare application, portal sheet, extension fill, signed PDFs, submission, checklist, client link", "<span class='chip s-none'>Design started</span>", "<b>0 of 12</b> work"],
-    ["Demo loop", "Configure → release → case → checked output → reuse → new edition; 3 + 2 combinations", "<span class='chip s-none'>Not started</span>", "After M3"]
+    ["Screen 01 closed", "Programs, path builder, combination page, channels, portal, online sources", "<span class='chip s-ok'>Done</span>", "Founder walked it 25 Oct"],
+    ["M2 · Super Admin setup", "Screens 01–04, forms channels, capture, AI work, release, preview by person", "<span class='chip s-brand'>In progress</span>", "<b>12 of 44</b> work; Screen 02, extension and Screen 03 part 1 in final checks"],
+    ["R1 · thin runtime slice", "Visitor visa: case, people, answers once, renderer, agent view, IMM 5257 from case facts", "<span class='chip s-ok'>Works</span>", "<b>5 of 8</b> work"],
+    ["M3 · case, agent and client", "Prepare application, portal sheet, extension fill, signed PDFs, submission, checklist, client link", "<span class='chip s-brand'>Design starting (m3 lane)</span>", "<b>0 of 15</b> work"],
+    ["Demo story (P-93)", "One Sample family: Visitor visa family of four + LMIA work permit reuse; every mechanism in DEMO.md; reset, configured (M2 gate) and finished story (M3 gate)", "<span class='chip s-none'>Seed after Screen 03 part 2</span>", "Runtime slice D1; every lane adds its row"]
   ]},
   lanes: { head: ["Lane", "Owns", "Now", "Who acts", "Next"], rows: [
-    ["screens", "Milestone 2 screens", "01 Programs · FIX", "Builder", "One fix pass: 13 bugs, channels, online sources, words; then reviewer, breaker, tester"],
-    ["forms", "PDF and online forms, capture, answer lists, extension", "F1 slice 2 · BUILD", "Builder", "Guard fix, A4, AI for leftovers, Adobe findings; then extension"],
-    ["evidence", "Adobe fill trials per form; AI scoring set", "E1 · IMM 5257", "Builder", "Then the team's trial list"],
-    ["runtime", "Thin slice R1, then M3 runtime", "R1 · PLAN → BUILD", "Builder", "Plan to the Lead now; build starts today"],
-    ["qa", "Independent testing of main; capabilities, bugs, coverage", "After-merge run", "Tester", "Retest main, add QA-13, check every decision has a capability"],
-    ["Lead (design)", "Concepts drafted by the design helper", "Prepare application, Screens 02–03, extension", "Lead", "All four drafts ready; walk them with the Lead"]
+    ["screens", "Milestone 2 screens", "Screen 02 AI work · CHECK round 2", "Builder", "Then the Lead check and merge; then Screen 04 shared library"],
+    ["forms", "PDF and online forms, capture, extension", "F2 extension · CHECK (re-score)", "Builder", "Merge first; then AI drafts from checklists"],
+    ["runtime", "Screen 03 workspace, then the demo seed", "Screen 03 part 2 · BUILD", "Builder", "Sync after screens merges; then demo checkpoints (D1)"],
+    ["m3", "M3 Prepare application (P-94)", "DESIGN challenge", "Builder", "The Lead answers, then BUILD in new files"],
+    ["qa", "Independent testing of main", "Waiting for the next merge", "Tester", "After-merge run on the extension"],
+    ["scout (Mac, Goose)", "Outside-in exploration", "Next charter ai-draft-review", "Founder starts it", "GOOSE-TASKS.md G2"],
+    ["evidence (Mac)", "Adobe fill trials", "IMM 5476 next", "Founder (Mac)", "Goose task G4 coming"]
   ]},
   open: [
-    ["See the drafts with the Lead", "The Lead walks you through the Prepare application board and Screens 02 and 03, one at a time, in plain words.", "As each draft is ready; about 10 minutes each."],
-    ["Demo data on :4400", "Only 1 of 29 combinations is Live; the stray test row was removed 24 Oct.", "Let the lanes configure demo combinations through the product; clean :4400 only with your OK."],
-    ["Validate placement (team clash 1)", "The team wants Validate inside ExpatReady after a form passes its trial; we chose Adobe.", "Decide after IMM 5257: IMM 1344 and 0008 already pass with one or two person steps."],
-    ["Up to US$12 for AI drafts", "IMM 0008, 5669, 5406 field maps.", "Approve when forms slice 2 makes the runs cheaper."],
-    ["Questions for the immigration expert", "Schedule A for paper spousal sponsorship; one structure-only portal capture; channels per demo combination; validating before the person signs.", "Relay all four in one message."],
-    ["GitHub private repository (agreed, P-81)", "Filtered copy without sources, team code or PDFs; tests on every pull request.", "Your steps: create the empty private repository, OK the filter tool install and the settings change."],
-    ["An intended user (you are arranging)", "A content publisher from the team walks M2 unaided for D17 and D20.", "You arrange who; the Lead prepares the walk once Screens 01–04 pass their checks."]
+    ["Devin small fixes", "May Devin fix small verified bugs itself, by PR, under the scout's limits?", "Lead recommends yes; D-1 stays with runtime (its file is busy)."],
+    ["Who sets who fills each question", "Once in the shared library, or per combination?", "Lead recommends once in the library, a change approved by a second person."],
+    ["Screen 02 real AI runs", "Describe it and the AI checklist draft, one run each.", "Lead recommends yes, US$5 for both, run by Goose after Screen 02 merges."],
+    ["Mac work through Goose", "G1: the US$12 AI drafts (approved 24 Oct); G2: scout charter ai-draft-review.", "Paste from GOOSE-TASKS.md whenever you like."],
+    ["Questions for the immigration expert", "Portal addresses, which forms are filed online, Schedule A, a structure-only portal capture, sponsor as a person on the case, and more (13).", "Relay in one message; they gate the real-world proof."],
+    ["Starter set and per-combination reset", "BACKLOG B34 and B35.", "Lead recommends later and no."]
   ],
   decisions: [
     ["Pre-qualification inside the client questionnaire", "PQR is part of the SQR, which is part of the agent view; AI drafts each combination's PQR, a person approves, released with the combination; a general PQR is built from released combinations (P-76). Prototype: PQR answers flow into the SQR; a staff eligibility page on the rules engine with Sample gates; no verdict to prospects (P-77)."],
+    ["One demo story (P-93)", "A Visitor visa family of four plus the LMIA work permit shows every mechanism: PDF and online ingestion, AI mapping and review, master data, PDF fill with barcodes, online fill, mixed channels, checklist, new edition. Reset, configured (M2 gate), finished story (M3 gate)."],
+    ["M3 in parallel (P-94)", "A fourth build lane, m3, designs and builds Prepare application while M2 finishes."],
     ["Facts are the root", "Shared fields; PDF and online forms are outputs; questionnaires built from facts (P-61, P-62, P-63)."],
     ["Family answers: confirmed by who answered", "One family questionnaire, a section per person; own and minors' answers count as confirmed; an adult's answers given by the principal wait for that adult or the officer (P-78)."],
     ["One place for approvals", "A To review page first under Configure lists everything waiting for a person or second person, including combinations to release (P-79)."],
@@ -193,14 +195,11 @@ const D = {
     ["Thin slice and independent tester", "Runtime lane R1; qa lane after every merge; c8 coverage floor (P-67, P-68, P-69)."]
   ],
   bugs: { head: ["Bug", "Severity", "What happens", "Lane", "Status"], rows: [
-    ["QA-1", "<span class='chip s-bad'>Critical</span>", "The shared Release page releases without submission or expert sign-off and records the first author as submitter", "screens", "Fix pass running"],
-    ["QA-13", "<span class='chip s-warn'>Major</span>", "Visitor visa: \"Add 1 form from the library\" fails every time (an old removed line blocks it)", "screens", "Fix pass running"],
-    ["QA-7", "<span class='chip s-warn'>Major</span>", "A too-long name: Create does nothing and shows no message", "screens", "Fix pass running"],
-    ["QA-9", "<span class='chip s-warn'>Major</span>", "Three builder test suites are out of date and cannot pass", "screens", "Fix pass running"],
-    ["QA-8", "<span class='chip s-warn'>Major</span>", "AI steps fail in every lane copy (sandbox cannot read linked folders)", "forms", "Slice 2, first item"],
-    ["QA-4", "<span class='chip s-warn'>Major</span>", "Pages 404 in lane copies (hidden folder in the path)", "forms / Lead", "Fixed in slice 1; tester retesting"],
-    ["QA-2", "<span class='chip s-ok'>Fixed</span>", "AI drafting test suite was red on main", "forms", "Merged; tester retesting"],
-    ["+ 7 Minor", "<span class='chip s-none'>Minor</span>", "Wording, names, times, demo menu (qa/BUGS.md)", "screens", "Fix pass running"]
+    ["QA-38", "<span class='chip s-warn'>Major</span>", "Open a case names release 1 while the case opens on release 2", "runtime", "Fixed on the runtime branch; qa retests after merge"],
+    ["D-1", "<span class='chip s-none'>Minor</span>", "A sign-off with no body is a server error", "runtime", "Screen 03 part 2"],
+    ["D-2", "<span class='chip s-none'>Minor</span>", "An approver can submit, then nobody can release", "runtime", "Screen 03 part 2"],
+    ["QA-39–43", "<span class='chip s-none'>Minor</span>", "Words, keyboard focus, an unknown combination", "screens, forms", "Fixed on branches; qa retests"],
+    ["Scout SC-1–5", "<span class='chip s-none'>1 Major idea, 3 Minor</span>", "No starter set; wording", "screens, forms, runtime", "Assigned 25 Oct"]
   ]},
   how: [
     ["You type /lead, nothing else", "I start, continue and check every lane. Every reply opens with the lanes table, then what changed, then at most three things I need from you."],

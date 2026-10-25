@@ -5,13 +5,13 @@ description: The command for a builder lane of the Pathway Configurator: /next s
 
 # /next <lane> — check, sync, do one stage, commit, hand back
 
-Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (call it P). Rules: P/`LANES.md`, P/`WORKFLOW.md`. Tool: `bash P/tools/lane.sh`. Builder lanes: screens, forms, evidence, runtime.
+Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (call it P). Rules: P/`LANES.md`, P/`WORKFLOW.md`. Tool: `bash P/tools/lane.sh`. Builder lanes: screens, forms, evidence, runtime, m3.
 
 ## 1. Guard (always first; on any failure print the fix and stop)
 1. `lane.sh whoami`.
    * `lead` (main copy) → reply only: "This is the Lead's copy. Type `/lead` here; the Lead runs the lanes." Stop.
    * `qa` → "This is the qa copy: type `/qa <mode>`." Stop.
-   * `unbound` and a lane was given → `lane.sh bind <lane>`. No lane given → ask which, listing the four. Stop.
+   * `unbound` and a lane was given → `lane.sh bind <lane>`. No lane given → ask which, listing the five. Stop.
    * Bound to another lane than the one typed → "This copy is the <x> lane. Type `/next <x>` here; for <typed>, use its own session." Stop. A bare `/next` means this copy's lane.
 2. `lane.sh setup` (in a cloud clone it runs `cloud-setup.sh`, which is idempotent: it finishes an interrupted setup and restarts a stopped database), then `lane.sh sync`. A lane branch older than P-82's cloud support answers "main copy: nothing to sync" in the cloud: run `git merge --no-edit origin/main` once, then setup and sync again. A conflict → list the files, change nothing, put it under Needs. Stop.
 3. Read P/`lanes/<lane>.md`. Its **"From the Lead"** section is the Lead's latest instruction: if your log does not yet say "applied Lead note <date>", apply it now (stage, owner, next action as it says) and log that line. If `owner` is still not Builder → print who acts (Lead: "the Lead acts next"; founder: the decision needed). Stop.
