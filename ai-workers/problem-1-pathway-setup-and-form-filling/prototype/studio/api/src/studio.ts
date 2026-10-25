@@ -165,6 +165,16 @@ export class Studio {
   }
 
   // ------------------------------------------------------------------ combination overview
+  /** The sample loader's note describes a combination as loaded ("attached; not set up yet"). Once a person has changed
+   *  or released it, that description is out of date: the page then says only that it is Sample (QA-42). */
+  private async basisNote(c: { id: string; workspaceId: string; combinationKey: string; basisNote: string | null }) {
+    if (!c.basisNote) return null;
+    const loaded = await this.db.auditEvent.findFirst({ where: { workspaceId: c.workspaceId, action: "loaded", entity: "sample inputs" }, orderBy: { at: "desc" }, select: { at: true } });
+    // Some steps name the combination by id, others by key (submitted, released): either counts.
+    const since = loaded ? await this.db.auditEvent.count({ where: { workspaceId: c.workspaceId, at: { gt: loaded.at }, OR: [{ combinationId: c.id }, { entityKey: c.combinationKey }] } }) : 0;
+    return since ? "Sample: from the sample inputs; its setup has changed since they were loaded." : c.basisNote;
+  }
+
   async combination(id: string) {
     const c = await this.db.combination.findUniqueOrThrow({ where: { id }, include: { program: true, attachments: { orderBy: { createdAt: "asc" } }, releases: { orderBy: { version: "desc" }, include: { packVersion: { select: { version: true } } } }, jobs: { orderBy: { startedAt: "desc" }, take: 20 } } });
     const nodes = await this.db.programDef.findMany({ where: { workspaceId: c.workspaceId } });
@@ -176,7 +186,7 @@ export class Studio {
     const problems = await this.problems(c.workspaceId, snapshot, id);
     const sub = await this.db.reviewSubmission.findFirst({ where: { combinationId: id }, orderBy: { submittedAt: "desc" } });
     return {
-      combination: { id: c.id, key: c.combinationKey, label: c.label, description: c.description, participants: c.participants, source_basis: c.sourceBasis, basis_note: c.basisNote, created_by: c.createdBy },
+      combination: { id: c.id, key: c.combinationKey, label: c.label, description: c.description, participants: c.participants, source_basis: c.sourceBasis, basis_note: await this.basisNote(c), created_by: c.createdBy },
       program: { key: (programNode ?? c.program).programNodeKey, label: (programNode ?? c.program).label, kind: (programNode ?? c.program).nodeKind, source_basis: (programNode ?? c.program).sourceBasis }, pathway: parent ? { key: parent.programNodeKey, label: parent.label, client_type: parent.clientType } : null,
       path: chain.map((n) => ({ key: n.programNodeKey, label: n.label, level: LEVEL[n.nodeKind].name })), allowed_locations: c.program.allowedLocations,
       attachments: c.attachments, jobs: c.jobs.map((j) => ({ ...j, detail: undefined })),

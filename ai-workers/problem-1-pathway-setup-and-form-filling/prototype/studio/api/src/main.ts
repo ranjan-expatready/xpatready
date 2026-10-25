@@ -15,6 +15,7 @@ import { Forms, FormsController } from "./forms.ts";
 import { CAPTURE_LIMITS } from "../../contracts/forms.ts";
 import { Intake, MAX_BYTES, MAX_FILES } from "./intake.ts";
 import { Programs } from "./programs.ts";
+import { ReviewQueueController, ReviewQueueService } from "./review-queue.ts";
 import { Runtime, RuntimeController } from "./runtime.ts";
 import { CaseForms, CaseFormsController } from "./fill-case.ts";
 import { Sources } from "./sources.ts";
@@ -156,7 +157,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms] })
+@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService] })
 class AppModule {}
 
 async function main() {

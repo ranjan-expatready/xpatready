@@ -63,4 +63,5 @@ None: points 1–5 are Lead decisions (ownership, K1 reading, record shape).
 Agreed 25 Oct (Lead, under P-89). BUILD slice 1.
 
 ## Build discoveries
+* **25 Oct, slice 1 — four review views have no slice.** Concept slices: (1) To review + AI work log; (2) source + proposals, impact, accept → release; (3) Propose with AI + K2. Board views 5 (screen map), 6 (portal capture review), 8 (merge panel) and 9 (held file) are in none of them, yet To review lists their items today (the API already takes each decision). Slice 1 shows those steps as "(not built yet)" with a tooltip, never a dead link. **Proposal:** add views 5, 6, 8 and 9 to slice 2: they are small panels over endpoints that exist (`captures/:id/approve|return`, `library/merges/:id/approve|reject`, `online-versions/:id/screen-map`; held-file approval needs `ApprovedSource`, point 4).
 

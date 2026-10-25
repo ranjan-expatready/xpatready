@@ -18,6 +18,8 @@ import { join } from "node:path";
 import { costUsd } from "../../../p2/ledger.ts";
 import { EXPERIMENT_CAP_USD, RUN_CAP_USD } from "../../../p2/policy.ts";
 import { ACTORS, Audit, Db, fail, need, PROTOTYPE, Workspace, type Actor } from "./core.ts";
+/** A person by name on every AI work view (Screen 02 board view 10): never an internal id. */
+const personName = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "A person";
 import { Sources } from "./sources.ts";
 
 const sha = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -261,14 +263,14 @@ export class Ai implements OnModuleInit {
     if (!b) fail("This AI work no longer exists (the demo workspace may have been reset).", HttpStatus.NOT_FOUND);
     const atts = await this.db.sourceAttachment.findMany({ where: { id: { in: b!.jobs.map((j) => j.attachmentId!).filter(Boolean) } }, select: { id: true, edition: true, fileName: true } });
     const plan = b!.plan as any;
-    return { ...b, plan: undefined, plan_targets: plan.targets, totals: plan.totals, operation_label: plan.operation_label, capability_note: plan.capability_note,
+    return { ...b, started_by_name: personName(b!.startedBy), plan: undefined, plan_targets: plan.targets, totals: plan.totals, operation_label: plan.operation_label, capability_note: plan.capability_note,
       spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), id: j.id, combinationId: j.combinationId, combination: j.combination.label, program: j.combination.program.label, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
   }
 
   async batches() {
     const workspaceId = await this.ws.id();
     const list = await this.db.aiBatch.findMany({ where: { workspaceId }, orderBy: { startedAt: "desc" }, take: 50, include: { jobs: { select: { status: true, costUsd: true } } } });
-    return list.map((b) => ({ id: b.id, scopeKind: b.scopeKind, scopeLabel: b.scopeLabel, mode: b.mode, status: b.status, message: b.message, startedBy: b.startedBy, startedAt: b.startedAt, finishedAt: b.finishedAt, worstCaseUsd: b.worstCaseUsd, steps: b.jobs.length, spent_usd: round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), counts: b.jobs.reduce((m: Record<string, number>, j) => ({ ...m, [j.status]: (m[j.status] ?? 0) + 1 }), {}) }));
+    return list.map((b) => ({ id: b.id, scopeKind: b.scopeKind, scopeLabel: b.scopeLabel, mode: b.mode, status: b.status, message: b.message, startedBy: b.startedBy, started_by_name: personName(b.startedBy), startedAt: b.startedAt, finishedAt: b.finishedAt, worstCaseUsd: b.worstCaseUsd, steps: b.jobs.length, spent_usd: round(b.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), counts: b.jobs.reduce((m: Record<string, number>, j) => ({ ...m, [j.status]: (m[j.status] ?? 0) + 1 }), {}) }));
   }
 
   async cancel(actor: Actor, id: string) {

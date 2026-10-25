@@ -1,6 +1,6 @@
 import * as React from "react";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Database, FileStack, FileText, Layers, Moon, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
+import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Database, FileStack, FileText, Inbox, Layers, Moon, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/controls";
@@ -15,6 +15,7 @@ import { JobPage } from "@/pages/job";
 import { FieldsPage, FieldPage, SectionsPage, DocumentTypesPage } from "@/pages/library";
 import { ActivityPage, ReleasesPage } from "@/pages/history";
 import { AiBatchPage, AiWorkPage } from "@/pages/ai";
+import { ToReviewPage } from "@/pages/to-review";
 import { RuntimeApp } from "@/runtime/cases";
 
 export default function App() {
@@ -26,7 +27,10 @@ function Shell() {
   const actorId = useActorId();
   const session = useApi(["session", actorId], "/session");
   const loc = useLocation();
+  // To review first under Configure (P-79), with what waits for the person acting.
+  const queue = useApi<{ counts: { needs: number } }>(["review-queue", actorId, "count"], "/review-queue?filter=needs", { refetchInterval: 15_000 });
   const nav = [
+    { to: "/review", label: "To review", icon: Inbox, badge: queue.data?.counts.needs || undefined },
     { to: "/", label: "Programs", icon: Layers, match: (p: string) => p === "/" || p === "/new" || p.startsWith("/c/") },
     { to: "/library/fields", label: "Fields", icon: Database },
     { to: "/library/sections", label: "Sections", icon: Boxes },
@@ -58,11 +62,11 @@ function Shell() {
       <div className="flex flex-1">
         <nav aria-label="Studio" className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-56 shrink-0 flex-col gap-0.5 border-r border-border bg-surface-raised p-3 md:flex">
           <p className="px-2 pb-1 pt-2 text-xs font-medium text-text-muted">Configure</p>
-          {nav.slice(0, 1).map((n) => <NavItem key={n.to} {...n} active={n.match ? n.match(loc.pathname) : undefined} />)}
+          {nav.slice(0, 2).map((n) => <NavItem key={n.to} {...n} active={n.match ? n.match(loc.pathname) : undefined} />)}
           <p className="px-2 pb-1 pt-4 text-xs font-medium text-text-muted">Shared library</p>
-          {nav.slice(1, 6).map((n) => <NavItem key={n.to} {...n} />)}
+          {nav.slice(2, 7).map((n) => <NavItem key={n.to} {...n} />)}
           <p className="px-2 pb-1 pt-4 text-xs font-medium text-text-muted">History</p>
-          {nav.slice(6).map((n) => <NavItem key={n.to} {...n} />)}
+          {nav.slice(7).map((n) => <NavItem key={n.to} {...n} />)}
           <div className="mt-auto rounded-lg border border-border bg-surface p-3 text-[11px] leading-relaxed text-text-muted">
             Simulated people; local PostgreSQL demo database. AI drafting uses the guarded prototype route (synthetic or public official inputs only). Not production.
           </div>
@@ -74,6 +78,7 @@ function Shell() {
             : !session.isPending && !session.data?.actor ? <Notice tone="danger" title="The studio answered without a person">Something between this page and the studio changed its answer. Reload this page; if it stays, restart the studio.</Notice> : null}
           <Routes>
             <Route path="/" element={<ProgramsPage />} />
+            <Route path="/review" element={<ToReviewPage />} />
             <Route path="/new" element={<NewCombinationPage />} />
             <Route path="/c/:id" element={<CombinationPage />} />
             <Route path="/c/:id/:tab" element={<CombinationPage />} />
@@ -114,10 +119,11 @@ function DraftBar() {
   );
 }
 
-function NavItem({ to, label, icon: Icon, active }: { to: string; label: string; icon: any; active?: boolean }) {
+function NavItem({ to, label, icon: Icon, active, badge }: { to: string; label: string; icon: any; active?: boolean; badge?: number }) {
   return (
     <NavLink to={to} end={to === "/"} className={({ isActive }) => cn("flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-sm text-text-muted hover:bg-text/5 hover:text-text", (active ?? isActive) && "bg-primary/10 font-medium text-text-link")}>
       <Icon className="size-4" />{label}
+      {badge ? <span className="ml-auto rounded-md bg-[#7c3aed]/12 px-1.5 text-[11px] font-semibold tabular-nums text-[#6d28d9] dark:text-[#c4b5fd]" aria-label={`${badge} waiting for you`}>{badge}</span> : null}
     </NavLink>
   );
 }

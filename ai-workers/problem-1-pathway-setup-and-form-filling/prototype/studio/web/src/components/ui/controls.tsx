@@ -57,6 +57,15 @@ export function Field({ label, hint, error, children, className }: { label: stri
   );
 }
 
+/** A dialog or panel opens on its first field, not on Close (QA-41: Enter on Close threw the form away). With no field
+ *  it opens on itself, so a screen reader reads its title and Tab reaches its buttons. */
+function openOnFirstField(e: Event) {
+  const box = e.currentTarget as HTMLElement | null;
+  e.preventDefault();
+  const field = box?.querySelector<HTMLElement>('input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+  (field ?? box)?.focus();
+}
+
 /** guard: once a field in the dialog was changed, closing it by Escape, the X or the overlay asks before discarding. */
 export function Dialog({ open, onOpenChange, title, description, children, footer, wide, guard }: { open: boolean; onOpenChange: (o: boolean) => void; title: string; description?: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode; wide?: boolean; guard?: boolean }) {
   const touched = React.useRef(false);
@@ -65,7 +74,7 @@ export function Dialog({ open, onOpenChange, title, description, children, foote
     <DialogPrimitive.Root open={open} onOpenChange={change}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px]" />
-        <DialogPrimitive.Content className={cn("fixed left-1/2 top-1/2 z-50 flex max-h-[88vh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border border-border bg-surface-raised shadow-xl outline-none", wide ? "max-w-4xl" : "max-w-lg")}>
+        <DialogPrimitive.Content onOpenAutoFocus={openOnFirstField} className={cn("fixed left-1/2 top-1/2 z-50 flex max-h-[88vh] w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-xl border border-border bg-surface-raised shadow-xl outline-none", wide ? "max-w-4xl" : "max-w-lg")}>
           <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
             <div>
               <DialogPrimitive.Title className="text-base font-semibold">{title}</DialogPrimitive.Title>
@@ -88,7 +97,7 @@ export function Panel({ open, onOpenChange, title, description, badge, children,
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/25" />
-        <DialogPrimitive.Content className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col border-l border-border bg-surface-raised shadow-xl outline-none">
+        <DialogPrimitive.Content onOpenAutoFocus={openOnFirstField} className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[560px] flex-col border-l border-border bg-surface-raised shadow-xl outline-none">
           <div className="flex items-start justify-between gap-4 border-b border-border px-6 py-4">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2"><DialogPrimitive.Title className="text-lg font-semibold">{title}</DialogPrimitive.Title>{badge}</div>
