@@ -33,6 +33,10 @@ export type Signed = { actor: Actor; modes: Mode[]; sessionId: string; workspace
 @Injectable()
 export class Extension {
   private wrong = new Map<string, number[]>();
+  /** The wrong tries from one address within the window; a new one is added to the list as it is now (two requests at
+   *  the same moment each count: never a list read before the other request's try was added). */
+  private tries(ip: string) { const win = PAIRING.wrongWindowMinutes * 60_000; return (this.wrong.get(ip) ?? []).filter((t) => Date.now() - t < win); }
+  private strike(ip: string) { this.wrong.set(ip, [...this.tries(ip), Date.now()]); }
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Forms) private readonly forms: Forms) {}
 
   /** XT-1: a code for the signed-in Studio person, shown once, kept hashed. */
@@ -52,19 +56,19 @@ export class Extension {
 
   /** XT-2: the extension exchanges a code for its token (once). Five wrong codes from one address pause tries. */
   async session(body: unknown, origin: H, ip: string) {
-    const now = Date.now(), win = PAIRING.wrongWindowMinutes * 60_000;
-    const tries = (this.wrong.get(ip) ?? []).filter((t) => now - t < win);
-    if (tries.length >= PAIRING.wrongTries) fail(`Too many wrong codes: try again in ${PAIRING.wrongWindowMinutes} minutes, with a new code from the Studio.`, HttpStatus.TOO_MANY_REQUESTS);
+    const now = Date.now();
+    if (this.tries(ip).length >= PAIRING.wrongTries) fail(`Too many wrong codes: try again in ${PAIRING.wrongWindowMinutes} minutes, with a new code from the Studio.`, HttpStatus.TOO_MANY_REQUESTS);
     const b = parse(NewSession, body);
     if (b.extensionId !== EXTENSION_ID || origin !== EXTENSION_ORIGIN) unauthorized("This is not the ExpatReady extension the Studio knows.");
     const p = await this.db.extensionPairing.findUnique({ where: { codeHash: sha(b.code) } });
-    if (!p || p.usedAt || p.expiresAt.getTime() <= now) { this.wrong.set(ip, [...tries, now]); unauthorized("That code is wrong, already used or more than 5 minutes old: ask the Studio for a new one."); }
+    if (!p || p.usedAt || p.expiresAt.getTime() <= now) { this.strike(ip); unauthorized("That code is wrong, already used or more than 5 minutes old: ask the Studio for a new one."); }
     const token = randomBytes(32).toString("base64url");
     const expiresAt = new Date(now + PAIRING.sessionHours * 3_600_000);
     // The code is spent under its own row: two exchanges at the same moment give one session (the other is refused).
     const s = await this.db.$transaction(async (tx) => {
       const used = await tx.extensionPairing.updateMany({ where: { id: p!.id, usedAt: null }, data: { usedAt: new Date() } });
-      if (!used.count) unauthorized("That code was just used: ask the Studio for a new one.");
+      // Losing the race for a code is a used code: a wrong try like any other (the count does not depend on timing).
+      if (!used.count) { this.strike(ip); unauthorized("That code was just used: ask the Studio for a new one."); }
       return tx.extensionSession.create({ data: { workspaceId: p!.workspaceId, person: p!.person, modes: p!.modes, extensionId: b.extensionId, tokenHash: sha(token), pairingId: p!.id, expiresAt } });
     });
     const actor = actorOf(s.person);

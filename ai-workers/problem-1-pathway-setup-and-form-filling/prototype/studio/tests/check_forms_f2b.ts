@@ -115,9 +115,9 @@ const connect = async (code: string, extra: Record<string, string> = {}) => call
   const wrong = [];
   for (let n = 0; n < 5; n++) wrong.push((await call("POST", "/extension/sessions", { code: "ZZZZZZZZ", extensionId: ID }, { origin: ORIGIN })).status);
   r = await connect(good.code);
-  // The used and the expired code tried above count too: by then this address had made 3 wrong tries.
+  // The used code, the expired code and the two exchanges that lost the race above count too: 4 wrong tries already.
   const first = wrong.indexOf(429);
-  ok("C2.9: STANDARDS §8 five wrong codes (wrong, used or expired) in 5 minutes pause tries from that address (429), even with a good code next", first === 2 && wrong.slice(first).every((x) => x === 429) && r.status === 429 && /Too many wrong codes/.test(r.body.message), { wrong, next: r.status });
+  ok("C2.9: STANDARDS §8 five wrong codes (wrong, used or expired) in 5 minutes pause tries from that address (429), even with a good code next", first === 1 && wrong.slice(first).every((x) => x === 429) && r.status === 429 && /Too many wrong codes/.test(r.body.message), { wrong, next: r.status });
 
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);
