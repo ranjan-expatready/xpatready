@@ -7,9 +7,11 @@
 // Online (a copy only: the demo seed's channel is never changed, M4). No browser, NO model call (US$0).
 //   zsh studio/tools/isolated.sh forms_f2c 4457 start && tsx studio/tests/check_forms_f2c.ts 4457 xr_studio_forms_f2c
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ANSWER_ON_SCREEN, portalValue } from "../engine/extension/fill.ts";
+import { screenIdentity } from "../engine/twin.ts";
 import { openCase, releaseOnline, setupVisitorVisa, type Call } from "./forms_f2_setup.ts";
 
 const PORT = Number(process.argv[2] ?? 4457), DB = process.argv[3] ?? "xr_studio_forms_f2c";
@@ -35,6 +37,8 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
 const read = (file: string) => JSON.parse(execFileSync(PY, ["-I", join(STUDIO, "tools", "read_portal_capture.py"), "page", join(FIX, file)], { encoding: "utf8" }).trim().split("\n").pop()!).screens[0];
 const until = async (fn: () => Promise<boolean>, ms = 120_000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await new Promise((r) => setTimeout(r, 500)); } return false; };
 const OFFICER = "user-O";
+/** A screen not in the version is kept as a checksum of its heading (break M2). */
+const SPOUSE_PAGE = `unknown-${createHash("sha256").update(screenIdentity("Your spouse or common-law partner")).digest("hex").slice(0, 16)}`;
 
 (async () => {
   // ──────────────────────────────────────────── engine (no server): the portal's own format (BR-10)
@@ -111,7 +115,7 @@ const OFFICER = "user-O";
   const both = await Promise.all([plan(rw), plan(rw), plan(rw)]);
   ok("C9.3: XT-6 three mismatches at the same moment still make one task (the database decides)", both.every((x) => x.status === 200) && sql(`select count(*)||':'||max(times) from recapture_task where screen_page='personal-details'`) === "1:5", sql(`select count(*)||':'||max(times) from recapture_task where screen_page='personal-details'`));
   r = await plan(s4);
-  ok("C9.3: Q2 a screen the approved version does not have fills nothing and opens \"Capture needed\" (not a change)", r.body.match === false && r.body.reason === "not_captured" && /not in the approved version/.test(r.body.message) && sql(`select kind from recapture_task where screen_page='your-spouse-or-common-law-partner'`) === "not_captured", r.body.message);
+  ok("C9.3: Q2 a screen the approved version does not have fills nothing and opens \"Capture needed\" (not a change)", r.body.match === false && r.body.reason === "not_captured" && /not in the approved version/.test(r.body.message) && sql(`select kind from recapture_task where screen_page='${SPOUSE_PAGE}'`) === "not_captured", r.body.message);
   r = await call("GET", "/extension/recapture-tasks", undefined, "user-C");
   ok("C9.3: the content team lists the open tasks with the screens and changes to capture again", r.status === 200 && r.body.length === 2 && r.body.every((t: { status: string }) => t.status === "OPEN"), r.body.map((t: { screen: string; kind: string; times: number }) => `${t.screen}:${t.kind}:${t.times}`));
   r = await call("GET", "/extension/recapture-tasks", undefined, OFFICER);
@@ -123,7 +127,7 @@ const OFFICER = "user-O";
   r = await call("POST", `/extension/captures/${cap2.id}/screens`, { screen: rw, revision: cap2.revision }, capTok);
   await call("POST", `/extension/captures/${cap2.id}/finish`, undefined, capTok);
   r = await call("POST", `/captures/${cap2.id}/approve`, undefined, "user-C");
-  ok("C9.3: XT-6 approving the re-capture closes the task of the screen it saw; the screen it did not see keeps its task", r.status < 300 && sql(`select status from recapture_task where id='${task1.id}'`) === "DONE" && sql(`select status from recapture_task where screen_page='your-spouse-or-common-law-partner'`) === "OPEN", sql("select screen_page||':'||status from recapture_task order by screen_page"));
+  ok("C9.3: XT-6 approving the re-capture closes the task of the screen it saw; the screen it did not see keeps its task", r.status < 300 && sql(`select status from recapture_task where id='${task1.id}'`) === "DONE" && sql(`select status from recapture_task where screen_page='${SPOUSE_PAGE}'`) === "OPEN", sql("select screen_page||':'||status from recapture_task order by screen_page"));
   const tasksBefore = sql("select count(*) from recapture_task");
   r = await plan(rw);
   ok("C7.4: M2 a case on the older release, on the newer screen: nothing filled, \"fill this screen by hand\", and no new task", r.body.match === false && !!r.body.newer && /fill this screen by hand/.test(r.body.message) && !r.body.task && sql("select count(*) from recapture_task") === tasksBefore, r.body.message);
@@ -135,6 +139,21 @@ const OFFICER = "user-O";
   const P2 = (await call("GET", `/runtime/cases/${c2.id}`, undefined, OFFICER)).body.people.find((x: { role: string }) => x.role === "principal").subject_id as string;
   r = await plan(rw, ext, c2.id, P2);
   ok("C7.4: Q2 the proof ends: a new case on the new release fills the re-captured screen (it matches: a plan, no task)", r.status === 200 && r.body.match === true && sql("select count(*) from recapture_task") === tasksBefore, { status: r.status, match: r.body.match, message: r.body.message });
+
+  // ──────────────────────────────────────────── CHECK fixes (break B1, M2, M4)
+  r = await plan({ ...s1, title: "Personal details (Spouse or common-law partner)" }, ext, c2.id, P2);
+  ok("C7.4: break B1 a screen titled \"Personal details (Spouse …)\" is not the applicant's screen: no plan, no value of the applicant", r.body.match === false && r.body.reason === "not_captured" && !JSON.stringify(r.body).includes("SAMPLE") && !JSON.stringify(r.body).includes("1990"), r.body.reason);
+  const secret = { ...s1, title: "Application 1234 5678 90 · details of AB1234567 Sample Name" };
+  r = await plan(secret, ext, c2.id, P2);
+  const leak = sql("select count(*) from recapture_task where screen_title like '%AB1234567%' or screen_page like '%ab1234567%' or screen_title like '%Sample Name%' or screen_page like '%sample-name%' or screen_page like '%1234%'");
+  ok("C9.3: break M2 a screen not in the version is kept as a checksum and named in words: its heading (a client's details) is in no task", r.body.task?.id && leak === "0" && sql(`select screen_title from recapture_task where id='${r.body.task.id}'`) === "A screen that is not in the approved version" && /^unknown-[0-9a-f]{16}$/.test(sql(`select screen_page from recapture_task where id='${r.body.task.id}'`)), { leak });
+  const secretTask = r.body.task.id as string;
+  for (let n = 0; n < 12; n++) await plan({ ...s1, title: `Junk screen number ${n}` }, ext, c2.id, P2);
+  const unknown = Number(sql(`select count(*) from recapture_task where kind='not_captured' and status='OPEN' and form_edition_id=(select form_edition_id from recapture_task where id='${secretTask}')`));
+  ok("C9.3: break M2 fail: one fill token cannot flood the content team (at most 10 open \"Capture needed\" per version)", unknown === 10, unknown);
+  r = await call("GET", "/extension/cases?q=f2c-case-1", undefined, ext);
+  const all = await call("GET", "/extension/cases", undefined, ext);
+  ok("C7.4: break M4 fill mode finds any open case by its reference; no match is an empty list", r.status === 200 && r.body.length === 1 && r.body[0].reference === "F2C-CASE-1" && all.body.length === 2 && (await call("GET", "/extension/cases?q=nothing-like-this", undefined, ext)).body.length === 0, r.body.map((x: { reference: string }) => x.reference));
 
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);

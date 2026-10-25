@@ -2,10 +2,10 @@
 // the side panel, and only the side panel of this extension: "read" gives the open screen's structure (never an
 // answer, reader.ts); "fill" writes the plan the server returned for this screen (filler.ts) and marks on the page any
 // input the screen did not accept. It never calls the API (the panel does: M7), keeps nothing and runs nothing else.
-import { fillScreen, type PlanInput } from "./filler.ts";
-import { readScreen } from "./reader.ts";
+import { fillScreen, sameScreen, type PlanInput } from "./filler.ts";
+import { readScreen, type ReadScreen } from "./reader.ts";
 
-type Msg = { kind: "ping" } | { kind: "read" } | { kind: "fill"; inputs: PlanInput[] };
+type Msg = { kind: "ping" } | { kind: "read" } | { kind: "fill"; inputs: PlanInput[]; expect: ReadScreen };
 const MARK = "xr-not-accepted";
 
 chrome.runtime.onMessage.addListener((msg: Msg, sender, reply) => {
@@ -13,6 +13,9 @@ chrome.runtime.onMessage.addListener((msg: Msg, sender, reply) => {
   if (msg.kind === "ping") reply({ ok: true });
   else if (msg.kind === "read") reply(readScreen(document));
   else if (msg.kind === "fill") {
+    // Break B2: the plan was made for the screen read before the request; if the person moved on (Next, Back, another
+    // screen loaded in place) the page now is another screen, and nothing is filled.
+    if (!sameScreen(document, msg.expect)) { reply({ moved: true }); return false; }
     for (const el of Array.from(document.querySelectorAll(`[data-${MARK}]`))) { (el as HTMLElement).style.outline = ""; el.removeAttribute(`data-${MARK}`); }
     const out = fillScreen(document, msg.inputs);
     // "Not accepted by the screen" is shown on the page too, beside the panel's list (BR-11).

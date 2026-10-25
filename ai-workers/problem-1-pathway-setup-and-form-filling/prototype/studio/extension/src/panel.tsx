@@ -24,7 +24,10 @@ const PLAN_MINUTES = 5; // Sample (BR-13)
 // ─── the portal tab: the active tab of the window the person works in, else the portal tab they used last
 async function portalTab(): Promise<chrome.tabs.Tab | null> {
   const hosts = (chrome.runtime.getManifest().content_scripts ?? []).flatMap((c) => c.matches ?? []);
-  const tabs = hosts.length ? await chrome.tabs.query({ url: hosts }) : [];
+  if (!hosts.length) return null;
+  // The panel's own window first (review m9: never another window's portal tab), else the portal tab used last.
+  const own = await chrome.windows.getCurrent().then((w) => chrome.tabs.query({ url: hosts, windowId: w.id })).catch(() => [] as chrome.tabs.Tab[]);
+  const tabs = own.length ? own : await chrome.tabs.query({ url: hosts });
   return tabs.find((t) => t.active) ?? [...tabs].sort((a, b) => (b.lastAccessed ?? 0) - (a.lastAccessed ?? 0))[0] ?? null;
 }
 async function ask<T>(msg: unknown, tabId?: number): Promise<{ tabId: number; answer: T }> {
@@ -105,7 +108,9 @@ function FillMode({ onError, clearError }: { onError: (e: unknown) => void; clea
   const [pick, setPick] = React.useState<{ caseId: string; subject: string; form: string }>({ caseId: "", subject: "", form: "" });
   const [planTab, setPlanTab] = React.useState<number | null>(null);
   const [plan, setPlan] = React.useState<Plan | null>(null), [outcomes, setOutcomes] = React.useState<Outcome[] | null>(null), [busy, setBusy] = React.useState(false);
-  React.useEffect(() => { void call<CaseRow[]>("GET", "/cases").then(setCases).catch(onError); }, []);
+  const [find, setFind] = React.useState("");
+  // Any open case can be found by its reference (the 50 newest are listed without a search).
+  React.useEffect(() => { const t = setTimeout(() => { void call<CaseRow[]>("GET", `/cases${find.trim() ? `?q=${encodeURIComponent(find.trim())}` : ""}`).then(setCases).catch(onError); }, find ? 300 : 0); return () => clearTimeout(t); }, [find]);
   // BR-13: the plan and its values are dropped when the portal tab moves on, and after 5 minutes.
   React.useEffect(() => {
     if (!plan) return;
@@ -126,14 +131,20 @@ function FillMode({ onError, clearError }: { onError: (e: unknown) => void; clea
       const p = await call<Plan>("POST", `/cases/${pick.caseId}/forms/${encodeURIComponent(pick.form)}/${pick.subject}/fill-plans`, { screen: read.screens[0] });
       setPlanTab(tabId); setPlan(p);
       // The same tab that was read is the one filled (never another portal tab that became active meanwhile).
-      if (p.match) setOutcomes((await ask<Outcome[]>({ kind: "fill", inputs: p.inputs }, tabId)).answer);
+      if (p.match) {
+        const done = (await ask<Outcome[] | { moved: true }>({ kind: "fill", inputs: p.inputs, expect: read.screens[0] }, tabId)).answer;
+        if (!Array.isArray(done)) { setPlan(null); throw new ApiError("The portal moved to another screen before filling. Nothing was filled: fill this screen again.", 0); }
+        setOutcomes(done);
+      }
     } catch (e) { onError(e); } finally { setBusy(false); }
   };
   if (!cases) return <p className="text-sm text-text-muted">Loading your cases…</p>;
-  if (!cases.length) return <Note title="No case to fill yet">Open a case in the Studio whose release files a form online; it appears here.</Note>;
+  if (!cases.length && !find) return <Note title="No case to fill yet">Open a case in the Studio whose release files a form online; it appears here.</Note>;
   const filled = outcomes?.filter((o) => o.outcome === "filled").length ?? 0;
   return (
     <div className="space-y-3">
+      <Field label="Search by reference"><input className={input} value={find} onChange={(e) => setFind(e.target.value)} type="search" autoComplete="off" /></Field>
+      {find && !cases.length && <p className="text-xs text-text-muted">No open case has that reference.</p>}
       <Field label="Case"><select className={input} value={pick.caseId} onChange={(e) => { const x = cases.find((k) => k.id === e.target.value); setPick({ caseId: e.target.value, subject: x?.people.find((p) => p.role === "principal")?.subject_id ?? "", form: x?.online_forms[0] ?? "" }); setPlan(null); setOutcomes(null); }}>
         <option value="">Choose a case</option>{cases.map((k) => <option key={k.id} value={k.id}>{k.reference} · {k.release}</option>)}</select></Field>
       {c && <>
@@ -184,9 +195,17 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
       setCap(r.capture); setCheck(null); setNote({ tone: r.result.outcome === "added" ? "ok" : "warn", text: r.result.outcome === "added" ? r.result.message : r.result.message });
     } catch (e) { onError(e); } finally { setBusy(false); }
   };
+  // Review Major 1: a capture left open (the panel was closed or reloaded) is offered again, never lost.
+  const [open, setOpen] = React.useState<Capture[] | null>(null);
+  React.useEffect(() => { if (!cap) void call<Capture[]>("GET", "/captures").then(setOpen).catch(onError); }, [cap]);
   const finish = async () => { if (!cap) return; setBusy(true); try { setCap(await call<Capture>("POST", `/captures/${cap.id}/finish`)); setNote(null); } catch (e) { onError(e); } finally { setBusy(false); } };
   if (!cap) return (
     <form onSubmit={start} className="space-y-3">
+      {open?.length ? <section aria-label="Captures to continue" className="space-y-2">
+        <p className="text-sm font-semibold">Continue a capture</p>
+        {open.map((o) => <Button key={o.id} type="button" onClick={() => { void call<Capture>("GET", `/captures/${o.id}`).then((fresh) => { setCap(fresh); setNote(null); }).catch(onError); }} className="w-full">{`Continue ${o.form} · ${o.screens.length} screen${o.screens.length === 1 ? "" : "s"} so far`}</Button>)}
+        <p className="pt-2 text-sm font-semibold">Or start a new capture</p>
+      </section> : null}
       <Note>Capture records each portal screen's structure in portal order, never an answer. A second person approves it before anything uses it.</Note>
       <Field label="Portal"><select className={input} value={meta.portal} onChange={(e) => setMeta({ ...meta, portal: e.target.value })}><option value="ircc_portal">IRCC Portal</option><option value="apr_portal">Authorized Paid Representatives Portal</option><option value="rep_pr_portal">Representative Permanent Residence Portal</option><option value="lmia_online">LMIA Online</option></select></Field>
       <Field label="Form code"><input className={input} value={meta.form} onChange={(e) => setMeta({ ...meta, form: e.target.value })} placeholder="IMM 5257" /></Field>
@@ -198,7 +217,8 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
   const done = cap.status !== "OPEN";
   return (
     <div className="space-y-3">
-      <Note tone={done ? "ok" : "info"} title={`${cap.form} · ${cap.screens.length} screen${cap.screens.length === 1 ? "" : "s"} captured`}>{done ? (cap.status === "HELD" ? `Held for a second person. ${cap.status_detail}` : cap.status_detail) : "Go to each screen in portal order and capture it."}</Note>
+      {/* Review m2: once finished, the record holds the version's screens too (Q2), so the count is not "captured" any more. */}
+      <Note tone={done ? "ok" : "info"} title={done ? `${cap.form} · ${cap.status === "HELD" ? "held for a second person" : "already in the library"}` : `${cap.form} · ${cap.screens.length} screen${cap.screens.length === 1 ? "" : "s"} captured`}>{done ? cap.status_detail : "Go to each screen in portal order and capture it."}</Note>
       {note && <Note tone={note.tone}>{note.text}</Note>}
       {check && <section aria-label="Check before sending" className="space-y-2 rounded-md border border-border bg-surface-raised p-2">
         <p className="text-sm font-semibold">Check before sending: these texts go to ExpatReady</p>
@@ -209,7 +229,8 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
       </section>}
       {!done && !check && <Pinned><Button primary onClick={read} disabled={busy} className="w-full">Capture this screen</Button></Pinned>}
       {!done && <Button onClick={finish} disabled={busy || !cap.screens.length} className="w-full">Finish capture</Button>}
-      {cap.screens.length > 0 && <ol className="list-decimal pl-5 text-xs text-text-muted">{cap.screens.map((s) => <li key={s.order}>{s.title} · {s.questions} questions</li>)}</ol>}
+      {done && <Pinned><Button primary onClick={() => { setCap(null); setNote(null); }} className="w-full">Start another capture</Button></Pinned>}
+      {!done && cap.screens.length > 0 && <ol className="list-decimal pl-5 text-xs text-text-muted">{cap.screens.map((s) => <li key={s.order}>{s.title} · {s.questions} questions</li>)}</ol>}
     </div>
   );
 }

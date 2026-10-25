@@ -28,7 +28,7 @@ const VOID = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input"
 const clean = (s: string | null | undefined) => (s ?? "").replace(/\s+/g, " ").trim();
 const clientData = (t: string | null | undefined) => { for (const [rx, what] of CLIENT) if (rx.test(t ?? "")) return what; return null; };
 const placeholder = (label: string) => !label.replace(/^[ -]+|[ -]+$/g, "") || PLACEHOLDER.test(label);
-const searchForm = (a: Attrs) => a.role === "search" || `${a.class ?? ""} ${a.id ?? ""} ${a.name ?? ""}`.toLowerCase().split(/[\s_-]+/).includes("search");
+export const searchForm = (a: Attrs) => a.role === "search" || `${a.class ?? ""} ${a.id ?? ""} ${a.name ?? ""}`.toLowerCase().split(/[\s_-]+/).includes("search");
 
 type Attrs = Record<string, string>;
 type El = { id: string; name: string | null; type: string; required: boolean; label: string | null; help?: string | null; order?: number; group?: string; part?: "YYYY" | "MM" | "DD"; max_length?: number; min_length?: number; pattern?: string; options?: Opt[]; _described?: string | null; _dom_id?: string | null; _placeholder?: string | null };

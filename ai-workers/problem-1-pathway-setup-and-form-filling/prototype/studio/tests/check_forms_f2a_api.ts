@@ -10,6 +10,7 @@ import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import type { CaptureInput, CaptureRecord } from "../engine/capture.ts";
 import { fingerprint, inputKey, mergeCapture, rawId, screenDifference, screenFingerprint, screenIdentity, screenProblems } from "../engine/extension/screens.ts";
+import { screenQualifier } from "../engine/twin.ts";
 import { draftScreenMap } from "../engine/twin.ts";
 
 const PORT = Number(process.argv[2] ?? 4455), DB = process.argv[3] ?? "xr_studio_forms_f2a";
@@ -44,8 +45,15 @@ const meta = { portal: "ircc_portal", form: "IMM 5257", title: "Visitor visa", w
   // ──────────────────────────────────────────── engine (no server)
   const [s1, s2, s3, s4, rw] = [S1, S2, S3, S4, RW].map(read);
   ok("C2.9: E-1 a screen's identity is its heading, the same whatever the order or the case of its words", screenIdentity("Personal details") === "personal-details" && screenIdentity("  PERSONAL   details ") === "personal-details" && screenIdentity(s4.title) !== screenIdentity(s1.title), [screenIdentity(s1.title), screenIdentity(s4.title)]);
+  // CHECK (break B1, m6): brackets, long headings and headings in another script keep two screens apart.
+  const spouseTitled = "Personal details (Spouse or common-law partner)";
+  ok("C2.9: break B1 a heading with words in brackets is another screen than the same heading without them", screenIdentity(spouseTitled) !== screenIdentity("Personal details") && screenIdentity("Personal details (2)") !== screenIdentity("Personal details (3)"), [screenIdentity(spouseTitled)]);
+  ok("C2.9: break B1 two long headings that differ after 40 characters are two screens; their id qualifiers differ too", screenIdentity("Information about your employment history in the last ten years: employer one") !== screenIdentity("Information about your employment history in the last ten years: employer two") && screenQualifier("Information about your employment history in the last ten years: employer one") !== screenQualifier("Information about your employment history in the last ten years: employer two") && screenQualifier("Information about your employment history in the last ten years: employer one").length <= 40);
+  ok("C2.9: break m6 headings in another script are told apart (never all \"screen\")", screenIdentity("Données personnelles") !== screenIdentity("Coordonnées") && screenIdentity("个人资料") !== screenIdentity("婚姻状况") && screenIdentity("— — —") !== screenIdentity("* * *") && !["screen"].includes(screenIdentity("个人资料")));
   ok("C2.9: E-1 an input is known by its screen and its element id, never its qualifier", inputKey(s4.title, "familyName@x") === inputKey(s4.title, "familyName") && inputKey(s4.title, "familyName") !== inputKey(s1.title, "familyName") && rawId("a@b") === "a");
   const approved = mergeCapture(null, [s1, s2, s3, s4].map((s) => ({ ...s, source: src })), meta).record;
+  const collide = mergeCapture(approved, [{ ...s1, title: spouseTitled, source: src }], meta);
+  ok("C2.9: break B1 fail: a branch capture titled \"Personal details (Spouse …)\" is a new screen, never the approved applicant screen replaced", collide.added.length === 1 && collide.record.screens.find((x) => x.title === "Personal details")!.inputs.every((i, n) => i.id === approved.screens[0].inputs[n].id) && collide.record.screens.length === 5, { added: collide.added, compared: collide.compared });
   ok("C2.9: E-2 one screen's fingerprint ignores the qualifier and the place of the screen; a reworded label changes it", screenFingerprint(approved.screens[3]) === screenFingerprint(s4) && screenFingerprint(s1) !== screenFingerprint(rw));
   const d = screenDifference(s1, rw);
   ok("C2.9: E-3 the difference of one screen names the reworded input and the added option, nothing else", d.some((x) => x.input === "familyName" && x.change === "reworded") && d.some((x) => x.change === "options") && d.every((x) => x.change !== "removed"), d.map((x) => `${x.input}:${x.change}`));
@@ -92,13 +100,18 @@ const meta = { portal: "ircc_portal", form: "IMM 5257", title: "Visitor visa", w
   const rev1 = r.body.capture.revision;
   r = await add(s1, rev1);
   ok("C2.9: BR-4 fail: the same screen again is \"already captured\", nothing added", r.body.result?.outcome === "duplicate" && r.body.capture.screens.length === 1, r.body.result);
+  // Break B1: a screen whose heading only adds words in brackets is not "already captured".
+  let rb = await add({ ...s1, title: "Personal details (Spouse or common-law partner)" }, rev1);
+  ok("C2.9: break B1 a second screen whose heading differs in brackets is added, not refused as already captured", rb.body.result?.outcome === "added", rb.body.result);
+  rb = await call("DELETE", `/captures/${c.id}/screens/2`);
+  const rev1b = (await call("GET", `/captures/${c.id}`)).body.revision;
   r = await add(s3, c.revision);
   ok("C2.9: BR-4 fail: a screen sent from an older revision is refused (409), nothing added", r.status === 409, r.body.message);
-  r = await add({ ...s3, inputs: s3.inputs.map((i, n) => (n ? i : { ...i, value: "SAMPLE" })) }, rev1);
+  r = await add({ ...s3, inputs: s3.inputs.map((i, n) => (n ? i : { ...i, value: "SAMPLE" })) }, rev1b);
   ok("C2.9: BR-1 fail: a screen carrying a value is refused as a whole (400), nothing kept", r.status === 400 && /carried an answer/.test(r.body.message), r.body.message);
-  r = await add({ ...s3, inputs: s3.inputs.map((i, n) => (n ? i : { ...i, label: "Details of AB1234567" })) }, rev1);
+  r = await add({ ...s3, inputs: s3.inputs.map((i, n) => (n ? i : { ...i, label: "Details of AB1234567" })) }, rev1b);
   ok("C2.9: BR-1 fail: a label holding a passport-like code is refused (422) in words, nothing kept", r.status === 422 && /passport-like code/.test(r.body.message), r.body.message);
-  r = await add({ ...s3, extra: 1 }, rev1);
+  r = await add({ ...s3, extra: 1 }, rev1b);
   ok("C2.9: BR-1 fail: a key the contract does not name is refused, never ignored", r.status === 400, r.status);
   r = await call("POST", "/extension/pairings", {}, "user-B");
   ok("C2.9: BR-15 roles fail: a person without the capture duty (author) gets no code for the extension (403)", r.status === 403, r.body.message);
@@ -107,7 +120,7 @@ const meta = { portal: "ircc_portal", form: "IMM 5257", title: "Visitor visa", w
   const saved = (await call("POST", "/captures", { portal: "ircc_portal", form: "IMM 5257", title: "Application for a visitor visa (online)" })).body;
   r = await add(s3, saved.revision, ext, saved.id);
   ok("C2.9: fail: a capture from saved pages takes no extension screen (404: not an extension capture of yours); an extension capture takes no saved page (409)", r.status === 404 && (await upload(`/captures/${c.id}/screens`, [S2])).status === 409, r.body.message);
-  r = await add(s3, rev1);
+  r = await add(s3, rev1b);
   const fin = await call("POST", `/extension/captures/${c.id}/finish`, undefined, ext);
   ok("C2.9: Q2 a capture that saw s1 and s3 unchanged is already in the library: 2 compared, 2 not seen this time, nothing removed", fin.body.status === "IN_LIBRARY" && /2 not seen this time/.test(fin.body.status_detail), fin.body.status_detail);
 

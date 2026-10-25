@@ -11,7 +11,7 @@
 import { canonical, sha256 } from "../../../contracts/rules.ts";
 import { fingerprint, structure, type CaptureInput, type CaptureRecord, type CaptureScreen } from "../../../contracts/portal-capture.ts";
 import { difference, type Difference } from "../capture.ts";
-import { inputKey, rawId, screenIdentity } from "../twin.ts";
+import { inputKey, rawId, screenIdentity, screenQualifier } from "../twin.ts";
 import RULES from "../../contracts/portal-reader-rules.json" with { type: "json" };
 
 export { inputKey, rawId, screenIdentity };
@@ -47,7 +47,7 @@ export function mergeCapture(current: CaptureRecord | null, seen: SeenScreen[], 
     const approvedIds = new Map((old?.inputs ?? []).map((i) => [rawId(i.id), i.id]));
     const taken = () => new Set(out.filter((x) => screenIdentity(x.title) !== ident).flatMap((x) => x.inputs.map((i) => i.id)));
     const t = taken();
-    const inputs = s.inputs.map((i, j) => ({ ...i, order: j + 1, id: approvedIds.get(rawId(i.id)) ?? (t.has(rawId(i.id)) ? `${rawId(i.id)}@${ident}` : rawId(i.id)) }));
+    const inputs = s.inputs.map((i, j) => ({ ...i, order: j + 1, id: approvedIds.get(rawId(i.id)) ?? (t.has(rawId(i.id)) ? `${rawId(i.id)}@${screenQualifier(s.title)}` : rawId(i.id)) }));
     if (old) {
       (screenFingerprint(old) === screenFingerprint({ title: s.title, inputs }) ? unchanged : compared).push(old.title);
       out[at] = { title: s.title, source: s.source, inputs }; after = at;

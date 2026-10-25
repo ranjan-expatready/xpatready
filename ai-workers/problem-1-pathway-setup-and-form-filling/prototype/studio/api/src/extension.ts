@@ -6,7 +6,7 @@
 // every request's Origin must match. Codes are single-use, 5 minutes; tokens 8 hours (Sample); five wrong codes from
 // one address in 5 minutes refuse further tries for 5 minutes (STANDARDS §8). Answers and tokens are never logged.
 // The Studio's sign-in is the simulated x-actor header: pairing proves the flow, not the security (Scaffolding, P-33).
-import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Ip, Param, Post } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Ip, Param, Post, Query } from "@nestjs/common";
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -43,7 +43,8 @@ export class Extension {
   /** The wrong tries from one address within the window; a new one is added to the list as it is now (two requests at
    *  the same moment each count: never a list read before the other request's try was added). */
   private tries(ip: string) { const win = PAIRING.wrongWindowMinutes * 60_000; return (this.wrong.get(ip) ?? []).filter((t) => Date.now() - t < win); }
-  private strike(ip: string) { this.wrong.set(ip, [...this.tries(ip), Date.now()]); }
+  private strike(ip: string) { const t = Date.now() + Math.random(); this.wrong.set(ip, [...this.tries(ip), t]); return t; }
+  private forgive(ip: string, t: number) { this.wrong.set(ip, (this.wrong.get(ip) ?? []).filter((x) => x !== t)); }
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Forms) private readonly forms: Forms, @Inject(Runtime) private readonly runtime: Runtime) {}
 
   /** XT-1: a code for the signed-in Studio person, shown once, kept hashed. */
@@ -64,20 +65,25 @@ export class Extension {
   /** XT-2: the extension exchanges a code for its token (once). Five wrong codes from one address pause tries. */
   async session(body: unknown, origin: H, ip: string) {
     const now = Date.now();
-    if (this.tries(ip).length >= PAIRING.wrongTries) fail(`Too many wrong codes: try again in ${PAIRING.wrongWindowMinutes} minutes, with a new code from the Studio.`, HttpStatus.TOO_MANY_REQUESTS);
+    // Who is asking first (break m2: a request from elsewhere never spends this address's tries), then the limit.
     const b = parse(NewSession, body);
     if (b.extensionId !== EXTENSION_ID || origin !== EXTENSION_ORIGIN) unauthorized("This is not the ExpatReady extension the Studio knows.");
+    if (this.tries(ip).length >= PAIRING.wrongTries) fail(`Too many wrong codes: try again in ${PAIRING.wrongWindowMinutes} minutes, with a new code from the Studio.`, HttpStatus.TOO_MANY_REQUESTS);
+    // Break M1: every try is counted before the database is asked, so tries sent at the same moment cannot all pass the
+    // check before any is counted; a right code takes its own try back.
+    const mine = this.strike(ip);
     const p = await this.db.extensionPairing.findUnique({ where: { codeHash: sha(b.code) } });
-    if (!p || p.usedAt || p.expiresAt.getTime() <= now) { this.strike(ip); unauthorized("That code is wrong, already used or more than 5 minutes old: ask the Studio for a new one."); }
+    if (!p || p.usedAt || p.expiresAt.getTime() <= now) unauthorized("That code is wrong, already used or more than 5 minutes old: ask the Studio for a new one.");
     const token = randomBytes(32).toString("base64url");
     const expiresAt = new Date(now + PAIRING.sessionHours * 3_600_000);
     // The code is spent under its own row: two exchanges at the same moment give one session (the other is refused).
     const s = await this.db.$transaction(async (tx) => {
       const used = await tx.extensionPairing.updateMany({ where: { id: p!.id, usedAt: null }, data: { usedAt: new Date() } });
       // Losing the race for a code is a used code: a wrong try like any other (the count does not depend on timing).
-      if (!used.count) { this.strike(ip); unauthorized("That code was just used: ask the Studio for a new one."); }
+      if (!used.count) unauthorized("That code was just used: ask the Studio for a new one."); // its try stays counted
       return tx.extensionSession.create({ data: { workspaceId: p!.workspaceId, person: p!.person, modes: p!.modes, extensionId: b.extensionId, tokenHash: sha(token), pairingId: p!.id, expiresAt } });
     });
+    this.forgive(ip, mine);
     const actor = actorOf(s.person);
     await this.audit.log(s.workspaceId, s.person, "connected", "browser extension", null, `${actor.name} connected the browser extension (${s.modes.join(" and ")}; until ${expiresAt.toISOString().slice(0, 16).replace("T", " ")} UTC)`);
     return { token, expires_at: expiresAt.toISOString(), modes: s.modes, person: { id: actor.id, name: actor.name, role: actor.role } };
@@ -109,7 +115,10 @@ export class Extension {
   }
   /** The Studio person's own sessions (never another person's), newest first. */
   async sessions(actor: Actor) {
-    const rows = await this.db.extensionSession.findMany({ where: { person: actor.id }, orderBy: { createdAt: "desc" }, take: 20 });
+    // Every live session (break m3: an older live one could not be seen or disconnected), then the 20 newest ended ones.
+    const live = await this.db.extensionSession.findMany({ where: { person: actor.id, revokedAt: null, expiresAt: { gt: new Date() } }, orderBy: { createdAt: "desc" } });
+    const ended = await this.db.extensionSession.findMany({ where: { person: actor.id, OR: [{ revokedAt: { not: null } }, { expiresAt: { lte: new Date() } }] }, orderBy: { createdAt: "desc" }, take: 20 });
+    const rows = [...live, ...ended];
     const now = Date.now();
     return rows.map((s) => ({ id: s.id, modes: s.modes, created_at: s.createdAt.toISOString(), expires_at: s.expiresAt.toISOString(), state: s.revokedAt ? "signed out" : s.expiresAt.getTime() <= now ? "ended" : "connected" }));
   }
@@ -125,6 +134,12 @@ export class Extension {
     if (!c) fail("No capture of yours with that id was started in the extension.", HttpStatus.NOT_FOUND);
     return c!;
   }
+  /** Review Major 1: the person's own extension captures still open (or returned to them), newest first, so a panel that
+   *  was closed or reloaded continues one instead of losing it. */
+  async openCaptures(sig: Signed) {
+    const rows = await this.db.portalCapture.findMany({ where: { workspaceId: sig.workspaceId, way: "extension", capturedBy: sig.actor.id, status: { in: ["OPEN", "RETURNED"] } }, orderBy: { createdAt: "desc" }, take: 20 });
+    return Promise.all(rows.map((c) => this.forms.capture(c.id)));
+  }
   startCapture(sig: Signed, body: unknown) { return this.forms.createCapture(sig.actor, { ...parse(NewExtensionCapture, body), way: "extension" }); }
   async addScreen(sig: Signed, id: string, body: unknown) { await this.ownCapture(sig, id); return this.forms.addExtensionScreen(sig.actor, id, body); }
   async capture(sig: Signed, id: string) { await this.ownCapture(sig, id); return this.forms.capture(id); }
@@ -132,9 +147,11 @@ export class Extension {
 
   /** Fill mode's choice of case: the workspace's open cases, newest first, with their people and the forms their
    *  pinned release files online (an officer reaches any case of the workspace, as in the Studio). */
-  async cases(sig: Signed) {
+  async cases(sig: Signed, q?: string) {
     need(sig.actor, "case");
-    const rows = await this.db.case.findMany({ where: { workspaceId: sig.workspaceId, status: "OPEN" }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 20,
+    // Break M4: any open case can be found by its reference (the 50 newest without a search).
+    const find = (q ?? "").trim().slice(0, 80);
+    const rows = await this.db.case.findMany({ where: { workspaceId: sig.workspaceId, status: "OPEN", ...(find ? { reference: { contains: find, mode: "insensitive" } } : {}) }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 50,
       include: { combination: { select: { label: true } }, pins: { include: { release: { select: { version: true, snapshot: true } } } }, participants: { orderBy: { order: "asc" }, include: { subject: { select: { label: true } } } } } });
     return rows.map((c) => {
       const s = c.pins[0]?.release.snapshot as unknown as { forms: { form_number: string; channel?: string }[]; field_maps: { form_number: string; channel?: string }[] } | undefined;
@@ -164,8 +181,8 @@ export class Extension {
       // this case keeps its release ("released means frozen"), so the screen is filled by hand and no task opens.
       const later = await this.db.formEdition.findMany({ where: { workspaceId: c.workspaceId, govFormDefId: ed.govFormDefId, channel: "ONLINE", portalKey: ed.portalKey, capturedOn: { gte: ed.capturedOn ?? new Date(0) }, id: { not: ed.id } }, orderBy: { capturedOn: "desc" } });
       const fits = later.find((v) => { if (!v.inventoryFile) return false; const r = (JSON.parse(readFileSync(join(SOLUTION, v.inventoryFile), "utf8")) as { record: CaptureRecord }).record; const sc = r.screens.find((x) => screenIdentity(x.title) === screenIdentity(live.title)); return !!sc && screenDifference(sc, live).length === 0; });
-      if (fits) newer = { edition: fits.editionLabel, message: `This case uses the version released on ${ed.capturedOn?.toISOString().slice(0, 10) ?? "an earlier day"}; the portal now shows ${fits.editionLabel}. Nothing was filled: fill this screen by hand.` };
-      else task = await this.recapture(sig, ed.id, plan, map!.form_edition);
+      if (fits) newer = { edition: fits.editionLabel, message: `This case uses the release of ${c.pins[0].release.releasedAt.toISOString().slice(0, 10)}, made before the portal changed; the portal now shows ${fits.editionLabel}. Nothing was filled: fill this screen by hand.` };
+      else task = await this.recapture(sig, ed.id, plan, map!.form_edition, live.inputs.map((i) => i.id));
     }
     const counts = plan.match ? plan.counts : null;
     await this.audit.log(c.workspaceId, sig.actor.id, plan.match ? "planned" : "refused", "screen fill", form, plan.match
@@ -178,15 +195,26 @@ export class Extension {
   /** XT-6: one open task per online version, screen and kind; a second mismatch updates the same row (the partial
    *  unique index decides between two at the same moment). Only input ids, kinds of change, option codes and the
    *  approved labels are kept: never the live page's text (M5). */
-  private async recapture(sig: Signed, editionId: string, plan: Exclude<FillPlan, { match: true }>, editionLabel: string) {
+  private async recapture(sig: Signed, editionId: string, plan: Exclude<FillPlan, { match: true }>, editionLabel: string, liveIds: string[]) {
     const kind = plan.reason === "changed" ? "changed" : "not_captured";
-    const differences = plan.reason === "changed" ? plan.differences : [];
-    const title = plan.reason === "changed" ? plan.screen : `(screen ${plan.screen_page})`;
+    // For a screen the version does not have: its element ids (the page's code, not a client's text) say what to capture.
+    const differences = plan.reason === "changed" ? plan.differences : liveIds.slice(0, 200).map((input) => ({ input, change: "added", approved_label: null }));
+    // Break M2: a changed screen is the approved one (its approved heading and identity are kept); a screen the version
+    // does not have is known only by the live page, whose heading can hold a client's details, so it is kept as a
+    // checksum of that heading and named in words, never in the page's own text (M5).
+    const page = plan.reason === "changed" ? plan.screen_page : `unknown-${sha(plan.screen_page).slice(0, 16)}`;
+    const title = plan.reason === "changed" ? plan.screen : "A screen that is not in the approved version";
+    if (kind === "not_captured") {
+      // One fill token cannot flood the content team: at most 10 open "Capture needed" tasks per online version.
+      const open = await this.db.recaptureTask.count({ where: { formEditionId: editionId, kind, status: "OPEN" } });
+      const same = await this.db.recaptureTask.findFirst({ where: { formEditionId: editionId, kind, status: "OPEN", screenPage: page } });
+      if (open >= 10 && !same) return { id: "", times: 0, message: "10 screens of this form are already waiting to be captured; the content team sees them first." };
+    }
     const open = await this.db.$queryRaw<{ n: bigint; combos: bigint }[]>`select count(distinct c.id) as n, count(distinct c.combination_id) as combos from runtime_case c join pack_work_pin p on p.case_id = c.id join config_release r on r.id = p.config_release_id
       where c.workspace_id = ${sig.workspaceId}::uuid and c.status = 'OPEN' and r.snapshot -> 'field_maps' @> ${JSON.stringify([{ form_edition: editionLabel }])}::jsonb`;
     const affected = { open_cases: Number(open[0]?.n ?? 0), combinations: Number(open[0]?.combos ?? 0) };
     const rows = await this.db.$queryRaw<{ id: string; times: number }[]>`insert into recapture_task (id, workspace_id, form_edition_id, screen_page, screen_title, kind, differences, affected, opened_by, updated_at)
-      values (gen_random_uuid(), ${sig.workspaceId}::uuid, ${editionId}::uuid, ${plan.screen_page}, ${title}, ${kind}, ${JSON.stringify(differences)}::jsonb, ${JSON.stringify(affected)}::jsonb, ${sig.actor.id}, now())
+      values (gen_random_uuid(), ${sig.workspaceId}::uuid, ${editionId}::uuid, ${page}, ${title}, ${kind}, ${JSON.stringify(differences)}::jsonb, ${JSON.stringify(affected)}::jsonb, ${sig.actor.id}, now())
       on conflict (form_edition_id, screen_page, kind) where status = 'OPEN'
       do update set times = recapture_task.times + 1, differences = excluded.differences, affected = excluded.affected, updated_at = now()
       returning id, times`;
@@ -214,9 +242,10 @@ export class ExtensionController {
   @Get("session") async me(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { return this.x.me(await this.x.signed(t, o, a)); }
   @Delete("session") @HttpCode(204) async signOut(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { await this.x.signOut(await this.x.signed(t, o, a)); }
   @Post("captures") async start(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Body() b: unknown) { return this.x.startCapture(await this.x.signed(t, o, a, "capture"), b); }
+  @Get("captures") async captures(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { return this.x.openCaptures(await this.x.signed(t, o, a, "capture")); }
   @Get("captures/:id") async capture(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string) { return this.x.capture(await this.x.signed(t, o, a, "capture"), id); }
   @Post("captures/:id/screens") async screen(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.addScreen(await this.x.signed(t, o, a, "capture"), id, b); }
-  @Get("cases") async cases(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { return this.x.cases(await this.x.signed(t, o, a, "fill")); }
+  @Get("cases") async cases(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Query("q") q?: string) { return this.x.cases(await this.x.signed(t, o, a, "fill"), q); }
   @Post("cases/:id/forms/:form/:subject/fill-plans") @HttpCode(200) async fill(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Param("form") form: string, @Param("subject") subject: string, @Body() b: unknown) { return this.x.fillPlan(await this.x.signed(t, o, a, "fill"), id, form, subject, b); }
   @Get("recapture-tasks") tasks(@Headers("x-actor") a: H) { return this.x.tasks(actorOf(a)); }
   @Post("captures/:id/finish") @HttpCode(200) async finish(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string) { return this.x.finish(await this.x.signed(t, o, a, "capture"), id); }

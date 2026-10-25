@@ -3,6 +3,7 @@
 // extension's id, and uses only that token; the API answers the extension's origin only. Every rule with a passing and
 // a failing case. Isolated copy (own database and files), no browser, NO model call (US$0).
 //   zsh studio/tools/isolated.sh forms_f2b 4456 start && tsx studio/tests/check_forms_f2b.ts 4456 xr_studio_forms_f2b
+// (by hand: tsx --tsconfig studio/api/tsconfig.json …, as run-suites.sh does: core.ts uses decorators)
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -14,8 +15,18 @@ const ID = "ipomjnfjkniidipddghocobgcfecebaf", ORIGIN = `chrome-extension://${ID
 const log: { name: string; ok: boolean; detail?: unknown }[] = []; let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 240)}` : ""}`); };
 type Res = { status: number; body: any; headers: Headers }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
+/** fetch, sent again when the copy was just restarted (a kept-alive connection closed, or not listening yet), for up to
+ *  60 s; never sent twice once a reply came. */
+const send = async (url: string, init: RequestInit): Promise<Response> => {
+  for (const t = Date.now(); ;) {
+    try { return await fetch(url, init); } catch (e) {
+      if (!/EPIPE|ECONNRESET|UND_ERR_SOCKET|ECONNREFUSED/.test((e as { cause?: { code?: string } }).cause?.code ?? "") || Date.now() - t > 60_000) throw e;
+      await new Promise((res) => setTimeout(res, 300));
+    }
+  }
+};
 const call = async (method: string, path: string, body?: unknown, headers: Record<string, string> = {}): Promise<Res> => {
-  const r = await fetch(`http://localhost:${PORT}/api${path}`, { method, headers: { "content-type": "application/json", ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
+  const r = await send(`http://localhost:${PORT}/api${path}`, { method, headers: { "content-type": "application/json", ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
   return { status: r.status, body: j, headers: r.headers };
 };
@@ -118,6 +129,20 @@ const connect = async (code: string, extra: Record<string, string> = {}) => call
   // The used code, the expired code and the two exchanges that lost the race above count too: 4 wrong tries already.
   const first = wrong.indexOf(429);
   ok("C2.9: STANDARDS §8 five wrong codes (wrong, used or expired) in 5 minutes pause tries from that address (429), even with a good code next", first === 1 && wrong.slice(first).every((x) => x === 429) && r.status === 429 && /Too many wrong codes/.test(r.body.message), { wrong, next: r.status });
+
+  // ──────────────────────────────────────────── CHECK fixes (break M1, m2, m3): a fresh server (an empty limiter)
+  const ROOT = join(STUDIO, "..", "..", "..", "..");
+  execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), DB.replace(/^xr_studio_/, ""), String(PORT), "restart"], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  r = await call("POST", "/extension/sessions", { code: "ZZZZZZZZ", extensionId: "b".repeat(32) }, { origin: ORIGIN });
+  const fresh = await connect((await pair("user-O")).code);
+  ok("C2.9: break m2 a request from another extension is refused for who it is and spends no try of the address", r.status === 401 && fresh.status === 201, [r.status, fresh.status]);
+  const burst = await Promise.all(Array.from({ length: 30 }, () => call("POST", "/extension/sessions", { code: "ZZZZZZZZ", extensionId: ID }, { origin: ORIGIN })));
+  const st = burst.map((x) => x.status);
+  ok("C2.9: break M1 thirty wrong codes sent at the same moment: at most 5 are tried, the rest are refused (429)", st.filter((x) => x === 401).length <= 5 && st.filter((x) => x === 429).length >= 25, { tried: st.filter((x) => x === 401).length, refused: st.filter((x) => x === 429).length });
+  execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), DB.replace(/^xr_studio_/, ""), String(PORT), "restart"], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  for (let n = 0; n < 22; n++) await connect((await pair("user-O")).code);
+  const mine = (await call("GET", "/extension/sessions", undefined, studio("user-O"))).body as { state: string }[];
+  ok("C2.9: break m3 every live session of a person is listed (22 connected, none hidden behind the newest 20)", mine.filter((x) => x.state === "connected").length >= 22, mine.filter((x) => x.state === "connected").length);
 
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);

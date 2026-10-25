@@ -10,6 +10,7 @@
 // screen goes to a person, because the PDF's first and second parent cannot be told apart from the screen.
 // Whatever is left is listed for drafting (the guarded AI in slice 2) or a person; a document upload is "not a fact".
 // Nothing here is final: a person accepts the proposals; a merged-away field id redirects to the field it was merged into.
+import { createHash } from "node:crypto";
 import type { CaptureRecord } from "./capture.ts";
 
 export type PdfEntry = { data_path: string; caption: string | null; heading: string | null; fact: string | null; transform: string | null; person: string | null; outcome: string };
@@ -47,9 +48,18 @@ function personOf(...texts: (string | null | undefined)[]) {
 const PERSON_WORDS: Record<string, string> = { subject_spouse_or_partner: "the spouse or partner", subject_child: "a child", parent: "a parent", representative: "the representative" };
 
 /** The executable step that turns the shared field's value into this input's own format. */
-/** A portal screen's identity: its heading, normalised as people read it ("Personal details" → "personal-details"),
- *  never the order it was captured in (F2a, challenge B1). The same words qualify an element id another screen uses. */
-export const screenIdentity = (title: string) => normLabel(title).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "screen";
+/** A portal screen's identity: its whole heading, in any script, with the words in brackets kept ("Personal details
+ *  (Spouse or common-law partner)" is another screen than "Personal details"), never the order it was captured in (F2a,
+ *  challenge B1; break B1: brackets dropped and a 40-character cut made two screens one). Only case, spacing, invisible
+ *  characters and punctuation are ignored. A heading with no letter or digit is known by a checksum of its text. */
+export function screenIdentity(title: string) {
+  const t = (title ?? "").normalize("NFKC").replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, "").toLowerCase();
+  const slug = t.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
+  return slug || `screen-${createHash("sha256").update(t.trim()).digest("hex").slice(0, 12)}`;
+}
+/** The short form of a screen's identity that qualifies an element id another screen uses ("familyName@your-spouse…"):
+ *  40 characters, with a checksum of the whole identity when it is longer, so two long headings never share it. */
+export const screenQualifier = (title: string) => { const id = screenIdentity(title); return id.length <= 40 ? id : `${id.slice(0, 31)}-${createHash("sha256").update(id).digest("hex").slice(0, 8)}`; };
 /** The page's own element id of a stored input id ("familyName@your-spouse" → "familyName"). */
 export const rawId = (id: string) => id.split("@")[0];
 /** An input's place: its screen and the page's element id, whatever a capture qualified it as. */

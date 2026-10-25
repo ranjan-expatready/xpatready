@@ -110,6 +110,13 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
     await tab.goto(portal("imm5257-online-s3-language.html")); await panel.getByRole("button", { name: "Capture this screen" }).click(); await panel.getByRole("button", { name: "Send this screen" }).click();
     await panel.getByText(/is already captured/).waitFor();
     ok("C2.9: BR-4 the same screen again is \"already captured\"", true);
+    // Review Major 1: the panel is closed or reloaded in the middle of a capture: it offers to continue it.
+    await panel.reload();
+    await panel.getByRole("button", { name: "Continue IMM 5257 · 3 screens so far" }).waitFor();
+    await axe(panel, "continue a capture"); await shot(panel, "03a-continue-capture-360");
+    await panel.getByRole("button", { name: "Continue IMM 5257 · 3 screens so far" }).click();
+    await panel.getByText("IMM 5257 · 3 screens captured").waitFor();
+    ok("C2.9: review Major 1 a reloaded panel continues the open capture (3 screens kept), never starts it again", sql("select count(*) from portal_capture where way='extension' and status='OPEN'") === "1");
     await tab.goto(portal("hostile-option-passport.html")); await panel.getByRole("button", { name: "Capture this screen" }).click();
     await panel.getByText(/^Refused: /).first().waitFor();
     ok("C2.9: BR-1 BR-3 fail: a screen whose text looks like a client's detail is refused in the panel; nothing is sent", /passport-like code/.test(await panel.locator("main").innerText()) && sql("select count(*) from audit_event where action='refused' and entity='portal screen'") === "0", (await panel.locator("main").innerText()).slice(0, 200));
@@ -183,6 +190,35 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
     await panel.getByRole("button", { name: "Fill this screen" }).click();
     await panel.getByText("Connect the browser extension").waitFor();
     ok("C7.4: session ended (disconnected in the Studio): the panel goes back to Connect and says why", /session ended/.test(await panel.locator("main").innerText()));
+
+    // ──────────────────────────────────────────── plan §9's end, in the panel (review m7): re-capture → approve → a new case fills
+    await asPerson("user-A"); await studio.getByRole("button", { name: "Get a code" }).click();
+    await panel.getByLabel("Code from the Studio").fill((await studio.locator("p.font-mono").innerText()).trim()); await panel.getByRole("button", { name: "Connect" }).click();
+    await panel.getByText("Configuration author · Capture").waitFor();
+    await panel.getByLabel("Form code").fill("IMM 5257"); await panel.getByLabel("Title as the portal shows it").fill("Application for a visitor visa (online)");
+    await panel.getByRole("button", { name: "Start capture" }).click();
+    await tab.goto(portal("imm5257-online-s1-personal-reworded.html"));
+    await panel.getByRole("button", { name: "Capture this screen" }).click(); await panel.getByRole("button", { name: "Send this screen" }).click();
+    await panel.getByText("Screen 1 captured · go to the next screen in the portal.").waitFor();
+    await panel.getByRole("button", { name: "Finish capture" }).click();
+    await panel.getByText("IMM 5257 · held for a second person").waitFor();
+    const held = await panel.locator("main").innerText();
+    ok("C9.3: the re-capture of the changed screen is held with its difference, the screens not seen kept (review m1, m2: no \"3 screens captured\", a next action)", /1 changed\); 2 not seen this time/.test(held) && !/3 screens captured/.test(held) && (await panel.getByRole("button", { name: "Start another capture" }).count()) === 1, held.slice(0, 200));
+    const cap2 = sql("select id from portal_capture where way='extension' order by created_at desc limit 1");
+    await call("POST", `/captures/${cap2}/approve`, undefined, "user-C");
+    ok("C9.3: approving the re-capture closes \"Re-capture needed\"", sql("select count(*) from recapture_task where status='OPEN'") === "0");
+    const rel2 = await releaseOnline(call, sql, vv, sql(`select form_edition_id from portal_capture where id='${cap2}'`), { unused: ["UNSPECIFIED"], note: "F2d: the re-captured screen" });
+    await openCase(call, vv, "F2D-CASE-2", [["person.family_name", "SAMPLE"], ["person.sex", "f_female"], ["person.date_of_birth", "1990-05-17"], ["person.place_of_birth_city", "Sample City"]], ["person.family_name", "person.date_of_birth", "person.sex"]);
+    await panel.getByRole("button", { name: "Sign out of the extension" }).click();
+    await asPerson("user-O"); await studio.getByRole("button", { name: "Get a code" }).click();
+    await panel.getByLabel("Code from the Studio").fill((await studio.locator("p.font-mono").innerText()).trim()); await panel.getByRole("button", { name: "Connect" }).click();
+    await panel.getByLabel("Search by reference").fill("F2D-CASE-2");
+    await panel.getByLabel("Case").selectOption({ label: "F2D-CASE-2 · Visitor visa · release 3" });
+
+    await tab.goto(portal("imm5257-online-s1-personal-reworded.html"));
+    await panel.getByRole("button", { name: "Fill this screen" }).click();
+    await panel.getByText(/^Filled \d of 9/).waitFor();
+    ok("C7.4: plan §9 ends: a new case on the new release fills the re-captured screen from the panel", rel2.status < 300 && /Filled 6 of 9/.test(await panel.getByRole("region", { name: "What was filled" }).innerText()) && (await tab.inputValue("#familyName")) === "SAMPLE", rel2.status);
   } finally {
     await ctx?.close(); server.kill(); rmSync(profile, { recursive: true, force: true });
   }

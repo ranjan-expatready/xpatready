@@ -12,6 +12,8 @@ type Code = { code: string; expires_at: string; modes: string[]; message: string
 type Session = { id: string; modes: string[]; created_at: string; expires_at: string; state: string };
 type Task = { id: string; edition: string; screen: string; kind: string; status: string; times: number; updated_at: string; differences: { input: string; change: string; approved_label: string | null }[]; affected: { open_cases?: number; combinations?: number } };
 const when = (iso: string) => new Date(iso).toLocaleString("en-CA", { dateStyle: "medium", timeStyle: "short" });
+/** The panel's words for a change (review m3): never a key or a raw change code. */
+const CHANGE_WORDS: Record<string, string> = { reworded: "reworded", options: "choices changed", added: "added", removed: "removed", type: "kind of input changed", required: "now required or no longer required", rules: "length or format changed" };
 const MODE_WORDS: Record<string, string> = { capture: "Capture", fill: "Fill" };
 
 export function ExtensionPage() {
@@ -67,7 +69,7 @@ export function ExtensionPage() {
           {!tasks.data.length ? <EmptyState title="No screen to capture again" /> : (
             <Table head={["Screen", "Online version", "What differs", "Open cases", "Seen", "State"]}>
               {tasks.data.map((t) => <tr key={t.id}><td>{t.screen}</td><td>{t.edition}</td>
-                <td>{t.kind === "not_captured" ? "Not in the approved version" : t.differences.map((d) => `${d.approved_label ?? d.input}: ${d.change}`).join("; ")}</td>
+                <td>{t.kind === "not_captured" ? `Not in the approved version: capture it (${t.differences.length} question${t.differences.length === 1 ? "" : "s"})` : t.differences.map((d) => `${d.approved_label ?? d.input}: ${CHANGE_WORDS[d.change] ?? "changed"}`).join("; ")}</td>
                 <td>{t.affected.open_cases ?? 0}</td><td>{t.times} × · {when(t.updated_at)}</td><td><Pill tone={t.status === "OPEN" ? "warn" : "ok"}>{t.status === "OPEN" ? "Open" : "Done"}</Pill></td></tr>)}
             </Table>
           )}

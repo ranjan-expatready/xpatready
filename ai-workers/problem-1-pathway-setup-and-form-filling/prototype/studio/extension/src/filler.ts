@@ -5,6 +5,7 @@
 // touches a password or hidden input, never clicks Next, Save or Submit, and never submits the form: values are set
 // through each input's own setter, followed by the input and change events a person's typing would fire.
 import RULES from "../../contracts/portal-reader-rules.json";
+import { readScreen, searchForm, type ReadScreen } from "./reader.ts";
 
 export type PlanInput = { id: string; type: string; label: string; value: string | null; status: string; source?: string };
 export type Outcome = { id: string; label: string; outcome: "filled" | "not_accepted" | "left_alone" | "not_filled"; reason?: string };
@@ -15,12 +16,31 @@ const PLACEHOLDER = new RegExp(RULES.placeholder.pattern, "i");
 const isPlaceholder = (o: HTMLOptionElement | undefined) => !!o && (!o.text.replace(/^[ -]+|[ -]+$/g, "") || PLACEHOLDER.test(o.text));
 const setter = (el: Element, prop: "value" | "checked") => Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), prop)?.set;
 
-/** The input the plan names by the page's own element id or name (a radio group by its name). */
+const FIELD = "input, select, textarea";
+const attrsOf = (e: Element) => Object.fromEntries(Array.from(e.attributes).map((x) => [x.name.toLowerCase(), x.value]));
+/** A question the reader would have read: a form field, not in a search form (break M3: a search box of the same name). */
+const question = (e: Element) => e.matches(FIELD) && !(e.closest("form") && searchForm(attrsOf(e.closest("form")!)));
+/** The input the plan names, found as the reader found it: by the element id, else by the name; only a form field
+ *  outside a search form, and only when exactly one matches (break M3, m4: a div with the id, two of the same name).
+ *  A radio group is all the radios of its name. Anything else is "not on the screen": nothing is written. */
 function find(doc: Document, id: string, type: string): HTMLElement[] {
-  if (type === "radio") return Array.from(doc.querySelectorAll<HTMLInputElement>(`input[type="radio"][name="${CSS.escape(id)}"]`));
-  const el = doc.getElementById(id) ?? doc.querySelector(`[name="${CSS.escape(id)}"]`);
-  return el ? [el as HTMLElement] : [];
+  if (type === "radio") return Array.from(doc.querySelectorAll<HTMLInputElement>(`input[type="radio"][name="${CSS.escape(id)}"]`)).filter(question);
+  const byId = doc.getElementById(id);
+  if (byId && question(byId)) return [byId];
+  const byName = Array.from(doc.querySelectorAll(`[name="${CSS.escape(id)}"]`)).filter(question);
+  return byName.length === 1 ? [byName[0] as HTMLElement] : [];
 }
+/** Plan §7 (review m9): the element is the kind of input the approved twin recorded; another kind is never written. */
+function sameKind(el: HTMLElement, type: string) {
+  if (type === "select") return el instanceof HTMLSelectElement;
+  if (type === "textarea") return el instanceof HTMLTextAreaElement;
+  if (!(el instanceof HTMLInputElement)) return false;
+  const t = (el.getAttribute("type") ?? "text").toLowerCase();
+  if (type === "radio" || type === "checkbox") return t === type;
+  return !["radio", "checkbox"].includes(t);
+}
+/** Shown on the screen: a field hidden by the page (a question that does not apply yet) is never written (break m5). */
+const shown = (els: HTMLElement[]) => els.some((e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== "hidden");
 
 /** Empty for each kind of input (M6): text is ""; a select is on its placeholder (or nothing); a radio group has
  *  nothing ticked; an unticked checkbox counts as empty. */
@@ -54,8 +74,16 @@ export function fillScreen(doc: Document, plan: PlanInput[]): Outcome[] {
     if (p.status !== "fill" || p.value == null) return { id: p.id, label: p.label, outcome: "not_filled", reason: p.status };
     const els = find(doc, p.id, p.type);
     const el = els[0] as HTMLInputElement | undefined;
-    if (!el || NEVER.has((el.getAttribute("type") ?? "").toLowerCase()) || el.disabled || (el as HTMLInputElement).readOnly) return { id: p.id, label: p.label, outcome: "not_filled", reason: "not_on_screen" };
+    if (!el || NEVER.has((el.getAttribute("type") ?? "").toLowerCase()) || el.disabled || (el as HTMLInputElement).readOnly || !shown(els)) return { id: p.id, label: p.label, outcome: "not_filled", reason: "not_on_screen" };
+    if (!els.every((e) => sameKind(e, p.type))) return { id: p.id, label: p.label, outcome: "not_filled", reason: "not_the_same_kind_of_input" };
     if (!isEmpty(els)) return { id: p.id, label: p.label, outcome: "left_alone", reason: "already_answered" };
     return write(els, p.value) ? { id: p.id, label: p.label, outcome: "filled" } : { id: p.id, label: p.label, outcome: "not_accepted", reason: "read_back_differs" };
   });
+}
+
+/** Break B2: the page is still the screen the plan was made for (read again, compared input by input): a screen the
+ *  person moved to while the plan was on its way is never filled. */
+export function sameScreen(doc: Document, expect: ReadScreen): boolean {
+  const now = readScreen(doc);
+  return now.ok && JSON.stringify(now.screens[0]) === JSON.stringify(expect);
 }

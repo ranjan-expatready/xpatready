@@ -268,7 +268,9 @@ export class Forms {
         // F2c (XT-6): the screens this capture saw close their "Re-capture needed" tasks on any earlier version of the
         // form on this portal; a screen it did not see keeps its task open.
         const seen = c.twinFile ? ((JSON.parse(readFileSync(join(SOLUTION, c.twinFile), "utf8")) as { seen?: string[] }).seen ?? record.screens.map((x) => screenIdentity(x.title))) : record.screens.map((x) => screenIdentity(x.title));
-        await tx.recaptureTask.updateMany({ where: { workspaceId: c.workspaceId, status: "OPEN", screenPage: { in: seen }, edition: { govFormDefId: def.id, portalKey: c.portalKey } }, data: { status: "DONE", closedBy: c.id, closedAt: new Date() } });
+        // A screen the earlier version did not have is kept as a checksum of its heading (api/src/extension.ts, break M2).
+        const pages = [...seen, ...seen.map((x) => `unknown-${createHash("sha256").update(x).digest("hex").slice(0, 16)}`)];
+        await tx.recaptureTask.updateMany({ where: { workspaceId: c.workspaceId, status: "OPEN", screenPage: { in: pages }, edition: { govFormDefId: def.id, portalKey: c.portalKey } }, data: { status: "DONE", closedBy: c.id, closedAt: new Date() } });
         return e;
       });
       await this.audit.log(c.workspaceId, actor.id, "approved", "portal capture", c.formKey, `${actor.name} approved the ${c.formKey} capture by ${nameOf(c.capturedBy)}: online version ${ed.editionLabel} (${inputs} questions), re-check by ${day(recheck)}`);
