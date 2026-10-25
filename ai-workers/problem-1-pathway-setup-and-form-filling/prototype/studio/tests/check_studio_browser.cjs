@@ -152,6 +152,14 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   { const t = await toastLike(/SME sign-off/); step("A7: approval before the SME sign-off is refused", /SME sign-off/.test(t), t); }
   await as("user-C");
   await click(btn("Select all I can sign")); await click(btn(/^Sign/));
+  // Screen 02 FIX (Lead re-check item 2): a document type named with the requirement is new to the shared library, so a
+  // second person approves it on To review before the release carries it.
+  await go("/review?kind=library_change");
+  const newType = p.locator('tr[data-kind="library_change"]').first();
+  const typeName = (await newType.count()) ? (await newType.textContent()) : "";
+  if (await newType.count()) { await click(newType.locator("[data-next] a")); await click(btn("Approve")); await p.waitForURL(/\/review$/); }
+  step("A7: the new document type is approved by a second person on To review", /approved: it is released with the next release/.test(await lastToast()), `${typeName.slice(0, 80)} · ${await lastToast()}`);
+  await go(`/c/${wp}/review`);
   await as("user-B");
   await click(btn("Approve and release")); await p.getByText(/Released version 2/).last().waitFor({ timeout: 30000 }).catch(() => {});
   step("A7: a second person (approver) releases version 2", /Released version 2/.test(await lastToast()), await lastToast());

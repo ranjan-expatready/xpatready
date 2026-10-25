@@ -59,6 +59,9 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   ok("a base document requirement is added to the draft", r.status === 201, r.body?.lineageKey);
   r = await call("POST", `/combinations/${id}/requirements`, { newTypeName: "Bank statement", attachMode: "COMBINATION_MANDATORY", appliesToRoles: "each_applicant" }, "user-C");
   ok("server permission: the content reviewer cannot edit the draft", r.status === 403, r.body.message);
+  // Screen 02 FIX (Lead re-check item 2): the new document type is approved by a second person before any release.
+  for (const ch of (await call("GET", "/library/changes?status=WAITING")).body) await call("POST", `/library/changes/${ch.id}/approve`, {}, "user-C");
+  ok("the new document type is approved by a second person (no release carries an unreviewed library item)", (await call("GET", "/library/changes?status=WAITING")).body.length === 0);
   const release = async (label: string) => {
     const s = await call("POST", `/combinations/${id}/submit`, {});
     const sub = await call("GET", `/combinations/${id}/review`);
