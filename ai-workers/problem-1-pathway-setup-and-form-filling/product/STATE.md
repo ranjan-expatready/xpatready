@@ -8,15 +8,16 @@ updated: 2026-10-25
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
-| screens | 02-ai-work | FINISH | Builder | slice 2 (data: LibraryChange, keyFor + field name/group, NormalizationItem kind/payload, ApprovedSource; on… |
+| screens | 02-ai-work | CHECK | Builder | Lead note waiting for sync · Blocked: the runtime lane's setup needs the patch (K1 + B1) before this branch can merge  |
 | forms | F2-extension | CHECK | Builder | FIX done (every Must/Blocker/Major and the Minors, a test per break); full suite run on the FIX commit, the… |
 | evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check IMM 5409 (prototype/evidence-lane/E1/imm5409/STATUS.md); send F5 (static forms: page fields sta… |
-| runtime | 03-combination-workspace (S1 (tab route, Overview, Forms, Preview by person; F-R1c-1; coverage; QA-38, QA-40)) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead early look at screens/03-combination-workspace/build-notes.md and screenshots/slice1/ (deviations list… |
+| runtime | 03-combination-workspace (DESIGN challenge) | DESIGN | Lead | Lead answers screens/03-combination-workspace/challenge.md (5 points: Preview on caseView, missing records,… |
 | qa | explore on main 8360565 (Screen 01, forms channels, R1 slice; Lead note 25 Oct, P-89) | WAITING | Lead | Lead reads qa/reports/2026-10-25-explore.md (not ready on QA-38 Major, runtime: "Open a case" names the old… |
 | scout | session with the founder (brief and setup review) | EXPLORE | Scout | the founder runs tools/scout.sh open on the Mac and holds the first session in Goose |
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-25 · Lead (cloud) · Screens handed in Screen 02 slices 2–3 (76d4e0f; CHECK continues). Its new K1/B1 rules refuse the runtime R1a setup: the screens lane commits the proven setup patch on its own branch so both merge together (one-off exception). Live AI runs for "Describe it" and K2 wait for the founder; the ApprovedSource drafting guard goes to forms after F2 CHECK.
 - 2026-10-25 · Lead (cloud) · Took over from the 05:00 Lead chat (founder). Screen 03 S1 EARLY-LOOK: GO (lead-check.md); runtime → BUILD S2 with five small changes first (Sample ages in Preview, field error clears on edit, no repeated person name, labelled rule counts, tab row at 1024 px). Coverage gate: no selected section needed. C1.8 added. Cloud PostgreSQL 18.3 fallback from the npm registry in `cloud-setup.sh`.
 - 2026-10-25 · Lead (cloud) · Scout, after the founder's input: the first run is a session with the founder (skill section 0b: explain, interview, `scout/BRIEF.md`, critical setup review). `tools/scout.sh open` and `save` added for it. Model from vision-focused research: `kimi-k3`; text-only models are unsuitable because Goose drops screenshots for them. A screenshot of every judged screen is required.
 - 2026-10-25 · Lead (cloud) · Screen 02 slice 1 EARLY-LOOK: GO (lead-check.md); screens → FINISH (slice 2 now carries board views 5, 6, 8 and 9). Scout recipe validated by Goose 1.56.0 itself (built from source): valid, scout skill found, charter fills the prompt. PR #19 suites: one Screen 01 browser timeout unrelated to the docs-only diff; the screens lane hardens that step.
@@ -26,4 +27,3 @@ updated: 2026-10-25
 - 2026-10-25 · Lead (cloud) · Took over from the 04:45 Lead chat (stopped at the credit limit); four lane sessions restarted (screens, runtime, forms, qa); Screen 04 (Shared library) draft restarted; CI suites green on main 8360565 (the red on 8d0831a was one run of `check_ai_launch_paths.ts`, forms hardens it); run-suites names the failing line.
 - 2026-10-25 · Lead (cloud) · **Full development mode (P-89).** Screen 01 DONE (founder's walk). Lead notes: screens → Screen 02 DESIGN; runtime → Screen 03 DESIGN; forms → F2 PLAN (P-90 extension approved); qa → explore on main. Lanes start after the notes PR merges.
 - 2026-10-25 · Lead (cloud) · Founder decided P-87 (every change by PR, the Lead merges everything) and P-88 (shared app stays on the Mac); `main` cannot be locked on GitHub's free plan, so the pre-push hook refuses pushes to `main`; `lane.sh table` no longer lets a merged lane branch hide main's note; independent workflow audit recorded in LEAD.md.
-- 2026-10-25 · Lead (cloud) · Founder's Mac report: :4400 on 8aef175 after a demo reset, QA-19 check PASS (qa closes it at its next sync); PR #14 merged (e404fcc on main); Mac tools recorded (Playwright Chromium, agent-browser); US$12 drafts Mac-only; P-87: cloud Lead on its own branch, to `main` by PR. All lanes waiting; next work needs Lead concepts (Screen 02, F2, R2).
