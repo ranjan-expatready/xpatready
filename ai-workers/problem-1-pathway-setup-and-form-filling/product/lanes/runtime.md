@@ -1,19 +1,23 @@
 # Lane: runtime — the thin end-to-end slice, then M3 runtime (P-67)
 
 ## From the Lead
-2026-10-25 (Lead, cloud): **full development mode (P-89): this lane builds Screen 03 in M2** (the combination workspace; it reuses your questionnaire renderer for Preview by person). Set current_item 03-combination-workspace, stage **DESIGN**, owner Builder: the short feasibility challenge (skill screen-challenge) of `screens/03-combination-workspace/concept.md` (agreed by the Lead; its Lead decisions at the top) and board `design/draft-workspace.html`; owner Lead. Screen path (WORKFLOW.md): BUILD slice 1 → EARLY-LOOK (Lead) → FINISH → CHECK → DEMO (Lead). Reuse Screen 01's combination components and channels, never fork them; the screens lane builds Screen 02 at the same time (To review, AI work): stay out of those pages. Carried items: F-R1c-1 (render.ts order) and RT-7 check authoring. R2 (prospect slice) waits until M2 is done.
+2026-10-25 06:00 (Lead, cloud): **Screen 03 challenge answered and agreed** (`screens/03-combination-workspace/challenge.md` "Lead response"). Set stage **BUILD**, slice **S1**, owner Builder: route `/c/:id/:tab`, `GET …/workspace?tab=`, Overview and Forms reusing Screen 01's components, and Preview by person on `caseView()` with the F-R1c-1 order fixed in `render.ts` and the preview-vs-runtime engine test. Also run the coverage check against every Sample combination and fix the data. Lead changes:
+* Substitute sets: no seeded sets; default "this document alone" (S3).
+* Filled by: goes through `revise()` until the screens lane's `LibraryChange` merges.
+New code goes in new files. `combination.tsx` becomes the tab shell, and the screens lane adds one entry point there (Setup opens Draft setup, Screen 02 challenge 1). Sync main first. Also fix qa's QA-38 (Major: "Open a case" names release 1 while the case opens on release 2) and QA-40 (an Online IMM 5257 case shows no forms line) in S1, with the qa checks in `tests/qa/check_qa_explore_1025.cjs`. Then EARLY-LOOK (Lead) with screenshots of the S1 views.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: R1-thin-slice
-current_slice: R1d
-stage: CHECK
+current_item: 03-combination-workspace
+current_slice: DESIGN challenge
+stage: DESIGN
 owner: Lead
-next_action: Lead checks the PR 13 fix (build-notes-r1d.md "PR 13 review"), then merges; lane stops; R2 waits for a Lead plan.
+next_action: Lead answers screens/03-combination-workspace/challenge.md (5 points: Preview on caseView, missing records, coverage gate, slices S1–S4, lane overlap; 1 founder question on Sample substitute sets), then moves the lane to BUILD slice 1.
 blocked_by: none
-updated: 2026-10-24
+updated: 2026-10-25
 
 ## Log (last 10 lines)
+- 2026-10-25 · Builder (cloud): applied Lead note (P-89, Screen 03 to this lane); DESIGN feasibility challenge written: Build after these changes, 5 Majors/Minor, slices S1–S4 proposed; no code; owner Lead.
 - 2026-10-25 · Builder (cloud): PR 13 fix verified on a fresh copy: journey 120/120, R1d 63/63, R1a 99/99, engine 50/50; run-suites --demo 21/21; any 437; copies stopped; CHECK owner Lead.
 - 2026-10-25 · Builder (cloud): break on the PR 13 fix: 0 Blocker/Major, 4 Minor; the change now names whose entries; lock race and old copies recorded; engine 50/50.
 - 2026-10-25 · Builder (cloud): applied Lead note 02:00 (PR 13 review): a copy keeps each group's live entry ids, so an added (even blank) or removed entry makes it stale; R1d 63/63, engine 50/50, mutations caught; review PASS (5 minors applied); break pending.
@@ -23,4 +27,3 @@ updated: 2026-10-24
 - 2026-10-25 · Builder (cloud): PR #12 review (Lead): 3 fill-case defects fixed with tests caught by mutation (Online filing line → 422 and not listed; lock refuses a missing or changed file 409; cap counted under FOR UPDATE); R1d 43/43, run-suites --demo 21/21 at be16c22; told the Lead; WAIT.
 - 2026-10-24 · Builder (cloud): Lead accepted R1d (3d47004, 21/21); answers recorded: an empty required group that applies blocks ready to file, cleared by a confirmed "none apply" fact (P-71, P-72); STATUS.md verdict is the trial record (IMM 1344 not passed, IMM 5707 passed). Waiting for the Lead PR merge.
 - 2026-10-24 · Builder (cloud): FIX R1d done: review minors 1–2 wording too; fresh copy journey 107/107, R1d 38/38, R1a 99/99, engine 39/39; run-suites --demo 21/21; any 437; copies stopped; CHECK owner Lead.
-- 2026-10-24 · Builder (cloud): CHECK R1d: review 7/10 (5 Majors), break 7 Majors 6 Minors; FIX: trial gate per form, readiness (needs a fix, by id), blocking list on the page, focus, delete/insert guards, file checks, cap per case; R1d 38/38, journey 107/107, R1a 99/99, engine 39/39; mutations caught.

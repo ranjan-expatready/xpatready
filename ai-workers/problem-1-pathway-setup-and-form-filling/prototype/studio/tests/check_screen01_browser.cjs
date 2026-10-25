@@ -25,7 +25,8 @@ function pdf(title, text) {
   out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n${offs.map((o) => `${String(o).padStart(10, "0")} 00000 n \n`).join("")}trailer\n<< /Size ${objs.length + 1} /Root 1 0 R /Info 6 0 R >>\nstartxref\n${x}\n%%EOF\n`;
   return Buffer.from(out, "latin1");
 }
-const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail === undefined ? undefined : String(detail).slice(0, 400) }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).slice(0, 200)}` : ""}`); };
+let lastStep = "(before the first step)"; // named when the script stops on an error (the suite table shows the last line)
+const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok, detail: detail === undefined ? undefined : String(detail).slice(0, 400) }); console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).slice(0, 200)}` : ""}`); };
 
 (async () => {
   const b = await chromium.launch({ channel: "chrome", headless: true });
@@ -37,6 +38,17 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const grid = () => p.getByRole("grid", { name: "Combinations" });
   const row = (label) => grid().locator(`[role="row"][data-label="${label.replace(/"/g, '\\"')}"]`).first();
   const as = async (id) => { await p.getByLabel("Simulated person").selectOption(id); await idle(); };
+  /** The list has its rows (not the loading skeleton) — read nothing before it. */
+  const listReady = () => p.waitForFunction(() => !document.querySelector('[aria-label="Loading programs"]') && document.querySelectorAll('[role="grid"][aria-label="Combinations"] [role="row"][data-node]').length > 0, null, { timeout: 30000 });
+  /** A combination page has loaded for this row: its title and the full path in the header (CI run 40157656563: reads
+   *  ran before the page had drawn on a busy runner). */
+  const onCombination = async (label) => {
+    await p.waitForURL(/\/c\//);
+    await p.waitForFunction((l) => document.querySelector("h1")?.textContent === l && document.querySelectorAll('nav[aria-label="Path"] a').length >= 2, label, { timeout: 30000 });
+    await idle();
+  };
+  /** Waits until keyboard focus is on the list row with this label (roving focus moves on the next frame). */
+  const focusOn = (label) => p.waitForFunction((l) => document.activeElement?.getAttribute("data-label") === l, label, { timeout: 5000 });
   let n = 0;
   /** Screenshot at 1440 and 1024 (same state), and axe on it. */
   const state = async (name, opts = {}) => {
@@ -162,27 +174,33 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await p.getByRole("button", { name: /^Individual/ }).click(); await idle();
 
   // ======================================================== keyboard: list → Enter opens the combination page
-  await p.goto(`${BASE}/?f=all`); await idle();
+  await p.goto(`${BASE}/?f=all`); await idle(); await listReady();
+  const rowLabels = await grid().locator('[role="row"][data-node]').evaluateAll((rs) => rs.map((r) => r.getAttribute("data-label")));
   await grid().locator('[role="row"][tabindex="0"]').focus();
-  await p.keyboard.press("End"); await p.keyboard.press("ArrowUp"); await p.waitForTimeout(100); // focus moves on the next frame
+  // Each key waits for the focus it causes (roving focus moves on the next frame): an ArrowUp pressed before End's
+  // focus lands is read by the first row and does nothing.
+  await p.keyboard.press("End"); await focusOn(rowLabels[rowLabels.length - 1]);
+  await p.keyboard.press("ArrowUp"); await focusOn(rowLabels[rowLabels.length - 2]);
   const focusedLabel = await p.evaluate(() => document.activeElement?.getAttribute("data-label"));
   const scrollBefore = await p.evaluate(() => Math.round(window.scrollY));
-  await p.keyboard.press("Enter"); await p.waitForURL(/\/c\//); await idle();
+  await p.keyboard.press("Enter"); await onCombination(focusedLabel);
   step("keyboard: one tab stop, ↑/↓/Home/End move, Enter opens the combination page (P-50)", /\/c\/[0-9a-f-]+$/.test(p.url()) && (await p.getByRole("heading", { level: 1 }).textContent()) === focusedLabel, `${focusedLabel} → ${p.url()}`);
-  await p.getByRole("navigation", { name: "Path" }).getByRole("link", { name: "Programs" }).click(); await idle();
+  await p.getByRole("navigation", { name: "Path" }).getByRole("link", { name: "Programs" }).click(); await idle(); await listReady();
+  await p.waitForFunction((l) => document.querySelector('[role="row"][aria-selected="true"]')?.getAttribute("data-label") === l && document.activeElement?.getAttribute("data-label") === l, focusedLabel, { timeout: 5000 }).catch(() => {}); // the check below decides
   const back = await p.evaluate(() => ({ url: location.search, sel: document.querySelector('[role="row"][aria-selected="true"]')?.getAttribute("data-label"), y: Math.round(window.scrollY), focus: document.activeElement?.getAttribute("data-label") }));
   step("P-50: Back keeps the view (All), highlights the opened row and restores the scroll", back.url.includes("f=all") && back.sel === focusedLabel && Math.abs(back.y - scrollBefore) < 40 && back.focus === focusedLabel, JSON.stringify({ ...back, scrollBefore }));
   await state("programs-back-row-highlighted", { viewport: true });
   // Review should 5: the browser's own Back button does the same.
-  await row("Super visa").click(); await p.waitForURL(/\/c\//); await idle(); // a row already set up (opening a not-started one would start it)
-  await p.goBack(); await grid().waitFor(); await idle(); await p.waitForTimeout(200);
+  await row("Super visa").click(); await onCombination("Super visa"); // a row already set up (opening a not-started one would start it)
+  await p.goBack(); await listReady();
+  await p.waitForFunction(() => { const s = document.querySelector('[role="row"][aria-selected="true"]'); return !!s && document.activeElement === s; }, null, { timeout: 5000 }).catch(() => {}); // the check below decides
   const backBtn = await p.evaluate(() => ({ sel: document.querySelector('[role="row"][aria-selected="true"]')?.getAttribute("data-label"), focus: document.activeElement?.getAttribute("data-label"), url: location.search }));
   step("review should 5: the browser's Back button returns to the list with the opened row highlighted and focused", backBtn.sel === "Super visa" && backBtn.focus === "Super visa" && backBtn.url.includes("f=all"), JSON.stringify(backBtn));
 
   // ======================================================== the combination page (row target)
-  await p.goto(`${BASE}/?f=all`); await idle();
+  await p.goto(`${BASE}/?f=all`); await idle(); await listReady();
   const vvRowStep = (await row("Visitor visa").locator("[data-next-step]").textContent()).trim();
-  await row("Visitor visa").click(); await p.waitForURL(/\/c\//); await idle();
+  await row("Visitor visa").click(); await onCombination("Visitor visa");
   const crumbs = await p.getByRole("navigation", { name: "Path" }).getByRole("link").allTextContents();
   step("P-50: the page header carries the full path, every level a link (Programs › Individual › Visitors › Visitor visa)", crumbs.join(" › ") === "Programs › Individual › Visitors › Visitor visa", crumbs.join(" › "));
   // Lead check item 1: one next step on the page — the row, the header and the first missing line say the same thing.
@@ -418,4 +436,4 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   console.log(`\n${log.filter((x) => x.ok).length} passed, ${log.filter((x) => !x.ok).length} failed · ${JSON.stringify(timings)}`);
   await b.close();
   process.exit(log.some((x) => !x.ok) ? 1 : 0);
-})().catch((e) => { console.error(e); process.exit(2); });
+})().catch((e) => { console.error(e); console.log(`STOPPED after "${lastStep}": ${String(e?.message ?? e).split("\n")[0].slice(0, 160)}`); process.exit(2); });

@@ -1,18 +1,20 @@
 # Lane: forms — PDF and online forms (P-61–P-63)
 
 ## From the Lead
-2026-10-25 (Lead, cloud): **full development mode (P-89); the founder approved the F2 browser extension (P-90).** Set current_item F2-extension, stage **PLAN**, owner Builder: `screens/F2-extension/plan.md` from `screens/F2-extension/concept.md` (Lead decisions at the top): a fresh agent's challenge first (skill screen-challenge), then the back-end table, team-model mapping, slices; record `@types/chrome` in ENVIRONMENT.md through the Lead when installed. Also, if Screen 02 needs it: the field-map purpose and overflow in the F1 contract (Screen 02 concept, Q3). Owner Lead after PLAN; the Lead agrees and sets BUILD.
+2026-10-25 06:15 (Lead, cloud): **F2 plan agreed** (`screens/F2-extension/plan.md` "Lead response"; S-1 to S-5 granted, S-3 as `web/src/pages/extension.tsx`; the five purposes named). Set stage **BUILD**, owner Builder. First **F1-P** (list purpose and overflow on a field map), so Screen 02 is not held. Then F2a (shared reader rules and the conformance test first; stop and report if the two readers cannot agree). One commit per slice. Also, from the Lead's earlier note: make `check_ai_launch_paths.ts` robust (one CI failure on 8d0831a) and stop it leaving files in the repo after a run. Add qa's QA-43 (unknown combination on `online-forms` → 404) with a test. Sync main first. BUILD ends at CHECK.
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
-current_item: F1-forms-channels
-stage: CHECK
+current_item: F2-extension
+stage: PLAN
 owner: Lead
-next_action: Lead check of the qa Minors pass after its FIX: build-notes "qa Minors pass" (its two lines), review-qa-minors.md, break-report-qa-minors.md; rerun run-suites.sh. Note: web/src/pages/ai.tsx got a one-line change (Retry follows the server's retryable flag); qa's check_qa_s2_probe.ts needs its order changed after a cancel+retry. Then F2; the US$12 paid drafts wait for the founder.
+next_action: Lead reads screens/F2-extension/plan.md (challenge.md: 1 Blocker, 7 Major, 7 Minor, all accepted in §3) and agrees or changes it; grants S-1…S-5; names the five list purposes (§10b); passes founder questions 1–3 (built on the recommendations meanwhile). Then BUILD from F1-P, F2a.
 blocked_by: none
-updated: 2026-10-24
+updated: 2026-10-25
 
 ## Log (last 10 lines)
+- 2026-10-25 · F2 · PLAN · fresh challenge: build after changes, 1 Blocker (screen identity from capture order → wrong-person fill; reproduced in code), 7 Major, 7 Minor; all accepted in plan §3 (pinned release only, own Sample combination, token-only extension routes, task stores twin labels only, fill events Not built); F1-P list purpose for Screen 02 added; graph check passes. US$0. Owner → Lead.
+- 2026-10-25 · F2 · CHECK → PLAN · applied Lead note 2026-10-25 (P-89, P-90; main 8360565 synced); fresh challenger running; plan.md drafted (measured facts F-1…F-11, records, engine, back-end table, slices F1-P + F2a–F2d); MV3 extension loads in the installed Chromium (probe). Cloud setup: postgresql-18 apt source refused (403), not needed for PLAN. US$0.
 - 2026-10-24 · F1 · CHECK (qa Minors) · Lead request (PR 10 review): STUDIO_FAKE_LAUNCHER runs only the test fixture (resolved path), tested by restarting the copy with another script and a disguised link (launch paths 55/55); isolated.sh now stops only the listening server; all suites green. US$0. Owner → Lead.
 - 2026-10-24 · F1 · CHECK → FIX → CHECK (qa Minors) · breaker: 2 Major (paid call after a cancel while the launch waited; reset crash), 6 Minor; every Major and most Minors fixed with a test (cancel honoured up to the paid call on every path; answer of a call cancelled mid-way never applied; retryable per step; reset safe); launch paths 52/52, slice 2 53/53, all suites green, api coverage 95.89/79.67. US$0. Owner → Lead.
 - 2026-10-24 · F1 · CHECK (qa Minors) · reviewer: ship after fixes, journey 6/10, 0 Must, 2 Major (a cancel during a part's stub pass still makes its paid call; AI work page not updated), 6 Minor; breaker running. US$0.
@@ -21,5 +23,3 @@ updated: 2026-10-24
 - 2026-10-24 · F1 · CHECK (slice 2b) · applied Lead note 19:10 (QA-34, QA-30): fake-launcher suite check_ai_launch_paths 29/29 (every live-draft refusal at US$0; parts provider limit now BLOCKED), capture and fill refusals in slice 2b 57/57; api coverage 95.73/79.09 (floor 95/79), engine 99.12/87.24; QA-30 a plain 400; all suites green. US$0. Owner → Lead.
 - 2026-10-24 · F1 · CHECK → FIX → CHECK (slice 2b) · breaker: 0 Blocker, 2 Major, 7 Minor; every Major and most Minors fixed with a test (page fields set only when drawn exactly, read back from the drawing; sign step on static forms; D3 under-lock race; static read from the file); slice 2b 44/44, all suites green, qa probe 26/0, any 437. US$0. Owner → Lead.
 - 2026-10-24 · F1 · CHECK (slice 2b) · reviewer: ship after fixes, journey 7.5/10, 0 Must, 2 Major (page fields drawn with ? or cut off still reported shown; no sign step on static forms), 5 Minor; breaker running. US$0.
-- 2026-10-24 · F1 · BUILD → CHECK (slice 2b) · all suites green on lane ports: slice 2b 28/28, forms channels 106/106 (capture check updated for QA-15), slice 2 52/52, guard 75, launch 53, engine 38, drafting 48, orchestration 22, grounding 29, Screen 01 API 135, channels 42, rules 67, browser 136, race pass, runtime 85, case engine 20; qa F1 probe 26/0 (QA-15 fixed); explicit any 437. US$0. Reviewer and breaker launched.
-- 2026-10-24 · F1 · BUILD (slice 2b) · F5, F6, QA-15, D3 built (521945f); slice 2b 28/28; full suite run in progress (drafting 48, orchestration 22, engine 38, slice 2 52/52; forms channels check updated for QA-15). US$0.
