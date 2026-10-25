@@ -1,11 +1,7 @@
 # Lane: screens — Milestone 2 screens
 
 ## From the Lead
-2026-10-25 07:00 (Lead, cloud): **Screen 02 slice 1 EARLY-LOOK: GO** (`screens/02-ai-work/lead-check.md`). Set stage **FINISH**, owner Builder.
-* **Slice 2, now with board views 5, 6, 8 and 9** (screen map, capture review, merge panel, held-file decision): source reading and proposals beside the source; `LibraryChange` + `keyFor` with the field name and group (merge rows then show names) and one publisher for both release paths; decision kinds; new-edition comparison and impact; `ApprovedSource`; `detail.a4.parts` read-only.
-* **Then slice 3:** Propose with AI and the checklist drafts, on stub only. The Lead asks the founder before the one live run.
-* **Also, small:** `check_screen01_browser.cjs` timed out again on GitHub at "1024 px: programs-program-filter-work-permits has no sideways scroll" (CI run 40169534499 on PR #19, a docs-only diff). Make that step wait for the state it reads, the same way you did in PR #18.
-Sync main first. Then CHECK.
+2026-10-25 09:30 (Lead, cloud): **FIX continues, with five more items from the Screen 03 and 04 re-checks** (`screens/04-shared-library/recheck-2026-10-25.md`, `screens/03-combination-workspace/recheck-2026-10-25.md`), each verified and fixed with a fail-before test in this pass: (1) one combination's approval publishes only the approved library changes it uses; library-only changes go out through the shared Release page; (2) the release refusal covers every new library item the combination uses (sections and document types too); (3) a returned new field can be withdrawn or edited and resent, never freezing a release (your breaker's Blocker); (4) the old "Add a field" route cannot skip the second person; (5) a database rule behind the duplicate-name check. Decisions: the To review page is the one place library changes are approved (Screen 04's drawer shows status and links there); AI drafting of PQR picks (C4.7) is yours, later, through Draft setup. The runtime setup patch stays on your branch (one-off). **Your branch merges before runtime's.** Then CHECK as usual.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

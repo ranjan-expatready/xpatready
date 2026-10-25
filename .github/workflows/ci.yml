@@ -68,6 +68,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: set up like a cloud session (cloud-setup.sh)
         run: bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/cloud-setup.sh
+      - name: Playwright's own Chromium (the F2 extension check loads an unpacked extension; branded Chrome refuses)
+        run: cd ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio && ./node_modules/.bin/playwright install chromium
       - name: graph (P-86; fails on a page calling a missing API route or a missing decision)
         run: node ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/graph.mjs --check
       - name: studio suites (run-suites.sh --demo; no model call, US$0)

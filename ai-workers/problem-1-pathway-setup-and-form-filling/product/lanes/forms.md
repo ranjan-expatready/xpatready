@@ -1,7 +1,7 @@
 # Lane: forms — PDF and online forms (P-61–P-63)
 
 ## From the Lead
-2026-10-25 06:15 (Lead, cloud): **F2 plan agreed** (`screens/F2-extension/plan.md` "Lead response"; S-1 to S-5 granted, S-3 as `web/src/pages/extension.tsx`; the five purposes named). Set stage **BUILD**, owner Builder. First **F1-P** (list purpose and overflow on a field map), so Screen 02 is not held. Then F2a (shared reader rules and the conformance test first; stop and report if the two readers cannot agree). One commit per slice. Also, from the Lead's earlier note: make `check_ai_launch_paths.ts` robust (one CI failure on 8d0831a) and stop it leaving files in the repo after a run. Add qa's QA-43 (unknown combination on `online-forms` → 404) with a test. Sync main first. BUILD ends at CHECK.
+2026-10-25 09:30 (Lead, cloud): **F2 Lead check: MERGE after three small items** (`screens/F2-extension/lead-check.md`). Stage CHECK, owner Builder. (1) Sync main (it carries the Lead's CI fix: Playwright's Chromium for `check_forms_f2d.ts`), push, CI green on the head. (2) A fresh reviewer re-score of the fixed build (journey ≥ 8, no 0). (3) Granted once: the demo reset (`api/src/demo.ts`) deletes the workspace's extension pairings and sessions, with a test; and after "This screen looks different" the panel's primary button says what to do. Then hand back; the Lead merges by PR. **Next after the merge:** the drafting guard admits ApprovedSource files (P-80; the screens lane's Screen 02 ask).
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
