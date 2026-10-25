@@ -45,7 +45,8 @@ table_() {
   for ln in $LANES; do
     m="$MAIN/$P/product/lanes/$ln.md"; [ -f "$m" ] || continue
     # Read the lane's newest copy (its own state between merges); flag a Lead note it has not synced yet.
-    f="$m"; best=0
+    # main's own copy competes too: a lane branch already merged must not win over a newer Lead note.
+    f="$m"; best=$(git -C "$MAIN" log -1 --format=%ct -- "$P/product/lanes/$ln.md" 2>/dev/null); best=${best:-0}
     for wt in $(git -C "$MAIN" worktree list --porcelain | awk '/^worktree /{print $2}'); do
       [ "$(cat "$wt/.claude/lane" 2>/dev/null)" = "$ln" ] || continue
       t=$(git -C "$wt" log -1 --format=%ct 2>/dev/null || echo 0); [ "$t" -gt "$best" ] && { best=$t; f="$wt/$P/product/lanes/$ln.md"; }
