@@ -74,6 +74,10 @@ Not fixed, recorded: review minor 5 (lock race: readiness checked before the `up
 Environment note (cloud): the database role is a superuser here, so the triggers are the guard; they hold for superusers too (only `session_replication_role = replica` skips them).
 Fresh copy, suite order: setup 13/13 → journey 107/107 → R1d 38/38 → R1a 99/99; engine 39/39; `run-suites.sh --demo` 21/21 green; explicit any 437 (baseline); AI cost US$0.
 
+## Lead answers after the FIX (24 Oct)
+1. Break M3 (P-71): an empty required repeating group that applies **blocks** ready to file. The person may record "none apply" for the group: a fact like any other, confirmed per P-72, which clears the block. Built next, after the Lead PR merges.
+2. The evidence lane's `STATUS.md` verdict is the fill-trial record for now (IMM 1344 not passed, IMM 5707 passed, as read). A machine-readable trial record comes later.
+
 ## Known gaps
 1. Restart recovery of the queue is written, not tested by a suite (a restart mid-generation).
 2. "By hand" counts a confirmed value whose form field has no code for it (option map); the copy lists them, the officer writes them in Adobe.
