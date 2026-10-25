@@ -1,45 +1,60 @@
-# Capability floor — node by node, what proves it today and what does not
+# Outside check — the capability floor, and three founder decisions the Lead has not seen
 
-**Who checked what:** Goose (outside checker), read-only on the tree, 25 Oct 2026. Checked against `origin/main` `2169ec3` (F2 merged) **and** the Lead branch `53eebd9` (Screen 02, PR #29, not yet merged — rows marked *PR #29* mean "built on that branch, not on `main`"). Nothing here is built or changed by this note.
-**Why:** the founder accepted **Option A** (25 Oct, 18:15) — keep P-93's demo story and add Corporate LMIA and Express Entry as proof-only rows at the **M3 gate**. This note makes "the whole floor is covered" checkable instead of asserted.
+**Who:** Goose (outside checker), read-only, 25 Oct 18:20. **On:** `origin/main` `2169ec3` and the Lead branch `53eebd9` (PR #29, unmerged). **Nothing here is built.** One file, one branch; merge or bin it as you see fit.
 
-**How to re-verify any row** (2 minutes, no app):
-`grep -n "C1.3" product/qa/CAPABILITIES.md` · `ls prototype/evidence-lane/E1/` · seed dump: `python3 -c "import json;[print(c['label'],c.get('setup',{}).get('key','no setup'),len(c.get('setup',{}).get('sources',[]))) for p in json.load(open('prototype/studio/samples/programs.json'))['programs'] for c in p['categories']]"`
+> **Read this with a pinch of salt, then check it.** This note is another agent's reading, not evidence in itself. Every claim carries a one-line check in §6. **If a check fails, this note is wrong** — say so in the lane notes and correct the founder; do not repeat the claim. Three of the founder's decisions below were made in a Goose chat, so treat them as what he said, not as a decision already recorded.
 
-## The board
+## 1 · Founder, in this session (record; he will not paste anything into `/lead`)
+- **D-A. Capability floor = Option A.** Keep P-93's hero untouched (visitor visa family of four) and combination B (work permit with LMIA). Add two **proof-only** rows at the **M3** gate: **Corporate LMIA high-wage** (seeded, "Supported by" from B) and **Express Entry** (online-only, answer sheet). Low-wage stays out; spousal stays out until expert question 1 is answered. Amends `DEMO.md` + the `SCREENS.md` demo list; **P-93's story does not change**.
+- **D-B. No GitHub subscription and no card.** Free Actions minutes are exhausted, so no job starts — guard included. Interim: the merge gate is the **full suite run on the exact commit, on the Mac, counts written into `lead-check.md`**. No merge without that evidence, and no pretending CI is green. Before CI is re-enabled, trim `.github/workflows/ci.yml` (no full suites on every push; `pull_request` or `workflow_dispatch` only) or it will burn out again within days.
+- **D-C. Nobody pastes findings into the Lead chat.** Findings arrive through `inbox/` and `/lead` picks them up. That is why this file exists.
 
-Legend — **Proved**: an independent test or Adobe trial exists. **Built, unproved**: code or tests exist, no independent test. **Zero**: nothing to show. Demo: **A** visitor visa family of four · **B** work permit with LMIA · **C** Corporate LMIA high-wage · **D** Express Entry. *Sample* = value not yet confirmed by the immigration expert.
+## 2 · Findings
+| id | type · severity | what happens | evidence | suggested lane |
+|---|---|---|---|---|
+| G-1 | Gap · **Critical to merging** | `main` is 271 files behind the Lead. Three Lead PRs are open and none merged; #29 carries Screen 02 **and every lane's current Lead note**, so all lanes are working from stale instructions. | `gh pr list --state open` → #29, #28, #30; `git log --oneline origin/main..HEAD` | Lead |
+| G-2 | Bug · **Blocker for P-87** | GitHub refuses to start any Actions job (free minutes exhausted, no payment method). Last green run 12:07 UTC; the guard job "failed" in 2s without running. Nothing can merge under the current rule. | `gh run view 40192739040` → annotation: "job was not started because recent account payments have failed or your spending limit needs to be increased" | Lead (founder decision D-B above) |
+| G-3 | Conflict · **Major** | **#28 and #29 both claim P-95**, and both claim **R-113** (`#29`: Screen 04 answers; `#28`: roles audit). Whatever merges second overwrites or forks the record, and `decision-impact.sh` will be checking two meanings of one number. | `gh pr view 29 --json body`; `git show origin/lead/2026-10-25-roles-audit:…/DECISIONS.md` | Lead |
+| G-4 | Gap · Major | **No Corporate capability rows exist at all**, though `lm.high_wage` is a seeded combination (Employer + Representative). A capability register with no Corporate row cannot show the Corporate pathway as proved or unproved. | `grep -in "corporate\|LMIA" product/qa/CAPABILITIES.md` → only C1.7's portal list | Lead (register) · qa (status) |
+| G-5 | Bug · Minor (stale record) | Register rows say *not tested / not built* where evidence exists: **C7.2** (Adobe passes on 6 forms), **C2.9 · C7.4 · C9.3** (F2 merged), **C2.3 · C2.8 · C9.1** (PR #29). Status is the qa lane's to set, but the *assignments* are the Lead's. | `ls prototype/evidence-lane/E1/`; `grep -n "C7.2\|C2.9\|C7.4\|C9.3\|C2.3\|C2.8\|C9.1" product/qa/CAPABILITIES.md` | Lead → qa |
+| G-6 | Gap · Major (mechanism) | **`lane.sh inbox` lists `main` and `devin/*` only.** A Goose drop on `goose/*` is invisible to `/lead`, which is how this note was nearly lost. Precedent exists (`devin/2026-10-25-goose-verify`), so this note is on `devin/`. Either widen the glob to `goose/*` or write the convention down in `inbox/README.md`. | `sed -n '140,148p' product/tools/lane.sh` | Lead |
+| G-7 | Gap · Major | **P-93's combination B does not exist in the seed.** Only `vv.single`, `sv.super_visa`, `sp.student` and `lm.high_wage` have setups; "Work permits › Employer-specific" has none, so reuse across combinations (DEMO row 18) cannot be shown yet. | seed dump in §6 | runtime (D1) |
+| G-8 | Gap · Minor | The circulating four-combination analysis claims "every node is covered". Five nodes have **zero** proof today; two of them (both link types) are runtime 03 S3 and two are m3. The frame is right; the coverage claim was premature. | board §3 | Lead (planning) |
 
-| # | Node | Proved today | Gap | Proved by (Option A) | Owner · stage | Gate |
+## 3 · The node board — what proves each node today
+Legend: **Proved** = independent test or Adobe trial · **Built** = code/tests, no independent test · **Zero** = nothing. Combinations: **A** visitor visa family of four · **B** work permit with LMIA · **C** Corporate LMIA high-wage · **D** Express Entry.
+
+| # | Node | Today | Gap | Proved by (Option A) | Owner · stage | Gate |
 |---|---|---|---|---|---|---|
-| 1 | PDF ingestion | C2.1 Works (IMM 5257 code, edition, checksum, 0.8 s); C3.1 Partial (AI mapping API only) | No person-walk of the drafting screens (C3.2 *not tested*); C's sources are empty | A (5257, 5707 + checklists) · C (EMP5711) | screens (04) · forms | M2 |
-| 2 | PDF auto-fill + Validate + barcodes | C7.1 Works; Adobe trials **passed**: 5257 (5/5 barcodes), 1295, 5707, 0008, 1344, 5409 | C7.2 row still says *not tested* — the register is stale, not the trial; IMM 5476 not done; EMP5711 never trialled | A (5257 barcodes) · B (1295) · C (5711, static form — read-back equal, no barcodes) | evidence (Mac) · runtime | M3 |
-| 3 | Online ingestion | C2.5 · C2.7 Works (capture, answers refused, second person approves); extension capture built in F2 (merged) | C2.8 review document *not built* (PR #29); nothing tested by qa since the F2 merge | A (5257 online, Sample portal screens) · D (saved EE pages) | forms · qa | M2 |
-| 4 | Online auto-populate | Extension fill built in F2 (`check_forms_f2c_fill` 17/17 on the lane) | C7.4 untested by qa; C7.3 **portal sheet not built** | A (extension fills one screen) · D (answer sheet in portal order) | forms · m3 | M3 |
-| 5 | Signed-PDF flow (print → sign → scan → upload) | **Zero.** C8.1 *not built*; C3.11 (signed line adds its scan requirement) *not built* | Whole flow | A (IMM 5476 signed upload) · C (EMP5711 — *Sample*, see caveat 1) | runtime (03 S3) · m3 | M3 |
-| 6 | Mixed filing derived from its lines | C1.6 Works — the method is derived correctly and blocks release | C7.7 the filing itself *not built* | A release 2 (5257 Online · 5707 PDF · 5476 Signed) | runtime · m3 | M3 |
-| 7 | Online-only filing (no PDF) | **Zero.** No Express Entry setup in the seed, no capability row, no answer sheet | Setup, answer sheet, proof | D only | m3 · screens | M3 |
-| 8 | N-persons (roles on lines, one filing per person) | C6.2 · C6.3 · C6.6 Works (R1d walk 35/35, 1440/390 px); seed has principal + spouse + up to 4 children | Per-person *filing* is M3 | A (4 people) · B (worker + spouse) | runtime | M2/M3 |
-| 9 | "Supported by" link | **Zero.** C1.3 *not built* — the path builder stores a text label only | The link and the facts it carries | B ← C | runtime (03 S3) | M2 |
-| 10 | "Follows" / route link | **Zero.** Same as 9; P-24 models EE as route steps *inside* one category, so a route is not yet a link either | Decide: route steps or a Follows link, then build it | D (Profile → PR) · B follows C | runtime (03 S3) · Lead | M2 |
-| 11 | Corporate/employer Pathway | **Shell only.** `lm.high_wage` is seeded (Employer + Representative) with **no sources**; **no capability rows name Corporate at all** | Sources (EMP5711 + LMIA Online answer sheet), rows in the register | C | forms · runtime · qa | M2/M3 |
-| 12 | Reuse of shared facts across combinations | C6.3 Works *within* a case only; reuse across combinations is designed (DEMO row 18) but **cannot be shown: no work-permit setup exists in the seed** | B's setup and seed | A → B (5707, 5476 reused with no new mapping; 1295 new) | runtime (D1) | M2 |
+| 1 | PDF ingestion | Proved in part (C2.1 Works; C3.1 Partial API only) | no person-walk of drafting; C has no sources | A · C | screens 04 · forms | M2 |
+| 2 | PDF auto-fill + Validate + barcodes | **Proved** at form level (5257 5/5 barcodes, 1295, 5707, 0008, 1344, 5409) | C7.2 row stale; 5476 pending; EMP5711 never trialled | A · B · C | evidence (Mac) · runtime | M3 |
+| 3 | Online ingestion | Built (C2.5, C2.7 Works; extension capture in F2) | C2.8 review doc is PR #29; qa has not run since F2 | A · D | forms · qa | M2 |
+| 4 | Online auto-populate | Built, unproved (F2 fill 17/17 on the lane) | C7.3 portal sheet **not built** | A · D | forms · m3 | M3 |
+| 5 | Signed-PDF flow (print→sign→scan→upload) | **Zero** (C8.1, C3.11 not built) | whole flow | A (5476) · C (EMP5711 — Sample) | runtime 03 S3 · m3 | M3 |
+| 6 | Mixed filing from its lines | Derivation **proved** (C1.6 Works) | the filing itself (C7.7) not built | A release 2 | runtime · m3 | M3 |
+| 7 | Online-only filing | **Zero** (no EE setup, no row, no answer sheet) | setup + answer sheet | D only | m3 · screens | M3 |
+| 8 | N-persons | **Proved** (C6.2/6.3/6.6; R1d 35/35, seed has spouse + up to 4 children) | per-person filing is M3 | A · B | runtime | M2/M3 |
+| 9 | "Supported by" link | **Zero** (C1.3 — a text label only) | the link and its carried facts | B ← C | runtime 03 S3 | M2 |
+| 10 | "Follows" / route | **Zero** (P-24 models EE as route steps inside one category) | decide route-steps vs link, then build | D · B follows C | runtime 03 S3 · Lead | M2 |
+| 11 | Corporate pathway | **Shell only** (`lm.high_wage`, no sources, no rows) | sources + rows | C | forms · runtime · qa | M2/M3 |
+| 12 | Reuse across combinations | Within a case only (C6.3 Works) | B's setup and seed (G-7) | A → B (5707, 5476 reused; 1295 new) | runtime D1 | M2 |
 
-**Count today: 1 fully proved · 6 built but unproved · 5 with zero proof (5, 7, 9, 10, 11's capability).** Under Option A all twelve are reachable; five of them land only at the **M3** gate, four of those in runtime 03 S3 or the m3 lane.
+**Count: 1 proved · 6 built/unproved · 5 zero.** Under Option A all twelve are reachable; five of them only at the M3 gate, four of those in runtime 03 S3 or m3.
 
-## Corrections to the circulating analysis (§4–§6)
-1. **"Every node is covered by at least one of the four" is a plan, not a fact.** Nodes 5, 7, 9, 10 have nothing built; 11 has a shell and no capability row. The four-combination frame is sound; the coverage claim was premature.
-2. **Visitor visa must stay.** It is the only combination with Adobe-passed barcodes (5257), a family of four, and a real mixed release (release 2). Dropping it would not "free" a slot — it would throw away the only proven PDF path and strand runtime's D1 seed.
-3. **Corporate is cheaper than assumed, work permit dearer.** `lm.high_wage` already exists as a combination in the seed; nothing is seeded for "Work permits › Employer-specific › With an LMIA", which B needs and which row 18 (reuse) depends on.
-4. **Spousal proves no node here** and is blocked on expert question 1 (IMM 5669 / Schedule A). It stays out of the floor, as P-93 already says. If it returns later, its seed must include a dependent child, or N=2.
+## 4 · Why visitor visa stays (against the circulating analysis)
+It is the only combination with Adobe-passed barcodes (IMM 5257), a family of four, and a real mixed release (release 2). Dropping it would not free a slot; it would discard the only proven PDF path and strand D1. Low-wage genuinely adds nothing (it shares facts with high-wage). Spousal proves **no** node above and is blocked on expert question 1 — it stays out, as P-93 says; if it returns, its seed must include a dependent child or N=2.
 
-## What the immigration expert still decides (nothing below is settled by us)
-1. **Channels per combination** (expert question 3, P-61): which forms are PDF upload, Online, or Signed PDF in each of A–D. Every channel row in `DEMO.md` is *Sample* until then. This decides whether node 5 is shown on A or on C.
-2. **EMP5711 is a signed agreement, not an Individual-only artefact** — employer and worker sign it. If the expert confirms a Signed-PDF line, node 5 sits on Corporate too; the board above assumes so (**Unconfirmed: no counsel**).
-3. **Express Entry after ITA.** If the personalised checklist includes a form that must be signed (a declaration or IMM 5476), EE is not a pure online-only proof and node 7 moves to "online plus one signed item".
+## 5 · Three expert questions (the only reason channel rows are still Sample)
+1. **Channels per combination** for A–D (expert question 3, P-61).
+2. **EMP5711** — is it filed as a Signed PDF line? Employer and worker both sign it, so signed-PDF is not Individual-only (**Unconfirmed: no counsel**).
+3. **Express Entry after ITA** — does the personalised checklist include anything that must be signed? If yes, D is not a pure online-only proof.
 
-## What this asks of the Lead
-1. Record Option A as a founder decision and amend `DEMO.md` (add rows for C and D at the **M3** gate; B's setup; no change to A) and `SCREENS.md` demo list. No change to P-93's hero.
-2. Fix the stale register rows where the trial already passed: **C7.2** (Adobe), **C2.9 · C7.4 · C9.3** (F2 merged), **C2.3 · C2.8 · C9.1** (PR #29).
-3. Add the missing capability rows: a Corporate set (C11.1 workspace and combination, C11.2 EMP5711 fill and read-back, C11.3 LMIA Online answer sheet), plus C1.3/C1.4-style rows for the two links and D's online-only answer sheet.
-4. Send the three expert questions above with this note attached, so the answers change rows rather than restart the argument.
+## 6 · Checks — run these before acting on any row above
+```
+grep -n "C1.3\|C7.2\|C8.1\|C2.9\|C7.4" product/qa/CAPABILITIES.md     # statuses in the board
+ls prototype/evidence-lane/E1/                                          # Adobe trials that exist
+python3 -c "import json;[print(c['label'],'|',c.get('setup',{}).get('key','no setup'),'|',len(c.get('setup',{}).get('sources',[]))) for p in json.load(open('prototype/studio/samples/programs.json'))['programs'] for c in p['categories']]"   # G-7
+gh pr list --state open; gh run view 40192739040                        # G-1, G-2
+sed -n '140,148p' product/tools/lane.sh                                 # G-6
+```
+Expected if this note is right: exactly one Adobe trial set (0008, 1295, 1344, 5257, 5409, 5707); four seeded setups and corporate with 0 sources; three open Lead PRs; a billing annotation on the run; `inbox` matching only `main` and `devin/*`. Any mismatch → the note is stale or wrong; correct it before the founder hears it second-hand.
