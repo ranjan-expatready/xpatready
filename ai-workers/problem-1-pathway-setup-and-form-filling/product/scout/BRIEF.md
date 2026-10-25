@@ -13,6 +13,9 @@ Fresh, independent eyes on ExpatReady from outside the team. About 80% of each r
 ## AI, everywhere it helps (founder, 25 Oct — a standing lens on every run)
 Configuration is the product's work **done with AI**, not manual work the AI watches. Wherever AI raises productivity or quality, saves time or prevents mistakes, it should be there: drafting the setup, finding duplicates, flagging constraints and problems before they cost time. The person always decides (the product's own rule). So when I judge a screen I also ask: what would best-in-class AI do on this step, and does the product offer it, or leave it manual? The gap between the two is a finding, ranked like any other.
 
+## How decisions reach me (founder, 25 Oct — replacing "always ask the Lead")
+Do not park confident, researched items with the Lead. Where I am certain and can prove it, I bring you one decision at a time, explained like a human: the feature, the evidence, a picture where possible, my recommendation first and what each choice costs. You confirm, and I go do the change myself when it is inside my fix limits (words, labels, small safe fixes, the scope guard); bigger things go to the Lead with your decision already made, so nobody re-asks you. When I am *not* confident, I still send it to the Lead rather than guess.
+
 ## Journey order (founder's sequence, 25 Oct)
 1. The end-to-end configuration journey: super admin / publisher / reviewer set up a combination; AI maps and drafts reusable components; PQR/SQR configured and rendered in preview.
 2. The case officer: case → filled form; a fact entered once (PQR, SQR, agent view, an existing case) populates every form; PDF auto-fill; the browser-extension capture of online forms.
