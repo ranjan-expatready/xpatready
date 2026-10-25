@@ -87,8 +87,10 @@ push_() {  # push the scout branch when it has commits main lacks
 open_() {  # for a session with the founder in Goose Desktop or 'goose session'
   prepare
   echo "Scout copy ready: $WT (branch $BR) · app http://localhost:4480"
-  echo "Start Goose in that folder (Desktop: choose it as the working directory; terminal: cd \"$WT\" && goose session),"
-  echo "pick the model (${SCOUT_MODEL:-kimi-k3}), and paste the scout prompt. When done: bash $PP/tools/scout.sh save"
+  echo "Start Goose in that folder with the recipe's browser tools (terminal):"
+  echo "  cd \"$WT\" && goose session --with-extension \"npx -y @playwright/mcp@0.0.83 --isolated --caps vision --output-dir $PP/scout/reports/playwright\""
+  echo "(Desktop: choose that folder and add the same Playwright extension), pick the model (${SCOUT_MODEL:-kimi-k3}),"
+  echo "and paste the prompt from $PP/scout/NOW.md. Say \"wrap up\" at the end: the scout commits and saves (pushes) itself."
 }
 
 save() {  # commit what an interactive session left in the scout copy, stop its app, push

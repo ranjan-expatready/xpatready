@@ -19,9 +19,10 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). Root r
 ## 0. Guard (first, every run)
 1. Run `bash P/tools/lane.sh whoami`. It must print `scout`. If it prints anything else, stop and say: "Run tools/scout.sh; scout works in its own copy".
 2. Read your lane file P/`lanes/scout.md`, including its **From the Lead** note. Follow the note when it names a charter.
-3. Read P/`scout/BRIEF.md` (the founder's intentions and priorities; it wins over the charter list), then P/`scout/CHARTERS.md` and P/`scout/FINDINGS.md`.
+3. Read P/`scout/NOW.md` (the handover card: where things stand, next charter, open questions), then P/`scout/BRIEF.md` (the founder's intentions and priorities; it wins over the charter list), then P/`scout/CHARTERS.md` and P/`scout/FINDINGS.md`.
 4. You work on `scout/<date>` in the copy `xpatready-scout` (`tools/scout.sh open` or a run prepares it). The app is `http://localhost:4480` (database `xr_studio_scout_x1`). Never use :4400 or another lane's ports.
-5. **If `scout/BRIEF.md` says "not written yet", or the founder asks for a session with them, do section 0b instead of a charter.**
+5. **Founder ritual (P8):** in a session the founder only opens Goose in this copy and says one sentence. Run `bash P/tools/scout.sh open` yourself first (it refreshes the copy from GitHub and starts the app on :4480), and save yourself on "wrap up" (section 5). One scout session at a time.
+6. **If `scout/BRIEF.md` says "not written yet", or the founder asks for a session with them, do section 0b instead of a charter.**
 
 ## 0b. Session with the founder (the first one, and whenever their priorities change)
 This is a working session, not a test run. By its end you understand the founder's intentions as well as the Lead does, and you would defend the setup as best-in-class. Do not follow the Lead's setup blindly, and do not guess: ask.
@@ -68,6 +69,7 @@ This is a working session, not a test run. By its end you understand the founder
   * the findings, top five first;
   * a **dependency map** for the charter (a mermaid graph of the screens, records and rules involved, with the broken links marked);
   * suggestions, each labelled *Needed for the proof* or *Later*, and *Capability* or *Scaffolding*.
+* A finding that disagrees with a decision says so in its first words ("Disagrees with P-n: …"). The Lead puts it to the founder before that decision is built on further; you never change a decision yourself.
 * Every Bug or Incomplete finding gets a check in `prototype/studio/tests/scout/` that fails today and passes once fixed.
 * Mark charters done in P/`scout/CHARTERS.md`. You may add new charters at the bottom.
 
@@ -83,18 +85,20 @@ A fix is allowed only when **all** of these hold. The pre-push guard (`tools/sco
 Put one commit per fix: `scout: fix SC-n — <what>`. Everything else is a finding for the Lead.
 
 ## 5. Hand back
+* Update P/`scout/NOW.md`: where things stand, branch and commit, the next charter, open questions.
 * Update P/`lanes/scout.md` below the Lead's note:
   * `stage: WAITING`
   * `owner: Lead`
   * `next_action: Lead reads scout/reports/<file>`
   * one log line
 * Commit with `scout: <charter> — <n findings, n fixed>` and the attribution line `Co-Authored-By: Goose <noreply@goose-docs.ai>`.
-* `tools/scout.sh` pushes your branch. Never push to `main`, never force-push, never use `--no-verify`, and never open pull requests: the Lead opens and merges them (P-87).
+* `tools/scout.sh` pushes your branch after a run. **In a session with the founder, save it yourself** when they say "wrap up": commit your files, then run `bash P/tools/scout.sh save` from this copy (it pushes only the scout branch, after the scope guard). Never push to `main`, never force-push, never use `--no-verify`, and never open pull requests: the Lead opens and merges them (P-87).
 * End with this block:
 ```
 Paste to Lead
 Lane: scout · Charter: <name> · Branch: scout/<date> · Commit: <short hash>
 Findings: <n Blocker · n Major · n Minor · n Idea> (SC-…) · Fixed: <SC-… or none>
+Turns used: <n of 200> · Cut short: <no, or where it stopped>
 Top three: <one line each>
 Questions: <one line each, or none>
 ```

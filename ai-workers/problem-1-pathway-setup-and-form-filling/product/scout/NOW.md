@@ -10,7 +10,7 @@
 - Next: the founder runs `tools/scout.sh save`; the Lead answers the setup review. Next charter by brief order: `firm-admin-day-one`.
 
 ## The founder's ritual (the only thing to remember — agreed 25 Oct)
-1. Open **Goose** (Desktop app or terminal) **in the folder `/Users/ranjansingh/Desktop/xpatready-scout`** — nothing else.
+1. Open **Goose** (Desktop app or terminal) **in the folder `xpatready-scout` (next to the main xpatready copy, e.g. on the Desktop)** — nothing else.
 2. Say one sentence, e.g. *"Scout: run charter firm-admin-day-one"* or *"Scout: continue from NOW.md with me."*
 3. The scout itself does everything with its tools (`scout.sh` machinery): refreshes its copy from GitHub, starts the app on :4480, runs the charter, and **when the founder says "wrap up"** commits, stops the app and pushes. No terminal commands from the founder, no copying folders, no scripts to learn.
 Honest limits: **one scout session at a time** (files are shared state; the save guard blocks a second); a run with **no Goose window open at all** still needs the one terminal command `scout.sh <charter>` — ask the Lead about a scheduler if even that should go.

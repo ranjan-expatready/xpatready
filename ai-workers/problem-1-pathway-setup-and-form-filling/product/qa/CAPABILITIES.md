@@ -39,7 +39,7 @@ Rows: the Lead (every product decision becomes a row or a backlog item the same 
 | C3.14 | 3 Library | Checks list and Shared library › Rules list, read-only, with where used and source (P-37, RULES-MODEL §7) | M2 | Not built | — | Screen 04 |
 | C4.1 | 4 Questionnaires | Author builds the SQR per person role from the facts the forms and documents need | M2 | Partial | — | Section selection only |
 | C4.2 | 4 Questionnaires | Author marks the combination's PQR questions on its PQR tab; only questions its SQR asks can be marked (P-76) | M2 | Not built | — | Screen 03 |
-| C4.7 | 4 Questionnaires | AI drafts the combination's PQR picks with a reason per pick; a person accepts or removes each (P-76) | M2 | Not built | — | Screen 03; AI drafting owned by forms slice 3 |
+| C4.7 | 4 Questionnaires | AI drafts the combination's PQR picks with a reason per pick; a person accepts or removes each (P-76) | M2 | Not built | — | Screen 03; AI drafting of the picks: screens lane through Draft setup (Lead, 25 Oct re-check) |
 | C4.8 | 5 Release | PQR and SQR changes are part of the combination's one review and release, with sources, forms, documents and rules; no separate approval (P-76) | M2 | Not built | — | Screen 03 Review and release |
 | C4.3 | 4 Questionnaires | Preview by person with a sample family through the shared renderer (P-47) | M2 | Partial | — | Coverage preview, not the renderer |
 | C4.5 | 4 Questionnaires | An upload question creates a document line (SA-1B-3 with P-47) | M2 | Not built | 141194dc 23 Oct | Not in the app; needs the shared renderer (C4.4) |

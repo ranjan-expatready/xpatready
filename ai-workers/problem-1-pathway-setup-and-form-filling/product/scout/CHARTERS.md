@@ -4,7 +4,7 @@ Each charter is a job a real person does, tested against what a best-in-class pr
 
 | | Charter | Persona | Journey to walk | Benchmark questions |
 |---|---|---|---|---|
-| [ ] | `firm-admin-day-one` | Firm administrator | First visit: understand the product, set up a program, category and sub-category from nothing, attach forms | Is there onboarding, guidance, sensible defaults, and import from a template? |
+| [ ] | `firm-admin-day-one` | Firm administrator | First visit: understand the product, set up a program, category and sub-category from nothing, attach forms, let AI draft from them and review its proposals (accept, edit, reject; P-32) | Is there onboarding, guidance, sensible defaults, and import from a template? Does the AI draft show its source, and is the review fast, safe and undoable? |
 | [ ] | `release-review` | Licensed consultant (second person) | Review what an author changed and release it | Diff, sign-off, audit trail, undo or roll back, notifications |
 | [ ] | `case-to-filled-form` | Case officer | Open a case, invite the client, confirm answers, fill and lock IMM 5257 | Status at a glance, what is missing, a fact once fills every form, who answered what |
 | [ ] | `online-portal-filing` | Case officer | A form filed online: capture through the extension, what to type where in the IRCC portal | Guided capture, answer sheet in portal order, what changed since capture, re-check |
