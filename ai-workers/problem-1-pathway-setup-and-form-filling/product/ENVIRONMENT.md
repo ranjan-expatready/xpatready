@@ -15,6 +15,12 @@ Every tool added for this work is listed here: version, official source, checksu
 | agent-browser | not recorded | not recorded (npm package `agent-browser`, browser automation CLI for AI agents) | not recorded | Mac (global install, path not recorded) | Lets an agent drive a browser from the command line; **no use in this work yet**, nothing in the repository calls it | Founder, 25 Oct (installed by the Hermes agent at the founder's request); technology gate record below is open |
 | git-filter-repo | 2.47.0 (reports `a40bce548d2c`) | Homebrew bottle of github.com/newren/git-filter-repo v2.47.0, MIT | source archive sha256 `4662cbe5918196a9f1b5b3e1211a32e61cff1812419c21df4f47c5439f09e902`; installed bottle sha256 `774b68744bca239b25b7e82693204f198c6ab1224ded38d8dd33ec1c23c245d8` (matches Homebrew's record, checked 24 Oct) | `/opt/homebrew/bin/git-filter-repo` (Python 3 script) | Built the filtered GitHub copy without `sources/`, `code/`, `archive/` and PDFs (P-81) — retired 24 Oct, kept for reference | Founder, 24 Oct |
 
+## Technology gate record: Goose, Ollama Cloud and Playwright MCP for the scout lane (STANDARDS §1, P-91) — open
+* **What:** the Goose CLI (Apache-2.0, github.com/aaif-goose/goose, docs goose-docs.ai), the Ollama Cloud provider (paid plan, the founder's API key in Goose's own keychain store, never in the repository), and `@playwright/mcp` 0.0.83 (Apache-2.0, published 28 Sep 2026, pinned in `.goose/recipes/scout.yaml`). Mac only, for the scout lane.
+* **Why:** an independent outside-in tester (P-91) that runs without Claude Code and its credit.
+* **Data:** prompts carry repository content and app screenshots with Sample data only. Ollama's FAQ says cloud prompts and responses are not stored or logged and are not used for training. `code/` is never read.
+* **Open:** record versions and checksums after the founder installs (`goose --version`; the npm integrity of `@playwright/mcp`).
+
 ## Technology gate record: Playwright Chromium and agent-browser (STANDARDS §1) — open
 * **Installed 25 Oct** on the Mac by the Hermes agent at the founder's request; recorded by the cloud Lead from the founder's message.
 * **To fill on the Mac (next Mac session):** exact versions (`npx playwright --version`, `agent-browser --version`), install location, source and licence (agent-browser), and checksums where published.

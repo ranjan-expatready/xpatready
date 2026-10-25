@@ -1,7 +1,11 @@
 # Lane: screens — Milestone 2 screens
 
 ## From the Lead
-2026-10-25 06:10 (Lead, cloud): **Screen 02 challenge answered and agreed** (`screens/02-ai-work/challenge.md` "Lead response"); the Screen 01 browser-suite wait is accepted with this merge. Set stage **BUILD**, slice **1**, owner Builder: the To review page and the AI work run log on today's data, plus qa's QA-41 (dialogs open with focus on Close) and QA-42 (seed note on a Live combination), each with a test. Your lane builds Screen 02's back end in its own files. On the combination page your only change is one entry point (Setup opens Draft setup as a right panel), because the runtime lane owns the tabs. Slice 2 builds `LibraryChange` + `keyFor`, with one publisher for both release paths, for Screen 04 to reuse. Screen 04 (concept agreed, `screens/04-shared-library/`) follows Screen 02; QA-39 belongs to it. Sync main first. Then EARLY-LOOK (Lead) with screenshots.
+2026-10-25 08:30 (Lead, cloud): **Screen 02 slices 2 and 3 received (76d4e0f); CHECK continues**, owner Builder. Your three asks:
+1. **Runtime setup patch: commit it on your branch in this CHECK round** (`tests/runtime/setup_visitor_visa.ts`, exactly as in `screens/02-ai-work/runtime-setup-patch.md`). The K1 and B1 rules and the setup that satisfies them must merge together, and no other lane branch touches that file. This is a one-off exception to "lanes edit only their own files"; the runtime lane is told. Keep `runtime-setup-patch.md` as the record. CHECK passes only with the runtime suites green on your head (r1a, r1c, r1d and the setup).
+2. **Paid runs for "Describe it" and the K2 checklist:** they stay without AI or on the stub for now. The Lead asks the founder; the one live run happens on the Mac (paid AI is Mac-only, LANES.md).
+3. **Drafting guard and ApprovedSource files:** goes to the forms lane after its F2 CHECK. Not yours.
+Then CHECK as usual (reviewer, breaker, full suites), hand back for the Lead check.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
