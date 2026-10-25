@@ -62,7 +62,8 @@ A fix is allowed only when **all** of these hold. The pre-push guard (`tools/sco
 * It is words, a label, an accessibility attribute, a missing empty or error message, a broken link, spacing or a layout glitch, or a one-function bug with an obvious cause.
 * It touches at most **40 changed lines** in all, in `prototype/studio/web/src/`, `api/src/` or `engine/`. It never touches `prisma/`, migrations, `contracts/`, `package*.json`, rules, skills, docs outside `scout/`, `AGENTS.md`, `CLAUDE.md`, `.claude/`, `.agents/`, `.goose/` or `.github*`.
 * The file is not changed on any open lane branch: `bash P/tools/scout.sh busy <file>` prints `free`.
-* It has a test in `tests/scout/` that failed before and passes after, and `npm run typecheck` in `prototype/studio` stays clean.
+* It has a test in `tests/scout/` that failed before and passes after, and the type check stays clean: in `prototype/studio`, run `./node_modules/.bin/tsc --noEmit -p api/tsconfig.json`.
+* To see a web fix in the browser, rebuild and restart your copy: `(cd prototype/studio/web && ../node_modules/.bin/vite build)`, then `zsh prototype/studio/tools/isolated.sh scout_x1 4480 restart`.
 * It does not change a product decision, a business rule or immigration values. Those go to the Lead as findings.
 
 Put one commit per fix: `scout: fix SC-n — <what>`. Everything else is a finding for the Lead.

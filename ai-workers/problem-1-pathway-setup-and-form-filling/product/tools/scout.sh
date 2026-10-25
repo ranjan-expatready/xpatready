@@ -48,12 +48,13 @@ scope() {  # the effective change of a scout tip against main (merges of main ex
 }
 
 run() {
-  local charter="${1:-next}" day wt br
+  local charter="${1:-next}" day wt br rc pgd
   command -v goose >/dev/null || { echo "Goose is not installed. Install the Goose CLI (goose-docs.ai), run 'goose configure', choose the Ollama Cloud provider and paste your Ollama API key, then run this again."; exit 3; }
   day=$(date +%Y-%m-%d); wt="$(dirname "$MAIN")/xpatready-scout"
   git -C "$MAIN" fetch -q origin || { echo "cannot reach GitHub; try again later"; exit 3; }
-  if [ ! -d "$wt" ]; then
-    git -C "$MAIN" worktree add -q "$wt" -b "scout/$day" origin/main && echo "scout copy created: $wt"
+  if [ ! -d "$wt" ]; then   # a branch left by a removed copy keeps its name, so pick a free one
+    br="scout/$day"; git -C "$MAIN" show-ref -q "refs/heads/$br" && br="scout/$day-$(date +%H%M)"
+    git -C "$MAIN" worktree add -q "$wt" -b "$br" origin/main && echo "scout copy created: $wt" || exit 3
   fi
   cd "$wt" || exit 3
   git diff --quiet && git diff --cached --quiet || { echo "The scout copy has uncommitted changes from an earlier run: $wt. Open it, commit or discard them, then run again."; exit 3; }
@@ -67,13 +68,21 @@ run() {
   mkdir -p .claude && echo scout > .claude/lane
   bash "$PP/tools/lane.sh" setup >/dev/null || exit 5
   echo "scout: $br · charter: $charter · model: ${SCOUT_MODEL:-kimi-k2.6} · app http://localhost:4480"
+  # As start.sh does: the database cluster running, the Prisma client generated, the web app built (a fresh copy has none).
+  pgd="$wt/.tools/solution-1-prototype/pg18-data"
+  ( export PATH="$wt/.tools/node-v24.21.0/bin:/opt/homebrew/opt/postgresql@18/bin:$PATH"; cd "$PS" || exit 1
+    pg_ctl -D "$pgd" status >/dev/null 2>&1 || LC_ALL=en_US.UTF-8 pg_ctl -D "$pgd" -l "$pgd/server.log" -w start >/dev/null || exit 1
+    ./node_modules/.bin/prisma generate >/dev/null && (cd web && ../node_modules/.bin/vite build >/dev/null)
+  ) || { echo "could not prepare the scout app (database, Prisma client or web build)"; exit 5; }
   zsh "$PS/tools/isolated.sh" scout_x1 4480 start >/dev/null || { echo "the scout app did not start (see $PS/var/isolated-scout_x1)"; exit 5; }
   goose recipe validate .goose/recipes/scout.yaml >/dev/null || { echo "The scout recipe does not validate with this Goose version; tell the Lead (goose --version)."; exit 5; }
   GOOSE_MODE=auto OLLAMA_STREAM_TIMEOUT=600 GOOSE_CLI_SHOW_COST=true \
     goose run --recipe .goose/recipes/scout.yaml --params charter="$charter" \
       --provider ollama_cloud --model "${SCOUT_MODEL:-kimi-k2.6}" \
       --max-turns "${SCOUT_TURNS:-200}" --max-tool-repetitions 3 -n "scout-$day-$charter"
+  rc=$?
   zsh "$PS/tools/isolated.sh" scout_x1 4480 stop >/dev/null 2>&1
+  [ "$rc" = 0 ] || { echo "Goose stopped with an error (exit $rc): nothing pushed. The work so far stays in $wt; run again to continue."; exit "$rc"; }
   git diff --quiet && git diff --cached --quiet || echo "Note: the run left uncommitted changes in $wt (not pushed)."
   [ "$(git rev-list --count origin/main..HEAD)" -gt 0 ] || { echo "Nothing new to push."; exit 0; }
   git push -q -u origin "$br" && echo "Pushed $br. Tell the Lead: \"scout pushed $br\" (the report is in $PP/scout/reports/)."
