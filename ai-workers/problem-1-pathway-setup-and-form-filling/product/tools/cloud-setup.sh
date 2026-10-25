@@ -57,8 +57,9 @@ case "$(uname -s)" in Linux) c=/usr/lib/postgresql/18/bin;; *) c=/opt/homebrew/o
 [ -x "$c/pg_ctl" ] && PGBIN="$c"
 if [ -z "$PGBIN" ] && command -v apt-get >/dev/null; then
   # Ubuntu's stock repositories carry an older major: the official PGDG repository has 18.
-  apt postgresql-common
-  [ -x /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh ] && $SUDO /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
+  # Either step may fail where the network denies apt.postgresql.org: the npm fallback below then runs.
+  apt postgresql-common || true
+  [ -x /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh ] && { $SUDO /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null || true; }
   apt_ready=""; apt postgresql-18 || true; [ -x "$c/pg_ctl" ] && PGBIN="$c"
 fi
 if [ "$(uname -s)" = Linux ] && [ ! -x "$c/postgres" ] && command -v npm >/dev/null; then
