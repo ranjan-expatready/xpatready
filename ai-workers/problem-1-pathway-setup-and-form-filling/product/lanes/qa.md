@@ -1,7 +1,7 @@
 # Lane: qa — independent testing of what is on main (skill `qa`)
 
 ## From the Lead
-2026-10-25 02:00 (Lead, cloud): main now carries runtime R1d (forms panel, P-71 gate, never-overwrite) with its PR 12 fixes, the qa R1c fixes (QA-35–37, QA-26 rest) and "none apply" for required groups. Run **/qa after-merge** on the new main: retest QA-35, QA-36, QA-37, QA-26; walk the forms panel (generate, out of date, lock refused while not ready, stale after a change; online forms not offered) and "none apply" (add, withdraw, confirm, readiness) as client and officer at 390 and 1440 px. One run only (weekly usage); list what you could not cover.
+2026-10-25 03:20 (Lead, cloud): after-merge on 8aef175 read and **merged** (ready; 0 Blocker/Critical/Major; QA-26, 35, 36, 37 closed; R1d walk 35/35). QA-19 stays with the Lead: the :4400 demo reset on the Mac clears it. Not covered (recorded): officer's Confirm section and None apply by click, Adobe check and browser download of a copy, a real Online release, 200% zoom and a screen reader. Stage: **waiting**. No new run until the Lead sends a note (weekly usage).
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
