@@ -2,10 +2,22 @@
 
 Reviewer: fresh session that did not build this. Branch `claude/screens-01-fix-c3010a` @ `246143f` + SC-2 fix (uncommitted at review time), isolated copies `screens_*` on :4440–4449, databases `xr_studio_screens_*`. No paid AI: every suite replays saved runs, US$0. Evidence outside the repo: `/tmp/s02-check/`.
 
-## Verdict: **Ship**, journey score **8.5/10** (pass ≥ 8, no criterion at 0)
+## Verdict: **Ship**, journey score **9.5/10** (pass ≥ 8, no criterion at 0)
 
-Journey (To review → approve a library change → release uses only what the combination needs; propose → return → correct/resend or withdraw; Draft setup → proposals → apply → decisions):
-task completed 9 · next step obvious 8 · plain words 9 (BR-16 words verified in the fix suite) · feedback/state 9 · correct data 9 · error recovery 8 (RETURNED rows name their fix; a held edition with no official file is refused in plain words with what to do) · accessibility/sizes 9 (axe clean in slice1/slice2_browser journeys at 1024/1440; one env-limit below) · speed 9 (saved runs, ms timings asserted) · visual 9 · trust/sources 9 (AI rows labelled, costs US$0, audit lines).
+Scored per journey-test §6 by walking every concept journey in a real browser (clicks/keys, personas, PostgreSQL checked after each step): see `journey-test-reviewer-2026-10-25-r2.md`. The reviewer session also made the one-line SC-2 label fix ("used by n").
+
+| Criterion | Score | Evidence |
+|---|---|---|
+| Task completed | ½ | journeys (a)–(d) end to end; (e) held PDF not walked live (gate in code + fix suite) |
+| Next step obvious | 1 | all four round-1 dead ends gone; chips name the next actor |
+| Plain words | 1 | return notes, prototype-exception label, no ids on the main path |
+| Feedback and state | 1 | Needs you/Waiting/Running counts; every mutation ends in a named state |
+| Correct data | 1 | psql-verified: APPROVED→PUBLISHED, RETURNED→WAITING, WITHDRAWN, scoped release v2, 708 maps |
+| Error recovery | 1 | resend and withdraw recover a returned proposal |
+| Accessibility and sizes | 1 | axe WCAG 2.2 A/AA clean on 4 pages; no scroll at 1024/390/640; focus rings present |
+| Speed | 1 | To review 269–320 ms, approve ~0.95 s, submit→release ~0.4 s |
+| Visual quality | 1 | consistent with design/draft-ai-work.html |
+| Trust and sources | 1 | who/when labels, origin, US$0.00, audit lines |
 
 ## The earlier findings, verified on this head (test name → evidence)
 - Re-check 1 (approval publishes only the changes the combination uses): `unapprovedAdds` + scoped publisher, `library-changes.ts:71-103` — check_screen02_fix 59/59.
