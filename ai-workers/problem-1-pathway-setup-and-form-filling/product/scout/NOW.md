@@ -8,6 +8,7 @@
 ## Where things stand (updated at the end of every session or run)
 - 2026-10-25 · **charter `firm-admin-day-one` done** (this session, run by the scout at the founder's go): report `reports/2026-10-25-firm-admin-day-one.md`, 5 findings (1 Major · 3 Minor · 1 Idea, priorities P2/P3), SC-2 fix written and proven then reverted (file busy on screens — the scope guard did its job; ready patch in the report), failing checks kept for SC-2 + SC-4. Branch `scout/2026-10-25-1328`, saved and pushed.
 - 2026-10-25 · first session with the founder (skill 0b): brief agreed and written (`BRIEF.md`), charters re-ordered with the founder, setup review `reports/2026-10-25-setup-review.md`, smoke test done.
+- 2026-10-25 · founder added a standing lens to the brief: **AI everywhere it helps** (draft setup, find duplicates, flag constraints — the person decides); every run now asks "would best-in-class AI do this step, and does the product offer it?". Recorded in `BRIEF.md`, applied to SC-1's suggestion.
 - Next: the Lead triages SC-1/3/4/5 (the setup review P1–P8 is answered). Next charter by brief order: **`release-review`** (needs a released combination — run after the Lead's read, or on sample data).
 
 ## The founder's ritual (the only thing to remember — agreed 25 Oct)
