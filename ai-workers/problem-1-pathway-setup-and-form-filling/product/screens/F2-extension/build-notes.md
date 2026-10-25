@@ -75,5 +75,11 @@
 | Break m1: a later mismatch replaces a task's differences | Kept on purpose: the task shows what the portal shows now; `times` counts the mismatches | — |
 | Break m7: a stolen token replayed with a forged Origin works | True, and now said plainly: the Origin binding stops a web page in a browser from using a token, not a person who has the token; the token's defences are its 8 hours, revocation in the Studio and session storage in memory only. Hardening (store install, device binding) is the team's M3 | — |
 
+## Lead check items (25 Oct 09:30, lead-check.md: MERGE after three items)
+* Main synced (b2c0710, the CI fix that installs Playwright's Chromium for `check_forms_f2d.ts`).
+* Granted once: `api/src/demo.ts` reset deletes the workspace's `recapture_task`, `extension_session` and `extension_pairing` rows (a reset signs every extension out). Test `check_forms_f2b.ts` 39/39: before, a live session and an open code; after, 0:0:0 rows; fail: the old token and the old code are refused (401). Before the change the old token still answered after a reset.
+* After "This screen looks different" the panel says what to do instead ("Enter this screen's answers yourself, from the case in the Studio. When the screen is captured again, check it again here.") and its primary button is "Check this screen again". Test `check_forms_f2d.ts` 37/37.
+* A fresh reviewer re-score: `review-2.md`.
+
 ## Environment (this cloud copy)
 PostgreSQL 18 could not be installed: the network policy refuses `apt.postgresql.org` (403). The suites ran on the image's PostgreSQL 16 (`cloud-setup.sh` with its binary path changed in a scratch copy, nothing committed); CI runs 18 and is the authority. All migrations, F1-P's included, apply on 16.

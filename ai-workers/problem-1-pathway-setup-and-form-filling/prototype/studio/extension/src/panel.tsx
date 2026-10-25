@@ -155,6 +155,8 @@ function FillMode({ onError, clearError }: { onError: (e: unknown) => void; clea
       <p className="text-xs text-text-muted">Fills the open portal screen only, from the case's confirmed answers. It never clicks Next, Save or Submit.</p>
       {plan && !plan.match && <Note tone="warn" title={plan.reason === "not_captured" ? "Screen not captured yet" : "This screen looks different"}>
         <p>{plan.message}</p>
+        {/* Lead note 25 Oct: say what to do instead (nothing on this screen is filled until it is re-captured or matches). */}
+        <p className="mt-2 font-medium">Enter this screen's answers yourself, from the case in the Studio. When the screen is captured again, check it again here.</p>
         {plan.differences?.length ? <ul className="mt-2 list-disc pl-5">{plan.differences.map((d, i) => <li key={i}>{d.approved_label ?? d.input}: {d.change === "reworded" ? "reworded" : d.change === "options" ? "choices changed" : d.change}</li>)}</ul> : null}
         {plan.task && plan.task.times > 1 && <p className="mt-2 text-xs">{plan.task.message}</p>}
       </Note>}
@@ -167,7 +169,7 @@ function FillMode({ onError, clearError }: { onError: (e: unknown) => void; clea
                 {o.outcome === "filled" ? (p?.why ?? "Filled") : o.outcome === "not_accepted" ? "Not accepted by the screen: enter it yourself." : o.outcome === "left_alone" ? "Already answered on the screen: left as it is." : p?.why ?? "Not filled."}</p></li>); })}
         </ul>
       </section>}
-      <Pinned><Button primary onClick={fill} disabled={busy || !pick.caseId || !pick.form || !pick.subject} className="w-full">{busy ? "Filling…" : "Fill this screen"}</Button></Pinned>
+      <Pinned><Button primary onClick={fill} disabled={busy || !pick.caseId || !pick.form || !pick.subject} className="w-full">{busy ? "Filling…" : plan && !plan.match ? "Check this screen again" : "Fill this screen"}</Button></Pinned>
     </div>
   );
 }

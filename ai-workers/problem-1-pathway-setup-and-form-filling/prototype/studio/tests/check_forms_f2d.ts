@@ -172,6 +172,7 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
     const diff = await panel.locator("main").innerText();
     const untouched = await tab.evaluate(() => (document.getElementById("familyName") as HTMLInputElement).value);
     ok("C9.3: BR-7 a changed screen fills nothing; the panel says so and names what differs; \"Re-capture needed\" is open", /Nothing was filled/.test(diff) && /Re-capture needed is open/.test(diff) && untouched === "" && sql("select count(*) from recapture_task where status='OPEN'") === "1", diff.slice(0, 220));
+    ok("C9.3: Lead note: after \"This screen looks different\" the panel says what to do instead, and its button is \"Check this screen again\"", /Enter this screen's answers yourself/.test(diff) && (await panel.getByRole("button", { name: "Check this screen again" }).count()) === 1 && (await panel.getByRole("button", { name: "Fill this screen" }).count()) === 0);
     await axe(panel, "screen looks different"); await shot(panel, "08-looks-different-360");
     await tab.goto(`http://127.0.0.1:${PORT}/`);
     await panel.getByRole("button", { name: "Fill this screen" }).click();

@@ -144,6 +144,15 @@ const connect = async (code: string, extra: Record<string, string> = {}) => call
   const mine = (await call("GET", "/extension/sessions", undefined, studio("user-O"))).body as { state: string }[];
   ok("C2.9: break m3 every live session of a person is listed (22 connected, none hidden behind the newest 20)", mine.filter((x) => x.state === "connected").length >= 22, mine.filter((x) => x.state === "connected").length);
 
+  // ──────────────────────────────────────────── Lead note 25 Oct 09:30: a demo reset signs every extension out
+  const kept = (await connect((await pair("user-O")).code)).body.token as string;
+  const openCode = (await pair("user-A")).code as string;
+  ok("C2.9: before the reset: a live session and an open code", (await call("GET", "/extension/session", undefined, ext(kept))).status === 200 && Number(sql("select count(*) from extension_session")) > 0);
+  r = await call("POST", "/demo/reset", { confirm: "RESET" }, studio("user-A"));
+  const left = sql("select (select count(*) from extension_session)||':'||(select count(*) from extension_pairing)||':'||(select count(*) from recapture_task)");
+  ok("C2.9: the demo reset deletes the workspace's extension sessions, codes and tasks (0:0:0)", r.status < 300 && left === "0:0:0", { reset: r.status, left });
+  ok("C2.9: fail: after the reset the old token and the old code no longer work (401)", (await call("GET", "/extension/session", undefined, ext(kept))).status === 401 && (await connect(openCode)).status === 401);
+
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log(`FAIL  the check stopped: ${String((e as Error)?.message ?? e).slice(0, 200)}`); console.error(e); process.exit(1); });
