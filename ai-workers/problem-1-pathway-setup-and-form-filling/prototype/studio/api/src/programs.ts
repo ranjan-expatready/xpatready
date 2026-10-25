@@ -17,6 +17,7 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Audit, Db, need, ROOT, Workspace, type Actor } from "./core.ts";
 import { addFormLine } from "./form-lines.ts";
+import { changeView, itemsOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 
@@ -249,6 +250,8 @@ export class Programs {
         if (r.errors) { why.set(id, { why: r.firstError }); continue; }
         const gate = gates.get(id)!;
         if (!gate.ok) { why.set(id, { why: gate.why }); continue; }
+        const waiting = await unapprovedAdds(this.db, workspaceId, itemsOf((snaps.get(id) as { snapshot: Snapshot }).snapshot));
+        if (waiting.length) { why.set(id, { why: `${unapprovedWhy(waiting).replace(/^it/, "It")}.` }); continue; }
         if (actor && (actor.duties as readonly string[]).includes("approve")) {
           if (gate.sub.submittedBy === actor.id) { why.set(id, { why: "You submitted it, so a different person releases it (BR-14).", self: true }); continue; }
           const { snapshot } = snaps.get(id) as { snapshot: Snapshot };
@@ -257,8 +260,11 @@ export class Programs {
         why.set(id, { why: null });
       }
     } else for (const r of changed) why.set(r.leaf.combinationId!, { why: r.errors ? r.firstError : null });
+    // Approved library changes travel with the shared draft and are released with it (Screen 02 slice 2, B1).
+    const library = (await this.db.libraryChange.findMany({ where: { workspaceId, status: "APPROVED", action: { in: ["ADD", "RETIRE", "RESTORE"] } }, orderBy: { proposedAt: "asc" } })).map(changeView);
     return {
-      changes: changed.reduce((s, r) => s + r.changes, 0),
+      changes: changed.reduce((s, r) => s + r.changes, 0) + library.length,
+      library,
       rows: changed.map((r) => { const w = why.get(r.leaf.combinationId!)!; return { combinationId: r.leaf.combinationId, label: r.leaf.label, path: r.leaf.path, changes: r.changes, held: !!w.why, why: w.why, self: !!w.self, released: !!r.leaf.release }; }),
       last: last ? { version: last.version, at: last.releasedAt, approver: last.approverId } : null,
       next: (last?.version ?? 0) + 1,
@@ -275,7 +281,7 @@ export class Programs {
     if (!d.changes) throw problem(409, "Nothing to release", "The shared draft has no changes since the last release.");
     if (b.expectedChanges !== d.changes) throw problem(409, "The draft changed", `The draft now has ${d.changes} changes, not ${b.expectedChanges}. Review the list again, then release.`);
     const include = d.rows.filter((r) => !r.held);
-    if (!include.length) {
+    if (!include.length && !d.library.length) {
       const mine = d.rows.filter((r) => r.self).map((r) => r.label);
       if (mine.length) {
         await this.audit.log(await this.ws.id(), actor.id, "refused", "release", null, `Release refused: ${actor.name} changed or submitted ${mine.join(", ")}`);
@@ -284,7 +290,7 @@ export class Programs {
       const shown = d.rows.slice(0, 5).map((r) => `${r.label}: ${r.why}`).join(" · ");
       throw problem(409, "Every change is held back", `Nothing can be released yet. ${shown}${d.rows.length > 5 ? ` · and ${d.rows.length - 5} more (see Review and release)` : ""}`);
     }
-    const out = await this.studio.releaseRows(actor, include.map((r) => r.combinationId!));
+    const out = await this.studio.releaseRows(actor, include.map((r) => r.combinationId!), d.library.map((l) => l.id));
     this.cache = null;
     return { ...out, held: d.rows.filter((r) => r.held).map((r) => ({ label: r.label, why: r.why })) };
   }

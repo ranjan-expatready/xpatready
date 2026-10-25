@@ -152,6 +152,14 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   { const t = await toastLike(/SME sign-off/); step("A7: approval before the SME sign-off is refused", /SME sign-off/.test(t), t); }
   await as("user-C");
   await click(btn("Select all I can sign")); await click(btn(/^Sign/));
+  // Screen 02 FIX (Lead re-check item 2): a document type named with the requirement is new to the shared library, so a
+  // second person approves it on To review before the release carries it.
+  await go("/review?kind=library_change");
+  const newType = p.locator('tr[data-kind="library_change"]').first();
+  const typeName = (await newType.count()) ? (await newType.textContent()) : "";
+  if (await newType.count()) { await click(newType.locator("[data-next] a")); await click(btn("Approve")); await p.waitForURL(/\/review$/); }
+  step("A7: the new document type is approved by a second person on To review", /approved: it is released with the next release/.test(await lastToast()), `${typeName.slice(0, 80)} · ${await lastToast()}`);
+  await go(`/c/${wp}/review`);
   await as("user-B");
   await click(btn("Approve and release")); await p.getByText(/Released version 2/).last().waitFor({ timeout: 30000 }).catch(() => {});
   step("A7: a second person (approver) releases version 2", /Released version 2/.test(await lastToast()), await lastToast());
@@ -217,6 +225,14 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const atts = await api(`/combinations/${scratch}/attachments`);
   step("B2: both forms read on this computer (no AI); the non-official file stays held", atts.filter((a) => a.status === "READ").length === 2 && await heldJunk() && !(await junkAttached()), atts.map((a) => `${a.fileName}=${a.status}`).join(", "));
 
+  // Screen 02 FIX (review Must 4): with form fields left to decide, apply stays on the job page and focuses their list;
+  // with none left it goes on to the preview. The journey goes on to the preview either way.
+  const afterApply = async () => {
+    await Promise.race([p.waitForURL(/preview/, { timeout: 30000 }), p.locator("#ff-decide:focus").waitFor({ timeout: 30000 })]);
+    const t = await lastToast();
+    if (!/preview/.test(p.url())) { step("C3.8 K1 (Must 4): form fields are left to decide, so apply stays on the job page with their list focused", /Form fields with no decision/.test(await p.locator("#ff-decide").textContent())); await go(`/c/${scratch}/preview`); }
+    await idle(); return t;
+  };
   /** Every remaining undecided proposal: take the shown recommendation (a person's click per item). */
   const decideRest = async () => {
     await click(p.getByRole("tab", { name: /^All/ }));
@@ -226,6 +242,9 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     for (let i = 0; i < 300; i++) {
       const n = await pend.count(); if (!n) break;
       clicks++; await pend.first().getByRole("button").first().click({ timeout: 10000 }).catch(() => {});
+      // BR-7 (Screen 02 FIX, Must 3): a new field a library field could fit asks why before it is accepted.
+      const why = pend.first().locator("[data-accept-reason]");
+      if (await why.count()) { await why.getByRole("textbox").fill("A different meaning on this form from the library field."); await why.getByRole("button", { name: "Accept with this reason" }).click({ timeout: 10000 }).catch(() => {}); }
       for (let w = 0; w < 40 && (await pend.count()) >= n; w++) await p.waitForTimeout(250);
     }
   };
@@ -238,13 +257,13 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   await draftReplay("IMM 1295");
   await p.getByText("Replay of a saved run").first().waitFor();
   const j1295 = await api(`/jobs/${p.url().split("/jobs/")[1]}`);
-  step("B3: the IMM 1295 draft is a labelled replay of a saved real run; against an empty library every field is new", j1295.mode === "REPLAY" && /Replay of saved run|Saved AI answer from run .*no model call, US\$0/.test(j1295.message) && j1295.detail.counts.reuse === 0 && j1295.detail.counts.new === j1295.items.length, `${j1295.mode} · ${j1295.items.length} items · "${String(j1295.message).slice(0, 90)}" · ${j1295.runId}: ${JSON.stringify(j1295.detail.counts)}`);
+  step("B3: the IMM 1295 draft is a labelled replay of a saved real run; against an empty library every field is new", j1295.mode === "REPLAY" && /Replay of saved run|Saved AI answer.*no model call, US\$0/.test(j1295.message) && j1295.detail.counts.reuse === 0 && j1295.detail.counts.new === j1295.items.length, `${j1295.mode} · ${j1295.items.length} items · "${String(j1295.message).slice(0, 90)}" · ${j1295.runId}: ${JSON.stringify(j1295.detail.counts)}`);
   await shot("B3-imm1295-proposals.png");
   await click(btn("Accept clean new definitions"));
   await decideRest();
   await click(btn("Apply to draft")); await click(p.getByRole("dialog").getByRole("button", { name: "Apply to draft" }));
-  await p.waitForURL(/preview/); await idle();
-  step("B3: IMM 1295 applied: its map and new definitions are in the draft", /applied to the draft/.test(await lastToast()), await lastToast());
+  const applied1295 = await afterApply();
+  step("B3: IMM 1295 applied: its map and new definitions are in the draft", /applied to the draft/.test(applied1295), applied1295);
 
   await go(`/c/${scratch}/sources`);
   await draftReplay("IMM 5476");
@@ -260,7 +279,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const parts = jd.items.filter((i) => /mailing_address_/.test(i.proposedKey));
   step("B4: every proposal decided by a person; address parts reuse the composite address; one item returned with a reason", jd.items.every((i) => i.decision !== "PENDING") && parts.length > 0 && parts.every((i) => i.decidedKey === "person.mailing_address") && jd.items.some((i) => i.decision === "RETURNED"), `${jd.items.filter((i) => i.decision !== "PENDING").length}/${jd.items.length} decided; parts ${parts.map((i) => `${i.proposedKey}->${i.decidedKey}`).join(" ")}; returned ${jd.items.filter((i) => i.decision === "RETURNED").map((i) => i.proposedKey).join(",")}`);
   await click(btn("Apply to draft")); await p.getByRole("dialog").getByLabel("Who files this form").selectOption("principal_applicant"); await click(p.getByRole("dialog").getByRole("button", { name: "Apply to draft" }));
-  await p.waitForURL(/preview/); await idle();
+  await afterApply();
   const draft = await api(`/combinations/${scratch}/preview?mode=draft&profile=none`);
   const c5476 = draft.coverage.find((c) => c.form === "IMM 5476");
   const addrBox = c5476.boxes.find((x) => x.fact === "person.mailing_address");
@@ -274,6 +293,18 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const after = await api(`/combinations/${scratch}/preview?mode=draft&profile=none`);
   const emailBoxes = after.coverage.flatMap((c) => c.boxes).filter((x) => x.fact === "person.email");
   step("B6: without any screen-code change the email boxes now come from a client question", emailBoxes.length > 0 && emailBoxes.every((x) => x.coverage === "client question"), `${emailBoxes.length} boxes`);
+  // Screen 02 slice 2 (K1, B1): every form field of the applied editions has a decision, and a second person approves
+  // the new shared fields on To review, before the draft is submitted and released (through the API: scaffolding here;
+  // check_screen02_slice2_browser.cjs walks the same decisions on their pages).
+  const appliedJobs = (await api(`/combinations/${scratch}`)).jobs.filter((j) => j.kind === "field_map" && j.status === "APPLIED");
+  let decidedFF = 0;
+  for (const j of appliedJobs) {
+    const ff = await api(`/jobs/${j.id}/form-fields`);
+    for (const x of ff.fields.filter((y) => y.outcome === "unresolved")) { await api(`/editions/${ff.edition.id}/form-fields/decision`, { method: "POST", data: { dataPath: x.dataPath, decision: "not_a_fact", reason: "Not filled from case facts in this journey (Sample)." } }); decidedFF++; }
+  }
+  const waitingAdds = await api("/library/changes?status=WAITING");
+  for (const c of waitingAdds) await p.request.fetch(`${URL}/api/library/changes/${c.id}/approve`, { method: "POST", headers: { "x-actor": "user-C", "content-type": "application/json" }, data: {} });
+  step("B6b: every form field decided (K1) and each new shared field approved by a second person (B1)", (await api("/library/changes?status=WAITING")).length === 0, `${decidedFF} form fields · ${waitingAdds.length} new fields approved`);
   await go(`/c/${scratch}/review`);
   await click(btn("Submit for review"));
   await as("user-C"); await click(btn("Select all I can sign")); await click(btn(/^Sign/));

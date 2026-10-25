@@ -1,7 +1,8 @@
 // New combination (Layout v2, journey board step 2), built by hand: one field per level with type-ahead — pick what exists
 // or "Create '…'" inline — the duplicate check as you type (BR-6, the server's own rule), an optional "Linked to", the
 // "Will be created as" line, and one request that checks every level before writing (POST /combinations/path).
-// "Describe it to AI" (Propose with AI) arrives with Screen 02 (P-41: no dead button).
+// "Describe it" (Screen 02 slice 3, board view 11, P-37/P-41) proposes the path; until paid runs are agreed it matches the
+// description's words with the existing paths (no AI, US$0), says so, and creates nothing until the author confirms.
 import * as React from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -12,6 +13,7 @@ import { Button, Notice, Select } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { CATALOGUE_URL_KEY, PATHWAY_LABEL } from "@/pages/programs";
+import type { PathProposal } from "../../../contracts/screen02";
 
 type Opt = { key: string; label: string; combinations: number; hasSetup: boolean; combinationId?: string | null };
 type ProgramOpt = Opt & { categories: (Opt & { subCategories: Opt[] })[] };
@@ -78,6 +80,7 @@ export function NewCombinationPage() {
       </nav>
       <h1 className="text-[22px] font-bold tracking-tight">New combination</h1>
       {!canAuthor && session.data ? <Notice tone="warn" title="Only a configuration author can create combinations">Switch to the Configuration author with "Acting as" at the top.</Notice> : null}
+      {canAuthor ? <Describe pathway={pathway} onUse={(x) => { if (x.pathway !== pathway) setPathway(x.pathway); setProgram(x.program); setCategory(x.category); setSub(x.subCategory); }} /> : null}
       <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface-raised p-5">
         <p className="text-sm text-text-muted">Pick what already exists, or type a new name and choose <b className="font-semibold text-text">Create</b>. Each level is checked for duplicates as you type.</p>
         {opts.isLoading ? <Skeleton className="h-16 w-full" /> : (
@@ -176,7 +179,7 @@ function Picker({ id, label, options, value, onChange, error, disabled, parentNe
           {items.length ? items.map((it, i) => (
             <li key={it.kind === "opt" ? it.o.key : it.kind} id={`${listId}-${i}`} role="option" aria-selected={i === hi} onMouseDown={(e) => { e.preventDefault(); choose(it); }} onMouseEnter={() => setHi(i)}
               className={cn("flex cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-1.5", i === hi && "bg-text/5")}>
-              {it.kind === "opt" ? <><span className="flex items-center gap-1.5">{value && "key" in value && value.key === it.o.key ? <Check className="size-3.5 text-text-link" aria-hidden /> : null}{it.o.label}</span><span className="text-[12px] tabular-nums text-text-muted">{it.o.combinations}</span></>
+              {it.kind === "opt" ? <><span className="flex items-center gap-1.5">{value && "key" in value && value.key === it.o.key ? <Check className="size-3.5 text-text-link" aria-hidden /> : null}{it.o.label}</span>{it.o.combinations ? <span className="text-[12px] tabular-nums text-text-muted">used by {it.o.combinations}</span> : null}</>
                 : it.kind === "create" ? <span className="flex items-center gap-1.5 font-semibold text-text-link"><Plus className="size-3.5" aria-hidden />Create "{it.label}"</span>
                 : <span className="text-text-muted">None</span>}
             </li>
@@ -185,5 +188,33 @@ function Picker({ id, label, options, value, onChange, error, disabled, parentNe
       ) : null}
       <span id={`pk-${id}-hint`} aria-live="polite" className={cn("text-xs", error || (typing && bad) || (!typing && valueProblem) ? "text-text-danger" : value && !("key" in value) ? "text-text-ok" : "text-text-muted")}>{error ?? hint}</span>
     </div>
+  );
+}
+
+/** Board view 11: describe the application, get a proposed path, use it (fills the fields below) or build it by hand. */
+function Describe({ pathway, onUse }: { pathway: string; onUse: (x: { pathway: string; program: Val; category: Val; subCategory: Val }) => void }) {
+  const [text, setText] = React.useState(""), [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null);
+  const [r, setR] = React.useState<PathProposal | null>(null);
+  const propose = async () => { setBusy(true); setErr(null); try { setR(await api<PathProposal>("/path-proposal", { method: "POST", json: { pathway, description: text } })); } catch (e) { setErr((e as Error).message); setR(null); } finally { setBusy(false); } };
+  const p = r?.proposal;
+  return (
+    <section aria-labelledby="describe-h" className="flex flex-col gap-3 rounded-lg border border-border bg-surface-raised p-5" data-describe>
+      <h2 id="describe-h" className="text-sm font-semibold">Describe it</h2>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <label className="flex-1 text-xs text-text-muted">What application is it?<input className="mt-1 h-9 w-full rounded-lg border border-border-strong bg-surface-raised px-3 text-sm text-text outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50" value={text} maxLength={400} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void propose(); } }} placeholder="Parents and grandparents super visa, applied from outside Canada" /></label>
+        <Button variant="secondary" busy={busy} onClick={() => void propose()}>Propose a path · US$0</Button>
+      </div>
+      {err ? <p role="alert" className="text-sm text-text-danger">{err}</p> : null}
+      {r ? (
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-3 text-sm" role="status">
+          <p className="text-xs text-text-muted"><b className="font-semibold text-text">Proposal without AI</b> · {r.why}{r.confidence ? ` · Confidence: ${r.confidence}` : ""} · Cost: US$0 · Nothing is created until you confirm.</p>
+          {p ? <>
+            <p>Will be created as <b className="font-semibold">{p.path.join(" › ")}</b>{r.others?.length ? <span className="text-text-muted"> (also close: {r.others.join("; ")})</span> : null}</p>
+            {p.exists ? <Notice tone="warn">"{p.path.slice(-2).join(" › ")}" already exists. <Link className="text-text-link underline" to={`/c/${p.combinationId}`}>Open the existing combination</Link></Notice>
+              : <div><Button size="sm" onClick={() => onUse({ pathway: p.pathway, program: p.program, category: p.category, subCategory: p.subCategory })}>Use this path</Button> <span className="text-xs text-text-muted">It fills the fields below; check them, then Create.</span></div>}
+          </> : null}
+        </div>
+      ) : null}
+    </section>
   );
 }
