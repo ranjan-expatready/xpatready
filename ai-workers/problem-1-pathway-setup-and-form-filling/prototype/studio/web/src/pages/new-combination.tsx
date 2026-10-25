@@ -176,7 +176,7 @@ function Picker({ id, label, options, value, onChange, error, disabled, parentNe
           {items.length ? items.map((it, i) => (
             <li key={it.kind === "opt" ? it.o.key : it.kind} id={`${listId}-${i}`} role="option" aria-selected={i === hi} onMouseDown={(e) => { e.preventDefault(); choose(it); }} onMouseEnter={() => setHi(i)}
               className={cn("flex cursor-pointer items-center justify-between gap-3 rounded-md px-2 py-1.5", i === hi && "bg-text/5")}>
-              {it.kind === "opt" ? <><span className="flex items-center gap-1.5">{value && "key" in value && value.key === it.o.key ? <Check className="size-3.5 text-text-link" aria-hidden /> : null}{it.o.label}</span><span className="text-[12px] tabular-nums text-text-muted">{it.o.combinations}</span></>
+              {it.kind === "opt" ? <><span className="flex items-center gap-1.5">{value && "key" in value && value.key === it.o.key ? <Check className="size-3.5 text-text-link" aria-hidden /> : null}{it.o.label}</span><span className="text-[12px] tabular-nums text-text-muted">{it.o.combinations ? `used by ${it.o.combinations}` : ""}</span></>
                 : it.kind === "create" ? <span className="flex items-center gap-1.5 font-semibold text-text-link"><Plus className="size-3.5" aria-hidden />Create "{it.label}"</span>
                 : <span className="text-text-muted">None</span>}
             </li>
