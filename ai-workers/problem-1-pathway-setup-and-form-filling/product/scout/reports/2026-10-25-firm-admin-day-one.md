@@ -68,3 +68,10 @@ No broken link on this journey end to end; the gap is the absent start-from-temp
 
 ## Ran · cost
 Goose on Ollama Cloud (kimi-k3), one session; Playwright against the scout copy on :4480 (own DB `xr_studio_scout_x1`, sample data only); US$0 product AI (dialog opened, never started).
+
+## Addendum (25 Oct, founder's question): is the AI/library model sound?
+Verdict, proven on the scout copy at US$0 (replayed saved runs, probes `ai-04..10`):
+1. Attach → the file is recognised (code, edition, kind from the PDF); a new edition would be held for review, never attached silently.
+2. AI drafts the field map *blind to the library*; the reuse/new/ambiguous/conflict split is computed **deterministically** against the library afterwards — the person decides every proposal; "Apply to draft" stays off until all are decided; applying is refused as stale if the library moved underneath.
+3. Accepted proposals grew the shared library (11 fields). A **second combination** attaching the same form: "its form fields are already mapped in the library, so it is added without AI" — zero duplicate masters, zero AI spend.
+SC-1 corrected: the capability is there and sound; the only real gap is that no first-run screen *says* this model (Minor UX, words). Cross-form fact reuse between *different* forms (5409 vs 5476 showed 0 reuse — likely legitimately unrelated fields) is chartered for verification in `ircc-form-changes` / `library-hygiene`.
