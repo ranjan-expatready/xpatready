@@ -74,6 +74,8 @@ export function readiness(view: QuestionnaireView, form: string, subjectId: stri
 /** The repeating groups a form reads for one person, as a copy saw them (break r1d-none-apply M1): whether "none apply"
  *  was confirmed and whether there were entries. A group answer fills no form field, so it is kept beside the facts. */
 export type GroupFact = { key: string; title: string; none: boolean; entries: boolean;
+  /** Whose entries (break r1d-pr13 m2: a form can read another person's group); absent on older copies. */
+  about?: string;
   /** The live entries (their row ids), so an entry added or removed after the copy is a change (PR 13 review); absent on
    *  copies made before it was kept (those still miss an added blank entry). Errs safe: an entry removed and added again
    *  with the same answers, or one past the form's room, is a change though the PDF would read the same. */
@@ -81,7 +83,7 @@ export type GroupFact = { key: string; title: string; none: boolean; entries: bo
 export function groupFacts(view: QuestionnaireView, form: string, subjectId: string): GroupFact[] {
   const read = new Set(view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden).map((q) => `${q.subjectId}|${q.section}`));
   return view.sections.filter((s) => s.group && read.has(`${s.subjectId}|${s.section}`))
-    .map((s) => ({ key: `${s.subjectId}|${s.section}`, title: s.title, none: s.group!.rows === 0 && !!s.group!.none_apply?.value && s.group!.none_apply.confirmed, entries: s.group!.rows > 0,
+    .map((s) => ({ key: `${s.subjectId}|${s.section}`, title: s.title, about: s.about_label, none: s.group!.rows === 0 && !!s.group!.none_apply?.value && s.group!.none_apply.confirmed, entries: s.group!.rows > 0,
       rows: [...new Set(s.questions.flatMap((q) => q.rows.map((r) => r.row)))].sort() }))
     .sort((a, b) => a.key.localeCompare(b.key));
 }
@@ -91,6 +93,6 @@ export function changedGroups(then: GroupFact[] | undefined, now: GroupFact[]): 
   if (!then) return [];
   const a = new Map(then.map((g) => [g.key, g])), b = new Map(now.map((g) => [g.key, g]));
   const out = new Set<string>();
-  for (const k of new Set([...a.keys(), ...b.keys()])) { const x = a.get(k), y = b.get(k); if (!x || !y || x.none !== y.none || x.entries !== y.entries || (x.rows && y.rows && x.rows.join() !== y.rows.join())) out.add(`Entries in "${(x ?? y)!.title}"`); }
+  for (const k of new Set([...a.keys(), ...b.keys()])) { const x = a.get(k), y = b.get(k); if (!x || !y || x.none !== y.none || x.entries !== y.entries || (x.rows && y.rows && x.rows.join() !== y.rows.join())) { const g = (y ?? x)!; out.add(`Entries in "${g.title}"${g.about ? ` for ${g.about}` : ""}`); } }
   return [...out].sort();
 }

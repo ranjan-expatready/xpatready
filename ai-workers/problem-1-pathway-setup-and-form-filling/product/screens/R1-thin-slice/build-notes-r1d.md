@@ -114,6 +114,14 @@ R1d 43/43 on a fresh copy.
 Fresh copy, suite order: journey 120/120, R1d 62/62, R1a 99/99, engine 48/48; `run-suites.sh --demo` 21/21; explicit any 437; AI cost US$0.
 Not fixed: the review's surviving engine mutation (confirmation read on the group's first fact instead of its client fact) needs a fixture group whose first fact is the officer's; none of the release's groups has one today (recorded). Questions for the Lead (from the review): a group counts as required when any per-entry question is required, so in the visitor visa every group is (Education history too): everyone answers "none apply" somewhere; the principal's IMM 5707 is blocked by the spouse's Employment history (from the field map): the immigration expert's question.
 
+### PR 13 review (Lead, 25 Oct 02:00): a filed copy missed an added blank entry
+| Finding | Fix | Test (fails when the fix is removed) |
+|---|---|---|
+| `groupFacts` kept only "has entries", so a blank second entry after filing left the copy current | a copy keeps each group's live entry ids (`GroupFact.rows`); `changedGroups` compares them; an added, removed or replaced entry is a change, named 'Entries in "<group>" for <person>' | engine "PR 13 review fail" and "(review m5)" (mutation: 48/49); R1d "PR 13 review fail": IMM 5257 filed with one complete previous-residence entry, a blank second entry → stale, naming the group (mutation: 62/63) |
+| review-r1d-pr13 (PASS, 5 Minor): m1 wording, m2 comment, m3 hash comment, m4 old copies, m5 tests | the lock refusal says "N changes since it was made"; the card says "Added, changed or removed"; comments on erring safe and on the facts-only hash; tests for a removed and a re-added entry | engine "(review m5)" |
+| break-report-r1d-pr13 (0 Blocker, 0 Major, 4 Minor): m2 whose entries; m4 "1 fact changed" | the change names the person ('… for Sample Spouse D'); m4 as above | engine and R1d wording |
+Not fixed, recorded: break m1, the lock race (an entry committed between the lock's checks and its write files a copy that is shown stale at once): the same gap as review minor 5 of R1d; closing it needs every answer and entry write to take the case lock. Break m3 / review m4: copies made before this fix have no entry ids and still miss an added blank entry (going to 0 entries is still caught).
+
 ## Known gaps
 1. Restart recovery of the queue is written, not tested by a suite (a restart mid-generation).
 2. "By hand" counts a confirmed value whose form field has no code for it (option map); the copy lists them, the officer writes them in Adobe.

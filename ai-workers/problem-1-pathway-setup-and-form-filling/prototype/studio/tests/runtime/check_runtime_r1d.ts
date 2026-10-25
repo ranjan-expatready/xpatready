@@ -293,7 +293,7 @@ async function main() {
   f = await formOf("IMM 5257", P);
   const c13 = f.copies.find((x) => x.id === pr13)!;
   ok("PR 13 review fail: filed with one complete previous-residence entry, a blank second entry makes the copy stale, naming the group; readiness says the new entry is not answered",
-    readyWithEntry && filed13.status === 201 && c13.stale && c13.changed.includes('Entries in "Previous countries of residence"') && !f.readiness.ready && f.readiness.missing.some((m) => m.reason === "not answered"), { readyWithEntry, filed: filed13.status, changed: c13?.changed, missing: f.readiness.missing.slice(0, 3) });
+    readyWithEntry && filed13.status === 201 && c13.stale && c13.changed.includes('Entries in "Previous countries of residence" for Sample Applicant D') && !f.readiness.ready && f.readiness.missing.some((m) => m.reason === "not answered"), { readyWithEntry, filed: filed13.status, changed: c13?.changed, missing: f.readiness.missing.slice(0, 3) });
 
   // PR #12 review 1: a form the release files Online is not offered as a PDF, even when its PDF form field map exists.
   // Fixture: a copy of this release whose IMM 5257 filing line is Online, pinned by a new case, then moved below the

@@ -174,15 +174,15 @@ ok("fail: the representative's facts are never the client's own", !confirmation(
   const gThen = groupFacts(doneView, "F 1", "p"), gNow = groupFacts(caseView(S, ppl, all, [], "agent", TODAY, [none({ noneApply: false, status: "VERIFIED" })]), "F 1", "p");
   ok("break M1 pass: the groups a form reads are kept with none apply (confirmed) and entries", gThen.length === 1 && gThen[0].none === true && gThen[0].entries === false && gNow[0].none === false);
   ok("break M1 fail: none apply withdrawn is a change, named by its group; the same groups are no change; a copy without a record compares nothing",
-    JSON.stringify(changedGroups(gThen, gNow)) === JSON.stringify(['Entries in "Jobs"']) && changedGroups(gThen, gThen).length === 0 && changedGroups(undefined, gNow).length === 0);
+    JSON.stringify(changedGroups(gThen, gNow)) === JSON.stringify(['Entries in "Jobs" for Applicant']) && changedGroups(gThen, gThen).length === 0 && changedGroups(undefined, gNow).length === 0);
   const withRows = (keys: string[]) => keys.map((k, i): Row => ({ rowKey: k, subjectId: "p", group: "jobs", order: i }));
   const one = groupFacts(caseView(S, ppl, all, withRows(["00000000-0000-0000-0000-0000000000a1"]), "agent", TODAY), "F 1", "p");
   const two = groupFacts(caseView(S, ppl, all, withRows(["00000000-0000-0000-0000-0000000000a1", "00000000-0000-0000-0000-0000000000a2"]), "agent", TODAY), "F 1", "p");
   ok("PR 13 review fail: an entry added (even blank) after a copy is a change, named by its group; a copy without entry ids compares as before",
-    JSON.stringify(changedGroups(one, two)) === JSON.stringify(['Entries in "Jobs"']) && changedGroups(one, one).length === 0 && changedGroups(one.map(({ rows: _r, ...g }) => g), two).length === 0, { one: one[0]?.rows, two: two[0]?.rows });
+    JSON.stringify(changedGroups(one, two)) === JSON.stringify(['Entries in "Jobs" for Applicant']) && changedGroups(one, one).length === 0 && changedGroups(one.map(({ rows: _r, ...g }) => g), two).length === 0, { one: one[0]?.rows, two: two[0]?.rows });
   const readded = groupFacts(caseView(S, ppl, all, withRows(["00000000-0000-0000-0000-0000000000a3"]), "agent", TODAY), "F 1", "p");
   ok("PR 13 review (review m5): an entry removed is a change; an entry removed and added again (a new id) is a change",
-    JSON.stringify(changedGroups(two, one)) === JSON.stringify(['Entries in "Jobs"']) && changedGroups(one, readded).length === 1);
+    JSON.stringify(changedGroups(two, one)) === JSON.stringify(['Entries in "Jobs" for Applicant']) && changedGroups(one, readded).length === 1);
   ok("M3 pass: the view shows the group with its rows and its answer; a section without a group has none", doneView.sections.find((x) => x.section === "jobs")?.group?.rows === 0 && doneView.sections.find((x) => x.section === "jobs")?.group?.required === true && doneView.sections.find((x) => x.section === "personal")?.group === null);
   const answeredOnly = all.map((a) => ({ ...a, status: "DECLARED" as const, channel: "agent_view" }));
   const unconf = readiness(caseView(S, ppl, answeredOnly, [], "agent", TODAY), "F 1", "p");
