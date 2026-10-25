@@ -50,7 +50,7 @@ At a milestone boundary report the gate evidence and stop; never start the next 
 1. Concept or plan: a fresh challenger agent, then the builder's challenge.
 2. Build: the builder's tests and scripted journeys; a fresh reviewer (D1–D20 + the journey score) and a fresh breaker.
 3. Lead check on the exact commit against concept, `STANDARDS.md`, `EXPERIENCE.md`.
-4. The qa lane on `main` after every merge and at every gate: human-style tests, data underneath, coverage. The scout, per charter, between merges: not a gate, but its Blockers stop a merge like qa's (P-92).
+4. The qa lane on `main` after every merge and at every gate: human-style tests, data underneath, coverage. The scout, per charter, between merges: not a gate, but its Blockers pause a merge until the Lead triages them (P-92).
 5. The founder's walkthrough, not optional: the AI checkers share blind spots.
 Checkers flag correctness gaps, standard violations and concept mismatches only; over-engineering is a defect too. **Scope test (P-26):** every objection, finding, suggestion and feature is *Needed for the proof* or *Not built*; agreed full-journey scope stays scheduled in its milestone.
 

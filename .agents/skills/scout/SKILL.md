@@ -16,7 +16,7 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). `AGENT
 ## 0. Guard (first, every run)
 1. `bash P/tools/lane.sh whoami` must print `scout`; else stop: "the scout works in its own copy".
 2. Read P/`lanes/scout.md` (its **From the Lead** note wins on the charter), P/`scout/NOW.md`, P/`scout/BRIEF.md` (the founder's intent; wins over the charter list), P/`scout/CHARTERS.md`, P/`scout/FINDINGS.md`.
-3. **Copy and app.** Mac: `bash P/tools/scout.sh open` yourself (refreshes `xpatready-scout` on `scout/<date>`, app on :4480). Cloud (Devin): a clone on a `scout/<date>` branch from `origin/main`, `echo scout > .claude/lane`, `bash P/tools/cloud-setup.sh`, then `zsh P/../prototype/studio/tools/isolated.sh scout_x1 4480 start`. Never :4400, never another lane's ports, never `main`.
+3. **Copy and app.** Mac: `bash P/tools/scout.sh open` yourself (refreshes `xpatready-scout` on `scout/<date>`, app on :4480). Cloud (Devin): a clone from `origin/main`, `bash P/tools/cloud-setup.sh`, `echo scout > .claude/lane`. Branch: `b=$(bash P/tools/scout.sh branch)` — it resumes the newest unmerged `origin/scout/*` so nothing the other engine filed is lost; `git checkout -b "$b" "origin/$b" 2>/dev/null || git checkout "$b" 2>/dev/null || git checkout -b "$b" origin/main`, then `git merge --no-edit origin/main`. App: `zsh P/../prototype/studio/tools/isolated.sh scout_x1 4480 start`. Never :4400, never another lane's ports, never `main`.
 4. Browser with real screenshots is required. No screenshot tool or no vision model → stop and tell the founder (Goose setup in P/`scout/NOW.md`).
 5. The founder asks for a session about priorities → interview them one question at a time (skill `grilling`), update `scout/BRIEF.md` with them, no test run.
 
@@ -36,6 +36,7 @@ The charter given, else the next unchecked one in P/`scout/CHARTERS.md`. First w
 * Report P/`scout/reports/<date>-<charter>.md` (under 120 lines): five plain-words lines "For the founder" first; benchmark; journeys with screenshots in `P/scout/reports/<date>-<charter>/`; findings, top five first; a mermaid dependency map with broken links marked; suggestions labelled *Needed for the proof* or *Later* and *Capability* or *Scaffolding*.
 * A finding against a decision starts "Disagrees with P-n: …"; you never change a decision.
 * Every Bug or Incomplete gets a check in `prototype/studio/tests/scout/` that fails today. Never write into another lane's folders (qa/, screens/, tests/qa/).
+* Tick the charter's `[ ]` in P/`scout/CHARTERS.md` when its report is in (date, finding count); unattended `next` runs pick by it.
 
 ## 4. Fix only what is small (the pre-push guard `tools/scout.sh scope` enforces it)
 All must hold: words, a label, an accessibility attribute, an empty or error message, a broken link, spacing, or a one-function bug with an obvious cause · at most 40 changed lines in `web/src/`, `api/src/` or `engine/` · never `prisma/`, migrations, `contracts/`, packages, rules, skills or docs outside `scout/` · `bash P/tools/scout.sh busy <file>` prints `free` · a test that failed before and passes after · `./node_modules/.bin/tsc --noEmit -p api/tsconfig.json` clean in `prototype/studio` · no decision, rule or immigration value changed. One commit per fix: `scout: fix SC-n — <what>`.
