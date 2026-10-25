@@ -18,13 +18,14 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 |---|---|---|
 | Lead, screens, forms, runtime, qa | Cloud or Mac | They need only GitHub and their own app copy; the cloud Lead starts these sessions itself |
 | Evidence: filling forms and reading them back (pypdf) | Cloud or Mac | The official blank PDFs are on GitHub (P-83) |
+| Getting a new official form (IRCC or ESDC PDF) | Mac downloads, then everyone has it | canada.ca refuses cloud requests. The Mac downloads the form, records its checksum in `official-sources/*/manifest.json` and pushes a branch; the Lead merges it by PR (P-83, P-87). From then on cloud sessions and CI have it |
 | Evidence: Adobe Reader Validate and the save round trip | **Mac only** | Adobe Reader is a desktop app; a cloud container cannot run it |
 | Scout (Goose on Ollama Cloud) | **Mac only** | Goose, the Ollama key and the visible browser are on the Mac (P-91) |
 | Reading the team's requirements (`sources/`) or code (`code/`) | **Mac only** | The team's own material stays off GitHub (P-82) |
-| Live paid AI drafts | **Mac only** | The API key works there; a cloud session's safety check refused it (LEAD.md spend row) |
+| Live paid AI drafts (each spend approved by the founder) | Mac today; cloud once set up | The guarded route reads the key from a protected key file (`prototype/p2` guard). The cloud needs the founder to add `ANTHROPIC_API_KEY` as a secret in the environment settings, `cloud-setup.sh` to write the key file from it (chmod 600), and one test call of a few cents. Never paste a key into a chat |
 | The shared demo on :4400 (restart, demo reset) | **Mac only** | P-88 |
 | A Lead chat | Cloud or Mac, **one at a time** | Two Leads would overwrite each other (P-87); a lane may run beside either |
-The cloud Lead can start only cloud sessions: work marked Mac only waits for the founder to open a Mac session (`/next evidence` in the evidence copy, `tools/scout.sh` for the scout).
+The cloud Lead can start only cloud sessions: work marked Mac only waits for the founder to open a Mac session (`/next evidence` in the evidence copy, `tools/scout.sh` for the scout). Whatever runs on the Mac reaches everyone the same way as cloud work: its own branch is pushed, and the Lead reviews and merges it by PR.
 **The founder uses one chat: the Lead (`/lead`).** The Lead starts or continues each lane's session itself (prompt `/next <lane>` or `/qa <mode>`; on the Mac an own worktree, in the cloud a session on the lane's branch — skill `lead`), is told when a stage ends, checks it, and asks the founder only for decisions, walkthroughs, paid-AI go-aheads and installs. The founder may open a lane session to watch, or a qa session to test together (`/qa with-me`).
 **Fresh context, any time:** state lives in files and commits, never in a chat. A long Lead chat → the Lead says so; open a new chat and type `/lead`. A lane session is disposable: the Lead starts a fresh one per stage when its context is long, cut from the lane's branch (or `main` once merged); `/next` binds the new copy.
 
