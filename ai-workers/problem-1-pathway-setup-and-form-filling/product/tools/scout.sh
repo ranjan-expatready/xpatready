@@ -68,8 +68,10 @@ run() {
   bash "$PP/tools/lane.sh" setup >/dev/null || exit 5
   echo "scout: $br · charter: $charter · model: ${SCOUT_MODEL:-kimi-k2.6} · app http://localhost:4480"
   zsh "$PS/tools/isolated.sh" scout_x1 4480 start >/dev/null || { echo "the scout app did not start (see $PS/var/isolated-scout_x1)"; exit 5; }
-  GOOSE_MODE=auto GOOSE_PROVIDER=ollama_cloud GOOSE_MODEL="${SCOUT_MODEL:-kimi-k2.6}" OLLAMA_STREAM_TIMEOUT=600 GOOSE_CLI_SHOW_COST=true \
+  goose recipe validate .goose/recipes/scout.yaml >/dev/null || { echo "The scout recipe does not validate with this Goose version; tell the Lead (goose --version)."; exit 5; }
+  GOOSE_MODE=auto OLLAMA_STREAM_TIMEOUT=600 GOOSE_CLI_SHOW_COST=true \
     goose run --recipe .goose/recipes/scout.yaml --params charter="$charter" \
+      --provider ollama_cloud --model "${SCOUT_MODEL:-kimi-k2.6}" \
       --max-turns "${SCOUT_TURNS:-200}" --max-tool-repetitions 3 -n "scout-$day-$charter"
   zsh "$PS/tools/isolated.sh" scout_x1 4480 stop >/dev/null 2>&1
   git diff --quiet && git diff --cached --quiet || echo "Note: the run left uncommitted changes in $wt (not pushed)."

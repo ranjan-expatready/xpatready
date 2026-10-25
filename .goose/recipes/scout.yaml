@@ -41,5 +41,3 @@ extensions:
 settings:
   goose_provider: ollama_cloud
   max_turns: 200
-retry:
-  max_retries: 0
