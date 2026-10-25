@@ -922,6 +922,8 @@ model Case {
   combination  Combination       @relation(fields: [combinationId], references: [id], onDelete: Restrict)
   pins         PackWorkPin[]
   participants CaseParticipant[]
+  forms        FormInstance[]
+  snapshots    AnswerSnapshot[]
 
   @@unique([workspaceId, idempotencyKey])
   @@unique([workspaceId, reference])
@@ -1088,3 +1090,56 @@ model ClientCanonicalAnswer {
   @@index([subjectId, canonicalFieldKey])
   @@map("client_canonical_answer")
 }
+
+/// The confirmed facts one generated copy read (team AnswerSnapshot): the values each form field of one form took for
+/// one person, frozen, and their hash. A later answer never changes it; "out of date" compares it with today's facts.
+model AnswerSnapshot {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  caseId      String   @map("case_id") @db.Uuid
+  subjectId   String   @map("subject_id") @db.Uuid
+  formNumber  String   @map("form_number")
+  inputHash   String   @map("input_hash") @db.VarChar(64)
+  /// [{ fact, about, row, value }] the confirmed facts read, in form-field order
+  factsJson   Json     @map("facts_json")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  case Case          @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  form FormInstance?
+
+  @@map("answer_snapshot")
+}
+
+/// One generated copy of one form for one person on a case (team FormInstance), never overwritten (P-65): a new copy is a
+/// new row. Status QUEUED → RUNNING → GENERATED | FAILED (the generation job); a GENERATED copy may be locked once
+/// ("validated copy uploaded back" or "filed"), after which nothing about it changes (database trigger).
+model FormInstance {
+  id              String    @id @default(uuid()) @db.Uuid
+  workspaceId     String    @map("workspace_id") @db.Uuid
+  caseId          String    @map("case_id") @db.Uuid
+  subjectId       String    @map("subject_id") @db.Uuid
+  formNumber      String    @map("form_number")
+  configReleaseId String    @map("config_release_id") @db.Uuid
+  snapshotId      String    @unique @map("snapshot_id") @db.Uuid
+  status          String    @default("QUEUED")
+  path            String?
+  sha256          String?   @db.VarChar(64)
+  /// The filler's report and the per-form-field results (written, by hand, by a person, not written and why)
+  resultJson      Json?     @map("result_json")
+  error           String?
+  lockedKind      String?   @map("locked_kind")
+  lockedAt        DateTime? @map("locked_at") @db.Timestamptz
+  lockedBy        String?   @map("locked_by")
+  idempotencyKey  String?   @map("idempotency_key")
+  createdBy       String    @map("created_by")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  finishedAt      DateTime? @map("finished_at") @db.Timestamptz
+
+  case     Case           @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  snapshot AnswerSnapshot @relation(fields: [snapshotId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, idempotencyKey])
+  @@index([caseId, formNumber, subjectId, createdAt])
+  @@map("form_instance")
+}
+

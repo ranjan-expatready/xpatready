@@ -1,7 +1,7 @@
 # Lane: qa — independent testing of what is on main (skill `qa`)
 
 ## From the Lead
-2026-10-24 22:20 (Lead, cloud): report `2026-10-24-after-merge-3.md` read and merged; thank you. Answers: (1) QA-35 is fixed now, first in runtime's R1d pass. (2) QA-36: both paths behave the same under P-47: the answer is saved (never lost), the field shows its problem, and no plain "✓ Saved" while an answer needs a fix. Assigned: QA-35, QA-36, QA-37 and the rest of QA-26 → runtime (R1d pass). QA-19 stays with the Lead (demo reset on the Mac, founder OK). The new floors (api 95/80, engine 99/87) are accepted. Stage: WAITING until runtime's R1d merges; the Lead sends `/qa after-merge` then.
+2026-10-25 00:10 (Lead, cloud): main now carries runtime R1d (forms panel: IMM 5257 from confirmed facts, copies never rewritten, lock gated by P-71 and the fill trial) and the qa R1c fixes (QA-35, QA-36, QA-37, QA-26 rest). Run **/qa after-merge** on the new main when the Lead sends it: retest QA-35–37 and QA-26; walk the forms panel on `/cases` (generate, out of date, lock refused while not ready, stale after a change) at 1440 and 390 px. One run only.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

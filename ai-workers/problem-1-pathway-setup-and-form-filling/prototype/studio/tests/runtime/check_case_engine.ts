@@ -5,6 +5,7 @@
 import fc from "fast-check";
 import { ageOn, caseView, checkValue, confirmation, optionsOf, knownOf, shapeOf, type Answer, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
+import { changedFacts, factsOf, formCoverage, inputHash, readiness, type FormFact } from "../../engine/runtime/forms.ts";
 import { recorder } from "./api.ts";
 
 const { ok, summary } = recorder();
@@ -122,6 +123,47 @@ ok("fail: the representative's facts are never the client's own", !confirmation(
   const hit = at(0);
   ok("R1c checks pass: a triggered check is placed on its question and the application's section, in the client's view too", hit.length === 1 && hit[0].fact === "case.funds" && hit[0].section === "visit" && hit[0].subjectId === caseSubject, hit);
   ok("R1c checks fail-guard: a passing value or a missing answer triggers nothing", at(5000).length === 0 && at(undefined).length === 0, [at(5000), at(undefined)]);
+}
+// ── R1d (RT-13…RT-15): a copy reads confirmed facts only; its hash and what changed since
+{
+  const ppl = household(false, 0);
+  const declared = ans("p", "person.family_name", "SAMPLE"), verified = ans("p", "person.family_name", "SAMPLE", { status: "VERIFIED", channel: "confirm_section" });
+  const unconfirmed = formCoverage(S, ppl, [declared], [], "F 1", "p", TODAY)!, confirmed = formCoverage(S, ppl, [verified], [], "F 1", "p", TODAY)!;
+  ok("RT-13 fail: an answer not confirmed is not among the facts a copy writes (P-72)", unconfirmed.facts.length === 0 && unconfirmed.boxes.some((b) => b.fact === "person.family_name" && b.coverage === "answered on screen"), unconfirmed.facts);
+  ok("RT-13 pass: a confirmed answer is, with its form field and value", confirmed.facts.some((f) => f.fact === "person.family_name" && f.value === "SAMPLE" && f.about === "p"), confirmed.facts);
+  const fact = fc.record({ box: fc.stringMatching(/^[a-z]{1,6}$/), fact: fc.constantFrom("person.a", "person.b", "case.c"), about: fc.constantFrom("p", "case"), row: fc.constantFrom(null, 0, 1), value: fc.oneof(fc.string(), fc.integer(), fc.boolean()) });
+  const facts = fc.uniqueArray(fact, { selector: (f) => f.box, maxLength: 12 });
+  prop("RT-15 property: the input hash does not depend on the order facts are read in, and changes with any value", fc.property(facts, fc.integer(), (fs, seed) => {
+    const shuffled = [...fs].sort((a, b) => ((a.box.charCodeAt(0) * seed) % 7) - ((b.box.charCodeAt(0) * seed) % 7));
+    if (inputHash(fs as FormFact[]) !== inputHash(shuffled as FormFact[])) return false;
+    if (!fs.length) return true;
+    const changed = fs.map((f, i) => (i === 0 ? { ...f, value: `${String(f.value)}x` } : f));
+    return inputHash(changed as FormFact[]) !== inputHash(fs as FormFact[]);
+  }), 200);
+  prop("RT-15 property: nothing changed → no changed facts; one value changed, added or no longer confirmed → exactly that fact named", fc.property(facts, (fs) => {
+    if (changedFacts(fs as FormFact[], fs as FormFact[]).length) return false;
+    if (!fs.length) return true;
+    const [first, ...rest] = fs as FormFact[];
+    const others = new Set(rest.map((f) => f.fact));
+    const named = (xs: string[]) => xs.includes(first.fact) && xs.every((x) => x === first.fact || others.has(x) === false || x === first.fact);
+    return named(changedFacts(fs as FormFact[], [{ ...first, value: "other" }, ...rest])) && named(changedFacts(rest, fs as FormFact[])) && named(changedFacts(fs as FormFact[], rest));
+  }), 200);
+  ok("RT-15 fail-guard: factsOf keeps only confirmed facts with a field, in form-field order", JSON.stringify(factsOf([{ box: "b", caption: "", fact: "x", meaning: null, about: "p", about_label: "", row: null, coverage: "confirmed fact", detail: "", value: 1 }, { box: "a", caption: "", fact: "y", meaning: null, about: "p", about_label: "", row: null, coverage: "confirmed fact", detail: "", value: 2 }, { box: "c", caption: "", fact: "z", meaning: null, about: "p", about_label: "", row: null, coverage: "answered on screen", detail: "", value: 3 }]).map((f) => f.box)) === '["a","b"]');
+  const view = caseView(S, ppl, [], [], "agent", TODAY);
+  const need = readiness(view, "F 1", "p");
+  ok("RT-14 fail: a form with a required fact unconfirmed is not ready to file, and names it (P-71)", !need.ready && need.missing.some((m) => m.fact === "person.family_name"), need.missing.map((m) => m.fact));
+  const all = qs(view).filter((q) => q.required && !q.hidden && q.fills.some((f) => f.form === "F 1" && f.subject === "p")).map((q) => ans(q.subjectId, q.fact, q.options?.length ? q.options[0].key : q.value_type === "yes_no" ? false : q.value_type === "date" ? (q.shape.datePrecision === "month" ? "1990-01" : "1990-01-01") : q.value_type === "number" ? "1000" : "X", { status: "VERIFIED", channel: "confirm_section" }));
+  const done = readiness(caseView(S, ppl, all, [], "agent", TODAY), "F 1", "p");
+  ok("RT-14 pass: with every required fact confirmed the form is ready to file; optional facts left empty do not block", done.ready, done.missing);
+  const answeredOnly = all.map((a) => ({ ...a, status: "DECLARED" as const, channel: "agent_view" }));
+  const unconf = readiness(caseView(S, ppl, answeredOnly, [], "agent", TODAY), "F 1", "p");
+  ok("RT-14 fail (review M2): facts answered but not confirmed still block filing, named \"not confirmed\"", !unconf.ready && unconf.missing.some((m) => m.reason === "not confirmed"), unconf.missing.map((m) => m.reason));
+  const wrong = all.map((a) => (a.field === "person.date_of_birth" ? { ...a, value: "1991-02-31" } : a));
+  const fix = readiness(caseView(S, ppl, wrong, [], "agent", TODAY), "F 1", "p");
+  ok("RT-14 fail (break M2): a confirmed answer that fails its check (1991-02-31) blocks filing as \"needs a fix\"", !fix.ready && fix.missing.some((m) => m.fact === "person.date_of_birth" && m.reason === "needs a fix"), fix.missing);
+  const twins = [...ppl, { subjectId: "c0", role: "child" as const, label: "Applicant", applies: true }];
+  const tw = caseView(S, twins, all, [], "agent", TODAY);
+  ok("RT-14 pass (break M6): readiness matches the person by id, so another person with the same name never blocks", readiness(tw, "F 1", "p").ready && !readiness(tw, "F 1", "c0").ready);
 }
 // ── PR 7 review D2: ageOn gives no age for a date that is not real or is in the future
 ok("D2 pass: a real past birth date gives the age in whole years (birthday today counts)", ageOn("2015-02-28", TODAY) === 11 && ageOn("2008-10-23", TODAY) === 18 && ageOn("2008-10-24", TODAY) === 17 && ageOn("2024-02-29", TODAY) === 2 && ageOn("2026-10-23", TODAY) === 0);
