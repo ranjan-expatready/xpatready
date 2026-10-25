@@ -1,6 +1,6 @@
 import * as React from "react";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Database, FileStack, FileText, Layers, Moon, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
+import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Database, FileStack, FileText, Layers, Moon, PlugZap, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/controls";
@@ -15,6 +15,7 @@ import { JobPage } from "@/pages/job";
 import { FieldsPage, FieldPage, SectionsPage, DocumentTypesPage } from "@/pages/library";
 import { ActivityPage, ReleasesPage } from "@/pages/history";
 import { AiBatchPage, AiWorkPage } from "@/pages/ai";
+import { ExtensionPage } from "@/pages/extension";
 import { RuntimeApp } from "@/runtime/cases";
 
 export default function App() {
@@ -36,6 +37,7 @@ function Shell() {
     { to: "/ai", label: "AI work", icon: Sparkles },
     { to: "/releases", label: "Releases", icon: BookOpen },
     { to: "/activity", label: "Activity", icon: Activity },
+    { to: "/extension", label: "Browser extension", icon: PlugZap },
   ];
   return (
     <div className="flex min-h-full flex-col">
@@ -89,6 +91,7 @@ function Shell() {
             <Route path="/ai/:batchId" element={<AiBatchPage />} />
             <Route path="/releases" element={<ReleasesPage />} />
             <Route path="/activity" element={<ActivityPage />} />
+            <Route path="/extension" element={<ExtensionPage />} />
             <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/">Back to programs</Link></Notice>} />
           </Routes>
         </main>

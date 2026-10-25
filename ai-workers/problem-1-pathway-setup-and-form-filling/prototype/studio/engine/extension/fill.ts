@@ -74,6 +74,8 @@ export function fillPlan(s: Snapshot, twin: CaptureRecord, form: string, subject
   const cov = map ? render({ ...s, field_maps: [map] } as Snapshot, renderPeople, known).coverage.find((c) => c.form === form && c.person === subjectId) : undefined;
   const boxes = new Map<string, BoxRow>((cov?.boxes ?? []).map((b) => [b.box, b]));
   const lists = new Map<string, { key: string; label: string }[]>((s.canonical_fields as { id: string; answer_list?: { values: { key: string; label: string }[] } }[]).flatMap((f) => (f.answer_list ? [[f.id, f.answer_list.values]] : [])));
+  // The case's own words for a fact: the question as it was asked, else the field's meaning (never a field key).
+  const askedAs = (fact: string) => (s.placements as { fact: string; question_text?: string | null }[]).find((x) => x.fact === fact)?.question_text ?? (s.canonical_fields as { id: string; meaning?: string | null }[]).find((x) => x.id === fact)?.meaning ?? "an answer";
   const sectionOf = (fact: string) => { const p = (s.placements as { fact: string; section_id: string }[]).find((x) => x.fact === fact); return (s.sections as { id: string; title: string }[]).find((x) => x.id === p?.section_id)?.title ?? "this section"; };
   const incomplete = screen.inputs.filter((i) => !DECIDED.has(entries.get(i.id)?.outcome ?? ""));
   const inputs = screen.inputs.map((i): PlanInput => {
@@ -87,7 +89,7 @@ export function fillPlan(s: Snapshot, twin: CaptureRecord, form: string, subject
     if (b.coverage !== "confirmed fact") return { ...base, status: "not_confirmed", why: `Not filled: confirm ${sectionOf(e.fact)} in the case first.` };
     const v = portalValue(b.value, e.transform, i, e.option_map, lists.get(e.fact) ?? []);
     if (v === null) return { ...base, status: "no_code", why: "The case's answer has no matching choice or format on this screen: enter it yourself." };
-    return { ...base, value: v, status: "fill", why: `From the case: ${b.fact} (${b.about_label}), confirmed.`, source: b.fact };
+    return { ...base, value: v, status: "fill", why: `From the case (${b.about_label}, confirmed): ${askedAs(e.fact)}`, source: b.fact };
   });
   const counts = Object.fromEntries((["fill", "not_confirmed", "no_answer", "you_answer", "no_code", "not_a_fact", "map_incomplete"] as PlanStatus[]).map((k) => [k, inputs.filter((x) => x.status === k).length])) as Record<PlanStatus, number>;
   return { match: true, screen: screen.title, screen_page: page, person: cov?.person_label ?? subjectId, inputs, counts };

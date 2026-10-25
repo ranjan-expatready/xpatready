@@ -130,6 +130,20 @@ export class Extension {
   async capture(sig: Signed, id: string) { await this.ownCapture(sig, id); return this.forms.capture(id); }
   async finish(sig: Signed, id: string) { await this.ownCapture(sig, id); return this.forms.finish(sig.actor, id); }
 
+  /** Fill mode's choice of case: the workspace's open cases, newest first, with their people and the forms their
+   *  pinned release files online (an officer reaches any case of the workspace, as in the Studio). */
+  async cases(sig: Signed) {
+    need(sig.actor, "case");
+    const rows = await this.db.case.findMany({ where: { workspaceId: sig.workspaceId, status: "OPEN" }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 20,
+      include: { combination: { select: { label: true } }, pins: { include: { release: { select: { version: true, snapshot: true } } } }, participants: { orderBy: { order: "asc" }, include: { subject: { select: { label: true } } } } } });
+    return rows.map((c) => {
+      const s = c.pins[0]?.release.snapshot as unknown as { forms: { form_number: string; channel?: string }[]; field_maps: { form_number: string; channel?: string }[] } | undefined;
+      const online = (s?.forms ?? []).filter((f) => f.channel === "ONLINE" && (s?.field_maps ?? []).some((m) => m.form_number === f.form_number && m.channel === "ONLINE")).map((f) => f.form_number);
+      return { id: c.id, reference: c.reference, release: `${c.combination.label} · release ${c.pins[0]?.release.version ?? "?"}`, online_forms: [...new Set(online)],
+        people: c.participants.filter((p) => p.role !== "case").map((p) => ({ subject_id: p.subjectId, label: p.subject.label, role: p.role })) };
+    });
+  }
+
   // ─── fill (BR-7…BR-13, BR-15): one screen of one case's online form, from its pinned release only (M2)
   async fillPlan(sig: Signed, caseId: string, form: string, subjectId: string, body: unknown) {
     const answers = noAnswers((body as { screen?: unknown } | null)?.screen ?? {});
@@ -202,6 +216,7 @@ export class ExtensionController {
   @Post("captures") async start(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Body() b: unknown) { return this.x.startCapture(await this.x.signed(t, o, a, "capture"), b); }
   @Get("captures/:id") async capture(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string) { return this.x.capture(await this.x.signed(t, o, a, "capture"), id); }
   @Post("captures/:id/screens") async screen(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.addScreen(await this.x.signed(t, o, a, "capture"), id, b); }
+  @Get("cases") async cases(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { return this.x.cases(await this.x.signed(t, o, a, "fill")); }
   @Post("cases/:id/forms/:form/:subject/fill-plans") @HttpCode(200) async fill(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Param("form") form: string, @Param("subject") subject: string, @Body() b: unknown) { return this.x.fillPlan(await this.x.signed(t, o, a, "fill"), id, form, subject, b); }
   @Get("recapture-tasks") tasks(@Headers("x-actor") a: H) { return this.x.tasks(actorOf(a)); }
   @Post("captures/:id/finish") @HttpCode(200) async finish(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string) { return this.x.finish(await this.x.signed(t, o, a, "capture"), id); }

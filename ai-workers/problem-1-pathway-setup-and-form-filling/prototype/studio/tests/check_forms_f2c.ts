@@ -10,6 +10,7 @@ import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ANSWER_ON_SCREEN, portalValue } from "../engine/extension/fill.ts";
+import { openCase, releaseOnline, setupVisitorVisa, type Call } from "./forms_f2_setup.ts";
 
 const PORT = Number(process.argv[2] ?? 4457), DB = process.argv[3] ?? "xr_studio_forms_f2c";
 const STUDIO = join(import.meta.dirname, "..");
@@ -45,43 +46,25 @@ const OFFICER = "user-O";
   ok("C7.4: BR-10 a choice takes the portal's own code from the option map", portalValue("female", "option_map", inp({ options: [{ code: "FEMALE", label: "Female" }] }), { map: { female: "FEMALE" }, unused: [], codes: ["FEMALE"] } as never, [{ key: "female", label: "Female" }]) === "FEMALE");
 
   // ──────────────────────────────────────────── setup (not under test): visitor visa released, then IMM 5257 filed Online
-  execFileSync(join(STUDIO, "node_modules", ".bin", "tsx"), ["--tsconfig", join(STUDIO, "api", "tsconfig.json"), join(STUDIO, "tests", "runtime", "setup_visitor_visa.ts"), String(PORT), DB], { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], timeout: 600_000 });
+  setupVisitorVisa(PORT, DB);
   const vv = sql("select id from combination where combination_key='vv.single'");
   const cap = (await call("POST", "/captures", { portal: "ircc_portal", form: "IMM 5257", title: "Application for a visitor visa (online)", applicationType: "Visitor visa" })).body;
   await upload(`/captures/${cap.id}/screens`, ["imm5257-online-s1-personal.html", "imm5257-online-s2-marital.html", "imm5257-online-s3-language.html"]);
   await call("POST", `/captures/${cap.id}/finish`);
   await call("POST", `/captures/${cap.id}/approve`, undefined, "user-B");
   const ed = sql(`select form_edition_id from portal_capture where id='${cap.id}'`);
-  await call("PATCH", `/combinations/${vv}/portal`, { portal: "ircc_portal" });
-  await call("PATCH", `/combinations/${vv}/forms/IMM 5257/channel`, { channel: "ONLINE" });
-  await call("POST", `/online-versions/${ed}/screen-map/draft`);
-  await call("POST", `/online-versions/${ed}/screen-map/accept`, {}, "user-C");
-  // Q3: the immigration expert role marks the UCI as answered on screen (Sample: a stand-in for a background question).
-  let r = await call("PATCH", `/online-versions/${ed}/screen-map`, { input: "uci", answerOnScreen: true, reason: "Sample: the representative answers this on the portal" }, "user-A");
+  let r = await releaseOnline(call as Call, sql, vv, ed, { note: "F2c: IMM 5257 filed Online" });
+  ok("setup: Visitor visa released again with IMM 5257 filed Online (capture, second person, screen map, Q3 marker)", r.status < 300 && Number(sql(`select max(version) from config_release where combination_id='${vv}'`)) >= 2, r.body?.message ?? r.status);
+  // Q3: the marker the setup set, and who may set it.
+  ok("C9.3: Q3 the immigration expert role marked the UCI \"You answer this on screen\"; the released map row says so", sql(`select outcome from form_field_map where form_edition_id='${ed}' and data_path='uci' order by version desc limit 1`) === ANSWER_ON_SCREEN);
+  r = await call("PATCH", `/online-versions/${ed}/screen-map`, { input: "uci", answerOnScreen: true, reason: "Sample: the representative answers this on the portal" }, "user-A");
   ok("C9.3: Q3 fail: only the immigration expert role (SME duty) marks \"You answer this on screen\" (author: 403)", r.status === 403, r.body.message);
-  r = await call("PATCH", `/online-versions/${ed}/screen-map`, { input: "uci", answerOnScreen: true, reason: "Sample: the representative answers this on the portal" }, "user-C");
-  ok("C9.3: Q3 the immigration expert role marks it; the map row says so", r.status === 200 && r.body.outcome === ANSWER_ON_SCREEN, r.body);
   r = await call("PATCH", `/online-versions/${ed}/screen-map`, { input: "uci", answerOnScreen: true, notAFact: true, reason: "both" }, "user-C");
   ok("C9.3: Q3 fail: one decision per input (answered on screen and not a fact together: 400)", r.status === 400, r.status);
-  for (const i of sql(`select data_path from form_field_map where form_edition_id='${ed}' and outcome='unresolved'`).split("\n").filter(Boolean))
-    await call("PATCH", `/online-versions/${ed}/screen-map`, i === "birthCity" ? { input: i, fact: "person.place_of_birth_city" } : { input: i, notAFact: true, reason: "Asked elsewhere in this case (F2c setup)" }, "user-C");
-  await call("POST", `/editions/${ed}/option-maps/draft`);
-  await call("PATCH", `/editions/${ed}/option-maps`, { dataPath: "sex", map: { f_female: "FEMALE", m_male: "MALE", u_unknown: "UNKNOWN", x_another_gender: "ANOTHER" } });
-  await call("POST", `/combinations/${vv}/submit`, { note: "F2c: IMM 5257 filed Online" });
-  const sub = (await call("GET", `/combinations/${vv}/review`, undefined, "user-C")).body.submission;
-  await call("POST", `/combinations/${vv}/signoff`, { items: (sub?.changeSummary ?? []).map((x: { kind: string; key: string }) => `${x.kind}|${x.key}`), action: "signed" }, "user-C");
-  r = await call("POST", `/combinations/${vv}/approve`, undefined, "user-B");
-  ok("setup: Visitor visa released again with IMM 5257 filed Online (capture, second person, screen map, Q3 marker)", r.status < 300 && Number(sql(`select max(version) from config_release where combination_id='${vv}'`)) >= 2, r.body?.message ?? r.status);
 
   // A case on that release, with confirmed facts.
-  const c = (await call("POST", "/runtime/cases", { combinationId: vv, reference: "F2C-CASE-1", clientActor: "user-P", principal: { displayName: "Client A" } }, OFFICER)).body;
-  const P = (await call("GET", `/runtime/cases/${c.id}`, undefined, OFFICER)).body.people.find((x: { role: string }) => x.role === "principal").subject_id as string;
-  const view = async () => (await call("GET", `/runtime/cases/${c.id}/questionnaire?mode=agent`, undefined, OFFICER)).body as { sections: { section: string; subjectId: string; questions: { fact: string; subjectId: string; answer?: { id: string } }[] }[] };
-  const save = async (fact: string, value: unknown) => { const q = (await view()).sections.flatMap((s) => s.questions).find((x) => x.subjectId === P && x.fact === fact); return call("PUT", `/runtime/cases/${c.id}/answers/${P}/${fact}`, { value, expectedId: q?.answer?.id ?? null }, OFFICER); };
-  for (const [f, v] of [["person.family_name", "SAMPLE"], ["person.sex", "f_female"], ["person.date_of_birth", "1990-05-17"], ["person.place_of_birth_city", "Sample City"]] as const) await save(f, v);
-  const sectionOf = async (fact: string) => (await view()).sections.find((s) => s.subjectId === P && s.questions.some((q) => q.fact === fact))!;
-  const confirm = async (fact: string) => { const s = await sectionOf(fact); return call("POST", `/runtime/cases/${c.id}/sections/${s.section}/confirm`, { subjectId: P, seen: s.questions.filter((q) => q.subjectId === P && q.answer).map((q) => q.answer!.id) }, OFFICER); };
-  for (const f of ["person.family_name", "person.date_of_birth", "person.sex"]) await confirm(f);
+  const k = await openCase(call as Call, vv, "F2C-CASE-1", [["person.family_name", "SAMPLE"], ["person.sex", "f_female"], ["person.date_of_birth", "1990-05-17"], ["person.place_of_birth_city", "Sample City"]], ["person.family_name", "person.date_of_birth", "person.sex"]);
+  const c = { id: k.id }, P = k.principal, save = k.save;
 
   // ──────────────────────────────────────────── the extension, fill mode
   const code = (await call("POST", "/extension/pairings", {}, OFFICER)).body.code;
@@ -145,20 +128,9 @@ const OFFICER = "user-O";
   r = await plan(rw);
   ok("C7.4: M2 a case on the older release, on the newer screen: nothing filled, \"fill this screen by hand\", and no new task", r.body.match === false && !!r.body.newer && /fill this screen by hand/.test(r.body.message) && !r.body.task && sql("select count(*) from recapture_task") === tasksBefore, r.body.message);
 
-  // the new version released (its screen map from the earlier one, no AI) → a new case fills the newer screen
+  // the new version released (its screen map from the earlier one, no AI; the new choice marked unused) → a new case
   const ed2 = sql(`select form_edition_id from portal_capture where id='${cap2.id}'`);
-  await call("POST", `/online-versions/${ed2}/screen-map/draft`);
-  await call("POST", `/online-versions/${ed2}/screen-map/accept`, {}, "user-C");
-  for (const i of sql(`select data_path from form_field_map where form_edition_id='${ed2}' and outcome='unresolved'`).split("\n").filter(Boolean))
-    await call("PATCH", `/online-versions/${ed2}/screen-map`, i === "uci" ? { input: i, answerOnScreen: true, reason: "Sample: the representative answers this on the portal" } : { input: i, notAFact: true, reason: "Asked elsewhere in this case (F2c setup)" }, "user-C");
-  if (sql(`select outcome from form_field_map where form_edition_id='${ed2}' and data_path='uci' order by version desc limit 1`) !== ANSWER_ON_SCREEN) await call("PATCH", `/online-versions/${ed2}/screen-map`, { input: "uci", answerOnScreen: true, reason: "Sample: the representative answers this on the portal" }, "user-C");
-  await call("POST", `/editions/${ed2}/option-maps/draft`);
-  // The re-captured screen has a new choice; the content team says no answer fills it.
-  await call("PATCH", `/editions/${ed2}/option-maps`, { dataPath: "sex", map: { f_female: "FEMALE", m_male: "MALE", u_unknown: "UNKNOWN", x_another_gender: "ANOTHER" }, unused: ["UNSPECIFIED"] });
-  await call("POST", `/combinations/${vv}/submit`, { note: "F2c: the re-captured IMM 5257 screens" });
-  const sub2 = (await call("GET", `/combinations/${vv}/review`, undefined, "user-C")).body.submission;
-  await call("POST", `/combinations/${vv}/signoff`, { items: (sub2?.changeSummary ?? []).map((x: { kind: string; key: string }) => `${x.kind}|${x.key}`), action: "signed" }, "user-C");
-  r = await call("POST", `/combinations/${vv}/approve`, undefined, "user-B");
+  r = await releaseOnline(call as Call, sql, vv, ed2, { unused: ["UNSPECIFIED"], note: "F2c: the re-captured IMM 5257 screens" });
   const c2 = (await call("POST", "/runtime/cases", { combinationId: vv, reference: "F2C-CASE-2", clientActor: "user-P", principal: { displayName: "Client A" } }, OFFICER)).body;
   const P2 = (await call("GET", `/runtime/cases/${c2.id}`, undefined, OFFICER)).body.people.find((x: { role: string }) => x.role === "principal").subject_id as string;
   r = await plan(rw, ext, c2.id, P2);

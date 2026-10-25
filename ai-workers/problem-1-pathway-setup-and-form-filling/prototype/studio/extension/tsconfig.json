@@ -4,12 +4,13 @@
     "lib": ["es2023", "dom", "dom.iterable"],
     "module": "esnext",
     "moduleResolution": "bundler",
+    "jsx": "react-jsx",
     "strict": true,
     "noEmit": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "allowImportingTsExtensions": true,
-    "types": [],
+    "types": ["chrome"],
     "typeRoots": ["../node_modules/@types"]
   },
   "include": ["src"]
