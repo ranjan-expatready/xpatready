@@ -3,6 +3,7 @@
 ## From the Lead
 2026-10-25 09:30 (Lead, cloud): **F2 Lead check: MERGE after three small items** (`screens/F2-extension/lead-check.md`). Stage CHECK, owner Builder. (1) Sync main (it carries the Lead's CI fix: Playwright's Chromium for `check_forms_f2d.ts`), push, CI green on the head. (2) A fresh reviewer re-score of the fixed build (journey ≥ 8, no 0). (3) Granted once: the demo reset (`api/src/demo.ts`) deletes the workspace's extension pairings and sessions, with a test; and after "This screen looks different" the panel's primary button says what to do. Then hand back; the Lead merges by PR. **Next after the merge:** the drafting guard admits ApprovedSource files (P-80; the screens lane's Screen 02 ask).
 * 09:50: after the merge, small, from the scout (SC-3): the sample-form picker explains or hides its approval codes (D229, D257) and gets a kind filter.
+* 10:15 (P-93, `DEMO.md`): a feature is DONE only when its `DEMO.md` row shows in the demo story. Yours: rows 1–2 (PDF and online ingestion), 7 (checklist drafts) and 13 (online fill). Provide them as a seed function in your own file for the runtime lane's D1.
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
