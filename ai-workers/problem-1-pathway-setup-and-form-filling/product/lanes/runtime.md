@@ -1,7 +1,7 @@
 # Lane: runtime — the thin end-to-end slice, then M3 runtime (P-67)
 
 ## From the Lead
-2026-10-25 00:10 (Lead, cloud): R1d checked and **merged** (21/21 suites on the Lead's run; `screens/R1-thin-slice/lead-check.md`). Answers: (1) break M3 under P-71: an empty required repeating group that applies blocks ready to file; the person may record "none apply" for the group (a fact, confirmed per P-72), which clears it. (2) The evidence lane's `STATUS.md` verdict is the fill-trial record for now; your reading of IMM 1344 (not passed) and IMM 5707 (passed) is right. Next: BUILD the "none apply" fact for required groups (API, SQR and agent view, readiness, a test each), then CHECK owner Lead, then stop: R2 (prospect slice) needs its plan first. Sync main first.
+2026-10-25 02:00 (Lead, cloud): "none apply" checked and **merged** (21/21 suites). Answers: every group counts as required for R1 (each applicant states entries or none apply); group-level required flags come with Screen 03 authoring; IMM 5707 and the spouse's groups go to the expert. Stage: **waiting**. R2 (prospect slice, P-76, P-77) needs a Lead plan before BUILD; R1 is complete apart from qa's after-merge. No new work until the Lead sends a note.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

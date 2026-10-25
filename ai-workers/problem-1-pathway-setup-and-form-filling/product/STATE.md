@@ -11,11 +11,12 @@ updated: 2026-10-23
 | screens | 01-programs-catalogue | CHECK | Lead | Lead note waiting for sync · Lead check of the small FIX on its exact commit (build-notes "Fixes: small FIX after Screen 01 DONE" and it… |
 | forms | F1-forms-channels | CHECK | Lead | Lead note waiting for sync · Lead check of the qa Minors pass after its FIX: build-notes "qa Minors pass" (its two lines), review-qa-min… |
 | evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead: check IMM 5409 (prototype/evidence-lane/E1/imm5409/STATUS.md); send F5 (static forms: page fields sta… |
-| runtime | R1-thin-slice (R1d) | CHECK | Lead | Lead note waiting for sync · Lead checks the R1d FIX (build-notes-r1d.md "Fixes"); decides break M3 (empty required groups: blocking or … |
+| runtime | R1-thin-slice (R1d) | CHECK | Lead | Lead note waiting for sync · Lead checks "none apply" (build-notes-r1d.md, its Fixes table) and the two questions (every group counts as… |
 | qa | after-merge on main 12e7207 (runtime R1c, screens small FIX, forms slice 2b + qa Minors) | WAITING | Lead | Lead note waiting for sync · Lead reads qa/reports/2026-10-24-after-merge-3.md (no Blocker or Critical; 15 findings closed), assigns QA-… |
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
+- 2026-10-25 · Lead (cloud) · PR #12 merged (e619113: runtime R1d, never-overwrite forms, P-71 gate); "none apply" for required groups checked (21/21) and merged on the Lead branch; runtime waits for an R2 plan; qa after-merge next.
 - 2026-10-25 · Lead (cloud) · Runtime R1d checked and merged on the Lead branch (forms panel, P-71 gate, never-overwrite triggers; 21/21 suites); next: PR, one qa after-merge; runtime builds the "none apply" fact for required groups.
 - 2026-10-24 · Lead (cloud) · Runtime R1d EARLY-LOOK (IMM 5257 filled from confirmed facts, copies never rewritten, lock, stale) → Go with changes: P-71 blocks Lock/Filed while facts are missing; "box" → "form field"; shorter "fills …" lists. `run-suites.sh` runs R1d after R1c, before R1a. Expert question 7 (IMM 5707 per applicant).
 - 2026-10-24 · Lead (cloud) · PR #10 merged (12e7207: runtime R1c, screens small FIX, forms qa Minors); qa after-merge on it: ready, 1 Major (QA-35) and 3 Minors to runtime's R1d pass; 15 of 17 retested findings closed; coverage floors raised (api 95/80, engine 99/87).
@@ -25,4 +26,3 @@ updated: 2026-10-23
 - 2026-10-24 · Lead (cloud) · Runtime R1c at CHECK (a986e9c: review 7/10 and break 4 Major, all fixed with tests): Lead check in progress; runtime branch merged on the Lead branch, `run-suites.sh` runs `check_runtime_r1c.cjs` after the visitor-visa setup and before R1a; full suites running before a PR. PR #9 merged (262750e).
 - 2026-10-24 · Lead (cloud) · Forms slice 2b checked and merged (PR #9; F5 shown outside Adobe, reproduced by the Lead); runtime R1c EARLY-LOOK → Go with changes, CHECK next; forms next: qa Minors; evidence next on the Mac: Adobe re-check of an F5 file, then IMM 5476.
 - 2026-10-24 · Lead (cloud) · **Screen 01 DONE** on qa's after-merge (db468e3, 9/10); qa report merged, QA-22–34 assigned; runtime building R1c (D1, D2 fixed, CI green), forms building 2b (D3, QA-30, QA-34 added); screens small FIX QA-4, QA-20, QA-22 next.
-- 2026-10-24 · Lead (cloud) · PR #7 merged (db468e3); founder gave all open approvals; qa, runtime and forms sessions started in the cloud; :4400 restart with demo reset, the US$12 drafts and evidence IMM 5476 wait for a Mac session.
