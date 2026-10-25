@@ -116,7 +116,9 @@ const run = Date.now().toString(36).slice(-5);
   const kept = await start.getByLabel("Day").inputValue().catch(() => "(gone)");
   const summary = await c.getByRole("alert").filter({ hasText: /problem|Check/ }).isVisible().catch(() => false);
   const storedDate = sql(`select coalesce(string_agg(a.value_json #>> '{}', ','), '') from client_canonical_answer a join case_participant p on p.subject_id=a.subject_id where p.case_id='${mine.id}' and a.canonical_field_key='case.intended_stay_from' and a.superseded_by_id is null`);
-  step("Back with an impossible date typed (31 Feb): like Save and continue, the part stays with the error, the typing is kept, nothing impossible is stored as saved", (await text(c)).includes("Part 2 of") && summary && kept === "31" && !storedDate.includes("-02-31"), { kept, summary, part: /Part \d+ of \d+/.exec(await text(c))?.[0], stored: storedDate, says: /✓ Saved/.test(await text(c)) ? "✓ Saved" : "" });
+  // Lead decision (P-47, QA-36): Back and Save and continue leave a part the same way: the answer is saved and flagged, the part stays with the summary.
+  const status = await text(c);
+  step("QA-36 Back with an impossible date typed (31 Feb): the part stays with the summary, the typing is kept, the status says it needs a fix (not '✓ Saved'); stored flagged", status.includes("Part 2 of") && summary && kept === "31" && /needs? a fix/.test(status) && !/✓ Saved/.test(status) && storedDate.includes("-02-31"), { kept, summary, part: /Part \d+ of \d+/.exec(status)?.[0], stored: storedDate, says: /Saved: [^.]*fix/.exec(status)?.[0] ?? "" });
   await look(c, "client after Back");
   if (!(await text(c)).includes("Part 2 of")) { await c.getByRole("button", { name: /Save and continue/ }).click(); await c.getByText(/^Part 2 of \d+/).waitFor(); }
   // Reload in the middle of a part: saved answers stay; what was typed and not saved is not silently counted as saved.

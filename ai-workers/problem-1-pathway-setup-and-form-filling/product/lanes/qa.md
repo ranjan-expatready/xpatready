@@ -5,10 +5,10 @@
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: after-merge on main 12e7207 (runtime R1c, screens small FIX, forms slice 2b + qa Minors)
-stage: WAITING
-owner: Lead
-next_action: Lead reads `qa/reports/2026-10-24-after-merge-3.md` (no Blocker or Critical; 15 findings closed), assigns QA-35 (Major, blank case area from the Demo menu), QA-36, QA-37 and the rest of QA-26 to runtime, answers two questions (QA-35 fix now or next stage; should Back apply Save and continue's checks).
+current_item: after-merge on main 8aef175 (runtime R1d forms panel and none apply; qa R1c fixes)
+stage: RUNNING
+owner: qa
+next_action: qa finishes the run: suite pass with coverage is running; then records, report `qa/reports/2026-10-25-after-merge.md`, Paste to Lead.
 blocked_by: none
 updated: 2026-10-24
 
