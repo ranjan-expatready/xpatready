@@ -49,10 +49,12 @@ table_() {
     # Stage, owner and next action come from the lane's own newest copy: main's file is newer whenever the Lead edits
     # its note, but its lane fields are only as fresh as the lane's last merged commit. A candidate (a worktree or a
     # pushed branch) counts only when its newest lane commit on this file (not "lead:") is in neither this copy nor
-    # origin/main: decided by ancestry, never by timestamps. Among several candidates the newest commit wins, ties by
-    # name. The Lead note itself is compared below.
-    f="$m"; rel="$P/product/lanes/$ln.md"; best=-1; bestn=""
+    # origin/main (ancestry), and is not older than the lane's last commit this copy has (an abandoned branch never rolls
+    # the table back); an equal time counts as newer. Among candidates the newest wins, ties by name. The Lead note
+    # itself is compared below.
+    f="$m"; rel="$P/product/lanes/$ln.md"; bestn=""
     lanec() { git -C "$1" log --no-merges --format='%H %ct %s' "${2:-HEAD}" -- "$rel" 2>/dev/null | grep -v '^[0-9a-f]* [0-9]* lead' | head -1 | cut -d' ' -f1-2; }
+    best=$(lanec "$MAIN" | cut -d' ' -f2); best=${best:-0}
     known() { git -C "$MAIN" merge-base --is-ancestor "$1" HEAD 2>/dev/null || git -C "$MAIN" merge-base --is-ancestor "$1" origin/main 2>/dev/null; }
     pick() { set -- $1 "$2" "$3"; [ -n "$1" ] || return 1; known "$1" && return 1
       { [ "$2" -gt "$best" ] || { [ "$2" -eq "$best" ] && [[ "$3" > "$bestn" ]]; }; } || return 1; best=$2; bestn=$3; }
