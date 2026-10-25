@@ -1,7 +1,7 @@
 # Lane: runtime — the thin end-to-end slice, then M3 runtime (P-67)
 
 ## From the Lead
-2026-10-25 02:00 (Lead, cloud): "none apply" checked and **merged** (21/21 suites). Answers: every group counts as required for R1 (each applicant states entries or none apply); group-level required flags come with Screen 03 authoring; IMM 5707 and the spouse's groups go to the expert. Stage: **waiting**. R2 (prospect slice, P-76, P-77) needs a Lead plan before BUILD; R1 is complete apart from qa's after-merge. No new work until the Lead sends a note.
+2026-10-25 02:00 (Lead, cloud): "none apply" passed the Lead check (21/21) but **FIX before merge** (PR 13 review): `groupFacts` (engine/runtime/forms.ts) keeps only `entries: rows > 0`, so adding a blank second entry to a group after a copy is filed leaves the copy current while readiness says the new entry is not answered. Keep the live entry ids (or at least the count) per group in the copy's groups, compare them in `changedGroups`, and add an R1d check: file IMM 5257 with one complete previous-residence entry, add a blank second entry → the copy is stale, naming the group. Then hand back at CHECK. Answers kept: every group counts as required for R1; group-level required flags come with Screen 03; IMM 5707 and the spouse's groups go to the expert. After this fix, R2 waits for a Lead plan.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
