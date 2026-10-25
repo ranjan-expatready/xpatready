@@ -1,6 +1,6 @@
 # Inbox — findings for the Lead, picked up without the founder relaying them
 
-Any outside checker (Devin, the scout, a team member) drops findings here; the Lead drains the inbox at the start of every `/lead` chat and every scheduled Lead run (`bash tools/lane.sh inbox`).
+One-off outside checks (a Devin audit outside a scout charter, a team member) drop findings here; charter-based exploration by Goose or Devin goes through the scout lane instead (P-95); the Lead drains the inbox at the start of every `/lead` chat and every scheduled Lead run (`bash tools/lane.sh inbox`).
 
 ## How to drop (never on `main`, P-87)
 1. Push a branch `devin/<date>-<topic>` (Devin) from the newest `main` with **one new file** `ai-workers/problem-1-pathway-setup-and-form-filling/product/inbox/<date>-<source>-<topic>.md` (not a folder at the repository root). Nothing else in that commit unless it is a small fix the founder allowed (below).

@@ -1,6 +1,6 @@
 ---
 name: qa
-description: Independent tester for the Pathway Configurator - tests the merged app like a person (every capability, validation and error message, roles, recovery) and underneath (API, data, code coverage), explores for gaps, logs bugs and suggestions, and asks questions through the Lead. Modes /qa after-merge, /qa milestone, /qa capability <name>, /qa explore <area>, /qa with-me. Use when the founder or Lead types /qa, asks to test like a human, find bugs, check what works, or at a merge or milestone gate.
+description: Independent tester for the Pathway Configurator - tests the merged app like a person (every capability, validation and error message, roles, recovery) and underneath (API, data, code coverage), logs bugs and suggestions, and asks questions through the Lead. Modes /qa after-merge, /qa milestone, /qa capability <name>, /qa with-me (outside-in exploration belongs to the scout, P-95). Use when the founder or Lead types /qa, asks to test like a human, find bugs, check what works, or at a merge or milestone gate.
 ---
 
 # /qa — independent testing, like a person and underneath
@@ -19,7 +19,6 @@ Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). Lane r
 | `after-merge` | Lead, after every merge of app code into `main` | Smoke of every Works capability + full test of the capabilities the merge touched (`git diff --stat <last tested commit>..main`) |
 | `milestone` | Lead, before a milestone gate (WORKFLOW.md) | Every capability in P/`qa/CAPABILITIES.md` for the milestone, every role, coverage report, all suites rerun |
 | `capability <name>` | Lead or founder | One capability or screen, in depth |
-| `explore <area>` | Founder, Lead, or when time allows | Charter-based exploration (60 min): what a real author, RCIC, officer or client would try |
 | `with-me` | Founder opens this session | Explore together: ask the founder one question at a time (AskUserQuestion, recommendation first), test what they point at, report as you go |
 
 ## 2. Test like a person: headed first, then headless (isolated copy, and the shared demo read-only)

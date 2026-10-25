@@ -25,7 +25,7 @@ instructions: |
 prompt: |
   Run one scout charter: {{ charter }}. The app is at {{ base_url }}.
   Follow the scout skill: guard, benchmark, explore headed then headless, record findings and a dependency map,
-  fix only what passes the small-fix rule, update lanes/scout.md, commit, and end with the "Paste to Lead" block.
+  fix only what passes the small-fix rule, update scout/NOW.md and lanes/scout.md, commit, and end with the "Paste to Lead" block.
 extensions:
   - type: platform
     name: developer

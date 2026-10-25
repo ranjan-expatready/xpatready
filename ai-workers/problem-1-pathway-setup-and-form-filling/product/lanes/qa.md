@@ -1,6 +1,7 @@
 # Lane: qa — independent testing of what is on main (skill `qa`)
 
 ## From the Lead
+2026-10-25 17:45 (Lead, Devin on the Mac): **P-95: your `explore` mode is retired**; outside-in exploration is the scout's (Goose or Devin). You stay the conformance gate: `after-merge`, `milestone`, `capability`, `with-me`. The 12:30 after-merge below still stands.
 2026-10-25 12:30 (Lead, Mac): **forms F2 (browser extension, F1-P list purpose) merged.** Run `/qa after-merge` on main: extension pairing, capture, fill and re-capture as a person (C2.9, C7.4, C9.3 task part), F1-P (list purpose), QA-43, demo reset; the 10:00 items below (D-1, D-2 rows) in the same run.
 2026-10-25 10:00 (Lead, cloud): your explore report was read and assigned this morning (QA-38/40 runtime, QA-39/41/42 screens, QA-43 forms). Stay WAITING until the next app merge (forms F2 first); the Lead then sends `/qa after-merge`. At that run, also add to `qa/BUGS.md`, as found by Devin and verified by the Lead: **D-1** signoff with no body → 500 (Minor, runtime) and **D-2** an approver can submit and then nobody can release (Minor, runtime); outside checkers' findings now reach the Lead through `inbox/` (README there). Before any new row, check `scout/FINDINGS.md` (skill `qa`).
 

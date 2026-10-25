@@ -1,6 +1,6 @@
 # Mac tasks for Goose — the founder's hands on the Mac
 
-Some work can only run on the founder's Mac (`LANES.md`, "Where work can run"): live paid AI, Adobe Reader, the :4400 demo, the scout. The founder does not have to do it by hand: the Lead writes a ready prompt here, the founder pastes it into Goose on the Mac, and Goose does the work and ends with a "Paste to Lead" block for the Lead chat. Pasting a task's prompt is the founder's go for what that task says (including its spend cap). The Lead adds, updates and closes tasks; newest open tasks first.
+Goose has two jobs (P-95): the founder's Mac hands (these tasks) and one of the scout's two engines (the other is Devin). Some work can only run on the founder's Mac (`LANES.md`, "Where work can run"): live paid AI, Adobe Reader, the :4400 demo, the Goose scout. The founder does not have to do it by hand: the Lead writes a ready prompt here, the founder pastes it into Goose on the Mac, and Goose does the work and ends with a "Paste to Lead" block for the Lead chat. Pasting a task's prompt is the founder's go for what that task says (including its spend cap). The Lead adds, updates and closes tasks; newest open tasks first.
 
 **How to start Goose for a task (Terminal on the Mac):** `cd` into the main xpatready copy, `git checkout main && git pull`, then `goose session`, and paste the prompt. Goose uses the founder's Ollama Cloud model; that costs nothing extra beyond the Ollama plan.
 
