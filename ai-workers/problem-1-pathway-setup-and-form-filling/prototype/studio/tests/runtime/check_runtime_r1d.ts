@@ -277,6 +277,24 @@ async function main() {
   r = await call("POST", `/runtime/cases/${caseId}/sections/${go}/confirm`, { subjectId: P, seen: [(await naNow(gc))!.id] }, OFFICER);
   ok("break m2: Confirm section names a group only for its own changed answer, never for an id of another group", r.status === 409 && !(r.body?.changed ?? []).includes(`group:${go}`), r.body?.changed);
 
+  // PR 13 review: IMM 5257 filed with one complete previous-residence entry; a blank second entry makes the copy stale.
+  const prev = "previous_countries_of_residence";
+  type RQ = Q & { section: string; rows: { row: string; answer: { id: string } | null }[] };
+  r = await put(prev, false, (await naNow(prev))?.id ?? null, OFFICER);
+  const firstRow: string = (await call("POST", `/runtime/cases/${caseId}/groups/${P}/rows`, { group: prev }, OFFICER)).body.row;
+  for (const q of ((await agent()).sections.flatMap((x: { questions: RQ[] }) => x.questions) as RQ[]).filter((q) => q.subjectId === P && q.section === prev && q.group && q.required && !q.hidden))
+    await call("PUT", `/runtime/cases/${caseId}/answers/${P}/${q.fact}`, { value: sample(q), expectedId: null, row: firstRow }, OFFICER);
+  await confirmAll(P);
+  const readyWithEntry = (await formOf("IMM 5257", P)).readiness.ready;
+  r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-pr13` }, OFFICER);
+  const pr13: string = r.body.id; await done(pr13);
+  const filed13 = await call("POST", `/runtime/form-copies/${pr13}/lock`, { kind: "filed" }, OFFICER);
+  await call("POST", `/runtime/cases/${caseId}/groups/${P}/rows`, { group: prev }, OFFICER);
+  f = await formOf("IMM 5257", P);
+  const c13 = f.copies.find((x) => x.id === pr13)!;
+  ok("PR 13 review fail: filed with one complete previous-residence entry, a blank second entry makes the copy stale, naming the group; readiness says the new entry is not answered",
+    readyWithEntry && filed13.status === 201 && c13.stale && c13.changed.includes('Entries in "Previous countries of residence"') && !f.readiness.ready && f.readiness.missing.some((m) => m.reason === "not answered"), { readyWithEntry, filed: filed13.status, changed: c13?.changed, missing: f.readiness.missing.slice(0, 3) });
+
   // PR #12 review 1: a form the release files Online is not offered as a PDF, even when its PDF form field map exists.
   // Fixture: a copy of this release whose IMM 5257 filing line is Online, pinned by a new case, then moved below the
   // real release (version -1) so later suites keep opening cases on the real one.
