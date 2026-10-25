@@ -21,7 +21,7 @@ import { basename, join, relative } from "node:path";
 import { promisify } from "node:util";
 import { Prisma, type FormEdition, type PortalCapture } from "@prisma/client";
 import type { Response } from "express";
-import { AbandonCapture, AcceptAiProposals, AcceptScreenMap, CAPTURE_LIMITS, CAPTURE_STATUS_WORDS, CHANNEL_WORDS, DRAFT_FROM_WORDS, DraftLeftovers, SetDraftFrom, UseDefaults, type Channel, type DraftFrom, SetOptionMap, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
+import { AbandonCapture, AcceptAiProposals, AcceptScreenMap, CAPTURE_LIMITS, CAPTURE_STATUS_WORDS, CHANNEL_WORDS, DRAFT_FROM_WORDS, DraftLeftovers, SetDraftFrom, UseDefaults, type Channel, type DraftFrom, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS,DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
 import { buildRecord, contractProblems, difference, fingerprint, noAnswers, reviewHtml, type CaptureInput, type CaptureRecord } from "../../engine/capture.ts";
 import { channelProblems, channelsView } from "../../engine/channels.ts";
 import { newestEdition } from "../../engine/programs.ts";
@@ -428,7 +428,7 @@ export class Forms {
       changes = { outcome: "mapped", canonicalFieldKey: key, person: b.person ?? "form_subject", transform: transformFor(input?.type ?? "text", input?.part ?? null, { answerListKey: field!.answerListKey }), confidence: "high", evidenceQuote: `Chosen by ${actor.name}${key !== b.fact ? ` (${b.fact} was merged into ${key})` : ""}`, reason: null, origin: "HUMAN", optionMap: om ? json(om.optionMap) : Prisma.DbNull };
       said = `${key}${b.person && b.person !== "form_subject" ? ` (${b.person})` : ""}`;
     } else {
-      changes = { outcome: "not_a_fact", canonicalFieldKey: null, person: null, transform: null, confidence: null, evidenceQuote: null, reason: `${b.reason} (${actor.name})`, origin: "HUMAN", optionMap: Prisma.DbNull };
+      changes = { outcome: "not_a_fact", canonicalFieldKey: null, person: null, transform: null, confidence: null, evidenceQuote: null, reason: `${b.reason} (${actor.name})`, origin: "HUMAN", optionMap: Prisma.DbNull, listPurpose: Prisma.DbNull };
       said = `not a fact: ${b.reason}`;
     }
     await revise(this.db.formFieldMap, rows, changes, actor.id, strip);
@@ -610,7 +610,7 @@ export class Forms {
         const om = list && input?.options?.length ? draftOptionMap(list.values.map((v) => ({ key: v.valueKey, label: v.label })), input.options) : null;
         await revise(tx.formFieldMap, rows, p.outcome === "mapped"
           ? { outcome: "mapped", canonicalFieldKey: p.fact, person: p.person, transform: p.transform, confidence: p.ai_confidence, evidenceQuote: `${p.why} · run ${j.runId}, accepted by ${actor.name}`.slice(0, 500), reason: null, origin: "AI_PROPOSAL", draftingRunId: j.runId, optionMap: om ? json(om.optionMap) : Prisma.DbNull }
-          : { outcome: "not_a_fact", canonicalFieldKey: null, person: null, transform: null, confidence: null, evidenceQuote: null, reason: `${p.why} · run ${j.runId}, accepted by ${actor.name}`.slice(0, 500), origin: "AI_PROPOSAL", draftingRunId: j.runId, optionMap: Prisma.DbNull }, actor.id, strip);
+          : { outcome: "not_a_fact", canonicalFieldKey: null, person: null, transform: null, confidence: null, evidenceQuote: null, reason: `${p.why} · run ${j.runId}, accepted by ${actor.name}`.slice(0, 500), origin: "AI_PROPOSAL", draftingRunId: j.runId, optionMap: Prisma.DbNull, listPurpose: Prisma.DbNull }, actor.id, strip);
         accepted++;
       }
     });
@@ -691,6 +691,8 @@ export class Forms {
 
   /** The online forms an author added from this combination (C2.7), newest first, in the combination's words. */
   async onlineForms(combinationId: string) {
+    // QA-43: an unknown combination is a 404, as a malformed id is, never an empty list.
+    if (!(await this.db.combination.findFirst({ where: { id: combinationId, workspaceId: await this.ws.id() }, select: { id: true } }))) fail("That combination does not exist.", HttpStatus.NOT_FOUND);
     const rows = await this.db.portalCapture.findMany({ where: { combinationId }, orderBy: { createdAt: "desc" } });
     return rows.map((c) => ({ ...this.view(c), status_words: CAPTURE_STATUS_WORDS[c.status] ?? c.status }));
   }
@@ -852,6 +854,23 @@ export class Forms {
     return { form_field: dataPath, option_map: { map: b.map, unused: b.unused, codes } };
   }
 
+  /** F1-P (Screen 02 Q3): a person sets what a list on a form holds and what happens to rows the form has no room
+   *  for. Only a row-level map (one of a repeating group's rows) has a purpose; a published row gets a new draft. */
+  async setListPurpose(actor: Actor, editionId: string, body: unknown) {
+    need(actor, "author");
+    const b = parse(SetListPurpose, body), dataPath = b.dataPath;
+    const ed = await this.db.formEdition.findUniqueOrThrow({ where: { id: editionId } });
+    const rows = await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath } });
+    const m = effective(rows, (x) => x.dataPath, "draft")[0];
+    if (!m) fail("That form field is not on this form's field map.", HttpStatus.NOT_FOUND);
+    if (m!.outcome !== "mapped" || m!.row == null) fail(`${m!.caption ?? dataPath} is not one row of a list on the form: only a list's rows have a purpose.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    const purpose = { kind: b.kind, overflow: b.overflow };
+    if (JSON.stringify(m!.listPurpose) !== JSON.stringify(purpose)) await revise(this.db.formFieldMap, rows, { listPurpose: json(purpose) }, actor.id, strip);
+    const words = `${LIST_PURPOSES.find((p) => p.key === b.kind)!.label}; ${LIST_OVERFLOWS.find((o) => o.key === b.overflow)!.label.toLowerCase()}`;
+    await this.audit.log(ed.workspaceId, actor.id, "changed", "list purpose", dataPath, `${actor.name} set the list purpose of ${m!.caption ?? dataPath} on ${ed.editionLabel} (${words})`);
+    return { form_field: dataPath, list_purpose: purpose, words };
+  }
+
   /** A form field's own choices: the online twin's (code, label); a PDF field's from its inventory (resolved options),
    *  else from its field map's code list ("code_list:… (Married=5, …)"), as the filler reads them (review 1). */
   private formOptions(ed: { channel: string; inventoryFile: string | null }, maps: { dataPath: string; transform: string | null }[]) {
@@ -983,6 +1002,7 @@ export class FormsController {
   @Post("online-versions/:id/screen-map/accept") accept(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.acceptScreenMap(actorOf(a), id, b); }
   @Post("editions/:id/option-maps/draft") optionMaps(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.draftOptionMaps(actorOf(a), id); }
   @Patch("editions/:id/option-maps") setOptionMap(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setOptionMap(actorOf(a), id, b); }
+  @Patch("editions/:id/list-purposes") setListPurpose(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setListPurpose(actorOf(a), id, b); }
   @Get("combinations/:id/channels") channels(@Param("id") id: string) { return this.f.channels(id); }
   @Patch("combinations/:id/portal") portal(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setPortal(actorOf(a), id, b); }
   /** The spreadsheet template for recording blank portal screens by hand (P-66 way C). */

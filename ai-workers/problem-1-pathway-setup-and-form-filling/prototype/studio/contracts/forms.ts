@@ -75,6 +75,28 @@ export const NewAnswerList = z.object({
 export const LinkAnswerList = z.object({ list: z.string().trim() });
 /** A person sets one form field's option map: value key → the form's code; codes no value fills are listed as unused. */
 export const SetOptionMap = z.object({ dataPath: z.string().trim().min(1, "Name the form field."), map: z.record(z.string(), z.string()), unused: z.array(z.string()).default([]) });
+/** F1-P (Screen 02 Q3, SA-1B-11, 12, 27): what a list on a form holds, and what happens when the case has more rows
+ *  than the form has room for. Words are Sample until the immigration expert confirms them. Never a silent cut. */
+export const LIST_PURPOSES = [
+  { key: "current", label: "Current" },
+  { key: "for_post", label: "For the post applied for" },
+  { key: "all", label: "All" },
+  { key: "latest", label: "Latest" },
+  { key: "date_range", label: "In a date range" },
+] as const;
+export const LIST_PURPOSE_KEYS = LIST_PURPOSES.map((p) => p.key) as unknown as [string, ...string[]];
+export const LIST_OVERFLOWS = [
+  { key: "extra_sheet", label: "Continue on an extra sheet" },
+  { key: "flag_officer", label: "Flag for the officer" },
+] as const;
+export const LIST_OVERFLOW_KEYS = LIST_OVERFLOWS.map((p) => p.key) as unknown as [string, ...string[]];
+export const SetListPurpose = z.object({
+  dataPath: z.string({ error: "Name the form field." }).trim().min(1, "Name the form field."),
+  kind: z.enum(LIST_PURPOSE_KEYS, { error: `Choose what the list holds: ${LIST_PURPOSES.map((p) => p.label).join(", ")}.` }),
+  overflow: z.enum(LIST_OVERFLOW_KEYS, { error: "Choose what happens when there are more rows than the form has room for: continue on an extra sheet, or flag for the officer." }),
+});
+export type ListPurpose = { kind: string; overflow: string };
+
 /** The guarded screen_map job for an online version's open inputs (F1 slice 2): STUB proves the path at US$0; LIVE
  *  is a paid call and repeats the worst case the person saw (to the cent), so nothing is spent unseen. */
 // QA-27: each field says in plain words what it needs, for a missing value and a wrong kind of value alike (zod's own

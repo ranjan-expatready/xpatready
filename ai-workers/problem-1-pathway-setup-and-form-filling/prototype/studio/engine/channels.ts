@@ -9,7 +9,7 @@ import type { Snapshot } from "./snapshot.ts";
 
 type Line = { form_number: string; channel?: Channel; status?: string; condition_plain?: string | null; who?: string; title?: string; online_versions?: number; online_only?: boolean };
 /** The parts of the snapshot (engine/snapshot.ts) these rules read. */
-type MapEntry = { data_path: string; caption?: string | null; outcome: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null };
+type MapEntry = { data_path: string; caption?: string | null; outcome: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null; row?: number | null; list_purpose?: { kind: string; overflow: string } | null };
 type FieldMap = { form_number: string; form_edition: string; channel?: string; recheck_by?: string | null; entries: MapEntry[] };
 type FieldDef = { id: string; answer_list?: { key: string; values: { key: string; label: string }[] } };
 const mapsOf = (s: Snapshot) => s.field_maps as FieldMap[];
@@ -73,6 +73,12 @@ export function channelProblems(s: Snapshot, today = new Date()): Problem[] {
     // Only a form field with codes of its own needs an option map; a derived or text field writes the value itself.
     if (!values || (!e.option_map && !hasCodes(e.transform))) continue;
     for (const p of optionMapProblems(values, e.option_map)) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `${e.caption ?? e.data_path} (${e.fact}): ${p}.` });
+  }
+  // F1-P (Screen 02 Q3): a list's rows say what the list holds and where extra rows go; until then it is a warning,
+  // never an error, so configurations released before F1-P stay releasable.
+  for (const m of mapsOf(s)) {
+    const unset = m.entries.filter((e) => e.outcome === "mapped" && e.row != null && !e.list_purpose);
+    if (unset.length) out.push({ level: "warning", where: `Field map ${m.form_edition}`, item: m.form_number, message: `${unset.length} list row${unset.length > 1 ? "s have" : " has"} no purpose yet (for example ${unset[0].caption ?? unset[0].data_path}): choose what the list holds and what happens to rows the form has no room for.` });
   }
   return out;
 }

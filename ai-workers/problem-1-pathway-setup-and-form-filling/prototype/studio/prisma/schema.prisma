@@ -335,7 +335,10 @@ model FormFieldMap {
   /// F1 (challenge point 3): { map: { answer-list value key: this form field's code }, unused: [codes of this form
   /// field that no value fills] }. `map` is the team's ENUM transform map (onMissing REFUSE).
   optionMap         Json?            @map("option_map")
-  updatedBy         String           @map("updated_by")
+  /// F1-P (Screen 02 Q3): a list row's purpose and overflow, { kind, overflow } (contracts/forms.ts LIST_PURPOSES).
+  /// Only on a row-level map (row set); null = "Purpose: not set" (a release warning).
+  listPurpose       Json?            @map("list_purpose")
+  updatedBy        String           @map("updated_by")
   updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   edition FormEdition @relation(fields: [formEditionId], references: [id], onDelete: Cascade)
