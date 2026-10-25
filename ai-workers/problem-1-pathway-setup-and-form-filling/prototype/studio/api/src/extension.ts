@@ -8,9 +8,16 @@
 // The Studio's sign-in is the simulated x-actor header: pairing proves the flow, not the security (Scaffolding, P-33).
 import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Ip, Param, Post } from "@nestjs/common";
 import { createHash, randomBytes, randomInt } from "node:crypto";
-import { CODE_ALPHABET, EXTENSION_PUBLIC_KEY, MODES, NewExtensionCapture, NewPairing, NewSession, PAIRING } from "../../contracts/extension.ts";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { CODE_ALPHABET, EXTENSION_PUBLIC_KEY, FillPlanRequest, MODES, NewExtensionCapture, NewPairing, NewSession, PAIRING } from "../../contracts/extension.ts";
+import type { CaptureInput, CaptureRecord } from "../../engine/capture.ts";
+import { fillPlan, onlineMapOf, type FillPlan } from "../../engine/extension/fill.ts";
+import { screenDifference, screenIdentity } from "../../engine/extension/screens.ts";
+import { noAnswers } from "../../engine/capture.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { ACTORS, actorOf, Audit, bearerOf, Db, fail, RUNTIME_ACTORS, Workspace, type Actor } from "./core.ts";
+import { ACTORS, actorOf, Audit, bearerOf, Db, fail, need, RUNTIME_ACTORS, SOLUTION, Workspace, type Actor } from "./core.ts";
+import { Runtime } from "./runtime.ts";
 import { Forms } from "./forms.ts";
 
 type H = string | undefined;
@@ -37,7 +44,7 @@ export class Extension {
    *  the same moment each count: never a list read before the other request's try was added). */
   private tries(ip: string) { const win = PAIRING.wrongWindowMinutes * 60_000; return (this.wrong.get(ip) ?? []).filter((t) => Date.now() - t < win); }
   private strike(ip: string) { this.wrong.set(ip, [...this.tries(ip), Date.now()]); }
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Forms) private readonly forms: Forms) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Forms) private readonly forms: Forms, @Inject(Runtime) private readonly runtime: Runtime) {}
 
   /** XT-1: a code for the signed-in Studio person, shown once, kept hashed. */
   async pair(actor: Actor, body: unknown) {
@@ -122,6 +129,63 @@ export class Extension {
   async addScreen(sig: Signed, id: string, body: unknown) { await this.ownCapture(sig, id); return this.forms.addExtensionScreen(sig.actor, id, body); }
   async capture(sig: Signed, id: string) { await this.ownCapture(sig, id); return this.forms.capture(id); }
   async finish(sig: Signed, id: string) { await this.ownCapture(sig, id); return this.forms.finish(sig.actor, id); }
+
+  // ─── fill (BR-7…BR-13, BR-15): one screen of one case's online form, from its pinned release only (M2)
+  async fillPlan(sig: Signed, caseId: string, form: string, subjectId: string, body: unknown) {
+    const answers = noAnswers((body as { screen?: unknown } | null)?.screen ?? {});
+    if (answers.length) fail(`Refused: the screen carried an answer (${answers.slice(0, 3).join(", ")}). The extension sends the screen's structure only; nothing was kept.`);
+    const live = parse(FillPlanRequest, body).screen as { title: string; inputs: CaptureInput[] };
+    const c = await this.runtime.reach(sig.actor, caseId, "officer");
+    const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
+    if (!people.some((p) => p.subjectId === subjectId && p.role !== "case")) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
+    const map = onlineMapOf<{ form_number: string; form_edition: string; inventory_file: string }>(s, form);
+    if (!map) fail(`${form} is not filed online in the release this case works from: fill it as a PDF from the case.`, HttpStatus.CONFLICT);
+    const twin = (JSON.parse(readFileSync(join(SOLUTION, map!.inventory_file), "utf8")) as { record: CaptureRecord }).record;
+    const st = await this.runtime.state(c);
+    const plan = fillPlan(s, twin, form, subjectId, people, st.answers, st.rows, live);
+    const ed = await this.db.formEdition.findFirst({ where: { workspaceId: c.workspaceId, editionLabel: map!.form_edition } });
+    let task: { id: string; times: number; message: string } | null = null, newer: { edition: string; message: string } | null = null;
+    if (!plan.match && ed) {
+      // M2: when the library already has a newer approved version that matches this screen, the re-capture is done;
+      // this case keeps its release ("released means frozen"), so the screen is filled by hand and no task opens.
+      const later = await this.db.formEdition.findMany({ where: { workspaceId: c.workspaceId, govFormDefId: ed.govFormDefId, channel: "ONLINE", portalKey: ed.portalKey, capturedOn: { gte: ed.capturedOn ?? new Date(0) }, id: { not: ed.id } }, orderBy: { capturedOn: "desc" } });
+      const fits = later.find((v) => { if (!v.inventoryFile) return false; const r = (JSON.parse(readFileSync(join(SOLUTION, v.inventoryFile), "utf8")) as { record: CaptureRecord }).record; const sc = r.screens.find((x) => screenIdentity(x.title) === screenIdentity(live.title)); return !!sc && screenDifference(sc, live).length === 0; });
+      if (fits) newer = { edition: fits.editionLabel, message: `This case uses the version released on ${ed.capturedOn?.toISOString().slice(0, 10) ?? "an earlier day"}; the portal now shows ${fits.editionLabel}. Nothing was filled: fill this screen by hand.` };
+      else task = await this.recapture(sig, ed.id, plan, map!.form_edition);
+    }
+    const counts = plan.match ? plan.counts : null;
+    await this.audit.log(c.workspaceId, sig.actor.id, plan.match ? "planned" : "refused", "screen fill", form, plan.match
+      ? `${sig.actor.name} asked the extension to fill "${plan.screen}" of ${form} for case ${caseId.slice(0, 8)}: ${counts!.fill} to fill, ${plan.inputs.length - counts!.fill} not (counts only)`
+      : `${sig.actor.name}'s screen of ${form} for case ${caseId.slice(0, 8)} ${plan.reason === "not_captured" ? "is not in the approved version" : "differs from the approved version"}: nothing filled${task ? ", re-capture task open" : newer ? ", a newer version matches (fill by hand)" : ""}`);
+    if (!plan.match) return { ...plan, task, newer, message: newer ? newer.message : plan.reason === "not_captured" ? "This screen is not in the approved version. Nothing was filled. Capture needed is open for the content team." : "This screen looks different from the approved version. Nothing was filled. Re-capture needed is open for the content team." };
+    return { ...plan, message: `${counts!.fill} to fill on this screen${plan.inputs.length - counts!.fill ? ` · ${plan.inputs.length - counts!.fill} need you` : ""}.` };
+  }
+
+  /** XT-6: one open task per online version, screen and kind; a second mismatch updates the same row (the partial
+   *  unique index decides between two at the same moment). Only input ids, kinds of change, option codes and the
+   *  approved labels are kept: never the live page's text (M5). */
+  private async recapture(sig: Signed, editionId: string, plan: Exclude<FillPlan, { match: true }>, editionLabel: string) {
+    const kind = plan.reason === "changed" ? "changed" : "not_captured";
+    const differences = plan.reason === "changed" ? plan.differences : [];
+    const title = plan.reason === "changed" ? plan.screen : `(screen ${plan.screen_page})`;
+    const open = await this.db.$queryRaw<{ n: bigint; combos: bigint }[]>`select count(distinct c.id) as n, count(distinct c.combination_id) as combos from runtime_case c join pack_work_pin p on p.case_id = c.id join config_release r on r.id = p.config_release_id
+      where c.workspace_id = ${sig.workspaceId}::uuid and c.status = 'OPEN' and r.snapshot -> 'field_maps' @> ${JSON.stringify([{ form_edition: editionLabel }])}::jsonb`;
+    const affected = { open_cases: Number(open[0]?.n ?? 0), combinations: Number(open[0]?.combos ?? 0) };
+    const rows = await this.db.$queryRaw<{ id: string; times: number }[]>`insert into recapture_task (id, workspace_id, form_edition_id, screen_page, screen_title, kind, differences, affected, opened_by, updated_at)
+      values (gen_random_uuid(), ${sig.workspaceId}::uuid, ${editionId}::uuid, ${plan.screen_page}, ${title}, ${kind}, ${JSON.stringify(differences)}::jsonb, ${JSON.stringify(affected)}::jsonb, ${sig.actor.id}, now())
+      on conflict (form_edition_id, screen_page, kind) where status = 'OPEN'
+      do update set times = recapture_task.times + 1, differences = excluded.differences, affected = excluded.affected, updated_at = now()
+      returning id, times`;
+    const t = rows[0];
+    return { id: t.id, times: t.times, message: t.times > 1 ? `Re-capture needed was already open: updated (${t.times} times seen).` : "Re-capture needed is open for the content team." };
+  }
+
+  /** The content team's list (review duty): open tasks first, with the screens and changes to capture again. */
+  async tasks(actor: Actor) {
+    need(actor, "review");
+    const rows = await this.db.recaptureTask.findMany({ where: { workspaceId: await this.ws.id() }, include: { edition: { select: { editionLabel: true } } }, orderBy: [{ status: "desc" }, { updatedAt: "desc" }], take: 100 });
+    return rows.map((t) => ({ id: t.id, edition: t.edition.editionLabel, screen: t.screenTitle, screen_page: t.screenPage, kind: t.kind, status: t.status, differences: t.differences, affected: t.affected, times: t.times, opened_at: t.openedAt.toISOString(), updated_at: t.updatedAt.toISOString(), closed_by: t.closedBy }));
+  }
 }
 
 @Controller("api/extension")
@@ -138,5 +202,7 @@ export class ExtensionController {
   @Post("captures") async start(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Body() b: unknown) { return this.x.startCapture(await this.x.signed(t, o, a, "capture"), b); }
   @Get("captures/:id") async capture(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string) { return this.x.capture(await this.x.signed(t, o, a, "capture"), id); }
   @Post("captures/:id/screens") async screen(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.addScreen(await this.x.signed(t, o, a, "capture"), id, b); }
+  @Post("cases/:id/forms/:form/:subject/fill-plans") @HttpCode(200) async fill(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Param("form") form: string, @Param("subject") subject: string, @Body() b: unknown) { return this.x.fillPlan(await this.x.signed(t, o, a, "fill"), id, form, subject, b); }
+  @Get("recapture-tasks") tasks(@Headers("x-actor") a: H) { return this.x.tasks(actorOf(a)); }
   @Post("captures/:id/finish") @HttpCode(200) async finish(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string) { return this.x.finish(await this.x.signed(t, o, a, "capture"), id); }
 }

@@ -65,9 +65,12 @@ export const ResolveInput = z.object({
   fact: z.string().trim().regex(/^[a-z][a-z0-9_]*\.[a-z0-9_.]+$/, "A shared field id, for example person.place_of_birth_city.").optional(),
   person: z.string().trim().regex(/^[a-z][a-z0-9_]{1,40}$/).optional(),
   notAFact: z.literal(true).optional(),
+  /** F2c (Q3, BR-9): a declaration or background question the representative answers on the portal themself; the
+   *  extension never fills it. Set by the immigration expert role (SME duty), approved by a second person with the map. */
+  answerOnScreen: z.literal(true).optional(),
   reason: z.string().trim().min(5, "Say why it is not a fact.").max(500).optional(),
-}).refine((b) => !!b.fact !== !!b.notAFact, { message: "Either map it to a shared field (fact) or mark it not a fact (notAFact), not both.", path: ["fact"] })
-  .refine((b) => !b.notAFact || !!b.reason, { message: "Say why it is not a fact.", path: ["reason"] });
+}).refine((b) => [!!b.fact, !!b.notAFact, !!b.answerOnScreen].filter(Boolean).length === 1, { message: "Map it to a shared field (fact), mark it not a fact (notAFact), or mark it answered on screen (answerOnScreen): one of the three.", path: ["fact"] })
+  .refine((b) => !(b.notAFact || b.answerOnScreen) || !!b.reason, { message: "Say why.", path: ["reason"] });
 export const NewAlias = z.object({ alias: z.string().trim().min(2).max(200) });
 export const NewAnswerList = z.object({
   key: z.string().trim().regex(/^[a-z][a-z0-9_]{1,60}$/, "A list key in lower case, for example sex or marital_status."),

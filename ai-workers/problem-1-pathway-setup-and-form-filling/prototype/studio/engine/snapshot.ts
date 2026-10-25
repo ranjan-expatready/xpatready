@@ -111,7 +111,7 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   // New keys appear only when set, so a configuration without channels keeps its fingerprint.
   const fieldMaps = [...forms].sort((a, b) => a.lineageKey.localeCompare(b.lineageKey)).flatMap((f) => [
     ...(f.form.editions as FormEdition[]).filter((e) => e.channel !== "ONLINE").sort(compareEditions),
-    ...(f.form.editions as FormEdition[]).filter((e) => e.channel === "ONLINE" && f.channel === "ONLINE" && e.portalKey === comp.portalKey).sort((a, b) => (a.capturedOn?.toISOString() ?? "").localeCompare(b.capturedOn?.toISOString() ?? "")),
+    ...(f.form.editions as FormEdition[]).filter((e) => e.channel === "ONLINE" && f.channel === "ONLINE" && e.portalKey === comp.portalKey).sort((a, b) => (a.capturedOn?.toISOString() ?? "").localeCompare(b.capturedOn?.toISOString() ?? "") || a.editionLabel.localeCompare(b.editionLabel, "en", { numeric: true })),
   ].map((e) => {
     const entries = shared.entriesOf(e.id);
     const online = e.channel === "ONLINE" ? { channel: "ONLINE", portal: e.portalKey, captured_on: e.capturedOn?.toISOString().slice(0, 10) ?? null, recheck_by: e.recheckBy?.toISOString().slice(0, 10) ?? null, content_sha256: e.contentSha256 } : {};

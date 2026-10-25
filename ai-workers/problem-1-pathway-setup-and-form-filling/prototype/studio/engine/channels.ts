@@ -63,7 +63,8 @@ export function channelProblems(s: Snapshot, today = new Date()): Problem[] {
     if (!online.length) { out.push({ level: "error", where: "Forms", item: f.form_number, message: f.online_versions ? `${f.form_number} is filed Online and has an approved online version from the ${portalLabel(portal)}, but no screen map yet: draft and accept it (no AI).` : `${f.form_number} is filed Online, but the library has no approved online version captured from the ${portalLabel(portal)}: capture its screens, or file it as a PDF upload.` }); continue; }
     const v = online[online.length - 1];
     if (v.recheck_by && v.recheck_by < day(today)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `The online version ${v.form_edition} passed its re-check date (${v.recheck_by}): capture the screens again, or confirm they are unchanged.` });
-    const open = v.entries.filter((e) => !["mapped", "not_a_fact", "never_filled"].includes(e.outcome));
+    // F2c (Q3): "person_answers_on_screen" is decided too: the representative answers it on the portal.
+    const open = v.entries.filter((e) => !["mapped", "not_a_fact", "never_filled", "person_answers_on_screen"].includes(e.outcome));
     if (open.length) out.push({ level: "error", where: `Field map ${v.form_edition}`, item: f.form_number, message: `${open.length} online input${open.length > 1 ? "s are" : " is"} neither mapped to a shared field nor marked "not a fact" (for example ${open[0].caption ?? open[0].data_path}).` });
     const loose = v.entries.filter((e) => e.outcome === "mapped" && e.fact && /^code_list:portal_choices$/.test(e.transform ?? "")).length;
     if (loose) out.push({ level: "warning", where: `Field map ${v.form_edition}`, item: f.form_number, message: `${loose} choice input${loose > 1 ? "s are" : " is"} not on an answer list yet: filled by matching labels, so a changed label could go unnoticed.` });

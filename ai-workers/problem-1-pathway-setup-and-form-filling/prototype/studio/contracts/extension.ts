@@ -35,3 +35,7 @@ export const NewSession = z.object({
 export const NewExtensionCapture = z.object({
   portal: z.string(), form: z.string(), title: z.string(), applicationType: z.string().optional(), combinationId: z.string().optional(),
 }).strict();
+
+// ─── F2c: fill one screen (plan §7 BR-6…BR-13; challenge M2, M3, M5, M7)
+/** The screen open now, read by the extension (structure only; its live labels are never stored). */
+export const FillPlanRequest = z.object({ screen: ExtensionScreen }).strict();

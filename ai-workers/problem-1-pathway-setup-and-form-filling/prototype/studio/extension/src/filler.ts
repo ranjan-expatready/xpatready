@@ -4,10 +4,15 @@
 // input is empty and whether the screen kept what was written; it never sends them anywhere. It never logs in, never
 // touches a password or hidden input, never clicks Next, Save or Submit, and never submits the form: values are set
 // through each input's own setter, followed by the input and change events a person's typing would fire.
+import RULES from "../../contracts/portal-reader-rules.json";
+
 export type PlanInput = { id: string; type: string; label: string; value: string | null; status: string; source?: string };
 export type Outcome = { id: string; label: string; outcome: "filled" | "not_accepted" | "left_alone" | "not_filled"; reason?: string };
 
 const NEVER = new Set(["password", "hidden", "submit", "button", "reset", "image", "file"]);
+const PLACEHOLDER = new RegExp(RULES.placeholder.pattern, "i");
+/** The readers' placeholder rule: a first option with no label, or "Please select…", "-- Choose --", whatever its value. */
+const isPlaceholder = (o: HTMLOptionElement | undefined) => !!o && (!o.text.replace(/^[ -]+|[ -]+$/g, "") || PLACEHOLDER.test(o.text));
 const setter = (el: Element, prop: "value" | "checked") => Object.getOwnPropertyDescriptor(Object.getPrototypeOf(el), prop)?.set;
 
 /** The input the plan names by the page's own element id or name (a radio group by its name). */
@@ -21,7 +26,7 @@ function find(doc: Document, id: string, type: string): HTMLElement[] {
  *  nothing ticked; an unticked checkbox counts as empty. */
 function isEmpty(els: HTMLElement[]): boolean {
   const el = els[0];
-  if (el instanceof HTMLSelectElement) return el.selectedIndex < 0 || el.value === "" || (el.selectedIndex === 0 && !el.options[0]?.value);
+  if (el instanceof HTMLSelectElement) return el.selectedIndex < 0 || el.value === "" || (el.selectedIndex === 0 && isPlaceholder(el.options[0]));
   if (el instanceof HTMLInputElement && el.type === "radio") return !(els as HTMLInputElement[]).some((r) => r.checked);
   if (el instanceof HTMLInputElement && el.type === "checkbox") return !el.checked;
   return (el as HTMLInputElement | HTMLTextAreaElement).value === "";

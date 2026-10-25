@@ -23,6 +23,7 @@ import { Prisma, type FormEdition, type PortalCapture } from "@prisma/client";
 import type { Response } from "express";
 import { AddExtensionScreen } from "../../contracts/extension.ts";
 import { mergeCapture, screenFingerprint, screenProblems } from "../../engine/extension/screens.ts";
+import { ANSWER_ON_SCREEN } from "../../engine/extension/fill.ts";
 import { AbandonCapture, AcceptAiProposals, AcceptScreenMap, CAPTURE_LIMITS, CAPTURE_STATUS_WORDS, CHANNEL_WORDS, DRAFT_FROM_WORDS, DraftLeftovers, SetDraftFrom, UseDefaults, type Channel, type DraftFrom, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS,DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
 import { buildRecord, contractProblems, difference, fingerprint, noAnswers, reviewHtml, type CaptureInput, type CaptureRecord } from "../../engine/capture.ts";
 import { channelProblems, channelsView } from "../../engine/channels.ts";
@@ -234,7 +235,7 @@ export class Forms {
     const prior = previous?.inventoryFile ? this.twinOf(previous.inventoryFile) : null;
     const seenNow = new Set(screens.map((s) => screenIdentity(s.title)));
     const last_seen = Object.fromEntries(record.screens.map((s) => { const k = screenIdentity(s.title); return [k, seenNow.has(k) ? day(c.capturedOn) : prior?.last_seen?.[k] ?? (previous?.capturedOn ? day(previous.capturedOn) : day(c.capturedOn))]; }));
-    writeFileSync(twinPath, JSON.stringify({ contract: "portal-twin/v1", fingerprint: fp, capture_id: c.id, record, last_seen }, null, 1));
+    writeFileSync(twinPath, JSON.stringify({ contract: "portal-twin/v1", fingerprint: fp, capture_id: c.id, record, last_seen, seen: [...seenNow] }, null, 1));
     const status = "HELD";
     // Every prototype capture comes from the Sample fixtures until a real blank screen exists (challenge point 5).
     const html = reviewHtml({ id: c.id, status, capturedBy: nameOf(c.capturedBy), capturedOn: day(c.capturedOn), fingerprint: fp, record, difference: diff, changes: previous?.editionLabel ?? null, sample: true });
@@ -264,6 +265,10 @@ export class Forms {
         const e = await tx.formEdition.create({ data: { workspaceId: c.workspaceId, govFormDefId: def.id, editionLabel: label, channel: "ONLINE", portalKey: c.portalKey, capturedOn: c.capturedOn, recheckBy: recheck, contentSha256: c.contentSha256, inventoryFile: c.twinFile, dataBoundBoxes: inputs } });
         const claimed = await tx.portalCapture.updateMany({ where: { id, status: "HELD", revision: c.revision }, data: { status: "APPROVED", approvedBy: actor.id, approvedAt: new Date(), formEditionId: e.id, revision: { increment: 1 }, statusDetail: `Approved by ${actor.name}: online version ${label}, re-check by ${day(recheck)}. Next: ${NEXT.APPROVED}` } });
         if (!claimed.count) await changed(tx);
+        // F2c (XT-6): the screens this capture saw close their "Re-capture needed" tasks on any earlier version of the
+        // form on this portal; a screen it did not see keeps its task open.
+        const seen = c.twinFile ? ((JSON.parse(readFileSync(join(SOLUTION, c.twinFile), "utf8")) as { seen?: string[] }).seen ?? record.screens.map((x) => screenIdentity(x.title))) : record.screens.map((x) => screenIdentity(x.title));
+        await tx.recaptureTask.updateMany({ where: { workspaceId: c.workspaceId, status: "OPEN", screenPage: { in: seen }, edition: { govFormDefId: def.id, portalKey: c.portalKey } }, data: { status: "DONE", closedBy: c.id, closedAt: new Date() } });
         return e;
       });
       await this.audit.log(c.workspaceId, actor.id, "approved", "portal capture", c.formKey, `${actor.name} approved the ${c.formKey} capture by ${nameOf(c.capturedBy)}: online version ${ed.editionLabel} (${inputs} questions), re-check by ${day(recheck)}`);
@@ -475,6 +480,12 @@ export class Forms {
       const om = list && input?.options?.length ? draftOptionMap(list.values.map((v) => ({ key: v.valueKey, label: v.label })), input.options) : null;
       changes = { outcome: "mapped", canonicalFieldKey: key, person: b.person ?? "form_subject", transform: transformFor(input?.type ?? "text", input?.part ?? null, { answerListKey: field!.answerListKey }), confidence: "high", evidenceQuote: `Chosen by ${actor.name}${key !== b.fact ? ` (${b.fact} was merged into ${key})` : ""}`, reason: null, origin: "HUMAN", optionMap: om ? json(om.optionMap) : Prisma.DbNull };
       said = `${key}${b.person && b.person !== "form_subject" ? ` (${b.person})` : ""}`;
+    } else if (b.answerOnScreen) {
+      // Q3: only the immigration expert role marks what the representative answers on screen (a second person approves
+      // the map at release, as every map change).
+      need(actor, "sme");
+      changes = { outcome: ANSWER_ON_SCREEN, canonicalFieldKey: null, person: null, transform: null, confidence: null, evidenceQuote: null, reason: `${b.reason} (${actor.name})`, origin: "HUMAN", optionMap: Prisma.DbNull, listPurpose: Prisma.DbNull };
+      said = `you answer this on screen: ${b.reason}`;
     } else {
       changes = { outcome: "not_a_fact", canonicalFieldKey: null, person: null, transform: null, confidence: null, evidenceQuote: null, reason: `${b.reason} (${actor.name})`, origin: "HUMAN", optionMap: Prisma.DbNull, listPurpose: Prisma.DbNull };
       said = `not a fact: ${b.reason}`;

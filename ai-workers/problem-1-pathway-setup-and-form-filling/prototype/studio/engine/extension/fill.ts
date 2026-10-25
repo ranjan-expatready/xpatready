@@ -52,6 +52,11 @@ export function portalValue(value: unknown, transform: string | null | undefined
   return s;
 }
 
+/** The online version a release files the form with: the newest one it holds (as the release validator reads it). */
+export function onlineMapOf<T extends { form_number: string; channel?: string }>(s: Snapshot, form: string): (T & OnlineMap) | undefined {
+  return (s.field_maps as (T & OnlineMap)[]).filter((m) => m.form_number === form && m.channel === "ONLINE").at(-1);
+}
+
 export function fillPlan(s: Snapshot, twin: CaptureRecord, form: string, subjectId: string, people: Participant[], answers: Answer[], rows: Row[], live: { title: string; inputs: CaptureInput[] }, today = new Date()): FillPlan {
   const page = screenIdentity(live.title);
   const screen = twin.screens.find((x) => screenIdentity(x.title) === page);
@@ -62,7 +67,7 @@ export function fillPlan(s: Snapshot, twin: CaptureRecord, form: string, subject
     return { match: false, reason: "changed", screen: screen.title, screen_page: page,
       differences: diff.map((d) => ({ input: d.input, change: d.change, approved_label: approved.get(d.input)?.label ?? null, ...(d.change === "options" ? { codes: { removed: (d.was as { removed?: string[] })?.removed ?? [], added: ((d.now as { added?: [string, string][] })?.added ?? []).map(([c]) => c) } } : {}) })) };
   }
-  const map = (s.field_maps as OnlineMap[]).find((m) => m.form_number === form && m.channel === "ONLINE");
+  const map = onlineMapOf(s, form);
   const entries = new Map((map?.entries ?? []).filter((e) => e.screen === screen.key).map((e) => [e.data_path, e]));
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const { known } = knownOf(s, people, answers, rows, today);
