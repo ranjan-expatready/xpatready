@@ -38,3 +38,4 @@
 | QA-36 | Bug · Minor | C6.2 | 12e7207 | 8aef175, 25 Oct | as decided by the Lead (P-47, save and flag): Back with 31 Feb keeps the part, the summary and the typing; status "Saved: 1 answer needs a fix", not "✓ Saved"; stored flagged (`check_qa_r1c_walk.cjs`) |
 | QA-37 | UX · Minor | C3.10 | 12e7207 | 8aef175, 25 Oct | `check_qa16_box_words.ts`: 0 in the web app, 0 in API messages |
 | QA-26 | UX · Minor | C6.2, C6.3, C6.6 | db468e38 | 8aef175, 25 Oct | `check_qa_r1a_probe.ts` 71/71: `applies` as text → "Say whether the person is travelling (true or false)." |
+| QA-19 | UX · Minor | C3.10, C1.4 | e742bc59 (shared demo) | 25 Oct (Mac, after the founder's demo reset; Lead note) | `check_qa19_demo_leftovers.ts` passed on the Mac :4400 after the reset (Lead's check; :4400 is not reachable from the cloud, P-88) |
