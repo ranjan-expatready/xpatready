@@ -1,6 +1,6 @@
 #!/bin/bash
 # Lanes (P-64, product/LANES.md): which lane this copy is, binding it, making it runnable, syncing it, and the status of all.
-#   lane.sh whoami            -> lead | screens | forms | evidence | runtime | qa | scout | unbound
+#   lane.sh whoami            -> lead | screens | forms | evidence | runtime | m3 | qa | scout | unbound
 #   lane.sh bind <lane>       bind this lane copy (git worktree, or a cloud clone: checks out the lane's newest branch) once
 #   lane.sh branch <lane>     the lane's newest branch on origin (<lane>/* or claude/<lane>-*)
 #   lane.sh setup             make this copy runnable: link .tools when present, npm ci when node_modules is missing
@@ -9,7 +9,8 @@
 #   lane.sh table             the lanes table from each lane's newest copy (else main); STATE.md and the Lead's replies use it
 #   lane.sh state             rewrite the generated table in STATE.md (main copy only, on branch main)
 #   lane.sh leads             Lead commits on main in the last 30 minutes and on other claude/* branches not yet in main (one Lead at a time, P-87)
-LANES="screens forms evidence runtime qa scout"
+#   lane.sh inbox             findings dropped for the Lead: files in product/inbox/ on main and unmerged devin/* branches (inbox/README.md)
+LANES="screens forms runtime m3 evidence qa scout"
 P="ai-workers/problem-1-pathway-setup-and-form-filling"
 HERE="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not in the repository"; exit 2; }
 MAIN="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
@@ -45,17 +46,26 @@ table_() {
   echo "| Lane | Item | Stage | Who acts | Next |"; echo "|---|---|---|---|---|"
   for ln in $LANES; do
     m="$MAIN/$P/product/lanes/$ln.md"; [ -f "$m" ] || continue
-    # Read the lane's newest copy (its own state between merges); flag a Lead note it has not synced yet.
-    # main's own copy competes too: a lane branch already merged must not win over a newer Lead note.
-    f="$m"; best=$(git -C "$MAIN" log -1 --format=%ct -- "$P/product/lanes/$ln.md" 2>/dev/null); best=${best:-0}
+    # Stage, owner and next action come from the lane's own newest copy: main's file is newer whenever the Lead edits
+    # its note, but its lane fields are only as fresh as the lane's last merged commit. A candidate (a worktree or a
+    # pushed branch) counts only when its newest lane commit on this file (not "lead:") is in neither this copy nor
+    # origin/main (ancestry), and is not older than the lane's last commit this copy has (an abandoned branch never rolls
+    # the table back); an equal time counts as newer. Among candidates the newest wins, ties by name. The Lead note
+    # itself is compared below.
+    f="$m"; rel="$P/product/lanes/$ln.md"; bestn=""
+    lanec() { git -C "$1" log --no-merges --format='%H %ct %s' "${2:-HEAD}" -- "$rel" 2>/dev/null | grep -v '^[0-9a-f]* [0-9]* lead' | head -1 | cut -d' ' -f1-2; }
+    best=$(lanec "$MAIN" | cut -d' ' -f2); best=${best:-0}
+    known() { git -C "$MAIN" merge-base --is-ancestor "$1" HEAD 2>/dev/null || git -C "$MAIN" merge-base --is-ancestor "$1" origin/main 2>/dev/null; }
+    pick() { set -- $1 "$2" "$3"; [ -n "$1" ] || return 1; known "$1" && return 1
+      { [ "$2" -gt "$best" ] || { [ "$2" -eq "$best" ] && [[ "$3" > "$bestn" ]]; }; } || return 1; best=$2; bestn=$3; }
     for wt in $(git -C "$MAIN" worktree list --porcelain | awk '/^worktree /{print $2}'); do
       [ "$(cat "$wt/.claude/lane" 2>/dev/null)" = "$ln" ] || continue
-      t=$(git -C "$wt" log -1 --format=%ct 2>/dev/null || echo 0); [ "$t" -gt "$best" ] && { best=$t; f="$wt/$P/product/lanes/$ln.md"; }
+      pick "$(lanec "$wt")" "$wt" && f="$wt/$rel"
     done
-    # Cloud lane sessions (P-82) push origin/<lane>/* or origin/claude/<lane>-*: a newer lane file there wins.
+    # Cloud lane sessions (P-82) push origin/<lane>/* or origin/claude/<lane>-*.
     for rb in $(git -C "$MAIN" for-each-ref --format='%(refname:short)' "refs/remotes/origin/$ln/" "refs/remotes/origin/claude/$ln-*"); do
-      t=$(git -C "$MAIN" log -1 --format=%ct "$rb" 2>/dev/null || echo 0); [ "$t" -gt "$best" ] || continue
-      tmpf=$(mktemp); tmps="$tmps $tmpf"; git -C "$MAIN" show "$rb:$P/product/lanes/$ln.md" > "$tmpf" 2>/dev/null && { best=$t; f="$tmpf"; }
+      pick "$(lanec "$MAIN" "$rb")" "$rb" || continue
+      tmpf=$(mktemp); tmps="$tmps $tmpf"; git -C "$MAIN" show "$rb:$rel" > "$tmpf" 2>/dev/null && f="$tmpf"
     done
     note() { awk '/^## From the Lead/{on=1; next} /^Command:/{on=0} on' "$1"; }
     pending=""; [ "$f" != "$m" ] && [ "$(note "$m")" != "$(note "$f")" ] && pending="Lead note waiting for sync · "
@@ -127,5 +137,13 @@ case "$1" in
     for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/claude/); do
       [ "$b" = "origin/$me" ] || git -C "$HERE" log "origin/main..$b" --no-merges --format="$b %h %cr %s" | grep -m1 ' lead:'
     done; true ;;
-  *) sed -n 2,11p "$0"; exit 2 ;;
+  inbox)  # findings dropped for the Lead (inbox/README.md): files on main, then unmerged devin/* branches.
+    # Acknowledged = merged: the Lead merges each checker branch into its own PR, so a handled branch drops out here.
+    git -C "$HERE" fetch -q origin || { echo "Cannot refresh the inbox from GitHub: retry before treating it as empty." >&2; exit 3; }
+    git -C "$HERE" ls-tree --name-only origin/main "$P/product/inbox/" | grep -v '/README.md$' | sed 's|^|main |'
+    for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/devin/); do
+      git -C "$HERE" merge-base --is-ancestor "$b" origin/main 2>/dev/null && continue
+      echo "$b $(git -C "$HERE" log -1 --format='%h %cr' "$b") · $(git -C "$HERE" diff --name-only "origin/main...$b" | tr '\n' ' ')"
+    done; true ;;
+  *) sed -n 2,12p "$0"; exit 2 ;;
 esac

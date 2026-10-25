@@ -6,6 +6,10 @@
   "engines": {
     "node": "24.21.0"
   },
+  "scripts": {
+    "extension": "tsx extension/build.ts production",
+    "extension:dev": "tsx extension/build.ts development"
+  },
   "dependencies": {
     "@hookform/resolvers": "5.4.0",
     "@nestjs/common": "11.1.29",
@@ -40,6 +44,7 @@
   "devDependencies": {
     "@axe-core/playwright": "4.4.1",
     "@tailwindcss/vite": "4.3.1",
+    "@types/chrome": "0.3.5",
     "@types/express": "5.0.6",
     "@types/node": "24.19.1",
     "@types/pg": "8.20.0",

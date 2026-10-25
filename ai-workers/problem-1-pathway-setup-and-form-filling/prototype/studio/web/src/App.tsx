@@ -1,6 +1,6 @@
 import * as React from "react";
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate } from "react-router-dom";
-import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Database, FileStack, FileText, Inbox, Layers, Moon, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
+import { Activity, BookOpen, Boxes, CheckSquare, ChevronDown, Database, FileStack, FileText, Inbox, Layers, Moon, PlugZap, RotateCcw, Sparkles, Sun, Upload, X } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { api, ApiError, getActor, setActor, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Table } from "@/components/ui/controls";
@@ -17,6 +17,7 @@ import { ActivityPage, ReleasesPage } from "@/pages/history";
 import { AiBatchPage, AiWorkPage } from "@/pages/ai";
 import { ToReviewPage } from "@/pages/to-review";
 import { CaptureReviewPage, EditionImpactPage, HeldFilePage, LibraryChangePage, MergeReviewPage, ScreenMapPage, FormFieldsPage } from "@/pages/review-items";
+import { ExtensionPage } from "@/pages/extension";
 import { RuntimeApp } from "@/runtime/cases";
 
 export default function App() {
@@ -42,6 +43,8 @@ function Shell() {
     { to: "/releases", label: "Releases", icon: BookOpen },
     { to: "/activity", label: "Activity", icon: Activity },
   ];
+  // Review m4: a configuration tool (capture, connect), so under Configure with Programs, not under History.
+  const tools = [{ to: "/extension", label: "Browser extension", icon: PlugZap }];
   return (
     <div className="flex min-h-full flex-col">
       <header className="sticky top-0 z-30 flex h-14 min-w-0 items-center gap-3 border-b border-border bg-surface-raised px-4">
@@ -64,6 +67,7 @@ function Shell() {
         <nav aria-label="Studio" className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-56 shrink-0 flex-col gap-0.5 border-r border-border bg-surface-raised p-3 md:flex">
           <p className="px-2 pb-1 pt-2 text-xs font-medium text-text-muted">Configure</p>
           {nav.slice(0, 2).map((n) => <NavItem key={n.to} {...n} active={n.match ? n.match(loc.pathname) : undefined} />)}
+          {tools.map((n) => <NavItem key={n.to} {...n} />)}
           <p className="px-2 pb-1 pt-4 text-xs font-medium text-text-muted">Shared library</p>
           {nav.slice(2, 7).map((n) => <NavItem key={n.to} {...n} />)}
           <p className="px-2 pb-1 pt-4 text-xs font-medium text-text-muted">History</p>
@@ -102,6 +106,7 @@ function Shell() {
             <Route path="/ai/:batchId" element={<AiBatchPage />} />
             <Route path="/releases" element={<ReleasesPage />} />
             <Route path="/activity" element={<ActivityPage />} />
+            <Route path="/extension" element={<ExtensionPage />} />
             <Route path="*" element={<Notice title="Page not found"><Link className="text-text-link underline" to="/">Back to programs</Link></Notice>} />
           </Routes>
         </main>

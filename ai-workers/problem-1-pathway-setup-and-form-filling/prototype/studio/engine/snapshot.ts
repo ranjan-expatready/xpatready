@@ -111,13 +111,13 @@ function assemble(comp: any, chain: any[], mode: Mode, rows: { fields: any[]; se
   // New keys appear only when set, so a configuration without channels keeps its fingerprint.
   const fieldMaps = [...forms].sort((a, b) => a.lineageKey.localeCompare(b.lineageKey)).flatMap((f) => [
     ...(f.form.editions as FormEdition[]).filter((e) => e.channel !== "ONLINE").sort(compareEditions),
-    ...(f.form.editions as FormEdition[]).filter((e) => e.channel === "ONLINE" && f.channel === "ONLINE" && e.portalKey === comp.portalKey).sort((a, b) => (a.capturedOn?.toISOString() ?? "").localeCompare(b.capturedOn?.toISOString() ?? "")),
+    ...(f.form.editions as FormEdition[]).filter((e) => e.channel === "ONLINE" && f.channel === "ONLINE" && e.portalKey === comp.portalKey).sort((a, b) => (a.capturedOn?.toISOString() ?? "").localeCompare(b.capturedOn?.toISOString() ?? "") || a.editionLabel.localeCompare(b.editionLabel, "en", { numeric: true })),
   ].map((e) => {
     const entries = shared.entriesOf(e.id);
     const online = e.channel === "ONLINE" ? { channel: "ONLINE", portal: e.portalKey, captured_on: e.capturedOn?.toISOString().slice(0, 10) ?? null, recheck_by: e.recheckBy?.toISOString().slice(0, 10) ?? null, content_sha256: e.contentSha256 } : {};
     return { form_number: f.form.formKey, form_edition: e.editionLabel, official_file: e.officialFile, form_sha256: e.sha256, inventory_file: e.inventoryFile, ...online,
       entries: entries.map((m) => ({ data_path: m.dataPath, caption: m.caption, heading: m.heading, outcome: m.outcome, person: m.person, row: m.row, fact: m.canonicalFieldKey, transform: m.transform, condition: m.condition, confidence: m.confidence, evidence_quote: m.evidenceQuote, unresolved_reason: m.reason, item_version: m.version, status: m.status, origin: m.origin,
-        ...(m.screenKey ? { screen: m.screenKey, screen_order: m.screenOrder, input_order: m.inputOrder } : {}), ...(m.optionMap ? { option_map: m.optionMap } : {}) })) };
+        ...(m.screenKey ? { screen: m.screenKey, screen_order: m.screenOrder, input_order: m.inputOrder } : {}), ...(m.optionMap ? { option_map: m.optionMap } : {}), ...(m.listPurpose ? { list_purpose: m.listPurpose } : {}) })) };
   })).filter((m) => m.entries.length);
 
   // The library is shared; a combination's snapshot carries the fields, sections and placements its forms and

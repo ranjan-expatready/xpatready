@@ -9,7 +9,7 @@ import type { Snapshot } from "./snapshot.ts";
 
 type Line = { form_number: string; channel?: Channel; status?: string; condition_plain?: string | null; who?: string; title?: string; online_versions?: number; online_only?: boolean };
 /** The parts of the snapshot (engine/snapshot.ts) these rules read. */
-type MapEntry = { data_path: string; caption?: string | null; outcome: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null };
+type MapEntry = { data_path: string; caption?: string | null; outcome: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null; row?: number | null; list_purpose?: { kind: string; overflow: string } | null };
 type FieldMap = { form_number: string; form_edition: string; channel?: string; recheck_by?: string | null; entries: MapEntry[] };
 type FieldDef = { id: string; answer_list?: { key: string; values: { key: string; label: string }[] } };
 const mapsOf = (s: Snapshot) => s.field_maps as FieldMap[];
@@ -63,7 +63,8 @@ export function channelProblems(s: Snapshot, today = new Date()): Problem[] {
     if (!online.length) { out.push({ level: "error", where: "Forms", item: f.form_number, message: f.online_versions ? `${f.form_number} is filed Online and has an approved online version from the ${portalLabel(portal)}, but no screen map yet: draft and accept it (no AI).` : `${f.form_number} is filed Online, but the library has no approved online version captured from the ${portalLabel(portal)}: capture its screens, or file it as a PDF upload.` }); continue; }
     const v = online[online.length - 1];
     if (v.recheck_by && v.recheck_by < day(today)) out.push({ level: "error", where: "Forms", item: f.form_number, message: `The online version ${v.form_edition} passed its re-check date (${v.recheck_by}): capture the screens again, or confirm they are unchanged.` });
-    const open = v.entries.filter((e) => !["mapped", "not_a_fact", "never_filled"].includes(e.outcome));
+    // F2c (Q3): "person_answers_on_screen" is decided too: the representative answers it on the portal.
+    const open = v.entries.filter((e) => !["mapped", "not_a_fact", "never_filled", "person_answers_on_screen"].includes(e.outcome));
     if (open.length) out.push({ level: "error", where: `Field map ${v.form_edition}`, item: f.form_number, message: `${open.length} online input${open.length > 1 ? "s are" : " is"} neither mapped to a shared field nor marked "not a fact" (for example ${open[0].caption ?? open[0].data_path}).` });
     const loose = v.entries.filter((e) => e.outcome === "mapped" && e.fact && /^code_list:portal_choices$/.test(e.transform ?? "")).length;
     if (loose) out.push({ level: "warning", where: `Field map ${v.form_edition}`, item: f.form_number, message: `${loose} choice input${loose > 1 ? "s are" : " is"} not on an answer list yet: filled by matching labels, so a changed label could go unnoticed.` });
@@ -73,6 +74,12 @@ export function channelProblems(s: Snapshot, today = new Date()): Problem[] {
     // Only a form field with codes of its own needs an option map; a derived or text field writes the value itself.
     if (!values || (!e.option_map && !hasCodes(e.transform))) continue;
     for (const p of optionMapProblems(values, e.option_map)) out.push({ level: "error", where: `Field map ${m.form_edition}`, item: e.data_path, message: `${e.caption ?? e.data_path} (${e.fact}): ${p}.` });
+  }
+  // F1-P (Screen 02 Q3): a list's rows say what the list holds and where extra rows go; until then it is a warning,
+  // never an error, so configurations released before F1-P stay releasable.
+  for (const m of mapsOf(s)) {
+    const unset = m.entries.filter((e) => e.outcome === "mapped" && e.row != null && !e.list_purpose);
+    if (unset.length) out.push({ level: "warning", where: `Field map ${m.form_edition}`, item: m.form_number, message: `${unset.length} list row${unset.length > 1 ? "s have" : " has"} no purpose yet (for example ${unset[0].caption ?? unset[0].data_path}): choose what the list holds and what happens to rows the form has no room for.` });
   }
   return out;
 }

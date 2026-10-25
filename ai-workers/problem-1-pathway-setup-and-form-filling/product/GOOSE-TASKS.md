@@ -8,10 +8,10 @@ Some work can only run on the founder's Mac (`LANES.md`, "Where work can run"): 
 
 ## Open tasks
 
-### G2 · Scout run `firm-admin-day-one` — ready now
-Easiest (the founder's ritual, `scout/NOW.md`): open Goose in the `xpatready-scout` folder and say *"Scout: run charter firm-admin-day-one"*; say "wrap up" at the end. Or, with no Goose window, one Terminal command in the main copy (about an hour; no paid Anthropic calls):
+### G2 · Scout run `ai-draft-review` — ready now (`firm-admin-day-one` done 25 Oct)
+Easiest (the founder's ritual, `scout/NOW.md`): open Goose in the `xpatready-scout` folder and say *"Scout: run charter ai-draft-review"*; say "wrap up" at the end. Or, with no Goose window, one Terminal command in the main copy (about an hour; no paid Anthropic calls):
 ```
-bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/scout.sh firm-admin-day-one
+bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/scout.sh ai-draft-review
 ```
 Either way it saves and pushes its own branch; paste its "Paste to Lead" block into the Lead chat.
 

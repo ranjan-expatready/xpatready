@@ -22,3 +22,5 @@
 | R-27 | 21 Oct | Align the whole journey with the Lead and builder first; founder takes it to the team and handles retrofit afterwards | P-19 | Handled |
 | R-28 | 21 Oct | Claude Code must not follow the design blindly: challenge it honestly, agree with the Lead before building; every piece of work (Lead's and builder's) checked and attacked, not self-approved | P-20; skills screen-challenge, next, lead, screen-concept; agents screen-breaker, screen-reviewer; WORKFLOW.md | Handled |
 | R-29 | 21 Oct | Builder and checkers must work to industry best practice (stack, system design, scalability, code, screen flow, UX, UI, reusability) consistently, not ad hoc | P-21; STANDARDS.md wired into all skills and agents | Handled |
+| R-30 | 21 Oct | Audit the whole setup end to end; best in class but not over-engineered; foundational rules always enforced; rules files small (under ~100 lines); keep Lead, builder and founder in sync | P-22; audit reply 21 Oct; framework page | Handled |
+| R-31 | 21 Oct | Explain visually how the framework works between founder, Lead and builder, the audit and quality scope, and what could break it | Framework page (artifact) | Handled |
