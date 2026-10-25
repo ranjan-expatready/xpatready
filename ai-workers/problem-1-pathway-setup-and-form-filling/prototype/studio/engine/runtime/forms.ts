@@ -4,7 +4,7 @@
 import { createHash } from "node:crypto";
 import { render, type BoxRow, type Person, type Role } from "../render.ts";
 import type { Snapshot } from "../snapshot.ts";
-import type { QuestionnaireView, Readiness } from "../../contracts/runtime.ts";
+import { groupLabel, type QuestionnaireView, type Readiness } from "../../contracts/runtime.ts";
 import { knownOf, type Answer, type Participant, type Row } from "./case.ts";
 
 /** One confirmed fact a copy reads: which form field, which fact about whom, which row, which value. */
@@ -52,7 +52,8 @@ export function changedFacts(then: FormFact[], now: FormFact[]): string[] {
 /** P-71: a form is blocked from filing only by its own Validate (steps a person does on the PDF: shown, not computed
  *  here) and by missing or conflicting facts it needs: a required question (not hidden) that fills this form for this
  *  person (matched by the person's id) with an answer that is missing, not confirmed, or confirmed with a problem (it
- *  would be written wrong: review and break report M2). Optional facts left empty do not block. */
+ *  would be written wrong: review and break report M2). A required repeating group the form reads with no entries
+ *  blocks too, until "none apply" is answered and confirmed for it (Lead, break M3). Optional facts left empty do not. */
 export function readiness(view: QuestionnaireView, form: string, subjectId: string): Readiness {
   const reads = view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden);
   const reason = (a: { confirmed: boolean; problems: string[] } | null | undefined) => (!a ? "not answered" as const : a.problems.length ? "needs a fix" as const : !a.confirmed ? "not confirmed" as const : null);
@@ -60,6 +61,11 @@ export function readiness(view: QuestionnaireView, form: string, subjectId: stri
     const r = q.group ? q.rows.map((x) => reason(x.answer)).find(Boolean) ?? null : reason(q.answer);
     return r ? [{ fact: q.fact, label: q.label, about: q.about_label, reason: r }] : [];
   });
-  const empty_groups = [...new Set(reads.filter((q) => q.group && q.required && q.rows.length === 0).map((q) => q.section_title))];
-  return { ready: missing.length === 0, missing, empty_groups };
+  const read = new Set(reads.map((q) => `${q.subjectId}|${q.section}`));
+  for (const sec of view.sections) {
+    if (!sec.group?.required || sec.group.rows > 0 || !read.has(`${sec.subjectId}|${sec.section}`)) continue;
+    const na = sec.group.none_apply, r = !na || !na.value ? "not answered" as const : !na.confirmed ? "not confirmed" as const : null;
+    if (r) missing.push({ fact: `group:${sec.section}`, label: groupLabel(sec.title), about: sec.about_label, reason: r });
+  }
+  return { ready: missing.length === 0, missing };
 }

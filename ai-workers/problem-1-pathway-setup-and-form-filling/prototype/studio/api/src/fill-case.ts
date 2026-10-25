@@ -71,8 +71,8 @@ export class CaseForms implements OnModuleInit {
   async list(actor: Actor, caseId: string): Promise<{ forms: CaseForm[] }> {
     const c = await this.officerCase(actor, caseId);
     const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
-    const { answers, rows } = await this.runtime.state(c);
-    const view = caseView(s, people, answers, rows, "agent");
+    const { answers, rows, groups } = await this.runtime.state(c);
+    const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
     const pdf = pdfForms(s);
     const titles = new Map((s.forms as { form_number: string; title?: string }[]).map((f) => [f.form_number, f.title ?? f.form_number]));
     const copies = await this.db.formInstance.findMany({ where: { caseId }, orderBy: { createdAt: "desc" }, include: { snapshot: true } });
@@ -203,12 +203,12 @@ export class CaseForms implements OnModuleInit {
     const b = parse(LockCopy, body);
     if (x.status !== "GENERATED") conflict("Only a generated copy can be locked.");
     if (x.lockedAt) conflict(`This copy is already locked (${LOCK_KINDS[x.lockedKind as keyof typeof LOCK_KINDS]}); a locked copy never changes.`);
-    const { answers, rows } = await this.runtime.state(c);
+    const { answers, rows, groups } = await this.runtime.state(c);
     const cov = formCoverage(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId);
     const changed = changedFacts((x.snapshot.factsJson as Stored).facts, cov?.facts ?? []);
     if (changed.length) conflict(`This copy is out of date (${changed.length} fact${changed.length === 1 ? "" : "s"} changed since it was made); generate a new copy and lock that one.`);
     // P-71 (Lead, R1d early look): a copy is filed or uploaded back only when its form is ready to file.
-    const ready = readiness(caseView(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, "agent"), x.formNumber, x.subjectId);
+    const ready = readiness(caseView(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, "agent", new Date(), groups), x.formNumber, x.subjectId);
     if (!ready.ready) conflict(notReady(ready.missing.length));
     if (!trialPassed(x.formNumber)) conflict(`${x.formNumber}'s fill trial has not passed yet: this is a checked copy, not for filing (P-65).`);
     // Only the file that was made is ever locked: it must still be there with the bytes recorded (PR #12 review 2), since

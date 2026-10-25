@@ -25,7 +25,7 @@ const bytes = (path: string, actor: string) => new Promise<{ status: number; bod
 });
 type Copy = { id: string; status: string; locked: { kind: string } | null; out_of_date: boolean; stale: boolean; changed: string[]; counts: { written: number; not_written: number } | null; intact: boolean | null; file_ok: boolean };
 type Q = { subjectId: string; fact: string; value_type: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; required: boolean; hidden: boolean; group: string | null; fills: { form: string; person: string }[]; answer: { confirmed: boolean } | null };
-type Form = { form: string; subject_id: string; applies: boolean; person: string; draft: { written_now: number; mapped: number; unconfirmed: number }; readiness: { ready: boolean; missing: { fact: string }[] }; copies: Copy[] };
+type Form = { form: string; subject_id: string; applies: boolean; person: string; draft: { written_now: number; mapped: number; unconfirmed: number }; readiness: { ready: boolean; missing: { fact: string; reason: string }[] }; copies: Copy[] };
 
 async function main() {
   const vv = sql("select id from combination where combination_key='vv.single'");
@@ -33,13 +33,14 @@ async function main() {
   const open = async (ref: string) => (await call("POST", "/runtime/cases", { combinationId: vv, reference: ref, clientActor: CLIENT, principal: { displayName: "Sample Applicant D" } }, OFFICER)).body;
   const c = await open(`R1D-${run}`), caseId: string = c.id;
   const P: string = c.people.find((p: { role: string }) => p.role === "principal").subject_id;
+  const caseSubject: string = c.people.find((p: { role: string }) => p.role === "case").subject_id;
   const spouse = (await call("POST", `/runtime/cases/${caseId}/people`, { role: "spouse_or_partner", displayName: "Sample Spouse D" }, OFFICER)).body.subject_id as string;
   const agent = async () => (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, OFFICER)).body;
   const answer = async (subject: string, fact: string, value: unknown, actor = OFFICER) => {
     const v = await agent(); const q = v.sections.flatMap((s: { questions: { subjectId: string; fact: string; answer: { id: string } | null }[] }) => s.questions).find((x: { subjectId: string; fact: string }) => x.subjectId === subject && x.fact === fact);
     return call("PUT", `/runtime/cases/${caseId}/answers/${subject}/${fact}`, { value, expectedId: q?.answer?.id ?? null }, actor);
   };
-  const confirmAll = async (subject: string) => { const v = await agent(); for (const s of v.sections.filter((x: { subjectId: string }) => x.subjectId === subject)) { const seen = s.questions.flatMap((q: { answer: { id: string } | null; rows: { answer: { id: string } | null }[] }) => [q.answer?.id, ...q.rows.map((r) => r.answer?.id)]).filter(Boolean); if (seen.length) await call("POST", `/runtime/cases/${caseId}/sections/${s.section}/confirm`, { subjectId: subject, seen }, OFFICER); } };
+  const confirmAll = async (subject: string) => { const v = await agent(); for (const s of v.sections.filter((x: { subjectId: string }) => x.subjectId === subject)) { const seen = [...s.questions.flatMap((q: { answer: { id: string } | null; rows: { answer: { id: string } | null }[] }) => [q.answer?.id, ...q.rows.map((r) => r.answer?.id)]), s.group?.none_apply?.id].filter(Boolean); if (seen.length) await call("POST", `/runtime/cases/${caseId}/sections/${s.section}/confirm`, { subjectId: subject, seen }, OFFICER); } };
   for (const [s, f, v] of [[P, "person.family_name", "SAMPLED"], [P, "person.given_names", "APPLICANT"], [P, "person.date_of_birth", "1990-04-13"], [P, "person.passport_number", "SAMPLEP123"], [spouse, "person.family_name", "SAMPLES"], [spouse, "person.date_of_birth", "1991-05-14"]] as const) await answer(s, f, v);
   await confirmAll(P); await confirmAll(spouse);
   await answer(P, "person.other_family_name", "SAMPLE-UNCONFIRMED", CLIENT); // a client field the client answered: counts as confirmed (principal)
@@ -79,6 +80,54 @@ async function main() {
   f = await formOf("IMM 5257", P);
   ok("RT-14 fail: with required facts unconfirmed, IMM 5257 is not ready to file and they are listed", !f.readiness.ready && f.readiness.missing.length > 0, f.readiness.missing.length);
 
+  // ── Lead answer to break M3 (P-71/P-72): a required repeating group with no entries blocks until "none apply" is
+  // answered and confirmed for it; "none apply" is a fact like any other.
+  type G = { subjectId: string; section: string; group: { required: boolean; client: boolean; rows: number; none_apply: { id: string; value: boolean; confirmed: boolean; status: string } | null } | null };
+  const blockedGroups = (x: Form) => x.readiness.missing.filter((m) => m.fact.startsWith("group:")).map((m) => m.fact.slice(6));
+  const groupsP = blockedGroups(f);
+  ok("M3 fail: IMM 5257 for the principal is blocked by its required groups with no entries, each named and \"not answered\"", groupsP.length >= 2 && f.readiness.missing.filter((m) => m.fact.startsWith("group:")).every((m) => m.reason === "not answered"), groupsP);
+  const sqrGroups = async (actor = CLIENT): Promise<G[]> => ((await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=sqr`, undefined, actor)).body.sections as G[]).filter((x) => x.subjectId === P && x.group);
+  const gc = (await sqrGroups()).find((x) => groupsP.includes(x.section) && x.group!.client)!.section;
+  const put = (g: string, noneApply: boolean, expectedId: string | null, actor = CLIENT, subject = P) => call("PUT", `/runtime/cases/${caseId}/groups/${subject}/${g}/none-apply`, { noneApply, expectedId }, actor);
+  r = await put(gc, true, null);
+  ok("M3 pass (P-72): the principal says none apply on their own questionnaire; it counts as confirmed", r.status === 200 && r.body.saved === true && r.body.group?.none_apply?.value === true && r.body.group.none_apply.confirmed === true, r.body);
+  const naId: string = r.body.group?.none_apply?.id;
+  r = await put(gc, true, naId);
+  ok("M3 pass: the same answer again saves nothing new", r.status === 200 && r.body.saved === false && sql(`select count(*) from client_group_answer where subject_id='${P}' and group_key='${gc}'`) === "1", r.body);
+  r = await put(gc, false, null);
+  ok("M3 fail: an answer based on an older view (expectedId) is refused (409), nothing saved", r.status === 409 && /same moment/.test(r.body?.detail ?? ""), r.body?.detail);
+  r = await call("POST", `/runtime/cases/${caseId}/groups/${P}/rows`, { group: gc }, CLIENT);
+  ok("M3 fail: an entry is not added beside \"none apply\" (409, change it first)", r.status === 409 && /change it to "entries apply" first/.test(r.body?.detail ?? ""), r.body?.detail);
+  f = await formOf("IMM 5257", P);
+  ok("M3 pass: with none apply confirmed, that group no longer blocks IMM 5257; the others still do", !blockedGroups(f).includes(gc) && blockedGroups(f).length === groupsP.length - 1, blockedGroups(f));
+  // Entries apply after all: the change back is a new version; entries may be added; none apply is refused beside them.
+  r = await put(gc, false, naId);
+  const back: string = r.body.group?.none_apply?.id;
+  const entry = await call("POST", `/runtime/cases/${caseId}/groups/${P}/rows`, { group: gc }, CLIENT);
+  r = await put(gc, true, back);
+  ok("M3 pass/fail: \"entries apply\" is saved as a new version; an entry can then be added, and none apply is refused while it exists (409)", !!back && back !== naId && entry.status === 201 && r.status === 409 && /has 1 entry; remove it first/.test(r.body?.detail ?? ""), { back: !!back, row: entry.status, again: r.body?.detail });
+  await call("DELETE", `/runtime/cases/${caseId}/groups/${P}/rows/${entry.body.row}`, undefined, CLIENT);
+  r = await put(gc, true, back);
+  ok("M3 pass: with the entry removed, none apply is said again (history kept: three versions)", r.status === 200 && r.body.group?.none_apply?.value === true && sql(`select count(*) from client_group_answer where subject_id='${P}' and group_key='${gc}'`) === "3", r.body?.detail ?? r.status);
+  // The officer's "none apply" waits for Confirm section, and is confirmed only when seen (never unseen).
+  const go = groupsP.find((x) => x !== gc)!;
+  r = await put(go, true, null, OFFICER);
+  const goId: string = r.body.group?.none_apply?.id;
+  f = await formOf("IMM 5257", P);
+  ok("M3 fail (P-72): none apply entered by the officer is \"not confirmed\" until Confirm section", r.body.group?.none_apply?.confirmed === false && f.readiness.missing.some((m) => m.fact === `group:${go}` && m.reason === "not confirmed"), f.readiness.missing.filter((m) => m.fact.startsWith("group:")));
+  r = await call("POST", `/runtime/cases/${caseId}/sections/${go}/confirm`, { subjectId: P, seen: [] }, OFFICER);
+  ok("M3 fail: Confirm section without having seen the group's answer is refused (409) and names it", r.status === 409 && (r.body?.changed ?? []).includes(`group:${go}`), r.body);
+  r = await call("POST", `/runtime/cases/${caseId}/sections/${go}/confirm`, { subjectId: P, seen: [goId] }, OFFICER);
+  f = await formOf("IMM 5257", P);
+  ok("M3 pass: with it seen, Confirm section confirms it (VERIFIED, a new version) and the group no longer blocks", r.status === 201 && r.body.confirmed >= 1 && !blockedGroups(f).includes(go) && sql(`select status from client_group_answer where subject_id='${P}' and group_key='${go}' and superseded_by_id is null`) === "VERIFIED", r.body);
+  // Refusals in plain words, and the database rule.
+  const bad = await put(gc, "yes" as unknown as boolean, null);
+  const otherClient = await put(gc, true, null, CLIENT_B), noGroup = await put("no_such_group", true, null), caseGroup = await put(groupsP.find((g) => g === "your_visit") ?? gc, true, null, OFFICER);
+  ok("M3 fail: a body that is not true or false is a 400 in plain words; another client cannot reach the case (404, as every case route); no such group 404; a group of the application asked for a person 422",
+    bad.status === 400 && /none apply \(true\) or entries apply \(false\)/.test(JSON.stringify(bad.body)) && otherClient.status === 404 && noGroup.status === 404 && /no repeating group/.test(noGroup.body?.detail ?? "") && (!groupsP.includes("your_visit") || caseGroup.status === 422), { bad: bad.status, otherClient: otherClient.status, noGroup: noGroup.body?.detail, caseGroup: caseGroup.status });
+  ok("M3 fail (database): a group answer is never changed in place", (() => { try { sql(`update client_group_answer set none_apply = false where subject_id='${P}' and group_key='${go}'`); return false; } catch (e) { return /append_only/.test((e as Error).message); } })());
+  ok("M3 pass: the audit records none apply without names or values", /recorded that no entries apply in /.test(sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity = 'group'`)));
+
   // ── P-71 (Lead, R1d early look): a copy is locked only when its form is ready to file
   r = await call("POST", `/runtime/form-copies/${first}/lock`, { kind: "filed" }, OFFICER);
   ok("P-71 fail: a copy of a form not ready to file cannot be filed or locked (409), with the reason", r.status === 409 && /facts? to answer or confirm before filing: do that, then generate a new copy/.test(r.body?.detail ?? ""), r.body?.detail);
@@ -92,7 +141,12 @@ async function main() {
       const v = await agent();
       const todo = v.sections.flatMap((x: { questions: Q[] }) => x.questions).filter((q: Q) => q.required && !q.hidden && !q.group && q.fills.some((x) => x.form === form && x.person === f0.person) && !q.answer?.confirmed);
       for (const q of todo) await answer(q.subjectId, q.fact, sample(q));
-      for (const subj of [...new Set(todo.map((q: Q) => q.subjectId))] as string[]) await confirmAll(subj);
+      // A required group with no entries (Lead, break M3): "none apply", then Confirm section.
+      const groups = f0.readiness.missing.filter((m) => m.fact.startsWith("group:")).map((m) => m.fact.slice(6));
+      // A group asked once for the application (the visit) is answered for the case, not the person.
+      const secs = groups.map((g) => v.sections.find((x: { subjectId: string; section: string; group: unknown }) => x.section === g && x.group && (x.subjectId === subject || x.subjectId === caseSubject)));
+      for (const sec of secs) if (sec) await call("PUT", `/runtime/cases/${caseId}/groups/${sec.subjectId}/${sec.section}/none-apply`, { noneApply: true, expectedId: sec.group?.none_apply?.id ?? null }, OFFICER);
+      for (const subj of [...new Set([...todo.map((q: Q) => q.subjectId), ...secs.filter(Boolean).map((x: { subjectId: string }) => x.subjectId)])] as string[]) await confirmAll(subj);
     }
     return (await formOf(form, subject)).readiness.ready;
   };

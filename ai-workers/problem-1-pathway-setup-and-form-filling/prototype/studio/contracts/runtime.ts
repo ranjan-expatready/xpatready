@@ -65,6 +65,12 @@ export const PutAnswer = z.object({
   row: z.string().uuid("Name the row by its id.").optional(),
 });
 
+/** "None apply" for a repeating group (Lead, break M3, P-71/P-72): true when no entry applies to the person, false to
+ *  say entries apply after all. expectedId: the group answer the person saw (null when none), as for an answer. */
+export const NoneApply = z.object({
+  noneApply: z.boolean({ message: "Say whether none apply (true) or entries apply (false)." }),
+  expectedId: z.string({ message: "Send the id of the answer you saw, or null when there was none." }).uuid("Send the id of the answer you saw, or null when there was none.").nullable(),
+});
 export const NewRow = z.object({ group: z.string({ message: "Name the repeating group (its section)." }).trim().min(1, "Name the repeating group (its section).").max(80) });
 /** "Confirm section" vouches for what the officer saw: the ids of the answers shown. Any answer that changed or arrived
  *  since is refused with 409 and listed, never confirmed unseen (STANDARDS §4). */
@@ -102,7 +108,11 @@ export type ViewQuestion = {
   /** Each form this fact fills, for whom (subject: the person's id, so two people with one name never mix) and how many form fields. */
   fills: { form: string; person: string; subject: string; boxes: number }[];
 };
-export type ViewSection = { subjectId: string; about_label: string; section: string; title: string; questions: ViewQuestion[]; answered: number; confirmed: number; invalid: number; missing: string[] };
+/** A repeating group's own answer: "none apply" (value true) or "entries apply" (false), confirmed like an answer. */
+export type ViewGroup = { required: boolean; client: boolean; rows: number; none_apply: (ViewAnswer & { value: boolean }) | null };
+export type ViewSection = { subjectId: string; about_label: string; section: string; title: string; questions: ViewQuestion[]; answered: number; confirmed: number; invalid: number; missing: string[];
+  /** When the section is a repeating group: its rows and its "none apply" answer (null otherwise). */
+  group: ViewGroup | null };
 /** A section check the case's answers trigger (RT-7, release data): a warning on the person's answers, never a block
  *  (P-71). fact and section place it on the question it concerns; null when the check names no one question. */
 export type ViewCheck = { id: string; severity: string; message: string; subjectId: string; about_label: string; fact: string | null; section: string | null; illustrative: boolean };
@@ -140,9 +150,11 @@ export type CaseForm = {
   applies: boolean;
 };
 /** P-71: what blocks filing one form for one person. missing: a required fact not answered, answered but not confirmed,
- *  or confirmed with a problem (it would be written wrong). empty_groups: repeating groups the form reads with no entries
- *  (shown before filing; whether a group needs one entry is configuration, not known yet). */
-export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" }[]; empty_groups: string[] };
+ *  or confirmed with a problem (it would be written wrong); and a required repeating group with no entries unless
+ *  "none apply" is confirmed for it (Lead, break M3), named by its section (fact "group:<section>"). */
+export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" }[] };
+/** How a required repeating group with no entries is named where it blocks filing. */
+export const groupLabel = (title: string) => `${title}: add the entries, or say none apply`;
 
 /** Which forms an answer fills, short enough for a household (Lead, R1d early look): one line per form, the person named
  *  when there is one, else how many people ("IMM 5257 for 6 people"); with counts, the form fields it fills (P-63). */

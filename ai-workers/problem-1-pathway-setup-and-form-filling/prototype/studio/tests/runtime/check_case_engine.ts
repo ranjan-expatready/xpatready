@@ -3,7 +3,7 @@
 // generated households, answers and values.
 //   tsx studio/tests/runtime/check_case_engine.ts
 import fc from "fast-check";
-import { ageOn, caseView, checkValue, confirmation, optionsOf, knownOf, shapeOf, type Answer, type Participant, type Row } from "../../engine/runtime/case.ts";
+import { ageOn, caseView, checkValue, confirmation, optionsOf, knownOf, shapeOf, type Answer, type GroupAnswer, type Participant, type Row } from "../../engine/runtime/case.ts";
 import type { Snapshot } from "../../engine/snapshot.ts";
 import { changedFacts, factsOf, formCoverage, inputHash, readiness, type FormFact } from "../../engine/runtime/forms.ts";
 import { recorder } from "./api.ts";
@@ -153,8 +153,20 @@ ok("fail: the representative's facts are never the client's own", !confirmation(
   const need = readiness(view, "F 1", "p");
   ok("RT-14 fail: a form with a required fact unconfirmed is not ready to file, and names it (P-71)", !need.ready && need.missing.some((m) => m.fact === "person.family_name"), need.missing.map((m) => m.fact));
   const all = qs(view).filter((q) => q.required && !q.hidden && q.fills.some((f) => f.form === "F 1" && f.subject === "p")).map((q) => ans(q.subjectId, q.fact, q.options?.length ? q.options[0].key : q.value_type === "yes_no" ? false : q.value_type === "date" ? (q.shape.datePrecision === "month" ? "1990-01" : "1990-01-01") : q.value_type === "number" ? "1000" : "X", { status: "VERIFIED", channel: "confirm_section" }));
-  const done = readiness(caseView(S, ppl, all, [], "agent", TODAY), "F 1", "p");
-  ok("RT-14 pass: with every required fact confirmed the form is ready to file; optional facts left empty do not block", done.ready, done.missing);
+  // Lead, break M3: a required repeating group with no entries blocks until "none apply" is answered and confirmed.
+  const none = (over: Partial<GroupAnswer> = {}): GroupAnswer => ({ id: `g${++n}`, subjectId: "p", group: "jobs", noneApply: true, status: "DECLARED", channel: "questionnaire", actor: "user-P", at: TODAY.toISOString(), ...over });
+  const noJobs = readiness(caseView(S, ppl, all, [], "agent", TODAY), "F 1", "p");
+  ok("M3 fail: every other required fact confirmed, but the required group Jobs has no entries and no answer: not ready, named by the group", !noJobs.ready && noJobs.missing.length === 1 && noJobs.missing[0].fact === "group:jobs" && noJobs.missing[0].reason === "not answered" && /Jobs: add the entries, or say none apply/.test(noJobs.missing[0].label), noJobs.missing);
+  const byOfficer = readiness(caseView(S, ppl, all, [], "agent", TODAY, [none({ channel: "agent_view", actor: "user-O" })]), "F 1", "p");
+  ok("M3 fail (P-72): \"none apply\" entered by the officer waits for Confirm section: not confirmed", !byOfficer.ready && byOfficer.missing[0]?.reason === "not confirmed", byOfficer.missing);
+  const entriesApply = readiness(caseView(S, ppl, all, [], "agent", TODAY, [none({ noneApply: false, status: "VERIFIED" })]), "F 1", "p");
+  ok("M3 fail: \"entries apply\" with no entry added still blocks (not answered)", !entriesApply.ready && entriesApply.missing[0]?.reason === "not answered", entriesApply.missing);
+  const doneView = caseView(S, ppl, all, [], "agent", TODAY, [none({ status: "VERIFIED", channel: "confirm_section", actor: "user-O" })]);
+  const done = readiness(doneView, "F 1", "p");
+  ok("RT-14 pass: with every required fact confirmed (and none apply confirmed for Jobs) the form is ready to file; optional facts left empty do not block", done.ready, done.missing);
+  const own = caseView(S, ppl, all, [], "agent", TODAY, [none()]);
+  ok("M3 pass (P-72): the principal's own \"none apply\" on the questionnaire counts as confirmed, so the form is ready", readiness(own, "F 1", "p").ready && own.sections.find((x) => x.section === "jobs")?.group?.none_apply?.confirmed === true, own.sections.find((x) => x.section === "jobs")?.group);
+  ok("M3 pass: the view shows the group with its rows and its answer; a section without a group has none", doneView.sections.find((x) => x.section === "jobs")?.group?.rows === 0 && doneView.sections.find((x) => x.section === "jobs")?.group?.required === true && doneView.sections.find((x) => x.section === "personal")?.group === null);
   const answeredOnly = all.map((a) => ({ ...a, status: "DECLARED" as const, channel: "agent_view" }));
   const unconf = readiness(caseView(S, ppl, answeredOnly, [], "agent", TODAY), "F 1", "p");
   ok("RT-14 fail (review M2): facts answered but not confirmed still block filing, named \"not confirmed\"", !unconf.ready && unconf.missing.some((m) => m.reason === "not confirmed"), unconf.missing.map((m) => m.reason));
@@ -162,7 +174,7 @@ ok("fail: the representative's facts are never the client's own", !confirmation(
   const fix = readiness(caseView(S, ppl, wrong, [], "agent", TODAY), "F 1", "p");
   ok("RT-14 fail (break M2): a confirmed answer that fails its check (1991-02-31) blocks filing as \"needs a fix\"", !fix.ready && fix.missing.some((m) => m.fact === "person.date_of_birth" && m.reason === "needs a fix"), fix.missing);
   const twins = [...ppl, { subjectId: "c0", role: "child" as const, label: "Applicant", applies: true }];
-  const tw = caseView(S, twins, all, [], "agent", TODAY);
+  const tw = caseView(S, twins, all, [], "agent", TODAY, [none({ status: "VERIFIED", channel: "confirm_section", actor: "user-O" })]);
   ok("RT-14 pass (break M6): readiness matches the person by id, so another person with the same name never blocks", readiness(tw, "F 1", "p").ready && !readiness(tw, "F 1", "c0").ready);
 }
 // ── PR 7 review D2: ageOn gives no age for a date that is not real or is in the future
