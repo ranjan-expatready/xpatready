@@ -59,7 +59,26 @@ if [ -z "$PGBIN" ] && command -v apt-get >/dev/null; then
   # Ubuntu's stock repositories carry an older major: the official PGDG repository has 18.
   apt postgresql-common
   [ -x /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh ] && $SUDO /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y >/dev/null
-  apt_ready=""; apt postgresql-18; PGBIN=/usr/lib/postgresql/18/bin
+  apt_ready=""; apt postgresql-18 || true; [ -x "$c/pg_ctl" ] && PGBIN="$c"
+fi
+if [ "$(uname -s)" = Linux ] && [ ! -x "$c/postgres" ] && command -v npm >/dev/null; then
+  # Fallback when the cloud network denies apt.postgresql.org (25 Oct): the same PostgreSQL 18.3 server from the npm
+  # registry (initdb, pg_ctl, postgres; checksum pinned), placed where the line above looks, so later runs find it.
+  # The package has no client tools: the image's own (16) are linked beside it, which psql and createdb accept.
+  # pg_dump 16 refuses an 18 server; no script uses it.
+  EPG=@embedded-postgres/linux-x64@18.3.0-beta.17
+  EPG_SHA='sha512-8orSD6NNopSLtjqir4dWQBrj+g8j1eJjWd9mB60A3xbWMzIBIPQpzT7XzbacW9YFSl/DejOLnRXfff+Wr13Tgw=='
+  t=$(mktemp -d)
+  if (cd "$t" && npm pack -q "$EPG" >/dev/null 2>&1) && [ "sha512-$(openssl dgst -sha512 -binary "$t"/*.tgz | base64 -w0)" = "$EPG_SHA" ]; then
+    tar xzf "$t"/*.tgz -C "$t"; $SUDO mkdir -p "${c%/bin}"; $SUDO cp -R "$t/package/native/." "${c%/bin}/"
+    node -e 'for (const l of require(process.argv[1])) console.log(l.source.replace(/^native\//, ""), l.target.replace(/^native\//, ""))' \
+      "$t/package/native/pg-symlinks.json" | while read -r s d; do $SUDO ln -sf "${c%/bin}/$s" "${c%/bin}/$d"; done
+    [ -x /usr/bin/psql ] || apt postgresql-client
+    cl=$(ls -d /usr/lib/postgresql/*/bin 2>/dev/null | grep -v "^$c\$" | sort -V | tail -1)
+    for x in psql createdb dropdb pg_dump pg_restore; do [ -e "$c/$x" ] || [ ! -x "$cl/$x" ] || $SUDO ln -sf "$cl/$x" "$c/$x"; done
+    PGBIN="$c"; echo "postgresql 18.3 from the npm registry (checksum verified)"
+  else echo "postgresql 18 npm fallback failed (download or checksum)"; fi
+  rm -rf "$t"
 fi
 [ -n "$PGBIN" ] && [ -x "$PGBIN/pg_ctl" ] || { echo "postgresql 18 not found and could not be installed"; exit 1; }
 PGDATA="$ROOT/.tools/solution-1-prototype/pg18-data"
