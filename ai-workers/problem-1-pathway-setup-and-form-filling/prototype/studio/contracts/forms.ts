@@ -41,6 +41,8 @@ export const NewCapture = z.object({
   applicationType: z.string().trim().max(200).optional(),
   /** Screen 01 "Add an online form" (C2.7): the combination it is added from; the online version stays a library one. */
   combinationId: z.string().uuid("Choose an existing combination.").optional(),
+  /** F2: "extension" for a capture made screen by screen in the browser extension (it adds to the current version, Q2). */
+  way: z.enum(["saved_page", "extension"], { error: "A capture is made from saved pages (or the template) or with the browser extension." }).optional(),
 });
 export const ReturnCapture = z.object({ note: z.string().trim().min(5, "Say what is wrong, so the person who captured it can fix it.").max(1000) });
 export const AbandonCapture = z.object({ note: z.string().trim().max(1000).optional() });

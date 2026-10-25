@@ -21,13 +21,15 @@ import { basename, join, relative } from "node:path";
 import { promisify } from "node:util";
 import { Prisma, type FormEdition, type PortalCapture } from "@prisma/client";
 import type { Response } from "express";
+import { AddExtensionScreen } from "../../contracts/extension.ts";
+import { mergeCapture, screenFingerprint, screenProblems } from "../../engine/extension/screens.ts";
 import { AbandonCapture, AcceptAiProposals, AcceptScreenMap, CAPTURE_LIMITS, CAPTURE_STATUS_WORDS, CHANNEL_WORDS, DRAFT_FROM_WORDS, DraftLeftovers, SetDraftFrom, UseDefaults, type Channel, type DraftFrom, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS,DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
 import { buildRecord, contractProblems, difference, fingerprint, noAnswers, reviewHtml, type CaptureInput, type CaptureRecord } from "../../engine/capture.ts";
 import { channelProblems, channelsView } from "../../engine/channels.ts";
 import { newestEdition } from "../../engine/programs.ts";
 import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
-import { compatible, draftScreenMap, normLabel, readScreenRun, transformFor, type AiProposal, type PdfEntry, type Proposal } from "../../engine/twin.ts";
+import { compatible, draftScreenMap, inputKey, normLabel, screenIdentity, readScreenRun, transformFor, type AiProposal, type PdfEntry, type Proposal } from "../../engine/twin.ts";
 import { partOutputTokens } from "../../engine/parts.ts";
 import { factKeyProblem } from "../../../contracts/fact-key.ts";
 import { costUsd } from "../../../p2/ledger.ts";
@@ -106,7 +108,7 @@ export class Forms {
     if (b.combinationId && !combo) fail("That combination does not exist.", HttpStatus.NOT_FOUND);
     const known = (await this.db.govFormDef.findMany({ where: { workspaceId }, select: { formKey: true } })).find((d) => compact(d.formKey) === compact(form));
     if (known) form = known.formKey;
-    const c = await this.db.portalCapture.create({ data: { workspaceId, portalKey: b.portal, formKey: form, title: b.title, applicationType: b.applicationType ?? null, way: "saved_page", status: "OPEN", statusDetail: "Add the blank screens in portal order: saved pages or the template.", record: { screens: [] }, combinationId: combo?.id ?? null, capturedBy: actor.id } });
+    const c = await this.db.portalCapture.create({ data: { workspaceId, portalKey: b.portal, formKey: form, title: b.title, applicationType: b.applicationType ?? null, way: b.way ?? "saved_page", status: "OPEN", statusDetail: b.way === "extension" ? "Capture each screen in the browser extension, in portal order; only the screens seen are compared with the current version." : "Add the blank screens in portal order: saved pages or the template.", record: { screens: [] }, combinationId: combo?.id ?? null, capturedBy: actor.id } });
     await this.audit.log(workspaceId, actor.id, "started", "portal capture", form, `${actor.name} started capturing ${form} from the ${portalLabel(b.portal)}${combo ? ` for "${combo.label}"` : ""}`, undefined, combo?.id);
     return this.view(c);
   }
@@ -118,6 +120,7 @@ export class Forms {
     if (!files?.length) fail("Choose at least one saved screen or template file.");
     const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id } });
     if (!["OPEN", "RETURNED"].includes(c.status)) conflict(`This capture is ${c.status.toLowerCase()}: start a new capture to record the screens again.`);
+    if (c.way === "extension") conflict("This capture is made in the browser extension, screen by screen: add saved pages to a capture of their own.");
     const tmp = join(VAR("demo"), "capture-reading"); mkdirSync(tmp, { recursive: true });
     const screens = screensOf(c.record), kept = [...(c.files as unknown as KeptFile[])], results: AddResult[] = [];
     for (const f of files!) {
@@ -165,6 +168,38 @@ export class Forms {
     return { capture: this.view(u), results };
   }
 
+  /** F2a (BR-1, BR-4): one screen read by the browser extension from the open portal page. It is checked again here with
+   *  the readers' own rules (contract, no answer, client details, a label with text after its colon); any problem
+   *  refuses the whole screen and nothing of it is kept. The same screen (same heading) twice is "already captured". */
+  async addExtensionScreen(actor: Actor, id: string, body: unknown) {
+    need(actor, "author");
+    const answers = noAnswers((body as { screen?: unknown } | null)?.screen ?? {});
+    const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id } });
+    if (answers.length) {
+      await this.audit.log(c.workspaceId, actor.id, "refused", "portal screen", c.formKey, `${actor.name}'s extension screen was refused: it carried an answer field (nothing kept)`);
+      fail(`Refused: the screen carried an answer (${answers.slice(0, 3).join(", ")}). Nothing was kept: the extension sends structure only.`);
+    }
+    const b = parse(AddExtensionScreen, body);
+    if (c.way !== "extension") conflict("This capture is made from saved pages: start a capture with the browser extension to add screens from it.");
+    if (!["OPEN", "RETURNED"].includes(c.status)) conflict(`This capture is ${c.status.toLowerCase()}: start a new capture to record the screens again.`);
+    if (b.revision !== c.revision) conflict("This capture changed since the extension last read it (a screen was added or removed): nothing was added. Look at the capture and send the screen again.");
+    const problems = screenProblems(b.screen as { title: string; inputs: CaptureInput[] });
+    if (problems.length) {
+      await this.audit.log(c.workspaceId, actor.id, "refused", "portal screen", c.formKey, `${actor.name}'s extension screen was refused: ${problems.length} text${problems.length > 1 ? "s" : ""} looked like a client's details (nothing kept)`);
+      fail(`Refused: ${problems.slice(0, 3).join("; ")}. Nothing was sent to the library or kept.`, HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+    const screens = screensOf(c.record);
+    const ident = screenIdentity(b.screen.title);
+    const again = screens.findIndex((x) => screenIdentity(x.title) === ident);
+    if (again >= 0) return { capture: this.view(c), result: { outcome: "duplicate", message: `"${screens[again].title}" is already captured (screen ${again + 1}); nothing added. Go to the next screen in the portal, or remove screen ${again + 1} first.` } };
+    if (screens.length + 1 > CAPTURE_LIMITS.screens) conflict(`Not added: a capture holds at most ${CAPTURE_LIMITS.screens} screens.`);
+    const fp = screenFingerprint(b.screen as { title: string; inputs: CaptureInput[] });
+    screens.push({ title: b.screen.title, inputs: b.screen.inputs as CaptureInput[], file: `extension-${fp.slice(0, 12)}`, sha256: fp, way: "extension" });
+    const u = await this.write(c, ["OPEN", "RETURNED"], { record: json({ screens }), status: "OPEN", statusDetail: `${screens.length} screen${screens.length === 1 ? "" : "s"} so far. ${NEXT.OPEN}` });
+    await this.audit.log(c.workspaceId, actor.id, "captured", "portal screens", c.formKey, `${actor.name} captured "${b.screen.title}" with the browser extension for ${c.formKey} (screen ${screens.length}; ${b.screen.inputs.length} questions, structure only)`);
+    return { capture: this.view(u), result: { outcome: "added", message: `Screen ${screens.length} captured · go to the next screen in the portal.` } };
+  }
+
   /** Builds the record, its fingerprint, the twin and the review document; then holds it for a second person, or says
    *  it is already in the library. */
   async finish(actor: Actor, id: string) {
@@ -173,15 +208,20 @@ export class Forms {
     if (c.status !== "OPEN") conflict(`This capture is ${c.status.toLowerCase()}; only an open capture can be finished.`);
     const screens = screensOf(c.record);
     if (!screens.length) fail("Add at least one screen before finishing the capture.");
-    const record = buildRecord({ portal: c.portalKey, form: c.formKey, title: c.title, applicationType: c.applicationType, way: c.way }, screens);
+    const meta = { portal: c.portalKey, form: c.formKey, title: c.title, applicationType: c.applicationType, way: c.way };
+    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId: c.workspaceId, formKey: c.formKey } } });
+    const versions = def ? await this.db.formEdition.findMany({ where: { govFormDefId: def.id, channel: "ONLINE", portalKey: c.portalKey }, orderBy: { capturedOn: "desc" } }) : [];
+    // Q2: a capture made in the extension during real work adds to the current version: only the screens it saw are
+    // compared; the others stay as approved ("not seen this time"); a new screen is added.
+    const merge = c.way === "extension" ? mergeCapture(versions[0]?.inventoryFile ? this.twinOf(versions[0].inventoryFile).record : null, screens.map((s) => ({ title: s.title, inputs: s.inputs, source: { way: s.way, file: s.file, sha256: s.sha256 } })), meta) : null;
+    const record = merge ? merge.record : buildRecord(meta, screens);
     const problems = [...contractProblems(record), ...noAnswers(record).map((p) => `${p}: a capture holds structure only`)];
     if (problems.length) fail(`The capture does not meet the capture contract: ${problems.join("; ")}.`, HttpStatus.UNPROCESSABLE_ENTITY);
     const fp = fingerprint(record);
-    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId: c.workspaceId, formKey: c.formKey } } });
-    const versions = def ? await this.db.formEdition.findMany({ where: { govFormDefId: def.id, channel: "ONLINE", portalKey: c.portalKey }, orderBy: { capturedOn: "desc" } }) : [];
+    const seen = merge && versions[0] ? ` Compared ${merge.compared.length + merge.unchanged.length} screen${merge.compared.length + merge.unchanged.length === 1 ? "" : "s"} seen (${merge.compared.length} changed); ${merge.not_seen.length} not seen this time; ${merge.added.length} added.` : "";
     const same = versions.find((v) => v.contentSha256 === fp);
     if (same) {
-      const u = await this.write(c, ["OPEN"], { record: json(record), contentSha256: fp, status: "IN_LIBRARY", formEditionId: same.id, statusDetail: `Already in the library: the screens are identical to ${same.editionLabel} (same fingerprint). Nothing new to approve. ${NEXT.IN_LIBRARY}` });
+      const u = await this.write(c, ["OPEN"], { record: json(record), contentSha256: fp, status: "IN_LIBRARY", formEditionId: same.id, statusDetail: `Already in the library: the screens are identical to ${same.editionLabel} (same fingerprint).${seen} Nothing new to approve. ${NEXT.IN_LIBRARY}` });
       await this.audit.log(c.workspaceId, actor.id, "finished", "portal capture", c.formKey, `${actor.name} finished the ${c.formKey} capture: identical to ${same.editionLabel}, nothing new`);
       return this.view(u);
     }
@@ -190,13 +230,17 @@ export class Forms {
     const dir = join(VAR("demo"), "portal-twins"); mkdirSync(dir, { recursive: true });
     // Named by the capture, not the fingerprint: two held captures of the same screens keep their own files (break m6).
     const twinPath = join(dir, `${c.formKey.replace(/\W+/g, "")}-${c.portalKey}-${c.id.slice(0, 8)}-${fp.slice(0, 12)}.twin.json`);
-    writeFileSync(twinPath, JSON.stringify({ contract: "portal-twin/v1", fingerprint: fp, capture_id: c.id, record }, null, 1));
+    // Q2: the day each screen was last seen in a capture (a screen this capture did not see keeps its earlier day).
+    const prior = previous?.inventoryFile ? this.twinOf(previous.inventoryFile) : null;
+    const seenNow = new Set(screens.map((s) => screenIdentity(s.title)));
+    const last_seen = Object.fromEntries(record.screens.map((s) => { const k = screenIdentity(s.title); return [k, seenNow.has(k) ? day(c.capturedOn) : prior?.last_seen?.[k] ?? (previous?.capturedOn ? day(previous.capturedOn) : day(c.capturedOn))]; }));
+    writeFileSync(twinPath, JSON.stringify({ contract: "portal-twin/v1", fingerprint: fp, capture_id: c.id, record, last_seen }, null, 1));
     const status = "HELD";
     // Every prototype capture comes from the Sample fixtures until a real blank screen exists (challenge point 5).
     const html = reviewHtml({ id: c.id, status, capturedBy: nameOf(c.capturedBy), capturedOn: day(c.capturedOn), fingerprint: fp, record, difference: diff, changes: previous?.editionLabel ?? null, sample: true });
     const htmlPath = twinPath.replace(/\.twin\.json$/, ".review.html"); writeFileSync(htmlPath, html);
     const u = await this.write(c, ["OPEN"], { record: json(record), contentSha256: fp, status, twinFile: rel(twinPath), reviewFile: rel(htmlPath), changesEditionId: previous?.id ?? null, difference: diff ? json(diff) : undefined,
-      statusDetail: previous ? `Held for a second person: ${diff!.length} difference${diff!.length === 1 ? "" : "s"} from ${previous.editionLabel} (impact review). Not used until approved.` : "Held for a second person: a new online version. Not used until approved." });
+      statusDetail: previous ? `Held for a second person: ${diff!.length} difference${diff!.length === 1 ? "" : "s"} from ${previous.editionLabel} (impact review).${seen} Not used until approved.` : "Held for a second person: a new online version. Not used until approved." });
     this.printReview(c.id, htmlPath);
     await this.audit.log(c.workspaceId, actor.id, "finished", "portal capture", c.formKey, `${actor.name} finished the ${c.formKey} capture (${record.screens.length} screens): held for a second person${previous ? `, ${diff!.length} differences from ${previous.editionLabel}` : ""}`, { fingerprint: fp });
     return this.view(u);
@@ -303,7 +347,7 @@ export class Forms {
     return { path: join(SOLUTION, c.reviewFile!), name: basename(c.reviewFile!) };
   }
 
-  private twinOf(file: string) { return JSON.parse(readFileSync(join(SOLUTION, file), "utf8")) as { fingerprint: string; record: CaptureRecord }; }
+  private twinOf(file: string) { return JSON.parse(readFileSync(join(SOLUTION, file), "utf8")) as { fingerprint: string; record: CaptureRecord; last_seen?: Record<string, string> }; }
   private view(c: PortalCapture, full = false) {
     const screens = screensOf(c.record);
     return { id: c.id, portal: c.portalKey, portal_label: portalLabel(c.portalKey), form: c.formKey, title: c.title, application_type: c.applicationType, way: c.way, status: c.status, status_detail: c.statusDetail,
@@ -351,7 +395,11 @@ export class Forms {
     // The form's drafting source (C2.10): ONLINE_ONLY drafts from the online screens alone, never the PDF version.
     if (ed.form.draftFrom !== "ONLINE_ONLY") for (const p of pdfs) { const rows = await this.mapRows(p.id); if (rows.length) { pdfEdition = p.editionLabel; pdf = rows.map((m) => ({ data_path: m.dataPath, caption: m.caption, heading: m.heading, fact: m.canonicalFieldKey, transform: m.transform, person: m.person, outcome: m.outcome })); break; } }
     const previous = new Map<string, { fact: string | null; transform: string | null; person: string | null; edition: string }>();
-    for (const o of ed.form.editions.filter((e) => e.channel === "ONLINE" && e.portalKey === ed.portalKey && e.id !== ed.id)) for (const m of await this.mapRows(o.id)) if (m.outcome === "mapped" && !previous.has(m.dataPath)) previous.set(m.dataPath, { fact: m.canonicalFieldKey, transform: m.transform, person: m.person, edition: o.editionLabel });
+    // Keyed by screen and element id (F2a, B1): a map row is reused only for the same input on the same screen.
+    for (const o of ed.form.editions.filter((e) => e.channel === "ONLINE" && e.portalKey === ed.portalKey && e.id !== ed.id && e.inventoryFile)) {
+      const titles = new Map(this.twinOf(o.inventoryFile!).record.screens.map((x) => [x.key, x.title]));
+      for (const m of await this.mapRows(o.id)) { const k = inputKey(titles.get(m.screenKey ?? "") ?? m.heading ?? "", m.dataPath); if (m.outcome === "mapped" && !previous.has(k)) previous.set(k, { fact: m.canonicalFieldKey, transform: m.transform, person: m.person, edition: o.editionLabel }); }
+    }
     const library = (await this.libraryRows(ed.workspaceId)).filter((r) => r.status !== "RETIRED" || r.mergedIntoKey).map((r) => ({ key: r.canonicalFieldKey, valueType: r.valueType, aliases: r.aliases, mergedIntoKey: r.mergedIntoKey, answerListKey: r.answerListKey }));
     const draft = draftScreenMap(twin.record, { pdf, pdfEdition, previous, library });
     const dir = join(VAR("demo"), "screen-maps"); mkdirSync(dir, { recursive: true });
@@ -988,6 +1036,7 @@ export class FormsController {
   @Post("captures/:id/screens") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: CAPTURE_LIMITS.fileMb * 1024 * 1024, files: CAPTURE_LIMITS.files } }))
   screens(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: Upload[]) { return this.f.addScreens(actorOf(a), id, files); }
   @Delete("captures/:id/screens/:order") removeScreen(@Headers("x-actor") a: H, @Param("id") id: string, @Param("order") o: string) { return this.f.removeScreen(actorOf(a), id, Number(o)); }
+  @Post("captures/:id/extension-screens") addExtensionScreen(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.addExtensionScreen(actorOf(a), id, b); }
   @Post("captures/:id/abandon") abandon(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.abandon(actorOf(a), id, b); }
   @Post("captures/:id/confirm") confirm(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.confirmRecheck(actorOf(a), id); }
   @Post("captures/:id/finish") finish(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.finish(actorOf(a), id); }

@@ -19,22 +19,28 @@ import hashlib
 import html
 import io
 import json
+import os
 import re
 import sys
 from html.parser import HTMLParser
 
-SKIP_TYPES = {"hidden", "submit", "button", "reset", "image", "search"}
-PARTS = {"year": "YYYY", "yyyy": "YYYY", "month": "MM", "mm": "MM", "day": "DD", "dd": "DD"}
-TYPES = {"text", "date", "select", "radio", "checkbox", "textarea", "number", "email", "tel", "file"}
+# The rules both readers follow (F2a, BR-2): this reader of saved pages and the browser extension's reader of the live
+# page (extension/src/reader.ts) read the same file, so they cannot drift; tests/check_forms_f2a.ts reads every fixture
+# with both. Patterns use ASCII classes only and compile with re.ASCII, as JavaScript reads them.
+with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "contracts", "portal-reader-rules.json"), encoding="utf-8") as _f:
+    RULES = json.load(_f)
+SKIP_TYPES = set(RULES["skip_types"])
+PARTS = RULES["parts"]
+TYPES = set(RULES["types"])
 # Custom controls the reader does not read: a page using them is not read (its question would go missing silently).
-ARIA_CONTROLS = {"radio", "checkbox", "switch", "textbox", "combobox", "listbox", "spinbutton", "slider", "radiogroup", "menuitemradio", "menuitemcheckbox", "option"}
-MAX_INPUTS = 500  # per screen; a portal screen has tens
+ARIA_CONTROLS = set(RULES["aria_controls"])
+SKIP_CONTAINERS = tuple(RULES["skip_containers"])
+MAX_INPUTS = RULES["max_inputs"]  # per screen; a portal screen has tens
 # Text that looks like a client's details rather than a question (P-66: a capture holds structure only).
-CLIENT_DATA = [
-    (re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+"), "an email address"),
-    (re.compile(r"(?<![\w-])\d(?:[ -]?\d){7,}(?![\w-])"), "a long number (an identifier such as a UCI or an application number)"),
-    (re.compile(r"\b[A-Z]{1,2}\d{6,9}\b"), "a passport-like code"),
-]
+CLIENT_DATA = [(re.compile(c["pattern"], re.ASCII), c["what"]) for c in RULES["client_data"]]
+LABEL_ANSWER = re.compile(RULES["label_answer"]["pattern"])
+PLACEHOLDER = re.compile(RULES["placeholder"]["pattern"], re.I | re.ASCII)
+REQUIRED_MARKS = re.compile(RULES["required_marks"]["prefix"] + "|" + RULES["required_marks"]["suffix"], re.I)
 
 
 def client_data(text):
@@ -61,7 +67,7 @@ def search_form(a):
 
 def placeholder(code, label):
     """"Please select…", "-- Choose --" or an empty first option; a first option with a real label is a choice."""
-    return not (label or "").strip(" -") or bool(re.match(r"^\s*(?:-+\s*)?(?:please\s+)?(?:select|choose)\b", label or "", re.I))
+    return not (label or "").strip(" -") or bool(PLACEHOLDER.match(label or ""))
 
 
 def clean(s):
@@ -106,7 +112,7 @@ class Screen(HTMLParser):
     # -- parser events
     def handle_starttag(self, tag, attrs):
         a = {k: (v if v is not None else "") for k, v in attrs}
-        if tag in ("script", "style", "noscript", "template"):
+        if tag in SKIP_CONTAINERS:
             self.skip += 1; return
         if self.skip:
             return
@@ -181,7 +187,7 @@ class Screen(HTMLParser):
             self.cap = ("option", None); self.buf = []
 
     def handle_endtag(self, tag):
-        if tag in ("script", "style", "noscript", "template"):
+        if tag in SKIP_CONTAINERS:
             self.skip = max(0, self.skip - 1); return
         if self.skip:
             return
@@ -260,7 +266,7 @@ class Screen(HTMLParser):
                 el["label"] = el.get("group") or el["id"]
             if el["label"].startswith("*") or "(required)" in el["label"].lower():
                 el["required"] = True
-            el["label"] = re.sub(r"^\*\s*|\s*\(required\)\s*$", "", el["label"], flags=re.I).strip()
+            el["label"] = REQUIRED_MARKS.sub("", el["label"]).strip()
             part = PARTS.get(el["label"].lower().strip(" :"))
             if part and el.get("group"):
                 el["part"] = part
@@ -278,8 +284,8 @@ class Screen(HTMLParser):
             if what:
                 self._refuse({"id": el["id"] if el else None, "label": el["label"] if el else "screen title"}, f"{where} shows {what}")
         for el in self.inputs:
-            if el["type"] not in ("radio", "checkbox", "select") and re.search(r":\s*\S{2,}", el.get("label") or ""):
-                self._refuse(el, "its label has text after the colon, which may be an answer shown as text")
+            if el["type"] not in ("radio", "checkbox", "select") and LABEL_ANSWER.search(el.get("label") or ""):
+                self._refuse(el, RULES["label_answer"]["what"])
         dup = sorted({el["id"] for el in self.inputs if sum(1 for x in self.inputs if x["id"] == el["id"]) > 1} | {i for i, n in self.dom_ids.items() if n > 1 and i in {el["id"] for el in self.inputs}})
         if dup:
             self.problems.append(f"the page uses the element id {', '.join(dup[:3])} more than once, so its questions cannot be told apart")
