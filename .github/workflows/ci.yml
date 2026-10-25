@@ -1,7 +1,9 @@
 # CI (P-81, P-82): the push guard on every push and pull request; on pull requests also the rules-file checks,
 # the decision-impact check, the explicit-any count and the engine/contract suites on PostgreSQL 18; the
-# official IRCC PDFs are committed (P-83) and verified by manifest checksum. On every push (P-85): the full studio
+# official IRCC PDFs are committed (P-83) and verified by manifest checksum. On every code push (P-85): the full studio
 # suites (product/tools/run-suites.sh, the same script the Lead and lanes run) on a machine set up by cloud-setup.sh.
+# A push whose files are all docs/evidence (.md, images, .pdf, .txt) skips the ~15-minute suites to keep the
+# GitHub Actions minutes bill low; the push guard still runs on every push (P-81).
 name: ci
 on:
   push:
@@ -58,9 +60,30 @@ jobs:
         run: |
           S=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio
           "$S/node_modules/.bin/tsx" --tsconfig "$S/api/tsconfig.json" "$S/tests/check_engine.ts"
-  suites:
-    # P-85: every push (lane branches, main, pull request heads); a newer push to the same branch cancels the older run.
+  changes:
     if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      run_suites: ${{ steps.d.outputs.run_suites }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - id: d
+        run: |
+          B="${{ github.event.before }}"
+          if [ "$B" = "0000000000000000000000000000000000000000" ]; then
+            echo "run_suites=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if git diff --name-only "$B..${{ github.sha }}" | grep -qivE '\.(md|txt|png|jpe?g|gif|webp|svg|pdf)$'; then
+            echo "run_suites=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run_suites=false" >> "$GITHUB_OUTPUT"
+          fi
+  suites:
+    # P-85: every push that changes code or config (lane branches, main); docs/evidence-only pushes are gated out
+    # by the changes job to keep the Actions bill low. A newer push to the same branch cancels the older run.
+    needs: changes
+    if: github.event_name == 'push' && needs.changes.outputs.run_suites == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     concurrency: { group: "suites-${{ github.ref }}", cancel-in-progress: true }
