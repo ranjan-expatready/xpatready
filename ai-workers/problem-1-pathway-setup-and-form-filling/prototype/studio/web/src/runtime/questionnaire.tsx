@@ -12,7 +12,7 @@ import { Button, Dialog, Input, Notice, Pill, Select, Textarea } from "@/compone
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { fillsText, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
+import { fillsText, groupLabel, type QuestionnaireView, type ViewAnswer, type ViewCheck, type ViewQuestion, type ViewSection } from "../../../contracts/runtime";
 
 export type CasePerson = { subject_id: string; role: "case" | "principal" | "spouse_or_partner" | "child"; label: string; applies: boolean };
 export type CaseInfo = { id: string; reference: string; status: string; combination_id: string; client: string; pin: { release_version: number; sha256: string; pinned_at: string; revision: number }; people: CasePerson[] };
@@ -319,6 +319,8 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
   const missingOf = (q: Question, row?: string) => (summary && q.required && !cellAnswer(q, row) && !d.dirty.some((x) => x.q === q && x.row === row) ? ["Answer this question, or leave it for now."] : []);
   const warningsOf = (q: Question, row?: string) => [...checksOf(q, row), ...missingOf(q, row)];
   const listed = cells.filter(({ q, row }) => problemsOf(q, row).length || warningsOf(q, row).length);
+  // A required group with no entries and no "none apply" (review r1d-none-apply M1): named in the summary, linked to "None apply".
+  const groupOpen = !!part.group?.required && part.group.rows === 0 && !part.group.none_apply?.value;
   const errorsListed = listed.some(({ q, row }) => problemsOf(q, row).length);
 
   async function save(): Promise<boolean> {
@@ -376,10 +378,11 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
       <p className="text-[13px] text-text-muted">Part {index + 1} of {total} · {part.title}</p>
       <div className="mb-4 mt-1.5 h-1.5 rounded-full bg-text/10" aria-hidden><div className="h-1.5 rounded-full bg-primary" style={{ width: `${(100 * (index + 1)) / total}%` }} /></div>
 
-      {summary && listed.length ? (
+      {summary && (listed.length || groupOpen) ? (
         <div ref={summaryRef} tabIndex={-1} role="alert" aria-labelledby="problem-title" className={cn("mb-4 rounded-lg border-2 bg-surface-raised p-4 outline-none", errorsListed ? "border-danger" : "border-warn")}>
           <p id="problem-title" className={cn("font-semibold", errorsListed ? "text-text-danger" : "text-text-warn")}>{errorsListed ? "There is a problem" : "Check these answers"}</p>
           <ul className="mt-1 space-y-1 text-sm">
+            {groupOpen ? <li><a className="font-medium text-text-warn underline" href={`#none-apply-${part.subjectId}-${part.section}`} onClick={(e) => { e.preventDefault(); document.getElementById(`none-apply-${part.subjectId}-${part.section}`)?.focus(); }}>{groupLabel(part.title)}.</a></li> : null}
             {listed.map(({ q, row }) => <li key={keyOf(q, row)}><a className={cn("font-medium underline", problemsOf(q, row).length ? "text-text-danger" : "text-text-warn")} href={`#f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`} onClick={(e) => { e.preventDefault(); document.getElementById(`f-${keyOf(q, row).replace(/[^a-z0-9]/gi, "")}`)?.focus(); }}>{q.label}{row ? ` (entry ${(q.rows.find((r) => r.row === row)?.index ?? 0) + 1})` : ""}{/[?:]$/.test(q.label) ? " " : ": "}{problemsOf(q, row)[0] ?? warningsOf(q, row)[0]}{!problemsOf(q, row).length && partChecks.some((c) => c.fact === q.fact && c.illustrative) ? " (Sample check)" : ""}</a></li>)}
           </ul>
           <p className="mt-2 text-xs text-text-muted">Your other answers are saved. You can fix these now, or <button className="font-medium text-text-link underline" onClick={() => go(leaveTo.to)}>{leaveTo.words}</button>.</p>
@@ -397,7 +400,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
         {grouped.length ? (
           <div className="space-y-3">
             <GroupIntro questions={grouped} />
-            {rows.length === 0 ? <p className="rounded-lg border border-dashed border-border-strong p-3 text-sm text-text-muted">Nothing added yet. Add an entry if this applies; leave it empty if it does not.</p> : null}
+            <NoneApply caseId={caseId} s={part} onAdd={() => void addRow()} adding={adding} />
             {rows.map((r) => (
               <section key={r.row} aria-label={`Entry ${r.index + 1}`} className="space-y-4 rounded-xl border border-border bg-surface-raised p-4">
                 <div className="flex items-center justify-between gap-2">
@@ -410,7 +413,7 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
                 {grouped.map((q) => field(q, r.row))}
               </section>
             ))}
-            <Button type="button" variant="secondary" className="h-11" busy={adding} onClick={() => void addRow()}><Plus aria-hidden />{rows.length ? "Add another" : "Add an entry"}</Button>
+            {rows.length ? <Button type="button" variant="secondary" className="h-11" busy={adding} onClick={() => void addRow()}><Plus aria-hidden />Add another</Button> : null}
           </div>
         ) : null}
         <div className="space-y-2 pt-2">
@@ -418,6 +421,45 @@ function SqrPart({ view, index, go }: { view: View; index: number; go: (i: numbe
           <Button type="button" variant="ghost" className="h-11 w-full" disabled={status === "saving"} onClick={async () => { if (await save()) { toast.push({ tone: "ok", text: "Saved. You can close this page and continue later." }); go(null); } else { setSummary(true); setFocusSummary((n) => n + 1); } }}>Save and come back later</Button>
         </div>
       </form>
+    </div>
+  );
+}
+
+/** A repeating group with no entries (Lead, break M3, P-71/P-72): add an entry, or say none apply; "none apply" is an
+ *  answer like any other (confirmed by the same rule) and can be changed back. Shown in both views. */
+function NoneApply({ caseId, s, compact, onAdd, adding }: { caseId: string; s: Section; compact?: boolean; onAdd: () => void; adding: boolean }) {
+  const qc = useQueryClient(), toast = useToast();
+  const [busy, setBusy] = React.useState(false);
+  const g = s.group, na = g?.none_apply;
+  // Keyboard (review M2): the pressed button is replaced; the focus goes to the control that replaces it.
+  const pressed = React.useRef(false), change = React.useRef<HTMLButtonElement>(null), add = React.useRef<HTMLButtonElement>(null);
+  React.useEffect(() => { if (pressed.current) { pressed.current = false; (na?.value ? change : add).current?.focus(); } }, [na?.value, na?.id]);
+  if (!g || g.rows > 0) return null;
+  const whose = `${s.title} for ${s.about_label}`;
+  async function say(noneApply: boolean) {
+    setBusy(true);
+    try {
+      await api(`/runtime/cases/${caseId}/groups/${s.subjectId}/${s.section}/none-apply`, { method: "PUT", json: { noneApply, expectedId: na?.id ?? null } });
+      pressed.current = true;
+      toast.push({ tone: "ok", text: noneApply ? `Saved: none apply in ${s.title} for ${s.about_label}.` : `Saved: entries apply in ${s.title}; add them now.` });
+    } catch (e) { toast.push({ tone: "danger", text: refusal(e) }); }
+    await qc.invalidateQueries({ queryKey: ["runtime", "view", caseId] }); setBusy(false);
+  }
+  if (na?.value) return (
+    <div className={cn("flex flex-wrap items-center gap-2", compact ? "text-[13px]" : "rounded-lg border border-border bg-surface-raised p-3 text-sm")}>
+      <Check className="size-4 text-text-ok" aria-hidden /><span className="font-medium">None apply</span><ConfirmPill a={na} />
+      {compact ? <span className="text-xs text-text-muted">{na.answered ? `${CHANNEL[na.answered.channel] ?? "answered"} · ${WHO[na.answered.by] ?? "someone"} · ${when(na.answered.at)} · confirmed by ${WHO[na.by] ?? "someone"} ${when(na.at)}` : `${CHANNEL[na.channel] ?? "answered"} · ${WHO[na.by] ?? "someone"} · ${when(na.at)}`}</span> : null}
+      <span className="flex-1" />
+      <Button ref={change} type="button" size="sm" variant="secondary" className={compact ? "" : "h-11"} busy={busy} onClick={() => void say(false)} aria-label={`Entries apply after all: ${whose}`}>Entries apply after all</Button>
+    </div>
+  );
+  return (
+    <div className={cn("space-y-2", compact ? "" : "rounded-lg border border-dashed border-border-strong p-3")}>
+      <p className={cn("text-text-muted", compact ? "text-[13px]" : "text-sm")}>{compact ? "No entries." : "Nothing added yet. Add an entry, or say that none apply."}{g.required ? " The forms need one or the other before filing." : ""}</p>
+      <div className="flex flex-wrap gap-2">
+        <Button ref={add} type="button" variant="secondary" size={compact ? "sm" : "default"} className={compact ? "" : "h-11"} busy={adding} onClick={onAdd} aria-label={compact ? `Add an entry: ${whose}` : undefined}><Plus aria-hidden />Add an entry</Button>
+        <Button id={`none-apply-${s.subjectId}-${s.section}`} type="button" variant="ghost" size={compact ? "sm" : "default"} className={compact ? "" : "h-11"} busy={busy} onClick={() => void say(true)} aria-label={`None apply: ${whose}`}>None apply</Button>
+      </div>
     </div>
   );
 }
@@ -488,8 +530,11 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
   const [busy, setBusy] = React.useState(false);
   const single = s.questions.filter((q) => !q.group), grouped = s.questions.filter((q) => q.group);
   const rows = grouped[0]?.rows ?? [];
-  const seen = s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer?.id) : [q.answer?.id])).filter((x): x is string => !!x);
-  const open = s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer])).filter((a) => a && a.status !== "VERIFIED").length;
+  // The group's "none apply" is reviewed and confirmed with the section's answers.
+  // With entries, the group's earlier answer is not shown, so it is not sent as seen (review m6).
+  const shownGroup = s.group && s.group.rows === 0 ? s.group.none_apply : null;
+  const seen = [...s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer?.id) : [q.answer?.id])), shownGroup?.id].filter((x): x is string => !!x);
+  const open = [...s.questions.flatMap((q) => (q.group ? q.rows.map((r) => r.answer) : [q.answer])), shownGroup].filter((a) => a && a.status !== "VERIFIED").length;
   const refresh = () => qc.invalidateQueries({ queryKey: ["runtime", "view", view.case.id] });
   const checks = view.checks.filter((c) => c.subjectId === s.subjectId && c.section === s.section);
   async function confirm() {
@@ -550,14 +595,14 @@ function AgentSection({ view, s, edit }: { view: View; s: Section; edit: (q: Que
       {grouped.length ? (
         <div className="space-y-2 border-t border-border bg-surface/60 px-4 py-3">
           <GroupIntro questions={grouped} />
-          {rows.length === 0 ? <p className="text-[13px] text-text-muted">No entries.</p> : null}
+          <NoneApply caseId={view.case.id} s={s} compact onAdd={() => void addRow()} adding={adding} />
           {rows.map((r) => (
             <div key={r.row} className="mb-3 overflow-hidden rounded-lg border border-border bg-surface-raised">
               <p className="flex items-center gap-2 border-b border-border px-4 py-1.5 text-xs font-medium">Entry {r.index + 1}{!r.fits ? <Pill tone="warn" title={`The form has room for ${grouped[0].capacity} entries`}>Does not fit on the form</Pill> : null}</p>
               {grouped.map((q) => line(q, r.row))}
             </div>
           ))}
-          <Button size="sm" variant="secondary" busy={adding} onClick={() => void addRow()}><Plus aria-hidden />Add an entry</Button>
+          {rows.length ? <Button size="sm" variant="secondary" busy={adding} onClick={() => void addRow()}><Plus aria-hidden />Add another</Button> : null}
         </div>
       ) : null}
     </section>

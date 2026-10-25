@@ -20,47 +20,55 @@
   "violations": []
  },
  {
-  "state": "06-client-group-remove-confirm",
+  "state": "06-client-group-none-apply",
   "violations": []
  },
  {
-  "state": "07-client-answering-for-spouse",
+  "state": "07-client-group-remove-confirm",
   "violations": []
  },
  {
-  "state": "08-client-required-named",
+  "state": "08-client-answering-for-spouse",
   "violations": []
  },
  {
-  "state": "09-client-resume",
+  "state": "09-client-required-named",
   "violations": []
  },
  {
-  "state": "10-agent-view-confirmed",
+  "state": "10-client-resume",
   "violations": []
  },
  {
-  "state": "11-agent-section-check",
+  "state": "11-agent-view-confirmed",
   "violations": []
  },
  {
-  "state": "12-agent-edit-dialog",
+  "state": "12-agent-section-check",
   "violations": []
  },
  {
-  "state": "13-agent-conflict",
+  "state": "13-agent-edit-dialog",
   "violations": []
  },
  {
-  "state": "14-forms-generated",
+  "state": "14-agent-conflict",
   "violations": []
  },
  {
-  "state": "15-forms-lock-confirm",
+  "state": "15-forms-generated",
   "violations": []
  },
  {
-  "state": "16-forms-stale",
+  "state": "16-agent-group-none-apply",
+  "violations": []
+ },
+ {
+  "state": "17-forms-lock-confirm",
+  "violations": []
+ },
+ {
+  "state": "18-forms-stale",
   "violations": []
  }
 ]

@@ -4,11 +4,13 @@
 // what the release preview shows. No I/O; every output says why.
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
-import { Address, CONFIRM_WORDS, MINOR, Phone, type QuestionnaireView, type ViewCheck } from "../../contracts/runtime.ts";
+import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
 export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
 export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
 export type Row = { rowKey: string; subjectId: string; group: string; order: number };
+/** A repeating group's own answer (client_group_answer): none apply (true) or entries apply (false). */
+export type GroupAnswer = { id: string; subjectId: string; group: string; noneApply: boolean; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
 export type Confirmation = { confirmed: boolean; why: string };
 
 /** Fields the client answers (P-72 "the client's fields"): placed in the questionnaire or the client's profile, and
@@ -180,7 +182,7 @@ export type Mode = "sqr" | "agent";
  *  box of a form that applies, or decides whether a form, document or question applies. Questions the release places in
  *  a selected section but nothing of this case reads are not asked (counted in the summary). SQR mode shows the
  *  client's fields only; agent mode shows every needed fact. */
-export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date()): QuestionnaireView {
+export function caseView(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], mode: Mode, today = new Date(), groupAnswers: GroupAnswer[] = []): QuestionnaireView {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const caseSubject = people.find((p) => p.role === "case")!;
   const { known, confirm } = knownOf(s, people, answers, rows, today);
@@ -220,12 +222,30 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
       countries: !options && (q.value_type === "country" || q.value_type === "address") ? countries : null,
     };
   });
+  // A repeating group's "none apply" (Lead, break M3): confirmed by the same rule as an answer to the group's facts
+  // (P-72, P-78), read as an answer to its first client fact (else its first fact).
+  const birthOf = (subjectId: string) => answers.find((a) => a.subjectId === subjectId && a.field === MINOR.birthDateField && !a.rowKey)?.value;
+  const groupOf = (qs: typeof questions): ViewGroup | null => {
+    const g = qs.find((q) => q.group); if (!g) return null;
+    const inGroup = qs.filter((q) => q.group), clientFact = inGroup.find((q) => isClientField(s, q.fact))?.fact;
+    const a = groupAnswers.find((x) => x.subjectId === g.subjectId && x.group === g.group);
+    const none_apply = a ? (() => {
+      const c = confirmation(s, { id: a.id, subjectId: a.subjectId, field: clientFact ?? inGroup[0].fact, rowKey: null, value: a.noneApply, status: a.status, channel: a.channel, actor: a.actor, at: a.at }, people.find((p) => p.subjectId === a.subjectId), birthOf(a.subjectId), today);
+      return { id: a.id, value: a.noneApply, status: a.status, channel: a.channel, by: a.actor, at: a.at, answered: a.origin ? { channel: a.origin.channel, by: a.origin.actor, at: a.origin.at } : null, problems: [], ...c };
+    })() : null;
+    return { required: inGroup.some((q) => q.required && !q.hidden), client: !!clientFact, rows: Math.max(0, ...inGroup.map((q) => q.rows.length)), none_apply };
+  };
   const sections = [...new Map(questions.map((q) => [`${q.subjectId}|${q.section}`, { subjectId: q.subjectId, about_label: q.about_label, section: q.section, title: q.section_title }])).values()].map((sec) => {
     const qs = questions.filter((q) => q.subjectId === sec.subjectId && q.section === sec.section);
     const answered = qs.flatMap((q) => (q.group ? q.rows.map((x) => x.answer) : [q.answer])).filter((a): a is NonNullable<typeof a> => !!a);
     // A repeating group may have no rows (no previous country, no job); a started row needs all its required answers.
     const missing = qs.filter((q) => q.required && !q.hidden && (q.group ? q.rows.some((x) => !x.answer) : !q.answer)).map((q) => q.label);
-    return { ...sec, questions: qs, answered: answered.length, confirmed: answered.filter((a) => a.confirmed).length, invalid: answered.filter((a) => a.problems.length).length, missing };
+    // A required group with no entries is answered by "none apply" (Lead, break M3): until then the part is not done
+    // (review r1d-none-apply M1); "none apply" counts as an answer of the part.
+    const group = groupOf(qs), na = group && group.rows === 0 ? group.none_apply : null;
+    if (group?.required && group.rows === 0 && !na?.value) missing.push(groupLabel(sec.title));
+    const all = na ? [...answered, na] : answered;
+    return { ...sec, questions: qs, answered: all.length, confirmed: all.filter((a) => a.confirmed).length, invalid: answered.filter((a) => a.problems.length).length, missing, group };
   });
   // Checks the answers trigger, on the question they concern; in the client's view only those on the client's parts.
   const shown = new Set(sections.map((x) => `${x.subjectId}|${x.section}`));

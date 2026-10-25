@@ -134,6 +134,20 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("checks: the answers behind the warnings are stored (warn, never block, P-71)", qOf(v, "The application", "case.intended_stay_to")?.answer?.value === "2027-02-28" && v.checks.length === 2, v.checks.map((x) => x.id));
   await end.getByLabel("Day").fill("31"); await end.getByLabel("Month").fill("7"); await c.getByLabel(/How much money/).fill("5000");
   step("groups (review M2): a repeating group says what an entry asks", await shows(c.getByRole("heading", { name: "Entries" })) && await shows(c.getByText(/Each entry asks: Name of a person or organisation you will visit; Their relationship to you; Their address in Canada/)));
+  // Lead, break M3: an empty group offers an entry or "none apply"; the principal's own answer counts as confirmed (P-72).
+  step("M3 client: an empty group offers \"Add an entry\" or \"None apply\", and says the forms need one or the other", await shows(c.getByRole("button", { name: "None apply" })) && await shows(c.getByText(/Add an entry, or say that none apply\. The forms need one or the other before filing\./)));
+  await c.getByRole("button", { name: "None apply" }).click();
+  step("M3 client pass: \"None apply\" is saved, counts as the client's own answer, and can be changed back", await shows(c.getByText("None apply", { exact: true })) && await shows(c.getByText("Counts as confirmed")) && await shows(c.getByRole("button", { name: "Entries apply after all" })) && await gone(c.getByRole("button", { name: "Add an entry" })));
+  const isFocused = (l) => l.evaluate((el) => el === document.activeElement).catch(() => false);
+  step("review M2 pass: after \"None apply\" the focus is on \"Entries apply after all\", not lost to the page", await eventually(() => isFocused(c.getByRole("button", { name: /^Entries apply after all/ }))));
+  await state(c, "client-group-none-apply", [390]);
+  await c.getByRole("button", { name: /^Entries apply after all/ }).click();
+  step("review M2 pass: after \"Entries apply after all\" the focus is on \"Add an entry\"", await shows(c.getByRole("button", { name: "Add an entry" })) && await eventually(() => isFocused(c.getByRole("button", { name: "Add an entry" }))));
+  await c.getByRole("button", { name: "Save and continue" }).click();
+  const groupItem = c.getByRole("alert").getByRole("link", { name: /^Entries in ".+": add them, or say none apply\.$/ });
+  step("review M1 fail-guard: Save and continue with a required group empty keeps the part and names the group, linked to \"None apply\"", await shows(groupItem));
+  await groupItem.click();
+  step("review M1 pass: the link takes the focus to \"None apply\"", await eventually(() => isFocused(c.getByRole("button", { name: /^None apply/ }))));
   await c.getByRole("button", { name: "Add an entry" }).click(); await idle(c);
   const entry = c.getByRole("region", { name: "Entry 1" });
   await entry.getByLabel("Name of a person or organisation you will visit").fill("Sample Host C");
@@ -276,6 +290,16 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await imm.getByText(/^What blocks filing \(\d+\)$/).click();
   step("review M3 pass: what blocks filing is listed on the page (question, whose, why), not only in a tooltip", await shows(imm.getByRole("listitem").filter({ hasText: /\(Sample Applicant C\): (not answered|not confirmed|needs a fix)$/ }).first()));
   step("review M1 fail-guard: IMM 5257's fill trial passed, so its copies are not marked \"Checked copy, not for filing\"", await gone(imm.getByText("Checked copy, not for filing")));
+  // Lead, break M3: an empty required group blocks filing until "none apply" is answered and confirmed: the officer
+  // says it for the principal's education in the agent view, then confirms the section.
+  const edu = o.locator("section").filter({ has: o.getByRole("heading", { name: "Education history" }) }).filter({ hasText: "for Sample Applicant C" });
+  step("M3 agent: the blocking list names the empty group (\"Entries in … : add them, or say none apply\")", await shows(imm.getByText(/Entries in "Education history": add them, or say none apply \(Sample Applicant C\): not answered/)));
+  await o.getByRole("tab", { name: /^Sample Applicant C/ }).click();
+  await edu.getByRole("button", { name: "None apply" }).click();
+  step("M3 agent pass (P-72): the officer's \"none apply\" waits for Confirm section", await shows(edu.getByText("None apply", { exact: true })) && await shows(edu.getByText("To confirm")));
+  await edu.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
+  step("M3 agent pass: Confirm section confirms it", await shows(edu.getByText("Confirmed", { exact: true })));
+  await state(o, "agent-group-none-apply", [1440]);
   // Confirm every required fact IMM 5257 reads for the principal (Sample values by type), as the officer would.
   const sample = (q) => q.options?.length ? q.options[0].key : q.shape.phone ? { country_code: "1", number: "5550100" } : q.value_type === "yes_no" ? false
     : q.value_type === "date" ? (q.shape.datePrecision === "month" ? "1990-01" : "1990-01-01") : q.value_type === "number" ? "1000"
@@ -283,11 +307,15 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   for (let pass = 0; pass < 3; pass++) {
     const av = (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body;
     const todo = av.sections.flatMap((x) => x.questions).filter((q) => q.required && !q.hidden && !q.group && q.fills.some((f) => f.form === "IMM 5257" && f.person === "Sample Applicant C") && !q.answer?.confirmed);
-    if (!todo.length) break;
+    // The other empty required groups IMM 5257 reads: "none apply" (the visit's entries are kept: it has rows).
+    const fl = (await call("GET", `/runtime/cases/${caseId}/forms`, undefined, "user-O")).body.forms.find((f) => f.form === "IMM 5257" && f.person === "Sample Applicant C");
+    const groups = fl.readiness.missing.filter((m) => m.fact.startsWith("group:")).map((m) => av.sections.find((x) => x.section === m.fact.slice(6) && x.group && (x.about_label === m.about))).filter(Boolean);
+    if (!todo.length && !groups.length) break;
     for (const q of todo) await call("PUT", `/runtime/cases/${caseId}/answers/${q.subjectId}/${q.fact}`, { value: sample(q), expectedId: q.answer?.id ?? null }, "user-O");
+    for (const g of groups) await call("PUT", `/runtime/cases/${caseId}/groups/${g.subjectId}/${g.section}/none-apply`, { noneApply: true, expectedId: g.group.none_apply?.id ?? null }, "user-O");
     const fresh = (await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=agent`, undefined, "user-O")).body;
-    for (const sec of fresh.sections.filter((x) => todo.some((q) => q.subjectId === x.subjectId))) {
-      const seen = sec.questions.flatMap((q) => [q.answer?.id, ...q.rows.map((r) => r.answer?.id)]).filter(Boolean);
+    for (const sec of fresh.sections.filter((x) => todo.some((q) => q.subjectId === x.subjectId) || groups.some((g) => g.subjectId === x.subjectId))) {
+      const seen = [...sec.questions.flatMap((q) => [q.answer?.id, ...q.rows.map((r) => r.answer?.id)]), sec.group?.none_apply?.id].filter(Boolean);
       if (seen.length) await call("POST", `/runtime/cases/${caseId}/sections/${sec.section}/confirm`, { subjectId: sec.subjectId, seen }, "user-O");
     }
   }
@@ -312,7 +340,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   await endEdit2.getByLabel("Day").fill("30"); await endEdit2.getByLabel("Month").fill("7");
   await o.getByRole("dialog").getByRole("button", { name: "Save" }).click(); await gone(o.getByRole("dialog"));
   await visitSec.getByRole("button", { name: /Confirm section/ }).click(); await idle(o);
-  step("forms RT-15 pass: after the visit end changes, the filed copy is stale, names the fact and keeps its file", await shows(imm.getByText(/Stale · Filed/)) && await shows(imm.getByText(/Facts changed after this copy was locked; the locked file is kept as it was\. Added or changed: When will the visit end\?/)));
+  step("forms RT-15 pass: after the visit end changes, the filed copy is stale, names the fact and keeps its file", await shows(imm.getByText(/Stale · Filed/)) && await shows(imm.getByText(/Facts changed after this copy was locked; the locked file is kept as it was\. Added, changed or removed: When will the visit end\?/)));
   await state(o, "forms-stale", [1440, 1024]);
   await imm.getByRole("button", { name: "Generate a new copy" }).click();
   step("forms RT-15 pass: a new copy is made only when asked; the filed copy stays in view beside it", await shows(imm.getByText("Generated", { exact: true }).first()) && await shows(imm.getByText(/Stale · Filed/)));

@@ -1,7 +1,7 @@
 # Lane: qa — independent testing of what is on main (skill `qa`)
 
 ## From the Lead
-2026-10-25 00:10 (Lead, cloud): main now carries runtime R1d (forms panel: IMM 5257 from confirmed facts, copies never rewritten, lock gated by P-71 and the fill trial) and the qa R1c fixes (QA-35, QA-36, QA-37, QA-26 rest). Run **/qa after-merge** on the new main when the Lead sends it: retest QA-35–37 and QA-26; walk the forms panel on `/cases` (generate, out of date, lock refused while not ready, stale after a change) at 1440 and 390 px. One run only.
+2026-10-25 02:00 (Lead, cloud): main now carries runtime R1d (forms panel, P-71 gate, never-overwrite) with its PR 12 fixes, the qa R1c fixes (QA-35–37, QA-26 rest) and "none apply" for required groups. Run **/qa after-merge** on the new main: retest QA-35, QA-36, QA-37, QA-26; walk the forms panel (generate, out of date, lock refused while not ready, stale after a change; online forms not offered) and "none apply" (add, withdraw, confirm, readiness) as client and officer at 390 and 1440 px. One run only (weekly usage); list what you could not cover.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
