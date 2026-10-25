@@ -8,12 +8,12 @@ updated: 2026-10-25
 <!-- lanes:start -->
 | Lane | Item | Stage | Who acts | Next |
 |---|---|---|---|---|
-| screens | 02-ai-work | DESIGN | Lead | Lead answers screens/02-ai-work/challenge.md (5 points: back-end ownership and the one combination-page but… |
-| forms | F2-extension | PLAN | Lead | Lead reads screens/F2-extension/plan.md (challenge.md: 1 Blocker, 7 Major, 7 Minor, all accepted in §3) an… |
+| screens | 02-ai-work | FIX | Builder | Lead note waiting for sync · full suites running (other-lanes test patch applied locally only). Lead decision 09:27: after the forms lan… |
+| forms | F2-extension | CHECK | Builder | Lead note waiting for sync · Lead items: main synced, demo reset drops extension sessions (f2b 39/39), panel button after a changed scre… |
 | evidence | E1-form-acceptance (E1b) | EARLY-LOOK | Lead | Lead: check IMM 5409 (prototype/evidence-lane/E1/imm5409/STATUS.md); send F5 (static forms: page fields sta… |
-| runtime | 03-combination-workspace (DESIGN challenge) | DESIGN | Lead | Lead answers screens/03-combination-workspace/challenge.md (5 points: Preview on caseView, missing records,… |
+| runtime | 03-combination-workspace (S1 (tab route, Overview, Forms, Preview by person; F-R1c-1; coverage; QA-38, QA-40)) | EARLY-LOOK | Lead | Lead note waiting for sync · Lead early look at screens/03-combination-workspace/build-notes.md and screenshots/slice1/ (deviations list… |
 | qa | explore on main 8360565 (Screen 01, forms channels, R1 slice; Lead note 25 Oct, P-89) | WAITING | Lead | Lead reads qa/reports/2026-10-25-explore.md (not ready on QA-38 Major, runtime: "Open a case" names the old… |
-| scout | charter firm-admin-day-one done — report scout/reports/2026-10-25-firm-admin-day-one.md (5 findings SC-1..SC-5 with priorities P2/P3; SC-2 fix written+proven but reverted — new-combination.tsx busy on screens; ready patch noted) | EXPLORE | Scout | next run, charter ai-draft-review (GOOSE-TASKS.md G2) |
+| scout | charter firm-admin-day-one done — report scout/reports/2026-10-25-firm-admin-day-one.md (5 findings SC-1..SC-5 with priorities P2/P3; SC-2 fix written+proven but reverted — new-combination.tsx busy on screens; ready patch noted) | WAITING | Lead | Lead note waiting for sync · Lead reads scout/reports/2026-10-25-firm-admin-day-one.md and triages SC-1 (Major: no onboarding/starter li… |
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)

@@ -46,15 +46,18 @@ table_() {
   echo "| Lane | Item | Stage | Who acts | Next |"; echo "|---|---|---|---|---|"
   for ln in $LANES; do
     m="$MAIN/$P/product/lanes/$ln.md"; [ -f "$m" ] || continue
-    # Read the lane's newest copy (its own state between merges); flag a Lead note it has not synced yet.
-    # main's own copy competes too: a lane branch already merged must not win over a newer Lead note.
-    f="$m"; best=$(git -C "$MAIN" log -1 --format=%ct -- "$P/product/lanes/$ln.md" 2>/dev/null); best=${best:-0}
+    # Stage, owner and next action come from the lane's own newest copy that main does not contain yet (a worktree or
+    # a pushed branch): main's file is newer whenever the Lead edits its note, but its lane fields are only as fresh as
+    # the last merge. A copy already merged into main loses to main. The Lead note itself is compared below.
+    f="$m"; best=0; base=$(git -C "$MAIN" rev-parse -q --verify origin/main || git -C "$MAIN" rev-parse main)
     for wt in $(git -C "$MAIN" worktree list --porcelain | awk '/^worktree /{print $2}'); do
       [ "$(cat "$wt/.claude/lane" 2>/dev/null)" = "$ln" ] || continue
+      git -C "$wt" merge-base --is-ancestor HEAD "$base" 2>/dev/null && continue
       t=$(git -C "$wt" log -1 --format=%ct 2>/dev/null || echo 0); [ "$t" -gt "$best" ] && { best=$t; f="$wt/$P/product/lanes/$ln.md"; }
     done
-    # Cloud lane sessions (P-82) push origin/<lane>/* or origin/claude/<lane>-*: a newer lane file there wins.
+    # Cloud lane sessions (P-82) push origin/<lane>/* or origin/claude/<lane>-*.
     for rb in $(git -C "$MAIN" for-each-ref --format='%(refname:short)' "refs/remotes/origin/$ln/" "refs/remotes/origin/claude/$ln-*"); do
+      git -C "$MAIN" merge-base --is-ancestor "$rb" "$base" 2>/dev/null && continue
       t=$(git -C "$MAIN" log -1 --format=%ct "$rb" 2>/dev/null || echo 0); [ "$t" -gt "$best" ] || continue
       tmpf=$(mktemp); tmps="$tmps $tmpf"; git -C "$MAIN" show "$rb:$P/product/lanes/$ln.md" > "$tmpf" 2>/dev/null && { best=$t; f="$tmpf"; }
     done
@@ -130,7 +133,7 @@ case "$1" in
     done; true ;;
   inbox)  # findings dropped for the Lead (inbox/README.md): files on main, then unmerged devin/* branches.
     # Acknowledged = merged: the Lead merges each checker branch into its own PR, so a handled branch drops out here.
-    git -C "$HERE" fetch -q origin 2>/dev/null
+    git -C "$HERE" fetch -q origin || { echo "Cannot refresh the inbox from GitHub: retry before treating it as empty." >&2; exit 3; }
     git -C "$HERE" ls-tree --name-only origin/main "$P/product/inbox/" | grep -v '/README.md$' | sed 's|^|main |'
     for b in $(git -C "$HERE" for-each-ref --format='%(refname:short)' refs/remotes/origin/devin/); do
       git -C "$HERE" merge-base --is-ancestor "$b" origin/main 2>/dev/null && continue
