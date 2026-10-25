@@ -1,0 +1,847 @@
+{
+ "summary": {
+  "file": "official-sources/ircc/checklists/imm5488e.pdf",
+  "sha256": "0c8fa194789eb5f7840737c96d3120d81e2a7504663b2ebef457538168d24ec8",
+  "reason_read": "document checklist",
+  "pdf": {
+   "pages": 1,
+   "needs_rendering": true,
+   "perms": [
+    "/UR3"
+   ],
+   "acroform_fields": 0,
+   "encryption": {
+    "V": 4,
+    "R": 4,
+    "P": -4
+   }
+  },
+  "template_ns": "http://www.xfa.org/schema/xfa-template/3.3/",
+  "fields_total": 27,
+  "entry_fields_bound": 17,
+  "entry_fields_in_shipped_data": 17,
+  "ui_counts": {
+   "textEdit": 2,
+   "button": 8,
+   "checkButton": 17
+  },
+  "required_fields": 0,
+  "choice_fields_with_options": 17,
+  "repeat_groups_dynamic": 1,
+  "row_groups_fixed": 18,
+  "barcode_fields": [],
+  "buttons": [
+   {
+    "som": "IMM_5488[0].Page1[0].top[0].link[0]",
+    "caption": "link",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5488[0].Page1[0].top[0].link[1]",
+    "caption": "link",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5488[0].Page1[0].FormsList[0].Row1[0].#subform[0].link[0]",
+    "caption": "link",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row3[0].#subform[0].link[0]",
+    "caption": "link",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row3[0].#subform[0].link[1]",
+    "caption": "link",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row7[0].#subform[0].link[0]",
+    "caption": "link",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row8[0].#subform[0].link[0]",
+    "caption": "link",
+    "scripts": {
+     "click": 1
+    }
+   },
+   {
+    "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row10[0].#subform[0].link[0]",
+    "caption": "link",
+    "scripts": {
+     "click": 1
+    }
+   }
+  ],
+  "scripts_by_activity": {
+   "initialize": 1,
+   "ready": 1,
+   "click": 8,
+   "script-object": 1
+  },
+  "presence_changing_scripts": 0,
+  "sections": {
+   "Page1.FormsList.Row1": 1,
+   "Page1.FormsList.Row2": 1,
+   "Page1.FormsList.Row3": 1,
+   "Page1.FormsList.Row4": 1,
+   "Page1.FormsList.Row5": 1,
+   "Page1.DocumentsList.Row1": 1,
+   "Page1.DocumentsList.Row2": 1,
+   "Page1.DocumentsList.Row3": 1,
+   "Page1.DocumentsList.Row4": 1,
+   "Page1.DocumentsList.Row5": 1,
+   "Page1.DocumentsList.Row6": 1,
+   "Page1.DocumentsList.Row7": 1,
+   "Page1.DocumentsList.Row8": 1,
+   "Page1.DocumentsList.Row9": 1,
+   "Page1.DocumentsList.Row10": 1,
+   "Page1.DocumentsList.Row11": 1,
+   "Page1.DocumentsList.Row12": 1
+  }
+ },
+ "groups": [
+  {
+   "som": "IMM_5488[0].Page1[0]",
+   "data_path": "IMM_5488[0].Page1[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].FormsList[0].Row1[0]",
+   "data_path": "IMM_5488[0].Page1[0].FormsList[0].Row1[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].FormsList[0].Row2[0]",
+   "data_path": "IMM_5488[0].Page1[0].FormsList[0].Row2[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].FormsList[0].Row3[0]",
+   "data_path": "IMM_5488[0].Page1[0].FormsList[0].Row3[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].FormsList[0].Row4[0]",
+   "data_path": "IMM_5488[0].Page1[0].FormsList[0].Row4[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].FormsList[0].Row5[0]",
+   "data_path": "IMM_5488[0].Page1[0].FormsList[0].Row5[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].HeaderRow[0]",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].HeaderRow[0]",
+   "occur": {
+    "max": "-1"
+   },
+   "fixed_row": false
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row1[0]",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row1[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row2[0]",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row2[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row3[0]",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row3[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row4[0]",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row4[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row5[0]",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row5[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row6[0]",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row6[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row7[0]",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row7[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row8[0]",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row8[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row9[0]",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row9[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row10[0]",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row10[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row11[0]",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row11[0]",
+   "occur": null,
+   "fixed_row": true
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row12[0]",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row12[0]",
+   "occur": null,
+   "fixed_row": true
+  }
+ ],
+ "presence_scripts": [],
+ "fields": [
+  {
+   "som": "IMM_5488[0].FormNumber[0]",
+   "section": "FormNumber",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "hidden",
+   "heading": null,
+   "in_row": null,
+   "scripts": {
+    "initialize": 1
+   }
+  },
+  {
+   "som": "IMM_5488[0].totPage[0]",
+   "section": "totPage",
+   "kind": "field",
+   "ui": "textEdit",
+   "caption": "",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "hidden",
+   "heading": null,
+   "in_row": null,
+   "scripts": {
+    "ready": 1
+   }
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].top[0].link[0]",
+   "section": "Page1.top.link",
+   "kind": "field",
+   "ui": "button",
+   "caption": "link",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "This document checklist is one of the forms that you need to submit with your application. Consult the Instruction Guide",
+   "in_row": "IMM_5488[0].Page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].top[0].link[1]",
+   "section": "Page1.top.link",
+   "kind": "field",
+   "ui": "button",
+   "caption": "link",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "This document checklist is one of the forms that you need to submit with your application. Consult the Instruction Guide",
+   "in_row": "IMM_5488[0].Page1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].FormsList[0].Row1[0].#subform[0].link[0]",
+   "section": "Page1.FormsList.Row1",
+   "kind": "field",
+   "ui": "button",
+   "caption": "link",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Application for Work Permit made Outside of Canada (IMM 1295)Note: If this application form is completed on a computer i",
+   "in_row": "IMM_5488[0].Page1[0].FormsList[0].Row1[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].FormsList[0].Row1[0].CheckBox1[0]",
+   "section": "Page1.FormsList.Row1",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].FormsList[0].Row1[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "I have enclosed the following items:",
+   "in_row": "IMM_5488[0].Page1[0].FormsList[0].Row1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].FormsList[0].Row2[0].CheckBox1[0]",
+   "section": "Page1.FormsList.Row2",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].FormsList[0].Row2[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Family Information (IMM 5707)Note: Must be completed by those aged 18 years or older or a minor travelling alone to Cana",
+   "in_row": "IMM_5488[0].Page1[0].FormsList[0].Row2[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].FormsList[0].Row3[0].CheckBox1[0]",
+   "section": "Page1.FormsList.Row3",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].FormsList[0].Row3[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Statutory Declaration of Common-law Union (IMM 5409), if applicableNote: Refer to the responsible visa office for your r",
+   "in_row": "IMM_5488[0].Page1[0].FormsList[0].Row3[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].FormsList[0].Row4[0].CheckBox1[0]",
+   "section": "Page1.FormsList.Row4",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].FormsList[0].Row4[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Use of a Representative (IMM 5476), if applicableNote: Complete this form only if you are using the services of an autho",
+   "in_row": "IMM_5488[0].Page1[0].FormsList[0].Row4[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].FormsList[0].Row5[0].CheckBox1[0]",
+   "section": "Page1.FormsList.Row5",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].FormsList[0].Row5[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Authority to Release Personal Information to a Designated Individual (IMM 5475), if applicableNote: Complete this form o",
+   "in_row": "IMM_5488[0].Page1[0].FormsList[0].Row5[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row1[0].CheckBox1[0]",
+   "section": "Page1.DocumentsList.Row1",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row1[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "I have enclosed the following items:",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row1[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row2[0].CheckBox1[0]",
+   "section": "Page1.DocumentsList.Row2",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row2[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "A photocopy of the information page of your valid passport or travel document which includes:the passport number;the iss",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row2[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row3[0].#subform[0].link[0]",
+   "section": "Page1.DocumentsList.Row3",
+   "kind": "field",
+   "ui": "button",
+   "caption": "link",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Two photos meeting the requirements of the Visa application photograph specifications. On the back of two photos, write ",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row3[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row3[0].#subform[0].link[1]",
+   "section": "Page1.DocumentsList.Row3",
+   "kind": "field",
+   "ui": "button",
+   "caption": "link",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Two photos meeting the requirements of the Visa application photograph specifications. On the back of two photos, write ",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row3[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row3[0].CheckBox1[0]",
+   "section": "Page1.DocumentsList.Row3",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row3[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "I have enclosed the following items:",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row3[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row4[0].CheckBox1[0]",
+   "section": "Page1.DocumentsList.Row4",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row4[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Proof of current immigration status: If your country or territory of residence differs from the citizenship listed on yo",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row4[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row5[0].CheckBox1[0]",
+   "section": "Page1.DocumentsList.Row5",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row5[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Photocopy of your Marriage license or Certificate, if applicableNote: Refer to the responsible visa office for your regi",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row5[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row6[0].CheckBox1[0]",
+   "section": "Page1.DocumentsList.Row6",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row6[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Proof indicating you meet the requirements of the job being offered.",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row6[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row7[0].#subform[0].link[0]",
+   "section": "Page1.DocumentsList.Row7",
+   "kind": "field",
+   "ui": "button",
+   "caption": "link",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "If your employer obtained a Labour Market Impact Assessment (LMIA) from Employment and Social Development Canada (ESDC),",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row7[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row7[0].CheckBox1[0]",
+   "section": "Page1.DocumentsList.Row7",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row7[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "I have enclosed the following items:",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row7[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row8[0].#subform[0].link[0]",
+   "section": "Page1.DocumentsList.Row8",
+   "kind": "field",
+   "ui": "button",
+   "caption": "link",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "If your employer is exempt from obtaining an LMIA from ESDC, your employer must provide you with the offer of employment",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row8[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row8[0].CheckBox1[0]",
+   "section": "Page1.DocumentsList.Row8",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row8[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "I have enclosed the following items:",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row8[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row9[0].CheckBox1[0]",
+   "section": "Page1.DocumentsList.Row9",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row9[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "If working in the province of Québec with an LMIA, provide evidence of a valid Québec Acceptance Certificate (CAQ) issue",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row9[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row10[0].#subform[0].link[0]",
+   "section": "Page1.DocumentsList.Row10",
+   "kind": "field",
+   "ui": "button",
+   "caption": "link",
+   "data_path": null,
+   "in_shipped_data": null,
+   "options": null,
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "If you are a Provincial Nominee and have an offer of employment to a Foreign National exempt from an LMIA (either a form",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row10[0]",
+   "scripts": {
+    "click": 1
+   }
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row10[0].CheckBox1[0]",
+   "section": "Page1.DocumentsList.Row10",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row10[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "I have enclosed the following items:",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row10[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row11[0].CheckBox1[0]",
+   "section": "Page1.DocumentsList.Row11",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row11[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "If applying for a post-graduation work permit, submit proof that you have completed all the requirements of your program",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row11[0]",
+   "scripts": null
+  },
+  {
+   "som": "IMM_5488[0].Page1[0].DocumentsList[0].Row12[0].CheckBox1[0]",
+   "section": "Page1.DocumentsList.Row12",
+   "kind": "field",
+   "ui": "checkButton",
+   "caption": "",
+   "data_path": "IMM_5488[0].Page1[0].DocumentsList[0].Row12[0].CheckBox1[0]",
+   "in_shipped_data": true,
+   "options": [
+    [
+     "1",
+     "0",
+     "2"
+    ]
+   ],
+   "options_from": null,
+   "options_resolved": null,
+   "required": false,
+   "max_chars": null,
+   "presence": "visible",
+   "heading": "Any additional documents required by the responsible visa office.Note: Refer to the responsible visa office for your reg",
+   "in_row": "IMM_5488[0].Page1[0].DocumentsList[0].Row12[0]",
+   "scripts": null
+  }
+ ]
+}
