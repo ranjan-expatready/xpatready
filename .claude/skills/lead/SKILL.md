@@ -8,9 +8,9 @@ description: Resume as the Lead (designer, checker and coordinator of all lanes)
 Home: `ai-workers/problem-1-pathway-setup-and-form-filling/product/` (P). Lanes: P/`LANES.md`. The founder talks only to the Lead (P-64).
 
 ## Guard (first)
-Run `bash P/tools/lane.sh whoami`. `unbound` in the cloud (own `claude/*` session branch) → **cloud Lead (P-87)**: `git fetch origin && git merge --ff-only origin/main` (refused: ask the founder), `echo lead > .claude/lane` (gitignored), run it again. Anything but `lead` → reply only: "This is the <x> lane's copy. Type `/next <x>` (or `/qa`) here; `/lead` belongs in the Lead chat (main copy)." Stop.
+Run `bash P/tools/lane.sh whoami` (Mac: on `lead/<date>` from `origin/main`). `unbound` in the cloud (own `claude/*` session branch) → **cloud Lead (P-87)**: `git merge --ff-only origin/main` (refused: ask), `echo lead > .claude/lane` (gitignored), run it again. Anything but `lead` → reply only: "This is the <x> lane's copy. Type `/next <x>` (or `/qa`) here; `/lead` belongs in the Lead chat (main copy)." Stop.
 
-**Where the Lead commits (P-87):** Mac: `main`. Cloud: its session branch, one PR to `main`, merged after green CI; read "on/push `main`" below as that. Lanes sync `origin/main`: hand back or send `/qa after-merge` only once that PR is merged.
+**Where the Lead commits (P-87):** never on `main`: Mac `lead/<date>`, cloud its session branch; one PR to `main` the Lead merges on green CI, reviews answered; read "on/push `main`" below as that. Hand back or send `/qa after-merge` only after it merges.
 
 ## Start of every chat
 0. **Cloud session (P-82):** run `bash P/tools/cloud-setup.sh` once.
@@ -38,7 +38,7 @@ Run `bash P/tools/lane.sh whoami`. `unbound` in the cloud (own `claude/*` sessio
 2. Each lane owned by Lead: its Lead stage as above (CHECK reads CI, P-85; MERGE under the standing OK). What needs the founder (EARLY-LOOK, DEMO, product choices) → check, then one plain question with a recommendation under "Questions for the founder" in `LEAD.md`.
 3. A lane owned by Builder whose Lead note, 4+ hours old, is not applied on its origin branch → `create_session` on `lane.sh branch <lane>`, prompt `/next <lane>`. Never evidence (Mac); never a lane with an origin commit in the last 2 hours.
 4. Never: paid AI, a product decision, a :4400 restart, a force-push, a merge with red CI.
-5. `lane.sh state`, STATE log line "scheduled Lead: …", `LEAD.md` line; commit, push `main`; push-notify only a new founder question. Reply in five lines.
+5. `lane.sh state`, STATE log line "scheduled Lead: …", `LEAD.md` line; commit, PR, merge on green; push-notify only a new founder question. Reply in five lines.
 
 ## Fresh context (say it unprompted)
 When this chat has been compacted or is long, say at the top: "Context is getting large: after this, open a new chat and type `/lead`; everything is saved." First commit `main` and make sure every lane's state is in its lane file.

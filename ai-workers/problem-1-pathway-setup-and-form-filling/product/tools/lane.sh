@@ -14,11 +14,12 @@ P="ai-workers/problem-1-pathway-setup-and-form-filling"
 HERE="$(git rev-parse --show-toplevel 2>/dev/null)" || { echo "not in the repository"; exit 2; }
 MAIN="$(cd "$(git rev-parse --git-common-dir)/.." && pwd)"
 whoami_() {
-  # lead only on branch main (P-82: the Mac's main copy, or a cloud clone checked out on main); a lane branch prefix (screens/, forms/, evidence/,
+  # lead on branch main or lead/* (P-82, P-87: the Mac's main copy, or a cloud clone checked out on main); a lane branch prefix (screens/, forms/, evidence/,
   # runtime/, qa/, or the existing claude/<lane>-* branches and <lane>-* worktree names) maps to that lane;
   # anything else is unbound, never lead.
   local br; br=$(git -C "$HERE" branch --show-current 2>/dev/null)
   [ "$br" = main ] && { echo lead; return; }
+  case "$br" in lead/*) echo lead; return;; esac
   [ -f "$HERE/.claude/lane" ] && { cat "$HERE/.claude/lane"; return; }
   case "$br" in
     screens/*|claude/screens-*) echo screens;;

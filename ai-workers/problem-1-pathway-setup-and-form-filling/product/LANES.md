@@ -5,7 +5,7 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 ## Who runs where
 | Lane | Copy and branch | What it owns | Command | Ports · databases |
 |---|---|---|---|---|
-| **Lead** | main copy, `main` (cloud: its session branch, to `main` by PR, P-87) | Concepts, decisions, requests, checks, merges, rules, skills, `STATE.md`, shared demo :4400 | `/lead` | 4420–4429 · `lead_*` |
+| **Lead** | main copy on `lead/*` (cloud: its session branch); every change to `main` by PR, merged by the Lead (P-87) | Concepts, decisions, requests, checks, merges, rules, skills, `STATE.md`, shared demo :4400 | `/lead` | 4420–4429 · `lead_*` |
 | **screens** | own worktree | Milestone 2 screens, screen path (`WORKFLOW.md`) | `/next screens` | 4440–4449 · `screens_*` |
 | **forms** | own worktree | PDF and online forms (P-61–P-66): intake, form versions, field and screen maps, answer lists, capture, extension | `/next forms` | 4450–4459 · `forms_*` |
 | **evidence** | own worktree | Fills each real form and checks it in Adobe (P-46, P-65 fill trial); AI scoring set. Never app code | `/next evidence` | 4460–4469 · `evidence_*` |
