@@ -508,7 +508,7 @@ export class Studio {
     const sub = await this.db.reviewSubmission.findFirst({ where: { combinationId: id, status: "SUBMITTED" }, orderBy: { submittedAt: "desc" } });
     if (!sub) fail("Nothing is waiting for review.");
     // A sign-off names at least one item, and the person who submitted does not sign their own submission (break m1).
-    if (!b.items?.length) fail("Choose the changes you sign or return.");
+    if (!b?.items?.length) fail("Choose the changes you sign or return.");
     if (b.action === "signed" && sub!.submittedBy === actor.id) fail("You submitted this, so a different person signs it.", HttpStatus.FORBIDDEN);
     const changes = sub!.changeSummary as any[];
     const needsSme = (ref: string) => changes.find((x) => `${x.kind}|${x.key}` === ref)?.needs_sme;
