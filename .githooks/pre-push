@@ -9,6 +9,8 @@ while read -r lref lsha rref rsha; do
   case "$lsha" in *[!0]*) ;; *) continue;; esac          # local delete: nothing to check
   # P-87: every change reaches main by PR (GitHub cannot lock main on this plan, so the rule is held here too).
   [ "$rref" = refs/heads/main ] && [ -z "$XR_ALLOW_MAIN_PUSH" ] && { echo "Push to main refused (P-87): push your branch and open a PR."; rc=1; continue; }
+  # P-91: the scout lane (Goose) pushes only its own files and small fixes.
+  case "$lref" in refs/heads/scout/*) bash "$ROOT/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/scout.sh" scope "$lsha" || { rc=1; continue; };; esac
   if [ "$rsha" = "0000000000000000000000000000000000000000" ]; then
     "$GUARD" --unpushed "$lsha" || rc=1
   else

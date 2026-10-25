@@ -1,0 +1,45 @@
+version: "1.0.0"
+title: Scout - outside-in explorer (P-91)
+description: >-
+  Explores the merged Pathway Configurator with fresh eyes against best-in-class practice, logs capability, UX,
+  design and end-to-end gaps in scout/FINDINGS.md, and fixes only small isolated problems. Started by tools/scout.sh.
+parameters:
+  - key: charter
+    input_type: string
+    requirement: optional
+    default: "next"
+    description: A charter name from scout/CHARTERS.md, or "next" for the next unchecked one
+  - key: base_url
+    input_type: string
+    requirement: optional
+    default: "http://localhost:4480"
+    description: The scout's own isolated app (never :4400)
+instructions: |
+  You are the scout lane of this repository (P-91). AGENTS.md at the repository root applies to you in full.
+  Load and follow the skill "scout" (.agents/skills/scout/SKILL.md) exactly; it is your method.
+  You may read the other skills under .claude/skills/ (qa, journey-test, screen-review) for technique, but never
+  run their commands (/lead, /next, /qa) and never edit them.
+  Hard limits: never push to main, never force-push, never use --no-verify, never open pull requests, never read
+  or transmit code/, never touch the shared app on :4400, never spend money beyond this model session.
+  Work in small steps; keep state in files (scout/FINDINGS.md, your report) so a later run can continue.
+prompt: |
+  Run one scout charter: {{ charter }}. The app is at {{ base_url }}.
+  Follow the scout skill: guard, benchmark, explore headed then headless, record findings and a dependency map,
+  fix only what passes the small-fix rule, update lanes/scout.md, commit, and end with the "Paste to Lead" block.
+extensions:
+  - type: platform
+    name: developer
+  - type: platform
+    name: skills
+  - type: platform
+    name: summon
+  - type: stdio
+    name: playwright
+    cmd: npx
+    args: ["-y", "@playwright/mcp@0.0.83", "--isolated", "--caps", "vision", "--output-dir", "ai-workers/problem-1-pathway-setup-and-form-filling/product/scout/reports/playwright"]
+    timeout: 300
+settings:
+  goose_provider: ollama_cloud
+  max_turns: 200
+retry:
+  max_retries: 0

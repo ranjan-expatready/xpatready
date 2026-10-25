@@ -11,6 +11,7 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 | **evidence** | own worktree | Fills each real form and checks it in Adobe (P-46, P-65 fill trial); AI scoring set. Never app code | `/next evidence` | 4460–4469 · `evidence_*` |
 | **runtime** | own worktree | Thin end-to-end slice (P-67); in M2, Screen 03 on the screen path (P-89); then M3 runtime: case, people, answers, renderer, agent view, fill from case facts | `/next runtime` | 4430–4439 · `runtime_*` |
 | **qa** | own worktree, synced to `main` | Independent testing of `main`: `qa/` (capabilities, bugs, reports) and `prototype/studio/tests/qa/`. Never app code | `/qa <mode>` | 4470–4479 · `qa_*` |
+| **scout** | own worktree `xpatready-scout` on `scout/<date>`, Mac; **Goose on Ollama Cloud**, not Claude Code (P-91) | Outside-in exploration against best-in-class practice: `scout/` (charters, findings, reports) and `prototype/studio/tests/scout/`; small fixes only (≤ 40 app lines, files no open lane branch touches; `tools/scout.sh scope` in the pre-push guard). Skill `.agents/skills/scout/`, recipe `.goose/recipes/scout.yaml` | founder: `tools/scout.sh [charter]` | 4480–4489 · `scout_*` |
 **A lane runs on the Mac or in the cloud** — each an ordinary clone, pull at start (automatic: the session-start hook fast-forwards a clean copy), push at end; one session per lane at a time. The evidence lane and anything needing `sources/` or `code/` runs on the Mac (those folders are Mac-only, P-82).
 **The founder uses one chat: the Lead (`/lead`).** The Lead starts or continues each lane's session itself (prompt `/next <lane>` or `/qa <mode>`; on the Mac an own worktree, in the cloud a session on the lane's branch — skill `lead`), is told when a stage ends, checks it, and asks the founder only for decisions, walkthroughs, paid-AI go-aheads and installs. The founder may open a lane session to watch, or a qa session to test together (`/qa with-me`).
 **Fresh context, any time:** state lives in files and commits, never in a chat. A long Lead chat → the Lead says so; open a new chat and type `/lead`. A lane session is disposable: the Lead starts a fresh one per stage when its context is long, cut from the lane's branch (or `main` once merged); `/next` binds the new copy.
@@ -36,6 +37,7 @@ Several builders work at once, each in its own **git worktree** (a separate copy
 | `screens/<item>/review.md`, `break-report.md`, journey-test report | Reviewer and breaker agents launched by the lane |
 | `screens/<item>/concept-draft.md`, `design/draft-*` | `screen-designer` agent, launched by the Lead |
 | `qa/`, `prototype/studio/tests/qa/` | qa lane |
+| `scout/`, `prototype/studio/tests/scout/`, and small fixes that pass `tools/scout.sh scope` | scout lane (Goose); the Lead triages its findings and merges its branch by PR |
 | `prototype/evidence-lane/` | evidence lane |
 A lane needing a rule, decision or concept change proposes it in its block; it never edits Lead files. A founder request about the workflow made in a lane session is passed to the Lead.
 
