@@ -11,7 +11,7 @@
    "channel": "ONLINE",
    "channel_words": "Online",
    "signature": "The client signs the declaration in the portal",
-   "version": "IMM 5257 online · IRCC Portal · 2026-10-25"
+   "version": "IMM 5257 online · IRCC Portal · 2026-10-24"
   },
   {
    "form": "IMM 5707",
@@ -27,21 +27,9 @@
  "problems": [
   {
    "level": "warning",
-   "where": "Field map IMM 5257 online · IRCC Portal · 2026-10-25",
+   "where": "Field map IMM 5257 online · IRCC Portal · 2026-10-24",
    "item": "IMM 5257",
    "message": "3 choice inputs are not on an answer list yet: filled by matching labels, so a changed label could go unnoticed."
-  },
-  {
-   "level": "warning",
-   "where": "Field map IMM 5257 (09-2023)",
-   "item": "IMM 5257",
-   "message": "52 list rows have no purpose yet (for example Question 8 B Row 1 Country or Territory. If you replied Yes to question 8 A, please give your previous country or territory of residence.): choose what the list holds and what happens to rows the form has no room for."
-  },
-  {
-   "level": "warning",
-   "where": "Field map IMM 5707 (01-2023)",
-   "item": "IMM 5707",
-   "message": "9 list rows have no purpose yet (for example ): choose what the list holds and what happens to rows the form has no room for."
   }
  ]
 }

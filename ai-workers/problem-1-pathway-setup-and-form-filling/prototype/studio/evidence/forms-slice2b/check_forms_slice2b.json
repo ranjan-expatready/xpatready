@@ -1,7 +1,7 @@
 {
- "at": "2026-10-25T11:39:10.959Z",
- "port": 4446,
- "database": "xr_studio_screens_fs2b",
+ "at": "2026-10-24T21:16:15.666Z",
+ "port": 4452,
+ "database": "xr_studio_forms_s2b",
  "paid_calls": 0,
  "pass": 60,
  "fail": 0,
@@ -451,7 +451,7 @@
    "detail": {
     "added": "form_line",
     "form": "IMM 5257",
-    "edition": "IMM 5257 online · IRCC Portal · 2026-10-25"
+    "edition": "IMM 5257 online · IRCC Portal · 2026-10-24"
    }
   },
   {
@@ -487,7 +487,7 @@
   {
    "name": "D3 fail: when other inputs are open too, a new live draft is refused until the waiting proposals are decided (nothing paid)",
    "ok": true,
-   "detail": "A finished AI draft of this online version has 2 proposals waiting (job 5dfc5627-b131-48ed-8b03-b3abffb7881c): accept them, or map those inputs by hand, before a new draft. A new draft now would pay again for inputs that draft already answered."
+   "detail": "A finished AI draft of this online version has 2 proposals waiting (job b78a4569-64b4-46b8-b2c5-7bc23a2db5d8): accept them, or map those inputs by hand, before a new draft. A new draft now would pay again for inputs that draft already answered."
   },
   {
    "name": "D3: once its proposals are accepted nothing waits: a new live draft of what is still open asks for its worst case again",
