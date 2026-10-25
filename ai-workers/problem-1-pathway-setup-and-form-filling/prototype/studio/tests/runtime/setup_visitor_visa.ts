@@ -140,7 +140,7 @@ async function main() {
   await call("POST", `/jobs/${jobId}/accept-clean`, { outcome: "REUSE" }, AUTHOR);
   await call("POST", `/jobs/${jobId}/accept-clean`, { outcome: "NEW" }, AUTHOR);
   for (const i of (await call("GET", `/jobs/${jobId}`)).body.items.filter((x: { decision: string }) => x.decision === "PENDING")) {
-    const d = CHANGED[i.proposedKey] ? { decision: "CHANGED", key: CHANGED[i.proposedKey] } : { decision: "ACCEPTED" };
+    const d = CHANGED[i.proposedKey] ? { decision: "CHANGED", key: CHANGED[i.proposedKey] } : { decision: "ACCEPTED", note: "As on 21 Oct: a different meaning from the library field that could fit (BR-7)." };
     const x = await call("POST", `/jobs/${jobId}/items/${i.id}`, d, AUTHOR);
     if (x.status >= 300) ok(`4.3 decision on ${i.proposedKey}`, false, x.body);
   }
