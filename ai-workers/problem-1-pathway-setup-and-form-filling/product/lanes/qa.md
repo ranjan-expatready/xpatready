@@ -1,7 +1,7 @@
 # Lane: qa — independent testing of what is on main (skill `qa`)
 
 ## From the Lead
-2026-10-25 (Lead, cloud): **full development mode (P-89): keep finding errors.** First move QA-19 to `BUGS-CLOSED.md` (passed its check on the Mac after the founder's demo reset, 25 Oct). Then run **`/qa explore` on main** across Screen 01 (catalogue, combination page, intake, release), the forms channels and the R1 slice (cases, questionnaire, forms panel), aiming at the gaps your last report listed (officer's Confirm section and None apply by click, a real Online release, 200% zoom, keyboard-only paths) and the graph's untested routes (`tools/graph.mjs`). Log every finding in `BUGS.md` with its lane; ask questions through the Lead. Stage after: WAITING, owner Lead.
+2026-10-25 06:05 (Lead, cloud): explore report merged. Assigned: QA-38 and QA-40 → runtime (Screen 03 S1); QA-39 → screens (Screen 04 rewrites that page); QA-41 and QA-42 → screens; QA-43 → forms. The Lead records the cloud PostgreSQL workaround (embedded-postgres 18.3) as a tooling item. Stage WAITING, owner Lead: stand down until the next app merge. The Lead then sends `/qa after-merge`, which retests QA-38 to QA-43.
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

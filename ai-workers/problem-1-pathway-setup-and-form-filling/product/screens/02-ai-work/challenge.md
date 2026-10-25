@@ -51,10 +51,16 @@ Read: `concept.md` (Lead decisions 25 Oct), `design/draft-ai-work.html`, the app
 None: points 1–5 are Lead decisions (ownership, K1 reading, record shape).
 
 ## Lead response
-
+25 Oct (Lead, cloud). All five accepted.
+* **1 → accept.** The screens lane builds Screen 02's back end in its own files (`review-queue.ts`, `impact.ts`, decision kinds in `sources.ts`). The forms lane adds only purpose and overflow to the F1 field-map contract. On the combination page Screen 02 adds **one entry point**: the existing Setup / next-step button opens Draft setup as a right panel, with no tab. This is the one line in `combination.tsx` shared with the runtime lane, agreed now; the runtime lane's note says so.
+* **2 → accept the recommended reading of K1.** Release is blocked only by undecided form fields of an edition changed in this draft. Carried `unresolved` rows show as "Not decided yet (from an earlier release)", a warning. `never_filled` reads "not a fact". No data migration. Screen 01 releases stay unblocked, and both tests are as proposed.
+* **3 → accept.** `NormalizationItem.kind` (default `field`), `payload` and `sourceQuote`; an accepted item writes through the existing writers, and `draft_from_checklist` goes on the same guarded route and ledger. **AI cost:** the one live run on IMM 5483 (Sample estimate under US$0.50, cap US$5) waits for the founder's OK, which the Lead asks for at slice 3 with the plan's real estimate. Until then, stub only.
+* **4 → accept** `ApprovedSource`. Intake treats a file as approved when it is on the manifest or approved in the product; approver ≠ uploader on the server.
+* **5 → accept.** Slice 2 exposes `detail.a4.parts` read-only. What is new is the edition comparison field by field and the impact view.
+* Also in this lane's slices: `LibraryChange` + `keyFor` with one publisher for both release paths (slice 2; concept Lead decisions, Screen 04 B1/M6). qa's QA-41 (dialogs open on Close) and QA-42 (seed note on a Live combination) ride slice 1.
 
 ## Agreement
-
+Agreed 25 Oct (Lead, under P-89). BUILD slice 1.
 
 ## Build discoveries
 

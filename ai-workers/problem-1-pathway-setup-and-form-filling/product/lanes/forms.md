@@ -1,7 +1,7 @@
 # Lane: forms — PDF and online forms (P-61–P-63)
 
 ## From the Lead
-2026-10-25 (Lead, cloud): **full development mode (P-89); the founder approved the F2 browser extension (P-90).** Set current_item F2-extension, stage **PLAN**, owner Builder: `screens/F2-extension/plan.md` from `screens/F2-extension/concept.md` (Lead decisions at the top): a fresh agent's challenge first (skill screen-challenge), then the back-end table, team-model mapping, slices; record `@types/chrome` in ENVIRONMENT.md through the Lead when installed. Also, if Screen 02 needs it: the field-map purpose and overflow in the F1 contract (Screen 02 concept, Q3). Owner Lead after PLAN; the Lead agrees and sets BUILD.
+2026-10-25 06:15 (Lead, cloud): **F2 plan agreed** (`screens/F2-extension/plan.md` "Lead response"; S-1 to S-5 granted, S-3 as `web/src/pages/extension.tsx`; the five purposes named). Set stage **BUILD**, owner Builder. First **F1-P** (list purpose and overflow on a field map), so Screen 02 is not held. Then F2a (shared reader rules and the conformance test first; stop and report if the two readers cannot agree). One commit per slice. Also, from the Lead's earlier note: make `check_ai_launch_paths.ts` robust (one CI failure on 8d0831a) and stop it leaving files in the repo after a run. Add qa's QA-43 (unknown combination on `online-forms` → 404) with a test. Sync main first. BUILD ends at CHECK.
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

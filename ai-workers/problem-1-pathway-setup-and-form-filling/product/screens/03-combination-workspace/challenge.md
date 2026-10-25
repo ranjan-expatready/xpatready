@@ -57,7 +57,18 @@ Short challenge (top 5, `/next` DESIGN) of `concept.md` (Lead-agreed 25 Oct) and
 1. **Substitute sets before Screen 04 builds their authoring:** recommend seeding two or three Sample sets (labelled Scaffolding, values Sample for the expert) so a document line can pick one now; the alternative is to hide the "Accepted documents" column until Screen 04.
 
 ## Lead response
+25 Oct (Lead, cloud). All five points accepted. The one founder question is settled by the Lead's Screen 04 decision, so none is open.
+* **1 → accept.** Preview by person builds an unsaved case and calls `caseView()`. The web view reuses `questionnaire.tsx` read-only, with agent mode as "Show facts and the form fields they fill". F-R1c-1 is fixed once in `render.ts`, and an engine test compares preview and runtime output for the same family.
+* **2 → accept, with two Lead changes.**
+  * **Substitute sets:** no seeded Sample sets. Every document line defaults to the set "this document alone", which is a real capability. Named sets arrive from Screen 02's checklist drafts and show read-only on Screen 04 (Screen 04 challenge M9). The set schema (`DocumentSubstituteSet`, `DocumentRequirement.substituteSetKey`) is this lane's; Screen 04 reads it.
+  * **Filled by:** this is a change to a shared field, so it goes through the screens lane's `LibraryChange` once that merges (Screen 02 slice 2: a second person approves, where used shown). Until then it goes through `revise()` with the where-used count, and it moves onto `LibraryChange` in the next FIX pass after that merge.
+  * **Sponsor:** added as a role, marked Sample; the expert question "is Sponsor a person role (combination 3)" is already on the list.
+* **3 → accept.** Coverage blocks only for facts a form field needs for a role the combination has. Each problem names the fact and the three fixes. Slice 1 runs it against every Sample combination and fixes the Sample data, never the rule, before the gate goes live. `run-suites --demo` must stay 21/21.
+* **4 → accept slices S1–S4** as proposed. EARLY-LOOK after S1 is the Lead's (P-89).
+* **5 → accept.** New code goes in new files, and `combination.tsx` becomes the tab shell. The Sources tab is removed only after Screen 02 merges. Shared components change only through the Lead.
+* **Question 1 → no founder question:** "this document alone" as the default set, as above.
 
 ## Agreement
+Agreed 25 Oct (Lead, under P-89). BUILD S1.
 
 ## Build discoveries

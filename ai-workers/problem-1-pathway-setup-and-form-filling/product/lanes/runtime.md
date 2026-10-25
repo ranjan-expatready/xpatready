@@ -1,7 +1,10 @@
 # Lane: runtime — the thin end-to-end slice, then M3 runtime (P-67)
 
 ## From the Lead
-2026-10-25 (Lead, cloud): **full development mode (P-89): this lane builds Screen 03 in M2** (the combination workspace; it reuses your questionnaire renderer for Preview by person). Set current_item 03-combination-workspace, stage **DESIGN**, owner Builder: the short feasibility challenge (skill screen-challenge) of `screens/03-combination-workspace/concept.md` (agreed by the Lead; its Lead decisions at the top) and board `design/draft-workspace.html`; owner Lead. Screen path (WORKFLOW.md): BUILD slice 1 → EARLY-LOOK (Lead) → FINISH → CHECK → DEMO (Lead). Reuse Screen 01's combination components and channels, never fork them; the screens lane builds Screen 02 at the same time (To review, AI work): stay out of those pages. Carried items: F-R1c-1 (render.ts order) and RT-7 check authoring. R2 (prospect slice) waits until M2 is done.
+2026-10-25 06:00 (Lead, cloud): **Screen 03 challenge answered and agreed** (`screens/03-combination-workspace/challenge.md` "Lead response"). Set stage **BUILD**, slice **S1**, owner Builder: route `/c/:id/:tab`, `GET …/workspace?tab=`, Overview and Forms reusing Screen 01's components, and Preview by person on `caseView()` with the F-R1c-1 order fixed in `render.ts` and the preview-vs-runtime engine test. Also run the coverage check against every Sample combination and fix the data. Lead changes:
+* Substitute sets: no seeded sets; default "this document alone" (S3).
+* Filled by: goes through `revise()` until the screens lane's `LibraryChange` merges.
+New code goes in new files. `combination.tsx` becomes the tab shell, and the screens lane adds one entry point there (Setup opens Draft setup, Screen 02 challenge 1). Sync main first. Also fix qa's QA-38 (Major: "Open a case" names release 1 while the case opens on release 2) and QA-40 (an Online IMM 5257 case shows no forms line) in S1, with the qa checks in `tests/qa/check_qa_explore_1025.cjs`. Then EARLY-LOOK (Lead) with screenshots of the S1 views.
 
 Command: `/next runtime` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 

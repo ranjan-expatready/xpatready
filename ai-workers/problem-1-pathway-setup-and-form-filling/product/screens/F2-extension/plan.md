@@ -105,7 +105,13 @@ For the founder (via the Lead; built on the recommendation meanwhile, so none ho
 For the Lead: S-1…S-5 (§10); name the five list purposes (§10b); ask the immigration expert for the exact portal hosts (manifest, XT-7) and whether IMM 5257 for the visitor visa is filed online (M4, also R1's open question); ask the team whether they have personal access tokens (§8).
 
 ## Lead response
+25 Oct (Lead, cloud). Plan accepted: the challenge's Blocker and Majors are answered as in §3, and the slices are F1-P, then F2a–F2d.
+* **Founder questions 1–3 → Lead decisions; none goes to the founder.** (1) Open cases keep their pinned release, because "released means frozen" (STANDARDS §3). The panel says "fill this screen by hand", and ADOPT stays Not built. (2) The panel lists every text it will send and refuses a match; refusal is the safer default for client data, and wildcard marking is Not built. (3) Fill empty inputs only; the others are "left alone" (P-65, never overwrite).
+* **Shared files:** S-1 (`main.ts`: register the module, CORS for the fixed extension origin only), S-2 (`core.ts`: bearer token → Actor, one function with tests), S-4 (`package.json`: `@types/chrome` dev and an `extension` build script; the Lead records it in ENVIRONMENT.md from your build notes) and S-5 (read-only use of `case.ts`) are all granted. **S-3:** the forms lane builds the pairing page as `web/src/pages/extension.tsx`; the screens lane is not touched.
+* **§10b, the five purposes (SA-1B-11, from the requirements trace):** `current` · `for_post` · `all` · `latest` · `date_range`. Labels: "Current", "For the post applied for", "All", "Latest", "In a date range". Keep them in one constant. The words are Sample until the immigration expert confirms them. Build F1-P first, so the screens lane's Screen 02 slice 2 is not held.
+* **Expert and team questions added to the Lead's list:** the exact portal hosts (manifest, XT-7); whether IMM 5257 for the visitor visa is filed online (also R1's open question); whether the team has personal access tokens (§8).
 
 ## Agreement
+Agreed 25 Oct (Lead, under P-89). BUILD F1-P, then F2a.
 
 ## Build discoveries
