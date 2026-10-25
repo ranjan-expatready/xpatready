@@ -60,10 +60,10 @@ export class Impact {
 
   /** Accept (an author): the new edition joins the library with its unchanged form fields' maps carried as draft rows and
    *  the rest left for a person; every combination using the form shows the change in the shared draft until release. */
-  async accept(actor: Actor, id: string, body: { expected?: number }) {
+  async accept(actor: Actor, id: string, body: { expected: number }) {
     need(actor, "author");
     const r = await this.review(id);
-    if (body.expected !== undefined && body.expected !== r.counts.form_fields) fail("The comparison changed since you opened it. Look at it again, then accept.", HttpStatus.CONFLICT);
+    if (body.expected !== r.counts.form_fields) fail("The comparison changed since you opened it. Look at it again, then accept.", HttpStatus.CONFLICT);
     const { h, item, def, old } = await this.held(id);
     const inventory = await this.readInventory(item.file);
     const oldMaps = old ? new Map(effective(await this.db.formFieldMap.findMany({ where: { formEditionId: old.id } }), (m) => m.dataPath, "draft").map((m) => [m.dataPath, m])) : new Map();
@@ -89,7 +89,9 @@ export class Impact {
     if (!h) fail("This held edition does not exist (the demo may have been reset).", HttpStatus.NOT_FOUND);
     if (h!.status !== "HELD" || h!.outcome !== "new_edition_held") fail("This file is not a new edition waiting for its impact review.", HttpStatus.CONFLICT);
     const item = manifest().find((i) => i.sha256 === h!.sha256);
-    if (!item) fail("Only an approved official file is compared.", HttpStatus.CONFLICT);
+    // An edition approved in the product (not on the official manifest) cannot be read field by field yet: the form
+    // reader takes official files only. It can be set aside with a reason (break M5), never left stuck.
+    if (!item) fail("This edition was approved in the product, not taken from the official library, so its form fields cannot be compared yet. Set it aside with a reason, or keep it held until the official file is in the library.", HttpStatus.CONFLICT);
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId: h!.workspaceId, formKey: h!.code! } }, include: { editions: true } });
     if (!def) fail(`${h!.code} is not in the library.`, HttpStatus.NOT_FOUND);
     const old = newestEdition(def!.editions.filter((e) => e.channel === "PDF")) ?? null;

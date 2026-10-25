@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
 
 export type AiScope = { kind: "catalogue" | "program" | "combination" | "source"; ids: string[]; label?: string };
 const MODES = [
-  ["LIVE", "Live AI", "Guarded route, Claude Opus 5.5; reuses saved output for unchanged forms; costs shown below"],
+  ["LIVE", "Live AI", "Reads each form with AI; unchanged forms reuse what was read before; the cost is shown below before it starts"],
   ["REPLAY", "Replay saved runs", "No model call, US$0; uses earlier real runs, labelled as replays"],
   ["STUB", "Stub pass", "No network, no cost, no AI content: proves the path only"],
 ] as const;

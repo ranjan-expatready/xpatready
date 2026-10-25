@@ -7,9 +7,10 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { KIND_WORDS, ReviewQueueQuery, type QueueFilter, type QueueItem, type QueueKind, type ReviewQueue } from "../../contracts/review-queue.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
-import { buildSnapshots } from "../../engine/snapshot.ts";
+import { buildSnapshots, effective, type Snapshot } from "../../engine/snapshot.ts";
 import { ACTORS, actorOf, Db, VAR, Workspace, type Actor } from "./core.ts";
 import { Studio } from "./studio.ts";
+import { itemsOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const holds = (a: Actor, duty: string) => (a.duties as readonly string[]).includes(duty);
@@ -91,7 +92,10 @@ export class ReviewQueueService {
         const c = combo.get(s.combinationId), gate = gates.get(s.combinationId)!, mine = s.submittedBy === actor.id;
         const changes = (s.changeSummary as unknown[]).length, href = `/c/${s.combinationId}/review`;
         const base = { id: `submission:${s.id}`, kind: "release" as const, title: c?.path ?? "A combination", by: nameOf(s.submittedBy), at: s.submittedAt.toISOString(), cost_usd: null };
-        if (gate.ok) out.push({ ...base, what: `Submitted with ${plural(changes, "change")}; every change that needs a sign-off is signed. Ready to release.`, ...(holds(actor, "approve") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Release", href, note: null } } : { state: "waiting" as const, waiting_on: mine ? "An approver releases it: not the person who submitted it." : "An approver releases it.", next: null }) });
+        // Review Must 1: the same new-field check as both release routes, so "Release" is never offered on a refusal.
+        const unapproved = gate.ok ? await unapprovedAdds(this.db, workspaceId, itemsOf((snaps.get(s.combinationId) as { snapshot: Snapshot }).snapshot)) : [];
+        if (unapproved.length) out.push({ ...base, what: `Submitted with ${plural(changes, "change")}. Not ready to release: ${unapprovedWhy(unapproved)}.`, state: "waiting" as const, waiting_on: "Its new shared fields are decided on To review first.", next: null });
+        else if (gate.ok) out.push({ ...base, what: `Submitted with ${plural(changes, "change")}; every change that needs a sign-off is signed. Ready to release.`, ...(holds(actor, "approve") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Release", href, note: null } } : { state: "waiting" as const, waiting_on: mine ? "An approver releases it: not the person who submitted it." : "An approver releases it.", next: null }) });
         else if (/changed after it was submitted/.test(gate.why)) out.push({ ...base, what: `The draft changed after it was submitted. ${gate.why.split(": ")[1] ?? ""}`.trim(), ...(holds(actor, "review") ? { state: "needs" as const, waiting_on: null, next: { label: "Submit again", href, note: null } } : { state: "waiting" as const, waiting_on: "A content publisher submits it again.", next: null }) });
         else out.push({ ...base, what: `Submitted with ${plural(changes, "change")}. ${gate.why}`, ...(holds(actor, "sme") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Review and sign", href, note: null } } : { state: "waiting" as const, waiting_on: mine ? "The content reviewer signs it: not the person who submitted it." : "The content reviewer signs the changes that need the SME duty.", next: null }) });
       }
@@ -126,15 +130,35 @@ export class ReviewQueueService {
         ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Approve or reject the merge", href: `/review/merge/${m.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You proposed it; a different person approves or rejects it." : "A content publisher approves or rejects it.", next: null }) });
     }
 
+    // K1 (review Musts 4, 5): a PDF edition changed in a draft whose form fields still have no decision blocks every
+    // combination using its form; the decision page is listed here so nobody has to find it under an applied job.
+    const openEditions = await this.db.formFieldMap.findMany({ where: { outcome: "unresolved", status: "DRAFT", edition: { workspaceId, channel: "PDF" } }, distinct: ["formEditionId"], select: { formEditionId: true } });
+    for (const { formEditionId } of openEditions) {
+      const ed = await this.db.formEdition.findUnique({ where: { id: formEditionId }, select: { id: true, editionLabel: true, capturedOn: true, form: { select: { formKey: true, usedBy: { where: { status: { not: "RETIRED" } }, select: { combinationId: true } } } } } });
+      if (!ed) continue;
+      const rows = effective(await this.db.formFieldMap.findMany({ where: { formEditionId } }), (m) => m.dataPath, "draft");
+      const n = rows.filter((r) => r.outcome === "unresolved" && r.status === "DRAFT").length;
+      if (!n) continue;
+      const users = ed.form.usedBy.length;
+      out.push({ id: `form-fields:${ed.id}`, kind: "form_fields", title: ed.editionLabel, by: null, at: (ed.capturedOn ?? new Date(0)).toISOString(), cost_usd: null,
+        what: `${plural(n, "form field")} with no decision: map each one, mark it "not a fact", or "filled by hand" with a reason. Until then ${users === 1 ? "the combination that uses this form is" : `the ${plural(users, "combination")} that use this form are`} not released.`,
+        ...(holds(actor, "review") ? { state: "needs" as const, waiting_on: null, next: { label: `Decide ${plural(n, "form field")}`, href: `/review/form-fields/${ed.id}`, note: null } } : { state: "waiting" as const, waiting_on: "A content publisher decides each form field.", next: null }) });
+    }
+
     // Held files (P-80) and new editions held for impact review (P-32), from the one intake.
     for (const h of held) {
       const where = h.combinationId ? `/c/${h.combinationId}?show=held` : "/library/forms";
       const label = h.editionLabel ?? h.code ?? h.fileName;
       if (h.outcome === "held") {
         const mine = h.createdBy === actor.id;
+        // Review Must 6: the second person cannot approve until the uploader records the IRCC page, so that is the
+        // uploader's step.
+        const noPage = !h.irccPage;
         out.push({ id: `held:${h.id}`, kind: "held_file", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null,
-          what: "Not on the approved source list: not read into the library, attached or sent to AI.",
-          ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Check the source", href: `/review/held/${h.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You uploaded it; a different person checks the source." : "A content publisher checks the source.", next: null }) });
+          what: `Not on the approved source list: not read into the library, attached or sent to AI.${noPage ? " The person who uploaded it records the IRCC page it came from first." : ""}`,
+          ...(mine && noPage ? { state: "needs" as const, waiting_on: null, next: { label: "Record the IRCC page", href: `/review/held/${h.id}`, note: null } }
+            : noPage ? { state: "waiting" as const, waiting_on: `${nameOf(h.createdBy)} records the IRCC page it came from; then a different person checks it.`, next: null }
+            : holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Check the source", href: `/review/held/${h.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You uploaded it; a different person checks the source." : "A content publisher checks the source.", next: null }) });
       } else {
         const older = h.outcome === "older_edition_held";
         out.push({ id: `held:${h.id}`, kind: "new_edition", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null,
@@ -149,7 +173,7 @@ export class ReviewQueueService {
       const mine = c.proposedBy === actor.id, word = c.kind === "field" ? "shared field" : c.kind.replace("_", " ");
       const what = `${c.action === "ADD" ? `New ${word}` : `${c.action[0]}${c.action.slice(1).toLowerCase()} the ${word}`}${c.reason ? `. Reason: ${c.reason}` : ""}${c.aiVerdict ? ` · Advisory check: ${c.aiVerdict}` : ""}`;
       const base = { id: `change:${c.id}`, kind: "library_change" as const, title: c.label ?? c.key, by: nameOf(c.proposedBy), at: c.proposedAt.toISOString(), cost_usd: null };
-      if (c.status === "RETURNED") out.push({ ...base, what: `${what} · Returned by ${nameOf(c.decidedBy)}: ${c.decisionNote}`, ...(mine ? { state: "needs" as const, waiting_on: null, next: { label: "See why it was returned", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: "The person who proposed it corrects it.", next: null }) });
+      if (c.status === "RETURNED") out.push({ ...base, what: `${what} · Returned by ${nameOf(c.decidedBy)}: ${c.decisionNote}`, ...(mine || holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: "Correct or withdraw", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: "The person who proposed it, or an author, corrects or withdraws it.", next: null }) });
       else out.push({ ...base, what, ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: c.action === "ADD" ? "Approve or return the new field" : "Approve or return", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You proposed it; a different person approves or returns it." : "A content publisher approves or returns it.", next: null }) });
     }
 

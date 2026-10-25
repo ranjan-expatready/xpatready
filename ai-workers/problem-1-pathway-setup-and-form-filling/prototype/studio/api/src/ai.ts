@@ -97,14 +97,14 @@ export class Ai implements OnModuleInit {
         const all = prepared ? this.sources.savedRuns(prepared.jobId, prepared.inputSha) : [];
         // A3: a saved answer is used before paying again; one that failed only our own check is re-checked first.
         const usable = all.find((r) => r.valid) ?? all.find((r) => r.recheckable);
-        const savedWhy = (r: NonNullable<typeof usable>) => `Saved AI answer from run ${r.run_id} (same form; prompt ${r.prompt ?? "unknown"}${r.recheckable ? "; it failed an earlier check and is re-checked with today's rules first" : r.rechecked ? "; re-checked with today's rules" : ""}): no model call, US$0.`;
+        const savedWhy = (r: NonNullable<typeof usable>) => `Saved AI answer for this same form${r.recheckable ? " (it failed an earlier check and is re-checked with today's rules first)" : r.rechecked ? " (re-checked with today's rules)" : ""}: no model call, US$0.`;
         if (mode === "REPLAY") {
           if (!usable) { targets.push({ ...base, action: "not_eligible", read_first, why: read_first ? "No saved AI answer to use (the form has not been read yet)." : "No saved AI answer for this form; run it live." }); continue; }
           targets.push({ ...base, action: "reuse_saved_output", read_first, run_file: usable.file, fingerprint, why: savedWhy(usable) }); continue;
         }
         if (mode === "LIVE" && usable && !opts.draftAgain) { targets.push({ ...base, action: "reuse_saved_output", read_first, run_file: usable.file, fingerprint, why: savedWhy(usable) }); continue; }
         const repeat = mode === "LIVE" && prepared ? this.sources.repeatsFailedRun(prepared.jobId, prepared.draftInputs) : null;
-        if (repeat) { targets.push({ ...base, action: "not_eligible", read_first, why: `A new paid call is refused: run ${repeat.run_id} asked the AI exactly this (same form, prompt, settings) and its answer failed our own check, so asking again would repeat it. Use the saved AI answer instead (no cost): it is re-checked with today's rules.` }); continue; }
+        if (repeat) { targets.push({ ...base, action: "not_eligible", read_first, why: `A new paid call is refused: an earlier run asked the AI exactly this (same form, prompt, settings) and its answer failed our own check, so asking again would repeat it. Use the saved AI answer instead (no cost): it is re-checked with today's rules.` }); continue; }
         // A4: reuse first and in parts when the library already maps some of this form's fields or the form is large.
         const split = inventoryFile ? await this.sources.draftSplit(a, await this.sources.printedEdition(a), false) : null;
         const a4 = split ? { total: split.plan.total, reused: split.plan.reused.length, reused_from: split.reusedFrom, to_ai: split.plan.leftover, parts: split.parts.map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, worst_usd: p.worst_usd, saved_answer: !!p.saved_run, repeats_failed_run: p.repeats_failed_run })) } : undefined;

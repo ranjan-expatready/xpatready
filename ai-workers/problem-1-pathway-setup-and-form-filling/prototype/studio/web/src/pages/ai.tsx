@@ -57,7 +57,7 @@ export function AiBatchPage() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 text-[#7c3aed]" /> {d.operation_label}</h1>
-          <p className="mt-1 text-sm text-text-muted">{d.scopeLabel} · {MODE[d.mode]} · started by {d.started_by_name}, {fmtWhen(d.startedAt)}</p>
+          <p className="mt-1 text-sm text-text-muted">{d.scopeLabel} · {d.mode === "LIVE" && d.jobs.length && (d.jobs as { mode: string; kind: string }[]).every((j) => j.mode !== "LIVE" || j.kind === "reuse_map") ? "No model call: saved answers and the library reused (US$0)" : MODE[d.mode]} · started by {d.started_by_name}, {fmtWhen(d.startedAt)}</p>
           <div className="mt-2 flex flex-wrap gap-1.5"><BatchStatus s={d.status} /><Pill>{d.jobs.length} step{d.jobs.length === 1 ? "" : "s"}</Pill><Pill>Spent US${d.spent_usd.toFixed(2)} · worst case US${d.worstCaseUsd.toFixed(2)} · limit US${d.spendLimitUsd.toFixed(2)}</Pill></div>
         </div>
         <div className="flex gap-2">

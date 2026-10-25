@@ -4,7 +4,7 @@
 /** A change to the shared library a second person approves (LibraryChange, Screen 04 B1). */
 export type LibraryChangeView = {
   id: string; kind: string; kind_word: string; key: string; label: string; action: string; action_word: string; reason: string | null;
-  ai_verdict: string | null; matches: { key: string; score: number }[]; status: "WAITING" | "APPROVED" | "RETURNED" | "RELEASED";
+  ai_verdict: string | null; matches: { key: string; score: number }[]; status: "WAITING" | "APPROVED" | "RETURNED" | "RELEASED" | "WITHDRAWN";
   proposed_by: string | null; proposed_by_id: string; proposed_at: string; decided_by: string | null; decided_at: string | null; decision_note: string | null;
   released_in: number | null; combination_id: string | null;
 };
@@ -22,7 +22,7 @@ export type CaptureView = {
 };
 
 /** A held file from the one intake (board view 9). */
-export type HeldFileView = { id: string; file: string; kind: string; code: string | null; title: string | null; edition: string | null; outcome: string; reason: string | null; combinationId: string | null; at: string; irccPage: string | null; uploadedBy: string };
+export type HeldFileView = { id: string; file: string; kind: string; code: string | null; title: string | null; edition: string | null; outcome: string; reason: string | null; combinationId: string | null; at: string; irccPage: string | null; uploadedBy: string; sha256: string; stored: boolean };
 
 /** The new-edition impact review (board view 7, C9.1). */
 export type ImpactChange = "unchanged" | "reworded" | "new" | "removed";

@@ -326,6 +326,8 @@ model LibraryChange {
   version        Int       @default(1)
   sourceJobId    String?   @map("source_job_id") @db.Uuid
   combinationId  String?   @map("combination_id") @db.Uuid
+  /// Who applied the draft that created it (break M2): never its approver either.
+  appliedBy      String?   @map("applied_by")
 
   @@index([workspaceId, status])
   @@map("library_change")

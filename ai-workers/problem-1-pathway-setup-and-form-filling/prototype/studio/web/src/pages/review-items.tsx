@@ -4,12 +4,13 @@
 import * as React from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, useAction, useActorId, useApi } from "@/lib/api";
-import { Button, Notice, Panel, Pill, Textarea } from "@/components/ui/controls";
+import { Button, Input, Notice, Panel, Pill, Textarea } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
 import { fmtWhen } from "@/components/status";
 import { cn } from "@/lib/utils";
 import { ToReviewPage } from "@/pages/to-review";
+import { FormFieldDecisions } from "@/pages/job";
 import type { SessionView } from "../../../contracts/programs";
 import type { CaptureView, HeldFileView, ImpactAccepted, ImpactChange, ImpactReview, LibraryChangeDetail, LibraryChangeView, MergeSide, MergeView, ScreenMapView } from "../../../contracts/screen02";
 
@@ -69,11 +70,41 @@ export function LibraryChangePage() {
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
       </div>
       <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span> (generated from the group and the name)</p></details>
-      {x.status !== "WAITING" ? null : mine || !me.has("review")
+      {x.status === "RETURNED" && (mine || me.has("author")) ? <Correct change={x} /> : x.status !== "WAITING" ? null : mine || !me.has("review")
         ? <Notice title={mine ? "You proposed this" : "A content publisher decides"}>{mine ? "A different person approves it or returns it with a reason. Until then, a combination that uses it is not released." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
         : <Decide yes="Approve" no="Return" busy={act.isPending} onYes={() => act.mutate({ d: "approve" })} onNo={(note) => act.mutate({ d: "return", note })} />}
+      {x.status === "WAITING" && me.has("author") && x.action === "ADD" ? <Withdraw id={x.id} /> : null}
     </div>
   );
+}
+
+/** B1 (break B1): a returned new field is corrected and sent again, or withdrawn; it never freezes its combination. */
+function Correct({ change }: { change: LibraryChangeDetail }) {
+  const nav = useNavigate();
+  const [label, setLabel] = React.useState(change.field?.label ?? change.label), [meaning, setMeaning] = React.useState(change.field?.meaning ?? ""), [reason, setReason] = React.useState("");
+  const send = useAction(() => api<LibraryChangeView>(`/library/changes/${change.id}/resubmit`, { method: "POST", json: { label, meaning, reason } }), { success: (r) => `"${r.label}" sent to a second person again`, invalidate: [...inv, ["library-change", change.id]], onDone: () => nav("/review") });
+  return (
+    <section aria-labelledby="correct-h" className="space-y-3 rounded-lg border border-border bg-surface-raised p-4" data-correct>
+      <h2 id="correct-h" className="font-semibold">Correct it and send it again</h2>
+      <label className="block text-sm">Name<Input className="mt-1" value={label} maxLength={120} onChange={(e) => setLabel(e.target.value)} /></label>
+      <label className="block text-sm">Meaning<Textarea className="mt-1" value={meaning} maxLength={500} onChange={(e) => setMeaning(e.target.value)} /></label>
+      <label className="block text-sm">What you corrected<Textarea className="mt-1" value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} placeholder="So the second person can check it" /></label>
+      <div className="flex justify-end"><Button busy={send.isPending} disabled={reason.trim().length < 8} onClick={() => send.mutate(undefined)}>Send again</Button></div>
+      <Withdraw id={change.id} />
+    </section>
+  );
+}
+/** An author withdraws a new field: the form fields that read it go back to "no decision" (K1). */
+function Withdraw({ id }: { id: string }) {
+  const nav = useNavigate();
+  const [open, setOpen] = React.useState(false), [why, setWhy] = React.useState("");
+  const go = useAction(() => api<{ form_fields_reopened: number }>(`/library/changes/${id}/withdraw`, { method: "POST", json: { note: why } }), { success: (r) => `Withdrawn: ${r.form_fields_reopened} form field${r.form_fields_reopened === 1 ? "" : "s"} back to "no decision"`, invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
+  return open ? (
+    <div className="flex flex-wrap items-end gap-2 border-t border-border pt-3" data-withdraw>
+      <label className="flex-1 text-sm">Why withdraw it<Input className="mt-1" value={why} maxLength={300} onChange={(e) => setWhy(e.target.value)} /></label>
+      <Button variant="destructive" busy={go.isPending} disabled={why.trim().length < 3} onClick={() => go.mutate(undefined)}>Withdraw the new field</Button>
+    </div>
+  ) : <div className="flex justify-end"><Button variant="ghost" onClick={() => setOpen(true)}>Withdraw it instead…</Button></div>;
 }
 
 // ───────────────────────────────────────────── board view 6: portal capture review (P-66)
@@ -150,7 +181,7 @@ export function HeldFilePage() {
   const list = useApi<HeldFileView[]>(["held"], "/intake/held");
   const [page, setPage] = React.useState("");
   const record = useAction(() => api(`/intake/held/${id}`, { method: "PATCH", json: { irccPage: page } }), { success: "IRCC page recorded", invalidate: [["held"], ...inv] });
-  const approve = useAction(() => api<{ result?: { message: string } | null }>(`/intake/held/${id}/approve`, { method: "POST", json: {} }), { success: (r) => `Approved as an official source${r.result ? `: ${r.result.message}` : ""}`, invalidate: [["held"], ...inv], onDone: () => nav("/review") });
+  const approve = useAction(() => api<{ result?: { message: string } | null }>(`/intake/held/${id}/approve`, { method: "POST", json: { irccPage: list.data?.find((x) => x.id === id)?.irccPage ?? undefined } }), { success: (r) => `Approved as an official source${r.result ? `: ${r.result.message}` : ""}`, invalidate: [["held"], ...inv], onDone: () => nav("/review") });
   const reject = useAction((note: string) => api(`/intake/held/${id}/reject`, { method: "POST", json: { note } }), { success: "Rejected: the file is not used", invalidate: [["held"], ...inv], onDone: () => nav("/review") });
   if (list.isLoading) return <Spinner label="Loading the held file" />;
   const h = list.data?.find((x) => x.id === id);
@@ -160,6 +191,11 @@ export function HeldFilePage() {
     <div className="mx-auto max-w-3xl space-y-5">
       <Crumbs here="Held file" />
       <Head title={h.edition ?? h.code ?? h.file} chip={mine ? "Waiting for a second person" : "Needs you"} tone={mine ? "neutral" : "warn"} sub={<>{h.file} · uploaded {fmtWhen(h.at)}</>} />
+      <dl className="grid grid-cols-[9rem_1fr] gap-x-4 gap-y-1 rounded-lg border border-border bg-surface-raised p-4 text-sm" data-held-read>
+        <dt className="text-text-muted">Read from the file</dt><dd>{h.code ? `${h.code}${h.title ? ` · ${h.title}` : ""}` : "No form code could be read"}</dd>
+        <dt className="text-text-muted">Edition</dt><dd>{h.edition ?? "Not read"}</dd>
+        <dt className="text-text-muted">The file</dt><dd>{h.stored ? <a className="text-text-link underline" href={`/api/intake/held/${h.id}/file`} target="_blank" rel="noreferrer">Open the held PDF</a> : "Not stored"} <span className="text-xs text-text-muted">· checksum {h.sha256.slice(0, 12)}…</span></dd>
+      </dl>
       <Notice tone="warn" title="Not on the approved source list">It was not read into the library, attached or sent to AI. A second person compares it with the IRCC page it came from; approved, its checksum joins the approved list and the file goes through the intake again.</Notice>
       <section aria-labelledby="held-page" className="space-y-2 rounded-lg border border-border bg-surface-raised p-4 text-sm">
         <h2 id="held-page" className="font-semibold">IRCC page it came from</h2>
@@ -181,7 +217,13 @@ export function EditionImpactPage() {
   const [tab, setTab] = React.useState<"comparison" | "library" | "combinations">("comparison");
   const accept = useAction(() => api<ImpactAccepted>(`/intake/held/${id}/impact/accept`, { method: "POST", json: { expected: r.data?.counts.form_fields } }), { success: (x) => `${x.edition} accepted: ${x.carried} form fields carried, ${x.for_a_person} left for a person. The change is in the shared draft.`, invalidate: [...inv, ["impact", id]], onDone: () => nav("/review") });
   if (r.isLoading) return <Spinner label="Comparing the editions (no AI)" />;
-  if (r.isError) return <ErrorState title="The impact could not be shown" description={(r.error as Error).message} action={<Link className="text-text-link underline" to="/review">Back to To review</Link>} />;
+  if (r.isError) return (
+    <div className="mx-auto max-w-3xl space-y-5">
+      <Crumbs here="New edition" />
+      <ErrorState title="The impact could not be shown" description={(r.error as Error).message} action={<Link className="text-text-link underline" to="/review">Back to To review</Link>} />
+      {me.has("review") ? <SetAside id={id!} /> : null}
+    </div>
+  );
   const x = r.data!, CH: Record<string, [string, string]> = { new: ["info", "New"], reworded: ["warn", "Reworded"], removed: ["danger", "Removed"], unchanged: ["neutral", "Unchanged"] };
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -203,6 +245,13 @@ export function EditionImpactPage() {
         : <Notice title="The configuration author accepts it">Accepting adds the new edition to the shared draft; nothing reaches firms until release.</Notice>}
     </div>
   );
+}
+
+/** Break M5: a held edition that cannot be compared is set aside with a reason, never left stuck on To review. */
+function SetAside({ id }: { id: string }) {
+  const nav = useNavigate();
+  const go = useAction((note: string) => api(`/intake/held/${id}/reject`, { method: "POST", json: { note } }), { success: "Set aside: the edition is not used", invalidate: [["held"], ...inv], onDone: () => nav("/review") });
+  return <Decide yes="Keep it held" no="Set it aside" busy={go.isPending} onYes={() => nav("/review")} onNo={(n) => go.mutate(n)} />;
 }
 
 // ───────────────────────────────────────────── board view 5: screen map of an online version (P-61 §3a, P-62 §8)
@@ -230,6 +279,20 @@ export function ScreenMapPage() {
           {x.state === "drafted" ? (me.has("review") ? <div className="flex justify-end"><Button busy={accept.isPending} onClick={() => accept.mutate(undefined)}>Accept the {c.mapped ?? 0} matches</Button></div> : <Notice title="A content publisher accepts it">Switch to a person with the review duty.</Notice>) : null}
         </>
       )}
+    </div>
+  );
+}
+
+/** K1 (review Musts 4, 5): one PDF edition's form fields, decided from To review whether they came from an AI draft or
+ *  from a new edition's accepted impact. */
+export function FormFieldsPage() {
+  const { id } = useParams(); const me = useMe();
+  return (
+    <div className="mx-auto max-w-5xl space-y-5">
+      <Crumbs here="Form fields" />
+      <Head title="Form fields with no decision" chip={me.has("review") ? "Needs you" : "A content publisher decides"} sub="Release of every combination that uses this form waits until each new form field has a decision." />
+      {me.has("review") ? null : <Notice title="A content publisher decides">Switch to a person with the review duty to decide these.</Notice>}
+      <FormFieldDecisions editionId={id!} readOnly={!me.has("review")} />
     </div>
   );
 }

@@ -1,7 +1,8 @@
 // Screen 02 slice 2 endpoints in the screens lane's own file (challenge point 1): a decision on one PDF form field (K1),
 // library changes approved by a second person (LibraryChange), the held-file decision (P-80) and the new-edition impact
 // review (P-32, C9.1). Captures, merges and screen maps keep their F1 endpoints (forms.ts); Screen 02 adds their pages.
-import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Patch, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Patch, Post, Query, Res } from "@nestjs/common";
+import type { Response } from "express";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
@@ -9,7 +10,7 @@ import { effective } from "../../engine/snapshot.ts";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { ACTORS, actorOf, Audit, Db, fail, need, revise, strip, VAR, Workspace, type Actor } from "./core.ts";
-import { changeView, decideChange } from "./library-changes.ts";
+import { changeView, decideChange, resubmitChange, withdrawChange } from "./library-changes.ts";
 import { Intake } from "./intake.ts";
 import { Impact } from "./impact.ts";
 import { Programs } from "./programs.ts";
@@ -22,7 +23,8 @@ const noteOf = (b: unknown) => { const n = obj(b).note; return typeof n === "str
 export const FormFieldDecision = z.object({
   dataPath: z.string().min(1).max(300),
   decision: z.enum(["not_a_fact", "by_hand"]),
-  reason: z.string().trim().min(8, "Say why in a sentence (at least 8 characters).").max(300),
+  // Invisible characters do not count towards the 8 (break m3: eight zero-width spaces passed).
+  reason: z.string().transform((x) => x.normalize("NFKC").replace(/[\p{Cf}\p{Default_Ignorable_Code_Point}]/gu, "").trim()).pipe(z.string().min(8, "Say why in a sentence (at least 8 characters).").max(300)),
 }).strict();
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
   const r = schema.safeParse(input ?? {});
@@ -32,7 +34,7 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
 
 @Injectable()
 export class Screen02 {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Db) readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
 
   /** K1: decides one PDF form field that no shared field fills. A new draft version of that form field (origin HUMAN);
    *  an undecided form field of an edition changed in this draft blocks release until it is decided. */
@@ -136,7 +138,9 @@ export async function proposePath(programs: Programs, body: { pathway?: string; 
     const path = [l.p.label, l.c.label, ...(l.s ? [l.s.label] : [])];
     const have = words(path.join(" ")), own = words((l.s ?? l.c).label);
     const hits = have.filter((w) => want.includes(w)), ownHits = own.filter((w) => want.includes(w));
-    return { l, path, hits, score: hits.length + ownHits.length * 2 + (own.length && ownHits.length === own.length ? 2 : 0) };
+    // "Exempt" in a path that the description does not say is the opposite meaning ("with an LMIA" is not LMIA-exempt).
+    const opposite = have.includes("exempt") && !want.includes("exempt") ? 4 : 0;
+    return { l, path, hits, score: hits.length + ownHits.length * 2 + (own.length && ownHits.length === own.length ? 2 : 0) - opposite };
   }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score || a.path.join().localeCompare(b.path.join()));
   const best = scored[0];
   if (!best) return { mode: "no_ai", cost_usd: 0, proposal: null, why: "No existing program, category or sub-category matches these words. Build the path by hand below." };
@@ -159,10 +163,18 @@ export class Screen02Controller {
   @Get("library/changes") changes(@Query("status") status?: string) { return this.s.libraryChanges(status || undefined); }
   @Get("library/changes/:id") change(@Param("id") id: string) { return this.s.libraryChange(id); }
   @Post("library/changes/:id/approve") approve(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.decideLibraryChange(actorOf(a), id, "approve", noteOf(b)); }
+  @Post("library/changes/:id/resubmit") resubmit(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const o = obj(b); const str = (v: unknown) => (typeof v === "string" ? v : undefined); return resubmitChange(this.s.db, actorOf(a), id, { label: str(o.label), meaning: str(o.meaning), reason: str(o.reason) }); }
+  @Post("library/changes/:id/withdraw") withdraw(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return withdrawChange(this.s.db, actorOf(a), id, noteOf(b)); }
+  @Get("intake/held/:id/file") async heldFile(@Param("id") id: string, @Res() res: Response) {
+    const f = await this.intake.heldBytes(id);
+    // Shown in the browser to compare, never run: a sandbox and no content sniffing (a held file is untrusted).
+    res.setHeader("Content-Type", "application/pdf"); res.setHeader("X-Content-Type-Options", "nosniff"); res.setHeader("Content-Security-Policy", "sandbox");
+    res.setHeader("Content-Disposition", `inline; filename="${f.name.replace(/[^A-Za-z0-9._-]/g, "_")}"`); res.send(f.bytes);
+  }
   @Post("library/changes/:id/return") ret(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.decideLibraryChange(actorOf(a), id, "return", noteOf(b)); }
   @Patch("intake/held/:id") page(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const p = obj(b).irccPage; return this.intake.recordPage(actorOf(a), id, { irccPage: typeof p === "string" ? p : undefined }); }
-  @Post("intake/held/:id/approve") approveHeld(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.intake.decideHeld(actorOf(a), id, "approve", { note: noteOf(b) }); }
+  @Post("intake/held/:id/approve") approveHeld(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const p = obj(b).irccPage; return this.intake.decideHeld(actorOf(a), id, "approve", { note: noteOf(b), irccPage: typeof p === "string" ? p : undefined }); }
   @Post("intake/held/:id/reject") rejectHeld(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.intake.decideHeld(actorOf(a), id, "reject", { note: noteOf(b) }); }
   @Get("intake/held/:id/impact") impactOf(@Param("id") id: string) { return this.impact.review(id); }
-  @Post("intake/held/:id/impact/accept") acceptImpact(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const e = obj(b).expected; return this.impact.accept(actorOf(a), id, { expected: typeof e === "number" ? e : undefined }); }
+  @Post("intake/held/:id/impact/accept") acceptImpact(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const e = obj(b).expected; if (typeof e !== "number") fail("Send the number of form fields you reviewed (expected), so a changed comparison is not accepted unseen."); return this.impact.accept(actorOf(a), id, { expected: e as number }); }
 }

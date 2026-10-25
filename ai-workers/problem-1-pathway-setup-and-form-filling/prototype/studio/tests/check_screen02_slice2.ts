@@ -97,7 +97,7 @@ function pdf(title: string, text: string) {
   // Every other proposal decided as the AI recommends, so the draft can be applied.
   for (const o of ["REUSE", "NEW"]) await call("POST", `/jobs/${jobId}/accept-clean`, { outcome: o });
   job = (await call("GET", `/jobs/${jobId}`)).body;
-  for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED" });
+  for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit." });
   r = await call("POST", `/jobs/${jobId}/apply`, { who: "each_applicant" });
   ok("setup: the decided draft is applied", r.status === 201, r.body?.detail ?? r.body);
   const applied = r.body;

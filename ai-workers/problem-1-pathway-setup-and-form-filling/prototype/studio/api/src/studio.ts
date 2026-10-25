@@ -8,7 +8,7 @@ import { buildSnapshot, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE, type Mode, type 
 import { slug } from "../../engine/import.ts";
 import { checkCondition, diff, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
-import { publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
+import { itemsOf, mergeItems, publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { cleanLabel, normalizeLabel } from "../../contracts/programs.ts";
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 
@@ -109,14 +109,17 @@ export class Studio {
     if (c.program.nodeKind !== "STREAM" && c.program.nodeKind !== "CATEGORY") return [{ level: "error", where: "Row", item: c.combinationKey, message: `This configuration is attached to a ${LEVEL[c.program.nodeKind].name.toLowerCase()} ("${c.program.label}"), above a full combination. Publishing is blocked: attach configuration to a category, or to its sub-category (SA-1B-55/56).` }];
     if (kids) return [{ level: "error", where: "Row", item: c.combinationKey, message: `"${c.program.label}" now has sub-categories, so this row sits above a full combination. Publishing is blocked (SA-1B-56).` }];
     return (await this.undecidedFormFields(combinationId, "DRAFT")).map((f) => ({ level: "error" as const, where: "Forms", item: f.form,
-      message: `${f.n} form field${f.n === 1 ? " has" : "s have"} no decision in this draft (for example ${f.example}). Map each one, mark it "not a fact", or "filled by hand" with a reason (K1).` }));
+      message: `${f.n} form field${f.n === 1 ? " has" : "s have"} no decision in this draft (for example ${f.example}). Map each one, mark it "not a fact", or "filled by hand" with a reason on To review › Form fields (K1).` }));
   }
 
   /** K1 (Screen 02 challenge point 2): form fields of the combination's forms that have no decision, per form. DRAFT rows
    *  are an edition changed in this draft (they block release); PUBLISHED rows were carried from an earlier release (a
    *  warning until that edition is drafted again). */
   async undecidedFormFields(combinationId: string, status: "DRAFT" | "PUBLISHED") {
-    const rows = await this.db.formFieldMap.findMany({ where: { outcome: "unresolved", status, edition: { form: { usedBy: { some: { combinationId, status: { not: "RETIRED" } } } } } }, select: { dataPath: true, caption: true, edition: { select: { form: { select: { formKey: true } } } } } });
+    const found = await this.db.formFieldMap.findMany({ where: { outcome: "unresolved", status, edition: { form: { usedBy: { some: { combinationId, status: { not: "RETIRED" } } } } } }, select: { id: true, dataPath: true, caption: true, edition: { select: { form: { select: { formKey: true } } } } } });
+    // A carried row already decided in a newer draft version is not counted again (review Should).
+    const later = status === "PUBLISHED" && found.length ? new Set((await this.db.formFieldMap.findMany({ where: { supersedesId: { in: found.map((r) => r.id) } }, select: { supersedesId: true } })).map((r) => r.supersedesId)) : new Set<string | null>();
+    const rows = found.filter((r) => !later.has(r.id));
     const by = new Map<string, { form: string; n: number; example: string }>();
     for (const r of rows) { const k = r.edition.form.formKey; const cur = by.get(k) ?? { form: k, n: 0, example: r.caption || r.dataPath }; cur.n++; by.set(k, cur); }
     return [...by.values()];
@@ -304,7 +307,9 @@ export class Studio {
     if (!VALUE_TYPES.includes(b.valueType)) fail(`Value type must be one of ${VALUE_TYPES.join(", ")}.`);
     if (await this.db.canonicalField.findFirst({ where: { workspaceId, canonicalFieldKey: b.key } })) fail(`${b.key} already exists: edit it instead, so every form keeps one definition.`, HttpStatus.CONFLICT);
     const f = await this.db.canonicalField.create({ data: { workspaceId, canonicalFieldKey: b.key, version: 1, status: "DRAFT", meaning: b.meaning.trim(), valueType: b.valueType, dataType: VALUE_TYPE_TO_DATA_TYPE[b.valueType], scope: b.key.startsWith("case.") ? "CASE_LEVEL" : "CLIENT_LEVEL", subjectKind: subjectKindOf(b.key), origin: "HUMAN", updatedBy: actor.id } });
-    await this.audit.log(workspaceId, actor.id, "created", "field", b.key, `${actor.name} added field ${b.key} (draft)`);
+    // Break M3: a field added in the library waits for a second person too, like one from an AI draft (B1).
+    await this.db.libraryChange.create({ data: { workspaceId, kind: "field", key: b.key, label: f.label, action: "ADD", reason: "Added in the library by hand.", status: "WAITING", proposedBy: actor.id } });
+    await this.audit.log(workspaceId, actor.id, "created", "field", b.key, `${actor.name} added field ${b.key} (draft); a second person approves it on To review`);
     return f;
   }
 
@@ -361,6 +366,8 @@ export class Studio {
     const key = slug(b.title);
     if (await this.db.logicalSection.findFirst({ where: { workspaceId, sectionKey: key } })) fail("A section with this title already exists; reuse it.", HttpStatus.CONFLICT);
     const s = await this.db.logicalSection.create({ data: { workspaceId, sectionKey: key, version: 1, status: "DRAFT", title: b.title.trim(), meaning: b.meaning ?? null, displayOrder: 100 + (await this.db.logicalSection.count({ where: { workspaceId } })), origin: "HUMAN", updatedBy: actor.id } });
+    // A new section waits for a second person on To review before any release carries it (Lead re-check 25 Oct).
+    await this.db.libraryChange.create({ data: { workspaceId, kind: "section", key, label: s.title, action: "ADD", reason: "Added by hand.", status: "WAITING", proposedBy: actor.id } });
     await this.audit.log(workspaceId, actor.id, "created", "section", key, `${actor.name} added section "${s.title}" (draft)`);
     return s;
   }
@@ -408,7 +415,9 @@ export class Studio {
     let typeKey = b.documentTypeKey;
     if (!typeKey && b.newTypeName?.trim()) {
       typeKey = slug(b.newTypeName);
-      if (!(await this.db.documentType.findFirst({ where: { workspaceId, documentTypeKey: typeKey } }))) await this.db.documentType.create({ data: { workspaceId, documentTypeKey: typeKey, name: b.newTypeName.trim(), category: b.providedBy ?? "client", version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
+      if (!(await this.db.documentType.findFirst({ where: { workspaceId, documentTypeKey: typeKey } }))) { await this.db.documentType.create({ data: { workspaceId, documentTypeKey: typeKey, name: b.newTypeName.trim(), category: b.providedBy ?? "client", version: 1, status: "DRAFT", origin: "HUMAN", updatedBy: actor.id } });
+        // A new document type waits for a second person on To review, like a new field (Lead re-check 25 Oct).
+        await this.db.libraryChange.create({ data: { workspaceId, kind: "document_type", key: typeKey, label: b.newTypeName.trim(), action: "ADD", reason: "Named while adding a document requirement.", status: "WAITING", proposedBy: actor.id, combinationId } }); }
     }
     if (!typeKey || !(await this.db.documentType.findFirst({ where: { workspaceId, documentTypeKey: typeKey } }))) fail("Choose a document type, or name a new one.");
     if (!WHO.includes(b.appliesToRoles)) fail("Choose whose document it is.");
@@ -558,7 +567,7 @@ export class Studio {
     const gate = await this.releaseGate(id, sha256);
     if (!gate.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: ${gate.why}`); fail(`Release refused: ${gate.why}`, HttpStatus.CONFLICT); }
     // A new shared field this draft uses is approved by a second person first (Screen 02 slice 2, B1).
-    const waiting = await unapprovedAdds(this.db, c.workspaceId, snapshot.canonical_fields.map((f) => f.id));
+    const waiting = await unapprovedAdds(this.db, c.workspaceId, itemsOf(snapshot));
     if (waiting.length) fail(`Release refused: ${unapprovedWhy(waiting)}.`, HttpStatus.CONFLICT);
     const sub = (gate as { sub: ReviewSubmission }).sub;
     const authors = await this.draftAuthors(id, snapshot, c.workspaceId);
@@ -571,7 +580,7 @@ export class Studio {
       const pack = await this.newPackVersion(tx, c.workspaceId, authors, actor.id, { rows: 1, via: "combination review" });
       const out = await this.publishRow(tx, c, snapshot, sha256, { packVersionId: pack.id, authors, submitter: sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(snapshot) } });
       await tx.reviewSubmission.update({ where: { id: sub.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
-      const library = await publishLibraryChanges(tx, c.workspaceId, pack.version);
+      const library = await publishLibraryChanges(tx, c.workspaceId, pack.version, { items: itemsOf(snapshot) });
       return { ...out, pack: pack.version, library };
     }, RELEASE_TX);
     await this.audit.log(c.workspaceId, actor.id, "released", "configuration", c.combinationKey, `${actor.name} approved and released "${c.label}" in Release ${release.pack}; ${Object.entries(release.n).filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(", ") || "no draft rows"} published`, { sha256, published: release.n, pack_version: release.pack }, id);
@@ -598,7 +607,7 @@ export class Studio {
   /** One release for the whole shared draft (P-23): every listed combination gets a frozen snapshot in one new pack
    *  version, in one transaction. Each one must have passed review (releaseGate, QA-1), and the person releasing must
    *  not have authored or submitted any of it (BR-14, server-side). */
-  async releaseRows(actor: Actor, ids: string[]) {
+  async releaseRows(actor: Actor, ids: string[], libraryIds?: string[]) {
     need(actor, "approve");
     const workspaceId = await this.ws.id();
     const prepared: { c: { id: string; workspaceId: string; sourceBasis: string; label: string }; snapshot: Snapshot; sha256: string; authors: string[]; sub: ReviewSubmission }[] = [];
@@ -609,7 +618,7 @@ export class Studio {
       if (blocking.length) fail(`Release refused: "${c.label}" has ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${blocking[0].item}: ${blocking[0].message})`, HttpStatus.CONFLICT);
       const gate = await this.releaseGate(id, sha256);
       if (!gate.ok) { await this.audit.log(workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: "${c.label}": ${gate.why}`); fail(`Release refused: "${c.label}": ${gate.why}`, HttpStatus.CONFLICT); }
-      const waiting = await unapprovedAdds(this.db, workspaceId, snapshot.canonical_fields.map((f) => f.id));
+      const waiting = await unapprovedAdds(this.db, workspaceId, itemsOf(snapshot));
       if (waiting.length) fail(`Release refused: "${c.label}": ${unapprovedWhy(waiting)}.`, HttpStatus.CONFLICT);
       prepared.push({ c, snapshot, sha256, authors: await this.draftAuthors(id, snapshot, workspaceId), sub: (gate as { sub: ReviewSubmission }).sub });
     }
@@ -634,7 +643,7 @@ export class Studio {
         rows.push({ label: p.c.label, version: r.version });
       }
       // Approved library changes go into the same release (P-23 one release for everything; Screen 04 B1).
-      const library = await publishLibraryChanges(tx, workspaceId, pack.version);
+      const library = await publishLibraryChanges(tx, workspaceId, pack.version, { ids: libraryIds ?? [], items: mergeItems(prepared.map((p) => itemsOf(p.snapshot))) });
       return { pack: pack.version, rows, library };
     }, RELEASE_TX);
     await this.audit.log(workspaceId, actor.id, "released", "pack", String(out.pack), `${actor.name} released Release ${out.pack}: ${[...out.rows.map((r) => r.label), ...out.library.map((l) => `${l.action.toLowerCase()} ${l.label}`)].join(", ")}`, { rows: out.rows, library: out.library, authors });

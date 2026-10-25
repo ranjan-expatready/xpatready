@@ -16,7 +16,7 @@ import { FieldsPage, FieldPage, SectionsPage, DocumentTypesPage } from "@/pages/
 import { ActivityPage, ReleasesPage } from "@/pages/history";
 import { AiBatchPage, AiWorkPage } from "@/pages/ai";
 import { ToReviewPage } from "@/pages/to-review";
-import { CaptureReviewPage, EditionImpactPage, HeldFilePage, LibraryChangePage, MergeReviewPage, ScreenMapPage } from "@/pages/review-items";
+import { CaptureReviewPage, EditionImpactPage, HeldFilePage, LibraryChangePage, MergeReviewPage, ScreenMapPage, FormFieldsPage } from "@/pages/review-items";
 import { RuntimeApp } from "@/runtime/cases";
 
 export default function App() {
@@ -86,6 +86,7 @@ function Shell() {
             <Route path="/review/held/:id" element={<HeldFilePage />} />
             <Route path="/review/edition/:id" element={<EditionImpactPage />} />
             <Route path="/review/screen-map/:id" element={<ScreenMapPage />} />
+            <Route path="/review/form-fields/:id" element={<FormFieldsPage />} />
             <Route path="/new" element={<NewCombinationPage />} />
             <Route path="/c/:id" element={<CombinationPage />} />
             <Route path="/c/:id/:tab" element={<CombinationPage />} />

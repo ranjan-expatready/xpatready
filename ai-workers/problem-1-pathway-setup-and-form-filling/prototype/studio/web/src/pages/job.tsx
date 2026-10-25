@@ -11,6 +11,9 @@ import type { FormFieldsView } from "../../../contracts/screen02";
 
 export const PERSON: Record<string, string> = { form_subject: "the form's subject", subject_spouse_or_partner: "the subject's spouse or partner", subject_parent_1: "the subject's first parent", subject_parent_2: "the subject's second parent", subject_child: "the subject's child", subject_sibling: "the subject's sibling", representative: "the representative", none: "the application" };
 const OUTCOME: Record<string, [string, string]> = { REUSE: ["ok", "Reuse existing"], NEW: ["info", "New definition"], AMBIGUOUS: ["warn", "Ambiguous"], CONFLICT: ["danger", "Conflict"] };
+/** What "accept the clean ones" leaves for a person: ambiguous and conflicting proposals, and new fields a library field
+ *  could fit (BR-7: they need a reason). */
+const needsOwn = (i: { outcome: string; decision: string; candidates?: { score: number }[] | null }) => i.decision === "PENDING" && (["AMBIGUOUS", "CONFLICT"].includes(i.outcome) || (i.outcome === "NEW" && (i.candidates ?? []).some((c) => c.score >= 0.55)));
 const FILTERS = [["decide", "Needs a decision"], ["new", "New"], ["reuse", "Reuse"], ["decided", "Decided"], ["all", "All"]] as const;
 
 export function JobPage() {
@@ -19,6 +22,7 @@ export function JobPage() {
   const j = useApi<any>(["job", jobId], `/jobs/${jobId}`, { refetchInterval: (q: any) => (q.state.data?.status === "RUNNING" || q.state.data?.status === "QUEUED" ? 3000 : false) });
   const [filter, setFilter] = React.useState<(typeof FILTERS)[number][0]>("decide");
   const [applyOpen, setApplyOpen] = React.useState(false);
+  const [focusDecisions, setFocusDecisions] = React.useState(false);
   const recompare = useAction(() => api(`/jobs/${jobId}/recompare`, { method: "POST" }), { success: (r: any) => `Compared again with the current library (no AI call): ${r.detail?.recompared?.kept ?? 0} decisions kept, ${r.detail?.recompared?.reopened ?? 0} to decide again`, invalidate: [["job", jobId]] });
   // Board view 4 keys: J / K move between proposals, A accepts the one in focus, N opens its new-field form.
   React.useEffect(() => {
@@ -42,20 +46,20 @@ export function JobPage() {
   const items = job.items as any[];
   const c = job.detail?.counts;
   const pending = items.filter((i) => i.decision === "PENDING");
-  const shown = items.filter((i) => filter === "all" ? true : filter === "decided" ? i.decision !== "PENDING" : filter === "decide" ? ["AMBIGUOUS", "CONFLICT"].includes(i.outcome) && i.decision === "PENDING" : filter === "new" ? i.outcome === "NEW" : i.outcome === "REUSE");
+  const shown = items.filter((i) => filter === "all" ? true : filter === "decided" ? i.decision !== "PENDING" : filter === "decide" ? needsOwn(i) : filter === "new" ? i.outcome === "NEW" : i.outcome === "REUSE");
   return (
     <div className="mx-auto max-w-7xl space-y-5 pb-24">
       <nav className="flex items-center gap-1 text-xs text-text-muted"><Link to={`/c/${id}/sources`} className="hover:underline">Sources and forms</Link><ChevronRight className="size-3" /><span>AI field-map draft</span></nav>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold"><Sparkles className="size-5 text-[#7c3aed]" /> {job.attachment?.edition ?? "Form"}: AI-proposed field map</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5"><ModePill mode={job.mode} /><StatusPill status={job.status} />{job.runId ? <Pill title="Run record">{job.runId}</Pill> : null}{job.costUsd !== null && job.costUsd !== undefined ? <Pill>US${Number(job.costUsd).toFixed(2)}</Pill> : null}<Pill>{job.elapsed_s}s</Pill></div>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5"><ModePill mode={job.mode} /><StatusPill status={job.status} />{job.costUsd !== null && job.costUsd !== undefined ? <Pill>US${Number(job.costUsd).toFixed(2)}</Pill> : null}<Pill>{job.elapsed_s}s</Pill></div>
           <p className="mt-2 max-w-3xl text-xs text-text-muted">{job.detail?.label ?? "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route"}. {job.mode === "REPLAY" ? "This is a replay of a saved real run: no model was called now." : ""} The AI saw only the public list of the form's fields; it never saw the library, a family or an answer key. The comparison with the library below is deterministic.</p>
         </div>
       </div>
       {job.status === "RUNNING" || job.status === "QUEUED" ? <Notice tone="ai" title="The AI is drafting" action={<Spinner label="Running" />}>{job.message} Steps so far: {(job.detail?.steps ?? []).map((s: any) => `${s.step} (exit ${s.exit})`).join(", ") || "starting"}. This page updates by itself.</Notice> : null}
       {job.status === "BLOCKED" || job.status === "FAILED" ? <Notice tone={job.status === "BLOCKED" ? "warn" : "danger"} title={job.status === "BLOCKED" ? "Blocked: nothing was drafted" : "The draft failed"} action={<Button size="sm" variant="secondary" asChild><Link to={`/c/${id}/sources`}>Back to sources</Link></Button>}>{job.message}</Notice> : null}
-      {job.status === "COMPLETED" ? <Notice tone="info" title="Compared with the library as it was when the draft was read" action={<Button size="sm" variant="secondary" onClick={() => recompare.mutate(undefined)} busy={recompare.isPending}>Compare again (no AI call)</Button>}>{job.detail?.library_revision ? `Library revision ${String(job.detail.library_revision.sha256).slice(0, 10)} (${job.detail.library_revision.fields} definition rows). ` : ""}If the shared library changes before you apply, applying is refused as stale; comparing again keeps every decision that still holds and reopens the rest.{job.detail?.recompared ? ` Last compared again by ${job.detail.recompared.by}: ${job.detail.recompared.kept} kept, ${job.detail.recompared.reopened} reopened.` : ""}</Notice> : null}
+      {job.status === "COMPLETED" ? <Notice tone="info" title="Compared with the library as it was when the draft was read" action={<Button size="sm" variant="secondary" onClick={() => recompare.mutate(undefined)} busy={recompare.isPending}>Compare again (no AI call)</Button>}>{job.detail?.library_revision ? `The library then had ${job.detail.library_revision.fields} shared field versions. ` : ""}If the shared library changes before you apply, applying is refused as stale; comparing again keeps every decision that still holds and reopens the rest.{job.detail?.recompared ? ` Last compared again by ${job.detail.recompared.by}: ${job.detail.recompared.kept} kept, ${job.detail.recompared.reopened} reopened.` : ""}</Notice> : null}
       {c ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
           <Stat label="Form fields" value={c.boxes} sub={`${c.mapped} mapped · ${c.unresolved} unresolved`} />
@@ -69,7 +73,7 @@ export function JobPage() {
       {items.length ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div role="tablist" className="flex gap-1">{FILTERS.map(([k, l]) => { const n = k === "all" ? items.length : k === "decided" ? items.length - pending.length : k === "decide" ? items.filter((i) => ["AMBIGUOUS", "CONFLICT"].includes(i.outcome) && i.decision === "PENDING").length : items.filter((i) => i.outcome === (k === "new" ? "NEW" : "REUSE")).length; return <button key={k} role="tab" aria-selected={filter === k} onClick={() => setFilter(k)} className={cn("rounded-lg px-3 py-1.5 text-sm", filter === k ? "bg-primary/10 font-medium text-text-link" : "text-text-muted hover:bg-text/5")}>{l} <span className="text-xs">({n})</span></button>; })}</div>
+            <div role="tablist" className="flex gap-1">{FILTERS.map(([k, l]) => { const n = k === "all" ? items.length : k === "decided" ? items.length - pending.length : k === "decide" ? items.filter(needsOwn).length : items.filter((i) => i.outcome === (k === "new" ? "NEW" : "REUSE")).length; return <button key={k} role="tab" aria-selected={filter === k} onClick={() => setFilter(k)} className={cn("rounded-lg px-3 py-1.5 text-sm", filter === k ? "bg-primary/10 font-medium text-text-link" : "text-text-muted hover:bg-text/5")}>{l} <span className="text-xs">({n})</span></button>; })}</div>
             {job.status === "COMPLETED" ? <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={() => clean.mutate("REUSE")} busy={clean.isPending && clean.variables === "REUSE"} disabled={!items.some((i) => i.outcome === "REUSE" && i.decision === "PENDING")}><CheckCheck /> Accept exact reuse ({items.filter((i) => i.outcome === "REUSE" && i.decision === "PENDING").length})</Button>
               <Button variant="secondary" onClick={() => clean.mutate("NEW")} busy={clean.isPending && clean.variables === "NEW"} disabled={!items.some((i) => i.outcome === "NEW" && i.decision === "PENDING" && !i.candidates.some((c: any) => c.score >= 0.55))} title="New definitions with no similar library field; anything close to an existing field needs its own decision"><CheckCheck /> Accept clean new definitions ({items.filter((i) => i.outcome === "NEW" && i.decision === "PENDING" && !i.candidates.some((c: any) => c.score >= 0.55)).length})</Button>
@@ -87,14 +91,23 @@ export function JobPage() {
           </div>
         </div>
       ) : null}
-      {job.status === "APPLIED" ? <FormFieldDecisions jobId={jobId!} /> : null}
-      {applyOpen ? <ApplyDialog job={job} onClose={() => setApplyOpen(false)} onDone={() => nav(`/c/${id}/preview`)} /> : null}
+      {job.status === "APPLIED" ? <FormFieldDecisions jobId={jobId!} focusOnLoad={focusDecisions} /> : null}
+      {applyOpen ? <ApplyDialog job={job} onClose={() => setApplyOpen(false)} onDone={async () => {
+        // Review Must 4: when form fields are left to decide, stay here where they are listed; otherwise preview.
+        const ff = await api<FormFieldsView>(`/jobs/${jobId}/form-fields`).catch(() => null);
+        if (ff?.fields.some((f) => f.outcome === "unresolved" && !f.carried)) setFocusDecisions(true);
+        else nav(`/c/${id}/preview`);
+      }} /> : null}
     </div>
   );
 }
 
 function ItemCard({ item, jobId, locked }: { item: any; jobId: string; locked: boolean }) {
-  const [mode, setMode] = React.useState<null | "other" | "new" | "return">(null);
+  const [mode, setMode] = React.useState<null | "other" | "new" | "return" | "why">(null);
+  // BR-7 (review Must 3): accepting makes a new shared field while a library field could fit, so it needs a reason.
+  const near = item.outcome === "NEW" && item.evidence?.recommendation?.action !== "reuse" ? ((item.candidates ?? []) as { key: string; score: number }[]).filter((c) => c.score >= 0.55).sort((x, y) => y.score - x.score)[0] : null;
+  const why = React.useRef<HTMLInputElement>(null);
+  React.useEffect(() => { if (mode === "why") why.current?.focus(); }, [mode]);
   const [key, setKey] = React.useState(item.candidates?.[0]?.key ?? item.proposedKey), [meaning, setMeaning] = React.useState(item.proposedMeaning), [type, setType] = React.useState(item.proposedType), [note, setNote] = React.useState("");
   const decide = useAction((b: any) => api(`/jobs/${jobId}/items/${item.id}`, { method: "POST", json: b }), { invalidate: [["job", jobId]], onDone: () => setMode(null) });
   const [tone, label] = OUTCOME[item.outcome];
@@ -102,7 +115,7 @@ function ItemCard({ item, jobId, locked }: { item: any; jobId: string; locked: b
   const dep = (k: string) => item.affected?.[k];
   const decided = item.decision !== "PENDING";
   return (
-    <article data-proposal={item.id} tabIndex={0} aria-label={`${OUTCOME[item.outcome][1]}: ${item.proposedKey}`} className={cn("rounded-xl border bg-surface-raised p-4 shadow-sm outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", decided ? "border-border opacity-90" : item.outcome === "CONFLICT" ? "border-danger/40" : item.outcome === "AMBIGUOUS" ? "border-warn/50" : "border-border")}>
+    <article data-proposal={item.id} tabIndex={0} aria-label={`${OUTCOME[item.outcome][1]}: ${item.proposedKey}`} className={cn("min-w-0 rounded-xl border bg-surface-raised p-4 shadow-sm [overflow-wrap:anywhere] outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50", decided ? "border-border opacity-90" : item.outcome === "CONFLICT" ? "border-danger/40" : item.outcome === "AMBIGUOUS" ? "border-warn/50" : "border-border")}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2"><Pill tone={tone}>{label}</Pill><code className="mono font-semibold">{item.proposedKey}</code><Pill>{item.proposedType}</Pill>{item.matchedKey && item.matchedKey !== item.proposedKey ? <span className="text-xs text-text-muted">closest: <code className="mono">{item.matchedKey}</code></span> : null}</div>
@@ -112,7 +125,7 @@ function ItemCard({ item, jobId, locked }: { item: any; jobId: string; locked: b
         </div>
         {decided ? <div className="text-right text-xs"><Pill tone={item.decision === "RETURNED" ? "warn" : "ok"}>{item.decision === "ACCEPTED" ? "Accepted" : item.decision === "CHANGED" ? "Changed" : item.decision === "NEW" ? "New shared field" : "Returned"}</Pill>{item.decision === "NEW" && item.payload?.label ? <p className="mt-1 font-medium">"{item.payload.label}" · a second person approves it on To review</p> : null}<p className="mt-1">{item.decidedKey ? <>uses <code className="mono">{item.decidedKey}</code></> : item.decisionNote}</p><p className="text-text-muted">by {item.decidedBy}</p>{!locked ? <button className="mt-1 text-text-link underline" onClick={() => decide.mutate({ decision: "PENDING" })}>undo</button> : null}</div> : null}
       </div>
-      <div className="mt-3 grid gap-3 lg:grid-cols-3">
+      <div className="mt-3 grid min-w-0 gap-3 lg:grid-cols-3 [&>*]:min-w-0">
         <div className="rounded-lg bg-surface p-3">
           <p className="text-[11px] font-medium uppercase tracking-wide text-text-muted">Whose value the form fields read ({item.boxes.length} form field{item.boxes.length > 1 ? "s" : ""})</p>
           <div className="mt-1 flex flex-wrap gap-1">{item.persons.map((p: string) => <Pill key={p} tone="info">{PERSON[p] ?? p}</Pill>)}</div>
@@ -137,7 +150,7 @@ function ItemCard({ item, jobId, locked }: { item: any; jobId: string; locked: b
       </div>
       {!decided && !locked ? (
         <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border pt-3">
-          <Button size="sm" data-accept onClick={() => decide.mutate({ decision: "ACCEPTED" })} busy={decide.isPending && !mode}>{rec?.action === "reuse" ? <GitMerge /> : <Plus />} {rec?.text ?? "Accept"}</Button>
+          <Button size="sm" data-accept aria-expanded={near ? mode === "why" : undefined} onClick={() => near ? setMode(mode === "why" ? null : "why") : decide.mutate({ decision: "ACCEPTED" })} busy={decide.isPending && !mode}>{rec?.action === "reuse" ? <GitMerge /> : <Plus />} {rec?.text ?? "Accept"}</Button>
           <Button size="sm" variant="secondary" onClick={() => setMode(mode === "other" ? null : "other")}>Use another library field</Button>
           <Button size="sm" variant="secondary" data-new onClick={() => setMode(mode === "new" ? null : "new")}>{rec?.action !== "create_new" ? "Create a new shared field" : "Name it as a new shared field"}</Button>
           <Button size="sm" variant="ghost" onClick={() => setMode(mode === "return" ? null : "return")}><CornerUpLeft /> Return</Button>
@@ -145,6 +158,7 @@ function ItemCard({ item, jobId, locked }: { item: any; jobId: string; locked: b
       ) : null}
       {mode === "other" ? <div className="mt-3 flex flex-wrap items-end gap-2"><Field label="Library field key" className="w-96"><Input className="mono" value={key} onChange={(e) => setKey(e.target.value)} list={`c-${item.id}`} /></Field><datalist id={`c-${item.id}`}>{item.candidates.map((cd: any) => <option key={cd.key} value={cd.key}>{cd.meaning}</option>)}</datalist><Button size="sm" onClick={() => decide.mutate({ decision: "CHANGED", key })} busy={decide.isPending}>Use this field</Button></div> : null}
       {mode === "new" ? <NewFieldForm item={item} busy={decide.isPending} onSave={(b) => decide.mutate({ decision: "NEW", ...b })} error={decide.error?.message ?? null} /> : null}
+      {mode === "why" && near ? <div className="mt-3 flex flex-wrap items-end gap-2" data-accept-reason><Field label={`Why is this not ${near.key}? (a library field that could fit)`} className="min-w-64 flex-1"><Input ref={why} value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} /></Field><Button size="sm" disabled={note.trim().length < 8} onClick={() => decide.mutate({ decision: "ACCEPTED", note })} busy={decide.isPending}>Accept with this reason</Button></div> : null}
       {mode === "return" ? <div className="mt-3 flex items-end gap-2"><Field label="Why it goes back (shown on its form fields as unresolved)" className="flex-1"><Textarea className="min-h-10" value={note} onChange={(e) => setNote(e.target.value)} /></Field><Button size="sm" variant="destructive" onClick={() => decide.mutate({ decision: "RETURNED", note })} busy={decide.isPending}>Return</Button></div> : null}
     </article>
   );
@@ -175,7 +189,7 @@ function NewFieldForm({ item, busy, onSave, error }: { item: { proposedKey: stri
   return (
     <div className="mt-3 space-y-2 rounded-lg border border-border p-3" data-new-field>
       <div className="grid gap-2 md:grid-cols-[1fr_2fr_auto]">
-        <Field label="Name"><Input value={label} onChange={(e) => setLabel(e.target.value)} maxLength={120} /></Field>
+        <Field label="Name"><Input autoFocus value={label} onChange={(e) => setLabel(e.target.value)} maxLength={120} /></Field>
         <Field label="Meaning"><Input value={meaning} onChange={(e) => setMeaning(e.target.value)} /></Field>
         <Field label="Kind of value"><Select value={type} onChange={(e) => setType(e.target.value)}>{["text", "date", "yes_no", "code", "country", "number", "address", "phone", "email"].map((t) => <option key={t}>{t}</option>)}</Select></Field>
       </div>
@@ -188,21 +202,24 @@ function NewFieldForm({ item, busy, onSave, error }: { item: { proposedKey: stri
 
 /** K1: after apply, every form field that no shared field fills needs a decision before release: "not a fact" or
  *  "filled by hand", each with a reason. Form fields carried from an earlier release only warn. */
-function FormFieldDecisions({ jobId }: { jobId: string }) {
-  const q = useApi<FormFieldsView>(["job-form-fields", jobId], `/jobs/${jobId}/form-fields`);
+export function FormFieldDecisions({ jobId, editionId, readOnly = false, focusOnLoad = false }: { jobId?: string; editionId?: string; readOnly?: boolean; focusOnLoad?: boolean }) {
+  const cache = editionId ? ["edition-form-fields", editionId] : ["job-form-fields", jobId!];
+  const q = useApi<FormFieldsView>(cache, editionId ? `/editions/${editionId}/form-fields` : `/jobs/${jobId}/form-fields`);
   const [open, setOpen] = React.useState<string | null>(null), [kind, setKind] = React.useState<"not_a_fact" | "by_hand">("not_a_fact"), [reason, setReason] = React.useState("");
-  const decide = useAction((dataPath: string) => api<{ outcome: string }>(`/editions/${q.data?.edition?.id}/form-fields/decision`, { method: "POST", json: { dataPath, decision: kind, reason } }), { success: (r) => `Decided: ${r.outcome === "by_hand" ? "filled by hand" : "not a fact"}`, invalidate: [["job-form-fields", jobId], ["combination"], ["draft"], ["catalogue"]], onDone: () => { setOpen(null); setReason(""); } });
+  const decide = useAction((dataPath: string) => api<{ outcome: string }>(`/editions/${q.data?.edition?.id}/form-fields/decision`, { method: "POST", json: { dataPath, decision: kind, reason } }), { success: (r) => `Decided: ${r.outcome === "by_hand" ? "filled by hand" : "not a fact"}`, invalidate: [cache, ["combination"], ["draft"], ["catalogue"], ["review-queue"]], onDone: () => { setOpen(null); setReason(""); } });
+  const heading = React.useRef<HTMLHeadingElement>(null);
+  React.useEffect(() => { if (focusOnLoad && q.data?.edition) { heading.current?.focus(); heading.current?.scrollIntoView({ block: "start" }); } }, [focusOnLoad, q.data?.edition]);
   if (!q.data?.edition) return null;
   const open_ = q.data.fields.filter((f) => f.outcome === "unresolved");
   const decided = q.data.fields.filter((f) => f.outcome === "by_hand" || (f.outcome === "not_a_fact" && f.status === "DRAFT"));
   return (
     <section aria-labelledby="ff-decide" className="space-y-3 rounded-xl border border-border bg-surface-raised p-4" data-form-field-decisions>
-      <div><h2 id="ff-decide" className="font-semibold">Form fields with no decision ({open_.length})</h2>
+      <div><h2 id="ff-decide" ref={heading} tabIndex={-1} className="font-semibold outline-none">Form fields with no decision ({open_.length})</h2>
         <p className="text-sm text-text-muted">Each form field is mapped to a shared field, marked "not a fact" (nothing is filled from case facts), or "filled by hand" with a reason. {open_.some((f) => !f.carried) ? "Release waits until every new one is decided." : open_.length ? "These come from an earlier release: decide them when you can." : "Every form field has a decision."}</p></div>
       <ul className="divide-y divide-border text-sm">{open_.slice(0, 50).map((f) => (
         <li key={f.dataPath} className="py-2" data-form-field={f.dataPath}>
           <div className="flex flex-wrap items-center justify-between gap-2"><span><b className="font-medium">{f.caption || f.dataPath}</b>{f.heading ? <span className="text-text-muted"> · {f.heading}</span> : null}{f.carried ? <Pill className="ml-2">Not decided yet (from an earlier release)</Pill> : null}{f.reason ? <span className="block text-xs text-text-muted">{f.reason}</span> : null}</span>
-            <Button size="sm" variant="secondary" onClick={() => { setOpen(open === f.dataPath ? null : f.dataPath); setReason(""); }}>Decide</Button></div>
+            {readOnly ? null : <Button size="sm" variant="secondary" aria-expanded={open === f.dataPath} onClick={() => { setOpen(open === f.dataPath ? null : f.dataPath); setReason(""); }}>Decide</Button>}</div>
           {open === f.dataPath ? (
             <div className="mt-2 grid gap-2 md:grid-cols-[auto_1fr_auto] md:items-end">
               <Field label="Decision"><Select value={kind} onChange={(e) => setKind(e.target.value === "by_hand" ? "by_hand" : "not_a_fact")}><option value="not_a_fact">Not a fact</option><option value="by_hand">Filled by hand</option></Select></Field>

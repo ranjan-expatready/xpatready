@@ -17,7 +17,7 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Audit, Db, need, ROOT, Workspace, type Actor } from "./core.ts";
 import { addFormLine } from "./form-lines.ts";
-import { changeView, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
+import { changeView, itemsOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
 
@@ -250,7 +250,7 @@ export class Programs {
         if (r.errors) { why.set(id, { why: r.firstError }); continue; }
         const gate = gates.get(id)!;
         if (!gate.ok) { why.set(id, { why: gate.why }); continue; }
-        const waiting = await unapprovedAdds(this.db, workspaceId, (snaps.get(id) as { snapshot: Snapshot }).snapshot.canonical_fields.map((f) => f.id));
+        const waiting = await unapprovedAdds(this.db, workspaceId, itemsOf((snaps.get(id) as { snapshot: Snapshot }).snapshot));
         if (waiting.length) { why.set(id, { why: `${unapprovedWhy(waiting).replace(/^it/, "It")}.` }); continue; }
         if (actor && (actor.duties as readonly string[]).includes("approve")) {
           if (gate.sub.submittedBy === actor.id) { why.set(id, { why: "You submitted it, so a different person releases it (BR-14).", self: true }); continue; }
@@ -290,7 +290,7 @@ export class Programs {
       const shown = d.rows.slice(0, 5).map((r) => `${r.label}: ${r.why}`).join(" · ");
       throw problem(409, "Every change is held back", `Nothing can be released yet. ${shown}${d.rows.length > 5 ? ` · and ${d.rows.length - 5} more (see Review and release)` : ""}`);
     }
-    const out = await this.studio.releaseRows(actor, include.map((r) => r.combinationId!));
+    const out = await this.studio.releaseRows(actor, include.map((r) => r.combinationId!), d.library.map((l) => l.id));
     this.cache = null;
     return { ...out, held: d.rows.filter((r) => r.held).map((r) => ({ label: r.label, why: r.why })) };
   }

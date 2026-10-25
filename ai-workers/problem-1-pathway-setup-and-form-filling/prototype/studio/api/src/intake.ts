@@ -95,28 +95,38 @@ export class Intake {
     if (h.createdBy !== actor.id) fail("The person who uploaded the file records the IRCC page it came from.", HttpStatus.FORBIDDEN);
     const page = String(body?.irccPage ?? "").trim();
     if (!/^https:\/\/(www\.)?canada\.ca\/\S+$/.test(page)) fail("Paste the canada.ca page the file came from (it starts with https://www.canada.ca/).");
-    await this.db.intakeItem.update({ where: { id }, data: { irccPage: page.slice(0, 500) } });
+    if (page.length > 500) fail("That page address is longer than 500 characters: paste the page itself, not a search result.");
+    await this.db.intakeItem.update({ where: { id }, data: { irccPage: page } });
     await this.audit.log(h.workspaceId, actor.id, "recorded", "held file", h.code ?? h.fileName, `${actor.name} recorded the IRCC page of ${h.editionLabel ?? h.fileName}: ${page}`, undefined, h.combinationId ?? undefined);
     return view((await this.db.intakeItem.findUniqueOrThrow({ where: { id } })));
   }
 
   /** P-80: a second person (never the uploader) compares the file with the IRCC page and approves it: its checksum joins
    *  the approved list, and the stored file goes through the intake again for the uploader. Or rejects it, with a reason. */
-  async decideHeld(actor: Actor, id: string, decision: "approve" | "reject", body: { note?: string }) {
+  async decideHeld(actor: Actor, id: string, decision: "approve" | "reject", body: { note?: string; irccPage?: string }) {
     need(actor, "review");
-    const h = await this.heldFile(id);
+    const h = await this.heldFile(id, decision === "reject");
     if (h.createdBy === actor.id) fail("You uploaded this file, so a different person checks its source.", HttpStatus.FORBIDDEN);
     if (decision === "reject") {
       if (!body?.note?.trim()) fail("Say why it is rejected, so the uploader knows.");
-      const done = await this.db.intakeItem.updateMany({ where: { id, status: "HELD" }, data: { status: "DONE", outcome: "refused", reason: `Rejected by ${actor.name}: ${body.note!.trim()}` } });
+      if (body.note!.length > 300) fail("Keep the reason under 300 characters.");
+      const done = await this.db.intakeItem.updateMany({ where: { id, status: "HELD" }, data: { status: "DONE", outcome: "refused", reason: `${h.outcome === "held" ? "Rejected" : "Set aside"} by ${actor.name}: ${body.note!.trim()}` } });
       if (!done.count) fail("Someone decided this file at the same moment. Refresh to see it.", HttpStatus.CONFLICT);
       await this.audit.log(h.workspaceId, actor.id, "rejected", "held file", h.code ?? h.fileName, `${actor.name} rejected ${h.editionLabel ?? h.fileName} as a source: ${body.note!.trim()}`, undefined, h.combinationId ?? undefined);
       return { outcome: "rejected" };
     }
     if (!h.irccPage) fail("The uploader records the IRCC page the file came from first; then compare and approve.", HttpStatus.CONFLICT);
-    const claimed = await this.db.intakeItem.updateMany({ where: { id, status: "HELD" }, data: { status: "DONE", reason: `Approved as a source by ${actor.name}` } });
-    if (!claimed.count) fail("Someone decided this file at the same moment. Refresh to see it.", HttpStatus.CONFLICT);
-    await this.db.approvedSource.create({ data: { workspaceId: h.workspaceId, sha256: h.sha256, kind: h.kind, code: h.code, edition: h.editionLabel, fileName: h.fileName, irccPage: h.irccPage!, intakeItemId: h.id, uploadedBy: h.createdBy, approvedBy: actor.id } });
+    // Break m5: what is approved is the page the second person saw, not one changed after they opened it.
+    if (body?.irccPage !== undefined && body.irccPage !== h.irccPage) fail("The IRCC page changed after you opened this file. Look at it again, then approve.", HttpStatus.CONFLICT);
+    // Break M4: only a file whose form code and edition were read from it becomes an official source.
+    if (!h.code || !h.editionLabel || !["form", "checklist"].includes(h.kind)) fail("Its form code and edition could not be read from the file, so it cannot become an official source. Reject it and upload the official PDF.", HttpStatus.CONFLICT);
+    // The claim and the approved list change together (break M4: a refused second write left the row decided).
+    await this.db.$transaction(async (tx) => {
+      const claimed = await tx.intakeItem.updateMany({ where: { id, status: "HELD" }, data: { status: "DONE", reason: `Approved as a source by ${actor.name}` } });
+      if (!claimed.count) fail("Someone decided this file at the same moment. Refresh to see it.", HttpStatus.CONFLICT);
+      if (await tx.approvedSource.findUnique({ where: { workspaceId_sha256: { workspaceId: h.workspaceId, sha256: h.sha256 } } })) fail("This file is already on the approved list.", HttpStatus.CONFLICT);
+      await tx.approvedSource.create({ data: { workspaceId: h.workspaceId, sha256: h.sha256, kind: h.kind, code: h.code, edition: h.editionLabel, fileName: h.fileName, irccPage: h.irccPage!, intakeItemId: h.id, uploadedBy: h.createdBy, approvedBy: actor.id } });
+    });
     await this.audit.log(h.workspaceId, actor.id, "approved", "held file", h.code ?? h.fileName, `${actor.name} approved ${h.editionLabel ?? h.fileName} as a source (IRCC page ${h.irccPage}); uploaded by ${ACTORS.find((x) => x.id === h.createdBy)?.name ?? "a person"}`, { sha256: h.sha256 }, h.combinationId ?? undefined);
     // The file goes through the one intake again, for the uploader, now that it is approved.
     const uploader = ACTORS.find((x) => x.id === h.createdBy);
@@ -128,11 +138,24 @@ export class Intake {
     return { outcome: "approved", result };
   }
 
-  private async heldFile(id: string) {
+  /** A held file waiting for its source check; with `anyHold`, also a held new or older edition, which a second person
+   *  may set aside with a reason (break M5: an edition approved in the product could never be compared or removed). */
+  private async heldFile(id: string, anyHold = false) {
     const h = await this.db.intakeItem.findUnique({ where: { id } }).catch(() => null);
     if (!h) fail("This held file does not exist (the demo may have been reset).", HttpStatus.NOT_FOUND);
-    if (h!.status !== "HELD" || h!.outcome !== "held") fail("This file is not waiting for a source check.", HttpStatus.CONFLICT);
+    const kinds = anyHold ? ["held", "new_edition_held", "older_edition_held"] : ["held"];
+    if (h!.status !== "HELD" || !kinds.includes(h!.outcome)) fail("This file is not waiting for a source check.", HttpStatus.CONFLICT);
     return h!;
+  }
+
+  /** M6: the held file itself, for the second person to compare with the IRCC page (opened in the browser, never run). */
+  async heldBytes(id: string) {
+    const h = await this.db.intakeItem.findUnique({ where: { id } }).catch(() => null);
+    if (!h || h.status !== "HELD" || !h.storedPath) fail("This held file is not stored (or it is decided).", HttpStatus.NOT_FOUND);
+    const path = h!.storedPath.startsWith("/") ? h!.storedPath : join(ROOT, h!.storedPath);
+    const bytes = readFileSync(path);
+    if (!bytes.subarray(0, 5).toString("latin1").startsWith("%PDF-")) fail("Only a held PDF is shown here.", HttpStatus.NOT_FOUND);
+    return { bytes, name: h!.fileName };
   }
 
   /** Files waiting for a person (held), newest first; with a combination, only those uploaded on it or for its forms. */
@@ -257,4 +280,4 @@ export class Intake {
   }
 }
 
-const view = (r: IntakeItem) => ({ id: r.id, file: r.fileName, kind: r.kind, code: r.code, title: r.title, edition: r.editionLabel, published: r.published, outcome: r.outcome, reason: r.reason, combinationId: r.combinationId, at: r.createdAt, irccPage: r.irccPage, uploadedBy: r.createdBy });
+const view = (r: IntakeItem) => ({ id: r.id, file: r.fileName, kind: r.kind, code: r.code, title: r.title, edition: r.editionLabel, published: r.published, outcome: r.outcome, reason: r.reason, combinationId: r.combinationId, at: r.createdAt, irccPage: r.irccPage, uploadedBy: r.createdBy, sha256: r.sha256, stored: !!r.storedPath });

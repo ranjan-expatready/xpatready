@@ -66,3 +66,34 @@ New files: `api/src/{library-changes,screen02,impact,checklist}.ts`, `contracts/
 * **Screen map:** accept and the leftover list are built. Mapping one leftover input from this page is not; the existing `PATCH …/screen-map` takes it.
 * **Runtime setup:** K1 and B1 refuse the runtime lane's R1a setup as written. A proposed patch is in `runtime-setup-patch.md`; it was applied locally only to prove the runtime suites pass.
 * `check_studio_browser.cjs` (studio journey) now decides the form fields and approves new fields before its submit (B6b).
+
+## FIX (25 Oct): break-report.md (1 Blocker, 8 Major, 15 Minor) and review.md (9 Must)
+Tests: `check_screen02_fix.ts` (new, one check per break and per Must, each with its failing case, 50/50); `check_screen02_slice2_browser.cjs` adds the Form fields page and the uploader's step.
+| Finding | Fix |
+|---|---|
+| B1 = Must 2 | A returned new field is a step for its proposer or an author: **Correct** (name, meaning, what changed → WAITING again) or **Withdraw** (its draft form-field maps go back to no decision; draft placements removed). `POST /library/changes/:id/resubmit\|withdraw` |
+| M1 | One name once per workspace: library, open changes and NEW decisions in open drafts, under an advisory lock; the key also avoids keys taken in open drafts |
+| M2 | `LibraryChange.appliedBy` (migration `20261025090000`): the person who applied the draft does not approve its fields either |
+| M3 | `POST /library/fields` writes a WAITING ADD; a brand-new field with no approved ADD is refused at release (NOT_PROPOSED) |
+| M4, m5 | Approving a file whose code, edition or kind was not read is refused; the claim and the approved list are one transaction; the page approved is the page seen; pages over 500 characters refused, not cut |
+| M5 = Must 7 | Partly: a held new or older edition can be set aside with a reason (`/reject`), so the row clears. **Not fixed:** comparing an edition approved in the product needs the form reader (`tools/read_form.py`, manifest only) to read a stored file, the same gate as the drafting guard: proposed for the forms lane with it |
+| M6 | The held page shows the code, edition, checksum and a sandboxed "Open the held PDF" (`GET /intake/held/:id/file`, CSP sandbox, nosniff) |
+| M7, m9 | Checklist apply validates every accepted proposal before it claims the draft; stub drafts per checklist under one lock (one open job) |
+| M8, m1–m4, m7, m8 | Job-item bodies validated (decision, kind of value, lengths; arrays 400); zero-width reasons refused; notes ≤ 300; non-Latin names get `field_<hash>`; long names cut at a word; checklist items cannot be NEW/CHANGED; `/apply` on a checklist draft 404 |
+| m6, m11–m15 | `expected` required on impact accept; "exempt" paths score lower in Describe it; N focuses Name; no sideways scroll on the proposals page; run id and library hash off it; a release publishes only the changes its page listed or its rows use. **m10 not fixed** (two people deciding one form field: last write wins) |
+| Must 1 | To review's release row runs the release's new-field check: "Not ready to release: …", no Release step |
+| Must 3 | Accept on a proposal that makes a new field while a library field could fit (≥ 0.55) needs a reason, like the N form; "Needs a decision" now lists those (Should 2) |
+| Musts 4, 5 | New To review kind **Form fields** (`form_fields`): one row per PDF edition with undecided draft form fields, step "Decide N form fields" → `/review/form-fields/:editionId` (the K1 list by edition, so a new edition's leftovers are decidable too). The refusal names "To review › Form fields". After apply with fields left, the job page stays and focuses the K1 list |
+| Must 6 | The uploader's held row is "Needs you · Record the IRCC page"; the second person waits until it is recorded |
+| Must 9 | Model name off Draft setup; run ids off plan reasons and step messages (kept in the record); a batch with no model call is titled "No model call", not "Live AI" (Should 3, in part) |
+| Lead re-check 25 Oct (1, 2, 5; 3 = B1, 4 = M3) | (1) a combination's approval publishes only the approved changes its snapshot uses; the shared release only what its page listed plus what its rows use (never "every approved change"). (2) Sections and document types made in the product write a WAITING ADD, and the release refusal covers every kind a combination uses (`unapprovedAdds(itemsOf(snapshot))`). (5) Migration `20261025100000_field_name_unique`: one name per group in the database (name table + unique index, kept by a trigger). Should 7: carried form fields decided in a newer draft are not counted again |
+
+### Deviations recorded (Must 8), for the Lead's acceptance
+* **Option map per channel (BR-11):** no page in this screen; `option-maps` routes exist (forms lane F4). Proposed: Screen 04 (library) or a forms-lane page.
+* **"Draft without AI" in Draft setup:** not offered; Replay and Stub stay top-level, not under "Prototype options" (Should 3).
+* **View 4 kind tabs** (fields · sections · checks): field-map drafts propose fields only; checklist drafts have their own page. Tabs wait for a draft that proposes several kinds (live K2).
+* **List purpose and overflow (BR-15):** waits on the forms lane's F1-P.
+* **BR-12 "AI maps only new or reworded fields":** the leftovers of an accepted new edition are decided by a person on the Form fields page; no AI step is offered (no paid runs).
+* **Screen map leftovers:** mapped through the existing `PATCH …/screen-map`, not from view 5.
+* **Not done (Shoulds):** BR-5 bulk accept of new definitions and Undo on bulk accepts (1), reads without a person (4, the app's existing pattern), Undo after an impact accept (5), a carry test with a mapped earlier edition (6), arrow keys on the impact tabs and K1 errors at the field (8), approve-next in place (9). Combination's held list link: `combination.tsx` is the runtime lane's.
+* **Other lanes' tests:** Must 3 stops the blind accept loops of two forms-lane suites and the runtime setup; a one-line-per-file patch is in `other-lanes-tests-patch.md`, proved locally and reverted.

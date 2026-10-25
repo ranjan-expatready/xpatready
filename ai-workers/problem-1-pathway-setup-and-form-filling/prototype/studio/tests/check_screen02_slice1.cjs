@@ -106,7 +106,8 @@ function pdf(title, text) {
   const mid = sql("select id from field_merge where status='PROPOSED' limit 1");
   step("C5.3 BR-9: the proposer of a merge waits; a second person sees the merge to decide", item(qa, `merge:${mid}`)?.state === "waiting" && item(qc, `merge:${mid}`)?.state === "needs", item(qc, `merge:${mid}`)?.what);
   const heldId = sql("select id from intake_item where status='HELD' and outcome='held' order by created_at desc limit 1");
-  step("C5.3 C2.3: the uploader of a held file waits; a second person checks the source on its page", item(qa, `held:${heldId}`)?.state === "waiting" && item(qc, `held:${heldId}`)?.next?.href === `/review/held/${heldId}`, item(qc, `held:${heldId}`)?.next?.href);
+  // FIX (review Must 6): before the IRCC page is recorded, the uploader has the step and the second person waits.
+  step("C5.3 C2.3: the uploader of a held file records its IRCC page on its page; the second person waits for it", item(qa, `held:${heldId}`)?.state === "needs" && item(qa, `held:${heldId}`)?.next?.label === "Record the IRCC page" && item(qa, `held:${heldId}`)?.next?.href === `/review/held/${heldId}` && item(qc, `held:${heldId}`)?.state === "waiting", item(qa, `held:${heldId}`)?.next);
   step("C5.3: the counts add up (Needs you + Waiting for others + Running = All) for each person", [qa, qb, qc].every((q) => q.counts.needs + q.counts.waiting + q.counts.running === q.counts.all && q.items.length === q.counts.all), JSON.stringify(qa.counts));
   const wa = await queue("user-A", "?filter=waiting");
   step("C5.3: Waiting for others lists only waiting items, oldest first", wa.items.length === qa.counts.waiting && wa.items.every((i) => i.state === "waiting") && wa.items.every((i, k, a) => k === 0 || a[k - 1].at <= i.at), wa.items.length);

@@ -105,7 +105,7 @@ const done = (b: any) => b && !["QUEUED", "RUNNING"].includes(b.status) && !b.jo
   const changed = job.items.find((i: any) => i.proposedKey === "person.occupation_title");
   if (changed) await call("POST", `/jobs/${jobId}/items/${changed.id}`, { decision: "CHANGED", key: "person.employment_activity" });
   job = (await call("GET", `/jobs/${jobId}`)).body;
-  for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED" });
+  for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit." });
   r = await call("POST", "/library/fields", { key: "person.synthetic_extra_field", meaning: "A definition added by someone else while the draft waited", valueType: "text" });
   r = await call("POST", `/jobs/${jobId}/apply`, {});
   ok("stale result refused: the library changed after the comparison, so applying is refused", r.status === 409 && /Stale/.test(r.body.message), r.body.message);
@@ -113,7 +113,7 @@ const done = (b: any) => b && !["QUEUED", "RUNNING"].includes(b.status) && !b.jo
   const kept = r.body?.detail?.recompared;
   job = (await call("GET", `/jobs/${jobId}`)).body;
   ok("compare again (no AI call) keeps every decision that still holds, including the person's change", kept?.kept > 50 && job.items.find((i: any) => i.proposedKey === "person.occupation_title")?.decidedKey === "person.employment_activity", kept);
-  for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED" });
+  for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit." });
   const wpBefore = (await call("GET", `/releases?combination=${await rowId("wp.family")}`)).body[0]?.sha256;
   const [ap1, ap2] = await Promise.all([call("POST", `/jobs/${jobId}/apply`, {}), call("POST", `/jobs/${jobId}/apply`, {})]);
   ok("apply twice at once: exactly one applies, the other is refused", [ap1, ap2].filter((x) => x.status === 201).length === 1 && [ap1, ap2].filter((x) => x.status === 409).length === 1, [ap1.status, ap2.status]);

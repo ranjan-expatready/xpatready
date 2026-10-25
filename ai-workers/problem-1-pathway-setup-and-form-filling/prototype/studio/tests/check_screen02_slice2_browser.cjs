@@ -43,6 +43,7 @@ function pdf(title, text) {
   const asWho = async (who) => { await p.goto(`${BASE}/`); await as(who); };
   /** The page has drawn: its heading, or the right panel for a page that opens one (never a fixed sleep). */
   const ready = async (heading) => { await (heading ? p.getByRole("heading", { level: 1, name: heading }).first() : p.getByRole("dialog")).waitFor({ timeout: 30000 }); await p.waitForLoadState("networkidle").catch(() => {}); };
+  const until = async (fn, ms = 15000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await p.waitForTimeout(300); } return false; };
   let n = 0;
   const state = async (name) => {
     n++; const base = `${String(n).padStart(2, "0")}-${name}`;
@@ -105,8 +106,22 @@ function pdf(title, text) {
   await p.locator("[data-new-field]").getByRole("button", { name: "Create the shared field" }).click();
   await p.getByText(/"Purpose of the earlier trip \(test\)" · a second person approves it on To review/).waitFor({ timeout: 15000 });
   step("C3.6 BR-7: N names it as a new shared field; the key is not typed; a second person approves it", true);
+  // Review Must 3: Accept on a new field that a library field could fit asks why first (no 400 after the click).
+  const nearItem = (await api(`/jobs/${jobId}`)).body.items.find((i) => i.decision === "PENDING" && i.outcome === "NEW" && (i.candidates ?? []).some((c) => c.score >= 0.55) && i.evidence?.recommendation?.action !== "reuse");
+  if (nearItem) {
+    await p.getByRole("tab", { name: /^Needs a decision/ }).click();
+    const card = p.locator(`article[data-proposal="${nearItem.id}"]`);
+    await card.locator("[data-accept]").click();
+    await card.locator("[data-accept-reason]").waitFor({ timeout: 5000 });
+    step("C3.6 BR-7 (Must 3): Accept on a new field a library field could fit asks why, focused, before it is accepted", await card.locator("[data-accept-reason] input").evaluate((el) => el === document.activeElement) && /Why is this not/.test(await card.locator("[data-accept-reason]").textContent()));
+    await state("proposals-accept-needs-reason");
+    await card.locator("[data-accept-reason] input").fill("A second phone number, not the main one.");
+    await card.getByRole("button", { name: "Accept with this reason" }).click();
+    await until(async () => (await api(`/jobs/${jobId}`)).body.items.find((i) => i.id === nearItem.id)?.decision === "ACCEPTED");
+    step("C3.6 BR-7 (Must 3): accepted with the reason kept", (await api(`/jobs/${jobId}`)).body.items.find((i) => i.id === nearItem.id)?.decisionNote === "A second phone number, not the main one.");
+  } else step("C3.6 BR-7 (Must 3): the replayed answer has a new proposal a library field could fit", false);
   for (const o of ["REUSE", "NEW"]) await api(`/jobs/${jobId}/accept-clean`, { method: "POST", data: { outcome: o } });
-  for (const i of (await api(`/jobs/${jobId}`)).body.items.filter((x) => x.decision === "PENDING")) await api(`/jobs/${jobId}/items/${i.id}`, { method: "POST", data: { decision: "ACCEPTED" } });
+  for (const i of (await api(`/jobs/${jobId}`)).body.items.filter((x) => x.decision === "PENDING")) await api(`/jobs/${jobId}/items/${i.id}`, { method: "POST", data: { decision: "ACCEPTED", note: "Test: a different meaning from the library field that could fit." } });
   r = await api(`/jobs/${jobId}/apply`, { method: "POST", data: { who: "each_applicant" } });
   step("setup: the decided draft is applied (new shared fields wait on To review)", r.status === 201, r.body?.new_fields);
   await asWho("user-A"); await p.goto(`${BASE}/c/${sv}/jobs/${jobId}`); await ready(/AI-proposed field map/);
@@ -120,6 +135,22 @@ function pdf(title, text) {
   await firstFF.getByRole("button", { name: "Save" }).click();
   await p.waitForFunction((x) => Number((document.querySelector("#ff-decide")?.textContent ?? "").match(/\((\d+)\)/)?.[1]) === x - 1, before, { timeout: 15000 }).catch(() => {});
   step("C3.8 K1: a form field decided \"filled by hand\" with its reason leaves the list", Number((await p.locator("#ff-decide").textContent()).match(/\((\d+)\)/)[1]) === before - 1, before);
+  // Review Musts 4, 5: the same decisions from To review, on their own page by edition.
+  await asWho("user-C"); await p.goto(`${BASE}/review?kind=form_fields`); await ready("To review");
+  const ffRow = p.locator('tr[data-kind="form_fields"]').first();
+  step("C3.8 K1 (Must 4): To review lists the form fields with no decision, with a step to decide them", /Decide \d+ form field/.test(await ffRow.textContent()));
+  const ffHref = await ffRow.locator("[data-next] a").getAttribute("href");
+  const ffEdition = ffHref.split("/").pop();
+  await p.goto(`${BASE}/review/form-fields/${ffEdition}`); await ready("Form fields with no decision");
+  await p.locator("[data-form-field-decisions]").waitFor();
+  await state("form-fields-page");
+  const ffBefore = Number((await p.locator("#ff-decide").textContent()).match(/\((\d+)\)/)[1]);
+  const ff2 = p.locator("[data-form-field]").first();
+  await ff2.getByRole("button", { name: "Decide" }).click();
+  await ff2.getByLabel("Reason").fill("Office use only: no case fact fills it.");
+  await ff2.getByRole("button", { name: "Save" }).click();
+  await p.waitForFunction((x) => Number((document.querySelector("#ff-decide")?.textContent ?? "").match(/\((\d+)\)/)?.[1]) === x - 1, ffBefore, { timeout: 15000 }).catch(() => {});
+  step("C3.8 K1 (Must 5): a form field decided on the Form fields page leaves its list", Number((await p.locator("#ff-decide").textContent()).match(/\((\d+)\)/)[1]) === ffBefore - 1, ffBefore);
   // A capture, a merge and a held file, each by the author.
   const cap = (await api("/captures", { method: "POST", data: { portal: "ircc_portal", form: "IMM 5257", title: "Application for a visitor visa (online)", applicationType: "Visitor visa" } })).body;
   await api(`/captures/${cap.id}/screens`, { method: "POST", multipart: { files: { name: "imm5257-online-s1-personal.html", mimeType: "text/html", buffer: fs.readFileSync(path.join(FIX, "imm5257-online-s1-personal.html")) } } });
@@ -133,7 +164,7 @@ function pdf(title, text) {
   // ======================================================== To review as the second person
   await asWho("user-C"); await p.goto(`${BASE}/review`); await ready("To review");
   const kinds = await p.locator("tr[data-kind]").evaluateAll((rs) => [...new Set(rs.map((x) => x.getAttribute("data-kind")))]);
-  step("C5.3: the second person's Needs you lists library changes, the capture, the merge and the held file", ["library_change", "capture", "merge", "held_file"].every((k) => kinds.includes(k)), kinds.join(","));
+  step("C5.3: the second person's Needs you lists library changes, the capture and the merge (the held file waits for its IRCC page)", ["library_change", "capture", "merge"].every((k) => kinds.includes(k)) && !kinds.includes("held_file"), kinds.join(","));
   step("C5.3: merge rows name the fields by name, not by key", !(await p.locator(`tr[data-item="merge:${mergeId}"]`).textContent()).includes(merge), merge);
   await state("to-review-second-person");
 
@@ -178,7 +209,9 @@ function pdf(title, text) {
   step("C3.5 view 8: approving merges and closes the panel", await toast(/Merged/));
 
   // ======================================================== board view 9: held file (P-80)
-  await asWho("user-A"); await p.goto(`${BASE}/review/held/${heldFile}`); await ready(/IMM 5476/);
+  await asWho("user-A"); await p.goto(`${BASE}/review?kind=held_file`); await ready("To review");
+  step("C2.3 P-80 (Must 6): the uploader's To review step is to record the IRCC page", /Record the IRCC page/.test(await p.locator(`tr[data-item="held:${heldFile}"]`).textContent()));
+  await p.goto(`${BASE}/review/held/${heldFile}`); await ready(/IMM 5476/);
   await p.getByLabel("Paste the canada.ca page").fill("https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5476.html");
   await state("held-file-uploader");
   await p.getByRole("button", { name: "Record the page" }).click(); await toast(/IRCC page recorded/);
