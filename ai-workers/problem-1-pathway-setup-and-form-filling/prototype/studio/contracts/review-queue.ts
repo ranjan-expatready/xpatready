@@ -6,11 +6,11 @@ import { z } from "zod";
 
 export const QUEUE_FILTERS = ["needs", "waiting", "running", "all"] as const;
 export type QueueFilter = (typeof QUEUE_FILTERS)[number];
-export const QUEUE_KINDS = ["ai_proposals", "release", "capture", "screen_map", "merge", "held_file", "new_edition", "running"] as const;
+export const QUEUE_KINDS = ["ai_proposals", "release", "library_change", "capture", "screen_map", "merge", "held_file", "new_edition", "running"] as const;
 export type QueueKind = (typeof QUEUE_KINDS)[number];
 /** The Kind filter's words, in the board's order (board view 1). */
 export const KIND_WORDS: Record<QueueKind, string> = {
-  ai_proposals: "AI proposals", release: "Review and release", new_edition: "New edition", capture: "Portal capture", screen_map: "Screen map",
+  ai_proposals: "AI proposals", release: "Review and release", library_change: "Shared library", new_edition: "New edition", capture: "Portal capture", screen_map: "Screen map",
   held_file: "Held file", merge: "Merge", running: "Running",
 };
 

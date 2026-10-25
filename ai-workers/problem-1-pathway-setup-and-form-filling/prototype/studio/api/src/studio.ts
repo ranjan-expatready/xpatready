@@ -8,6 +8,7 @@ import { buildSnapshot, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE, type Mode, type 
 import { slug } from "../../engine/import.ts";
 import { checkCondition, diff, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
+import { publishLibraryChanges, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 import { cleanLabel, normalizeLabel } from "../../contracts/programs.ts";
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 
@@ -107,7 +108,18 @@ export class Studio {
     const kids = await this.db.programDef.count({ where: { workspaceId: c.workspaceId, parentNodeKey: c.program.programNodeKey } });
     if (c.program.nodeKind !== "STREAM" && c.program.nodeKind !== "CATEGORY") return [{ level: "error", where: "Row", item: c.combinationKey, message: `This configuration is attached to a ${LEVEL[c.program.nodeKind].name.toLowerCase()} ("${c.program.label}"), above a full combination. Publishing is blocked: attach configuration to a category, or to its sub-category (SA-1B-55/56).` }];
     if (kids) return [{ level: "error", where: "Row", item: c.combinationKey, message: `"${c.program.label}" now has sub-categories, so this row sits above a full combination. Publishing is blocked (SA-1B-56).` }];
-    return [];
+    return (await this.undecidedFormFields(combinationId, "DRAFT")).map((f) => ({ level: "error" as const, where: "Forms", item: f.form,
+      message: `${f.n} form field${f.n === 1 ? " has" : "s have"} no decision in this draft (for example ${f.example}). Map each one, mark it "not a fact", or "filled by hand" with a reason (K1).` }));
+  }
+
+  /** K1 (Screen 02 challenge point 2): form fields of the combination's forms that have no decision, per form. DRAFT rows
+   *  are an edition changed in this draft (they block release); PUBLISHED rows were carried from an earlier release (a
+   *  warning until that edition is drafted again). */
+  async undecidedFormFields(combinationId: string, status: "DRAFT" | "PUBLISHED") {
+    const rows = await this.db.formFieldMap.findMany({ where: { outcome: "unresolved", status, edition: { form: { usedBy: { some: { combinationId, status: { not: "RETIRED" } } } } } }, select: { dataPath: true, caption: true, edition: { select: { form: { select: { formKey: true } } } } } });
+    const by = new Map<string, { form: string; n: number; example: string }>();
+    for (const r of rows) { const k = r.edition.form.formKey; const cur = by.get(k) ?? { form: k, n: 0, example: r.caption || r.dataPath }; cur.n++; by.set(k, cur); }
+    return [...by.values()];
   }
 
   async createCombination(actor: Actor, b: { programKey: string; label?: string; participants: any[]; description?: string; sourceBasis?: "SOURCE_BACKED" | "ILLUSTRATIVE"; basisNote?: string; key?: string }) {
@@ -203,7 +215,8 @@ export class Studio {
   async problems(workspaceId: string, s: Snapshot, combinationId?: string) {
     const structure = combinationId ? await this.structureProblems(combinationId) : [];
     const lib = (await this.db.canonicalField.findMany({ where: { workspaceId }, select: { canonicalFieldKey: true, valueType: true, status: true } })).filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
-    return [...structure, ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation })))];
+    const carried = combinationId ? (await this.undecidedFormFields(combinationId, "PUBLISHED")).map((f) => ({ level: "warning" as const, where: "Forms", item: f.form, message: `Not decided yet (from an earlier release): ${f.n} form field${f.n === 1 ? "" : "s"} (for example ${f.example}). Decide them when this edition is drafted again.` })) : [];
+    return [...structure, ...validate(s, lib, s.derived_fields.map((d) => ({ id: d.id, calculation: d.calculation }))), ...carried];
   }
 
   async config(id: string, mode: Mode) {
@@ -544,6 +557,9 @@ export class Studio {
     // The same review gate as the shared Release page (QA-1, review should 2).
     const gate = await this.releaseGate(id, sha256);
     if (!gate.ok) { await this.audit.log(c.workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: ${gate.why}`); fail(`Release refused: ${gate.why}`, HttpStatus.CONFLICT); }
+    // A new shared field this draft uses is approved by a second person first (Screen 02 slice 2, B1).
+    const waiting = await unapprovedAdds(this.db, c.workspaceId, snapshot.canonical_fields.map((f) => f.id));
+    if (waiting.length) fail(`Release refused: ${unapprovedWhy(waiting)}.`, HttpStatus.CONFLICT);
     const sub = (gate as { sub: ReviewSubmission }).sub;
     const authors = await this.draftAuthors(id, snapshot, c.workspaceId);
     for (const author of authors) {
@@ -555,7 +571,8 @@ export class Studio {
       const pack = await this.newPackVersion(tx, c.workspaceId, authors, actor.id, { rows: 1, via: "combination review" });
       const out = await this.publishRow(tx, c, snapshot, sha256, { packVersionId: pack.id, authors, submitter: sub.submittedBy, approver: actor.id, summary: { changes: changes.length, sme_signed: changes.filter((x) => x.needs_sme).length, counts: this.counts(snapshot) } });
       await tx.reviewSubmission.update({ where: { id: sub.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
-      return { ...out, pack: pack.version };
+      const library = await publishLibraryChanges(tx, c.workspaceId, pack.version);
+      return { ...out, pack: pack.version, library };
     }, RELEASE_TX);
     await this.audit.log(c.workspaceId, actor.id, "released", "configuration", c.combinationKey, `${actor.name} approved and released "${c.label}" in Release ${release.pack}; ${Object.entries(release.n).filter(([, v]) => v).map(([k, v]) => `${v} ${k}`).join(", ") || "no draft rows"} published`, { sha256, published: release.n, pack_version: release.pack }, id);
     return { version: release.version, pack: release.pack, sha256, published: release.n };
@@ -592,6 +609,8 @@ export class Studio {
       if (blocking.length) fail(`Release refused: "${c.label}" has ${blocking.length} problem${blocking.length > 1 ? "s" : ""} (${blocking[0].item}: ${blocking[0].message})`, HttpStatus.CONFLICT);
       const gate = await this.releaseGate(id, sha256);
       if (!gate.ok) { await this.audit.log(workspaceId, actor.id, "refused", "release", c.combinationKey, `Release refused: "${c.label}": ${gate.why}`); fail(`Release refused: "${c.label}": ${gate.why}`, HttpStatus.CONFLICT); }
+      const waiting = await unapprovedAdds(this.db, workspaceId, snapshot.canonical_fields.map((f) => f.id));
+      if (waiting.length) fail(`Release refused: "${c.label}": ${unapprovedWhy(waiting)}.`, HttpStatus.CONFLICT);
       prepared.push({ c, snapshot, sha256, authors: await this.draftAuthors(id, snapshot, workspaceId), sub: (gate as { sub: ReviewSubmission }).sub });
     }
     const submitted = prepared.filter((p) => p.sub.submittedBy === actor.id).map((p) => p.c.label);
@@ -614,9 +633,11 @@ export class Studio {
         await tx.reviewSubmission.update({ where: { id: p.sub.id }, data: { status: "APPROVED", decidedBy: actor.id, decidedAt: new Date() } });
         rows.push({ label: p.c.label, version: r.version });
       }
-      return { pack: pack.version, rows };
+      // Approved library changes go into the same release (P-23 one release for everything; Screen 04 B1).
+      const library = await publishLibraryChanges(tx, workspaceId, pack.version);
+      return { pack: pack.version, rows, library };
     }, RELEASE_TX);
-    await this.audit.log(workspaceId, actor.id, "released", "pack", String(out.pack), `${actor.name} released Release ${out.pack}: ${out.rows.map((r) => r.label).join(", ")}`, { rows: out.rows, authors });
+    await this.audit.log(workspaceId, actor.id, "released", "pack", String(out.pack), `${actor.name} released Release ${out.pack}: ${[...out.rows.map((r) => r.label), ...out.library.map((l) => `${l.action.toLowerCase()} ${l.label}`)].join(", ")}`, { rows: out.rows, library: out.library, authors });
     return out;
   }
 

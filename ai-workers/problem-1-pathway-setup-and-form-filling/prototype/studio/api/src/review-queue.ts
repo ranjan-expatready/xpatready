@@ -16,7 +16,6 @@ const holds = (a: Actor, duty: string) => (a.duties as readonly string[]).includ
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 const ORDER: Record<QueueItem["state"], number> = { needs: 0, waiting: 1, running: 2 };
 /** Where a step has no page yet, the row says so instead of linking to a page that cannot take it (board views 5–9). */
-const NO_PAGE = "Its review page is not built yet; nothing changes until a person decides.";
 
 @Injectable()
 export class ReviewQueueService {
@@ -40,7 +39,7 @@ export class ReviewQueueService {
 
   private async items(actor: Actor): Promise<QueueItem[]> {
     const workspaceId = await this.ws.id();
-    const [nodes, combos, jobs, pending, batches, subs, captures, online, merges, held] = await Promise.all([
+    const [nodes, combos, jobs, pending, batches, subs, captures, online, merges, held, changes] = await Promise.all([
       this.db.programDef.findMany({ where: { workspaceId }, select: { id: true, programNodeKey: true, parentNodeKey: true, nodeKind: true, label: true } }),
       this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, label: true } }),
       this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, combinationId: true, attachmentId: true, kind: true, mode: true, status: true, costUsd: true, startedBy: true, startedAt: true, finishedAt: true, detail: true } }),
@@ -51,6 +50,7 @@ export class ReviewQueueService {
       this.db.formEdition.findMany({ where: { workspaceId, channel: "ONLINE" }, select: { id: true, editionLabel: true, capturedOn: true, maps: { select: { id: true }, take: 1 } } }),
       this.db.fieldMerge.findMany({ where: { workspaceId, status: "PROPOSED" } }),
       this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" } }),
+      this.db.libraryChange.findMany({ where: { workspaceId, status: { in: ["WAITING", "RETURNED"] } } }),
     ]);
     const byKey = new Map(nodes.map((n) => [n.programNodeKey, n]));
     const byId = new Map(nodes.map((n) => [n.id, n]));
@@ -103,7 +103,7 @@ export class ReviewQueueService {
       const diffs = Array.isArray(c.difference) ? c.difference.length : 0;
       out.push({ id: `capture:${c.id}`, kind: "capture", title: `${c.formKey} online · ${c.title}`, by: nameOf(c.capturedBy), at: c.createdAt.toISOString(), cost_usd: null,
         what: `${plural(screens, "screen")} captured from blank pages by ${nameOf(c.capturedBy)}${c.changesEditionId ? ` · ${plural(diffs, "difference")} from the approved version` : " · a new online version"}. Not used until a second person approves it.`,
-        ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Approve or return", href: null, note: NO_PAGE } } : { state: "waiting" as const, waiting_on: mine ? "You captured it; a different person approves or returns it." : "A content publisher approves or returns it.", next: null }) });
+        ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Approve or return", href: `/review/capture/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You captured it; a different person approves or returns it." : "A content publisher approves or returns it.", next: null }) });
     }
 
     // Online versions without a screen map: drafted (waiting for a person to accept) or not drafted yet (no AI).
@@ -113,15 +113,17 @@ export class ReviewQueueService {
       const duty = drafted ? "review" : "author";
       out.push({ id: `screen-map:${e.id}`, kind: "screen_map", title: e.editionLabel, by: null, at: (e.capturedOn ?? new Date(0)).toISOString(), cost_usd: drafted ? 0 : null,
         what: drafted ? "Screen map drafted without AI: a person accepts the matches and maps what is left." : "Approved online version with no screen map yet. Drafting it reuses the PDF twin and the library first (no AI).",
-        ...(holds(actor, duty) ? { state: "needs" as const, waiting_on: null, next: { label: drafted ? "Review the screen map" : "Draft the screen map", href: null, note: NO_PAGE } } : { state: "waiting" as const, waiting_on: drafted ? "A content publisher accepts it." : "The configuration author drafts it.", next: null }) });
+        ...(holds(actor, duty) ? { state: "needs" as const, waiting_on: null, next: { label: drafted ? "Review the screen map" : "Draft the screen map", href: `/review/screen-map/${e.id}`, note: null } } : { state: "waiting" as const, waiting_on: drafted ? "A content publisher accepts it." : "The configuration author drafts it.", next: null }) });
     }
 
     // Merges proposed for a second person (P-65).
+    // Shared fields by name (Screen 04 M1): the key stays under Details.
+    const names = new Map((merges.length ? await this.db.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: { in: merges.flatMap((m) => [m.keepKey, m.mergeKey]) } }, orderBy: { version: "desc" }, select: { canonicalFieldKey: true, label: true } }) : []).reverse().map((f) => [f.canonicalFieldKey, f.label ?? f.canonicalFieldKey]));
     for (const m of merges) {
-      const mine = m.proposedBy === actor.id;
-      out.push({ id: `merge:${m.id}`, kind: "merge", title: `${m.mergeKey} → ${m.keepKey}`, by: nameOf(m.proposedBy), at: m.proposedAt.toISOString(), cost_usd: null,
-        what: `Merge two shared fields: ${m.mergeKey} goes away and redirects to ${m.keepKey}. Reason: ${m.reason}`,
-        ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Approve or reject the merge", href: null, note: NO_PAGE } } : { state: "waiting" as const, waiting_on: mine ? "You proposed it; a different person approves or rejects it." : "A content publisher approves or rejects it.", next: null }) });
+      const mine = m.proposedBy === actor.id, gone = names.get(m.mergeKey) ?? m.mergeKey, keep = names.get(m.keepKey) ?? m.keepKey;
+      out.push({ id: `merge:${m.id}`, kind: "merge", title: `${gone} → ${keep}`, by: nameOf(m.proposedBy), at: m.proposedAt.toISOString(), cost_usd: null,
+        what: `Merge two shared fields: "${gone}" goes away and redirects to "${keep}". Reason: ${m.reason}`,
+        ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Approve or reject the merge", href: `/review/merge/${m.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You proposed it; a different person approves or rejects it." : "A content publisher approves or rejects it.", next: null }) });
     }
 
     // Held files (P-80) and new editions held for impact review (P-32), from the one intake.
@@ -132,13 +134,23 @@ export class ReviewQueueService {
         const mine = h.createdBy === actor.id;
         out.push({ id: `held:${h.id}`, kind: "held_file", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null,
           what: "Not on the approved source list: not read into the library, attached or sent to AI.",
-          ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Check the source", href: where, note: "Approving a held file in the product is not built yet (P-80)." } } : { state: "waiting" as const, waiting_on: mine ? "You uploaded it; a different person checks the source." : "A content publisher checks the source.", next: null }) });
+          ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Check the source", href: `/review/held/${h.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You uploaded it; a different person checks the source." : "A content publisher checks the source.", next: null }) });
       } else {
         const older = h.outcome === "older_edition_held";
         out.push({ id: `held:${h.id}`, kind: "new_edition", title: label, by: nameOf(h.createdBy), at: h.createdAt.toISOString(), cost_usd: null,
           what: older ? "An older edition than the one in the library: it is not used unless a person decides otherwise." : "A newer edition of a form in the library: nothing changes until a person reviews its impact and releases it.",
-          ...(holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: older ? "See the older edition" : "Review impact", href: where, note: older ? null : "The impact review is not built yet; the edition is held." } } : { state: "waiting" as const, waiting_on: "The configuration author reviews it.", next: null }) });
+          ...(holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: older ? "See the older edition" : "Review impact", href: older ? where : `/review/edition/${h.id}`, note: null } } : { state: "waiting" as const, waiting_on: "The configuration author reviews it.", next: null }) });
       }
+    }
+
+    // Library changes (P-53, Screen 04 B1): a new shared field and later adds, retires and restores, approved by a
+    // second person; a returned one goes back to the person who proposed it.
+    for (const c of changes) {
+      const mine = c.proposedBy === actor.id, word = c.kind === "field" ? "shared field" : c.kind.replace("_", " ");
+      const what = `${c.action === "ADD" ? `New ${word}` : `${c.action[0]}${c.action.slice(1).toLowerCase()} the ${word}`}${c.reason ? `. Reason: ${c.reason}` : ""}${c.aiVerdict ? ` · Advisory check: ${c.aiVerdict}` : ""}`;
+      const base = { id: `change:${c.id}`, kind: "library_change" as const, title: c.label ?? c.key, by: nameOf(c.proposedBy), at: c.proposedAt.toISOString(), cost_usd: null };
+      if (c.status === "RETURNED") out.push({ ...base, what: `${what} · Returned by ${nameOf(c.decidedBy)}: ${c.decisionNote}`, ...(mine ? { state: "needs" as const, waiting_on: null, next: { label: "See why it was returned", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: "The person who proposed it corrects it.", next: null }) });
+      else out.push({ ...base, what, ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: c.action === "ADD" ? "Approve or return the new field" : "Approve or return", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You proposed it; a different person approves or returns it." : "A content publisher approves or returns it.", next: null }) });
     }
 
     // AI work still running: shown so a person knows it is coming, never as something to decide.

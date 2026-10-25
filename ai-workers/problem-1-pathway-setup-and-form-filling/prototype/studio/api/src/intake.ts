@@ -25,7 +25,7 @@ import { basename, join } from "node:path";
 import { promisify } from "node:util";
 import { manifest } from "../../engine/import.ts";
 import { editionMonth, newestEdition } from "../../engine/programs.ts";
-import { Audit, Db, fail, need, OFFICIAL, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
+import { ACTORS, Audit, Db, fail, need, OFFICIAL, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
 import { Sources } from "./sources.ts";
 
 const run = promisify(execFile);
@@ -83,6 +83,58 @@ export class Intake {
     return r;
   }
 
+  private async approvedInProduct(workspaceId: string, hash: string) {
+    const a = await this.db.approvedSource.findUnique({ where: { workspaceId_sha256: { workspaceId, sha256: hash } } });
+    return a ? { approval: `Approved in the product by ${ACTORS.find((x) => x.id === a.approvedBy)?.name ?? "a second person"} (IRCC page ${a.irccPage})` } : undefined;
+  }
+
+  /** P-80: the uploader records the IRCC page a held file came from, for the second person to compare. */
+  async recordPage(actor: Actor, id: string, body: { irccPage?: string }) {
+    need(actor, "author");
+    const h = await this.heldFile(id);
+    if (h.createdBy !== actor.id) fail("The person who uploaded the file records the IRCC page it came from.", HttpStatus.FORBIDDEN);
+    const page = String(body?.irccPage ?? "").trim();
+    if (!/^https:\/\/(www\.)?canada\.ca\/\S+$/.test(page)) fail("Paste the canada.ca page the file came from (it starts with https://www.canada.ca/).");
+    await this.db.intakeItem.update({ where: { id }, data: { irccPage: page.slice(0, 500) } });
+    await this.audit.log(h.workspaceId, actor.id, "recorded", "held file", h.code ?? h.fileName, `${actor.name} recorded the IRCC page of ${h.editionLabel ?? h.fileName}: ${page}`, undefined, h.combinationId ?? undefined);
+    return view((await this.db.intakeItem.findUniqueOrThrow({ where: { id } })));
+  }
+
+  /** P-80: a second person (never the uploader) compares the file with the IRCC page and approves it: its checksum joins
+   *  the approved list, and the stored file goes through the intake again for the uploader. Or rejects it, with a reason. */
+  async decideHeld(actor: Actor, id: string, decision: "approve" | "reject", body: { note?: string }) {
+    need(actor, "review");
+    const h = await this.heldFile(id);
+    if (h.createdBy === actor.id) fail("You uploaded this file, so a different person checks its source.", HttpStatus.FORBIDDEN);
+    if (decision === "reject") {
+      if (!body?.note?.trim()) fail("Say why it is rejected, so the uploader knows.");
+      const done = await this.db.intakeItem.updateMany({ where: { id, status: "HELD" }, data: { status: "DONE", outcome: "refused", reason: `Rejected by ${actor.name}: ${body.note!.trim()}` } });
+      if (!done.count) fail("Someone decided this file at the same moment. Refresh to see it.", HttpStatus.CONFLICT);
+      await this.audit.log(h.workspaceId, actor.id, "rejected", "held file", h.code ?? h.fileName, `${actor.name} rejected ${h.editionLabel ?? h.fileName} as a source: ${body.note!.trim()}`, undefined, h.combinationId ?? undefined);
+      return { outcome: "rejected" };
+    }
+    if (!h.irccPage) fail("The uploader records the IRCC page the file came from first; then compare and approve.", HttpStatus.CONFLICT);
+    const claimed = await this.db.intakeItem.updateMany({ where: { id, status: "HELD" }, data: { status: "DONE", reason: `Approved as a source by ${actor.name}` } });
+    if (!claimed.count) fail("Someone decided this file at the same moment. Refresh to see it.", HttpStatus.CONFLICT);
+    await this.db.approvedSource.create({ data: { workspaceId: h.workspaceId, sha256: h.sha256, kind: h.kind, code: h.code, edition: h.editionLabel, fileName: h.fileName, irccPage: h.irccPage!, intakeItemId: h.id, uploadedBy: h.createdBy, approvedBy: actor.id } });
+    await this.audit.log(h.workspaceId, actor.id, "approved", "held file", h.code ?? h.fileName, `${actor.name} approved ${h.editionLabel ?? h.fileName} as a source (IRCC page ${h.irccPage}); uploaded by ${ACTORS.find((x) => x.id === h.createdBy)?.name ?? "a person"}`, { sha256: h.sha256 }, h.combinationId ?? undefined);
+    // The file goes through the one intake again, for the uploader, now that it is approved.
+    const uploader = ACTORS.find((x) => x.id === h.createdBy);
+    let result: IntakeResult | null = null;
+    if (uploader && h.storedPath) {
+      const combination = h.combinationId ? await this.db.combination.findUnique({ where: { id: h.combinationId } }) : null;
+      try { result = await this.oneSafely(uploader, h.workspaceId, { originalname: h.fileName, buffer: readFileSync(h.storedPath.startsWith("/") ? h.storedPath : join(ROOT, h.storedPath)) }, combination, "MANUAL"); } catch { result = null; }
+    }
+    return { outcome: "approved", result };
+  }
+
+  private async heldFile(id: string) {
+    const h = await this.db.intakeItem.findUnique({ where: { id } }).catch(() => null);
+    if (!h) fail("This held file does not exist (the demo may have been reset).", HttpStatus.NOT_FOUND);
+    if (h!.status !== "HELD" || h!.outcome !== "held") fail("This file is not waiting for a source check.", HttpStatus.CONFLICT);
+    return h!;
+  }
+
   /** Files waiting for a person (held), newest first; with a combination, only those uploaded on it or for its forms. */
   async held(combinationId?: string) {
     const workspaceId = await this.ws.id();
@@ -107,7 +159,8 @@ export class Intake {
       return { ...r, attachmentId: a.attachment.id, attachmentStatus: a.attachment.status, message: `${r.message} ${a.duplicate ? `Already attached to ${combination.label}.` : `Attached to ${combination.label}.`}` };
     };
 
-    const approved = manifest().find((i) => i.sha256 === hash);
+    // Approved: on the official manifest, or approved in the product by a second person (P-80, ApprovedSource).
+    const approved = manifest().find((i) => i.sha256 === hash) ?? await this.approvedInProduct(workspaceId, hash);
     // A matching old library record does not override source verification. Never attach an unapproved
     // checksum just because it was present in a workspace before this gate existed.
     const same = await this.db.formEdition.findFirst({ where: { workspaceId, sha256: hash }, include: { form: true, _count: { select: { maps: true } } } });
@@ -204,4 +257,4 @@ export class Intake {
   }
 }
 
-const view = (r: IntakeItem) => ({ id: r.id, file: r.fileName, kind: r.kind, code: r.code, title: r.title, edition: r.editionLabel, published: r.published, outcome: r.outcome, reason: r.reason, combinationId: r.combinationId, at: r.createdAt });
+const view = (r: IntakeItem) => ({ id: r.id, file: r.fileName, kind: r.kind, code: r.code, title: r.title, edition: r.editionLabel, published: r.published, outcome: r.outcome, reason: r.reason, combinationId: r.combinationId, at: r.createdAt, irccPage: r.irccPage, uploadedBy: r.createdBy });

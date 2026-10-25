@@ -22,7 +22,7 @@ export function ReleasePage() {
     setBusy(true); setErr(null);
     try {
       const r = await api("/pack/release", { method: "POST", json: { expectedChanges: d.data.changes } });
-      setDone(r); toast.push({ tone: "ok", text: `Release ${r.pack} published: ${r.rows.length} combination${r.rows.length === 1 ? "" : "s"}` });
+      setDone(r); toast.push({ tone: "ok", text: `Release ${r.pack} published: ${r.rows.length} combination${r.rows.length === 1 ? "" : "s"}${r.library?.length ? ` and ${r.library.length} library change${r.library.length === 1 ? "" : "s"}` : ""}` });
       void qc.invalidateQueries();
     } catch (e) { setErr((e as Error).message); void d.refetch(); } finally { setBusy(false); }
   };
@@ -30,6 +30,8 @@ export function ReleasePage() {
   if (d.isError) return <Notice tone="danger" title="The draft could not be loaded">{(d.error as Error).message}</Notice>;
   const x = d.data;
   const ok = x.rows.filter((r: any) => !r.held), held = x.rows.filter((r: any) => r.held);
+  const lib: any[] = x.library ?? [];
+  const what = [ok.length ? `${ok.length} combination${ok.length === 1 ? "" : "s"}` : null, lib.length ? `${lib.length} library change${lib.length === 1 ? "" : "s"}` : null].filter(Boolean).join(" and ");
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <nav aria-label="Breadcrumb" className="text-xs text-text-muted"><Link to="/" className="hover:underline">Programs</Link> › Review and release</nav>
@@ -37,11 +39,11 @@ export function ReleasePage() {
         <h1 className="text-2xl font-bold tracking-tight">Review and release</h1>
         <p className="mt-1 text-sm text-text-muted">Everyone's changes are in one shared draft. Releasing publishes together every combination that has passed its review (submitted, and signed by the content reviewer where an expert must sign); firms keep what was approved until then. {x.last ? `Last release: Release ${x.last.version}, ${fmtDate(x.last.at)}.` : "Nothing released yet."}</p>
       </div>
-      {done ? <Notice tone="ok" title={`Release ${done.pack} published`}>{done.rows.map((r: any) => r.label).join(", ")}.{done.held.length ? ` Held back: ${done.held.map((h: any) => h.label).join(", ")}.` : ""} <Link className="text-text-link underline" to="/">Back to Programs</Link></Notice> : null}
-      {!x.rows.length ? <EmptyState title="Nothing to release" description="The shared draft has no changes since the last release. Changes appear here as soon as someone edits a combination." action={<Button asChild variant="secondary"><Link to="/">Back to Programs</Link></Button>} /> : (
+      {done ? <Notice tone="ok" title={`Release ${done.pack} published`}>{[...done.rows.map((r: any) => r.label), ...(done.library ?? []).map((l: any) => `${l.label} (${l.action.toLowerCase()})`)].join(", ")}.{done.held.length ? ` Held back: ${done.held.map((h: any) => h.label).join(", ")}.` : ""} <Link className="text-text-link underline" to="/">Back to Programs</Link></Notice> : null}
+      {!x.rows.length && !lib.length ? <EmptyState title="Nothing to release" description="The shared draft has no changes since the last release. Changes appear here as soon as someone edits a combination." action={<Button asChild variant="secondary"><Link to="/">Back to Programs</Link></Button>} /> : (
         <>
-          <p className="rounded-lg border border-border bg-surface-raised px-4 py-3 text-sm" aria-live="polite"><b>{x.changes} draft change{x.changes === 1 ? "" : "s"}</b> across <b>{x.rows.length} combination{x.rows.length === 1 ? "" : "s"}</b>. The list below shows each combination's count and whether it can be released.</p>
-          <Table head={["Combination", "Changes", "In this release"]}>
+          <p className="rounded-lg border border-border bg-surface-raised px-4 py-3 text-sm" aria-live="polite"><b>{x.changes} draft change{x.changes === 1 ? "" : "s"}</b> across <b>{x.rows.length} combination{x.rows.length === 1 ? "" : "s"}</b>{lib.length ? <> and <b>{lib.length} library change{lib.length === 1 ? "" : "s"}</b></> : null}. The list below shows each one and whether it can be released.</p>
+          {x.rows.length ? <Table head={["Combination", "Changes", "In this release"]}>
             {x.rows.map((r: any) => (
               <tr key={r.combinationId}>
                 <td><Link className="font-medium text-text-link hover:underline" to={`/c/${r.combinationId}/review`}>{r.label}</Link><p className="text-xs text-text-muted">{r.path.join(" › ")}{r.released ? "" : " · first release"}</p></td>
@@ -49,12 +51,21 @@ export function ReleasePage() {
                 <td>{r.held ? <span className="text-text-danger">Held back: {r.why}</span> : <span className="text-text-ok">Will be released</span>}</td>
               </tr>
             ))}
-          </Table>
+          </Table> : null}
+          {lib.length ? (
+            <section aria-labelledby="lib-changes" className="space-y-2">
+              <h2 id="lib-changes" className="text-base font-semibold">Library changes</h2>
+              <p className="text-sm text-text-muted">Approved by a second person on To review. They reach every combination that uses them in this release.</p>
+              <Table head={["Change", "Approved by", "In this release"]}>
+                {lib.map((l) => <tr key={l.id} data-library-change={l.key}><td><b className="font-medium">{l.action_word} {l.kind_word} "{l.label}"</b>{l.reason ? <p className="text-xs text-text-muted">{l.reason}</p> : null}</td><td className="text-sm">{l.decided_by}</td><td><span className="text-text-ok">Will be released</span></td></tr>)}
+              </Table>
+            </section>
+          ) : null}
           {held.length ? <Notice tone="warn" title={`${held.length} held back`}>A held-back combination stays at its last release until its problem is fixed and its review is done. Open it to submit it or see what is waiting.</Notice> : null}
           {err ? <Notice tone="danger" title="Not released">{err}</Notice> : null}
           <div className="flex flex-wrap items-center justify-end gap-3">
             {!canApprove ? <p className="text-sm text-text-muted">A different person releases. Switch to the Approver (simulated) to release.</p> : <p className="text-sm text-text-muted">You can release only changes you did not make or submit yourself.</p>}
-            <Button disabled={!canApprove || !ok.length || busy} busy={busy} onClick={() => void release()}>{ok.length ? `Release ${ok.length} combination${ok.length === 1 ? "" : "s"} as Release ${x.next}` : "Nothing ready to release"}</Button>
+            <Button disabled={!canApprove || !what || busy} busy={busy} onClick={() => void release()}>{what ? `Release ${what} as Release ${x.next}` : "Nothing ready to release"}</Button>
           </div>
         </>
       )}

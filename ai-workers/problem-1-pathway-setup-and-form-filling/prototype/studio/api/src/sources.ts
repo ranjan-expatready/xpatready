@@ -19,6 +19,8 @@ import { checkedOutput, explainRun, failedOurCheck, isProviderLimit, sameDraftIn
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 import { reconvertFile } from "../../../p2/reconvert.ts";
 import { addFormLine, resolveKey } from "./form-lines.ts";
+import { keyFor, sameName } from "./library-changes.ts";
+import { cleanLabel, labelProblem } from "../../contracts/programs.ts";
 import { ACTORS, Audit, Db, fail, need, NODE, OFFICIAL, PROTOTYPE, PY, ROOT, SOLUTION, STUDIO, VAR, VAR_ROOT, Workspace, type Actor } from "./core.ts";
 const ACTOR_BY_ID = (id: string) => ACTORS.find((a) => a.id === id) ?? ACTORS[0];
 /** The library revision a comparison was made against: every definition key, version and status. A different revision
@@ -83,7 +85,11 @@ export class Sources {
       else if (kind === "Form") { status = "RECOGNISED"; detail = `Recognised: ${item.edition}, an approved official form. Next: AI drafts its field map.`; }
       else { status = "ATTACHED"; detail = `Recognised: ${item.edition}, an approved official source. Kept as a source document; its text supports requirements and citations.`; }
     }
-    const a = await this.db.sourceAttachment.create({ data: { workspaceId: c.workspaceId, combinationId, kind, fileName: safe, storedPath: stored.replace(`${ROOT}/`, ""), sha256: hash, bytes: file.buffer.length, recognised: !!item, officialFile: item?.file ?? null, edition, approval: item?.approval ?? null, status, statusDetail: detail, uploadedVia: via, uploadedBy: actor.id } });
+    // P-80: approved in the product by a second person. Kept as a source; AI drafting still reads only the official
+    // manifest's files (the drafting guard admits official inputs only), so it is not offered for AI drafting.
+    const inProduct = item ? null : await this.db.approvedSource.findUnique({ where: { workspaceId_sha256: { workspaceId: c.workspaceId, sha256: hash } } });
+    if (inProduct) { kind = inProduct.kind === "checklist" ? "Document checklist" : "Form"; edition = inProduct.edition; status = "ATTACHED"; detail = `Approved as a source in the product (IRCC page ${inProduct.irccPage}). Kept as a source document; AI drafting reads only the official library's files.`; }
+    const a = await this.db.sourceAttachment.create({ data: { workspaceId: c.workspaceId, combinationId, kind, fileName: safe, storedPath: stored.replace(`${ROOT}/`, ""), sha256: hash, bytes: file.buffer.length, recognised: !!item, officialFile: item?.file ?? null, edition, approval: item?.approval ?? (inProduct ? `approved in the product (${inProduct.irccPage})` : null), status, statusDetail: detail, uploadedVia: via, uploadedBy: actor.id } });
     await this.audit.log(c.workspaceId, actor.id, "uploaded", "source", safe, `${actor.name} attached ${safe} to "${c.label}"${via === "SAMPLE" ? " (sample button)" : ""}: ${status === "HELD" ? "held, not recognised" : edition}`, { sha256: hash, via });
     return { attachment: a, duplicate: false, message: detail };
   }
@@ -519,7 +525,7 @@ export class Sources {
     return { ...j, attachment: a, items: j.items.sort((x, y) => rank[x.outcome] - rank[y.outcome] || x.proposedKey.localeCompare(y.proposedKey)), elapsed_s: Math.round(((j.finishedAt ?? new Date()).getTime() - j.startedAt.getTime()) / 1000) };
   }
 
-  async decide(actor: Actor, jobId: string, itemId: string, b: { decision: "ACCEPTED" | "CHANGED" | "RETURNED" | "PENDING"; key?: string; note?: string; meaning?: string; valueType?: string }) {
+  async decide(actor: Actor, jobId: string, itemId: string, b: { decision: "ACCEPTED" | "CHANGED" | "RETURNED" | "PENDING" | "NEW"; key?: string; note?: string; meaning?: string; valueType?: string; label?: string; reason?: string }) {
     need(actor, "review");
     const job = await this.db.draftingJob.findUniqueOrThrow({ where: { id: jobId } });
     if (job.status === "APPLIED") fail("This draft is already applied to the configuration; change the definitions in the library instead.", HttpStatus.CONFLICT);
@@ -536,9 +542,32 @@ export class Sources {
       if (problem) fail(`A new key is area.name in lower case: ${problem}.`);
     }
     if (b.decision === "RETURNED" && !b.note?.trim()) fail("Say why it goes back, so its form fields show the reason.");
+    if (b.decision === "NEW") return this.decideNew(actor, job, it, b);
     const u = await this.db.normalizationItem.update({ where: { id: itemId }, data: { decision: b.decision, decidedKey: b.decision === "RETURNED" || b.decision === "PENDING" ? null : decidedKey, decidedBy: b.decision === "PENDING" ? null : actor.id, decisionNote: b.note ?? (b.meaning ? `meaning: ${b.meaning}` : null), decidedAt: b.decision === "PENDING" ? null : new Date(),
       ...(b.meaning ? { proposedMeaning: b.meaning } : {}), ...(b.valueType ? { proposedType: b.valueType } : {}) } });
     await this.audit.log(job.workspaceId, actor.id, "decided", "AI proposal", it.proposedKey, `${actor.name} ${b.decision.toLowerCase()} ${it.proposedKey}${decidedKey && decidedKey !== it.proposedKey ? ` → ${decidedKey}` : ""}${b.note ? `: ${b.note}` : ""}`);
+    return u;
+  }
+
+  /** BR-7: a new shared field. The person types its name and meaning; the key is generated (keyFor), an exact duplicate
+   *  name in the same group is refused without AI, and a reason is required when the advisory match disagrees (AI or
+   *  the library saw a field that could fit). A different person approves it on To review (LibraryChange ADD at apply). */
+  private async decideNew(actor: Actor, job: { id: string; workspaceId: string }, it: { id: string; proposedKey: string; proposedType: string; candidates: unknown }, b: { label?: string; meaning?: string; valueType?: string; reason?: string }) {
+    const label = cleanLabel(b.label ?? "");
+    const bad = labelProblem(label); if (bad) fail(bad);
+    const meaning = (b.meaning ?? "").trim(); if (meaning.length < 8) fail("Say what the field means in a sentence (at least 8 characters).");
+    const group = it.proposedKey.split(".")[0];
+    const twin = await sameName(this.db, job.workspaceId, group, label);
+    if (twin) fail(`"${label}" is already a shared field in this group (${twin.label ?? twin.canonicalFieldKey}). Use that field instead.`, HttpStatus.CONFLICT);
+    const best = ((it.candidates as { key: string; score: number }[]) ?? []).filter((c) => c.score >= 0.55).sort((x, y) => y.score - x.score)[0];
+    const reason = (b.reason ?? "").trim();
+    if (best && reason.length < 8) fail(`The library already has a field that could fit (${best.key}). Say why this is a different meaning.`);
+    const taken = new Set([...(await this.db.canonicalField.findMany({ where: { workspaceId: job.workspaceId }, select: { canonicalFieldKey: true } })).map((x) => x.canonicalFieldKey),
+      ...(await this.db.normalizationItem.findMany({ where: { jobId: job.id, decidedKey: { not: null }, id: { not: it.id } }, select: { decidedKey: true } })).map((x) => x.decidedKey!)]);
+    const key = keyFor(group, label, taken);
+    const u = await this.db.normalizationItem.update({ where: { id: it.id }, data: { decision: "NEW", decidedKey: key, decidedBy: actor.id, decidedAt: new Date(), proposedMeaning: meaning, ...(b.valueType ? { proposedType: b.valueType } : {}),
+      decisionNote: reason || null, payload: { label, reason: reason || null, advisory: best ? { key: best.key, score: best.score } : null } } });
+    await this.audit.log(job.workspaceId, actor.id, "decided", "AI proposal", it.proposedKey, `${actor.name} made "${label}" a new shared field (${key})${reason ? `: ${reason}` : ""}`);
     return u;
   }
 
@@ -583,7 +612,13 @@ export class Sources {
       let created = 0;
       for (const i of job.items.filter((x) => x.decision !== "RETURNED" && x.decidedKey)) {
         if (await tx.canonicalField.findFirst({ where: { workspaceId: ws, canonicalFieldKey: i.decidedKey! } })) continue;
-        await tx.canonicalField.create({ data: { workspaceId: ws, canonicalFieldKey: i.decidedKey!, version: 1, status: "DRAFT", meaning: i.proposedMeaning, valueType: i.proposedType, dataType: VALUE_TYPE_TO_DATA_TYPE[i.proposedType] ?? "STRING", scope: i.decidedKey!.startsWith("case.") ? "CASE_LEVEL" : "CLIENT_LEVEL", subjectKind: subjectKindOf(i.decidedKey!), origin: "AI_PROPOSAL", sourceRef: `${job.mode === "REPLAY" ? "replayed " : ""}AI run ${job.runId}; decided by ${i.decidedBy}`, updatedBy: actor.id } });
+        const p = (i.payload ?? {}) as { label?: string; reason?: string | null; advisory?: { key: string; score: number } | null };
+        await tx.canonicalField.create({ data: { workspaceId: ws, canonicalFieldKey: i.decidedKey!, version: 1, status: "DRAFT", meaning: i.proposedMeaning, valueType: i.proposedType, dataType: VALUE_TYPE_TO_DATA_TYPE[i.proposedType] ?? "STRING", scope: i.decidedKey!.startsWith("case.") ? "CASE_LEVEL" : "CLIENT_LEVEL", subjectKind: subjectKindOf(i.decidedKey!), origin: "AI_PROPOSAL", sourceRef: `${job.mode === "REPLAY" ? "replayed " : ""}AI run ${job.runId}; decided by ${i.decidedBy}`, updatedBy: actor.id, ...(p.label ? { label: p.label, groupKey: i.decidedKey!.split(".")[0], labelChecked: true } : {}) } });
+        // Every new shared field waits for a second person on To review before any release carries it (BR-7, P-53).
+        const top = ((i.candidates as { key: string; score: number }[]) ?? []).slice(0, 3);
+        await tx.libraryChange.create({ data: { workspaceId: ws, kind: "field", key: i.decidedKey!, label: p.label ?? null, action: "ADD", reason: p.reason ?? i.decisionNote ?? null,
+          aiVerdict: i.outcome === "NEW" && !top.some((c) => c.score >= 0.55) ? "No library field means the same." : top[0] ? `Could be ${top[0].key} (match ${Math.round(top[0].score * 100)}%).` : null,
+          matches: top, meaningChecked: i.decision === "NEW", status: "WAITING", proposedBy: i.decidedBy ?? actor.id, sourceJobId: job.id, combinationId: job.combinationId } });
         created++;
       }
       await tx.formFieldMap.createMany({ data: out.entries.map((e: any) => {
