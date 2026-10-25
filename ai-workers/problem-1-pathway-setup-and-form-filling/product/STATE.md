@@ -16,7 +16,7 @@ updated: 2026-10-25
 <!-- lanes:end -->
 
 ## Log (last 10 lines; older in history/)
-- 2026-10-25 · Lead (cloud) · Screen 04 (Shared library) concept agreed by the Lead (Q1–Q3 settled by P-52, P-53, P-37, P-70; no-AI short form built; five slices; screens lane after Screen 02); C3.12–C3.14 added; fresh screen-challenge running before it goes to the lane.
+- 2026-10-25 · Lead (cloud) · Screen 04 (Shared library) concept agreed by the Lead (Q1–Q3 settled by P-52, P-53, P-37, P-70; no-AI short form built; five slices; screens lane after Screen 02); C3.12–C3.14 added; fresh challenge: 1 Blocker (library-only changes could never be released) and 10 Majors, all accepted; one `LibraryChange` record built in Screen 02 slice 2; conditions edited in place in the library drawer (P-37).
 - 2026-10-25 · Lead (cloud) · Took over from the 04:45 Lead chat (stopped at the credit limit); four lane sessions restarted (screens, runtime, forms, qa); Screen 04 (Shared library) draft restarted; CI suites green on main 8360565 (the red on 8d0831a was one run of `check_ai_launch_paths.ts`, forms hardens it); run-suites names the failing line.
 - 2026-10-25 · Lead (cloud) · **Full development mode (P-89).** Screen 01 DONE (founder's walk). Lead notes: screens → Screen 02 DESIGN; runtime → Screen 03 DESIGN; forms → F2 PLAN (P-90 extension approved); qa → explore on main. Lanes start after the notes PR merges.
 - 2026-10-25 · Lead (cloud) · Founder decided P-87 (every change by PR, the Lead merges everything) and P-88 (shared app stays on the Mac); `main` cannot be locked on GitHub's free plan, so the pre-push hook refuses pushes to `main`; `lane.sh table` no longer lets a merged lane branch hide main's note; independent workflow audit recorded in LEAD.md.

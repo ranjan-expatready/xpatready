@@ -6,12 +6,13 @@
 * **Q3 → yes, settled by the founder:** P-37 asks for a read-only central Shared library › Rules list with where used; it is the last slice.
 * **K1** "Field map" (P-63; SCREENS row 04 updated) · **K2** approval from the To review row (P-79), no separate page · **K3** rows C3.12–C3.14 added to `qa/CAPABILITIES.md`; C3.6 now covers document types · **K4** a substitute set is drafted inside Describe for a document type and shown read-only; editing an existing set Not built · **K5** as drafted: merges stay on Screen 02.
 * **K6 → build the no-AI short form:** P-53 and P-34 both say it exists; it is the AI off / AI failed recovery path EXPERIENCE requires; items it adds carry "not meaning-checked" until AI runs.
+* **Challenge (25 Oct, `challenge.md`): 1 Blocker, 10 Major, 9 Minor, all accepted.** Library changes are one `LibraryChange` record, built in Screen 02 slice 2 and reused here, and published by the shared release under "Library changes"; a retire takes effect at release (B1, M6). Describe is a worker job (M7). Conditions are edited in place in the drawer as a second-person library change (M10, P-37). The guard is defined per kind at PLAN (M3). Merged fields are never "Retired" (M4). Old write routes close in the slice that replaces them (M5). The rest follow `challenge.md` "Lead response".
 * Builder: the screens lane, after Screen 02 (the runtime lane builds Screen 03). The `similar` route is one route shared with Screen 02, agreed with the forms lane at PLAN. Slices: (1) five lists with where used, origin, status, reuse per combination, and drawers, on today's data; (2) Describe what you need with the exact-duplicate block, verdicts and the short form; (3) Delete · Retire · Restore with the in-use guard and second-person approval; (4) Forms list, Add forms, editions, re-check due; (5) Checks and Rules lists. EARLY-LOOK after slice 1 is the Lead's (P-89).
 
 Board: `design/draft-library.html` (one file, 10 views, 44 states; "Show labels" shows Capability or Scaffolding, Needed or Not built, and the decision each element follows or lacks). All counts, editions, dates, check values and costs are **Sample**; form codes and titles are IRCC's; nothing here is confirmed by the immigration expert. Unconfirmed: no counsel. Where this concept and the board differ, this concept wins.
 
 ## 1. Job and journey
-A content publisher sees what the shared library holds (fields, sections, document types, forms, checks), where each item is used, whether AI or a person made it, and how much a combination reused versus added; adds a missing item by describing it; adds forms to the library; and removes what is no longer needed, without breaking anything in use. Personas: Configuration author; Content reviewer (second person). Activities 3.1, 3.4; SA-1B-1..24, 26..32 (the trace in `history/TRACE-SA01B-2026-10-23.md`; SA-01B itself is Mac-only and was not read). Capabilities: C3.6, C3.7 (Not built), C2.1, C2.4 (door 2), C2.11, C3.5 (aliases shown), C3.10; links to C9.1 (impact review on Screen 02).
+A content publisher sees what the shared library holds (fields, sections, document types, forms, checks), where each item is used, whether AI or a person made it, and how much a combination reused versus added; adds a missing item by describing it; adds forms to the library; and removes what is no longer needed, without breaking anything in use. Personas: Configuration author; Content reviewer (second person). Activities 3.1, 3.4; SA-1B-1..24, 26..32 (the trace in `history/TRACE-SA01B-2026-10-23.md`; SA-01B itself is Mac-only and was not read). Capabilities: C3.6, C3.7 (built in slice 3), C3.12–C3.14, C2.1, C2.4 (door 2), C2.11, C3.5 (aliases shown), C3.10; links to C9.1 (impact review on Screen 02).
 
 ## 2. Ten layers (exists · team · new)
 | Layer | In our app | Team code | New for Screen 04 |
@@ -78,7 +79,7 @@ Tests: one pass + one fail per BR-1..16 (e.g. BR-9 retire with one draft use →
 Q1–Q3 settled (Lead decisions above); no founder question open.
 
 ## Definition of Ready (WORKFLOW.md)
-- [ ] Board agreed (Lead clicks through after the challenge)
+- [ ] Board agreed (Lead clicks through at READY; short form relabelled Needed)
 - [x] Every element labelled Needed / Not built and Capability / Scaffolding (§6b, board labels)
 - [ ] Data and API needs known (§6 lists them; one shared `similar` route with Screen 02 to agree with the forms lane)
 - [x] Every decision it relies on agreed (Q1–Q3 by P-52, P-53, P-37, P-70; K1–K6 Lead)
