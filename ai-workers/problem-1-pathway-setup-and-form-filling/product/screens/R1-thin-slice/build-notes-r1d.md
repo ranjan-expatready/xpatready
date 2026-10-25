@@ -111,6 +111,7 @@ R1d 43/43 on a fresh copy.
 | break m2: Confirm section's `changed` could name a group wrongly | the group is named only for its own changed answer | R1d "break m2" |
 | break m4: rule refusals titled "Changed by someone else" | "Not possible now" (type not-possible) for the two rule refusals | R1d "break m1/m5/m4" |
 | break m5: the same answer from an older tab got 409 | the same answer saves nothing, whatever the view (200) | R1d "break m1/m5/m4" (mutation caught) |
+Fresh copy, suite order: journey 120/120, R1d 62/62, R1a 99/99, engine 48/48; `run-suites.sh --demo` 21/21; explicit any 437; AI cost US$0.
 Not fixed: the review's surviving engine mutation (confirmation read on the group's first fact instead of its client fact) needs a fixture group whose first fact is the officer's; none of the release's groups has one today (recorded). Questions for the Lead (from the review): a group counts as required when any per-entry question is required, so in the visitor visa every group is (Education history too): everyone answers "none apply" somewhere; the principal's IMM 5707 is blocked by the spouse's Employment history (from the field map): the immigration expert's question.
 
 ## Known gaps
