@@ -19,6 +19,8 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
   if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST);
   return r.data;
 }
+/** A rule refuses the request (nobody else changed anything): 409 "Not possible now" (break r1d-none-apply m4). */
+const refused = (detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/not-possible", title: "Not possible now", status: 409, detail }, HttpStatus.CONFLICT); };
 const conflict = (detail: string, extra: Record<string, unknown> = {}): never => { throw new HttpException({ type: "https://expatready.local/problems/stale-answer", title: "Changed by someone else", status: 409, detail, ...extra }, HttpStatus.CONFLICT); };
 const fieldError = (field: string, message: string): never => { throw new HttpException({ type: "https://expatready.local/problems/validation", title: "Some details need fixing", status: 400, detail: message, errors: [{ field, message }] }, HttpStatus.BAD_REQUEST); };
 const RELATIONSHIP: Record<string, string> = { spouse_or_partner: "SPOUSE_OR_PARTNER", child: "CHILD" };
@@ -246,7 +248,7 @@ export class Runtime {
     await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${subjectId}|${b.group}`}))`;
       // "None apply" stands until someone says entries apply: an entry is never added beside it (never contradict silently).
-      if ((await tx.clientGroupAnswer.findFirst({ where: { subjectId, groupKey: b.group, supersededById: null } }))?.noneApply) conflict("\"None apply\" is recorded for this group; change it to \"entries apply\" first, then add the entries.");
+      if ((await tx.clientGroupAnswer.findFirst({ where: { subjectId, groupKey: b.group, supersededById: null } }))?.noneApply) refused("\"None apply\" is recorded for this group; change it to \"entries apply\" first, then add the entries.");
       const live = await tx.clientFactRecord.findMany({ where: { subjectId, groupKey: b.group, supersededById: null } });
       await tx.clientFactRecord.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey: b.group, rowKey: id, order: live.length ? Math.max(...live.map((x) => x.order)) + 1 : 0, sourceJson: { channel: isOfficer(actor) ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() } } });
     });
@@ -265,10 +267,12 @@ export class Runtime {
     const changed = await this.db.$transaction(async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${subjectId}|${groupKey}`}))`;
       const cur = await tx.clientGroupAnswer.findFirst({ where: { subjectId, groupKey, supersededById: null } });
+      // The answer already stands (even from an older view: break m5), or "entries apply" with nothing said before
+      // (break m1: it would record nothing new): nothing is saved.
+      if ((cur && cur.noneApply === b.noneApply) || (!cur && !b.noneApply)) return false;
       if ((cur?.id ?? null) !== b.expectedId) conflict("Someone answered this at the same moment; nothing was saved. Look at their answer and try again.");
       const entries = await tx.clientFactRecord.count({ where: { subjectId, groupKey, supersededById: null, tombstone: false } });
-      if (b.noneApply && entries) conflict(`This group has ${entries} entr${entries === 1 ? "y" : "ies"}; remove ${entries === 1 ? "it" : "them"} first, then say none apply.`);
-      if (cur && cur.noneApply === b.noneApply) return false; // the same answer again: nothing new
+      if (b.noneApply && entries) refused(`This group has ${entries} entr${entries === 1 ? "y" : "ies"}; remove ${entries === 1 ? "it" : "them"} first, then say none apply.`);
       if (cur) { const n = await tx.clientGroupAnswer.updateMany({ where: { id: cur.id, supersededById: null }, data: { supersededById: id } }); if (n.count !== 1) conflict("Someone answered this at the same moment; nothing was saved. Look at their answer and try again."); }
       await tx.clientGroupAnswer.create({ data: { id, workspaceId: c.workspaceId, subjectId, groupKey, noneApply: b.noneApply, status: "DECLARED", sourceJson: { channel: isOfficer(actor) ? "agent_view" : "questionnaire", actor: actor.id, at: new Date().toISOString() } } });
       return true;
@@ -312,14 +316,18 @@ export class Runtime {
       const live = new Set((await tx.clientFactRecord.findMany({ where: { subjectId: b.subjectId, supersededById: null, tombstone: false }, select: { rowKey: true } })).map((r) => r.rowKey));
       const current = stored.filter((a) => a.rowKey === null || live.has(a.rowKey));
       // The section's "none apply", when it is a repeating group (Lead, break M3), is confirmed with its answers.
-      const ga = await tx.clientGroupAnswer.findFirst({ where: { subjectId: b.subjectId, groupKey: section, supersededById: null } });
-      const currentIds = new Set([...stored.map((a) => a.id), ...(ga ? [ga.id] : [])]);
+      // With entries, the entries answer the group: its earlier "entries apply" is neither shown nor confirmed (review m6).
+      const entries = await tx.clientFactRecord.count({ where: { subjectId: b.subjectId, groupKey: section, supersededById: null, tombstone: false } });
+      const held = await tx.clientGroupAnswer.findFirst({ where: { subjectId: b.subjectId, groupKey: section, supersededById: null } });
+      const ga = entries ? null : held; // its id, when sent, is still a current id (never "changed")
+      const currentIds = new Set([...stored.map((a) => a.id), ...(held ? [held.id] : [])]);
       const gone = [...seen].filter((id) => !currentIds.has(id));
       const unseen = current.filter((a) => a.status === "DECLARED" && !seen.has(a.id));
       const gaUnseen = !!ga && ga.status === "DECLARED" && !seen.has(ga.id);
       if (gone.length || unseen.length || gaUnseen) {
         const changed = await tx.clientCanonicalAnswer.findMany({ where: { id: { in: gone } }, select: { canonicalFieldKey: true } });
-        const groupGone = gone.length && await tx.clientGroupAnswer.count({ where: { id: { in: gone } } });
+        // The group is named only when it is a group and its own answer changed (break m2), never for another person's id.
+        const groupGone = gone.length && await tx.clientGroupAnswer.count({ where: { id: { in: gone }, subjectId: b.subjectId, groupKey: section } });
         conflict("Some answers in this section changed or arrived after you reviewed it; nothing was confirmed. Review them and confirm again.", { changed: [...new Set([...changed, ...unseen].map((a) => a.canonicalFieldKey)), ...(gaUnseen || groupGone ? [`group:${section}`] : [])] });
       }
       const open = current.filter((a) => a.status === "DECLARED");

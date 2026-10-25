@@ -126,10 +126,26 @@ async function main() {
   ok("M3 fail: a body that is not true or false is a 400 in plain words; another client cannot reach the case (404, as every case route); no such group 404; a group of the application asked for a person 422",
     bad.status === 400 && /none apply \(true\) or entries apply \(false\)/.test(JSON.stringify(bad.body)) && otherClient.status === 404 && noGroup.status === 404 && /no repeating group/.test(noGroup.body?.detail ?? "") && (!groupsP.includes("your_visit") || caseGroup.status === 422), { bad: bad.status, otherClient: otherClient.status, noGroup: noGroup.body?.detail, caseGroup: caseGroup.status });
   ok("M3 fail (database): a group answer is never changed in place", (() => { try { sql(`update client_group_answer set none_apply = false where subject_id='${P}' and group_key='${go}'`); return false; } catch (e) { return /append_only/.test((e as Error).message); } })());
+  // P-78 (review m7): the principal's "none apply" for the adult spouse is "answered by the principal", not confirmed.
+  const spouseGroup = ((await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=sqr`, undefined, CLIENT)).body.sections as G[]).find((x) => x.subjectId === spouse && x.group?.client && x.group.rows === 0)!;
+  r = await put(spouseGroup.section, true, null, CLIENT, spouse);
+  ok("review m7 pass (P-78): the principal says none apply for the adult spouse: saved, \"answered by the principal\", not confirmed", r.status === 200 && r.body.group?.none_apply?.confirmed === false && /principal/.test(r.body.group?.none_apply?.why ?? ""), r.body?.group?.none_apply);
+  // review m6: with entries, the group's earlier "entries apply" answers nothing; Confirm section neither needs nor confirms it.
+  const withEntry = (await sqrGroups()).find((x) => x.section !== gc && x.section !== go && x.group!.rows === 0)!.section;
+  const na1 = await put(withEntry, true, null, OFFICER);
+  const ea = await put(withEntry, false, na1.body.group?.none_apply?.id ?? null, OFFICER);
+  const e1 = await call("POST", `/runtime/cases/${caseId}/groups/${P}/rows`, { group: withEntry }, OFFICER);
+  r = await call("POST", `/runtime/cases/${caseId}/sections/${withEntry}/confirm`, { subjectId: P, seen: [] }, OFFICER);
+  const r2 = await call("POST", `/runtime/cases/${caseId}/sections/${withEntry}/confirm`, { subjectId: P, seen: [ea.body.group?.none_apply?.id] }, OFFICER);
+  ok("review m6 pass: with an entry in the group, Confirm section neither asks for the hidden \"entries apply\" answer nor refuses it when sent; it stays as it was", ea.status === 200 && ea.body.saved === true && e1.status === 201 && r.status === 201 && r2.status === 201 && sql(`select status from client_group_answer where subject_id='${P}' and group_key='${withEntry}' and superseded_by_id is null`) === "DECLARED", r.body?.detail ?? r.body);
+  await call("DELETE", `/runtime/cases/${caseId}/groups/${P}/rows/${e1.body.row}`, undefined, OFFICER);
   ok("M3 pass: the audit records none apply without names or values", /recorded that no entries apply in /.test(sql(`select coalesce(string_agg(summary, ' '), '') from audit_event where entity = 'group'`)));
 
-  // ── P-71 (Lead, R1d early look): a copy is locked only when its form is ready to file
-  r = await call("POST", `/runtime/form-copies/${first}/lock`, { kind: "filed" }, OFFICER);
+  // ── P-71 (Lead, R1d early look): a copy is locked only when its form is ready to file (a copy made now: the
+  // first one is out of date after the groups above changed)
+  r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-p71` }, OFFICER);
+  const p71: string = r.body.id; await done(p71);
+  r = await call("POST", `/runtime/form-copies/${p71}/lock`, { kind: "filed" }, OFFICER);
   ok("P-71 fail: a copy of a form not ready to file cannot be filed or locked (409), with the reason", r.status === 409 && /facts? to answer or confirm before filing: do that, then generate a new copy/.test(r.body?.detail ?? ""), r.body?.detail);
   // Confirm every required fact IMM 5257 reads for the principal (Sample values by type), then make a new copy.
   const sample = (q: { value_type: string; shape: { datePrecision: string; phone: boolean }; options: { key: string }[] | null; fact: string }) => q.options?.length ? q.options[0].key : q.shape.phone ? { country_code: "1", number: "5550100" }
@@ -184,7 +200,7 @@ async function main() {
   r = await call("POST", `/runtime/cases/${caseId}/forms/IMM%205257/${P}/generate`, { idempotencyKey: `gen-${run}-3` }, OFFICER);
   const second: string = r.body.id; await done(second);
   f = await formOf("IMM 5257", P);
-  ok("RT-15 pass: a new copy is a new row with today's facts, up to date; the locked one stays stale and unchanged", f.copies[0].id === second && !f.copies[0].out_of_date && f.copies.find((x) => x.id === locked1)!.stale && sql(`select count(*) from form_instance where case_id='${caseId}' and subject_id='${P}'`) === "3");
+  ok("RT-15 pass: a new copy is a new row with today's facts, up to date; the locked one stays stale and unchanged", f.copies[0].id === second && !f.copies[0].out_of_date && f.copies.find((x) => x.id === locked1)!.stale && sql(`select count(*) from form_instance where case_id='${caseId}' and subject_id='${P}'`) === "4");
   await answer(P, "person.given_names", "APPLICANTE"); await confirmAll(P);
   r = await call("POST", `/runtime/form-copies/${second}/lock`, { kind: "filed" }, OFFICER);
   ok("RT-16 fail: an out-of-date copy cannot be locked (409): generate a new one first", r.status === 409 && /out of date/.test(r.body?.detail ?? ""), r.body?.detail);
@@ -242,6 +258,24 @@ async function main() {
   ok("PR #12 review 2 fail: a copy whose file changed on disk cannot be locked (409 in plain words); it stays unlocked", lockChanged.status === 409 && /changed on disk/.test(lockChanged.body?.detail ?? "") && sql(`select locked_at is null from form_instance where id='${lockMe}'`) === "t", lockChanged.body?.detail);
   r = await call("POST", `/runtime/form-copies/${lockMe}/lock`, { kind: "filed" }, OFFICER);
   ok("PR #12 review 2 pass: with its file as it was made, the same copy locks", r.status === 201 && r.body.locked?.kind === "filed", r.body?.detail ?? r.status);
+
+  // break r1d-none-apply M1: a filed copy goes stale when a "none apply" it read is withdrawn, and not when it is said again.
+  const naNow = async (g: string) => (await sqrGroups()).find((x) => x.section === g)!.group!.none_apply;
+  await put(gc, false, (await naNow(gc))!.id);
+  const staleCopy = (await formOf("IMM 5257", P)).copies.find((x) => x.id === lockMe)!;
+  await put(gc, true, (await naNow(gc))!.id);
+  const backCopy = (await formOf("IMM 5257", P)).copies.find((x) => x.id === lockMe)!;
+  ok("break M1 fail/pass: withdrawing a confirmed none apply makes the filed copy stale, naming the group; saying it again (confirmed) makes it current again",
+    staleCopy.stale && staleCopy.changed.some((x) => /^Entries in "/.test(x)) && !backCopy.stale && !backCopy.out_of_date, { stale: staleCopy.changed, back: backCopy.changed });
+  // break m1, m4, m5: nothing new saved for "entries apply" said first or the same answer from an older view; a rule refusal is not "changed by someone else".
+  const fresh = ((await call("GET", `/runtime/cases/${caseId}/questionnaire?mode=sqr`, undefined, CLIENT)).body.sections as G[]).find((x) => x.subjectId === spouse && x.group && !x.group.none_apply && x.section !== spouseGroup.section)!;
+  const firstFalse = await put(fresh.section, false, null, CLIENT, spouse), staleSame = await put(gc, true, null);
+  const e2 = await call("POST", `/runtime/cases/${caseId}/groups/${P}/rows`, { group: gc }, CLIENT);
+  ok("break m1/m5/m4: \"entries apply\" said first saves nothing; the same answer from an older view saves nothing (200, not 409); a rule refusal is titled \"Not possible now\"",
+    firstFalse.status === 200 && firstFalse.body.saved === false && sql(`select count(*) from client_group_answer where subject_id='${spouse}' and group_key='${fresh.section}'`) === "0"
+    && staleSame.status === 200 && staleSame.body.saved === false && e2.status === 409 && e2.body?.title === "Not possible now", { firstFalse: firstFalse.body?.saved, staleSame: staleSame.status, e2: e2.body?.title });
+  r = await call("POST", `/runtime/cases/${caseId}/sections/${go}/confirm`, { subjectId: P, seen: [(await naNow(gc))!.id] }, OFFICER);
+  ok("break m2: Confirm section names a group only for its own changed answer, never for an id of another group", r.status === 409 && !(r.body?.changed ?? []).includes(`group:${go}`), r.body?.changed);
 
   // PR #12 review 1: a form the release files Online is not offered as a PDF, even when its PDF form field map exists.
   // Fixture: a copy of this release whose IMM 5257 filing line is Online, pinned by a new case, then moved below the

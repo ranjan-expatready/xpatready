@@ -154,7 +154,7 @@ export type CaseForm = {
  *  "none apply" is confirmed for it (Lead, break M3), named by its section (fact "group:<section>"). */
 export type Readiness = { ready: boolean; missing: { fact: string; label: string; about: string; reason: "not answered" | "not confirmed" | "needs a fix" }[] };
 /** How a required repeating group with no entries is named where it blocks filing. */
-export const groupLabel = (title: string) => `${title}: add the entries, or say none apply`;
+export const groupLabel = (title: string) => `Entries in "${title}": add them, or say none apply`;
 
 /** Which forms an answer fills, short enough for a household (Lead, R1d early look): one line per form, the person named
  *  when there is one, else how many people ("IMM 5257 for 6 people"); with counts, the form fields it fills (P-63). */

@@ -94,6 +94,25 @@ R1d 43/43 on a fresh copy.
 * **Tests:** engine 44/44 (+6: not answered, the officer's waits, entries apply without entries, confirmed → ready, the principal's own counts, the view shape); R1d 57/57 (+14: blocking named, client's own, same again, stale 409, no entry beside it, unblocks, change back and entries, refused beside entries, history, officer's waits, Confirm unseen 409, seen confirms, refusals 400/404/404/422, database append-only, audit); journey 116/116 (+5: client offer, client pass and change back, blocking list names it, officer's waits, Confirm section); R1a 99/99. Mutations: readiness rule off → engine 41/44; group confirmation always true → 43/44; the three server rules off → R1d 44/57.
 * Note: "Your visit" (the visit contact) is a group asked once for the application, so its "none apply" is the application's.
 
+### Fixes (CHECK → FIX): review-r1d-none-apply.md (8/10, Ship after fixes) and break-report-r1d-none-apply.md (0 Blocker, 1 Major, 6 Minor)
+| Finding | Fix | Test (each fails when its fix is removed) |
+|---|---|---|
+| break M1: a filed copy never went stale when its "none apply" was withdrawn (a group answer fills no form field) | a copy keeps the groups it read (`groupFacts`: none apply confirmed, entries) beside its facts; `changedGroups` adds 'Entries in "<title>"' to out of date / stale and to the lock refusal; copies made before have no record and compare nothing | engine "break M1" ×2; R1d "break M1 fail/pass" (mutation caught) |
+| review M1: an empty required group showed "Done" / "Optional" and Save and continue let it through | the part lists the group as missing until none apply is said ('Entries in "<title>": add them, or say none apply'); none apply counts as an answer of the part; the client's summary names it, linked to "None apply" | engine "review M1" ×2 (mutation caught); journey "review M1 fail-guard" and "pass" |
+| review M2 / break m3: focus dropped to the page after None apply / Entries apply after all | the control that replaces the pressed button takes the focus ("Entries apply after all", or "Add an entry") | journey "review M2 pass" ×2 |
+| review m3: same button names in every group | "None apply: <group> for <person>", "Entries apply after all: …", "Add an entry: …" (agent view) | journey (role names) |
+| review m4: no who/when for none apply in the agent view | the same who/when line as an answer | |
+| review m5: section pill "0 answered" after none apply | none apply counts in answered / confirmed | engine "review M1 pass" |
+| review m6: a hidden "entries apply" (with entries) was sent as seen and confirmed | with entries, the agent view sends nothing for it and the server neither requires nor confirms it; an id sent anyway is not "changed" | R1d "review m6 pass" (mutation caught: it found a real 409) |
+| review m7: no test for the principal's none apply for the adult spouse | test added (P-78: answered by the principal, not confirmed) | R1d "review m7 pass" |
+| review m8: "Entries apply after all" looked like text, small at 390 px | a secondary button, 44 px high in the client view | |
+| review m9 / break m6: wording | 'Entries in "<title>": add them, or say none apply' (the entries, not the whole part) | engine, journey wording |
+| break m1: "entries apply" said first recorded an empty answer | nothing is saved (200, saved false) | R1d "break m1/m5/m4" (mutation caught) |
+| break m2: Confirm section's `changed` could name a group wrongly | the group is named only for its own changed answer | R1d "break m2" |
+| break m4: rule refusals titled "Changed by someone else" | "Not possible now" (type not-possible) for the two rule refusals | R1d "break m1/m5/m4" |
+| break m5: the same answer from an older tab got 409 | the same answer saves nothing, whatever the view (200) | R1d "break m1/m5/m4" (mutation caught) |
+Not fixed: the review's surviving engine mutation (confirmation read on the group's first fact instead of its client fact) needs a fixture group whose first fact is the officer's; none of the release's groups has one today (recorded). Questions for the Lead (from the review): a group counts as required when any per-entry question is required, so in the visitor visa every group is (Education history too): everyone answers "none apply" somewhere; the principal's IMM 5707 is blocked by the spouse's Employment history (from the field map): the immigration expert's question.
+
 ## Known gaps
 1. Restart recovery of the queue is written, not tested by a suite (a restart mid-generation).
 2. "By hand" counts a confirmed value whose form field has no code for it (option map); the copy lists them, the officer writes them in Adobe.

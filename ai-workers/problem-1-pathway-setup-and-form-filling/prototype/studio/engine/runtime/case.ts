@@ -4,7 +4,7 @@
 // what the release preview shows. No I/O; every output says why.
 import { evalCondition, kkey, render, type Known, type Person, type Role } from "../render.ts";
 import { subjectKindOf, type Snapshot } from "../snapshot.ts";
-import { Address, CONFIRM_WORDS, MINOR, Phone, type QuestionnaireView, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
+import { Address, CONFIRM_WORDS, groupLabel, MINOR, Phone, type QuestionnaireView, type ViewCheck, type ViewGroup } from "../../contracts/runtime.ts";
 
 export type Participant = { subjectId: string; role: Role | "case"; label: string; applies: boolean };
 export type Answer = { id: string; subjectId: string; field: string; rowKey: string | null; value: unknown; status: "DECLARED" | "VERIFIED"; channel: string; actor: string; at: string; origin?: { channel: string; actor: string; at: string } | null };
@@ -240,7 +240,12 @@ export function caseView(s: Snapshot, people: Participant[], answers: Answer[], 
     const answered = qs.flatMap((q) => (q.group ? q.rows.map((x) => x.answer) : [q.answer])).filter((a): a is NonNullable<typeof a> => !!a);
     // A repeating group may have no rows (no previous country, no job); a started row needs all its required answers.
     const missing = qs.filter((q) => q.required && !q.hidden && (q.group ? q.rows.some((x) => !x.answer) : !q.answer)).map((q) => q.label);
-    return { ...sec, questions: qs, answered: answered.length, confirmed: answered.filter((a) => a.confirmed).length, invalid: answered.filter((a) => a.problems.length).length, missing, group: groupOf(qs) };
+    // A required group with no entries is answered by "none apply" (Lead, break M3): until then the part is not done
+    // (review r1d-none-apply M1); "none apply" counts as an answer of the part.
+    const group = groupOf(qs), na = group && group.rows === 0 ? group.none_apply : null;
+    if (group?.required && group.rows === 0 && !na?.value) missing.push(groupLabel(sec.title));
+    const all = na ? [...answered, na] : answered;
+    return { ...sec, questions: qs, answered: all.length, confirmed: all.filter((a) => a.confirmed).length, invalid: answered.filter((a) => a.problems.length).length, missing, group };
   });
   // Checks the answers trigger, on the question they concern; in the client's view only those on the client's parts.
   const shown = new Set(sections.map((x) => `${x.subjectId}|${x.section}`));

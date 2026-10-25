@@ -138,9 +138,16 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   step("M3 client: an empty group offers \"Add an entry\" or \"None apply\", and says the forms need one or the other", await shows(c.getByRole("button", { name: "None apply" })) && await shows(c.getByText(/Add an entry, or say that none apply\. The forms need one or the other before filing\./)));
   await c.getByRole("button", { name: "None apply" }).click();
   step("M3 client pass: \"None apply\" is saved, counts as the client's own answer, and can be changed back", await shows(c.getByText("None apply", { exact: true })) && await shows(c.getByText("Counts as confirmed")) && await shows(c.getByRole("button", { name: "Entries apply after all" })) && await gone(c.getByRole("button", { name: "Add an entry" })));
+  const isFocused = (l) => l.evaluate((el) => el === document.activeElement).catch(() => false);
+  step("review M2 pass: after \"None apply\" the focus is on \"Entries apply after all\", not lost to the page", await eventually(() => isFocused(c.getByRole("button", { name: /^Entries apply after all/ }))));
   await state(c, "client-group-none-apply", [390]);
-  await c.getByRole("button", { name: "Entries apply after all" }).click();
-  await shows(c.getByRole("button", { name: "Add an entry" }));
+  await c.getByRole("button", { name: /^Entries apply after all/ }).click();
+  step("review M2 pass: after \"Entries apply after all\" the focus is on \"Add an entry\"", await shows(c.getByRole("button", { name: "Add an entry" })) && await eventually(() => isFocused(c.getByRole("button", { name: "Add an entry" }))));
+  await c.getByRole("button", { name: "Save and continue" }).click();
+  const groupItem = c.getByRole("alert").getByRole("link", { name: /^Entries in ".+": add them, or say none apply\.$/ });
+  step("review M1 fail-guard: Save and continue with a required group empty keeps the part and names the group, linked to \"None apply\"", await shows(groupItem));
+  await groupItem.click();
+  step("review M1 pass: the link takes the focus to \"None apply\"", await eventually(() => isFocused(c.getByRole("button", { name: /^None apply/ }))));
   await c.getByRole("button", { name: "Add an entry" }).click(); await idle(c);
   const entry = c.getByRole("region", { name: "Entry 1" });
   await entry.getByLabel("Name of a person or organisation you will visit").fill("Sample Host C");
@@ -286,7 +293,7 @@ const call = async (method, url, body, actor) => { const r = await fetch(`${BASE
   // Lead, break M3: an empty required group blocks filing until "none apply" is answered and confirmed: the officer
   // says it for the principal's education in the agent view, then confirms the section.
   const edu = o.locator("section").filter({ has: o.getByRole("heading", { name: "Education history" }) }).filter({ hasText: "for Sample Applicant C" });
-  step("M3 agent: the blocking list names the empty group (\"add the entries, or say none apply\")", await shows(imm.getByText(/Education history: add the entries, or say none apply \(Sample Applicant C\): not answered/)));
+  step("M3 agent: the blocking list names the empty group (\"Entries in … : add them, or say none apply\")", await shows(imm.getByText(/Entries in "Education history": add them, or say none apply \(Sample Applicant C\): not answered/)));
   await o.getByRole("tab", { name: /^Sample Applicant C/ }).click();
   await edu.getByRole("button", { name: "None apply" }).click();
   step("M3 agent pass (P-72): the officer's \"none apply\" waits for Confirm section", await shows(edu.getByText("None apply", { exact: true })) && await shows(edu.getByText("To confirm")));

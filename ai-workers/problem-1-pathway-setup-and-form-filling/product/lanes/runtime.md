@@ -9,11 +9,12 @@ current_item: R1-thin-slice
 current_slice: R1d
 stage: CHECK
 owner: Builder
-next_action: CHECK "none apply": screen-reviewer and screen-breaker, fix, then CHECK owner Lead, then stop (R2 waits for its plan).
+next_action: FIX "none apply" done (review 8/10 Ship after fixes, break 1 Major 6 Minor, all fixed with tests); full suite run in progress; then CHECK owner Lead, then stop.
 blocked_by: none
 updated: 2026-10-24
 
 ## Log (last 10 lines)
+- 2026-10-25 · Builder (cloud): CHECK "none apply": review 8/10 (2 Majors), break 1 Major (filed copy not stale when none apply withdrawn) + 6 Minors; all fixed with tests, mutations caught; journey 120/120, R1d 62/62, engine 48/48.
 - 2026-10-25 · Builder (cloud): synced main e619113 (PR #12 merged); BUILD "none apply" for required groups: client_group_answer (append-only), PUT none-apply, Confirm section, readiness blocks empty required groups; engine 44/44, R1d 57/57, journey 116/116, R1a 99/99; mutations caught; CHECK started.
 - 2026-10-25 · Builder (cloud): PR #12 review (Lead): 3 fill-case defects fixed with tests caught by mutation (Online filing line → 422 and not listed; lock refuses a missing or changed file 409; cap counted under FOR UPDATE); R1d 43/43, run-suites --demo 21/21 at be16c22; told the Lead; WAIT.
 - 2026-10-24 · Builder (cloud): Lead accepted R1d (3d47004, 21/21); answers recorded: an empty required group that applies blocks ready to file, cleared by a confirmed "none apply" fact (P-71, P-72); STATUS.md verdict is the trial record (IMM 1344 not passed, IMM 5707 passed). Waiting for the Lead PR merge.
@@ -23,4 +24,3 @@ updated: 2026-10-24
 - 2026-10-24 · Builder (cloud): qa on R1c first (Lead): QA-35 blank case area from the Demo menu, QA-36 one leave path for Back and Save and continue, QA-37 "form fields", QA-26 applies wording; tests caught by mutation; journey 99/99, R1a 99/99, R1d 25/25; still EARLY-LOOK owner Lead.
 - 2026-10-24 · Builder (cloud): BUILD R1d: confirmed-only fill through the shared filler (S-11), FormInstance/AnswerSnapshot with never-overwrite triggers, job queue, out of date/stale/lock, forms panel; R1d 25/25, engine 36/36, journey 93/93, R1a 97/97, run-suites --demo 20/20; EARLY-LOOK owner Lead.
 - 2026-10-24 · Builder (cloud): applied Lead note 21:10 (R1c merged in PR #10); synced main 12e7207; BUILD R1d started.
-- 2026-10-24 · Builder (cloud): PR 10 review: Back keeps a refused draft (Major), case list Load more (Minor), each with a test caught by mutation; journey 79/79, API 97/97, run-suites green; waiting for #10 merge before R1d.

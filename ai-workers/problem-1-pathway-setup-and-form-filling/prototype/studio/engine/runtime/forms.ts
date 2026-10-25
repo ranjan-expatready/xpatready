@@ -69,3 +69,22 @@ export function readiness(view: QuestionnaireView, form: string, subjectId: stri
   }
   return { ready: missing.length === 0, missing };
 }
+
+/** The repeating groups a form reads for one person, as a copy saw them (break r1d-none-apply M1): whether "none apply"
+ *  was confirmed and whether there were entries. A group answer fills no form field, so it is kept beside the facts. */
+export type GroupFact = { key: string; title: string; none: boolean; entries: boolean };
+export function groupFacts(view: QuestionnaireView, form: string, subjectId: string): GroupFact[] {
+  const read = new Set(view.sections.flatMap((s) => s.questions).filter((q) => q.fills.some((f) => f.form === form && f.subject === subjectId) && !q.hidden).map((q) => `${q.subjectId}|${q.section}`));
+  return view.sections.filter((s) => s.group && read.has(`${s.subjectId}|${s.section}`))
+    .map((s) => ({ key: `${s.subjectId}|${s.section}`, title: s.title, none: s.group!.rows === 0 && !!s.group!.none_apply?.value && s.group!.none_apply.confirmed, entries: s.group!.rows > 0 }))
+    .sort((a, b) => a.key.localeCompare(b.key));
+}
+/** The groups whose "none apply" or entries changed since a copy was made, named as the forms panel names them. A copy
+ *  made before groups were kept (no record) compares nothing. */
+export function changedGroups(then: GroupFact[] | undefined, now: GroupFact[]): string[] {
+  if (!then) return [];
+  const a = new Map(then.map((g) => [g.key, g])), b = new Map(now.map((g) => [g.key, g]));
+  const out = new Set<string>();
+  for (const k of new Set([...a.keys(), ...b.keys()])) { const x = a.get(k), y = b.get(k); if (!x || !y || x.none !== y.none || x.entries !== y.entries) out.add(`Entries in "${(x ?? y)!.title}"`); }
+  return [...out].sort();
+}

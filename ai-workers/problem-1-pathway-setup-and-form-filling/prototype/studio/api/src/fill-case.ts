@@ -14,14 +14,14 @@ import type { z } from "zod";
 import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type FormCopy } from "../../contracts/runtime.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
-import { changedFacts, formCoverage, inputHash, pdfForms, readiness, type FormFact } from "../../engine/runtime/forms.ts";
+import { changedFacts, changedGroups, formCoverage, groupFacts, inputHash, pdfForms, readiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
 import type { BoxRow } from "../../engine/render.ts";
 import { actorOf, Audit, Db, fail, PROTOTYPE, ROOT, VAR, VAR_ROOT, type Actor } from "./core.ts";
 import { writeForm } from "./fill.ts";
 import { Runtime, type Reached } from "./runtime.ts";
 
 type H = string | undefined;
-type Stored = { facts: FormFact[]; boxes: BoxRow[] };
+type Stored = { facts: FormFact[]; boxes: BoxRow[]; groups?: GroupFact[] };
 const short = (id: string) => id.slice(0, 8);
 const parse = <S extends z.ZodType>(schema: S, input: unknown): z.infer<S> => { const r = schema.safeParse(input ?? {}); if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST); return r.data; };
 const conflict = (detail: string): never => { throw new HttpException({ type: "https://expatready.local/problems/form-copy", title: "Not possible now", status: 409, detail }, HttpStatus.CONFLICT); };
@@ -86,16 +86,16 @@ export class CaseForms implements OnModuleInit {
         if (!applies && !mine.length) continue; // a form that stops applying keeps its copies in view (break M4)
         forms.push({ form, title: titles.get(form) ?? form, subject_id: p.subjectId, person: p.label, applies, trial_passed: trialPassed(form),
           draft: { written_now: cov?.facts.length ?? 0, mapped: cov?.mapped ?? 0, unconfirmed: cov?.boxes.filter((b) => b.coverage === "answered on screen").length ?? 0 },
-          readiness: readiness(view, form, p.subjectId), copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels)) });
+          readiness: readiness(view, form, p.subjectId), copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId))) });
       }
     }
     return { forms };
   }
 
   /** A copy with its state today; changed facts are named by their question (labels), never by their keys. */
-  private copyOf(x: Awaited<ReturnType<Db["formInstance"]["findMany"]>>[number] & { snapshot: { factsJson: unknown } }, today: FormFact[], labels = new Map<string, string>()): FormCopy {
-    const then = (x.snapshot.factsJson as Stored).facts;
-    const changed = x.status === "GENERATED" ? changedFacts(then, today).map((f) => labels.get(f) ?? f) : [];
+  private copyOf(x: Awaited<ReturnType<Db["formInstance"]["findMany"]>>[number] & { snapshot: { factsJson: unknown } }, today: FormFact[], labels = new Map<string, string>(), todayGroups: GroupFact[] = []): FormCopy {
+    const stored = x.snapshot.factsJson as Stored, then = stored.facts;
+    const changed = x.status === "GENERATED" ? [...changedFacts(then, today).map((f) => labels.get(f) ?? f), ...changedGroups(stored.groups, todayGroups)] : [];
     const result = x.resultJson as { counts?: FormCopy["counts"]; intact?: boolean; person_steps?: string[]; boxes?: { fact: string | null; result: string; why: string | null }[] } | null;
     const byHand = (result?.boxes ?? []).filter((b) => b.result === "by hand").map((b) => ({ label: (b.fact && labels.get(b.fact)) || "A form field", why: b.why ?? "" }));
     return { id: x.id, status: x.status as FormCopy["status"], created_at: x.createdAt.toISOString(), created_by: x.createdBy, finished_at: x.finishedAt?.toISOString() ?? null, error: x.error,
@@ -113,13 +113,13 @@ export class CaseForms implements OnModuleInit {
     if (!who) fail("That person is not on this case.", HttpStatus.NOT_FOUND);
     if (b.idempotencyKey) { const again = await this.db.formInstance.findFirst({ where: { caseId, idempotencyKey: b.idempotencyKey } }); if (again) return this.answerFor(again, form, subjectId); }
     const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
-    const { answers, rows } = await this.runtime.state(c);
+    const { answers, rows, groups } = await this.runtime.state(c);
     if ((s.forms as { form_number: string; channel?: string }[]).some((f) => f.form_number === form && f.channel === "ONLINE"))
       fail(`${form} is filed Online in this case's release: its answers go on the portal sheet, not in a PDF.`, HttpStatus.UNPROCESSABLE_ENTITY);
     if (!pdfForms(s).has(form)) fail(`${form} has no PDF to fill in this case's release.`, HttpStatus.NOT_FOUND);
     const cov = formCoverage(s, people, answers, rows, form, subjectId);
     if (!cov || cov.applies === false) fail(`${form} does not apply to that person on this case.`, HttpStatus.UNPROCESSABLE_ENTITY);
-    const stored: Stored = { facts: cov!.facts, boxes: cov!.boxes };
+    const stored: Stored = { facts: cov!.facts, boxes: cov!.boxes, groups: groupFacts(caseView(s, people, answers, rows, "agent", new Date(), groups), form, subjectId) };
     let copy;
     try {
       copy = await this.db.$transaction(async (tx) => {
@@ -189,11 +189,12 @@ export class CaseForms implements OnModuleInit {
 
   async copy(actor: Actor, id: string) {
     const { x, c } = await this.copyFor(actor, id);
-    const { answers, rows } = await this.runtime.state(c);
+    const { answers, rows, groups } = await this.runtime.state(c);
     const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
     const cov = formCoverage(s, people, answers, rows, x.formNumber, x.subjectId);
-    const labels = new Map(caseView(s, people, answers, rows, "agent").sections.flatMap((v) => v.questions).map((q) => [q.fact, q.label]));
-    return this.copyOf(x, cov?.facts ?? [], labels);
+    const view = caseView(s, people, answers, rows, "agent", new Date(), groups);
+    const labels = new Map(view.sections.flatMap((v) => v.questions).map((q) => [q.fact, q.label]));
+    return this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, x.formNumber, x.subjectId));
   }
 
   /** RT-16: lock a generated, up-to-date copy once ("validated copy uploaded back" or "filed"). The officer only; an out
@@ -205,10 +206,11 @@ export class CaseForms implements OnModuleInit {
     if (x.lockedAt) conflict(`This copy is already locked (${LOCK_KINDS[x.lockedKind as keyof typeof LOCK_KINDS]}); a locked copy never changes.`);
     const { answers, rows, groups } = await this.runtime.state(c);
     const cov = formCoverage(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, x.formNumber, x.subjectId);
-    const changed = changedFacts((x.snapshot.factsJson as Stored).facts, cov?.facts ?? []);
+    const lockView = caseView(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, "agent", new Date(), groups);
+    const changed = [...changedFacts((x.snapshot.factsJson as Stored).facts, cov?.facts ?? []), ...changedGroups((x.snapshot.factsJson as Stored).groups, groupFacts(lockView, x.formNumber, x.subjectId))];
     if (changed.length) conflict(`This copy is out of date (${changed.length} fact${changed.length === 1 ? "" : "s"} changed since it was made); generate a new copy and lock that one.`);
     // P-71 (Lead, R1d early look): a copy is filed or uploaded back only when its form is ready to file.
-    const ready = readiness(caseView(this.runtime.snapshotOf(c), this.runtime.peopleOf(c), answers, rows, "agent", new Date(), groups), x.formNumber, x.subjectId);
+    const ready = readiness(lockView, x.formNumber, x.subjectId);
     if (!ready.ready) conflict(notReady(ready.missing.length));
     if (!trialPassed(x.formNumber)) conflict(`${x.formNumber}'s fill trial has not passed yet: this is a checked copy, not for filing (P-65).`);
     // Only the file that was made is ever locked: it must still be there with the bytes recorded (PR #12 review 2), since
