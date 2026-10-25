@@ -9,7 +9,13 @@
 - 2026-10-25 · first session with the founder (skill 0b): brief agreed and written (`BRIEF.md`), charters re-ordered with the founder, setup review `reports/2026-10-25-setup-review.md`, smoke test done. Branch `scout/2026-10-25-1328`.
 - Next: the founder runs `tools/scout.sh save`; the Lead answers the setup review. Next charter by brief order: `firm-admin-day-one`.
 
-## How to resume
+## The founder's ritual (the only thing to remember — agreed 25 Oct)
+1. Open **Goose** (Desktop app or terminal) **in the folder `/Users/ranjansingh/Desktop/xpatready-scout`** — nothing else.
+2. Say one sentence, e.g. *"Scout: run charter firm-admin-day-one"* or *"Scout: continue from NOW.md with me."*
+3. The scout itself does everything with its tools (`scout.sh` machinery): refreshes its copy from GitHub, starts the app on :4480, runs the charter, and **when the founder says "wrap up"** commits, stops the app and pushes. No terminal commands from the founder, no copying folders, no scripts to learn.
+Honest limits: **one scout session at a time** (files are shared state; the save guard blocks a second); a run with **no Goose window open at all** still needs the one terminal command `scout.sh <charter>` — ask the Lead about a scheduler if even that should go.
+
+## How to resume (mechanics, for the agent)
 1. Mac, main copy: `bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/scout.sh open` (session in Goose) or `… <charter>` (unattended run), then `… save` afterwards.
 2. In-session: guard `bash product/tools/lane.sh whoami` → must print `scout`; read the lane's "From the Lead" note, `BRIEF.md`, `CHARTERS.md`, `FINDINGS.md`; run the charter per the skill.
 3. End of every session/run: update this card (stand + next), update `lanes/scout.md` below the Lead's note, commit on the scout branch, hand the Lead the Paste block.
