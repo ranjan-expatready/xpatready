@@ -102,11 +102,11 @@ function pdf(title, text) {
   step(`C5.3: the ${smeItems ? "content reviewer signs" : "approver releases"} the submitted combination from To review (its Review and release tab)`, subOther?.state === "needs" && subOther.next.href === `/c/${ss.id}/review` && subOther.next.label === (smeItems ? "Review and sign" : "Release"), subOther?.next?.label);
   const capA = item(qa, `capture:${cap.id}`), capC = item(qc, `capture:${cap.id}`);
   step("C5.3 BR-9: the capturer waits (\"You captured it; a different person approves or returns it.\"); no step offered", capA?.state === "waiting" && /You captured it/.test(capA.waiting_on) && capA.next === null, capA?.waiting_on);
-  step("C5.3: a second person sees Approve or return, marked not built yet (no link to a page that cannot take it)", capC?.state === "needs" && capC.next.label === "Approve or return" && capC.next.href === null && /not built yet/.test(capC.next.note), capC?.next?.note);
+  step("C5.3: a second person sees Approve or return, linked to the capture review page (slice 2)", capC?.state === "needs" && capC.next.label === "Approve or return" && capC.next.href === `/review/capture/${cap.id}`, capC?.next?.href);
   const mid = sql("select id from field_merge where status='PROPOSED' limit 1");
   step("C5.3 BR-9: the proposer of a merge waits; a second person sees the merge to decide", item(qa, `merge:${mid}`)?.state === "waiting" && item(qc, `merge:${mid}`)?.state === "needs", item(qc, `merge:${mid}`)?.what);
   const heldId = sql("select id from intake_item where status='HELD' and outcome='held' order by created_at desc limit 1");
-  step("C5.3 C2.3: the uploader of a held file waits; a second person checks the source on the combination page", item(qa, `held:${heldId}`)?.state === "waiting" && item(qc, `held:${heldId}`)?.next?.href === `/c/${ss.id}?show=held`, item(qc, `held:${heldId}`)?.next?.label);
+  step("C5.3 C2.3: the uploader of a held file waits; a second person checks the source on its page", item(qa, `held:${heldId}`)?.state === "waiting" && item(qc, `held:${heldId}`)?.next?.href === `/review/held/${heldId}`, item(qc, `held:${heldId}`)?.next?.href);
   step("C5.3: the counts add up (Needs you + Waiting for others + Running = All) for each person", [qa, qb, qc].every((q) => q.counts.needs + q.counts.waiting + q.counts.running === q.counts.all && q.items.length === q.counts.all), JSON.stringify(qa.counts));
   const wa = await queue("user-A", "?filter=waiting");
   step("C5.3: Waiting for others lists only waiting items, oldest first", wa.items.length === qa.counts.waiting && wa.items.every((i) => i.state === "waiting") && wa.items.every((i, k, a) => k === 0 || a[k - 1].at <= i.at), wa.items.length);
@@ -142,10 +142,10 @@ function pdf(title, text) {
   // ======================================================== the page (second person)
   await as("user-C"); await open();
   const capRow = await row(`capture:${cap.id}`).textContent();
-  step("C5.3: the second person sees the capture as Needs you with Approve or return (not built yet)", /Needs you/.test(capRow) && /Approve or return/.test(capRow) && /not built yet/.test(capRow), capRow.slice(0, 160));
-  await row(`capture:${cap.id}`).locator("[data-next] [tabindex]").focus();
-  const tip = await p.getByRole("tooltip").first().textContent({ timeout: 5000 }).catch(() => "");
-  step("C5.3: the not-built step explains itself on focus", /not built yet; nothing changes until a person decides/.test(tip), tip);
+  step("C5.3: the second person sees the capture as Needs you with Approve or return", /Needs you/.test(capRow) && /Approve or return/.test(capRow), capRow.slice(0, 160));
+  const capLink = row(`capture:${cap.id}`).locator("[data-next] a");
+  const capHref = await capLink.getAttribute("href");
+  step("C5.3: the capture step is a link to its review page", capHref === `/review/capture/${cap.id}`, capHref);
   await state("needs-you-second-person");
   await p.getByLabel("Kind of item").selectOption("capture"); await p.waitForURL(/kind=capture/);
   await p.waitForFunction(() => { const k = [...document.querySelectorAll("tr[data-kind]")].map((x) => x.getAttribute("data-kind")); return k.length > 0 && k.every((x) => x === "capture"); }, null, { timeout: 10000 }).catch(() => {}); // the check below decides

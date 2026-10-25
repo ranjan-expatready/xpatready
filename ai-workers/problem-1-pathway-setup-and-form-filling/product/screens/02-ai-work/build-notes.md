@@ -41,3 +41,28 @@ Job clarity 4 · data truth 5 (same counts and gate as Programs and Release) · 
 
 ### Known gaps
 Board views 2–9 and 11 are later slices. The queue recomputes the release gate for open submissions on each call. Fine for the sample (1–5 rows); measured again at slice 2 with more data.
+
+## FINISH (25 Oct): slices 2 and 3 with board views 2–9 and 11
+### What was built (element → record → API → rule → test)
+| Element | Record | API | Rule | Tests |
+|---|---|---|---|---|
+| Field name + group, `keyFor` | `CanonicalField.label/groupKey/labelChecked` (migration, back-filled, insert trigger; outside the snapshot) | — | M1, BR-7 | every field named after load; key generated from group + name |
+| New shared field (view 4) | `NormalizationItem` decision `NEW` + payload | `POST /jobs/:id/items/:item {decision: NEW, label, meaning, reason}` | BR-7 | duplicate name 409 · punctuation 400 · reason when a field could fit 400 |
+| Library change | `LibraryChange` (new table) | `GET /library/changes[/:id]`, `POST …/approve\|return` | B1, BR-9 | maker 403 · return without reason 400 · decided twice 409 |
+| One publisher | `publishLibraryChanges` in `studio.approve` and `studio.releaseRows` | both release routes; Release page "Library changes" | B1, P-23 | release using a waiting field 409, held back on Release with the reason · approved fields published, `released_in` set |
+| K1 decisions | `FormFieldMap` new draft version (`not_a_fact` / `by_hand` + reason) | `GET /jobs/:id/form-fields`, `POST /editions/:id/form-fields/decision` | K1 (as agreed) | undecided in this draft blocks submit; carried rows warn only |
+| Held file (view 9) | `IntakeItem.irccPage`, `ApprovedSource` (new table) | `PATCH /intake/held/:id`, `POST …/approve\|reject` | P-80, BR-9 | page before approval 409 · canada.ca only · uploader 403 · re-intake after approval |
+| New edition (view 7) | comparison computed (no table) | `GET /intake/held/:id/impact`, `POST …/impact/accept` | BR-12, C9.1 | no AI, US$0 · accept carries unchanged maps as drafts · changed comparison 409 · twice 409 |
+| Capture, merge, screen map (views 6, 8, 5) | existing F1 records | existing F1 routes + `GET /library/merges/:id`, `GET /online-versions/:id/screen-map` | P-66, P-65, P-62 | browser journeys: maker read-only, second person decides |
+| Draft setup (view 2), parts (view 3) | `AiBatch.plan`, `detail.a4.parts` | `/ai/plan`, `/ai/batches/:id` + `parts[]` | BR-3, BR-4 | panel opens from the combination's next step with the cost line |
+| Describe it (view 11) | — | `POST /path-proposal` | P-41 | proposal by words (no AI, US$0) · fail cases 400/403 |
+| K2 checklist drafts | `DraftingJob` kind `checklist_draft`, items kind `document_requirement` | `POST /attachments/:id/draft-checklist`, `POST /jobs/:id/apply-checklist` | K2 | live 409 (founder's OK) · stub US$0 · accepted proposal written by `saveRequirement` |
+New files: `api/src/{library-changes,screen02,impact,checklist}.ts`, `contracts/screen02.ts`, `web/src/pages/review-items.tsx`, `tests/check_screen02_slice2.ts` (API), `tests/check_screen02_slice2_browser.cjs` (journeys, screenshots in `screenshots/finish/`), migrations `20261025080000`, `20261025080100`. `combination.tsx` (runtime lane) untouched: Setup reaches Draft setup through the existing next step, now a right panel.
+
+### Deviations and scaffolding (for the Lead)
+* **No live AI in this stage (US$0).** "Describe it" matches the description's words with the existing paths and says "Proposal without AI". K2 runs only the stub pass, so it proposes nothing. Both wait for the founder's OK on paid runs. The K2 review and apply are proved with one test-inserted proposal, labelled Scaffolding in the test.
+* **View 4** shows proposals with J/K/A/N keys, the new-field form and the K1 decisions. It has no PDF page beside each proposal (the board's "source page with highlight"): the inventory has no page coordinates per form field.
+* **Held file approved in the product:** the file is kept as a source and attached, but AI drafting still reads only manifest files (the drafting guard is the forms lane's). Proposed for the forms lane: let the guard admit `ApprovedSource`.
+* **Screen map:** accept and the leftover list are built. Mapping one leftover input from this page is not; the existing `PATCH …/screen-map` takes it.
+* **Runtime setup:** K1 and B1 refuse the runtime lane's R1a setup as written. A proposed patch is in `runtime-setup-patch.md`; it was applied locally only to prove the runtime suites pass.
+* `check_studio_browser.cjs` (studio journey) now decides the form fields and approves new fields before its submit (B6b).

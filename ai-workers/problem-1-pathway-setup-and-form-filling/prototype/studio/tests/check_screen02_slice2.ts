@@ -100,9 +100,14 @@ function pdf(title: string, text: string) {
   for (const i of job.items.filter((x: any) => x.decision === "PENDING")) await call("POST", `/jobs/${jobId}/items/${i.id}`, { decision: "ACCEPTED" });
   r = await call("POST", `/jobs/${jobId}/apply`, { who: "each_applicant" });
   ok("setup: the decided draft is applied", r.status === 201, r.body?.detail ?? r.body);
+  const applied = r.body;
   const changes = (await call("GET", "/library/changes?status=WAITING")).body as any[];
   const mineChange = changes.find((c) => c.key === newKey);
-  ok("C5.3 B1: every new shared field from the draft waits as a library ADD, by name, with its reason and advisory check", changes.length === r.body.new_fields && mineChange?.label === "Previous travel purpose (test)" && mineChange?.action === "ADD" && !!mineChange?.ai_verdict, { waiting: changes.length, new_fields: r.body.new_fields });
+  r = await call("GET", `/library/changes/${mineChange.id}`);
+  ok("C3.6: one change reads its field by name, meaning, kind of value and group", r.status === 200 && r.body.field?.label === "Previous travel purpose (test)" && r.body.field?.group === group && /travelled before/.test(r.body.field?.meaning), r.body?.field);
+  r = await call("GET", "/library/changes/00000000-0000-0000-0000-000000000000");
+  ok("C3.6 fail: an unknown change is a plain 404", r.status === 404, r.body?.detail);
+  ok("C5.3 B1: every new shared field from the draft waits as a library ADD, by name, with its reason and advisory check", changes.length === applied.new_fields && mineChange?.label === "Previous travel purpose (test)" && mineChange?.action === "ADD" && !!mineChange?.ai_verdict, { waiting: changes.length, new_fields: applied.new_fields });
   const q = (await call("GET", "/review-queue?filter=all&kind=library_change")).body;
   ok("C5.3: To review lists them; the person who decided them waits", q.items.length === changes.length && q.items.every((i: any) => i.state === "waiting"), q.counts);
 
@@ -110,6 +115,8 @@ function pdf(title: string, text: string) {
   r = await call("POST", `/combinations/${sv}/submit`, {});
   ok("C3.8 K1 fail: a draft with undecided form fields of the applied edition cannot be submitted", r.status === 400 && /no decision in this draft/.test(r.body?.detail), r.body?.detail);
   const ff = (await call("GET", `/jobs/${jobId}/form-fields`)).body;
+  const fe = (await call("GET", `/editions/${ff.edition.id}/form-fields`)).body;
+  ok("C3.8 K1: the edition's form fields read the same list (no decision, mapped, not a fact) by edition", fe.fields.length === ff.fields.length && fe.fields.some((x: any) => x.outcome_word === "No decision"), fe.fields.length);
   const open = ff.fields.filter((f: any) => f.outcome === "unresolved");
   r = await call("POST", `/editions/${ff.edition.id}/form-fields/decision`, { dataPath: open[0].dataPath, decision: "by_hand", reason: "x" });
   ok("C3.8 K1 fail: \"filled by hand\" needs a reason (400)", r.status === 400, r.body?.detail);
@@ -161,6 +168,16 @@ function pdf(title: string, text: string) {
   ok("C2.3 P-80: a second person approves it: its checksum joins the approved list and the file goes through the intake again", r.status === 201 && Number(sql("select count(*) from approved_source")) === 1 && r.body.result && r.body.result.outcome !== "held", r.body?.result?.outcome);
   r = await intake([["imm5476-next-again.pdf", bytes]]);
   ok("C2.3: the same file uploaded again is no longer held", r?.outcome !== "held", r?.outcome);
+
+  // ─────────────────────────────── C3.9 / C3.5: the screen map and the merge read by their pages
+  const ed = sql("select id from form_edition where channel='ONLINE' limit 1");
+  const edId = ed || "00000000-0000-0000-0000-000000000000";
+  r = await call("GET", `/online-versions/${edId}/screen-map`);
+  ok("C3.9: an online version's screen map reads its state (or a plain 404 when there is none)", ed ? r.status === 200 && ["not_drafted", "drafted", "accepted"].includes(r.body.state) : r.status === 404, r.body?.state ?? r.body?.detail);
+  const [mk, mm] = sql("select canonical_field_key from canonical_field where value_type='text' and status='PUBLISHED' and merged_into_key is null group by canonical_field_key order by canonical_field_key desc limit 2").split("\n");
+  r = await call("POST", "/library/merges", { keep: mk, merge: mm, reason: "Test input: the same meaning under two keys." });
+  const mg = (await call("GET", `/library/merges/${r.body?.id ?? sql("select id from field_merge where status='PROPOSED' limit 1")}`)).body;
+  ok("C3.5: a proposed merge reads both fields by name with what moves", mg.status === "PROPOSED" && !!mg.goes?.label && !!mg.stays?.label && typeof mg.goes.form_fields === "number", `${mg.goes?.label} → ${mg.stays?.label}`);
 
   // ─────────────────────────────── C1.2 board view 11: "Describe it" proposes a path (no AI until paid runs are agreed)
   r = await call("POST", "/path-proposal", { pathway: "INDIVIDUAL", description: "Super visa for parents and grandparents" });

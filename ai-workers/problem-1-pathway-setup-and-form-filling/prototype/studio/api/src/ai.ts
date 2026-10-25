@@ -23,6 +23,8 @@ const personName = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? "A p
 /** A4 (Screen 02 slice 2, challenge point 5): a step's parts as it ran them, read-only, in plain counts. */
 type PartState = { index: number; sections: string[]; fields: number; status: string; cost_usd?: number; error?: string | null };
 const partsOf = (detail: unknown) => ((detail as { a4?: { parts?: PartState[] } } | null)?.a4?.parts ?? []).map((p) => ({ index: p.index, sections: p.sections, fields: p.fields, status: p.status, cost_usd: p.cost_usd ?? 0, message: p.error ?? null }));
+type A4 = { total: number; reused: number; leftover: number };
+const a4Of = (detail: unknown): A4 | null => { const a = (detail as { a4?: A4 } | null)?.a4; return a ? { total: a.total, reused: a.reused, leftover: a.leftover } : null; };
 const partsLine = (all: ReturnType<typeof partsOf>) => { if (!all.length) return null; const n = (s: string) => all.filter((p) => p.status === s).length; return `${all.length} part${all.length === 1 ? "" : "s"} · ${[n("done") && `${n("done")} done`, n("failed") && `${n("failed")} failed`, n("running") && `${n("running")} running`, n("queued") && `${n("queued")} queued`, n("not started") && `${n("not started")} not started`].filter(Boolean).join(", ")}`; };
 import { Sources } from "./sources.ts";
 
@@ -268,7 +270,7 @@ export class Ai implements OnModuleInit {
     const atts = await this.db.sourceAttachment.findMany({ where: { id: { in: b!.jobs.map((j) => j.attachmentId!).filter(Boolean) } }, select: { id: true, edition: true, fileName: true } });
     const plan = b!.plan as any;
     return { ...b, started_by_name: personName(b!.startedBy), plan: undefined, plan_targets: plan.targets, totals: plan.totals, operation_label: plan.operation_label, capability_note: plan.capability_note,
-      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), parts: partsOf(j.detail), a4: (j.detail as { a4?: { total: number; reused: number; leftover: number } } | null)?.a4 ? { total: (j.detail as any).a4.total, reused: (j.detail as any).a4.reused, leftover: (j.detail as any).a4.leftover } : null, id: j.id, combinationId: j.combinationId, combination: j.combination.label, program: j.combination.program.label, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
+      spent_usd: round(b!.jobs.reduce((a, j) => a + (j.costUsd ?? 0), 0)), jobs: b!.jobs.map((j) => ({ retryable: b!.operation !== "screen_map" && retryable(j), parts: partsOf(j.detail), a4: a4Of(j.detail), id: j.id, combinationId: j.combinationId, combination: j.combination.label, program: j.combination.program.label, source: atts.find((a) => a.id === j.attachmentId)?.edition ?? atts.find((a) => a.id === j.attachmentId)?.fileName, kind: j.kind, mode: j.mode, status: j.status, message: j.message, costUsd: j.costUsd, runId: j.runId, attempt: j.attempt, attachmentId: j.attachmentId, detail: undefined })) };
   }
 
   async batches() {

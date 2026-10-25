@@ -3,6 +3,7 @@
 // only after its own review (submitted, unchanged since, expert changes signed; QA-1), and by a different person from
 // every author and submitter (BR-14); the server enforces both, the screen says so before anyone tries.
 import * as React from "react";
+import type { LibraryChangeView } from "../../../contracts/screen02";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, useActorId, useApi, useToast } from "@/lib/api";
@@ -30,7 +31,7 @@ export function ReleasePage() {
   if (d.isError) return <Notice tone="danger" title="The draft could not be loaded">{(d.error as Error).message}</Notice>;
   const x = d.data;
   const ok = x.rows.filter((r: any) => !r.held), held = x.rows.filter((r: any) => r.held);
-  const lib: any[] = x.library ?? [];
+  const lib: LibraryChangeView[] = x.library ?? [];
   const what = [ok.length ? `${ok.length} combination${ok.length === 1 ? "" : "s"}` : null, lib.length ? `${lib.length} library change${lib.length === 1 ? "" : "s"}` : null].filter(Boolean).join(" and ");
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -39,7 +40,7 @@ export function ReleasePage() {
         <h1 className="text-2xl font-bold tracking-tight">Review and release</h1>
         <p className="mt-1 text-sm text-text-muted">Everyone's changes are in one shared draft. Releasing publishes together every combination that has passed its review (submitted, and signed by the content reviewer where an expert must sign); firms keep what was approved until then. {x.last ? `Last release: Release ${x.last.version}, ${fmtDate(x.last.at)}.` : "Nothing released yet."}</p>
       </div>
-      {done ? <Notice tone="ok" title={`Release ${done.pack} published`}>{[...done.rows.map((r: any) => r.label), ...(done.library ?? []).map((l: any) => `${l.label} (${l.action.toLowerCase()})`)].join(", ")}.{done.held.length ? ` Held back: ${done.held.map((h: any) => h.label).join(", ")}.` : ""} <Link className="text-text-link underline" to="/">Back to Programs</Link></Notice> : null}
+      {done ? <Notice tone="ok" title={`Release ${done.pack} published`}>{[...done.rows.map((r: any) => r.label), ...((done.library ?? []) as { label: string; action: string }[]).map((l) => `${l.label} (${l.action.toLowerCase()})`)].join(", ")}.{done.held.length ? ` Held back: ${done.held.map((h: any) => h.label).join(", ")}.` : ""} <Link className="text-text-link underline" to="/">Back to Programs</Link></Notice> : null}
       {!x.rows.length && !lib.length ? <EmptyState title="Nothing to release" description="The shared draft has no changes since the last release. Changes appear here as soon as someone edits a combination." action={<Button asChild variant="secondary"><Link to="/">Back to Programs</Link></Button>} /> : (
         <>
           <p className="rounded-lg border border-border bg-surface-raised px-4 py-3 text-sm" aria-live="polite"><b>{x.changes} draft change{x.changes === 1 ? "" : "s"}</b> across <b>{x.rows.length} combination{x.rows.length === 1 ? "" : "s"}</b>{lib.length ? <> and <b>{lib.length} library change{lib.length === 1 ? "" : "s"}</b></> : null}. The list below shows each one and whether it can be released.</p>

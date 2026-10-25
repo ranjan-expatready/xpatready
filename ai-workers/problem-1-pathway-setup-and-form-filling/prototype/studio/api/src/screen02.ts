@@ -15,6 +15,9 @@ import { Impact } from "./impact.ts";
 import { Programs } from "./programs.ts";
 
 type H = string | undefined;
+/** A request body read loosely: an object, or nothing. Each service checks its own fields. */
+const obj = (b: unknown): Record<string, unknown> => (b && typeof b === "object" && !Array.isArray(b) ? (b as Record<string, unknown>) : {});
+const noteOf = (b: unknown) => { const n = obj(b).note; return typeof n === "string" ? n : undefined; };
 /** K1: a PDF form field is mapped, "not a fact", or "filled by hand" with a reason. */
 export const FormFieldDecision = z.object({
   dataPath: z.string().min(1).max(300),
@@ -147,7 +150,7 @@ export async function proposePath(programs: Programs, body: { pathway?: string; 
 @Controller("api")
 export class Screen02Controller {
   constructor(@Inject(Screen02) private readonly s: Screen02, @Inject(Intake) private readonly intake: Intake, @Inject(Impact) private readonly impact: Impact, @Inject(Programs) private readonly programs: Programs) {}
-  @Post("path-proposal") pathProposal(@Headers("x-actor") a: H, @Body() b: any) { need(actorOf(a), "author"); return proposePath(this.programs, b ?? {}); }
+  @Post("path-proposal") pathProposal(@Headers("x-actor") a: H, @Body() b: unknown) { need(actorOf(a), "author"); return proposePath(this.programs, obj(b) as { pathway?: string; description?: string }); }
   @Get("jobs/:id/form-fields") jobFormFields(@Param("id") id: string) { return this.s.jobFormFields(id); }
   @Get("editions/:id/form-fields") formFields(@Param("id") id: string) { return this.s.formFields(id); }
   @Post("editions/:id/form-fields/decision") decide(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.decideFormField(actorOf(a), id, b); }
@@ -155,11 +158,11 @@ export class Screen02Controller {
   @Get("library/merges/:id") merge(@Param("id") id: string) { return this.s.merge(id); }
   @Get("library/changes") changes(@Query("status") status?: string) { return this.s.libraryChanges(status || undefined); }
   @Get("library/changes/:id") change(@Param("id") id: string) { return this.s.libraryChange(id); }
-  @Post("library/changes/:id/approve") approve(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.decideLibraryChange(actorOf(a), id, "approve", b?.note); }
-  @Post("library/changes/:id/return") ret(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.s.decideLibraryChange(actorOf(a), id, "return", b?.note); }
-  @Patch("intake/held/:id") page(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.intake.recordPage(actorOf(a), id, b ?? {}); }
-  @Post("intake/held/:id/approve") approveHeld(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.intake.decideHeld(actorOf(a), id, "approve", b ?? {}); }
-  @Post("intake/held/:id/reject") rejectHeld(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.intake.decideHeld(actorOf(a), id, "reject", b ?? {}); }
+  @Post("library/changes/:id/approve") approve(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.decideLibraryChange(actorOf(a), id, "approve", noteOf(b)); }
+  @Post("library/changes/:id/return") ret(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.decideLibraryChange(actorOf(a), id, "return", noteOf(b)); }
+  @Patch("intake/held/:id") page(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const p = obj(b).irccPage; return this.intake.recordPage(actorOf(a), id, { irccPage: typeof p === "string" ? p : undefined }); }
+  @Post("intake/held/:id/approve") approveHeld(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.intake.decideHeld(actorOf(a), id, "approve", { note: noteOf(b) }); }
+  @Post("intake/held/:id/reject") rejectHeld(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.intake.decideHeld(actorOf(a), id, "reject", { note: noteOf(b) }); }
   @Get("intake/held/:id/impact") impactOf(@Param("id") id: string) { return this.impact.review(id); }
-  @Post("intake/held/:id/impact/accept") acceptImpact(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.impact.accept(actorOf(a), id, b ?? {}); }
+  @Post("intake/held/:id/impact/accept") acceptImpact(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { const e = obj(b).expected; return this.impact.accept(actorOf(a), id, { expected: typeof e === "number" ? e : undefined }); }
 }

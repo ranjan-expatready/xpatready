@@ -10,14 +10,15 @@ Sync main first. Then CHECK.
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_screen: 02-ai-work
-stage: FINISH
+stage: CHECK
 owner: Builder
-next_action: slice 2 (data: LibraryChange, keyFor + field name/group, NormalizationItem kind/payload, ApprovedSource; one publishLibraryChanges in both release paths; decision kinds + K1; views 5/6/8/9; new-edition comparison + impact; detail.a4.parts; Draft setup panel; proposals beside the source), then slice 3 (Propose with AI, K2 checklist drafts, stub only); journeys as scripted checks; CHECK.
-then: CHECK (reviewer + breaker).
-blocked_by: none
+next_action: CHECK of Screen 02 slices 2 and 3: screen-reviewer (journey score) and screen-breaker in parallel, attacking contracts, data, migrations, roles, concurrency and hostile files. The Lead decides on the runtime setup patch (`screens/02-ai-work/runtime-setup-patch.md`): until it is applied, check_runtime_r1a/c/d fail at setup on this branch.
+then: Lead check → merge (with the runtime patch).
+blocked_by: the runtime lane's setup needs the patch (K1 + B1) before this branch can merge green
 updated: 2026-10-25
 
 ## Log (last 10 lines)
+- 2026-10-25 · 02 · FINISH → CHECK · slices 2+3: LibraryChange + keyFor + field names (migration), one publisher in both release paths, NEW field (BR-7), K1, views 2–9 + 11 (impact, capture, screen map, merge, held file/ApprovedSource, Draft setup panel, parts), K2 stub path; check_screen02_slice2 57/57, browser journeys all passed (19 states, axe clean), all suites PASS except runtime setup (patch proposed, proved locally: 13/120/63/99). any 437 = baseline. AI US$0.
 - 2026-10-25 · 02 · EARLY-LOOK → FINISH · applied Lead note 2026-10-25 07:00 (GO; slice 2 with views 5, 6, 8, 9; then slice 3).
 - 2026-10-25 · 02 · BUILD → EARLY-LOOK · slice 1: To review (GET /review-queue, menu first with Needs you count; roles: maker waits, second person acts; same count as Programs, same gate as Release), AI work names; QA-41 dialogs open on their first field, QA-42 stale sample note; check_screen02_slice1 all passed (fail-before on QA-41/42), all 22 suites PASS. AI US$0.
 - 2026-10-25 · 02 · DESIGN → BUILD · applied Lead note 2026-10-25 06:10 (challenge agreed; slice 1 + QA-41, QA-42).
@@ -27,4 +28,3 @@ updated: 2026-10-25
 - 2026-10-24 · 01 · CHECK → FIX · reviewer Ship 9/10 (0 Must, 3 Should), breaker 1 Major (K1 keyboard on Portal/Filed as) + 5 Minor: K1, m1–m5, Should 1–2 fixed; smallfix 23/23 (10 new checks fail on 12af01a). review.md earlier rounds → review-earlier.md.
 - 2026-10-24 · 01 · DONE → FIX · applied Lead note 2026-10-24 20:20 (sent to this session; on PR #9): QA-4, QA-20, QA-22 each reproduced, fixed and tested (check_screen01_smallfix.cjs 11/11); full suites running; CHECK next.
 - 2026-10-24 · 01 · FIX → CHECK · QA-14 one name per parent in the database (normalised key, partial unique index, app keys other scripts), QA-17 dates on steps, L1 (cause: wrong database; checks now verify it), L2 waits, L3 type errors 39 → 0; CHECK round 3: reviewer Ship 9/10, breaker 0 Major/7 Minor, all fixed. Rules 67, API 135, browser 136, channels 42, grounding 29, forms 106. AI US$0.
-- 2026-10-24 · 01 · CHECK → FIX · applied Lead note 2026-10-24 (merged 1cb174a6; small FIX: QA-14, QA-17, L1–L3).

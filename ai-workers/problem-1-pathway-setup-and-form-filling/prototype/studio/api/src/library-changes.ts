@@ -3,7 +3,7 @@
 // call inside their transaction (publishLibraryChanges). A combination whose draft uses an item whose ADD is still
 // waiting (or was returned) is not released: the item review cannot be skipped by releasing a combination.
 import { HttpException, HttpStatus } from "@nestjs/common";
-import type { LibraryChange } from "@prisma/client";
+import type { LibraryChange, Prisma } from "@prisma/client";
 import { normalizeLabel } from "../../contracts/programs.ts";
 import { ACTORS, type Actor, type Db } from "./core.ts";
 
@@ -63,23 +63,37 @@ export const unapprovedWhy = (rows: LibraryChange[]) => `it uses ${rows.slice(0,
  *  single combination's approval inside their transaction. ADD publishes the item's draft rows (already published when a
  *  released combination carries it), RETIRE takes effect now, RESTORE brings a retired item back. DELETE never reaches a
  *  release (approved deletes are removed at once, Screen 04 L1); EDIT_RULE is Screen 04's and stays approved here. */
-export async function publishLibraryChanges(tx: any, workspaceId: string, pack: number) {
+export async function publishLibraryChanges(tx: Prisma.TransactionClient, workspaceId: string, pack: number) {
   const approved: LibraryChange[] = await tx.libraryChange.findMany({ where: { workspaceId, status: "APPROVED", action: { in: ["ADD", "RETIRE", "RESTORE"] } }, orderBy: { proposedAt: "asc" } });
   const out: { kind: string; key: string; label: string; action: string }[] = [];
   for (const c of approved) {
-    const at = DELEGATE[c.kind];
-    if (!at) continue;
-    const delegate = tx[at.model], where = { workspaceId, [at.key]: c.key };
+    const rows = await versionsOf(tx, c.kind, workspaceId, c.key);
+    if (!rows) continue;
     if (c.action === "ADD") {
-      for (const d of await delegate.findMany({ where: { ...where, status: "DRAFT" } })) { if (d.supersedesId) await delegate.update({ where: { id: d.supersedesId }, data: { status: "SUPERSEDED" } }); await delegate.update({ where: { id: d.id }, data: { status: "PUBLISHED" } }); }
+      for (const d of rows.filter((r) => r.status === "DRAFT")) { if (d.supersedesId) await setStatus(tx, c.kind, d.supersedesId, "SUPERSEDED"); await setStatus(tx, c.kind, d.id, "PUBLISHED"); }
     } else {
       const from = c.action === "RETIRE" ? "PUBLISHED" : "RETIRED", to = c.action === "RETIRE" ? "RETIRED" : "PUBLISHED";
-      const cur = await delegate.findFirst({ where: { ...where, status: from }, orderBy: { version: "desc" } });
-      if (cur) await delegate.update({ where: { id: cur.id }, data: { status: to } });
+      const cur = rows.filter((r) => r.status === from).sort((x, y) => y.version - x.version)[0];
+      if (cur) await setStatus(tx, c.kind, cur.id, to);
     }
     await tx.libraryChange.update({ where: { id: c.id }, data: { status: "RELEASED", releasedIn: pack } });
     out.push({ kind: c.kind, key: c.key, label: c.label ?? c.key, action: c.action });
   }
   return out;
 }
-const DELEGATE: Record<string, { model: string; key: string }> = { field: { model: "canonicalField", key: "canonicalFieldKey" }, section: { model: "logicalSection", key: "sectionKey" }, document_type: { model: "documentType", key: "documentTypeKey" } };
+type Status = "DRAFT" | "PUBLISHED" | "SUPERSEDED" | "RETIRED";
+type Version = { id: string; status: Status; version: number; supersedesId: string | null };
+const pick = { id: true, status: true, version: true, supersedesId: true } as const;
+/** The versions of one library item, by kind (fields, sections, document types); null for a kind this publisher does not
+ *  publish (checks belong to their combination). */
+async function versionsOf(tx: Prisma.TransactionClient, kind: string, workspaceId: string, key: string): Promise<Version[] | null> {
+  if (kind === "field") return tx.canonicalField.findMany({ where: { workspaceId, canonicalFieldKey: key }, select: pick });
+  if (kind === "section") return tx.logicalSection.findMany({ where: { workspaceId, sectionKey: key }, select: pick });
+  if (kind === "document_type") return tx.documentType.findMany({ where: { workspaceId, documentTypeKey: key }, select: pick });
+  return null;
+}
+async function setStatus(tx: Prisma.TransactionClient, kind: string, id: string, status: Status) {
+  if (kind === "field") await tx.canonicalField.update({ where: { id }, data: { status } });
+  else if (kind === "section") await tx.logicalSection.update({ where: { id }, data: { status } });
+  else if (kind === "document_type") await tx.documentType.update({ where: { id }, data: { status } });
+}

@@ -102,11 +102,11 @@ function Count({ n, l, tone }: { n: React.ReactNode; l: string; tone?: string })
 /** K2 (Screen 02 slice 3): the combination's official checklists, drafted into document requirements on the same review
  *  path. Only the stub pass runs until the founder agrees the live run's cost. */
 function Checklists({ combinationId, onOpen }: { combinationId: string; onOpen: (jobId: string) => void }) {
-  const list = useQuery<any[]>({ queryKey: ["attachments", combinationId], queryFn: () => api(`/combinations/${combinationId}/attachments`) });
+  const list = useQuery<{ id: string; recognised: boolean; kind: string; edition: string | null; fileName: string }[]>({ queryKey: ["attachments", combinationId], queryFn: () => api(`/combinations/${combinationId}/attachments`) });
   const [busy, setBusy] = React.useState<string | null>(null), [err, setErr] = React.useState<string | null>(null);
   const checklists = (list.data ?? []).filter((a) => a.recognised && a.kind === "Document checklist");
   if (!checklists.length) return null;
-  const run = async (id: string) => { setBusy(id); setErr(null); try { const j = await api<any>(`/attachments/${id}/draft-checklist`, { method: "POST", json: { mode: "stub" } }); onOpen(j.id); } catch (e) { setErr((e as Error).message); } finally { setBusy(null); } };
+  const run = async (id: string) => { setBusy(id); setErr(null); try { const j = await api<{ id: string }>(`/attachments/${id}/draft-checklist`, { method: "POST", json: { mode: "stub" } }); onOpen(j.id); } catch (e) { setErr((e as Error).message); } finally { setBusy(null); } };
   return (
     <section aria-labelledby="ck-h" className="space-y-2 rounded-lg border border-border p-3" data-checklists>
       <h3 id="ck-h" className="text-sm font-semibold">Checklists: document requirements</h3>

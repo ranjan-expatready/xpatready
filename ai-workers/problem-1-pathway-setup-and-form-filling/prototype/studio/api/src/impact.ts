@@ -4,6 +4,7 @@
 // and every combination the change touches; nothing changes until a person accepts, and nothing reaches firms until
 // release. Open cases stay on the release they started on.
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -36,10 +37,10 @@ export class Impact {
     const rows: Row[] = fresh.map((f) => {
       const o = before.get(f.data_path!), m = oldMaps.get(f.data_path!);
       const change = !o ? "new" : norm(o.caption) === norm(f.caption) ? "unchanged" : "reworded";
-      return { dataPath: f.data_path!, caption: (f.caption ?? f.data_path!).slice(0, 300), section: f.section ?? null, change, ...(change === "reworded" ? { was: (o!.caption ?? "").slice(0, 300) } : {}), field: m?.canonicalFieldKey ?? null, outcome: m?.outcome };
+      return { dataPath: f.data_path!, caption: (f.caption || f.data_path!).slice(0, 300), section: f.section ?? null, change, ...(change === "reworded" ? { was: (o!.caption ?? "").slice(0, 300) } : {}), field: m?.canonicalFieldKey ?? null, outcome: m?.outcome };
     });
     const now = new Set(fresh.map((f) => f.data_path!));
-    for (const o of oldFields) if (!now.has(o.data_path!)) { const m = oldMaps.get(o.data_path!); rows.push({ dataPath: o.data_path!, caption: (o.caption ?? o.data_path!).slice(0, 300), section: o.section ?? null, change: "removed", field: m?.canonicalFieldKey ?? null, outcome: m?.outcome }); }
+    for (const o of oldFields) if (!now.has(o.data_path!)) { const m = oldMaps.get(o.data_path!); rows.push({ dataPath: o.data_path!, caption: (o.caption || o.data_path!).slice(0, 300), section: o.section ?? null, change: "removed", field: m?.canonicalFieldKey ?? null, outcome: m?.outcome }); }
     const count = (c: Row["change"]) => rows.filter((r) => r.change === c).length;
     // Impact on the library: the shared fields read by form fields that were removed or reworded.
     const touchedKeys = [...new Set(rows.filter((r) => (r.change === "removed" || r.change === "reworded") && r.field).map((r) => r.field!))];
@@ -70,13 +71,13 @@ export class Impact {
       const claimed = await tx.intakeItem.updateMany({ where: { id, status: "HELD", outcome: "new_edition_held" }, data: { status: "DONE", outcome: "added", reason: `Accepted after impact review by ${actor.name}` } });
       if (!claimed.count) fail("Someone decided this edition at the same moment. Refresh to see it.", HttpStatus.CONFLICT);
       const ed = await tx.formEdition.create({ data: { workspaceId: h.workspaceId, govFormDefId: def.id, editionLabel: h.editionLabel!, officialFile: item.file, sha256: h.sha256, storedPath: h.storedPath || null, inventoryFile: inventory, dataBoundBoxes: r.counts.form_fields } });
-      const data = r.rows.filter((x) => x.change !== "removed").map((x) => {
+      const data: Prisma.FormFieldMapCreateManyInput[] = r.rows.filter((x) => x.change !== "removed").map((x) => {
         const m = x.change === "unchanged" ? oldMaps.get(x.dataPath) : undefined;
         return m ? { workspaceId: h.workspaceId, formEditionId: ed.id, dataPath: x.dataPath, caption: x.caption, heading: x.section, outcome: m.outcome, person: m.person, row: m.row, canonicalFieldKey: m.canonicalFieldKey, transform: m.transform, condition: m.condition, confidence: m.confidence,
-          evidenceQuote: `Unchanged from ${old!.editionLabel}`, reason: m.reason, version: 1, status: "DRAFT" as const, origin: "CODE_MATCH" as const, optionMap: m.optionMap ?? undefined, updatedBy: actor.id }
+          evidenceQuote: `Unchanged from ${old!.editionLabel}`, reason: m.reason, version: 1, status: "DRAFT" as const, origin: "CODE_MATCH" as const, optionMap: m.optionMap === null ? Prisma.DbNull : (m.optionMap as Prisma.InputJsonValue), updatedBy: actor.id }
           : { workspaceId: h.workspaceId, formEditionId: ed.id, dataPath: x.dataPath, caption: x.caption, heading: x.section, outcome: "unresolved", reason: x.change === "reworded" ? `Reworded in ${h.editionLabel}: was "${x.was}"` : `New in ${h.editionLabel}`, version: 1, status: "DRAFT" as const, origin: "CODE_MATCH" as const, updatedBy: actor.id };
       });
-      await tx.formFieldMap.createMany({ data: data as any });
+      await tx.formFieldMap.createMany({ data });
       return { edition: ed.editionLabel, carried: data.filter((d) => d.outcome !== "unresolved").length, for_a_person: data.filter((d) => d.outcome === "unresolved").length };
     });
     await this.audit.log(h.workspaceId, actor.id, "accepted", "new edition", def.formKey, `${actor.name} accepted ${res.edition} after its impact review: ${res.carried} form fields carried from ${old?.editionLabel ?? "no earlier edition"}, ${res.for_a_person} left for a person; ${r.combinations.length} combinations show the change until release (no AI)`, undefined, h.combinationId ?? undefined);

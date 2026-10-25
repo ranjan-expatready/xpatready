@@ -9,6 +9,7 @@ import { Button, Notice, Pill, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
 import { EmptyState } from "@/components/ui/empty-state";
+import type { BatchPart } from "../../../contracts/screen02";
 
 const STATUS: Record<string, [string, string]> = { QUEUED: ["neutral", "Queued"], RUNNING: ["ai", "Running"], COMPLETED: ["ok", "Done"], APPLIED: ["ok", "Added to draft"], PARTIAL: ["warn", "Partly done"], FAILED: ["danger", "Failed"], BLOCKED: ["warn", "Blocked"], CANCELLED: ["neutral", "Cancelled"] };
 export const BatchStatus = ({ s }: { s: string }) => { const [t, l] = STATUS[s] ?? ["neutral", s]; return <Pill tone={t}>{l}</Pill>; };
@@ -78,7 +79,7 @@ export function AiBatchPage() {
             <td>{j.kind === "field_map" && j.status === "COMPLETED" && j.mode !== "STUB" ? <Link className="whitespace-nowrap text-sm font-medium text-text-link hover:underline" to={`/c/${j.combinationId}/jobs/${j.id}`}>Review proposals</Link> : j.status === "APPLIED" && j.kind === "field_map" ? <Link className="text-xs text-text-link hover:underline" to={`/c/${j.combinationId}/jobs/${j.id}`}>Applied</Link> : null}</td>
           </tr>))}
       </Table>
-      {d.jobs.filter((j: any) => j.parts.length).map((j: any) => <Parts key={j.id} job={j} />)}
+      {d.jobs.filter((j: PartsJob) => j.parts.length).map((j: PartsJob) => <Parts key={j.id} job={j} />)}
       <p className="text-xs text-text-muted">{d.capability_note}</p>
     </div>
   );
@@ -86,15 +87,16 @@ export function AiBatchPage() {
 
 const PART: Record<string, [string, string]> = { queued: ["neutral", "Queued"], running: ["ai", "Running"], done: ["ok", "Done"], failed: ["danger", "Failed"], "not started": ["neutral", "Not started"] };
 /** A4 (board view 3): one count bar and the parts table of a step drafted in parts, in real counts. */
-function Parts({ job }: { job: any }) {
-  const done = job.parts.filter((p: any) => p.status === "done"), fields = done.reduce((s: number, p: any) => s + p.fields, 0), total = job.a4?.leftover ?? job.parts.reduce((s: number, p: any) => s + p.fields, 0);
+type PartsJob = { id: string; source: string | null; parts: BatchPart[]; a4: { total: number; reused: number; leftover: number } | null };
+function Parts({ job }: { job: PartsJob }) {
+  const done = job.parts.filter((p) => p.status === "done"), fields = done.reduce((s, p) => s + p.fields, 0), total = job.a4?.leftover ?? job.parts.reduce((s, p) => s + p.fields, 0);
   return (
     <section aria-label={`Parts of ${job.source}`} className="space-y-2 rounded-lg border border-border bg-surface-raised p-4" data-parts>
       <h2 className="font-semibold">{job.source}: part {done.length} of {job.parts.length} · {fields} of {total} form fields</h2>
       {job.a4?.reused ? <p className="text-sm text-text-muted">{job.a4.reused} of {job.a4.total} form fields reused from the library without AI.</p> : null}
       <div className="h-2 overflow-hidden rounded-full bg-surface-sunken" role="progressbar" aria-label="Form fields drafted" aria-valuemin={0} aria-valuemax={total} aria-valuenow={fields}><div className="h-full bg-primary" style={{ width: `${total ? Math.round((fields / total) * 100) : 0}%` }} /></div>
       <Table dense head={["Part", "Sections", "Form fields", "Status", "Cost"]}>
-        {job.parts.map((p: any) => { const [t, w] = PART[p.status] ?? ["neutral", p.status]; return <tr key={p.index}><td>{p.index}</td><td className="text-xs">{p.sections.join(", ")}</td><td className="tabular-nums">{p.fields}</td><td><Pill tone={t}>{w}</Pill>{p.message ? <p className="max-w-xs text-xs text-text-muted">{p.message}</p> : null}</td><td className="text-xs">US${Number(p.cost_usd).toFixed(2)}</td></tr>; })}
+        {job.parts.map((p) => { const [t, w] = PART[p.status] ?? ["neutral", p.status]; return <tr key={p.index}><td>{p.index}</td><td className="text-xs">{p.sections.join(", ")}</td><td className="tabular-nums">{p.fields}</td><td><Pill tone={t}>{w}</Pill>{p.message ? <p className="max-w-xs text-xs text-text-muted">{p.message}</p> : null}</td><td className="text-xs">US${Number(p.cost_usd).toFixed(2)}</td></tr>; })}
       </Table>
     </section>
   );

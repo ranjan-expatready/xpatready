@@ -274,6 +274,18 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   const after = await api(`/combinations/${scratch}/preview?mode=draft&profile=none`);
   const emailBoxes = after.coverage.flatMap((c) => c.boxes).filter((x) => x.fact === "person.email");
   step("B6: without any screen-code change the email boxes now come from a client question", emailBoxes.length > 0 && emailBoxes.every((x) => x.coverage === "client question"), `${emailBoxes.length} boxes`);
+  // Screen 02 slice 2 (K1, B1): every form field of the applied editions has a decision, and a second person approves
+  // the new shared fields on To review, before the draft is submitted and released (through the API: scaffolding here;
+  // check_screen02_slice2_browser.cjs walks the same decisions on their pages).
+  const appliedJobs = (await api(`/combinations/${scratch}`)).jobs.filter((j) => j.kind === "field_map" && j.status === "APPLIED");
+  let decidedFF = 0;
+  for (const j of appliedJobs) {
+    const ff = await api(`/jobs/${j.id}/form-fields`);
+    for (const x of ff.fields.filter((y) => y.outcome === "unresolved")) { await api(`/editions/${ff.edition.id}/form-fields/decision`, { method: "POST", data: { dataPath: x.dataPath, decision: "not_a_fact", reason: "Not filled from case facts in this journey (Sample)." } }); decidedFF++; }
+  }
+  const waitingAdds = await api("/library/changes?status=WAITING");
+  for (const c of waitingAdds) await p.request.fetch(`${URL}/api/library/changes/${c.id}/approve`, { method: "POST", headers: { "x-actor": "user-C", "content-type": "application/json" }, data: {} });
+  step("B6b: every form field decided (K1) and each new shared field approved by a second person (B1)", (await api("/library/changes?status=WAITING")).length === 0, `${decidedFF} form fields · ${waitingAdds.length} new fields approved`);
   await go(`/c/${scratch}/review`);
   await click(btn("Submit for review"));
   await as("user-C"); await click(btn("Select all I can sign")); await click(btn(/^Sign/));

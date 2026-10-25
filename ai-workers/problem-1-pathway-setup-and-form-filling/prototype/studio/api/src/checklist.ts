@@ -47,7 +47,7 @@ export class Checklists {
       const p = i.payload as RequirementProposal;
       const type = types.find((t) => t.documentTypeKey === p.document_type || t.name.toLowerCase() === p.document_type.toLowerCase());
       if (!type) { skipped.push(`${p.document_type} (no such document type in the library yet)`); continue; }
-      await this.studio.saveRequirement(actor, job!.combinationId, null, { documentTypeKey: type.documentTypeKey, attachMode: p.base_or_conditional === "conditional" ? "ANSWER_CONDITIONAL" : "COMBINATION_MANDATORY", conditionPlain: p.condition_plain ?? undefined, appliesToRoles: p.who, providedBy: p.provided_by ?? "client", sourceQuote: i.sourceQuote ?? undefined, sourceFile: a.officialFile ?? a.fileName } as any);
+      await this.studio.saveRequirement(actor, job!.combinationId, null, { documentTypeKey: type.documentTypeKey, attachMode: p.base_or_conditional === "conditional" ? "ANSWER_CONDITIONAL" : "COMBINATION_MANDATORY", conditionPlain: p.condition_plain ?? undefined, appliesToRoles: p.who, providedBy: p.provided_by ?? "client", sourceQuote: i.sourceQuote ?? undefined, sourceFile: a.officialFile ?? a.fileName });
       added++;
     }
     await this.audit.log(job!.workspaceId, actor.id, "applied", "checklist draft", a.edition ?? a.fileName, `${actor.name} applied the reviewed checklist draft of ${a.edition ?? a.fileName}: ${added} document requirements added to the draft${skipped.length ? `; not applied: ${skipped.join(", ")}` : ""}`, undefined, job!.combinationId);
@@ -58,6 +58,6 @@ export class Checklists {
 @Controller("api")
 export class ChecklistsController {
   constructor(@Inject(Checklists) private readonly c: Checklists) {}
-  @Post("attachments/:id/draft-checklist") draft(@Headers("x-actor") a: string | undefined, @Param("id") id: string, @Body() b: any) { return this.c.draft(actorOf(a), id, b ?? {}); }
+  @Post("attachments/:id/draft-checklist") draft(@Headers("x-actor") a: string | undefined, @Param("id") id: string, @Body() b: unknown) { return this.c.draft(actorOf(a), id, (b ?? {}) as { mode?: string }); }
   @Post("jobs/:id/apply-checklist") apply(@Headers("x-actor") a: string | undefined, @Param("id") id: string) { return this.c.apply(actorOf(a), id); }
 }

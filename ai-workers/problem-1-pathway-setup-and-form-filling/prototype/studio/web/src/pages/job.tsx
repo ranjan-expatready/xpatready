@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { ErrorState } from "@/components/ui/error-state";
 import { ModePill, StatusPill } from "@/pages/combination";
 import { cn } from "@/lib/utils";
+import type { FormFieldsView } from "../../../contracts/screen02";
 
 export const PERSON: Record<string, string> = { form_subject: "the form's subject", subject_spouse_or_partner: "the subject's spouse or partner", subject_parent_1: "the subject's first parent", subject_parent_2: "the subject's second parent", subject_child: "the subject's child", subject_sibling: "the subject's sibling", representative: "the representative", none: "the application" };
 const OUTCOME: Record<string, [string, string]> = { REUSE: ["ok", "Reuse existing"], NEW: ["info", "New definition"], AMBIGUOUS: ["warn", "Ambiguous"], CONFLICT: ["danger", "Conflict"] };
@@ -167,10 +168,10 @@ function ApplyDialog({ job, onClose, onDone }: { job: any; onClose: () => void; 
 
 /** BR-7: a new shared field from a proposal. The person types its name and meaning (never a key: it is generated from
  *  the group and the name); a reason is needed when the library already has a field that could fit. */
-function NewFieldForm({ item, busy, onSave, error }: { item: any; busy: boolean; onSave: (b: { label: string; meaning: string; valueType: string; reason: string }) => void; error: string | null }) {
+function NewFieldForm({ item, busy, onSave, error }: { item: { proposedKey: string; proposedMeaning: string; proposedType: string; candidates?: { key: string; score: number }[] }; busy: boolean; onSave: (b: { label: string; meaning: string; valueType: string; reason: string }) => void; error: string | null }) {
   const guess = item.proposedKey.split(".").slice(-1)[0].replace(/_/g, " ");
   const [label, setLabel] = React.useState(guess.charAt(0).toUpperCase() + guess.slice(1)), [meaning, setMeaning] = React.useState(item.proposedMeaning), [type, setType] = React.useState(item.proposedType), [reason, setReason] = React.useState("");
-  const close = (item.candidates ?? []).find((c: any) => c.score >= 0.55);
+  const close = (item.candidates ?? []).find((c) => c.score >= 0.55);
   return (
     <div className="mt-3 space-y-2 rounded-lg border border-border p-3" data-new-field>
       <div className="grid gap-2 md:grid-cols-[1fr_2fr_auto]">
@@ -188,23 +189,23 @@ function NewFieldForm({ item, busy, onSave, error }: { item: any; busy: boolean;
 /** K1: after apply, every form field that no shared field fills needs a decision before release: "not a fact" or
  *  "filled by hand", each with a reason. Form fields carried from an earlier release only warn. */
 function FormFieldDecisions({ jobId }: { jobId: string }) {
-  const q = useApi<any>(["job-form-fields", jobId], `/jobs/${jobId}/form-fields`);
+  const q = useApi<FormFieldsView>(["job-form-fields", jobId], `/jobs/${jobId}/form-fields`);
   const [open, setOpen] = React.useState<string | null>(null), [kind, setKind] = React.useState<"not_a_fact" | "by_hand">("not_a_fact"), [reason, setReason] = React.useState("");
-  const decide = useAction((dataPath: string) => api(`/editions/${q.data.edition.id}/form-fields/decision`, { method: "POST", json: { dataPath, decision: kind, reason } }), { success: (r: any) => `Decided: ${r.outcome === "by_hand" ? "filled by hand" : "not a fact"}`, invalidate: [["job-form-fields", jobId], ["combination"], ["draft"], ["catalogue"]], onDone: () => { setOpen(null); setReason(""); } });
+  const decide = useAction((dataPath: string) => api<{ outcome: string }>(`/editions/${q.data?.edition?.id}/form-fields/decision`, { method: "POST", json: { dataPath, decision: kind, reason } }), { success: (r) => `Decided: ${r.outcome === "by_hand" ? "filled by hand" : "not a fact"}`, invalidate: [["job-form-fields", jobId], ["combination"], ["draft"], ["catalogue"]], onDone: () => { setOpen(null); setReason(""); } });
   if (!q.data?.edition) return null;
-  const open_ = q.data.fields.filter((f: any) => f.outcome === "unresolved");
-  const decided = q.data.fields.filter((f: any) => f.outcome === "by_hand" || (f.outcome === "not_a_fact" && f.status === "DRAFT"));
+  const open_ = q.data.fields.filter((f) => f.outcome === "unresolved");
+  const decided = q.data.fields.filter((f) => f.outcome === "by_hand" || (f.outcome === "not_a_fact" && f.status === "DRAFT"));
   return (
     <section aria-labelledby="ff-decide" className="space-y-3 rounded-xl border border-border bg-surface-raised p-4" data-form-field-decisions>
       <div><h2 id="ff-decide" className="font-semibold">Form fields with no decision ({open_.length})</h2>
-        <p className="text-sm text-text-muted">Each form field is mapped to a shared field, marked "not a fact" (nothing is filled from case facts), or "filled by hand" with a reason. {open_.some((f: any) => !f.carried) ? "Release waits until every new one is decided." : open_.length ? "These come from an earlier release: decide them when you can." : "Every form field has a decision."}</p></div>
-      <ul className="divide-y divide-border text-sm">{open_.slice(0, 50).map((f: any) => (
+        <p className="text-sm text-text-muted">Each form field is mapped to a shared field, marked "not a fact" (nothing is filled from case facts), or "filled by hand" with a reason. {open_.some((f) => !f.carried) ? "Release waits until every new one is decided." : open_.length ? "These come from an earlier release: decide them when you can." : "Every form field has a decision."}</p></div>
+      <ul className="divide-y divide-border text-sm">{open_.slice(0, 50).map((f) => (
         <li key={f.dataPath} className="py-2" data-form-field={f.dataPath}>
           <div className="flex flex-wrap items-center justify-between gap-2"><span><b className="font-medium">{f.caption || f.dataPath}</b>{f.heading ? <span className="text-text-muted"> · {f.heading}</span> : null}{f.carried ? <Pill className="ml-2">Not decided yet (from an earlier release)</Pill> : null}{f.reason ? <span className="block text-xs text-text-muted">{f.reason}</span> : null}</span>
             <Button size="sm" variant="secondary" onClick={() => { setOpen(open === f.dataPath ? null : f.dataPath); setReason(""); }}>Decide</Button></div>
           {open === f.dataPath ? (
             <div className="mt-2 grid gap-2 md:grid-cols-[auto_1fr_auto] md:items-end">
-              <Field label="Decision"><Select value={kind} onChange={(e) => setKind(e.target.value as any)}><option value="not_a_fact">Not a fact</option><option value="by_hand">Filled by hand</option></Select></Field>
+              <Field label="Decision"><Select value={kind} onChange={(e) => setKind(e.target.value === "by_hand" ? "by_hand" : "not_a_fact")}><option value="not_a_fact">Not a fact</option><option value="by_hand">Filled by hand</option></Select></Field>
               <Field label="Reason"><Input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} placeholder={kind === "by_hand" ? "Who fills it and why" : "Signature, office use, a document…"} /></Field>
               <Button size="sm" busy={decide.isPending} onClick={() => decide.mutate(f.dataPath)}>Save</Button>
             </div>
@@ -218,11 +219,13 @@ function FormFieldDecisions({ jobId }: { jobId: string }) {
 
 /** K2 (Screen 02 slice 3): a checklist draft. Each proposal is a document requirement (or a section, rule or check) with
  *  the checklist's own words beside it; a person accepts or returns each, then applies them to the draft. */
-function ChecklistJob({ job, combinationId }: { job: any; combinationId: string }) {
+type ChecklistItem = { id: string; kind: string; decision: string; proposedMeaning: string; sourceQuote: string | null; payload: { document_type?: string; who?: string; base_or_conditional?: string; condition_plain?: string } | null };
+type ChecklistJobView = { id: string; status: string; mode: string; costUsd: number | null; message: string | null; attachment?: { edition: string | null } | null; items: ChecklistItem[] };
+function ChecklistJob({ job, combinationId }: { job: ChecklistJobView; combinationId: string }) {
   const nav = useNavigate();
-  const items = job.items as any[];
+  const items = job.items;
   const decide = useAction((v: { id: string; decision: string; note?: string }) => api(`/jobs/${job.id}/items/${v.id}`, { method: "POST", json: { decision: v.decision, note: v.note } }), { invalidate: [["job", job.id]] });
-  const apply = useAction(() => api(`/jobs/${job.id}/apply-checklist`, { method: "POST" }), { success: (r: any) => `${r.added} document requirement${r.added === 1 ? "" : "s"} added to the draft${r.skipped.length ? `; not applied: ${r.skipped.length}` : ""}`, invalidate: [["job", job.id], ["combination"], ["draft"], ["catalogue"]], onDone: () => nav(`/c/${combinationId}`) });
+  const apply = useAction(() => api<{ added: number; skipped: string[] }>(`/jobs/${job.id}/apply-checklist`, { method: "POST" }), { success: (r) => `${r.added} document requirement${r.added === 1 ? "" : "s"} added to the draft${r.skipped.length ? `; not applied: ${r.skipped.length}` : ""}`, invalidate: [["job", job.id], ["combination"], ["draft"], ["catalogue"]], onDone: () => nav(`/c/${combinationId}`) });
   const pending = items.filter((i) => i.decision === "PENDING").length;
   const [back, setBack] = React.useState<string | null>(null), [note, setNote] = React.useState("");
   return (

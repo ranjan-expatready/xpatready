@@ -13,6 +13,7 @@ import { Button, Notice, Select } from "@/components/ui/controls";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { CATALOGUE_URL_KEY, PATHWAY_LABEL } from "@/pages/programs";
+import type { PathProposal } from "../../../contracts/screen02";
 
 type Opt = { key: string; label: string; combinations: number; hasSetup: boolean; combinationId?: string | null };
 type ProgramOpt = Opt & { categories: (Opt & { subCategories: Opt[] })[] };
@@ -193,8 +194,8 @@ function Picker({ id, label, options, value, onChange, error, disabled, parentNe
 /** Board view 11: describe the application, get a proposed path, use it (fills the fields below) or build it by hand. */
 function Describe({ pathway, onUse }: { pathway: string; onUse: (x: { pathway: string; program: Val; category: Val; subCategory: Val }) => void }) {
   const [text, setText] = React.useState(""), [busy, setBusy] = React.useState(false), [err, setErr] = React.useState<string | null>(null);
-  const [r, setR] = React.useState<any>(null);
-  const propose = async () => { setBusy(true); setErr(null); try { setR(await api("/path-proposal", { method: "POST", json: { pathway, description: text } })); } catch (e) { setErr((e as Error).message); setR(null); } finally { setBusy(false); } };
+  const [r, setR] = React.useState<PathProposal | null>(null);
+  const propose = async () => { setBusy(true); setErr(null); try { setR(await api<PathProposal>("/path-proposal", { method: "POST", json: { pathway, description: text } })); } catch (e) { setErr((e as Error).message); setR(null); } finally { setBusy(false); } };
   const p = r?.proposal;
   return (
     <section aria-labelledby="describe-h" className="flex flex-col gap-3 rounded-lg border border-border bg-surface-raised p-5" data-describe>

@@ -10,13 +10,15 @@ import { ErrorState } from "@/components/ui/error-state";
 import { fmtWhen } from "@/components/status";
 import { cn } from "@/lib/utils";
 import { ToReviewPage } from "@/pages/to-review";
+import type { SessionView } from "../../../contracts/programs";
+import type { CaptureView, HeldFileView, ImpactAccepted, ImpactChange, ImpactReview, LibraryChangeDetail, LibraryChangeView, MergeSide, MergeView, ScreenMapView } from "../../../contracts/screen02";
 
 const inv = [["review-queue"], ["draft"], ["catalogue"]];
 function useMe() {
   const id = useActorId();
-  const s = useApi<any>(["session", id], "/session");
-  const duties: string[] = s.data?.actor?.duties ?? [];
-  return { id, has: (d: string) => duties.includes(d), name: s.data?.actor?.name as string | undefined };
+  const s = useApi<SessionView>(["session", id], "/session");
+  const duties: readonly string[] = s.data?.actor?.duties ?? [];
+  return { id, has: (d: string) => duties.includes(d), name: s.data?.actor?.name };
 }
 function Crumbs({ here }: { here: string }) {
   return <nav aria-label="Path" className="text-xs text-text-muted"><Link to="/review" className="hover:underline">To review</Link> › {here}</nav>;
@@ -43,11 +45,11 @@ function Decide({ yes, no, onYes, onNo, busy, noNeedsReason = true, disabledWhy 
 // ───────────────────────────────────────────── a new shared field (P-53) and other library changes
 export function LibraryChangePage() {
   const { id } = useParams(); const nav = useNavigate(); const me = useMe();
-  const c = useApi<any>(["library-change", id], `/library/changes/${id}`);
-  const act = useAction((v: { d: "approve" | "return"; note?: string }) => api(`/library/changes/${id}/${v.d}`, { method: "POST", json: { note: v.note } }), { success: (r: any) => (r.status === "APPROVED" ? `"${r.label}" approved: it is released with the next release` : `"${r.label}" returned to ${r.proposed_by}`), invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
+  const c = useApi<LibraryChangeDetail>(["library-change", id], `/library/changes/${id}`);
+  const act = useAction((v: { d: "approve" | "return"; note?: string }) => api<LibraryChangeView>(`/library/changes/${id}/${v.d}`, { method: "POST", json: { note: v.note } }), { success: (r) => (r.status === "APPROVED" ? `"${r.label}" approved: it is released with the next release` : `"${r.label}" returned to ${r.proposed_by}`), invalidate: [...inv, ["library-change", id]], onDone: () => nav("/review") });
   if (c.isLoading) return <Spinner label="Loading the change" />;
   if (c.isError) return <ErrorState title="This change could not be opened" description={(c.error as Error).message} action={<Link className="text-text-link underline" to="/review">Back to To review</Link>} />;
-  const x = c.data, mine = x.proposed_by_id === me.id;
+  const x = c.data!, mine = x.proposed_by_id === me.id;
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <Crumbs here={x.label} />
@@ -63,7 +65,7 @@ export function LibraryChangePage() {
       <div className="space-y-1 text-sm">
         {x.reason ? <p><b>Reason:</b> {x.reason}</p> : null}
         {x.ai_verdict ? <p><b>Advisory check:</b> {x.ai_verdict}</p> : null}
-        {(x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m: any) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
+        {(x.matches ?? []).length ? <p className="text-text-muted">Closest library fields: {x.matches.map((m) => `${m.key} (${Math.round(m.score * 100)}%)`).join(", ")}</p> : null}
         {x.status === "RETURNED" ? <Notice tone="warn" title={`Returned by ${x.decided_by}`}>{x.decision_note}</Notice> : null}
       </div>
       <details className="text-xs text-text-muted"><summary className="cursor-pointer">Details</summary><p className="mt-1">Key: <span className="mono">{x.key}</span> (generated from the group and the name)</p></details>
@@ -77,12 +79,12 @@ export function LibraryChangePage() {
 // ───────────────────────────────────────────── board view 6: portal capture review (P-66)
 export function CaptureReviewPage() {
   const { id } = useParams(); const nav = useNavigate(); const me = useMe();
-  const c = useApi<any>(["capture", id], `/captures/${id}`);
-  const approve = useAction(() => api(`/captures/${id}/approve`, { method: "POST" }), { success: (r: any) => `Approved: ${r.edition?.label ?? r.edition?.editionLabel ?? "the online version"} is in the library`, invalidate: [...inv, ["capture", id]], onDone: () => nav("/review") });
+  const c = useApi<CaptureView>(["capture", id], `/captures/${id}`);
+  const approve = useAction(() => api<{ edition?: { editionLabel?: string } }>(`/captures/${id}/approve`, { method: "POST" }), { success: (r) => `Approved: ${r.edition?.editionLabel ?? "the online version"} is in the library`, invalidate: [...inv, ["capture", id]], onDone: () => nav("/review") });
   const ret = useAction((note: string) => api(`/captures/${id}/return`, { method: "POST", json: { note } }), { success: "Returned to the person who captured it", invalidate: [...inv, ["capture", id]], onDone: () => nav("/review") });
   if (c.isLoading) return <Spinner label="Loading the capture" />;
   if (c.isError) return <ErrorState title="This capture could not be opened" description={(c.error as Error).message} action={<Link className="text-text-link underline" to="/review">Back to To review</Link>} />;
-  const x = c.data, mine = x.captured_by === me.id, diffs: any[] = Array.isArray(x.difference) ? x.difference : [];
+  const x = c.data!, mine = x.captured_by === me.id, diffs = Array.isArray(x.difference) ? x.difference : [];
   return (
     <div className="mx-auto max-w-4xl space-y-5">
       <Crumbs here={`${x.form} online · portal capture`} />
@@ -92,11 +94,11 @@ export function CaptureReviewPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <section aria-labelledby="cap-screens" className="rounded-lg border border-border bg-surface-raised p-4">
           <h2 id="cap-screens" className="mb-2 font-semibold">Screens in portal order</h2>
-          <ol className="space-y-1 text-sm">{x.screens.map((s: any) => <li key={s.order}>{s.order}. {s.title} <span className="text-text-muted">· {s.questions} question{s.questions === 1 ? "" : "s"}</span></li>)}</ol>
+          <ol className="space-y-1 text-sm">{x.screens.map((s) => <li key={s.order}>{s.order}. {s.title} <span className="text-text-muted">· {s.questions} question{s.questions === 1 ? "" : "s"}</span></li>)}</ol>
         </section>
         <section aria-labelledby="cap-diff" className="rounded-lg border border-border bg-surface-raised p-4">
           <h2 id="cap-diff" className="mb-2 font-semibold">Differences from the approved version</h2>
-          {x.changes_edition_id ? (diffs.length ? <ul className="space-y-1 text-sm">{diffs.slice(0, 30).map((d: any, i: number) => <li key={i}>{d.change ?? d.kind ?? "Changed"}: {d.label ?? d.input ?? d.screen ?? ""}</li>)}</ul> : <p className="text-sm text-text-muted">No differences.</p>) : <p className="text-sm text-text-muted">A new online version: nothing to compare with.</p>}
+          {x.changes_edition_id ? (diffs.length ? <ul className="space-y-1 text-sm">{diffs.slice(0, 30).map((d, i) => <li key={i}>{d.change ?? d.kind ?? "Changed"}: {d.label ?? d.input ?? d.screen ?? ""}</li>)}</ul> : <p className="text-sm text-text-muted">No differences.</p>) : <p className="text-sm text-text-muted">A new online version: nothing to compare with.</p>}
         </section>
       </div>
       {x.review_file ? <p className="text-sm"><a className="text-text-link underline" href={`/api/captures/${x.id}/review`} target="_blank" rel="noreferrer">Open the review document</a> (every screen and question, for the comparison with the portal)</p> : null}
@@ -110,11 +112,11 @@ export function CaptureReviewPage() {
 // ───────────────────────────────────────────── board view 8: merge two shared fields (right panel over To review, P-48)
 export function MergeReviewPage() {
   const { id } = useParams(); const nav = useNavigate(); const me = useMe();
-  const m = useApi<any>(["merge", id], `/library/merges/${id}`);
+  const m = useApi<MergeView>(["merge", id], `/library/merges/${id}`);
   const approve = useAction((note?: string) => api(`/library/merges/${id}/approve`, { method: "POST", json: note ? { note } : {} }), { success: "Merged: the field that goes away now redirects", invalidate: [...inv, ["merge", id]], onDone: () => nav("/review") });
   const reject = useAction((note: string) => api(`/library/merges/${id}/reject`, { method: "POST", json: { note } }), { success: "Merge rejected", invalidate: [...inv, ["merge", id]], onDone: () => nav("/review") });
   const x = m.data, mine = x?.proposed_by_id === me.id;
-  const side = (f: any, word: string) => (
+  const side = (f: MergeSide, word: string) => (
     <div className="flex-1 rounded-lg border border-border p-3 text-sm">
       <p className="text-xs font-semibold uppercase tracking-wide text-text-muted">{word}</p>
       <p className="mt-1 font-semibold">{f.label}</p><p className="text-text-muted">{f.meaning}</p>
@@ -127,7 +129,7 @@ export function MergeReviewPage() {
       <Panel open onOpenChange={(o) => { if (!o) nav("/review"); }} title="Merge two shared fields" badge={x ? <Pill tone={x.status === "PROPOSED" && !mine ? "warn" : "neutral"}>{x.status === "PROPOSED" ? (mine ? "Waiting for a second person" : "Needs you") : x.status === "APPLIED" ? "Merged" : "Rejected"}</Pill> : null}
         description={x ? `Proposed by ${x.proposed_by}, ${fmtWhen(x.proposed_at)}` : undefined}
         footer={<Button variant="ghost" onClick={() => nav("/review")}>Close</Button>}>
-        {m.isLoading ? <Spinner label="Loading the merge" /> : m.isError ? <Notice tone="danger" title="This merge could not be opened">{(m.error as Error).message}</Notice> : (
+        {m.isLoading ? <Spinner label="Loading the merge" /> : m.isError || !x ? <Notice tone="danger" title="This merge could not be opened">{(m.error as Error | null)?.message ?? "No answer from the studio."}</Notice> : (
           <div className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row" data-merge>{side(x.goes, "Goes away")}{side(x.stays, "Stays")}</div>
             <p className="text-sm">What moves: {x.goes.form_fields} form field{x.goes.form_fields === 1 ? "" : "s"} and {x.goes.questions} question{x.goes.questions === 1 ? "" : "s"} move to "{x.stays.label}"; its name becomes an alias that redirects. Releases already made do not change.</p>
@@ -145,10 +147,10 @@ export function MergeReviewPage() {
 // ───────────────────────────────────────────── board view 9: held file (P-80)
 export function HeldFilePage() {
   const { id } = useParams(); const nav = useNavigate(); const me = useMe();
-  const list = useApi<any[]>(["held"], "/intake/held");
+  const list = useApi<HeldFileView[]>(["held"], "/intake/held");
   const [page, setPage] = React.useState("");
   const record = useAction(() => api(`/intake/held/${id}`, { method: "PATCH", json: { irccPage: page } }), { success: "IRCC page recorded", invalidate: [["held"], ...inv] });
-  const approve = useAction(() => api(`/intake/held/${id}/approve`, { method: "POST", json: {} }), { success: (r: any) => `Approved as an official source${r.result ? `: ${r.result.message}` : ""}`, invalidate: [["held"], ...inv], onDone: () => nav("/review") });
+  const approve = useAction(() => api<{ result?: { message: string } | null }>(`/intake/held/${id}/approve`, { method: "POST", json: {} }), { success: (r) => `Approved as an official source${r.result ? `: ${r.result.message}` : ""}`, invalidate: [["held"], ...inv], onDone: () => nav("/review") });
   const reject = useAction((note: string) => api(`/intake/held/${id}/reject`, { method: "POST", json: { note } }), { success: "Rejected: the file is not used", invalidate: [["held"], ...inv], onDone: () => nav("/review") });
   if (list.isLoading) return <Spinner label="Loading the held file" />;
   const h = list.data?.find((x) => x.id === id);
@@ -175,12 +177,12 @@ export function HeldFilePage() {
 // ───────────────────────────────────────────── board view 7: new edition impact (P-32, C9.1)
 export function EditionImpactPage() {
   const { id } = useParams(); const nav = useNavigate(); const me = useMe();
-  const r = useApi<any>(["impact", id], `/intake/held/${id}/impact`);
+  const r = useApi<ImpactReview>(["impact", id], `/intake/held/${id}/impact`);
   const [tab, setTab] = React.useState<"comparison" | "library" | "combinations">("comparison");
-  const accept = useAction(() => api(`/intake/held/${id}/impact/accept`, { method: "POST", json: { expected: r.data?.counts.form_fields } }), { success: (x: any) => `${x.edition} accepted: ${x.carried} form fields carried, ${x.for_a_person} left for a person. The change is in the shared draft.`, invalidate: [...inv, ["impact", id]], onDone: () => nav("/review") });
+  const accept = useAction(() => api<ImpactAccepted>(`/intake/held/${id}/impact/accept`, { method: "POST", json: { expected: r.data?.counts.form_fields } }), { success: (x) => `${x.edition} accepted: ${x.carried} form fields carried, ${x.for_a_person} left for a person. The change is in the shared draft.`, invalidate: [...inv, ["impact", id]], onDone: () => nav("/review") });
   if (r.isLoading) return <Spinner label="Comparing the editions (no AI)" />;
   if (r.isError) return <ErrorState title="The impact could not be shown" description={(r.error as Error).message} action={<Link className="text-text-link underline" to="/review">Back to To review</Link>} />;
-  const x = r.data, CH: Record<string, [string, string]> = { new: ["info", "New"], reworded: ["warn", "Reworded"], removed: ["danger", "Removed"], unchanged: ["neutral", "Unchanged"] };
+  const x = r.data!, CH: Record<string, [string, string]> = { new: ["info", "New"], reworded: ["warn", "Reworded"], removed: ["danger", "Removed"], unchanged: ["neutral", "Unchanged"] };
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <Crumbs here={`${x.form} new edition`} />
@@ -192,10 +194,10 @@ export function EditionImpactPage() {
       </div>
       <div role="tabpanel" className="overflow-x-auto rounded-lg border border-border bg-surface-raised">
         {tab === "comparison" ? <table className="w-full min-w-[640px] text-sm"><thead><tr className="border-b border-border text-left text-text-muted"><th className="px-4 py-2">Form field</th><th className="px-4 py-2">Change</th><th className="px-4 py-2">Shared field today</th></tr></thead>
-          <tbody>{x.rows.filter((row: any) => row.change !== "unchanged").slice(0, 200).map((row: any) => <tr key={row.dataPath + row.change} className="border-b border-border last:border-b-0"><td className="px-4 py-2">{row.caption}{row.was ? <p className="text-xs text-text-muted">was: {row.was}</p> : null}</td><td className="px-4 py-2"><Pill tone={CH[row.change][0]}>{CH[row.change][1]}</Pill></td><td className="px-4 py-2 text-text-muted">{row.field ?? "—"}</td></tr>)}
+          <tbody>{x.rows.filter((row) => row.change !== "unchanged").slice(0, 200).map((row) => <tr key={row.dataPath + row.change} className="border-b border-border last:border-b-0"><td className="px-4 py-2">{row.caption}{row.was ? <p className="text-xs text-text-muted">was: {row.was}</p> : null}</td><td className="px-4 py-2"><Pill tone={CH[row.change][0]}>{CH[row.change][1]}</Pill></td><td className="px-4 py-2 text-text-muted">{row.field ?? "—"}</td></tr>)}
             <tr><td colSpan={3} className="px-4 py-2 text-text-muted">{x.counts.unchanged} unchanged form fields keep their map.</td></tr></tbody></table>
-          : tab === "library" ? (x.library.length ? <ul className="divide-y divide-border text-sm">{x.library.map((f: any) => <li key={f.key} className="px-4 py-2"><b>{f.label}</b> · {f.form_fields} form field{f.form_fields === 1 ? "" : "s"} reworded or removed<p className="text-text-muted">{f.meaning}</p></li>)}</ul> : <p className="p-4 text-sm text-text-muted">No shared field loses or changes a form field.</p>)
-          : (x.combinations.length ? <ul className="divide-y divide-border text-sm">{x.combinations.map((c: any) => <li key={c.id} className="px-4 py-2"><Link className="text-text-link hover:underline" to={`/c/${c.id}`}>{c.label}</Link></li>)}<li className="px-4 py-2 text-text-muted">{x.open_cases} open case{x.open_cases === 1 ? "" : "s"} stay on the release they started on.</li></ul> : <p className="p-4 text-sm text-text-muted">No combination files this form yet.</p>)}
+          : tab === "library" ? (x.library.length ? <ul className="divide-y divide-border text-sm">{x.library.map((f) => <li key={f.key} className="px-4 py-2"><b>{f.label}</b> · {f.form_fields} form field{f.form_fields === 1 ? "" : "s"} reworded or removed<p className="text-text-muted">{f.meaning}</p></li>)}</ul> : <p className="p-4 text-sm text-text-muted">No shared field loses or changes a form field.</p>)
+          : (x.combinations.length ? <ul className="divide-y divide-border text-sm">{x.combinations.map((c) => <li key={c.id} className="px-4 py-2"><Link className="text-text-link hover:underline" to={`/c/${c.id}`}>{c.label}</Link></li>)}<li className="px-4 py-2 text-text-muted">{x.open_cases} open case{x.open_cases === 1 ? "" : "s"} stay on the release they started on.</li></ul> : <p className="p-4 text-sm text-text-muted">No combination files this form yet.</p>)}
       </div>
       {me.has("author") ? <div className="flex justify-end"><Button busy={accept.isPending} onClick={() => accept.mutate(undefined)}>Accept into the shared draft</Button></div>
         : <Notice title="The configuration author accepts it">Accepting adds the new edition to the shared draft; nothing reaches firms until release.</Notice>}
@@ -206,13 +208,13 @@ export function EditionImpactPage() {
 // ───────────────────────────────────────────── board view 5: screen map of an online version (P-61 §3a, P-62 §8)
 export function ScreenMapPage() {
   const { id } = useParams(); const me = useMe();
-  const s = useApi<any>(["screen-map", id], `/online-versions/${id}/screen-map`);
-  const draft = useAction(() => api(`/online-versions/${id}/screen-map/draft`, { method: "POST" }), { success: (r: any) => `Drafted without AI: ${r.counts.mapped} of ${r.counts.inputs} inputs matched`, invalidate: [["screen-map", id], ...inv] });
-  const accept = useAction(() => api(`/online-versions/${id}/screen-map/accept`, { method: "POST", json: {} }), { success: (r: any) => `Accepted: ${r.mapped} mapped, ${r.unresolved} left for a person`, invalidate: [["screen-map", id], ...inv] });
+  const s = useApi<ScreenMapView>(["screen-map", id], `/online-versions/${id}/screen-map`);
+  const draft = useAction(() => api<{ counts: { mapped: number; inputs: number } }>(`/online-versions/${id}/screen-map/draft`, { method: "POST" }), { success: (r) => `Drafted without AI: ${r.counts.mapped} of ${r.counts.inputs} inputs matched`, invalidate: [["screen-map", id], ...inv] });
+  const accept = useAction(() => api<{ mapped: number; unresolved: number }>(`/online-versions/${id}/screen-map/accept`, { method: "POST", json: {} }), { success: (r) => `Accepted: ${r.mapped} mapped, ${r.unresolved} left for a person`, invalidate: [["screen-map", id], ...inv] });
   if (s.isLoading) return <Spinner label="Loading the screen map" />;
   if (s.isError) return <ErrorState title="This screen map could not be opened" description={(s.error as Error).message} action={<Link className="text-text-link underline" to="/review">Back to To review</Link>} />;
-  const x = s.data, FOUND: Record<string, string> = { same_path: "same element id", pdf_twin: "PDF twin", alias: "alias" };
-  const open = x.inputs.filter((i: any) => i.outcome === "leftover" || i.outcome === "unresolved").length;
+  const x = s.data!, c = x.counts ?? {}, FOUND: Record<string, string> = { same_path: "same element id", pdf_twin: "PDF twin", alias: "alias" };
+  const open = x.inputs.filter((i) => i.outcome === "leftover" || i.outcome === "unresolved").length;
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <Crumbs here={`Screen map · ${x.edition.label}`} />
@@ -220,12 +222,12 @@ export function ScreenMapPage() {
       {x.state === "not_drafted" ? (me.has("author") ? <Notice title="Draft it first (no AI)" action={<Button busy={draft.isPending} onClick={() => draft.mutate(undefined)}>Draft the screen map</Button>}>The PDF twin's field map, earlier online versions and aliases are reused first; AI is never called here.</Notice>
         : <Notice title="The configuration author drafts it">Drafting reuses the PDF twin and the library first (no AI).</Notice>) : (
         <>
-          {x.state === "drafted" ? <p className="text-sm">Drafted without AI{x.pdf_edition ? ` from the PDF twin ${x.pdf_edition}` : ""}: {x.counts.mapped} of {x.counts.inputs} inputs matched; {x.counts.leftover} left for a person or the AI; {x.counts.not_a_fact ?? 0} not a fact.</p> : null}
+          {x.state === "drafted" ? <p className="text-sm">Drafted without AI{x.pdf_edition ? ` from the PDF twin ${x.pdf_edition}` : ""}: {c.mapped ?? 0} of {c.inputs ?? 0} inputs matched; {c.leftover ?? 0} left for a person or the AI; {c.not_a_fact ?? 0} not a fact.</p> : null}
           <div className="overflow-x-auto rounded-lg border border-border bg-surface-raised">
             <table className="w-full min-w-[680px] text-sm" aria-label="Inputs"><thead><tr className="border-b border-border text-left text-text-muted"><th className="px-4 py-2">Screen</th><th className="px-4 py-2">Input</th><th className="px-4 py-2">Shared field</th><th className="px-4 py-2">Found by</th></tr></thead>
-              <tbody>{x.inputs.map((i: any) => <tr key={i.input} className="border-b border-border last:border-b-0" data-outcome={i.outcome}><td className="px-4 py-2 text-text-muted">{i.screen}</td><td className="px-4 py-2">{i.label}</td><td className="px-4 py-2">{i.field_label ?? (i.outcome === "not_a_fact" ? "Not a fact" : <span className="text-text-warn">Left for a person</span>)}</td><td className="px-4 py-2 text-xs text-text-muted">{FOUND[i.method] ?? (i.outcome === "mapped" ? "accepted" : "—")}</td></tr>)}</tbody></table>
+              <tbody>{x.inputs.map((i) => <tr key={i.input} className="border-b border-border last:border-b-0" data-outcome={i.outcome}><td className="px-4 py-2 text-text-muted">{i.screen}</td><td className="px-4 py-2">{i.label}</td><td className="px-4 py-2">{i.field_label ?? (i.outcome === "not_a_fact" ? "Not a fact" : <span className="text-text-warn">Left for a person</span>)}</td><td className="px-4 py-2 text-xs text-text-muted">{FOUND[i.method ?? ""] ?? (i.outcome === "mapped" ? "accepted" : "—")}</td></tr>)}</tbody></table>
           </div>
-          {x.state === "drafted" ? (me.has("review") ? <div className="flex justify-end"><Button busy={accept.isPending} onClick={() => accept.mutate(undefined)}>Accept the {x.counts.mapped} matches</Button></div> : <Notice title="A content publisher accepts it">Switch to a person with the review duty.</Notice>) : null}
+          {x.state === "drafted" ? (me.has("review") ? <div className="flex justify-end"><Button busy={accept.isPending} onClick={() => accept.mutate(undefined)}>Accept the {c.mapped ?? 0} matches</Button></div> : <Notice title="A content publisher accepts it">Switch to a person with the review duty.</Notice>) : null}
         </>
       )}
     </div>
