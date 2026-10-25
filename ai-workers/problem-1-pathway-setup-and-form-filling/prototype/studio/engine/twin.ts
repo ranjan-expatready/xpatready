@@ -10,6 +10,7 @@
 // screen goes to a person, because the PDF's first and second parent cannot be told apart from the screen.
 // Whatever is left is listed for drafting (the guarded AI in slice 2) or a person; a document upload is "not a fact".
 // Nothing here is final: a person accepts the proposals; a merged-away field id redirects to the field it was merged into.
+import { createHash } from "node:crypto";
 import type { CaptureRecord } from "./capture.ts";
 
 export type PdfEntry = { data_path: string; caption: string | null; heading: string | null; fact: string | null; transform: string | null; person: string | null; outcome: string };
@@ -47,6 +48,23 @@ function personOf(...texts: (string | null | undefined)[]) {
 const PERSON_WORDS: Record<string, string> = { subject_spouse_or_partner: "the spouse or partner", subject_child: "a child", parent: "a parent", representative: "the representative" };
 
 /** The executable step that turns the shared field's value into this input's own format. */
+/** A portal screen's identity: its whole heading, in any script, with the words in brackets kept ("Personal details
+ *  (Spouse or common-law partner)" is another screen than "Personal details"), never the order it was captured in (F2a,
+ *  challenge B1; break B1: brackets dropped and a 40-character cut made two screens one). Only case, spacing, invisible
+ *  characters and punctuation are ignored. A heading with no letter or digit is known by a checksum of its text. */
+export function screenIdentity(title: string) {
+  const t = (title ?? "").normalize("NFKC").replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, "").toLowerCase();
+  const slug = t.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
+  return slug || `screen-${createHash("sha256").update(t.trim()).digest("hex").slice(0, 12)}`;
+}
+/** The short form of a screen's identity that qualifies an element id another screen uses ("familyName@your-spouse…"):
+ *  40 characters, with a checksum of the whole identity when it is longer, so two long headings never share it. */
+export const screenQualifier = (title: string) => { const id = screenIdentity(title); return id.length <= 40 ? id : `${id.slice(0, 31)}-${createHash("sha256").update(id).digest("hex").slice(0, 8)}`; };
+/** The page's own element id of a stored input id ("familyName@your-spouse" → "familyName"). */
+export const rawId = (id: string) => id.split("@")[0];
+/** An input's place: its screen and the page's element id, whatever a capture qualified it as. */
+export const inputKey = (screenTitle: string, id: string) => `${screenIdentity(screenTitle)}|${rawId(id)}`;
+
 export function transformFor(type: string, part: string | null, lib: { answerListKey?: string | null } | undefined) {
   if (part) return `date:${part}`;
   if (type === "date") return "date:YYYY-MM-DD";
@@ -62,7 +80,7 @@ export function compatible(type: string, part: string | null, valueType: string 
   return !["date"].includes(valueType) || type === "text";
 }
 
-export function draftScreenMap(twin: CaptureRecord, ctx: { pdf: PdfEntry[]; pdfEdition: string | null; previous: Map<string, { fact: string | null; transform: string | null; person: string | null; edition: string }>; library: LibraryEntry[] }): { proposals: Proposal[]; pdf_not_on_portal: { caption: string; fact: string }[]; counts: Record<string, number> } {
+export function draftScreenMap(twin: CaptureRecord, ctx: { pdf: PdfEntry[]; pdfEdition: string | null; /** keyed by inputKey(screen title, element id) */ previous: Map<string, { fact: string | null; transform: string | null; person: string | null; edition: string }>; library: LibraryEntry[] }): { proposals: Proposal[]; pdf_not_on_portal: { caption: string; fact: string }[]; counts: Record<string, number> } {
   const lib = new Map(ctx.library.map((l) => [l.key, l]));
   const resolve = (k: string | null) => { let key = k, n = 0; while (key && lib.get(key)?.mergedIntoKey && n++ < 5) key = lib.get(key)!.mergedIntoKey; return key; };
   const mapped = ctx.pdf.filter((e) => e.outcome === "mapped" && e.fact);
@@ -78,8 +96,9 @@ export function draftScreenMap(twin: CaptureRecord, ctx: { pdf: PdfEntry[]; pdfE
     };
     const who = personOf(s.title, i.group);
     if (i.type === "file") { proposals.push({ ...base, outcome: "not_a_fact", method: null, fact: null, transform: null, person: null, from: null, why: "A document upload: the document checklist asks for it, not a shared field." }); continue; }
-    // 1. same path
-    const prev = ctx.previous.get(i.id);
+    // 1. same path: the same element id on the same screen (B1: never the same id on another screen, whose person may
+    // differ, such as the applicant's and the spouse's familyName).
+    const prev = ctx.previous.get(inputKey(s.title, i.id));
     if (prev?.fact) { done("same_path", prev.fact, prev.person, prev.edition, `Same element id as in ${prev.edition}, which maps it to ${prev.fact}.`); continue; }
     // 2. PDF twin
     let hits: PdfEntry[] = [];

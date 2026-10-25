@@ -5,9 +5,9 @@
 // The server honours STUDIO_FAKE_LAUNCHER only in an isolated copy's own working folder. QA-30: a draft request with no
 // mode is a plain 400. QA-27, QA-31, QA-32 (qa Minors pass): plain words on the screen-map refusals, a screen-map draft
 // cancelled before its paid call, a retry after a mid-run cancel. Every rule has a passing and a failing case.
-//   zsh studio/tools/isolated.sh forms_fl 4453 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_ai_launch_paths.ts 4453 xr_studio_forms_fl
+//   zsh studio/tools/isolated.sh forms_fl 4453 start STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs && tsx studio/tests/check_ai_launch_paths.ts 4453 xr_studio_forms_fl  [--evidence writes evidence/forms-slice2b]
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const PORT = Number(process.argv[2] ?? 4453), DB = process.argv[3] ?? "xr_studio_forms_fl";
@@ -17,11 +17,15 @@ const LEDGER = join(STUDIO, "..", "p2", "ledger", "spend.jsonl");
 const log: { name: string; ok: boolean; detail?: unknown }[] = []; let pass = 0, fail = 0;
 const ok = (name: string, c: unknown, detail?: unknown) => { c ? pass++ : fail++; log.push({ name, ok: !!c, detail }); console.log(`${c ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${JSON.stringify(detail).slice(0, 240)}` : ""}`); };
 type Res = { status: number; body: any }; // eslint-disable-line @typescript-eslint/no-explicit-any -- test responses are read loosely, as in the other API checks
-/** fetch, sent again once when a kept-alive connection was closed before any reply (the suite restarts its server). */
+/** fetch, sent again when a kept-alive connection was closed before any reply, or the server is not listening yet (the
+ *  suite restarts its server; a slow runner can take longer to listen again): for up to 60 s, never sent twice once a
+ *  reply has come (CI flake on 8d0831a: the check stopped without a FAIL line). */
 const send = async (url: string, init: RequestInit): Promise<Response> => {
-  try { return await fetch(url, init); } catch (e) {
-    if (!/EPIPE|ECONNRESET|UND_ERR_SOCKET/.test((e as { cause?: { code?: string } }).cause?.code ?? "")) throw e;
-    return fetch(url, init);
+  for (const t = Date.now(); ;) {
+    try { return await fetch(url, init); } catch (e) {
+      if (!/EPIPE|ECONNRESET|UND_ERR_SOCKET|ECONNREFUSED/.test((e as { cause?: { code?: string } }).cause?.code ?? "") || Date.now() - t > 60_000) throw e;
+      await new Promise((r) => setTimeout(r, 500));
+    }
   }
 };
 const call = async (method: string, path: string, body?: unknown, actor = "user-A"): Promise<Res> => {
@@ -35,6 +39,36 @@ const upload = async (path: string, names: string[]): Promise<Res> => {
   const x = await fetch(`http://localhost:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd });
   return { status: x.status, body: await x.json() };
 };
+/** Restarts this copy's server with another launcher setting. isolated.sh waits 30 s for the server; on a slow runner the
+ *  wait can run out while the server is still starting, so a failed restart waits for /api/session up to 2 minutes more
+ *  before the check reports it (a FAIL line, never a crash). */
+const restart = async (root: string, name: string, launcher: string) => {
+  try { execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), name, String(PORT), "restart", `STUDIO_FAKE_LAUNCHER=${launcher}`], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }); return true; }
+  catch { return until(async () => (await fetch(`http://localhost:${PORT}/api/session`).catch(() => null))?.status === 200, 120_000); }
+};
+/** What the guarded launcher's stub passes write in the repository (the PR 10 part runs it on purpose, US$0): run, job
+ *  and ticket files, the source's inventory, two ledger lines per pass (reserve and settle at US$0) and a new canary
+ *  digest. Recorded at the start and put back at the end, so a regression run leaves the repository as it was (Lead
+ *  note, 25 Oct): only files this run added are removed, and the ledger loses only the lines this run appended, and
+ *  only while it still starts with what it held before (another copy's line is never touched). */
+const P2 = join(STUDIO, "..", "p2"), P1 = join(STUDIO, "..", "p1");
+const DIRS = [join(P2, "runs"), join(P2, "jobs"), join(P2, "ledger", "used-launch-tickets"), join(P1, "inventory")];
+const CANARY = join(P2, "screening", "canary-digest.json");
+const filesIn = (d: string): string[] => (existsSync(d) ? readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? filesIn(join(d, e.name)) : [join(d, e.name)])) : []);
+const before = { files: new Set(DIRS.flatMap(filesIn)), ledger: readFileSync(LEDGER, "utf8"), canary: existsSync(CANARY) ? readFileSync(CANARY, "utf8") : null };
+function putBack() {
+  const added = DIRS.flatMap(filesIn).filter((f) => !before.files.has(f));
+  for (const f of added) rmSync(f, { force: true });
+  const now = readFileSync(LEDGER, "utf8");
+  const extra = now.startsWith(before.ledger) ? now.slice(before.ledger.length).split("\n").filter(Boolean) : null;
+  // Only stub lines settled at US$0 are this run's; anything else is left for a person to look at.
+  if (extra && extra.every((l) => { const x = JSON.parse(l); return x.caller === "stub" || (x.type === "settle" && x.actual_usd === 0); })) writeFileSync(LEDGER, before.ledger);
+  else if (extra?.length) console.log(`note: the spend ledger gained ${extra.length} line(s) that are not this run's stub passes; left as they are`);
+  if (before.canary !== null) writeFileSync(CANARY, before.canary);
+  return added.length;
+}
+/** The evidence file is written only when asked (--evidence): a regression run leaves the repository as it was. */
+const EVIDENCE = process.argv.includes("--evidence");
 const JARGON = /expected \w+, received|Invalid input|Too small|Too big|undefined|\bnull\b|NaN|TypeError/i;
 const scenario = (x: unknown) => { writeFileSync(join(VARDIR, "fake-launch.json"), JSON.stringify(x)); rmSync(join(VARDIR, "fake-launch.count"), { force: true }); writeFileSync(join(VARDIR, "fake-launch.log"), ""); };
 const calls = () => readFileSync(join(VARDIR, "fake-launch.log"), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as { mode: string });
@@ -235,12 +269,12 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   const disguised = join(linkDir, "fake-launch.mjs"); rmSync(disguised, { force: true }); symlinkSync(rogue, disguised);
   for (const [label, path] of [["another script", rogue], ["a link named like the fixture", disguised]] as const) {
     rmSync(marker, { force: true }); writeFileSync(join(VARDIR, "fake-launch.log"), "");
-    execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), NAME, String(PORT), "restart", `STUDIO_FAKE_LAUNCHER=${path}`], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+    if (!(await restart(ROOT, NAME, path))) { ok(`PR 10: the copy restarted with STUDIO_FAKE_LAUNCHER naming ${label}`, false, "the server did not come back in 2.5 minutes"); continue; }
     r = await call("POST", `/attachments/${source}/draft`, { mode: "stub" });
     const g = r.status === 201 ? await finished(r.body.id) : { status: `not started: ${r.body?.message}` };
     ok(`PR 10: STUDIO_FAKE_LAUNCHER naming ${label} is ignored: it never runs, the fake log stays empty, and the guarded launcher's stub pass runs (US$0)`, !existsSync(marker) && calls().length === 0 && g.status === "COMPLETED" && /Stub pass completed/.test(g.message ?? ""), { status: g.status, message: g.message, ran: existsSync(marker), fakeCalls: calls().length });
   }
-  execFileSync("zsh", [join(STUDIO, "tools", "isolated.sh"), NAME, String(PORT), "restart", "STUDIO_FAKE_LAUNCHER=ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs"], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  if (!(await restart(ROOT, NAME, "ai-workers/problem-1-pathway-setup-and-form-filling/prototype/studio/tests/fixtures/fake-launch.mjs"))) ok("PR 10: the copy restarted with the fixture launcher", false, "the server did not come back in 2.5 minutes");
   scenario({ stub: { exit: 0, out: { ok: true } } });
   r = await call("POST", `/attachments/${source}/draft`, { mode: "stub" });
   const back = r.status === 201 ? await finished(r.body.id) : null;
@@ -255,9 +289,11 @@ const record = (run: Record<string, unknown>, extra: Record<string, unknown> = {
   ok("break M2: a reset while a screen-map draft runs leaves the server running (the draft ends nowhere, quietly)", r.status < 300 && alive.status === 200, { reset: r.status, session: alive.status });
 
   // ──────────────────────────────────────────── evidence and reset
-  const out = join(STUDIO, "evidence", "forms-slice2b"); mkdirSync(out, { recursive: true });
+  const out = EVIDENCE ? join(STUDIO, "evidence", "forms-slice2b") : VARDIR; mkdirSync(out, { recursive: true });
   await call("POST", "/demo/reset", { confirm: "RESET" });
+  const removed = putBack();
+  ok("the run leaves the repository as it was: the stub passes' run, job and ticket files removed, the ledger and the canary digest as before", readFileSync(LEDGER, "utf8") === before.ledger && DIRS.flatMap(filesIn).every((f) => before.files.has(f)), { removed });
   console.log(`\n${pass}/${pass + fail} passed`);
   writeFileSync(join(out, "check_ai_launch_paths.json"), JSON.stringify({ at: new Date().toISOString(), port: PORT, database: DB, paid_calls: 0, pass, fail, log }, null, 1));
   process.exit(fail ? 1 : 0);
-})().catch((e) => { console.error(e); process.exit(1); });
+})().catch((e) => { putBack(); console.log(`FAIL  the check stopped: ${String((e as Error)?.message ?? e).slice(0, 200)}`); console.error(e); process.exit(1); });
