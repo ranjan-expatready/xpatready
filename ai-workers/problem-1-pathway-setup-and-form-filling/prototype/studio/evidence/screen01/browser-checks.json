@@ -1,9 +1,9 @@
 {
- "at": "2026-10-24T18:48:28.216Z",
+ "at": "2026-10-25T11:42:51.162Z",
  "timings": {
-  "cold_first_view_ms": 469,
-  "first_view_ms": 135,
-  "filter_ms": 22
+  "cold_first_view_ms": 411,
+  "first_view_ms": 98,
+  "filter_ms": 59
  },
  "pass": 136,
  "fail": 0,
@@ -11,7 +11,7 @@
   {
    "name": "setup: sample inputs load through the form intake",
    "ok": true,
-   "detail": "6.711"
+   "detail": "5.921"
   },
   {
    "name": "setup: one replay of a saved real AI run on Super visa (no model call, US$0)",
@@ -26,7 +26,7 @@
   {
    "name": "performance: first view under 1 s with the sample data (app files cached)",
    "ok": true,
-   "detail": "135 ms (cold browser 469 ms)"
+   "detail": "98 ms (cold browser 411 ms)"
   },
   {
    "name": "P-49: Needs work is the default view, with its count",
@@ -95,7 +95,7 @@
   {
    "name": "performance: changing the view answers under 200 ms",
    "ok": true,
-   "detail": "22 ms"
+   "detail": "59 ms"
   },
   {
    "name": "F1: Live shows every row whose status is Live",
@@ -171,7 +171,7 @@
   {
    "name": "regression: \"Show all\" keeps the All view after the search box settles (no stale URL rewrite)",
    "ok": true,
-   "detail": "http://localhost:4404/?f=all"
+   "detail": "http://localhost:4440/?f=all"
   },
   {
    "name": "item 5: Corporate shows the demo names (LMIA › High-wage position, Low-wage position, Global Talent Stream, In-home caregiver)",
@@ -189,7 +189,7 @@
   {
    "name": "keyboard: one tab stop, ↑/↓/Home/End move, Enter opens the combination page (P-50)",
    "ok": true,
-   "detail": "Spouse of a skilled worker → http://localhost:4404/c/52fa3f70-0b1d-4fa5-909d-a406b514ca11"
+   "detail": "Spouse of a skilled worker → http://localhost:4440/c/2f9c516b-22f8-462f-8e83-38b63748ffcd"
   },
   {
    "name": "P-50: Back keeps the view (All), highlights the opened row and restores the scroll",
@@ -369,7 +369,7 @@
   {
    "name": "item 3: the warnings on a Live row are this combination's own and link to Review and release",
    "ok": true,
-   "detail": "6 shown, 6 own"
+   "detail": "15 shown, 15 own"
   },
   {
    "name": "axe: combination-page-live-unverified-source-held has no WCAG A/AA violation",
@@ -486,7 +486,7 @@
   {
    "name": "QA-11: \"Open the existing combination\" opens that combination's page (not the list)",
    "ok": true,
-   "detail": "http://localhost:4404/c/02bc1b10-ae22-4b3c-9b5f-d21588cdcdc7"
+   "detail": "http://localhost:4440/c/a6d6f37d-2d6c-41ca-8e57-f69f89543df3"
   },
   {
    "name": "QA-1: the shared Release page holds back a combination nobody submitted, saying why",
@@ -608,7 +608,7 @@
   {
    "name": "QA-17: a step run on another day shows its date (\"Oct 21, …\"); one run today says \"today\"",
    "ok": true,
-   "detail": "today 6:46 p.m. | today 6:46 p.m. | today 6:46 p.m."
+   "detail": "today 5:10 p.m. | today 5:10 p.m. | today 5:10 p.m."
   },
   {
    "name": "P-63: no page says \"box\" or \"box map\" (form field, field map)",

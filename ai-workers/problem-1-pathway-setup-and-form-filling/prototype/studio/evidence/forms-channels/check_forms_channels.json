@@ -1,7 +1,7 @@
 {
- "at": "2026-10-24T21:15:04.692Z",
- "port": 4450,
- "database": "xr_studio_forms_f1",
+ "at": "2026-10-25T11:37:20.269Z",
+ "port": 4446,
+ "database": "xr_studio_screens_f1",
  "paid_calls": 0,
  "fixtures": "Sample (tests/fixtures/portal/README.md)",
  "pass": 106,
@@ -166,8 +166,8 @@
    "name": "a configuration without channels keeps its fingerprint (draft equals its release after the migration)",
    "ok": true,
    "detail": {
-    "wpRelease": "4eef83f16ab10c5bdac941963cc49f3329473ec697e11f57dfb296559e566605",
-    "wpDraft": "4eef83f16ab10c5bdac941963cc49f3329473ec697e11f57dfb296559e566605"
+    "wpRelease": "52b4c9159c9c4969dee69944a438b541ea93e70c8c61abe02ddf05fb928ae290",
+    "wpDraft": "52b4c9159c9c4969dee69944a438b541ea93e70c8c61abe02ddf05fb928ae290"
    }
   },
   {
@@ -246,8 +246,8 @@
    "name": "finish answers before the review document is printed (printed in the background; HTML until the PDF exists)",
    "ok": true,
    "detail": {
-    "ms": 27,
-    "review_file": "prototype/studio/var/isolated-forms_f1/workspaces/demo/portal-twins/IMM5257-ircc_portal-154af0a1-d6375ca38c3b.review.html"
+    "ms": 30,
+    "review_file": "prototype/studio/var/isolated-screens_f1/workspaces/demo/portal-twins/IMM5257-ircc_portal-d63d3fdb-d6375ca38c3b.review.html"
    }
   },
   {
@@ -273,12 +273,12 @@
    "name": "approval: a second person makes it an online version, re-check date set (Sample 180 days)",
    "ok": true,
    "detail": {
-    "id": "4d5891a7-10af-4a6b-8602-3c416924f479",
-    "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
+    "id": "743fe931-eb8c-4561-87d1-7b53dcda787f",
+    "label": "IMM 5257 online · IRCC Portal · 2026-10-25",
     "channel": "ONLINE",
     "portal": "ircc_portal",
-    "captured_on": "2026-10-24",
-    "recheck_by": "2027-04-22",
+    "captured_on": "2026-10-25",
+    "recheck_by": "2027-04-23",
     "fingerprint": "d6375ca38c3bb70b1622d381fd8afdba0971ee4a5da445650f4b7290ad74ba36",
     "questions": 13
    }
@@ -290,7 +290,7 @@
   {
    "name": "identity: the same screens saved again (new session token, script, time) are 'already in the library'",
    "ok": true,
-   "detail": "Already in the library: the screens are identical to IMM 5257 online · IRCC Portal · 2026-10-24 (same fingerprint). Nothing new to approve. A second person confirms the screens are unchanged, which renews the online version's re-check date."
+   "detail": "Already in the library: the screens are identical to IMM 5257 online · IRCC Portal · 2026-10-25 (same fingerprint). Nothing new to approve. A second person confirms the screens are unchanged, which renews the online version's re-check date."
   },
   {
    "name": "identity fail: a reworded label and an added option are held with the field-by-field difference",
@@ -316,7 +316,7 @@
   {
    "name": "a returned capture is fixed: the edited screens removed, the right ones added; finish finds them already in the library",
    "ok": true,
-   "detail": "Already in the library: the screens are identical to IMM 5257 online · IRCC Portal · 2026-10-24 (same fingerprint). Nothing new to approve. A second person confirms the screens are unchanged, which renews the online version's re-check date."
+   "detail": "Already in the library: the screens are identical to IMM 5257 online · IRCC Portal · 2026-10-25 (same fingerprint). Nothing new to approve. A second person confirms the screens are unchanged, which renews the online version's re-check date."
   },
   {
    "name": "abandon: a capture given up stays for the audit and takes no more screens",
@@ -360,8 +360,8 @@
    "name": "concurrency: two screens added at the same moment are both kept, or one is refused with 409; never 'added' and lost",
    "ok": true,
    "detail": [
-    409,
     201,
+    409,
     1
    ]
   },
@@ -496,8 +496,8 @@
    "ok": true,
    "detail": [
     "person.family_name holds a text; this input is a date part (YYYY).",
-    "Either map it to a shared field (fact) or mark it not a fact (notAFact), not both.",
-    "IMM 5257 online · IRCC Portal · 2026-10-24 has no input nowhere in its accepted screen map (accept the screen map first)."
+    "Map it to a shared field (fact), mark it not a fact (notAFact), or mark it answered on screen (answerOnScreen): one of the three.",
+    "IMM 5257 online · IRCC Portal · 2026-10-25 has no input nowhere in its accepted screen map (accept the screen map first)."
    ]
   },
   {
@@ -535,7 +535,7 @@
   {
    "name": "the review's validator runs the channel rules (the re-check error is among the draft's problems at review and release)",
    "ok": true,
-   "detail": 91
+   "detail": 95
   },
   {
    "name": "confirm fail: the person who captured the screens again cannot confirm them unchanged",
@@ -545,12 +545,12 @@
    "name": "confirm: a second person confirms the identical re-capture; the re-check date runs from it, once",
    "ok": true,
    "detail": {
-    "id": "4d5891a7-10af-4a6b-8602-3c416924f479",
-    "label": "IMM 5257 online · IRCC Portal · 2026-10-24",
+    "id": "743fe931-eb8c-4561-87d1-7b53dcda787f",
+    "label": "IMM 5257 online · IRCC Portal · 2026-10-25",
     "channel": "ONLINE",
     "portal": "ircc_portal",
-    "captured_on": "2026-10-24",
-    "recheck_by": "2027-04-22",
+    "captured_on": "2026-10-25",
+    "recheck_by": "2027-04-23",
     "fingerprint": "d6375ca38c3bb70b1622d381fd8afdba0971ee4a5da445650f4b7290ad74ba36",
     "questions": 13
    }
@@ -570,9 +570,21 @@
    "detail": [
     {
      "level": "warning",
-     "where": "Field map IMM 5257 online · IRCC Portal · 2026-10-24",
+     "where": "Field map IMM 5257 online · IRCC Portal · 2026-10-25",
      "item": "IMM 5257",
      "message": "3 choice inputs are not on an answer list yet: filled by matching labels, so a changed label could go unnoticed."
+    },
+    {
+     "level": "warning",
+     "where": "Field map IMM 5257 (09-2023)",
+     "item": "IMM 5257",
+     "message": "52 list rows have no purpose yet (for example Question 8 B Row 1 Country or Territory. If you replied Yes to question 8 A, please give your previous country or territory of residence.): choose what the list holds and what happens to rows the form has no room for."
+    },
+    {
+     "level": "warning",
+     "where": "Field map IMM 5707 (01-2023)",
+     "item": "IMM 5707",
+     "message": "9 list rows have no purpose yet (for example ): choose what the list holds and what happens to rows the form has no room for."
     }
    ]
   },
@@ -580,8 +592,8 @@
    "name": "Forms library: IMM 5257 shows both channels and its online version",
    "ok": true,
    "detail": [
-    "PDF",
-    "Online"
+    "Online",
+    "PDF"
    ]
   },
   {
