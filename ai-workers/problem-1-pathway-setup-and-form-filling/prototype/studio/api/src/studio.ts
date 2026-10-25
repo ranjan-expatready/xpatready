@@ -6,9 +6,10 @@ import { canRelease } from "../../../contracts/rules.ts";
 import { peopleFor, render, kkey, type Known } from "../../engine/render.ts";
 import { buildSnapshot, subjectKindOf, VALUE_TYPE_TO_DATA_TYPE, type Mode, type Snapshot } from "../../engine/snapshot.ts";
 import { slug } from "../../engine/import.ts";
+import { FormLineEdit } from "../../contracts/workspace.ts";
 import { checkCondition, diff, validate } from "../../engine/validate.ts";
 import { ACTORS, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
-import { cleanLabel, normalizeLabel } from "../../contracts/programs.ts";
+import { cleanLabel, normalizeLabel, problemFromZod } from "../../contracts/programs.ts";
 import { newKeyProblem } from "../../../contracts/fact-key.ts";
 
 const VALUE_TYPES = Object.keys(VALUE_TYPE_TO_DATA_TYPE);
@@ -419,7 +420,7 @@ export class Studio {
     return row;
   }
 
-  async saveForm(actor: Actor, combinationId: string, formKey: string, b: { who?: string; attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; retire?: boolean; baseRevision?: string }) {
+  async saveForm(actor: Actor, combinationId: string, formKey: string, b: { who?: string; attachMode?: "COMBINATION_MANDATORY" | "ANSWER_CONDITIONAL"; condition?: any; conditionPlain?: string; retire?: boolean; baseRevision?: string; copies?: number; minAge?: number | null; signedBy?: string | null }) {
     need(actor, "author"); // draft edits are the author duty, enforced here for every screen and direct call
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const rows = await this.db.combinationForm.findMany({ where: { combinationId, lineageKey: formKey } });
@@ -430,6 +431,10 @@ export class Studio {
     const changes: any = {};
     if (b.retire) changes.status = "RETIRED";
     if (b.who) { if (!WHO.includes(b.who)) fail("Choose whose form it is."); changes.who = b.who; }
+    // Screen 03 S1 (contracts/workspace.ts): copies, minimum age and who signs; field errors as Problem Details.
+    const line = FormLineEdit.safeParse({ copies: b.copies, minAge: b.minAge, signedBy: b.signedBy });
+    if (!line.success) throw new HttpException(problemFromZod(line.error), HttpStatus.BAD_REQUEST);
+    for (const k of ["copies", "minAge", "signedBy"] as const) if (line.data[k] !== undefined) changes[k] = line.data[k];
     if (b.attachMode) { changes.attachMode = b.attachMode; if (b.attachMode === "COMBINATION_MANDATORY") { changes.predicateJson = null; changes.conditionPlain = null; } }
     if (b.condition !== undefined && (b.attachMode ?? rows[0].attachMode) === "ANSWER_CONDITIONAL") { const t = await this.libraryTypes(c.workspaceId); const errs = checkCondition(b.condition, t.fields, t.derived); if (errs.length) fail(`Condition: ${errs.join("; ")}.`); changes.predicateJson = b.condition; changes.conditionPlain = b.conditionPlain ?? null; }
     const { row } = await revise(this.db.combinationForm, rows, { ...changes, origin: "HUMAN" }, actor.id, strip);

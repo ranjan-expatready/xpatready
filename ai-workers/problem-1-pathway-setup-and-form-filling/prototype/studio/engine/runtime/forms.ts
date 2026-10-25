@@ -15,7 +15,7 @@ export type FormFact = { box: string; fact: string; about: string; row: number |
 export function formCoverage(s: Snapshot, people: Participant[], answers: Answer[], rows: Row[], form: string, subjectId: string, today = new Date()) {
   const renderPeople: Person[] = people.filter((p) => p.role !== "case").map((p) => ({ id: p.subjectId, role: p.role as Role, label: p.label, applies: p.applies }));
   const { known } = knownOf(s, people, answers, rows, today);
-  const cov = render(s, renderPeople, known).coverage.find((c) => c.form === form && c.person === subjectId);
+  const cov = render(s, renderPeople, known, { today }).coverage.find((c) => c.form === form && c.person === subjectId);
   if (!cov) return null;
   return { ...cov, facts: factsOf(cov.boxes) };
 }

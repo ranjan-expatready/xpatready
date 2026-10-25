@@ -295,6 +295,11 @@ model CombinationForm {
   origin        Origin
   /// F1 (P-61 §2): how this line is filed. Existing lines stay PDF upload (today's behaviour).
   channel       FilingChannel    @default(PDF_UPLOAD)
+  /// Screen 03 S1: copies of the form for each person it names (1 to 9), the age a person must have reached for the line
+  /// to apply to them (null: any age), and who signs it (contracts/workspace.ts SIGNED_BY, Sample until the expert confirms).
+  copies        Int              @default(1)
+  minAge        Int?             @map("min_age")
+  signedBy      String?          @map("signed_by")
   updatedBy     String           @map("updated_by")
   updatedAt     DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 

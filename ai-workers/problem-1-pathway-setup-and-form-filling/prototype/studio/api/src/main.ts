@@ -19,6 +19,7 @@ import { Runtime, RuntimeController } from "./runtime.ts";
 import { CaseForms, CaseFormsController } from "./fill-case.ts";
 import { Sources } from "./sources.ts";
 import { Studio } from "./studio.ts";
+import { WorkspaceController, WorkspaceViews } from "./workspace.ts";
 
 type H = string | undefined;
 
@@ -156,7 +157,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms] })
+@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, WorkspaceController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, WorkspaceViews] })
 class AppModule {}
 
 async function main() {

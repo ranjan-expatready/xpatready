@@ -66,11 +66,11 @@ export function JobPage() {
         <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface-raised/95 px-6 py-3 backdrop-blur md:left-56">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
             <p className="text-sm">{job.status === "APPLIED" ? "Applied to the draft. Next: preview the effect, then submit for review." : pending.length ? <><b>{pending.length}</b> proposal{pending.length > 1 ? "s" : ""} still to decide. Every proposal needs a decision before it reaches the draft.</> : "All proposals decided. Apply them to the combination's draft configuration."}</p>
-            {job.status === "APPLIED" ? <Button onClick={() => nav(`/c/${id}/preview`)}>Preview the draft</Button> : <Button disabled={!!pending.length} onClick={() => setApplyOpen(true)}><GitMerge /> Apply to draft</Button>}
+            {job.status === "APPLIED" ? <Button onClick={() => nav(`/c/${id}/preview?view=studio`)}>Preview the draft</Button> : <Button disabled={!!pending.length} onClick={() => setApplyOpen(true)}><GitMerge /> Apply to draft</Button>}
           </div>
         </div>
       ) : null}
-      {applyOpen ? <ApplyDialog job={job} onClose={() => setApplyOpen(false)} onDone={() => nav(`/c/${id}/preview`)} /> : null}
+      {applyOpen ? <ApplyDialog job={job} onClose={() => setApplyOpen(false)} onDone={() => nav(`/c/${id}/preview?view=studio`)} /> : null}
     </div>
   );
 }

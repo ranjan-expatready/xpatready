@@ -30,11 +30,13 @@ export function OriginPill({ origin, status }: { origin?: string; status?: strin
   );
 }
 
-export function ConfigurationTab({ d }: { d: any }) {
+/** areas: the parts a Screen 03 tab shows until its slice rebuilds it (SQR: questions and checks; Documents; Rules). */
+export function ConfigurationTab({ d, areas }: { d: any; areas?: (typeof SUBS)[number][0][] }) {
   const id = d.combination.id;
   const [params, setParams] = useSearchParams();
   const area = params.get("area");
-  const [sub, setSubState] = React.useState<(typeof SUBS)[number][0]>(SUBS.some(([k]) => k === area) ? (area as any) : "forms");
+  const subs = SUBS.filter(([k]) => !areas || areas.includes(k));
+  const [sub, setSubState] = React.useState<(typeof SUBS)[number][0]>(subs.some(([k]) => k === area) ? (area as any) : subs[0][0]);
   const setSub = (k: (typeof SUBS)[number][0]) => { setSubState(k); const n = new URLSearchParams(params); n.set("area", k); setParams(n, { replace: true }); };
   const cfg = useApi<any>(["config", id, "draft"], `/combinations/${id}/config?mode=draft`);
   const fields = useLibraryFields();
@@ -45,7 +47,7 @@ export function ConfigurationTab({ d }: { d: any }) {
     <RevCtx.Provider value={cfg.data.revisions ?? {}}>
     <div className="space-y-4">
       <Notice tone="info">You are editing the <b>draft</b>. Every save is validated and versioned; the released version stays exactly as approved until a new release. Preview shows the effect immediately.</Notice>
-      <div role="tablist" className="flex gap-1">{SUBS.map(([k, l]) => <button key={k} role="tab" aria-selected={sub === k} onClick={() => setSub(k)} className={cn("rounded-lg px-3 py-1.5 text-sm", sub === k ? "bg-primary/10 font-medium text-text-link" : "text-text-muted hover:bg-text/5")}>{l} <span className="text-xs">({k === "forms" ? s.forms.length : k === "documents" ? s.document_requirements.length : k === "rules" ? s.rules.length : k === "questions" ? s.sections.length : s.checks.length})</span></button>)}</div>
+      {subs.length > 1 ? <div role="tablist" className="flex gap-1">{subs.map(([k, l]) => <button key={k} role="tab" aria-selected={sub === k} onClick={() => setSub(k)} className={cn("rounded-lg px-3 py-1.5 text-sm", sub === k ? "bg-primary/10 font-medium text-text-link" : "text-text-muted hover:bg-text/5")}>{l} <span className="text-xs">({k === "forms" ? s.forms.length : k === "documents" ? s.document_requirements.length : k === "rules" ? s.rules.length : k === "questions" ? s.sections.length : s.checks.length})</span></button>)}</div> : null}
       {sub === "forms" ? <Forms id={id} s={s} fields={fields} /> : sub === "documents" ? <Documents id={id} s={s} fields={fields} /> : sub === "rules" ? <Rules id={id} s={s} fields={fields} /> : sub === "questions" ? <Questions id={id} s={s} /> : <Checks s={s} meaning={fields.meaning} />}
     </div>
     </RevCtx.Provider>

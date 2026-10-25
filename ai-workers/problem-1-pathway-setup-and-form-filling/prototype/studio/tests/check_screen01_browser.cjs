@@ -217,7 +217,9 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("item 7: no floating \"AI for this combination\" button (one AI place: the next step)", await p.getByRole("button", { name: /AI for this combination/ }).count() === 0);
   const facts = await p.locator("h1 + *, h1").first().locator("xpath=../following-sibling::p[1]").textContent().catch(() => "");
   step("item 7: the facts sit in one muted line under the title", /Not released yet|In Release \d|Released/.test(facts) && !/Released v\d/.test(facts) && /people:/.test(facts) && !/\b[a-z]+\.[a-z_]+\.[a-z_]+\b/.test(facts), facts);
-  step("item 1: \"+ Add form\" lives on the combination page", await p.getByRole("button", { name: "Add form" }).count() === 1);
+  // Screen 03 S1: the forms moved from Overview to the Forms tab of the same page.
+  await p.getByRole("tab", { name: "Forms", exact: true }).click(); await p.getByRole("heading", { name: "Forms", exact: true }).waitFor(); await idle();
+  step("item 1: \"+ Add form\" lives on the combination page (its Forms tab)", await p.getByRole("button", { name: "Add form" }).count() === 1);
   const vvList = (await cat("pathway=INDIVIDUAL&filter=all")).rows.find((x) => x.nodeKey === "individual.visitors.visitor_visa").nextAction;
   const vvPage = (await p.locator("[data-next-step]").first().textContent())?.trim();
   step("review #1: the page's next step is the row's (same words, same action)", vvList && vvPage === vvList.label && (await p.locator("[data-next-step]").first().getAttribute("data-next-step")) === vvList.kind, `${vvList?.label} / ${vvPage}`);
@@ -237,7 +239,8 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   await state("add-form-panel-intake-results", { viewport: true });
   await panel.getByRole("button", { name: "Close" }).first().click(); await idle();
   const lib = (await api("/library/forms")).body;
-  step("item 8: the held edition is not in the library and not attached here (never silently)", !lib.find((f) => f.code === "IMM 5257").editions.some((e) => e.label === "IMM 5257 (06-2019)") && !(await api(`/combinations/${p.url().split("/c/")[1]}/attachments`)).body.some((a) => /06-2019/.test(a.edition ?? "")));
+  step("item 8: the held edition is not in the library and not attached here (never silently)", !lib.find((f) => f.code === "IMM 5257").editions.some((e) => e.label === "IMM 5257 (06-2019)") && !(await api(`/combinations/${p.url().split("/c/")[1].split(/[/?]/)[0]}/attachments`)).body.some((a) => /06-2019/.test(a.edition ?? "")));
+  await p.getByRole("tab", { name: "Overview", exact: true }).click(); await p.getByRole("region", { name: /Held for a person/ }).waitFor(); // held files are listed on Overview (Screen 03 S1)
   const heldText = await p.getByRole("region", { name: /Held for a person/ }).textContent();
   step("held for a person: the page lists the older edition as not used", heldText.includes("IMM 5257 (06-2019)") && /Older edition: not used/.test(heldText), heldText);
   step("review #3: no technical words on the page (screen numbers, error names, hashes, user ids, \"inventory\")", !/Screen 0\d|Error\b|inventory|user-[A-Z]\b|\b[0-9a-f]{10}\b/.test(await p.locator("main").textContent()));
@@ -274,7 +277,9 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   step("source-trust: unverified upload remains outside the combination's release workflow", (await api("/draft")).body.rows.every((r) => r.label !== "With an LMIA"));
   // Lead check item 6: the sample note names every form and checklist the page lists.
   const lmiaMain = await p.locator("main").textContent();
+  await p.getByRole("tab", { name: "Forms", exact: true }).click(); await p.getByRole("region", { name: "Forms" }).locator("tbody tr").first().waitFor(); // Screen 03 S1: the lines are on Forms
   const lmiaCodes = (await p.getByRole("region", { name: "Forms" }).locator("tbody tr td:first-child .mono").allTextContents()).map((c) => c.trim());
+  await p.getByRole("tab", { name: "Overview", exact: true }).click(); await p.getByText("Released versions").waitFor();
   step("item 6: the With an LMIA sample note lists the six forms and two checklists the page shows", lmiaCodes.length === 8 && lmiaCodes.every((c) => lmiaMain.includes(`Sample: starts from`) && new RegExp(`\\(forms [^)]*${c.replace(/ /g, "\\s")}`).test(lmiaMain)), lmiaCodes.join(", "));
   // Lead check item 3: a Live row's warnings are its own and lead to where each one is listed.
   const warnLink = p.getByRole("link", { name: /\d+ warnings?: see them/ });
@@ -375,11 +380,11 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   // ======================================================== P-74: forms decisions visible (C1.6, C1.7, C2.7, C2.10)
   await p.goto(`${BASE}/?f=all`); await idle();
   step("C1.6: the Programs row says how the combination is filed", /Filed: PDF only/.test(await row("With an LMIA").textContent()));
-  await p.goto(`${BASE}/c/${wpId}`); await idle();
+  await p.goto(`${BASE}/c/${wpId}/forms`); await idle(); // Screen 03 S1: the forms are on the Forms tab
   const forms = p.getByRole("region", { name: "Forms" });
   step("C1.6: the combination page shows the filing method and each line's channel", /Filing: PDF only/.test(await forms.textContent()) && await forms.getByRole("combobox", { name: /^How IMM \d+.* is filed$/ }).count() >= 6);
   await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("SIGNED_PDF_UPLOAD"); await idle();
-  await p.waitForFunction(() => /signed by hand, scanned/.test(document.querySelector('[aria-labelledby="ov-forms"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
+  await p.waitForFunction(() => /signed by hand, scanned/.test(document.querySelector('[aria-labelledby="fm-h"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
   step("C1.6: the author sets a line's channel; the line's signature follows and the filing method stays in C1.6's short words", /Filing: PDF only/.test(await p.locator("[data-filing]").textContent()) && /some signed by hand/.test((await p.locator("[data-filing] [title]").getAttribute("title")) ?? "") && /signed by hand, scanned/.test(await forms.textContent()));
   await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("PDF_UPLOAD"); await idle();
   await forms.getByRole("combobox", { name: "Portal" }).selectOption("ircc_portal"); await idle();

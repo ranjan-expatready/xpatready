@@ -82,7 +82,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   step("A2: the work-permit row (Individual › Work permits › Employer-specific work permit) shows it is in Release 1 (one release word, review #3) and no draft changes", /In Release 1/.test(await p.innerText("main")) && /draft matches the release/i.test(await p.innerText("main")));
   await shot("A2-overview.png");
 
-  await go(`/c/${wp}/preview`);
+  await go(`/c/${wp}/preview?view=studio`); // Screen 03 S1: the studio preview, reached from Preview by person
   await p.getByText("Questions to ask").first().waitFor();
   let main = await p.innerText("main");
   step("A3: preview renders the released configuration with the sample family's confirmed facts", /Released version 1/.test(main) && /questions to ask/i.test(main), main.match(/forms\n(\d+)/i)?.[0]);
@@ -129,7 +129,7 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
   step("A5: the new requirement survives a reload, marked Draft and edited by a person", /Custody documents or parental letter of authorization/.test(main) && /Edited by a person/.test(main));
   await shot("A5-configuration-documents.png");
 
-  await go(`/c/${wp}/preview`);
+  await go(`/c/${wp}/preview?view=studio`); // Screen 03 S1: the studio preview, reached from Preview by person
   await p.getByLabel("Known facts", { exact: false }).selectOption("none").catch(async () => { await p.locator("select").nth(2).selectOption("none"); });
   await idle(); await click(btn("Document checklist"));
   const custody0 = await custodyStatus("Cannot tell yet");

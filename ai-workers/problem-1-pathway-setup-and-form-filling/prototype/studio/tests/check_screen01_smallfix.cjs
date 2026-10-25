@@ -97,7 +97,7 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
     const wp = sql("select id from combination where combination_key='wp.family'");
     for (const w of [400, 390, 1024]) {
       await p.setViewportSize({ width: w, height: 900 });
-      await p.goto(`${BASE}/c/${wp}`); await p.locator("main select[id^='portal-']").first().waitFor();
+      await p.goto(`${BASE}/c/${wp}/forms`); await p.locator("main select[id^='portal-']").first().waitFor();
       const sw = await p.evaluate(() => document.documentElement.scrollWidth);
       const sel = await p.locator("main select[id^='portal-']").first().evaluate((e) => Math.round(e.getBoundingClientRect().right));
       step(`C1.7 QA-20: ${w} px, the combination page with the Portal select has no sideways scroll`, sw <= w && sel <= w, `page ${sw} px, select ends at ${sel} px`);
@@ -108,12 +108,12 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
     await p.locator("main select[id^='portal-']").first().selectOption(""); await p.waitForTimeout(800);
 
     // -------------------------------------------------------------- review should 1: the forms table scrolls by keyboard
-    await p.setViewportSize({ width: 400, height: 900 }); await p.goto(`${BASE}/c/${wp}`); await p.locator("main select[id^='portal-']").first().waitFor();
+    await p.setViewportSize({ width: 400, height: 900 }); await p.goto(`${BASE}/c/${wp}/forms`); await p.locator("main select[id^='portal-']").first().waitFor();
     const ax = await new AxeBuilder({ page: p }).withRules(["scrollable-region-focusable"]).analyze();
     step("C1.6 review should 1: at 400 px every sideways-scrolling area takes keyboard focus (axe scrollable-region-focusable)", ax.violations.length === 0, ax.violations.map((v) => v.nodes.map((n) => n.target.join(" ")).join("; ")).join(" | ") || "none");
 
     // -------------------------------------------------------------- break K1: keyboard on the Portal and "Filed as" selects
-    await p.setViewportSize({ width: 1440, height: 900 }); await p.goto(`${BASE}/c/${wp}`);
+    await p.setViewportSize({ width: 1440, height: 900 }); await p.goto(`${BASE}/c/${wp}/forms`);
     const portal = p.locator("main select[id^='portal-']").first(); await portal.waitFor();
     const patches = []; p.on("request", (rq) => { if (rq.method() === "PATCH") patches.push(rq.url()); });
     await portal.focus(); for (let i = 0; i < 3; i++) { await p.keyboard.press("ArrowDown"); await p.waitForTimeout(80); }
@@ -137,7 +137,7 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
     {
       const c = await b.newContext({ viewport: { width: 1440, height: 900 } }); const q = await c.newPage();
       await q.route("**/api/session**", async (r) => { await new Promise((res) => setTimeout(res, 1500)); await r.continue(); });
-      await q.goto(`${BASE}/c/${wp}`);
+      await q.goto(`${BASE}/c/${wp}/forms`);
       let readOnly = 0; const until = Date.now() + 3000;
       while (Date.now() < until) { readOnly += await q.locator("main b[id^='portal-']").count(); await q.waitForTimeout(50); }
       step("C1.7 break m4: while the session loads, the author never sees Portal as read-only words", readOnly === 0 && await q.locator("main select[id^='portal-']").count() === 1, `read-only looks ${readOnly}`);

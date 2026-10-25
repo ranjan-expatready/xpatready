@@ -1,0 +1,30 @@
+[
+ {
+  "state": "overview-1440",
+  "violations": []
+ },
+ {
+  "state": "forms-1440",
+  "violations": []
+ },
+ {
+  "state": "forms-panel",
+  "violations": []
+ },
+ {
+  "state": "preview-1440",
+  "violations": []
+ },
+ {
+  "state": "overview-1024",
+  "violations": []
+ },
+ {
+  "state": "forms-1024",
+  "violations": []
+ },
+ {
+  "state": "preview-1024",
+  "violations": []
+ }
+]

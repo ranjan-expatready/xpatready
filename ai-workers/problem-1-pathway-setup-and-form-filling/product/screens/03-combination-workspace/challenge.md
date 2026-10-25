@@ -72,3 +72,6 @@ Short challenge (top 5, `/next` DESIGN) of `concept.md` (Lead-agreed 25 Oct) and
 Agreed 25 Oct (Lead, under P-89). BUILD S1.
 
 ## Build discoveries
+* **S1, coverage (BR-7):** the Sample combinations with forms (Visitor visa, With an LMIA; draft and release 1) have 0 gaps under the rule. The renderer's "unresolved" flag marks 136 facts placed as "taken from a document" that no document type supplies. Under BR-7 the officer fills these, so they are covered: a document-reader gap, not a coverage gap. Open for S2: a fact placed only in a section the combination does not select still counts as asked, because both the preview and a case ask it. Should the S2 release gate require a selected section? Recommendation: no, because the runtime asks it.
+* **S1, capability id:** the form line's copies, minimum age and "Signed by" have no capability in `qa/CAPABILITIES.md`. The checks are labelled "C1.8 (proposed)". The Lead adds it, or names the capability they belong to.
+* **S1, preview vs case order:** a case lists parts person by person in whatever order its subject ids sort (random UUIDs), and the preview does the same with its own ids. Both pages show one person at a time, so the check compares each person's parts in order. The content was identical.

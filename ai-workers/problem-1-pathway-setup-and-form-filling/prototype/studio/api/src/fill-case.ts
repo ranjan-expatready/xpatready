@@ -11,7 +11,8 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, realpathSync } from "node:fs";
 import { join } from "node:path";
 import type { z } from "zod";
-import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type FormCopy } from "../../contracts/runtime.ts";
+import { GenerateCopy, LockCopy, LOCK_KINDS, notReady, type CaseForm, type CaseOnlineForm, type FormCopy } from "../../contracts/runtime.ts";
+import { portalLabel } from "../../contracts/forms.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { caseView } from "../../engine/runtime/case.ts";
 import { changedFacts, changedGroups, formCoverage, groupFacts, inputHash, pdfForms, readiness, type FormFact, type GroupFact } from "../../engine/runtime/forms.ts";
@@ -68,7 +69,7 @@ export class CaseForms implements OnModuleInit {
 
   /** Every PDF form that applies to someone on the case: the draft (what a copy made now would write), readiness and
    *  the copies made, each with out of date / stale and the facts that changed. One read of the case. */
-  async list(actor: Actor, caseId: string): Promise<{ forms: CaseForm[] }> {
+  async list(actor: Actor, caseId: string): Promise<{ forms: CaseForm[]; online: CaseOnlineForm[] }> {
     const c = await this.officerCase(actor, caseId);
     const s = this.runtime.snapshotOf(c), people = this.runtime.peopleOf(c);
     const { answers, rows, groups } = await this.runtime.state(c);
@@ -89,7 +90,13 @@ export class CaseForms implements OnModuleInit {
           readiness: readiness(view, form, p.subjectId), copies: mine.map((x) => this.copyOf(x, cov?.facts ?? [], labels, groupFacts(view, form, p.subjectId))) });
       }
     }
-    return { forms };
+    // QA-40: a form filed Online is listed too (no copy to make), with the people it applies to and its portal.
+    const portal = (s.combination as { portal?: string }).portal;
+    const online = (s.forms as { form_number: string; title?: string; channel?: string }[]).filter((f) => f.channel === "ONLINE").map((f) => ({
+      form: f.form_number, title: f.title ?? f.form_number, portal: portal ? portalLabel(portal) : null,
+      people: [...new Set(view.forms.filter((x) => x.form === f.form_number && x.applies !== false).map((x) => x.person))],
+    })).filter((f) => f.people.length);
+    return { forms, online };
   }
 
   /** A copy with its state today; changed facts are named by their question (labels), never by their keys. */

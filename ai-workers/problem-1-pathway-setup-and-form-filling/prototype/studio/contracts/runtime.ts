@@ -149,6 +149,9 @@ export type CaseForm = {
   /** The form no longer applies to this person (for example marked not travelling); its copies stay listed (break M4). */
   applies: boolean;
 };
+/** QA-40: a form this case's release files Online (P-61): no PDF copy is made, but the officer still sees it, for whom,
+ *  and on which portal (the portal sheet comes later, P-62 §6). */
+export type CaseOnlineForm = { form: string; title: string; portal: string | null; people: string[] };
 /** P-71: what blocks filing one form for one person. missing: a required fact not answered, answered but not confirmed,
  *  or confirmed with a problem (it would be written wrong); and a required repeating group with no entries unless
  *  "none apply" is confirmed for it (Lead, break M3), named by its section (fact "group:<section>"). */
