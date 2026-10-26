@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Draft board v2 — Structure (W1-03), recommended A+ outline</title>
+<style>/* Team brand tokens copied from prototype/studio/web/src/styles/tokens.css (light sheet). */
+:root{--color-primary:#0862c5;--primary-50:#e6f4ff;--primary-100:#cce9ff;--color-surface:#f7f7f7;--color-surface-raised:#fff;--color-text:#2d2d2d;--color-text-muted:#737373;--color-text-link:#054e9c;--color-border:#d9d9d9;--color-border-strong:#bfbfbf;--color-warn:#ff8500;--orange-50:#fff3e0;--color-text-warn:#663200;--color-ok:#16a34a;--color-text-ok:#0f5c2e;--color-danger:#dc2626;--color-text-danger:#991b1b;--neutral-100:#eeeeee;--radius:8px;--font:'Inter Variable',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+*{box-sizing:border-box}body{margin:0;font-family:var(--font);font-size:14px;color:var(--color-text);background:#e9ecef;line-height:1.45}
+h1,h2,h3{font-family:'Proxima Nova',var(--font);margin:0}
+.board{max-width:1500px;margin:0 auto;padding:24px}
+.board>header h1{font-size:24px}.board>header p{color:var(--color-text-muted);margin:4px 0 0}
+.section{margin:28px 0 8px}.section h2{font-size:18px}.section p{margin:4px 0;color:var(--color-text-muted);max-width:1100px}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:16px;padding:1px 6px;border-radius:999px;border:1px solid;white-space:nowrap;font-weight:500;vertical-align:middle}
+.tag.cap{color:var(--color-text-link);border-color:var(--primary-100);background:var(--primary-50)}
+.tag.scaf{color:var(--color-text-warn);border-color:#ffc773;background:var(--orange-50)}
+.tag.nb{color:var(--color-text-muted);border:1px dashed var(--color-border-strong);background:#fff}
+.tag.dec{color:var(--color-text-ok);border-color:#a7dcb9;background:#eefaf2}
+.tag.gap{color:var(--color-text-danger);border-color:#f3b4b4;background:#fdf0f0}
+.tag.sample{color:var(--color-text-warn);border-color:#ffc773;background:#fff}
+.ann{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+/* app shell */
+.frame{background:var(--color-surface);border:1px solid var(--color-border-strong);border-radius:12px;overflow:hidden;box-shadow:0 2px 8px #0000001a;margin-top:10px}
+.frame-title{font-size:12px;color:var(--color-text-muted);padding:6px 12px;background:#fff;border-bottom:1px solid var(--color-border);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--color-border)}
+.logo{font-weight:800;color:var(--color-primary);font-size:18px;display:flex;align-items:center;gap:6px}.logo i{display:inline-block;width:22px;height:22px;border-radius:5px;background:var(--color-primary)}
+.prod{border-left:1px solid var(--color-border);padding-left:12px;font-size:12px;color:var(--color-text-muted)}.prod b{display:block;color:var(--color-text);font-size:14px}
+.demo{font-size:12px;background:var(--orange-50);color:var(--color-text-warn);border-radius:6px;padding:2px 8px}
+.draftbar{display:flex;justify-content:space-between;padding:6px 16px;background:var(--orange-50);border-bottom:1px solid #ffe0b3;font-size:14px}.draftbar a{color:var(--color-text-link);font-weight:600;text-decoration:none}
+.shell{display:grid;grid-template-columns:200px 1fr;min-height:520px}
+.side{background:#fff;border-right:1px solid var(--color-border);padding:14px 10px;font-size:14px}
+.side .grp{font-size:12px;color:var(--color-text-muted);margin:14px 8px 4px}.side .grp:first-child{margin-top:0}
+.side a{display:block;padding:6px 8px;border-radius:6px;color:var(--color-text);text-decoration:none}.side a.on{background:var(--primary-50);color:var(--color-text-link);font-weight:600}
+.main{padding:20px 24px;position:relative}
+.ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.ph h1{font-size:24px}.ph .sub{color:var(--color-text-muted);width:100%;margin-top:-4px}
+.spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--radius);border:1px solid var(--color-border-strong);background:#fff;color:var(--color-text);font:inherit;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+.btn.primary[disabled]{background:#99c0ea;border-color:#99c0ea;cursor:not-allowed}
+.btn.sm{height:28px;padding:0 10px;font-size:12px}.btn.ghost{border-color:transparent;background:transparent;color:var(--color-text-link)}
+.btn.danger{color:var(--color-text-danger)}
+.info{display:inline-flex;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--color-text-muted);color:var(--color-text-muted);font-size:11px;align-items:center;justify-content:center;font-weight:700;cursor:help}
+/* segmented control: team ProgramTypeSwitcher pattern, filled active segment */
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:12px;border:1px solid var(--color-border);background:var(--neutral-100)}
+.seg button{border:0;background:transparent;font:inherit;font-weight:500;padding:6px 14px;border-radius:9px;color:var(--color-text-muted);display:inline-flex;gap:8px;align-items:center;cursor:pointer}
+.seg button.on{background:var(--color-primary);color:#fff;box-shadow:0 1px 2px #0003}
+.seg .n{font-size:12px;background:#0000000f;border-radius:999px;padding:0 7px}.seg .on .n{background:#ffffff33}
+.toolbar{display:flex;gap:10px;align-items:center;margin:16px 0 12px;flex-wrap:wrap}
+.search{flex:1;min-width:260px;display:flex;align-items:center;gap:8px;height:36px;border:1px solid var(--color-border-strong);border-radius:var(--radius);background:#fff;padding:0 10px;color:var(--color-text-muted)}
+.search kbd{margin-left:auto;font-size:12px;border:1px solid var(--color-border);border-radius:4px;padding:0 5px}
+.dd{display:inline-flex;align-items:center;gap:6px;height:36px;border:1px solid var(--color-border-strong);border-radius:var(--radius);background:#fff;padding:0 10px;font-size:14px;cursor:pointer}
+.dd:after{content:"▾";color:var(--color-text-muted)}
+.stats{color:var(--color-text-muted);font-size:14px;margin:-4px 0 10px}.stats b{color:var(--color-text)}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--color-border);border-radius:var(--radius);overflow:hidden}
+th{font-size:12px;font-weight:600;color:var(--color-text-muted);text-align:left;padding:10px 14px;border-bottom:1px solid var(--color-border);background:#fff}
+td{padding:0 14px;height:44px;border-bottom:1px solid var(--color-border);vertical-align:middle}
+tr.grp td{height:34px;background:var(--color-surface);font-size:12px;font-weight:600;color:var(--color-text-muted)}
+tr:hover td{background:#fafcff}
+.trail{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:720px;display:block}
+.trail span,.trail b{white-space:nowrap}.trail .sep{color:var(--color-text-muted);margin:0 6px}.trail .t{color:var(--color-text-muted)}.trail .none{color:var(--color-text-muted);font-style:italic}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid var(--color-border);background:#fff}
+.chip.live{color:var(--color-text-ok);border-color:#a7dcb9;background:#eefaf2}.chip.live:before{content:"✓"}
+.chip.setup:before{content:"◌"}.chip.notready{color:var(--color-text-warn);border-color:#ffc773;background:var(--orange-50)}.chip.notready:before{content:"!"}
+.chip.new{color:var(--color-text-link);border-color:var(--primary-100);background:var(--primary-50)}
+a.next{color:var(--color-text-link);font-weight:600;text-decoration:none}
+.ai{color:#6d28d9}
+.prog{height:6px;border-radius:3px;background:var(--neutral-100);overflow:hidden;width:120px;display:inline-block;vertical-align:middle}.prog i{display:block;height:100%;background:var(--color-primary)}
+.callout{border:1px solid var(--primary-100);background:var(--primary-50);border-radius:var(--radius);padding:12px 14px;margin:12px 0;font-size:14px}
+.callout.warn{border-color:#ffc773;background:var(--orange-50)}.callout.err{border-color:#f3b4b4;background:#fdf0f0}
+.card{background:#fff;border:1px solid var(--color-border);border-radius:var(--radius);padding:16px 18px;margin-top:12px}
+.card h3{font-size:16px;margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.mini{background:#fff;border:1px solid var(--color-border-strong);border-radius:10px;padding:12px;font-size:12px}
+.mini h4{margin:0 0 6px;font-size:14px}
+.skel{height:14px;border-radius:4px;background:linear-gradient(90deg,#eee,#f6f6f6,#eee);margin:10px 0}
+.empty{text-align:center;padding:28px 12px;color:var(--color-text-muted)}.empty b{display:block;color:var(--color-text);font-size:16px;margin-bottom:4px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--color-text-muted)}
+.inp{height:36px;border:1px solid var(--color-border-strong);border-radius:var(--radius);background:#fff;padding:0 10px;display:flex;align-items:center;color:var(--color-text);font-size:14px}
+.inp.ph{color:var(--color-text-muted)}.inp.err{border-color:var(--color-danger)}.inp.ok{border-color:var(--color-primary)}.inp.ro{background:var(--color-surface)}
+.req{font-size:12px;color:var(--color-text-muted);font-weight:400}
+.hint{font-size:12px;color:var(--color-text-muted)}.hint.err{color:var(--color-text-danger)}.hint.ok{color:var(--color-text-ok)}
+.panel{position:absolute;top:0;right:0;bottom:0;width:440px;background:#fff;border-left:1px solid var(--color-border-strong);box-shadow:-6px 0 18px #0000001f;display:flex;flex-direction:column}
+.panel .ph2{padding:14px 18px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:8px}.panel .pb{padding:16px 18px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:12px}.panel .pf{padding:12px 18px;border-top:1px solid var(--color-border);display:flex;justify-content:space-between}
+.steps{list-style:none;margin:6px 0;padding:0;font-size:14px}.steps li{display:flex;gap:8px;align-items:center;padding:3px 0}
+.steps .d:before{content:"✓";color:var(--color-text-ok);font-weight:700}.steps .r:before{content:"◐";color:var(--color-primary)}.steps .w:before{content:"○";color:var(--color-text-muted)}.steps .x:before{content:"✕";color:var(--color-text-danger)}
+.tree td{height:40px}.lvl{font-size:12px;color:var(--color-text-muted);border:1px solid var(--color-border);border-radius:4px;padding:0 5px;margin-left:6px}
+.chev{display:inline-block;width:18px;color:var(--color-text-muted)}
+.i1{padding-left:28px}.i2{padding-left:56px}.i3{padding-left:84px}
+.tipbox{position:relative;display:inline-block;background:var(--color-text);color:#fff;font-size:12px;padding:6px 9px;border-radius:6px;max-width:320px;line-height:1.4}
+[data-tip]{position:relative}[data-tip]:hover:after{content:attr(data-tip);position:absolute;left:0;top:calc(100% + 6px);z-index:20;width:300px;background:var(--color-text);color:#fff;font-size:12px;font-weight:400;padding:6px 9px;border-radius:6px;white-space:normal;line-height:1.4;text-align:left}
+.menu{background:#fff;border:1px solid var(--color-border);border-radius:var(--radius);box-shadow:0 8px 20px #0002;padding:4px;width:360px}
+.menu div{padding:7px 10px;border-radius:6px}.menu div.on{background:var(--primary-50)}.menu small{display:block;color:var(--color-text-muted);font-size:12px}
+.note{font-size:12px;color:var(--color-text-muted);margin-top:6px}
+.cons{font-size:12px;margin:6px 0 0;padding-left:16px}.cons li{margin:2px 0}
+.rec{display:inline-block;font-size:12px;font-weight:700;color:#fff;background:var(--color-primary);border-radius:4px;padding:1px 6px;margin-left:6px}
+/* v2: Pathway sections of setup cards */
+.sec{margin:18px 0 0}.sec-h{display:flex;align-items:center;gap:10px;padding:6px 2px;border:0;background:none;font:inherit;width:100%;text-align:left;cursor:pointer}
+.sec-h h2{font-size:16px}.sec-h .cnt{font-size:12px;color:var(--color-text-muted);background:#fff;border:1px solid var(--color-border);border-radius:999px;padding:0 8px}
+.sec-h .needs{font-size:12px;color:var(--color-text-warn);background:var(--orange-50);border-radius:999px;padding:0 8px;font-weight:600}
+.sec-h .rule{flex:1;height:1px;background:var(--color-border)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:8px;list-style:none;padding:0}
+.c2{background:#fff;border:1px solid var(--color-border);border-radius:12px;padding:14px 16px 12px;display:flex;flex-direction:column;gap:8px;transition:box-shadow .15s,border-color .15s;min-height:188px;position:relative}
+.c2:hover{border-color:var(--color-border-strong);box-shadow:0 4px 14px #0000000f}
+.c2 .crumb{font-size:12px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.c2 .ttl{font-size:16px;font-weight:700;line-height:1.3;color:var(--color-text)}.c2 .subc{font-size:14px;color:var(--color-text);margin-top:-6px}.c2 .subc.none{color:var(--color-text-muted);font-style:italic}
+.c2 .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.c2 .facts{font-size:12px;color:var(--color-text-muted)}.c2 .facts b{color:var(--color-text);font-weight:600}
+.c2 .foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid var(--neutral-100);padding-top:10px}
+.stepper{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}.stepper i{height:5px;border-radius:3px;background:var(--neutral-100)}.stepper i.d{background:var(--color-primary)}.stepper i.r{background:repeating-linear-gradient(45deg,var(--color-primary) 0 4px,#99c0ea 4px 8px)}.stepper i.ok{background:var(--color-ok)}
+.steplabel{font-size:12px;color:var(--color-text-muted);margin-top:-3px}
+.chip.ns{color:var(--color-text-muted);border-style:dashed}.chip.ns:before{content:"○"}
+.btn.next2{height:30px;padding:0 12px;font-size:14px;background:var(--primary-50);border-color:var(--primary-100);color:var(--color-text-link);font-weight:600}
+.btn.next2.ai{background:#f3effe;border-color:#ddd2fb;color:#5b21b6}
+.viewsw{display:inline-flex;gap:2px;padding:3px;border-radius:10px;border:1px solid var(--color-border);background:var(--neutral-100)}.viewsw button{border:0;background:transparent;border-radius:7px;padding:4px 9px;font:inherit;font-size:12px;color:var(--color-text-muted);cursor:pointer}.viewsw button.on{background:#fff;color:var(--color-text);box-shadow:0 1px 2px #0002}
+.w1024 .main{max-width:824px}.w1024{max-width:1024px}
+.skc{background:#fff;border:1px solid var(--color-border);border-radius:12px;padding:14px;min-height:188px}
+.mark{background:#fff3b0;border-radius:2px}
+.chip{white-space:nowrap;flex-shrink:0}
+.c2 .crumb{white-space:normal;overflow:visible}
+
+.ol{background:#fff;border:1px solid var(--color-border);border-radius:12px;padding:8px 0;max-width:780px}
+.ol .r{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:6px;margin:0 6px}
+.ol .r:hover{background:var(--color-surface)}.ol .r.sel{background:var(--primary-50);outline:1px solid var(--primary-100)}
+.ol .r .used{margin-left:auto;font-size:12px;color:var(--color-text-muted);white-space:nowrap}
+.ol .ghost{color:var(--color-text-muted);font-size:14px;height:32px}.ol .ghost:hover{color:var(--color-text-link)}
+.ol .typing{height:auto;padding:6px 14px;flex-wrap:wrap;background:#fff}
+.ol .typing .inp{height:32px;min-width:260px}
+.ol .guide{border-left:1px solid var(--color-border);margin-left:22px}
+.lv{font-size:12px;color:var(--color-text-muted)}
+.locs{display:inline-flex;border:1px solid var(--color-border-strong);border-radius:8px;overflow:hidden;font-size:12px}.locs span{padding:4px 9px;border-right:1px solid var(--color-border)}.locs span:last-child{border-right:0}.locs .on{background:var(--color-primary);color:#fff}
+.nmc{font-size:12px;color:var(--color-text-muted);border:1px dashed var(--color-border-strong);border-radius:999px;padding:0 6px}
+.dl{display:grid;grid-template-columns:130px 1fr;gap:8px 12px;font-size:14px}.dl dt{color:var(--color-text-muted)}.dl dd{margin:0}
+</style></head>
+<body><div class="board">
+<header><h1>Draft board v2 · Structure (W1-03) — recommended A+ outline</h1>
+<p>Designer draft for the Lead, 26 Oct, after the challenge. The v1 tree is kept and made faster: an <b>outline</b> with <b>"+ Add …" rows typed in place</b> at the end of each group (checks shown under the row, Enter to add), and the team's <b>detail panel</b> for the selected name (trail, used by, where cases may be opened, rename, history). Names from P-112 (Sample until the immigration expert confirms). Concept: <code>concept-draft.md</code> §2, §3, §5, §7.</p>
+<div class="legend"><span class="tag cap">Capability · Needed</span> · <span class="tag scaf">Scaffolding · Needed</span> · <span class="tag nb">Not built</span> · <span class="tag dec">Follows P-xx</span> · <span class="tag gap">GAP / CONFLICT</span> · hover dotted elements for tooltips.</div>
+<div class="ann"><span class="tag dec">Follows P-104: one Structure page, tree and links, duplicate check, "did you mean"</span><span class="tag dec">Follows P-95: AI meaning check built, off by default</span><span class="tag dec">Follows P-112: names</span><span class="tag dec">Lead decision: renames reach firms with the next release (challenge M1)</span><span class="tag dec">Lead decision: a new last level is listed at once as Not started (M6)</span><span class="tag nb">Remove, move, reorder: Not built</span></div></header>
+
+<div class="frame"><div class="frame-title">Retail · typing a new category under Visitors (meaning check off) · "Study permit" selected in the detail panel</div>
+<div class="topbar"><span class="logo"><i></i>ExpatReady</span><span class="prod"><b>Product Studio</b>Pathway Configurator</span><span class="demo">Prototype · demo workspace</span> <span class="tag scaf">Scaffolding · Needed (not ported)</span><span class="spacer"></span><span class="dd">Demo</span><span class="dd">Acting as Configuration author</span></div>
+<div class="draftbar"><span><b>Draft</b> · 6 changes across 5 combinations</span><a href="#">Review and release (6)</a></div>
+
+<div class="shell"><nav class="side"><div class="grp">Configure</div><a href="#">To review</a><a href="#">Immigration programs</a><a href="#" class="on">Structure</a><div class="grp">Shared library</div><a href="#">Fields</a><a href="#">Sections</a><a href="#">Document types</a><a href="#">Forms</a><a href="#">Checks</a><div class="grp">History</div><a href="#">AI work</a><a href="#">Releases</a><a href="#">Activity</a></nav>
+
+<main class="main" style="min-height:720px">
+ <div class="ph"><h1>Structure</h1><span class="info" data-tip="The list of pathways, programs, categories and sub-categories. Every category without sub-categories, and every sub-category, is a combination.">i</span>
+  <div class="sub">Where every combination sits: Pathway › Program › Category › Sub-category.</div></div>
+ <div class="toolbar" style="max-width:780px">
+  <div class="seg"><button class="on" data-tip="Who applies: a person and their family.">Retail</button><button data-tip="Who applies: an employer or organisation.">Corporate and employers</button></div>
+  <div class="search" style="min-width:200px" data-tip="Find a name at any level in this tab.">⌕ Find a name</div>
+  <button class="btn sm">Expand all</button><button class="btn sm">Collapse all</button>
+ </div>
+ <div class="stats">2 pathways · 5 programs · 5 categories · 2 sub-categories · <b>5</b> combinations</div>
+ <div class="ol" role="tree" aria-label="Retail structure">
+  <div class="r" role="treeitem" aria-expanded="true"><span class="chev">▾</span><b>Temporary residence</b><span class="lv">Pathway</span><span class="used">3 combinations</span></div>
+  <div class="guide">
+   <div class="r"><span class="chev">▾</span><b>Visitors</b><span class="lv">Program</span><span class="used">1 combination</span></div>
+   <div class="guide">
+    <div class="r"><span class="chev"></span>Visitor visa<span class="lv">Category · combination</span><span class="chip live">Live</span><span class="used">Outside Canada</span></div>
+    <div class="r typing"><span class="chev"></span><span class="inp ok">Tourist visa</span><span class="locs" data-tip="Where a case for it may be opened. Sample until the expert confirms."><span>Inside</span><span class="on">Outside</span><span>Both</span></span><button class="btn sm primary">Add</button><button class="btn sm ghost">Cancel</button>
+     <div style="width:100%;padding-left:26px" class="hint">No exact match under Visitors · no close spelling · <span class="nmc" data-tip="Only the spelling check ran; a reviewer compares the meaning by eye. The AI meaning check runs when paid runs are on.">Not meaning-checked</span> · Enter to add, Esc to cancel</div></div>
+   </div>
+   <div class="r"><span class="chev">▾</span><b>Study permits</b><span class="lv">Program</span><span class="used">1 combination</span></div>
+   <div class="guide">
+    <div class="r sel"><span class="chev">▾</span>Study permit<span class="lv">Category</span><span class="used">1 combination</span></div>
+    <div class="guide"><div class="r"><span class="chev">└</span>Outside Canada<span class="lv">Sub-category · combination</span><span class="chip setup">In setup</span><span class="used">Outside Canada</span></div>
+     <div class="r ghost" data-tip="Add a sub-category under Study permit. Checked against the names that exist first."><span class="chev"></span>＋ Add sub-category</div></div>
+    <div class="r ghost"><span class="chev"></span>＋ Add category</div>
+   </div>
+   <div class="r"><span class="chev">▸</span><b>Work permits</b><span class="lv">Program</span><span class="used">1 combination</span></div>
+   <div class="r ghost"><span class="chev"></span>＋ Add program</div>
+  </div>
+  <div class="r"><span class="chev">▸</span><b>Permanent residence</b><span class="lv">Pathway</span><span class="used">2 combinations</span></div>
+  <div class="r ghost" data-tip="Add a pathway under Retail, such as Citizenship."><span class="chev"></span>＋ Add pathway</div>
+ </div>
+ <div class="ann" style="max-width:780px"><span class="tag cap">Capability · Needed: outline (keyboard: arrows, Enter, Esc; role=tree)</span><span class="tag cap">Capability · Needed: "+ Add …" row typed in place with checks</span><span class="tag cap">Capability · Needed: where cases may be opened (challenge M5)</span><span class="tag cap">Capability · Needed: "Not meaning-checked" mark (P-95)</span><span class="tag sample">Sample names and locations</span></div>
+
+ <aside class="panel" aria-label="Study permit details">
+  <div class="ph2"><b>Study permit</b><span class="lv">Category</span><span class="spacer"></span><button class="btn sm ghost" aria-label="Close">✕</button></div>
+  <div class="pb">
+   <dl class="dl"><dt>Trail</dt><dd>Retail › Temporary residence › Study permits › <b>Study permit</b></dd>
+    <dt>Used by</dt><dd>1 combination: Outside Canada (In setup) <a class="next" href="#">Open</a></dd>
+    <dt>Cases opened from</dt><dd><span class="locs"><span>Inside</span><span class="on">Outside</span><span>Both</span></span><div class="hint">Its sub-categories start from this. Sample.</div></dd>
+    <dt>Meaning check</dt><dd><span class="nmc">Not meaning-checked</span></dd>
+    <dt>History</dt><dd class="hint">Added by the configuration author, 26 Oct · from Load sample</dd></dl>
+   <label class="f">Name <span class="req">Required</span><span class="inp">Study permit</span><span class="hint" data-tip="Released means frozen.">The new name shows in setup at once; firms see it after the next release. Open cases keep their names.</span></label>
+  </div>
+  <div class="pf"><button class="btn">Cancel</button><button class="btn primary">Save</button></div>
+  <div class="ann" style="padding:0 18px 10px"><span class="tag cap">Capability · Needed: team detail panel (pinned header and footer)</span></div>
+ </aside>
+</main></div></div>
+
+<div class="section"><h2>States</h2></div>
+<div class="grid4">
+ <div class="mini"><h4>Exact twin (refused)</h4><span class="inp err">study-Permit</span><div class="hint err">"Study permit" already exists under Study permits. Choose it instead.</div><div class="note">Add disabled. Index + service; Pathways are compared within their type.</div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Close spelling (free)</h4><span class="inp">Visiter visa</span><div class="callout warn" style="margin:6px 0">Did you mean <b>Visitor visa</b>? <button class="btn sm">Use existing</button> <button class="btn sm ghost">Add mine anyway</button></div><div class="note">Warn, never block; "Add anyway" goes to Activity.</div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Meaning check on (paid runs on)</h4><div class="callout" style="margin:0"><b>Checking the meaning</b> · about US$0.01, stated before it starts<ul class="steps"><li class="d">Spelling check (free)</li><li class="r">AI reading "Tourist visa"</li><li class="w">Result</li></ul><span class="prog" style="width:100%"><i style="width:60%"></i></span> <button class="btn sm danger">Stop</button></div><div class="callout warn" style="margin:6px 0">Did you mean "Visitor visa"? AI: same application, everyday name. US$0.01</div><span class="tag cap">Capability · Needed (W1-07; tested live once)</span> <span class="tag scaf">Scaffolding · Needed: paid-run switch, replay</span></div>
+ <div class="mini"><h4>Meaning check stopped / failed</h4><div class="callout" style="margin:0 0 6px">Stopped. Charged: US$0.00. Added after the spelling check only.</div><div class="callout err" style="margin:0">AI did not answer within 30 seconds. Charged so far: US$0.01. <button class="btn sm">Try again</button></div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Sub-category refused (category has setup)</h4><div class="callout err" style="margin:0">Visitor visa already has its own setup, so it is the combination. A sub-category would leave that setup above a combination.</div><div class="note">The "+ Add sub-category" row under it is disabled with this reason (409 category_has_setup).</div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Rename of a name used by a Live combination</h4><div class="callout warn" style="margin:0">"Visitors" → "Visitor programs": 1 Live combination gets one name-only change for its next release. No expert tick needed.</div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Conflict</h4><div class="callout err" style="margin:0">Someone renamed this to "Study permits (students)" while you were editing. <button class="btn sm">Reload</button></div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Read-only (approver)</h4><div class="r" style="color:var(--color-text-muted)" data-tip="Only a configuration author can add or rename names.">＋ Add category (disabled)</div><div class="note">"+ Add" rows and Save are disabled with the reason; the server refuses (403).</div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Find with no match</h4><div class="search" style="min-width:0">⌕ caregiver</div><div class="empty" style="padding:12px"><b>No name matches "caregiver" in Retail</b>1 match in Corporate and employers. <a class="next">Show it</a></div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Long names</h4><div class="ol" style="padding:4px 0"><div class="r" style="height:auto;min-height:38px;padding:6px 14px"><span class="chev">└</span><span>With an LMIA – inside Canada, for a worker whose employer holds a positive assessment</span></div></div><div class="note">Names wrap within the outline; the "used by" column stays aligned.</div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Empty (after Reset)</h4><div class="empty" style="padding:12px"><b>No structure yet</b>Both tabs are empty after Reset. Add your first pathway, for example Temporary residence.<br><br><button class="btn primary sm">＋ Add pathway</button></div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Loading / error</h4><div class="skel"></div><div class="skel" style="margin-left:22px;width:70%"></div><div class="callout err" style="margin:8px 0 0">The structure could not load. Your work is safe. <button class="btn sm">Retry</button></div><span class="tag cap">Capability · Needed</span></div>
+</div>
+
+<div class="section"><h2>Corporate and employers tab (Sample)</h2><div class="ann"><span class="tag gap">CONFLICT: P-112 files the LMIA under "Temporary residence"; challenge M4 says the immigration expert should name the employer Pathway</span><span class="tag scaf">Scaffolding · Needed: from Load sample</span></div></div>
+<div class="ol" style="max-width:780px"><div class="r"><span class="chev">▾</span><b>Temporary residence</b><span class="lv">Pathway</span><span class="used">1 combination</span></div><div class="guide"><div class="r"><span class="chev">▾</span><b>Labour market impact assessment</b><span class="lv">Program</span><span class="used">1 combination</span></div><div class="guide"><div class="r"><span class="chev"></span>High-wage position<span class="lv">Category · combination</span><span class="chip ns">Not started</span></div><div class="r ghost"><span class="chev"></span>＋ Add category</div></div></div></div>
+
+<div class="section"><h2>Why A+ over v1 A (panel for every add)</h2>
+<ul class="cons" style="font-size:14px;color:var(--color-text)"><li>Easier setup: no overlay to open per name; type, see the checks, press Enter; the next row is ready.</li><li>Cleaner: one outline, one detail panel only when a name is selected; actions appear on their own rows, not as links on every line.</li><li>Trust: the new name is typed exactly where it will live, right under the siblings it is checked against.</li><li>Team fit: the team's tree view + detail panel; WAI-ARIA tree pattern for the keyboard.</li><li>Columns (B) and diagram (C) stay rejected: see <code>draft-structure.html</code>.</li></ul></div>
+</div></body></html>

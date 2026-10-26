@@ -44,4 +44,4 @@ Run `bash P/tools/lane.sh whoami` (Mac: on `lead/<date>` from `origin/main`). `u
 When this chat has been compacted or is long, say at the top: "Context is getting large: after this, open a new chat and type `/lead`; everything is saved." First commit `main` and make sure every lane's state is in its lane file.
 
 ## Before your last reply (required)
-Update `LEAD.md` (open items + one session-log line; keep 10), `STATE.md` (`lane.sh state` regenerates the table; add a log line), `REQUESTS.md`, `DECISIONS.md`; republish the "Programme map" artifact when milestones, lanes or decisions changed. Run `bash P/tools/check-docs.sh` and `bash P/tools/decision-impact.sh` (P-74) and fix what they flag. Commit `main` (`lead: <summary>` + attribution line).
+Update `WAVE-1.md` statuses and `STATE.md` (`lane.sh state` table + one log line; the only session log, P-111). `DECISIONS.md` and `REQUESTS.md` only when the founder decided or asked something; `LEAD.md` only when an open item changes. Run `bash P/tools/check-docs.sh` and `bash P/tools/decision-impact.sh` (P-74) and fix what they flag. Commit `main` (`lead: <summary>` + attribution line).

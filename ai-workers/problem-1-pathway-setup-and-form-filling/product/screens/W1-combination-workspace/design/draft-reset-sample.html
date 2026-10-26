@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W1-11 · Reset and Load sample · what the founder sees · draft board</title>
+<style>
+/* Team tokens from prototype/studio/web/src/styles/tokens.css. Type 12/14/16/18/24. */
+:root{--blue:#0862c5;--link:#054e9c;--text:#2d2d2d;--muted:#595959;--border:#d9d9d9;--border2:#bfbfbf;--surface:#f7f7f7;--p50:#e6f4ff;--p100:#cce9ff;--p800:#043a73;
+--dan:#dc2626;--dant:#991b1b;--danbg:#fdecec;--warn:#ff8500;--warnt:#663200;--warnbg:#fff3e0;--ok:#16a34a;--okt:#0f5c2e;--okbg:#e7f6ec;--n100:#eeeeee}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Inter Variable",Inter,system-ui,sans-serif;font-size:14px;line-height:1.45;color:var(--text);background:var(--surface)}
+h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}h1{font-size:24px}h2{font-size:18px;font-weight:600}h3{font-size:16px;font-weight:600}
+a{color:var(--link);font-weight:600}
+.mut{color:var(--muted)}.sm{font-size:12px}.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--p800)}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:6px;border:1px solid var(--border2);background:#fff;color:var(--text);font-weight:600;font-family:inherit;font-size:14px}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}.btn.dan{background:var(--dan);border-color:var(--dan);color:#fff}.btn[disabled]{background:var(--n100);color:var(--muted);border-color:var(--border)}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:var(--okbg);color:var(--okt)}.c-su{background:var(--n100);color:#404040}.c-ai{background:var(--p50);color:var(--p800)}.c-warn{background:var(--warnbg);color:var(--warnt)}.c-no{background:var(--danbg);color:var(--dant)}
+.boardbar{background:#2d2d2d;color:#eee;padding:8px 16px;font-size:12px;position:sticky;top:0;z-index:5}.boardbar b{color:#fff}
+.frame{max-width:1180px;margin:24px auto;background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.fhead{background:#fbfbfb;border-bottom:1px solid var(--border);padding:10px 16px;display:flex;gap:12px;align-items:center}
+.fhead .n{background:#2d2d2d;color:#fff;border-radius:999px;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:12px}
+.fbody{padding:20px;background:var(--surface)}
+.card{background:#fff;border:1px solid var(--border);border-radius:8px;padding:16px}
+.dialog{background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px #0000002a;max-width:640px;margin:0 auto;padding:20px}
+table{width:100%;border-collapse:collapse;background:#fff}th{font-size:12px;color:var(--muted);text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:#fbfbfb}td{padding:8px 12px;border-bottom:1px solid var(--n100);height:40px}
+.tblwrap{border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.sp{flex:1}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin:12px 0}.tab{padding:8px 12px;border-bottom:2px solid transparent}.tab.on{border-bottom-color:var(--blue);font-weight:600}
+.empty{text-align:center;padding:36px;border:1px dashed var(--border2);border-radius:12px;background:#fff}
+.bar{height:8px;border-radius:999px;background:var(--n100);overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:var(--blue)}
+.steps{list-style:none;margin:6px 0 0;padding:0}.steps li{display:flex;gap:8px;padding:3px 0;font-size:13px}.ico{width:18px;text-align:center;font-weight:700}
+.cap{font-size:12px;border:1px dashed;border-radius:4px;padding:0 6px;font-weight:600}
+.cx{color:#404040;border-color:#8c8c8c;background:#f7f7f7}.cn{color:#0f5c2e;border-color:#16a34a;background:#f3fbf5}.dec{color:#043a73;border-color:#0862c5;background:#f2f8ff}.miss{color:#991b1b;border-color:#dc2626;background:#fff5f5}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+ul.k{margin:6px 0;padding-left:18px}
+.demo{border:1px dashed var(--warn);background:var(--warnbg);color:var(--warnt);border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="boardbar"><b>W1-11 draft board · not for porting.</b> Eight frames in the order the founder clicks. The Demo menu, Reset, Load sample and replayed AI answers are <b>Scaffolding</b> (P-33); what they open into (empty pages, the Form library, To review, the run panel) is the product. All names and forms Sample; the 5 Retail combinations' names follow the founder's sheet as corrected by the W1-12 research (pending).</div>
+
+<!-- 1 -->
+<section class="frame"><div class="fhead"><span class="n">1</span><b>The Demo menu</b><span class="sp"></span><span class="cap cx">Scaffolding · never ported</span></div>
+<div class="fbody"><div class="row"><span class="sp"></span><div class="card" style="width:340px;padding:8px">
+  <p class="sm mut" style="margin:4px 8px">Demo (prototype only)</p>
+  <div style="padding:8px"><b>Reset to blank</b><br><span class="sm mut">Empties all configuration, the shared library included.</span></div>
+  <div style="padding:8px;border-top:1px solid var(--n100)"><b>Load sample</b><br><span class="sm mut">Adds the starting point: structure, official PDFs and each combination's forms (Sample).</span></div>
+  <div style="padding:8px;border-top:1px solid var(--n100)"><b>Acting as</b> Configuration author ▾</div>
+</div></div>
+<p class="sm mut">Removed from the menu: the old "Load sample inputs" (it built 11 programs and imported a released configuration) and the "Configured" checkpoint (DEMO.md, P-93) <span class="cap miss">Conflict with P-108 → Q3</span></p></div></section>
+
+<!-- 2 -->
+<section class="frame"><div class="fhead"><span class="n">2</span><b>Reset to blank — the confirmation</b><span class="sp"></span><span class="cap dec">P-108 · BR-15</span></div>
+<div class="fbody"><div class="dialog" role="dialog" aria-label="Reset to blank">
+  <h2>Reset to blank?</h2>
+  <p>This empties all configuration in the demo workspace. It cannot be undone.</p>
+  <div class="grid2">
+    <div><b>Emptied</b><ul class="k sm"><li>Structure below Retail and Corporate and employers: 4 pathways, 9 programs, 23 categories and sub-categories</li><li>6 combinations and their setup</li><li>Form library: 14 forms, 15 editions</li><li>Shared library: 412 fields, 31 sections, 48 document types, 22 checks, 37 rules</li><li>1,206 AI proposals and decisions, 3 reviews, 2 releases</li><li>2 cases with their answers</li></ul></div>
+    <div><b>Kept</b><ul class="k sm"><li>Official IRCC PDFs saved with the app (Load sample uses them)</li><li>Saved AI answers (so drafting can replay at US$0)</li><li>The AI spend record</li><li>Test evidence (checked unchanged after the reset)</li><li>The two Pathway types (the Programs tabs)</li></ul><span class="cap miss">Assumed: Pathway types are fixed tabs (P-104), Lead to confirm</span></div>
+  </div>
+  <label class="sm" style="display:block;margin-top:12px">Type RESET to confirm<br><input type="text" value="RESET" style="height:32px;border:1px solid var(--border2);border-radius:6px;padding:0 8px;width:200px" aria-label="Type RESET to confirm"></label>
+  <div class="row" style="margin-top:14px"><span class="sp"></span><button class="btn">Cancel</button><button class="btn dan">Reset to blank</button></div>
+  <p class="sm mut">Error example: "Type RESET to confirm." under the box (no reset happens).</p>
+</div><p class="sm mut">Counts are Sample. The reset already deletes these rows today (<span class="mono">api/src/demo.ts</span>); new here: the dialog lists the library explicitly and the founder sees it is emptied.</p></div></section>
+
+<!-- 3 -->
+<section class="frame"><div class="fhead"><span class="n">3</span><b>After Reset — what the founder sees</b><span class="sp"></span><span class="cap cn">Empty states: Capability · Needed</span></div>
+<div class="fbody grid2">
+  <div><p class="sm mut">Programs</p><div class="tabs"><span class="tab on">Retail</span><span class="tab">Corporate and employers</span></div>
+    <div class="empty"><h3>Nothing set up yet</h3><p class="mut">Build the structure (pathway, program, category, sub-category) on the Structure page, then create a combination. In the prototype you can also load the sample.</p><div class="row" style="justify-content:center"><button class="btn pri">Open Structure</button><span class="demo">Demo: Load sample</span></div></div></div>
+  <div><p class="sm mut">Shared library › Forms</p><div class="empty" style="margin-top:44px"><h3>No forms in the library yet</h3><p class="mut">Find forms with AI from an IRCC guide, or upload an official PDF. Each is checked for number, edition and checksum and approved by a person.</p><div class="row" style="justify-content:center"><button class="btn pri">✦ Find forms with AI</button><button class="btn">Upload a PDF</button></div></div></div>
+  <div class="card"><b>To review</b><p class="mut sm" style="margin:4px 0 0">Nothing waits for you.</p></div>
+  <div class="card"><b>Fields · Sections · Document types · Checks · Rules</b><p class="mut sm" style="margin:4px 0 0">Each shows "None yet. They are proposed by AI from the forms you add, and accepted by a person."</p></div>
+</div></section>
+
+<!-- 4 -->
+<section class="frame"><div class="fhead"><span class="n">4</span><b>Load sample — the confirmation</b><span class="sp"></span><span class="cap dec">P-108, P-106, P-109 · BR-16</span></div>
+<div class="fbody"><div class="dialog" role="dialog" aria-label="Load sample">
+  <h2>Load the sample starting point?</h2>
+  <p>Adds only the starting point of the founder's 5 Retail combinations and 1 Corporate Sample. Everything else is proposed by AI when you draft each combination.</p>
+  <b>Adds</b>
+  <ul class="k sm">
+    <li><b>Structure</b> (five levels) for 6 combinations:
+      <ul class="k"><li>Retail › Temporary residence › Study permit › Outside Canada <span class="chip c-warn">Sample</span></li><li>Retail › Permanent residence › Express Entry › Permanent residence application <span class="chip c-warn">Sample</span></li><li>Retail › Permanent residence › Provincial Nominee Program › Ontario <span class="chip c-warn">Sample · P-109</span></li><li>Retail › 2 more from the founder's sheet (names after the W1-12 research)</li><li>Corporate and employers › Labour Market Impact Assessment › High-wage position <span class="chip c-warn">Sample · structure and forms only, P-106</span></li></ul></li>
+    <li><b>Official PDFs into the Form library</b>: 14 forms copied from the official files saved with the app; number, edition and checksum checked against their list; IRCC accepts (PDF / Online / both) <span class="chip c-warn">Sample</span></li>
+    <li><b>Each combination's forms</b> already picked <span class="chip c-warn">Sample until the immigration expert confirms</span> <span class="cap miss">Q3: picked at load (recommended) or left for the founder to pick</span></li>
+  </ul>
+  <b>Does not add</b>
+  <p class="sm" style="margin:4px 0">Shared fields, sections, document types, checks, rules, questions, field maps, cases. They arrive as AI proposals when you press "Draft setup with AI" on a combination (saved answers replay at US$0).</p>
+  <div class="row" style="margin-top:14px"><span class="sp"></span><button class="btn">Cancel</button><button class="btn pri">Load sample</button></div>
+  <p class="sm mut">Refused when anything exists: "The workspace is not empty. Reset to blank first, then load the sample."</p>
+</div></div></section>
+
+<!-- 5 -->
+<section class="frame"><div class="fhead"><span class="n">5</span><b>Loading — progress, never stuck</b><span class="sp"></span><span class="cap dec">Run panel style, P-110 (no AI is called)</span></div>
+<div class="fbody"><div class="dialog" role="status" aria-live="polite">
+  <div class="row"><b>Loading the sample</b><span class="chip c-su">No AI · US$0</span></div>
+  <div class="bar" aria-label="Step 2 of 3"><i style="width:66%"></i></div>
+  <p class="sm" style="margin:0"><b>Step 2 of 3 · Adding official PDFs to the Form library</b> · 11 of 14</p>
+  <ol class="steps"><li><span class="ico" style="color:var(--ok)">✓</span>Structure: 6 combinations, 21 levels</li><li><span class="ico" style="color:var(--blue)">◔</span><b>Official PDFs: 11 of 14 checked and added</b></li><li class="mut"><span class="ico">○</span>Pick each combination's forms</li></ol>
+  <p class="sm mut" style="margin:8px 0 0">Error example: "IMM 5406: the file's checksum does not match its list. Not added. The other 13 were added; Reset and load again, or upload it in the Form library."</p>
+</div></div></section>
+
+<!-- 6 -->
+<section class="frame"><div class="fhead"><span class="n">6</span><b>After Load sample — what the founder sees</b><span class="sp"></span><span class="cap cn">Capability pages with Sample data</span></div>
+<div class="fbody">
+  <p class="sm mut">Programs › Retail</p>
+  <div class="tblwrap"><table><thead><tr><th>Combination</th><th>Status</th><th>Forms</th><th>Next step</th></tr></thead><tbody>
+    <tr><td>Temporary residence › Study permit › <b>Outside Canada</b></td><td><span class="chip c-su">◌ In setup</span></td><td>IMM 1294 + 2 (Sample)</td><td><button class="btn" style="min-height:30px">✦ Draft setup with AI</button></td></tr>
+    <tr><td>Permanent residence › Express Entry › <b>Permanent residence application</b></td><td><span class="chip c-su">◌ In setup</span></td><td>IMM 0008 · 5669 · 5406 (PDF twins, Sample)</td><td><button class="btn" style="min-height:30px">✦ Draft setup with AI</button></td></tr>
+    <tr><td>Permanent residence › Provincial Nominee Program › <b>Ontario</b></td><td><span class="chip c-su">◌ In setup</span></td><td>IMM 0008 · 0008DEP · 5669 · 5406 · 5476</td><td><button class="btn" style="min-height:30px">✦ Draft setup with AI</button></td></tr>
+    <tr><td class="mut">2 more Retail combinations (names after W1-12)</td><td><span class="chip c-su">◌ In setup</span></td><td class="mut">Sample</td><td class="mut">Draft setup with AI</td></tr>
+  </tbody></table></div>
+  <div class="grid2" style="margin-top:16px">
+    <div><p class="sm mut">Shared library › Forms</p><div class="tblwrap"><table><thead><tr><th>Number</th><th>Title</th><th>Edition</th><th>IRCC accepts</th><th>Origin</th></tr></thead><tbody>
+      <tr><td class="mono">IMM 0008</td><td>Generic application form for Canada</td><td>06-2025</td><td>PDF · Online <span class="chip c-warn">Sample</span></td><td><span class="chip c-su">Loaded by the sample</span></td></tr>
+      <tr><td class="mono">IMM 5669</td><td>Schedule A – Background/Declaration</td><td>11-2024</td><td>PDF only <span class="chip c-warn">Sample</span></td><td><span class="chip c-su">Loaded by the sample</span></td></tr>
+      <tr><td class="mono mut" colspan="5">… 12 more</td></tr></tbody></table></div></div>
+    <div><p class="sm mut">Shared library › Fields</p><div class="empty"><b>No shared fields yet</b><p class="sm mut">They arrive as AI proposals when a combination is drafted, and a person accepts each.</p></div></div>
+  </div>
+</div></section>
+
+<!-- 7 -->
+<section class="frame"><div class="fhead"><span class="n">7</span><b>On a combination: "Draft setup with AI" — choose, then watch</b><span class="sp"></span><span class="cap dec">P-108 replay · P-110 · BR-17</span></div>
+<div class="fbody grid2">
+  <div class="dialog" style="margin:0"><h3>Draft setup with AI · Provincial Nominee Program · Ontario</h3>
+    <p class="sm">AI proposes, for the 5 forms, a shared field for every form field, the sections, and the documents from the checklist. Nothing changes until a person accepts each proposal on To review.</p>
+    <label class="row sm"><input type="radio" name="r" checked> <b>Replay saved answers · US$0</b> — 4 of 5 forms have one (recorded by each form's first live run)</label>
+    <label class="row sm"><input type="radio" name="r"> Live AI · about US$1.20 for 5 forms (Sample estimate) · US$12.10 of the US$40 wave budget used</label>
+    <div class="card" style="margin-top:8px;background:var(--warnbg);border-color:#ffc773"><b class="sm">IMM 0008DEP has no saved answer yet.</b><p class="sm" style="margin:4px 0">Run it live once (about US$0.20, recorded for every later replay) or skip it for now.</p><label class="row sm"><input type="radio" name="d" checked> Skip IMM 0008DEP</label><label class="row sm"><input type="radio" name="d"> Run IMM 0008DEP live</label></div>
+    <div class="row" style="margin-top:12px"><span class="sp"></span><button class="btn">Cancel</button><button class="btn pri">Start</button></div>
+    <span class="cap miss">Saved answers exist today only for earlier forms; each new form needs one live run first (W1-07/W1-10, within US$40)</span>
+  </div>
+  <div class="card" role="status"><div class="row"><b>✦ Draft setup with AI</b><span class="chip c-su">Replay · US$0</span><span class="sp"></span><button class="btn" style="min-height:30px;border-color:var(--dan);color:var(--dant)">■ Stop</button></div>
+    <div class="bar"><i style="width:58%"></i></div><p class="sm" style="margin:0"><b>Step 4 of 6 · Proposing document types</b> · checklist read, 11 of 18 items</p>
+    <ol class="steps"><li><span class="ico" style="color:var(--ok)">✓</span>Read the form fields of 4 forms (no AI)</li><li><span class="ico" style="color:var(--ok)">✓</span>Propose shared fields: 481 form fields</li><li><span class="ico" style="color:var(--ok)">✓</span>Propose sections: 9</li><li><span class="ico" style="color:var(--blue)">◔</span><b>Propose document types from the checklist</b></li><li class="mut"><span class="ico">○</span>Compare with the shared library</li><li class="mut"><span class="ico">○</span>Put the proposals on To review</li></ol>
+    <p class="sm mut">Labelled "replay of a saved answer" wherever its proposals are shown.</p></div>
+</div></section>
+
+<!-- 8 -->
+<section class="frame"><div class="fhead"><span class="n">8</span><b>When the run ends — the publisher's loop starts</b><span class="sp"></span><span class="cap cn">Capability · Needed (To review: P-79)</span></div>
+<div class="fbody grid2">
+  <div class="card"><b>Run finished · 4 forms · US$0</b><p class="sm">412 proposals ready: 0 reuse (the library was empty) · 398 new shared fields · 14 need a decision. 9 sections, 18 document types.</p><button class="btn pri">Review on To review →</button></div>
+  <div class="card"><b>To review</b><div class="tblwrap" style="margin-top:8px"><table><thead><tr><th>What</th><th>Why</th><th>Next</th></tr></thead><tbody>
+    <tr><td>398 new shared fields · Ontario</td><td><span class="chip c-ai">AI · replay</span> from 4 forms</td><td>Accept in bulk · review the 14</td></tr>
+    <tr><td>9 sections · Ontario</td><td><span class="chip c-ai">AI · replay</span></td><td>Review</td></tr>
+    <tr><td>18 document types · Ontario</td><td><span class="chip c-ai">AI · replay</span> from the checklist</td><td>Review</td></tr></tbody></table></div>
+    <p class="sm mut">The second combination drafted afterwards shows reuse ("312 reused · 86 new"), the proof's reuse step.</p></div>
+</div></section>
+</body>
+</html>

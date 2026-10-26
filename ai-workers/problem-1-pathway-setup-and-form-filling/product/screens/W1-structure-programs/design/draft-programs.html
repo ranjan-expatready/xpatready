@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Draft board — Immigration programs list (W1-04)</title>
+<style>/* Team brand tokens copied from prototype/studio/web/src/styles/tokens.css (light sheet). */
+:root{--color-primary:#0862c5;--primary-50:#e6f4ff;--primary-100:#cce9ff;--color-surface:#f7f7f7;--color-surface-raised:#fff;--color-text:#2d2d2d;--color-text-muted:#737373;--color-text-link:#054e9c;--color-border:#d9d9d9;--color-border-strong:#bfbfbf;--color-warn:#ff8500;--orange-50:#fff3e0;--color-text-warn:#663200;--color-ok:#16a34a;--color-text-ok:#0f5c2e;--color-danger:#dc2626;--color-text-danger:#991b1b;--neutral-100:#eeeeee;--radius:8px;--font:'Inter Variable',Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+*{box-sizing:border-box}body{margin:0;font-family:var(--font);font-size:14px;color:var(--color-text);background:#e9ecef;line-height:1.45}
+h1,h2,h3{font-family:'Proxima Nova',var(--font);margin:0}
+.board{max-width:1500px;margin:0 auto;padding:24px}
+.board>header h1{font-size:24px}.board>header p{color:var(--color-text-muted);margin:4px 0 0}
+.section{margin:28px 0 8px}.section h2{font-size:18px}.section p{margin:4px 0;color:var(--color-text-muted);max-width:1100px}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;line-height:16px;padding:1px 6px;border-radius:999px;border:1px solid;white-space:nowrap;font-weight:500;vertical-align:middle}
+.tag.cap{color:var(--color-text-link);border-color:var(--primary-100);background:var(--primary-50)}
+.tag.scaf{color:var(--color-text-warn);border-color:#ffc773;background:var(--orange-50)}
+.tag.nb{color:var(--color-text-muted);border:1px dashed var(--color-border-strong);background:#fff}
+.tag.dec{color:var(--color-text-ok);border-color:#a7dcb9;background:#eefaf2}
+.tag.gap{color:var(--color-text-danger);border-color:#f3b4b4;background:#fdf0f0}
+.tag.sample{color:var(--color-text-warn);border-color:#ffc773;background:#fff}
+.ann{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+/* app shell */
+.frame{background:var(--color-surface);border:1px solid var(--color-border-strong);border-radius:12px;overflow:hidden;box-shadow:0 2px 8px #0000001a;margin-top:10px}
+.frame-title{font-size:12px;color:var(--color-text-muted);padding:6px 12px;background:#fff;border-bottom:1px solid var(--color-border);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.topbar{display:flex;align-items:center;gap:12px;padding:10px 16px;background:#fff;border-bottom:1px solid var(--color-border)}
+.logo{font-weight:800;color:var(--color-primary);font-size:18px;display:flex;align-items:center;gap:6px}.logo i{display:inline-block;width:22px;height:22px;border-radius:5px;background:var(--color-primary)}
+.prod{border-left:1px solid var(--color-border);padding-left:12px;font-size:12px;color:var(--color-text-muted)}.prod b{display:block;color:var(--color-text);font-size:14px}
+.demo{font-size:12px;background:var(--orange-50);color:var(--color-text-warn);border-radius:6px;padding:2px 8px}
+.draftbar{display:flex;justify-content:space-between;padding:6px 16px;background:var(--orange-50);border-bottom:1px solid #ffe0b3;font-size:14px}.draftbar a{color:var(--color-text-link);font-weight:600;text-decoration:none}
+.shell{display:grid;grid-template-columns:200px 1fr;min-height:520px}
+.side{background:#fff;border-right:1px solid var(--color-border);padding:14px 10px;font-size:14px}
+.side .grp{font-size:12px;color:var(--color-text-muted);margin:14px 8px 4px}.side .grp:first-child{margin-top:0}
+.side a{display:block;padding:6px 8px;border-radius:6px;color:var(--color-text);text-decoration:none}.side a.on{background:var(--primary-50);color:var(--color-text-link);font-weight:600}
+.main{padding:20px 24px;position:relative}
+.ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.ph h1{font-size:24px}.ph .sub{color:var(--color-text-muted);width:100%;margin-top:-4px}
+.spacer{flex:1}
+.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:var(--radius);border:1px solid var(--color-border-strong);background:#fff;color:var(--color-text);font:inherit;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--color-primary);border-color:var(--color-primary);color:#fff}
+.btn.primary[disabled]{background:#99c0ea;border-color:#99c0ea;cursor:not-allowed}
+.btn.sm{height:28px;padding:0 10px;font-size:12px}.btn.ghost{border-color:transparent;background:transparent;color:var(--color-text-link)}
+.btn.danger{color:var(--color-text-danger)}
+.info{display:inline-flex;width:16px;height:16px;border-radius:50%;border:1.5px solid var(--color-text-muted);color:var(--color-text-muted);font-size:11px;align-items:center;justify-content:center;font-weight:700;cursor:help}
+/* segmented control: team ProgramTypeSwitcher pattern, filled active segment */
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:12px;border:1px solid var(--color-border);background:var(--neutral-100)}
+.seg button{border:0;background:transparent;font:inherit;font-weight:500;padding:6px 14px;border-radius:9px;color:var(--color-text-muted);display:inline-flex;gap:8px;align-items:center;cursor:pointer}
+.seg button.on{background:var(--color-primary);color:#fff;box-shadow:0 1px 2px #0003}
+.seg .n{font-size:12px;background:#0000000f;border-radius:999px;padding:0 7px}.seg .on .n{background:#ffffff33}
+.toolbar{display:flex;gap:10px;align-items:center;margin:16px 0 12px;flex-wrap:wrap}
+.search{flex:1;min-width:260px;display:flex;align-items:center;gap:8px;height:36px;border:1px solid var(--color-border-strong);border-radius:var(--radius);background:#fff;padding:0 10px;color:var(--color-text-muted)}
+.search kbd{margin-left:auto;font-size:12px;border:1px solid var(--color-border);border-radius:4px;padding:0 5px}
+.dd{display:inline-flex;align-items:center;gap:6px;height:36px;border:1px solid var(--color-border-strong);border-radius:var(--radius);background:#fff;padding:0 10px;font-size:14px;cursor:pointer}
+.dd:after{content:"▾";color:var(--color-text-muted)}
+.stats{color:var(--color-text-muted);font-size:14px;margin:-4px 0 10px}.stats b{color:var(--color-text)}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--color-border);border-radius:var(--radius);overflow:hidden}
+th{font-size:12px;font-weight:600;color:var(--color-text-muted);text-align:left;padding:10px 14px;border-bottom:1px solid var(--color-border);background:#fff}
+td{padding:0 14px;height:44px;border-bottom:1px solid var(--color-border);vertical-align:middle}
+tr.grp td{height:34px;background:var(--color-surface);font-size:12px;font-weight:600;color:var(--color-text-muted)}
+tr:hover td{background:#fafcff}
+.trail{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:720px;display:block}
+.trail span,.trail b{white-space:nowrap}.trail .sep{color:var(--color-text-muted);margin:0 6px}.trail .t{color:var(--color-text-muted)}.trail .none{color:var(--color-text-muted);font-style:italic}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid var(--color-border);background:#fff}
+.chip.live{color:var(--color-text-ok);border-color:#a7dcb9;background:#eefaf2}.chip.live:before{content:"✓"}
+.chip.setup:before{content:"◌"}.chip.notready{color:var(--color-text-warn);border-color:#ffc773;background:var(--orange-50)}.chip.notready:before{content:"!"}
+.chip.new{color:var(--color-text-link);border-color:var(--primary-100);background:var(--primary-50)}
+a.next{color:var(--color-text-link);font-weight:600;text-decoration:none}
+.ai{color:#6d28d9}
+.prog{height:6px;border-radius:3px;background:var(--neutral-100);overflow:hidden;width:120px;display:inline-block;vertical-align:middle}.prog i{display:block;height:100%;background:var(--color-primary)}
+.callout{border:1px solid var(--primary-100);background:var(--primary-50);border-radius:var(--radius);padding:12px 14px;margin:12px 0;font-size:14px}
+.callout.warn{border-color:#ffc773;background:var(--orange-50)}.callout.err{border-color:#f3b4b4;background:#fdf0f0}
+.card{background:#fff;border:1px solid var(--color-border);border-radius:var(--radius);padding:16px 18px;margin-top:12px}
+.card h3{font-size:16px;margin-bottom:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.mini{background:#fff;border:1px solid var(--color-border-strong);border-radius:10px;padding:12px;font-size:12px}
+.mini h4{margin:0 0 6px;font-size:14px}
+.skel{height:14px;border-radius:4px;background:linear-gradient(90deg,#eee,#f6f6f6,#eee);margin:10px 0}
+.empty{text-align:center;padding:28px 12px;color:var(--color-text-muted)}.empty b{display:block;color:var(--color-text);font-size:16px;margin-bottom:4px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--color-text-muted)}
+.inp{height:36px;border:1px solid var(--color-border-strong);border-radius:var(--radius);background:#fff;padding:0 10px;display:flex;align-items:center;color:var(--color-text);font-size:14px}
+.inp.ph{color:var(--color-text-muted)}.inp.err{border-color:var(--color-danger)}.inp.ok{border-color:var(--color-primary)}.inp.ro{background:var(--color-surface)}
+.req{font-size:12px;color:var(--color-text-muted);font-weight:400}
+.hint{font-size:12px;color:var(--color-text-muted)}.hint.err{color:var(--color-text-danger)}.hint.ok{color:var(--color-text-ok)}
+.panel{position:absolute;top:0;right:0;bottom:0;width:440px;background:#fff;border-left:1px solid var(--color-border-strong);box-shadow:-6px 0 18px #0000001f;display:flex;flex-direction:column}
+.panel .ph2{padding:14px 18px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:8px}.panel .pb{padding:16px 18px;flex:1;overflow:auto;display:flex;flex-direction:column;gap:12px}.panel .pf{padding:12px 18px;border-top:1px solid var(--color-border);display:flex;justify-content:space-between}
+.steps{list-style:none;margin:6px 0;padding:0;font-size:14px}.steps li{display:flex;gap:8px;align-items:center;padding:3px 0}
+.steps .d:before{content:"✓";color:var(--color-text-ok);font-weight:700}.steps .r:before{content:"◐";color:var(--color-primary)}.steps .w:before{content:"○";color:var(--color-text-muted)}.steps .x:before{content:"✕";color:var(--color-text-danger)}
+.tree td{height:40px}.lvl{font-size:12px;color:var(--color-text-muted);border:1px solid var(--color-border);border-radius:4px;padding:0 5px;margin-left:6px}
+.chev{display:inline-block;width:18px;color:var(--color-text-muted)}
+.i1{padding-left:28px}.i2{padding-left:56px}.i3{padding-left:84px}
+.tipbox{position:relative;display:inline-block;background:var(--color-text);color:#fff;font-size:12px;padding:6px 9px;border-radius:6px;max-width:320px;line-height:1.4}
+[data-tip]{position:relative}[data-tip]:hover:after{content:attr(data-tip);position:absolute;left:0;top:calc(100% + 6px);z-index:20;width:300px;background:var(--color-text);color:#fff;font-size:12px;font-weight:400;padding:6px 9px;border-radius:6px;white-space:normal;line-height:1.4;text-align:left}
+.menu{background:#fff;border:1px solid var(--color-border);border-radius:var(--radius);box-shadow:0 8px 20px #0002;padding:4px;width:360px}
+.menu div{padding:7px 10px;border-radius:6px}.menu div.on{background:var(--primary-50)}.menu small{display:block;color:var(--color-text-muted);font-size:12px}
+.note{font-size:12px;color:var(--color-text-muted);margin-top:6px}
+.cons{font-size:12px;margin:6px 0 0;padding-left:16px}.cons li{margin:2px 0}
+.rec{display:inline-block;font-size:12px;font-weight:700;color:#fff;background:var(--color-primary);border-radius:4px;padding:1px 6px;margin-left:6px}
+</style></head>
+<body><div class="board">
+<header><h1>Draft board · Immigration programs list (W1-04)</h1>
+<p>Designer draft for the Lead, 26 Oct. Before: <code>screens/W1-baseline/01-programs-retail.png</code>, <code>02-programs-corporate.png</code>. Concept: <code>concept-draft.md</code> §6–§8. Board is intent, not pixels (P-44). Every name and status below is <b>Sample</b> (names pending research, W1-12).</p>
+<div class="legend"><span class="tag cap">Capability · Needed</span> what the product does · <span class="tag scaf">Scaffolding · Needed</span> demo only, never ported · <span class="tag nb">Not built</span> · <span class="tag dec">Follows P-xx</span> decision followed · <span class="tag gap">GAP</span> decision missing / conflict · hover any dotted element for its tooltip.</div>
+</header>
+
+<div class="section"><h2>Option A — Grouped list <span class="rec">Recommended</span></h2>
+<p>One table of every configured combination, grouped by Pathway, full five-part trail on one line (program in bold), Status and one Next step. The filter-tab row (Needs work · Live · All · Program) is replaced by search plus two dropdowns. Pathway type is a filled segmented control (team <code>ProgramTypeSwitcher</code> pattern) with counts.</p>
+<div class="ann"><span class="tag dec">Follows P-104: Pathway type tab, full trail</span><span class="tag dec">Follows P-106: no "Supported by" notes</span><span class="tag dec">Follows P-50: a row opens the combination page</span><span class="tag gap">GAP: replaces P-49 "Needs work" default view (BR-13) — record on agreement</span><span class="tag gap">GAP: title "Immigration programs" + menu item "Structure" (founder Q3)</span></div></div>
+
+<div class="frame"><div class="frame-title">Retail tab · normal state · 1280 px</div>
+<div class="topbar"><span class="logo"><i></i>ExpatReady</span><span class="prod"><b>Product Studio</b>Pathway Configurator</span><span class="demo">Prototype · demo workspace</span> <span class="tag scaf">Scaffolding · Needed (not ported)</span><span class="spacer"></span><span class="dd">Demo</span><span class="dd">Acting as Configuration author</span></div>
+<div class="draftbar"><span><b>Draft</b> · 6 changes across 5 combinations</span><a href="#">Review and release (6)</a></div>
+
+<div class="shell"><nav class="side"><div class="grp">Configure</div><a href="#">To review</a><a href="#" class="on">Immigration programs</a><a href="#">Structure</a><div class="grp">Shared library</div><a href="#">Fields</a><a href="#">Sections</a><a href="#">Document types</a><a href="#">Forms</a><a href="#">Checks</a><div class="grp">History</div><a href="#">AI work</a><a href="#">Releases</a><a href="#">Activity</a></nav>
+
+<main class="main">
+ <div class="ph"><h1>Immigration programs</h1><span class="info" data-tip="Each row is one application a firm can open. The trail reads Pathway type › Pathway › Program › Category › Sub-category.">i</span>
+  <span class="spacer"></span>
+  <button class="btn" data-tip="The list of pathways, programs, categories and sub-categories. New combinations pick from it.">Structure</button>
+  <button class="btn primary" data-tip="Create a combination by picking its place in the Structure. Rules, or AI if you choose, can propose it from a description.">＋ New combination</button>
+  <div class="sub">Every combination your firm can open, with where its setup stands.</div></div>
+ <div class="ann"><span class="tag cap">Capability · Needed: title, Structure link, New combination (primary, last)</span></div>
+ <div class="toolbar">
+  <div class="seg" role="group" aria-label="Pathway type"><button class="on" aria-pressed="true" data-tip="Applications made by a person for themselves and their family.">Retail <span class="n">5</span></button><button aria-pressed="false" data-tip="Applications made by an employer or organisation, such as an LMIA.">Corporate and employers <span class="n">1</span></button></div>
+  <div class="search" data-tip="Search names at any level, form numbers and documents in this tab.">⌕ Search names, form numbers, documents <kbd>⌘K</kbd></div>
+  <span class="dd" data-tip="Show one pathway only.">Pathway: All</span>
+  <span class="dd" data-tip="In setup: being configured. Not ready: something blocks release. Live: firms can open cases on it.">Status: All</span>
+ </div>
+ <div class="ann"><span class="tag cap">Capability · Needed: Pathway type segmented control with counts</span><span class="tag cap">Capability · Needed: search (tab-scoped)</span><span class="tag cap">Capability · Needed: two filters, state in the URL</span></div>
+ <div class="stats"><b>5</b> combinations · <b>1</b> Live · <b>1</b> Not ready · <b>3</b> In setup</div>
+ <table><thead><tr><th>Combination <span class="note">(Pathway type › Pathway › Program › Category › Sub-category)</span></th><th style="width:130px">Status</th><th style="width:250px">Next step</th></tr></thead><tbody>
+  <tr class="grp"><td colspan="3">Temporary residence · 3</td></tr>
+  <tr><td><span class="trail" title="Retail › Temporary residence › Visitors › Visitor visa › No sub-category"><span class="t">Retail</span><span class="sep">›</span><span class="t">Temporary residence</span><span class="sep">›</span><b>Visitors</b><span class="sep">›</span><span>Visitor visa</span><span class="sep">›</span><span class="none">No sub-category</span></span></td><td><span class="chip live" data-tip="Firms can open cases on this combination. Released 24 Oct (Sample).">Live</span></td><td><a class="next" href="#" data-tip="Open the combination page.">Open</a></td></tr>
+  <tr><td><span class="trail" title="Retail › Temporary residence › Study permits › Study permit › From outside Canada"><span class="t">Retail</span><span class="sep">›</span><span class="t">Temporary residence</span><span class="sep">›</span><b>Study permits</b><span class="sep">›</span><span>Study permit</span><span class="sep">›</span><span>From outside Canada</span></span></td><td><span class="chip setup" data-tip="Being configured. Firms cannot open cases yet.">In setup</span></td><td><a class="next ai" href="#" data-tip="AI read the forms and suggested shared fields. Nothing changes until you accept.">✦ Review 42 AI proposals</a></td></tr>
+  <tr><td><span class="trail" title="Retail › Temporary residence › Work permits › Employer-specific work permit (LMIA) › From inside Canada"><span class="t">Retail</span><span class="sep">›</span><span class="t">Temporary residence</span><span class="sep">›</span><b>Work permits</b><span class="sep">›</span><span>Employer-specific work permit (LMIA)</span><span class="sep">›</span><span>From inside Canada</span></span></td><td><span class="chip setup">In setup</span></td><td><span class="ai" data-tip="AI is drafting the setup from the forms. Open to see each step or stop it.">✦ AI drafting · step 2 of 4</span> <span class="prog"><i style="width:50%"></i></span></td></tr>
+  <tr class="grp"><td colspan="3">Permanent residence · 2</td></tr>
+  <tr><td><span class="trail" title="Retail › Permanent residence › Provincial nominees › Permanent residence application (Express Entry) › Ontario"><span class="t">Retail</span><span class="sep">›</span><span class="t">Permanent residence</span><span class="sep">›</span><b>Provincial nominees</b><span class="sep">›</span><span>Permanent residence application (Express Entry)</span><span class="sep">›</span><span>Ontario</span></span></td><td><span class="chip setup">In setup</span></td><td><a class="next" href="#" data-tip="Pick this combination's forms from the form library.">Add forms from the library</a></td></tr>
+  <tr><td><span class="trail" title="Retail › Permanent residence › Family sponsorship › Spouse or common-law partner › Applicant outside Canada"><span class="t">Retail</span><span class="sep">›</span><span class="t">Permanent residence</span><span class="sep">›</span><b>Family sponsorship</b><span class="sep">›</span><span>Spouse or common-law partner</span><span class="sep">›</span><span>Applicant outside Canada</span></span></td><td><span class="chip notready" data-tip="Something blocks release. Open to see exactly what is missing.">Not ready</span></td><td><a class="next" href="#">See 1 missing</a></td></tr>
+ </tbody></table>
+ <div class="ann"><span class="tag cap">Capability · Needed: full trail on every row (long trail cut with full text on hover)</span><span class="tag cap">Capability · Needed: Pathway group rows with counts</span><span class="tag cap">Capability · Needed: calculated status by shape + text</span><span class="tag cap">Capability · Needed: one next step (AI running uses the shared W1-07 progress)</span><span class="tag sample">Sample names: pending research</span></div>
+</main></div></div>
+
+<div class="section"><h2>Option A — Corporate and employers tab (one Sample combination)</h2>
+<div class="ann"><span class="tag dec">Follows P-106: Retail and Corporate separate; the link lives on the case</span><span class="tag gap">GAP: which Pathway employer applications sit under (immigration expert) — "Temporary residence" is Sample</span></div></div>
+<div class="frame"><div class="frame-title">Corporate and employers tab</div>
+<div class="shell"><nav class="side"><div class="grp">Configure</div><a href="#">To review</a><a href="#" class="on">Immigration programs</a><a href="#">Structure</a><div class="grp">Shared library</div><a href="#">Fields</a><a href="#">Sections</a><a href="#">Document types</a><a href="#">Forms</a><a href="#">Checks</a><div class="grp">History</div><a href="#">AI work</a><a href="#">Releases</a><a href="#">Activity</a></nav>
+
+<main class="main">
+ <div class="ph"><h1>Immigration programs</h1><span class="info">i</span><span class="spacer"></span><button class="btn">Structure</button><button class="btn primary">＋ New combination</button></div>
+ <div class="toolbar"><div class="seg"><button>Retail <span class="n">5</span></button><button class="on">Corporate and employers <span class="n">1</span></button></div><div class="search">⌕ Search names, form numbers, documents <kbd>⌘K</kbd></div><span class="dd">Pathway: All</span><span class="dd">Status: All</span></div>
+ <div class="callout"><b>How employer and worker cases connect</b> <span class="info" data-tip="Setups stay separate. The connection is made on the case, by the agent, in a later wave.">i</span><br>The employer's LMIA is set up here; the worker's work permit is set up under Retail. On the worker's case the agent picks "relies on employer case", and the employer's name, address and LMIA number fill in (case step, later wave).
+ <ul class="cons" style="font-size:14px"><li>A software company hires one developer → one employer case here, one worker case under Retail.</li><li>One LMIA for three cooks → one employer case, three worker cases, each relying on it.</li><li>A household hires a caregiver → the household is the employer.</li></ul><span class="tag sample">Sample examples</span> <span class="tag cap">Capability · Needed (wording is Sample content)</span> <span class="tag nb">Case-level link: Not built here (W4)</span></div>
+ <div class="stats"><b>1</b> combination · <b>1</b> In setup</div>
+ <table><thead><tr><th>Combination</th><th style="width:130px">Status</th><th style="width:250px">Next step</th></tr></thead><tbody>
+ <tr class="grp"><td colspan="3">Temporary residence · 1</td></tr>
+ <tr><td><span class="trail"><span class="t">Corporate and employers</span><span class="sep">›</span><span class="t">Temporary residence</span><span class="sep">›</span><b>Labour market impact assessment (LMIA)</b><span class="sep">›</span><span>High-wage position</span><span class="sep">›</span><span class="none">No sub-category</span></span></td><td><span class="chip setup">In setup</span></td><td><a class="next" href="#">Add forms from the library</a></td></tr>
+ </tbody></table>
+ <div class="ann"><span class="tag scaf">Scaffolding · Needed: this row comes from Load sample (P-108)</span></div>
+</main></div></div>
+
+<div class="section"><h2>States (Option A)</h2></div>
+<div class="grid3">
+ <div class="mini"><h4>Loading</h4><div class="seg"><button class="on">Retail <span class="n">…</span></button><button>Corporate and employers</button></div><div class="skel" style="width:90%"></div><div class="skel" style="width:75%"></div><div class="skel" style="width:85%"></div><div class="skel" style="width:60%"></div><div class="note">Skeleton rows + sr-only "Loading combinations". No "New combination" until the person is known.</div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Empty (after Reset)</h4><div class="empty"><b>Nothing set up yet</b>Start with the Structure: add the pathways, programs and categories you offer, then create a combination.<br><br><button class="btn primary sm">Open Structure</button> <button class="btn sm">＋ New combination</button><br><br><button class="btn sm" style="border-style:dashed">Load sample</button></div><span class="tag cap">Capability · Needed (empty state)</span> <span class="tag scaf">Scaffolding · Needed: Load sample (demo chrome)</span></div>
+ <div class="mini"><h4>No matches</h4><div class="search" style="min-width:0">⌕ caregiver</div><div class="empty"><b>No combination matches "caregiver" in Retail</b>1 match in Corporate and employers. <a class="next" href="#">Show it</a><br><button class="btn sm ghost">Clear search</button></div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Error</h4><div class="callout err"><b>The list could not load.</b><br>The studio did not answer. Your work is safe. <br><br><button class="btn sm">Retry</button></div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Long trail (1024 px)</h4><table><tbody><tr><td><span class="trail" style="max-width:300px" title="Retail › Permanent residence › Provincial nominees › Permanent residence application (Express Entry) › Ontario"><span class="t">Retail</span><span class="sep">›</span><span class="t">Permanent residence</span><span class="sep">›</span><b>Provincial nominees</b><span class="sep">›</span><span>Permanent residence application (Express Entry)</span><span class="sep">›</span><span>Ontario</span></span></td></tr></tbody></table><div class="note">One line, cut with "…"; full trail on hover and focus; never wraps the row taller than 44 px. Below 640 px the next step moves under the trail.</div><span class="tag cap">Capability · Needed</span></div>
+ <div class="mini"><h4>Read-only (approver)</h4><button class="btn primary sm" disabled data-tip="Only a configuration author can create combinations. Switch to the Configuration author.">＋ New combination</button><div class="note">Disabled with the reason in its tooltip; rows still open read-only. Server refuses writes (403).</div><span class="tag cap">Capability · Needed</span></div>
+</div>
+
+<div class="section"><h2>Option B — Cards per Pathway</h2><p>Same data as cards in Pathway columns.</p></div>
+<div class="grid2"><div class="mini"><div class="grid3">
+ <div><h4>Temporary residence</h4><div class="card" style="margin-top:6px;padding:10px"><b>Visitors</b> › Visitor visa<br><span class="chip live">Live</span></div><div class="card" style="margin-top:6px;padding:10px"><b>Study permits</b> › Study permit › From outside Canada<br><span class="chip setup">In setup</span> <a class="next ai">✦ Review 42</a></div><div class="card" style="margin-top:6px;padding:10px"><b>Work permits</b> › … › From inside Canada<br><span class="chip setup">In setup</span></div></div>
+ <div><h4>Permanent residence</h4><div class="card" style="margin-top:6px;padding:10px"><b>Provincial nominees</b> › … › Ontario<br><span class="chip setup">In setup</span></div><div class="card" style="margin-top:6px;padding:10px"><b>Family sponsorship</b> › … › Applicant outside Canada<br><span class="chip notready">Not ready</span></div></div>
+ <div><h4>Citizenship</h4><div class="empty" style="padding:10px">None yet</div></div></div></div>
+ <div><ul class="cons" style="font-size:14px"><li>+ Modern, visual, Pathway at a glance.</li><li>− 6–8 combinations per screen instead of 15+; weak at 100+ combinations.</li><li>− The full five-part trail does not fit a card without wrapping (P-104 asks for it everywhere).</li><li>− Unlike the team's tables (TEAM-PATTERNS "List").</li></ul></div></div>
+
+<div class="section"><h2>Option C — Split view (Structure tree filters the list)</h2></div>
+<div class="grid2"><div class="mini" style="display:grid;grid-template-columns:200px 1fr;gap:10px">
+ <div style="border-right:1px solid var(--color-border);padding-right:8px"><b>Retail</b><div class="i1">▾ Temporary residence</div><div class="i2">Visitors</div><div class="i2" style="background:var(--primary-50)">Study permits</div><div class="i2">Work permits</div><div class="i1">▸ Permanent residence</div><div class="i1">▸ Citizenship</div></div>
+ <div><table><tbody><tr><td><span class="trail" style="max-width:340px">Retail › Temporary residence › <b>Study permits</b> › Study permit › From outside Canada</span></td></tr></tbody></table></div></div>
+ <div><ul class="cons" style="font-size:14px"><li>+ Browse by structure and act in one screen.</li><li>− Repeats the Structure page; two places to look at the tree.</li><li>− At 1024 px the list keeps ~520 px: trails are cut on most rows.</li></ul></div></div>
+
+<div class="section"><h2>Before → after (founder's 26 Oct points)</h2>
+<ul class="cons" style="font-size:14px;color:var(--color-text)"><li>Plain bordered tabs → filled segmented control with counts; "Individual" → <b>Retail</b>.</li><li>"Programs" → <b>Immigration programs</b> (Q3).</li><li>Needs work · Live · All · Program: All → search + Pathway and Status dropdowns; all combinations shown by default; stats line keeps the counts.</li><li>"Citizenship / Grant of citizenship" two-line path → one-line full five-part trail, program bold.</li><li>"Supported by …", "Follows …", "Filed: …" notes removed from rows (P-106; channel moves to the combination, P-107).</li><li>Search and New combination: New combination is the primary action, last in the title row; search sits with the tab it searches.</li><li>"Browser extension" menu item gone (P-102).</li></ul></div>
+</div></body></html>

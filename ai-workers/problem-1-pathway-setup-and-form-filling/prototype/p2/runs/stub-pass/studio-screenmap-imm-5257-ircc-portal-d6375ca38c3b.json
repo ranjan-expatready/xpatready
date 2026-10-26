@@ -1,6 +1,6 @@
 {
  "job_id": "studio-screenmap-imm-5257-ircc-portal-d6375ca38c3b",
- "path_code_sha256": "a5f5a5b9a6c96a876c837bf338920fb687d3ad065b94e901517a10bf27501cd6",
+ "path_code_sha256": "537ba2377b281b325f8699272d5504370e8c03c671191c6b9718a6883ebdc065",
  "screening_sources": [
   {
    "file": "prototype/expected/slice-1-field-map.json",
@@ -19,8 +19,8 @@
    "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
   }
  ],
- "digest_sha256": "85a785acae5986cb8465ddc405dbe87952e4a2f9469653ddbdbdf2e2a5246bd0",
- "run_id": "studio-screenmap-imm-5257-ircc-portal-d6375ca38c3b-stub-20261025t114401221z-098c7c",
- "at": "2026-10-25T11:44:01.629Z",
+ "digest_sha256": "2a020e1551a8cf4b66239facc706dd7b049bbdb6d001134450a0e30db4ac2c23",
+ "run_id": "studio-screenmap-imm-5257-ircc-portal-d6375ca38c3b-stub-20261025t125754639z-04712c",
+ "at": "2026-10-25T12:57:54.800Z",
  "stub_calls": 1
 }

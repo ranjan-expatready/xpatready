@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W1-08 · Combination workspace cleanup · draft board</title>
+<style>
+/* Team tokens from prototype/studio/web/src/styles/tokens.css (copied from ERv2-frontend): primary-600 #0862c5, link primary-700 #054e9c,
+   text neutral-900 #2d2d2d, muted neutral-600 #737373 on white (neutral-700 #595959 on grey), border neutral-200 #d9d9d9, surface neutral-50 #f7f7f7,
+   orange-500 #ff8500 fill only, text-warn orange-900 #663200, danger 500/700, ok 500/800. Type 12/14/16/18/24. */
+:root{--blue:#0862c5;--link:#054e9c;--text:#2d2d2d;--muted:#595959;--border:#d9d9d9;--border2:#bfbfbf;--surface:#f7f7f7;--raised:#fff;
+--p50:#e6f4ff;--p100:#cce9ff;--p800:#043a73;--dan:#dc2626;--dant:#991b1b;--danbg:#fdecec;--warn:#ff8500;--warnt:#663200;--warnbg:#fff3e0;--ok:#16a34a;--okt:#0f5c2e;--okbg:#e7f6ec;--n100:#eeeeee}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Inter Variable",Inter,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;line-height:1.45;color:var(--text);background:var(--surface)}
+h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+h1{font-size:24px;font-weight:700}h2{font-size:18px;font-weight:600}h3{font-size:16px;font-weight:600}
+a,.lnk{color:var(--link);text-decoration:underline;text-underline-offset:2px;cursor:pointer;background:none;border:0;padding:0;font:inherit;font-weight:600}
+button{font-family:inherit;font-size:14px}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.mut{color:var(--muted)}.sm{font-size:12px}.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--p800)}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:6px;border:1px solid var(--border2);background:#fff;color:var(--text);font-weight:600;cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}.btn.ghost{border-color:transparent;background:transparent}.btn.sm{min-height:30px;padding:0 10px;font-size:12px}
+.btn.dan{border-color:var(--dan);color:var(--dant)}
+.btn[disabled]{background:var(--n100);border-color:var(--border);color:var(--muted);cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.c-ok{background:var(--okbg);color:var(--okt)}.c-no{background:var(--danbg);color:var(--dant)}.c-su{background:var(--n100);color:#404040}.c-ai{background:var(--p50);color:var(--p800)}.c-warn{background:var(--warnbg);color:var(--warnt)}
+.card{background:var(--raised);border:1px solid var(--border);border-radius:8px;padding:16px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+table{width:100%;border-collapse:collapse;background:#fff}th{font-size:12px;font-weight:600;color:var(--muted);text-align:left;padding:8px 12px;border-bottom:1px solid var(--border);background:#fbfbfb;white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--n100);height:44px;vertical-align:middle}
+.tblwrap{border:1px solid var(--border);border-radius:8px;overflow-x:auto}
+.trunc{max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;vertical-align:bottom}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.sp{flex:1}
+.stack>*+*{margin-top:16px}
+td select{max-width:190px}
+td{padding:8px 10px}
+select,input[type=text],input[type=number]{font:inherit;font-size:14px;height:32px;border:1px solid var(--border2);border-radius:6px;padding:0 8px;background:#fff;color:var(--text)}
+select.err{border-color:var(--dan);box-shadow:0 0 0 2px #dc262622}
+.ferr{color:var(--dant);font-size:12px;margin-top:4px;max-width:300px}
+.tip{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;border:1px solid var(--border2);font-size:11px;font-weight:700;color:var(--muted);cursor:help;margin-left:4px;position:relative;vertical-align:middle;background:#fff}
+.tip:hover::after,.tip:focus::after{content:attr(data-tip);position:absolute;left:50%;top:22px;transform:translateX(-50%);width:280px;background:#2d2d2d;color:#fff;padding:8px 10px;border-radius:6px;font-weight:400;font-size:12px;line-height:1.4;z-index:40;white-space:normal;text-align:left}
+/* board-only chrome: visually separate, never ported */
+.boardbar{background:#2d2d2d;color:#eee;padding:8px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;font-size:12px;position:sticky;top:0;z-index:60}
+.boardbar select{font-size:12px;height:26px}.boardbar b{color:#fff}
+.ann{display:none;font-size:11px;font-weight:600;padding:0 6px;border-radius:4px;margin-left:6px;vertical-align:middle;white-space:nowrap;border:1px dashed;line-height:18px}
+.showann .ann{display:inline-block}
+.side .ann{white-space:normal;margin:4px 8px}
+.a-cn{color:#0f5c2e;border-color:#16a34a;background:#f3fbf5}.a-cx{color:#404040;border-color:#8c8c8c;background:#f7f7f7}.a-nb{color:#663200;border-color:#ff8500;background:#fff8ee}
+.a-dec{color:#043a73;border-color:#0862c5;background:#f2f8ff}.a-miss{color:#991b1b;border-color:#dc2626;background:#fff5f5}
+.gone{display:none;border:1px dashed var(--dan);background:#fff5f5;color:var(--dant);border-radius:8px;padding:8px 12px;font-size:12px}
+.showann .gone{display:block}
+/* app shell */
+.top{height:56px;background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;padding:0 16px}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--blue);font-size:18px}.logo i{width:24px;height:24px;border-radius:6px;background:var(--blue);display:inline-block}
+.demo{border:1px dashed var(--warn);background:var(--warnbg);color:var(--warnt);border-radius:6px;padding:2px 8px;font-size:12px;font-weight:600}
+.shell{display:flex;min-height:calc(100vh - 92px)}
+.side{width:224px;background:#fff;border-right:1px solid var(--border);padding:12px 8px;flex-shrink:0}
+.side p{font-size:12px;font-weight:600;color:var(--muted);margin:14px 8px 4px}.side a{display:block;padding:7px 10px;border-radius:6px;color:#404040;text-decoration:none;font-weight:400}
+.side a.on{background:var(--p50);color:var(--p800);font-weight:600}
+main{flex:1;min-width:0;padding:16px 28px 60px}
+.draftbar{background:var(--warnbg);border:1px solid #ffe0b3;border-radius:8px;padding:8px 14px;display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.crumbs{font-size:14px;color:var(--muted);margin-bottom:8px}.crumbs a{font-weight:400}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--border);margin:16px 0;flex-wrap:wrap}
+.tab{border:0;background:transparent;padding:10px 12px;color:#404040;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.tab.on{border-bottom-color:var(--blue);color:var(--text);font-weight:600}
+.nextcard{border:1px solid var(--border);background:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 2px #0000000f}
+.missing{border:1px solid #f5b5b5;background:#fff7f7;border-radius:12px;padding:14px 16px}
+.missing li{margin:4px 0}
+.stat{background:#fff;border:1px solid var(--border);border-radius:12px;padding:14px}.stat b{font-size:24px;display:block}
+.run{border:1px solid var(--p100);background:#fff;border-radius:12px;padding:14px 16px;min-width:420px}
+.bar{height:8px;border-radius:999px;background:var(--n100);overflow:hidden;margin:8px 0}.bar i{display:block;height:100%;background:var(--blue)}
+.steps{list-style:none;margin:6px 0 0;padding:0}.steps li{display:flex;gap:8px;align-items:center;padding:3px 0;font-size:13px}
+.ico{width:18px;text-align:center;font-weight:700}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:560px;background:#fff;border-left:1px solid var(--border);box-shadow:-8px 0 24px #00000022;z-index:70;padding:20px;overflow:auto;display:none}
+.drawer.open{display:block}
+.rolechip{border:1px solid var(--border2);border-radius:10px;padding:8px 12px;background:#fff;cursor:pointer;text-align:left}
+.rolechip.on{border-color:var(--blue);background:var(--p50)}
+.phone{width:280px;border:8px solid #2d2d2d;border-radius:28px;background:#fff;padding:14px;flex-shrink:0}
+.sect{background:#fafafa;font-weight:600}
+.rail{width:220px;flex-shrink:0;border-right:1px solid var(--border);padding-right:12px}
+.rail button{display:flex;gap:8px;align-items:center;width:100%;text-align:left;border:0;background:transparent;padding:10px;border-radius:8px;cursor:pointer}
+.rail button.on{background:var(--p50);font-weight:600}
+.skel{background:linear-gradient(90deg,#eee,#f7f7f7,#eee);border-radius:8px;height:44px;margin:8px 0}
+.banner{border-radius:8px;padding:10px 14px;display:flex;gap:12px;align-items:center}
+.b-conf{background:var(--warnbg);border:1px solid #ffc773}.b-ro{background:var(--p50);border:1px solid var(--p100)}
+.explain{border:1px solid var(--p100);background:#f7fbff;border-radius:8px;padding:12px;font-size:13px;display:none}
+.explain.open{display:block}
+.col3{display:grid;grid-template-columns:1.3fr 1fr 1fr;gap:16px}
+@media (prefers-reduced-motion:no-preference){.spin{display:inline-block;animation:sp 1s linear infinite}@keyframes sp{to{transform:rotate(360deg)}}}
+</style>
+</head>
+<body>
+<div class="boardbar" role="region" aria-label="Board controls (not part of the product)">
+  <b>W1-08 draft board · not for porting</b>
+  <label>Tab structure <select id="opt"><option value="A">A · Setup-order tabs (Recommended)</option><option value="B">B · Guided step rail</option><option value="C">C · Four tabs</option></select></label>
+  <label>State <select id="st">
+    <option value="needs">Needs work (in setup, 76 AI proposals)</option><option value="normal">Normal (Release 1 live)</option><option value="empty">Empty (new combination, no forms)</option>
+    <option value="loading">Loading</option><option value="running">Running (AI drafting, run panel)</option><option value="aierror">AI error (Find missing forms)</option>
+    <option value="fielderr">Field error (Online on a PDF-only form)</option><option value="readonly">Read-only (approver)</option><option value="conflict">Conflict (someone else saved)</option><option value="long">Long names</option>
+  </select></label>
+  <label><input type="checkbox" id="ann"> Show labels (Capability / Scaffolding · Needed / Not built · decision followed or missing · what was removed)</label>
+  <span>All content Sample. Form numbers from decisions P-109 and the team's sources; IRCC accepts values Sample until the immigration expert confirms.</span>
+</div>
+
+<div class="top">
+  <span class="logo"><i></i>ExpatReady</span>
+  <span><b>Product Studio</b><br><span class="sm mut">Pathway Configurator</span></span>
+  <span class="demo">Prototype · demo workspace</span><span class="ann a-cx">Scaffolding</span>
+  <span class="sp"></span>
+  <span class="demo">Demo ▾ Reset to blank · Load sample</span><span class="ann a-cx">Scaffolding · W1-11, see draft-reset-sample.html</span>
+  <span class="sm mut" data-st="!readonly">Acting as <b>Configuration author</b> (simulated)</span>
+  <span class="sm mut" data-st="readonly">Acting as <b>Approver</b> (simulated)</span>
+</div>
+<div class="shell">
+<nav class="side" aria-label="Main menu">
+  <p>Configure</p><a href="#">To review <span class="chip c-ai">2</span></a><a href="#" class="on">Programs</a><a href="#">Structure</a>
+  <span class="ann a-dec">Structure: P-104 (W1-03). Browser extension item removed: P-102</span>
+  <p>Shared library</p><a href="#">Forms</a><a href="#">Fields</a><a href="#">Sections</a><a href="#">Document types</a><a href="#">Checks</a><a href="#">Rules</a>
+  <span class="ann a-dec">Setup order: W1-09 (concept)</span>
+  <p>History</p><a href="#">AI work</a><a href="#">Releases</a><a href="#">Activity</a>
+</nav>
+<main id="main">
+  <div class="draftbar"><b>Draft</b> · 132 changes across 3 combinations<span class="sp"></span><a href="#">Release page · 132 changes</a><span class="ann a-dec">Renamed: Screen 03 recheck M6</span></div>
+  <nav class="crumbs" aria-label="Path"><a href="#">Programs</a> › <a href="#">Retail</a> › <a href="#">Permanent residence</a> › <a href="#">Provincial Nominee Program</a> › <span>Ontario</span> <span class="ann a-dec">Five-part trail, Retail: P-104</span></nav>
+
+  <div class="row" style="align-items:flex-start;gap:16px">
+    <div style="flex:1;min-width:0">
+      <div class="row">
+        <h1 data-st="!long">Provincial Nominee Program · Ontario</h1>
+        <h1 data-st="long" class="trunc" style="max-width:640px" title="Provincial Nominee Program · Ontario · Skilled worker with a job offer from an Ontario employer, paper application (Sample long name)">Provincial Nominee Program · Ontario · Skilled worker with a job offer from an Ontario employer, paper application (Sample long name)</h1>
+        <span class="chip c-su" data-st="!normal">◌ In setup</span><span class="chip c-ok" data-st="normal">● Live · Release 1</span>
+        <span class="tip" tabindex="0" data-tip="Worked out from the setup: In setup until the first release; Live when firms can open cases on a released version.">?</span>
+      </div>
+      <p class="mut" style="margin:4px 0 0">
+        <span data-st="!normal">Not released yet</span><span data-st="normal">Released 26 Oct · draft matches the release</span>
+        · <span data-st="!empty">5 forms · Filed as: PDF upload 4, Online 1</span><span data-st="empty">no forms yet</span>
+        · 4 people roles · <span class="chip c-warn">Sample</span>
+        <span class="tip" tabindex="0" data-tip="Sample: the forms of this combination and what IRCC accepts for each are Sample until the immigration expert confirms them (P-108, P-109).">?</span>
+      </p>
+      <p class="gone" style="margin-top:8px">Removed from this line: "cases opened inside Canada" (a structure fact, shown on the Structure page, P-104) and the portal.</p>
+    </div>
+    <!-- next step card or AI run panel (the one AI place in the header) -->
+    <div data-st="needs fielderr conflict long" class="nextcard"><div><p class="sm mut" style="margin:0">Next step</p></div><button class="btn pri sm">✦ Review 76 AI proposals →</button><span class="tip" tabindex="0" data-tip="AI proposed field maps, shared fields and sections for IMM 5669. Nothing changes this combination until a person accepts each proposal on To review.">?</span><span class="ann a-cn">Capability · Needed</span></div>
+    <div data-st="empty" class="nextcard"><div><p class="sm mut" style="margin:0">Next step</p></div><button class="btn pri sm">+ Add forms from the library</button></div>
+    <div data-st="normal readonly" class="nextcard"><div><p class="sm mut" style="margin:0">Next step</p><p style="margin:0;font-weight:600" data-st="normal">Nothing to do: firms can open cases on it</p><p style="margin:0;font-weight:600" data-st="readonly">Approve on Review and release</p><p class="sm mut" style="margin:0" data-st="readonly">Submitted by the configuration author · 2 expert ticks done</p></div></div>
+    <div data-st="running" class="run" role="status" aria-live="polite">
+      <div class="row"><b>✦ Draft setup with AI</b><span class="chip c-su">Replay of a saved answer · US$0</span><span class="sp"></span><button class="btn sm dan">■ Stop</button></div>
+      <div class="bar" aria-label="Step 3 of 6"><i style="width:42%"></i></div>
+      <p class="sm" style="margin:0"><b>Step 3 of 6 · Proposing sections</b> · forms read 5 of 5 · sections proposed for 3 of 5 forms</p>
+      <ol class="steps">
+        <li><span class="ico" style="color:var(--ok)">✓</span>Read the form fields of 5 forms (on this computer, no AI)</li>
+        <li><span class="ico" style="color:var(--ok)">✓</span>Propose a shared field for each form field (233 form fields)</li>
+        <li><span class="ico spin" style="color:var(--blue)">◔</span><b>Propose sections</b> (3 of 5 forms)</li>
+        <li class="mut"><span class="ico">○</span>Propose document types from the checklist</li>
+        <li class="mut"><span class="ico">○</span>Compare with the shared library (reuse, new, needs a decision)</li>
+        <li class="mut"><span class="ico">○</span>Put the proposals on To review</li>
+      </ol>
+      <p class="sm mut" style="margin:6px 0 0">Stop ends the run now; proposals already made stay on To review. A live run states its cost before it starts.</p>
+      <span class="ann a-dec">Run panel: P-110, W1-07 component</span>
+    </div>
+  </div>
+
+  <div data-st="conflict" class="banner b-conf" style="margin-top:12px"><b>Someone else saved this combination.</b> The content reviewer changed IMM 5406 "Filed as" at 14:02. Your change is not saved. <span class="sp"></span><button class="btn sm">Reload their version</button><button class="btn sm ghost">Compare</button><span class="ann a-cn">Capability · Needed (S1 409, recheck m2)</span></div>
+  <div data-st="readonly" class="banner b-ro" style="margin-top:12px">You are viewing as the Approver: read-only. Only the configuration author changes the setup. <span class="ann a-cn">Capability · Needed</span></div>
+
+  <!-- tab strips -->
+  <div id="tabsA" class="tabs" role="tablist" aria-label="Combination">
+    <button class="tab" data-tab="overview">Overview</button><button class="tab" data-tab="forms">Forms <span class="chip c-su" data-st="!empty">5</span></button><button class="tab" data-tab="questionnaires">Questionnaires</button><button class="tab" data-tab="documents">Documents</button><button class="tab" data-tab="preview">Preview</button><button class="tab" data-tab="review">Review and release <span class="chip c-no" data-st="needs fielderr">1</span></button>
+    <span class="ann a-dec" style="align-self:center">Option A · amends P-35 (Q1)</span>
+  </div>
+  <div id="tabsC" class="tabs" role="tablist" aria-label="Combination">
+    <button class="tab" data-tab="overview">Overview</button><button class="tab" data-tab="setup">Setup</button><button class="tab" data-tab="preview">Preview</button><button class="tab" data-tab="review">Review and release</button>
+    <span class="ann a-dec" style="align-self:center">Option C</span>
+  </div>
+  <div id="jumpC" class="row sm" style="margin:-8px 0 12px">Jump to: <a href="#p-forms">Forms</a> · <a href="#p-questionnaires">Questionnaires</a> · <a href="#p-documents">Documents</a> <span class="mut">(one long page; the phone preview cannot stay beside the questions)</span></div>
+
+  <div id="layout" style="display:flex;gap:20px;align-items:flex-start">
+  <div id="railB" class="rail" aria-label="Setup steps">
+    <p class="sm mut" style="margin:0 0 6px">Option B · setup steps <span class="ann a-dec">Option B (5 steps &gt; EXPERIENCE §3 wizard ≤ 3)</span></p>
+    <button data-tab="forms"><span class="ico" style="color:var(--ok)">✓</span>1 Forms</button>
+    <button data-tab="questionnaires"><span class="ico" style="color:var(--dan)">!</span>2 People and questionnaires</button>
+    <button data-tab="documents"><span class="ico" style="color:var(--warnt)">◐</span>3 Documents</button>
+    <button data-tab="preview"><span class="ico">○</span>4 Preview</button>
+    <button data-tab="review"><span class="ico">○</span>5 Submit for review</button>
+    <p class="sm mut">No Overview: each step's tick is the status. Revisiting one line later still walks the rail.</p>
+  </div>
+  <div id="panes" style="flex:1;min-width:0">
+
+  <div data-st="loading" aria-busy="true"><div class="skel" style="width:40%"></div><div class="grid4"><div class="skel" style="height:90px"></div><div class="skel" style="height:90px"></div><div class="skel" style="height:90px"></div><div class="skel" style="height:90px"></div></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><p class="sm mut">Loading the combination…</p></div>
+
+  <!-- ===================== OVERVIEW ===================== -->
+  <section class="pane stack" id="p-overview" data-st="!loading">
+    <div data-st="needs fielderr conflict long running aierror readonly" class="missing">
+      <h3>Missing before firms can use it (3)</h3>
+      <ul style="margin:8px 0 0;padding-left:18px">
+        <li>IMM 5669 has no accepted field map: 76 AI proposals wait. <a href="#">Review on To review</a></li>
+        <li>2 facts the forms need are not asked of anyone (spouse's previous marriage date, IMM 5406). <a href="#" data-go="questionnaires">Fix in Questionnaires</a></li>
+        <li>Marriage certificate waits for a person to accept it. <a href="#" data-go="documents">See in Documents</a></li>
+      </ul>
+      <span class="ann a-cn">Capability · Needed · each item names one action (BR-2, recheck X2)</span>
+    </div>
+    <div data-st="empty" class="missing" style="background:#fff;border-color:var(--border)">
+      <h3>Start here: pick this combination's forms</h3>
+      <ol style="margin:8px 0 0;padding-left:18px"><li>Add forms from the Form library (or Find missing forms). <a href="#" data-go="forms">Go to Forms</a></li><li>Draft setup with AI: questions, sections and documents arrive as proposals you accept.</li><li>Check who can be on a case, preview a Sample family, then submit for review.</li></ol>
+    </div>
+    <div class="grid4">
+      <div class="stat"><span class="mut sm">Forms</span><b><span data-st="!empty">5</span><span data-st="empty">0</span></b><span class="sm mut" data-st="!empty">5 forms · 1 checklist · filed as PDF upload 4, Online 1</span><span class="sm mut" data-st="empty">none picked yet</span></div>
+      <div class="stat"><span class="mut sm">Questions</span><b><span data-st="!empty">142</span><span data-st="empty">0</span></b><span class="sm mut">questions for 4 people roles · 8 shared sections</span></div>
+      <div class="stat"><span class="mut sm">Documents</span><b><span data-st="!empty">5</span><span data-st="empty">0</span></b><span class="sm mut">documents · 1 only if an answer says so</span></div>
+      <div class="stat"><span class="mut sm">Checks</span><b><span data-st="!empty">2</span><span data-st="empty">0</span></b><span class="sm mut">checks on answers · none fail on the Sample family</span></div>
+    </div>
+    <span class="ann a-dec">Every count says what it counts (EXPERIENCE §2.7; S1 change 4)</span>
+    <div class="card">
+      <div class="row"><h2>Who can be on a case</h2><button class="lnk sm" data-explain="ex1">What does this control?</button><span class="sp"></span><a href="#" data-go="questionnaires" data-st="!readonly">Change in Questionnaires</a></div>
+      <div class="explain" id="ex1" style="margin-top:8px">
+        <b>These are the people a case for this combination may include.</b> For each person:
+        <ul style="margin:6px 0 0;padding-left:18px"><li><b>How many</b> — the fewest and most a case may have; the questionnaire repeats for each one.</li><li><b>Is an applicant</b> — gets their own copy of every form set to "Each applicant" (for example their own IMM 5669, Sample) and their own questionnaire sections. A representative is never an applicant.</li><li><b>Answered by</b> — who types the answers: the person on their own link, or the principal for a child under 18.</li></ul>
+        <p class="sm mut" style="margin:6px 0 0">Changing it changes the questionnaires, which forms each person gets, and the Preview.</p>
+      </div>
+      <div class="tblwrap" style="margin-top:10px"><table>
+        <thead><tr><th>Person</th><th>How many on a case <span class="tip" tabindex="0" data-tip="The fewest and most of this person a case may have. 'Up to 1' means optional.">?</span></th><th>Is an applicant <span class="tip" tabindex="0" data-tip="Gets their own copy of every form set to 'Each applicant' and their own questionnaire sections. A representative is never an applicant.">?</span></th><th>Answered by <span class="tip" tabindex="0" data-tip="Who types this person's answers. The principal answers for a child under 18; an adult confirms their own answers on their own link.">?</span></th></tr></thead>
+        <tbody><tr><td>Principal applicant</td><td>Exactly 1</td><td>Yes</td><td>Themselves</td></tr><tr><td>Spouse or partner</td><td>Up to 1</td><td>Yes</td><td>Themselves, or the principal until they confirm</td></tr><tr><td>Dependent child</td><td>0 to 6</td><td>Yes</td><td>The principal, for a child under 18</td></tr><tr><td>Representative</td><td>Up to 1</td><td>No</td><td>The representative</td></tr></tbody>
+      </table></div>
+      <span class="ann a-cn">Capability · Needed · redesign of "People in this combination" (BR-8; P-78)</span>
+    </div>
+    <div class="gone">Removed from Overview: "Add form" and "Add an online form" (forms are added only on Forms, from the library: P-103; online capture parked: P-102) · "Filing: no forms yet" and "Portal: no portal yet" (P-102) · "Held for a person" (now on To review and the Form library: P-79, P-103) · "Released versions" (Review and release tab and History › Releases) · "Recent steps" (History › AI work; a running AI step shows in the header run panel: P-110).</div>
+  </section>
+
+  <!-- ===================== FORMS ===================== -->
+  <section class="pane stack" id="p-forms" data-st="!loading">
+    <div class="row"><h2>Forms</h2><span class="tip" tabindex="0" data-tip="The IRCC forms this application files. Forms come only from the Form library: pick them here, or use Find missing forms.">?</span><span class="sp"></span>
+      <span data-st="!readonly" class="row"><button class="btn pri" data-open="picker">+ Add forms from the library</button><button class="btn" data-open="findrun">✦ Find missing forms</button><span class="tip" tabindex="0" data-tip="AI reads IRCC's guide for this program and proposes forms you have not picked. The Form library downloads each from canada.ca and holds it until a person approves it. About US$0.04 live; US$0 with a saved answer (Sample estimate).">?</span></span>
+      <span class="ann a-cn">One door: P-103 · Capability · Needed</span>
+    </div>
+    <p class="sm mut" style="margin-top:4px">Forms are picked from the Form library only; to bring in a new form, use Find missing forms or the Form library. Forms checked against canada.ca: 26 Oct (Sample).</p>
+
+    <div data-st="aierror" class="run" style="max-width:720px" role="status">
+      <div class="row"><b>✦ Find missing forms</b><span class="chip c-ai">Live AI · about US$0.04 (Sample estimate)</span><span class="sp"></span><button class="btn sm dan" data-st="running">■ Stop</button></div>
+      <div data-st="running"><div class="bar"><i style="width:58%"></i></div><p class="sm" style="margin:0"><b>Step 4 of 6 · Downloading from canada.ca</b> · 1 of 2 new forms downloaded</p></div>
+      <div data-st="aierror" class="banner" style="background:var(--danbg);border:1px solid #f5b5b5;margin-top:8px;display:block">
+        <b>Stopped at step 4: canada.ca did not answer for IMM 5406 (no reply in 30 seconds).</b>
+        <p class="sm" style="margin:4px 0 0">Kept: IMM 0008DEP downloaded and held for approval in the Form library. Cost so far US$0.03; nothing is charged for the failed download.</p>
+        <div class="row" style="margin-top:8px"><button class="btn sm pri">Try again</button><button class="btn sm">Upload IMM 5406 in the Form library</button></div>
+      </div>
+      <ol class="steps">
+        <li><span class="ico" style="color:var(--ok)">✓</span>Read IRCC's guide for this program (IMM 5xxx guide, Sample)</li>
+        <li><span class="ico" style="color:var(--ok)">✓</span>List the forms the guide names: 7</li>
+        <li><span class="ico" style="color:var(--ok)">✓</span>Compare with the Form library and this combination: 2 not picked, 1 not in the library</li>
+        <li><span class="ico" data-st="running" style="color:var(--blue)">◔</span><span class="ico" data-st="aierror" style="color:var(--dan)">✕</span><b>Download from canada.ca and read number, edition, checksum</b></li>
+        <li class="mut"><span class="ico">○</span>Hold each new form for a person's approval in the Form library</li>
+        <li class="mut"><span class="ico">○</span>Offer the approved forms here as "Proposed for this combination"</li>
+      </ol>
+      <span class="ann a-dec">P-103 intake + P-110 run (W1-06, W1-07)</span> <span class="ann a-miss">Missing: do approved forms join automatically? Recommend: offered, a person adds (§10, Lead's call)</span>
+    </div>
+
+    <div data-st="empty" class="card" style="text-align:center;padding:32px">
+      <h3>No forms yet</h3><p class="mut">Pick the forms this application files from the Form library. Not there yet? Find missing forms asks AI to read IRCC's guide and propose them.</p>
+      <div class="row" style="justify-content:center"><button class="btn pri" data-open="picker">+ Add forms from the library</button><button class="btn">✦ Find missing forms</button></div>
+    </div>
+
+    <div data-st="needs normal" class="card" style="background:#f7fbff;border-color:var(--p100)">
+      <div class="row"><b>Proposed for this combination (1)</b><span class="chip c-ai">from Find missing forms</span><span class="sp"></span></div>
+      <div class="row" style="margin-top:6px"><span class="mono">IMM 5562</span> Supplementary information – your travels <span class="chip c-ok">Approved in the Form library</span><span class="mut sm">IRCC's guide lists it for every adult applicant (Sample)</span><span class="sp"></span><button class="btn sm" data-st="!readonly">Add</button><button class="btn sm ghost" data-st="!readonly">Dismiss</button></div>
+      <span class="ann a-cn">Capability · Needed (BR-7)</span>
+    </div>
+
+    <div data-st="!empty" class="tblwrap"><table>
+      <thead><tr><th>Form</th><th>Edition <span class="tip" tabindex="0" data-tip="The current edition in the Form library. Editions and titles here are Sample.">?</span></th><th>IRCC accepts <span class="tip" tabindex="0" data-tip="What IRCC takes for this edition, recorded once in the Form library (Sample until the immigration expert confirms).">?</span></th><th>Filed as by default <span class="tip" tabindex="0" data-tip="How new cases file this form unless the case officer changes it. Only ways IRCC accepts are offered.">?</span></th><th>Who fills it <span class="tip" tabindex="0" data-tip="Who gets a copy of this form on a case: the application once, the principal, each applicant, or the representative.">?</span></th><th>Only if</th><th>Field map <span class="tip" tabindex="0" data-tip="How many of the form's fillable spots are linked to a shared field, accepted by a person.">?</span></th><th></th></tr></thead>
+      <tbody>
+        <tr><td><span class="mono">IMM 0008</span> <span class="trunc" style="max-width:200px" title="Generic application form for Canada">Generic application form for Canada</span></td><td>06-2025</td><td>PDF · Online</td>
+          <td><select aria-label="How IMM 0008 is filed by default" data-st="!readonly"><option>PDF upload</option><option>Signed PDF upload</option><option selected>Online</option></select><span data-st="readonly">Online</span><br><span class="chip c-warn" style="margin-top:4px" title="Needs the browser extension (later wave). Until then the case officer files it on IRCC's site by hand or switches to PDF where IRCC accepts it.">Needs the browser extension (later wave)</span><span class="ann a-dec">P-107, P-102</span></td>
+          <td>The application (once)</td><td class="mut">—</td><td>233 of 233</td><td><button class="btn sm ghost" data-st="!readonly" aria-label="Edit IMM 0008 line">Edit</button></td></tr>
+        <tr><td><span class="mono">IMM 5669</span> <span class="trunc" style="max-width:200px" title="Schedule A – Background/Declaration">Schedule A – Background/Declaration</span></td><td>11-2024</td><td>PDF only</td>
+          <td><select aria-label="How IMM 5669 is filed by default" data-st="!readonly"><option>PDF upload</option><option selected>Signed PDF upload</option><option disabled>Online — IRCC accepts this form as a PDF only</option></select><span data-st="readonly">Signed PDF upload</span></td>
+          <td>Each applicant 18 or over</td><td class="mut">—</td><td><span data-st="!normal"><a href="#">76 AI proposals wait</a></span><span data-st="normal">198 of 198</span></td><td><button class="btn sm ghost" data-st="!readonly">Edit</button></td></tr>
+        <tr><td><span class="mono">IMM 5406</span> <span class="trunc" style="max-width:200px" title="Additional family information">Additional family information</span></td><td>09-2024</td><td>PDF only</td>
+          <td><select aria-label="How IMM 5406 is filed by default" data-st="!readonly !fielderr"><option selected>PDF upload</option><option>Signed PDF upload</option><option disabled>Online — IRCC accepts this form as a PDF only</option></select><span data-st="readonly">PDF upload</span>
+            <span data-st="fielderr"><select class="err" aria-invalid="true" aria-describedby="e5406" aria-label="How IMM 5406 is filed by default"><option>PDF upload</option><option>Signed PDF upload</option><option selected>Online</option></select><div class="ferr" id="e5406">IRCC accepts this form as a PDF only (Form library, Sample until the immigration expert confirms). Choose PDF upload or Signed PDF upload.</div><span class="ann a-cn">BR-5 refusal (also when the API is called directly)</span></span></td>
+          <td>Each applicant 18 or over</td><td class="mut">—</td><td>118 of 118</td><td><button class="btn sm ghost" data-st="!readonly">Edit</button></td></tr>
+        <tr><td><span class="mono">IMM 0008DEP</span> <span class="trunc" style="max-width:200px" title="Additional dependants/declaration">Additional dependants/declaration</span></td><td>06-2025</td><td>PDF only</td>
+          <td><select aria-label="How IMM 0008DEP is filed by default" data-st="!readonly"><option selected>PDF upload</option><option>Signed PDF upload</option><option disabled>Online — IRCC accepts this form as a PDF only</option></select><span data-st="readonly">PDF upload</span></td>
+          <td>Principal applicant</td><td><span class="trunc" style="max-width:180px" title="Only if more family members are on the application than IMM 0008 has room for (Sample rule)">More family members than IMM 0008 has room for (Sample)</span></td><td>64 of 64</td><td><button class="btn sm ghost" data-st="!readonly">Edit</button></td></tr>
+        <tr><td><span class="mono">IMM 5476</span> <span class="trunc" style="max-width:200px" title="Use of a representative">Use of a representative</span></td><td>11-2025</td><td>PDF only</td>
+          <td><select aria-label="How IMM 5476 is filed by default" data-st="!readonly"><option>PDF upload</option><option selected>Signed PDF upload</option><option disabled>Online — IRCC accepts this form as a PDF only</option></select><span data-st="readonly">Signed PDF upload</span></td>
+          <td>Representative</td><td>A representative is on the case</td><td>41 of 41</td><td><button class="btn sm ghost" data-st="!readonly">Edit</button></td></tr>
+        <tr><td><span class="mono">Checklist</span> Document checklist for this program <span class="chip c-warn">Sample</span></td><td>—</td><td colspan="2" class="mut">Checklist · not filed · AI reads it to propose documents</td><td class="mut">—</td><td class="mut">—</td><td class="mut">n/a</td><td></td></tr>
+        <tr data-st="long"><td><span class="mono">IMM 0008DEP</span> <span class="trunc" style="max-width:200px" title="Additional dependants/declaration — a long title kept on one line, full text on hover">Additional dependants/declaration — a long title kept on one line, full text on hover</span></td><td>06-2025</td><td>PDF only</td><td>PDF upload</td><td><span class="trunc" style="max-width:140px" title="Each dependent child 18 or over who is not a full-time student (Sample)">Each dependent child 18 or over who is not a full-time student (Sample)</span></td><td>—</td><td>64 of 64</td><td></td></tr>
+      </tbody></table></div>
+    <span class="ann a-cn">Edit opens the line drawer kept from Screen 03 S1: copies, minimum age, signed by (Sample list), only if. Capability · Needed</span>
+    <div class="gone">Removed from Forms: the portal select and "Use defaults for this portal" (P-102) · "Add an online form" and "Continue the online form" (P-102, C2.7 parked) · "What drafting reads, per form" (PDF is the only ingestion: P-102; C2.10 parks) · "Choose files", drag-and-drop and "Attach a sample file" (no desktop upload on a combination: P-103; the sample button is scaffolding that Load sample replaces) · the attachments list with "Review AI proposals" (To review: P-79).</div>
+  </section>
+
+  <!-- ===================== QUESTIONNAIRES ===================== -->
+  <section class="pane stack" id="p-questionnaires" data-st="!loading">
+    <div class="row"><h2>Questionnaires</h2><span class="tip" tabindex="0" data-tip="What each person on a case is asked, who fills each question and when. Questions come from the shared library sections the forms need.">?</span><span class="sp"></span><button class="lnk sm" data-explain="ex2">What does "people" control?</button><button class="btn sm" data-st="!readonly" data-open="people">Edit people</button></div>
+    <div class="explain" id="ex2">Each role below gets its own questionnaire sections and repeats for each person on the case. An <b>applicant</b> gets every form set to "Each applicant". A child under 18 is answered by the principal. The Representative is never an applicant: they get only the representative's form and questions.</div>
+    <div class="row" role="group" aria-label="Show questions for">
+      <button class="rolechip on" aria-pressed="true"><b>Principal applicant</b><br><span class="sm mut">Exactly 1 · applicant · 64 asked, 12 by the officer</span></button>
+      <button class="rolechip"><b>Spouse or partner</b><br><span class="sm mut">Up to 1 · applicant · 58 asked</span></button>
+      <button class="rolechip"><b>Dependent child</b><br><span class="sm mut">0 to 6 · applicant · answered by the principal under 18</span></button>
+      <button class="rolechip"><b>Representative</b><br><span class="sm mut">Up to 1 · not an applicant · 9 asked</span></button>
+      <span class="ann a-cn">People strip = S2 role chips + BR-8 · Capability · Needed</span>
+    </div>
+    <div data-st="empty" class="card" style="text-align:center;padding:28px"><h3>No questions yet</h3><p class="mut">Questions come from the forms. Add forms, then Draft setup with AI: the questions each form needs arrive as proposals you accept on To review.</p></div>
+    <div data-st="!empty">
+      <div class="banner" style="background:#fff;border:1px solid var(--border)"><b>Forms need 214 facts:</b> 198 asked of the client · 12 entered by the case officer · 2 from documents · <span style="color:var(--dant);font-weight:600" data-st="!normal">2 not covered: blocks release</span><span data-st="normal" class="chip c-ok">all covered</span><span class="sp"></span><a href="#" data-st="!normal">Show the 2</a><span class="tip" tabindex="0" data-tip="Release is blocked until every fact a picked form needs is asked of someone, entered by the case officer, or comes from a document.">?</span><span class="ann a-cn">Coverage (S2 engine, BR-11)</span></div>
+      <div class="banner" data-st="needs" style="background:var(--p50);border:1px solid var(--p100);margin-top:10px"><span class="chip c-ai">✦ AI</span> AI proposed 3 sections and 9 question placements from IMM 5669. Nothing changes here until a person accepts them. <span class="sp"></span><a href="#">Review on To review (12)</a></div>
+      <div class="row" style="align-items:flex-start;gap:16px;margin-top:12px">
+        <div class="tblwrap" style="flex:1;min-width:0"><table>
+          <thead><tr><th>Question</th><th>Who fills it <span class="tip" tabindex="0" data-tip="Set once in the shared library. Changing it needs a second person and changes every combination that asks this question (P-97).">?</span></th><th>When it is asked <span class="tip" tabindex="0" data-tip="Pre-qualification: before a case opens (this combination's picks). Questionnaire: the client, on the family link. At the case: the case officer.">?</span></th><th>Only if</th><th>Needed by</th></tr></thead>
+          <tbody>
+            <tr class="sect"><td colspan="5">▾ Identity and contact <span class="mut sm">shared section · 14 questions</span> <a class="sm" href="#">Open in the library</a></td></tr>
+            <tr><td>Family name</td><td>Client</td><td>Questionnaire</td><td class="mut">—</td><td class="sm">IMM 0008 · IMM 5669 · IMM 5406</td></tr>
+            <tr><td>Date of birth</td><td>Client</td><td><label><input type="checkbox" checked data-st="!readonly"> Pre-qualification</label></td><td class="mut">—</td><td class="sm">IMM 0008 · IMM 5669</td></tr>
+            <tr><td>Unique client identifier (UCI)</td><td>Case officer</td><td>At the case</td><td class="sm">Has applied to IRCC before is Yes</td><td class="sm">IMM 0008</td></tr>
+            <tr class="sect"><td colspan="5">▾ Background and declaration <span class="mut sm">shared section · 22 questions</span></td></tr>
+            <tr><td>Military or police service</td><td>Client</td><td>Questionnaire</td><td class="sm">Age is 18 or over</td><td class="sm">IMM 5669</td></tr>
+            <tr><td>Previous refusals by any country</td><td>Client</td><td><label><input type="checkbox" checked data-st="!readonly"> Pre-qualification</label></td><td class="mut">—</td><td class="sm">IMM 0008</td></tr>
+            <tr class="sect"><td colspan="5">▾ Provincial nomination <span class="mut sm">shared section · 4 questions · Sample</span></td></tr>
+            <tr><td>Province that nominated you</td><td>Client</td><td><label><input type="checkbox" checked data-st="!readonly"> Pre-qualification</label></td><td class="mut">—</td><td class="sm">IMM 0008</td></tr>
+            <tr><td>Nomination certificate number</td><td>Case officer</td><td>At the case</td><td class="mut">—</td><td class="sm">IMM 0008</td></tr>
+            <tr data-st="long"><td><span class="trunc" style="max-width:220px" title="Have you ever been detained, incarcerated or put in jail in any country, including while awaiting trial (Sample long wording)">Have you ever been detained, incarcerated or put in jail in any country, including while awaiting trial (Sample long wording)</span></td><td>Client</td><td>Questionnaire</td><td>—</td><td class="sm">IMM 5669</td></tr>
+          </tbody></table></div>
+        <div class="phone" aria-label="What the principal applicant sees">
+          <p class="sm mut" style="margin:0">What the Principal applicant sees · draft</p>
+          <h3 style="margin:8px 0">Identity and contact</h3>
+          <p class="sm" style="margin:6px 0 2px">Family name</p><input type="text" style="width:100%" value="Sample-Family" aria-label="Family name (preview)">
+          <p class="sm" style="margin:8px 0 2px">Date of birth</p><input type="text" style="width:100%" value="1988-04-12" aria-label="Date of birth (preview)">
+          <p class="sm mut" style="margin:8px 0 0">UCI is entered by the case officer, so the client does not see it.</p>
+          <span class="ann a-cn">Live preview beside (EXPERIENCE §2.4; S2)</span>
+        </div>
+      </div>
+      <details class="card" style="margin-top:12px"><summary><b>Checks on these answers (2)</b> <span class="mut sm">from the shared library</span></summary>
+        <ul class="sm"><li>Date of marriage is after both dates of birth · warns (Sample)</li><li>Nomination certificate has not expired on the filing date · blocks ready to file (Sample)</li></ul></details>
+      <span class="ann a-dec">Who fills it read-only: P-97 (founder asked "who fills each question": shown here, changed in the library)</span>
+      <span class="ann a-dec">PQR + SQR in one tab: P-76 (PQR ⊂ questionnaire)</span>
+      <span class="ann a-nb">Not built here: editing conditions (Screen 04 library change)</span>
+    </div>
+    <div class="gone">Removed: the separate PQR and SQR tabs (one tab, "When it is asked") · the Rules tab (conditions shown as "Only if" here; the central list is Shared library › Rules, P-37) · the Configuration sub-tab row (EXPERIENCE §2.2).</div>
+  </section>
+
+  <!-- ===================== DOCUMENTS ===================== -->
+  <section class="pane stack" id="p-documents" data-st="!loading">
+    <div class="row"><h2>Documents</h2><span class="tip" tabindex="0" data-tip="Documents each person uploads. Each line picks a document type from the shared library; a missing type goes to Describe what you need.">?</span><span class="sp"></span><button class="btn" data-st="!readonly">+ Add from the library</button></div>
+    <div data-st="empty" class="card" style="text-align:center;padding:28px"><h3>No documents yet</h3><p class="mut">Add the program's checklist on Forms; Draft setup with AI proposes the documents it lists. Or add a document type from the library.</p></div>
+    <div data-st="!empty" class="tblwrap"><table>
+      <thead><tr><th>Document</th><th>Whose</th><th>Only if</th><th>Origin <span class="tip" tabindex="0" data-tip="Where this line came from: AI read it from the checklist and a person accepted it, or a person added it.">?</span></th></tr></thead>
+      <tbody>
+        <tr><td>Provincial nomination certificate</td><td>Principal applicant</td><td>Always</td><td><span class="chip c-su">Added by a person</span> <span class="sm mut">P-109</span></td></tr>
+        <tr><td>Passport (bio page)</td><td>Each applicant</td><td>Always</td><td><span class="chip c-ai">AI · from the checklist</span> accepted</td></tr>
+        <tr><td>Police certificate</td><td>Each applicant 18 or over</td><td>Always (Sample)</td><td><span class="chip c-ai">AI · from the checklist</span> accepted</td></tr>
+        <tr><td>Marriage certificate</td><td>Spouse or partner</td><td>Marital status is Married</td><td><span data-st="needs"><span class="chip c-warn">AI · waits on To review</span></span><span data-st="!needs"><span class="chip c-ai">AI · from the checklist</span> accepted</span></td></tr>
+        <tr><td>Birth certificate</td><td>Dependent child</td><td>Always</td><td><span class="chip c-su">Added by a person</span></td></tr>
+      </tbody></table></div>
+    <span class="ann a-cn">Capability · Needed (BR-12; P-52/53)</span> <span class="ann a-nb">Not built here: named substitute sets (Screen 04)</span>
+  </section>
+
+  <!-- ===================== PREVIEW ===================== -->
+  <section class="pane stack" id="p-preview" data-st="!loading">
+    <div class="row">
+      <label>Sample family <select><option>Couple with two children (8 and 16)</option><option>Single applicant</option><option>Couple, no children</option></select></label>
+      <label>Version <select><option>Draft</option><option data-st="normal">Release 1</option></select></label>
+      <label><input type="checkbox"> Show who fills each question</label>
+      <span class="tip" tabindex="0" data-tip="Runs the same rules a case runs, on a Sample family. Answers typed here change the preview only.">?</span>
+      <span class="ann a-cn">Shared renderer, read-only (P-47, S1)</span>
+    </div>
+    <div data-st="empty" class="card" style="text-align:center;padding:28px"><h3>Nothing to preview yet</h3><p class="mut">The preview shows what each person gets once forms are picked and their questions accepted.</p></div>
+    <div data-st="!empty" class="stack">
+      <div class="row" role="group" aria-label="Person">
+        <button class="rolechip on" aria-pressed="true"><b>Principal applicant</b><br><span class="sm mut">64 questions · 4 documents · 3 forms</span></button>
+        <button class="rolechip"><b>Spouse or partner</b><br><span class="sm mut">58 questions · 3 documents · 2 forms</span></button>
+        <button class="rolechip"><b>Child, aged 16</b><br><span class="sm mut">31 questions, answered by the principal · 2 documents · 0 forms</span></button>
+        <button class="rolechip"><b>Child, aged 8</b><br><span class="sm mut">18 questions, answered by the principal · 2 documents · 0 forms</span></button>
+      </div>
+      <div class="col3">
+        <div class="card"><h3>Asked</h3><ul class="sm" style="padding-left:18px"><li>Family name</li><li>Date of birth <span class="chip c-su">Pre-qualification</span></li><li>Province that nominated you <span class="chip c-su">Pre-qualification</span></li><li>Military or police service <span class="mut">— asked because age is 18 or over</span></li><li class="mut">… 60 more</li></ul></div>
+        <div class="card"><h3>Documents</h3><ul class="sm" style="padding-left:18px"><li>Provincial nomination certificate</li><li>Passport (bio page)</li><li>Police certificate <span class="mut">— 18 or over</span></li></ul></div>
+        <div class="card"><h3>Forms</h3><ul class="sm" style="padding-left:18px"><li>IMM 0008 · Online <span class="chip c-warn">needs the extension (later wave)</span></li><li>IMM 5669 · Signed PDF upload</li><li>IMM 5406 · PDF upload</li><li class="mut">IMM 0008DEP not needed — 4 family members fit on IMM 0008 (Sample)</li></ul></div>
+      </div>
+      <div class="card"><h3>Answers that change what applies</h3>
+        <div class="row" style="margin-top:8px"><label>Marital status <select><option>Married</option><option>Single</option></select></label><span class="sm mut">→ adds Marriage certificate for the spouse</span></div>
+        <div class="row" style="margin-top:8px"><label>A representative is on the case <select><option>No</option><option>Yes</option></select></label><span class="sm mut">→ Yes adds IMM 5476 and the Representative's questions</span></div>
+      </div>
+    </div>
+    <div class="gone">Removed from Preview: the "Known facts" select, three person-count selects, five count tiles and the four sub-tabs (Questionnaire · Document checklist · Forms and coverage · Rules and checks). Field-by-field coverage stays behind each form's "Show form fields" (S1 agent mode).</div>
+  </section>
+
+  <!-- ===================== REVIEW ===================== -->
+  <section class="pane stack" id="p-review" data-st="!loading">
+    <h2>Review and release</h2>
+    <ol class="row" style="list-style:none;padding:0;gap:24px"><li><b>1</b> The configuration author submits</li><li><b>2</b> The immigration expert ticks what needs an expert</li><li><b>3</b> A different person approves and releases</li></ol>
+    <div class="card"><h3>Release checks</h3>
+      <ul class="sm" style="padding-left:18px">
+        <li data-st="!normal"><span class="chip c-no">Blocks release</span> 2 facts the forms need are not asked of anyone. <a href="#" data-go="questionnaires">Fix in Questionnaires</a></li>
+        <li><span class="chip c-warn">Warning</span> IMM 0008 is filed Online by default: cases cannot fill it online until the browser extension returns; the case officer can switch it to PDF upload. <span class="ann a-dec">Warn, not block: BR-6</span></li>
+        <li data-st="normal"><span class="chip c-ok">Passed</span> every other check</li>
+      </ul></div>
+    <div class="card"><h3>Changes in this draft</h3><p class="sm mut">As built (C5.1): each change with before and after, who made it (AI accepted by a person, or a person) and the expert ticks. Approving releases this combination and the library changes it uses.</p></div>
+    <div class="card"><h3>Release history</h3><p class="sm" data-st="!normal">Nothing released yet. Cases only ever use a released version.</p><p class="sm" data-st="normal">Release 1 · 26 Oct · approved by the Approver · <a href="#">History › Releases</a></p><span class="ann a-dec">Moved here from Overview</span></div>
+    <div class="row" data-st="!readonly"><span class="sp"></span><button class="btn pri" data-st="needs fielderr">Submit for review</button></div>
+    <div class="row" data-st="readonly"><span class="sp"></span><span class="sm mut">2 problems block release · nothing else waits</span><button class="btn pri" disabled>Approve and release</button></div>
+  </section>
+  </div></div>
+
+  <!-- drawers -->
+  <div class="drawer" id="d-picker" role="dialog" aria-label="Add forms from the library">
+    <div class="row"><h2>Add forms from the library</h2><span class="sp"></span><button class="btn ghost" data-close>✕</button></div>
+    <p class="sm mut">Only forms approved in the Form library can be added. To bring in a new form, use Find missing forms or the Form library.</p>
+    <input type="text" placeholder="Search by number or title, for example IMM 5562" style="width:100%" aria-label="Search the Form library">
+    <div class="tblwrap" style="margin-top:10px"><table><thead><tr><th></th><th>Form</th><th>Edition</th><th>IRCC accepts</th><th>Used in</th></tr></thead><tbody>
+      <tr><td><input type="checkbox" aria-label="Add IMM 5562"></td><td><span class="mono">IMM 5562</span> Supplementary information – your travels</td><td>06-2025</td><td>PDF only</td><td>2 combinations</td></tr>
+      <tr><td><input type="checkbox" aria-label="Add IMM 5257"></td><td><span class="mono">IMM 5257</span> Application for a temporary resident visa</td><td>09-2025</td><td>PDF · Online</td><td>1 combination</td></tr>
+      <tr class="mut"><td><input type="checkbox" disabled aria-label="IMM 0008 already here"></td><td><span class="mono">IMM 0008</span> Generic application form</td><td colspan="3">Already in this combination</td></tr>
+      <tr class="mut"><td><input type="checkbox" disabled aria-label="IMM 1294 waiting"></td><td><span class="mono">IMM 1294</span> Application for a study permit</td><td colspan="3">Waiting for approval in the Form library: cannot be added yet</td></tr>
+    </tbody></table></div>
+    <p class="sm mut">No match? "No form matches 'IMM 1234'. Find missing forms, or open the Form library."</p>
+    <div class="row" style="margin-top:12px"><span class="sp"></span><button class="btn ghost" data-close>Cancel</button><button class="btn pri">Add 1 form</button></div>
+    <span class="ann a-cn">BR-3, BR-4 · Capability · Needed</span>
+  </div>
+  <div class="drawer" id="d-people" role="dialog" aria-label="Who can be on a case">
+    <div class="row"><h2>Who can be on a case</h2><span class="sp"></span><button class="btn ghost" data-close>✕</button></div>
+    <p class="sm mut">Changing this changes the questionnaires, which forms each person gets, and the Preview.</p>
+    <div class="tblwrap"><table><thead><tr><th>Person</th><th>Fewest</th><th>Most</th><th>Is an applicant</th><th></th></tr></thead><tbody>
+      <tr><td>Principal applicant</td><td>1</td><td>1</td><td>Yes</td><td class="sm mut">always one</td></tr>
+      <tr><td>Spouse or partner</td><td><input type="number" value="0" style="width:56px" aria-label="Fewest spouses"></td><td><input type="number" value="1" style="width:56px" aria-label="Most spouses"></td><td><select aria-label="Spouse is an applicant"><option>Yes</option><option>No, appears on others' forms</option></select></td><td><button class="btn sm ghost">Remove</button></td></tr>
+      <tr><td>Dependent child</td><td><input type="number" value="0" style="width:56px" aria-label="Fewest children"></td><td><input type="number" value="6" style="width:56px" aria-label="Most children"></td><td><select aria-label="Child is an applicant"><option>Yes</option><option>No, appears on others' forms</option></select></td><td><button class="btn sm ghost">Remove</button></td></tr>
+      <tr><td>Representative</td><td>0</td><td>1</td><td>No (never)</td><td><button class="btn sm ghost">Remove</button></td></tr>
+    </tbody></table></div>
+    <div class="ferr">Example error: "The fewest cannot be more than the most. Change one of them."</div>
+    <div class="row" style="margin-top:12px"><button class="btn sm ghost">+ Add a person</button><span class="sp"></span><button class="btn ghost" data-close>Cancel</button><button class="btn pri">Save</button></div>
+    <span class="ann a-cn">BR-8 · Capability · Needed</span>
+  </div>
+  <div class="drawer" id="d-findrun" role="dialog" aria-label="Find missing forms">
+    <div class="row"><h2>Find missing forms</h2><span class="sp"></span><button class="btn ghost" data-close>✕</button></div>
+    <p>AI reads IRCC's guide for <b>Provincial Nominee Program · Ontario</b> and lists the forms it names that this combination has not picked. The Form library downloads each new one from canada.ca and holds it until a person approves it; approved forms come back here as proposals.</p>
+    <label class="row"><input type="radio" name="m" checked> Use the saved answer · US$0 (replay)</label>
+    <label class="row"><input type="radio" name="m"> Live AI · about US$0.04 (Sample estimate) · US$12.10 of the US$40 wave budget used</label>
+    <div class="row" style="margin-top:12px"><span class="sp"></span><button class="btn ghost" data-close>Cancel</button><button class="btn pri">Start</button></div>
+    <span class="ann a-dec">Cost first: P-110</span>
+  </div>
+</main>
+</div>
+<script>
+const $=(s,r=document)=>[...r.querySelectorAll(s)];
+let tab='overview';
+function vis(el,st){const t=(el.dataset.st||'').split(/\s+/).filter(Boolean);const pos=t.filter(x=>!x.startsWith('!'));const neg=t.filter(x=>x.startsWith('!')).map(x=>x.slice(1));return (pos.length?pos.includes(st):true)&&!neg.includes(st);}
+function render(){
+  const opt=document.getElementById('opt').value, st=document.getElementById('st').value;
+  document.body.classList.toggle('showann',document.getElementById('ann').checked);
+  $('[data-st]').forEach(el=>{el.style.display=vis(el,st)?'':'none';});
+  document.getElementById('tabsA').style.display=opt==='A'?'':'none';
+  document.getElementById('tabsC').style.display=opt==='C'?'':'none';
+  document.getElementById('jumpC').style.display=(opt==='C'&&tab==='setup')?'':'none';
+  document.getElementById('railB').style.display=opt==='B'?'':'none';
+  if(opt==='B'&&tab==='overview')tab='forms';
+  if(opt!=='C'&&tab==='setup')tab='forms';
+  if(opt==='C'&&['forms','questionnaires','documents'].includes(tab))tab='setup';
+  const show=tab==='setup'?['forms','questionnaires','documents']:[tab];
+  $('.pane').forEach(p=>{const k=p.id.slice(2);if(!show.includes(k))p.style.display='none';});
+  $('[data-tab]').forEach(b=>{const on=b.dataset.tab===tab;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);});
+}
+$('[data-tab]').forEach(b=>b.addEventListener('click',()=>{tab=b.dataset.tab;render();}));
+$('[data-go]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();const o=document.getElementById('opt').value;tab=(o==='C'&&['forms','questionnaires','documents'].includes(a.dataset.go))?'setup':a.dataset.go;render();}));
+$('[data-explain]').forEach(b=>b.addEventListener('click',()=>document.getElementById(b.dataset.explain).classList.toggle('open')));
+$('[data-open]').forEach(b=>b.addEventListener('click',()=>document.getElementById('d-'+b.dataset.open).classList.add('open')));
+$('[data-close]').forEach(b=>b.addEventListener('click',()=>b.closest('.drawer').classList.remove('open')));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('.drawer.open').forEach(d=>d.classList.remove('open'));});
+['opt','st','ann'].forEach(i=>document.getElementById(i).addEventListener('change',render));
+render();
+</script>
+</body>
+</html>

@@ -1,0 +1,975 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-imm1344e-p3of5-05e60ce01931-live-20261026t053005298z-e34718",
+  "idempotency_key": "e3beb7593768ebb7740be29a51257b25cdbd4ef8638d1bb9a4bdcfea6a6fb0a8",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "027aa63c1caa6f9d838aaae0dc43077495a94b8bf80e9a5ee296989047256cae",
+  "inputs": {
+   "combination": "studio",
+   "official_files": [
+    {
+     "file": "prototype/p2/parts/imm1344e.p3of5-05e60ce01931.part.json",
+     "sha256": "bff52a0cde8a998a3017768f3aa4ea048770017a8bece8152ea1d3eab2037e17"
+    }
+   ],
+   "configuration_version": "studio-add-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 600000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 22000,
+   "prompt_version": "field-map-part.v1.md",
+   "prompt_sha256": "a9136d0a9d77791de0bfe52dcf2c61c928f80c387223019bd68524eb343893aa"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 25824,
+    "output_tokens": 17696,
+    "duration_ms": 127581
+   }
+  ],
+  "usage": {
+   "input_tokens": 25824,
+   "output_tokens": 17696,
+   "cost_usd": 0.457216,
+   "duration_ms": 127581
+  },
+  "started_at": "2026-10-26T05:30:05.300Z",
+  "ended_at": "2026-10-26T05:32:13.096Z",
+  "entries": [
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorResidency[0].question[0].LiveOutsideCan[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.canadian_citizen_living_outside_canada",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Sponsor Residency Declaration Section. Are you a Canadian citizen living exclusively outside Canada?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorResidency[0].question[0].LiveQC[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.intended_province_of_residence",
+    "transform": "derive: Y if intended province is Quebec, else N (codes: Y = the province of Quebec, N = other province or territory)",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Please select one of the following: Immediately after my spouse, common-law or conjugal partner and dependent children become permanent residents, I intend to live in:"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q1[0].Over18Ind[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.date_of_birth",
+    "transform": "derive: Y if age on signing date >= 18, else N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you 18 years of age or older?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q2[0].CanCitzInd[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.status_in_canada",
+    "transform": "derive: Y if status is any Canadian citizen category or permanent resident, else N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you a Canadian citizen or permanent resident?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q3[0].SpouseCLInd[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "none",
+    "fact": "case.sponsorship_class",
+    "transform": "derive: Y if class is family class or spouse or common-law partner in Canada class, else N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you sponsoring a member of the family class or a member of the spouse or common-law partner in Canada class?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q4[0].ResideCanInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.resides_only_in_canada",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Do you reside in Canada and in no other country? If you answered \"NO\", but are a Canadian citizen living exclusively out"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q5[0].PrevSponsored[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.became_pr_as_sponsored_partner_last_5_years",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "In the five years preceding this application, did you become a permanent resident after being sponsored as a spouse, com"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q6[0].PrevAppInd[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "case.previous_undecided_application_for_sponsored_person",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Have you submitted a previous application in respect of which a final decision has not been made for the person being sp"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q7[0].SocialAssistInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.social_assistance_other_than_disability",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you in receipt of social assistance for a reason other than disability?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q8[0].BankruptInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.undischarged_bankrupt",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you an undischarged bankrupt under the Bankruptcy and Insolvency Act?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q9[0].PrevSocialInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.previous_sponsoree_received_social_assistance",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Have persons you previously sponsored or their family members received social assistance during the validity period of t"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q10[0].UndertakeInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.cosigned_undertaking_social_assistance",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Did you co-sign an undertaking where the sponsored person or their family members received social assistance during the"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q11[0].LeaveCanInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.ordered_to_leave_canada",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Have you been ordered to leave Canada?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q12[0].LatePayInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.late_immigration_debt_payment",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you late in making a required payment on an immigration loan, a performance bond or any other amounts you agreed to"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q13[0].JailInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.currently_detained",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you currently detained in jail, prison, penitentiary or reformatory?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q14[0].SexOffInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.convicted_sexual_violent_or_family_offence",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Have you been convicted of a sexual offence or serious violent offence against anyone, or an offence causing bodily harm"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q15[0].SupportPayInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.default_on_support_order",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you in default of a court order to make support payments to your spouse, former spouse, common-law partner, former c"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q16[0].RevokeCitzInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.citizenship_revocation_pending",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you the subject of an application to revoke your Canadian citizenship?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q17[0].InadmissibleInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.inadmissibility_report_pending",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you the subject of a report on inadmissibility?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].q18[0].ActParlimentInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "form_subject",
+    "fact": "person.charged_with_serious_offence",
+    "transform": "yes_no_code:Y/N",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Have you been charged with an offence under an Act of Parliament punishable by a maximum term of imprisonment of at leas"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].SponsorEA[0].IfYesDetails[0].Details[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.sponsor_eligibility_details",
+    "transform": "as_is (max 200 characters)",
+    "condition": "Only when question 13, 16, 17 or 18 is answered Yes",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "If you answered \"Yes\" to question 13, 16, 17, or 18 please provide details including date and place."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q1[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.family_name",
+    "transform": "as_is (max 100 characters)",
+    "condition": "Only when the sponsor has a co-signer; the co-signer is the sponsor's spouse or common-law partner and must not be the person being sponsored — reviewer must confirm the partner record is the co-signer",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Family Name(s) (exactly as shown on your passport or travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q1[0].GivenName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.given_name",
+    "transform": "as_is (max 100 characters)",
+    "condition": "Only when the sponsor has a co-signer (sponsor's spouse or common-law partner who is not the person being sponsored)",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Given Name(s) (exactly as shown on your passport or travel document)"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasFamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.other_family_name",
+    "transform": "as_is (max 100 characters)",
+    "condition": "Only when a co-signer exists and AliasNameIndicator is Y",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Family Name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasGivenName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.other_given_name",
+    "transform": "as_is (max 100 characters)",
+    "condition": "Only when a co-signer exists and AliasNameIndicator is Y",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Given Name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasNameIndicator[0].AliasNameIndicator[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.other_family_name",
+    "transform": "derive: Y if any other family or given name is recorded, else N",
+    "condition": "Only when the sponsor has a co-signer",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Have you ever used any other name (e.g. Nickname, maiden name, alias, etc.)?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].sex[0].Sex[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.sex",
+    "transform": "code_list:imm1344.sex (Female, Male, Unknown, Unspecified)",
+    "condition": "Only when the sponsor has a co-signer",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Gender"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBDay[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.date_of_birth",
+    "transform": "date:DD",
+    "condition": "Only when the sponsor has a co-signer",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "DD"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBMonth[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.date_of_birth",
+    "transform": "date:MM",
+    "condition": "Only when the sponsor has a co-signer",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "MM"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBYear[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.date_of_birth",
+    "transform": "date:YYYY",
+    "condition": "Only when the sponsor has a co-signer",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "YYYY"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].pob[0].PlaceBirthCity[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.place_of_birth_city",
+    "transform": "as_is (max 30 characters)",
+    "condition": "Only when the sponsor has a co-signer",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "City/Town"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].pob[0].PlaceBirthCountry[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.country_of_birth",
+    "transform": "code_list:imm1344.country (three-digit codes as listed, e.g. Canada 511)",
+    "condition": "Only when the sponsor has a co-signer",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Country"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q6New[0].StatusInCan[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.status_in_canada",
+    "transform": "code_list:imm1344.status_in_canada (1 citizen by birth, 2 citizen by descent, 3 naturalized, 4 permanent resident, 5 Status Indian)",
+    "condition": "Only when the sponsor has a co-signer",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Status in Canada"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].UCI[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.uci",
+    "transform": "as_is (max 10 characters)",
+    "condition": "Only when the co-signer is a permanent resident or naturalized Canadian citizen",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "b) UCI/Client ID"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].DateStatInCan[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.date_became_permanent_resident",
+    "transform": "date:YYYY-MM-DD",
+    "condition": "Only when the co-signer is a permanent resident or naturalized Canadian citizen",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "If you are a permanent resident or a naturalized Canadian citizen, provide the following information:"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].StatusDates[0].FromYr[0]",
+    "outcome": "not_a_fact",
+    "confidence": "medium",
+    "unresolved_reason": "Invisible helper box with no caption that appears to split the visible status date for internal use; fill only the visible date box",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "If you are a permanent resident or a naturalized Canadian citizen, provide the following information:"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].StatusDates[0].FromMM[0]",
+    "outcome": "not_a_fact",
+    "confidence": "medium",
+    "unresolved_reason": "Invisible helper box with no caption that appears to split the visible status date for internal use; fill only the visible date box",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "If you are a permanent resident or a naturalized Canadian citizen, provide the following information:"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].StatusDates[0].FromDD[0]",
+    "outcome": "not_a_fact",
+    "confidence": "medium",
+    "unresolved_reason": "Invisible helper box with no caption that appears to split the visible status date for internal use; fill only the visible date box",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "If you are a permanent resident or a naturalized Canadian citizen, provide the following information:"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].SameNameInd[0]",
+    "outcome": "mapped",
+    "confidence": "low",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.family_name_at_pr",
+    "transform": "derive: Y if name at time of becoming PR equals current full name, else N (meaning of Yes not captioned; reviewer to confirm)",
+    "condition": "Only when the co-signer is a permanent resident or naturalized Canadian citizen",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "c) Full name at the time you became a permanent resident"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.family_name_at_pr",
+    "transform": "as_is (max 100 characters)",
+    "condition": "Only when the co-signer is a permanent resident or naturalized Canadian citizen",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Family Name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].GivenName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.given_name_at_pr",
+    "transform": "as_is (max 100 characters)",
+    "condition": "Only when the co-signer is a permanent resident or naturalized Canadian citizen",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Given Name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].Rel2Sponsor[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "relationship.relationship_to_sponsor",
+    "transform": "code_list:imm1344.relationship_to_sponsor (10 Spouse, 01 Common-Law Partner, 85 Other)",
+    "condition": "Only when the sponsor has a co-signer",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "a) Relationship to the sponsor"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].Other[0]",
+    "outcome": "mapped",
+    "confidence": "low",
+    "person": "subject_spouse_or_partner",
+    "fact": "relationship.relationship_to_sponsor_other",
+    "transform": "as_is (max 30 characters)",
+    "condition": "Only when Rel2Sponsor is 85 (Other); reviewer should confirm the co-signer then is not the sponsor's spouse/partner record",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "b) Other"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].MaritalStatusNew[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.marital_status",
+    "transform": "code_list:imm1344.marital_status (09 Annulled Marriage, 03 Common-Law, 04 Divorced, 05 Legally Separated, 01 Married, 02 Single, 00 Unknown, 06 Widowed)",
+    "condition": "Only when the sponsor has a co-signer",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "c) Current marital status"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].DateOfMarriage[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "relationship.current_union_start_date",
+    "transform": "date:YYYY-MM-DD",
+    "condition": "Only when the co-signer is married or in a common-law relationship",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "d) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].MarriageDate[0].FromYr[0]",
+    "outcome": "not_a_fact",
+    "confidence": "medium",
+    "unresolved_reason": "Invisible helper box with no caption that appears to split the visible marriage date for internal use; fill only the visible date box",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "d) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].MarriageDate[0].FromMM[0]",
+    "outcome": "not_a_fact",
+    "confidence": "medium",
+    "unresolved_reason": "Invisible helper box with no caption that appears to split the visible marriage date for internal use; fill only the visible date box",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "d) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].MarriageDate[0].FromDD[0]",
+    "outcome": "not_a_fact",
+    "confidence": "medium",
+    "unresolved_reason": "Invisible helper box with no caption that appears to split the visible marriage date for internal use; fill only the visible date box",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "d) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].e[0].FamilyName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.family_name",
+    "transform": "as_is (max 100 characters)",
+    "condition": "Only when the sponsor has a co-signer who is the sponsor's spouse or common-law partner (the co-signer's current partner is then the sponsor)",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "e) Provide the name of your current spouse/common-law partner"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].e[0].GivenName[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "form_subject",
+    "fact": "person.given_name",
+    "transform": "as_is (max 100 characters)",
+    "condition": "Only when the sponsor has a co-signer who is the sponsor's spouse or common-law partner (the co-signer's current partner is then the sponsor)",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "e) Provide the name of your current spouse/common-law partner"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PrevMarriedIndicator[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "relationship.previous_union_type",
+    "transform": "derive: Y if any previous marriage or common-law relationship is recorded, else N",
+    "condition": "Only when the sponsor has a co-signer",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Have you previously been married or in a common-law relationship?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PMFamilyName[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Only when PrevMarriedIndicator is Y",
+    "unresolved_reason": "Family name of the co-signer's former spouse/partner; that person has no role in the available person list (not the subject's spouse, parent, child or sibling), so whose record holds it cannot be determined",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Family name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PMGivenName[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Only when PrevMarriedIndicator is Y",
+    "unresolved_reason": "Given name of the co-signer's former spouse/partner; that person has no role in the available person list",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Given name(s)"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBYear[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Only when PrevMarriedIndicator is Y",
+    "unresolved_reason": "Date of birth of the co-signer's former spouse/partner; that person has no role in the available person list",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "YYYY"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBMonth[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Only when PrevMarriedIndicator is Y",
+    "unresolved_reason": "Date of birth of the co-signer's former spouse/partner; that person has no role in the available person list",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "MM"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBDay[0]",
+    "outcome": "unresolved",
+    "confidence": "medium",
+    "condition": "Only when PrevMarriedIndicator is Y",
+    "unresolved_reason": "Date of birth of the co-signer's former spouse/partner; that person has no role in the available person list",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "DD"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].TypeOfRelationship[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "relationship.previous_union_type",
+    "transform": "code_list:imm1344.previous_relationship_type (03 Common-Law, 01 Married); first previous union only",
+    "condition": "Only when PrevMarriedIndicator is Y",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Type of relationship"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].FromDate[0].FromDate[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "relationship.previous_union_start_date",
+    "transform": "date:YYYY-MM-DD; first previous union only",
+    "condition": "Only when PrevMarriedIndicator is Y",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "From"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].ToDate[0].ToDate[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "relationship.previous_union_end_date",
+    "transform": "date:YYYY-MM-DD; first previous union only",
+    "condition": "Only when PrevMarriedIndicator is Y",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "To"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].FromYr[0]",
+    "outcome": "not_a_fact",
+    "confidence": "medium",
+    "unresolved_reason": "Invisible helper box with no caption, apparently derived from the visible previous-relationship dates; fill only the visible date boxes",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "CO-SIGNER PERSONAL DETAILS"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": null,
+  "needs_person": [],
+  "set_aside_fields": []
+ },
+ "launch_evidence": {
+  "path_code_sha256": "afd07044a293f3ac3d96977ab6a63965cca7b57832624a63c5daaea6a3b9e3ce",
+  "template_sha256": "966ad8b94385fa99450bef25c615d65fcff2c8230f02f0a356c6c3e0cad30c2c",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IMM 1344 (09-2024)"
+  },
+  "screened": true,
+  "output_sha256": "027aa63c1caa6f9d838aaae0dc43077495a94b8bf80e9a5ee296989047256cae",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "abaaa7560c40859e427fbc5b3f5e498a0e6edc581db418014ebbf3a92310e1a2",
+  "request_bytes": 55127,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 100,
+   "committed_usd": 36.963228
+  },
+  "admitted": [
+   {
+    "file": "prototype/p2/parts/imm1344e.p3of5-05e60ce01931.part.json",
+    "sha256": "bff52a0cde8a998a3017768f3aa4ea048770017a8bece8152ea1d3eab2037e17",
+    "kind": "inventory_part"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "cce48855c6ac30cb4c00be6604ddc5003409089bf772a6713bc3b4207b480aae",
+   "digest_made_at": "2026-10-26T05:30:05.299Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "412c419d2b9e2180fe107be2497f5bf5",
+   "ticket_expires_at": "2026-10-26T05:32:05.299Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 1344 (09-2024)\",\"canonical_fields\":[{\"id\":\"person.canadian_citizen_living_outside_canada\",\"meaning\":\"Whether the person is a Canadian citizen living exclusively outside Canada\",\"value_type\":\"yes_no\"},{\"id\":\"person.intended_province_of_residence\",\"meaning\":\"Canadian province or territory where the person intends to live once the sponsored persons become permanent residents\",\"value_type\":\"code\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"Date of birth\",\"value_type\":\"date\"},{\"id\":\"person.status_in_canada\",\"meaning\":\"Immigration or citizenship status in Canada (citizen by birth, by descent, naturalized, permanent resident, Status Indian)\",\"value_type\":\"code\"},{\"id\":\"case.sponsorship_class\",\"meaning\":\"Immigration class of the person being sponsored (e.g. family class, spouse or common-law partner in Canada class)\",\"value_type\":\"code\"},{\"id\":\"person.resides_only_in_canada\",\"meaning\":\"Whether the person resides in Canada and in no other country\",\"value_type\":\"yes_no\"},{\"id\":\"person.became_pr_as_sponsored_partner_last_5_years\",\"meaning\":\"Whether, in the five years before the application, the person became a permanent resident after being sponsored as a spouse, common-law or conjugal partner\",\"value_type\":\"yes_no\"},{\"id\":\"case.previous_undecided_application_for_sponsored_person\",\"meaning\":\"Whether a previous sponsorship application for the same sponsored person is still awaiting a final decision\",\"value_type\":\"yes_no\"},{\"id\":\"person.social_assistance_other_than_disability\",\"meaning\":\"Whether the person currently receives social assistance for a reason other than disability\",\"value_type\":\"yes_no\"},{\"id\":\"person.undischarged_bankrupt\",\"meaning\":\"Whether the person is an undischarged bankrupt under the Bankruptcy and Insolvency Act\",\"value_type\":\"yes_no\"},{\"id\":\"person.previous_sponsoree_received_social_assistance\",\"meaning\":\"Whether persons previously sponsored by the person, or their family members, received social assistance during the undertaking validity period\",\"value_type\":\"yes_no\"},{\"id\":\"person.cosigned_undertaking_social_assistance\",\"meaning\":\"Whether the person co-signed an undertaking under which the sponsored person or their family received social assistance during its validity\",\"value_type\":\"yes_no\"},{\"id\":\"person.ordered_to_leave_canada\",\"meaning\":\"Whether the person has been ordered to leave Canada\",\"value_type\":\"yes_no\"},{\"id\":\"person.late_immigration_debt_payment\",\"meaning\":\"Whether the person is late on a required payment of an immigration loan, performance bond or other agreed immigration amount\",\"value_type\":\"yes_no\"},{\"id\":\"person.currently_detained\",\"meaning\":\"Whether the person is currently detained in jail, prison, penitentiary or reformatory\",\"value_type\":\"yes_no\"},{\"id\":\"person.convicted_sexual_violent_or_family_offence\",\"meaning\":\"Whether the person has been convicted of a sexual offence, serious violent offence or offence causing bodily harm as described on the form\",\"value_type\":\"yes_no\"},{\"id\":\"person.default_on_support_order\",\"meaning\":\"Whether the person is in default of a court order to make support payments to a spouse, former spouse, partner or child\",\"value_type\":\"yes_no\"},{\"id\":\"person.citizenship_revocation_pending\",\"meaning\":\"Whether the person is the subject of an application to revoke Canadian citizenship\",\"value_type\":\"yes_no\"},{\"id\":\"person.inadmissibility_report_pending\",\"meaning\":\"Whether the person is the subject of a report on inadmissibility\",\"value_type\":\"yes_no\"},{\"id\":\"person.charged_with_serious_offence\",\"meaning\":\"Whether the person has been charged with an offence under an Act of Parliament punishable by the term of imprisonment stated on the form\",\"value_type\":\"yes_no\"},{\"id\":\"person.sponsor_eligibility_details\",\"meaning\":\"Free-text details (including date and place) explaining 'Yes' answers to sponsor eligibility questions\",\"value_type\":\"text\"},{\"id\":\"person.family_name\",\"meaning\":\"Current family name(s) as shown on passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.given_name\",\"meaning\":\"Current given name(s) as shown on passport or travel document\",\"value_type\":\"text\"},{\"id\":\"person.other_family_name\",\"meaning\":\"Other family name ever used (nickname, maiden name, alias)\",\"value_type\":\"text\"},{\"id\":\"person.other_given_name\",\"meaning\":\"Other given name ever used (nickname, alias)\",\"value_type\":\"text\"},{\"id\":\"person.sex\",\"meaning\":\"Sex / gender\",\"value_type\":\"code\"},{\"id\":\"person.place_of_birth_city\",\"meaning\":\"City or town of birth\",\"value_type\":\"text\"},{\"id\":\"person.country_of_birth\",\"meaning\":\"Country of birth\",\"value_type\":\"country\"},{\"id\":\"person.uci\",\"meaning\":\"IRCC Unique Client Identifier (UCI / Client ID)\",\"value_type\":\"text\"},{\"id\":\"person.date_became_permanent_resident\",\"meaning\":\"Date the person became a permanent resident of Canada\",\"value_type\":\"date\"},{\"id\":\"person.family_name_at_pr\",\"meaning\":\"Family name(s) at the time the person became a permanent resident\",\"value_type\":\"text\"},{\"id\":\"person.given_name_at_pr\",\"meaning\":\"Given name(s) at the time the person became a permanent resident\",\"value_type\":\"text\"},{\"id\":\"relationship.relationship_to_sponsor\",\"meaning\":\"Relationship of a person to the sponsor (spouse, common-law partner, other)\",\"value_type\":\"code\"},{\"id\":\"relationship.relationship_to_sponsor_other\",\"meaning\":\"Free-text description of the relationship to the sponsor when it is 'other'\",\"value_type\":\"text\"},{\"id\":\"person.marital_status\",\"meaning\":\"Current marital status\",\"value_type\":\"code\"},{\"id\":\"relationship.current_union_start_date\",\"meaning\":\"Date the person married or began the common-law relationship with their current spouse or partner\",\"value_type\":\"date\"},{\"id\":\"relationship.previous_union_type\",\"meaning\":\"Type of a previous marriage or common-law relationship\",\"value_type\":\"code\"},{\"id\":\"relationship.previous_union_start_date\",\"meaning\":\"Start date of a previous marriage or common-law relationship\",\"value_type\":\"date\"},{\"id\":\"relationship.previous_union_end_date\",\"meaning\":\"End date of a previous marriage or common-law relationship\",\"value_type\":\"date\"}],\"entries\":[{\"data_path\":\"form1[0].Part1[0].SponsorResidency[0].question[0].LiveOutsideCan[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.canadian_citizen_living_outside_canada\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Sponsor Residency Declaration Section. Are you a Canadian citizen living exclusively outside Canada?\"},{\"data_path\":\"form1[0].Part1[0].SponsorResidency[0].question[0].LiveQC[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.intended_province_of_residence\",\"transform\":\"derive: Y if intended province is Quebec, else N (codes: Y = the province of Quebec, N = other province or territory)\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Please select one of the following: Immediately after my spouse, common-law or conjugal partner and dependent children become permanent residents, I intend to live in:\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q1[0].Over18Ind[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"derive: Y if age on signing date >= 18, else N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you 18 years of age or older?\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q2[0].CanCitzInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.status_in_canada\",\"transform\":\"derive: Y if status is any Canadian citizen category or permanent resident, else N\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you a Canadian citizen or permanent resident?\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q3[0].SpouseCLInd[0]\",\"outcome\":\"mapped\",\"person\":\"none\",\"row\":null,\"fact\":\"case.sponsorship_class\",\"transform\":\"derive: Y if class is family class or spouse or common-law partner in Canada class, else N\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you sponsoring a member of the family class or a member of the spouse or common-law partner in Canada class?\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q4[0].ResideCanInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.resides_only_in_canada\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Do you reside in Canada and in no other country? If you answered \\\"NO\\\", but are a Canadian citizen living exclusively out\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q5[0].PrevSponsored[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.became_pr_as_sponsored_partner_last_5_years\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"In the five years preceding this application, did you become a permanent resident after being sponsored as a spouse, com\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q6[0].PrevAppInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"case.previous_undecided_application_for_sponsored_person\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Have you submitted a previous application in respect of which a final decision has not been made for the person being sp\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q7[0].SocialAssistInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.social_assistance_other_than_disability\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you in receipt of social assistance for a reason other than disability?\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q8[0].BankruptInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.undischarged_bankrupt\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you an undischarged bankrupt under the Bankruptcy and Insolvency Act?\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q9[0].PrevSocialInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.previous_sponsoree_received_social_assistance\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Have persons you previously sponsored or their family members received social assistance during the validity period of t\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q10[0].UndertakeInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.cosigned_undertaking_social_assistance\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Did you co-sign an undertaking where the sponsored person or their family members received social assistance during the \"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q11[0].LeaveCanInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.ordered_to_leave_canada\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Have you been ordered to leave Canada?\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q12[0].LatePayInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.late_immigration_debt_payment\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you late in making a required payment on an immigration loan, a performance bond or any other amounts you agreed to \"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q13[0].JailInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.currently_detained\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you currently detained in jail, prison, penitentiary or reformatory?\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q14[0].SexOffInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.convicted_sexual_violent_or_family_offence\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Have you been convicted of a sexual offence or serious violent offence against anyone, or an offence causing bodily harm\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q15[0].SupportPayInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.default_on_support_order\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you in default of a court order to make support payments to your spouse, former spouse, common-law partner, former c\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q16[0].RevokeCitzInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.citizenship_revocation_pending\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you the subject of an application to revoke your Canadian citizenship?\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q17[0].InadmissibleInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.inadmissibility_report_pending\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you the subject of a report on inadmissibility?\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].q18[0].ActParlimentInd[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.charged_with_serious_offence\",\"transform\":\"yes_no_code:Y/N\",\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Have you been charged with an offence under an Act of Parliament punishable by a maximum term of imprisonment of at leas\"},{\"data_path\":\"form1[0].Part1[0].SponsorEA[0].IfYesDetails[0].Details[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.sponsor_eligibility_details\",\"transform\":\"as_is (max 200 characters)\",\"condition\":\"Only when question 13, 16, 17 or 18 is answered Yes\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"If you answered \\\"Yes\\\" to question 13, 16, 17, or 18 please provide details including date and place.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q1[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is (max 100 characters)\",\"condition\":\"Only when the sponsor has a co-signer; the co-signer is the sponsor's spouse or common-law partner and must not be the person being sponsored — reviewer must confirm the partner record is the co-signer\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Family Name(s) (exactly as shown on your passport or travel document)\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q1[0].GivenName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.given_name\",\"transform\":\"as_is (max 100 characters)\",\"condition\":\"Only when the sponsor has a co-signer (sponsor's spouse or common-law partner who is not the person being sponsored)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Given Name(s) (exactly as shown on your passport or travel document)\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasFamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.other_family_name\",\"transform\":\"as_is (max 100 characters)\",\"condition\":\"Only when a co-signer exists and AliasNameIndicator is Y\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Family Name(s)\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasGivenName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.other_given_name\",\"transform\":\"as_is (max 100 characters)\",\"condition\":\"Only when a co-signer exists and AliasNameIndicator is Y\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Given Name(s)\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q2[0].AliasNameIndicator[0].AliasNameIndicator[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.other_family_name\",\"transform\":\"derive: Y if any other family or given name is recorded, else N\",\"condition\":\"Only when the sponsor has a co-signer\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Have you ever used any other name (e.g. Nickname, maiden name, alias, etc.)?\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].sex[0].Sex[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.sex\",\"transform\":\"code_list:imm1344.sex (Female, Male, Unknown, Unspecified)\",\"condition\":\"Only when the sponsor has a co-signer\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Gender\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBDay[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:DD\",\"condition\":\"Only when the sponsor has a co-signer\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"DD\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBMonth[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:MM\",\"condition\":\"Only when the sponsor has a co-signer\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"MM\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].dob[0].DOBYear[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"date:YYYY\",\"condition\":\"Only when the sponsor has a co-signer\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"YYYY\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].pob[0].PlaceBirthCity[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.place_of_birth_city\",\"transform\":\"as_is (max 30 characters)\",\"condition\":\"Only when the sponsor has a co-signer\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"City/Town\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q3-4-5[0].pob[0].PlaceBirthCountry[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.country_of_birth\",\"transform\":\"code_list:imm1344.country (three-digit codes as listed, e.g. Canada 511)\",\"condition\":\"Only when the sponsor has a co-signer\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Country\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q6New[0].StatusInCan[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.status_in_canada\",\"transform\":\"code_list:imm1344.status_in_canada (1 citizen by birth, 2 citizen by descent, 3 naturalized, 4 permanent resident, 5 Status Indian)\",\"condition\":\"Only when the sponsor has a co-signer\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Status in Canada\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].UCI[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.uci\",\"transform\":\"as_is (max 10 characters)\",\"condition\":\"Only when the co-signer is a permanent resident or naturalized Canadian citizen\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"b) UCI/Client ID\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].DateStatInCan[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.date_became_permanent_resident\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when the co-signer is a permanent resident or naturalized Canadian citizen\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"If you are a permanent resident or a naturalized Canadian citizen, provide the following information:\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].StatusDates[0].FromYr[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Invisible helper box with no caption that appears to split the visible status date for internal use; fill only the visible date box\",\"evidence_quote\":\"If you are a permanent resident or a naturalized Canadian citizen, provide the following information:\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].StatusDates[0].FromMM[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Invisible helper box with no caption that appears to split the visible status date for internal use; fill only the visible date box\",\"evidence_quote\":\"If you are a permanent resident or a naturalized Canadian citizen, provide the following information:\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7New[0].StatusDates[0].FromDD[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Invisible helper box with no caption that appears to split the visible status date for internal use; fill only the visible date box\",\"evidence_quote\":\"If you are a permanent resident or a naturalized Canadian citizen, provide the following information:\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].SameNameInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.family_name_at_pr\",\"transform\":\"derive: Y if name at time of becoming PR equals current full name, else N (meaning of Yes not captioned; reviewer to confirm)\",\"condition\":\"Only when the co-signer is a permanent resident or naturalized Canadian citizen\",\"confidence\":\"low\",\"unresolved_reason\":null,\"evidence_quote\":\"c) Full name at the time you became a permanent resident\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.family_name_at_pr\",\"transform\":\"as_is (max 100 characters)\",\"condition\":\"Only when the co-signer is a permanent resident or naturalized Canadian citizen\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Family Name(s)\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q7cNew[0].GivenName[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.given_name_at_pr\",\"transform\":\"as_is (max 100 characters)\",\"condition\":\"Only when the co-signer is a permanent resident or naturalized Canadian citizen\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Given Name(s)\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].Rel2Sponsor[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"relationship.relationship_to_sponsor\",\"transform\":\"code_list:imm1344.relationship_to_sponsor (10 Spouse, 01 Common-Law Partner, 85 Other)\",\"condition\":\"Only when the sponsor has a co-signer\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"a) Relationship to the sponsor\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].Other[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"relationship.relationship_to_sponsor_other\",\"transform\":\"as_is (max 30 characters)\",\"condition\":\"Only when Rel2Sponsor is 85 (Other); reviewer should confirm the co-signer then is not the sponsor's spouse/partner record\",\"confidence\":\"low\",\"unresolved_reason\":null,\"evidence_quote\":\"b) Other\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].a-b-c[0].MaritalStatusNew[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.marital_status\",\"transform\":\"code_list:imm1344.marital_status (09 Annulled Marriage, 03 Common-Law, 04 Divorced, 05 Legally Separated, 01 Married, 02 Single, 00 Unknown, 06 Widowed)\",\"condition\":\"Only when the sponsor has a co-signer\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"c) Current marital status\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].DateOfMarriage[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"relationship.current_union_start_date\",\"transform\":\"date:YYYY-MM-DD\",\"condition\":\"Only when the co-signer is married or in a common-law relationship\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"d) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].MarriageDate[0].FromYr[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Invisible helper box with no caption that appears to split the visible marriage date for internal use; fill only the visible date box\",\"evidence_quote\":\"d) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].MarriageDate[0].FromMM[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Invisible helper box with no caption that appears to split the visible marriage date for internal use; fill only the visible date box\",\"evidence_quote\":\"d) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].d[0].MarriageDate[0].FromDD[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Invisible helper box with no caption that appears to split the visible marriage date for internal use; fill only the visible date box\",\"evidence_quote\":\"d) (If you are married or in a common-law relationship) Provide the date on which you were married or entered into the c\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].e[0].FamilyName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.family_name\",\"transform\":\"as_is (max 100 characters)\",\"condition\":\"Only when the sponsor has a co-signer who is the sponsor's spouse or common-law partner (the co-signer's current partner is then the sponsor)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"e) Provide the name of your current spouse/common-law partner\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q8New[0].e[0].GivenName[0]\",\"outcome\":\"mapped\",\"person\":\"form_subject\",\"row\":null,\"fact\":\"person.given_name\",\"transform\":\"as_is (max 100 characters)\",\"condition\":\"Only when the sponsor has a co-signer who is the sponsor's spouse or common-law partner (the co-signer's current partner is then the sponsor)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"e) Provide the name of your current spouse/common-law partner\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PrevMarriedIndicator[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"relationship.previous_union_type\",\"transform\":\"derive: Y if any previous marriage or common-law relationship is recorded, else N\",\"condition\":\"Only when the sponsor has a co-signer\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Have you previously been married or in a common-law relationship?\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PMFamilyName[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only when PrevMarriedIndicator is Y\",\"confidence\":\"medium\",\"unresolved_reason\":\"Family name of the co-signer's former spouse/partner; that person has no role in the available person list (not the subject's spouse, parent, child or sibling), so whose record holds it cannot be determined\",\"evidence_quote\":\"Family name(s)\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9New[0].PMGivenName[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only when PrevMarriedIndicator is Y\",\"confidence\":\"medium\",\"unresolved_reason\":\"Given name of the co-signer's former spouse/partner; that person has no role in the available person list\",\"evidence_quote\":\"Given name(s)\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBYear[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only when PrevMarriedIndicator is Y\",\"confidence\":\"medium\",\"unresolved_reason\":\"Date of birth of the co-signer's former spouse/partner; that person has no role in the available person list\",\"evidence_quote\":\"YYYY\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBMonth[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only when PrevMarriedIndicator is Y\",\"confidence\":\"medium\",\"unresolved_reason\":\"Date of birth of the co-signer's former spouse/partner; that person has no role in the available person list\",\"evidence_quote\":\"MM\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PrevSpouseDOB[0].DOBDay[0]\",\"outcome\":\"unresolved\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only when PrevMarriedIndicator is Y\",\"confidence\":\"medium\",\"unresolved_reason\":\"Date of birth of the co-signer's former spouse/partner; that person has no role in the available person list\",\"evidence_quote\":\"DD\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].TypeOfRelationship[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"relationship.previous_union_type\",\"transform\":\"code_list:imm1344.previous_relationship_type (03 Common-Law, 01 Married); first previous union only\",\"condition\":\"Only when PrevMarriedIndicator is Y\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Type of relationship\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].FromDate[0].FromDate[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"relationship.previous_union_start_date\",\"transform\":\"date:YYYY-MM-DD; first previous union only\",\"condition\":\"Only when PrevMarriedIndicator is Y\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"From\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].ToDate[0].ToDate[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"relationship.previous_union_end_date\",\"transform\":\"date:YYYY-MM-DD; first previous union only\",\"condition\":\"Only when PrevMarriedIndicator is Y\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"To\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].FromYr[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Invisible helper box with no caption, apparently derived from the visible previous-relationship dates; fill only the visible date boxes\",\"evidence_quote\":\"CO-SIGNER PERSONAL DETAILS\"}]}"
+}

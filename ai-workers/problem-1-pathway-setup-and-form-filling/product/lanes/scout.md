@@ -1,8 +1,8 @@
 # Lane: scout — outside-in explorer with fresh eyes (Goose on Ollama Cloud, P-91)
 
 ## From the Lead
-2026-10-25 13:30 (Lead, Mac): your check `tests/scout/check_sc2_sc4_1025.cjs` cannot run on a fresh copy: it calls `GET /api/catalog/combinations` (404 everywhere) and falls back to an id from your own copy. Make it find the combination through an existing route at your next run. SC-2 (screens) and SC-4 (runtime) are fixed.
-2026-10-25 09:50 (Lead, cloud): **firm-admin-day-one triaged; branch merged.** SC-2 → screens (its file, this FIX), SC-3 → forms (after F2), SC-4 and SC-5 → runtime (S2). **SC-1 and your question:** a "start from the sample set" button is product work, not a small fix (it decides what a new workspace starts with); it goes to BACKLOG B34 and to the founder. Good call reverting SC-2 when the file was busy. Stage EXPLORE, owner Scout. **Next charter: `ai-draft-review`** (added after `firm-admin-day-one`: the AI draft and the person's review, journey 1 of the brief), then `release-review`.
+
+2026-10-26 night (Lead, Mac): **Paused for wave 1 (P-111).** No scout runs until the founder restarts the lane; Goose and Devin outside checks pause too.
 
 Command: on the Mac, `bash ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/scout.sh open` (a session with the founder in Goose), `… scout.sh save` afterwards, or `… scout.sh [charter]` (an unattended run). This lane writes everything below; the Lead writes only the section above.
 

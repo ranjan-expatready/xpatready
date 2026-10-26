@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W1-09 · Shared library in setup order · draft board (screen-designer, 26 Oct)</title>
+<!-- Self-contained draft board. Team tokens from prototype/studio/web/src/styles/tokens.css (copied from ERv2-frontend):
+     primary #0862c5, link #054e9c, text #2d2d2d, muted #595959 (neutral-700 for AA on grey), border #d9d9d9, surface #f7f7f7,
+     warn text #663200 on #fff3e0, ok #0f5c2e, danger #991b1b. Type sizes 12/14/16/18/20/24 only. Inter for UI, Proxima Nova headings.
+     Every combination name, count, edition, date and cost is Sample; form codes and titles are IRCC's. Board controls are not product. -->
+<style>
+:root{--primary:#0862c5;--link:#054e9c;--link-dark:#043a73;--text:#2d2d2d;--muted:#595959;--border:#d9d9d9;--border-strong:#bfbfbf;--surface:#f7f7f7;--raised:#fff;--soft:#eeeeee;
+--ok-bg:#e7f6ec;--ok:#0f5c2e;--danger-bg:#fdecec;--danger:#991b1b;--warn-bg:#fff3e0;--warn:#663200;--warn-line:#ffc773;--ai-bg:#e6f4ff;--ai:#043a73;--ai-line:#cce9ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--surface);color:var(--text);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+h1,h2,h3,h4{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+h1{font-size:24px;font-weight:700}h2{font-size:18px;font-weight:600}h3{font-size:16px;font-weight:600}h4{font-size:14px;font-weight:600}
+a,.lnk{color:var(--link);font-weight:600;text-decoration:underline;text-underline-offset:2px;cursor:pointer;background:none;border:0;padding:0;font:inherit;font-weight:600}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.mut{color:var(--muted)}.s12{font-size:12px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:6px;font-weight:600;font-size:14px;border:1px solid var(--border-strong);background:#fff;color:var(--text);cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:#fff}.btn.sm{min-height:30px;padding:0 10px;font-size:12px}
+.btn.ghost{border-color:transparent;background:transparent}.btn.danger{border-color:#dc2626;color:var(--danger)}
+.btn.ai{background:var(--ai-bg);border-color:var(--ai-line);color:var(--ai)}
+.btn[disabled]{background:var(--soft);border-color:var(--border);color:var(--muted);cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.ok{background:var(--ok-bg);color:var(--ok)}.no{background:var(--danger-bg);color:var(--danger)}.neu{background:var(--soft);color:#404040}.ai{background:var(--ai-bg);color:var(--ai)}.warn{background:var(--warn-bg);color:var(--warn)}
+.dash{background:#fff;color:#404040;border:1px dashed #8c8c8c}
+.card{background:#fff;border:1px solid var(--border);border-radius:8px}.pad{padding:14px 16px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.grow{flex:1}.stack{display:flex;flex-direction:column;gap:12px}
+.ailine{display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:14px;color:#404040;background:#f5faff;border:1px solid var(--ai-line);border-radius:6px;padding:8px 12px}
+.notice{border-radius:8px;padding:10px 14px;border:1px solid var(--border);display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.notice.info{background:#f5faff;border-color:var(--ai-line)}.notice.warn{background:var(--warn-bg);border-color:var(--warn-line)}.notice.err{background:var(--danger-bg);border-color:#f5b5b5}.notice.okn{background:var(--ok-bg);border-color:#b7e2c4}
+table{border-collapse:collapse;width:100%;background:#fff}
+th{font-weight:600;text-align:left;font-size:12px;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);background:#fbfbfb;white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--soft);vertical-align:top;height:44px}
+tr.grp td{background:#fafafa;font-weight:600;font-size:12px;color:#404040;height:auto;padding:6px 12px}
+tr.later td{color:var(--muted)}
+tr.cur td{background:#f5faff}
+.num{display:inline-flex;width:26px;height:26px;border-radius:50%;align-items:center;justify-content:center;font-weight:700;font-size:12px;border:2px solid var(--border-strong);color:#404040;background:#fff}
+.num.done{border-color:var(--ok);color:var(--ok)}.num.now{border-color:var(--primary);color:var(--primary)}
+.maker{display:inline-flex;align-items:center;gap:4px;font-size:12px;border-radius:4px;padding:1px 6px;margin:0 4px 4px 0;border:1px solid var(--border)}
+.maker.ai{border-color:var(--ai-line)}.maker.person{background:#fff}.maker.expert{background:#fffaf2;border-color:var(--warn-line);color:var(--warn)}.maker.team{background:var(--soft)}
+.ico{font-weight:700;font-size:12px}
+.bar{height:10px;border-radius:999px;background:var(--soft);overflow:hidden}.bar>i{display:block;height:100%;background:var(--primary);border-radius:999px}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.steps li{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.steps .st{width:22px;height:22px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;border:2px solid var(--border-strong)}
+.steps .st.d{border-color:var(--ok);color:var(--ok)}.steps .st.r{border-color:var(--primary);color:var(--primary)}.steps .st.x{border-color:#dc2626;color:var(--danger)}
+.split{display:grid;grid-template-columns:minmax(0,1fr) 540px;align-items:start}
+.panel{background:#fff;border:1px solid var(--border);border-radius:8px 0 0 8px;display:flex;flex-direction:column;min-height:640px;box-shadow:-6px 0 16px rgba(0,0,0,.06)}
+.panel header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px}.panel .body{padding:14px 18px;display:flex;flex-direction:column;gap:14px;flex:1}.panel footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.dim{opacity:.45;pointer-events:none}
+.under{overflow:hidden;min-width:0}.panel{position:relative;z-index:5}
+dl.kv{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;margin:0}dl.kv dt{color:var(--muted);font-size:12px;padding-top:2px}dl.kv dd{margin:0}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600}
+input,select,textarea{font:inherit;font-size:14px;padding:8px 10px;border:1px solid #8c8c8c;border-radius:6px;background:#fff;color:var(--text)}
+.bad{border-color:#dc2626!important}.err-msg{color:var(--danger);font-size:12px}
+.skel{background:linear-gradient(90deg,#eee,#f6f6f6,#eee);border-radius:4px;height:14px}
+@media (prefers-reduced-motion:no-preference){.skel{background-size:200% 100%;animation:sk 1.4s infinite}@keyframes sk{to{background-position:-200% 0}}}
+.shell{display:grid;grid-template-columns:220px minmax(0,1fr);min-height:900px}
+.top{display:flex;align-items:center;gap:14px;padding:10px 20px;background:#fff;border-bottom:1px solid var(--border)}
+.logo{font-weight:700;color:var(--primary);font-size:18px;font-family:"Proxima Nova",Inter,sans-serif}
+.badge{background:var(--warn-bg);color:var(--warn);border-radius:4px;padding:2px 8px;font-size:12px;font-weight:600}
+.draftbar{padding:8px 20px;background:var(--warn-bg);border-bottom:1px solid var(--warn-line);display:flex;gap:12px;align-items:center;font-size:14px}
+nav.side{background:#fff;border-right:1px solid var(--border);padding:16px 12px;display:flex;flex-direction:column;gap:2px}
+nav.side .grp{font-size:12px;color:var(--muted);margin:12px 8px 4px;font-weight:600}
+nav.side button{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:6px;color:#404040;font-size:14px;border:0;background:transparent;text-align:left;cursor:pointer}
+nav.side button.on{background:var(--ai-bg);color:var(--link-dark);font-weight:600}
+nav.side .cnt{margin-left:auto;font-size:12px;background:var(--ai-bg);color:var(--ai);border-radius:999px;padding:0 7px}
+main{padding:20px 24px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.crumbs{font-size:12px;color:var(--muted)}
+[data-tip]{position:relative}
+[data-tip]:hover::after,[data-tip]:focus-visible::after{content:attr(data-tip);position:absolute;left:0;top:calc(100% + 6px);z-index:20;width:max-content;max-width:300px;white-space:normal;background:#2d2d2d;color:#fff;font-size:12px;font-weight:400;line-height:1.4;padding:6px 9px;border-radius:6px;text-align:left}
+.lab,.dec{display:none}
+body.labels .lab{display:inline-flex;font-size:12px;font-weight:600;border:1px dashed #7c3aed;color:#5b21b6;background:#faf5ff;border-radius:4px;padding:0 5px;margin-left:6px;white-space:nowrap;vertical-align:middle}
+body.labels .lab.sc{border-color:#b35a00;color:#8c4600;background:#fff8ef}
+body.labels .lab.nb{border-style:dotted;color:#404040;background:#f3f3f3;border-color:#8c8c8c}
+body.labels .lab.oth{border-color:#0862c5;color:#043a73;background:#f5faff}
+body.labels .dec{display:inline-flex;font-size:12px;font-weight:600;border:1px solid #0f5c2e;color:#0f5c2e;background:#f0fbf4;border-radius:4px;padding:0 5px;margin-left:6px;white-space:nowrap;vertical-align:middle}
+body.labels .dec.q{border-color:#991b1b;color:#991b1b;background:#fff5f5}
+.board{background:#2d2d2d;color:#fff;padding:10px 20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:12px}
+.board select{font-size:12px;padding:4px 6px}.board label{display:inline-flex;gap:6px;align-items:center}
+.legend{background:#fff;border-bottom:1px solid var(--border);padding:6px 20px;font-size:12px;display:none;gap:8px;flex-wrap:wrap;align-items:center}
+body.labels .legend{display:flex}
+.view{display:none}.view.on{display:block}
+.opt{border:1px solid var(--border);border-radius:8px;background:#fff;padding:14px;display:flex;flex-direction:column;gap:10px}
+.opt.rec{border:2px solid var(--primary)}
+.mini{border:1px solid var(--border);border-radius:6px;background:var(--surface);padding:10px;font-size:12px}
+.mini .m{display:grid;grid-template-columns:120px 1fr;gap:8px}
+.mini .m nav{background:#fff;border:1px solid var(--border);border-radius:4px;padding:6px;display:flex;flex-direction:column;gap:3px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.flow{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;align-items:stretch}
+.flow .bx{border:1px solid var(--border);border-radius:6px;padding:8px;background:#fff;font-size:12px}
+.flow .bx b{display:block;font-size:14px;margin-bottom:2px}
+@media (max-width:1100px){.split{grid-template-columns:1fr}.split .under{display:none}.grid3,.flow{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="board" role="region" aria-label="Board controls (not product)">
+  <b>W1-09 board · not product</b>
+  <label>View <select id="vsel" aria-label="Choose a view"></select></label>
+  <label><input type="checkbox" id="labels"> Show labels</label>
+  <span>All names, counts, editions, dates and costs are Sample. Form codes and titles are IRCC's.</span>
+</div>
+<div class="legend" aria-label="Label legend">
+  <span class="lab" style="display:inline-flex">Capability</span><span class="lab sc" style="display:inline-flex">Scaffolding</span>
+  <span class="lab nb" style="display:inline-flex">Not built</span><span class="lab oth" style="display:inline-flex">Built by another item</span>
+  <span class="dec" style="display:inline-flex">[F] follows a decision</span><span class="dec q" style="display:inline-flex">[M]/[C]/Q open</span>
+  <span>Unlabelled elements inherit their container's label. Everything labelled Capability is Needed for the proof unless marked Not built.</span>
+</div>
+
+<div class="top">
+  <span class="logo">ExpatReady</span><span><b>Product Studio</b><br><span class="s12 mut">Pathway Configurator</span></span>
+  <span class="badge">Prototype · demo workspace</span><span class="lab sc">Scaffolding</span>
+  <span class="grow"></span>
+  <button class="btn sm" data-tip="Demo tools: Reset empties everything; Load sample adds the structure and the official PDFs of the 5 combinations.">Demo ▾</button><span class="lab sc">Scaffolding</span><span class="dec">[F] P-108</span>
+  <span class="s12 mut">Acting as</span><select aria-label="Acting as"><option>Configuration author · content publisher</option><option>Content reviewer · second person</option></select><span class="lab sc">Scaffolding</span>
+</div>
+<div class="draftbar"><b>Draft</b> · <span id="dbar">412 changes across 5 combinations</span><span class="grow"></span><a>Review and release</a></div>
+
+<div class="shell">
+<nav class="side" aria-label="Main menu">
+  <div class="grp">Configure</div>
+  <button data-tip="Everything waiting for a person: AI proposals, new items to approve, held files.">To review <span class="cnt" id="trc">3</span></button>
+  <button>Structure</button>
+  <button>Programs</button>
+  <div class="grp">Shared library <span class="dec q">[C2] Q1</span></div>
+  <button class="on" data-goto="v1" data-tip="The order the library is built in, who makes each piece, and what is left.">Setup order</button>
+  <button data-tip="Step 1. Official IRCC forms, checklists and guides. The one door for forms.">1 · Forms</button>
+  <button data-tip="Step 3–5. Shared fields, their answer lists and validations.">3 · Fields</button>
+  <button data-tip="Step 6. Groups of questions in the order clients answer them.">6 · Sections</button>
+  <button data-tip="Step 7. Documents a client provides, and what each proves.">7 · Document types</button>
+  <button data-tip="Step 8. Shared sentences such as 'Is married or common-law', used by rules and lines.">8 · Conditions</button><span class="dec q" style="margin-left:10px">Q3</span>
+  <button data-tip="Step 9. Consistency and document checks; they warn, never block.">9 · Checks</button>
+  <div class="grp">History</div>
+  <button>AI work</button><button>Releases</button><button>Activity</button>
+</nav>
+
+<main>
+<!-- ============ V1 Setup order — normal, all combinations (Recommended B + b2) ============ -->
+<section class="view" id="v1" data-name="1 · Setup order — mid-setup, all combinations (Recommended)">
+  <div class="crumbs">Shared library › Setup order</div>
+  <div class="row"><div class="grow"><h1>Setup order <span class="lab">Capability</span><span class="dec">[F] option B + b2 (Q1, Q2)</span></h1>
+  <p class="mut" style="margin:4px 0 0">The shared library is built in this order. AI reads your forms and checklists and proposes each piece; a person accepts; new items need a second person.</p></div>
+  <button class="btn" data-goto="v7" data-tip="A picture of how sources become shared fields, sections, documents, conditions and checks.">How it fits together</button>
+  <button class="btn pri" data-goto="v8" data-tip="Add a missing field, section, document type, condition or check by describing it. AI checks the library for one that already means the same.">Describe what you need</button></div>
+  <div class="row">
+    <label class="f">Combination<select data-tip="Pick one combination to see its own counts: what it reused from the library and what it added." aria-label="Combination"><option>All combinations (5 Retail · 1 Corporate)</option><option>Retail › Temporary residence › Visitor visa › Outside Canada</option></select></label>
+    <span class="grow"></span><span class="s12 mut" data-tip="Worked out from what has been done. Nobody ticks a step." tabindex="0">Updated just now · calculated, never ticked</span>
+  </div>
+  <div id="t1"></div>
+</section>
+
+<!-- ============ V2 One combination ============ -->
+<section class="view" id="v2" data-name="2 · Setup order — one combination (reused vs new)">
+  <div class="crumbs">Shared library › Setup order › Visitor visa</div>
+  <div class="row"><div class="grow"><h1>Setup order</h1><p class="mut" style="margin:4px 0 0">For one combination: what it reused from the library and what it added.</p></div><button class="btn">How it fits together</button><button class="btn pri">Describe what you need</button></div>
+  <div class="row"><label class="f">Combination<select aria-label="Combination"><option>Retail › Temporary residence › Visitor visa › Outside Canada</option></select></label>
+   <div class="card pad" style="flex:1" data-tip="Reused: in the library before this combination. New: this combination brought it in." tabindex="0"><b>Shared fields used: 146</b> · 112 reused · 34 new <span class="dec">[F] P-37, C3.13</span></div></div>
+  <div id="t2"></div>
+</section>
+
+<!-- ============ V3 Empty after reset ============ -->
+<section class="view" id="v3" data-name="3 · Empty after Reset">
+  <div class="crumbs">Shared library › Setup order</div>
+  <h1>Setup order</h1>
+  <div class="notice info"><div class="grow"><h3>The library is empty</h3><p style="margin:4px 0">Set up in this order: add a combination, then its forms. AI reads the forms and proposes the rest; you accept. <span class="dec">[F] P-108</span></p></div>
+   <a>Open Structure</a><button class="btn pri">New combination</button><button class="btn" data-tip="Demo only: adds the structure of the 5 combinations and their official PDFs.">Load sample</button><span class="lab sc">Scaffolding</span></div>
+  <div id="t3"></div>
+</section>
+
+<!-- ============ V4 After Load sample ============ -->
+<section class="view" id="v4" data-name="4 · After Load sample (forms in, proposals ready to replay)">
+  <div class="crumbs">Shared library › Setup order</div>
+  <h1>Setup order</h1>
+  <div class="notice okn"><div class="grow">Sample loaded: the structure of 5 Retail combinations and 1 Corporate Sample, and 14 official PDFs in the library. Shared fields, sections and document types arrive as replayed AI proposals you accept. <span class="lab sc">Scaffolding</span><span class="dec">[F] P-108</span></div></div>
+  <div id="t4"></div>
+</section>
+
+<!-- ============ V5 AI run panel — running ============ -->
+<section class="view" id="v5" data-name="5 · AI run panel — Draft sections, running (W1-07 component)">
+  <div class="split">
+   <div class="under dim"><div class="crumbs">Shared library › Setup order</div><h1>Setup order</h1><div id="t5"></div></div>
+   <aside class="panel" role="dialog" aria-label="Draft sections with AI">
+    <header><div class="row"><h2 class="grow">Draft sections with AI</h2><span class="chip ai">Running</span></div>
+     <span class="s12 mut">From the parts and question order of 4 forms · results go to To review as proposals <span class="lab oth">W1-07 run panel</span><span class="dec">[F] P-110</span></span></header>
+    <div class="body">
+     <div class="ailine" style="justify-content:space-between"><span>Cost stated before start: <b>up to US$0.40</b> · spent so far US$0.12</span><span class="s12">Wave 1 live budget: US$7.80 of US$40 used</span></div>
+     <div><div class="row s12" style="justify-content:space-between"><b>Step 3 of 5 · Reading IMM 5406 (page 2 of 3)</b><span>2 of 4 forms done</span></div><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="2" aria-label="Forms done"><i style="width:55%"></i></div><span class="s12 mut">The bar counts real work done (forms and pages read), never an invented percentage.</span></div>
+     <ol class="steps">
+      <li><span class="st d">✓</span><div><b>Check what is already in the library</b><br><span class="s12 mut">18 sections, 233 shared fields. No AI, US$0.</span></div></li>
+      <li><span class="st d">✓</span><div><b>IMM 0008 · Generic application form for Canada</b><br><span class="s12 mut">7 sections proposed · 5 reuse · 2 new · US$0.06</span></div></li>
+      <li><span class="st r">3</span><div><b>IMM 5406 · Additional family information</b><br><span class="s12 mut">Reading page 2 of 3…</span></div></li>
+      <li><span class="st">4</span><div>IMM 5669 · Schedule A – Background/Declaration</div></li>
+      <li><span class="st">5</span><div>Compare with existing sections and send proposals to To review</div></li>
+     </ol>
+     <p class="s12 mut">Nothing is written to the library until a person accepts each proposal on To review.</p>
+    </div>
+    <footer><button class="btn danger" data-tip="Ends the run now. Proposals from finished forms are kept; no further AI calls are made.">Stop</button><span class="s12 mut" style="align-self:center">You can close this panel; the run continues and shows under To review › Running.</span><button class="btn">Close</button></footer>
+   </aside>
+  </div>
+</section>
+
+<!-- ============ V6 AI run stopped / failed ============ -->
+<section class="view" id="v6" data-name="6 · AI run — stopped, and failed with the next step">
+  <div class="grid3" style="grid-template-columns:1fr 1fr">
+   <div class="card pad stack"><div class="row"><h3 class="grow">Draft sections with AI</h3><span class="chip neu">■ Stopped</span></div>
+    <div class="bar"><i style="width:50%;background:#8c8c8c"></i></div>
+    <p style="margin:0">Stopped after 2 of 4 forms. Proposals from the finished forms are kept; no further cost. Spent US$0.12.</p>
+    <div class="row"><a>Review 9 proposals</a><button class="btn sm" data-tip="Runs only the forms that did not finish. The cost is shown first.">Run the rest · up to US$0.20</button></div><span class="dec">[F] P-110 "Stop really ends the run"</span></div>
+   <div class="card pad stack"><div class="row"><h3 class="grow">Read the checklist with AI</h3><span class="chip no">✕ Failed</span></div>
+    <div class="notice err"><div><b>IMM 5484 could not be read: the file has no text layer.</b><br>Nothing was spent on this file. Upload the text version from canada.ca, or add its documents by describing them.</div></div>
+    <div class="row"><a>Open Forms</a><button class="btn sm">Describe a document type</button></div><span class="dec">[F] EXPERIENCE §2.10 error with the fix</span></div>
+  </div>
+</section>
+
+<!-- ============ V7 How it fits together ============ -->
+<section class="view" id="v7" data-name="7 · How it fits together (b2's explainer panel; option b3 as a map)">
+  <div class="crumbs">Shared library › Setup order › How it fits together</div>
+  <h1>How it fits together <span class="lab">Capability</span><span class="dec">[F] b2 explainer (Q2)</span></h1>
+  <p class="mut" style="margin:0">One path for every piece: a source goes in, AI proposes, a person decides, a second person approves new items, and a release publishes them.</p>
+  <div class="flow" aria-label="The path every library item follows">
+   <div class="bx"><b>1 Source</b>Official PDF form, checklist or guide, from canada.ca or uploaded</div>
+   <div class="bx" style="border-color:var(--ai-line);background:#f5faff"><b>2 AI proposes</b>Reuse · new · ambiguous · conflict, beside the source page</div>
+   <div class="bx"><b>3 Duplicate check</b>Exact name: blocked, no AI. Same meaning: AI verdict</div>
+   <div class="bx"><b>4 A person decides</b>Accept, edit or reject; or describes a missing item</div>
+   <div class="bx"><b>5 Second person</b>Approves every new, retired or restored item</div>
+   <div class="bx"><b>6 Release</b>Published; every combination that uses it gets it</div>
+  </div>
+  <table aria-label="Which source makes which piece">
+   <thead><tr><th>Piece</th><th>AI reads</th><th>What AI proposes</th><th>What a person does</th><th>Who never</th></tr></thead>
+   <tbody>
+    <tr><td><b>Forms</b></td><td>The IRCC guide or checklist</td><td>The forms a combination needs; the system downloads each from canada.ca</td><td>Approves each download, or uploads a PDF</td><td>AI never stores a file itself</td></tr>
+    <tr><td><b>Shared fields</b> and field map</td><td>Every form field of the PDF</td><td>Reuse an existing shared field, or a new one</td><td>Accepts; marks "not a fact"; describes a missing one</td><td>Nobody types a key</td></tr>
+    <tr><td><b>Answer lists</b></td><td>The form's own choices</td><td>The list and how each value is written on each form</td><td>Accepts; corrects values</td><td>—</td></tr>
+    <tr><td><b>Validations</b></td><td>Character limits, date formats on the form</td><td>"At most 30 characters"; "Date in the past"</td><td>Accepts</td><td>—</td></tr>
+    <tr><td><b>Sections</b></td><td>The form's parts and question order</td><td>Groups of shared fields, question wording, who answers</td><td>Accepts; describes a missing section</td><td>—</td></tr>
+    <tr><td><b>Document types</b></td><td>The document checklist (e.g. IMM 5484)</td><td>Types, what each proves, and the lines "who · only if"</td><td>Accepts; describes a missing one</td><td>—</td></tr>
+    <tr><td><b>Conditions</b></td><td>Form instructions, checklist notes</td><td>Shared sentences: "Is married or common-law"</td><td>Accepts; edits in the drawer (second person)</td><td>—</td></tr>
+    <tr><td><b>Checks</b></td><td>Guides, form limits, repeated AI review findings</td><td>"Passport valid through the stay" (warns)</td><td>Accepts; the expert sets the value per combination</td><td>AI never sets the value</td></tr>
+    <tr><td><b>Person roles</b></td><td>—</td><td>Nothing</td><td>The team keeps the list; the expert confirms</td><td>AI never</td></tr>
+   </tbody>
+  </table>
+  <p class="s12 mut">Option b3 would make this map the library's main view; it is kept here as the explainer because it shows no counts and no next step.</p>
+</section>
+
+<!-- ============ V8 Describe what you need ============ -->
+<section class="view" id="v8" data-name="8 · Describe what you need — a person adds a field (duplicate check)">
+  <div class="row" style="margin-bottom:8px"><span class="s12 mut">State:</span>
+   <button class="btn sm" data-ds="dup">Exact duplicate</button><button class="btn sm" data-ds="ver">AI verdict: use existing</button><button class="btn sm" data-ds="off">AI off · not meaning-checked</button></div>
+  <div class="split">
+   <div class="under dim"><div class="crumbs">Shared library › Fields</div><h1>Fields</h1><div class="skel" style="width:60%;margin:10px 0"></div><div class="skel" style="width:80%"></div></div>
+   <aside class="panel" role="dialog" aria-label="Describe what you need">
+    <header><h2>Describe what you need <span class="lab">Capability</span><span class="dec">[F] P-15, P-34, P-53</span></h2>
+     <div class="row" role="radiogroup" aria-label="Kind"><span class="chip ai" data-tip="A single question or value, such as a date of birth.">Field</span><span class="chip neu">Section</span><span class="chip neu">Document type</span><span class="chip neu">Condition <span class="dec q">[M4]</span></span><span class="chip neu">Check <span class="dec q">[M4]</span></span></div></header>
+    <div class="body">
+     <label class="f">What do you need, and why?<textarea id="dtext" rows="3" aria-describedby="dmsg">Applicant's country of birth, asked on the visitor visa form</textarea></label>
+     <div id="dmsg"></div>
+    </div>
+    <footer><button class="btn">Cancel</button><span id="dfoot"></span></footer>
+   </aside>
+  </div>
+</section>
+
+<!-- ============ V9 A list with its AI line; waiting for others ============ -->
+<section class="view" id="v9" data-name="9 · A list page with its AI line (Sections) · maker waiting">
+  <div class="crumbs">Shared library › Setup order › 6 · Sections</div>
+  <div class="row"><div class="grow"><h1>Sections</h1><p class="mut" style="margin:4px 0 0">Groups of questions in the order clients answer them. Each combination picks the sections its questionnaire uses.</p></div><button class="btn pri">Describe a section</button></div>
+  <div class="ailine"><span class="chip ai">AI</span><span class="grow">AI drafts sections from the forms' parts and question order · <b>4 forms not drafted yet</b> · about US$0.40 <span class="lab oth">W1-10 drafting · W1-07 panel</span><span class="dec">[F] P-11</span></span><button class="btn ai sm" data-goto="v5" data-tip="Opens the AI run panel: cost first, steps live, Stop at any time.">Draft sections</button><a>12 proposals on To review</a></div>
+  <div class="row"><input aria-label="Search sections" placeholder="Search sections" style="width:320px"><select aria-label="Origin"><option>Any origin</option><option>AI-drafted</option><option>Described by a person</option></select>
+   <span class="chip ok">Released · 16</span><span class="chip warn">Waiting for a second person · 2</span><span class="chip dash">Returned · 0</span></div>
+  <table aria-label="Sections">
+   <thead><tr><th>Section</th><th>Questions</th><th data-tip="Combinations whose questionnaire uses it">Used by</th><th>Origin</th><th>Status</th></tr></thead>
+   <tbody>
+    <tr><td><b>Personal details</b></td><td>12</td><td>5 combinations</td><td class="s12">AI · from IMM 0008 · accepted 26 Oct</td><td><span class="chip ok">✓ Released</span></td></tr>
+    <tr><td><b>Family members</b></td><td>9</td><td>4 combinations</td><td class="s12">AI · from IMM 5406 · accepted 26 Oct</td><td><span class="chip ok">✓ Released</span></td></tr>
+    <tr><td><b>Background declarations</b></td><td>10</td><td>3 combinations</td><td class="s12">AI · from IMM 5669 · accepted 26 Oct</td><td><span class="chip ok">✓ Released</span></td></tr>
+    <tr class="cur"><td><b>Provincial nomination</b></td><td>3</td><td>1 combination</td><td class="s12">Person · described 26 Oct</td><td><span class="chip warn" data-tip="You added this. A different person approves it on To review." tabindex="0">◷ Waiting for a second person</span></td></tr>
+    <tr><td><span style="display:block;max-width:360px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="Service, membership and government position history, including military and police service">Service, membership and government position history, including military and police service</span></td><td>17</td><td>3 combinations</td><td class="s12">AI · from IMM 5669</td><td><span class="chip ok">✓ Released</span></td></tr>
+   </tbody>
+  </table>
+  <div class="notice warn"><div>You sent "Provincial nomination" for approval. A different person approves it on To review. You can still withdraw or correct it there.</div><a>Open on To review</a></div>
+</section>
+
+<!-- ============ V10 Missing masters ============ -->
+<section class="view" id="v10" data-name="10 · Missing masters: Wave 1 vs Later · Person roles · Answer lists">
+  <div class="crumbs">Shared library › Setup order</div>
+  <h2>Masters not in today's menu <span class="dec q">Q3</span></h2>
+  <div class="grid3">
+   <div class="card pad stack"><h3>Answer lists <span class="chip ai">Wave 1</span></h3><p class="s12 mut" style="margin:0">Shown under Fields. Built in the back end (forms lane); no screen today.</p>
+    <table><thead><tr><th>List</th><th>Values</th><th>Used by</th></tr></thead><tbody><tr><td>Marital status</td><td>7</td><td>4 fields · 6 forms</td></tr><tr><td>Countries</td><td>249</td><td>21 fields</td></tr><tr><td>Sex</td><td>4</td><td>3 fields</td></tr></tbody></table><span class="lab">Capability</span></div>
+   <div class="card pad stack"><h3>Conditions <span class="chip ai">Wave 1</span></h3><p class="s12 mut" style="margin:0">Shared sentences reused by rules, lines and checks. Today each combination keeps its own copy. <span class="dec q">[C1]</span></p>
+    <table><thead><tr><th>Condition</th><th>Used by</th></tr></thead><tbody><tr><td>Is married or common-law</td><td>3 rules · 2 lines</td></tr><tr><td>Has dependent children</td><td>4 lines</td></tr><tr><td>Is 18 or older on the application date</td><td>2 lines</td></tr></tbody></table><span class="lab">Capability</span></div>
+   <div class="card pad stack"><h3>Person roles <span class="chip neu">Wave 1 · read-only</span></h3><p class="s12 mut" style="margin:0">Who a line applies to. AI never drafts them; the team keeps the list and the expert confirms. <span class="dec q">[M8]</span></p>
+    <table><thead><tr><th>Role</th><th>Used by</th></tr></thead><tbody><tr><td>Principal applicant</td><td>6 combinations</td></tr><tr><td>Spouse or partner</td><td>5 combinations</td></tr><tr><td>Dependent child</td><td>4 combinations</td></tr><tr><td>Representative</td><td>6 combinations</td></tr></tbody></table><span class="lab">Capability</span> <span class="lab nb">Editing: Not built</span></div>
+  </div>
+  <h3>Later — designed, not built in this wave <span class="lab nb">Not built</span><span class="dec">[F] MASTERS §1–§2</span></h3>
+  <table aria-label="Later masters"><thead><tr><th>Master</th><th>Why later</th><th>Until then</th></tr></thead><tbody id="laterT"></tbody></table>
+</section>
+
+<!-- ============ V11 Loading / error / read-only / not ready ============ -->
+<section class="view" id="v11" data-name="11 · Loading · error · read-only · not ready · all done">
+  <div class="grid3" style="grid-template-columns:1fr 1fr">
+   <div class="card pad stack" aria-busy="true"><h3>Loading</h3><div class="skel"></div><div class="skel" style="width:85%"></div><div class="skel" style="width:70%"></div><span class="s12 mut" role="status">Loading the setup order</span></div>
+   <div class="card pad stack"><h3>Error</h3><div class="notice err"><div class="grow">The setup order could not be loaded. Your work is saved.</div><button class="btn sm">Try again</button></div></div>
+   <div class="card pad stack"><h3>Read-only (no author duty)</h3><div class="notice info"><div>You can see the setup order. Adding, describing and AI drafts are for content publishers; approvals are on To review.</div></div><button class="btn ai sm" disabled data-tip="Content publishers start AI drafts.">Draft sections</button></div>
+   <div class="card pad stack"><h3>Not ready</h3><div class="row"><span class="num">7</span><b>Document types</b><span class="chip neu" data-tip="Needs a document checklist in the library first." tabindex="0">○ Not ready</span></div><p style="margin:0">Starts when a checklist is in the library. <a>Add it on Forms</a></p><button class="btn ai sm" disabled>Read the checklist</button><span class="s12 mut">The list still opens: you can describe a document type by hand.</span><span class="dec">[F] EXPERIENCE §2.9 warn, don't block</span></div>
+   <div class="card pad stack" style="grid-column:1/-1"><h3>All done for one combination</h3><div class="notice okn"><div class="grow">Visitor visa: every step done. 146 shared fields (112 reused · 34 new), 9 sections, 11 document types, 6 conditions, 4 checks. Next: its requirement lines on the combination, then Review and release.</div><a>Open Visitor visa</a></div></div>
+  </div>
+</section>
+
+<!-- ============ V12 Options for the founder ============ -->
+<section class="view" id="v12" data-name="12 · Options for the founder: (a) navigation A · B · C and (b) display b1 · b2 · b3">
+  <h2>(a) Where the library lives <span class="dec q">Q1</span></h2>
+  <div class="grid3">
+   <div class="opt"><h3>A · Separate lists, numbered</h3><div class="mini"><div class="m"><nav><span>Shared library</span><span>1 Forms ●</span><span>3 Fields ◷</span><span>6 Sections ○</span><span>7 Documents ○</span><span>9 Checks ○</span></nav><div>Each list as today. No page explains the order or who makes what.</div></div></div>
+    <p class="s12" style="margin:0"><b>+</b> Least build. <b>−</b> Order and makers stay invisible; AI hidden; hunting across five pages.</p></div>
+   <div class="opt rec"><h3>B · Setup order page in front <span class="chip ai">Recommended</span></h3><div class="mini"><div class="m"><nav><b>Setup order</b><span>1 Forms</span><span>3 Fields</span><span>6 Sections</span><span>…</span></nav><div>One table: step, needs first, made by, state, next step, AI action. Combination filter. Lists stay behind it.</div></div></div>
+    <p class="s12" style="margin:0"><b>+</b> Order, makers, what's left and every AI action in one place; lists keep curation. <b>−</b> One new page and read model; the menu changes.</p></div>
+   <div class="opt"><h3>C · Inside each combination</h3><div class="mini"><div class="m"><nav><span>Visitor visa</span><span>Forms</span><span>Fields</span><span>Sections</span><span>Documents</span></nav><div>Library tabs inside the workspace; no library menu.</div></div></div>
+    <p class="s12" style="margin:0"><b>+</b> Natural for a first combination. <b>−</b> Shared items belong to many combinations: no home for duplicates, merges, retire; overlaps W1-08 and the per-form path.</p></div>
+  </div>
+  <h2>(b) How the order is shown <span class="dec q">Q2</span></h2>
+  <div class="grid3">
+   <div class="opt"><h3>b1 · Menu numbers only</h3><div class="mini">1 Forms ✓ · 3 Fields ◷ 12 · 6 Sections ○ …</div><p class="s12" style="margin:0"><b>+</b> Cheapest. <b>−</b> No "who makes it", no reason a step waits, no AI.</p></div>
+   <div class="opt rec"><h3>b2 · Steps table + explainer <span class="chip ai">Recommended</span></h3><div class="mini">View 1 (table) + View 7 (How it fits together)</div><p class="s12" style="margin:0"><b>+</b> Work tool and explanation together; states calculated. <b>−</b> Longest page; needs good tooltips.</p></div>
+   <div class="opt"><h3>b3 · Dependency map as main view</h3><div class="mini">Boxes and arrows: Forms → Fields → Sections / Documents → Conditions → Checks</div><p class="s12" style="margin:0"><b>+</b> Best whole picture. <b>−</b> No counts or next step; weak at 1024 px and by keyboard.</p></div>
+  </div>
+</section>
+</main>
+</div>
+
+<script>
+// ---- Steps data (Sample) ----
+const M = {ai:["AI","ai"],person:["Person","person"],expert:["Expert","expert"],team:["Team","team"]};
+const BASE = [
+ {n:0,name:"Structure and combination",tip:"Pathway type › Pathway › Program › Category › Sub-category. A combination is the last level.",needs:"—",made:[["ai","path proposal"],["person","picks from Structure"]],gate:"Release",lab:"oth",labt:"W1-03/05",dec:"P-104, P-105"},
+ {n:1,name:"Forms",tip:"Official IRCC PDFs, checklists and guides. The form library is the one door.",needs:"a combination (to propose)",made:[["ai","from the guide or checklist"],["person","uploads · approves downloads"]],gate:"Number + edition + checksum; second person for an off-list file",lab:"oth",labt:"W1-06",dec:"P-103",ai:"Propose forms"},
+ {n:2,name:"Person roles",tip:"Who a line applies to: principal applicant, spouse or partner, dependent child, representative.",needs:"—",made:[["team","keeps the list"],["expert","confirms"]],gate:"Release",lab:"cap",labt:"read-only",dec:"[M8]",q:true},
+ {n:3,name:"Shared fields and field map",tip:"One shared field per meaning; the field map says which shared field fills each form field, for whom.",needs:"forms, roles",made:[["ai","each form field of the PDF"],["person","accepts · describes"]],gate:"New field: second person; map: validator + release",lab:"cap",dec:"P-11, P-15, P-63",ai:"Map form fields"},
+ {n:4,name:"Answer lists",tip:"The choices a field offers and how each value is written on each form.",needs:"fields with choices",made:[["ai","the form's own choices"],["person","corrects values"]],gate:"Second person on a new list",lab:"cap",dec:"Q3",q:true},
+ {n:5,name:"Validations",tip:"Rules on one value: length, format, date in the past. Same rule in every channel.",needs:"fields",made:[["ai","the form's limits"],["person","accepts"]],gate:"Release",lab:"oth",labt:"W1-10 drafting",dec:"P-14",ai:"Draft validations"},
+ {n:6,name:"Sections",tip:"Groups of questions, their wording, who answers and whether they repeat.",needs:"fields",made:[["ai","the form's parts and order"],["person","describes"]],gate:"Second person on a new section",lab:"oth",labt:"W1-10 drafting",dec:"P-53",ai:"Draft sections"},
+ {n:7,name:"Document types",tip:"Documents a client provides and what each proves.",needs:"a checklist in the library",made:[["ai","the document checklist"],["person","describes"]],gate:"Second person on a new type",lab:"oth",labt:"W1-10 drafting",dec:"P-53, P-12",ai:"Read the checklist"},
+ {n:8,name:"Conditions",tip:"Shared sentences such as 'Is married or common-law', written once and reused.",needs:"fields, answer lists, roles",made:[["ai","form instructions, checklists"],["person","describes · edits"]],gate:"Second person; release updates every user",lab:"cap",dec:"[C1] P-12",q:true,ai:"Draft conditions"},
+ {n:9,name:"Checks",tip:"Consistency and document checks. They warn, never block. The expert sets values that vary.",needs:"fields, document types, conditions",made:[["ai","guides, form limits"],["expert","sets the value per combination"]],gate:"Release; warns only",lab:"oth",labt:"W1-10 drafting",dec:"P-14",ai:"Draft checks"},
+ {n:10,name:"Requirement lines (on each combination)",tip:"What · who · only if · order: the combination's own lines, using the masters above.",needs:"all above",made:[["ai","checklist lines"],["person","accepts on the workspace"]],gate:"Release",lab:"oth",labt:"W1-08",dec:"P-12"}
+];
+const ST = {done:["ok","✓ Done"],needs:["warn","! Needs you"],wait:["neu","◷ Waiting for others"],run:["ai","◌ AI running"],empty:["dash","Empty"],notready:["neu","○ Not ready"],replay:["ai","Ready to replay"]};
+const STT = {done:"Everything here is released or approved.",needs:"Proposals or decisions wait for you.",wait:"A second person has to approve items you sent.",run:"An AI draft is running; open it to see the steps or Stop it.",empty:"Nothing yet. Start with the step's action.",notready:"Needs an earlier step first; the reason is in the row.",replay:"Earlier real AI runs can be replayed at US$0 so you can accept them."};
+const VIEWS = {
+ t1:{states:["done","done","done","needs","done","needs","run","notready","empty","empty","empty"],
+   counts:["6 combinations","14 forms · 2 checklists","4 roles","233 shared fields · 12 proposals","9 lists","71 drafted · 18 proposals","18 sections · drafting","0 · no checklist yet","0","0","0 lines"],
+   next:["Open Programs","Open Forms","See roles","Review 12 proposals","Open answer lists","Review 18 proposals","See the run","Add a checklist on Forms","Open conditions","Open checks","Open a combination"]},
+ t2:{states:["done","done","done","done","done","done","wait","needs","empty","empty","empty"],
+   counts:["Visitor visa","4 forms (IMM 5257, Schedule 1, IMM 5707, IMM 5476)","3 roles used","146 · 112 reused · 34 new","6 · 6 reused","58 · 41 reused · 17 new","9 · 7 reused · 2 new","11 proposals from IMM 5484","0","0","0 lines"],
+   next:["Open Visitor visa","Open Forms","See roles","Open fields","Open answer lists","Open validations","2 wait on To review","Review 11 proposals","Open conditions","Open checks","Open Visitor visa"]},
+ t3:{states:["empty","notready","done","notready","notready","notready","notready","notready","notready","notready","notready"],
+   counts:["0","0","4 roles (team list)","0","0","0","0","0","0","0","0"],
+   next:["New combination","Needs a combination","See roles","Needs forms","Needs fields","Needs fields","Needs fields","Needs a checklist","Needs fields","Needs fields","Needs a combination"]},
+ t4:{states:["done","done","done","replay","replay","replay","replay","replay","replay","replay","empty"],
+   counts:["5 Retail · 1 Corporate Sample","14 official PDFs","4 roles","233 proposals","9 lists","71 proposals","18 proposals","27 proposals","6 proposals","4 proposals","0 lines"],
+   next:["Open Programs","Open Forms","See roles","Replay and review","Replay and review","Replay and review","Replay and review","Replay and review","Replay and review","Replay and review","Open a combination"]}
+};
+VIEWS.t5 = VIEWS.t1;
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")}
+function table(id){
+ const v = VIEWS[id];
+ let h = `<table aria-label="Setup order"><thead><tr><th>Step</th><th>Master</th><th data-tip="What must exist before this step can start.">Needs first</th><th data-tip="Who makes it: AI from which source, a person, the expert or the team.">Made by</th><th data-tip="What must happen before it is used in a case.">Gate</th><th>State</th><th data-tip="Counts say what they count. With a combination chosen: reused vs new.">How many</th><th>Next step</th></tr></thead><tbody>`;
+ BASE.forEach((s,i)=>{
+  const st = v.states[i], [cls,word] = ST[st];
+  const numc = st==="done"?"done":(st==="needs"||st==="run")?"now":"";
+  const labs = s.lab==="oth"?`<span class="lab oth">${s.labt}</span>`:`<span class="lab">Capability</span>${s.labt?`<span class="lab nb">${s.labt}</span>`:""}`;
+  const dec = `<span class="dec${s.q?" q":""}">${s.q?"":"[F] "}${esc(s.dec)}</span>`;
+  const made = s.made.map(([k,t])=>`<span class="maker ${M[k][1]}" data-tip="${k==="ai"?"AI proposes; nothing is used until a person accepts it.":k==="expert"?"Immigration values come only from the immigration expert.":k==="team"?"Set by the team; not drafted by AI.":"A person decides; new items need a second person."}" tabindex="0"><span class="ico">${M[k][0]}</span> ${esc(t)}</span>`).join("");
+  let act = "";
+  if (s.ai){ const en = !["notready","done"].includes(st) && st!=="run";
+    act = ` <button class="btn ai sm" ${en?"":"disabled"} data-goto="v5" data-tip="${en?"Opens the AI run panel: cost first, steps live, Stop at any time.":st==="done"?"Nothing left to draft. Runs again only for new or changed forms.":st==="run"?"Already running.":"Needs an earlier step first."}">${s.ai}</button>`;}
+  const nx = st==="notready"?`<span class="s12 mut">${esc(v.next[i])}</span>`:`<a>${esc(v.next[i])}</a>`;
+  h += `<tr class="${st==="needs"||st==="run"?"cur":""}"><td><span class="num ${numc}">${s.n}</span></td><td><b data-tip="${esc(s.tip)}" tabindex="0">${esc(s.name)}</b>${labs}${dec}</td><td class="s12">${esc(s.needs)}</td><td>${made}</td><td class="s12">${esc(s.gate)}</td><td><span class="chip ${cls}" data-tip="${STT[st]}" tabindex="0">${word}</span></td><td class="s12">${esc(v.counts[i])}${st==="run"?`<div class="bar" style="margin-top:4px" role="progressbar" aria-label="Forms drafted" aria-valuenow="2" aria-valuemax="4"><i style="width:55%"></i></div>`:""}</td><td>${nx}${act}</td></tr>`;
+ });
+ h += `<tr class="grp"><td colspan="8"><button class="lnk" data-goto="v10" data-tip="Designed masters not built in this wave, each with why.">Later · 11 masters designed, not built in this wave ▸</button> <span class="lab nb">Not built</span></td></tr></tbody></table>`;
+ document.getElementById(id).innerHTML = h;
+}
+["t1","t2","t3","t4","t5"].forEach(table);
+const LATER = [["AI review objectives (tier 3)","People write them; runs at case stages (later wave)","—"],["Field groups (full name, address, period)","Shapes repeated patterns; fields work without them","Single fields"],["Key-date types","Needed for case reminders (case officer wave)","—"],["Government steps","Case journey (case officer wave)","—"],["Standard-step starters","Firm to-dos (later)","—"],["Reference tables (countries, language levels)","Countries come with the answer list for now","Answer list"],["Eligibility gates and scoring","Not needed to set up and fill the 5 combinations","—"],["Country-specific requirements","Needs the expert's content","Help text on the document type"],["Deficiency checks","Later, from AI review patterns","—"],["Translations","French labels later","English only"],["Fee table","Immigration values: the expert supplies them","Sample, labelled"]];
+document.getElementById("laterT").innerHTML = LATER.map(r=>`<tr class="later"><td>${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join("");
+// ---- Describe states ----
+const DS = {
+ dup:{t:"Date of birth",msg:`<p class="err-msg" style="font-size:14px"><b>A field with this name already exists:</b> "Date of birth" (about each person, used by 6 forms). Open it, or say what is different about the one you need. Checked without AI.</p><a>Open "Date of birth"</a><span class="dec">[F] P-34 layer 1</span>`,foot:`<button class="btn pri" disabled>Add new</button>`,bad:true},
+ ver:{t:"Applicant's country of birth, asked on the visitor visa form",msg:`<div class="ailine"><span class="chip ai">AI</span> Checked the library for the same meaning · US$0.01 <span class="dec">[F] P-95 switch on</span></div><div class="card pad stack"><div class="row"><b class="grow">AI's verdict: Use existing</b><span class="chip ai">High confidence</span></div><p style="margin:0">"Place of birth – country" already means this. It is asked in Personal details and used by IMM 5257, IMM 0008 and IMM 5406.</p><table><thead><tr><th>Closest items</th><th>Used by</th></tr></thead><tbody><tr><td>Place of birth – country</td><td>3 forms · 5 combinations</td></tr><tr><td>Country of citizenship</td><td>6 forms</td></tr></tbody></table></div><label class="f">Reason, if you add a new one anyway<textarea rows="2" placeholder="Required because AI found an existing field"></textarea></label><span class="s12 mut">Add new sends it to a different person for approval.</span>`,foot:`<span class="row"><button class="btn">Add new with reason</button><button class="btn pri">Use existing</button></span>`},
+ off:{t:"Relationship to sponsor",msg:`<div class="notice warn"><div><b>AI meaning check is off.</b> The exact-name check ran and found nothing. The item is marked "not meaning-checked"; the reviewer compares it by eye.</div></div><dl class="kv"><dt>Name</dt><dd><input value="Relationship to sponsor" aria-label="Name"></dd><dt>Type</dt><dd><select aria-label="Type"><option>Choice</option></select></dd><dt>Answer list</dt><dd><select aria-label="Answer list"><option>Relationship (11 values)</option></select></dd><dt>About</dt><dd><select aria-label="Who it is about"><option>Each person</option></select></dd></dl><span class="dec">[F] P-53 item 6, P-95</span>`,foot:`<button class="btn pri">Send for approval</button>`}
+};
+function ds(k){const d=DS[k];const t=document.getElementById("dtext");t.value=d.t;t.classList.toggle("bad",!!d.bad);document.getElementById("dmsg").innerHTML=d.msg;document.getElementById("dfoot").innerHTML=d.foot;}
+document.querySelectorAll("[data-ds]").forEach(b=>b.onclick=()=>ds(b.dataset.ds));ds("ver");
+// ---- View switching ----
+const sel=document.getElementById("vsel");
+document.querySelectorAll(".view").forEach(v=>{const o=document.createElement("option");o.value=v.id;o.textContent=v.dataset.name;sel.appendChild(o);});
+function show(id){document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on",v.id===id));sel.value=id;
+ document.getElementById("dbar").textContent = id==="v3"?"No changes · the library is empty":id==="v4"?"Sample loaded · 0 changes":"412 changes across 5 combinations";
+ document.getElementById("trc").textContent = id==="v3"?"0":id==="v4"?"8":"3";}
+sel.onchange=()=>show(sel.value);
+document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if(g&&!g.disabled){show(g.dataset.goto);window.scrollTo(0,0);}});
+document.getElementById("labels").onchange=e=>document.body.classList.toggle("labels",e.target.checked);
+show("v1");
+</script>
+</body>
+</html>
