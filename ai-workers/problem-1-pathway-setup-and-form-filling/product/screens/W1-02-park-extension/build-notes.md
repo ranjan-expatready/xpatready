@@ -82,6 +82,15 @@ Each has a passing and a failing case in `tests/check_forms_w102_fix.ts` (20/20)
 
 Choice 1 above now reads: no schema change, **and the snapshot keeps reading the dormant data** (break M2).
 
+## Lead check (26 Oct, e6c16b8) and its FIX
+* Code accepted. Lead decisions: (1) the dormant extension tables stay until W6, **no migration now**; (2) the Lead marks
+  DEMO rows 2 and 13 and capabilities C1.7, C2.10, C2.11, C3.9 parked on `main`; (3) the case fill's "portal sheet"
+  wording goes to W4.
+* FIX: the test runs' by-products under `prototype/p2/` (122 added files: launch tickets and stub run records; spend
+  ledger lines, stub-pass snapshots and the canary digest changed) were taken back to `main`'s versions, as e8599a8 did.
+  `.gitignore` now keeps new stub run records (`p2/runs/*-stub-*.json`) out; the launch tickets and the ledger cannot be
+  covered by one line (a paid run's ticket looks the same, and the ledger is tracked), so they are restored before a commit.
+
 ## Not done here (for the Lead)
 * qa lane's own checks that drive parked routes or code: `tests/qa/check_qa_s2_probe.ts` (imports `screenMapProposals`,
   now parked), `check_qa_f1_probe.ts`, `check_qa_s01_channels.cjs`, `check_qa_explore_1025.cjs`; the qa lane drops or
