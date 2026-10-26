@@ -16,15 +16,18 @@ const ROOT = import.meta.dirname;
 /** The out folder is emptied first, so it must be one the build owns (break 26 Oct: any path given was deleted): inside
  *  the Studio's working folder, new or empty, or an earlier build of this extension. A relative path is from where the
  *  command runs, for every part of the build. */
+/** The names an earlier build holds at its top (nothing else is ever emptied). */
 const BUILD_FILES = new Set(["manifest.json", "panel.html", "background.js", "content.js", "assets", "brand", "fonts", ".DS_Store"]);
 function outFolder(out: string) {
   const dir = resolve(out), work = resolve(ROOT, "..", "var");
   if (dir === work) throw new Error(`"${dir}" is the Studio's working folder itself: build into a folder inside it`);
   // Inside the working folder too, only an empty folder or an earlier build is emptied (review-4 Minor 5: `var/workspaces`
-  // holds the demo's approval records). An earlier build holds the build's own files only; a manifest, when there, is ours.
-  if (!existsSync(dir) || !readdirSync(dir).filter((f) => f !== ".DS_Store").length) return dir;
-  const own = readdirSync(dir).every((f) => BUILD_FILES.has(f));
-  try { if (own && (!existsSync(join(dir, "manifest.json")) || /^ExpatReady portal assistant/.test(JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")).name))) return dir; } catch { /* not a build */ }
+  // holds the demo's approval records). An earlier build holds this extension's manifest AND nothing but the build's own
+  // files: an `assets` folder of someone's pictures with no manifest, or our manifest beside a `notes.txt`, is not one
+  // (PR #34 and #35 reviews).
+  const entries = existsSync(dir) ? readdirSync(dir) : [];
+  if (!entries.filter((f) => f !== ".DS_Store").length) return dir;
+  try { if (entries.every((f) => BUILD_FILES.has(f)) && /^ExpatReady portal assistant/.test(JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")).name)) return dir; } catch { /* no manifest of ours: not a build */ }
   throw new Error(`"${dir}" already holds other files: build into an empty folder (nothing there was changed)`);
 }
 
