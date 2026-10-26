@@ -530,10 +530,11 @@ export class Studio {
     if (last?.sha256 === sha256) fail("Nothing has changed since the released version.");
     const errors = (await this.problems(c.workspaceId, snapshot, id)).filter((p) => p.level === "error");
     if (errors.length) fail(`Fix ${errors.length} problem${errors.length > 1 ? "s" : ""} before submitting: ${errors.slice(0, 3).map((e) => `${e.item}: ${e.message}`).join(" · ")}`);
-    await this.db.reviewSubmission.updateMany({ where: { combinationId: id, status: "SUBMITTED" }, data: { status: "WITHDRAWN", decisionNote: "replaced by a newer submission" } });
     const changes = diff((last?.snapshot as any) ?? null, snapshot);
     // W1-02 (break M2): nothing to sign is nothing to release, even when the fingerprint moved (an older release's keys).
+    // Refused before anything is written (PR #39 review): a waiting submission is never withdrawn by a refused one.
     if (last && !changes.length) fail("Nothing has changed since the released version.");
+    await this.db.reviewSubmission.updateMany({ where: { combinationId: id, status: "SUBMITTED" }, data: { status: "WITHDRAWN", decisionNote: "replaced by a newer submission" } });
     const s = await this.db.reviewSubmission.create({ data: { workspaceId: c.workspaceId, combinationId: id, draftSha256: sha256, submittedBy: actor.id, status: "SUBMITTED", changeSummary: changes as any, decisionNote: note ?? null } });
     await this.audit.log(c.workspaceId, actor.id, "submitted", "configuration", c.combinationKey, `${actor.name} submitted "${c.label}" for review: ${changes.length} change${changes.length === 1 ? "" : "s"} (${changes.filter((x) => x.needs_sme).length} need the SME duty)`, { sha256 });
     return s;

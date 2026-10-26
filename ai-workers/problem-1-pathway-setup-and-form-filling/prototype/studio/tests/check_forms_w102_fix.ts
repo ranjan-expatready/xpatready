@@ -62,9 +62,14 @@ const onlineEdition = (ws: string, defId: string, label: string) => sql(`insert 
   // (b) again, as a rule: a fingerprint that moved with nothing to review is never submitted (nothing to sign, nothing released).
   const lastRel = sql(`select id || '|' || sha256 from config_release where combination_id='${wp}' order by version desc limit 1`).split("|");
   sql(`update config_release set sha256 = '${"f".repeat(64)}' where id = '${lastRel[0]}'`);
+  // PR #39 review: a submission already waiting (made here by SQL, as an earlier submit would leave it) is not withdrawn
+  // by a submit that is then refused.
+  const waiting = sql(`insert into review_submission (id, workspace_id, combination_id, draft_sha256, submitted_by, status, change_summary) values (gen_random_uuid(), '${ws}', '${wp}', '${"e".repeat(64)}', 'user-A', 'SUBMITTED', '[]') returning id`).split("\n")[0];
   const subsBefore = sql(`select count(*) from review_submission where combination_id='${wp}'`);
   r = await call("POST", `/combinations/${wp}/submit`, { note: "fingerprint moved, nothing changed" });
   ok("C5.1: break M2 (b) fail case: a draft whose fingerprint differs from its release but holds no change is refused (\"Nothing has changed\"), no submission made", r.status === 400 && /Nothing has changed/.test(r.body.message) && sql(`select count(*) from review_submission where combination_id='${wp}'`) === subsBefore, r.body.message);
+  ok("C5.1: PR #39 review: the refused submit withdrew nothing: the waiting submission is still waiting", sql(`select status from review_submission where id='${waiting}'`) === "SUBMITTED", sql(`select status || ' ' || coalesce(decision_note, '') from review_submission where id='${waiting}'`));
+  sql(`delete from review_submission where id='${waiting}'`);
   sql(`update config_release set sha256 = '${lastRel[1]}' where id = '${lastRel[0]}'`);
 
   // ──────────────────────────────────────────── review M1: Preview and the Studio fill of an Online line
@@ -101,6 +106,9 @@ const onlineEdition = (ws: string, defId: string, label: string) => sql(`insert 
   r = await call("POST", `/combinations/${wp}/submit`, { note: "IMM 9001 has no PDF" });
   ok("C3.8: break M1 a line for a form the library holds only online is an error at review, and submit is refused (nothing released)", ch.some((p: { level: string; item: string }) => p.level === "error" && p.item === "IMM 9001") && r.status === 400 && /IMM 9001: IMM 9001 has no PDF edition/.test(r.body.message), r.body.message);
   ok("C3.8: break M1 pass: no other line of the combination has that error", !ch.some((p: { level: string; item: string; message: string }) => p.item !== "IMM 9001" && /no PDF edition/.test(p.message)));
+  const libForms = async () => (await call("GET", "/library/forms")).body as { code: string; usedBy: number; online_only?: boolean; editions: unknown[] }[];
+  const f9 = (await libForms()).find((f) => f.code === "IMM 9001");
+  ok("C3.12: PR #39 review: a form held only online stays in the Forms library, marked online only, with no edition and its use (1 combination)", f9?.online_only === true && f9.editions.length === 0 && f9.usedBy === 1, f9);
   sql(`delete from combination_form where combination_id='${wp}' and lineage_key='IMM 9001'`);
 
   // ──────────────────────────────────────────── break m2: the first PDF of a form held only online is added, not held
@@ -111,6 +119,8 @@ const onlineEdition = (ws: string, defId: string, label: string) => sql(`insert 
   ok("C2.4: break m2 the official IMM 0008 PDF is added as the form's first PDF edition, not held as a \"new edition\" of the parked online version", !/edition_held/.test(up.results[0].outcome) && sql(`select count(*) from form_edition where gov_form_def_id='${def8}' and channel='PDF'`) === "1", up.results[0]);
   const again = (await (await fetch(`http://localhost:${PORT}/api/intake`, { method: "POST", headers: { "x-actor": "user-A" }, body: fd })).json()) as { results: { outcome: string }[] };
   ok("C2.4: break m2 fail case: the same PDF again is \"already in the library\" (the PDF edition is the current one)", /in_library/.test(again.results[0].outcome), again.results[0].outcome);
+  const f8 = (await libForms()).find((f) => f.code === "IMM 0008");
+  ok("C3.12: PR #39 review fail case: once its PDF is added the form is an ordinary library form (its PDF edition listed, not online only)", !!f8 && !f8.online_only && f8.editions.length === 1, f8);
 
   // ──────────────────────────────────────────── break m1: a parked screen-map AI batch is never run again
   const batch = sql(`insert into ai_batch (id, workspace_id, idempotency_key, operation, scope_kind, scope_label, mode, status, plan_sha256, plan, spend_limit_usd, worst_case_usd, started_by) values (gen_random_uuid(), '${ws}', 'w102-screen-map', 'screen_map', 'online_version', 'IMM 1295 online', 'LIVE', 'FAILED', 'screen-map', '{"targets":[],"totals":{"worst_usd":0}}', 0, 0, 'user-A') returning id`).split("\n")[0];

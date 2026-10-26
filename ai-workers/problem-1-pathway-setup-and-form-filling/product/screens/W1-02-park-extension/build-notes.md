@@ -91,6 +91,14 @@ Choice 1 above now reads: no schema change, **and the snapshot keeps reading the
   `.gitignore` now keeps new stub run records (`p2/runs/*-stub-*.json`) out; the launch tickets and the ledger cannot be
   covered by one line (a paid run's ticket looks the same, and the ledger is tracked), so they are restored before a commit.
 
+## PR #39 FIX (Lead, 26 Oct evening)
+| Item | Finding | Result |
+|---|---|---|
+| 1 | CI: `check_studio_browser.cjs` timed out (30 s) waiting for "Review AI proposals" after the IMM 1295 replay (pass B), run 40343334624 | Not reproduced: 44/44 here three times on an isolated copy (STUDIO_URL, its own port), once from a fresh-clone-like `p2/`. Main passed the same suite at 96 s; this run failed at 78 s on the replay's background job, so a slow runner is the likely cause; no removed control is involved (the Draft with AI dialog opened). The check now waits up to 3 minutes for that link and, if it never comes, fails with the row's own words (the job's status and reason), so a real failure is readable. No app change |
+| 2 | Devin, `studio.ts` submit: an empty submission withdrew a waiting one before being refused | refused before anything is written; fail-before shown (the waiting submission became WITHDRAWN on 0f54908) |
+| 3 | Devin, `sources.ts` libraryForms: a form held only online vanished from the library with its uses | listed with `online_only` and its uses; the Forms page marks it "Online version only · later wave" and says to add its PDF; the Add form picker still skips it (no PDF edition); fail-before shown |
+Checks: `check_forms_w102_fix` 23/23 (21/23 on 0f54908: the two new cases fail).
+
 ## Not done here (for the Lead)
 * qa lane's own checks that drive parked routes or code: `tests/qa/check_qa_s2_probe.ts` (imports `screenMapProposals`,
   now parked), `check_qa_f1_probe.ts`, `check_qa_s01_channels.cjs`, `check_qa_explore_1025.cjs`; the qa lane drops or
