@@ -8,7 +8,7 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { captureSchemaErrors, fingerprint, noAnswers, type CaptureRecord } from "../contracts/portal-capture.ts";
 import { canonical } from "../contracts/rules.ts";
 import {
-  BASE_URL, FORBIDDEN, INVENTORY, KEY_FILE, LABEL, MAX_ATTEMPTS, MODELS, OFFICIAL, PARTS_DIR, PRICE_PER_MTOK, PROMPTS_DIR, PROTOTYPE,
+  approvedSourcesDirOk, BASE_URL, FORBIDDEN, INVENTORY, KEY_FILE, LABEL, MAX_ATTEMPTS, MODELS, OFFICIAL, PARTS_DIR, PRICE_PER_MTOK, PROMPTS_DIR, PROTOTYPE,
   ROUTE_ID, RUN_CAP_USD, RUNS_DIR, SCREEN_INVENTORIES, SOLUTION,
 } from "./policy.ts";
 
@@ -19,11 +19,15 @@ const inside = (p: string, dir: string) => p === dir || p.startsWith(dir + sep);
 type ManifestItem = { file: string; path: string; sha256: string };
 const manifestItems = (): ManifestItem[] => JSON.parse(readFileSync(join(OFFICIAL, "manifest.json"), "utf8")).items;
 
-export type AdmittedInput = { file: string; sha256: string; kind: "official" | "inventory" | "draft" | "inventory_part" | "screen_inventory"; bytes: Buffer; parent_sources?: { file: string; sha256: string }[] };
-export type AdmitOptions = { allowStubDrafts?: boolean; depth?: number };
+/** P-80: set on an inventory (or a part of one) of a form approved in the product, from its checked approval record. */
+export type ApprovedInProduct = { sha256: string; edition: string; uploaded_by: string; approved_by: string };
+export type AdmittedInput = { file: string; sha256: string; kind: "official" | "inventory" | "draft" | "inventory_part" | "screen_inventory"; bytes: Buffer; parent_sources?: { file: string; sha256: string }[]; approved?: ApprovedInProduct };
+/** approvedDir (P-80): the one copy's approved-sources folder, named by the launcher; without it nothing approved in the
+ *  product is admitted. */
+export type AdmitOptions = { allowStubDrafts?: boolean; depth?: number; approvedDir?: string };
 
 /** Admits one drafting input: an official file listed in official-sources/ircc/manifest.json with the same
- *  SHA-256, or the P1 inventory of such a file. The path is resolved first, so "..", symlinks and
+ *  SHA-256, or the P1 inventory of such a file, or (P-80) the inventory of a form a second person approved in the product. The path is resolved first, so "..", symlinks and
  *  forbidden folders cannot slip through. `expectedSha` is the hash the run record names. */
 export function admitInput(file: string, expectedSha?: string, opts: AdmitOptions = {}): AdmittedInput {
   const abs = resolve(SOLUTION, file);
@@ -48,10 +52,43 @@ export function admitInput(file: string, expectedSha?: string, opts: AdmitOption
     return { file: rel, sha256: h, kind: "inventory", bytes };
   }
   if (dirname(abs) === RUNS_DIR && abs.endsWith(".json")) return admitDraft(rel, bytes, h, expectedSha, opts);
+  if (approvedSourcesDirOk(dirname(abs))) return admitApproved(rel, abs, bytes, h, opts);
   // F1 slice 2: plain names only (a name is sent in the prompt), checked again by the parts' own rules.
   if (dirname(abs) === SCREEN_INVENTORIES && /^[a-z0-9][a-z0-9._-]*\.screens\.json$/.test(basename(abs))) return admitScreens(rel, bytes, h);
   if (dirname(abs) === PARTS_DIR && /^[a-z0-9][a-z0-9._-]*\.part\.json$/.test(basename(abs))) return admitPart(rel, bytes, h, expectedSha, opts);
-  return refuse(`not on the drafting allowlist (official files, their P1 inventories, parts of them, approved screen inventories, and guarded drafts under AIW-D263): ${file}`);
+  return refuse(`not on the drafting allowlist (official files, their P1 inventories, inventories of forms approved in the product, parts of them, approved screen inventories, and guarded drafts under AIW-D263): ${file}`);
+}
+
+/** P-80: the inventory of a form a second person approved in the product. The guard cannot see the database, so the
+ *  Studio writes the approval where this can check it: <checksum>.approval.json, the approved PDF <checksum>.pdf and its
+ *  inventory <checksum>.inventory.json, in the copy's approved-sources folder. Admitted only from the folder the launcher
+ *  named, when the record is for exactly this checksum, the PDF still has it, the inventory was read from that PDF (its
+ *  summary names the file and the checksum), and the approver is not the uploader. Anything else is refused. */
+function admitApproved(rel: string, abs: string, bytes: Buffer, h: string, opts: AdmitOptions): AdmittedInput {
+  const no = (m: string): never => refuse(`approved form ${rel} not admitted (P-80): ${m}`);
+  const dir = dirname(abs);
+  if (!opts.approvedDir) no("no approved-sources folder was named for this run, so nothing approved in the product is admitted");
+  if (resolve(opts.approvedDir!) !== dir) no("it is not in the approved-sources folder named for this run (another copy's or workspace's approval)");
+  const m = /^([0-9a-f]{64})\.inventory\.json$/.exec(basename(abs));
+  if (!m) no("only the inventory of an approved PDF is admitted, named by its checksum");
+  const sum = m![1];
+  const inv = json(bytes, no);
+  if (!inv || typeof inv !== "object" || !Array.isArray(inv.fields) || !inv.summary) no("it is not a form inventory");
+  if (inv.summary.sha256 !== sum) no("its summary checksum is not the one its name gives");
+  const plain = (name: string) => { const p = join(dir, name); let st; try { st = lstatSync(p); } catch { return no(`${name} is missing (no approval recorded for this checksum)`); } if (st.isSymbolicLink() || realpathSync(p) !== p) no(`${name} is a link`); return readFileSync(p); };
+  const rec = json(plain(`${sum}.approval.json`), no);
+  closed(rec, ["contract", "sha256", "kind", "code", "edition", "file_name", "ircc_page", "uploaded_by", "approved_by", "approved_at"], [], "approval record", no);
+  if (rec.contract !== "approved-source/v1") no("its approval record is not an approved-source/v1 record");
+  if (rec.sha256 !== sum) no("its approval record is for another checksum");
+  if (rec.kind !== "form" || typeof rec.edition !== "string" || !/^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(rec.edition)) no("the approval is not for a form with a printed edition");
+  const person = /^[A-Za-z0-9_-]{1,64}$/;
+  if (!person.test(rec.uploaded_by) || !person.test(rec.approved_by)) no("the people named are not plain ids");
+  if (rec.uploaded_by.toLowerCase() === rec.approved_by.toLowerCase()) no("approved by the person who uploaded it (a second person approves, P-80)");
+  if (typeof rec.approved_at !== "string" || Number.isNaN(Date.parse(rec.approved_at)) || Date.parse(rec.approved_at) > Date.now() + 300_000) no("the approval time is not a past date and time");
+  const pdfName = `${sum}.pdf`;
+  if (sha(plain(pdfName)) !== sum) no("the approved PDF no longer has the approved checksum");
+  if (inv.summary.file !== relative(SOLUTION, join(dir, pdfName)).split(sep).join("/")) no("its inventory was not read from the approved PDF");
+  return { file: rel, sha256: h, kind: "inventory", bytes, approved: { sha256: sum, edition: rec.edition, uploaded_by: rec.uploaded_by, approved_by: rec.approved_by } };
 }
 
 const json = (bytes: Buffer, no: (m: string) => never) => { try { return JSON.parse(bytes.toString("utf8")); } catch { return no("not JSON"); } };
@@ -139,7 +176,7 @@ function admitPart(rel: string, bytes: Buffer, h: string, expectedSha: string | 
     }
   } else no(`its parent is a ${parent.kind}, not an inventory or a screen inventory`);
   if (expectedSha !== undefined && expectedSha !== h) no("hash differs from the run record");
-  return { file: rel, sha256: h, kind: "inventory_part", bytes, parent_sources: [{ file: parent.file, sha256: parent.sha256 }] };
+  return { file: rel, sha256: h, kind: "inventory_part", bytes, parent_sources: [{ file: parent.file, sha256: parent.sha256 }], ...(parent.approved ? { approved: parent.approved } : {}) };
 }
 
 /** AIW-D263: an earlier AI draft made by the guarded launch path from permitted inputs. Verified before
@@ -262,9 +299,11 @@ export function assertNoLinksUnder(dir: string): void {
  *  realpath, which stats every link on the way. In a lane copy `node_modules` is a link whose target runs through a
  *  second link (the copy's `.tools`); resolving it needed read access to that link, which would grant the whole tools
  *  folder. With the flag the allowances below suffice everywhere, and none is widened. */
-export function isolatedNodeArgs(ledgerDir: string): string[] {
+export function isolatedNodeArgs(ledgerDir: string, approvedDir?: string): string[] {
   const nodeModules = realpathSync(join(PROTOTYPE, "node_modules"));
-  const reads = [OFFICIAL, INVENTORY, join(PROTOTYPE, "p2"), join(PROTOTYPE, "contracts"), join(PROTOTYPE, "package.json"), join(PROTOTYPE, "node_modules"), nodeModules, dirname(KEY_FILE), ledgerDir];
+  // P-80: one copy's approved-sources folder, only when the launcher names one; never any other part of the Studio's files.
+  if (approvedDir !== undefined && !approvedSourcesDirOk(approvedDir)) refuse(`not an approved-sources folder of a Studio copy: ${approvedDir}`);
+  const reads = [OFFICIAL, INVENTORY, join(PROTOTYPE, "p2"), join(PROTOTYPE, "contracts"), join(PROTOTYPE, "package.json"), join(PROTOTYPE, "node_modules"), nodeModules, dirname(KEY_FILE), ledgerDir, ...(approvedDir ? [approvedDir] : [])];
   return ["--permission", "--preserve-symlinks", ...reads.map((r) => `--allow-fs-read=${r}`), `--allow-fs-write=${ledgerDir}`];
 }
 

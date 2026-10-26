@@ -5,7 +5,7 @@ import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import { execFile, spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { basename, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { manifest, slug } from "../../engine/import.ts";
 import { normalize, type LibraryField } from "../../engine/normalize.ts";
@@ -48,6 +48,18 @@ export function launcherFor(requested: string | undefined, varRoot: string): str
 const LAUNCHER = launcherFor(process.env.STUDIO_FAKE_LAUNCHER, VAR_ROOT);
 const PROMPTS = join(PROTOTYPE, "p2", "prompts");
 const EDITION = /^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/;
+/** P-80: where the drafting guard can check an approval made in the product (p2/policy.ts approvedSourcesDirOk): this
+ *  copy's own workspace folder, so a demo reset removes it with the database row and test copies never share one. */
+export const APPROVED_DIR = () => join(VAR("demo"), "approved-sources");
+type Approval = { sha256: string; kind: string; code: string | null; edition: string | null; fileName: string; irccPage: string; uploadedBy: string; approvedBy: string; approvedAt: Date };
+/** P-80: the approval record and the approved PDF the guard checks (p2/guard.ts admitApproved), written when a second
+ *  person approves a held file (intake.ts) and again from the database row when missing (approved before it existed). */
+export function recordApproval(row: Approval, bytes: Buffer) {
+  if (sha(bytes) !== row.sha256) fail("The stored file no longer has the approved checksum; upload the official PDF again.", HttpStatus.CONFLICT);
+  const dir = APPROVED_DIR(); mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, `${row.sha256}.pdf`), bytes);
+  writeFileSync(join(dir, `${row.sha256}.approval.json`), JSON.stringify({ contract: "approved-source/v1", sha256: row.sha256, kind: row.kind, code: row.code, edition: row.edition, file_name: row.fileName, ircc_page: row.irccPage, uploaded_by: row.uploadedBy, approved_by: row.approvedBy, approved_at: row.approvedAt.toISOString() }, null, 1) + "\n");
+}
 const TITLES: Record<string, string> = { "IMM 5257": "Application for Temporary Resident Visa", "IMM 1295": "Application for Work Permit made Outside of Canada", "IMM 5707": "Family Information", "IMM 5409": "Statutory Declaration of Common-law Union", "IMM 5476": "Use of a Representative", "IMM 5475": "Authority to Release Personal Information to a Designated Individual", "IMM 5257 SCH1": "Schedule 1: Background/Declaration" };
 
 @Injectable()
@@ -61,8 +73,8 @@ export class Sources {
       .catch(() => undefined);
   }
 
-  /** Attaches a file to a combination as a source and says whether AI may read it (only approved official files, by
-   *  checksum, D147). Uploads reach this through the one form intake (intake.ts); "+ Add" calls it for a library file. */
+  /** Attaches a file to a combination as a source and says whether AI may read it (only approved files, by checksum:
+   *  the official library's, D147, or one a second person approved in the product, P-80). Uploads reach this through the one form intake (intake.ts); "+ Add" calls it for a library file. */
   async attach(actor: Actor, combinationId: string, file: { originalname: string; buffer: Buffer }, via: "MANUAL" | "SAMPLE") {
     need(actor, "author");
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
@@ -85,28 +97,47 @@ export class Sources {
       else if (kind === "Form") { status = "RECOGNISED"; detail = `Recognised: ${item.edition}, an approved official form. Next: AI drafts its field map.`; }
       else { status = "ATTACHED"; detail = `Recognised: ${item.edition}, an approved official source. Kept as a source document; its text supports requirements and citations.`; }
     }
-    // P-80: approved in the product by a second person. Kept as a source; AI drafting still reads only the official
-    // manifest's files (the drafting guard admits official inputs only), so it is not offered for AI drafting.
+    // P-80: approved in the product by a second person: a form is read on this computer and drafted like an official one
+    // (the drafting guard checks the approval record written at approval); a checklist is kept as a source document.
     const inProduct = item ? null : await this.db.approvedSource.findUnique({ where: { workspaceId_sha256: { workspaceId: c.workspaceId, sha256: hash } } });
-    if (inProduct) { kind = inProduct.kind === "checklist" ? "Document checklist" : "Form"; edition = inProduct.edition; status = "ATTACHED"; detail = `Approved as a source in the product (IRCC page ${inProduct.irccPage}). Kept as a source document; AI drafting reads only the official library's files.`; }
+    if (inProduct) {
+      kind = inProduct.kind === "checklist" ? "Document checklist" : "Form"; edition = inProduct.edition;
+      const by = ACTOR_BY_ID(inProduct.approvedBy).name;
+      const known = kind === "Form" ? await this.db.formEdition.findFirst({ where: { workspaceId: c.workspaceId, sha256: hash, maps: { some: {} } } }) : null;
+      if (known) { status = "IN_LIBRARY"; detail = `Approved in the product by ${by}: ${edition}. Its form fields are already mapped in the library, so no AI drafting is needed.`; }
+      else if (kind === "Form") { status = "RECOGNISED"; detail = `Approved in the product by ${by} (IRCC page ${inProduct.irccPage}): ${edition}. Next: read the form on this computer, then AI drafts its field map, as for an official form.`; }
+      else { status = "ATTACHED"; detail = `Approved in the product by ${by} (IRCC page ${inProduct.irccPage}). Kept as a source document; its text supports requirements and citations.`; }
+    }
     const a = await this.db.sourceAttachment.create({ data: { workspaceId: c.workspaceId, combinationId, kind, fileName: safe, storedPath: stored.replace(`${ROOT}/`, ""), sha256: hash, bytes: file.buffer.length, recognised: !!item, officialFile: item?.file ?? null, edition, approval: item?.approval ?? (inProduct ? `approved in the product (${inProduct.irccPage})` : null), status, statusDetail: detail, uploadedVia: via, uploadedBy: actor.id } });
     await this.audit.log(c.workspaceId, actor.id, "uploaded", "source", safe, `${actor.name} attached ${safe} to "${c.label}"${via === "SAMPLE" ? " (sample button)" : ""}: ${status === "HELD" ? "held, not recognised" : edition}`, { sha256: hash, via });
     return { attachment: a, duplicate: false, message: detail };
   }
 
+  /** P-80: the product approval of a file that is not in the official library (a second person approved it), or null. */
+  async approvedInProduct(a: { workspaceId: string; sha256: string; recognised: boolean }) {
+    return a.recognised ? null : this.db.approvedSource.findUnique({ where: { workspaceId_sha256: { workspaceId: a.workspaceId, sha256: a.sha256 } } });
+  }
+
+  /** The file name a form's drafting job is known by: the official file's, or for a form approved in the product its
+   *  checksum's (job ids studio-fieldmap-approved-<12 hex>, which the launcher is started for with the approved folder). */
+  draftName(a: { officialFile: string | null; sha256: string }) { return a.officialFile ?? `approved-${a.sha256.slice(0, 12)}.pdf`; }
+
   async read(actor: Actor, attachmentId: string) {
     need(actor, "author");
     const a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: attachmentId } });
-    if (!a.recognised || !a.officialFile) fail("Only recognised official forms are read.");
+    const approved = await this.approvedInProduct(a);
+    if (!(a.recognised && a.officialFile) && !approved) fail("Only approved forms are read: a file of the official library, or one a second person approved in the product.");
     if (a.kind !== "Form") fail("This is a checklist or instructions, not a fillable form; it is kept as a source.");
+    // The record the guard checks, written at approval; written again from the database row when it is missing.
+    if (approved && !(existsSync(join(APPROVED_DIR(), `${a.sha256}.approval.json`)) && existsSync(join(APPROVED_DIR(), `${a.sha256}.pdf`)))) recordApproval(approved, readFileSync(resolve(ROOT, a.storedPath)));
     const job = await this.db.draftingJob.create({ data: { workspaceId: a.workspaceId, combinationId: a.combinationId, attachmentId, kind: "read_form", mode: "LOCAL", status: "RUNNING", message: "Reading the form's fields on this computer (no AI)", startedBy: actor.id } });
     try {
-      const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "read_form.py"), a.officialFile!], { cwd: ROOT, timeout: 120_000 });
+      const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "read_form.py"), ...(approved ? ["--approved", APPROVED_DIR(), a.sha256] : [a.officialFile!])], { cwd: ROOT, timeout: 120_000 });
       const r = JSON.parse(stdout.trim().split("\n").pop()!);
       if (!r.ok) throw new Error(r.error ?? r.status);
       await this.db.sourceAttachment.update({ where: { id: a.id }, data: { status: "READ", statusDetail: `Read: ${r.summary.entry_fields_bound} form fields, ${r.summary.required_fields} required, ${r.summary.choice_fields_with_options} with answer lists, ${r.summary.row_groups_fixed} repeating rows, ${r.summary.barcodes} barcodes. Next: draft its field map with AI.`, inventoryFile: r.inventory_file, inventorySummary: r.summary } });
       await this.db.draftingJob.update({ where: { id: job.id }, data: { status: "COMPLETED", message: `Read ${r.summary.entry_fields_bound} form fields on this computer (no AI)${String(r.status).includes("DIFFERS") ? "; the stored form field list differs from this file and was kept as it was" : ""}.`, detail: r, finishedAt: new Date() } });
-      await this.audit.log(a.workspaceId, actor.id, "read", "form", a.officialFile, `${actor.name} read ${a.edition}: ${r.summary.entry_fields_bound} form fields (${r.status})`);
+      await this.audit.log(a.workspaceId, actor.id, "read", "form", a.officialFile ?? a.fileName, `${actor.name} read ${a.edition}${approved ? " (approved in the product)" : ""}: ${r.summary.entry_fields_bound} form fields (${r.status})`);
       return { ok: true, summary: r.summary };
     } catch (e) {
       await this.db.draftingJob.update({ where: { id: job.id }, data: { status: "FAILED", message: (e as Error).message.slice(0, 400), finishedAt: new Date() } });
@@ -143,7 +174,7 @@ export class Sources {
 
   async draftOptions(attachmentId: string) {
     const a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: attachmentId } });
-    const jobId = a.officialFile ? this.jobIdFor(a.officialFile) : null;
+    const jobId = a.officialFile || (await this.approvedInProduct(a)) ? this.jobIdFor(this.draftName(a)) : null;
     const ledger = this.ledger();
     const inventory = this.inventoryOf(a);
     const invSha = inventory ? sha(readFileSync(join(SOLUTION, inventory))) : undefined;
@@ -175,10 +206,11 @@ export class Sources {
   }
 
   /** The form's box list: its own, or, before it is read here, the one the reader keeps for exactly this file (same
-   *  checksum; reading never replaces it). Lets the plan find a saved AI answer before offering a paid call (A3). */
+   *  checksum; reading never replaces it). Lets the plan find a saved AI answer before offering a paid call (A3). For a
+   *  form approved in the product (P-80) that is the approved folder's inventory of the same checksum. */
   inventoryOf(a: { officialFile: string | null; inventoryFile: string | null; sha256: string }) {
-    if (a.inventoryFile || !a.officialFile) return a.inventoryFile;
-    const rel = `prototype/p1/inventory/${basename(a.officialFile).replace(/\.pdf$/, "")}.inventory.json`;
+    if (a.inventoryFile) return a.inventoryFile;
+    const rel = a.officialFile ? `prototype/p1/inventory/${basename(a.officialFile).replace(/\.pdf$/, "")}.inventory.json` : relative(SOLUTION, join(APPROVED_DIR(), `${a.sha256}.inventory.json`));
     try { return JSON.parse(readFileSync(join(SOLUTION, rel), "utf8")).summary?.sha256 === a.sha256 ? rel : null; } catch { return null; }
   }
 
@@ -206,7 +238,7 @@ export class Sources {
    *  their guarded jobs are written (p2/parts, p2/jobs); the guard admits a part only as an exact subset. */
   async draftSplit(a: { workspaceId: string; officialFile: string | null; inventoryFile: string | null; sha256: string; edition: string | null }, printedEdition: string | null, write: boolean) {
     const invRel = this.inventoryOf(a);
-    if (!invRel || !a.officialFile) return null;
+    if (!invRel) return null;
     const invBytes = readFileSync(join(SOLUTION, invRel)), inv = JSON.parse(invBytes.toString("utf8"));
     const formKey = (printedEdition ?? a.edition ?? "").split(" (")[0];
     // A merged field redirects; a field retired (or missing) is never reused (break m6): the AI or a person maps it.
@@ -215,7 +247,7 @@ export class Sources {
     const live = (k: string) => { let key = k; for (let n = 0; n < 5 && newest.get(key)?.mergedIntoKey; n++) key = newest.get(key)!.mergedIntoKey!; const f = newest.get(key); return f && f.status !== "RETIRED" ? key : null; };
     const plan = planDraft(inv, await this.priorMaps(a.workspaceId, formKey, a.sha256), { redirect: live });
     if (!plan.reused.length && plan.parts.length <= 1) return null;
-    const whole = this.ensureJobFile({ officialFile: a.officialFile, inventoryFile: invRel }, printedEdition);
+    const whole = this.ensureJobFile({ officialFile: this.draftName(a), inventoryFile: invRel }, printedEdition);
     const invSha = sha(invBytes), stem = basename(invRel).replace(/\.inventory\.json$/, "");
     const parts = plan.parts.map((p) => {
       const body = { contract: "inventory-part/v1", parent: { file: invRel, sha256: invSha }, part: { index: p.index, count: p.count, section: p.sections.join(", ") }, summary: inv.summary, groups: inv.groups, presence_scripts: inv.presence_scripts, fields: p.fields };
@@ -265,7 +297,7 @@ export class Sources {
     const printed = await this.printedEdition(a);
     const split = await this.draftSplit(a, printed, true);
     if (split) return this.runParts(id, a, split, j.mode === "LIVE" ? "live" : "stub");
-    const { jobId } = this.ensureJobFile(a, printed);
+    const { jobId } = this.ensureJobFile({ officialFile: this.draftName(a), inventoryFile: a.inventoryFile }, printed);
     await this.db.draftingJob.update({ where: { id }, data: { message: j.mode === "LIVE" ? "Stub pass of the guarded launch path, then the AI call" : "Stub pass of the guarded launch path (no network, no cost)", detail: { job_id: jobId, steps: [] } } });
     await this.launch(id, a.id, jobId, j.mode === "LIVE" ? "live" : "stub");
   }
@@ -379,7 +411,9 @@ export class Sources {
 
   private launchProcess(jobId: string, mode: "stub" | "live"): Promise<{ code: number; out: string; err: string }> {
     return new Promise((res) => {
-      const p = spawn(NODE, [LAUNCHER, "--job", jobId, `--${mode}`], { cwd: ROOT, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
+      // P-80: a form approved in the product is admitted only from this copy's approved folder, named to the launcher.
+      const approved = /^studio-fieldmap-approved-[0-9a-f]{12}/.test(jobId) ? ["--approved-dir", APPROVED_DIR()] : [];
+      const p = spawn(NODE, [LAUNCHER, "--job", jobId, `--${mode}`, ...approved], { cwd: ROOT, env: { ...process.env, PATH: `${join(NODE, "..")}:${process.env.PATH}` } });
       let out = "", err = "";
       p.stdout.on("data", (d) => (out += d)); p.stderr.on("data", (d) => (err += d));
       p.on("close", (code) => res({ code: code ?? 1, out, err }));
@@ -626,7 +660,10 @@ export class Sources {
     const pending = job.items.filter((i) => i.decision === "PENDING");
     if (pending.length) fail(`${pending.length} proposal${pending.length > 1 ? "s are" : " is"} still undecided (for example ${pending[0].proposedKey}).`);
     const a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: job.attachmentId! } });
-    const item = manifest().find((i) => i.sha256 === a.sha256)!;
+    // An official file, or (P-80) one a second person approved in the product: the edition its approval names.
+    const official = manifest().find((i) => i.sha256 === a.sha256), inProduct = official ? null : await this.approvedInProduct(a);
+    if (!official && !inProduct?.edition) fail("This file is held until its source is verified, so its draft cannot be applied.", HttpStatus.CONFLICT);
+    const item: { file: string | null; edition: string; applicability: string } = official ?? { file: null, edition: inProduct!.edition!, applicability: `approved in the product (IRCC page ${inProduct!.irccPage})` };
     const rec = JSON.parse(readFileSync(join(SOLUTION, job.runFile!), "utf8"));
     const out = checkedOutput(rec);
     const inv = JSON.parse(readFileSync(join(SOLUTION, a.inventoryFile!), "utf8"));
@@ -687,7 +724,7 @@ export class Sources {
   async reuseForm(actor: Actor, attachmentId: string, b: { who?: string }) {
     need(actor, "author");
     const a = await this.db.sourceAttachment.findUniqueOrThrow({ where: { id: attachmentId } });
-    if (!manifest().some((i) => i.sha256 === a.sha256)) fail("This file is held until its source is verified. It cannot be reused from the library.", HttpStatus.CONFLICT);
+    if (!manifest().some((i) => i.sha256 === a.sha256) && !(await this.approvedInProduct(a))) fail("This file is held until its source is verified. It cannot be reused from the library.", HttpStatus.CONFLICT);
     const ed = await this.db.formEdition.findFirst({ where: { workspaceId: a.workspaceId, sha256: a.sha256, maps: { some: {} } }, include: { form: true } });
     if (!ed) fail("This form's fields are not mapped in the library yet; read it and draft its field map.");
     // A form removed from this combination can be reused again (QA-13): only the line's newest version counts.
@@ -702,7 +739,9 @@ export class Sources {
   async libraryForms() {
     const workspaceId = await this.ws.id();
     const forms = await this.db.govFormDef.findMany({ where: { workspaceId }, orderBy: { formKey: "asc" }, include: { editions: { include: { _count: { select: { maps: true } } } }, usedBy: { where: { status: { not: "RETIRED" } }, select: { combinationId: true } } } });
-    const approved = new Set(manifest().map((i) => i.sha256));
+    // P-80: a file a second person approved in the product is a library form too.
+    const inProduct = new Set((await this.db.approvedSource.findMany({ where: { workspaceId }, select: { sha256: true } })).map((x) => x.sha256));
+    const approved = new Set([...manifest().map((i) => i.sha256), ...inProduct]);
     // Historical workspaces may contain entries created before the source gate. Keep those out of
     // library pickers and usage summaries; a prior database row is not a source-verification decision.
     // F1: an online version is verified by its second-person approval (P-66), not by the official list.
@@ -714,7 +753,7 @@ export class Sources {
       const mine = new Set(f.editions.map((e) => e.sha256));
       const used = new Set([...f.usedBy.map((u) => u.combinationId), ...att.filter((a) => mine.has(a.sha256)).map((a) => a.combinationId)]);
       return { code: f.formKey, title: f.displayName, kind: f.formKind, usedBy: used.size,
-        editions: [...f.editions.filter((e) => e.channel !== "ONLINE")].sort((a, b) => compareEditions(b, a)).map((e) => ({ label: e.editionLabel, channel: "PDF", mapped: e._count.maps > 0, boxes: e._count.maps, approved: !!e.officialFile })),
+        editions: [...f.editions.filter((e) => e.channel !== "ONLINE")].sort((a, b) => compareEditions(b, a)).map((e) => ({ label: e.editionLabel, channel: "PDF", mapped: e._count.maps > 0, boxes: e._count.maps, approved: !!e.officialFile || inProduct.has(e.sha256 ?? ""), approved_in_product: !e.officialFile && inProduct.has(e.sha256 ?? "") })),
         online_versions: f.editions.filter((e) => e.channel === "ONLINE").map((e) => ({ id: e.id, label: e.editionLabel, channel: "ONLINE", portal: e.portalKey, captured_on: e.capturedOn?.toISOString().slice(0, 10) ?? null, recheck_by: e.recheckBy?.toISOString().slice(0, 10) ?? null, mapped: e._count.maps > 0, form_fields: e._count.maps })),
         channels: [...new Set(f.editions.map((e) => (e.channel === "ONLINE" ? "Online" : "PDF")))] };
     });

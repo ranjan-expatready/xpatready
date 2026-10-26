@@ -3,8 +3,13 @@
 //   Extension side (only its own token, never x-actor): exchange the code for a token; who am I; sign out; capture.
 // The token is opaque (32 random bytes), kept only as its sha256, bound to the person, the firm (workspace), the
 // modes their duties give (capture: the author duty, Sample; fill: the case duty) and the extension's fixed id, which
-// every request's Origin must match. Codes are single-use, 5 minutes; tokens 8 hours (Sample); five wrong codes from
-// one address in 5 minutes refuse further tries for 5 minutes (STANDARDS §8). Answers and tokens are never logged.
+// every request's Origin must match. Codes are single-use, 5 minutes; tokens 8 hours (Sample). A code's first three
+// characters find it; a wrong code with them counts against it in the database, and the fifth wrong try voids it
+// (STANDARDS §8; review-2 Minor 1: never a per-address pause in memory, which a shared office address or a restart
+// broke). A blind guess must hit an open code's three characters and then its other five (31^8 codes, 5 tries each),
+// and every try to exchange a code is throttled in the database: 60 a minute per address, 600 for the whole server
+// (review-3 Major 2: one client could otherwise sweep every selector and void the office's codes).
+// Answers and tokens are never logged.
 // The Studio's sign-in is the simulated x-actor header: pairing proves the flow, not the security (Scaffolding, P-33).
 import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Ip, Param, Post, Query } from "@nestjs/common";
 import { createHash, randomBytes, randomInt } from "node:crypto";
@@ -13,7 +18,7 @@ import { join } from "node:path";
 import { CODE_ALPHABET, EXTENSION_PUBLIC_KEY, FillPlanRequest, MODES, NewExtensionCapture, NewPairing, NewSession, PAIRING } from "../../contracts/extension.ts";
 import type { CaptureInput, CaptureRecord } from "../../engine/capture.ts";
 import { fillPlan, onlineMapOf, type FillPlan } from "../../engine/extension/fill.ts";
-import { screenDifference, screenIdentity } from "../../engine/extension/screens.ts";
+import { idLooksLikeClientDetail, screenDifference, screenIdentity } from "../../engine/extension/screens.ts";
 import { noAnswers } from "../../engine/capture.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { ACTORS, actorOf, Audit, bearerOf, Db, fail, need, RUNTIME_ACTORS, SOLUTION, Workspace, type Actor } from "./core.ts";
@@ -39,12 +44,6 @@ export type Signed = { actor: Actor; modes: Mode[]; sessionId: string; workspace
 
 @Injectable()
 export class Extension {
-  private wrong = new Map<string, number[]>();
-  /** The wrong tries from one address within the window; a new one is added to the list as it is now (two requests at
-   *  the same moment each count: never a list read before the other request's try was added). */
-  private tries(ip: string) { const win = PAIRING.wrongWindowMinutes * 60_000; return (this.wrong.get(ip) ?? []).filter((t) => Date.now() - t < win); }
-  private strike(ip: string) { const t = Date.now() + Math.random(); this.wrong.set(ip, [...this.tries(ip), t]); return t; }
-  private forgive(ip: string, t: number) { this.wrong.set(ip, (this.wrong.get(ip) ?? []).filter((x) => x !== t)); }
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Forms) private readonly forms: Forms, @Inject(Runtime) private readonly runtime: Runtime) {}
 
   /** XT-1: a code for the signed-in Studio person, shown once, kept hashed. */
@@ -53,37 +52,60 @@ export class Extension {
     const modes = modesOf(actor);
     if (!modes.length) fail(`${actor.name} (simulated) holds neither the capture duty nor the case duty, so the extension has nothing to do for them.`, HttpStatus.FORBIDDEN);
     const workspaceId = await this.ws.id();
-    const open = await this.db.extensionPairing.count({ where: { person: actor.id, usedAt: null, expiresAt: { gt: new Date() } } });
+    const live = { usedAt: null, voidedAt: null, expiresAt: { gt: new Date() } };
+    const open = await this.db.extensionPairing.count({ where: { person: actor.id, ...live } });
     if (open >= PAIRING.openCodes) fail(`${open} codes are still open: use one in the extension, or wait ${PAIRING.codeMinutes} minutes for them to end.`, HttpStatus.TOO_MANY_REQUESTS);
-    const code = Array.from({ length: 8 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join("");
+    // Three characters no open code starts with, when there are any (so one person's typing never counts against another's code).
+    let code = "";
+    for (let n = 0; n < 5 && !code; n++) {
+      const c = Array.from({ length: 8 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join("");
+      if (n === 4 || !(await this.db.extensionPairing.count({ where: { selector: c.slice(0, PAIRING.selector), ...live } }))) code = c;
+    }
     const expiresAt = new Date(Date.now() + PAIRING.codeMinutes * 60_000);
-    await this.db.extensionPairing.create({ data: { workspaceId, person: actor.id, modes, codeHash: sha(code), expiresAt } });
+    await this.db.extensionPairing.create({ data: { workspaceId, person: actor.id, modes, codeHash: sha(code), selector: code.slice(0, PAIRING.selector), expiresAt } });
     await this.audit.log(workspaceId, actor.id, "paired", "browser extension", null, `${actor.name} asked for a code to connect the browser extension (${modes.join(" and ")})`);
     return { code, expires_at: expiresAt.toISOString(), modes, message: `Connect the browser extension: enter this code in the extension within ${PAIRING.codeMinutes} minutes.` };
   }
 
-  /** XT-2: the extension exchanges a code for its token (once). Five wrong codes from one address pause tries. */
+  /** XT-2: the extension exchanges a code for its token (once). The fifth wrong try against a code voids it. */
   async session(body: unknown, origin: H, ip: string) {
     const now = Date.now();
-    // Who is asking first (break m2: a request from elsewhere never spends this address's tries), then the limit.
+    // Who is asking first (break m2: a request from elsewhere never spends a code's tries).
     const b = parse(NewSession, body);
     if (b.extensionId !== EXTENSION_ID || origin !== EXTENSION_ORIGIN) unauthorized("This is not the ExpatReady extension the Studio knows.");
-    if (this.tries(ip).length >= PAIRING.wrongTries) fail(`Too many wrong codes: try again in ${PAIRING.wrongWindowMinutes} minutes, with a new code from the Studio.`, HttpStatus.TOO_MANY_REQUESTS);
-    // Break M1: every try is counted before the database is asked, so tries sent at the same moment cannot all pass the
-    // check before any is counted; a right code takes its own try back.
-    const mine = this.strike(ip);
+    // Every try is written before it is counted, so tries sent at the same moment each see the others (break M1); a right
+    // code takes its own try back. Old tries are cleared as new ones come.
+    const address = (ip || "unknown").slice(0, 64);
+    const [mine] = await this.db.$queryRaw<{ id: bigint }[]>`insert into extension_code_try (address) values (${address}) returning id`;
+    await this.db.$executeRaw`delete from extension_code_try where at < now() - interval '10 minutes'`;
+    // The server total counts at most an address's own limit from each address: one address over its limit is refused on
+    // its own and never pauses every colleague (review-4 Major 1).
+    const [n] = await this.db.$queryRaw<{ here: bigint; all: bigint }[]>`select coalesce(sum(c) filter (where address = ${address}), 0) as here, coalesce(sum(least(c, ${PAIRING.triesPerAddress})), 0) as all
+      from (select address, count(*) as c from extension_code_try where at > now() - interval '1 minute' group by address) t`;
+    if (Number(n.here) > PAIRING.triesPerAddress) fail("Too many tries from this network in the last minute: wait a minute, then enter the code again.", HttpStatus.TOO_MANY_REQUESTS);
+    if (Number(n.all) > PAIRING.triesPerServer) fail("Too many tries to connect an extension in the last minute: wait a minute, then enter the code again.", HttpStatus.TOO_MANY_REQUESTS);
     const p = await this.db.extensionPairing.findUnique({ where: { codeHash: sha(b.code) } });
-    if (!p || p.usedAt || p.expiresAt.getTime() <= now) unauthorized("That code is wrong, already used or more than 5 minutes old: ask the Studio for a new one.");
+    if (!p || p.usedAt || p.voidedAt || p.expiresAt.getTime() <= now) {
+      // A wrong code counts against every open code it could have meant (same first three characters), in one statement
+      // each, so tries sent at the same moment are all counted (break M1) and a restart forgets none.
+      const hit = await this.db.$queryRaw<{ id: string; person: string; workspace_id: string; voided: boolean }[]>`update extension_pairing
+        set wrong_tries = wrong_tries + 1, voided_at = case when wrong_tries + 1 >= ${PAIRING.wrongTries} then now() else voided_at end
+        where selector = ${b.code.slice(0, PAIRING.selector)} and used_at is null and voided_at is null and expires_at > now() and code_hash <> ${sha(b.code)}
+        returning id, person, workspace_id, voided_at is not null as voided`;
+      for (const v of hit.filter((x) => x.voided)) await this.audit.log(v.workspace_id, v.person, "voided", "browser extension", null, `A browser extension code of ${actorOf(v.person).name} stopped working after ${PAIRING.wrongTries} wrong tries`);
+      if (p?.voidedAt || hit.some((x) => x.voided)) unauthorized(`That code stopped working after ${PAIRING.wrongTries} wrong tries: ask the Studio for a new one.`);
+      unauthorized(`That code is wrong, already used or more than 5 minutes old: check it, or ask the Studio for a new one. A code stops working after ${PAIRING.wrongTries} wrong tries.`);
+    }
     const token = randomBytes(32).toString("base64url");
     const expiresAt = new Date(now + PAIRING.sessionHours * 3_600_000);
     // The code is spent under its own row: two exchanges at the same moment give one session (the other is refused).
     const s = await this.db.$transaction(async (tx) => {
-      const used = await tx.extensionPairing.updateMany({ where: { id: p!.id, usedAt: null }, data: { usedAt: new Date() } });
-      // Losing the race for a code is a used code: a wrong try like any other (the count does not depend on timing).
-      if (!used.count) unauthorized("That code was just used: ask the Studio for a new one."); // its try stays counted
+      // Not voided meanwhile: the fifth wrong try and the right code sent at the same moment cannot both win.
+      const used = await tx.extensionPairing.updateMany({ where: { id: p!.id, usedAt: null, voidedAt: null }, data: { usedAt: new Date() } });
+      if (!used.count) unauthorized("That code was just used or stopped working: ask the Studio for a new one.");
       return tx.extensionSession.create({ data: { workspaceId: p!.workspaceId, person: p!.person, modes: p!.modes, extensionId: b.extensionId, tokenHash: sha(token), pairingId: p!.id, expiresAt } });
     });
-    this.forgive(ip, mine);
+    await this.db.$executeRaw`delete from extension_code_try where id = ${mine.id}`;
     const actor = actorOf(s.person);
     await this.audit.log(s.workspaceId, s.person, "connected", "browser extension", null, `${actor.name} connected the browser extension (${s.modes.join(" and ")}; until ${expiresAt.toISOString().slice(0, 16).replace("T", " ")} UTC)`);
     return { token, expires_at: expiresAt.toISOString(), modes: s.modes, person: { id: actor.id, name: actor.name, role: actor.role } };
@@ -143,6 +165,12 @@ export class Extension {
   startCapture(sig: Signed, body: unknown) { return this.forms.createCapture(sig.actor, { ...parse(NewExtensionCapture, body), way: "extension" }); }
   async addScreen(sig: Signed, id: string, body: unknown) { await this.ownCapture(sig, id); return this.forms.addExtensionScreen(sig.actor, id, body); }
   async capture(sig: Signed, id: string) { await this.ownCapture(sig, id); return this.forms.capture(id); }
+  /** PR #27: a returned (or open) capture goes on in the panel: a wrong screen is removed there, then captured again. */
+  async removeScreen(sig: Signed, id: string, order: number, revision: string | undefined) {
+    // Break (26 Oct): the panel names a screen by its place, so it must say which version of the list it saw.
+    if (!/^\d+$/.test(revision ?? "")) fail("Send the capture's revision you were shown, so the screen you meant is the one removed.");
+    await this.ownCapture(sig, id); return this.forms.removeScreen(sig.actor, id, order, Number(revision));
+  }
   async finish(sig: Signed, id: string) { await this.ownCapture(sig, id); return this.forms.finish(sig.actor, id); }
 
   /** Fill mode's choice of case: the workspace's open cases, newest first, with their people and the forms their
@@ -198,7 +226,9 @@ export class Extension {
   private async recapture(sig: Signed, editionId: string, plan: Exclude<FillPlan, { match: true }>, editionLabel: string, liveIds: string[]) {
     const kind = plan.reason === "changed" ? "changed" : "not_captured";
     // For a screen the version does not have: its element ids (the page's code, not a client's text) say what to capture.
-    const differences = plan.reason === "changed" ? plan.differences : liveIds.slice(0, 200).map((input) => ({ input, change: "added", approved_label: null }));
+    // PR #27: a live element id that looks like a client's detail (an email address, a long number, a passport-like code)
+    // is dropped: it is the page's code, but a page can build it from what was typed.
+    const differences = plan.reason === "changed" ? plan.differences : liveIds.filter((i) => !idLooksLikeClientDetail(i)).slice(0, 200).map((input) => ({ input, change: "added", approved_label: null }));
     // Break M2: a changed screen is the approved one (its approved heading and identity are kept); a screen the version
     // does not have is known only by the live page, whose heading can hold a client's details, so it is kept as a
     // checksum of that heading and named in words, never in the page's own text (M5).
@@ -244,6 +274,7 @@ export class ExtensionController {
   @Post("captures") async start(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Body() b: unknown) { return this.x.startCapture(await this.x.signed(t, o, a, "capture"), b); }
   @Get("captures") async captures(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { return this.x.openCaptures(await this.x.signed(t, o, a, "capture")); }
   @Get("captures/:id") async capture(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string) { return this.x.capture(await this.x.signed(t, o, a, "capture"), id); }
+  @Delete("captures/:id/screens/:order") async removeScreen(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Param("order") n: string, @Query("revision") rev?: string) { return this.x.removeScreen(await this.x.signed(t, o, a, "capture"), id, Number(n), rev); }
   @Post("captures/:id/screens") async screen(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.addScreen(await this.x.signed(t, o, a, "capture"), id, b); }
   @Get("cases") async cases(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Query("q") q?: string) { return this.x.cases(await this.x.signed(t, o, a, "fill"), q); }
   @Post("cases/:id/forms/:form/:subject/fill-plans") @HttpCode(200) async fill(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Param("form") form: string, @Param("subject") subject: string, @Body() b: unknown) { return this.x.fillPlan(await this.x.signed(t, o, a, "fill"), id, form, subject, b); }

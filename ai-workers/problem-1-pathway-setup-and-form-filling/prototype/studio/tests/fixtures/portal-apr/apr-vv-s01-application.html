@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!-- Sample · Scaffolding (P-33, P-98). Written by the forms lane to look like a blank screen of an application on the
+     Authorized Paid Representatives (APR) Portal. Not a real APR screen: nobody has seen one yet (the founder captures the
+     real blank screens in G3). Labels follow IRCC's public descriptions of the form; the markup differs from the IRCC
+     Portal Sample on purpose (aria-labelledby, a step list, a representative banner, a sign-out form). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="csrf-token" content="apr-sess-41d9">
+  <title>Application details - Application for a visitor visa - APR Portal</title>
+  <script>window.__apr = { step: 1, total: 6 };</script>
+</head>
+<body>
+  <header>
+    <p class="banner">Authorized Paid Representatives Portal (Sample)</p>
+    <nav aria-label="Portal"><a href="/apr/dashboard">My applications</a> <a href="/apr/help">Help</a> <a href="/apr/fr" lang="fr">Français</a></nav>
+    <form role="search" action="/apr/search"><label for="aprSearch">Search applications</label><input type="search" id="aprSearch" name="q"></form>
+  </header>
+  <main>
+    <ol class="steps" aria-label="Application steps"><li aria-current="step">Application details</li><li>Personal details</li><li>Marital status</li><li>Spouse or common-law partner</li><li>Languages</li><li>Passport</li></ol>
+    <h1>Application details</h1>
+    <form id="aprApplication" method="post" action="/apr/application/visitor">
+      <input type="hidden" name="_csrf" value="apr-sess-41d9">
+      <input type="hidden" name="draftId" value="D-000000">
+      <label for="visitPurpose">Purpose of your visit (required)</label>
+      <select id="visitPurpose" name="visitPurpose" required><option value="">Select one</option><option value="TOURISM">Tourism</option><option value="FAMILY">Visit family or friends</option><option value="BUSINESS">Business</option></select>
+      <fieldset><legend>Are you travelling with members of your family? (required)</legend>
+        <input type="radio" id="travelFamilyYES" name="travelFamily" value="YES" required><label for="travelFamilyYES">Yes</label>
+        <input type="radio" id="travelFamilyNO" name="travelFamily" value="NO" required><label for="travelFamilyNO">No</label>
+      </fieldset>
+      <fieldset><legend>Date you plan to arrive</legend>
+        <label for="arrivalYear">Year</label><input type="text" id="arrivalYear" name="arrivalYear" maxlength="4">
+        <label for="arrivalMonth">Month</label><select id="arrivalMonth" name="arrivalMonth"><option value="">--</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select>
+        <label for="arrivalDay">Day</label><input type="text" id="arrivalDay" name="arrivalDay" maxlength="2">
+      </fieldset>
+      <div class="actions"><button type="button" name="back">Back</button> <button type="submit" name="next">Save and continue</button></div>
+    </form>
+  </main>
+  <footer><form action="/apr/signout" method="post"><button type="submit">Sign out</button></form></footer>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!-- Sample · Scaffolding (P-33, P-98). Written by the forms lane to look like a blank screen of an application on the
+     Authorized Paid Representatives (APR) Portal. Not a real APR screen: nobody has seen one yet (the founder captures the
+     real blank screens in G3). Labels follow IRCC's public descriptions of the form; the markup differs from the IRCC
+     Portal Sample on purpose (aria-labelledby, a step list, a representative banner, a sign-out form). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="csrf-token" content="apr-sess-41d9">
+  <title>Personal details - Application for a visitor visa - APR Portal</title>
+  <script>window.__apr = { step: 2, total: 6 };</script>
+</head>
+<body>
+  <header>
+    <p class="banner">Authorized Paid Representatives Portal (Sample)</p>
+    <nav aria-label="Portal"><a href="/apr/dashboard">My applications</a> <a href="/apr/help">Help</a> <a href="/apr/fr" lang="fr">Français</a></nav>
+    <form role="search" action="/apr/search"><label for="aprSearch">Search applications</label><input type="search" id="aprSearch" name="q"></form>
+  </header>
+  <main>
+    <ol class="steps" aria-label="Application steps"><li>Application details</li><li aria-current="step">Personal details</li><li>Marital status</li><li>Spouse or common-law partner</li><li>Languages</li><li>Passport</li></ol>
+    <h1>Personal details</h1>
+    <form id="aprApplication" method="post" action="/apr/application/visitor">
+      <input type="hidden" name="_csrf" value="apr-sess-41d9">
+      <input type="hidden" name="draftId" value="D-000000">
+      <fieldset><legend>Full name</legend>
+      <div class="field"><span id="familyNameLabel" class="label">Surname (as shown on your passport) <span class="req">(required)</span></span>
+        <input type="text" id="familyName" name="familyName" aria-labelledby="familyNameLabel" maxlength="100" required></div>
+      <div class="field"><span id="givenNamesLabel" class="label">Given name(s) (as shown on your passport or travel document)</span>
+        <input type="text" id="givenNames" name="givenNames" aria-labelledby="givenNamesLabel" maxlength="100" aria-describedby="givenNamesHelp"></div>
+      <p id="givenNamesHelp" class="help">Leave blank if you have no given name on your passport.</p>
+      </fieldset>
+      <div class="field"><span id="uciLabel" class="label">UCI</span>
+        <input type="text" id="uci" name="uci" aria-labelledby="uciLabel" maxlength="10" pattern="[0-9]{8,10}" aria-describedby="uciHelp"></div>
+      <p id="uciHelp" class="help">Your unique client identifier, if you have one. It is on letters from IRCC.</p>
+      <label for="sex">Sex (required)</label>
+      <select id="sex" name="sex" required><option value="">Select one</option><option value="FEMALE">Female</option><option value="MALE">Male</option><option value="ANOTHER">Another gender</option><option value="UNKNOWN">Unknown</option><option value="UNSPECIFIED">Prefer not to say</option></select>
+      <fieldset><legend>Date of birth</legend>
+        <label for="dobYear">Year</label><input type="text" id="dobYear" name="dobYear" maxlength="4" required>
+        <label for="dobMonth">Month</label><select id="dobMonth" name="dobMonth" required><option value="">--</option><option value="01">01</option><option value="02">02</option><option value="03">03</option><option value="04">04</option><option value="05">05</option><option value="06">06</option><option value="07">07</option><option value="08">08</option><option value="09">09</option><option value="10">10</option><option value="11">11</option><option value="12">12</option></select>
+        <label for="dobDay">Day</label><input type="text" id="dobDay" name="dobDay" maxlength="2" required>
+      </fieldset>
+      <fieldset><legend>Place of birth</legend>
+      <div class="field"><span id="birthCityLabel" class="label">City or town <span class="req">(required)</span></span>
+        <input type="text" id="birthCity" name="birthCity" aria-labelledby="birthCityLabel" required></div>
+      <label for="birthCountry">Country or territory (required)</label>
+      <select id="birthCountry" name="birthCountry" required><option value="">Select one</option><option value="IND">India</option><option value="PHL">Philippines</option><option value="CHN">China</option></select>
+      </fieldset>
+      <div class="actions"><button type="button" name="back">Back</button> <button type="submit" name="next">Save and continue</button></div>
+    </form>
+  </main>
+  <footer><form action="/apr/signout" method="post"><button type="submit">Sign out</button></form></footer>
+</body>
+</html>

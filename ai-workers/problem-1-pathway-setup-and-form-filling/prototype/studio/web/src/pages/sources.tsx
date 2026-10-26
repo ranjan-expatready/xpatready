@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { FileUp, FolderOpen, Play, Recycle, ScanLine, Sparkles } from "lucide-react";
 import { api, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { DraftingSources } from "@/components/channels";
-import { Button, Dialog, Field, Notice, Pill, Select, Table } from "@/components/ui/controls";
+import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ModePill, StatusPill } from "@/pages/combination";
 import { useQueryClient } from "@tanstack/react-query";
@@ -84,11 +84,19 @@ function ReuseButton({ a, d, onReuse, busy }: { a: any; d: any; onReuse: () => v
   return has ? <Pill tone="ok">In this configuration</Pill> : <Button size="sm" variant="secondary" onClick={onReuse} busy={busy}><Recycle /> Add from library</Button>;
 }
 
+/** One file of the official library, as GET /official-library lists it. */
+type OfficialFile = { file: string; edition: string; kind: string; combination: string; sha256: string };
+
 function SampleDialog({ id, onClose, attached }: { id: string; onClose: () => void; attached: string[] }) {
-  const lib = useApi<any[]>(["official"], "/official-library");
+  const lib = useApi<OfficialFile[]>(["official"], "/official-library");
   const toast = useToast();
   const [busy, setBusy] = React.useState<string | null>(null);
-  const attach = async (f: any) => {
+  // Scout SC-3: a kind filter and a search by code or title; the internal approval record ids (D229, D257) are not shown,
+  // since every file listed here is on the approved official list (by checksum) and that is what a person needs to know.
+  const [kind, setKind] = React.useState(""), [find, setFind] = React.useState("");
+  const kinds = [...new Set((lib.data ?? []).map((f) => f.kind))].sort();
+  const shown = (lib.data ?? []).filter((f) => (!kind || f.kind === kind) && (!find.trim() || `${f.edition} ${f.file}`.toLowerCase().includes(find.trim().toLowerCase())));
+  const attach = async (f: OfficialFile) => {
     setBusy(f.file);
     try { const r = await api(`/combinations/${id}/attachments/sample`, { method: "POST", json: { officialFile: f.file } }); toast.push({ tone: ["held", "new_edition_held", "older_edition_held", "refused", "failed"].includes(r.outcome) ? "danger" : "ok", text: `${f.edition}: ${r.message}` }); }
     catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); }
@@ -96,8 +104,14 @@ function SampleDialog({ id, onClose, attached }: { id: string; onClose: () => vo
   };
   return (
     <Dialog wide open onOpenChange={(o) => !o && onClose()} title="Attach a sample file" description="Stands in for choosing a file from your computer: the file goes through the same upload, recognition and status handling." footer={<Button onClick={onClose}>Done</Button>}>
-      <Table dense head={["Official file", "Kind", "Approved", ""]}>
-        {(lib.data ?? []).map((f: any) => <tr key={f.file}><td><p className="font-medium">{f.edition}</p><p className="text-xs text-text-muted">{f.combination}</p></td><td className="text-xs">{f.kind}</td><td className="text-xs">{f.approval}</td><td>{attached.includes(f.sha256) ? <Pill tone="ok">Attached</Pill> : <Button size="sm" variant="secondary" busy={busy === f.file} onClick={() => attach(f)}>Attach</Button>}</td></tr>)}
+      <p className="mb-3 text-sm text-text-muted">Every file here is on the approved official source list: its checksum matches the copy taken from the IRCC page.</p>
+      <div className="mb-3 flex flex-wrap items-end gap-3">
+        <Field label="Kind" className="w-48"><Select aria-label="Kind" value={kind} onChange={(e) => setKind(e.target.value)}><option value="">All kinds</option>{kinds.map((k) => <option key={k} value={k}>{k}</option>)}</Select></Field>
+        <Field label="Find" className="min-w-48 flex-1"><Input aria-label="Find a form code or title" type="search" placeholder="IMM 5257" value={find} onChange={(e) => setFind(e.target.value)} /></Field>
+      </div>
+      {!shown.length && lib.data ? <p className="text-sm text-text-muted">No official file matches: clear the filter.</p> : null}
+      <Table dense head={["Official file", "Kind", ""]}>
+        {shown.map((f) => <tr key={f.file}><td><p className="font-medium">{f.edition}</p><p className="text-xs text-text-muted">{f.combination}</p></td><td className="text-xs">{f.kind}</td><td>{attached.includes(f.sha256) ? <Pill tone="ok">Attached</Pill> : <Button size="sm" variant="secondary" busy={busy === f.file} onClick={() => attach(f)}>Attach</Button>}</td></tr>)}
       </Table>
     </Dialog>
   );
@@ -110,7 +124,10 @@ function DraftDialog({ a, onClose }: { a: any; onClose: () => void }) {
   // The order the server uses: answers that pass today's check first, then ones it re-checks before use (Lead check A3).
   const runs: SavedRun[] = opts.data?.saved_runs ?? [];
   const saved = [...runs.filter((r) => r.valid), ...runs.filter((r) => r.recheckable)];
-  const [mode, setMode] = React.useState<"live" | "replay" | "stub">("live");
+  // Review-3 Minor 4: a form approved in the product (not on the official manifest) is not open to a paid call yet (the
+  // founder's or the Lead's decision): its dialog starts on the stub pass and says why Live is closed.
+  const liveClosed = !a.recognised;
+  const [mode, setMode] = React.useState<"live" | "replay" | "stub">(liveClosed ? "stub" : "live");
   const [runFile, setRunFile] = React.useState("");
   React.useEffect(() => { if (saved.length && !runFile) { setRunFile(saved[0].file); setMode("replay"); } }, [saved.length]);
   const qc = useQueryClient();
@@ -121,7 +138,7 @@ function DraftDialog({ a, onClose }: { a: any; onClose: () => void }) {
     <Dialog open onOpenChange={(o) => !o && onClose()} title={`Draft the field map of ${a.edition}`} description="The AI reads the list of the form's fields (public official content only) and proposes, for every form field, whose fact fills it and which library field it is. People decide every proposal before anything reaches the draft."
       footer={<><Button variant="ghost" onClick={onClose}>Cancel</Button><Button onClick={() => go.mutate(undefined)} busy={go.isPending}><Play /> {mode === "replay" ? "Use saved AI answer" : mode === "live" ? "Start live AI draft" : "Run stub pass"}</Button></>}>
       <div className="space-y-3 text-sm">
-        <label className="flex items-start gap-2"><input type="radio" checked={mode === "live"} onChange={() => setMode("live")} className="mt-1" /><span><b>Live AI call</b> through the guarded route: stub pass first, then Claude Opus 5.5, up to US$5 for this run. {l ? `Spent so far US$${l.committed_usd} of the US$${l.cap_usd} experiment cap; US$${l.remaining_usd} left.` : ""} {opts.data && !opts.data.key_present ? <span className="text-text-danger">The API key file is missing: a live call will be refused.</span> : null}</span></label>
+        <label className="flex items-start gap-2"><input type="radio" checked={mode === "live"} onChange={() => setMode("live")} className="mt-1" disabled={liveClosed} /><span>{liveClosed ? <><b>Live AI call</b>: not open yet for a form approved in the product (only for files on the official list); run the stub pass.</> : <><b>Live AI call</b> through the guarded route: stub pass first, then Claude Opus 5.5, up to US$5 for this run. {l ? `Spent so far US$${l.committed_usd} of the US$${l.cap_usd} experiment cap; US$${l.remaining_usd} left.` : ""} {opts.data && !opts.data.key_present ? <span className="text-text-danger">The API key file is missing: a live call will be refused.</span> : null}</>}</span></label>
         <label className="flex items-start gap-2"><input type="radio" checked={mode === "replay"} onChange={() => setMode("replay")} className="mt-1" disabled={!saved.length} /><span><b>Use the saved AI answer</b> (no model call, US$0): an earlier real answer for this same form, checked with today's rules before use and labelled wherever it is shown.{saved.length ? <Select className="mt-1" value={runFile} onChange={(e) => setRunFile(e.target.value)}>{saved.map((r) => <option key={r.file} value={r.file}>{r.run_id} · {r.at?.slice(0, 16)} · paid US${r.cost_usd?.toFixed(2)} then{r.recheckable ? " · re-checked first" : r.rechecked ? " · re-checked" : ""}</option>)}</Select> : <span className="block text-xs text-text-muted">No saved AI answer for this form yet.</span>}</span></label>
         <label className="flex items-start gap-2"><input type="radio" checked={mode === "stub"} onChange={() => setMode("stub")} className="mt-1" /><span><b>Stub pass only</b>: proves the guarded path end to end without network or cost; produces no AI content.</span></label>
         <Field label="Job" hint="Inputs: this form's inventory only (allowlisted); expected answers and family values are screened out of the prompt."><code className="mono block rounded bg-surface px-2 py-1">{opts.data?.job_id}</code></Field>

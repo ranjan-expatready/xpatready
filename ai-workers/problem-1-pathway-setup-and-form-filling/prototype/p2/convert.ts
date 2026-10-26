@@ -42,9 +42,10 @@ const editionOf = (officialFile: string): string | undefined =>
   (JSON.parse(readFileSync(join(OFFICIAL, "manifest.json"), "utf8")).items as { path: string; edition?: string }[])
     .find((i) => `official-sources/ircc/${i.path}` === officialFile)?.edition;
 
-export function convertFieldMap(parsed: any, inventoryFile: string) {
+/** approvedEdition (P-80): for a form approved in the product, the edition its checked approval names (launch.ts). */
+export function convertFieldMap(parsed: any, inventoryFile: string, approvedEdition?: string) {
   const inv = JSON.parse(readFileSync(join(SOLUTION, inventoryFile), "utf8")).summary as { file: string; sha256: string };
-  const edition = editionOf(inv.file);
+  const edition = editionOf(inv.file) ?? approvedEdition;
   if (!edition) throw new Error(`no edition for ${inv.file} in the official manifest`);
   const weak: string[] = [];
   const checked = checkFieldMapOutput(parsed);

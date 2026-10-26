@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!-- Sample · Scaffolding (P-33, P-98). Written by the forms lane to look like a blank screen of an application on the
+     Authorized Paid Representatives (APR) Portal. Not a real APR screen: nobody has seen one yet (the founder captures the
+     real blank screens in G3). Labels follow IRCC's public descriptions of the form; the markup differs from the IRCC
+     Portal Sample on purpose (aria-labelledby, a step list, a representative banner, a sign-out form). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="csrf-token" content="apr-sess-41d9">
+  <title>Marital status - Application for a visitor visa - APR Portal</title>
+  <script>window.__apr = { step: 3, total: 6 };</script>
+</head>
+<body>
+  <header>
+    <p class="banner">Authorized Paid Representatives Portal (Sample)</p>
+    <nav aria-label="Portal"><a href="/apr/dashboard">My applications</a> <a href="/apr/help">Help</a> <a href="/apr/fr" lang="fr">Français</a></nav>
+    <form role="search" action="/apr/search"><label for="aprSearch">Search applications</label><input type="search" id="aprSearch" name="q"></form>
+  </header>
+  <main>
+    <ol class="steps" aria-label="Application steps"><li>Application details</li><li>Personal details</li><li aria-current="step">Marital status</li><li>Spouse or common-law partner</li><li>Languages</li><li>Passport</li></ol>
+    <h1>Marital status</h1>
+    <form id="aprApplication" method="post" action="/apr/application/visitor">
+      <input type="hidden" name="_csrf" value="apr-sess-41d9">
+      <input type="hidden" name="draftId" value="D-000000">
+      <label for="maritalStatus">Your current marital status (required)</label>
+      <select id="maritalStatus" name="maritalStatus" required aria-describedby="maritalStatusHelp"><option value="">Select one</option><option value="MARRIED">Married</option><option value="SINGLE">Single</option><option value="COMMON_LAW">Common-law</option><option value="DIVORCED">Divorced</option><option value="SEPARATED">Legally separated</option><option value="WIDOWED">Widowed</option><option value="ANNULLED">Annulled marriage</option><option value="UNKNOWN">Unknown</option></select>
+      <p id="maritalStatusHelp" class="help">If you are married or in a common-law relationship, the next screen asks about your spouse or partner.</p>
+      <div class="actions"><button type="button" name="back">Back</button> <button type="submit" name="next">Save and continue</button></div>
+    </form>
+  </main>
+  <footer><form action="/apr/signout" method="post"><button type="submit">Sign out</button></form></footer>
+</body>
+</html>
