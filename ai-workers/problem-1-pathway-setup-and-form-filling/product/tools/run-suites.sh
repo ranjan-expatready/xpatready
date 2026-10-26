@@ -10,6 +10,9 @@ set -u
 ROOT="$(git rev-parse --show-toplevel)"; cd "$ROOT" || exit 2
 P=ai-workers/problem-1-pathway-setup-and-form-filling; S="$P/prototype/studio"
 export PATH="$ROOT/.tools/node-v24.21.0/bin:/opt/homebrew/opt/postgresql@18/bin:$PATH"
+# GNU timeout: `timeout` on Linux (CI), `gtimeout` from Homebrew coreutils on the Mac. Missing → stop loudly, never run unguarded.
+TIMEOUT="$(command -v timeout || command -v gtimeout || true)"
+[ -n "$TIMEOUT" ] || { echo "GNU timeout is missing (Mac: brew install coreutils, which provides gtimeout); no suite was run"; exit 2; }
 DEMO=0; [ "${1:-}" = "--demo" ] && DEMO=1
 # Not regression suites: the 100-program exercise needs its own fixture copy (run by hand, see its usage line).
 SKIP="check_catalogue_scale.cjs"
@@ -21,7 +24,7 @@ pg_ctl -D "$ROOT/.tools/solution-1-prototype/pg18-data" status >/dev/null 2>&1 |
 rows=(); fail=0
 run() {  # $1 file, $2 label, rest: command
   local f="$1" label="$2"; shift 2; local log="$OUT/${f%.*}.log" t0=$SECONDS
-  if timeout 1200 "$@" > "$log" 2>&1; then st=PASS; else st=FAIL; fail=1; fi
+  if "$TIMEOUT" 1200 "$@" > "$log" 2>&1; then st=PASS; else st=FAIL; fail=1; fi
   local last; last=$(grep -E "passed|/[0-9]+ passed|[0-9]+ passed" "$log" | tail -1 | cut -c1-90)
   [ -n "$last" ] || last="$(grep -c '^PASS' "$log") checks passed"
   # A failing check's own line first: "Error" also appears inside PASS lines that quote an expected error.
