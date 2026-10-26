@@ -17,7 +17,6 @@
       "Bash(git -C * push * -d*)",
       "Bash(git -C * push * --delete*)",
       "Bash(git -C * push * :*)",
-      "Bash(gh pr merge*)",
       "Bash(gh pr close*)",
       "Bash(gh pr edit*)",
       "Bash(gh pr comment*)",
@@ -74,6 +73,18 @@
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/ai-workers/tools/snapshot.sh 2>/dev/null || true",
             "timeout": 20
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "if": "Bash(gh pr merge*)",
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/ai-workers/problem-1-pathway-setup-and-form-filling/product/tools/merge-guard.sh",
+            "timeout": 15,
+            "onFailure": "block"
           }
         ]
       }
