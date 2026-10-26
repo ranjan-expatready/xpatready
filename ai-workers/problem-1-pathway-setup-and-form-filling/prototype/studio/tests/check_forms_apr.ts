@@ -259,7 +259,7 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
     const dAgain = await send("Order screen D"), bAgain = await send("Order screen B");
     const fresh = await send("Order screen F");
     ok("C2.9: review-4 Minor 1 two removals keep portal order (B and D captured again: A B C D E), a new screen goes at the end, and the message says where it went, not \"in its place\"",
-      (await titles()) === "ABCDEF" && /captured again as screen 4, before "Order screen E"/.test(dAgain.body.result?.message) && /captured again as screen 2, before "Order screen C"/.test(bAgain.body.result?.message) && /^Screen 6 captured/.test(fresh.body.result?.message) && !/in its place/.test(`${dAgain.body.result?.message}${bAgain.body.result?.message}`),
+      (await titles()) === "ABCDEF" && /captured again as screen 3, before "Order screen E"/.test(dAgain.body.result?.message) && /captured again as screen 2, before "Order screen C"/.test(bAgain.body.result?.message) && /^Screen 6 captured/.test(fresh.body.result?.message) && !/in its place/.test(`${dAgain.body.result?.message}${bAgain.body.result?.message}`),
       { order: await titles(), d: dAgain.body.result?.message, b: bAgain.body.result?.message, f: fresh.body.result?.message });
     const mine = await as(token).call("GET", "/extension/captures");
     ok("C2.9: review Major 1 the panel's list of captures to continue holds this person's open capture (the route a reloaded panel reads)", mine.status === 200 && mine.body.some((c: { id: string }) => c.id === open.id), mine.status);
