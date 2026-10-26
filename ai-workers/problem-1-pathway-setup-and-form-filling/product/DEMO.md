@@ -13,7 +13,7 @@ Every online line in A and B is filed through the **APR Portal** (P-98: the one 
 | # | Mechanism | Where in the story | Capability | Owner lane |
 |---|---|---|---|---|
 | 1 | Ingest a PDF form: code, edition, checksum read without AI; an off-list file held, then approved by a second person | A: attach IMM 5257, IMM 5707, IMM 5476; one off-list file held | C2.1, C2.2, C2.3 | forms, screens |
-| 2 | Ingest an online form: portal screens captured with the extension, checked before sending, a second person approves | A: IMM 5257 online, Sample APR Portal screens, then the real blank APR screens the founder captures (P-98) | C2.5, C2.8, C2.9 | forms |
+| 2 | **Parked (P-102, W6).** Ingest an online form: portal screens captured with the extension, checked before sending, a second person approves | A: IMM 5257 online, Sample APR Portal screens, then the real blank APR screens the founder captures (P-98) | C2.5, C2.8, C2.9 | forms |
 | 3 | AI maps form fields to shared fields (reuse, new, ambiguous), saved answers replayed at US$0; one live run when the founder approves | A: the three forms; B: only IMM 1295 | C3.1, C3.3 | screens, forms |
 | 4 | A person reviews: accept with a reason, edit, reject; form-field decisions (not a fact, filled by hand) | A | C3.2, C3.8 | screens |
 | 5 | Master data: new shared fields approved by a second person; duplicates found; "Describe it"; aliases and a merge | A creates, B reuses | C3.5, C3.6, C3.13, C5.3 | screens |
@@ -24,7 +24,7 @@ Every online line in A and B is filed through the **APR Portal** (P-98: the one 
 | 10 | Review and release: submit, expert ticks, a different person releases; library changes go out with it | A release 1, release 2; B | C5.1, C5.2 | runtime, screens |
 | 11 | A case on a release: answers once, each person; the minor answered by the principal; confirm by section | A family case on release 1 | C6.1–C6.3, C6.6, C6.10 | runtime |
 | 12 | PDF auto-fill with barcodes, read back equal, Adobe Validate | A release 1: IMM 5257 PDF (5/5 barcodes); B: IMM 1295 | C7.1, C7.2 | runtime, evidence |
-| 13 | Online auto-fill: the extension fills one portal screen from confirmed facts; a changed screen fills nothing and opens "Re-capture needed" | A release 2: IMM 5257 Online | C7.4, C9.3 | forms |
+| 13 | **Parked (P-102, W6).** Online auto-fill: the extension fills one portal screen from confirmed facts; a changed screen fills nothing and opens "Re-capture needed" | A release 2: IMM 5257 Online | C7.4, C9.3 | forms |
 | 14 | Online plus PDF in one filing: portal sheet, filled PDFs, signed scans | A release 2 case | C7.7, C8.1 | runtime (M3) |
 | 15 | Document checklist per person | A case | C6.4 | runtime (M3) |
 | 16 | The case stays on its release while a new release goes out | A: case on release 1, release 2 published | C6.1 (P-67) | runtime |

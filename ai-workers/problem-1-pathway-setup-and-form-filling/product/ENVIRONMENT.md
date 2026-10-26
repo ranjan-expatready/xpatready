@@ -30,6 +30,9 @@ Every tool added for this work is listed here: version, official source, checksu
 * **To fill on the Mac (next Mac session):** exact versions (`npx playwright --version`, `agent-browser --version`), install location, source and licence (agent-browser), and checksums where published.
 * **Problem and options:** not recorded for agent-browser. Playwright Chromium duplicates the system Chrome the suites already use. Until a problem is named, neither is part of the reference build; a lane that wants agent-browser proposes it through this gate first.
 
+## Tool: GNU coreutils 9.12 for the suites' time limit (installed 26 Oct, founder OK)
+* **What and why:** `brew install coreutils` (9.12_1, GPL-3.0-or-later, official Homebrew bottle, sha256 `38e01cd0…7b73d` matches the published one; pulled in `gmp` and `openssl@4`). Gives `/opt/homebrew/bin/gtimeout`, which `tools/run-suites.sh` uses on the Mac (Linux CI has `timeout`). Test tooling only, not part of the app; no data leaves the Mac.
+
 ## Technology gate record: git-filter-repo (STANDARDS §1)
 * **Problem:** the local history held `sources/` (390 files) and 83 PDFs that must never reach GitHub (P-81); a plain push would send them.
 * **Options:** (1) push as is: rejected, leaks excluded files; (2) rewrite the working repository's history: rejected, breaks five running lane copies; (3) a filtered mirror built by git-filter-repo: chosen; (4) a single fresh commit without history: loses the review trail.

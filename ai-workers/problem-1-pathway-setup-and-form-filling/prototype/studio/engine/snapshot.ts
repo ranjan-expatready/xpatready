@@ -92,7 +92,9 @@ export async function buildSnapshots(db: PrismaClient, workspaceId: string, comb
   return out;
 }
 
-/** F1 (CHECK fixes): what the channel rules need to know about a line's form beyond its field maps, only when it matters,
+/** W1-02 (break M2): kept as before the park, so a release made with a portal or an Online line keeps its fingerprint on
+ *  an older database; a database made since holds no portal or online version, so these keys never appear there.
+ *  F1 (CHECK fixes): what the channel rules need to know about a line's form beyond its field maps, only when it matters,
  *  so configurations without online versions keep their fingerprint: an Online line's approved online versions from
  *  the portal (none, or how many, mapped or not), and a form the library has only online (a PDF line has nothing to fill). */
 function formEditions(f: { channel?: string | null; form: { editions: FormEdition[] } }, portalKey: string | null) {

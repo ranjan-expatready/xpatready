@@ -11,7 +11,7 @@ import { Button, Input, Panel, Pill } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
-export type LibraryForm = { code: string; title: string; kind: string; usedBy: number; editions: { label: string; mapped: boolean; boxes: number; approved: boolean }[] };
+export type LibraryForm = { code: string; title: string; kind: string; usedBy: number; online_only?: true; editions: { label: string; mapped: boolean; boxes: number; approved: boolean }[] };
 export type IntakeResult = { file: string; outcome: "in_library" | "added" | "attached" | "new_edition_held" | "older_edition_held" | "held" | "refused" | "failed"; message: string; kind: string; code: string | null; title: string | null; edition: string | null; published: string | null };
 
 export const OUTCOME: Record<IntakeResult["outcome"], [tone: string, label: string]> = {

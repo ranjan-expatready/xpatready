@@ -357,7 +357,8 @@ export class Ai implements OnModuleInit {
     const batch = await this.db.aiBatch.findUnique({ where: { id }, include: { jobs: true } });
     if (!batch) fail("This AI work no longer exists.", HttpStatus.NOT_FOUND);
     if (batch!.jobs.some((j) => j.status === "QUEUED" || j.status === "RUNNING")) fail("Wait until the running steps finish.", HttpStatus.CONFLICT);
-    if (batch!.operation === "screen_map") fail("A screen-map draft is started again from its online version (draft with AI), not retried here.", HttpStatus.CONFLICT);
+    // W1-02 (break m1): a screen-map draft (online versions, parked with the browser extension) is never run again.
+    if (batch!.operation === "screen_map") fail("This was a screen-map draft of an online version: online versions are parked with the browser extension (later wave), so it is not run again.", HttpStatus.CONFLICT);
     const latest = new Map<string, any>();
     for (const j of batch!.jobs) { const k = `${j.attachmentId}|${j.kind}`; const cur = latest.get(k); if (!cur || j.attempt > cur.attempt) latest.set(k, j); }
     // QA-32: a step cancelled part-way (its later parts "not started") is retried too: its finished parts reuse their

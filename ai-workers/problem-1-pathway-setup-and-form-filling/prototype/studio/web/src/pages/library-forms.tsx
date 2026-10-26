@@ -22,8 +22,8 @@ export function FormsPage() {
           {lib.data.map((f) => (
             <tr key={f.code}>
               <td className="mono whitespace-nowrap">{f.code}</td>
-              <td>{f.title}{f.kind !== "data_form" ? <Pill tone="neutral" className="ml-2">Checklist or instructions</Pill> : null}</td>
-              <td>{f.editions.length ? f.editions.map((e) => <p key={e.label} className="whitespace-nowrap">{e.label.replace(`${f.code} `, "")} · {e.mapped ? `${e.boxes} form fields mapped` : "form fields not mapped yet"}{e.approved ? "" : " · not an approved official file"}</p>) : <span className="text-text-muted">no edition stored</span>}</td>
+              <td>{f.title}{f.kind !== "data_form" ? <Pill tone="neutral" className="ml-2">Checklist or instructions</Pill> : null}{f.online_only ? <Pill tone="warn" className="ml-2" title="Only an online version of this form is stored; online filling needs the browser extension (later wave). Add its official PDF to use it.">Online version only · later wave</Pill> : null}</td>
+              <td>{f.editions.length ? f.editions.map((e) => <p key={e.label} className="whitespace-nowrap">{e.label.replace(`${f.code} `, "")} · {e.mapped ? `${e.boxes} form fields mapped` : "form fields not mapped yet"}{e.approved ? "" : " · not an approved official file"}</p>) : <span className="text-text-muted">{f.online_only ? "no PDF edition yet: add its official PDF above" : "no edition stored"}</span>}</td>
               <td className="tabular-nums">{f.usedBy} {f.usedBy === 1 ? "combination" : "combinations"}</td>
             </tr>
           ))}

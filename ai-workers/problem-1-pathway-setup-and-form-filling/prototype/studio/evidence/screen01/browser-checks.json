@@ -1,17 +1,17 @@
 {
- "at": "2026-10-25T11:42:51.162Z",
+ "at": "2026-10-26T14:41:51.833Z",
  "timings": {
-  "cold_first_view_ms": 411,
-  "first_view_ms": 98,
-  "filter_ms": 59
+  "cold_first_view_ms": 497,
+  "first_view_ms": 197,
+  "filter_ms": 30
  },
- "pass": 136,
+ "pass": 129,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load through the form intake",
    "ok": true,
-   "detail": "5.921"
+   "detail": "7.871"
   },
   {
    "name": "setup: one replay of a saved real AI run on Super visa (no model call, US$0)",
@@ -26,7 +26,7 @@
   {
    "name": "performance: first view under 1 s with the sample data (app files cached)",
    "ok": true,
-   "detail": "98 ms (cold browser 411 ms)"
+   "detail": "197 ms (cold browser 497 ms)"
   },
   {
    "name": "P-49: Needs work is the default view, with its count",
@@ -95,7 +95,7 @@
   {
    "name": "performance: changing the view answers under 200 ms",
    "ok": true,
-   "detail": "59 ms"
+   "detail": "30 ms"
   },
   {
    "name": "F1: Live shows every row whose status is Live",
@@ -171,7 +171,7 @@
   {
    "name": "regression: \"Show all\" keeps the All view after the search box settles (no stale URL rewrite)",
    "ok": true,
-   "detail": "http://localhost:4440/?f=all"
+   "detail": "http://localhost:4454/?f=all"
   },
   {
    "name": "item 5: Corporate shows the demo names (LMIA › High-wage position, Low-wage position, Global Talent Stream, In-home caregiver)",
@@ -189,7 +189,7 @@
   {
    "name": "keyboard: one tab stop, ↑/↓/Home/End move, Enter opens the combination page (P-50)",
    "ok": true,
-   "detail": "Spouse of a skilled worker → http://localhost:4440/c/2f9c516b-22f8-462f-8e83-38b63748ffcd"
+   "detail": "Spouse of a skilled worker → http://localhost:4454/c/9d711439-1c1d-46f9-951c-21eca2ea59de"
   },
   {
    "name": "P-50: Back keeps the view (All), highlights the opened row and restores the scroll",
@@ -486,7 +486,7 @@
   {
    "name": "QA-11: \"Open the existing combination\" opens that combination's page (not the list)",
    "ok": true,
-   "detail": "http://localhost:4440/c/a6d6f37d-2d6c-41ca-8e57-f69f89543df3"
+   "detail": "http://localhost:4454/c/15e5a631-8590-47d5-813a-471e798ff3cf"
   },
   {
    "name": "QA-1: the shared Release page holds back a combination nobody submitted, saying why",
@@ -547,68 +547,38 @@
    "ok": true
   },
   {
-   "name": "C1.7: the author picks the combination's portal",
+   "name": "C1.6 P-107: the author files a line Online; the line says it needs the browser extension (later wave) and the filing method is Mixed",
    "ok": true
   },
   {
-   "name": "C2.7: \"Add an online form\" opens a right panel with the combination's portal chosen",
-   "ok": true
-  },
-  {
-   "name": "review 2 should 1: a page holding an answer is refused and nothing is left behind (no \"being captured\" row)",
-   "ok": true
-  },
-  {
-   "name": "axe: add-online-form-panel has no WCAG A/AA violation",
+   "name": "axe: combination-online-later-wave has no WCAG A/AA violation",
    "ok": true,
    "detail": ""
   },
   {
-   "name": "1024 px: add-online-form-panel has no sideways scroll",
+   "name": "1024 px: combination-online-later-wave has no sideways scroll",
    "ok": true
   },
   {
-   "name": "C2.7: the screens are read, checked for answers and sent for approval",
+   "name": "C1.6 P-102: no portal choice and no \"Add an online form\" on the combination page",
    "ok": true
   },
   {
-   "name": "C2.7: the combination lists the online form as \"Awaiting a second person\"",
+   "name": "C1.6: someone without the author duty sees the channels but cannot change them",
    "ok": true
   },
   {
-   "name": "axe: combination-online-form-awaiting has no WCAG A/AA violation",
-   "ok": true,
-   "detail": ""
-  },
-  {
-   "name": "1024 px: combination-online-form-awaiting has no sideways scroll",
+   "name": "C1.6 P-102: the sources tab no longer offers what drafting reads online",
    "ok": true
   },
   {
-   "name": "C1.6/C1.7: someone without the author duty sees the channels and the portal, but cannot change them",
-   "ok": true
-  },
-  {
-   "name": "C2.10: the sources tab says, per form, what drafting reads (PDF version first by default)",
-   "ok": true
-  },
-  {
-   "name": "C2.10: the author changes it per form and the line says what that means",
-   "ok": true
-  },
-  {
-   "name": "axe: sources-tab-drafting-reads has no WCAG A/AA violation",
-   "ok": true,
-   "detail": ""
-  },
-  {
-   "name": "1024 px: sources-tab-drafting-reads has no sideways scroll",
+   "name": "C1.6 P-102: the Browser extension page and its menu entry are gone",
    "ok": true
   },
   {
    "name": "QA-17: a step run on another day shows its date (\"Oct 21, …\"); one run today says \"today\"",
    "ok": true,
-   "detail": "today 5:10 p.m. | today 5:10 p.m. | today 5:10 p.m."
+   "detail": "today 8:10 p.m. | today 8:10 p.m. | today 8:10 p.m."
   },
   {
    "name": "P-63: no page says \"box\" or \"box map\" (form field, field map)",
@@ -711,15 +681,7 @@
    "violations": []
   },
   {
-   "state": "23-add-online-form-panel",
-   "violations": []
-  },
-  {
-   "state": "24-combination-online-form-awaiting",
-   "violations": []
-  },
-  {
-   "state": "25-sources-tab-drafting-reads",
+   "state": "23-combination-online-later-wave",
    "violations": []
   }
  ]

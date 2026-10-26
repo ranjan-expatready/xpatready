@@ -9,7 +9,7 @@ import { AddLineBody, CatalogueQuery, cleanLabel, CreateCombinationBody, CreateN
   type CatalogueGroup, type CatalogueLeaf, type CatalogueNode, type CatalogueResponse, type CombinationSummary, type ParticipantLine, type Status } from "../../contracts/programs.ts";
 import { manifest } from "../../engine/import.ts";
 import { channelProblems, channelsView, filingKind } from "../../engine/channels.ts";
-import { CAPTURE_STATUS_WORDS, CHANNEL_WORDS, portalLabel, type Channel } from "../../contracts/forms.ts";
+import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
 import { checkedOf, comparePaths, compareStatus, isLive, missingItems, needsWork, newestEdition, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
 import { diff, validate } from "../../engine/validate.ts";
@@ -335,8 +335,8 @@ export class Programs {
   }
 
   /** POST /combinations/:id/lines {kind: FORM}: "+ Add" picks a form already in the library (BR-12, P-25). A form whose
-   *  edition has its field map becomes a form line, filed on the channel the library supports for the combination's
-   *  portal (F1); one without a field map is attached as a source for AI to draft. A removed form can be added again. */
+   *  edition has its field map becomes a form line, filed as a PDF upload by default (F1); one without a field map is
+   *  attached as a source for AI to draft. A removed form can be added again. */
   async addLine(actor: Actor, combinationId: string, body: unknown) {
     need(actor, "author");
     const b = parse(AddLineBody, body);
@@ -352,18 +352,7 @@ export class Programs {
       this.cache = null;
       return { added: "form_line", form: form.formKey, edition: current.editionLabel };
     }
-    // A form the library has only as an approved online version for this combination's portal is filed Online (C2.7).
-    const onlineHere = c.portalKey ? form.editions.find((e) => e.channel === "ONLINE" && e.portalKey === c.portalKey) : undefined;
-    if (onlineHere) {
-      const r = await addFormLine(this.db, { workspaceId: c.workspaceId, combinationId, govFormDefId: form.id, formKey: form.formKey, origin: "HUMAN", by: actor.id, sourceQuote: `${onlineHere.editionLabel}: added from the library` });
-      if (r === "already") throw problem(409, "Already on this combination", `${form.formKey} is already one of this combination's forms.`, { errors: [{ field: "formKey", message: "Already added." }] });
-      await this.audit.log(c.workspaceId, actor.id, "reused", "form", form.formKey, `${actor.name} added ${form.formKey} (online version ${onlineHere.editionLabel}) to "${c.label}" from the library`, undefined, combinationId);
-      this.cache = null;
-      return { added: "form_line", form: form.formKey, edition: onlineHere.editionLabel };
-    }
     const latest = newestEdition(form.editions.filter((e) => e.channel !== "ONLINE"));
-    const onlineElsewhere = form.editions.find((e) => e.channel === "ONLINE");
-    if (!latest?.storedPath && onlineElsewhere) throw problem(409, "Choose the portal first", c.portalKey ? `${form.formKey} is in the library only as an online version from the ${portalLabel(onlineElsewhere.portalKey)}, not from this combination's ${portalLabel(c.portalKey)}. Add an online form from this combination's portal, or upload the IRCC PDF.` : `${form.formKey} is in the library only as an online version (${portalLabel(onlineElsewhere.portalKey)}). Choose this combination's portal first, then add it; or upload the IRCC PDF.`);
     if (!latest?.storedPath) throw problem(409, "No file for this form", `${form.formKey} has no stored file to attach. Upload the IRCC PDF.`);
     const r = await this.sources.attach(actor, combinationId, { originalname: latest.officialFile ?? `${form.formKey}.pdf`, buffer: readFileSync(resolve(ROOT, latest.storedPath)) }, "MANUAL");
     this.cache = null;
@@ -472,24 +461,18 @@ export class Programs {
     const newest = new Map<string, (typeof forms)[number]>();
     for (const f of forms) if (!newest.has(f.lineageKey)) newest.set(f.lineageKey, f);
     const lines = [...newest.values()].filter((f) => f.status !== "RETIRED");
-    // Channels (C1.6, C1.7): each line's channel and its default for this portal, the derived filing method, and the
-    // channel problems the validator raises at release, from the same draft snapshot the review uses.
+    // Channels (C1.6): each line's channel, the derived filing method, and the channel problems the validator raises at
+    // release, from the same draft snapshot the review uses.
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, combinationId, "draft");
     const view = channelsView(snapshot);
-    // Each line's default for this portal (C1.7): Online where the library has an approved online version from it. One
-    // query for all lines (break round 2 m7), the same rule as defaultChannelFor.
-    const onlineForms = new Set(c.portalKey ? (await this.db.formEdition.findMany({ where: { govFormDefId: { in: lines.map((f) => f.govFormDefId) }, channel: "ONLINE", portalKey: c.portalKey }, select: { govFormDefId: true } })).map((e) => e.govFormDefId) : []);
-    const captures = await this.db.portalCapture.findMany({ where: { combinationId }, orderBy: { createdAt: "desc" } });
     return {
       row: row?.leaf ?? null, changes: row?.changes ?? 0, allowedLocations: c.program.allowedLocations, participants: c.participants,
-      portal: c.portalKey, portalLabel: c.portalKey ? portalLabel(c.portalKey) : null, filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: view.filing_method,
+      filing: filingKind(snapshot.forms as SnapForm[]), filingDetail: view.filing_method,
       channelProblems: channelProblems(snapshot).filter((p) => p.where === "Forms"),
-      onlineForms: captures.map((x) => ({ id: x.id, form: x.formKey, title: x.title, portal: x.portalKey, portalLabel: portalLabel(x.portalKey), status: x.status, statusWords: CAPTURE_STATUS_WORDS[x.status] ?? x.status, detail: x.statusDetail, at: x.createdAt })),
       forms: lines.sort((x, y) => x.lineageKey.localeCompare(y.lineageKey)).map((f) => {
-        const online = f.channel === "ONLINE";
-        const e = newestEdition(f.form.editions.filter((x) => x._count.maps > 0 && (online ? x.channel === "ONLINE" && x.portalKey === c.portalKey : x.channel !== "ONLINE")));
+        const e = newestEdition(f.form.editions.filter((x) => x._count.maps > 0 && x.channel !== "ONLINE"));
         return { code: f.form.formKey, title: f.form.displayName, document: f.form.formKind !== "data_form", who: f.who, when: f.attachMode === "COMBINATION_MANDATORY" ? "always" : f.conditionPlain ?? "only if", edition: e?.editionLabel ?? null, boxes: e?._count.maps ?? 0,
-          channel: f.channel, channelWords: CHANNEL_WORDS[f.channel], defaultChannel: onlineForms.has(f.govFormDefId) ? "ONLINE" : "PDF_UPLOAD", signature: view.lines.find((l) => l.form === f.lineageKey)?.signature ?? null };
+          channel: f.channel, channelWords: CHANNEL_WORDS[f.channel], signature: view.lines.find((l) => l.form === f.lineageKey)?.signature ?? null };
       }),
       sources: c.attachments.map((x) => ({ id: x.id, kind: x.kind, name: x.edition ?? x.fileName, status: x.status, detail: x.statusDetail, at: x.createdAt })),
       held: await this.heldFor(c.workspaceId, combinationId, new Set((row?.leaf.forms ?? []).map((f) => f.code))),

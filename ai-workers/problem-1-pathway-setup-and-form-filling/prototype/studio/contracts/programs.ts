@@ -184,14 +184,10 @@ export type HeldFile = { id: string; file: string; code: string | null; edition:
 type Channel = "PDF_UPLOAD" | "ONLINE" | "SIGNED_PDF_UPLOAD";
 export type CombinationSummary = {
   row: CatalogueLeaf | null; changes: number; allowedLocations: string[]; participants: unknown;
-  forms: { code: string; title: string; document: boolean; who: string; when: string; edition: string | null; boxes: number; channel: Channel; channelWords: string; defaultChannel: Channel; signature: string | null }[];
-  /** The portal the filing goes through (C1.7) and the derived filing method (C1.6). */
-  portal: string | null; portalLabel: string | null;
+  forms: { code: string; title: string; document: boolean; who: string; when: string; edition: string | null; boxes: number; channel: Channel; channelWords: string; signature: string | null }[];
   /** C1.6's words: "PDF only", "Online only", "Mixed: online and PDF"; filingDetail says it line by line. */
   filing: string; filingDetail: string;
   channelProblems: ProblemLine[];
-  /** Online forms added from this combination (C2.7), each with its status in plain words ("Awaiting a second person"). */
-  onlineForms: { id: string; form: string; title: string; portal: string; portalLabel: string; status: string; statusWords: string; detail: string | null; at: string | Date }[];
   sources: { id: string; kind: string | null; name: string; status: string; detail: string | null; at: string | Date }[];
   held: HeldFile[];
 };
