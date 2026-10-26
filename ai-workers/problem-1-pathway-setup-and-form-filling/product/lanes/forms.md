@@ -9,11 +9,12 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 current_item: W1-02-park-extension (Park the browser extension, P-102, P-107)
 stage: CHECK
 owner: Builder
-next_action: launch screen-reviewer and screen-breaker on W1-02 (contracts, removed routes, data, roles; PDF paths unchanged); then owner Lead. Lead: drop the dormant tables by migration now or at W6? qa lane parks its 4 probes that drive parked code (build-notes)
+next_action: wait for the breaker's report; then FIX the reviewer's Major M1 and Minors with any breaker Blocker/Major, each with a test
 blocked_by: none
 updated: 2026-10-26
 
 ## Log (last 10 lines)
+- 2026-10-26 · W1-02 · CHECK · reviewer (review.md): Ship after fixes, journey 8.5/10, 0 Must, 1 Major (Preview offers Fill PDF on an Online line, refused with 'portal sheet' words), 6 Minor; breaker still running. US$0.
 - 2026-10-26 · W1-02 · CHECK · synced main (bdd002d): only test artifacts conflicted (p2 spend ledger kept base + main + this lane's US$0 stub lines, none dropped; stub-pass snapshots and canary digest taken from main); no studio code came from main. Reviewer and breaker launched (ports 4450, 4451). US$0.
 - 2026-10-26 · W1-02 · BUILD → CHECK · applied Lead note 2026-10-26 evening (wave 1 reset): extension parked: extension/, capture, pairing, online fill, APR twin and screen maps, Extension page, Add an online form, portal choice, use-defaults, drafting-sources, capture/screen-map review pages and queue kinds, re-capture removed from app, API, tests, seed (DEMO rows 2, 13) and demo; Online stays a choice with a later-wave warning (P-107); no schema change (dormant tables, build-notes). Checks: channels 53, demo 25, f3a0 7, slice2 41, slice2b 36, f1p 16, ai launch 39, s01 channels 16, s01 api 135, s01 rules 67, s02 slice2 56, s01 browser 129, smallfix, s02 browser ×2 all; PDF regression engine 38, ai drafting 48, f3a1c 33, p80 41, pdf hardening 49, s02 fix 59, release race pass, grounding 30, ai orchestration 22, runtime r1d 63; graph --check 0. US$0.
 - 2026-10-26 · F3 · FIX → CHECK · PR #36 review: retry shares the launch guard (locks and re-check before insert; f3a1c 33/33), re-capture coverage worded as version-wide with matches kept apart, Check before sending shows ids, help, format and choice codes (f3c 35/35). US$0. Owner → Lead.
@@ -23,4 +24,3 @@ updated: 2026-10-26
 - 2026-10-26 · F3 · CHECK · reviewer (review.md): Ship after fixes, journey 8.5/10, 0 Must, 1 Major (finish summary calls partly seen sections "not seen"), 6 Minor; checks re-run 15/20/26/17, race mutation caught 10/10. PR #35 fix 715c639 pushed (manifest AND build files only; apr 50/50). Breaker running. US$0.
 - 2026-10-26 · F3 · BUILD → CHECK · slices 1–4 built and pushed: 8f4ea2c (f3a0 15/15), 6f671d1 (f3a1c 20/20), eb5c78d (f3c 26/26), f9e748d (f3c2 17/17); PR #34 review fix 2ee3642 (apr 49/49); main 4ab7da9 merged; apr, f2d, f2b, f2c, f2c_fill, f2a_api, demo, channels, slice2, ai suites, Screen 01 and 02 green; build-notes.md written. Reviewer and breaker launched. US$0.
 - 2026-10-26 · F3 · BUILD · Lead answers: IMM 5409 leaves the starting library through runtime's demo.ts (option a; row 1 stays rejected until then); PR #34 merged (4ab7da9); PR #34 review fix to build.ts written with its fail-before test (assets-only folder refused), run and commit next. US$0.
-- 2026-10-26 · F3 · BUILD · applied Lead note 2026-10-26 night (Pass A+B merged; BUILD slices 1–4): slice 1 F3a-0 section groups, Sample labels, coverage by shared field and person (f3a0 15/15, 8f4ea2c); slice 2 F3a-1c second-draft guard (f3a1c 20/20, slice2 53/53, ai suites green, 6f671d1); slice 3 F3c-1 built (f3c 26/26), regression running. US$0.
