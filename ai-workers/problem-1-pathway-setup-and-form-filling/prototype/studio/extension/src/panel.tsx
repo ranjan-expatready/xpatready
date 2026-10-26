@@ -17,6 +17,7 @@ type Person = { id: string; name: string; role: string };
 type Me = { person: Person; modes: ("capture" | "fill")[]; expires_at: string };
 type CaseRow = { id: string; reference: string; release: string; people: { subject_id: string; label: string; role: string }[]; online_forms: string[] };
 type Plan = { match: true; screen: string; inputs: (PlanInput & { why: string })[]; counts: Record<string, number>; message: string } | { match: false; reason: string; message: string; screen?: string; differences?: { input: string; change: string; approved_label: string | null }[]; task?: { times: number; message: string } | null };
+type Task = { id: string; form: string; title: string | null; portal: string; portal_label: string; edition: string; screen: string; kind: string; differences: unknown[]; times: number };
 type Summary = { screens: number; questions: number; pdf_edition: string | null; pdf_sections_not_seen: { group: string; label: string; questions: number }[] };
 type Capture = { id: string; revision: number; status: string; status_detail: string; form: string; screens: { order: number; title: string; questions: number }[];
   /** F3 X1: the combination it was started for in the Studio. */ combination?: { id: string; label: string } | null; reused?: boolean; summary?: Summary };
@@ -94,7 +95,7 @@ function Panel() {
           : me === null ? <Connect onDone={(m) => { setMe(m); setMode(m.modes.includes("fill") ? "fill" : "capture"); setError(null); }} onError={setError} />
           : mode === "fill" ? <FillMode onError={fail} clearError={() => setError(null)} /> : <CaptureMode onError={fail} clearError={() => setError(null)} />}
       </main>
-      {me && <footer className="border-t border-border bg-surface-raised px-3 py-2 text-right"><button onClick={signOut} className="text-xs text-text-link underline">Sign out of the extension</button></footer>}
+      {me && <footer className="flex items-center gap-2 border-t border-border bg-surface-raised px-3 py-2"><span className="text-xs text-text-muted">Connected until {new Date(me.expires_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span><button onClick={signOut} className="ml-auto text-xs text-text-link underline">Sign out of the extension</button></footer>}
     </div>
   );
 }
@@ -118,18 +119,24 @@ function Connect({ onDone, onError }: { onDone: (m: Me) => void; onError: (m: st
 }
 
 // ─── fill mode
+/** F3 X9: the three groups of a fill's results, in the order a person deals with them. */
+const GROUPS = [{ key: "filled", label: "Filled" }, { key: "confirm", label: "Confirm in the case first" }, { key: "screen", label: "You answer on screen" }] as const;
+const groupOf = (o: Outcome, p: { status: string } | undefined) => o.outcome === "filled" ? "filled" : p && ["not_confirmed", "no_answer"].includes(p.status) ? "confirm" : "screen";
 function FillMode({ onError, clearError }: { onError: (e: unknown) => void; clearError: () => void }) {
   const [cases, setCases] = React.useState<CaseRow[] | null>(null);
   const [pick, setPick] = React.useState<{ caseId: string; subject: string; form: string }>({ caseId: "", subject: "", form: "" });
   const [planTab, setPlanTab] = React.useState<number | null>(null);
   const [plan, setPlan] = React.useState<Plan | null>(null), [outcomes, setOutcomes] = React.useState<Outcome[] | null>(null), [busy, setBusy] = React.useState(false);
   const [find, setFind] = React.useState("");
+  // F3 X10: "Undo this fill" clears what this fill wrote and nobody changed; gone once the portal moves on.
+  const [undone, setUndone] = React.useState<{ cleared: number; kept: number } | null>(null);
+  const undo = async () => { if (planTab === null) return; setBusy(true); try { setUndone((await ask<{ cleared: number; kept: number }>({ kind: "undo" }, planTab)).answer); } catch (e) { onError(e); } finally { setBusy(false); } };
   // Any open case can be found by its reference (the 50 newest are listed without a search).
   React.useEffect(() => { const t = setTimeout(() => { void call<CaseRow[]>("GET", `/cases${find.trim() ? `?q=${encodeURIComponent(find.trim())}` : ""}`).then(setCases).catch(onError); }, find ? 300 : 0); return () => clearTimeout(t); }, [find]);
   // BR-13: the plan and its values are dropped when the portal tab moves on, and after 5 minutes.
   React.useEffect(() => {
     if (!plan) return;
-    const drop = () => { setPlan(null); setOutcomes(null); };
+    const drop = () => { setPlan(null); setOutcomes(null); setUndone(null); };
     const t = setTimeout(drop, PLAN_MINUTES * 60_000);
     const moved = (id: number, info: { url?: string; status?: string }) => { if (id === planTab && (info.url || info.status === "loading")) drop(); };
     const closed = (id: number) => { if (id === planTab) drop(); };
@@ -139,7 +146,7 @@ function FillMode({ onError, clearError }: { onError: (e: unknown) => void; clea
   }, [plan, planTab]);
   const c = cases?.find((x) => x.id === pick.caseId);
   const fill = async () => {
-    setBusy(true); clearError(); setPlan(null); setOutcomes(null);
+    setBusy(true); clearError(); setPlan(null); setOutcomes(null); setUndone(null);
     try {
       const { tabId, answer: read } = await ask<ReaderResult>({ kind: "read" });
       if (!read.ok) throw new ApiError("error" in read ? `This screen could not be read: ${read.error}.` : "This screen could not be read without reading an answer: nothing was sent.", 0);
@@ -177,12 +184,18 @@ function FillMode({ onError, clearError }: { onError: (e: unknown) => void; clea
       </Note>}
       {plan?.match && outcomes && <section aria-label="What was filled" className="space-y-2">
         <Note tone={outcomes.some((o) => o.outcome === "not_accepted") ? "warn" : "ok"} title={`Filled ${filled} of ${outcomes.length}${outcomes.length - filled ? ` · ${outcomes.length - filled} need${outcomes.length - filled === 1 ? "s" : ""} you` : ""}`}>{plan.screen}</Note>
-        <ul className="divide-y divide-border rounded-md border border-border bg-surface-raised">
-          {outcomes.map((o) => { const p = plan.inputs.find((x) => x.id === o.id); return (
-            <li key={o.id} className="p-2 text-sm"><p className="font-medium">{o.label}</p>
-              <p className={`text-xs ${o.outcome === "filled" ? "text-text-ok" : o.outcome === "not_accepted" ? "text-text-danger" : "text-text-muted"}`}>
-                {o.outcome === "filled" ? (p?.why ?? "Filled") : o.outcome === "not_accepted" ? "Not accepted by the screen: enter it yourself." : o.outcome === "left_alone" ? "Already answered on the screen: left as it is." : p?.why ?? "Not filled."}</p></li>); })}
-        </ul>
+        {/* F3 X9: grouped by what the person does next, each with its source; an unconfirmed answer links to the case. */}
+        {GROUPS.map((g) => { const rows = outcomes.filter((o) => groupOf(o, plan.inputs.find((x) => x.id === o.id)) === g.key); return rows.length ? (
+          <div key={g.key} role="group" aria-label={g.label}><p className="mb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">{g.label} ({rows.length})</p>
+            <ul className="divide-y divide-border rounded-md border border-border bg-surface-raised">
+              {rows.map((o) => { const p = plan.inputs.find((x) => x.id === o.id); return (
+                <li key={o.id} className="p-2 text-sm"><p className="font-medium">{o.label}</p>
+                  <p className={`text-xs ${o.outcome === "filled" ? "text-text-ok" : o.outcome === "not_accepted" ? "text-text-danger" : "text-text-muted"}`}>
+                    {o.outcome === "filled" ? (p?.why ?? "Filled") : o.outcome === "not_accepted" ? "Not accepted by the screen: enter it yourself." : o.outcome === "left_alone" ? "Already answered on the screen: left as it is." : p?.why ?? "Not filled."}</p>
+                  {g.key === "confirm" && <a className="text-xs text-text-link underline" href={`${API}/cases/${pick.caseId}`} target="_blank" rel="noreferrer">Open the case to confirm it</a>}</li>); })}
+            </ul></div>) : null; })}
+        {filled > 0 && !undone && <Button onClick={undo} disabled={busy} className="w-full">Undo this fill</Button>}
+        {undone && <Note tone="ok">{`Cleared ${undone.cleared} value${undone.cleared === 1 ? "" : "s"} this fill wrote${undone.kept ? `; ${undone.kept} you changed since ${undone.kept === 1 ? "stays" : "stay"} as you left ${undone.kept === 1 ? "it" : "them"}` : ""}.`}</Note>}
       </section>}
       <Pinned><Button primary onClick={fill} disabled={busy || !pick.caseId || !pick.form || !pick.subject} className="w-full">{busy ? "Filling…" : plan && !plan.match ? "Check this screen again" : "Fill this screen"}</Button></Pinned>
     </div>
@@ -192,7 +205,7 @@ function FillMode({ onError, clearError }: { onError: (e: unknown) => void; clea
 // ─── capture mode
 function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; clearError: () => void }) {
   const [cap, setCap] = React.useState<Capture | null>(null), [meta, setMeta] = React.useState({ portal: PORTALS[0][0] as string, form: "", title: "", applicationType: "" });
-  const [check, setCheck] = React.useState<{ screen: ReadScreen; tabId: number; questions: Question[] } | null>(null), [note, setNote] = React.useState<{ tone: "ok" | "warn" | "danger"; text: string } | null>(null), [busy, setBusy] = React.useState(false);
+  const [check, setCheck] = React.useState<{ screen: ReadScreen; tabId: number; questions: Question[] } | null>(null), [note, setNote] = React.useState<{ tone: "info" | "ok" | "warn" | "danger"; text: string } | null>(null), [busy, setBusy] = React.useState(false);
   const start = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); clearError();
     try {
@@ -255,10 +268,24 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
   const remove = async (order: number) => { if (!cap) return; setBusy(true); clearError(); try { setCap(await call<Capture>("DELETE", `/captures/${cap.id}/screens/${order}?revision=${cap.revision}`)); setNote({ tone: "ok", text: `Screen ${order} removed: capture it again in the portal.` }); } catch (e) { onError(e); } finally { setBusy(false); } };
   // Review Major 1: a capture left open (the panel was closed or reloaded) is offered again, never lost.
   const [open, setOpen] = React.useState<Capture[] | null>(null);
-  React.useEffect(() => { if (!cap) void call<Capture[]>("GET", "/captures").then(setOpen).catch(onError); }, [cap]);
+  // F3 X8: screens that changed on the portal and must be captured again (no case is shown to a capture token).
+  const [tasks, setTasks] = React.useState<Task[] | null>(null);
+  React.useEffect(() => { if (!cap) { void call<Capture[]>("GET", "/captures").then(setOpen).catch(onError); void call<Task[]>("GET", "/capture/recapture-tasks").then(setTasks).catch(onError); } }, [cap]);
+  const again = async (t: Task) => {
+    setBusy(true); clearError();
+    try {
+      const c = await call<Capture>("POST", "/captures", { portal: t.portal, form: t.form, title: t.title ?? t.form });
+      setCap(c); setNote({ tone: "info", text: `Go to "${t.screen}" in the ${t.portal_label} and capture it again; ${c.reused ? "this continues your open capture of " + t.form : "a second person approves it"}.` });
+    } catch (e) { onError(e); } finally { setBusy(false); }
+  };
   const finish = async () => { if (!cap) return; setBusy(true); try { setCap(await call<Capture>("POST", `/captures/${cap.id}/finish`)); setNote(null); } catch (e) { onError(e); } finally { setBusy(false); } };
   if (!cap) return (
     <form onSubmit={start} className="space-y-3">
+      {tasks?.length ? <section aria-label="Screens to capture again" className="space-y-2">
+        <p className="text-sm font-semibold">Screens to capture again</p>
+        {tasks.map((t) => <div key={t.id} className="space-y-1"><Button type="button" onClick={() => void again(t)} disabled={busy} className="w-full">{`Capture ${t.screen} again · ${t.form}`}</Button>
+          <p className="text-xs text-text-muted">{`${t.portal_label}: ${t.kind === "changed" ? `${t.differences.length} question${t.differences.length === 1 ? "" : "s"} changed` : "a question the version does not have"}${t.times > 1 ? ` · seen ${t.times} times` : ""}`}</p></div>)}
+      </section> : null}
       {open?.length ? <section aria-label="Captures to continue" className="space-y-2">
         <p className="text-sm font-semibold">Continue a capture</p>
         {open.map((o) => <Button key={o.id} type="button" onClick={() => { void call<Capture>("GET", `/captures/${o.id}`).then((fresh) => { setCap(fresh); setNote(null); }).catch(onError); }} className="w-full">{o.status === "RETURNED" ? `Returned to you: ${o.form} · ${o.screens.length} screen${o.screens.length === 1 ? "" : "s"}` : o.combination ? `Started in the Studio · ${o.combination.label}: ${o.form} · ${o.screens.length} screen${o.screens.length === 1 ? "" : "s"} so far` : `Continue ${o.form} · ${o.screens.length} screen${o.screens.length === 1 ? "" : "s"} so far`}</Button>)}

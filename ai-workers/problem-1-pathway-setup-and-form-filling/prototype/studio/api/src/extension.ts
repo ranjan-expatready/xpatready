@@ -22,6 +22,7 @@ import { fillPlan, onlineMapOf, type FillPlan } from "../../engine/extension/fil
 import { idLooksLikeClientDetail, screenDifference, screenIdentity } from "../../engine/extension/screens.ts";
 import { noAnswers } from "../../engine/capture.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
+import { portalLabel } from "../../contracts/forms.ts";
 import { ACTORS, actorOf, Audit, bearerOf, Db, fail, need, RUNTIME_ACTORS, SOLUTION, Workspace, type Actor } from "./core.ts";
 import { Runtime } from "./runtime.ts";
 import { Forms } from "./forms.ts";
@@ -255,6 +256,12 @@ export class Extension {
   }
 
   /** The content team's list (review duty): open tasks first, with the screens and changes to capture again. */
+  /** F3 D8, X8: the open re-capture tasks, for a person capturing in the extension (capture token): which form, portal
+   *  and screen, and what changed; never the cases they affect (STANDARDS §5: a capture token sees no client). */
+  async captureTasks(sig: Signed) {
+    const rows = await this.db.recaptureTask.findMany({ where: { workspaceId: sig.workspaceId, status: "OPEN" }, include: { edition: { select: { editionLabel: true, portalKey: true, form: { select: { formKey: true, displayName: true } } } } }, orderBy: { updatedAt: "desc" }, take: 50 });
+    return rows.map((t) => ({ id: t.id, form: t.edition.form.formKey, title: t.edition.form.displayName, portal: t.edition.portalKey, portal_label: portalLabel(t.edition.portalKey), edition: t.edition.editionLabel, screen: t.screenTitle, kind: t.kind, differences: t.differences, times: t.times }));
+  }
   async tasks(actor: Actor) {
     need(actor, "review");
     const rows = await this.db.recaptureTask.findMany({ where: { workspaceId: await this.ws.id() }, include: { edition: { select: { editionLabel: true } } }, orderBy: [{ status: "desc" }, { updatedAt: "desc" }], take: 100 });
@@ -281,5 +288,6 @@ export class ExtensionController {
   @Get("cases") async cases(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Query("q") q?: string) { return this.x.cases(await this.x.signed(t, o, a, "fill"), q); }
   @Post("cases/:id/forms/:form/:subject/fill-plans") @HttpCode(200) async fill(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Param("form") form: string, @Param("subject") subject: string, @Body() b: unknown) { return this.x.fillPlan(await this.x.signed(t, o, a, "fill"), id, form, subject, b); }
   @Get("recapture-tasks") tasks(@Headers("x-actor") a: H) { return this.x.tasks(actorOf(a)); }
+  @Get("capture/recapture-tasks") async captureTasks(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { return this.x.captureTasks(await this.x.signed(t, o, a, "capture")); }
   @Post("captures/:id/finish") @HttpCode(200) async finish(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string) { return this.x.finish(await this.x.signed(t, o, a, "capture"), id); }
 }
