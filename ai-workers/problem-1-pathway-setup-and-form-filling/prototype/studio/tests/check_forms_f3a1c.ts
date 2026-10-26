@@ -7,6 +7,8 @@
 // saved answer (replayed). Isolated copy with the queue held (steps stay queued), NO model call (US$0).
 //   zsh studio/tools/isolated.sh forms_f3a1c 4454 start STUDIO_HOLD_QUEUE=1 && tsx studio/tests/check_forms_f3a1c.ts 4454 xr_studio_forms_f3a1c
 import { execFileSync } from "node:child_process";
+import { existsSync, rmSync } from "node:fs";
+import { join } from "node:path";
 
 const PORT = Number(process.argv[2] ?? 4454), DB = process.argv[3] ?? "xr_studio_forms_f3a1c";
 let pass = 0, fail = 0;
@@ -18,6 +20,10 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
   return { status: r.status, body: j };
 };
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
+/** Planning IMM 5707 with its library map taken out writes its drafting job file; the check removes it again when it
+ *  made it (Lead check Minor 4: a check leaves nothing in the repository folder). */
+const JOB_5707 = join(import.meta.dirname, "..", "..", "p2", "jobs", "studio-fieldmap-imm5707e.json");
+const hadJob = existsSync(JOB_5707);
 const planOf = async (attachmentId: string, mode = "STUB", draftAgain = false) => (await call("POST", "/ai/plan", { scope: { kind: "source", ids: [attachmentId] }, mode, draftAgain })).body.targets[0];
 
 (async () => {
@@ -58,7 +64,7 @@ const planOf = async (attachmentId: string, mode = "STUB", draftAgain = false) =
   sql(`update drafting_job set status='COMPLETED', started_at = now() - interval '1 hour' where id='${job}'`);
   sql(`update normalization_item set decision='PENDING' where job_id='${job}'`);
   const newer = (kind: string, mode: string, status: string) => sql(`insert into drafting_job (id, workspace_id, combination_id, attachment_id, kind, mode, status, started_by, message) select gen_random_uuid(), workspace_id, combination_id, id, '${kind}', '${mode}', '${status}', 'user-A', 'F3a-1c check (newer step)' from source_attachment where id='${aV}' returning id`).split("\n")[0];
-  for (const [kind, mode, status, what] of [["field_map", "STUB", "COMPLETED", "a newer stub pass"], ["field_map", "REPLAY", "FAILED", "a newer failed draft"], ["reuse_map", "LOCAL", "FAILED", "a newer failed \"add from the library\""]] as const) {
+  for (const [kind, mode, status, what] of [["field_map", "STUB", "COMPLETED", "a newer stub pass"], ["field_map", "REPLAY", "FAILED", "a newer failed draft"], ["reuse_map", "LOCAL", "FAILED", "a newer failed \"add from the library\""], ["field_map", "REPLAY", "BLOCKED", "a newer draft blocked by the usage limit"], ["field_map", "LIVE", "CANCELLED", "a newer cancelled draft"]] as const) {
     const id = newer(kind, mode, status);
     t = await planOf(aS);
     ok(`C3.1: D4 break M4 fail case: ${what} never hides the draft waiting with 12 proposals: still skipped`, t.action === "skip" && /12 proposals left/.test(t.why), t.why);
@@ -120,6 +126,8 @@ const planOf = async (attachmentId: string, mode = "STUB", draftAgain = false) =
   }
   ok("C3.1: D4 no model call was made: no drafting step of IMM 5257 or IMM 5707 is live (US$0)", sql(`select count(*) from drafting_job where mode='LIVE' and attachment_id in ('${aV}','${aS}','${v5707}','${s5707}')`) === "0");
 
+  if (!hadJob) rmSync(JOB_5707, { force: true });
+  ok("C3.1: Lead check Minor 4 the check leaves no drafting job file of its own behind in the repository folder", hadJob || !existsSync(JOB_5707));
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.log(`FAIL  the check stopped: ${String((e as Error)?.message ?? e).slice(0, 300)}`); console.error(e); process.exit(1); });

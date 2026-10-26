@@ -30,7 +30,7 @@ import { channelProblems, channelsView } from "../../engine/channels.ts";
 import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
-import { compatible, draftScreenMap, inputKey, normLabel, screenCoverage, screenIdentity, readScreenRun, transformFor, type AiProposal, type PdfEntry, type Proposal, type SectionNotSeen } from "../../engine/twin.ts";
+import { compatible, draftScreenMap, inputKey, isScreenInput, normLabel, screenCoverage, screenIdentity, readScreenRun, transformFor, type AiProposal, type PdfEntry, type Proposal, type SectionNotSeen } from "../../engine/twin.ts";
 import { partOutputTokens } from "../../engine/parts.ts";
 import { factKeyProblem } from "../../../contracts/fact-key.ts";
 import { costUsd } from "../../../p2/ledger.ts";
@@ -279,9 +279,9 @@ export class Forms {
   /** F3 X6: what a finished capture holds, in counts, and the PDF sections no captured screen asks yet (BR-12: a warning,
    *  never a block); a second person approves it before anything uses it (BR-9). */
   private async finishSummary(c: PortalCapture, record: CaptureRecord) {
-    const cov = await this.sectionsNotSeen(c.workspaceId, c.formKey, c.portalKey, record);
     // Review Minor 4: the counts are this capture's own screens; a re-capture merged into the version says so apart.
     const own = screensOf(c.record);
+    const cov = await this.sectionsNotSeen(c.workspaceId, c.formKey, c.portalKey, record, own);
     return { screens: own.length, questions: own.reduce((n, s) => n + s.inputs.length, 0), version_screens: record.screens.length, pdf_edition: cov.pdf_edition, unmatched_questions: cov.unmatched,
       pdf_sections_not_seen: cov.sections.map((x) => ({ group: x.group, label: x.label, questions: x.questions, total: x.total })) };
   }
@@ -454,18 +454,23 @@ export class Forms {
   }
   /** F3 D1, X6: the PDF sections no screen of this capture asks yet, matched as the screen-map draft would match them
    *  (shared field and person), minus sections the form's online version marks asked differently. No AI, nothing stored. */
-  private async sectionsNotSeen(workspaceId: string, formKey: string, portalKey: string, record: CaptureRecord) {
+  private async sectionsNotSeen(workspaceId: string, formKey: string, portalKey: string, record: CaptureRecord, own: { title: string }[] = record.screens) {
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey } }, include: { editions: true } });
     if (!def) return { pdf_edition: null, sections: [] as SectionNotSeen[], unmatched: 0 };
     const ctx = await this.screenMapContext(workspaceId, def.editions, portalKey, null, true);
     if (!ctx.pdf.length) return { pdf_edition: null, sections: [] as SectionNotSeen[], unmatched: 0 };
     const proposals = draftScreenMap(record, ctx).proposals;
     const seen = proposals.filter((p) => p.outcome === "mapped").map((p) => ({ fact: p.fact, person: p.person }));
-    // Break M5: questions on the captured screens that nothing matches yet (a person maps them on the screen map, or
-    // drafting does); a section they belong to stays listed until then, and the summary says why.
-    const unmatched = proposals.filter((p) => p.outcome === "leftover").length;
-    const online = def.editions.filter((e) => e.channel === "ONLINE" && e.portalKey === portalKey).sort((a, b) => (a.editionLabel < b.editionLabel ? 1 : -1))[0];
-    const decided = online ? (await this.mapRows(online.id)).filter((m) => m.outcome === ASKED_DIFFERENTLY.outcome && m.heading).map((m) => m.heading!) : [];
+    const online = def.editions.filter((e) => e.channel === "ONLINE" && e.portalKey === portalKey).sort((a, b) => (b.capturedOn?.getTime() ?? 0) - (a.capturedOn?.getTime() ?? 0))[0];
+    const rows = online ? await this.mapRows(online.id) : [];
+    const decided = rows.filter((m) => m.outcome === ASKED_DIFFERENTLY.outcome && m.heading).map((m) => m.heading!);
+    // Break M5, Lead check Minor 1: the questions on THIS capture's own screens that nothing matches yet and no person
+    // has decided on the current version's screen map (mapped, not a fact, answered on screen); a section they belong
+    // to stays listed until then, and the summary says why. Counts say what they count.
+    const titles = online?.inventoryFile ? new Map(this.twinOf(online.inventoryFile).record.screens.map((x) => [x.key, x.title])) : new Map<string, string>();
+    const settled = new Set(rows.filter((m) => isScreenInput(m) && m.outcome !== "unresolved").map((m) => inputKey(titles.get(m.screenKey ?? "") ?? m.heading ?? "", m.dataPath)));
+    const mine = new Set(own.map((x) => screenIdentity(x.title)));
+    const unmatched = proposals.filter((p) => p.outcome === "leftover" && mine.has(screenIdentity(p.screen)) && !settled.has(inputKey(p.screen, p.input))).length;
     return { pdf_edition: ctx.pdfEdition, sections: screenCoverage(formKey, ctx.pdf, seen, decided), unmatched };
   }
 

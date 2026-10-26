@@ -59,6 +59,12 @@ Each fix has a test that fails without it.
 * **Review Minor 4 · counts after a one-screen re-capture.** The summary counts this capture's own screens and questions and says how many the version holds.
 * **Kept, with reasons:** review Minor 6 (`elsewhere.job_href` is not shown yet: the rail, F3b, links it); break m4 (the "New screen" prompt can go stale when the portal changes a screen in place; it only names a screen, and "Capture this screen" always reads the page as it is now). Break M3's other half: the reused capture is listed under the combination it was started for, not under every combination (the approved online version belongs to the library and serves them all).
 
+## Fixes after the Lead check (26 Oct; review-2.md: Ship after fixes, 8.5/10, 0 Must, 1 Major)
+* **Major · a newer step blocked by the usage limit hid a waiting draft** (`ai.ts mappingIndex`): a source's draft is now its newest field-map step that is not a stub pass and is queued, running, done or applied; any other state (blocked, failed, cancelled, interrupted) never hides a draft waiting for review. Check: f3a1c (blocked and cancelled cases added; 30/30).
+* **Minor 1 · "N questions not matched yet" after a re-capture** (`forms.ts sectionsNotSeen`): counts only this capture's own screens' questions that nothing matches and no person has decided on the current version's screen map. Check: f3c (a one-screen re-capture after the screen map is decided: "1 screen captured … (the version holds 5 screens)", no undecided question; 33/33).
+* **Minor 4 · f3a1c left `p2/jobs/studio-fieldmap-imm5707e.json`**: the check removes the job file it made and checks it is gone.
+* **Next pass (Lead):** Minor 2 (two queries per target in the launch's re-check) and the reader-side id checks.
+
 ## Not in this stage
 * Slices 5–8 (`engine/queue.ts`, `?form=`, `Problem.forms`, D7 warning, `formProgress`, the asked-differently routes, X4 live coverage) wait for the runtime lane's Screen 03 merge and the screens lane's agreement on `review-queue.ts` (Lead response Q3).
 * DEMO row 1's approval waits for the runtime lane's `demo.ts` change (Lead: option a).

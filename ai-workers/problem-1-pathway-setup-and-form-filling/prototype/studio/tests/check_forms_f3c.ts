@@ -216,6 +216,25 @@ const openOf = (form: string) => sql(`select count(*) from portal_capture where 
     ok("C2.9: BR-12 the sections listed carry plain labels, never a form path or key (BR-16)", !/Page\d|\.|_|canonical|person\./.test(sum.split("matches yet")[1]?.split("The rest belong")[0]?.split(/question[s]? on the captured screens/)[0] ?? ""), sum);
     await axe(panel, "panel: finish summary"); await shot(panel, "06-finish-summary-360");
     ok("C2.9: X6 the capture is held for a second person, as the summary says", sql(`select status from portal_capture where id='${started}'`) === "HELD");
+
+    // Lead check Minor 1: a one-screen re-capture after the screen map is decided counts only its own screen's questions
+    // that nobody has decided yet (here none), never the whole version's.
+    await call("POST", `/captures/${started}/approve`, undefined, "user-C");
+    const ed = sql(`select form_edition_id from portal_capture where id='${started}'`);
+    await call("POST", `/online-versions/${ed}/screen-map/draft`);
+    await call("POST", `/online-versions/${ed}/screen-map/accept`, {}, "user-C");
+    for (const input of sql(`select data_path from form_field_map where form_edition_id='${ed}' and outcome='unresolved'`).split("\n").filter(Boolean))
+      await call("PATCH", `/online-versions/${ed}/screen-map`, { input, notAFact: true, reason: "Sample: decided for this check" }, "user-C");
+    ok("setup: the approved version's screen map is decided (nothing open)", !!ed && sql(`select count(*) from form_field_map where form_edition_id='${ed}' and outcome='unresolved'`) === "0");
+    await panel.getByRole("button", { name: "Start another capture" }).click();
+    await panel.getByLabel("Form code").fill("IMM 5257"); await panel.getByLabel("Title as the portal shows it").fill("Application for a visitor visa");
+    await panel.getByRole("button", { name: "Start capture" }).click(); await panel.getByText("IMM 5257 · 0 screens captured").waitFor();
+    await tab.goto(apr("apr-vv-s02-personal.html")); await panel.getByRole("button", { name: "Capture this screen" }).click(); await check.waitFor();
+    await panel.getByRole("button", { name: "Send this screen" }).click(); await panel.getByText("Screen 1 captured").waitFor();
+    await panel.getByRole("button", { name: "Finish capture" }).click(); await summary.waitFor();
+    const again = await summary.innerText();
+    ok("C2.9: Lead check Minor 1 fail case: a one-screen re-capture counts its own screen (1 screen, of the version's 5) and no question already decided on the screen map",
+      /^1 screen captured · \d+ questions? \(the version holds 5 screens\)/.test(again) && !/not matched yet: a person maps/.test(again), again.slice(0, 400));
   } finally {
     await ctx?.close(); server.kill(); rmSync(profile, { recursive: true, force: true });
   }
