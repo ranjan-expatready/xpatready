@@ -1,0 +1,10 @@
+# W1-structure-programs — Lead check
+
+## Slice 1, data and API (27 Oct, b5ccae8 on `screens/2026-10-26-w1-structure`)
+* **Read:** build notes, the challenge "Build discoveries" entry, migration `20261027090000_w1_structure` (expand only, rollback written), the file list (new code in new files: `structure.ts`, `lifecycle.ts`, contracts, engine, test; small marked edits elsewhere). The lane's checks: `check_w1_structure` 83/83, all 32 suites, `tsc` clean, any-ratchet at baseline, graph check exit 0, US$0. CI did not run (GitHub billing); the Lead reruns the suites before merging.
+* **Contract kept:** several Pathways per type (B1), lifecycle via `LibraryChange` with second-person approval and release (A1, P-116/P-52), reorder at once with an audit line (Q1), retired-combination guard in `runtime.ts` (Q2), setup steps and "Filed" from existing data (A3, A4), roles on every write. Meaning check returns `paid_runs_off` (no AI in this slice).
+* **Deviation accepted:** open cases do not block retiring a structure name. P-52 L3 ("open cases do not count") wins over addendum A2, which the Lead accepted by mistake on 26 Oct. Retiring only hides a name from pickers; open cases keep their pinned release.
+* **Capability or scaffolding:** all Capability (in production the content publisher adds, renames, reorders, removes and retires names; a second person approves). Known gaps 2–4 (the "Individual" switch, alphabetical pickers, the old path builder) close in slices 3–4. Gap 5 (the releaser may be the proposer for lifecycle changes) matches today's library changes; second-person approval holds. Kept as is.
+* **Not merged alone.** From an empty workspace the current New combination now says "add one on the Structure first", but the Structure page arrives in slice 2. Merging slice 1 by itself would leave Reset with no way forward in the app. Slices 1 and 2 merge together.
+* **qa files:** the four `tests/qa/` checks that add programs under `individual` need a Pathway first; the qa lane is told in its note.
+* **Next:** BUILD slice 2 (Structure page) on the same branch; EARLY-LOOK with screenshots next to `design/draft-structure-v2.html`.

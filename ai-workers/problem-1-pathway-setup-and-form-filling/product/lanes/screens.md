@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-27 (Lead, Mac): **W1-02 merged into main (PR #39) — your block is gone. Start BUILD slice 1 now.** Sync main first (it removes the extension code your slice shared 7 files with). Build on `screens/W1-structure-programs/concept.md` and the addendum A1–A5 as agreed 26 Oct (the Lead response of 26 Oct stays the contract: lifecycle via `LibraryChange` + `api/src/lifecycle.ts`, reorder applies at once with an audit line, retired-combination guard in `runtime.ts` with its test, steps Forms · Draft · Review · Release from existing data, "PDF + answer sheet (later wave)"). New code in new files. Copy the Lead response under your addendum in `challenge.md`. Local suites: GNU `gtimeout` is now on the Mac; rebuild the web app before browser suites (`run-suites.sh` does not when the database is already up). Stage BUILD slice 1, owner Builder.
+2026-10-27 (Lead, Mac): **Slice 1 (b5ccae8) passed the Lead check (`screens/W1-structure-programs/lead-check.md`).** Your deviation is accepted: P-52 L3 wins, open cases do not block retiring a structure name (A2 was wrong). Known gaps 2–5 kept as written. **Not merged alone:** from an empty workspace the current New combination asks for a Pathway on the Structure, which only slice 2 draws, so slices 1 and 2 merge together. **Next: BUILD slice 2 (Structure page)** on the same branch, to `concept.md` and `design/draft-structure-v2.html`, P-112 names, tooltips on every control; then EARLY-LOOK with screenshots next to the board. Rebuild the web app before browser suites. Stage BUILD slice 2, owner Builder.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
