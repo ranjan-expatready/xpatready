@@ -1,5 +1,5 @@
 {
   "note": "Explicit any in live code, counted by tools/count-any.mjs. Lower total when a screen types more files; never raise it. Files in clean must stay at zero.",
-  "total": 437,
+  "total": 434,
   "clean": ["engine/ai-run.ts", "api/src/programs.ts", "api/src/intake.ts", "engine/programs.ts", "contracts/programs.ts", "web/src/pages/programs.tsx", "web/src/pages/combination.tsx", "web/src/pages/new-combination.tsx"]
 }

@@ -84,16 +84,19 @@ function ReuseButton({ a, d, onReuse, busy }: { a: any; d: any; onReuse: () => v
   return has ? <Pill tone="ok">In this configuration</Pill> : <Button size="sm" variant="secondary" onClick={onReuse} busy={busy}><Recycle /> Add from library</Button>;
 }
 
+/** One file of the official library, as GET /official-library lists it. */
+type OfficialFile = { file: string; edition: string; kind: string; combination: string; sha256: string };
+
 function SampleDialog({ id, onClose, attached }: { id: string; onClose: () => void; attached: string[] }) {
-  const lib = useApi<any[]>(["official"], "/official-library");
+  const lib = useApi<OfficialFile[]>(["official"], "/official-library");
   const toast = useToast();
   const [busy, setBusy] = React.useState<string | null>(null);
   // Scout SC-3: a kind filter and a search by code or title; the internal approval record ids (D229, D257) are not shown,
   // since every file listed here is on the approved official list (by checksum) and that is what a person needs to know.
   const [kind, setKind] = React.useState(""), [find, setFind] = React.useState("");
-  const kinds = [...new Set((lib.data ?? []).map((f: any) => f.kind as string))].sort();
-  const shown = (lib.data ?? []).filter((f: any) => (!kind || f.kind === kind) && (!find.trim() || `${f.edition} ${f.file}`.toLowerCase().includes(find.trim().toLowerCase())));
-  const attach = async (f: any) => {
+  const kinds = [...new Set((lib.data ?? []).map((f) => f.kind))].sort();
+  const shown = (lib.data ?? []).filter((f) => (!kind || f.kind === kind) && (!find.trim() || `${f.edition} ${f.file}`.toLowerCase().includes(find.trim().toLowerCase())));
+  const attach = async (f: OfficialFile) => {
     setBusy(f.file);
     try { const r = await api(`/combinations/${id}/attachments/sample`, { method: "POST", json: { officialFile: f.file } }); toast.push({ tone: ["held", "new_edition_held", "older_edition_held", "refused", "failed"].includes(r.outcome) ? "danger" : "ok", text: `${f.edition}: ${r.message}` }); }
     catch (e) { toast.push({ tone: "danger", text: (e as Error).message }); }
@@ -108,7 +111,7 @@ function SampleDialog({ id, onClose, attached }: { id: string; onClose: () => vo
       </div>
       {!shown.length && lib.data ? <p className="text-sm text-text-muted">No official file matches: clear the filter.</p> : null}
       <Table dense head={["Official file", "Kind", ""]}>
-        {shown.map((f: any) => <tr key={f.file}><td><p className="font-medium">{f.edition}</p><p className="text-xs text-text-muted">{f.combination}</p></td><td className="text-xs">{f.kind}</td><td>{attached.includes(f.sha256) ? <Pill tone="ok">Attached</Pill> : <Button size="sm" variant="secondary" busy={busy === f.file} onClick={() => attach(f)}>Attach</Button>}</td></tr>)}
+        {shown.map((f) => <tr key={f.file}><td><p className="font-medium">{f.edition}</p><p className="text-xs text-text-muted">{f.combination}</p></td><td className="text-xs">{f.kind}</td><td>{attached.includes(f.sha256) ? <Pill tone="ok">Attached</Pill> : <Button size="sm" variant="secondary" busy={busy === f.file} onClick={() => attach(f)}>Attach</Button>}</td></tr>)}
       </Table>
     </Dialog>
   );
