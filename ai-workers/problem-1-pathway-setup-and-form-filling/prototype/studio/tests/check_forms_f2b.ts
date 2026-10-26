@@ -187,6 +187,15 @@ const connect = async (code: string, extra: Record<string, string> = {}) => call
   r = await connect((await pair("user-O")).code);
   ok("C2.9: review-3 Major 2 fail: 600 tries from many addresses in a minute pause every try for that minute (429, in words)", r.status === 429 && /Too many tries to connect an extension/.test(r.body.message), r.body.message);
   clearTries();
+  // Review-4 Major 1: one address over its own limit never sets off the server-wide one for everyone else.
+  sql("delete from extension_pairing where person='user-O' and used_at is null"); // codes the refused tries above left open
+  sql("insert into extension_code_try (address) select 'one-address' from generate_series(1, 600)");
+  r = await connect((await pair("user-O")).code);
+  ok("C2.9: review-4 Major 1 fail case: 600 tries from one other address in a minute never pause a colleague's right code (201, not 429)", r.status === 201, r.body.message ?? r.status);
+  sql("insert into extension_code_try (address) select 'many-' || (g % 9) from generate_series(1, 600) g");
+  r = await connect((await pair("user-O")).code);
+  ok("C2.9: review-4 Major 1 the server-wide limit still holds: ten addresses each at their own limit pause the next try (429)", r.status === 429 && /Too many tries to connect an extension/.test(r.body.message), r.body.message);
+  clearTries();
   sql("delete from extension_pairing where person='user-O' and used_at is null"); // codes the refused tries above left open
   const ten: unknown[] = [];
   for (let n = 0; n < 10; n++) { const x = await connect((await pair("user-O")).code); ten.push(x.status === 201 ? 201 : `${x.status} ${x.body.message}`); }

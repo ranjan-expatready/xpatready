@@ -36,8 +36,25 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   ok("demo: the forms part of the story runs and says what it did, row by row", r.status === 201 && ["row 1:", "row 2:", "row 7:", "row 13:"].every((x) => (r.body.log as string[]).some((l) => l.startsWith(x))), r.body.log ?? r.body.message);
   const files = sql(`select string_agg(distinct split_part(edition, ' (', 1), ',' order by split_part(edition, ' (', 1)) from source_attachment where combination_id='${vv}' and recognised`);
   ok("C2.1: DEMO row 1 the visitor visa's official forms and checklists are attached through the one intake, read without AI", ["IMM 5257", "IMM 5707", "IMM 5476", "IMM 5484", "IMM 5881"].every((c) => files.includes(c)), files);
-  ok("C2.2/C2.3: DEMO row 1 an off-list copy was held, then approved by a second person (the reviewer, not the uploader)", r.body.held_decision === "approved" && /^user-A>user-C\|IMM /.test(sql("select uploaded_by || '>' || approved_by || '|' || code from approved_source")), sql("select uploaded_by || '>' || approved_by || '|' || code from approved_source"));
-  ok("C2.3: review-3 Major 1 after approval the copy is in the library and attached, and nothing is left waiting in To review", sql(`select count(*) from source_attachment a join approved_source s on s.sha256 = a.sha256 where a.combination_id='${vv}'`) === "1" && sql("select count(*) from intake_item where status='HELD'") === "0", sql("select string_agg(outcome || ':' || coalesce(reason,''), ' / ') from intake_item where status='HELD'"));
+  // Review-4 Major 2: the copy is a visitor visa form (Sample list: Guide 5256's forms), never another program's (IMM 1344).
+  // The library already holds every visitor visa form from its official file, so the second person rejects the copy as
+  // not needed (review-3 Major 1: never approved into a loop); approval of an off-list file is P-80's (p80_guard).
+  const VISITOR_FORMS = ["IMM 5257", "IMM 5257 SCH1", "IMM 5707", "IMM 5476", "IMM 5484", "IMM 5409", "IMM 5881"];
+  const copyCodes = () => sql("select string_agg(distinct code, ',') from intake_item where file_name like '%-from-email.pdf'").split(",");
+  ok("C2.2: review-4 Major 2 the demo's off-list copy is a visitor visa form (IMM 5409 here), never a sponsorship form", copyCodes().join() === "IMM 5409" && copyCodes().every((c) => VISITOR_FORMS.includes(c)), copyCodes());
+  const decided = sql("select created_by || '|' || status || '|' || coalesce(reason,'') from intake_item where file_name like '%-from-email.pdf'");
+  ok("C2.2/C2.3: DEMO row 1 the off-list copy was held, then decided by a second person (the reviewer, not the uploader): rejected as not needed, the library holds IMM 5409 from the official file",
+    r.body.held_decision === "rejected" && /^user-A\|DONE\|Rejected by Content reviewer: Sample: the library already holds IMM 5409/.test(decided) && sql("select count(*) from audit_event where action='rejected' and actor='user-C'") !== "0", { decision: r.body.held_decision, decided });
+  ok("C2.3: review-3 Major 1 the rejected copy is not in the library, not attached, and nothing is left waiting in To review", sql("select count(*) from approved_source") === "0" && sql("select count(*) from intake_item where status='HELD'") === "0", sql("select string_agg(outcome || ':' || coalesce(reason,''), ' / ') from intake_item where status='HELD'"));
+  // For the draft dialog below (review-3 Minor 4), this check approves its own off-list copy, as p80_guard does: the
+  // official IMM 1344 with one byte line added (check data only, never the demo story).
+  const checkCopy = Buffer.concat([readFileSync(join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc", "forms", "imm1344e.pdf")), Buffer.from("\n% check only: an off-list copy for the draft dialog\n")]);
+  const cfd = new FormData(); cfd.append("files", new Blob([checkCopy]), "imm1344e-check-copy.pdf");
+  await fetch(`http://localhost:${PORT}/api/combinations/${vv}/attachments`, { method: "POST", headers: { "x-actor": "user-A" }, body: cfd });
+  const checkHeld = sql("select id from intake_item where file_name='imm1344e-check-copy.pdf' and status='HELD'");
+  await call("PATCH", `/intake/held/${checkHeld}`, { irccPage: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm1344.html" });
+  const checkApproved = await call("POST", `/intake/held/${checkHeld}/approve`, {}, "user-C");
+  ok("setup: this check's own off-list copy (check data, not the demo) is approved by the second person and attached", checkApproved.status < 300 && sql(`select count(*) from source_attachment a join approved_source s on s.sha256 = a.sha256 where a.combination_id='${vv}'`) === "1", checkApproved.body?.message ?? checkApproved.status);
   const cap = sql(`select portal_key || '|' || status || '|' || jsonb_array_length(record->'screens') || '|' || coalesce(approved_by, '') from portal_capture where id='${r.body.capture_id}'`);
   ok("C2.5/C2.8: DEMO row 2 IMM 5257 online captured from the Sample APR screens (5, the spouse branch not seen), approved by a second person", cap === "apr_portal|APPROVED|5|user-B", cap);
   ok("C2.6: DEMO row 7 the checklist drafting path ran its stub pass (US$0, nothing proposed until the founder's live run)", !!r.body.checklist_job_id && sql(`select kind || '|' || mode || '|' || cost_usd from drafting_job where id='${r.body.checklist_job_id}'`) === "checklist_draft|STUB|0", sql(`select kind || '|' || mode from drafting_job where id='${r.body.checklist_job_id}'`));
@@ -71,10 +88,10 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
     ok("SC-3: a search by form code (any case) finds that form's files only", found.length > 0 && found.every((f) => /IMM 5257/.test(f)), found);
     await dlg.getByRole("searchbox", { name: "Find a form code or title" }).fill("nothing like this");
     ok("SC-3 fail: a search that matches nothing says so, with no rows", (await rows().count()) === 0 && /No official file matches/.test(await dlg.innerText()));
-    // Review-3 Minor 4: the approved copy (row 1) is read on this computer, then its draft dialog starts on the stub pass
+    // Review-3 Minor 4: the approved copy (this check's own) is read on this computer, then its draft dialog starts on the stub pass
     // and says why the paid call is closed for it.
     await p.keyboard.press("Escape");
-    const row = p.locator("tr", { hasText: "-from-email.pdf" }).first(); // the row's status words change once it is read
+    const row = p.locator("tr", { hasText: "imm1344e-check-copy.pdf" }).first(); // the row's status words change once it is read
     await row.getByRole("button", { name: "Read form" }).click();
     await row.getByRole("button", { name: "Draft with AI" }).click();
     const draft = p.getByRole("dialog");
@@ -96,6 +113,7 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   ok("demo fail (break 13): the story's files are never attached to another combination (With an LMIA: 409, nothing attached)", r.status === 409 && /Visitor visa/.test(r.body.message) && sql(`select count(*) from source_attachment where combination_id='${lmia}'`) === lmiaFiles, r.body.message);
   r = await call("POST", "/demo/forms-story", { combinationId: demoVv });
   ok("C2.3: review-3 Major 1 on the loaded demo the story's off-list copy is decided by the second person and nothing is left stuck in To review", r.status === 201 && !!r.body.held_decision && sql("select count(*) from intake_item where status='HELD'") === "0", r.body.log ?? r.body.message);
+  ok("C2.2: review-4 Major 2 on the loaded demo too, every off-list copy the story made is a visitor visa form", copyCodes().every((c) => VISITOR_FORMS.includes(c)), copyCodes());
   // The same copy uploaded by hand and sent for approval: refused before anything changes, in words.
   const copy = Buffer.concat([readFileSync(join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc", "forms", "imm5257_1e.pdf")), Buffer.from("\n% another copy\n")]);
   const fd = new FormData(); fd.append("files", new Blob([copy]), "schedule1-again.pdf");
@@ -104,6 +122,21 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   await call("PATCH", `/intake/held/${again}`, { irccPage: "https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/imm5257-schedule-1.html" });
   r = await call("POST", `/intake/held/${again}/approve`, {}, "user-C");
   ok("C2.3: review-3 Major 1 fail: approving a copy of an edition the library holds is refused (409) before anything changes, saying to reject it; the hold message said so already", r.status === 409 && /already holds IMM 5257 SCH1 \(09-2023\) from the official file/.test(r.body.message) && sql(`select status from intake_item where id='${again}'`) === "HELD" && /already holds/.test(up.results?.[0]?.message ?? ""), { approve: r.body.message, held: up.results?.[0]?.message });
+  // Review-4 Minor 2: the held page says so before anyone clicks: no Approve, Reject is the main action with the reason filled in.
+  const heldList = (await call("GET", "/intake/held", undefined, "user-C")).body as { id: string; cannotApprove: string | null }[];
+  ok("C2.3: review-4 Minor 2 the held list says why this copy cannot be approved (the library holds that edition)", /already holds IMM 5257 SCH1/.test(heldList.find((x) => x.id === again)?.cannotApprove ?? ""), heldList.find((x) => x.id === again));
+  const b2 = await chromium.launch({ channel: "chrome", headless: true });
+  try {
+    const p = await b2.newPage({ viewport: { width: 1440, height: 900 } });
+    await p.goto(`http://localhost:${PORT}/`); await p.evaluate(() => localStorage.setItem("xr-actor", "user-C"));
+    await p.goto(`http://localhost:${PORT}/review/held/${again}`);
+    await p.getByText("This copy cannot be approved").waitFor();
+    const approveShown = await p.getByRole("button", { name: "Approve as an official source" }).count();
+    const note = await p.getByLabel(/Reason/).inputValue();
+    ok("C2.3: review-4 Minor 2 fail case: the held page of a copy the library holds offers no Approve; Reject is the action, its reason already filled in", approveShown === 0 && /already holds IMM 5257 SCH1/.test(note) && await p.getByRole("button", { name: "Reject" }).isEnabled(), { approveShown, note });
+    await p.getByRole("button", { name: "Reject" }).click(); await p.waitForURL(/\/review$/);
+    ok("C2.3: review-4 Minor 2 Reject closes the copy from the held page (nothing left held)", sql(`select status from intake_item where id='${again}'`) === "DONE");
+  } finally { await b2.close(); }
 
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);

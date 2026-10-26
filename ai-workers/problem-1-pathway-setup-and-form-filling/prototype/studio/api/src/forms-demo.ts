@@ -1,8 +1,8 @@
 // The forms lane's part of the demo story (P-93, DEMO.md rows 1, 2, 7 and 13; P-98: the APR Portal). The runtime lane's
 // demo seed (api/src/demo.ts, D1) calls seedFormsStory for combination A (Visitor visa) after setting it up; until it
 // does, POST /api/demo/forms-story runs it from the Demo menu or a check. Like the demo loader it stands in for people
-// on the screens and calls the same services they do: the official files go through the one intake; an off-list copy is
-// held and approved by a second person (P-80); the Sample APR screens are captured from saved blank pages and approved
+// on the screens and calls the same services they do: the official files go through the one intake; an off-list copy of
+// a visitor visa form is held and decided by a second person (P-80); the Sample APR screens are captured from saved blank pages and approved
 // by a second person (P-66, P-98); the checklist drafting path runs its stub pass (no AI until the founder's live run);
 // and, for release 2, IMM 5257 is filed Online on the APR Portal with its screen map decided (the runtime lane then
 // submits and releases). Never AI, never a case answer; every value is Sample. The real blank APR screens replace the
@@ -25,9 +25,11 @@ export const STORY_FILES = ["imm5257e.pdf", "imm5707e.pdf", "imm5476e.pdf", "imm
  *  spouse screen is a branch, not seen; the screen map lists its PDF questions as not seen). */
 export const APR_VV_SCREENS = ["apr-vv-s01-application.html", "apr-vv-s02-personal.html", "apr-vv-s03-marital.html", "apr-vv-s05-language.html", "apr-vv-s06-passport.html"];
 const APR_DIR = join(STUDIO, "tests", "fixtures", "portal-apr");
-/** Row 1's off-list copy: the first of these official forms whose edition the library does not hold yet (a copy of an
- *  edition the library holds is not needed: review-3 Major 1), as a person would have saved it from an email. */
-const COPY_CANDIDATES = ["imm5257_1e.pdf", "imm5645e.pdf", "imm1344e.pdf", "imm5532e.pdf", "imm5710e.pdf"];
+/** Row 1's off-list copy: the first of these visitor visa forms whose edition the library does not hold yet (a copy of an
+ *  edition the library holds is not needed: review-3 Major 1), as a person would have saved it from an email. Visitor
+ *  visa forms only, never another program's (review-4 Major 2): IMM 5409, the common-law declaration Guide 5256 asks
+ *  for "if it applies", then Schedule 1. Which forms a program uses is Sample until the immigration expert confirms. */
+export const COPY_CANDIDATES = ["imm5409e.pdf", "imm5257_1e.pdf"];
 
 type Services = { db: Db; forms: Forms; intake: Intake; sources: Sources; checklists: Checklists };
 export type FormsStory = { log: string[]; capture_id: string; online_version_id: string; held_decision: "approved" | "rejected" | null; checklist_job_id: string | null };
@@ -57,10 +59,10 @@ async function seedSteps(s: Services, combinationId: string, label: string, opts
     if (r.attachmentStatus === "RECOGNISED" && r.attachmentId) await s.sources.read(AUTHOR, r.attachmentId);
     log.push(`row 1: ${r.edition ?? f}: ${r.outcome}`);
   }
-  // Row 1: a copy of IMM 5257 Schedule 1 saved from an email (its bytes differ from the official file, so its checksum is
+  // Row 1: a copy of a visitor visa form saved from an email (its bytes differ from the official file, so its checksum is
   // on no list): held, the uploader records the IRCC page, a second person decides (P-80). Approved when the library does
-  // not hold that edition yet; when it does (the demo load attaches the official Schedule 1), the copy is not needed and
-  // the second person rejects it with that reason (review-3 Major 1: never a copy approved into a loop).
+  // not hold that edition yet; when it does (the setup's library holds every visitor visa form), the copy is not needed
+  // and the second person rejects it with that reason (review-3 Major 1: never a copy approved into a loop).
   const editions = new Set((await s.db.formEdition.findMany({ where: { workspaceId: combo.workspaceId }, select: { editionLabel: true } })).map((e) => e.editionLabel));
   const pick = manifest().filter((i) => COPY_CANDIDATES.includes(i.file)).sort((a, b) => COPY_CANDIDATES.indexOf(a.file) - COPY_CANDIDATES.indexOf(b.file)).find((i) => !editions.has(i.edition)) ?? manifest().find((i) => i.file === COPY_CANDIDATES[0])!;
   const copy = Buffer.concat([readFileSync(join(OFFICIAL, pick.path)), Buffer.from("\n% Sample: a copy saved from an email (forms lane demo story)\n")]);

@@ -28,8 +28,15 @@ function Head({ title, chip, tone = "warn", sub }: { title: string; chip: string
   return <div><div className="flex flex-wrap items-center gap-3"><h1 className="text-2xl font-bold tracking-tight">{title}</h1><Pill tone={tone}>{chip}</Pill></div>{sub ? <p className="mt-1 text-sm text-text-muted">{sub}</p> : null}</div>;
 }
 /** Decide with an optional or required note: the primary step and the one that sends it back with a reason. */
-function Decide({ yes, no, onYes, onNo, busy, noNeedsReason = true, disabledWhy }: { yes: string; no: string; onYes: () => void; onNo: (note: string) => void; busy: boolean; noNeedsReason?: boolean; disabledWhy?: string | null }) {
-  const [note, setNote] = React.useState("");
+function Decide({ yes, no, onYes, onNo, busy, noNeedsReason = true, disabledWhy, onlyNo }: { yes: string; no: string; onYes: () => void; onNo: (note: string) => void; busy: boolean; noNeedsReason?: boolean; disabledWhy?: string | null; /** The yes would be refused: the reason is filled in and the no is the main action. */ onlyNo?: string }) {
+  const [note, setNote] = React.useState(onlyNo ?? "");
+  if (onlyNo) return (
+    <div className="space-y-2 rounded-lg border border-border bg-surface-raised p-4">
+      <label className="block text-sm font-medium" htmlFor="decide-note">Reason (needed to {no.toLowerCase()})</label>
+      <Textarea id="decide-note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} placeholder="What the other person should know" />
+      <div className="flex flex-wrap justify-end gap-2"><Button busy={busy} disabled={note.trim().length < 3} onClick={() => onNo(note.trim())}>{no}</Button></div>
+    </div>
+  );
   return (
     <div className="space-y-2 rounded-lg border border-border bg-surface-raised p-4">
       <label className="block text-sm font-medium" htmlFor="decide-note">Reason {noNeedsReason ? `(needed to ${no.toLowerCase()})` : "(optional)"}</label>
@@ -205,7 +212,10 @@ export function HeldFilePage() {
       </section>
       {mine || !me.has("review")
         ? <Notice title={mine ? "You uploaded this file" : "A content publisher decides"}>{mine ? "A different person compares it with the IRCC page and approves or rejects it." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
-        : <Decide yes="Approve as an official source" no="Reject" busy={approve.isPending || reject.isPending} disabledWhy={h.irccPage ? null : "Waiting for the uploader to record the IRCC page."} onYes={() => approve.mutate(undefined)} onNo={(n) => reject.mutate(n)} />}
+        : h.cannotApprove
+          ? <><Notice tone="warn" title="This copy cannot be approved">{h.cannotApprove}</Notice>
+              <Decide yes="Approve as an official source" no="Reject" onlyNo={h.cannotApprove.split(":")[0].slice(0, 300)} busy={reject.isPending} onYes={() => undefined} onNo={(n) => reject.mutate(n)} /></>
+          : <Decide yes="Approve as an official source" no="Reject" busy={approve.isPending || reject.isPending} disabledWhy={h.irccPage ? null : "Waiting for the uploader to record the IRCC page."} onYes={() => approve.mutate(undefined)} onNo={(n) => reject.mutate(n)} />}
     </div>
   );
 }

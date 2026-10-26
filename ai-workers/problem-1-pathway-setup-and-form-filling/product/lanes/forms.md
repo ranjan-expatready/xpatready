@@ -10,14 +10,15 @@ Earlier note (09:30, done): 2026-10-25 09:30 (Lead, cloud): **F2 Lead check: MER
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
-current_item: F3-add-form-wizard (PLAN for F3a-1, F3a-2, F3c-1, F3c-2); F2 Pass A+B waits at CHECK (owner Lead, 69fb92d)
-stage: PLAN
+current_item: F2-extension Pass A+B (Lead check FIX done; then F3 BUILD slices 1–4 after the merge, plan agreed)
+stage: CHECK
 owner: Lead
-next_action: Lead agrees screens/F3-add-form-wizard/plan.md (fresh challenge plan-challenge.md: 2 Blocker, 6 Major, 10 Minor, all accepted and applied; questions Q1–Q4); F2 Pass A+B: Lead re-score and merge, then G3
+next_action: Lead merges Pass A+B (review-4 fixes in build-notes "Fixes after the Lead check"; DEMO row 1 now held → rejected, see Needs); then F3 BUILD slices 1–4 (F3a-0, F3a-1c, F3c-1 without X4, F3c-2)
 blocked_by: none
 updated: 2026-10-26
 
 ## Log (last 10 lines)
+- 2026-10-26 · F2 · FIX → CHECK · applied Lead note 2026-10-26 evening (review-4: Ship after fixes, 8.5/10, 2 Major): firm-wide pairing count capped per address (f2b 52), demo copy is IMM 5409 (visitor), rejected as not needed since the library holds it (demo 27), two removals keep portal order (apr), held page offers Reject only when Approve would be refused (demo), build refuses a var folder holding files (apr). US$0. Owner → Lead.
 - 2026-10-26 · F3 · PLAN · applied Lead note 2026-10-26 (F3 PLAN after Pass A+B; read from origin/lead/2026-10-26): plan.md for F3a-1, F3a-2, F3c-1, F3c-2 (no table, no migration); "asked differently online" = a released screen-map decision per PDF subform group, keyed by shared field and person, only after the screen map is accepted; fresh challenge (2 Blocker, 6 Major, 10 Minor) all applied; slices reordered around the runtime merge. No code. Owner → Lead.
 - 2026-10-26 · F2 · CHECK → FIX → CHECK · review-3: Ship after fixes, journey 7.5/10, 2 Major (approved copy of a held edition looped to 409; no pairing rate limit); breaker (report in its reply, file refused by a safety filter): 4 Major (rate limit, remove by position, reader gaps, the same loop), 9 Minor. All Majors fixed with tests (f2b 50, apr 46, demo 21, f2c 38) and 8 Minors; full run-suites 35/36 on the Mac (smallfix arrow keys: macOS only). US$0. Owner → Lead.
 - 2026-10-26 · F2 · BUILD → CHECK · applied Lead note 2026-10-26 (read from origin/lead/2026-10-26, PR #33 not merged; code from main e06a54e). Pass A: per-code wrong-try limit in the database (f2b 45), SC-3 picker, PR #27 (returned capture resumes with Remove, ids that look like client details dropped, check list dropped on navigation), P-80 approved files drafted (p80_guard 41). Pass B: APR Portal default, Sample APR screens with branches, dev build takes the real host, unknown markup "not read" (apr 37, f2a 60), demo seed rows 1, 2, 7, 13 (demo 12); PDF hardening 49. US$0.
@@ -27,4 +28,3 @@ updated: 2026-10-26
 - 2026-10-25 · F2 · CHECK → FIX · reviewer: ship after fixes, journey 7/10 (1 Must = wrong-person fill via screen identity), 1 Major (capture lost on panel reload), 9 Minor; breaker: 2 Blocker (identity collision; Next during fill), 4 Major, 7 Minor; all fixed with tests (f2a_api 34, f2b 36, f2c 36, f2c_fill 17, f2d 36) except E-1 step id (no page has one) and two by-design answers. US$0.
 - 2026-10-25 · F2 · BUILD → CHECK · F1-P, F2a–F2d built and pushed (d67b592, c9b8269, a9745ae, bebc666, c16bf6f, 6f6e098); reviewer and breaker launched on 6f6e098; full suite run in progress. US$0.
 - 2026-10-25 · F2 · BUILD (F2d) · MV3 build (production manifest checked: sidePanel+storage, exact Sample hosts, no API host permission so every call carries its Origin), side panel (connect, fill with sources, not accepted, looks different, capture with check-before-sending, held), Studio /extension page, @types/chrome 0.3.5; journey in Chromium 31/31, axe clean on every state; 3 bugs found by the journey fixed. US$0.
-- 2026-10-25 · F2 · BUILD (F2c) · fill plan from the case's pinned release (confirmed facts only, portal format, compare first, map complete, you answer on screen), one re-capture task per version+screen (3 at once → 1 row), approve closes seen screens, older case fills by hand, new case fills the new screen; writer fills empty inputs only, read-back, never submits; check_forms_f2c 32/32, f2c_fill 11/11; 2 bugs found and fixed (oldest online map, -1 placeholder). US$0.

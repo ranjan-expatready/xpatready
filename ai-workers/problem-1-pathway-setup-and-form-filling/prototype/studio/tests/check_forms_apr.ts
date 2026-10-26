@@ -95,6 +95,12 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
   const wipe = spawnSync(TSX, [join(STUDIO, "extension", "build.ts"), "development", "http://localhost:4400", "apr.example.gc.ca", keep], { encoding: "utf8", timeout: 120_000 });
   ok("C7.4: break (26 Oct) fail: a build into a folder that holds other files builds nothing and deletes nothing", wipe.status === 2 && /already holds other files/.test(wipe.stderr) && existsSync(join(keep, "notes.txt")), wipe.stderr.slice(0, 160));
   rmSync(keep, { recursive: true, force: true });
+  // Review-4 Minor 5: inside the Studio's working folder too (`var/workspaces` holds the demo's approval records).
+  const inVar = join(VARDIR, "records"); mkdirSync(inVar, { recursive: true }); writeFileSync(join(inVar, "approved.json"), "{}");
+  const varWipe = spawnSync(TSX, [join(STUDIO, "extension", "build.ts"), "development", "http://localhost:4400", "apr.example.gc.ca", inVar], { encoding: "utf8", timeout: 120_000 });
+  const varAgain = spawnSync(TSX, [join(STUDIO, "extension", "build.ts"), "development", "http://localhost:4400", "apr.example.gc.ca", join(VARDIR, "cli-dev")], { encoding: "utf8", timeout: 120_000 });
+  ok("C7.4: review-4 Minor 5 fail case: a build into a folder of the working folder that holds files builds nothing and deletes nothing; an earlier build there is built over",
+    varWipe.status === 2 && /already holds other files/.test(varWipe.stderr) && existsSync(join(inVar, "approved.json")) && varAgain.status === 0, [varWipe.status, varWipe.stderr.slice(0, 160), varAgain.status, varAgain.stderr.slice(-200)]);
 
   // ──────────────────────────────────────────── setup (not under test)
   setupVisitorVisa(PORT, DB);
@@ -193,7 +199,7 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
     await panel.getByText("Screen 2 removed: capture it again in the portal.").waitFor();
     ok("C2.9: PR #27 the wrong screen is removed in the panel (by keyboard); the capture is open again", screensNow() === 4 && sql(`select status from portal_capture where id='${capId}'`) === "OPEN");
     await tab.goto(apr("apr-vv-s02-personal.html")); await panel.getByRole("button", { name: "Capture this screen" }).click();
-    await panel.getByRole("button", { name: "Send this screen" }).click(); await panel.getByText("Screen 2 captured again, in its place").waitFor();
+    await panel.getByRole("button", { name: "Send this screen" }).click(); await panel.getByText('"Personal details" captured again as screen 2, before "Marital status"').waitFor();
     const order = (JSON.parse(sql(`select record::text from portal_capture where id='${capId}'`)).screens as { title: string }[]).map((x) => x.title).join(" / ");
     ok("C2.9: review-3 Minor 1 the screen captured again goes back into its place: portal order kept", order === "Application details / Personal details / Marital status / Languages / Passport", order);
     await panel.getByRole("button", { name: "Finish capture" }).click();
@@ -242,6 +248,19 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
     ok("C2.9: break (26 Oct) fail: a remove sent from an older list (stale revision: 409) or with no revision (400) removes nothing", stale.status === 409 && /changed since you last saw it/.test(stale.body.message) && bare.status === 400 && (await as(token).call("GET", `/extension/captures/${open.id}`)).body.screens.length === 1, [stale.status, bare.status]);
     const removed = await as(token).call("DELETE", `/extension/captures/${open.id}/screens/1?revision=${good.body.capture.revision}`);
     ok("C2.9: PR #27 the capturer's token removes a screen of their own capture (the route the panel's Remove uses)", removed.status === 200 && removed.body.screens.length === 0, removed.status);
+    // Review-4 Minor 1: five screens A–E; B and D removed, then captured again (D first): portal order A B C D E; a screen
+    // never seen before goes at the end, not into a removed screen's place.
+    let rev = removed.body.revision as number;
+    const send = async (title: string) => { const x = await as(token).call("POST", `/extension/captures/${open.id}/screens`, { screen: { title, inputs: [{ id: `q-${title.replace(/\W+/g, "-")}`, label: `Question on ${title}`, type: "text", required: false, order: 1 }] }, revision: rev }); rev = x.body.capture?.revision ?? rev; return x; };
+    const drop = async (n: number) => { const x = await as(token).call("DELETE", `/extension/captures/${open.id}/screens/${n}?revision=${rev}`); rev = x.body.revision ?? rev; return x; };
+    const titles = async () => ((await as(token).call("GET", `/extension/captures/${open.id}`)).body.screens as { title: string }[]).map((x) => x.title.slice(-1)).join("");
+    for (const t of ["A", "B", "C", "D", "E"]) await send(`Order screen ${t}`);
+    await drop(2); await drop(3); // B, then D (now third)
+    const dAgain = await send("Order screen D"), bAgain = await send("Order screen B");
+    const fresh = await send("Order screen F");
+    ok("C2.9: review-4 Minor 1 two removals keep portal order (B and D captured again: A B C D E), a new screen goes at the end, and the message says where it went, not \"in its place\"",
+      (await titles()) === "ABCDEF" && /captured again as screen 4, before "Order screen E"/.test(dAgain.body.result?.message) && /captured again as screen 2, before "Order screen C"/.test(bAgain.body.result?.message) && /^Screen 6 captured/.test(fresh.body.result?.message) && !/in its place/.test(`${dAgain.body.result?.message}${bAgain.body.result?.message}`),
+      { order: await titles(), d: dAgain.body.result?.message, b: bAgain.body.result?.message, f: fresh.body.result?.message });
     const mine = await as(token).call("GET", "/extension/captures");
     ok("C2.9: review Major 1 the panel's list of captures to continue holds this person's open capture (the route a reloaded panel reads)", mine.status === 200 && mine.body.some((c: { id: string }) => c.id === open.id), mine.status);
 

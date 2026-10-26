@@ -78,7 +78,10 @@ export class Extension {
     const address = (ip || "unknown").slice(0, 64);
     const [mine] = await this.db.$queryRaw<{ id: bigint }[]>`insert into extension_code_try (address) values (${address}) returning id`;
     await this.db.$executeRaw`delete from extension_code_try where at < now() - interval '10 minutes'`;
-    const [n] = await this.db.$queryRaw<{ here: bigint; all: bigint }[]>`select count(*) filter (where address = ${address}) as here, count(*) as all from extension_code_try where at > now() - interval '1 minute'`;
+    // The server total counts at most an address's own limit from each address: one address over its limit is refused on
+    // its own and never pauses every colleague (review-4 Major 1).
+    const [n] = await this.db.$queryRaw<{ here: bigint; all: bigint }[]>`select coalesce(sum(c) filter (where address = ${address}), 0) as here, coalesce(sum(least(c, ${PAIRING.triesPerAddress})), 0) as all
+      from (select address, count(*) as c from extension_code_try where at > now() - interval '1 minute' group by address) t`;
     if (Number(n.here) > PAIRING.triesPerAddress) fail("Too many tries from this network in the last minute: wait a minute, then enter the code again.", HttpStatus.TOO_MANY_REQUESTS);
     if (Number(n.all) > PAIRING.triesPerServer) fail("Too many tries to connect an extension in the last minute: wait a minute, then enter the code again.", HttpStatus.TOO_MANY_REQUESTS);
     const p = await this.db.extensionPairing.findUnique({ where: { codeHash: sha(b.code) } });

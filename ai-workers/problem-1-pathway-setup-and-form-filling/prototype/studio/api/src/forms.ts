@@ -82,6 +82,15 @@ type Library = Awaited<ReturnType<Forms["libraryRows"]>>;
 type Delegate = Parameters<typeof revise>[0];
 const json = (v: unknown) => v as Prisma.InputJsonValue;
 /** The screens of a capture: as added (open), or numbered in its record (finished; a returned capture reopens). */
+/** The portal order of every screen a capture has seen, by screen identity (kept through removals); a record without one
+ *  takes its screens' order. Bounded, like the capture. */
+const CAPTURE_ORDER_MAX = 4 * CAPTURE_LIMITS.screens;
+const portalOrder = (record: Prisma.JsonValue, screens: { title: string }[]): string[] => {
+  const kept = (record as { order?: unknown } | null)?.order;
+  const order = Array.isArray(kept) ? kept.filter((x): x is string => typeof x === "string") : [];
+  for (const s of screens) if (!order.includes(screenIdentity(s.title))) order.push(screenIdentity(s.title));
+  return order.slice(-CAPTURE_ORDER_MAX);
+};
 const screensOf = (record: Prisma.JsonValue): DraftScreen[] => ((record as { screens?: (DraftScreen | CaptureRecord["screens"][number])[] } | null)?.screens ?? [])
   .map((x) => ("source" in x ? { title: x.title, inputs: x.inputs, file: x.source.file, sha256: x.source.sha256, way: x.source.way } : x));
 /** A request body checked against its contract; a mismatch is a 400 Problem Details with field errors. */
@@ -198,13 +207,16 @@ export class Forms {
     if (again >= 0) return { capture: this.view(c), result: { outcome: "duplicate", message: `"${screens[again].title}" is already captured (screen ${again + 1}); nothing added. Go to the next screen in the portal, or remove screen ${again + 1} first.` } };
     if (screens.length + 1 > CAPTURE_LIMITS.screens) conflict(`Not added: a capture holds at most ${CAPTURE_LIMITS.screens} screens.`);
     const fp = screenFingerprint(b.screen as { title: string; inputs: CaptureInput[] });
-    // Review-3 Minor 1: a screen captured after one was removed goes back into that place, so portal order is kept.
-    const gap = (c.record as { gap?: unknown } | null)?.gap;
-    const at = Number.isInteger(gap) && (gap as number) >= 0 && (gap as number) <= screens.length ? (gap as number) : screens.length;
+    // Review-3 Minor 1, review-4 Minor 1: the capture keeps the portal order of every screen it has seen; a removed screen
+    // captured again goes back before the next screen it came before (any number of removals), a new screen at the end.
+    const order = portalOrder(c.record, screens);
+    const rank = order.indexOf(ident);
+    const next = rank < 0 ? -1 : screens.findIndex((x) => order.indexOf(screenIdentity(x.title)) > rank);
+    const at = next < 0 ? screens.length : next;
     screens.splice(at, 0, { title: b.screen.title, inputs: b.screen.inputs as CaptureInput[], file: `extension-${fp.slice(0, 12)}`, sha256: fp, way: "extension" });
-    const u = await this.write(c, ["OPEN", "RETURNED"], { record: json({ screens }), status: "OPEN", statusDetail: `${screens.length} screen${screens.length === 1 ? "" : "s"} so far. ${NEXT.OPEN}` });
-    await this.audit.log(c.workspaceId, actor.id, "captured", "portal screens", c.formKey, `${actor.name} captured "${b.screen.title}" with the browser extension for ${c.formKey} (screen ${screens.length}; ${b.screen.inputs.length} questions, structure only)`);
-    return { capture: this.view(u), result: { outcome: "added", message: at < screens.length - 1 ? `Screen ${at + 1} captured again, in its place · go on in the portal.` : `Screen ${screens.length} captured · go to the next screen in the portal.` } };
+    const u = await this.write(c, ["OPEN", "RETURNED"], { record: json({ screens, order: rank < 0 ? [...order, ident].slice(-CAPTURE_ORDER_MAX) : order }), status: "OPEN", statusDetail: `${screens.length} screen${screens.length === 1 ? "" : "s"} so far. ${NEXT.OPEN}` });
+    await this.audit.log(c.workspaceId, actor.id, "captured", "portal screens", c.formKey, `${actor.name} captured "${b.screen.title}" with the browser extension for ${c.formKey} (screen ${at + 1}; ${b.screen.inputs.length} questions, structure only)`);
+    return { capture: this.view(u), result: { outcome: "added", message: at < screens.length - 1 ? `"${b.screen.title}" captured again as screen ${at + 1}, before "${screens[at + 1].title}" · go on in the portal.` : `Screen ${screens.length} captured · go to the next screen in the portal.` } };
   }
 
   /** Builds the record, its fingerprint, the twin and the review document; then holds it for a second person, or says
@@ -314,7 +326,7 @@ export class Forms {
     if (!Number.isInteger(order) || order < 1 || order > screens.length) fail(`There is no screen ${order} in this capture (it has ${screens.length}).`, HttpStatus.NOT_FOUND);
     const [gone] = screens.splice(order - 1, 1);
     const kept = (c.files as unknown as KeptFile[]).filter((k) => screens.some((s) => s.sha256 === k.sha256));
-    const u = await this.write(c, ["OPEN", "RETURNED"], { record: json({ screens, gap: order - 1 }), files: json(kept), status: "OPEN", statusDetail: `Screen ${order} ("${gone.title}") removed; ${screens.length} screen${screens.length === 1 ? "" : "s"} left. ${NEXT.OPEN}` });
+    const u = await this.write(c, ["OPEN", "RETURNED"], { record: json({ screens, order: portalOrder(c.record, screensOf(c.record)) }), files: json(kept), status: "OPEN", statusDetail: `Screen ${order} ("${gone.title}") removed; ${screens.length} screen${screens.length === 1 ? "" : "s"} left. ${NEXT.OPEN}` });
     await this.audit.log(c.workspaceId, actor.id, "removed", "portal screen", c.formKey, `${actor.name} removed screen ${order} ("${gone.title}") from the ${c.formKey} capture`);
     return this.view(u);
   }

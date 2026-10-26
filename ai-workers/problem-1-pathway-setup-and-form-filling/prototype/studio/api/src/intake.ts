@@ -121,13 +121,8 @@ export class Intake {
     if (!h.irccPage) fail("The uploader records the IRCC page the file came from first; then compare and approve.", HttpStatus.CONFLICT);
     // Break m5: what is approved is the page the second person saw, not one changed after they opened it.
     if (body?.irccPage !== undefined && body.irccPage !== h.irccPage) fail("The IRCC page changed after you opened this file. Look at it again, then approve.", HttpStatus.CONFLICT);
-    // Break M4: only a file whose form code and edition were read from it becomes an official source.
-    if (h.reason === FRENCH) fail("This is a French version: it has the English edition's code and edition, so it cannot become that edition's source. Reject it, or upload the English PDF.", HttpStatus.CONFLICT);
-    if (!h.code || !h.editionLabel || !["form", "checklist"].includes(h.kind)) fail("Its form code and edition could not be read from the file, so it cannot become an official source. Reject it and upload the official PDF.", HttpStatus.CONFLICT);
-    // Review-3 Major 1: a copy of an edition the library already holds from another file can never be used (one edition,
-    // one file), so approving it would only send it round the intake to be held again. Said before anything changes.
-    const already = await this.db.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId: h.workspaceId, editionLabel: h.editionLabel! } } });
-    if (already && already.sha256 !== h.sha256) fail(`The library already holds ${h.editionLabel} from ${already.officialFile ? "the official file" : "another file"}, so this copy is not needed: reject it with that reason, and add ${h.code} from the library.`, HttpStatus.CONFLICT);
+    const no = (await this.cannotApprove([h])).get(h.id);
+    if (no) fail(no, HttpStatus.CONFLICT);
     // The claim and the approved list change together (break M4: a refused second write left the row decided).
     const bytes = h.storedPath ? readFileSync(h.storedPath.startsWith("/") ? h.storedPath : join(ROOT, h.storedPath)) : null;
     if (bytes && sha(bytes) !== h.sha256) fail("The held file is no longer stored as it was uploaded. Reject it and upload the official PDF again.", HttpStatus.CONFLICT);
@@ -174,11 +169,34 @@ export class Intake {
   /** Files waiting for a person (held), newest first; with a combination, only those uploaded on it or for its forms. */
   async held(combinationId?: string) {
     const workspaceId = await this.ws.id();
-    const rows = await this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" }, orderBy: { createdAt: "desc" } });
-    if (!combinationId) return rows.map(view);
-    const codes = new Set((await this.db.combinationForm.findMany({ where: { combinationId, status: { not: "RETIRED" } }, include: { form: true } })).map((f) => f.form.formKey));
-    for (const a of await this.db.sourceAttachment.findMany({ where: { combinationId }, select: { edition: true } })) if (a.edition) codes.add(a.edition.split(" (")[0]);
-    return rows.filter((r) => r.combinationId === combinationId || (r.code && codes.has(r.code))).map(view);
+    let rows = await this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" }, orderBy: { createdAt: "desc" } });
+    if (combinationId) {
+      const codes = new Set((await this.db.combinationForm.findMany({ where: { combinationId, status: { not: "RETIRED" } }, include: { form: true } })).map((f) => f.form.formKey));
+      for (const a of await this.db.sourceAttachment.findMany({ where: { combinationId }, select: { edition: true } })) if (a.edition) codes.add(a.edition.split(" (")[0]);
+      rows = rows.filter((r) => r.combinationId === combinationId || (r.code && codes.has(r.code)));
+    }
+    // Review-4 Minor 2: the page says before anyone clicks when approval would be refused, and offers Reject instead.
+    const no = await this.cannotApprove(rows);
+    return rows.map((r) => ({ ...view(r), cannotApprove: no.get(r.id) ?? null }));
+  }
+
+  /** Why each held file can never become an official source (approving it is refused), or nothing when it can. */
+  private async cannotApprove(rows: IntakeItem[]) {
+    const labels = [...new Set(rows.map((r) => r.editionLabel).filter((x): x is string => !!x))];
+    const held = labels.length ? await this.db.formEdition.findMany({ where: { workspaceId: { in: [...new Set(rows.map((r) => r.workspaceId))] }, editionLabel: { in: labels } }, select: { workspaceId: true, editionLabel: true, sha256: true, officialFile: true } }) : [];
+    const why = new Map<string, string>();
+    for (const h of rows) {
+      // Break M4: only a file whose form code and edition were read from it becomes an official source.
+      if (h.reason === FRENCH) why.set(h.id, "This is a French version: it has the English edition's code and edition, so it cannot become that edition's source. Reject it, or upload the English PDF.");
+      else if (!h.code || !h.editionLabel || !["form", "checklist"].includes(h.kind)) why.set(h.id, "Its form code and edition could not be read from the file, so it cannot become an official source. Reject it and upload the official PDF.");
+      else {
+        // Review-3 Major 1: a copy of an edition the library already holds from another file can never be used (one
+        // edition, one file), so approving it would only send it round the intake to be held again.
+        const already = held.find((e) => e.workspaceId === h.workspaceId && e.editionLabel === h.editionLabel);
+        if (already && already.sha256 !== h.sha256) why.set(h.id, `The library already holds ${h.editionLabel} from ${already.officialFile ? "the official file" : "another file"}, so this copy is not needed: reject it with that reason, and add ${h.code} from the library.`);
+      }
+    }
+    return why;
   }
 
   private async one(actor: Actor, workspaceId: string, file: IntakeFile, combination: { id: string; label: string } | null, via: "MANUAL" | "SAMPLE"): Promise<IntakeResult> {
