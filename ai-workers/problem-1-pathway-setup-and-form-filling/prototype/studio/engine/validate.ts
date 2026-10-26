@@ -68,7 +68,7 @@ export function validate(s: Snapshot, library: { key: string; valueType: string 
   // one nobody here uses is not this combination's warning.
   const reads = derivedRead(s);
   for (const d of derivedRows) if (reads.has(d.id) && !CALCULATIONS[d.calculation]) out.push({ level: "warning", where: "Derived fields", item: d.id, message: `Calculation ${d.calculation} has no tested helper: recorded, never evaluated.` });
-  out.push(...channelProblems(s)); // F1 (forms lane): filing channels, online versions and option maps
+  out.push(...channelProblems(s)); // F1 (forms lane): filing channels, a form with no PDF edition, and option maps
   return out;
 }
 

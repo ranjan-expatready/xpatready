@@ -67,7 +67,8 @@ export class Sources {
   constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {
     // A job left "running" by a stopped server can never finish: say so instead of showing it as running forever.
     void this.db.draftingJob.updateMany({ where: { status: "RUNNING" }, data: { status: "FAILED", message: "The studio server stopped while this step was running; start it again.", finishedAt: new Date() } })
-      // A screen-map draft's own AI work (QA-31) ends with it.
+      // A screen-map draft's own AI work (QA-31) ends with it (none starts since W1-02 parked online versions; an older one
+      // left running still ends).
       .then(() => this.db.aiBatch.updateMany({ where: { operation: "screen_map", status: { in: ["QUEUED", "RUNNING"] }, cancelRequested: true }, data: { status: "CANCELLED", message: "Cancelled; the studio server stopped before the draft ended.", finishedAt: new Date() } }))
       .then(() => this.db.aiBatch.updateMany({ where: { operation: "screen_map", status: { in: ["QUEUED", "RUNNING"] } }, data: { status: "FAILED", message: "The studio server stopped while this draft was running.", finishedAt: new Date() } }))
       .catch(() => undefined);
@@ -744,8 +745,8 @@ export class Sources {
     const approved = new Set([...manifest().map((i) => i.sha256), ...inProduct]);
     // Historical workspaces may contain entries created before the source gate. Keep those out of
     // library pickers and usage summaries; a prior database row is not a source-verification decision.
-    // F1: an online version is verified by its second-person approval (P-66), not by the official list.
-    const visible = forms.map((f) => ({ ...f, editions: f.editions.filter((e) => e.channel === "ONLINE" || approved.has(e.sha256)) })).filter((f) => f.editions.length);
+    // W1-02 (P-102): forms come in only as PDFs; an online version (parked with the browser extension) is not listed.
+    const visible = forms.map((f) => ({ ...f, editions: f.editions.filter((e) => e.channel !== "ONLINE" && approved.has(e.sha256)) })).filter((f) => f.editions.length);
     // "Used by" (P-51): every combination that files the form or has one of its editions attached as a source.
     const shas = visible.flatMap((f) => f.editions.map((e) => e.sha256)).filter(Boolean) as string[];
     const att = await this.db.sourceAttachment.findMany({ where: { workspaceId, sha256: { in: shas } }, select: { sha256: true, combinationId: true } });
@@ -754,7 +755,6 @@ export class Sources {
       const used = new Set([...f.usedBy.map((u) => u.combinationId), ...att.filter((a) => mine.has(a.sha256)).map((a) => a.combinationId)]);
       return { code: f.formKey, title: f.displayName, kind: f.formKind, usedBy: used.size,
         editions: [...f.editions.filter((e) => e.channel !== "ONLINE")].sort((a, b) => compareEditions(b, a)).map((e) => ({ label: e.editionLabel, channel: "PDF", mapped: e._count.maps > 0, boxes: e._count.maps, approved: !!e.officialFile || inProduct.has(e.sha256 ?? ""), approved_in_product: !e.officialFile && inProduct.has(e.sha256 ?? "") })),
-        online_versions: f.editions.filter((e) => e.channel === "ONLINE").map((e) => ({ id: e.id, label: e.editionLabel, channel: "ONLINE", portal: e.portalKey, captured_on: e.capturedOn?.toISOString().slice(0, 10) ?? null, recheck_by: e.recheckBy?.toISOString().slice(0, 10) ?? null, mapped: e._count.maps > 0, form_fields: e._count.maps })),
         channels: [...new Set(f.editions.map((e) => (e.channel === "ONLINE" ? "Online" : "PDF")))] };
     });
   }

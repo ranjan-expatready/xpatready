@@ -4,15 +4,6 @@ import { Prisma } from "@prisma/client";
 import { Db, fail } from "./core.ts";
 import { WHO } from "./studio.ts";
 
-/** The channel a new line gets (challenge point 4): Online when the library has an approved online version of the form
- *  captured from the combination's portal, otherwise PDF upload. */
-export async function defaultChannelFor(db: Pick<Db, "combination" | "formEdition">, combinationId: string, govFormDefId: string) {
-  const c = await db.combination.findUnique({ where: { id: combinationId }, select: { portalKey: true } });
-  if (!c?.portalKey) return "PDF_UPLOAD" as const;
-  const online = await db.formEdition.count({ where: { govFormDefId, channel: "ONLINE", portalKey: c.portalKey } });
-  return online ? ("ONLINE" as const) : ("PDF_UPLOAD" as const);
-}
-
 /** A field id merged into another redirects to it (P-65); any other id is returned as it is. */
 export async function resolveKey(db: Db, workspaceId: string, key: string) {
   for (let i = 0, k = key; i < 5; i++) {
@@ -27,9 +18,9 @@ export async function resolveKey(db: Db, workspaceId: string, key: string) {
  *  Only the newest version of the line counts. Adding back a removed form restores the line, never a different one
  *  (CHECK must 2): a removal not released yet is taken back (the released line returns unchanged, or a draft-only line
  *  becomes a draft again with its own who and when); after a released removal the form comes back as a new version
- *  with the content it had when removed. A new line takes the default channel (F1). Writes never raise a duplicate
+ *  with the content it had when removed. A new line is filed as a PDF upload (F1, P-102). Writes never raise a duplicate
  *  error, so a racing request inside a transaction (the AI apply) is answered "already" instead of aborting it. */
-export async function addFormLine(db: Pick<Db, "combination" | "combinationForm" | "formEdition">, l: { workspaceId: string; combinationId: string; govFormDefId: string; formKey: string; who?: string; origin: "HUMAN" | "AI_PROPOSAL"; by: string; sourceQuote: string }): Promise<"added" | "already"> {
+export async function addFormLine(db: Pick<Db, "combinationForm">, l: { workspaceId: string; combinationId: string; govFormDefId: string; formKey: string; who?: string; origin: "HUMAN" | "AI_PROPOSAL"; by: string; sourceQuote: string }): Promise<"added" | "already"> {
   if (l.who !== undefined && !WHO.includes(l.who)) fail("Choose whose form it is from the list.");
   const history = await db.combinationForm.findMany({ where: { combinationId: l.combinationId, lineageKey: l.formKey }, orderBy: { version: "desc" } });
   const newest = history[0];
@@ -42,7 +33,7 @@ export async function addFormLine(db: Pick<Db, "combination" | "combinationForm"
     // After a released removal the line comes back with the content it had when removed; a new line gets the defaults.
     const row: Prisma.CombinationFormCreateManyInput = newest
       ? { workspaceId: newest.workspaceId, combinationId: newest.combinationId, lineageKey: newest.lineageKey, govFormDefId: newest.govFormDefId, who: newest.who, attachMode: newest.attachMode, predicateJson: newest.predicateJson ?? Prisma.DbNull, conditionPlain: newest.conditionPlain, sourceQuote: newest.sourceQuote, channel: newest.channel, origin: l.origin, updatedBy: l.by, status: "DRAFT", version: newest.version + 1, supersedesId: newest.id }
-      : { workspaceId: l.workspaceId, combinationId: l.combinationId, lineageKey: l.formKey, govFormDefId: l.govFormDefId, who: l.who ?? "each_applicant", attachMode: "COMBINATION_MANDATORY", sourceQuote: l.sourceQuote.slice(0, 500), channel: await defaultChannelFor(db, l.combinationId, l.govFormDefId), origin: l.origin, updatedBy: l.by, status: "DRAFT", version: 1 };
+      : { workspaceId: l.workspaceId, combinationId: l.combinationId, lineageKey: l.formKey, govFormDefId: l.govFormDefId, who: l.who ?? "each_applicant", attachMode: "COMBINATION_MANDATORY", sourceQuote: l.sourceQuote.slice(0, 500), channel: "PDF_UPLOAD", origin: l.origin, updatedBy: l.by, status: "DRAFT", version: 1 };
     n = (await db.combinationForm.createMany({ data: [row], skipDuplicates: true })).count;
   }
   return n ? "added" : "already";

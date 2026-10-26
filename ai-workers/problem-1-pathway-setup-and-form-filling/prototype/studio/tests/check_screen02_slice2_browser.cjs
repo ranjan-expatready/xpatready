@@ -2,8 +2,7 @@
 // state at 1440 and 1024 px into product/screens/02-ai-work/screenshots/finish/, axe (WCAG 2.2 AA) on each. Isolated
 // copy; the test builds its own data through the screens' endpoints (one saved AI answer replayed: no model call, US$0).
 //   new edition → impact (three tabs) → accept · To review as the second person · a new shared field approved ·
-//   portal capture (capturer read-only, second person approves) · screen map drafted without AI and accepted · merge
-//   panel · held file (uploader records the IRCC page, second person approves) · K1 form-field decisions and a new
+//   merge panel (W1-02, P-102: the portal capture and screen map views are parked with the browser extension) · held file (uploader records the IRCC page, second person approves) · K1 form-field decisions and a new
 //   shared field on the proposals page (J/K keys) · Draft setup panel · Describe it on New combination · checklist stub
 //   pass · Release page with its Library changes group
 //   zsh studio/tools/isolated.sh screens_s02c 4443 start && node studio/tests/check_screen02_slice2_browser.cjs 4443 xr_studio_screens_s02c
@@ -15,7 +14,6 @@ const BASE = `http://localhost:${PORT}`;
 const ROOT = path.resolve(__dirname, "..", "..", "..");
 const OFFICIAL = path.join(ROOT, "official-sources", "ircc");
 const SHOTS = path.join(ROOT, "product", "screens", "02-ai-work", "screenshots", "finish"); fs.mkdirSync(SHOTS, { recursive: true });
-const FIX = path.join(__dirname, "fixtures", "portal");
 const sql = (q) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 let fail = 0, lastStep = "(before the first step)";
 const step = (name, ok, detail) => { lastStep = name; if (!ok) fail++; console.log(`${ok ? "PASS" : "FAIL"}  ${name}${detail !== undefined ? ` — ${String(detail).slice(0, 220)}` : ""}`); };
@@ -151,10 +149,7 @@ function pdf(title, text) {
   await ff2.getByRole("button", { name: "Save" }).click();
   await p.waitForFunction((x) => Number((document.querySelector("#ff-decide")?.textContent ?? "").match(/\((\d+)\)/)?.[1]) === x - 1, ffBefore, { timeout: 15000 }).catch(() => {});
   step("C3.8 K1 (Must 5): a form field decided on the Form fields page leaves its list", Number((await p.locator("#ff-decide").textContent()).match(/\((\d+)\)/)[1]) === ffBefore - 1, ffBefore);
-  // A capture, a merge and a held file, each by the author.
-  const cap = (await api("/captures", { method: "POST", data: { portal: "ircc_portal", form: "IMM 5257", title: "Application for a visitor visa (online)", applicationType: "Visitor visa" } })).body;
-  await api(`/captures/${cap.id}/screens`, { method: "POST", multipart: { files: { name: "imm5257-online-s1-personal.html", mimeType: "text/html", buffer: fs.readFileSync(path.join(FIX, "imm5257-online-s1-personal.html")) } } });
-  await api(`/captures/${cap.id}/finish`, { method: "POST" });
+  // A merge and a held file, each by the author.
   const [keep, merge] = sql("select canonical_field_key from canonical_field where value_type='text' and status='PUBLISHED' and merged_into_key is null group by canonical_field_key order by canonical_field_key limit 2").split("\n");
   await api("/library/merges", { method: "POST", data: { keep, merge, reason: "Test input: the same meaning under two keys." } });
   const mergeId = sql("select id from field_merge where status='PROPOSED' limit 1");
@@ -164,7 +159,7 @@ function pdf(title, text) {
   // ======================================================== To review as the second person
   await asWho("user-C"); await p.goto(`${BASE}/review`); await ready("To review");
   const kinds = await p.locator("tr[data-kind]").evaluateAll((rs) => [...new Set(rs.map((x) => x.getAttribute("data-kind")))]);
-  step("C5.3: the second person's Needs you lists library changes, the capture and the merge (the held file waits for its IRCC page)", ["library_change", "capture", "merge"].every((k) => kinds.includes(k)) && !kinds.includes("held_file"), kinds.join(","));
+  step("C5.3: the second person's Needs you lists library changes and the merge (the held file waits for its IRCC page; no capture or screen map: P-102)", ["library_change", "merge"].every((k) => kinds.includes(k)) && !kinds.includes("held_file") && !kinds.includes("capture") && !kinds.includes("screen_map"), kinds.join(","));
   step("C5.3: merge rows name the fields by name, not by key", !(await p.locator(`tr[data-item="merge:${mergeId}"]`).textContent()).includes(merge), merge);
   await state("to-review-second-person");
 
@@ -179,27 +174,9 @@ function pdf(title, text) {
   await p.getByRole("button", { name: "Approve" }).click(); await p.waitForURL(/\/review$/);
   step("C5.3: approving returns to To review; it is released with the next release", await toast(/approved: it is released with the next release/));
 
-  // ======================================================== board view 6: portal capture
-  await asWho("user-A"); await p.goto(`${BASE}/review/capture/${cap.id}`); await ready(/IMM 5257 online/);
-  step("C2.8 view 6 BR-9: the capturer sees the capture read-only", await p.getByRole("button", { name: "Approve" }).count() === 0 && /You captured this/.test(await p.locator("main").textContent()));
-  await state("capture-review-capturer");
-  await asWho("user-C"); await p.goto(`${BASE}/review/capture/${cap.id}`); await ready(/IMM 5257 online/);
-  step("C2.8 view 6: the second person sees the screens in portal order and what is new", /Screens in portal order/.test(await p.locator("main").textContent()) && /new online version|Differences/.test(await p.locator("main").textContent()));
-  await state("capture-review-second-person");
-  await p.getByRole("button", { name: "Approve" }).click(); await p.waitForURL(/\/review$/);
-  step("C2.8 view 6: approving makes it an online version in the library", await toast(/Approved: .* is in the library|Approved: the online version is in the library/));
-
-  // ======================================================== board view 5: screen map (no AI)
-  const online = sql(`select form_edition_id from portal_capture where id='${cap.id}'`);
-  await asWho("user-A"); await p.goto(`${BASE}/review/screen-map/${online}`); await ready(/Screen map/);
-  await state("screen-map-not-drafted");
-  await p.getByRole("button", { name: "Draft the screen map" }).click();
-  await p.locator('table[aria-label="Inputs"]').waitFor({ timeout: 30000 });
-  step("C3.9 view 5: drafting without AI shows each input with what found it", /Found by/.test(await p.locator('table[aria-label="Inputs"]').textContent()));
-  await asWho("user-C"); await p.goto(`${BASE}/review/screen-map/${online}`); await ready(/Screen map/);
-  await state("screen-map-drafted");
-  await p.getByRole("button", { name: /Accept the \d+ matches/ }).click();
-  step("C3.9 view 5: accepting the matches leaves the rest for a person", await toast(/Accepted: \d+ mapped, \d+ left for a person/));
+  // ======================================================== board views 5 and 6 are parked (P-102)
+  await asWho("user-C"); await p.goto(`${BASE}/review/capture/00000000-0000-4000-8000-000000000000`); await p.getByText("Page not found").waitFor({ timeout: 30000 });
+  step("C5.3 P-102: the portal capture and screen map review pages are gone (Page not found)", /Page not found/.test(await p.locator("main").textContent()));
 
   // ======================================================== board view 8: merge (panel over To review)
   await asWho("user-C"); await p.goto(`${BASE}/review/merge/${mergeId}`); await ready(null); // the panel hides the list behind it from assistive technology

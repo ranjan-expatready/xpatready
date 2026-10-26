@@ -1,15 +1,13 @@
 // Screen 02 slice 2 endpoints in the screens lane's own file (challenge point 1): a decision on one PDF form field (K1),
 // library changes approved by a second person (LibraryChange), the held-file decision (P-80) and the new-edition impact
-// review (P-32, C9.1). Captures, merges and screen maps keep their F1 endpoints (forms.ts); Screen 02 adds their pages.
+// review (P-32, C9.1). Merges keep their F1 endpoints (forms.ts); Screen 02 adds their pages.
 import { Body, Controller, Get, Headers, HttpStatus, Inject, Injectable, Param, Patch, Post, Query, Res } from "@nestjs/common";
 import type { Response } from "express";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { effective } from "../../engine/snapshot.ts";
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
-import { ACTORS, actorOf, Audit, Db, fail, need, revise, strip, VAR, Workspace, type Actor } from "./core.ts";
+import { ACTORS, actorOf, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
 import { changeView, decideChange, resubmitChange, withdrawChange } from "./library-changes.ts";
 import { Intake } from "./intake.ts";
 import { Impact } from "./impact.ts";
@@ -43,7 +41,7 @@ export class Screen02 {
     const b = parse(FormFieldDecision, body);
     const ed = await this.db.formEdition.findUnique({ where: { id: editionId }, include: { form: true } }).catch(() => null);
     if (!ed) fail("This form edition does not exist.", HttpStatus.NOT_FOUND);
-    if (ed!.channel !== "PDF") fail("This decides a PDF edition's form fields; an online version's inputs are decided on its screen map.");
+    if (ed!.channel !== "PDF") fail("This decides a PDF edition's form fields.");
     const rows = await this.db.formFieldMap.findMany({ where: { formEditionId: ed!.id, dataPath: b.dataPath } });
     const cur = effective(rows, (m) => m.dataPath, "draft")[0];
     if (!cur) fail(`${ed!.editionLabel} has no form field ${b.dataPath}.`, HttpStatus.NOT_FOUND);
@@ -58,26 +56,10 @@ export class Screen02 {
   /** The undecided and decided form fields of a PDF edition (K1), for the review page beside the source. */
   async formFields(editionId: string) {
     const ed = await this.db.formEdition.findUnique({ where: { id: editionId }, include: { form: true } }).catch(() => null);
-    if (!ed) fail("This form edition does not exist.", HttpStatus.NOT_FOUND);
+    if (!ed || ed.channel === "ONLINE") fail("This form edition does not exist.", HttpStatus.NOT_FOUND); // W1-02 (break m3): online versions are parked
     const rows = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed!.id } }), (m) => m.dataPath, "draft");
     const word: Record<string, string> = { mapped: "Mapped", not_a_fact: "Not a fact", never_filled: "Not a fact", by_hand: "Filled by hand", unresolved: "No decision" };
     return { edition: { id: ed!.id, label: ed!.editionLabel, form: ed!.form.formKey }, fields: rows.map((r) => ({ dataPath: r.dataPath, caption: r.caption, heading: r.heading, outcome: r.outcome, outcome_word: word[r.outcome] ?? r.outcome, field: r.canonicalFieldKey, reason: r.reason, status: r.status, carried: r.outcome === "unresolved" && r.status === "PUBLISHED" })) };
-  }
-
-  /** Board view 5: an online version's screen map, as drafted without AI (proposals waiting for a person) or as accepted
-   *  (its field map rows, with what is still open). */
-  async screenMap(editionId: string) {
-    const ed = await this.db.formEdition.findUnique({ where: { id: editionId }, include: { form: true } }).catch(() => null);
-    if (!ed || ed.channel !== "ONLINE") fail("This online version does not exist.", HttpStatus.NOT_FOUND);
-    const rows = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed!.id } }), (m) => m.dataPath, "draft");
-    const names = new Map((await this.db.canonicalField.findMany({ where: { workspaceId: ed!.workspaceId }, orderBy: { version: "asc" }, select: { canonicalFieldKey: true, label: true } })).map((f) => [f.canonicalFieldKey, f.label ?? f.canonicalFieldKey]));
-    const base = { edition: { id: ed!.id, label: ed!.editionLabel, form: ed!.form.formKey } };
-    if (rows.length) return { ...base, state: "accepted" as const, inputs: rows.map((r) => ({ input: r.dataPath, label: r.caption, screen: r.heading, outcome: r.outcome, field: r.canonicalFieldKey, field_label: r.canonicalFieldKey ? names.get(r.canonicalFieldKey) ?? r.canonicalFieldKey : null, why: r.reason ?? r.evidenceQuote })) };
-    const file = join(VAR("demo"), "screen-maps", `${ed!.id}.json`);
-    if (!existsSync(file)) return { ...base, state: "not_drafted" as const, inputs: [] };
-    const d = JSON.parse(readFileSync(file, "utf8")) as { pdf_edition: string | null; counts: Record<string, number>; proposals: { input: string; label: string; screen: string; group: string | null; outcome: string; method: string | null; fact: string | null; from: string | null; why: string }[] };
-    return { ...base, state: "drafted" as const, pdf_edition: d.pdf_edition, counts: d.counts,
-      inputs: d.proposals.map((p) => ({ input: p.input, label: p.group ? `${p.group} › ${p.label}` : p.label, screen: p.screen, outcome: p.outcome, method: p.method, field: p.fact, field_label: p.fact ? names.get(p.fact) ?? p.fact : null, why: p.from ?? p.why })) };
   }
 
   /** Board view 8: one proposed merge with both fields by name, meaning and use. */
@@ -158,7 +140,6 @@ export class Screen02Controller {
   @Get("jobs/:id/form-fields") jobFormFields(@Param("id") id: string) { return this.s.jobFormFields(id); }
   @Get("editions/:id/form-fields") formFields(@Param("id") id: string) { return this.s.formFields(id); }
   @Post("editions/:id/form-fields/decision") decide(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.s.decideFormField(actorOf(a), id, b); }
-  @Get("online-versions/:id/screen-map") screenMap(@Param("id") id: string) { return this.s.screenMap(id); }
   @Get("library/merges/:id") merge(@Param("id") id: string) { return this.s.merge(id); }
   @Get("library/changes") changes(@Query("status") status?: string) { return this.s.libraryChanges(status || undefined); }
   @Get("library/changes/:id") change(@Param("id") id: string) { return this.s.libraryChange(id); }

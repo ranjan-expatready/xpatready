@@ -1,7 +1,7 @@
 {
- "at": "2026-10-24T18:44:05.730Z",
- "port": 4403,
- "database": "xr_studio_aiorch",
+ "at": "2026-10-26T14:44:53.585Z",
+ "port": 4459,
+ "database": "xr_studio_forms_aiorch",
  "paid_calls": 0,
  "test_switches": [
   "STUDIO_FAULT_SOURCE=imm5475e.pdf (phase 1)",
@@ -85,7 +85,7 @@
    "ok": true,
    "detail": {
     "action": "reuse_saved_output",
-    "why": "Saved AI answer from run studio-fieldmap-imm5257e-live-20261021t060247723z (same form; prompt field-map.v1.md): no model call, US$0."
+    "why": "Saved AI answer for this same form: no model call, US$0."
    }
   },
   {
@@ -128,7 +128,7 @@
    "name": "compare again (no AI call) keeps every decision that still holds, including the person's change",
    "ok": true,
    "detail": {
-    "at": "2026-10-24T18:44:05.282Z",
+    "at": "2026-10-26T14:44:53.165Z",
     "by": "user-A",
     "kept": 84,
     "reopened": 0
