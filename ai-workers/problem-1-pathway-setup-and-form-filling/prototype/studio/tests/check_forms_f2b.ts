@@ -129,7 +129,10 @@ const connect = async (code: string, extra: Record<string, string> = {}) => call
   const ALPHA = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   /** The i-th wrong code that starts like `code` (its last character changed). */
   const wrongOf = (code: string, i: number) => `${code.slice(0, 7)}${ALPHA[(ALPHA.indexOf(code[7]) + 1 + i) % ALPHA.length]}`;
+  // Each scenario below starts with no tries in the last minute (the throttle per address is checked on its own after them).
+  const clearTries = () => sql("delete from extension_code_try");
   const triesOf = (code: string) => sql(`select wrong_tries || '|' || (voided_at is not null) from extension_pairing where code_hash = encode(sha256('${code}'::bytea), 'hex')`);
+  clearTries();
   const four = await pair("user-O");
   for (let n = 0; n < 4; n++) r = await connect(wrongOf(four.code, n));
   ok("C2.9: Minor 1 a wrong code that starts like an open code is refused (401) in words, and counted against that code in the database", r.status === 401 && /check it/.test(r.body.message) && /stops working after 5 wrong tries/.test(r.body.message) && triesOf(four.code) === "4|false", { message: r.body.message, tries: triesOf(four.code) });
@@ -143,15 +146,18 @@ const connect = async (code: string, extra: Record<string, string> = {}) => call
   ok("C2.9: Minor 1 fail: three wrong tries, a server restart, two more: the fifth voids the code and the right code is refused (the count survived the restart)", r.status === 401 && /stopped working after 5 wrong tries/.test(r.body.message) && after5.status === 401 && /stopped working/.test(after5.body.message) && triesOf(kept3.code) === "5|true", { fifth: r.body.message, right: after5.body.message, tries: triesOf(kept3.code) });
   ok("C2.9: Minor 1 the voided code is in the audit for its person, without the code", sql(`select count(*) from audit_event where action='voided' and actor='user-O'`) !== "0" && sql(`select count(*) from audit_event where summary like '%${kept3.code}%'`) === "0");
   // A shared office address: thirty wrong codes that start like no open code pause nobody.
+  clearTries();
   const office = await Promise.all(Array.from({ length: 30 }, (_, i) => connect(`ZZZ${ALPHA.slice(i % 20, (i % 20) + 5)}`)));
   const colleague = await connect((await pair("user-O")).code);
   ok("C2.9: Minor 1 thirty wrong codes from one address (a shared office) never pause another person's right code (201, no 429)", office.every((x) => x.status === 401) && colleague.status === 201, { refused: office.filter((x) => x.status === 401).length, colleague: colleague.status });
   // Break M1: wrong tries sent at the same moment are all counted; the code is voided at exactly five.
+  clearTries();
   const burstCode = await pair("user-O");
   const burst = await Promise.all(Array.from({ length: 30 }, (_, i) => connect(wrongOf(burstCode.code, i % 29))));
   const late = await connect(burstCode.code);
   ok("C2.9: break M1 thirty wrong codes against one code at the same moment: all refused, counted to exactly five, the code voided", burst.every((x) => x.status === 401) && triesOf(burstCode.code) === "5|true" && late.status === 401, { tries: triesOf(burstCode.code), late: late.status });
   // The right code and the fifth wrong try at the same moment: one wins, never both.
+  clearTries();
   const edge = await pair("user-O");
   for (let n = 0; n < 4; n++) await connect(wrongOf(edge.code, n));
   const [right, fifth] = await Promise.all([connect(edge.code), connect(wrongOf(edge.code, 4))]);
@@ -160,7 +166,7 @@ const connect = async (code: string, extra: Record<string, string> = {}) => call
   r = await call("POST", "/extension/sessions", { code: wrongOf((await pair("user-O")).code, 0), extensionId: "b".repeat(32) }, { origin: ORIGIN });
   ok("C2.9: break m2 a request from another extension is refused for who it is and spends no try of any code", r.status === 401 && /not the ExpatReady extension/.test(r.body.message) && sql("select count(*) from extension_pairing where wrong_tries > 0 and used_at is null and voided_at is null") === "0", r.body.message);
   // A voided code no longer counts as open: the person can ask for another.
-  sql("delete from extension_pairing where person='user-A' and used_at is null");
+  sql("delete from extension_pairing where person='user-A' and used_at is null"); clearTries();
   const fiveA = [];
   for (let n = 0; n < 5; n++) fiveA.push((await pair("user-A")).code as string);
   const sixth = await call("POST", "/extension/pairings", {}, studio("user-A"));
@@ -168,6 +174,23 @@ const connect = async (code: string, extra: Record<string, string> = {}) => call
   const again = await call("POST", "/extension/pairings", {}, studio("user-A"));
   ok("C2.9: Minor 1 a voided code no longer holds one of the five open places (sixth refused 429; after a void, a new code 201)", sixth.status === 429 && again.status === 201, [sixth.status, again.status]);
   sql("delete from extension_pairing where person='user-A' and used_at is null"); // the author's open places again, for the checks below
+  // Review-3 Major 2: every try is throttled in the database, 60 a minute per address and 600 for the whole server.
+  clearTries();
+  const sweep = await Promise.all(Array.from({ length: 70 }, (_, i) => connect(`QQ${ALPHA.slice(i % 25, (i % 25) + 6)}`)));
+  const blocked = await connect((await pair("user-O")).code);
+  ok("C2.9: review-3 Major 2 fail: one address sweeping codes is stopped after 60 tries in a minute (429, in words), the right code too while it lasts", sweep.filter((x) => x.status === 401).length <= 60 && sweep.filter((x) => x.status === 429).length >= 10 && blocked.status === 429 && /Too many tries from this network/.test(blocked.body.message), { tried: sweep.filter((x) => x.status === 401).length, refused: sweep.filter((x) => x.status === 429).length, next: blocked.body.message });
+  restart();
+  ok("C2.9: review-3 Major 2 the count is in the database: a restart does not lift it", (await connect((await pair("user-O")).code)).status === 429);
+  sql("update extension_code_try set at = now() - interval '2 minutes'");
+  ok("C2.9: review-3 Major 2 a minute later the right code connects (201): a shared office is never paused for long", (await connect((await pair("user-O")).code)).status === 201);
+  sql("insert into extension_code_try (address) select 'other-' || g from generate_series(1, 600) g");
+  r = await connect((await pair("user-O")).code);
+  ok("C2.9: review-3 Major 2 fail: 600 tries from many addresses in a minute pause every try for that minute (429, in words)", r.status === 429 && /Too many tries to connect an extension/.test(r.body.message), r.body.message);
+  clearTries();
+  sql("delete from extension_pairing where person='user-O' and used_at is null"); // codes the refused tries above left open
+  const ten: unknown[] = [];
+  for (let n = 0; n < 10; n++) { const x = await connect((await pair("user-O")).code); ten.push(x.status === 201 ? 201 : `${x.status} ${x.body.message}`); }
+  ok("C2.9: review-3 Major 2 a right code's own try is taken back: ten codes in a row from one office connect and leave no try counted", ten.every((x) => x === 201) && sql("select count(*) from extension_code_try") === "0", { ten, left: sql("select count(*) from extension_code_try") });
   restart();
   for (let n = 0; n < 22; n++) await connect((await pair("user-O")).code);
   const mine = (await call("GET", "/extension/sessions", undefined, studio("user-O"))).body as { state: string }[];

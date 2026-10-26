@@ -23,8 +23,10 @@ export const AddExtensionScreen = z.object({ screen: ExtensionScreen, revision: 
  *  answers and the one extension a token is bound to. The private key was never kept (an unpacked or managed install
  *  needs none); a store listing (team, M3) gets its own id, set with STUDIO_EXTENSION_ID (api/src/extension.ts). */
 export const EXTENSION_PUBLIC_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEApy5qbK2+9ydQGaawucAd8zmZ09yi20vJ/zO5qP+QFV6IGvGrbehQK56E/rsjB8eZ2IOY1sOU8qkdn6AmBPHrY32RQnCVfT0FkTQzMuavHh/4peIp3F+gjUMeaza9WqNdfhhVwn/80iwPIU2gXPfy3URmoXpBoQM90J6mDA1zpREASlHy8gzGA38eSLhzczzcctQ6mh/1Mh647pXcPAt/SbEMaatlEVbfJlNa4xto8R9JOFAldv5Kw7LLS1WKeY5VQIa4FM0yiG05vy69XZBATJuitELSfpC3j6xHiCFMoeCBeFjcruy1JOCxwR5Ya3UMUC8M2BXwkjsUO4Ci4ZoN7QIDAQAB";
-/** Sample. wrongTries: wrong codes against one code before it stops working; selector: the characters that find a code. */
-export const PAIRING = { codeMinutes: 5, sessionHours: 8, openCodes: 5, wrongTries: 5, selector: 3 } as const;
+/** Sample. wrongTries: wrong codes against one code before it stops working; selector: the characters that find a code;
+ *  triesPerAddress / triesPerServer: tries to exchange a code in one minute (generous: an office typing codes never
+ *  reaches them; a client sweeping codes does). */
+export const PAIRING = { codeMinutes: 5, sessionHours: 8, openCodes: 5, wrongTries: 5, selector: 3, triesPerAddress: 60, triesPerServer: 600 } as const;
 /** No 0/O, 1/I/L: a code is read off one screen and typed into another. */
 export const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
 export const MODES = ["capture", "fill"] as const;

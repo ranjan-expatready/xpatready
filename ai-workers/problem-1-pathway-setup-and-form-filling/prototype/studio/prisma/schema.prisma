@@ -1260,6 +1260,17 @@ model ExtensionPairing {
   @@map("extension_pairing")
 }
 
+/// One try to exchange a pairing code, kept a few minutes: the throttle per address and for the whole server (review-3
+/// Major 2). Holds the client's address and the time only; never the code.
+model ExtensionCodeTry {
+  id      BigInt   @id @default(autoincrement())
+  address String   @db.VarChar(64)
+  at      DateTime @default(now()) @db.Timestamptz
+
+  @@index([at, address])
+  @@map("extension_code_try")
+}
+
 /// The extension's session: an opaque token, kept only as its sha256, bound to one person, firm, modes and extension
 /// id; revocable; 8 h (Sample). The token itself lives in the extension's session storage (memory) only.
 model ExtensionSession {

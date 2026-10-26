@@ -124,6 +124,10 @@ export class Intake {
     // Break M4: only a file whose form code and edition were read from it becomes an official source.
     if (h.reason === FRENCH) fail("This is a French version: it has the English edition's code and edition, so it cannot become that edition's source. Reject it, or upload the English PDF.", HttpStatus.CONFLICT);
     if (!h.code || !h.editionLabel || !["form", "checklist"].includes(h.kind)) fail("Its form code and edition could not be read from the file, so it cannot become an official source. Reject it and upload the official PDF.", HttpStatus.CONFLICT);
+    // Review-3 Major 1: a copy of an edition the library already holds from another file can never be used (one edition,
+    // one file), so approving it would only send it round the intake to be held again. Said before anything changes.
+    const already = await this.db.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId: h.workspaceId, editionLabel: h.editionLabel! } } });
+    if (already && already.sha256 !== h.sha256) fail(`The library already holds ${h.editionLabel} from ${already.officialFile ? "the official file" : "another file"}, so this copy is not needed: reject it with that reason, and add ${h.code} from the library.`, HttpStatus.CONFLICT);
     // The claim and the approved list change together (break M4: a refused second write left the row decided).
     const bytes = h.storedPath ? readFileSync(h.storedPath.startsWith("/") ? h.storedPath : join(ROOT, h.storedPath)) : null;
     if (bytes && sha(bytes) !== h.sha256) fail("The held file is no longer stored as it was uploaded. Reject it and upload the official PDF again.", HttpStatus.CONFLICT);
@@ -238,7 +242,9 @@ export class Intake {
     // Readable form identity is not proof of an official source. Hold before library creation,
     // combination attachment, edition-impact processing, or any downstream AI mapping.
     if ((read.kind === "form" || read.kind === "checklist") && !approved) {
-      const r: IntakeResult = { file: name, outcome: "held", ...read, message: `Held for source verification: ${read.edition ?? read.code ?? "This form"} is not on the approved source list. It was not added to the library, attached, or sent to AI.` };
+      // Said at once when the library already has this edition from another file: the second person rejects the copy.
+      const have = id.edition_label ? await this.db.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId, editionLabel: id.edition_label } } }) : null;
+      const r: IntakeResult = { file: name, outcome: "held", ...read, message: `Held for source verification: ${read.edition ?? read.code ?? "This form"} is not on the approved source list. It was not added to the library, attached, or sent to AI.${have ? ` The library already holds ${id.edition_label} from ${have.officialFile ? "the official file" : "another file"}, so this copy is not needed: use the library's.` : ""}` };
       await this.record(actor, workspaceId, combination?.id ?? null, name, stored, hash, file.buffer.length, r, "HELD", "checksum not on approved source manifest");
       await this.audit.log(workspaceId, actor.id, "held", "form", read.code ?? name, `${actor.name} uploaded an unverified form source; held before library, attachment or AI use`, { sha256: hash }, combination?.id);
       return r;

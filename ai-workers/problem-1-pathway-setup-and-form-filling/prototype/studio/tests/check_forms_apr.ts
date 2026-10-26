@@ -13,7 +13,7 @@
 /// <reference types="chrome" />
 import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium, type BrowserContext, type Page } from "playwright";
@@ -84,6 +84,18 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
   const bad = spawnSync(TSX, [join(STUDIO, "extension", "build.ts"), "development", "http://localhost:4400", "*.gc.ca", join(VARDIR, "cli-bad")], { encoding: "utf8", timeout: 120_000 });
   ok("C2.9: P-98 G3 fail: a wildcard pasted by mistake builds nothing and says why, with the usage line", bad.status === 2 && /not built: The portal "\*\.gc\.ca" cannot be used/.test(bad.stderr) && /usage: npm run extension:dev/.test(bad.stderr) && !existsSync(join(VARDIR, "cli-bad", "manifest.json")), bad.stderr.slice(0, 200));
 
+  // Break: the founder's addresses typed after the production command (or an address as the out folder) build nothing
+  // and make no folder named after the address (run from this check's own folder: a child keeps tsx's --tsconfig path).
+  const wrongBuild = spawnSync(TSX, [join(STUDIO, "extension", "build.ts"), "production", "http://localhost:4400", "apr.example.gc.ca"], { encoding: "utf8", timeout: 120_000 });
+  const urlOut = spawnSync(TSX, [join(STUDIO, "extension", "build.ts"), "development", "http://localhost:4400", "apr.example.gc.ca", "http://localhost:4400"], { encoding: "utf8", timeout: 120_000 });
+  ok("C7.4: XT-7 fail: addresses given to the production build, or an address as the out folder, build nothing, say why, and make no \"http:\" folder",
+    wrongBuild.status === 2 && /takes its hosts from hosts.json only/.test(wrongBuild.stderr) && urlOut.status === 2 && /is an address, not a folder/.test(urlOut.stderr) && !existsSync(join(process.cwd(), "http:")), [wrongBuild.status, wrongBuild.stderr.slice(-300), urlOut.status, urlOut.stderr.slice(-300)]);
+
+  const keep = mkdtempSync(join(tmpdir(), "xr-apr-keep-")); writeFileSync(join(keep, "notes.txt"), "a person's own file");
+  const wipe = spawnSync(TSX, [join(STUDIO, "extension", "build.ts"), "development", "http://localhost:4400", "apr.example.gc.ca", keep], { encoding: "utf8", timeout: 120_000 });
+  ok("C7.4: break (26 Oct) fail: a build into a folder that holds other files builds nothing and deletes nothing", wipe.status === 2 && /already holds other files/.test(wipe.stderr) && existsSync(join(keep, "notes.txt")), wipe.stderr.slice(0, 160));
+  rmSync(keep, { recursive: true, force: true });
+
   // ──────────────────────────────────────────── setup (not under test)
   setupVisitorVisa(PORT, DB);
   const vv = sql("select id from combination where combination_key='vv.single'");
@@ -149,13 +161,21 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
     await capture("apr-vv-s06-passport.html", 5);
 
     // ──────────────────────────────────────────── markup the reader cannot see into: "not read", nothing sent (P-98)
-    for (const [file, why] of [["live-unknown-shadow.html", /inside page components the reader cannot see into/], ["live-unknown-frame.html", /inside a frame/], ["live-unknown-unlabelled.html", /no label the reader can find \(mat-input-0, mat-input-1\)/], ["live-unknown-combobox.html", /custom control \(role="combobox"\)/]] as const) {
+    for (const [file, why] of [["live-unknown-shadow.html", /inside page components the reader cannot see into/], ["live-unknown-frame.html", /inside a frame/], ["live-unknown-unlabelled.html", /no label the reader can find \(mat-input-0, mat-input-1\)/], ["live-unknown-combobox.html", /custom control \(role="combobox"\)/],
+      ["live-unknown-closed-shadow.html", /inside page components the reader cannot see into/], ["live-unknown-nested-shadow.html", /inside page components the reader cannot see into/],
+      ["live-unknown-foreign-frame.html", /a frame from another site the reader cannot look into/], ["live-unknown-object.html", /inside a frame/]] as const) {
       await tab.goto(apr(file)); await panel.getByRole("button", { name: "Capture this screen" }).click();
       await panel.getByText(/^Not read: /).first().waitFor();
       const said = await panel.locator("main").innerText();
       ok(`C2.9: P-98 fail: unknown markup (${file.replace(/^live-unknown-|\.html$/g, "")}) is "not read", the reason in words, nothing sent`, why.test(said) && /Nothing was sent/.test(said) && screensNow() === 5 && (await panel.getByRole("region", { name: "Check before sending" }).count()) === 0, said.slice(0, 200));
     }
     await axe(panel, "not read"); await shot(panel, "02-not-read-360");
+    // Break 26 Oct (minor): a label whose words equal its input's id, and an input moved off the page as a trap for
+    // robots, are ordinary markup: the screen reads.
+    await tab.goto(apr("live-ok-label-is-id.html")); await panel.getByRole("button", { name: "Capture this screen" }).click();
+    await panel.getByRole("region", { name: "Check before sending" }).waitFor();
+    ok("C2.9: P-98 a label equal to its input's id and an off-page trap input do not stop a real screen (it reads; nothing sent yet)", /city/.test(await panel.getByRole("region", { name: "Check before sending" }).innerText()) && screensNow() === 5);
+    await tab.goto(apr("apr-vv-s05-language.html")); await panel.getByText("The portal moved to another screen: nothing was sent.").waitFor();
 
     // ──────────────────────────────────────────── a returned capture goes on in the panel (PR #27)
     await panel.getByRole("button", { name: "Finish capture" }).click();
@@ -169,10 +189,13 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
     ok("C2.9: PR #27 a returned capture resumes in the panel with the second person's note and its screens; Finish waits for a change",
       /wrong application/.test(ret) && (await panel.getByRole("list", { name: "Screens captured" }).locator("li").count()) === 5 && await panel.getByRole("button", { name: "Finish capture" }).isDisabled());
     await axe(panel, "returned to you"); await shot(panel, "03-returned-360");
-    await panel.getByRole("button", { name: "Remove screen 5, Passport" }).focus(); await panel.keyboard.press("Enter"); // keyboard
-    await panel.getByText("Screen 5 removed: capture it again in the portal.").waitFor();
+    await panel.getByRole("button", { name: "Remove screen 2, Personal details" }).focus(); await panel.keyboard.press("Enter"); // keyboard
+    await panel.getByText("Screen 2 removed: capture it again in the portal.").waitFor();
     ok("C2.9: PR #27 the wrong screen is removed in the panel (by keyboard); the capture is open again", screensNow() === 4 && sql(`select status from portal_capture where id='${capId}'`) === "OPEN");
-    await capture("apr-vv-s06-passport.html", 5);
+    await tab.goto(apr("apr-vv-s02-personal.html")); await panel.getByRole("button", { name: "Capture this screen" }).click();
+    await panel.getByRole("button", { name: "Send this screen" }).click(); await panel.getByText("Screen 2 captured again, in its place").waitFor();
+    const order = (JSON.parse(sql(`select record::text from portal_capture where id='${capId}'`)).screens as { title: string }[]).map((x) => x.title).join(" / ");
+    ok("C2.9: review-3 Minor 1 the screen captured again goes back into its place: portal order kept", order === "Application details / Personal details / Marital status / Languages / Passport", order);
     await panel.getByRole("button", { name: "Finish capture" }).click();
     await panel.getByText("IMM 5257 · held for a second person").waitFor();
     r = await call("POST", `/captures/${capId}/approve`, undefined, "user-C");
@@ -212,9 +235,12 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
     const good = await as(token).call("POST", `/extension/captures/${open.id}/screens`, screen({}));
     ok("C2.9: BR-1 the same screen with structure only is added", good.status < 300 && good.body.result?.outcome === "added", good.body.result);
     const officerTok = (await fetch(`http://localhost:${PORT}/api/extension/sessions`, { method: "POST", headers: { origin: `chrome-extension://${ID}`, "content-type": "application/json" }, body: JSON.stringify({ code: (await call("POST", "/extension/pairings", {}, "user-O")).body.code, extensionId: ID }) }).then((x) => x.json())).token as string;
-    const notMine = await as(officerTok).call("DELETE", `/extension/captures/${open.id}/screens/1`);
+    const notMine = await as(officerTok).call("DELETE", `/extension/captures/${open.id}/screens/1?revision=${good.body.capture.revision}`);
     ok("C2.9: PR #27 fail: a token without the capture duty cannot remove a screen of someone's capture (403), nothing removed", notMine.status === 403 && (await as(token).call("GET", `/extension/captures/${open.id}`)).body.screens.length === 1, notMine.status);
-    const removed = await as(token).call("DELETE", `/extension/captures/${open.id}/screens/1`);
+    const stale = await as(token).call("DELETE", `/extension/captures/${open.id}/screens/1?revision=${open.revision}`);
+    const bare = await as(token).call("DELETE", `/extension/captures/${open.id}/screens/1`);
+    ok("C2.9: break (26 Oct) fail: a remove sent from an older list (stale revision: 409) or with no revision (400) removes nothing", stale.status === 409 && /changed since you last saw it/.test(stale.body.message) && bare.status === 400 && (await as(token).call("GET", `/extension/captures/${open.id}`)).body.screens.length === 1, [stale.status, bare.status]);
+    const removed = await as(token).call("DELETE", `/extension/captures/${open.id}/screens/1?revision=${good.body.capture.revision}`);
     ok("C2.9: PR #27 the capturer's token removes a screen of their own capture (the route the panel's Remove uses)", removed.status === 200 && removed.body.screens.length === 0, removed.status);
     const mine = await as(token).call("GET", "/extension/captures");
     ok("C2.9: review Major 1 the panel's list of captures to continue holds this person's open capture (the route a reloaded panel reads)", mine.status === 200 && mine.body.some((c: { id: string }) => c.id === open.id), mine.status);

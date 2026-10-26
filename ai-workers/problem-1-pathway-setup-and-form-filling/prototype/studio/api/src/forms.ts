@@ -65,7 +65,7 @@ const STATUS_WORDS: Record<string, string> = { OPEN: "reopened", HELD: "finished
 const NEXT: Record<string, string> = {
   OPEN: "Add the next screen, remove a wrong one, or finish the capture.",
   HELD: "A second person approves it or returns it with a reason.",
-  RETURNED: "Remove the screens that are wrong, add them again and finish; or abandon the capture.",
+  RETURNED: "Remove the screens that are wrong, capture them again and finish; or abandon the capture in the Studio.",
   IN_LIBRARY: "A second person confirms the screens are unchanged, which renews the online version's re-check date.",
   APPROVED: "Draft its screen map (no AI); a person accepts it and maps what is left.",
   ABANDONED: "Nothing: start a new capture to record the screens again.",
@@ -198,10 +198,13 @@ export class Forms {
     if (again >= 0) return { capture: this.view(c), result: { outcome: "duplicate", message: `"${screens[again].title}" is already captured (screen ${again + 1}); nothing added. Go to the next screen in the portal, or remove screen ${again + 1} first.` } };
     if (screens.length + 1 > CAPTURE_LIMITS.screens) conflict(`Not added: a capture holds at most ${CAPTURE_LIMITS.screens} screens.`);
     const fp = screenFingerprint(b.screen as { title: string; inputs: CaptureInput[] });
-    screens.push({ title: b.screen.title, inputs: b.screen.inputs as CaptureInput[], file: `extension-${fp.slice(0, 12)}`, sha256: fp, way: "extension" });
+    // Review-3 Minor 1: a screen captured after one was removed goes back into that place, so portal order is kept.
+    const gap = (c.record as { gap?: unknown } | null)?.gap;
+    const at = Number.isInteger(gap) && (gap as number) >= 0 && (gap as number) <= screens.length ? (gap as number) : screens.length;
+    screens.splice(at, 0, { title: b.screen.title, inputs: b.screen.inputs as CaptureInput[], file: `extension-${fp.slice(0, 12)}`, sha256: fp, way: "extension" });
     const u = await this.write(c, ["OPEN", "RETURNED"], { record: json({ screens }), status: "OPEN", statusDetail: `${screens.length} screen${screens.length === 1 ? "" : "s"} so far. ${NEXT.OPEN}` });
     await this.audit.log(c.workspaceId, actor.id, "captured", "portal screens", c.formKey, `${actor.name} captured "${b.screen.title}" with the browser extension for ${c.formKey} (screen ${screens.length}; ${b.screen.inputs.length} questions, structure only)`);
-    return { capture: this.view(u), result: { outcome: "added", message: `Screen ${screens.length} captured · go to the next screen in the portal.` } };
+    return { capture: this.view(u), result: { outcome: "added", message: at < screens.length - 1 ? `Screen ${at + 1} captured again, in its place · go on in the portal.` : `Screen ${screens.length} captured · go to the next screen in the portal.` } };
   }
 
   /** Builds the record, its fingerprint, the twin and the review document; then holds it for a second person, or says
@@ -295,21 +298,23 @@ export class Forms {
     if (c.status !== "HELD") conflict("Only a held capture can be returned.");
     if (c.capturedBy === actor.id) fail("A second person reviews a capture: the person who captured it cannot return it to themselves.", HttpStatus.FORBIDDEN);
     // Claimed like approval (break M1): an approval and a return at the same moment cannot both succeed.
-    const u = await this.write(c, ["HELD"], { status: "RETURNED", decisionNote: b.note, statusDetail: `Returned by ${actor.name}: ${b.note}. Next: ${NEXT.RETURNED}` });
+    const u = await this.write(c, ["HELD"], { status: "RETURNED", decisionNote: b.note, statusDetail: `Returned by ${actor.name}: ${b.note.trim().replace(/[.!?]+$/, "")}. Next: ${NEXT.RETURNED}` });
     await this.audit.log(c.workspaceId, actor.id, "returned", "portal capture", c.formKey, `${actor.name} returned the ${c.formKey} capture: ${b.note}`);
     return this.view(u);
   }
 
   /** Removes one screen of an open or returned capture (a wrong or edited screen; review 6, break m3). */
-  async removeScreen(actor: Actor, id: string, order: number) {
+  async removeScreen(actor: Actor, id: string, order: number, revision?: number) {
     need(actor, "author");
     const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id } });
     if (!["OPEN", "RETURNED"].includes(c.status)) conflict(`This capture is ${c.status.toLowerCase()}: only an open or returned capture's screens can be removed.`);
+    // Break (26 Oct): a screen is named by its place, so a list shown before another change would remove the wrong one.
+    if (revision !== undefined && revision !== c.revision) conflict("This capture changed since you last saw it (a screen was added or removed): nothing was removed. Look at its screens again, then remove the one you mean.");
     const screens = screensOf(c.record);
     if (!Number.isInteger(order) || order < 1 || order > screens.length) fail(`There is no screen ${order} in this capture (it has ${screens.length}).`, HttpStatus.NOT_FOUND);
     const [gone] = screens.splice(order - 1, 1);
     const kept = (c.files as unknown as KeptFile[]).filter((k) => screens.some((s) => s.sha256 === k.sha256));
-    const u = await this.write(c, ["OPEN", "RETURNED"], { record: json({ screens }), files: json(kept), status: "OPEN", statusDetail: `Screen ${order} ("${gone.title}") removed; ${screens.length} screen${screens.length === 1 ? "" : "s"} left. ${NEXT.OPEN}` });
+    const u = await this.write(c, ["OPEN", "RETURNED"], { record: json({ screens, gap: order - 1 }), files: json(kept), status: "OPEN", statusDetail: `Screen ${order} ("${gone.title}") removed; ${screens.length} screen${screens.length === 1 ? "" : "s"} left. ${NEXT.OPEN}` });
     await this.audit.log(c.workspaceId, actor.id, "removed", "portal screen", c.formKey, `${actor.name} removed screen ${order} ("${gone.title}") from the ${c.formKey} capture`);
     return this.view(u);
   }
@@ -1055,7 +1060,7 @@ export class FormsController {
   @Get("captures/:id") capture(@Param("id") id: string) { return this.f.capture(id); }
   @Post("captures/:id/screens") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: CAPTURE_LIMITS.fileMb * 1024 * 1024, files: CAPTURE_LIMITS.files } }))
   screens(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: Upload[]) { return this.f.addScreens(actorOf(a), id, files); }
-  @Delete("captures/:id/screens/:order") removeScreen(@Headers("x-actor") a: H, @Param("id") id: string, @Param("order") o: string) { return this.f.removeScreen(actorOf(a), id, Number(o)); }
+  @Delete("captures/:id/screens/:order") removeScreen(@Headers("x-actor") a: H, @Param("id") id: string, @Param("order") o: string, @Query("revision") rev?: string) { return this.f.removeScreen(actorOf(a), id, Number(o), rev === undefined ? undefined : Number(rev)); }
   @Post("captures/:id/abandon") abandon(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.abandon(actorOf(a), id, b); }
   @Post("captures/:id/confirm") confirm(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.confirmRecheck(actorOf(a), id); }
   @Post("captures/:id/finish") finish(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.finish(actorOf(a), id); }

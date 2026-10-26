@@ -6,14 +6,26 @@
 //     the APR host as the address bar shows it (some.host.example, https only). No code change for a new host.
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
-import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join, resolve, sep } from "node:path";
 import { build } from "vite";
 import { devPortalOrigin, manifest, productionProblems } from "./manifest.ts";
 import HOSTS from "./hosts.json" with { type: "json" };
 
 const ROOT = import.meta.dirname;
+/** The out folder is emptied first, so it must be one the build owns (break 26 Oct: any path given was deleted): inside
+ *  the Studio's working folder, new or empty, or an earlier build of this extension. A relative path is from where the
+ *  command runs, for every part of the build. */
+function outFolder(out: string) {
+  const dir = resolve(out), work = resolve(ROOT, "..", "var");
+  if (dir === work) throw new Error(`"${dir}" is the Studio's working folder itself: build into a folder inside it`);
+  if (!existsSync(dir) || dir.startsWith(work + sep) || !readdirSync(dir).length) return dir;
+  try { if (/^ExpatReady portal assistant/.test(JSON.parse(readFileSync(join(dir, "manifest.json"), "utf8")).name)) return dir; } catch { /* not a build */ }
+  throw new Error(`"${dir}" already holds other files: build into an empty folder (nothing there was changed)`);
+}
+
 export async function buildExtension(mode: "production" | "development", out: string, local?: { api: string; portal: string }) {
+  out = outFolder(out);
   // Production takes nothing from the command line: its hosts are hosts.json's only (a host given here is refused).
   if (mode === "production" && local) throw new Error("production manifest refused: the production build takes its hosts from hosts.json only, never from the command line");
   if (mode === "development") local = { api: devApiOrigin(local?.api), portal: devPortalOrigin(local?.portal) };
@@ -44,6 +56,11 @@ if (process.argv[1] && import.meta.filename === process.argv[1]) {
   const [mode, a, b, c] = process.argv.slice(2);
   try {
     if (mode !== "production" && mode !== "development") throw new Error("Say production or development.");
+    // An out folder is a plain path: an address given to the wrong build (production takes no Studio or host) would
+    // otherwise become a folder named "http:/localhost:4400".
+    const out = mode === "production" ? a : c;
+    if (mode === "production" && (b !== undefined || /:\/\/|^[a-z0-9.-]+\.[a-z]{2,}$/i.test(a ?? ""))) throw new Error("the production build takes its hosts from hosts.json only: give it no Studio address or portal host (for the APR host use extension:dev)");
+    if (out !== undefined && /:\/\//.test(out)) throw new Error(`"${out}" is an address, not a folder to build into`);
     // Into the Studio's working folder (never tracked), so a build leaves the copy clean: var/extension, var/extension-dev.
     const r = mode === "production" ? await buildExtension("production", a ?? join(ROOT, "..", "var", "extension")) : await buildExtension("development", c ?? join(ROOT, "..", "var", "extension-dev"), { api: a, portal: b });
     console.log(`built ${r.manifest.name} into ${r.out} (load this folder unpacked)`);

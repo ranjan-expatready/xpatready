@@ -210,7 +210,7 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
     return () => { chrome.tabs.onUpdated.removeListener(moved); chrome.tabs.onRemoved.removeListener(closed); };
   }, [check]);
   // PR #27: a capture the second person returned goes on here: remove the screens that are wrong, capture them again, finish.
-  const remove = async (order: number) => { if (!cap) return; setBusy(true); clearError(); try { setCap(await call<Capture>("DELETE", `/captures/${cap.id}/screens/${order}`)); setNote({ tone: "ok", text: `Screen ${order} removed: capture it again in the portal.` }); } catch (e) { onError(e); } finally { setBusy(false); } };
+  const remove = async (order: number) => { if (!cap) return; setBusy(true); clearError(); try { setCap(await call<Capture>("DELETE", `/captures/${cap.id}/screens/${order}?revision=${cap.revision}`)); setNote({ tone: "ok", text: `Screen ${order} removed: capture it again in the portal.` }); } catch (e) { onError(e); } finally { setBusy(false); } };
   // Review Major 1: a capture left open (the panel was closed or reloaded) is offered again, never lost.
   const [open, setOpen] = React.useState<Capture[] | null>(null);
   React.useEffect(() => { if (!cap) void call<Capture[]>("GET", "/captures").then(setOpen).catch(onError); }, [cap]);
@@ -245,9 +245,10 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
       </section>}
       {!done && !check && <Pinned><Button primary onClick={read} disabled={busy} className="w-full">Capture this screen</Button></Pinned>}
       {/* A returned capture is finished again only after a change (remove a wrong screen or capture one). */}
-      {!done && <Button onClick={finish} disabled={busy || !cap.screens.length || returned} className="w-full">Finish capture</Button>}
+      {!done && <Button onClick={finish} disabled={busy || !cap.screens.length || returned} aria-describedby={returned ? "finish-why" : undefined} className="w-full">Finish capture</Button>}
+      {returned && <p id="finish-why" className="text-xs text-text-muted">Remove a screen that is wrong and capture it again; then Finish sends the capture to the second person again.</p>}
       {done && <Pinned><Button primary onClick={() => { setCap(null); setNote(null); }} className="w-full">Start another capture</Button></Pinned>}
-      {!done && cap.screens.length > 0 && <ol aria-label="Screens captured" className="list-decimal space-y-1 pl-5 text-xs text-text-muted">{cap.screens.map((s) => <li key={s.order}><span className="inline-flex w-full items-center gap-2"><span className="flex-1">{s.title} · {s.questions} questions</span>
+      {!done && cap.screens.length > 0 && <ol aria-label="Screens captured" className="list-decimal space-y-1 pl-5 text-xs text-text-muted">{cap.screens.map((s) => <li key={s.order}><span className="inline-flex w-full items-center gap-2"><span className="flex-1">{s.title} · {s.questions} question{s.questions === 1 ? "" : "s"}</span>
         <button type="button" onClick={() => void remove(s.order)} disabled={busy} aria-label={`Remove screen ${s.order}, ${s.title}`} className="inline-flex min-h-6 min-w-6 items-center px-1 text-text-link underline">Remove</button></span></li>)}</ol>}
     </div>
   );

@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<!-- Sample · Scaffolding (P-98, break 26 Oct): markup that must read normally: a label whose words are the same as its
+     input's id, and an input moved off the page as a trap for robots (never a question a person sees). -->
+<html lang="en"><head><meta charset="utf-8"><title>Contact - APR Portal</title></head>
+<body><main><h1>Contact</h1>
+<form id="aprApplication"><label for="city">city</label><input type="text" id="city" name="city">
+<label for="country">Country or territory</label><select id="country" name="country"><option value="">Select one</option><option value="IND">India</option></select>
+<input type="text" id="hp_trap" name="hp_trap" style="position:absolute;left:-9999px" tabindex="-1" autocomplete="off">
+<button type="submit">Save and continue</button></form></main></body></html>

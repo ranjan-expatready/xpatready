@@ -6,17 +6,19 @@
 // every request's Origin must match. Codes are single-use, 5 minutes; tokens 8 hours (Sample). A code's first three
 // characters find it; a wrong code with them counts against it in the database, and the fifth wrong try voids it
 // (STANDARDS §8; review-2 Minor 1: never a per-address pause in memory, which a shared office address or a restart
-// broke). A blind guess must hit an open code's three characters and then its other five (31^8 codes, 5 tries each).
+// broke). A blind guess must hit an open code's three characters and then its other five (31^8 codes, 5 tries each),
+// and every try to exchange a code is throttled in the database: 60 a minute per address, 600 for the whole server
+// (review-3 Major 2: one client could otherwise sweep every selector and void the office's codes).
 // Answers and tokens are never logged.
 // The Studio's sign-in is the simulated x-actor header: pairing proves the flow, not the security (Scaffolding, P-33).
-import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Ip, Param, Post, Query } from "@nestjs/common";
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { CODE_ALPHABET, EXTENSION_PUBLIC_KEY, FillPlanRequest, MODES, NewExtensionCapture, NewPairing, NewSession, PAIRING } from "../../contracts/extension.ts";
 import type { CaptureInput, CaptureRecord } from "../../engine/capture.ts";
 import { fillPlan, onlineMapOf, type FillPlan } from "../../engine/extension/fill.ts";
-import { looksLikeClientDetail, screenDifference, screenIdentity } from "../../engine/extension/screens.ts";
+import { idLooksLikeClientDetail, screenDifference, screenIdentity } from "../../engine/extension/screens.ts";
 import { noAnswers } from "../../engine/capture.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { ACTORS, actorOf, Audit, bearerOf, Db, fail, need, RUNTIME_ACTORS, SOLUTION, Workspace, type Actor } from "./core.ts";
@@ -66,11 +68,19 @@ export class Extension {
   }
 
   /** XT-2: the extension exchanges a code for its token (once). The fifth wrong try against a code voids it. */
-  async session(body: unknown, origin: H) {
+  async session(body: unknown, origin: H, ip: string) {
     const now = Date.now();
     // Who is asking first (break m2: a request from elsewhere never spends a code's tries).
     const b = parse(NewSession, body);
     if (b.extensionId !== EXTENSION_ID || origin !== EXTENSION_ORIGIN) unauthorized("This is not the ExpatReady extension the Studio knows.");
+    // Every try is written before it is counted, so tries sent at the same moment each see the others (break M1); a right
+    // code takes its own try back. Old tries are cleared as new ones come.
+    const address = (ip || "unknown").slice(0, 64);
+    const [mine] = await this.db.$queryRaw<{ id: bigint }[]>`insert into extension_code_try (address) values (${address}) returning id`;
+    await this.db.$executeRaw`delete from extension_code_try where at < now() - interval '10 minutes'`;
+    const [n] = await this.db.$queryRaw<{ here: bigint; all: bigint }[]>`select count(*) filter (where address = ${address}) as here, count(*) as all from extension_code_try where at > now() - interval '1 minute'`;
+    if (Number(n.here) > PAIRING.triesPerAddress) fail("Too many tries from this network in the last minute: wait a minute, then enter the code again.", HttpStatus.TOO_MANY_REQUESTS);
+    if (Number(n.all) > PAIRING.triesPerServer) fail("Too many tries to connect an extension in the last minute: wait a minute, then enter the code again.", HttpStatus.TOO_MANY_REQUESTS);
     const p = await this.db.extensionPairing.findUnique({ where: { codeHash: sha(b.code) } });
     if (!p || p.usedAt || p.voidedAt || p.expiresAt.getTime() <= now) {
       // A wrong code counts against every open code it could have meant (same first three characters), in one statement
@@ -92,6 +102,7 @@ export class Extension {
       if (!used.count) unauthorized("That code was just used or stopped working: ask the Studio for a new one.");
       return tx.extensionSession.create({ data: { workspaceId: p!.workspaceId, person: p!.person, modes: p!.modes, extensionId: b.extensionId, tokenHash: sha(token), pairingId: p!.id, expiresAt } });
     });
+    await this.db.$executeRaw`delete from extension_code_try where id = ${mine.id}`;
     const actor = actorOf(s.person);
     await this.audit.log(s.workspaceId, s.person, "connected", "browser extension", null, `${actor.name} connected the browser extension (${s.modes.join(" and ")}; until ${expiresAt.toISOString().slice(0, 16).replace("T", " ")} UTC)`);
     return { token, expires_at: expiresAt.toISOString(), modes: s.modes, person: { id: actor.id, name: actor.name, role: actor.role } };
@@ -152,7 +163,11 @@ export class Extension {
   async addScreen(sig: Signed, id: string, body: unknown) { await this.ownCapture(sig, id); return this.forms.addExtensionScreen(sig.actor, id, body); }
   async capture(sig: Signed, id: string) { await this.ownCapture(sig, id); return this.forms.capture(id); }
   /** PR #27: a returned (or open) capture goes on in the panel: a wrong screen is removed there, then captured again. */
-  async removeScreen(sig: Signed, id: string, order: number) { await this.ownCapture(sig, id); return this.forms.removeScreen(sig.actor, id, order); }
+  async removeScreen(sig: Signed, id: string, order: number, revision: string | undefined) {
+    // Break (26 Oct): the panel names a screen by its place, so it must say which version of the list it saw.
+    if (!/^\d+$/.test(revision ?? "")) fail("Send the capture's revision you were shown, so the screen you meant is the one removed.");
+    await this.ownCapture(sig, id); return this.forms.removeScreen(sig.actor, id, order, Number(revision));
+  }
   async finish(sig: Signed, id: string) { await this.ownCapture(sig, id); return this.forms.finish(sig.actor, id); }
 
   /** Fill mode's choice of case: the workspace's open cases, newest first, with their people and the forms their
@@ -210,7 +225,7 @@ export class Extension {
     // For a screen the version does not have: its element ids (the page's code, not a client's text) say what to capture.
     // PR #27: a live element id that looks like a client's detail (an email address, a long number, a passport-like code)
     // is dropped: it is the page's code, but a page can build it from what was typed.
-    const differences = plan.reason === "changed" ? plan.differences : liveIds.filter((i) => !looksLikeClientDetail(i)).slice(0, 200).map((input) => ({ input, change: "added", approved_label: null }));
+    const differences = plan.reason === "changed" ? plan.differences : liveIds.filter((i) => !idLooksLikeClientDetail(i)).slice(0, 200).map((input) => ({ input, change: "added", approved_label: null }));
     // Break M2: a changed screen is the approved one (its approved heading and identity are kept); a screen the version
     // does not have is known only by the live page, whose heading can hold a client's details, so it is kept as a
     // checksum of that heading and named in words, never in the page's own text (M5).
@@ -250,13 +265,13 @@ export class ExtensionController {
   @Get("sessions") sessions(@Headers("x-actor") a: H) { return this.x.sessions(actorOf(a)); }
   @Delete("sessions/:id") @HttpCode(204) async revoke(@Headers("x-actor") a: H, @Param("id") id: string) { await this.x.revoke(actorOf(a), id); }
   // Extension (its token only)
-  @Post("sessions") session(@Body() b: unknown, @Headers("origin") o: H) { return this.x.session(b, o); }
+  @Post("sessions") session(@Body() b: unknown, @Headers("origin") o: H, @Ip() ip: string) { return this.x.session(b, o, ip); }
   @Get("session") async me(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { return this.x.me(await this.x.signed(t, o, a)); }
   @Delete("session") @HttpCode(204) async signOut(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { await this.x.signOut(await this.x.signed(t, o, a)); }
   @Post("captures") async start(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Body() b: unknown) { return this.x.startCapture(await this.x.signed(t, o, a, "capture"), b); }
   @Get("captures") async captures(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { return this.x.openCaptures(await this.x.signed(t, o, a, "capture")); }
   @Get("captures/:id") async capture(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string) { return this.x.capture(await this.x.signed(t, o, a, "capture"), id); }
-  @Delete("captures/:id/screens/:order") async removeScreen(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Param("order") n: string) { return this.x.removeScreen(await this.x.signed(t, o, a, "capture"), id, Number(n)); }
+  @Delete("captures/:id/screens/:order") async removeScreen(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Param("order") n: string, @Query("revision") rev?: string) { return this.x.removeScreen(await this.x.signed(t, o, a, "capture"), id, Number(n), rev); }
   @Post("captures/:id/screens") async screen(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.x.addScreen(await this.x.signed(t, o, a, "capture"), id, b); }
   @Get("cases") async cases(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Query("q") q?: string) { return this.x.cases(await this.x.signed(t, o, a, "fill"), q); }
   @Post("cases/:id/forms/:form/:subject/fill-plans") @HttpCode(200) async fill(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Param("form") form: string, @Param("subject") subject: string, @Body() b: unknown) { return this.x.fillPlan(await this.x.signed(t, o, a, "fill"), id, form, subject, b); }
