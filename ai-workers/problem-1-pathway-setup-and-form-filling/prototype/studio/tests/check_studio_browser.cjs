@@ -252,7 +252,11 @@ const step = (name, ok, detail) => { log.push({ name, ok: !!ok, detail: detail =
     await click(p.getByRole("row", { name: new RegExp(edition) }).getByRole("button", { name: "Draft with AI" }));
     await p.getByRole("dialog").getByText("Use the saved AI answer").click();
     await click(p.getByRole("dialog").getByRole("button", { name: "Use saved AI answer" }));
-    await p.getByRole("row", { name: new RegExp(edition) }).getByRole("link", { name: "Review AI proposals" }).click(); await idle();
+    // The replay runs after the stub pass, in the background: a busy CI runner needs more than a click's 30 s (PR #39 CI
+    // timed out here once; a local run takes a few seconds). If it never ends, the row's own words say why.
+    const link = p.getByRole("row", { name: new RegExp(edition) }).getByRole("link", { name: "Review AI proposals" });
+    await link.waitFor({ timeout: 180000 }).catch(async () => { throw new Error(`${edition}: no "Review AI proposals" after 3 minutes; the row says: ${(await p.getByRole("row", { name: new RegExp(edition) }).first().textContent().catch(() => "?"))?.slice(0, 400)}`); });
+    await link.click(); await idle();
   };
   await draftReplay("IMM 1295");
   await p.getByText("Replay of a saved run").first().waitFor();

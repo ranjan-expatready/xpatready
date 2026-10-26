@@ -745,15 +745,16 @@ export class Sources {
     const approved = new Set([...manifest().map((i) => i.sha256), ...inProduct]);
     // Historical workspaces may contain entries created before the source gate. Keep those out of
     // library pickers and usage summaries; a prior database row is not a source-verification decision.
-    // W1-02 (P-102): forms come in only as PDFs; an online version (parked with the browser extension) is not listed.
-    const visible = forms.map((f) => ({ ...f, editions: f.editions.filter((e) => e.channel !== "ONLINE" && approved.has(e.sha256)) })).filter((f) => f.editions.length);
+    // W1-02 (P-102): forms come in only as PDFs; an online version (parked with the browser extension) is never listed as an
+    // edition. A form the library holds only online (an older database) stays listed, with its uses, so it can get its PDF.
+    const visible = forms.map((f) => ({ ...f, onlineOnly: f.editions.length > 0 && f.editions.every((e) => e.channel === "ONLINE"), editions: f.editions.filter((e) => e.channel !== "ONLINE" && approved.has(e.sha256)) })).filter((f) => f.editions.length || f.onlineOnly);
     // "Used by" (P-51): every combination that files the form or has one of its editions attached as a source.
     const shas = visible.flatMap((f) => f.editions.map((e) => e.sha256)).filter(Boolean) as string[];
     const att = await this.db.sourceAttachment.findMany({ where: { workspaceId, sha256: { in: shas } }, select: { sha256: true, combinationId: true } });
     return visible.map((f) => {
       const mine = new Set(f.editions.map((e) => e.sha256));
       const used = new Set([...f.usedBy.map((u) => u.combinationId), ...att.filter((a) => mine.has(a.sha256)).map((a) => a.combinationId)]);
-      return { code: f.formKey, title: f.displayName, kind: f.formKind, usedBy: used.size,
+      return { code: f.formKey, title: f.displayName, kind: f.formKind, usedBy: used.size, ...(f.onlineOnly ? { online_only: true } : {}),
         editions: [...f.editions.filter((e) => e.channel !== "ONLINE")].sort((a, b) => compareEditions(b, a)).map((e) => ({ label: e.editionLabel, channel: "PDF", mapped: e._count.maps > 0, boxes: e._count.maps, approved: !!e.officialFile || inProduct.has(e.sha256 ?? ""), approved_in_product: !e.officialFile && inProduct.has(e.sha256 ?? "") })),
         channels: [...new Set(f.editions.map((e) => (e.channel === "ONLINE" ? "Online" : "PDF")))] };
     });
