@@ -77,8 +77,42 @@ export function fillScreen(doc: Document, plan: PlanInput[]): Outcome[] {
     if (!el || NEVER.has((el.getAttribute("type") ?? "").toLowerCase()) || el.disabled || (el as HTMLInputElement).readOnly || !shown(els)) return { id: p.id, label: p.label, outcome: "not_filled", reason: "not_on_screen" };
     if (!els.every((e) => sameKind(e, p.type))) return { id: p.id, label: p.label, outcome: "not_filled", reason: "not_the_same_kind_of_input" };
     if (!isEmpty(els)) return { id: p.id, label: p.label, outcome: "left_alone", reason: "already_answered" };
+    // Break m5: "not ticked" on a box already not ticked writes nothing, so it is never counted as filled (or undone).
+    if (el instanceof HTMLInputElement && el.type === "checkbox" && p.value !== "true") return { id: p.id, label: p.label, outcome: "left_alone", reason: "already_answered" };
     return write(els, p.value) ? { id: p.id, label: p.label, outcome: "filled" } : { id: p.id, label: p.label, outcome: "not_accepted", reason: "read_back_differs" };
   });
+}
+
+/** F3 X10: what one fill wrote, kept in the page's memory only (gone when the page changes), so "Undo this fill" clears
+ *  exactly that. */
+export type Written = { id: string; type: string; value: string };
+/** The inputs a fill wrote, for the page's outline. */
+export function filledElements(doc: Document, written: Written[]): HTMLElement[] {
+  return written.flatMap((w) => { const els = find(doc, w.id, w.type); return w.type === "radio" ? (els as HTMLInputElement[]).filter((r) => r.value === w.value) : els.slice(0, 1); });
+}
+/** Still the value this fill wrote: a person who changed it since keeps their answer. */
+function holds(els: HTMLElement[], value: string) {
+  const el = els[0];
+  if (el instanceof HTMLInputElement && el.type === "radio") return (els as HTMLInputElement[]).some((r) => r.checked && r.value === value);
+  if (el instanceof HTMLInputElement && el.type === "checkbox") return el.checked === (value === "true");
+  return (el as HTMLInputElement).value === value;
+}
+/** Empties one input the way a person would: through its own setter, with the events typing fires. */
+function clear(els: HTMLElement[]) {
+  const el = els[0];
+  if (el instanceof HTMLInputElement && (el.type === "radio" || el.type === "checkbox")) { for (const r of els as HTMLInputElement[]) if (r.checked) { setter(r, "checked")!.call(r, false); fire(r); } return; }
+  if (el instanceof HTMLSelectElement) { const blank = Array.from(el.options).findIndex((o) => o.value === "" || isPlaceholder(o)); el.selectedIndex = blank; fire(el); return; }
+  setter(el, "value")!.call(el, ""); fire(el);
+}
+/** F3 X10: "Undo this fill" clears the values this fill wrote that nobody changed since; never anything else. */
+export function undoFill(doc: Document, written: Written[]): { cleared: number; kept: number } {
+  let cleared = 0, kept = 0;
+  for (const w of written) {
+    const els = find(doc, w.id, w.type);
+    if (!els.length || !holds(els, w.value)) { kept++; continue; }
+    clear(els); cleared++;
+  }
+  return { cleared, kept };
 }
 
 /** Break B2: the page is still the screen the plan was made for (read again, compared input by input): a screen the

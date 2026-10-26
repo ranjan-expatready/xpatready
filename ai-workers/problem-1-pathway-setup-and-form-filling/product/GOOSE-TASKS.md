@@ -8,7 +8,7 @@ Some work can only run on the founder's Mac (`LANES.md`, "Where work can run"): 
 
 ## Open tasks
 
-### G3 · Real APR screens captured with the extension (the founder, by hand) — NOT READY: waits for the forms lane's Pass B merge (P-98)
+### G3 · Real APR screens captured with the extension (the founder, by hand) — READY since 26 Oct (Pass B and the build-folder fix merged; P-98): step 1 now, send the Lead the host
 The founder holds an APR account (P-98). This one is done by the founder's own hands, not by Goose: only the founder signs in to the APR Portal, and nobody else ever sees the password. The Lead says "G3 is ready" when the forms lane's APR pass is merged and :4400 runs it (restart with the founder's OK).
 1. **Before anything:** sign in to the APR Portal yourself in Chrome. Check that a new **visitor visa** and a new **work permit** application can be started there. If not, stop and tell the Lead (P-98 assumes both are filed through APR). Copy only the **address host** of the application screens from the address bar (for example `something.cic.gc.ca`) and paste it to the Lead; the Lead puts it in the build command below.
 2. **Rules for the session:** start a **new blank application**, never a client's. Type only made-up Sample answers when the portal needs one to move to the next screen. Never submit, pay or sign. Delete the draft afterwards if the portal allows it. The extension reads only the structure (labels, types, options, required flags) and refuses any screen showing an answer, so capture each screen **as soon as it opens, before typing**. (Unconfirmed: no counsel; IRCC's terms on this are unread.)

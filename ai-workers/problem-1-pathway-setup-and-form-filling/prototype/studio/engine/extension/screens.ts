@@ -77,6 +77,9 @@ export function screenProblems(s: { title: string; inputs: CaptureInput[] }): st
   look("the screen title", s.title);
   for (const i of s.inputs) {
     for (const t of [i.label, i.group, i.help, ...(i.options ?? []).map((o) => o.label)]) look(`"${i.label}"`, t);
+    // Break m8: the element id and the input's format pattern are kept too, so they are checked like its texts.
+    look(`the format of "${i.label}"`, (i as { pattern?: string }).pattern);
+    if (idLooksLikeClientDetail(i.id)) out.push(`the element id of "${i.label}" looks like a client's detail`);
     if (!["radio", "checkbox", "select"].includes(i.type) && LABEL_ANSWER.test(i.label)) out.push(`"${i.label}": ${RULES.label_answer.what}`);
   }
   const ids = s.inputs.map((i) => i.id), dup = [...new Set(ids.filter((x, n) => ids.indexOf(x) !== n))];

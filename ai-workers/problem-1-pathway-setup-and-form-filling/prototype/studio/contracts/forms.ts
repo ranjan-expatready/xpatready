@@ -18,6 +18,14 @@ export const PORTAL_KEYS = PORTALS.map((p) => p.key) as [string, ...string[]];
 export const DEFAULT_PORTAL = "apr_portal";
 export const portalLabel = (key: string | null | undefined) => PORTALS.find((p) => p.key === key)?.label ?? key ?? "no portal";
 
+/** F3 plan D1: the decisions an online version's screen map holds about its page inputs. A row with any other outcome
+ *  (such as `asked_differently`, a decision about a whole PDF section) is never a page input. */
+export const SCREEN_MAP_OUTCOMES = ["mapped", "not_a_fact", "person_answers_on_screen", "unresolved"] as const;
+/** F3 plan D1: the outcome and the data path prefix of "asked differently online" (a PDF section the portal asks in
+ *  another way); a page element id can never start with "@". */
+export const ASKED_DIFFERENTLY = { outcome: "asked_differently", prefix: "@asked-differently:" } as const;
+export const AskedDifferently = z.object({ group: z.string().trim().min(1).max(80), reason: z.string().trim().min(3).max(300) }).strict();
+
 export const CHANNELS = ["PDF_UPLOAD", "ONLINE", "SIGNED_PDF_UPLOAD"] as const;
 export type Channel = (typeof CHANNELS)[number];
 export const CHANNEL_WORDS: Record<Channel, string> = { PDF_UPLOAD: "PDF upload", ONLINE: "Online", SIGNED_PDF_UPLOAD: "Signed PDF upload" };

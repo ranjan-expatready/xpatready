@@ -1,0 +1,53 @@
+{
+  "_about": "F3 plan D1: a plain label for each PDF section group (the form's subform name without its page) that holds a mapped form field. Sample: written by the forms lane from each group's headings in the official PDF; the immigration expert confirms or rewords them. A group with no label here shows \"Other questions of <form>\".",
+  "IMM 5257": {
+    "Header": "Form header",
+    "ButtonsHeader": "Details the form works out (age, adult)",
+    "PersonalDetails": "Personal details",
+    "MaritalStatus": "Marital status and spouse",
+    "natID": "National identity document",
+    "USCard": "United States permanent resident card",
+    "ContactInformation": "Contact information",
+    "DetailsOfVisit": "Details of the visit",
+    "Contacts_Row2": "Second person or place to visit in Canada",
+    "Education": "Education",
+    "Occupation": "Employment",
+    "BackgroundInfo": "Background: health",
+    "BackgroundInfo2": "Background: refusals and earlier applications",
+    "PageWrapper": "Background: crimes, military and government service",
+    "Consent1": "Consent and declaration",
+    "ButtonsFooter": "Form footer"
+  },
+  "IMM 1295": {
+    "Header": "Form header",
+    "ButtonsHeader": "Details the form works out (age, adult)",
+    "PersonalDetails": "Personal details",
+    "MaritalStatus": "Marital status and spouse",
+    "natID": "National identity document",
+    "USCard": "United States permanent resident card",
+    "ContactInformation": "Contact information",
+    "FaxEmail": "Fax and email",
+    "DetailsOfIntendedWork": "The intended work and employer",
+    "IntendedLocationInCanada": "Where the work will be",
+    "DetailsOfWorkCont": "The job and how long it lasts",
+    "LCP": "Caregiver work",
+    "PageWrapper": "Education, employment and background",
+    "BackgroundInfo": "Background: health",
+    "BackgroundInfo2": "Background: refusals and earlier applications",
+    "Consent0": "Consent and declaration",
+    "ButtonsFooter": "Form footer"
+  },
+  "IMM 5707": {
+    "SectionA": "Applicant, spouse and parents",
+    "SectionB": "Children",
+    "SectionC": "Declaration and signature"
+  },
+  "IMM 5476": {
+    "RadioButtonList": "What the form is for",
+    "SectionA": "Applicant",
+    "SectionB": "Representative and their contact details",
+    "sectionC": "Cancelling a representative",
+    "sectionD": "Representative's declaration",
+    "sectionE": "Your declaration"
+  }
+}
