@@ -31,12 +31,12 @@ const placeholder = (label: string) => !label.replace(/^[ -]+|[ -]+$/g, "") || P
 export const searchForm = (a: Attrs) => a.role === "search" || `${a.class ?? ""} ${a.id ?? ""} ${a.name ?? ""}`.toLowerCase().split(/[\s_-]+/).includes("search");
 
 type Attrs = Record<string, string>;
-type El = { id: string; name: string | null; type: string; required: boolean; label: string | null; help?: string | null; order?: number; group?: string; part?: "YYYY" | "MM" | "DD"; max_length?: number; min_length?: number; pattern?: string; options?: Opt[]; _described?: string | null; _dom_id?: string | null; _placeholder?: string | null };
+type El = { id: string; name: string | null; type: string; required: boolean; label: string | null; help?: string | null; order?: number; group?: string; part?: "YYYY" | "MM" | "DD"; max_length?: number; min_length?: number; pattern?: string; options?: Opt[]; _described?: string | null; _labelled?: string | null; _dom_id?: string | null; _placeholder?: string | null };
 type Opt = { code: string; label: string | null; _dom_id?: string | null };
 type LabelEntry = { for: string | null; text: string[]; inputs: (El | Opt)[] };
 
 class Screen {
-  title = ""; h1 = ""; inputs: El[] = []; refused: Refusal[] = []; problems: string[] = [];
+  title = ""; h1 = ""; inputs: El[] = []; refused: Refusal[] = []; problems: string[] = []; unnamed: string[] = [];
   labelsFor: Record<string, string> = {}; textById: Record<string, string> = {};
   skip = 0; search = 0; cap: string | null = null; buf: string[] = [];
   labelStack: LabelEntry[] = []; legends: string[] = [];
@@ -73,7 +73,7 @@ class Screen {
       if (SKIP_TYPES.has(typ)) return;
       const ident = a.id || a.name;
       if (!ident) return; // not a question the extension could find again; an answer in it is never read
-      const el: El = { id: ident, name: a.name || null, type: TYPES.has(typ) ? typ : "text", required: "required" in a || a["aria-required"] === "true", label: clean(a["aria-label"]) || null, help: null, _described: a["aria-describedby"] ?? null, _dom_id: a.id ?? null };
+      const el: El = { id: ident, name: a.name || null, type: TYPES.has(typ) ? typ : "text", required: "required" in a || a["aria-required"] === "true", label: clean(a["aria-label"]) || null, help: null, _described: a["aria-describedby"] ?? null, _labelled: a["aria-labelledby"] ?? null, _dom_id: a.id ?? null };
       if (/^\d+$/.test(a.maxlength ?? "")) el.max_length = Number(a.maxlength);
       if (/^\d+$/.test(a.minlength ?? "")) el.min_length = Number(a.minlength);
       if (a.pattern) el.pattern = a.pattern;
@@ -128,6 +128,8 @@ class Screen {
 
   finish(): ReadScreen {
     for (const el of this.inputs) {
+      // aria-labelledby names the question first (as a browser does), from the text of the elements it points to.
+      if (el._labelled) { const named = el._labelled.split(/\s+/).filter(Boolean).map((i) => this.textById[i] ?? "").join(" ").trim(); if (named) el.label = named; }
       if (el.label == null && el._dom_id && el._dom_id in this.labelsFor) el.label = this.labelsFor[el._dom_id];
       for (const o of el.options ?? []) {
         if (o.label == null && o._dom_id && o._dom_id in this.labelsFor) o.label = this.labelsFor[o._dom_id];
@@ -135,12 +137,13 @@ class Screen {
         delete o._dom_id;
       }
       if (el._described) { const h = el._described.split(/\s+/).filter(Boolean).map((i) => this.textById[i] ?? "").join(" ").trim(); el.help = h || null; }
-      if (!el.label) el.label = el.group || el.id;
+      // No label, legend, aria-label or aria-labelledby: known only by the page's code (the live reader stops on it).
+      if (!el.label) { if (!el.group) this.unnamed.push(el.id); el.label = el.group || el.id; }
       if (el.label.startsWith("*") || el.label.toLowerCase().includes("(required)")) el.required = true;
       el.label = el.label.replace(REQUIRED_MARKS, "").trim();
       const part = PARTS[el.label.toLowerCase().replace(/^[ :]+|[ :]+$/g, "")];
       if (part && el.group) el.part = part;
-      delete el._described; delete el._dom_id; delete el._placeholder; delete (el as { name?: unknown }).name;
+      delete el._described; delete el._labelled; delete el._dom_id; delete el._placeholder; delete (el as { name?: unknown }).name;
       if (el.help == null) delete el.help;
     }
     const names = Object.fromEntries(this.inputs.map((el) => [el.id, el.label]));
@@ -172,13 +175,57 @@ function walk(n: Node, s: Screen) {
   }
 }
 
+const CONTROLS = "input:not([type=hidden]),select,textarea,[contenteditable],[role=textbox],[role=combobox],[role=listbox],[role=radio],[role=checkbox],[role=switch]";
+type ChromeDom = { dom?: { openOrClosedShadowRoot?: (e: Element) => ShadowRoot | null } };
+/** A component's own inside, open or closed: in the extension's content script Chrome gives closed ones too. */
+const rootOf = (e: Element): ShadowRoot | null => { const dom = (globalThis as unknown as { chrome?: ChromeDom }).chrome?.dom; try { return dom?.openOrClosedShadowRoot ? dom.openOrClosedShadowRoot(e) : e.shadowRoot; } catch { return e.shadowRoot; } };
+/** Every element of a page and of the components inside it, however deep. */
+function* deep(root: Document | ShadowRoot): Generator<Element> { for (const e of Array.from(root.querySelectorAll("*"))) { yield e; const r = rootOf(e); if (r) yield* deep(r); } }
+const visible = (e: Element) => (typeof e.checkVisibility === "function" ? e.checkVisibility() : true) && e.getClientRects().length > 0 && e.getBoundingClientRect().width * e.getBoundingClientRect().height > 0;
+/** Where the screen's questions are: inside its form or main area, or large enough to be part of the screen. */
+const inScreen = (e: Element, doc: Document) => !!e.closest("form, main, [role=main], fieldset") || e.getBoundingClientRect().width * e.getBoundingClientRect().height >= 0.25 * (doc.defaultView?.innerWidth ?? 1024) * (doc.defaultView?.innerHeight ?? 768);
+/** Frames, objects and embeds of a page whose inside this reader cannot read, and same-site frames holding questions. */
+function framed(doc: Document, depth = 0): string[] {
+  const out: string[] = [];
+  for (const f of Array.from(deep(doc)).filter((e) => ["iframe", "frame", "object", "embed"].includes(e.tagName.toLowerCase()))) {
+    let inner: Document | null = null;
+    try { inner = (f as HTMLIFrameElement).contentDocument ?? null; } catch { inner = null; }
+    if (inner && depth < 3) { if (Array.from(deep(inner)).some((e) => e.matches(CONTROLS))) out.push("some of its questions sit inside a frame, and the reader reads the page itself only"); else out.push(...framed(inner, depth + 1)); }
+    else if (visible(f) && inScreen(f, doc)) out.push(`part of the screen is ${f.tagName.toLowerCase() === "iframe" || f.tagName.toLowerCase() === "frame" ? "a frame from another site" : "an embedded object"} the reader cannot look into`);
+  }
+  return out;
+}
+/** Live page only, a second difference on purpose (P-98: the founder captures real APR screens whose markup nobody has
+ *  seen): a saved page has no components, frames or layout, so the saved-page reader never meets these. Markup this
+ *  reader cannot see into stops the capture ("not read"), never a screen sent with questions missing or named only by
+ *  the page's code. Break 26 Oct: closed and nested components, frames from another site, frames inside frames, objects
+ *  and embeds too; an input off the page or hidden from assistive technology (a trap for robots) never stops a screen. */
+function liveProblems(doc: Document, unnamed: string[]): string[] {
+  const out: string[] = [];
+  const hint = "; record this screen with the spreadsheet template";
+  if (Array.from(deep(doc)).some((e) => { const r = rootOf(e); return !!r && Array.from(deep(r)).some((x) => x.matches(CONTROLS)); })) out.push(`its questions sit inside page components the reader cannot see into${hint}`);
+  const frames = framed(doc);
+  if (frames.length) out.push(`${frames[0]}${hint}`);
+  const width = Math.max(doc.documentElement.scrollWidth, doc.defaultView?.innerWidth ?? 0);
+  const shown = (id: string) => {
+    const e = doc.getElementById(id) ?? doc.getElementsByName(id)[0];
+    if (!e || !visible(e) || e.closest("[aria-hidden=true]")) return false;
+    const r = e.getBoundingClientRect(), x = r.left + (doc.defaultView?.scrollX ?? 0), y = r.top + (doc.defaultView?.scrollY ?? 0);
+    return x + r.width > 0 && y + r.height > 0 && x < width; // off the page: a trap for robots, not a question
+  };
+  const named = unnamed.filter(shown);
+  if (named.length) out.push(`${named.length === 1 ? "a question has" : `${named.length} questions have`} no label the reader can find (${named.slice(0, 2).join(", ")})`);
+  return out;
+}
+
 /** Reads the open screen. Never reads an answer; never changes the page. */
 export function readScreen(doc: Document): ReaderResult {
   const s = new Screen();
   walk(doc, s);
   const screen = s.finish();
   if (s.refused.length) return { ok: false, refused: s.refused, title: screen.title };
-  if (s.problems.length) return { ok: false, error: [...new Set(s.problems)].slice(0, 3).join("; ") };
-  if (!screen.inputs.length) return { ok: false, error: "no questions found on this page (a portal screen has inputs; a guide page belongs on the combination's sources)" };
+  const problems = [...s.problems, ...liveProblems(doc, s.unnamed)];
+  if (problems.length) return { ok: false, error: [...new Set(problems)].slice(0, 3).join("; ") };
+  if (!screen.inputs.length) return { ok: false, error: doc.querySelector("iframe, frame") ? "no questions found on the page itself; they may be inside a frame, which the reader does not read" : "no questions found on this page (a portal screen has inputs; a guide page belongs on the combination's sources)" };
   return { ok: true, screens: [screen] };
 }

@@ -1,6 +1,6 @@
 // P2 drafting policy, fixed in code (AIW-D260 content limits, AIW-D261 route). The runner reads only
 // these constants; a run record cannot widen them. Changing a value here needs the founder's decision.
-import { join } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 
 export const PROTOTYPE = join(import.meta.dirname, "..");
 export const ROOT = join(PROTOTYPE, "..", "..", "..");
@@ -23,6 +23,16 @@ export const PARTS_DIR = join(PROTOTYPE, "p2", "parts");
 /** F1 slice 2: approved portal screen inventories (P-66 portal twins) for the screen_map job. The guard admits one only
  *  when a second person approved it and its fingerprint is the one recomputed from its structure. */
 export const SCREEN_INVENTORIES = join(PROTOTYPE, "p2", "screen-inventories");
+/** P-80: forms a second person approved in the product (held, not on the official manifest). At approval the Studio
+ *  writes, per copy and per workspace, the approval record, the approved PDF and (on "read the form") its inventory into
+ *  <studio working folder>/workspaces/demo/approved-sources, so a demo reset clears them with the database row and test
+ *  copies never share one. The guard sees no database: it admits such an inventory only from a folder of exactly this
+ *  shape that the launcher names, and only after checking the record (guard.ts admitApproved). */
+export const STUDIO_VAR_DIR = join(PROTOTYPE, "studio", "var");
+export function approvedSourcesDirOk(dir: unknown): dir is string {
+  if (typeof dir !== "string" || resolve(dir) !== dir) return false;
+  return /^(isolated-[a-z0-9_]+\/)?workspaces\/demo\/approved-sources$/.test(relative(STUDIO_VAR_DIR, dir).split(sep).join("/"));
+}
 /** Run records and stub-pass records, written only by the launcher (the isolated child cannot write here). */
 export const RUNS_DIR = join(PROTOTYPE, "p2", "runs");
 /** Salted-hash screening digest written by the launcher before every run and read by the drafting process,

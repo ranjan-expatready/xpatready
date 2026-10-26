@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<!-- Sample · Scaffolding (P-33, P-98). Written by the forms lane to look like a blank screen of an application on the
+     Authorized Paid Representatives (APR) Portal. Not a real APR screen: nobody has seen one yet (the founder captures the
+     real blank screens in G3). Labels follow IRCC's public descriptions of the form; the markup differs from the IRCC
+     Portal Sample on purpose (aria-labelledby, a step list, a representative banner, a sign-out form). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="csrf-token" content="apr-sess-41d9">
+  <title>Languages - Application for a visitor visa - APR Portal</title>
+  <script>window.__apr = { step: 5, total: 6 };</script>
+</head>
+<body>
+  <header>
+    <p class="banner">Authorized Paid Representatives Portal (Sample)</p>
+    <nav aria-label="Portal"><a href="/apr/dashboard">My applications</a> <a href="/apr/help">Help</a> <a href="/apr/fr" lang="fr">Français</a></nav>
+    <form role="search" action="/apr/search"><label for="aprSearch">Search applications</label><input type="search" id="aprSearch" name="q"></form>
+  </header>
+  <main>
+    <ol class="steps" aria-label="Application steps"><li>Application details</li><li>Personal details</li><li>Marital status</li><li>Spouse or common-law partner</li><li aria-current="step">Languages</li><li>Passport</li></ol>
+    <h1>Languages</h1>
+    <form id="aprApplication" method="post" action="/apr/application/visitor">
+      <input type="hidden" name="_csrf" value="apr-sess-41d9">
+      <input type="hidden" name="draftId" value="D-000000">
+      <label for="nativeLanguage">Native language or mother tongue (required)</label>
+      <select id="nativeLanguage" name="nativeLanguage" required><option value="">Select one</option><option value="ENG">English</option><option value="FRA">French</option><option value="HIN">Hindi</option><option value="TGL">Tagalog</option></select>
+      <fieldset><legend>Can you communicate in English or French? (required)</legend>
+        <input type="radio" id="officialLanguageEN" name="officialLanguage" value="EN" required><label for="officialLanguageEN">English</label>
+        <input type="radio" id="officialLanguageFR" name="officialLanguage" value="FR" required><label for="officialLanguageFR">French</label>
+        <input type="radio" id="officialLanguageBOTH" name="officialLanguage" value="BOTH" required><label for="officialLanguageBOTH">Both</label>
+        <input type="radio" id="officialLanguageNEITHER" name="officialLanguage" value="NEITHER" required><label for="officialLanguageNEITHER">Neither</label>
+      </fieldset>
+      <div class="actions"><button type="button" name="back">Back</button> <button type="submit" name="next">Save and continue</button></div>
+    </form>
+  </main>
+  <footer><form action="/apr/signout" method="post"><button type="submit">Sign out</button></form></footer>
+</body>
+</html>

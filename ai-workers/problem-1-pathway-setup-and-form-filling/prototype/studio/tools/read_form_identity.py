@@ -6,7 +6,10 @@ saved (its ModDate, else CreationDate). Kind: "checklist" when its title or firs
 "guide" when they say guide or instructions, otherwise "form". An HTML page (a saved canada.ca page) is a guide: its
 title, a form code in that title and its "date modified"; a page with two or more question inputs is a saved portal
 screen ("portal_screen", F1), which belongs in a portal capture, not on a combination's sources. Prints one JSON line: {ok, kind, code, edition, edition_label,
-title, published} or {ok: false, error, ...}. The file is opened as data only; nothing in it is executed.
+title, published, language} or {ok: false, error, ...}. The file is opened as data only; nothing in it is executed.
+Language (PDF hardening, 26 Oct): IRCC prints the language after the edition ("IMM 5257 (09-2023) E", French "… F") and in
+the title ("IMM 5257 F : Demande …"); a French version has the same code and edition as the English one, so it is reported
+as "fr" for the intake to hold rather than taken for the English edition. A password-protected file is said to be one.
   .tools/solution-1-prototype/.venv/bin/python -I studio/tools/read_form_identity.py <file>
 """
 import html
@@ -44,9 +47,9 @@ def texts(reader):
 
 def kind_of(title, first):
     head = f"{title}\n{first[:600]}".lower()
-    if "checklist" in head:
+    if "checklist" in head or "liste de contrôle" in head or "liste de controle" in head:
         return "checklist"
-    if re.search(r"\bguide\b|\binstructions?\b", title.lower()):
+    if re.search(r"\bguide\b|\binstructions?\b|\bdirectives\b", title.lower()):
         return "guide"
     return "form"
 
@@ -90,6 +93,13 @@ def main(path):
             return read_html(raw)
         return {"ok": False, "error": "not a PDF or a saved web page"}
     reader = PdfReader(path)
+    if reader.is_encrypted:  # IRCC's own files open with the empty password; one that needs a password cannot be read
+        try:
+            opened = reader.decrypt("")
+        except Exception:
+            opened = 0
+        if not opened:
+            return {"ok": False, "error": "the file is password-protected, so nothing in it can be read; upload the unprotected PDF from IRCC", "kind": "unknown"}
     title = str((reader.metadata or {}).get("/Title") or "").strip()
     body, first = texts(reader)
     published = pdf_date(reader.metadata)
@@ -105,12 +115,14 @@ def main(path):
     if re.search(r"schedule\s*1\b", title, re.I):
         code += " SCH1"
     digits = code.split()[1]
-    editions = Counter(re.findall(rf"{code.split()[0]}\s?{digits}\s?E?\s*\((\d{{2}}-\d{{4}})\)", body))
-    clean = re.sub(r"^" + CODE + r"\s*E?\s*:?\s*", "", title).strip() or code
+    editions = Counter(re.findall(rf"{code.split()[0]}\s?{digits}\s?[EF]?\s*\((\d{{2}}-\d{{4}})\)", body))
+    clean = re.sub(r"^" + CODE + r"\s*[EF]?\s*:?\s*", "", title).strip() or code
+    marks = Counter(re.findall(rf"{code.split()[0]}\s?{digits}\s?(?:\(\d{{2}}-\d{{4}}\))?\s?([EF])\b", f"{title}\n{body}"))
+    language = "fr" if re.match(CODE + r"\s?F\b", title) or marks["F"] > marks["E"] else "en"
     if not editions:
         return {"ok": False, "error": f"found {code} but no edition date such as (09-2023) printed next to it", "code": code, "title": clean, "kind": kind, "published": published}
     edition = editions.most_common(1)[0][0]
-    return {"ok": True, "kind": kind, "code": code, "edition": edition, "edition_label": f"{code} ({edition})", "title": clean, "published": published}
+    return {"ok": True, "kind": kind, "code": code, "edition": edition, "edition_label": f"{code} ({edition})", "title": clean, "published": published, "language": language}
 
 
 if __name__ == "__main__":

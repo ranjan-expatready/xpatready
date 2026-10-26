@@ -148,6 +148,13 @@ const SPOUSE_PAGE = `unknown-${createHash("sha256").update(screenIdentity("Your 
   const leak = sql("select count(*) from recapture_task where screen_title like '%AB1234567%' or screen_page like '%ab1234567%' or screen_title like '%Sample Name%' or screen_page like '%sample-name%' or screen_page like '%1234%'");
   ok("C9.3: break M2 a screen not in the version is kept as a checksum and named in words: its heading (a client's details) is in no task", r.body.task?.id && leak === "0" && sql(`select screen_title from recapture_task where id='${r.body.task.id}'`) === "A screen that is not in the approved version" && /^unknown-[0-9a-f]{16}$/.test(sql(`select screen_page from recapture_task where id='${r.body.task.id}'`)), { leak });
   const secretTask = r.body.task.id as string;
+  // PR #27: a "Capture needed" task keeps the live screen's element ids (what to capture), but drops any id that looks
+  // like a client's detail (a page can build an id from what was typed).
+  const idsScreen = { title: "Travel companions (Sample)", inputs: [{ id: "companionName", label: "Name", type: "text", required: false, order: 1 }, { id: "AB1234567", label: "Passport", type: "text", required: false, order: 2 }, { id: "12345678", label: "UCI", type: "text", required: false, order: 3 }, { id: "applicant_UCI12345678", label: "UCI", type: "text", required: false, order: 4 }, { id: "dob-1990-05-17", label: "Date", type: "text", required: false, order: 5 }] };
+  r = await plan(idsScreen, ext, c2.id, P2);
+  const kept = r.body.task?.id ? sql(`select differences::text from recapture_task where id='${r.body.task.id}'`) : "";
+  ok("C9.3: PR #27 \"Capture needed\" keeps the page's own element ids (companionName) to say what to capture", /companionName/.test(kept), kept);
+  ok("C9.3: PR #27 fail: an element id that looks like a passport number or a UCI, alone or inside a longer id (applicant_UCI12345678, dob-1990-05-17), is dropped from the task (in no task row)", !/AB1234567|12345678|1990-05-17/.test(kept) && sql("select count(*) from recapture_task where differences::text like '%AB1234567%' or differences::text like '%12345678%' or differences::text like '%1990-05-17%'") === "0", kept);
   for (let n = 0; n < 12; n++) await plan({ ...s1, title: `Junk screen number ${n}` }, ext, c2.id, P2);
   const unknown = Number(sql(`select count(*) from recapture_task where kind='not_captured' and status='OPEN' and form_edition_id=(select form_edition_id from recapture_task where id='${secretTask}')`));
   ok("C9.3: break M2 fail: one fill token cannot flood the content team (at most 10 open \"Capture needed\" per version)", unknown === 10, unknown);

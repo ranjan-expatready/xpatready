@@ -22,7 +22,7 @@ export type CaptureView = {
 };
 
 /** A held file from the one intake (board view 9). */
-export type HeldFileView = { id: string; file: string; kind: string; code: string | null; title: string | null; edition: string | null; outcome: string; reason: string | null; combinationId: string | null; at: string; irccPage: string | null; uploadedBy: string; sha256: string; stored: boolean };
+export type HeldFileView = { id: string; file: string; kind: string; code: string | null; title: string | null; edition: string | null; outcome: string; reason: string | null; combinationId: string | null; at: string; irccPage: string | null; uploadedBy: string; sha256: string; stored: boolean; /** Why approving would be refused (review-4 Minor 2); null when it can be approved. */ cannotApprove?: string | null };
 
 /** The new-edition impact review (board view 7, C9.1). */
 export type ImpactChange = "unchanged" | "reworded" | "new" | "removed";

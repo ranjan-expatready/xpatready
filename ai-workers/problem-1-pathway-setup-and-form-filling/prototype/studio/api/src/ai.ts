@@ -68,6 +68,8 @@ export class Ai implements OnModuleInit {
     // Only an edition with its boxes mapped can be reused: an upload registers its edition before any map exists.
     const editions = await this.db.formEdition.findMany({ where: { workspaceId, maps: { some: {} } }, select: { sha256: true, editionLabel: true } });
     const jobs = await this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, attachmentId: true, status: true, kind: true, fingerprint: true, runId: true, mode: true } });
+    // P-80: files a second person approved in the product are drafted like official ones (the guard checks the approval).
+    const inProduct = new Set((await this.db.approvedSource.findMany({ where: { workspaceId, kind: "form" }, select: { sha256: true } })).map((x) => x.sha256));
     const order = new Map(combinationIds.map((id, i) => [id, i]));
     const targets: Target[] = [];
     const draftedHere = new Map<string, string>(); // form edition (file hash) → the combination whose draft covers it
@@ -79,7 +81,8 @@ export class Ai implements OnModuleInit {
       for (const a of c.attachments) {
         if (attachmentId && a.id !== attachmentId) continue;
         const base = { combinationId: c.id, combination: c.label, program: c.program.label, attachmentId: a.id, source: a.edition ?? a.fileName, expected_usd: null as number | null, worst_usd: 0 };
-        if (!a.recognised) { if (attachmentId) targets.push({ ...base, action: "not_eligible", why: "Not an approved official file: never read or sent to the AI." }); continue; }
+        const approvedHere = !a.recognised && inProduct.has(a.sha256);
+        if (!a.recognised && !approvedHere) { if (attachmentId) targets.push({ ...base, action: "not_eligible", why: "Not an approved file (neither in the official library nor approved in the product by a second person): never read or sent to the AI." }); continue; }
         if (a.kind !== "Form") { if (attachmentId) targets.push({ ...base, action: "not_eligible", why: "Checklist or instructions: field-map drafting applies to fillable forms only. Document requirements are authored by people." }); continue; }
         const formKey = (a.edition ?? "").split(" (")[0];
         const active = jobs.find((j) => j.attachmentId === a.id && (j.status === "QUEUED" || j.status === "RUNNING"));
@@ -91,8 +94,10 @@ export class Ai implements OnModuleInit {
         if (draftedHere.has(a.sha256)) { targets.push({ ...base, action: "skip", why: `Same form as in ${draftedHere.get(a.sha256)}: review that draft once; once applied, add it here from the library.` }); continue; }
         draftedHere.set(a.sha256, c.label);
         const read_first = a.status === "RECOGNISED" || a.status === "READ_FAILED";
+        // A paid call admits official inputs only today (p2/runner.ts): an approved form's live call waits for that change.
+        if (approvedHere && mode === "LIVE") { targets.push({ ...base, action: "not_eligible", read_first, why: "Approved in the product by a second person: drafted through the guarded stub pass (no cost). A live AI call for it is not open yet: the paid route admits only the official library's files." }); continue; }
         const inventoryFile = this.sources.inventoryOf(a);
-        const prepared = inventoryFile ? this.sources.ensureJobFile({ officialFile: a.officialFile, inventoryFile }, await this.sources.printedEdition(a)) : null;
+        const prepared = inventoryFile ? this.sources.ensureJobFile({ officialFile: this.sources.draftName(a), inventoryFile }, await this.sources.printedEdition(a)) : null;
         const fingerprint = prepared ? sha(JSON.stringify({ input: prepared.inputSha, template: prepared.template, settings: prepared.settings, known: prepared.known })) : undefined;
         const all = prepared ? this.sources.savedRuns(prepared.jobId, prepared.inputSha) : [];
         // A3: a saved answer is used before paying again; one that failed only our own check is re-checked first.
@@ -112,7 +117,7 @@ export class Ai implements OnModuleInit {
         const fp = split ? sha(JSON.stringify({ fingerprint, parts: split.parts.map((p) => p.file) })) : fingerprint;
         const how = split ? `in ${split.parts.length} part${split.parts.length === 1 ? "" : "s"} (${split.plan.leftover} of ${split.plan.total} form fields${split.plan.reused.length ? `; ${split.plan.reused.length} reused from ${split.reusedFrom.join(", ")} without AI` : ""})` : "";
         if (split && !split.parts.length) { targets.push({ ...base, action: "draft", read_first, fingerprint: fp, expected_usd: 0, worst_usd: 0, a4, why: `Every one of its ${split.plan.total} form fields is reused from ${split.reusedFrom.join(", ")} (same data path and caption): no AI call, US$0; a person reviews the result.` }); continue; }
-        targets.push({ ...base, action: "draft", read_first, fingerprint: fp, expected_usd: est.expected, worst_usd: est.worst, ...(a4 ? { a4 } : {}), why: mode === "LIVE" ? `${read_first ? "Read the form on this computer, then a" : "A"} guarded live call${how ? ` ${how}` : ""} (stub pass first; up to ${2} attempts${split ? " per part" : ""}).` : `${read_first ? "Read the form, then the" : "The"} guarded stub pass${how ? ` ${how}` : ""}: no network, no cost, no AI content.` });
+        targets.push({ ...base, action: "draft", read_first, fingerprint: fp, expected_usd: est.expected, worst_usd: est.worst, ...(a4 ? { a4 } : {}), why: `${approvedHere ? "Approved in the product by a second person, so it can be drafted. " : ""}${mode === "LIVE" ? `${read_first ? "Read the form on this computer, then a" : "A"} guarded live call${how ? ` ${how}` : ""} (stub pass first; up to ${2} attempts${split ? " per part" : ""}).` : `${read_first ? "Read the form, then the" : "The"} guarded stub pass${how ? ` ${how}` : ""}: no network, no cost, no AI content.`}` });
       }
     }
     const runnable = targets.filter((t) => t.action === "draft" || t.action === "reuse_saved_output" || t.action === "reuse_library");

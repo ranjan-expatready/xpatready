@@ -13,7 +13,7 @@ import { join } from "node:path";
 import { PolicyRefusal } from "./guard.ts";
 import { assertIsolated } from "./isolation.ts";
 import { SpendLedger } from "./ledger.ts";
-import { JOBS_DIR, LEDGER_DIR, PROMPTS_DIR, ticketFile } from "./policy.ts";
+import { approvedSourcesDirOk, JOBS_DIR, LEDGER_DIR, PROMPTS_DIR, SOLUTION, ticketFile } from "./policy.ts";
 import { hasStubPass } from "./pathcode.ts";
 import { buildRequest, requestSha256, type Job } from "./prompt.ts";
 import { admittedPublicText, jobScreenItems, loadDigest, screenWithDigest, useTicket } from "./screen.ts";
@@ -35,6 +35,9 @@ try {
   const jobId = arg("job") ?? "", runId = arg("run-id") ?? "", mode = arg("caller");
   if (!NAME.test(jobId) || !NAME.test(runId)) throw new PolicyRefusal("job id and run id must be plain names");
   if (mode !== "stub" && mode !== "live") throw new PolicyRefusal("--caller must be stub or live");
+  // P-80: the copy's approved-sources folder, as the launcher named it (and allowed it to be read); nothing else.
+  const approvedDir = arg("approved-dir");
+  if (approvedDir !== undefined && !approvedSourcesDirOk(approvedDir)) throw new PolicyRefusal("--approved-dir must be a Studio copy's approved-sources folder");
   const job = JSON.parse(readFileSync(join(JOBS_DIR, `${jobId}.json`), "utf8")) as Job;
   if (!NAME.test(job.template) || !NAME.test(job.output_schema)) throw new PolicyRefusal("template and schema must be plain file names in p2/prompts");
   const template = readFileSync(join(PROMPTS_DIR, job.template));
@@ -61,13 +64,15 @@ try {
   const build = (admitted: Parameters<typeof buildRequest>[2]) => {
     req = buildRequest(template.toString("utf8"), JSON.parse(schemaBytes.toString("utf8")), admitted, job.known);
     // The finished request, as it will be sent: no family value beyond words printed on the admitted forms.
-    screenWithDigest(digest, [{ name: "the finished request", text: JSON.stringify(req), familyValuesOnly: true, publicText: admittedPublicText(admitted) }]);
+    // P-80: an approved form's inventory (or its parent's, for a part) is its public text, read from the approved folder.
+    const approvedText = admitted.filter((a) => a.approved).map((a) => a.kind === "inventory" ? a.bytes.toString("utf8") : readFileSync(join(SOLUTION, a.parent_sources![0].file), "utf8"));
+    screenWithDigest(digest, [{ name: "the finished request", text: JSON.stringify(req), familyValuesOnly: true, publicText: [admittedPublicText(admitted.filter((a) => !a.approved)), ...approvedText].join("\n") }]);
     requestScreened = true;
     return req;
   };
   const caller = mode === "stub" ? stubCaller(job.kind) : sdkCaller();
   const ledger = new SpendLedger(LEDGER_DIR); // the experiment ledger at EXPERIMENT_CAP_USD; never injected
-  const outcome = await runDrafting(run, build, caller, ledger, { allowStubDrafts: mode === "stub", screened: () => requestScreened });
+  const outcome = await runDrafting(run, build, caller, ledger, { allowStubDrafts: mode === "stub", screened: () => requestScreened, approvedDir });
   console.log(JSON.stringify({
     ok: true, isolation, job_id: jobId, prompt_sha256: promptSha,
     screening: { digest_sha256: digestSha, digest_made_at: digest.made_at, digest_sources: digest.sources, ticket_nonce: ticket.nonce, ticket_expires_at: ticket.expires_at, items_screened: jobScreenItems(job, template, schemaBytes).length, request_screened: requestScreened, stub_gate_checked: mode === "live" },

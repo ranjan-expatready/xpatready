@@ -5,14 +5,17 @@
 import { z } from "zod";
 
 /** The representative portals a filing goes through (P-61 facts, IRCC and ESDC pages, 23 Oct). Sample until the
- *  immigration expert confirms which program is filed where. */
+ *  immigration expert confirms which program is filed where. P-98: the proof of concept proves the APR Portal only, so
+ *  it comes first and is the default; the others stay listed but are not proven now. */
 export const PORTALS = [
+  { key: "apr_portal", label: "APR Portal (Authorized Paid Representatives)", owner: "IRCC" },
   { key: "ircc_portal", label: "IRCC Portal", owner: "IRCC" },
-  { key: "apr_portal", label: "Authorized Paid Representatives Portal", owner: "IRCC" },
   { key: "rep_pr_portal", label: "Representative Permanent Residence Portal", owner: "IRCC" },
   { key: "lmia_online", label: "LMIA Online", owner: "ESDC" },
 ] as const;
 export const PORTAL_KEYS = PORTALS.map((p) => p.key) as [string, ...string[]];
+/** P-98: the portal a new online form or capture starts on when nothing else is chosen. */
+export const DEFAULT_PORTAL = "apr_portal";
 export const portalLabel = (key: string | null | undefined) => PORTALS.find((p) => p.key === key)?.label ?? key ?? "no portal";
 
 export const CHANNELS = ["PDF_UPLOAD", "ONLINE", "SIGNED_PDF_UPLOAD"] as const;

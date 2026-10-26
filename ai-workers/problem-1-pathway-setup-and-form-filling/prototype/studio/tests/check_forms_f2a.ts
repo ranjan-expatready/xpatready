@@ -13,6 +13,9 @@ import { build } from "vite";
 
 const STUDIO = join(import.meta.dirname, "..");
 const FIX = join(STUDIO, "tests", "fixtures", "portal");
+// P-98: the Sample APR-style screens too (labels named by aria-labelledby); their live-only pages (live-*) are checked
+// in the browser by check_forms_apr.ts, since a saved page has no components, frames or layout.
+const APR = join(STUDIO, "tests", "fixtures", "portal-apr");
 const TMP = join(STUDIO, "var", "check-forms-f2a"); rmSync(TMP, { recursive: true, force: true }); mkdirSync(TMP, { recursive: true });
 const PY = join(STUDIO, "..", "..", "..", "..", ".tools", "solution-1-prototype", ".venv", "bin", "python");
 const log: { name: string; ok: boolean; detail?: unknown }[] = []; let pass = 0, fail = 0;
@@ -50,16 +53,24 @@ const blankHtml = (page: Page) => page.evaluate(() => {
   };
 
   // ──────────────────────────────────────────── C2.9 BR-2: every fixture, both readers
-  const files = readdirSync(FIX).filter((f) => f.endsWith(".html")).sort();
-  for (const f of files) {
-    const e = await ext(join(FIX, f));
+  const files = [...readdirSync(FIX).filter((f) => f.endsWith(".html")).sort().map((f) => [FIX, f]), ...readdirSync(APR).filter((f) => /^apr-.*\.html$/.test(f)).sort().map((f) => [APR, f])];
+  for (const [dir, f] of files) {
+    const e = await ext(join(dir, f));
     const blank = join(TMP, `blank-${f}`); writeFileSync(blank, await blankHtml(page));
-    const p = py(blank), pFile = py(join(FIX, f));
+    const p = py(blank), pFile = py(join(dir, f));
     const agree = kind(e) === kind(p) && (!e.ok || same(e.screens, p.screens));
     ok(`C2.9: BR-2 ${f}: the extension's reading equals the saved-page reader's reading of the same screen made blank (${kind(e)})`, agree, agree ? (e.ok ? `${e.screens![0].inputs.length} inputs` : e.error ?? e.refused?.[0]?.why) : { extension: e, saved_page: p });
     if (pFile.ok) ok(`C2.9: BR-2 ${f}: a blank screen read from the saved file and from the page give the same structure`, same(pFile.screens, p.screens));
     else ok(`C2.9: BR-1 ${f}: the saved-page reader refuses or does not read it (${pFile.refused?.[0]?.why ?? pFile.error}); the extension never gives a structure holding an answer`, !e.ok || !JSON.stringify(e).includes("SAMPLE"), e.ok ? "read, no answer in it" : e.error ?? e.refused?.[0]?.why);
   }
+
+  // P-98: a question named by aria-labelledby takes the words it points to in both readers, never the element id.
+  const named = (r: Read) => (r.screens?.[0]?.inputs as { id: string; label: string }[] | undefined)?.find((i) => i.id === "familyName")?.label;
+  const aprS2 = join(APR, "apr-vv-s02-personal.html"), aprE = await ext(aprS2), aprP = py(aprS2);
+  ok("C2.9: P-98 an APR question named by aria-labelledby reads its words in both readers", named(aprE) === "Family name (as shown on your passport or travel document)" && named(aprP) === named(aprE), { extension: named(aprE), saved_page: named(aprP) });
+  writeFileSync(join(TMP, "no-labelledby.html"), readFileSync(aprS2, "utf8").replace(/ aria-labelledby="[^"]*"/g, ""));
+  const plain = await ext(join(TMP, "no-labelledby.html"));
+  ok("C2.9: P-98 fail: the same screen without aria-labelledby leaves the UCI with no label, so the live reader says \"not read\" (never \"uci\" sent as a question)", !plain.ok && /no label the reader can find \(uci/.test(plain.error ?? ""), plain.error ?? plain.ok);
 
   // ──────────────────────────────────────────── C2.9 BR-1: a screen typed into in the browser reads as the blank screen
   const s1 = join(FIX, "imm5257-online-s1-personal.html");

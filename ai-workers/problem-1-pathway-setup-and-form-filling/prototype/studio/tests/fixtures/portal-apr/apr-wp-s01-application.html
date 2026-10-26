@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<!-- Sample · Scaffolding (P-33, P-98). Written by the forms lane to look like a blank screen of an application on the
+     Authorized Paid Representatives (APR) Portal. Not a real APR screen: nobody has seen one yet (the founder captures the
+     real blank screens in G3). Labels follow IRCC's public descriptions of the form; the markup differs from the IRCC
+     Portal Sample on purpose (aria-labelledby, a step list, a representative banner, a sign-out form). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="csrf-token" content="apr-sess-41d9">
+  <title>Application details - Application for a work permit made outside of Canada - APR Portal</title>
+  <script>window.__apr = { step: 1, total: 5 };</script>
+</head>
+<body>
+  <header>
+    <p class="banner">Authorized Paid Representatives Portal (Sample)</p>
+    <nav aria-label="Portal"><a href="/apr/dashboard">My applications</a> <a href="/apr/help">Help</a> <a href="/apr/fr" lang="fr">Français</a></nav>
+    <form role="search" action="/apr/search"><label for="aprSearch">Search applications</label><input type="search" id="aprSearch" name="q"></form>
+  </header>
+  <main>
+    <ol class="steps" aria-label="Application steps"><li aria-current="step">Application details</li><li>Personal details</li><li>Proposed job in Canada</li><li>Employment in the past 10 years</li><li>Education</li></ol>
+    <h1>Application details</h1>
+    <form id="aprApplication" method="post" action="/apr/application/work-permit">
+      <input type="hidden" name="_csrf" value="apr-sess-41d9">
+      <input type="hidden" name="draftId" value="D-000000">
+      <fieldset><legend>Do you have a job offer from an employer in Canada? (required)</legend>
+        <input type="radio" id="jobOfferYES" name="jobOffer" value="YES" required><label for="jobOfferYES">Yes</label>
+        <input type="radio" id="jobOfferNO" name="jobOffer" value="NO" required><label for="jobOfferNO">No</label>
+      </fieldset>
+      <div class="field"><span id="lmiaNumberLabel" class="label">Labour Market Impact Assessment (LMIA) number</span>
+        <input type="text" id="lmiaNumber" name="lmiaNumber" aria-labelledby="lmiaNumberLabel" maxlength="20" aria-describedby="lmiaNumberHelp"></div>
+      <p id="lmiaNumberHelp" class="help">On the positive LMIA your employer received. Leave blank if your job offer is exempt.</p>
+      <div class="actions"><button type="button" name="back">Back</button> <button type="submit" name="next">Save and continue</button></div>
+    </form>
+  </main>
+  <footer><form action="/apr/signout" method="post"><button type="submit">Sign out</button></form></footer>
+</body>
+</html>
