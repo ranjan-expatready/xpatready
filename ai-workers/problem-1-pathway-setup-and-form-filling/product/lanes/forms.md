@@ -7,13 +7,14 @@
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
 current_item: W1-02-park-extension (Park the browser extension, P-102, P-107)
-stage: FIX
-owner: Builder
-next_action: finish run-suites.sh and studio_browser on own port; then CHECK owner Lead
+stage: CHECK
+owner: Lead
+next_action: Lead merges W1-02 (PR #39); founder: install coreutils (GNU timeout) so run-suites.sh runs on the Mac as in CI?
 blocked_by: none
 updated: 2026-10-26
 
 ## Log (last 10 lines)
+- 2026-10-26 · W1-02 · FIX → CHECK · full suites on 2fb9c84: run-suites.sh 32/32 PASS (Mac: a scratchpad stand-in for GNU timeout, which macOS lacks) and check_studio_browser 44/44 on own port 4450 (never :4400); test-run by-products taken back (p2 equals main); graph --check 0. US$0. Owner → Lead.
 - 2026-10-26 · W1-02 · CHECK → FIX · applied Lead note (PR #39 CI): studio_browser timeout not reproduced (44/44 ×3 on an isolated copy), check waits 3 min for the replay and says the row's status if not; submit refuses an empty submission before withdrawing a waiting one; online-only forms stay in the library marked later wave (fail-before 21/23 → 23/23); full suites running. US$0.
 - 2026-10-26 · W1-02 · FIX → CHECK · applied Lead check (e6c16b8: code accepted): test-run by-products under prototype/p2 taken back to main's versions (122 added files removed; spend ledger, stub-pass snapshots, canary digest restored), as e8599a8; .gitignore keeps new stub run records out (one line); Lead decisions recorded in build-notes (tables stay to W6, DEMO/capabilities on main, portal-sheet wording W4). No code change. US$0. Owner → Lead.
 - 2026-10-26 · W1-02 · FIX → CHECK · review M1 + 6 Minor and break M1, M2 + 5 Minor fixed with tests: Preview shows Online lines as later wave (no Fill), Studio fill refusal in later-wave words; a form with no PDF edition blocks release; snapshot restored so older releases keep their fingerprint, submit refuses an empty change list; parked screen-map batches not retried; intake compares PDF editions only; online editions not served; demo run mark is its own history entry. w102_fix 20, demo 26, channels 53, slice2 41, slice2b 36, ai launch 39, f3a1c 33, s01 api 135, f1p 16, s01 channels 16, s02 slice2 56, p80 41, pdf 49, s02 fix 59, race pass, grounding 30, s01 browser 129, smallfix/s02 browsers all, ai orch 22, runtime r1d 63, engine 38, ai drafting 48; graph --check 0. US$0. Owner → Lead.
@@ -23,4 +24,3 @@ updated: 2026-10-26
 - 2026-10-26 · W1-02 · BUILD → CHECK · applied Lead note 2026-10-26 evening (wave 1 reset): extension parked: extension/, capture, pairing, online fill, APR twin and screen maps, Extension page, Add an online form, portal choice, use-defaults, drafting-sources, capture/screen-map review pages and queue kinds, re-capture removed from app, API, tests, seed (DEMO rows 2, 13) and demo; Online stays a choice with a later-wave warning (P-107); no schema change (dormant tables, build-notes). Checks: channels 53, demo 25, f3a0 7, slice2 41, slice2b 36, f1p 16, ai launch 39, s01 channels 16, s01 api 135, s01 rules 67, s02 slice2 56, s01 browser 129, smallfix, s02 browser ×2 all; PDF regression engine 38, ai drafting 48, f3a1c 33, p80 41, pdf hardening 49, s02 fix 59, release race pass, grounding 30, ai orchestration 22, runtime r1d 63; graph --check 0. US$0.
 - 2026-10-26 · F3 · FIX → CHECK · PR #36 review: retry shares the launch guard (locks and re-check before insert; f3a1c 33/33), re-capture coverage worded as version-wide with matches kept apart, Check before sending shows ids, help, format and choice codes (f3c 35/35). US$0. Owner → Lead.
 - 2026-10-26 · F3 · FIX → CHECK · applied Lead check (review-2: 8.5/10, 1 Major): guard counts only queued, running, done or applied steps (a blocked step never hides a waiting draft; f3a1c 30/30); re-capture summary counts its own undecided questions only (f3c 33/33); f3a1c removes its job file; f3c2 20, apr 50, slice2 53. US$0. Owner → Lead.
-- 2026-10-26 · F3 · FIX → CHECK · wider suites green on the fixes: apr 50, f2d 37, demo 27, f2a_api 34, f2a reader 62, f2b 52, f2c 38, channels 106, slice2 53, ai launch paths 56, Screen 01 browser 136; graph --check exit 0. US$0. Owner → Lead.
