@@ -12,6 +12,8 @@
 // Nothing here is final: a person accepts the proposals; a merged-away field id redirects to the field it was merged into.
 import { createHash } from "node:crypto";
 import type { CaptureRecord } from "./capture.ts";
+import { ASKED_DIFFERENTLY, SCREEN_MAP_OUTCOMES } from "../contracts/forms.ts";
+import PDF_SECTIONS from "../contracts/pdf-sections.json" with { type: "json" };
 
 export type PdfEntry = { data_path: string; caption: string | null; heading: string | null; fact: string | null; transform: string | null; person: string | null; outcome: string };
 export type LibraryEntry = { key: string; valueType: string; aliases: string[]; mergedIntoKey: string | null; answerListKey?: string | null };
@@ -143,6 +145,50 @@ export function draftScreenMap(twin: CaptureRecord, ctx: { pdf: PdfEntry[]; pdfE
   const pdf_not_on_portal = [...new Map(mapped.filter((e) => !used.has(e.fact!) && !proposals.some((p) => p.fact === e.fact)).map((e) => [e.fact!, { caption: (e.caption ?? e.data_path).slice(0, 120), fact: e.fact! }])).values()];
   const n = (o: string) => proposals.filter((p) => p.outcome === o || p.method === o).length;
   return { proposals, pdf_not_on_portal, counts: { inputs: proposals.length, mapped: n("mapped"), same_path: n("same_path"), pdf_twin: n("pdf_twin"), alias: n("alias"), leftover: n("leftover"), not_a_fact: n("not_a_fact"), ai_calls: 0 } };
+}
+
+// ───────────────────────────────────────────── F3a-0 (plan D1): PDF section groups and online screen coverage
+/** The PDF section group of a form field: its subform path without the page ("Page2.MaritalStatus.SectionA" →
+ *  "MaritalStatus", "page1.SectionB.Child" → "SectionB"); a path with no page is its own first part. */
+export function sectionGroupOf(path: string | null | undefined): string | null {
+  const parts = (path ?? "").split(".").map((p) => p.replace(/\[\d+\]$/, "").trim()).filter(Boolean);
+  if (parts.length > 1 && /^page\d+$/i.test(parts[0])) parts.shift();
+  return parts[0] ?? null;
+}
+/** The plain label of a section group (Sample, contracts/pdf-sections.json; the immigration expert confirms), never the
+ *  path itself (BR-16). */
+export function sectionLabel(form: string, group: string | null): string {
+  const labels = (PDF_SECTIONS as unknown as Record<string, Record<string, string>>)[form] ?? {};
+  return (group && labels[group]) || `Other questions of ${form}`;
+}
+/** A row of an online version's screen map that is a page input (D1: every reader goes through this; a section-level
+ *  decision such as "asked differently online" is never an input). */
+export const isScreenInput = (row: { outcome: string; dataPath: string }) =>
+  (SCREEN_MAP_OUTCOMES as readonly string[]).includes(row.outcome) && !row.dataPath.startsWith(ASKED_DIFFERENTLY.prefix);
+
+export type CoverageEntry = { data_path: string; heading: string | null; fact: string | null; person: string | null; outcome: string };
+export type SectionNotSeen = { group: string; label: string; sharedFields: string[]; questions: number };
+/** An entry's group: from its section, else from its own form path (a repeated row such as "Row2" has no section of
+ *  its own in the inventory: "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0]…" → "PersonalDetails"). */
+export const groupOfEntry = (e: { data_path: string; heading: string | null }) =>
+  sectionGroupOf(e.heading) ?? sectionGroupOf(e.data_path.split(".").slice(1).join(".")) ?? "";
+const personKey = (fact: string, person: string | null) => `${fact}|${person ?? "form_subject"}`;
+/** BR-12: the PDF sections whose mapped form fields no captured screen asks yet, in PDF order. A form field is seen when
+ *  a captured screen input maps to the same shared field for the same person (D1, B2: the applicant's family name never
+ *  covers the spouse's); form fields decided "not a fact" or "filled by hand" are not counted (only mapped ones are),
+ *  and a group a person marked "asked differently online" is cleared. No AI, nothing stored. */
+export function screenCoverage(form: string, pdf: CoverageEntry[], seen: { fact: string | null; person: string | null }[], askedDifferently: string[] = []): SectionNotSeen[] {
+  const have = new Set(seen.filter((s) => s.fact).map((s) => personKey(s.fact!, s.person)));
+  const cleared = new Set(askedDifferently);
+  const out = new Map<string, { group: string; facts: Set<string>; paths: Set<string> }>();
+  for (const e of pdf) {
+    if (e.outcome !== "mapped" || !e.fact || have.has(personKey(e.fact, e.person))) continue;
+    const group = groupOfEntry(e);
+    if (cleared.has(group)) continue;
+    const g = out.get(group) ?? { group, facts: new Set<string>(), paths: new Set<string>() };
+    g.facts.add(e.fact); g.paths.add(e.data_path); out.set(group, g);
+  }
+  return [...out.values()].map((g) => ({ group: g.group, label: sectionLabel(form, g.group || null), sharedFields: [...g.facts], questions: g.paths.size }));
 }
 
 // ───────────────────────────────────────────── F1 slice 2: the AI's screen map for leftovers (guarded screen_map job)
