@@ -5,7 +5,6 @@ import { Body, Catch, Controller, Delete, Get, Headers, HttpException, Inject, M
 import { NestFactory } from "@nestjs/core";
 import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import type { NestExpressApplication } from "@nestjs/platform-express";
-import type { NextFunction, Request, Response } from "express";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { actorOf, Audit, Db, STUDIO, Workspace } from "./core.ts";
@@ -13,8 +12,6 @@ import { Ai } from "./ai.ts";
 import { Demo } from "./demo.ts";
 import { Fill } from "./fill.ts";
 import { Forms, FormsController } from "./forms.ts";
-import { EXTENSION_ORIGIN, Extension, ExtensionController } from "./extension.ts";
-import { CAPTURE_LIMITS } from "../../contracts/forms.ts";
 import { Intake, MAX_BYTES, MAX_FILES } from "./intake.ts";
 import { Programs } from "./programs.ts";
 import { ReviewQueueController, ReviewQueueService } from "./review-queue.ts";
@@ -141,9 +138,7 @@ class ProblemErrors implements ExceptionFilter {
       const body = e.getResponse() as any, status = e.getStatus();
       // Upload limits fire before the intake sees the files (break m9): say which limit, in plain words.
       if (status === 413 || /^(File too large|Too many files)$/.test(String(body?.message ?? ""))) {
-        // Each upload says its own limits: portal captures take smaller files than the intake (review 12).
-        const capture = /\/api\/captures\//.test(String(host.switchToHttp().getRequest()?.url ?? ""));
-        const files = capture ? CAPTURE_LIMITS.files : MAX_FILES, mb = capture ? CAPTURE_LIMITS.fileMb : MAX_BYTES / 1024 / 1024;
+        const files = MAX_FILES, mb = MAX_BYTES / 1024 / 1024;
         return send(413, "Too large", /files/i.test(String(body?.message)) ? `Add at most ${files} files at a time. Nothing was added.` : `A file is larger than ${mb} MB. Nothing was added; add files up to ${mb} MB each.`);
       }
       if (typeof body === "object" && body.detail) return send(status, body.title ?? "Request refused", body.detail, body);
@@ -162,7 +157,7 @@ class ProblemErrors implements ExceptionFilter {
   }
 }
 
-@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ChecklistsController, ExtensionController], providers: [Extension, Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, Impact, Checklists] })
+@Module({ controllers: [StudioController, SourcesController, DemoController, AiController, ProgramsController, FormsController, RuntimeController, CaseFormsController, ReviewQueueController, Screen02Controller, ChecklistsController], providers: [Db, Workspace, Audit, Studio, Sources, Intake, Fill, Demo, Ai, Programs, Forms, Runtime, CaseForms, ReviewQueueService, Screen02, Impact, Checklists] })
 class AppModule {}
 
 async function main() {
@@ -170,16 +165,6 @@ async function main() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, { logger: ["error", "warn"] });
   app.useBodyParser("json", { limit: "5mb" });
   app.useGlobalFilters(new ProblemErrors());
-  // F2b (S-1, XT-3): the browser extension's routes answer one origin, the fixed extension's; no credentials (it sends
-  // its token, never a cookie) and no x-actor header across origins. Every other route sends no CORS header at all.
-  app.use("/api/extension", (req: Request, res: Response, next: NextFunction) => {
-    if (req.headers.origin === EXTENSION_ORIGIN) {
-      res.setHeader("Access-Control-Allow-Origin", EXTENSION_ORIGIN); res.setHeader("Vary", "Origin");
-      res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE"); res.setHeader("Access-Control-Allow-Headers", "authorization, content-type"); res.setHeader("Access-Control-Max-Age", "600");
-    }
-    if (req.method === "OPTIONS") return res.status(req.headers.origin === EXTENSION_ORIGIN ? 204 : 403).end();
-    next();
-  });
   const web = join(STUDIO, "web", "dist");
   if (existsSync(web)) {
     // dotfiles "allow": lane copies live under .claude/worktrees/, and a hidden folder in the path made every page a 404.

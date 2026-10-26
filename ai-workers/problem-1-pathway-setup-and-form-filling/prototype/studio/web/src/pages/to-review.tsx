@@ -14,7 +14,7 @@ import { fmtWhen, Tip, TipProvider } from "@/components/status";
 import { cn } from "@/lib/utils";
 
 const VIEWS = [["needs", "Needs you"], ["waiting", "Waiting for others"], ["running", "Running"], ["all", "All"]] as const;
-const KIND_TONE: Record<QueueKind, string> = { ai_proposals: "ai", release: "info", library_change: "info", form_fields: "warn", new_edition: "warn", held_file: "warn", capture: "neutral", screen_map: "neutral", merge: "neutral", running: "ai" };
+const KIND_TONE: Record<QueueKind, string> = { ai_proposals: "ai", release: "info", library_change: "info", form_fields: "warn", new_edition: "warn", held_file: "warn", merge: "neutral", running: "ai" };
 const STATE: Record<QueueItem["state"], [string, string]> = { needs: ["warn", "Needs you"], waiting: ["neutral", "Waiting for others"], running: ["ai", "Running"] };
 
 export function ToReviewPage() {
@@ -47,7 +47,7 @@ export function ToReviewPage() {
             {typed ? <button type="button" className="absolute right-1 top-1 rounded p-1.5 text-text-muted hover:bg-text/5" aria-label="Clear search" onClick={() => { setTyped(""); set({ q: null }); }}><X className="size-4" /></button> : null}
           </div>
         </div>
-        <p className="-mt-2 text-sm text-text-muted">Everything that waits for a person: AI proposals, combinations to review and release, new editions, portal captures, screen maps, held files and merges. Nothing reaches a release until a person decides.</p>
+        <p className="-mt-2 text-sm text-text-muted">Everything that waits for a person: AI proposals, combinations to review and release, new editions, held files and merges. Nothing reaches a release until a person decides.</p>
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Show items">

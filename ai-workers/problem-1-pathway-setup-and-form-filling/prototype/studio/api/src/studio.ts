@@ -251,7 +251,9 @@ export class Studio {
     }
     if (q.answers) for (const [k, v] of Object.entries<any>(JSON.parse(q.answers))) { if (v === "" || v === null) known.delete(k); else known.set(k, { value: v, status: "answered", source: "answered on this preview screen (not saved, not confirmed)" }); }
     const out = render(snapshot, people, known);
-    return { label, mode: q.mode === "release" || q.mode === "published" ? "release" : "draft", sha256: sha, combination: snapshot.combination, participants, ...out };
+    // W1-02 (review M1): the forms filed Online, which the product does not fill until the browser extension returns.
+    const online_forms = (snapshot.forms as { form_number: string; channel?: string }[]).filter((f) => f.channel === "ONLINE").map((f) => f.form_number);
+    return { label, mode: q.mode === "release" || q.mode === "published" ? "release" : "draft", sha256: sha, combination: snapshot.combination, participants, online_forms, ...out };
   }
 
   // ------------------------------------------------------------------ the shared library
@@ -528,8 +530,11 @@ export class Studio {
     if (last?.sha256 === sha256) fail("Nothing has changed since the released version.");
     const errors = (await this.problems(c.workspaceId, snapshot, id)).filter((p) => p.level === "error");
     if (errors.length) fail(`Fix ${errors.length} problem${errors.length > 1 ? "s" : ""} before submitting: ${errors.slice(0, 3).map((e) => `${e.item}: ${e.message}`).join(" · ")}`);
-    await this.db.reviewSubmission.updateMany({ where: { combinationId: id, status: "SUBMITTED" }, data: { status: "WITHDRAWN", decisionNote: "replaced by a newer submission" } });
     const changes = diff((last?.snapshot as any) ?? null, snapshot);
+    // W1-02 (break M2): nothing to sign is nothing to release, even when the fingerprint moved (an older release's keys).
+    // Refused before anything is written (PR #39 review): a waiting submission is never withdrawn by a refused one.
+    if (last && !changes.length) fail("Nothing has changed since the released version.");
+    await this.db.reviewSubmission.updateMany({ where: { combinationId: id, status: "SUBMITTED" }, data: { status: "WITHDRAWN", decisionNote: "replaced by a newer submission" } });
     const s = await this.db.reviewSubmission.create({ data: { workspaceId: c.workspaceId, combinationId: id, draftSha256: sha256, submittedBy: actor.id, status: "SUBMITTED", changeSummary: changes as any, decisionNote: note ?? null } });
     await this.audit.log(c.workspaceId, actor.id, "submitted", "configuration", c.combinationKey, `${actor.name} submitted "${c.label}" for review: ${changes.length} change${changes.length === 1 ? "" : "s"} (${changes.filter((x) => x.needs_sme).length} need the SME duty)`, { sha256 });
     return s;

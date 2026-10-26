@@ -267,11 +267,11 @@ export class Intake {
       await this.audit.log(workspaceId, actor.id, "held", "form", read.code ?? name, `${actor.name} uploaded an unverified form source; held before library, attachment or AI use`, { sha256: hash }, combination?.id);
       return r;
     }
-    // F1 (challenge point 1): a saved portal screen is never kept as a guide. It belongs in a portal capture, where a
-    // screen holding an answer is refused and a second person approves the rest (P-66).
+    // F1 (challenge point 1), W1-02 (P-102): a saved portal screen is never kept as a guide; forms come in only as their
+    // official PDF (an online-only form is read from its PDF twin).
     if (read.kind === "portal_screen") {
-      const r: IntakeResult = { file: name, outcome: "refused", ...read, message: "This is a saved portal screen, not a guide: add it to a portal capture (with its portal), where it is checked for answers and approved by a second person. Nothing was added or attached." };
-      await this.record(actor, workspaceId, combination?.id ?? null, name, "", hash, file.buffer.length, r, "DONE", "saved portal screen: belongs in a portal capture");
+      const r: IntakeResult = { file: name, outcome: "refused", ...read, message: "This is a saved portal screen, not a form or a guide: forms come in only as their official PDF. Add the form's PDF from IRCC instead. Nothing was added or attached." };
+      await this.record(actor, workspaceId, combination?.id ?? null, name, "", hash, file.buffer.length, r, "DONE", "saved portal screen: forms come in only as PDFs");
       rmSync(stored, { force: true });
       return r;
     }
@@ -292,8 +292,10 @@ export class Intake {
       await this.record(actor, workspaceId, combination?.id ?? null, name, stored, hash, file.buffer.length, r, "HELD", "same edition, different file");
       return r;
     }
-    if (def?.editions.length) {
-      const current = newestEdition(def.editions)!;
+    // W1-02 (break m2): an online version (parked, on an older database) is not an edition the PDF is compared with.
+    const pdfEditions = (def?.editions ?? []).filter((e) => e.channel !== "ONLINE");
+    if (pdfEditions.length) {
+      const current = newestEdition(pdfEditions)!;
       const newer = editionMonth(id.edition_label) > editionMonth(current.editionLabel);
       const r: IntakeResult = newer
         ? { file: name, outcome: "new_edition_held", ...read, message: `New edition: impact review needed. ${id.edition_label} is newer than the library's ${current.editionLabel}. It is held: not added to the library, not attached and not used until a person reviews what changed.` }

@@ -372,7 +372,7 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
     step(`narrow ${w} px: the combination's name keeps its width (≥ 200 px), next steps are not clipped, no sideways scroll`, narrow.nameW >= 200 && narrow.over <= 0 && narrow.clipped === 0, JSON.stringify(narrow));
   }
   await p.setViewportSize({ width: 1440, height: 900 });
-  // ======================================================== P-74: forms decisions visible (C1.6, C1.7, C2.7, C2.10)
+  // ======================================================== P-74: forms decisions visible (C1.6; P-107 Online stays a choice, W1-02)
   await p.goto(`${BASE}/?f=all`); await idle();
   step("C1.6: the Programs row says how the combination is filed", /Filed: PDF only/.test(await row("With an LMIA").textContent()));
   await p.goto(`${BASE}/c/${wpId}`); await idle();
@@ -382,38 +382,22 @@ const step = (name, ok, detail) => { lastStep = name; log.push({ name, ok: !!ok,
   await p.waitForFunction(() => /signed by hand, scanned/.test(document.querySelector('[aria-labelledby="ov-forms"]')?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
   step("C1.6: the author sets a line's channel; the line's signature follows and the filing method stays in C1.6's short words", /Filing: PDF only/.test(await p.locator("[data-filing]").textContent()) && /some signed by hand/.test((await p.locator("[data-filing] [title]").getAttribute("title")) ?? "") && /signed by hand, scanned/.test(await forms.textContent()));
   await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("PDF_UPLOAD"); await idle();
-  await forms.getByRole("combobox", { name: "Portal" }).selectOption("ircc_portal"); await idle();
-  await p.waitForFunction(() => /IRCC Portal/.test(document.querySelector("main")?.textContent ?? "") && !document.querySelector("[data-filing] select:disabled"), null, { timeout: 5000 }).catch(() => {});
-  step("C1.7: the author picks the combination's portal", (await forms.getByRole("combobox", { name: "Portal" }).inputValue()) === "ircc_portal");
-  await forms.getByRole("button", { name: "Add an online form" }).click();
-  const op = p.getByRole("dialog", { name: "Add an online form" }); await op.waitFor();
-  for (let i = 0; i < 25 && (await op.getByRole("combobox", { name: "Portal" }).inputValue()) !== "ircc_portal"; i++) await p.waitForTimeout(200); // the summary refresh after the portal save
-  step("C2.7: \"Add an online form\" opens a right panel with the combination's portal chosen", (await op.getByRole("combobox", { name: "Portal" }).inputValue()) === "ircc_portal");
-  await op.getByLabel("Form code").fill("IMM 5707"); await op.getByLabel("Title as the portal shows it").fill("Family information (online)");
-  await op.getByLabel("Choose blank screens").setInputFiles(path.join(__dirname, "fixtures", "portal", "imm5257-online-s1-personal-with-answers.html"));
-  await op.getByRole("button", { name: "Add and send for approval" }).click();
-  await op.getByText(/nothing was kept/).waitFor({ timeout: 30000 }).catch(() => {}); await idle();
-  step("review 2 should 1: a page holding an answer is refused and nothing is left behind (no \"being captured\" row)", /nothing was kept/.test(await op.textContent()) && !/Being captured/.test((await p.locator("[data-online-forms]").textContent().catch(() => "")) ?? ""));
-  await op.getByLabel("Choose blank screens").setInputFiles(["imm5257-online-s1-personal.html", "imm5257-online-s2-marital.html", "imm5257-online-s3-language.html"].map((f) => path.join(__dirname, "fixtures", "portal", f)));
-  await state("add-online-form-panel", { viewport: true });
-  await op.getByRole("button", { name: "Add and send for approval" }).click();
-  await op.getByText(/online form added/).waitFor({ timeout: 30000 }).catch(() => {});
-  step("C2.7: the screens are read, checked for answers and sent for approval", /Awaiting a second person/.test(await op.textContent()) && (await op.getByRole("list", { name: "Screen results" }).getByText("Added").count()) === 3);
-  await op.getByRole("button", { name: "Close" }).first().click(); await idle();
-  await p.waitForFunction(() => /Awaiting a second person/.test(document.querySelector("[data-online-forms]")?.textContent ?? ""), null, { timeout: 8000 }).catch(() => {}); // Lead check L2: the list refreshes after the panel closes
-  step("C2.7: the combination lists the online form as \"Awaiting a second person\"", /IMM 5707.*Awaiting a second person/s.test(await p.locator("[data-online-forms]").textContent()));
-  await state("combination-online-form-awaiting");
+  // P-107, W1-02 (P-102): Online stays selectable and says it needs the browser extension (later wave); no portal choice,
+  // no "Add an online form", no drafting-source choice (parked with the extension).
+  await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("ONLINE"); await idle();
+  await p.waitForFunction(() => /is filed Online: it needs the browser extension/.test(document.querySelector('[aria-labelledby="ov-forms"]')?.textContent ?? ""), null, { timeout: 8000 }).catch(() => {}); // the option itself says "(later wave)": wait for the page's own words
+  step("C1.6 P-107: the author files a line Online; the line says it needs the browser extension (later wave) and the filing method is Mixed", /Needs the browser extension \(later wave\)/.test(await forms.textContent()) && /Filing: Mixed: online and PDF/.test(await p.locator("[data-filing]").textContent()) && /Warning/.test(await forms.textContent()));
+  await state("combination-online-later-wave");
+  await forms.getByRole("combobox", { name: "How IMM 1295 is filed" }).selectOption("PDF_UPLOAD"); await idle();
+  step("C1.6 P-102: no portal choice and no \"Add an online form\" on the combination page", await forms.getByRole("combobox", { name: "Portal" }).count() === 0 && await forms.getByRole("button", { name: "Add an online form" }).count() === 0);
   await as("user-B");
-  step("C1.6/C1.7: someone without the author duty sees the channels and the portal, but cannot change them", await forms.getByRole("combobox").count() === 0 && /IRCC Portal/.test(await forms.textContent()) && await forms.getByRole("button", { name: "Add an online form" }).count() === 0);
+  step("C1.6: someone without the author duty sees the channels but cannot change them", await forms.getByRole("combobox").count() === 0 && /PDF upload/.test(await forms.textContent()) && await forms.getByRole("button", { name: "Add form" }).count() === 0);
   await as("user-A");
   await p.goto(`${BASE}/c/${wpId}/sources`); await idle();
-  const dsrc = p.locator("[data-drafting-sources]");
-  step("C2.10: the sources tab says, per form, what drafting reads (PDF version first by default)", /Reads the PDF version \(IMM 1295/.test(await dsrc.textContent()) && (await dsrc.getByRole("combobox", { name: "What drafting reads for IMM 1295" }).inputValue()) === "PDF_FIRST");
-  await dsrc.getByRole("combobox", { name: "What drafting reads for IMM 1295" }).selectOption("ONLINE_ONLY"); await idle();
-  await p.waitForFunction(() => /Online screens only, but no online version/.test(document.querySelector("[data-drafting-sources]")?.textContent ?? ""), null, { timeout: 5000 }).catch(() => {});
-  step("C2.10: the author changes it per form and the line says what that means", /Online screens only, but no online version from the IRCC Portal has been approved yet/.test(await dsrc.textContent()));
-  await dsrc.getByRole("combobox", { name: "What drafting reads for IMM 1295" }).selectOption("PDF_FIRST"); await idle();
-  await state("sources-tab-drafting-reads");
+  step("C1.6 P-102: the sources tab no longer offers what drafting reads online", await p.locator("[data-drafting-sources]").count() === 0);
+  await p.goto(`${BASE}/extension`); await idle();
+  step("C1.6 P-102: the Browser extension page and its menu entry are gone", /Page not found/.test(await p.locator("main").textContent()) && await p.getByRole("link", { name: "Browser extension" }).count() === 0);
+
 
   // QA-17: "Recent steps" say the day when a step did not run today.
   const sql17 = (q) => require("node:child_process").execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${process.argv[3] ?? "xr_studio_s01ui"}`, "-Atc", q], { encoding: "utf8" }).trim();

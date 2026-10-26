@@ -1,4 +1,5 @@
-// Screen 02 slice 2: the pages a To review row opens (board views 5–9 and the new shared field). Each says what is
+// Screen 02 slice 2: the pages a To review row opens (board views 7–9 and the new shared field; views 5 and 6, screen
+// maps and portal captures, are parked with the browser extension, W1-02). Each says what is
 // waiting, who made it and what a decision does; the person who made it sees it read-only (the server refuses their
 // decision too, BR-9). Every decision returns to To review with a toast.
 import * as React from "react";
@@ -12,7 +13,7 @@ import { cn } from "@/lib/utils";
 import { ToReviewPage } from "@/pages/to-review";
 import { FormFieldDecisions } from "@/pages/job";
 import type { SessionView } from "../../../contracts/programs";
-import type { CaptureView, HeldFileView, ImpactAccepted, ImpactChange, ImpactReview, LibraryChangeDetail, LibraryChangeView, MergeSide, MergeView, ScreenMapView } from "../../../contracts/screen02";
+import type { HeldFileView, ImpactAccepted, ImpactChange, ImpactReview, LibraryChangeDetail, LibraryChangeView, MergeSide, MergeView } from "../../../contracts/screen02";
 
 const inv = [["review-queue"], ["draft"], ["catalogue"]];
 function useMe() {
@@ -112,39 +113,6 @@ function Withdraw({ id }: { id: string }) {
       <Button variant="destructive" busy={go.isPending} disabled={why.trim().length < 3} onClick={() => go.mutate(undefined)}>Withdraw the new field</Button>
     </div>
   ) : <div className="flex justify-end"><Button variant="ghost" onClick={() => setOpen(true)}>Withdraw it instead…</Button></div>;
-}
-
-// ───────────────────────────────────────────── board view 6: portal capture review (P-66)
-export function CaptureReviewPage() {
-  const { id } = useParams(); const nav = useNavigate(); const me = useMe();
-  const c = useApi<CaptureView>(["capture", id], `/captures/${id}`);
-  const approve = useAction(() => api<{ edition?: { editionLabel?: string } }>(`/captures/${id}/approve`, { method: "POST" }), { success: (r) => `Approved: ${r.edition?.editionLabel ?? "the online version"} is in the library`, invalidate: [...inv, ["capture", id]], onDone: () => nav("/review") });
-  const ret = useAction((note: string) => api(`/captures/${id}/return`, { method: "POST", json: { note } }), { success: "Returned to the person who captured it", invalidate: [...inv, ["capture", id]], onDone: () => nav("/review") });
-  if (c.isLoading) return <Spinner label="Loading the capture" />;
-  if (c.isError) return <ErrorState title="This capture could not be opened" description={(c.error as Error).message} action={<Link className="text-text-link underline" to="/review">Back to To review</Link>} />;
-  const x = c.data!, mine = x.captured_by === me.id, diffs = Array.isArray(x.difference) ? x.difference : [];
-  return (
-    <div className="mx-auto max-w-4xl space-y-5">
-      <Crumbs here={`${x.form} online · portal capture`} />
-      <Head title={`${x.form} online · ${x.title}`} chip={x.status === "HELD" ? (mine ? "Waiting for a second person" : "Needs you") : x.status === "APPROVED" ? "Approved" : x.status === "RETURNED" ? "Returned" : x.status} tone={x.status === "HELD" && !mine ? "warn" : "neutral"}
-        sub={<>{x.portal_label} · captured by {x.captured_by_name} on {x.captured_on} from {x.way === "template" ? "the spreadsheet template" : "saved blank pages"} · {x.screens.length} screens, {x.questions} questions</>} />
-      <p className="text-sm">{x.status_detail}</p>
-      <div className="grid gap-4 md:grid-cols-2">
-        <section aria-labelledby="cap-screens" className="rounded-lg border border-border bg-surface-raised p-4">
-          <h2 id="cap-screens" className="mb-2 font-semibold">Screens in portal order</h2>
-          <ol className="space-y-1 text-sm">{x.screens.map((s) => <li key={s.order}>{s.order}. {s.title} <span className="text-text-muted">· {s.questions} question{s.questions === 1 ? "" : "s"}</span></li>)}</ol>
-        </section>
-        <section aria-labelledby="cap-diff" className="rounded-lg border border-border bg-surface-raised p-4">
-          <h2 id="cap-diff" className="mb-2 font-semibold">Differences from the approved version</h2>
-          {x.changes_edition_id ? (diffs.length ? <ul className="space-y-1 text-sm">{diffs.slice(0, 30).map((d, i) => <li key={i}>{d.change ?? d.kind ?? "Changed"}: {d.label ?? d.input ?? d.screen ?? ""}</li>)}</ul> : <p className="text-sm text-text-muted">No differences.</p>) : <p className="text-sm text-text-muted">A new online version: nothing to compare with.</p>}
-        </section>
-      </div>
-      {x.review_file ? <p className="text-sm"><a className="text-text-link underline" href={`/api/captures/${x.id}/review`} target="_blank" rel="noreferrer">Open the review document</a> (every screen and question, for the comparison with the portal)</p> : null}
-      {x.status !== "HELD" ? null : mine || !me.has("review")
-        ? <Notice title={mine ? "You captured this" : "A content publisher decides"}>{mine ? "A different person approves or returns it." : "Switch to the Content reviewer or the Approver (simulated) to decide."}</Notice>
-        : <Decide yes="Approve" no="Return" busy={approve.isPending || ret.isPending} onYes={() => approve.mutate(undefined)} onNo={(n) => ret.mutate(n)} />}
-    </div>
-  );
 }
 
 // ───────────────────────────────────────────── board view 8: merge two shared fields (right panel over To review, P-48)
@@ -262,35 +230,6 @@ function SetAside({ id }: { id: string }) {
   const nav = useNavigate();
   const go = useAction((note: string) => api(`/intake/held/${id}/reject`, { method: "POST", json: { note } }), { success: "Set aside: the edition is not used", invalidate: [["held"], ...inv], onDone: () => nav("/review") });
   return <Decide yes="Keep it held" no="Set it aside" busy={go.isPending} onYes={() => nav("/review")} onNo={(n) => go.mutate(n)} />;
-}
-
-// ───────────────────────────────────────────── board view 5: screen map of an online version (P-61 §3a, P-62 §8)
-export function ScreenMapPage() {
-  const { id } = useParams(); const me = useMe();
-  const s = useApi<ScreenMapView>(["screen-map", id], `/online-versions/${id}/screen-map`);
-  const draft = useAction(() => api<{ counts: { mapped: number; inputs: number } }>(`/online-versions/${id}/screen-map/draft`, { method: "POST" }), { success: (r) => `Drafted without AI: ${r.counts.mapped} of ${r.counts.inputs} inputs matched`, invalidate: [["screen-map", id], ...inv] });
-  const accept = useAction(() => api<{ mapped: number; unresolved: number }>(`/online-versions/${id}/screen-map/accept`, { method: "POST", json: {} }), { success: (r) => `Accepted: ${r.mapped} mapped, ${r.unresolved} left for a person`, invalidate: [["screen-map", id], ...inv] });
-  if (s.isLoading) return <Spinner label="Loading the screen map" />;
-  if (s.isError) return <ErrorState title="This screen map could not be opened" description={(s.error as Error).message} action={<Link className="text-text-link underline" to="/review">Back to To review</Link>} />;
-  const x = s.data!, c = x.counts ?? {}, FOUND: Record<string, string> = { same_path: "same element id", pdf_twin: "PDF twin", alias: "alias" };
-  const open = x.inputs.filter((i) => i.outcome === "leftover" || i.outcome === "unresolved").length;
-  return (
-    <div className="mx-auto max-w-5xl space-y-5">
-      <Crumbs here={`Screen map · ${x.edition.label}`} />
-      <Head title={`Screen map · ${x.edition.form} online`} chip={x.state === "accepted" ? (open ? `${open} left for a person` : "Accepted") : x.state === "drafted" ? "Needs you" : "Not drafted"} tone={x.state === "accepted" && !open ? "ok" : "warn"} sub={x.edition.label} />
-      {x.state === "not_drafted" ? (me.has("author") ? <Notice title="Draft it first (no AI)" action={<Button busy={draft.isPending} onClick={() => draft.mutate(undefined)}>Draft the screen map</Button>}>The PDF twin's field map, earlier online versions and aliases are reused first; AI is never called here.</Notice>
-        : <Notice title="The configuration author drafts it">Drafting reuses the PDF twin and the library first (no AI).</Notice>) : (
-        <>
-          {x.state === "drafted" ? <p className="text-sm">Drafted without AI{x.pdf_edition ? ` from the PDF twin ${x.pdf_edition}` : ""}: {c.mapped ?? 0} of {c.inputs ?? 0} inputs matched; {c.leftover ?? 0} left for a person or the AI; {c.not_a_fact ?? 0} not a fact.</p> : null}
-          <div className="overflow-x-auto rounded-lg border border-border bg-surface-raised">
-            <table className="w-full min-w-[680px] text-sm" aria-label="Inputs"><thead><tr className="border-b border-border text-left text-text-muted"><th className="px-4 py-2">Screen</th><th className="px-4 py-2">Input</th><th className="px-4 py-2">Shared field</th><th className="px-4 py-2">Found by</th></tr></thead>
-              <tbody>{x.inputs.map((i) => <tr key={i.input} className="border-b border-border last:border-b-0" data-outcome={i.outcome}><td className="px-4 py-2 text-text-muted">{i.screen}</td><td className="px-4 py-2">{i.label}</td><td className="px-4 py-2">{i.field_label ?? (i.outcome === "not_a_fact" ? "Not a fact" : <span className="text-text-warn">Left for a person</span>)}</td><td className="px-4 py-2 text-xs text-text-muted">{FOUND[i.method ?? ""] ?? (i.outcome === "mapped" ? "accepted" : "—")}</td></tr>)}</tbody></table>
-          </div>
-          {x.state === "drafted" ? (me.has("review") ? <div className="flex justify-end"><Button busy={accept.isPending} onClick={() => accept.mutate(undefined)}>Accept the {c.mapped ?? 0} matches</Button></div> : <Notice title="A content publisher accepts it">Switch to a person with the review duty.</Notice>) : null}
-        </>
-      )}
-    </div>
-  );
 }
 
 /** K1 (review Musts 4, 5): one PDF edition's form fields, decided from To review whether they came from an AI draft or

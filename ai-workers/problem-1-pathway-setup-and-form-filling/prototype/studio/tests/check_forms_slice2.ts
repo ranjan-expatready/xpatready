@@ -1,6 +1,6 @@
 // F1 forms channels, slice 2 (forms lane): A4 (reuse first, split by section groups, per-part progress, merge flags
-// near-duplicates), the guarded screen_map job for inputs left open, and the evidence lane's findings F1–F4 in the
-// filler. Every rule has a passing and a failing case. On an isolated copy (its own database and files; the demo is
+// near-duplicates) and the evidence lane's findings F1–F4 in the filler (W1-02, P-102: the guarded screen_map job for an
+// online version's open inputs is parked with the browser extension). Every rule has a passing and a failing case. On an isolated copy (its own database and files; the demo is
 // never touched). NO model call (US$0): AI steps run the guarded stub pass; an accepted AI proposal is a hand-written
 // answer, said so in its check. QA-8 (the guard in lane copies) is checked in tests/check_p2_guard.ts.
 //   zsh studio/tools/isolated.sh forms_s2 4451 start STUDIO_PART_PAUSE_MS=3000 && tsx studio/tests/check_forms_slice2.ts 4451 xr_studio_forms_s2
@@ -8,13 +8,11 @@
 import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { factKeyProblem } from "../../contracts/fact-key.ts";
 import { channelProblems } from "../engine/channels.ts";
 import { inFormFormat, isSignatureBox, personSteps } from "../engine/form-steps.ts";
 import { hasCodes, labelForText } from "../engine/options.ts";
 import type { Snapshot } from "../engine/snapshot.ts";
 import { assembleMerged, flagNearDuplicates, mergeParts, planDraft, type Prior } from "../engine/parts.ts";
-import { readScreenRun, screenMapProposals } from "../engine/twin.ts";
 
 const PORT = Number(process.argv[2] ?? 4451), DB = process.argv[3] ?? "xr_studio_forms_s2";
 const STUDIO = join(import.meta.dirname, "..");
@@ -36,11 +34,6 @@ const call = async (method: string, path: string, body?: unknown, actor = "user-
   const r = await send(`http://localhost:${PORT}/api${path}`, { method, headers: { "x-actor": actor, "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   const t = await r.text(); let j: unknown = t; try { j = JSON.parse(t); } catch { /* not JSON */ }
   return { status: r.status, body: j };
-};
-const upload = async (path: string, names: string[], actor = "user-A"): Promise<Res> => {
-  const fd = new FormData(); for (const n of names) fd.append("files", new Blob([new Uint8Array(readFileSync(join(FIX, "portal", n)))]), n);
-  const r = await send(`http://localhost:${PORT}/api${path}`, { method: "POST", headers: { "x-actor": actor }, body: fd });
-  return { status: r.status, body: await r.json() };
 };
 const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psql", [`postgresql://xr_studio@127.0.0.1:54329/${DB}`, "-Atc", q], { encoding: "utf8" }).trim();
 const until = async (fn: () => Promise<boolean>, ms = 300_000) => { const t = Date.now(); while (Date.now() - t < ms) { if (await fn()) return true; await new Promise((r) => setTimeout(r, 1000)); } return false; };
@@ -72,7 +65,7 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   const coded = { ...data1344.find((f: { options_resolved?: unknown }) => Array.isArray(f.options_resolved) && (f.options_resolved as unknown[]).length) };
   const codedPrior = prior({ data_path: coded.data_path, caption: coded.caption, transform: "code_list:old (A=1, B=2)", options: [["A", "1"], ["B", "2"]], confidence: "medium" });
   ok("A4 reuse fail (review 4): a choice field whose codes differ from the earlier edition's is not reused; with the same codes it is, at the earlier row's own confidence", planDraft(inv1344, [codedPrior]).reused.length === 0 && planDraft(inv1344, [{ ...codedPrior, options: coded.options_resolved }]).reused[0]?.confidence === "medium");
-  // The paid-only steps of A4 and screen_map, run at US$0 on saved and hand-written records (review 6).
+  // The paid-only steps of A4, run at US$0 on saved and hand-written records (review 6).
   const saved5257 = JSON.parse(readFileSync(join(PROTOTYPE, "p2", "runs", readdirSync(join(PROTOTYPE, "p2", "runs")).filter((f) => f.startsWith("studio-fieldmap-imm5257e-live-") && !f.includes("reconverted")).sort().find((f) => { const e = JSON.parse(readFileSync(join(PROTOTYPE, "p2", "runs", f), "utf8")); return e.contract_valid === true && !!e.raw_output && !e.output_errors && /^completed/.test(e.drafting_run?.status ?? ""); })!), "utf8"));
   const whole5257 = JSON.parse(saved5257.raw_output) as { form_edition: string; canonical_fields: { id: string; meaning: string; value_type: string }[]; entries: { data_path: string }[] };
   const inv5257 = JSON.parse(readFileSync(join(PROTOTYPE, "p1", "inventory", "imm5257e.inventory.json"), "utf8"));
@@ -85,23 +78,6 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   const items = [{ proposedKey: "person.birth_city", outcome: "NEW", reason: "New.", evidence: {} as Record<string, unknown> }, { proposedKey: "person.family_name", outcome: "REUSE", reason: "Reuse.", evidence: {} as Record<string, unknown> }];
   flagNearDuplicates(items, merged.near_duplicates);
   ok("A4 ingest: a near-duplicate proposal is flagged for a person (reason and evidence); a reused field is not", /Near-duplicate of person\.city_of_birth/.test(items[0].reason) && items[0].evidence.near_duplicate_of === "person.city_of_birth" && items[1].reason === "Reuse.");
-
-  // ──────────────────────────────────────────── screen_map proposals (no server)
-  const left = [{ input: "birthCity", type: "text", part: null, label: "Place of birth › City or town" }, { input: "dobYear", type: "text", part: "YYYY", label: "Date of birth › Year" }, { input: "consent", type: "checkbox", part: null, label: "I agree" }];
-  const libE = [{ key: "person.place_of_birth_city", valueType: "text", aliases: [], mergedIntoKey: null }, { key: "person.town_of_birth", valueType: "text", aliases: [], mergedIntoKey: "person.place_of_birth_city" }, { key: "person.family_name", valueType: "text", aliases: [], mergedIntoKey: null }];
-  const entry = (input: string, fact: string | null, outcome = "mapped", person = "form_subject") => ({ input, outcome, person, fact, transform: "whatever the AI wrote", confidence: "medium", unresolved_reason: outcome === "mapped" ? null : "portal mechanics", evidence_quote: input });
-  const sp = screenMapProposals({ canonical_fields: [], entries: [entry("birthCity", "person.town_of_birth"), entry("consent", null, "not_a_fact"), entry("notAsked", "person.family_name")] }, left, libE, factKeyProblem);
-  const city = sp.proposals.find((p) => p.input === "birthCity");
-  ok("screen_map: a proposal for an open input names a library field (merged ids redirect), with our own transform, never the AI's", city?.outcome === "mapped" && city.fact === "person.place_of_birth_city" && city.transform === "as_is" && sp.proposals.find((p) => p.input === "consent")?.outcome === "not_a_fact", sp.proposals);
-  ok("screen_map fail: an answer for an input that was not asked is ignored; an input with no answer stays open", sp.ignored.includes("notAsked") && sp.not_answered.includes("dobYear"));
-  const bad = screenMapProposals({ canonical_fields: [], entries: [entry("birthCity", "person.unknown_field"), entry("dobYear", "person.family_name"), entry("consent", "Person.Bad Name")] }, left, libE, factKeyProblem);
-  ok("screen_map fail: a field not in the library, a field that does not suit the input (text for a year), and a bad name all stay open with the reason", bad.proposals.every((p) => p.outcome === "unresolved") && /not in the library/.test(bad.proposals[0].why) && /date part/.test(bad.proposals[1].why) && /names the field/.test(bad.proposals[2].why), bad.proposals.map((p) => p.why));
-  ok("screen_map fail: a person outside the agreed list is not accepted", screenMapProposals({ canonical_fields: [], entries: [entry("birthCity", "person.place_of_birth_city", "mapped", "neighbour")] }, left, libE, factKeyProblem).proposals[0].outcome === "unresolved");
-  const leftE = [{ input: "birthCity", type: "text", part: null, label: "City or town" }];
-  const runOk = readScreenRun({ contract_valid: true, raw_output: JSON.stringify({ canonical_fields: [], entries: [entry("birthCity", "person.place_of_birth_city")] }), drafting_run: { run_id: "hand-written", status: "completed", usage: { cost_usd: 0 } } }, leftE, libE, factKeyProblem);
-  const runBad = readScreenRun({ contract_valid: true, raw_output: "{not json", drafting_run: { status: "completed" } }, leftE, libE, factKeyProblem);
-  const runRefused = readScreenRun({ contract_valid: false, raw_output: null, drafting_run: { status: "refused", usage: { cost_usd: 0.12 } } }, leftE, libE, factKeyProblem);
-  ok("screen_map live branch (hand-written records, no model call): a usable answer gives proposals; unreadable or refused answers give a plain message and no proposal", runOk.ok && runOk.proposals[0].fact === "person.place_of_birth_city" && !runBad.ok && /not in the agreed shape/.test(runBad.message) && !runRefused.ok && /declined/.test(runRefused.message) && runRefused.cost === 0.12);
 
   // ──────────────────────────────────────────── evidence findings F1–F4 (no server)
   const f1344 = inv1344.fields as { data_path?: string; som?: string; ui?: string; caption?: string; required?: boolean }[];
@@ -209,41 +185,6 @@ const readJson = (rel: string) => JSON.parse(readFileSync(join(PROTOTYPE, "..", 
   r = await call("POST", `/jobs/${reusedJob.id}/apply`, {});
   const origins = sql("select string_agg(distinct origin::text, ',') from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 5257 (09-2023)'");
   ok("A4 reuse apply: the reused form fields enter the library as code matches (origin CODE_MATCH, 'as released in IMM 5257 (01-2020)'), never as AI", r.status === 201 && origins === "CODE_MATCH" && sql("select count(*) from form_field_map m join form_edition e on e.id = m.form_edition_id where e.edition_label = 'IMM 5257 (09-2023)' and m.evidence_quote like '%as released in IMM 5257 (01-2020)%'") !== "0", { status: r.status, origins });
-
-  // ──────────────────────────────────────────── screen_map: the guarded job for inputs left open (US$0)
-  const cap = (await call("POST", "/captures", { portal: "ircc_portal", form: "IMM 5257", title: "Visitor visa (Sample)" })).body;
-  await upload(`/captures/${cap.id}/screens`, ["imm5257-online-s1-personal.html", "imm5257-online-s2-marital.html", "imm5257-online-s3-language.html"]);
-  await call("POST", `/captures/${cap.id}/finish`);
-  const ed = (await call("POST", `/captures/${cap.id}/approve`, undefined, "user-C")).body.edition.id as string;
-  await call("POST", `/online-versions/${ed}/screen-map/draft`);
-  await call("POST", `/online-versions/${ed}/screen-map/accept`, {}, "user-C");
-  const open = sql(`select string_agg(data_path, ',') from form_field_map where form_edition_id='${ed}' and outcome='unresolved'`).split(",").filter(Boolean);
-  r = await call("POST", `/online-versions/${ed}/screen-map/ai`, { combinationId: fs, mode: "STUB" });
-  ok("screen_map fail: drafted only for a combination that files the form", r.status === 404, r.body.message);
-  r = await call("POST", `/online-versions/${ed}/screen-map/ai`, { combinationId: vv, mode: "LIVE" });
-  ok("screen_map fail: a live draft is refused until its worst case is confirmed to the cent (nothing spent unseen)", r.status === 409 && /costs at most US\$[0-9.]+/.test(r.body.message), r.body.message);
-  r = await call("POST", `/online-versions/${ed}/screen-map/ai`, { combinationId: vv, mode: "STUB" }, "user-C");
-  ok("screen_map fail: the reviewer (no author duty) cannot start it", r.status === 403);
-  const [d1, d2] = await Promise.all([1, 2].map(() => call("POST", `/online-versions/${ed}/screen-map/ai`, { combinationId: vv, mode: "STUB" })));
-  ok("screen_map fail (review 2): two starts at the same moment make one job; the other is refused", [d1.status, d2.status].sort().join() === "201,409" && sql(`select count(*) from drafting_job where kind='screen_map'`) === "1", [d1.status, d2.status]);
-  r = d1.status === 201 ? d1 : d2;
-  const sm = await finished(r.body.id);
-  const smRun = readdirSync(join(PROTOTYPE, "p2", "runs")).filter((f) => f.startsWith(sm.detail?.job_id ?? "-") && f.includes("-stub-")).sort().pop();
-  const smEnv = smRun ? JSON.parse(readFileSync(join(PROTOTYPE, "p2", "runs", smRun), "utf8")) : { note: `no stub run: ${sm.status} ${sm.message}` };
-  ok("screen_map: the stub pass admits the approved screens and only the open inputs (an admitted part of the screen inventory), US$0", sm.status === "COMPLETED" && sm.costUsd === 0 && sm.detail.inputs === open.length && smEnv.launch_evidence?.admitted?.[0]?.kind === "inventory_part" && smEnv.drafting_run?.kind === "screen_map" && smEnv.contract_valid === true, { message: sm.message, admitted: smEnv.launch_evidence?.admitted });
-  r = await call("POST", `/online-versions/${ed}/screen-map/ai/accept`, { jobId: sm.id }, "user-C");
-  ok("screen_map fail: a stub pass has nothing to accept", r.status === 409, r.body.message);
-  // A completed answer, hand-written for this check (no model call): the rule that reads it is the one a live run uses.
-  const lib = sql("select canonical_field_key from canonical_field where canonical_field_key = 'person.place_of_birth_city' limit 1");
-  const answer = { canonical_fields: [], entries: [open[0], open[1]].map((i) => ({ input: i, outcome: "not_a_fact", person: "none", fact: null, transform: null, confidence: "medium", unresolved_reason: "asked only by the portal", evidence_quote: i })) };
-  const proposals = screenMapProposals(answer, open.map((i) => ({ input: i, type: "text", part: null, label: i })), lib ? [{ key: lib, valueType: "text", aliases: [], mergedIntoKey: null }] : [], factKeyProblem);
-  sql(`update drafting_job set run_id = 'hand-written-check-answer', detail = detail || '${JSON.stringify(proposals).replace(/'/g, "''")}'::jsonb where id = '${sm.id}'`);
-  r = await call("POST", `/online-versions/${ed}/screen-map/ai/accept`, { jobId: sm.id, inputs: [open[0]] }, "user-C");
-  const firstStatus = sql(`select status from drafting_job where id='${sm.id}'`);
-  const accepted = sql(`select outcome || ':' || origin from form_field_map where form_edition_id='${ed}' and data_path='${open[0]}' order by version desc limit 1`);
-  const rest = await call("POST", `/online-versions/${ed}/screen-map/ai/accept`, { jobId: sm.id }, "user-C");
-  const again = await call("POST", `/online-versions/${ed}/screen-map/ai/accept`, { jobId: sm.id }, "user-C");
-  ok("screen_map accept: a person accepts one proposal now (a new draft version, origin AI_PROPOSAL) and the rest later (break m13); then nothing is left to accept", r.status === 201 && r.body.accepted === 1 && accepted === "not_a_fact:AI_PROPOSAL" && firstStatus === "COMPLETED" && rest.status === 201 && rest.body.accepted === 1 && again.status === 409, { accepted, firstStatus, rest: rest.body, again: again.status });
 
   // ──────────────────────────────────────────── the filler: F1–F3 through the API (wp.family, IMM 1295, US$0)
   const fill = async () => (await call("POST", `/combinations/${wp}/fill`, { form: "IMM 1295", person: "principal", mode: "draft" })).body;

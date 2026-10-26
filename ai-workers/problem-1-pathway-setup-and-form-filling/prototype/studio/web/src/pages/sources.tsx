@@ -2,7 +2,6 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 import { FileUp, FolderOpen, Play, Recycle, ScanLine, Sparkles } from "lucide-react";
 import { api, useAction, useActorId, useApi, useToast } from "@/lib/api";
-import { DraftingSources } from "@/components/channels";
 import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ModePill, StatusPill } from "@/pages/combination";
@@ -45,7 +44,6 @@ export function SourcesTab({ d }: { d: any }) {
         </div> : <p className="text-sm text-text-muted">A configuration author attaches sources and starts drafting.</p>}
       </div>
       {results ? <IntakeResults results={results} /> : null}
-      <DraftingSources id={id} canAuthor={canAuthor} />
       {!d.attachments.length ? <EmptyState title="No sources attached" description="Attach the program's official forms and guides. Each recognised form can be read and drafted with AI." /> : (
         <Table head={["Source", "Status and steps", "Next"]}>
           {d.attachments.map((a: any) => {

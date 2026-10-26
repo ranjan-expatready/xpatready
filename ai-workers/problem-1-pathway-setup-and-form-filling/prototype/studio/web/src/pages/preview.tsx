@@ -4,6 +4,7 @@ import { api, useAction, useApi } from "@/lib/api";
 import { Button, Dialog, Input, Notice, Pill, Select, Stat, Table } from "@/components/ui/controls";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import { ONLINE_LATER } from "../../../contracts/forms";
 
 const COV: Record<string, [string, string]> = {
   "confirmed fact": ["ok", "bg-ok"], "answered on screen": ["info", "bg-primary"], "document reading": ["ai", "bg-[#7c3aed]"], "client question": ["info", "bg-primary/50"],
@@ -125,7 +126,7 @@ function Forms({ v, id, mode, profile }: { v: any; id: string; mode: string; pro
             {APPLIES(f.applies)}
             <span className="max-w-sm truncate text-xs text-text-muted" title={f.why}>{f.why}{f.missing.length ? ` (waiting for ${f.missing.join(", ")})` : ""}</span>
             {c && total ? <div className="flex h-2 w-48 overflow-hidden rounded-full bg-surface" title={Object.entries(c.counts).map(([k, n]) => `${k}: ${n}`).join(" · ")}>{Object.entries(COV).map(([k, [, bar]]) => (c.counts[k] ? <span key={k} className={bar} style={{ width: `${(100 * c.counts[k]) / total}%` }} /> : null))}</div> : null}
-            {c && c.edition ? <Button size="sm" variant="secondary" onClick={() => fill.mutate({ form: f.form, person: f.person })} busy={fill.isPending && fill.variables?.form === f.form && fill.variables?.person === f.person} disabled={!c.counts["confirmed fact"]} title="Writes confirmed facts into a copy of the official PDF and reads them back"><FileCheck2 /> Fill PDF from confirmed facts</Button> : f.form_kind === "document" ? <Pill>document, not filled</Pill> : null}
+            {c && c.edition && (v.online_forms ?? []).includes(f.form) ? <span className="text-xs text-text-muted" data-online-later title="This form is filed Online: the product fills it once the browser extension returns. File it as a PDF upload to fill its PDF.">{ONLINE_LATER}</span> : c && c.edition ? <Button size="sm" variant="secondary" onClick={() => fill.mutate({ form: f.form, person: f.person })} busy={fill.isPending && fill.variables?.form === f.form && fill.variables?.person === f.person} disabled={!c.counts["confirmed fact"]} title="Writes confirmed facts into a copy of the official PDF and reads them back"><FileCheck2 /> Fill PDF from confirmed facts</Button> : f.form_kind === "document" ? <Pill>document, not filled</Pill> : null}
           </div>
           {open === key && c ? (
             <div className="border-t border-border px-4 py-3">
