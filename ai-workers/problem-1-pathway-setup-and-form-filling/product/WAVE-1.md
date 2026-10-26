@@ -48,4 +48,5 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 | Lead PRs #28 (roles audit), #30 (archive non-POC folders) | open since 25 Oct | Founder decides later; not blocking |
 
 ## Rules for this wave
+**Lanes (P-111):** two build lanes (screens, forms) plus qa after every merge; runtime (workspace) starts after both merge; m3 research only; scout, evidence, Devin and Goose paused; one Lead chat at a time, a fresh /lead each day. Permanent-residence combinations: PDFs where IRCC takes them, an answer sheet for portal-only forms (P-113).
 Concepts offer the founder 2–3 options with a recommendation before BUILD (founder: "discuss the available solutions, then select one"). Tooltips in plain functional words on every control. Corporate stays empty except one Sample. AI only proposes; every AI action follows W1-07.
