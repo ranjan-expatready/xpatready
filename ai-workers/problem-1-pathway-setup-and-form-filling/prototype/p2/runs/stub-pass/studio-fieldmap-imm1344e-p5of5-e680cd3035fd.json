@@ -1,0 +1,26 @@
+{
+ "job_id": "studio-fieldmap-imm1344e-p5of5-e680cd3035fd",
+ "path_code_sha256": "df1b2e2c24e54d8d1da73afd8acd3d39983d3c47601a7974f6b69c4b58015713",
+ "screening_sources": [
+  {
+   "file": "prototype/expected/slice-1-field-map.json",
+   "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+  },
+  {
+   "file": "prototype/expected/slice-1-field-map.v2.json",
+   "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+  },
+  {
+   "file": "prototype/p1/e5-family-values.json",
+   "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+  },
+  {
+   "file": "prototype/p1/adobe-complete-1295-values.json",
+   "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+  }
+ ],
+ "digest_sha256": "f0a780fb218a8f6c9518f3f8884808b3660c65d88b5e074a37434fe09273eb0e",
+ "run_id": "studio-fieldmap-imm1344e-p5of5-e680cd3035fd-stub-20261026t053404942z-ce41d4",
+ "at": "2026-10-26T05:34:05.214Z",
+ "stub_calls": 1
+}
