@@ -121,6 +121,21 @@ const tokenFor = async (actor: string) => (await extCall("", "POST", "/extension
     ok("C7.4: X10 Undo clears only what the fill wrote and nobody changed: the person's correction stays, the others are empty again, no outline left",
       after.fam === "CHANGED-BY-ME" && after.sex === "" && (after.year === null || after.year === "") && after.outlined === 0 && new RegExp(`Cleared ${nFilled - 1} values? this fill wrote; 1 you changed since stays as you left it`).test(said), { after, said: said.slice(-160) });
     await axe(panel, "after undo"); await shot(panel, "02-undo-360");
+    // Break M1: the portal swaps another screen in place (same page, no new address): Undo clears nothing and goes.
+    await tab.goto(apr("apr-vv-s02-personal.html"));
+    await panel.getByRole("button", { name: "Fill this screen" }).click(); await panel.getByText(/^Filled \d+ of 9/).waitFor();
+    await tab.evaluate(() => { document.querySelector("h1")!.textContent = "Spouse or common-law partner"; });
+    await panel.getByRole("button", { name: "Undo this fill" }).click();
+    await panel.getByText(/The portal shows another screen now: nothing was cleared/).waitFor();
+    const kept = await tab.evaluate(() => ({ fam: (document.getElementById("familyName") as HTMLInputElement).value, sex: (document.getElementById("sex") as HTMLSelectElement).value }));
+    ok("C7.4: X10 break M1 fail case: another screen swapped in place: Undo clears nothing, says so, and is gone", kept.fam === "SAMPLE" && kept.sex === "FEMALE" && (await panel.getByRole("button", { name: "Undo this fill" }).count()) === 0, kept);
+    // Break m5: the page's own outline on an input is put back after Undo.
+    await tab.goto(apr("apr-vv-s02-personal.html"));
+    const own = await tab.evaluate(() => { const el = document.getElementById("familyName") as HTMLInputElement; el.style.outline = "1px dashed rgb(0, 128, 0)"; return el.style.outline; });
+    await panel.getByRole("button", { name: "Fill this screen" }).click(); await panel.getByText(/^Filled \d+ of 9/).waitFor();
+    await panel.getByRole("button", { name: "Undo this fill" }).click(); await panel.getByText(/^Cleared \d+ values? this fill wrote/).waitFor();
+    const back = await tab.evaluate(() => (document.getElementById("familyName") as HTMLInputElement).style.outline);
+    ok("C7.4: X10 break m5 the page's own outline on an input comes back after Undo", !!own && back === own, { own, back });
     // Undo is gone once the portal moves on (the fill's memory went with the page).
     await tab.fill("#familyName", "");
     await panel.getByRole("button", { name: "Fill this screen" }).click(); await panel.getByText(/^Filled \d+ of 9/).waitFor();
@@ -138,6 +153,7 @@ const tokenFor = async (actor: string) => (await extCall("", "POST", "/extension
     const tasks = await as(capTok).call("GET", "/extension/capture/recapture-tasks");
     ok("C9.3: D8 X8 a capture token lists the open task: form, portal, screen and what changed, never the cases it affects",
       tasks.status === 200 && tasks.body.length === 1 && tasks.body[0].form === "IMM 5257" && tasks.body[0].screen === "Personal details" && tasks.body[0].portal === "apr_portal" && !("affected" in tasks.body[0]) && !JSON.stringify(tasks.body).includes("APR-F3C2-1"), tasks.body);
+    ok("C9.3: D8 break m6 no element id reaches a capture token: each change is the approved question's words and what changed", (tasks.body[0].differences as Record<string, unknown>[]).length > 0 && (tasks.body[0].differences as Record<string, unknown>[]).every((d) => !("input" in d) && typeof d.question === "string"), tasks.body[0].differences);
     const refused = await as(fillTok).call("GET", "/extension/capture/recapture-tasks");
     ok("C9.3: D8 fail case: a fill-only token is refused on the capture-mode task list (403)", refused.status === 403, refused.status);
     const studioTasks = await call("GET", "/extension/recapture-tasks", undefined, "user-C");

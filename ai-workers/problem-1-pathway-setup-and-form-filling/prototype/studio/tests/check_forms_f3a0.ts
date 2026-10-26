@@ -47,6 +47,13 @@ const marital = notSeen.find((s) => s.group === "MaritalStatus");
 ok("C2.12: B2 fail case: every question but the spouse's captured (the applicant's and the employer's), the spouse's are not: \"Marital status and spouse\" is not seen, with the spouse's family name, though the applicant's family name is seen",
   notSeen.length === 1 && marital?.label === "Marital status and spouse" && marital.sharedFields.includes("person.family_name") && marital.questions === 3, notSeen);
 const everyone = p1295.filter((e) => e.outcome === "mapped").map((e) => ({ fact: e.fact, person: e.person }));
+// Review Major 1: a section partly asked says how much of it is not; a section fully asked is not listed.
+const personal = p1295.filter((e) => e.outcome === "mapped" && groupOfEntry(e) === "PersonalDetails");
+const half = personal.slice(0, Math.floor(personal.length / 2)).map((e) => ({ fact: e.fact, person: e.person }));
+const partly = screenCoverage("IMM 1295", p1295, [...applicantOnly.filter((x) => !personal.some((e) => e.fact === x.fact && e.person === x.person)), ...half]).find((s) => s.group === "PersonalDetails");
+ok("C2.12: review Major 1 a section partly asked is listed with how many of its form fields no captured question matches (\"x of y\"), never as wholly not seen",
+  !!partly && partly.questions > 0 && partly.questions < partly.total && partly.total === new Set(personal.map((e) => e.data_path)).size, partly && { questions: partly.questions, total: partly.total });
+ok("C2.12: review Major 1 fail case: a section every form field of which is matched is not listed at all, and \"none\" means its total", !notSeen.some((s) => s.group === "PersonalDetails") && screenCoverage("IMM 1295", p1295, []).every((s) => s.questions === s.total) && marital!.questions < marital!.total);
 ok("C2.12: BR-12 every mapped form field seen for its own person: nothing is listed", screenCoverage("IMM 1295", p1295, everyone).length === 0);
 ok("C2.12: D1 a repeated row with no section of its own (earlier countries, Row2) falls in its form path's group, never Other questions", groupOfEntry({ data_path: "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0].Country[0]", heading: null }) === "PersonalDetails" && groupOfEntry({ data_path: "form1[0].Page1[0].X[0]", heading: "Page2.MaritalStatus.SectionA" }) === "MaritalStatus");
 ok("C2.12: BR-12 nothing captured yet: every group with a mapped form field is listed once, in PDF order, Personal details first", (() => { const all = screenCoverage("IMM 1295", p1295, []); return all[0]?.group === "PersonalDetails" && all.length === mappedGroups("IMM 1295", "imm1295e").size && new Set(all.map((s) => s.group)).size === all.length; })());

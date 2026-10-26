@@ -86,6 +86,34 @@ const openOf = (form: string) => sql(`select count(*) from portal_capture where 
   ok("C2.9: X1 the capture started in the Studio is listed first, before a newer one started in the panel", list[0] === capId && list.includes(r.body.id), list);
   sql(`update portal_capture set status='ABANDONED' where id='${r.body.id}'`);
   sql(`update portal_capture set status='ABANDONED' where id='${capId}'`); // the journey below starts it again from the Studio's page
+  // Break M2: a capture held for the second person is the open one too: a new start returns it, so a later return never
+  // leaves two open captures of one form.
+  const held = (await as(token).call("POST", "/extension/captures", { portal: "apr_portal", form: "IMM 1295", title: "Work permit" })).body.id as string;
+  sql(`update portal_capture set status='HELD' where id='${held}'`);
+  r = await call("POST", "/captures", { ...START, form: "IMM 1295", title: "Work permit", combinationId: vv });
+  await call("POST", `/captures/${held}/return`, { note: "check: returned while a new start was tried" }, "user-C");
+  ok("C2.9: D6 break M2 fail case: a start while the capture is held returns the held one (200, reused); after the second person returns it there is one open capture, not two",
+    r.status === 200 && r.body.id === held && r.body.status === "HELD" && sql(`select count(*) from portal_capture where way='extension' and captured_by='user-A' and form_key='IMM 1295' and status in ('OPEN','RETURNED','HELD')`) === "1", [r.status, r.body.status]);
+  sql(`update portal_capture set status='ABANDONED' where id='${held}'`);
+  // Break m2: a form the library does not hold, written with and without its space, is one capture.
+  const abc = await Promise.all(["ABC 123", "ABC123"].map((form) => as(token).call("POST", "/extension/captures", { portal: "apr_portal", form, title: "A form not in the library" })));
+  ok("C2.9: D6 break m2 fail case: \"ABC 123\" and \"ABC123\" are one capture", abc[0].body.id === abc[1].body.id && abc.some((x) => x.status === 200), abc.map((x) => [x.status, x.body.form]));
+  sql(`update portal_capture set status='ABANDONED' where id='${abc[0].body.id}'`);
+  // Break M3: a capture started in the panel (no combination) takes the combination of a Studio start; a start from
+  // another combination continues it and keeps the first one's.
+  const pan = (await as(token).call("POST", "/extension/captures", { portal: "apr_portal", form: "IMM 5476", title: "Use of a representative" })).body.id as string;
+  r = await call("POST", "/captures", { ...START, form: "IMM 5476", title: "Use of a representative", combinationId: vv });
+  const sv = sql("select id from combination where combination_key <> 'vv.single' limit 1");
+  const other = sv ? await call("POST", "/captures", { ...START, form: "IMM 5476", title: "Use of a representative", combinationId: sv }) : null;
+  ok("C2.9: D6 break M3 a panel capture with no combination takes the Studio start's (Visitor visa); a start from another combination continues it and keeps Visitor visa",
+    r.status === 200 && r.body.id === pan && r.body.combination?.label === "Visitor visa" && (!other || (other.body.id === pan && other.body.combination?.label === "Visitor visa")), [r.body.combination, other?.body.combination]);
+  // Break m8: an element id or a format that carries a client's detail is refused like a text, and nothing is kept.
+  const rev = (await as(token).call("GET", `/extension/captures/${pan}`)).body.revision;
+  const byId = await as(token).call("POST", `/extension/captures/${pan}/screens`, { screen: { title: "Representative", inputs: [{ id: "X1234567", label: "Representative's name", type: "text", required: false, order: 1 }] }, revision: rev });
+  const byPattern = await as(token).call("POST", `/extension/captures/${pan}/screens`, { screen: { title: "Representative", inputs: [{ id: "repEmail", label: "Email", type: "text", required: false, order: 1, pattern: "^jane.client@example.com$" }] }, revision: rev });
+  ok("C2.9: BR-3 break m8 fail case: a passport-like element id, or an email inside an input's format, is refused (422, in words); nothing kept",
+    byId.status === 422 && /element id of "Representative's name" looks like a client's detail/.test(byId.body.message) && byPattern.status === 422 && /format of "Email"/.test(byPattern.body.message) && (await as(token).call("GET", `/extension/captures/${pan}`)).body.screens.length === 0, [byId.status, byId.body.message, byPattern.status, byPattern.body.message]);
+  sql(`update portal_capture set status='ABANDONED' where id='${pan}'`);
 
   // ──────────────────────────────────────────── in Chromium: the Studio button, then the panel on the APR screens
   const out = join(VARDIR, "extension");
@@ -181,10 +209,11 @@ const openOf = (form: string) => sql(`select count(*) from portal_capture where 
     const summary = panel.getByRole("region", { name: "Capture summary" }); await summary.waitFor();
     const sum = await summary.innerText();
     const questions = Number(sql(`select sum(jsonb_array_length(s->'inputs')) from portal_capture, jsonb_array_elements(record->'screens') s where id='${started}'`));
-    ok("C2.9: X6 BR-9 Finish shows the screens and questions sent, that a second person approves it, and the PDF sections no captured screen asks (the spouse branch)",
-      new RegExp(`^5 screens · ${questions} questions`).test(sum) && /A second person approves it in the Studio before anything uses it/.test(sum) && /PDF sections not seen on any captured screen yet \(IMM 5257 \(09-2023\)\)/.test(sum) && /Marital status and spouse \(\d+\)/.test(sum), sum.slice(0, 400));
+    ok("C2.9: X6 BR-9 Finish shows the screens and questions captured, that a second person approves it, and the PDF form fields no captured question matches (the spouse branch)",
+      new RegExp(`^5 screens captured · ${questions} questions`).test(sum) && /A second person approves it in the Studio before anything uses it/.test(sum) && /PDF form fields no captured question matches yet \(IMM 5257 \(09-2023\)\)/.test(sum) && /Marital status and spouse: \d+ of \d+ form fields/.test(sum), sum.slice(0, 500));
+    ok("C2.9: review Major 1 a section partly asked says how much (\"x of y form fields\"), never \"not seen\": Personal details was captured", !/not seen/.test(sum) && /Personal details: \d+ of \d+ form fields|^(?![\s\S]*Personal details:)/.test(sum), sum.slice(0, 500));
     ok("C2.9: X6 the summary links to the capture in the Studio", (await summary.getByRole("link", { name: "Open it in the Studio" }).getAttribute("href")) === `http://127.0.0.1:${PORT}/review/capture/${started}`);
-    ok("C2.9: BR-12 the sections listed carry plain labels, never a form path or key (BR-16)", !/Page\d|\.|_|canonical|person\./.test(sum.split("PDF sections not seen")[1]?.split("Each is a screen")[0] ?? ""), sum);
+    ok("C2.9: BR-12 the sections listed carry plain labels, never a form path or key (BR-16)", !/Page\d|\.|_|canonical|person\./.test(sum.split("matches yet")[1]?.split("The rest belong")[0]?.split(/question[s]? on the captured screens/)[0] ?? ""), sum);
     await axe(panel, "panel: finish summary"); await shot(panel, "06-finish-summary-360");
     ok("C2.9: X6 the capture is held for a second person, as the summary says", sql(`select status from portal_capture where id='${started}'`) === "HELD");
   } finally {

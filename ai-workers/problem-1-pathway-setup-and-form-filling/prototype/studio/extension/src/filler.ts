@@ -77,6 +77,8 @@ export function fillScreen(doc: Document, plan: PlanInput[]): Outcome[] {
     if (!el || NEVER.has((el.getAttribute("type") ?? "").toLowerCase()) || el.disabled || (el as HTMLInputElement).readOnly || !shown(els)) return { id: p.id, label: p.label, outcome: "not_filled", reason: "not_on_screen" };
     if (!els.every((e) => sameKind(e, p.type))) return { id: p.id, label: p.label, outcome: "not_filled", reason: "not_the_same_kind_of_input" };
     if (!isEmpty(els)) return { id: p.id, label: p.label, outcome: "left_alone", reason: "already_answered" };
+    // Break m5: "not ticked" on a box already not ticked writes nothing, so it is never counted as filled (or undone).
+    if (el instanceof HTMLInputElement && el.type === "checkbox" && p.value !== "true") return { id: p.id, label: p.label, outcome: "left_alone", reason: "already_answered" };
     return write(els, p.value) ? { id: p.id, label: p.label, outcome: "filled" } : { id: p.id, label: p.label, outcome: "not_accepted", reason: "read_back_differs" };
   });
 }

@@ -167,7 +167,8 @@ export const isScreenInput = (row: { outcome: string; dataPath: string }) =>
   (SCREEN_MAP_OUTCOMES as readonly string[]).includes(row.outcome) && !row.dataPath.startsWith(ASKED_DIFFERENTLY.prefix);
 
 export type CoverageEntry = { data_path: string; heading: string | null; fact: string | null; person: string | null; outcome: string };
-export type SectionNotSeen = { group: string; label: string; sharedFields: string[]; questions: number };
+/** A PDF section with form fields no captured question matches yet: `questions` of its `total` mapped form fields. */
+export type SectionNotSeen = { group: string; label: string; sharedFields: string[]; questions: number; total: number };
 /** An entry's group: from its section, else from its own form path (a repeated row such as "Row2" has no section of
  *  its own in the inventory: "form1[0].Page1[0].PersonalDetails[0].PreviousCOR[0].Row2[0]…" → "PersonalDetails"). */
 export const groupOfEntry = (e: { data_path: string; heading: string | null }) =>
@@ -180,15 +181,17 @@ const personKey = (fact: string, person: string | null) => `${fact}|${person ?? 
 export function screenCoverage(form: string, pdf: CoverageEntry[], seen: { fact: string | null; person: string | null }[], askedDifferently: string[] = []): SectionNotSeen[] {
   const have = new Set(seen.filter((s) => s.fact).map((s) => personKey(s.fact!, s.person)));
   const cleared = new Set(askedDifferently);
-  const out = new Map<string, { group: string; facts: Set<string>; paths: Set<string> }>();
+  const out = new Map<string, { group: string; facts: Set<string>; paths: Set<string>; all: Set<string> }>();
   for (const e of pdf) {
-    if (e.outcome !== "mapped" || !e.fact || have.has(personKey(e.fact, e.person))) continue;
+    if (e.outcome !== "mapped" || !e.fact) continue;
     const group = groupOfEntry(e);
     if (cleared.has(group)) continue;
-    const g = out.get(group) ?? { group, facts: new Set<string>(), paths: new Set<string>() };
-    g.facts.add(e.fact); g.paths.add(e.data_path); out.set(group, g);
+    const g = out.get(group) ?? { group, facts: new Set<string>(), paths: new Set<string>(), all: new Set<string>() };
+    g.all.add(e.data_path); out.set(group, g);
+    if (!have.has(personKey(e.fact, e.person))) { g.facts.add(e.fact); g.paths.add(e.data_path); }
   }
-  return [...out.values()].map((g) => ({ group: g.group, label: sectionLabel(form, g.group || null), sharedFields: [...g.facts], questions: g.paths.size }));
+  // Review Major 1: a section partly asked says how much ("29 of 37"); a section fully asked is not listed.
+  return [...out.values()].filter((g) => g.paths.size).map((g) => ({ group: g.group, label: sectionLabel(form, g.group || null), sharedFields: [...g.facts], questions: g.paths.size, total: g.all.size }));
 }
 
 // ───────────────────────────────────────────── F1 slice 2: the AI's screen map for leftovers (guarded screen_map job)

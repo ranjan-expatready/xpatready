@@ -260,7 +260,11 @@ export class Extension {
    *  and screen, and what changed; never the cases they affect (STANDARDS §5: a capture token sees no client). */
   async captureTasks(sig: Signed) {
     const rows = await this.db.recaptureTask.findMany({ where: { workspaceId: sig.workspaceId, status: "OPEN" }, include: { edition: { select: { editionLabel: true, portalKey: true, form: { select: { formKey: true, displayName: true } } } } }, orderBy: { updatedAt: "desc" }, take: 50 });
-    return rows.map((t) => ({ id: t.id, form: t.edition.form.formKey, title: t.edition.form.displayName, portal: t.edition.portalKey, portal_label: portalLabel(t.edition.portalKey), edition: t.edition.editionLabel, screen: t.screenTitle, kind: t.kind, differences: t.differences, times: t.times }));
+    // Break m6: no element id reaches a capture token (a page can build one from what was typed): each difference is
+    // the approved question's label and what changed; a screen the version lacks is counted, not listed.
+    const words = (d: unknown) => (Array.isArray(d) ? d : []).map((x: { approved_label?: string | null; change?: string }) => ({ question: x.approved_label ?? null, change: x.change ?? "changed" }));
+    return rows.map((t) => ({ id: t.id, form: t.edition.form.formKey, title: t.edition.form.displayName, portal: t.edition.portalKey, portal_label: portalLabel(t.edition.portalKey), edition: t.edition.editionLabel, screen: t.screenTitle, kind: t.kind,
+      differences: t.kind === "changed" ? words(t.differences).filter((x) => x.question) : [], new_questions: t.kind === "changed" ? 0 : (Array.isArray(t.differences) ? t.differences.length : 0), times: t.times }));
   }
   async tasks(actor: Actor) {
     need(actor, "review");

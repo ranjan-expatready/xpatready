@@ -85,6 +85,20 @@ const PLAN = [
   const check = (expect: unknown) => page.evaluate((e) => (window as unknown as { XrFill: { sameScreen: (d: Document, x: unknown) => boolean } }).XrFill.sameScreen(document, e), expect);
   ok("C7.4: break B2 the page is still the screen the plan was made for: filling goes ahead", await check(readPy("imm5257-online-s1-personal.html")));
   ok("C7.4: break B2 fail: the person moved to another screen (the spouse's) or the screen changed: nothing is filled", !(await check(readPy("imm5257-online-s4-spouse.html"))) && !(await check(readPy("imm5257-online-s1-personal-reworded.html"))));
+  // ──────────────────────────────────────────── F3 X10 Undo, and the F3 CHECK fixes (break m5)
+  type Fill = { XrFill: { fillScreen: (d: Document, p: unknown) => Outcome[]; undoFill: (d: Document, w: unknown) => { cleared: number; kept: number } } };
+  out = await fill("portal/imm5257-online-s1-personal.html", [{ id: "familyName", type: "text", label: "Family name", value: "SAMPLE", status: "fill" }, { id: "sex", type: "select", label: "Sex", value: "ANOTHER", status: "fill" }, { id: "dobMonth", type: "select", label: "Month", value: "05", status: "fill" }]);
+  await page.fill("#familyName", "CHANGED-BY-ME");
+  const undone = await page.evaluate(() => (window as unknown as Fill).XrFill.undoFill(document, [{ id: "familyName", type: "text", value: "SAMPLE" }, { id: "sex", type: "select", value: "ANOTHER" }, { id: "dobMonth", type: "select", value: "05" }]));
+  const left = await page.evaluate(() => ({ fam: (document.getElementById("familyName") as HTMLInputElement).value, sex: (document.getElementById("sex") as HTMLSelectElement).value, month: (document.getElementById("dobMonth") as HTMLSelectElement).value }));
+  ok("C7.4: F3 X10 Undo clears the selects the fill wrote back to their blank choice and keeps the text the person changed", undone.cleared === 2 && undone.kept === 1 && left.fam === "CHANGED-BY-ME" && left.sex === "" && left.month === "", { undone, left });
+  await page.setContent(`<form id="application"><fieldset><legend>Marital status</legend><input type="radio" id="m1" name="marital" value="SINGLE"><label for="m1">Single</label><input type="radio" id="m2" name="marital" value="MARRIED"><label for="m2">Married</label></fieldset><input type="checkbox" id="consent"><label for="consent">I agree</label><input type="checkbox" id="news"><label for="news">Send news</label></form>`);
+  await page.addScriptTag({ path: join(TMP, "filler.js") });
+  out = await page.evaluate(() => (window as unknown as Fill).XrFill.fillScreen(document, [{ id: "marital", type: "radio", label: "Marital status", value: "MARRIED", status: "fill" }, { id: "consent", type: "checkbox", label: "I agree", value: "true", status: "fill" }, { id: "news", type: "checkbox", label: "Send news", value: "false", status: "fill" }]));
+  ok("C7.4: F3 break m5 fail case: \"not ticked\" on a box already not ticked writes nothing and is not counted as filled; a radio and a box to tick are filled",
+    of(out, "news").outcome === "left_alone" && of(out, "marital").outcome === "filled" && of(out, "consent").outcome === "filled", out);
+  const radioUndo = await page.evaluate(() => { const r = (window as unknown as Fill).XrFill.undoFill(document, [{ id: "marital", type: "radio", value: "MARRIED" }, { id: "consent", type: "checkbox", value: "true" }]); return { r, ticked: Array.from(document.querySelectorAll("input:checked")).map((e) => e.id) }; });
+  ok("C7.4: F3 X10 Undo unticks the radio and the box the fill ticked (nothing else)", radioUndo.r.cleared === 2 && radioUndo.ticked.length === 0, radioUndo);
   await browser.close();
   console.log(`\n${pass}/${pass + fail} passed`);
   process.exit(fail ? 1 : 0);

@@ -27,7 +27,7 @@ import { ANSWER_ON_SCREEN } from "../../engine/extension/fill.ts";
 import { ASKED_DIFFERENTLY, AbandonCapture, AcceptAiProposals, AcceptScreenMap, CAPTURE_LIMITS, CAPTURE_STATUS_WORDS, CHANNEL_WORDS, DRAFT_FROM_WORDS, DraftLeftovers, SetDraftFrom, UseDefaults, type Channel, type DraftFrom, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS,DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
 import { buildRecord, contractProblems, difference, fingerprint, noAnswers, reviewHtml, type CaptureInput, type CaptureRecord } from "../../engine/capture.ts";
 import { channelProblems, channelsView } from "../../engine/channels.ts";
-import { newestEdition } from "../../engine/programs.ts";
+import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
 import { compatible, draftScreenMap, inputKey, normLabel, screenCoverage, screenIdentity, readScreenRun, transformFor, type AiProposal, type PdfEntry, type Proposal, type SectionNotSeen } from "../../engine/twin.ts";
@@ -123,10 +123,14 @@ export class Forms {
     if (known) form = known.formKey;
     const data = { workspaceId, portalKey: b.portal, formKey: form, title: b.title, applicationType: b.applicationType ?? null, way: b.way ?? "saved_page", status: "OPEN", statusDetail: b.way === "extension" ? "Capture each screen in the browser extension, in portal order; only the screens seen are compared with the current version." : "Add the blank screens in portal order: saved pages or the template.", record: { screens: [] }, combinationId: combo?.id ?? null, capturedBy: actor.id };
     // F3 D6, BR-15: one open extension capture per person, form and portal. A second start (a double click, the Studio
-    // then the panel) returns the open or returned one, with the combination it was started for; never a second capture.
+    // then the panel) returns the open, returned or held one, with the combination it was started for; never a second
+    // capture (break M2: a held capture returned later would otherwise make two open ones). The form compares as the
+    // library does ("ABC 123" is "ABC123", break m2); a capture started without a combination takes this start's (M3).
     const r = b.way !== "extension" ? { c: await this.db.portalCapture.create({ data }), reused: false } : await this.db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`extension-capture:${workspaceId}:${actor.id}:${form}:${b.portal}`}))`;
-      const open = await tx.portalCapture.findFirst({ where: { workspaceId, capturedBy: actor.id, formKey: form, portalKey: b.portal, way: "extension", status: { in: ["OPEN", "RETURNED"] } }, orderBy: { createdAt: "desc" } });
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`extension-capture:${workspaceId}:${actor.id}:${compact(form)}:${b.portal}`}))`;
+      const mine = await tx.portalCapture.findMany({ where: { workspaceId, capturedBy: actor.id, portalKey: b.portal, way: "extension", status: { in: ["OPEN", "RETURNED", "HELD"] } }, orderBy: { createdAt: "desc" } });
+      const open = mine.find((x) => compact(x.formKey) === compact(form));
+      if (open && !open.combinationId && combo) return { c: await tx.portalCapture.update({ where: { id: open.id }, data: { combinationId: combo.id } }), reused: true };
       return open ? { c: open, reused: true } : { c: await tx.portalCapture.create({ data }), reused: false };
     });
     if (!r.reused) await this.audit.log(workspaceId, actor.id, "started", "portal capture", form, `${actor.name} started capturing ${form} from the ${portalLabel(b.portal)}${combo ? ` for "${combo.label}"` : ""}`, undefined, combo?.id);
@@ -276,7 +280,10 @@ export class Forms {
    *  never a block); a second person approves it before anything uses it (BR-9). */
   private async finishSummary(c: PortalCapture, record: CaptureRecord) {
     const cov = await this.sectionsNotSeen(c.workspaceId, c.formKey, c.portalKey, record);
-    return { screens: record.screens.length, questions: record.screens.reduce((n, s) => n + s.inputs.length, 0), pdf_edition: cov.pdf_edition, pdf_sections_not_seen: cov.sections.map((x) => ({ group: x.group, label: x.label, questions: x.questions })) };
+    // Review Minor 4: the counts are this capture's own screens; a re-capture merged into the version says so apart.
+    const own = screensOf(c.record);
+    return { screens: own.length, questions: own.reduce((n, s) => n + s.inputs.length, 0), version_screens: record.screens.length, pdf_edition: cov.pdf_edition, unmatched_questions: cov.unmatched,
+      pdf_sections_not_seen: cov.sections.map((x) => ({ group: x.group, label: x.label, questions: x.questions, total: x.total })) };
   }
 
   /** The second person (never the one who captured it) approves: the capture becomes an online version. */
@@ -432,7 +439,8 @@ export class Forms {
    *  inputs on the same screens, and the shared-field library. The screen-map draft and a capture's coverage (F3 D1)
    *  read the same context, so they match a screen the same way. */
   private async screenMapContext(workspaceId: string, editions: FormEdition[], portalKey: string | null, excludeId: string | null, withPdf: boolean) {
-    const pdfs = editions.filter((e) => e.channel === "PDF").sort((a, b) => (a.editionLabel < b.editionLabel ? 1 : -1));
+    // Break m9: the newest PDF edition by the editions' own dates, never by sorting their labels as text.
+    const pdfs = editions.filter((e) => e.channel === "PDF").sort((a, b) => compareEditions(b, a));
     let pdfEdition: string | null = null, pdf: PdfEntry[] = [];
     if (withPdf) for (const p of pdfs) { const rows = await this.mapRows(p.id); if (rows.length) { pdfEdition = p.editionLabel; pdf = rows.map((m) => ({ data_path: m.dataPath, caption: m.caption, heading: m.heading, fact: m.canonicalFieldKey, transform: m.transform, person: m.person, outcome: m.outcome })); break; } }
     const previous = new Map<string, { fact: string | null; transform: string | null; person: string | null; edition: string }>();
@@ -448,13 +456,17 @@ export class Forms {
    *  (shared field and person), minus sections the form's online version marks asked differently. No AI, nothing stored. */
   private async sectionsNotSeen(workspaceId: string, formKey: string, portalKey: string, record: CaptureRecord) {
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey } }, include: { editions: true } });
-    if (!def) return { pdf_edition: null, sections: [] as SectionNotSeen[] };
+    if (!def) return { pdf_edition: null, sections: [] as SectionNotSeen[], unmatched: 0 };
     const ctx = await this.screenMapContext(workspaceId, def.editions, portalKey, null, true);
-    if (!ctx.pdf.length) return { pdf_edition: null, sections: [] as SectionNotSeen[] };
-    const seen = draftScreenMap(record, ctx).proposals.filter((p) => p.outcome === "mapped").map((p) => ({ fact: p.fact, person: p.person }));
+    if (!ctx.pdf.length) return { pdf_edition: null, sections: [] as SectionNotSeen[], unmatched: 0 };
+    const proposals = draftScreenMap(record, ctx).proposals;
+    const seen = proposals.filter((p) => p.outcome === "mapped").map((p) => ({ fact: p.fact, person: p.person }));
+    // Break M5: questions on the captured screens that nothing matches yet (a person maps them on the screen map, or
+    // drafting does); a section they belong to stays listed until then, and the summary says why.
+    const unmatched = proposals.filter((p) => p.outcome === "leftover").length;
     const online = def.editions.filter((e) => e.channel === "ONLINE" && e.portalKey === portalKey).sort((a, b) => (a.editionLabel < b.editionLabel ? 1 : -1))[0];
     const decided = online ? (await this.mapRows(online.id)).filter((m) => m.outcome === ASKED_DIFFERENTLY.outcome && m.heading).map((m) => m.heading!) : [];
-    return { pdf_edition: ctx.pdfEdition, sections: screenCoverage(formKey, ctx.pdf, seen, decided) };
+    return { pdf_edition: ctx.pdfEdition, sections: screenCoverage(formKey, ctx.pdf, seen, decided), unmatched };
   }
 
   async draftScreenMapFor(actor: Actor, editionId: string) {

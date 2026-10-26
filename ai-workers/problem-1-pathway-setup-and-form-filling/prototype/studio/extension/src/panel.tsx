@@ -18,11 +18,11 @@ type Me = { person: Person; modes: ("capture" | "fill")[]; expires_at: string };
 type CaseRow = { id: string; reference: string; release: string; people: { subject_id: string; label: string; role: string }[]; online_forms: string[] };
 type Plan = { match: true; screen: string; inputs: (PlanInput & { why: string })[]; counts: Record<string, number>; message: string } | { match: false; reason: string; message: string; screen?: string; differences?: { input: string; change: string; approved_label: string | null }[]; task?: { times: number; message: string } | null };
 type Task = { id: string; form: string; title: string | null; portal: string; portal_label: string; edition: string; screen: string; kind: string; differences: unknown[]; times: number };
-type Summary = { screens: number; questions: number; pdf_edition: string | null; pdf_sections_not_seen: { group: string; label: string; questions: number }[] };
+type Summary = { screens: number; questions: number; version_screens: number; pdf_edition: string | null; unmatched_questions: number; pdf_sections_not_seen: { group: string; label: string; questions: number; total: number }[] };
 type Capture = { id: string; revision: number; status: string; status_detail: string; form: string; screens: { order: number; title: string; questions: number }[];
   /** F3 X1: the combination it was started for in the Studio. */ combination?: { id: string; label: string } | null; reused?: boolean; summary?: Summary };
 /** A screen's identity as the Studio compares screens (engine/twin.ts screenIdentity): its heading, case and spacing aside. */
-const ident = (title: string) => title.normalize("NFKC").replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
+const ident = (title: string) => { const t = title.normalize("NFKC").replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, "").toLowerCase(); return t.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || `screen:${t.trim()}`; };
 const KIND: Record<string, string> = { text: "Text", textarea: "Text", select: "Choose one", radio: "Choose one", checkbox: "Tick box", date: "Date", email: "Email", tel: "Telephone", number: "Number", file: "File upload" };
 /** F3 X5: what "Check before sending" shows for each question: its label, kind and choices, and any text that looks
  *  like a client's detail. */
@@ -130,7 +130,17 @@ function FillMode({ onError, clearError }: { onError: (e: unknown) => void; clea
   const [find, setFind] = React.useState("");
   // F3 X10: "Undo this fill" clears what this fill wrote and nobody changed; gone once the portal moves on.
   const [undone, setUndone] = React.useState<{ cleared: number; kept: number } | null>(null);
-  const undo = async () => { if (planTab === null) return; setBusy(true); try { setUndone((await ask<{ cleared: number; kept: number }>({ kind: "undo" }, planTab)).answer); } catch (e) { onError(e); } finally { setBusy(false); } };
+  const [filledScreen, setFilledScreen] = React.useState<ReadScreen | null>(null);
+  // Break M1: Undo is for the screen that was filled; when the portal shows another screen in place (no new page),
+  // nothing is cleared and Undo goes.
+  const undo = async () => {
+    if (planTab === null || !filledScreen) return; setBusy(true);
+    try {
+      const r = (await ask<{ cleared: number; kept: number } | { moved: true }>({ kind: "undo", expect: filledScreen }, planTab)).answer;
+      if ("moved" in r) { setPlan(null); setOutcomes(null); setFilledScreen(null); throw new ApiError("The portal shows another screen now: nothing was cleared. Undo works only on the screen that was filled.", 0); }
+      setUndone(r);
+    } catch (e) { onError(e); } finally { setBusy(false); }
+  };
   // Any open case can be found by its reference (the 50 newest are listed without a search).
   React.useEffect(() => { const t = setTimeout(() => { void call<CaseRow[]>("GET", `/cases${find.trim() ? `?q=${encodeURIComponent(find.trim())}` : ""}`).then(setCases).catch(onError); }, find ? 300 : 0); return () => clearTimeout(t); }, [find]);
   // BR-13: the plan and its values are dropped when the portal tab moves on, and after 5 minutes.
@@ -156,7 +166,7 @@ function FillMode({ onError, clearError }: { onError: (e: unknown) => void; clea
       if (p.match) {
         const done = (await ask<Outcome[] | { moved: true }>({ kind: "fill", inputs: p.inputs, expect: read.screens[0] }, tabId)).answer;
         if (!Array.isArray(done)) { setPlan(null); throw new ApiError("The portal moved to another screen before filling. Nothing was filled: fill this screen again.", 0); }
-        setOutcomes(done);
+        setOutcomes(done); setFilledScreen(read.screens[0]);
       }
     } catch (e) { onError(e); } finally { setBusy(false); }
   };
@@ -212,7 +222,7 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
       const c = await call<Capture>("POST", "/captures", { portal: meta.portal, form: meta.form, title: meta.title, ...(meta.applicationType ? { applicationType: meta.applicationType } : {}) });
       setCap(c);
       // F3 D6: one open capture per person, form and portal: a second start continues the one already open.
-      if (c.reused) setNote({ tone: "warn", text: `You already have this capture open${c.combination ? ` (started in the Studio for ${c.combination.label})` : ""}: continuing it, ${c.screens.length} screen${c.screens.length === 1 ? "" : "s"} so far. Nothing new was started.` });
+      if (c.reused) setNote({ tone: "warn", text: c.status === "HELD" ? `${c.form} on this portal is held for a second person: a new capture starts once they approve or return it (or once you withdraw it in the Studio). Nothing new was started.` : `You already have this capture open${c.combination ? ` (started in the Studio for ${c.combination.label})` : ""}: continuing it, ${c.screens.length} screen${c.screens.length === 1 ? "" : "s"} so far. Nothing new was started.` });
     } catch (err) { onError(err); } finally { setBusy(false); }
   };
   // BR-3: every text the screen would send is listed first; a text that looks like a client's detail refuses the screen.
@@ -275,7 +285,10 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
     setBusy(true); clearError();
     try {
       const c = await call<Capture>("POST", "/captures", { portal: t.portal, form: t.form, title: t.title ?? t.form });
-      setCap(c); setNote({ tone: "info", text: `Go to "${t.screen}" in the ${t.portal_label} and capture it again; ${c.reused ? "this continues your open capture of " + t.form : "a second person approves it"}.` });
+      setCap(c);
+      const there = t.kind === "changed" ? c.screens.find((x) => ident(x.title) === ident(t.screen)) : undefined;
+      setNote(there ? { tone: "warn", text: `"${t.screen}" is already in this capture (screen ${there.order}): remove it below, then capture it again in the ${t.portal_label}.` }
+        : { tone: "info", text: t.kind === "changed" ? `Go to "${t.screen}" in the ${t.portal_label} and capture it again; ${c.reused ? "this continues your open capture of " + t.form : "a second person approves it"}.` : `Go to the ${t.form} screen the approved version does not have, in the ${t.portal_label}, and capture it; ${c.reused ? "this continues your open capture of " + t.form : "a second person approves it"}.` });
     } catch (e) { onError(e); } finally { setBusy(false); }
   };
   const finish = async () => { if (!cap) return; setBusy(true); try { setCap(await call<Capture>("POST", `/captures/${cap.id}/finish`)); setNote(null); } catch (e) { onError(e); } finally { setBusy(false); } };
@@ -283,8 +296,8 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
     <form onSubmit={start} className="space-y-3">
       {tasks?.length ? <section aria-label="Screens to capture again" className="space-y-2">
         <p className="text-sm font-semibold">Screens to capture again</p>
-        {tasks.map((t) => <div key={t.id} className="space-y-1"><Button type="button" onClick={() => void again(t)} disabled={busy} className="w-full">{`Capture ${t.screen} again · ${t.form}`}</Button>
-          <p className="text-xs text-text-muted">{`${t.portal_label}: ${t.kind === "changed" ? `${t.differences.length} question${t.differences.length === 1 ? "" : "s"} changed` : "a question the version does not have"}${t.times > 1 ? ` · seen ${t.times} times` : ""}`}</p></div>)}
+        {tasks.map((t) => <div key={t.id} className="space-y-1"><Button type="button" onClick={() => void again(t)} disabled={busy} className="w-full">{t.kind === "changed" ? `Capture ${t.screen} again · ${t.form}` : `Capture the new screen · ${t.form}`}</Button>
+          <p className="text-xs text-text-muted">{`${t.portal_label}: ${t.kind === "changed" ? `${t.differences.length} question${t.differences.length === 1 ? "" : "s"} changed` : "a screen the approved version does not have"}${t.times > 1 ? ` · seen ${t.times} times` : ""}`}</p></div>)}
       </section> : null}
       {open?.length ? <section aria-label="Captures to continue" className="space-y-2">
         <p className="text-sm font-semibold">Continue a capture</p>
@@ -320,13 +333,14 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
           : <Button primary onClick={send} disabled={busy} className="w-full">Send this screen</Button>}
       </section>}
       {done && cap.summary && <section aria-label="Capture summary" className="space-y-2 rounded-md border border-border bg-surface-raised p-2 text-sm">
-        <p className="font-semibold">{`${cap.summary.screens} screen${cap.summary.screens === 1 ? "" : "s"} · ${cap.summary.questions} question${cap.summary.questions === 1 ? "" : "s"}`}</p>
+        <p className="font-semibold">{`${cap.summary.screens} screen${cap.summary.screens === 1 ? "" : "s"} captured · ${cap.summary.questions} question${cap.summary.questions === 1 ? "" : "s"}`}{cap.summary.version_screens > cap.summary.screens ? ` (the version holds ${cap.summary.version_screens} screens)` : ""}</p>
         {cap.status === "HELD" && <p>A second person approves it in the Studio before anything uses it.</p>}
         {cap.summary.pdf_sections_not_seen.length
-          ? <div><p className="font-medium">PDF sections not seen on any captured screen yet ({cap.summary.pdf_edition}):</p>
-              <ul className="list-disc pl-5">{cap.summary.pdf_sections_not_seen.map((x) => <li key={x.group}>{x.label} ({x.questions})</li>)}</ul>
-              <p className="text-xs text-text-muted">Each is a screen that appears only after some answers, or a question asked differently online. Capture it later, or mark it asked differently on the screen map.</p></div>
-          : cap.summary.pdf_edition ? <p>Every section of {cap.summary.pdf_edition} is asked on a captured screen.</p> : null}
+          ? <div><p className="font-medium">PDF form fields no captured question matches yet ({cap.summary.pdf_edition}):</p>
+              <ul className="list-disc pl-5">{cap.summary.pdf_sections_not_seen.map((x) => <li key={x.group}>{x.questions === x.total ? `${x.label}: none of its ${x.total} form field${x.total === 1 ? "" : "s"}` : `${x.label}: ${x.questions} of ${x.total} form fields`}</li>)}</ul>
+              {cap.summary.unmatched_questions > 0 && <p className="text-xs">{`${cap.summary.unmatched_questions} question${cap.summary.unmatched_questions === 1 ? "" : "s"} on the captured screens ${cap.summary.unmatched_questions === 1 ? "is" : "are"} not matched yet: a person maps ${cap.summary.unmatched_questions === 1 ? "it" : "them"} on the screen map after approval, which can cover these form fields.`}</p>}
+              <p className="text-xs text-text-muted">The rest belong to a screen that appears only after some answers, or a question the portal asks differently. Capture that screen later, or mark the section asked differently on the screen map.</p></div>
+          : cap.summary.pdf_edition ? <p>Every form field of {cap.summary.pdf_edition} matches a captured question.</p> : null}
         <a className="text-text-link underline" href={`${API}/review/capture/${cap.id}`} target="_blank" rel="noreferrer">Open it in the Studio</a>
       </section>}
       {!done && !check && <Pinned><Button primary onClick={read} disabled={busy} className="w-full">Capture this screen</Button></Pinned>}

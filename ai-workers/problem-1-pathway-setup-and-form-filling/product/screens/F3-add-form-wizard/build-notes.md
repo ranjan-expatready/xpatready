@@ -7,7 +7,9 @@ Built after the Lead agreed the plan (Q1–Q4) and merged Pass A + B. Backend pa
 | 1 · F3a-0: section groups, Sample labels, coverage, `isScreenInput` | 8f4ea2c | `check_forms_f3a0.ts` 15/15 (pure) |
 | 2 · F3a-1c: second-draft guard | 6f671d1 | `check_forms_f3a1c.ts` 20/20 |
 | 3 · F3c-1 without X4: one open capture, Studio start, X1, X3, X5, X6 | eb5c78d | `check_forms_f3c.ts` 26/26 |
-| 4 · F3c-2: X8, X9, X10, X12 | this stage | `check_forms_f3c2.ts` 17/17 |
+| 4 · F3c-2: X8, X9, X10, X12 | f9e748d | `check_forms_f3c2.ts` 17/17 |
+| PR #35 review fix: our manifest AND nothing but build files | 715c639 | `check_forms_apr.ts` 50/50 |
+| Fixes after CHECK (below) | this stage | f3a0 17/17, f3a1c 27/27, f3c 31/31, f3c2 20/20, f2c_fill 20/20 |
 | PR #34 review fix: the build empties a folder only when it holds this extension's manifest | 2ee3642 | `check_forms_apr.ts` 49/49 |
 
 ## Slice 1 (D1 grain and key)
@@ -35,6 +37,27 @@ Built after the Lead agreed the plan (Q1–Q4) and merged Pass A + B. Backend pa
 * X9: fill results in three groups (Filled · Confirm in the case first · You answer on screen), each with its source. An answer to give or confirm links to the case (`/cases/:id`). **Gap for the runtime lane:** the case page has no address for one section, so the link opens the case and the words name the section.
 * X10: the content script outlines each input it wrote (no ExpatReady text in the page) and keeps the last fill's inputs in that page's memory only. "Undo this fill" clears the ones still holding what it wrote and keeps any a person changed. A new page starts with nothing to undo, and the panel drops Undo when the tab moves.
 * X12: "Connected until 18:40" (local time) in the panel footer, from the session's own end.
+
+## Fixes after CHECK (26 Oct; review.md: Ship after fixes, journey 8.5/10, 0 Must, 1 Major, 6 Minor; break-report.md: 0 Blocker, 5 Major, 9 Minor)
+Each fix has a test that fails without it.
+* **Review Major 1 + break M5 · the finish summary called partly seen sections "not seen".** `screenCoverage` now gives each section's `total` and lists only sections with a form field no captured question matches. The panel says "PDF form fields no captured question matches yet: Marital status and spouse: x of y form fields", or "none of its y". It counts the questions on the captured screens that nothing matches yet ("a person maps them on the screen map after approval"), so a captured spouse screen whose questions are not mapped yet is explained rather than called "not seen". Checks: f3a0, f3c.
+* **Break M1 · Undo on a screen swapped in place.** Undo sends the screen it filled; the content script compares it with the page (`sameScreen`) and clears nothing when another screen is shown, and the panel says so and drops Undo. Check: f3c2.
+* **Break M2 · two open captures through a held one.** A capture held for the second person counts as the open one: a new start returns it (200, reused, "held for a second person"), so a later return never leaves two. Check: f3c.
+* **Break M3 + review Minor 1 · a start from another combination.** A capture started in the panel with no combination takes the Studio start's. A start from another combination continues the first one, and the Studio now says whose ("Already started in the extension for Visitor visa … one capture per form and portal serves every combination once approved"). Check: f3c (API).
+* **Break M4 · the guard bypassed by a newer failed or stub step.** A source's draft is its newest field-map step that is **not a stub pass and did not fail or stop**. A newer failed draft, a failed "add from the library" or a stub pass no longer hides a draft waiting with proposals; a newer applied draft still supersedes it. This replaces the slice-2 "newest step" rule (plan D4 said "newest"; the breaker showed it lets a second paid draft through). Check: f3a1c.
+* **Break m1 · deadlock (HTTP 500) on two launches of the same files in opposite order.** Every file's lock is taken first, in one order; the loser gets a 409 in words. Check: f3a1c (three rounds, Visitor visa and Super visa).
+* **Review Minor 5 · the guard's queries per source.** One set of queries per plan (`mappingIndex`), shared with the launch's re-check.
+* **Break m2 · "ABC 123" and "ABC123".** One capture: the form compares as the library compares codes. Check: f3c.
+* **Break m3 · a heading of symbols only.** The panel keeps such a heading's own text as its identity, so "—" and "•••" are two screens.
+* **Break m5 · the page's own outline, and an unticked box.** The outline the page had is put back after Undo; "not ticked" on a box already not ticked is "left alone", never "filled". Checks: f3c2, f2c_fill (also Undo on radios, selects and checkboxes).
+* **Break m6 · element ids through the capture-token task list.** Each change is the approved question's words and what changed; a screen the version lacks is counted, not listed. Check: f3c2.
+* **Break m7 · "Capture A screen that is not in the approved version again".** Now "Capture the new screen · IMM 5257".
+* **Break m8 · element ids and formats.** `screenProblems` checks each input's element id (`idLooksLikeClientDetail`) and its format pattern like its texts; a passport-like id or an email in a pattern is refused (422) and nothing kept. Check: f3c.
+* **Break m9 · the PDF edition chosen by label text.** `screenMapContext` orders PDF editions with `compareEditions`.
+* **Review Minor 2 · "Capture <screen> again" into a capture that already holds it.** The panel says to remove that screen first, then capture it again.
+* **Review Minor 3 · the Studio footer at 1024 px and 200 % zoom.** Its three buttons wrap.
+* **Review Minor 4 · counts after a one-screen re-capture.** The summary counts this capture's own screens and questions and says how many the version holds.
+* **Kept, with reasons:** review Minor 6 (`elsewhere.job_href` is not shown yet: the rail, F3b, links it); break m4 (the "New screen" prompt can go stale when the portal changes a screen in place; it only names a screen, and "Capture this screen" always reads the page as it is now). Break M3's other half: the reused capture is listed under the combination it was started for, not under every combination (the approved online version belongs to the library and serves them all).
 
 ## Not in this stage
 * Slices 5–8 (`engine/queue.ts`, `?form=`, `Problem.forms`, D7 warning, `formProgress`, the asked-differently routes, X4 live coverage) wait for the runtime lane's Screen 03 merge and the screens lane's agreement on `review-queue.ts` (Lead response Q3).

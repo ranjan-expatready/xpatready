@@ -6,11 +6,12 @@
 import { filledElements, fillScreen, sameScreen, undoFill, type PlanInput, type Written } from "./filler.ts";
 import { readScreen, type ReadScreen } from "./reader.ts";
 
-type Msg = { kind: "ping" } | { kind: "read" } | { kind: "fill"; inputs: PlanInput[]; expect: ReadScreen } | { kind: "undo" };
+type Msg = { kind: "ping" } | { kind: "read" } | { kind: "fill"; inputs: PlanInput[]; expect: ReadScreen } | { kind: "undo"; expect: ReadScreen };
 const MARK = "xr-not-accepted", FILLED = "xr-filled";
 /** F3 X10: what the last fill wrote on this page, in this page's memory only (a new page starts with nothing to undo). */
 let written: Written[] = [];
-const unmark = () => { for (const el of Array.from(document.querySelectorAll(`[data-${FILLED}]`))) { (el as HTMLElement).style.outline = ""; el.removeAttribute(`data-${FILLED}`); } };
+// The page's own outline is kept and put back (break m5).
+const unmark = () => { for (const el of Array.from(document.querySelectorAll(`[data-${FILLED}]`))) { (el as HTMLElement).style.outline = el.getAttribute(`data-${FILLED}`) === "-" ? "" : el.getAttribute(`data-${FILLED}`)!; el.removeAttribute(`data-${FILLED}`); } };
 
 chrome.runtime.onMessage.addListener((msg: Msg, sender, reply) => {
   if (sender.id !== chrome.runtime.id || sender.tab) return false; // only this extension's own pages
@@ -25,7 +26,7 @@ chrome.runtime.onMessage.addListener((msg: Msg, sender, reply) => {
     // F3 X10: each value written is outlined on the page (no ExpatReady text in the page) and remembered for Undo.
     unmark();
     written = out.filter((o) => o.outcome === "filled").map((o) => { const p = msg.inputs.find((x) => x.id === o.id)!; return { id: p.id, type: p.type, value: p.value! }; });
-    for (const el of filledElements(document, written)) { el.style.outline = "2px solid #1f6feb"; el.setAttribute(`data-${FILLED}`, "1"); }
+    for (const el of filledElements(document, written)) { el.setAttribute(`data-${FILLED}`, el.style.outline || "-"); el.style.outline = "2px solid #1f6feb"; }
     // "Not accepted by the screen" is shown on the page too, beside the panel's list (BR-11).
     for (const o of out.filter((x) => x.outcome === "not_accepted")) {
       const el = document.getElementById(o.id) ?? document.querySelector(`[name="${CSS.escape(o.id)}"]`);
@@ -33,6 +34,8 @@ chrome.runtime.onMessage.addListener((msg: Msg, sender, reply) => {
     }
     reply(out);
   } else if (msg.kind === "undo") {
+    // Break M1: a screen swapped in place (same ids, no new page) is another screen: nothing is cleared.
+    if (!written.length || !sameScreen(document, msg.expect)) { reply({ moved: true }); return false; }
     const r = undoFill(document, written);
     unmark(); written = [];
     reply(r);

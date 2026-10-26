@@ -53,13 +53,21 @@ const planOf = async (attachmentId: string, mode = "STUB", draftAgain = false) =
   t = await planOf(aS);
   ok("C3.1: BR-6 applied and in the library: the Super visa is offered \"Add from library\" (no AI call, US$0)", t.action === "reuse_library" && t.worst_usd === 0, t);
   sql(`delete from form_field_map where data_path='f3a1c.check'`);
-  // Stub passes and superseded drafts never block.
+  // Break M4: a newer step that is no draft to review (a stub pass, a failed draft, a failed "add from the library")
+  // never hides the draft still waiting; a newer real draft that was applied does.
   sql(`update drafting_job set status='COMPLETED', started_at = now() - interval '1 hour' where id='${job}'`);
   sql(`update normalization_item set decision='PENDING' where job_id='${job}'`);
-  sql(`insert into drafting_job (id, workspace_id, combination_id, attachment_id, kind, mode, status, started_by, message) select gen_random_uuid(), workspace_id, combination_id, id, 'field_map', 'STUB', 'COMPLETED', 'user-A', 'F3a-1c check (stub, newer)' from source_attachment where id='${aV}'`);
+  const newer = (kind: string, mode: string, status: string) => sql(`insert into drafting_job (id, workspace_id, combination_id, attachment_id, kind, mode, status, started_by, message) select gen_random_uuid(), workspace_id, combination_id, id, '${kind}', '${mode}', '${status}', 'user-A', 'F3a-1c check (newer step)' from source_attachment where id='${aV}' returning id`).split("\n")[0];
+  for (const [kind, mode, status, what] of [["field_map", "STUB", "COMPLETED", "a newer stub pass"], ["field_map", "REPLAY", "FAILED", "a newer failed draft"], ["reuse_map", "LOCAL", "FAILED", "a newer failed \"add from the library\""]] as const) {
+    const id = newer(kind, mode, status);
+    t = await planOf(aS);
+    ok(`C3.1: D4 break M4 fail case: ${what} never hides the draft waiting with 12 proposals: still skipped`, t.action === "skip" && /12 proposals left/.test(t.why), t.why);
+    sql(`delete from drafting_job where id='${id}'`);
+  }
+  const applied = newer("field_map", "REPLAY", "APPLIED");
   t = await planOf(aS);
-  ok("C3.1: D4 an older draft superseded by a newer stub pass never blocks (the newest step counts, and a stub pass is not a draft to review)", t.action === "draft" && !t.elsewhere, t);
-  sql(`delete from drafting_job where attachment_id='${aV}' and mode='STUB'`);
+  ok("C3.1: D4 an older draft superseded by a newer real draft that was added to the draft no longer blocks", t.action !== "skip" && !t.elsewhere, t);
+  sql(`delete from drafting_job where id='${applied}'`);
   ok("setup: the older draft is the newest again: skipped", (await planOf(aS)).action === "skip");
   // Keyed by checksum: a byte-different file is its own file.
   const sha = sql(`select sha256 from source_attachment where id='${aV}'`);
@@ -91,6 +99,25 @@ const planOf = async (attachmentId: string, mode = "STUB", draftAgain = false) =
   const otherSide = queuedFor === v5707 ? s5707 : v5707;
   r = await call("POST", `/attachments/${otherSide}/draft`, { mode: "replay" });
   ok("C3.1: D4 while that draft is queued, a later draft of the same file in the other visa is refused (409, in words)", r.status === 409 && /Being mapped in (Visitor|Super) visa: the AI draft is queued/.test(r.body.message), r.body.message);
+  // Break m1: two launches of the same two files in opposite order at the same moment take their locks in one order:
+  // one is queued, the other refused in words (409), never a 500 from a deadlock.
+  sql(`delete from drafting_job where kind='field_map' and attachment_id in ('${v5707}','${s5707}')`);
+  // The Visitor visa and the Super visa attach the same IMM 5257 and IMM 5707; the Super visa's IMM 5707 is made its
+  // first source here, so its plan names the two files in the other order.
+  sql(`update source_attachment set created_at = created_at - interval '1 day' where id='${s5707}'`);
+  const ids = (label: string) => sql(`select id from combination where label='${label}'`);
+  const scopeA = { kind: "combinations", ids: [ids("Visitor visa")] }, scopeB = { kind: "combinations", ids: [ids("Super visa")] };
+  for (let round = 0; round < 3; round++) {
+    sql(`delete from drafting_job where kind='field_map' and mode <> 'STUB' and attachment_id in (select a.id from source_attachment a where a.edition like 'IMM 5707 (%' or a.edition like 'IMM 5257 (%')`);
+    const [pA, pB] = await Promise.all([call("POST", "/ai/plan", { scope: scopeA, mode: "REPLAY" }), call("POST", "/ai/plan", { scope: scopeB, mode: "REPLAY" })]);
+    const order = (pl: Res) => (pl.body.targets as { action: string; source: string }[]).filter((x) => x.action === "reuse_saved_output").map((x) => x.source.split(" (")[0]);
+    if (round === 0) ok("setup: the two plans name IMM 5257 and IMM 5707 in opposite order", order(pA).join() === "IMM 5257,IMM 5707" && order(pB).join() === "IMM 5707,IMM 5257", [order(pA), order(pB)]);
+    const two = await Promise.all([
+      call("POST", "/ai/batches", { scope: scopeA, mode: "REPLAY", idempotencyKey: `f3a1c-a${round}-${Date.now()}`, planSha256: pA.body.plan_sha256 }),
+      call("POST", "/ai/batches", { scope: scopeB, mode: "REPLAY", idempotencyKey: `f3a1c-b${round}-${Date.now()}`, planSha256: pB.body.plan_sha256 }),
+    ]);
+    ok(`C3.1: D4 break m1 fail case (round ${round + 1}): two launches of the same files in opposite order: one queued, the other 409 in words, never a 500`, two.some((x) => x.status < 300) && two.every((x) => x.status < 300 || (x.status === 409 && /Being mapped in/.test(x.body.message))), two.map((x) => [x.status, x.body?.message?.slice(0, 80)]));
+  }
   ok("C3.1: D4 no model call was made: no drafting step of IMM 5257 or IMM 5707 is live (US$0)", sql(`select count(*) from drafting_job where mode='LIVE' and attachment_id in ('${aV}','${aS}','${v5707}','${s5707}')`) === "0");
 
   console.log(`\n${pass}/${pass + fail} passed`);
