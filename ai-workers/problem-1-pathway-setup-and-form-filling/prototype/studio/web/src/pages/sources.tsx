@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { FileUp, FolderOpen, Play, Recycle, ScanLine, Sparkles } from "lucide-react";
 import { api, useAction, useActorId, useApi, useToast } from "@/lib/api";
 import { DraftingSources } from "@/components/channels";
-import { Button, Dialog, Field, Notice, Pill, Select, Table } from "@/components/ui/controls";
+import { Button, Dialog, Field, Input, Notice, Pill, Select, Table } from "@/components/ui/controls";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ModePill, StatusPill } from "@/pages/combination";
 import { useQueryClient } from "@tanstack/react-query";
@@ -88,6 +88,11 @@ function SampleDialog({ id, onClose, attached }: { id: string; onClose: () => vo
   const lib = useApi<any[]>(["official"], "/official-library");
   const toast = useToast();
   const [busy, setBusy] = React.useState<string | null>(null);
+  // Scout SC-3: a kind filter and a search by code or title; the internal approval record ids (D229, D257) are not shown,
+  // since every file listed here is on the approved official list (by checksum) and that is what a person needs to know.
+  const [kind, setKind] = React.useState(""), [find, setFind] = React.useState("");
+  const kinds = [...new Set((lib.data ?? []).map((f: any) => f.kind as string))].sort();
+  const shown = (lib.data ?? []).filter((f: any) => (!kind || f.kind === kind) && (!find.trim() || `${f.edition} ${f.file}`.toLowerCase().includes(find.trim().toLowerCase())));
   const attach = async (f: any) => {
     setBusy(f.file);
     try { const r = await api(`/combinations/${id}/attachments/sample`, { method: "POST", json: { officialFile: f.file } }); toast.push({ tone: ["held", "new_edition_held", "older_edition_held", "refused", "failed"].includes(r.outcome) ? "danger" : "ok", text: `${f.edition}: ${r.message}` }); }
@@ -96,8 +101,14 @@ function SampleDialog({ id, onClose, attached }: { id: string; onClose: () => vo
   };
   return (
     <Dialog wide open onOpenChange={(o) => !o && onClose()} title="Attach a sample file" description="Stands in for choosing a file from your computer: the file goes through the same upload, recognition and status handling." footer={<Button onClick={onClose}>Done</Button>}>
-      <Table dense head={["Official file", "Kind", "Approved", ""]}>
-        {(lib.data ?? []).map((f: any) => <tr key={f.file}><td><p className="font-medium">{f.edition}</p><p className="text-xs text-text-muted">{f.combination}</p></td><td className="text-xs">{f.kind}</td><td className="text-xs">{f.approval}</td><td>{attached.includes(f.sha256) ? <Pill tone="ok">Attached</Pill> : <Button size="sm" variant="secondary" busy={busy === f.file} onClick={() => attach(f)}>Attach</Button>}</td></tr>)}
+      <p className="mb-3 text-sm text-text-muted">Every file here is on the approved official source list: its checksum matches the copy taken from the IRCC page.</p>
+      <div className="mb-3 flex flex-wrap items-end gap-3">
+        <Field label="Kind" className="w-48"><Select aria-label="Kind" value={kind} onChange={(e) => setKind(e.target.value)}><option value="">All kinds</option>{kinds.map((k) => <option key={k} value={k}>{k}</option>)}</Select></Field>
+        <Field label="Find" className="min-w-48 flex-1"><Input aria-label="Find a form code or title" type="search" placeholder="IMM 5257" value={find} onChange={(e) => setFind(e.target.value)} /></Field>
+      </div>
+      {!shown.length && lib.data ? <p className="text-sm text-text-muted">No official file matches: clear the filter.</p> : null}
+      <Table dense head={["Official file", "Kind", ""]}>
+        {shown.map((f: any) => <tr key={f.file}><td><p className="font-medium">{f.edition}</p><p className="text-xs text-text-muted">{f.combination}</p></td><td className="text-xs">{f.kind}</td><td>{attached.includes(f.sha256) ? <Pill tone="ok">Attached</Pill> : <Button size="sm" variant="secondary" busy={busy === f.file} onClick={() => attach(f)}>Attach</Button>}</td></tr>)}
       </Table>
     </Dialog>
   );

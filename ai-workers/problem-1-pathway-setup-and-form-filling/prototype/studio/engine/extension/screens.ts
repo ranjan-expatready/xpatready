@@ -65,6 +65,8 @@ export { fingerprint };
 // ─── BR-1 on the server: the extension's screen is checked again with the readers' own rules (never trusted)
 const CLIENT = RULES.client_data.map((c) => [new RegExp(c.pattern), c.what] as const);
 const LABEL_ANSWER = new RegExp(RULES.label_answer.pattern);
+/** A text the readers' client-detail rules would refuse (an email address, a long number, a passport-like code). */
+export const looksLikeClientDetail = (t: string) => CLIENT.some(([rx]) => rx.test(t));
 /** Why a screen sent by the extension is refused as a whole (an empty list: it holds structure only). */
 export function screenProblems(s: { title: string; inputs: CaptureInput[] }): string[] {
   const out: string[] = [];

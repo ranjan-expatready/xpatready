@@ -11,6 +11,8 @@
 //     silently; it waits for the impact review (P-32, P-38; the review itself is Screen 02)
 //   the same code with an older edition → "older_edition_held": "Older edition: not used" (review #5)
 //   a code and edition that cannot be read, or the same edition printed on a different file → "held" for a person
+//   a French version (same code and edition as the English one, "IMM 5257 (09-2023) F") → "held": never taken for the
+//     English edition, never approved into the library as one (PDF hardening, 26 Oct)
 //   a readable form/checklist whose checksum is not on the approved source manifest → held before library, attachment,
 //     edition-impact review or AI use; source verification must come first
 //   not a PDF or a saved web page → "refused" before anything reads it
@@ -26,7 +28,7 @@ import { promisify } from "node:util";
 import { manifest } from "../../engine/import.ts";
 import { editionMonth, newestEdition } from "../../engine/programs.ts";
 import { ACTORS, Audit, Db, fail, need, OFFICIAL, PY, ROOT, STUDIO, VAR, Workspace, type Actor } from "./core.ts";
-import { Sources } from "./sources.ts";
+import { recordApproval, Sources } from "./sources.ts";
 
 const run = promisify(execFile);
 const sha = (b: Buffer) => createHash("sha256").update(b).digest("hex");
@@ -38,6 +40,7 @@ export type IntakeResult = {
   /** Set when the file was attached to the combination it was uploaded on. */
   attachmentId?: string; attachmentStatus?: string;
 };
+const FRENCH = "French-language version of an English edition";
 const KIND_WORD: Record<string, string> = { form: "form", checklist: "document checklist", guide: "guide", portal_screen: "saved portal screen", unknown: "file" };
 
 @Injectable()
@@ -119,21 +122,27 @@ export class Intake {
     // Break m5: what is approved is the page the second person saw, not one changed after they opened it.
     if (body?.irccPage !== undefined && body.irccPage !== h.irccPage) fail("The IRCC page changed after you opened this file. Look at it again, then approve.", HttpStatus.CONFLICT);
     // Break M4: only a file whose form code and edition were read from it becomes an official source.
+    if (h.reason === FRENCH) fail("This is a French version: it has the English edition's code and edition, so it cannot become that edition's source. Reject it, or upload the English PDF.", HttpStatus.CONFLICT);
     if (!h.code || !h.editionLabel || !["form", "checklist"].includes(h.kind)) fail("Its form code and edition could not be read from the file, so it cannot become an official source. Reject it and upload the official PDF.", HttpStatus.CONFLICT);
     // The claim and the approved list change together (break M4: a refused second write left the row decided).
-    await this.db.$transaction(async (tx) => {
+    const bytes = h.storedPath ? readFileSync(h.storedPath.startsWith("/") ? h.storedPath : join(ROOT, h.storedPath)) : null;
+    if (bytes && sha(bytes) !== h.sha256) fail("The held file is no longer stored as it was uploaded. Reject it and upload the official PDF again.", HttpStatus.CONFLICT);
+    const row = await this.db.$transaction(async (tx) => {
       const claimed = await tx.intakeItem.updateMany({ where: { id, status: "HELD" }, data: { status: "DONE", reason: `Approved as a source by ${actor.name}` } });
       if (!claimed.count) fail("Someone decided this file at the same moment. Refresh to see it.", HttpStatus.CONFLICT);
       if (await tx.approvedSource.findUnique({ where: { workspaceId_sha256: { workspaceId: h.workspaceId, sha256: h.sha256 } } })) fail("This file is already on the approved list.", HttpStatus.CONFLICT);
-      await tx.approvedSource.create({ data: { workspaceId: h.workspaceId, sha256: h.sha256, kind: h.kind, code: h.code, edition: h.editionLabel, fileName: h.fileName, irccPage: h.irccPage!, intakeItemId: h.id, uploadedBy: h.createdBy, approvedBy: actor.id } });
+      return tx.approvedSource.create({ data: { workspaceId: h.workspaceId, sha256: h.sha256, kind: h.kind, code: h.code, edition: h.editionLabel, fileName: h.fileName, irccPage: h.irccPage!, intakeItemId: h.id, uploadedBy: h.createdBy, approvedBy: actor.id } });
     });
+    // The drafting guard cannot see the database: the approval and the approved bytes go where it checks them (P-80). A
+    // file held without its bytes (already in the library) gets them when it is read from an attachment (sources.ts).
+    if (bytes) recordApproval(row, bytes);
     await this.audit.log(h.workspaceId, actor.id, "approved", "held file", h.code ?? h.fileName, `${actor.name} approved ${h.editionLabel ?? h.fileName} as a source (IRCC page ${h.irccPage}); uploaded by ${ACTORS.find((x) => x.id === h.createdBy)?.name ?? "a person"}`, { sha256: h.sha256 }, h.combinationId ?? undefined);
     // The file goes through the one intake again, for the uploader, now that it is approved.
     const uploader = ACTORS.find((x) => x.id === h.createdBy);
     let result: IntakeResult | null = null;
-    if (uploader && h.storedPath) {
+    if (uploader && bytes) {
       const combination = h.combinationId ? await this.db.combination.findUnique({ where: { id: h.combinationId } }) : null;
-      try { result = await this.oneSafely(uploader, h.workspaceId, { originalname: h.fileName, buffer: readFileSync(h.storedPath.startsWith("/") ? h.storedPath : join(ROOT, h.storedPath)) }, combination, "MANUAL"); } catch { result = null; }
+      try { result = await this.oneSafely(uploader, h.workspaceId, { originalname: h.fileName, buffer: bytes }, combination, "MANUAL"); } catch { result = null; }
     }
     return { outcome: "approved", result };
   }
@@ -218,6 +227,12 @@ export class Intake {
       const what = id.code ? `the edition of ${id.code}` : "the form code and edition";
       const r: IntakeResult = { file: name, outcome: "held", ...read, message: `Held for a person: we could not read ${what} from this file (${why}). Nothing was added or attached.` };
       await this.record(actor, workspaceId, combination?.id ?? null, name, stored, hash, file.buffer.length, r, "HELD", `We could not read ${what} from this file`);
+      return r;
+    }
+    // A French version prints the English edition's code and edition: held, so it is never filed as the English edition.
+    if (id.language === "fr" && (read.kind === "form" || read.kind === "checklist")) {
+      const r: IntakeResult = { file: name, outcome: "held", ...read, message: `Held for a person: this is the French version of ${read.edition}. The library keeps each form's English edition, so it was not added to the library, attached or sent to AI.` };
+      await this.record(actor, workspaceId, combination?.id ?? null, name, stored, hash, file.buffer.length, r, "HELD", FRENCH);
       return r;
     }
     // Readable form identity is not proof of an official source. Hold before library creation,

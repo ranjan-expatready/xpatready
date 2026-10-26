@@ -20,6 +20,9 @@ type Plan = { match: true; screen: string; inputs: (PlanInput & { why: string })
 type Capture = { id: string; revision: number; status: string; status_detail: string; form: string; screens: { order: number; title: string; questions: number }[] };
 const CLIENT = RULES.client_data.map((c) => [new RegExp(c.pattern), c.what] as const);
 const PLAN_MINUTES = 5; // Sample (BR-13)
+/** The portals as contracts/forms.ts lists them (kept here so the panel does not bundle the request contracts); P-98:
+ *  the APR Portal first and chosen. */
+const PORTALS = [["apr_portal", "APR Portal (Authorized Paid Representatives)"], ["ircc_portal", "IRCC Portal"], ["rep_pr_portal", "Representative Permanent Residence Portal"], ["lmia_online", "LMIA Online"]] as const;
 
 // ─── the portal tab: the active tab of the window the person works in, else the portal tab they used last
 async function portalTab(): Promise<chrome.tabs.Tab | null> {
@@ -176,18 +179,18 @@ function FillMode({ onError, clearError }: { onError: (e: unknown) => void; clea
 
 // ─── capture mode
 function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; clearError: () => void }) {
-  const [cap, setCap] = React.useState<Capture | null>(null), [meta, setMeta] = React.useState({ portal: "ircc_portal", form: "", title: "", applicationType: "" });
-  const [check, setCheck] = React.useState<{ screen: ReadScreen; texts: { text: string; what: string | null }[] } | null>(null), [note, setNote] = React.useState<{ tone: "ok" | "warn" | "danger"; text: string } | null>(null), [busy, setBusy] = React.useState(false);
+  const [cap, setCap] = React.useState<Capture | null>(null), [meta, setMeta] = React.useState({ portal: PORTALS[0][0] as string, form: "", title: "", applicationType: "" });
+  const [check, setCheck] = React.useState<{ screen: ReadScreen; tabId: number; texts: { text: string; what: string | null }[] } | null>(null), [note, setNote] = React.useState<{ tone: "ok" | "warn" | "danger"; text: string } | null>(null), [busy, setBusy] = React.useState(false);
   const start = async (e: React.FormEvent) => { e.preventDefault(); setBusy(true); clearError(); try { setCap(await call<Capture>("POST", "/captures", { portal: meta.portal, form: meta.form, title: meta.title, ...(meta.applicationType ? { applicationType: meta.applicationType } : {}) })); } catch (err) { onError(err); } finally { setBusy(false); } };
   // BR-3: every text the screen would send is listed first; a text that looks like a client's detail refuses the screen.
   const read = async () => {
     setBusy(true); clearError(); setNote(null);
     try {
-      const { answer: r } = await ask<ReaderResult>({ kind: "read" });
+      const { tabId, answer: r } = await ask<ReaderResult>({ kind: "read" });
       if (!r.ok) { setCheck(null); setNote({ tone: "danger", text: "refused" in r ? `Refused: ${r.refused[0].why}. Nothing was sent.` : `Not read: ${r.error}. Nothing was sent.` }); return; }
       const s = r.screens[0];
       const texts = [s.title, ...s.inputs.flatMap((i) => [i.label, i.group, i.help, ...(i.options ?? []).map((o) => o.label)])].filter((t): t is string => !!t);
-      setCheck({ screen: s, texts: [...new Set(texts)].map((text) => ({ text, what: CLIENT.find(([rx]) => rx.test(text))?.[1] ?? null })) });
+      setCheck({ screen: s, tabId, texts: [...new Set(texts)].map((text) => ({ text, what: CLIENT.find(([rx]) => rx.test(text))?.[1] ?? null })) });
     } catch (e) { onError(e); } finally { setBusy(false); }
   };
   const send = async () => {
@@ -197,6 +200,17 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
       setCap(r.capture); setCheck(null); setNote({ tone: r.result.outcome === "added" ? "ok" : "warn", text: r.result.outcome === "added" ? r.result.message : r.result.message });
     } catch (e) { onError(e); } finally { setBusy(false); }
   };
+  // PR #27: the list checked is the screen that was read; when the portal tab moves on (Next, Back, a reload) it is
+  // dropped, so "Send this screen" can never send a screen that is no longer the one open.
+  React.useEffect(() => {
+    if (!check) return;
+    const moved = (id: number, info: { url?: string; status?: string }) => { if (id === check.tabId && (info.url || info.status === "loading")) { setCheck(null); setNote({ tone: "warn", text: "The portal moved to another screen: nothing was sent. Capture the screen that is open now." }); } };
+    const closed = (id: number) => { if (id === check.tabId) setCheck(null); };
+    chrome.tabs.onUpdated.addListener(moved); chrome.tabs.onRemoved.addListener(closed);
+    return () => { chrome.tabs.onUpdated.removeListener(moved); chrome.tabs.onRemoved.removeListener(closed); };
+  }, [check]);
+  // PR #27: a capture the second person returned goes on here: remove the screens that are wrong, capture them again, finish.
+  const remove = async (order: number) => { if (!cap) return; setBusy(true); clearError(); try { setCap(await call<Capture>("DELETE", `/captures/${cap.id}/screens/${order}`)); setNote({ tone: "ok", text: `Screen ${order} removed: capture it again in the portal.` }); } catch (e) { onError(e); } finally { setBusy(false); } };
   // Review Major 1: a capture left open (the panel was closed or reloaded) is offered again, never lost.
   const [open, setOpen] = React.useState<Capture[] | null>(null);
   React.useEffect(() => { if (!cap) void call<Capture[]>("GET", "/captures").then(setOpen).catch(onError); }, [cap]);
@@ -205,22 +219,22 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
     <form onSubmit={start} className="space-y-3">
       {open?.length ? <section aria-label="Captures to continue" className="space-y-2">
         <p className="text-sm font-semibold">Continue a capture</p>
-        {open.map((o) => <Button key={o.id} type="button" onClick={() => { void call<Capture>("GET", `/captures/${o.id}`).then((fresh) => { setCap(fresh); setNote(null); }).catch(onError); }} className="w-full">{`Continue ${o.form} · ${o.screens.length} screen${o.screens.length === 1 ? "" : "s"} so far`}</Button>)}
+        {open.map((o) => <Button key={o.id} type="button" onClick={() => { void call<Capture>("GET", `/captures/${o.id}`).then((fresh) => { setCap(fresh); setNote(null); }).catch(onError); }} className="w-full">{o.status === "RETURNED" ? `Returned to you: ${o.form} · ${o.screens.length} screen${o.screens.length === 1 ? "" : "s"}` : `Continue ${o.form} · ${o.screens.length} screen${o.screens.length === 1 ? "" : "s"} so far`}</Button>)}
         <p className="pt-2 text-sm font-semibold">Or start a new capture</p>
       </section> : null}
       <Note>Capture records each portal screen's structure in portal order, never an answer. A second person approves it before anything uses it.</Note>
-      <Field label="Portal"><select className={input} value={meta.portal} onChange={(e) => setMeta({ ...meta, portal: e.target.value })}><option value="ircc_portal">IRCC Portal</option><option value="apr_portal">Authorized Paid Representatives Portal</option><option value="rep_pr_portal">Representative Permanent Residence Portal</option><option value="lmia_online">LMIA Online</option></select></Field>
+      <Field label="Portal"><select className={input} value={meta.portal} onChange={(e) => setMeta({ ...meta, portal: e.target.value })}>{PORTALS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></Field>
       <Field label="Form code"><input className={input} value={meta.form} onChange={(e) => setMeta({ ...meta, form: e.target.value })} placeholder="IMM 5257" /></Field>
       <Field label="Title as the portal shows it"><input className={input} value={meta.title} onChange={(e) => setMeta({ ...meta, title: e.target.value })} /></Field>
       <Field label="Application type (optional)"><input className={input} value={meta.applicationType} onChange={(e) => setMeta({ ...meta, applicationType: e.target.value })} /></Field>
       <Button primary type="submit" disabled={busy || meta.form.trim().length < 2 || meta.title.trim().length < 3} className="w-full">Start capture</Button>
     </form>
   );
-  const done = cap.status !== "OPEN";
+  const done = !["OPEN", "RETURNED"].includes(cap.status), returned = cap.status === "RETURNED";
   return (
     <div className="space-y-3">
       {/* Review m2: once finished, the record holds the version's screens too (Q2), so the count is not "captured" any more. */}
-      <Note tone={done ? "ok" : "info"} title={done ? `${cap.form} · ${cap.status === "HELD" ? "held for a second person" : "already in the library"}` : `${cap.form} · ${cap.screens.length} screen${cap.screens.length === 1 ? "" : "s"} captured`}>{done ? cap.status_detail : "Go to each screen in portal order and capture it."}</Note>
+      <Note tone={done ? "ok" : returned ? "warn" : "info"} title={done ? `${cap.form} · ${cap.status === "HELD" ? "held for a second person" : cap.status === "APPROVED" ? "approved" : cap.status === "ABANDONED" ? "abandoned" : "already in the library"}` : returned ? `${cap.form} · returned to you` : `${cap.form} · ${cap.screens.length} screen${cap.screens.length === 1 ? "" : "s"} captured`}>{done || returned ? cap.status_detail : "Go to each screen in portal order and capture it."}</Note>
       {note && <Note tone={note.tone}>{note.text}</Note>}
       {check && <section aria-label="Check before sending" className="space-y-2 rounded-md border border-border bg-surface-raised p-2">
         <p className="text-sm font-semibold">Check before sending: these texts go to ExpatReady</p>
@@ -230,9 +244,11 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
           : <Button primary onClick={send} disabled={busy} className="w-full">Send this screen</Button>}
       </section>}
       {!done && !check && <Pinned><Button primary onClick={read} disabled={busy} className="w-full">Capture this screen</Button></Pinned>}
-      {!done && <Button onClick={finish} disabled={busy || !cap.screens.length} className="w-full">Finish capture</Button>}
+      {/* A returned capture is finished again only after a change (remove a wrong screen or capture one). */}
+      {!done && <Button onClick={finish} disabled={busy || !cap.screens.length || returned} className="w-full">Finish capture</Button>}
       {done && <Pinned><Button primary onClick={() => { setCap(null); setNote(null); }} className="w-full">Start another capture</Button></Pinned>}
-      {!done && cap.screens.length > 0 && <ol className="list-decimal pl-5 text-xs text-text-muted">{cap.screens.map((s) => <li key={s.order}>{s.title} · {s.questions} questions</li>)}</ol>}
+      {!done && cap.screens.length > 0 && <ol aria-label="Screens captured" className="list-decimal space-y-1 pl-5 text-xs text-text-muted">{cap.screens.map((s) => <li key={s.order}><span className="inline-flex w-full items-center gap-2"><span className="flex-1">{s.title} · {s.questions} questions</span>
+        <button type="button" onClick={() => void remove(s.order)} disabled={busy} aria-label={`Remove screen ${s.order}, ${s.title}`} className="inline-flex min-h-6 min-w-6 items-center px-1 text-text-link underline">Remove</button></span></li>)}</ol>}
     </div>
   );
 }

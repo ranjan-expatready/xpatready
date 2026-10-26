@@ -2,7 +2,7 @@
 // API before the browser extension fills a screen, on an isolated copy only (M4: the demo seed's channel is never
 // changed). Not under test here; each check tests its own part.
 //   setupVisitorVisa: the runtime lane's visitor-visa setup (released, IMM 5257 filed as a PDF)
-//   releaseOnline: IMM 5257 filed Online from an approved online version: screen map (no AI), the UCI marked "You answer
+//   releaseOnline: IMM 5257 filed Online, on that version's portal, from an approved online version: screen map (no AI), the UCI marked "You answer
 //     this on screen" by the immigration expert role (Q3, Sample), the sex option map, submit, sign-off, release
 //   openCase: a case on the newest release with the principal's identity facts entered and confirmed by the officer
 import { execFileSync } from "node:child_process";
@@ -19,7 +19,9 @@ export function setupVisitorVisa(port: number, db: string) {
 
 /** Files IMM 5257 Online with the approved online version `ed` and releases the visitor visa again. */
 export async function releaseOnline(call: Call, sql: (q: string) => string, vv: string, ed: string, opts: { unused?: string[]; note: string }) {
-  await call("PATCH", `/combinations/${vv}/portal`, { portal: "ircc_portal" });
+  // The combination files through the portal the approved online version was captured on (P-98: the APR Portal unless a
+  // check chose another).
+  await call("PATCH", `/combinations/${vv}/portal`, { portal: sql(`select portal_key from form_edition where id='${ed}'`) });
   await call("PATCH", `/combinations/${vv}/forms/IMM 5257/channel`, { channel: "ONLINE" });
   await call("POST", `/online-versions/${ed}/screen-map/draft`);
   await call("POST", `/online-versions/${ed}/screen-map/accept`, {}, "user-C");

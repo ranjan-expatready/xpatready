@@ -31,7 +31,7 @@ const placeholder = (label: string) => !label.replace(/^[ -]+|[ -]+$/g, "") || P
 export const searchForm = (a: Attrs) => a.role === "search" || `${a.class ?? ""} ${a.id ?? ""} ${a.name ?? ""}`.toLowerCase().split(/[\s_-]+/).includes("search");
 
 type Attrs = Record<string, string>;
-type El = { id: string; name: string | null; type: string; required: boolean; label: string | null; help?: string | null; order?: number; group?: string; part?: "YYYY" | "MM" | "DD"; max_length?: number; min_length?: number; pattern?: string; options?: Opt[]; _described?: string | null; _dom_id?: string | null; _placeholder?: string | null };
+type El = { id: string; name: string | null; type: string; required: boolean; label: string | null; help?: string | null; order?: number; group?: string; part?: "YYYY" | "MM" | "DD"; max_length?: number; min_length?: number; pattern?: string; options?: Opt[]; _described?: string | null; _labelled?: string | null; _dom_id?: string | null; _placeholder?: string | null };
 type Opt = { code: string; label: string | null; _dom_id?: string | null };
 type LabelEntry = { for: string | null; text: string[]; inputs: (El | Opt)[] };
 
@@ -73,7 +73,7 @@ class Screen {
       if (SKIP_TYPES.has(typ)) return;
       const ident = a.id || a.name;
       if (!ident) return; // not a question the extension could find again; an answer in it is never read
-      const el: El = { id: ident, name: a.name || null, type: TYPES.has(typ) ? typ : "text", required: "required" in a || a["aria-required"] === "true", label: clean(a["aria-label"]) || null, help: null, _described: a["aria-describedby"] ?? null, _dom_id: a.id ?? null };
+      const el: El = { id: ident, name: a.name || null, type: TYPES.has(typ) ? typ : "text", required: "required" in a || a["aria-required"] === "true", label: clean(a["aria-label"]) || null, help: null, _described: a["aria-describedby"] ?? null, _labelled: a["aria-labelledby"] ?? null, _dom_id: a.id ?? null };
       if (/^\d+$/.test(a.maxlength ?? "")) el.max_length = Number(a.maxlength);
       if (/^\d+$/.test(a.minlength ?? "")) el.min_length = Number(a.minlength);
       if (a.pattern) el.pattern = a.pattern;
@@ -128,6 +128,8 @@ class Screen {
 
   finish(): ReadScreen {
     for (const el of this.inputs) {
+      // aria-labelledby names the question first (as a browser does), from the text of the elements it points to.
+      if (el._labelled) { const named = el._labelled.split(/\s+/).filter(Boolean).map((i) => this.textById[i] ?? "").join(" ").trim(); if (named) el.label = named; }
       if (el.label == null && el._dom_id && el._dom_id in this.labelsFor) el.label = this.labelsFor[el._dom_id];
       for (const o of el.options ?? []) {
         if (o.label == null && o._dom_id && o._dom_id in this.labelsFor) o.label = this.labelsFor[o._dom_id];
@@ -140,7 +142,7 @@ class Screen {
       el.label = el.label.replace(REQUIRED_MARKS, "").trim();
       const part = PARTS[el.label.toLowerCase().replace(/^[ :]+|[ :]+$/g, "")];
       if (part && el.group) el.part = part;
-      delete el._described; delete el._dom_id; delete el._placeholder; delete (el as { name?: unknown }).name;
+      delete el._described; delete el._labelled; delete el._dom_id; delete el._placeholder; delete (el as { name?: unknown }).name;
       if (el.help == null) delete el.help;
     }
     const names = Object.fromEntries(this.inputs.map((el) => [el.id, el.label]));
@@ -172,13 +174,33 @@ function walk(n: Node, s: Screen) {
   }
 }
 
+const CONTROLS = "input:not([type=hidden]),select,textarea,[contenteditable],[role=textbox],[role=combobox],[role=listbox],[role=radio],[role=checkbox],[role=switch]";
+/** Live page only, a second difference on purpose (P-98: the founder captures real APR screens whose markup nobody has
+ *  seen): a saved page has no components, frames or layout, so the saved-page reader never meets these. Markup this
+ *  reader cannot see into stops the capture ("not read"), never a screen sent with questions missing or named only by
+ *  the page's code. */
+function liveProblems(doc: Document, screen: ReadScreen): string[] {
+  const out: string[] = [];
+  if (Array.from(doc.querySelectorAll("*")).some((e) => e.shadowRoot?.querySelector(CONTROLS))) out.push("its questions sit inside page components the reader cannot see into; record this screen with the spreadsheet template");
+  const frames = Array.from(doc.querySelectorAll("iframe, frame")) as HTMLIFrameElement[];
+  // A frame from another site cannot be looked into at all; one from this site can, and if it holds questions they would go missing.
+  if (frames.some((f) => { try { return !!f.contentDocument?.querySelector(CONTROLS); } catch { return false; } })) out.push("some of its questions sit inside a frame, and the reader reads the page itself only; record this screen with the spreadsheet template");
+  const shown = (id: string) => { const e = doc.getElementById(id) ?? doc.getElementsByName(id)[0]; return !!e && (typeof e.checkVisibility === "function" ? e.checkVisibility() : e.getClientRects().length > 0); };
+  // No label, legend, aria-label or aria-labelledby: the question would be known only by the page's code (mat-input-3).
+  const unnamed = screen.inputs.filter((i) => i.label === i.id && shown(i.id));
+  if (unnamed.length) out.push(`${unnamed.length === 1 ? "a question has" : `${unnamed.length} questions have`} no label the reader can find (${unnamed.slice(0, 2).map((i) => i.id).join(", ")})`);
+  if (!screen.inputs.length && frames.length) out.push("no questions found on the page itself; they may be inside a frame, which the reader does not read");
+  return out;
+}
+
 /** Reads the open screen. Never reads an answer; never changes the page. */
 export function readScreen(doc: Document): ReaderResult {
   const s = new Screen();
   walk(doc, s);
   const screen = s.finish();
   if (s.refused.length) return { ok: false, refused: s.refused, title: screen.title };
-  if (s.problems.length) return { ok: false, error: [...new Set(s.problems)].slice(0, 3).join("; ") };
+  const problems = [...s.problems, ...liveProblems(doc, screen)];
+  if (problems.length) return { ok: false, error: [...new Set(problems)].slice(0, 3).join("; ") };
   if (!screen.inputs.length) return { ok: false, error: "no questions found on this page (a portal screen has inputs; a guide page belongs on the combination's sources)" };
   return { ok: true, screens: [screen] };
 }

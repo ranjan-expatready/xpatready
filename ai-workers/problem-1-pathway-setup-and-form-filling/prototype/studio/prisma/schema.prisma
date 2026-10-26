@@ -1248,9 +1248,15 @@ model ExtensionPairing {
   codeHash    String    @unique @map("code_hash") @db.VarChar(64)
   expiresAt   DateTime  @map("expires_at") @db.Timestamptz
   usedAt      DateTime? @map("used_at") @db.Timestamptz
+  /// The code's first three characters, which find it; a wrong code with them counts against it (review-2 Minor 1).
+  selector    String?   @db.VarChar(3)
+  /// Wrong codes tried against this one, kept in the database (never per address in memory); the fifth voids it.
+  wrongTries  Int       @default(0) @map("wrong_tries")
+  voidedAt    DateTime? @map("voided_at") @db.Timestamptz
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([person, createdAt])
+  @@index([selector])
   @@map("extension_pairing")
 }
 

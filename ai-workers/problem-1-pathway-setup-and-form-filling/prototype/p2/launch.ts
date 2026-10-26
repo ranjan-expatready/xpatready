@@ -2,6 +2,8 @@
 //
 //   node p2/launch.ts --job <job id> --stub     demonstration through the exact path, no network, no key
 //   node p2/launch.ts --job <job id> --live     paid call; refused unless a stub pass of the same code exists
+//   … --approved-dir <folder>                   P-80: the Studio copy's approved-sources folder, for a form approved in
+//                                               the product (the guard admits its inventory only from there)
 //
 // In order, before any prompt exists: (1) the job's route and every input are admitted by the guard;
 // (2) the maker-written template and output schema are screened against the answer key and the family
@@ -16,7 +18,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { join } from "node:path";
 import { idempotencyKey } from "../contracts/rules.ts";
 import { admitRun, assertNoLinksUnder, canaryStrings, isolatedNodeArgs, loadKey, PolicyRefusal, screenMakerText } from "./guard.ts";
-import { DIGEST_FILE, DRAFT_ENTRY, JOBS_DIR, LABEL, LEDGER_DIR, PROMPTS_DIR, PROTOTYPE, RUNS_DIR, SCREENING_DIR, ticketFile, TICKETS_DIR } from "./policy.ts";
+import { approvedSourcesDirOk, DIGEST_FILE, DRAFT_ENTRY, JOBS_DIR, LABEL, LEDGER_DIR, PROMPTS_DIR, PROTOTYPE, RUNS_DIR, SCREENING_DIR, ticketFile, TICKETS_DIR } from "./policy.ts";
 import { hasStubPass, pathCodeSha, stubPassFile } from "./pathcode.ts";
 import { buildDigest, jobScreenItems, type Digest } from "./screen.ts";
 import { convertFieldMap } from "./convert.ts";
@@ -40,15 +42,20 @@ export function issueTicket(canary: ReturnType<typeof canaryStrings>, job: Job, 
   return { digest, digestSha: sha(bytes) };
 }
 
-export function launch(jobId: string, mode: "stub" | "live"): LaunchResult {
+export function launch(jobId: string, mode: "stub" | "live", opts: { approvedDir?: string } = {}): LaunchResult {
   if (!NAME.test(jobId)) throw new PolicyRefusal("job id must be a plain name");
+  const approvedDir = opts.approvedDir;
+  if (approvedDir !== undefined && !approvedSourcesDirOk(approvedDir)) throw new PolicyRefusal(`--approved-dir must be a Studio copy's approved-sources folder: ${approvedDir}`);
   const job = JSON.parse(readFileSync(join(JOBS_DIR, `${jobId}.json`), "utf8")) as Job;
   if (job.job_id !== jobId) throw new PolicyRefusal("job file names a different job id");
   if (!NAME.test(job.template) || !NAME.test(job.output_schema)) throw new PolicyRefusal("template and schema must be plain file names in p2/prompts");
   // A6: a known fact goes into the prompt as given, so it must be exactly an edition label and nothing else.
   if (job.known && (Object.keys(job.known).some((k) => k !== "form_edition") || !/^IMM [0-9A-Z ]+ \([0-9]{2}-[0-9]{4}\)$/.test(job.known.form_edition ?? ""))) throw new PolicyRefusal("a job's known facts may hold only a printed form edition such as IMM 0000 (MM-YYYY)");
   const settings = job.settings as Parameters<typeof admitRun>[0]["settings"];
-  admitRun({ inputs: { official_files: job.inputs }, settings }, { allowStubDrafts: mode === "stub" }); // (1) route and inputs
+  const admitted = admitRun({ inputs: { official_files: job.inputs }, settings }, { allowStubDrafts: mode === "stub", approvedDir }); // (1) route and inputs
+  // P-80: a form approved in the product is drafted with the edition its approval names, never another one the job claims.
+  const approved = admitted.find((a) => a.approved)?.approved;
+  if (approved && job.known?.form_edition !== approved.edition) throw new PolicyRefusal(`the job's printed edition (${job.known?.form_edition ?? "none"}) is not the edition approved in the product (${approved.edition})`);
   assertNoLinksUnder(join(PROTOTYPE, "p2")); // nothing the drafting process may read can lead elsewhere
   const template = readFileSync(join(PROMPTS_DIR, job.template));
   const schema = readFileSync(join(PROMPTS_DIR, job.output_schema));
@@ -77,8 +84,8 @@ export function launch(jobId: string, mode: "stub" | "live"): LaunchResult {
   const env: Record<string, string> = {};
   for (const k of ["PATH", "HOME", "TMPDIR", "LANG"]) if (process.env[k]) env[k] = process.env[k]!; // no ANTHROPIC_* passes through
   const timeout = Number(job.settings.timeout_ms ?? 600_000) * Number(job.settings.max_attempts ?? 1) + 60_000;
-  const child = spawnSync(process.execPath, [...isolatedNodeArgs(LEDGER_DIR), DRAFT_ENTRY, "--job", jobId, "--run-id", runId, "--caller", mode,
-    "--template-sha", sha(template), "--schema-sha", sha(schema)], { encoding: "utf8", env, timeout, maxBuffer: 64 * 1024 * 1024 }); // (3)
+  const child = spawnSync(process.execPath, [...isolatedNodeArgs(LEDGER_DIR, approvedDir), DRAFT_ENTRY, "--job", jobId, "--run-id", runId, "--caller", mode,
+    "--template-sha", sha(template), "--schema-sha", sha(schema), ...(approvedDir ? ["--approved-dir", approvedDir] : [])], { encoding: "utf8", env, timeout, maxBuffer: 64 * 1024 * 1024 }); // (3)
   rmSync(ticketFile(runId), { force: true }); // used or not, this run's ticket is done (its use is recorded in the ledger folder)
   const endedAt = new Date().toISOString();
   let out: Record<string, any>;
@@ -105,7 +112,7 @@ export function launch(jobId: string, mode: "stub" | "live"): LaunchResult {
       if (outputErrors) status = "invalid_output";
       else if (job.kind !== "field_map") status = "completed";
       else {
-        const c = convertFieldMap(parsed, job.inputs[0].file);
+        const c = convertFieldMap(parsed, job.inputs[0].file, approved?.edition);
         entries = c.entries; status = c.status; conversion = { weak_evidence: c.weak_evidence, edition_note: c.edition_note, needs_person: c.needs_person, set_aside_fields: c.set_aside_fields };
       }
     }
@@ -142,9 +149,10 @@ export function launch(jobId: string, mode: "stub" | "live"): LaunchResult {
 if (import.meta.main) {
   const i = process.argv.indexOf("--job");
   const mode = process.argv.includes("--live") ? "live" : process.argv.includes("--stub") ? "stub" : null;
+  const a = process.argv.indexOf("--approved-dir");
   try {
-    if (i < 0 || !mode) throw new PolicyRefusal("usage: launch.ts --job <job id> (--stub | --live)");
-    const r = launch(process.argv[i + 1], mode);
+    if (i < 0 || !mode) throw new PolicyRefusal("usage: launch.ts --job <job id> (--stub | --live) [--approved-dir <folder>]");
+    const r = launch(process.argv[i + 1], mode, a > 0 ? { approvedDir: process.argv[a + 1] ?? "" } : {});
     console.log(JSON.stringify({ exit: r.exit, run_file: r.run_file, refused: r.refused, status: (r.record as any)?.status }));
     process.exit(r.exit);
   } catch (e) {

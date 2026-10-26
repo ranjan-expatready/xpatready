@@ -6,7 +6,7 @@
 import * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Globe, Upload } from "lucide-react";
-import { CAPTURE_LIMITS, CHANNEL_WORDS, CHANNELS, DRAFT_FROM, DRAFT_FROM_WORDS, PORTALS, type Channel, type DraftFrom } from "../../../contracts/forms";
+import { CAPTURE_LIMITS, CHANNEL_WORDS, CHANNELS, DEFAULT_PORTAL, DRAFT_FROM, DRAFT_FROM_WORDS, PORTALS, type Channel, type DraftFrom } from "../../../contracts/forms";
 import type { CombinationSummary } from "../../../contracts/programs";
 import { api, useApi, useToast } from "@/lib/api";
 import { Button, Field, Input, Notice, Panel, Pill, Select, Table } from "@/components/ui/controls";
@@ -147,10 +147,11 @@ type AddResult = { file: string; outcome: string; message: string };
  *  (saved pages, or the filled-in template). It is checked for answers, finished and held for a second person. */
 export function AddOnlineFormPanel({ id, sum, codes, onClose, resume }: { id: string; sum: CombinationSummary; codes: string[]; onClose: () => void; resume?: CombinationSummary["onlineForms"][number] }) {
   const qc = useQueryClient(); const toast = useToast();
-  const [portal, setPortal] = React.useState(resume?.portal ?? sum.portal ?? "");
+  // P-98: with no portal on the combination, the APR Portal is chosen (the one portal the proof of concept proves).
+  const [portal, setPortal] = React.useState(resume?.portal ?? sum.portal ?? DEFAULT_PORTAL);
   // Follows the combination's portal until the person chooses one here (review round 2, should 3).
   const touched = React.useRef(!!resume);
-  React.useEffect(() => { if (!touched.current) setPortal(sum.portal ?? ""); }, [sum.portal]);
+  React.useEffect(() => { if (!touched.current) setPortal(sum.portal ?? DEFAULT_PORTAL); }, [sum.portal]);
   const [form, setForm] = React.useState(resume?.form ?? codes[0] ?? "");
   const [title, setTitle] = React.useState(resume?.title ?? "");
   const [files, setFiles] = React.useState<File[]>([]);
@@ -188,7 +189,7 @@ export function AddOnlineFormPanel({ id, sum, codes, onClose, resume }: { id: st
     <Panel open onOpenChange={(o) => !o && onClose()} title={resume ? `Continue the ${resume.form} online form` : "Add an online form"} description="Record the form as the portal shows it: its blank screens, never a client's answers. A second person approves it before it is used."
       footer={done ? <Button onClick={onClose}>Close</Button> : <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={!portal || !form.trim() || title.trim().length < 3 || !files.length || !!tooBig} onClick={() => void submit()}><Upload /> Add and send for approval</Button></>}>
       <div className="flex flex-col gap-4">
-        <Field label="Portal" error={errors.portal} hint={!sum.portal ? "This combination has no portal yet: choose the one the form is filed through." : portal && portal !== sum.portal ? `Not this combination's portal (${sum.portalLabel}): its lines filed Online use the ${sum.portalLabel}.` : "This combination's portal"}>
+        <Field label="Portal" error={errors.portal} hint={!sum.portal ? "This combination has no portal yet: the APR Portal is chosen, the one portal proven now. Change it if the form is filed elsewhere." : portal && portal !== sum.portal ? `Not this combination's portal (${sum.portalLabel}): its lines filed Online use the ${sum.portalLabel}.` : "This combination's portal"}>
           <Select value={portal} disabled={!!resume} onChange={(e) => { touched.current = true; setPortal(e.target.value); }} aria-label="Portal"><option value="">Choose…</option>{PORTALS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}</Select>
         </Field>
         <Field label="Form code" error={errors.form} hint="As IRCC numbers it, for example IMM 5257.">

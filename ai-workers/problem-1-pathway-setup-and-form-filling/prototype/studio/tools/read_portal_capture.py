@@ -152,7 +152,8 @@ class Screen(HTMLParser):
                 return
             el = {"id": ident, "name": a.get("name") or None, "type": typ if typ in TYPES else "text",
                   "required": "required" in a or a.get("aria-required") == "true",
-                  "label": clean(a.get("aria-label")) or None, "help": None, "_described": a.get("aria-describedby"), "_dom_id": a.get("id")}
+                  "label": clean(a.get("aria-label")) or None, "help": None, "_described": a.get("aria-describedby"),
+                  "_labelled": a.get("aria-labelledby"), "_dom_id": a.get("id")}
             for k, key in (("maxlength", "max_length"), ("minlength", "min_length")):
                 if a.get(k, "").isdigit():
                     el[key] = int(a[k])
@@ -251,6 +252,11 @@ class Screen(HTMLParser):
 
     def finish(self):
         for el in self.inputs:
+            # aria-labelledby names the question first (as a browser does), from the text of the elements it points to.
+            if el.get("_labelled"):
+                named = " ".join(self.text_by_id.get(i, "") for i in el["_labelled"].split()).strip()
+                if named:
+                    el["label"] = named
             if el.get("label") is None and el.get("_dom_id") in self.labels_for:
                 el["label"] = self.labels_for[el["_dom_id"]]
             for o in el.get("options") or []:
@@ -270,7 +276,7 @@ class Screen(HTMLParser):
             part = PARTS.get(el["label"].lower().strip(" :"))
             if part and el.get("group"):
                 el["part"] = part
-            for k in ("_described", "_dom_id", "_placeholder", "name"):
+            for k in ("_described", "_labelled", "_dom_id", "_placeholder", "name"):
                 el.pop(k, None)
             if el.get("help") is None:
                 el.pop("help", None)

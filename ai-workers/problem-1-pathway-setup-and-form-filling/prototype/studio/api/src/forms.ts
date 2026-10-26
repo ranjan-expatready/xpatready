@@ -37,6 +37,9 @@ import { costUsd } from "../../../p2/ledger.ts";
 import { PARTS_DIR, RUN_CAP_USD, SCREEN_INVENTORIES } from "../../../p2/policy.ts";
 import { defaultChannelFor, resolveKey } from "./form-lines.ts";
 import { Sources } from "./sources.ts";
+import { Intake } from "./intake.ts";
+import { Checklists } from "./checklist.ts";
+import { seedFormsStory } from "./forms-demo.ts";
 import { actorOf, ACTORS, Audit, Db, fail, NODE, need, PROTOTYPE, PY, revise, ROOT, SOLUTION, STUDIO, strip, VAR, Workspace, type Actor } from "./core.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import type { z } from "zod";
@@ -761,7 +764,7 @@ export class Forms {
   /** For each form of a combination (its lines, its attached forms, the online forms added from it): which source
    *  drafting reads (C2.10, P-62 §1), what exists of each, and the per-form choice. */
   async draftingSources(combinationId: string) {
-    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId }, include: { attachments: { where: { kind: "Form", recognised: true }, select: { edition: true } } } });
+    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId }, include: { attachments: { where: { kind: "Form", status: { not: "HELD" } }, select: { edition: true } } } }); // official or approved in the product (P-80)
     const lines = await this.db.combinationForm.findMany({ where: { combinationId }, select: { lineageKey: true } });
     const captured = await this.db.portalCapture.findMany({ where: { combinationId, status: { not: "ABANDONED" } }, select: { formKey: true } });
     const codes = [...new Set([...lines.map((l) => l.lineageKey), ...c.attachments.map((a) => (a.edition ?? "").split(" (")[0]).filter(Boolean), ...captured.map((x) => x.formKey)])].sort();
@@ -1041,7 +1044,11 @@ const send = async (res: Response, file: { path: string; name: string }) => { if
 
 @Controller("api")
 export class FormsController {
-  constructor(@Inject(Forms) private readonly f: Forms) {}
+  constructor(@Inject(Forms) private readonly f: Forms, @Inject(Db) private readonly db: Db, @Inject(Intake) private readonly intake: Intake, @Inject(Sources) private readonly sources: Sources, @Inject(Checklists) private readonly checklists: Checklists) {}
+  /** P-93: the forms lane's part of the demo story (DEMO.md rows 1, 2, 7, 13 on the APR Portal), for the runtime lane's seed. */
+  @Post("demo/forms-story") story(@Headers("x-actor") a: H, @Body() b: { combinationId?: string; online?: boolean } | undefined) {
+    return seedFormsStory({ db: this.db, forms: this.f, intake: this.intake, sources: this.sources, checklists: this.checklists }, actorOf(a), String(b?.combinationId ?? ""), { online: b?.online === true });
+  }
   @Get("portals") portals() { return this.f.portals(); }
   @Get("captures") captures(@Query("take") take?: string, @Query("skip") skip?: string) { return this.f.captures(Number(take ?? 50), Number(skip ?? 0)); }
   @Post("captures") create(@Headers("x-actor") a: H, @Body() b: unknown) { return this.f.createCapture(actorOf(a), b); }
