@@ -283,6 +283,7 @@ export class Forms {
     const own = screensOf(c.record);
     const cov = await this.sectionsNotSeen(c.workspaceId, c.formKey, c.portalKey, record, own);
     return { screens: own.length, questions: own.reduce((n, s) => n + s.inputs.length, 0), version_screens: record.screens.length, pdf_edition: cov.pdf_edition, unmatched_questions: cov.unmatched,
+      matched_here: cov.matched_here, matched_kept: cov.matched_kept,
       pdf_sections_not_seen: cov.sections.map((x) => ({ group: x.group, label: x.label, questions: x.questions, total: x.total })) };
   }
 
@@ -456,9 +457,9 @@ export class Forms {
    *  (shared field and person), minus sections the form's online version marks asked differently. No AI, nothing stored. */
   private async sectionsNotSeen(workspaceId: string, formKey: string, portalKey: string, record: CaptureRecord, own: { title: string }[] = record.screens) {
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey } }, include: { editions: true } });
-    if (!def) return { pdf_edition: null, sections: [] as SectionNotSeen[], unmatched: 0 };
+    if (!def) return { pdf_edition: null, sections: [] as SectionNotSeen[], unmatched: 0, matched_here: 0, matched_kept: 0 };
     const ctx = await this.screenMapContext(workspaceId, def.editions, portalKey, null, true);
-    if (!ctx.pdf.length) return { pdf_edition: null, sections: [] as SectionNotSeen[], unmatched: 0 };
+    if (!ctx.pdf.length) return { pdf_edition: null, sections: [] as SectionNotSeen[], unmatched: 0, matched_here: 0, matched_kept: 0 };
     const proposals = draftScreenMap(record, ctx).proposals;
     const seen = proposals.filter((p) => p.outcome === "mapped").map((p) => ({ fact: p.fact, person: p.person }));
     const online = def.editions.filter((e) => e.channel === "ONLINE" && e.portalKey === portalKey).sort((a, b) => (b.capturedOn?.getTime() ?? 0) - (a.capturedOn?.getTime() ?? 0))[0];
@@ -471,7 +472,14 @@ export class Forms {
     const settled = new Set(rows.filter((m) => isScreenInput(m) && m.outcome !== "unresolved").map((m) => inputKey(titles.get(m.screenKey ?? "") ?? m.heading ?? "", m.dataPath)));
     const mine = new Set(own.map((x) => screenIdentity(x.title)));
     const unmatched = proposals.filter((p) => p.outcome === "leftover" && mine.has(screenIdentity(p.screen)) && !settled.has(inputKey(p.screen, p.input))).length;
-    return { pdf_edition: ctx.pdfEdition, sections: screenCoverage(formKey, ctx.pdf, seen, decided), unmatched };
+    // PR #36 review: the sections are worked out over the whole version a re-capture merges into; the form fields its own
+    // screens match are kept apart from those only the screens kept from the approved version match.
+    const key = (f: string | null, p: string | null) => `${f}|${p ?? "form_subject"}`;
+    const here = new Set(proposals.filter((p) => p.outcome === "mapped" && mine.has(screenIdentity(p.screen))).map((p) => key(p.fact, p.person)));
+    const all = new Set(seen.map((x) => key(x.fact, x.person)));
+    const fields = ctx.pdf.filter((e) => e.outcome === "mapped" && e.fact);
+    const matched_here = fields.filter((e) => here.has(key(e.fact, e.person))).length, matched_kept = fields.filter((e) => !here.has(key(e.fact, e.person)) && all.has(key(e.fact, e.person))).length;
+    return { pdf_edition: ctx.pdfEdition, sections: screenCoverage(formKey, ctx.pdf, seen, decided), unmatched, matched_here, matched_kept };
   }
 
   async draftScreenMapFor(actor: Actor, editionId: string) {

@@ -124,6 +124,25 @@ const planOf = async (attachmentId: string, mode = "STUB", draftAgain = false) =
     ]);
     ok(`C3.1: D4 break m1 fail case (round ${round + 1}): two launches of the same files in opposite order: one queued, the other 409 in words, never a 500`, two.some((x) => x.status < 300) && two.every((x) => x.status < 300 || (x.status === 409 && /Being mapped in/.test(x.body.message))), two.map((x) => [x.status, x.body?.message?.slice(0, 80)]));
   }
+  // PR #36 review: a retry takes the same file lock and re-check as a launch. The Visitor visa's IMM 5707 draft fails;
+  // meanwhile the Super visa starts, then finishes, its own: retrying the Visitor visa's work is refused, nothing queued.
+  sql(`delete from drafting_job where kind='field_map' and attachment_id in ('${v5707}','${s5707}')`);
+  const pR = await call("POST", "/ai/plan", { scope: { kind: "source", ids: [v5707] }, mode: "REPLAY" });
+  const bR = await call("POST", "/ai/batches", { scope: { kind: "source", ids: [v5707] }, mode: "REPLAY", idempotencyKey: `f3a1c-r-${Date.now()}`, planSha256: pR.body.plan_sha256 });
+  sql(`update drafting_job set status='FAILED', message='F3a-1c check: failed' where attachment_id='${v5707}' and kind='field_map'`);
+  const sJob = sql(`insert into drafting_job (id, workspace_id, combination_id, attachment_id, kind, mode, status, started_by, message) select gen_random_uuid(), workspace_id, combination_id, id, 'field_map', 'REPLAY', 'QUEUED', 'user-A', 'F3a-1c check (Super visa)' from source_attachment where id='${s5707}' returning id`).split("\n")[0];
+  const vJobs = () => sql(`select count(*) from drafting_job where kind='field_map' and attachment_id='${v5707}'`);
+  let rr = await call("POST", `/ai/batches/${bR.body.id}/retry`, {});
+  ok("C3.1: PR #36 review fail case: retrying a failed draft while another combination's draft of the same file is queued is refused (409, in words); nothing inserted",
+    bR.status < 300 && rr.status === 409 && /^Being mapped in Super visa/.test(rr.body.message) && vJobs() === "1", [bR.status, rr.status, rr.body?.message, vJobs()]);
+  sql(`update drafting_job set status='COMPLETED' where id='${sJob}'`);
+  sql(`insert into normalization_item (id, workspace_id, job_id, proposed_key, proposed_meaning, proposed_type, outcome, candidates, persons, boxes, evidence, affected, reason) select gen_random_uuid(), workspace_id, '${sJob}', 'person.retry_' || g, 'Sample proposal ' || g, 'string', 'new', '[]', '{}', '[]', '[]', '[]', 'F3a-1c check' from drafting_job, generate_series(1, 3) g where id='${sJob}'`);
+  rr = await call("POST", `/ai/batches/${bR.body.id}/retry`, {});
+  ok("C3.1: PR #36 review fail case: retrying after the other combination finished its draft (3 proposals pending) is refused too; nothing inserted",
+    rr.status === 409 && /Being mapped in Super visa: 3 proposals left/.test(rr.body.message) && vJobs() === "1", [rr.status, rr.body?.message, vJobs()]);
+  sql(`delete from normalization_item where job_id='${sJob}'`); sql(`delete from drafting_job where id='${sJob}'`);
+  rr = await call("POST", `/ai/batches/${bR.body.id}/retry`, {});
+  ok("C3.1: PR #36 review with nothing mapped elsewhere the retry is queued (attempt 2, saved answer, US$0)", rr.status < 300 && vJobs() === "2", [rr.status, rr.body?.message, vJobs()]);
   ok("C3.1: D4 no model call was made: no drafting step of IMM 5257 or IMM 5707 is live (US$0)", sql(`select count(*) from drafting_job where mode='LIVE' and attachment_id in ('${aV}','${aS}','${v5707}','${s5707}')`) === "0");
 
   if (!hadJob) rmSync(JOB_5707, { force: true });

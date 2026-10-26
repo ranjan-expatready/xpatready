@@ -65,6 +65,11 @@ Each fix has a test that fails without it.
 * **Minor 4 · f3a1c left `p2/jobs/studio-fieldmap-imm5707e.json`**: the check removes the job file it made and checks it is gone.
 * **Next pass (Lead):** Minor 2 (two queries per target in the launch's re-check) and the reader-side id checks.
 
+## Fixes from the PR #36 review (26 Oct)
+* **Red · a retry could queue a second paid draft** (`ai.ts retry`): retry and launch now share `guardDrafts`, the same file locks in one order and the same re-check inside one transaction, so a retry of a file being mapped in another combination (queued, running, or done with proposals pending) is refused (409 "Being mapped in …") before any step is inserted. Check: f3a1c (a failed Visitor visa draft retried while the Super visa's draft is queued, then waiting with 3 proposals: refused; once nothing is mapped elsewhere, queued; 33/33).
+* **Yellow · after a re-capture the coverage spoke for the whole version** (`forms.ts sectionsNotSeen`, panel): the words now say so ("no question of the version matches yet … its 5 screens: 1 captured now, 4 kept from the approved version"), and the form fields matched by the screens captured now are counted apart from those only the kept screens match. Check: f3c.
+* **Preview completeness** (`panel.tsx questionsOf`): "Check before sending" lists everything the screen sends: each question's element id, help text, format (length, pattern) and each choice's code beside its label; the panel's own client-detail check reads the id, pattern and codes too (the server's refusal stays the second line). Check: f3c (35/35).
+
 ## Not in this stage
 * Slices 5–8 (`engine/queue.ts`, `?form=`, `Problem.forms`, D7 warning, `formProgress`, the asked-differently routes, X4 live coverage) wait for the runtime lane's Screen 03 merge and the screens lane's agreement on `review-queue.ts` (Lead response Q3).
 * DEMO row 1's approval waits for the runtime lane's `demo.ts` change (Lead: option a).

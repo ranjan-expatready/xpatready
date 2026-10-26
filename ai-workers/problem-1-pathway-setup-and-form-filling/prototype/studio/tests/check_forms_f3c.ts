@@ -182,6 +182,8 @@ const openOf = (form: string) => sql(`select count(*) from portal_capture where 
     const qs = await check.innerText();
     ok("C2.9: X5 \"Check before sending\" lists each question with its kind and choices (a text question, a date, a choice with its options), as structure only",
       /Family name \(as shown on your passport or travel document\)\s*Text, required/.test(qs) && /Choose one(, required)?: [^\n]*(Female|Male)/.test(qs) && /question[s]? go to ExpatReady, as structure only/.test(qs), qs.slice(0, 400));
+    ok("C2.9: PR #36 review fail case: everything the screen sends is shown before sending: each element id, help text and choice code",
+      /Element id: familyName/.test(qs) && /Element id: givenNames/.test(qs) && /Help: Leave blank if you have no given name on your passport\./.test(qs) && /FEMALE = Female/.test(qs), qs.slice(0, 500));
     await axe(panel, "panel: check before sending, per question"); await shot(panel, "04-check-per-question-360");
     await panel.getByRole("button", { name: "Send this screen" }).click(); await panel.getByText("Screen 2 captured").waitFor();
     // X3: back to a screen already captured: it says so, before anything is read for sending; nothing is sent.
@@ -235,6 +237,9 @@ const openOf = (form: string) => sql(`select count(*) from portal_capture where 
     const again = await summary.innerText();
     ok("C2.9: Lead check Minor 1 fail case: a one-screen re-capture counts its own screen (1 screen, of the version's 5) and no question already decided on the screen map",
       /^1 screen captured · \d+ questions? \(the version holds 5 screens\)/.test(again) && !/not matched yet: a person maps/.test(again), again.slice(0, 400));
+    const split = /Matched by the screens captured now: (\d+) form fields?; only by the screens kept from the approved version: (\d+)\./.exec(again);
+    ok("C2.9: PR #36 review fail case: after a re-capture the sections are said to be worked out over the whole version (1 screen captured now, 4 kept), and the form fields matched now are kept apart from those only the kept screens match",
+      /no question of the version matches yet \(IMM 5257 \(09-2023\); its 5 screens: 1 captured now, 4 kept from the approved version\)/.test(again) && !!split && Number(split[1]) > 0 && Number(split[2]) > 0, again.slice(0, 500));
   } finally {
     await ctx?.close(); server.kill(); rmSync(profile, { recursive: true, force: true });
   }
