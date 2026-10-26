@@ -18,18 +18,22 @@ type Me = { person: Person; modes: ("capture" | "fill")[]; expires_at: string };
 type CaseRow = { id: string; reference: string; release: string; people: { subject_id: string; label: string; role: string }[]; online_forms: string[] };
 type Plan = { match: true; screen: string; inputs: (PlanInput & { why: string })[]; counts: Record<string, number>; message: string } | { match: false; reason: string; message: string; screen?: string; differences?: { input: string; change: string; approved_label: string | null }[]; task?: { times: number; message: string } | null };
 type Task = { id: string; form: string; title: string | null; portal: string; portal_label: string; edition: string; screen: string; kind: string; differences: unknown[]; times: number };
-type Summary = { screens: number; questions: number; version_screens: number; pdf_edition: string | null; unmatched_questions: number; pdf_sections_not_seen: { group: string; label: string; questions: number; total: number }[] };
+type Summary = { screens: number; questions: number; version_screens: number; pdf_edition: string | null; unmatched_questions: number; matched_here: number; matched_kept: number; pdf_sections_not_seen: { group: string; label: string; questions: number; total: number }[] };
 type Capture = { id: string; revision: number; status: string; status_detail: string; form: string; screens: { order: number; title: string; questions: number }[];
   /** F3 X1: the combination it was started for in the Studio. */ combination?: { id: string; label: string } | null; reused?: boolean; summary?: Summary };
 /** A screen's identity as the Studio compares screens (engine/twin.ts screenIdentity): its heading, case and spacing aside. */
 const ident = (title: string) => { const t = title.normalize("NFKC").replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, "").toLowerCase(); return t.replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "") || `screen:${t.trim()}`; };
 const KIND: Record<string, string> = { text: "Text", textarea: "Text", select: "Choose one", radio: "Choose one", checkbox: "Tick box", date: "Date", email: "Email", tel: "Telephone", number: "Number", file: "File upload" };
 /** F3 X5: what "Check before sending" shows for each question: its label, kind and choices, and any text that looks
- *  like a client's detail. */
-type Question = { label: string; kind: string; choices: string[]; bad: { text: string; what: string } | null };
+ *  like a client's detail. PR #36 review: everything the screen sends is shown, so its element id, help text, format
+ *  (length, pattern) and each choice's code are listed too. */
+type Question = { label: string; kind: string; choices: string[]; details: string[]; bad: { text: string; what: string } | null };
 const badOf = (texts: (string | undefined | null)[]) => { for (const t of texts) { if (!t) continue; const hit = CLIENT.find(([rx]) => rx.test(t)); if (hit) return { text: t, what: hit[1] }; } return null; };
-const questionsOf = (s: ReadScreen): Question[] => [{ label: s.title, kind: "Screen title", choices: [], bad: badOf([s.title]) },
-  ...s.inputs.map((i) => ({ label: i.group ? `${i.group} › ${i.label}` : i.label, kind: `${KIND[i.type] ?? i.type}${i.part ? ` (${i.part === "YYYY" ? "year" : i.part === "MM" ? "month" : "day"})` : ""}${i.required ? ", required" : ""}`, choices: (i.options ?? []).map((o) => o.label), bad: badOf([i.label, i.group, i.help, ...(i.options ?? []).map((o) => o.label)]) }))];
+const questionsOf = (s: ReadScreen): Question[] => [{ label: s.title, kind: "Screen title", choices: [], details: [], bad: badOf([s.title]) },
+  ...s.inputs.map((i) => ({ label: i.group ? `${i.group} › ${i.label}` : i.label, kind: `${KIND[i.type] ?? i.type}${i.part ? ` (${i.part === "YYYY" ? "year" : i.part === "MM" ? "month" : "day"})` : ""}${i.required ? ", required" : ""}`,
+    choices: (i.options ?? []).map((o) => (o.code && o.code !== o.label ? `${o.code} = ${o.label}` : o.label)),
+    details: [`Element id: ${i.id}`, ...(i.help ? [`Help: ${i.help}`] : []), ...([i.min_length != null ? `at least ${i.min_length}` : "", i.max_length != null ? `at most ${i.max_length} characters` : "", i.pattern ? `pattern ${i.pattern}` : ""].filter(Boolean).length ? [`Format: ${[i.min_length != null ? `at least ${i.min_length}` : "", i.max_length != null ? `at most ${i.max_length} characters` : "", i.pattern ? `pattern ${i.pattern}` : ""].filter(Boolean).join(", ")}`] : [])],
+    bad: badOf([i.label, i.group, i.help, i.id, i.pattern, ...(i.options ?? []).flatMap((o) => [o.label, o.code])]) }))];
 const FIX = "Fix: open a blank application with no client's details, go to this screen and capture it again. Nothing was sent.";
 const CLIENT = RULES.client_data.map((c) => [new RegExp(c.pattern), c.what] as const);
 const PLAN_MINUTES = 5; // Sample (BR-13)
@@ -327,6 +331,7 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
         <ul tabIndex={0} aria-label="Questions this screen sends" className="max-h-60 divide-y divide-border overflow-y-auto text-xs">{check.questions.map((q, i) => (
           <li key={i} className={`py-1 ${q.bad ? "text-text-danger" : ""}`}><p className={q.bad ? "font-semibold" : "font-medium text-text"}>{q.label}</p>
             <p className="text-text-muted">{q.kind}{q.choices.length ? `: ${q.choices.join(" · ")}` : ""}</p>
+            {q.details.map((d, k) => <p key={k} className="break-all text-text-muted">{d}</p>)}
             {q.bad && <p className="font-semibold">{`"${q.bad.text}" looks like ${q.bad.what}`}</p>}</li>))}</ul>
         {check.questions.some((q) => q.bad)
           ? <Note tone="danger">{`Refused: "${check.questions.find((q) => q.bad)!.label}" shows a text that looks like ${check.questions.find((q) => q.bad)!.bad!.what}. ${FIX}`}</Note>
@@ -336,7 +341,10 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
         <p className="font-semibold">{`${cap.summary.screens} screen${cap.summary.screens === 1 ? "" : "s"} captured · ${cap.summary.questions} question${cap.summary.questions === 1 ? "" : "s"}`}{cap.summary.version_screens > cap.summary.screens ? ` (the version holds ${cap.summary.version_screens} screens)` : ""}</p>
         {cap.status === "HELD" && <p>A second person approves it in the Studio before anything uses it.</p>}
         {cap.summary.pdf_sections_not_seen.length
-          ? <div><p className="font-medium">PDF form fields no captured question matches yet ({cap.summary.pdf_edition}):</p>
+          ? <div><p className="font-medium">{cap.summary.version_screens > cap.summary.screens
+                ? `PDF form fields no question of the version matches yet (${cap.summary.pdf_edition}; its ${cap.summary.version_screens} screens: ${cap.summary.screens} captured now, ${cap.summary.version_screens - cap.summary.screens} kept from the approved version):`
+                : `PDF form fields no captured question matches yet (${cap.summary.pdf_edition}):`}</p>
+              {cap.summary.version_screens > cap.summary.screens && <p className="text-xs">{`Matched by the screens captured now: ${cap.summary.matched_here} form field${cap.summary.matched_here === 1 ? "" : "s"}; only by the screens kept from the approved version: ${cap.summary.matched_kept}.`}</p>}
               <ul className="list-disc pl-5">{cap.summary.pdf_sections_not_seen.map((x) => <li key={x.group}>{x.questions === x.total ? `${x.label}: none of its ${x.total} form field${x.total === 1 ? "" : "s"}` : `${x.label}: ${x.questions} of ${x.total} form fields`}</li>)}</ul>
               {cap.summary.unmatched_questions > 0 && <p className="text-xs">{`${cap.summary.unmatched_questions} question${cap.summary.unmatched_questions === 1 ? "" : "s"} on the captured screens ${cap.summary.unmatched_questions === 1 ? "is" : "are"} not matched yet: a person maps ${cap.summary.unmatched_questions === 1 ? "it" : "them"} on the screen map after approval, which can cover these form fields.`}</p>}
               <p className="text-xs text-text-muted">The rest belong to a screen that appears only after some answers, or a question the portal asks differently. Capture that screen later, or mark the section asked differently on the screen map.</p></div>

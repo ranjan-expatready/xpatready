@@ -15,6 +15,7 @@ import { HttpException, HttpStatus, Inject, Injectable, type OnModuleInit } from
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { Prisma } from "@prisma/client";
 import { costUsd } from "../../../p2/ledger.ts";
 import { EXPERIMENT_CAP_USD, RUN_CAP_USD } from "../../../p2/policy.ts";
 import { ACTORS, Audit, Db, fail, need, PROTOTYPE, Workspace, type Actor } from "./core.ts";
@@ -161,6 +162,24 @@ export class Ai implements OnModuleInit {
     };
   }
 
+  /** F3 D4: one draft per file at a time, across combinations, for every way a draft step is queued (a launch, a retry:
+   *  PR #36 review). Every file's lock is taken first, in one order (break m1: never a deadlock), then each file is
+   *  re-checked inside the same transaction: a draft of it queued or running anywhere, or being mapped in another
+   *  source, refuses the whole request (409, in words) before any step is inserted. */
+  private async guardDrafts(tx: Prisma.TransactionClient, workspaceId: string, attachmentIds: string[]) {
+    if (!attachmentIds.length) return;
+    const shaOf = new Map((await tx.sourceAttachment.findMany({ where: { id: { in: attachmentIds } }, select: { id: true, sha256: true } })).map((a) => [a.id, a.sha256]));
+    for (const sha of [...new Set(shaOf.values())].sort()) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`draft:${workspaceId}:${sha}`}))`;
+    const elsewhereNow = await this.mappingIndex(workspaceId, [...shaOf.values()], tx);
+    for (const id of attachmentIds) {
+      const sha = shaOf.get(id); if (!sha) continue;
+      const same = (await tx.sourceAttachment.findMany({ where: { workspaceId, sha256: sha }, select: { id: true } })).map((x) => x.id);
+      const busy = await tx.draftingJob.findFirst({ where: { workspaceId, kind: "field_map", mode: { not: "STUB" }, status: { in: ["QUEUED", "RUNNING"] }, attachmentId: { in: same } }, include: { combination: { select: { label: true } } } });
+      const other = busy ? null : elsewhereNow(sha, id);
+      if (busy || other) fail(other?.why ?? `Being mapped in ${busy!.combination.label}: a draft of this same form was started a moment ago. Nothing new was started; open it there.`, HttpStatus.CONFLICT);
+    }
+  }
+
   /** Expected cost from the newest real run of the same input; worst case exactly as the ledger reserves it. */
   private estimate(prepared: any, saved: any[]) {
     const runsDir = join(PROTOTYPE, "p2", "runs");
@@ -213,22 +232,9 @@ export class Ai implements OnModuleInit {
     const created = await this.db.$transaction(async (tx) => {
       const batch = await tx.aiBatch.create({ data: { workspaceId, idempotencyKey: b.idempotencyKey, operation: plan.operation, scopeKind: b.scope.kind, scopeLabel: plan.scope.label, mode: b.mode, status: "QUEUED", planSha256: plan.plan_sha256, plan: plan as any, spendLimitUsd: limit, worstCaseUsd: plan.totals.worst_usd, expectedUsd: plan.totals.expected_usd, startedBy: actor.id, message: `${run.length} step${run.length === 1 ? "" : "s"} queued` } });
       const ids: string[] = [];
-      // F3 D4: one draft per file at a time, across combinations: two launches of the same file at the same moment queue
-      // one job; the other is refused (the plan each saw was taken before the other's job existed). A stub pass is no
-      // draft to review (no AI, nothing to decide), so stub passes never wait for each other. Every file's lock is taken
-      // first, in one order, so two launches of the same files in another order wait in turn (break m1: never a deadlock).
-      const guarded = b.mode === "STUB" ? [] : run.filter((t) => t.action !== "reuse_library");
-      const shaOf = new Map((await tx.sourceAttachment.findMany({ where: { id: { in: guarded.map((t) => t.attachmentId) } }, select: { id: true, sha256: true } })).map((a) => [a.id, a.sha256]));
-      for (const sha of [...new Set(shaOf.values())].sort()) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`draft:${workspaceId}:${sha}`}))`;
-      const elsewhereNow = await this.mappingIndex(workspaceId, [...shaOf.values()], tx);
+      // F3 D4: a stub pass is no draft to review (no AI, nothing to decide), so stub passes never wait for each other.
+      await this.guardDrafts(tx, workspaceId, b.mode === "STUB" ? [] : run.filter((t) => t.action !== "reuse_library").map((t) => t.attachmentId));
       for (const t of run) {
-        const sha = shaOf.get(t.attachmentId);
-        if (sha) {
-          const same = (await tx.sourceAttachment.findMany({ where: { workspaceId, sha256: sha }, select: { id: true } })).map((x) => x.id);
-          const busy = await tx.draftingJob.findFirst({ where: { workspaceId, kind: "field_map", mode: { not: "STUB" }, status: { in: ["QUEUED", "RUNNING"] }, attachmentId: { in: same } }, include: { combination: { select: { label: true } } } });
-          const other = busy ? null : elsewhereNow(sha, t.attachmentId);
-          if (busy || other) fail(other?.why ?? `Being mapped in ${busy!.combination.label}: a draft of this same form was started a moment ago. Nothing new was started; open it there.`, HttpStatus.CONFLICT);
-        }
         const j = await tx.draftingJob.create({ data: { workspaceId, combinationId: t.combinationId, attachmentId: t.attachmentId, batchId: batch.id, kind: t.action === "reuse_library" ? "reuse_map" : "field_map", mode: t.action === "reuse_library" ? "LOCAL" : t.action === "reuse_saved_output" ? "REPLAY" : b.mode, status: "QUEUED", fingerprint: t.fingerprint ?? null, startedBy: actor.id,
           runFile: t.run_file ? `prototype/p2/runs/${t.run_file}` : null, runId: t.run_file ? t.run_file.replace(/(\.reconverted)?\.json$/, "") : null, costUsd: t.action === "draft" && b.mode === "LIVE" ? null : 0,
           message: `Queued: ${ACTION_TEXT[t.action]}${t.read_first ? " (read the form first)" : ""}` } });
@@ -364,9 +370,16 @@ export class Ai implements OnModuleInit {
     const worst = round(redo.reduce((a, j) => a + (j.mode === "LIVE" ? (worstEach.find((t) => t.attachmentId === j.attachmentId)?.worst_usd ?? RUN_CAP_USD) : 0), 0));
     const ledger = this.sources.ledger();
     if (worst > ledger.remaining_usd) fail(`Retrying could cost up to US$${worst.toFixed(2)}, more than is left of the experiment cap.`);
-    const ids: string[] = [];
+    let ids: string[] = [];
     try {
-      for (const j of redo) ids.push((await this.db.draftingJob.create({ data: { workspaceId: j.workspaceId, combinationId: j.combinationId, attachmentId: j.attachmentId, batchId: id, kind: j.kind, mode: j.mode, status: "QUEUED", fingerprint: j.fingerprint, runFile: j.mode === "REPLAY" ? j.runFile : null, runId: j.mode === "REPLAY" ? j.runId : null, costUsd: j.mode === "LIVE" ? null : 0, attempt: j.attempt + 1, startedBy: actor.id, message: `Queued: retry ${j.attempt + 1} of ${MAX_ATTEMPTS_PER_SOURCE}` } })).id);
+      // PR #36 review: a retried draft takes the same file lock and re-check as a launch, so it never queues a second
+      // draft of a file another combination started or finished meanwhile (refused before any step is inserted).
+      ids = await this.db.$transaction(async (tx) => {
+        await this.guardDrafts(tx, batch!.workspaceId, redo.filter((j) => j.kind === "field_map" && j.mode !== "STUB").map((j) => j.attachmentId!));
+        const made: string[] = [];
+        for (const j of redo) made.push((await tx.draftingJob.create({ data: { workspaceId: j.workspaceId, combinationId: j.combinationId, attachmentId: j.attachmentId, batchId: id, kind: j.kind, mode: j.mode, status: "QUEUED", fingerprint: j.fingerprint, runFile: j.mode === "REPLAY" ? j.runFile : null, runId: j.mode === "REPLAY" ? j.runId : null, costUsd: j.mode === "LIVE" ? null : 0, attempt: j.attempt + 1, startedBy: actor.id, message: `Queued: retry ${j.attempt + 1} of ${MAX_ATTEMPTS_PER_SOURCE}` } })).id);
+        return made;
+      });
     } catch (e) { if ((e as any)?.code === "P2002") fail("One of these forms already has a step running.", HttpStatus.CONFLICT); throw e; }
     await this.db.aiBatch.update({ where: { id }, data: { status: "QUEUED", cancelRequested: false, finishedAt: null, message: `Retrying ${ids.length} step${ids.length > 1 ? "s" : ""}` } });
     await this.audit.log(batch!.workspaceId, actor.id, "retried", "AI work", id, `${actor.name} retried ${ids.length} step${ids.length > 1 ? "s" : ""} (failed, blocked or cancelled before being sent) of the AI work for ${batch!.scopeLabel} (worst case US$${worst.toFixed(2)}); completed steps were not re-run`);
