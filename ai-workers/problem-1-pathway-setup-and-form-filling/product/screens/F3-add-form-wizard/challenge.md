@@ -1,0 +1,150 @@
+# F3 — Add a form: guided path and extension · challenge (fresh challenger, 26 Oct)
+
+Challenged: `concept-draft.md` and `design/draft-wizard.html` (every view and state rendered headless and read). Checked against `main` as the working copy holds it (origin/main e06a54e plus Lead documents only; no app code differs), the runtime lane's unmerged Screen 03 branch (`claude/runtime-r1-8f1db8`, 9dfe9b8), decisions P-23, P-38, P-51, P-57, P-61–P-66, P-76, P-79, P-80, P-90, P-93–P-99, `DEMO.md`, `qa/CAPABILITIES.md`, `STANDARDS.md`, `EXPERIENCE.md`, `LANES.md`, `lanes/forms.md`, Screens 02, 04 (concept, recheck), F2 (concept, build notes). `ai-workers/tools/freshness.sh`: team frontend copy is **stale** against the team's dev branch and one team copy is unverified, so every team-component point below is **Unverified**. Form codes are IRCC's; every count, edition, screen name and portal behaviour is **Sample**. A paid representative filing and capturing through the APR Portal, and the extension reading and filling APR screens: **Unconfirmed: no counsel**.
+
+## Verdict: **Build after these changes**
+The idea is right and needed: one place per form that says where it stands, what is left and who acts, built only from links to screens that exist. The draft gets the hard principles right (calculated, never stored; no write action; no AI; second person kept). But four things in it are wrong against the code on `main` and would recreate the "two copies of a rule" problem P-99 is meant to remove: (1) it misses a third next-step calculator that already exists, (2) it keys progress by form alone while jobs, the validator and channels are per combination, which hides a double-AI-draft path, (3) it says reuse needs no action when the app requires one, and (4) it adds a new capture-request record although the app can already do this with the record it has. It also draws the combination page as it was, not as the runtime lane's Screen 03 is rebuilding it. None of these needs a rethink: each has a small fix.
+
+No Blocker. Seven Majors, eleven Minors.
+
+## Objections
+### Major
+
+**M1. "The rail and To review can never disagree" is not true as specified: there are three next-step calculators, not two, and none is per form.** *Needed for the proof · Capability.*
+* *What breaks:* the combination page header, its missing list and the Programs row take their next step from `engine/programs.ts` `setupActionOf` / `missingItems` (fact: lines 28–38, "nextActionOf and the missing list both use this, so the page's missing list, the page header and the Programs row always name the same step"). To review takes its own from the private `items()` method of `api/src/review-queue.ts` (one 150-line method; there are no per-kind functions to "extract and call"). The validator problems are per combination and not keyed by form: an option-map problem has `item: e.data_path` and `where: "Field map <edition>"` (`engine/channels.ts` lines 79–83), so "step 6 for IMM 5257" can only be found by string matching. A fourth calculator (`formProgress`) on top of these will drift.
+* *Example:* combination A, IMM 5476 held and IMM 5257 with 12 proposals. Header says "Review 12 AI proposals"; rail for IMM 5476 says "Record the IRCC page"; To review lists both. Fine today, but the first time one of the three changes its rule (as Screen 02's K1 form-fields row did), the rail is wrong and no test notices, because the draft's contract test compares only rail and To review.
+* *Fix:* the forms lane's PLAN (a) moves each To review kind into a pure function `queueItemsOf(kind, facts, actor)` in `engine/` that returns items **with a form code**; `review-queue.ts` and `formProgress` both call them, with no behaviour change (the To review suites stay green); (b) adds an optional `form` to the validator's `Problem` type (`engine/validate.ts` line 17) and sets it in `channels.ts` and `undecidedFormFields`; (c) makes `setupActionOf` read the same per-form facts (or leaves it as is and adds it to the contract test: header next = first open step across the combination's forms). Name one lane as writer of `review-queue.ts` (today the screens lane's Screen 02 file) for the extraction.
+* *Confidence:* high (facts read in code).
+
+**M2. Progress cannot be keyed by "form code in the workspace" (K1): five of seven steps are per combination, and the shared form being mapped elsewhere is a missing state that today leads to a second AI draft.** *Needed for the proof · Capability.* This is the `DraftingJob.combinationId` dependency.
+* *Facts:* `DraftingJob.combinationId` is required and the job hangs off a `SourceAttachment`, which belongs to one combination (`schema.prisma`, models DraftingJob, SourceAttachment). The one-active-step index is per attachment (`drafting_job_one_active_per_source` on `attachment_id`). The AI plan (`api/src/ai.ts` lines 81–93) treats a file as "already being drafted" only within the same plan (`draftedHere`) or the same attachment (`active`, `waiting`); a file mapped in the library is reused only after the map is **applied** (`editions` with `maps`). Validator steps need the combination's portal and line channel (`channelProblems` reads `s.combination.portal`; `undecidedFormFields(combinationId)`). Step 7 is relevant only where this combination files the form Online.
+* *Example (TAXONOMY §4 cases 2 and 4: one family, several combinations set up in parallel):* A's IMM 5707 draft waits for review (not applied). The author adds IMM 5707 to combination B. B's rail step 2 shows "Not started · Open Draft setup"; the plan offers "Draft field map" again: a second AI run (paid when live, US$ Sample), and two competing sets of proposals for one edition, against P-38 "analysed once".
+* *Fix:* key = (form, combination), with the library-level parts (edition, field map, approvals) shared; the library door is the (form, no combination) case. Add the state **"Being mapped in Visitor visa: 12 proposals left · a content publisher"** with a link to that job and no Draft setup link. In the same slice, the forms lane makes the plan skip a file whose same checksum has a waiting or running job in **any** combination ("Same form as in Visitor visa: being reviewed there"), with a pass and a fail test. The return strip and rail URL then carry the combination too (Minor m1).
+* *Confidence:* high.
+
+**M3. "Reused · nothing to do" (BR-6, board view 2 "Reused", journey row 5 "complete at once") is not how reuse works on `main`.** *Needed for the proof · Capability.*
+* *Fact:* reuse is a person's step. `setupActionOf` offers "Add N forms from the library" (`engine/programs.ts` line 35); launching it creates a `reuse_map` job (LOCAL, no AI) that adds the reviewed field map to the draft (`ai.ts` lines 237–239). The runtime Screen 03 Forms tab shows such a file as "Attached as a source. Its form fields are already mapped in the library, so it is added without AI" until someone does it.
+* *Fix:* step 2 for a reused edition = **"Add from the library · no AI · US$0"**, one action, done when the job is applied; step 6 then runs B's own validator (B's channel and portal). Change board view 2 "Reused" and journey row 5 to show the one click. A changed checksum is never reused (kept).
+* *Confidence:* high.
+
+**M4. The new `CaptureRequest` record (BR-14, K2) duplicates a record the app already has.** *Needed for the proof · Capability.*
+* *Facts:* the Studio route `POST /api/captures` already accepts `way: "extension"` and a `combinationId`, and creates an OPEN capture for the signed-in person (`api/src/forms.ts` lines 101–115, `contracts/forms.ts` `NewCapture`). The extension's `GET /api/extension/captures` already lists that person's OPEN and RETURNED extension captures, newest first (`api/src/extension.ts` `openCaptures`, built for F2 review Major 1). Abandoning a capture already exists (`POST /api/captures/:id/abandon`).
+* *What breaks with the draft:* a second "open capture" record with its own expiry (24 h Sample), its own 410 and its own uniqueness rule, which To review, the rail and the panel must then reconcile with `PortalCapture`.
+* *Fix:* no new table and no migration. "Start the capture in the extension" is a choice in the existing **Add an online form** panel (Screen 01, C2.7, the screen already built, P-99) and the rail's step 7 link opens that panel. It creates the OPEN extension capture for the person who will capture (idempotent: a second click returns the open one for the same person, form and portal, STANDARDS §4); the panel labels a capture that has a combination "Started in the Studio · Visitor visa"; an unwanted one is abandoned as today. Requesting a capture **for another person** (a person picker, notifications) is *Not built*: for the proof the founder starts and captures himself (P-98). Agree with K2's principle: server side, no `externally_connectable` (F2 §7, `manifest.ts` `productionProblems`).
+* *Confidence:* high.
+
+**M5. The board retrofits onto the combination page as it was, not onto Screen 03 that the runtime lane is building.** *Needed for the proof · Capability.*
+* *Facts:* on `main` the tabs are Overview · Sources and forms · Configuration · Preview · Review and release (`combination.tsx` line 21); the board draws Overview · Sources · Forms · Review and release with a new "Setup" column. On the runtime branch, Screen 03 S1 moves the Forms rows into a new runtime-owned file `web/src/pages/workspace/forms.tsx` with tabs from `contracts/workspace.ts`, a "Version and field map" column, a 560 px line panel that already has a "Field map" field, and one request for the tab (`GET /combinations/:id/workspace?tab=forms`). The draft's "the screens lane edits only the Forms section of `combination.tsx`" will not apply after that merge; `job.tsx` is also touched on that branch.
+* *What breaks:* two right panels on one tab (line panel and rail), a second request per tab view (STANDARDS §5 "one request per screen view"), a column that repeats "Version and field map", and merge conflicts in runtime files.
+* *Fix:* F3b starts after Screen 03 S1 merges. The step chip goes **in the "Version and field map" cell** ("Step 3 of 7 · Review each proposal · 12 left · Continue"); Continue opens the rail **in place of** the line panel (one panel at a time; the line panel's "Field map" row links to it). The per-form step is one more field in the workspace response: the runtime lane adds the field, calling the forms lane's `formProgress` (the `DEMO.md` "function in its own file" pattern). Redraw view 1 on Screen 03's layout.
+* *Confidence:* high for facts; medium on the exact panel choice (the Lead may prefer the rail as a section of the line panel).
+
+**M6. "Branches not seen" over-claims, and as worded it becomes a warning that never clears.** *Needed for the proof (P-99 names it) · Capability.*
+* *Fact:* the pure, no-AI ingredient exists: `draftScreenMap(...)` returns `pdf_not_on_portal: {caption, fact}[]` (`engine/twin.ts` line 83), and the "not seen this time" list exists (F2 Q2). *Judgment:* "shared fields the PDF map fills that no captured screen asks" also contains questions the portal never asks or asks in another way (questions the portal derives, PDF-only items, a signature date). Calling all of them "branches" tells the capturer to hunt for screens that do not exist, and Q2's warning in Review and release stays on forever (warning fatigue against EXPERIENCE §2.9).
+* *Example:* the IMM 5257 PDF asks a question the APR screens ask as two inputs with different labels (Sample); the alias step does not match it; it shows as a "branch not seen" after every capture.
+* *Fix:* word it **"PDF sections not seen on any captured screen yet: a screen that appears only after some answers, or a question asked differently online"**, group by the PDF heading, exclude entries decided "not a fact" or "filled by hand", and show the count once in Review and release as a warning. During capture (before approval) run `draftScreenMap` read-only on the open record and store nothing. No new decision record (scope).
+* *Confidence:* medium (depends on the real APR screens the founder captures, G3).
+
+**M7. The extension list X1–X12 is over-scoped, repeats work already sent to the forms lane, and two items break the F2 model.** *Mixed (table below).*
+* *Facts:* X2 (APR default) is Pass B item 1; X7 (returned capture resumes) and clearing "Check before sending" on navigation are Pass A item 3; the branch fixtures are Pass B item 2; the seed for `DEMO.md` rows 1, 2, 7, 13 is Pass B item 4, while F3d also seeds rows 1–3, 13 (`lanes/forms.md`, Lead note 26 Oct). X8: `GET /api/extension/recapture-tasks` is a Studio route that needs the **review** duty, while capture mode is given by the **author** duty (`extension.ts` `tasks` and `modesOf`), so a capturer's panel cannot list the tasks without a new token route in capture mode. X10's "source on hover" writes ExpatReady text into the portal page, where the portal's own scripts can read it; F2 §7 keeps writes to input values only (outline styling exists already for differences, `content.ts`).
+* *Fix:* keep the P-99 set and drop or move the rest (table in "Extension against best practice").
+* *Confidence:* high.
+
+### Minor
+* **m1 · Return strip and rail addresses.** Put one `ReturnStrip` in the Studio shell that reads the address, instead of editing eight pages (fewer collisions with runtime's `job.tsx`). The address must carry the combination (`?form=IMM%205257&c=<combination>`), and the rail itself must be addressable (`/c/:id/forms?setup=IMM%205257`, as Screen 04 recheck item 8 asks for drawers) so "Back to the steps" and the browser's Back land on the step with focus. *Needed.*
+* **m2 · To review filtered by form.** `?q=IMM 5257` matches title, what and kind words (`review-queue.ts` lines 32–34): library-change rows are titled with the field's name and AI-proposal rows with the combination's path, so board view 4 ("6 new shared fields from IMM 5257") is not produced by today's search. Add a `form=` filter using M1's form code. `LibraryChange.sourceJobId` → job → attachment checksum → form edition gives the form (join by checksum, not by parsing the edition text). *Needed.*
+* **m3 · Step 4 has no action of its own.** With C3.4 not built, its content is a consequence of step 3 and its only action is step 5's approval (or "Correct or withdraw" when returned). Keep P-99's label, but do not make it the "current step" when nothing can be done there. *Judgment, low confidence; Lead decides.*
+* **m4 · Online-only form** (no PDF edition; `channels.ts` `online_only`) is not drawn: steps 2–6 "Not needed", step 7 drafts from the screens, with the AI cost line when leftovers need it. *Not built* for the proof (the demo forms all have PDFs): one state line only.
+* **m5 · Draft setup scoped to this form.** Step 2 opens Draft setup for this form's source (the plan already takes a single-source scope, `ai.ts` `plan`), not the whole combination. *Needed.*
+* **m6 · Freshness while the rail is open.** The rail is read-only but others act meanwhile (a second person approves elsewhere). Refetch on focus and on return from a deep link, and say "Updated just now" (EXPERIENCE §4 conflict state, read-only form). *Needed.*
+* **m7 · Copy and personas on the board.** "Case F3-CASE-1 (Sample)" is an identifier on the main path (BR-16, EXPERIENCE §5); the fill view shows "Configuration author · Fill" but fill mode comes from the case duty (`modesOf`), so the persona is the case officer; the "Reused (combination B)" state keeps Visitor visa in the page path while the rail says the LMIA work permit. *Needed (board only).*
+* **m8 · Scaffolding-like state under a capability (P-33).** "Screen map drafted" is a JSON file under the demo folder, not a database row (`review-queue.ts` line 116 `existsSync`). The rail inherits it through the shared function: acceptable for the proof, but label it in build notes and make Demo Reset clear it. *Needed (label only).*
+* **m9 · One request, no per-row calls.** `items()` already does one lookup per open edition; `forms-progress` must build the facts once per request and group by form, never call the queue per form (STANDARDS §5, D15). *Needed.*
+* **m10 · Team components (Unverified, stale copy).** The team has `components/ui/sheet.tsx` and `stage-bar.tsx` ("an ordered list, not a wizard: every stage is always reachable") and `wizard-step-card.tsx`. Map the rail to the sheet plus an ordered step list in the stage-bar's spirit; do not use the wizard card (that is a page-per-step wizard, which P-99 excludes). *Needed (retrofit note).*
+* **m11 · Prerequisites are untested.** `qa/CAPABILITIES.md` still shows C2.3, C2.8, C5.3 Not built and C3.2 Not tested, although Screen 02 is merged; every rail link lands on those pages. Run `/qa after-merge` on Screen 02 before F3 BUILD, or the F3 journey will find Screen 02 bugs and score them against F3. *Needed (sequencing).*
+
+## What is sound
+* **Rail plus deep links, no write action, no copy of a rule (BR-1),** steps calculated, never stored or ticked (BR-2, EXPERIENCE §2.5), and the tooltip "Worked out from what has been done. You never tick a step." Exactly P-99.
+* **Resume with "meanwhile"** (BR-4): the maker waiting on step 5 is offered step 7. This is the dead end firm admins actually hit (waiting with nothing to do), and the draft solves it without a new record.
+* **What's left with what, how many, who, a link** (BR-5) and counts that say what they count (EXPERIENCE §2.7).
+* **Held file, new edition and second person states** (BR-7, BR-8) reuse Screen 02's server-side rules; the maker never gets an approve link.
+* **The rail never calls AI**; step 2 opens Draft setup with its cost line (P-62 §4); replay at US$0 is labelled Scaffolding.
+* **Every state drawn** (EXPERIENCE §4), including loading, error with Try again, read-only and empty, at 1024 px and 200 % zoom (Screen 04 UM10 lesson taken in).
+* **Online twin reuses the PDF map first** (BR-10) on the existing `draftScreenMap`; changed screen (BR-12) on the existing `RecaptureTask`.
+* **Security model kept:** no `externally_connectable`, server-side request (K2), fill never clicks Next, Save or Submit, empty inputs only, read-back (F2 BR-6, BR-11, BR-12).
+* **Capability or Scaffolding labels** on the board and in §6b are complete and honest (Acting as, fixtures, fixture server, replayed AI, dev build host all Scaffolding).
+
+## [M] marks
+* **K1 (progress keyed by form code in the workspace): agree in part.** Right that the field map belongs to the edition (P-38) and is shared. Wrong as the key: steps 1 (attach), 2–3 (jobs per combination), 6 (validator per combination) and 7 (channel per line) depend on the combination. Key = (form, combination), library parts shared, library door = no combination (M2).
+* **K2 (start capture from the Studio by a server-side record, not a page-to-extension message): agree with the principle, disagree with the new record.** Use the existing OPEN extension `PortalCapture` (M4).
+* **K3 (sections have no form-driven owner; a warning that never holds step 6): agree.** C3.4 is not built (Screen 02 K2 slice 3) and placements are Screen 03's. Word it "3 new shared fields not placed in a questionnaire section yet (Screen 03)". It must never hold step 6.
+
+## The draft's founder questions
+* **Q1 (what the second person approves in step 5): agree with the recommendation.** Only what already needs one (new shared fields, held file, portal capture); the field map is approved inside the combination's one Review and release (P-23, P-76, STANDARDS §3.8: only release publishes). Worth asking, because P-99's own words "a second person approves" could be read as a new approval of each field map.
+* **Q2 (online version usable with screens not seen): agree with "yes, with a warning", reworded per M6.** It is largely settled already by F2 Q2 (a capture adds to the current version; an unknown screen at fill opens "Capture needed") and P-66 (capture during real work sees only some screens). Ask it only with the honest wording; the Lead could settle it.
+* **Q3 (library door vs one guided path): agree with the recommendation, but it is not a founder question.** There is no conflict: P-51 already says AI maps a form only when a combination first uses it, and the schema enforces it (`DraftingJob.combinationId` required, attachments belong to a combination). The alternative would need a migration and an AI plan change for no proof value. Lead decides; keep the "Use it in a combination" link. Remove the [C] mark from BR-13.
+
+## Extension against best practice (guided capture and autofill)
+Reference practice: step recorders (guided capture tools that record each step and let a person delete or redo one) detect a new page and prompt, redact by default and resume after an interruption; password managers and browser autofill fill only on a click, mark the filled inputs, offer undo, keep details in their own window (not in the page) and never submit. The F2 build already meets the strict parts (structure only, whole screen refused on a value, click per screen, read-back, never submit). Recommendation per item:
+
+| # | Item | Keep? | Kind · scope | Why |
+|---|---|---|---|---|
+| X1 | Started in the Studio | **Keep**, on the existing OPEN capture (M4) | Capability · Needed | P-99 "start from the Studio" |
+| X2 | APR default | **Move**: Pass B item 1 | Capability · Needed (forms Pass B) | Already sent |
+| X3 | Guided progress, "already captured" before sending | **Keep**; add the step-recorder practice: when the page changes, the panel says "New screen: Contact details · Capture this screen", never sends on its own | Capability · Needed | P-99 "guided capture"; the content script already runs on the portal host |
+| X4 | Live coverage | **Keep**, worded per M6 | Capability · Needed | P-99 "branches not seen" |
+| X5 | Check before sending per question with reason and fix | **Keep** (light: regroup what F2 BR-3 lists) | Capability · Needed | P-99 "check before sending" |
+| X6 | Finish summary, link back to the rail | **Keep** | Capability · Needed | Closes the loop to the rail |
+| X7 | Returned capture resumes | **Move**: Pass A item 3 | Capability · Needed (forms Pass A) | Already sent |
+| X8 | Re-capture tasks in capture mode | **Keep**, with a capture-mode token route listing tasks (today's route needs the review duty) | Capability · Needed | `DEMO.md` row 13 needs the re-capture found and done |
+| X9 | Fill results grouped with sources | **Keep** | Capability · Needed | P-99 "fill with sources and read-back" |
+| X10 | Outline filled inputs, source on hover, Undo | **Keep outline and Undo** (in memory, only values it wrote and nobody changed, gone on navigation as F2 BR-13); **drop source on hover** in the page: sources stay in the panel | Capability · outline Needed, Undo should | Page scripts must not read ExpatReady text (F2 §7) |
+| X11 | Position in the form | **Later** | *Not built* | Useful, not named by P-99 |
+| X12 | Session line, reconnect keeps a capture | **Mostly exists** (8 h token, `openCaptures` resumes); show the end time only | Capability · Minor | |
+
+Real-APR risk to carry, not F3's to solve: if the real APR screens render inside a frame, the top-frame-only content script (`all_frames: false`) reads nothing; Pass B item 3 already requires a safe failure ("not read", never a value sent).
+
+## Elements: Capability or Scaffolding
+| Element | Label | Needed / Not built |
+|---|---|---|
+| Rail (side panel), step chip in the Forms row, return strip, what's left, resume | Capability | Needed |
+| `formProgress` engine and per-form progress API, `form` on queue items and validator problems | Capability | Needed |
+| Cross-combination draft guard in the AI plan (M2) | Capability | Needed |
+| Start capture from the Studio on the existing capture record (M4) | Capability | Needed |
+| Coverage read model on `draftScreenMap` (M6) | Capability | Needed |
+| Form drawer "Setup" section (library door) | Capability | Needed after Screen 04 slice 4 |
+| Extension X1, X3–X6, X8, X9, X10 (outline, Undo) | Capability | Needed (Undo should) |
+| Acting as (second person), Sample APR-style fixtures and the fixture server, dev build with the founder's APR host, replayed AI answers, demo seed | Scaffolding, never ported | Needed for the demo only |
+| Screen-map draft kept as a demo-folder file (m8) | Existing storage under a capability: label it | Needed (label) |
+| Capture request for another person, Form health, per-screen "entered" tick, store publishing, other browsers, screenshot capture, AI sections from forms, X11 | — | Not built |
+
+## Back-end plan (element → record → API → rule → test)
+| Element | Record (no new table) | API | Rule | Test (pass · fail) |
+|---|---|---|---|---|
+| Per-kind queue facts with form code | existing: DraftingJob, NormalizationItem, LibraryChange (`sourceJobId`), PortalCapture (`formKey`), FormEdition, FormFieldMap, IntakeItem, RecaptureTask | `GET /review-queue?form=` (adds a filter) | BR-2 | queue output identical before and after extraction · item without a form code fails the contract |
+| Validator problems by form | none (type field) | inside existing review and release | BR-9 | option-map problem carries its form · filter by form returns it, not another form's |
+| Form progress | none: read model over the above | `GET /api/forms/:code/progress?combination=` (404 outside the workspace, 403 without a studio duty) | BR-2–BR-6, BR-9 | last proposal decided → step 3 done · rail next = queue next = header next for the same item |
+| Per-form step in the Forms tab | none | one more field in `GET /combinations/:id/workspace?tab=forms` (runtime adds it, calls `formProgress`) | STANDARDS §5 | one request for the tab · no request per row |
+| Mapped elsewhere | DraftingJob + SourceAttachment checksum | plan skips with reason | P-38 | A waiting, B plans → skip "being reviewed in Visitor visa" · A applied → B "Add from the library" |
+| Reuse | `reuse_map` job (exists) | existing launch | BR-6 as fixed (M3) | reused edition → one click, US$0, no AI · changed checksum → not reused |
+| Start capture from the Studio | PortalCapture OPEN, `way: extension`, `combinationId` | `POST /api/captures` (idempotent per person, form, portal) | BR-14 as fixed | double click → one capture · another person's capture not listed in the panel |
+| Coverage | PortalCapture record (read only) | `GET /api/extension/captures/:id/coverage` | BR-11 as fixed (M6) | fixture with one unseen branch → 1 section · not-a-fact PDF entries excluded |
+| Re-capture tasks in the panel | RecaptureTask | `GET /api/extension/recapture-tasks` (token, capture mode, own workspace) | P-66 §2 | capture-mode token lists open tasks · fill-only token refused |
+
+## Slice order I would use
+0. **Prerequisites:** forms Pass A and Pass B merged (APR default, fixtures, returned capture, founder capture path); `/qa after-merge` on Screen 02 (m11); runtime Screen 03 S1 merged (M5).
+1. **F3a-1 (forms, PLAN first):** per-kind queue functions with a form code, `form` on validator problems, the cross-combination draft guard. No visible change; To review suites stay green; contract test rail = queue = header prepared.
+2. **F3a-2 (forms):** `formProgress` and the progress endpoint; the per-form field in the workspace response (runtime adds one line calling it). States: every one on the board plus "Being mapped in …" and "Add from the library".
+3. **F3b (screens):** rail in place of the line panel, chip in the "Version and field map" cell, return strip in the shell, addressable rail, `form=` on To review, Draft setup scoped to the form. EARLY-LOOK by the Lead here (the founder clicks the board before BUILD, P-99).
+4. **F3c-1 (forms, extension capture):** start from the Add an online form panel (X1), new-screen prompt and already captured (X3), coverage (X4), check before sending per question (X5), finish summary (X6).
+5. **F3c-2 (forms, extension fill and re-capture):** grouped results with sources (X9), outline and Undo (X10 without hover text), re-capture tasks in capture mode (X8).
+6. **F3d:** one seed owner for rows 1–3, 13 (merge with Pass B item 4, not twice), the end-to-end journey of the board's view 9 as corrected, then `/qa capability ingestion` and a scout charter; then the founder's real APR capture (G3) walked through the rail.
+7. Form drawer "Setup" (library door) with Screen 04 slice 4.
+
+## Questions for the founder (recommendation first)
+Settled 26 Oct: see the Lead response.
+## Lead response
+26 Oct (Lead, Mac). Spot-checked: `DraftingJob.combinationId` is required (`prisma/schema.prisma`); `POST /api/captures` already takes `way: extension` with a `combinationId` and creates an OPEN capture the panel lists (`api/src/forms.ts`, `openCaptures`). **All seven Majors accepted.** M1: per-kind queue functions in `engine/` with a form code, `form` on validator problems, one contract test rail = To review = header (F3a-1). M2: K1 changed to key (form, combination), library parts shared; state "Being mapped in <combination>" and a guard against a second draft. M3: reuse is "Add from the library · no AI · US$0". M4: K2 changed, no new record; the capture starts from the existing Add an online form panel, idempotent. M5: F3b after Screen 03 S1 merges; chip in "Version and field map", rail in place of the line panel. M6: "PDF sections not seen on any captured screen yet", cleared by a person's "asked differently online". M7: X2, X7 and the seed stay in forms Pass A/B; X8 capture-mode route; X10 no hover text. K3 agreed.
+Questions: Q1 answered by the founder (P-99 amended, P-100: no new approval). Q2 settled by F2 Q2 and P-66: usable with the M6 warning; an unseen screen gives "Capture needed" and is filled by hand. Q3 settled by P-51: both doors open the same rail; from the Forms library it stops after step 1. Slice order as proposed above; the board is corrected before the founder clicks it.
+## Agreement
+## Build discoveries
