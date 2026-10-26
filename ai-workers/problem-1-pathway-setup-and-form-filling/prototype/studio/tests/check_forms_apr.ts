@@ -102,6 +102,12 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
   ok("C7.4: PR #34 review fail case: a folder holding only an assets folder with a file (no manifest of this extension) is refused and left untouched",
     lookAlike.status === 2 && /already holds other files/.test(lookAlike.stderr) && existsSync(join(look, "assets", "user-photos.png")) && !existsSync(join(look, "manifest.json")), [lookAlike.status, lookAlike.stderr.slice(0, 160)]);
   rmSync(look, { recursive: true, force: true });
+  // PR #35 review: our own manifest beside someone's file is not an earlier build either: refused, left untouched.
+  const mixed = mkdtempSync(join(tmpdir(), "xr-apr-mixed-")); writeFileSync(join(mixed, "manifest.json"), JSON.stringify({ name: "ExpatReady portal assistant (development)" })); writeFileSync(join(mixed, "notes.txt"), "a person's own notes");
+  const mixedBuild = spawnSync(TSX, [join(STUDIO, "extension", "build.ts"), "development", "http://localhost:4400", "apr.example.gc.ca", mixed], { encoding: "utf8", timeout: 120_000 });
+  ok("C7.4: PR #35 review fail case: a folder holding this extension's manifest and a notes.txt is refused and left untouched",
+    mixedBuild.status === 2 && /already holds other files/.test(mixedBuild.stderr) && existsSync(join(mixed, "notes.txt")) && JSON.parse(readFileSync(join(mixed, "manifest.json"), "utf8")).name === "ExpatReady portal assistant (development)", [mixedBuild.status, mixedBuild.stderr.slice(0, 160)]);
+  rmSync(mixed, { recursive: true, force: true });
   // Review-4 Minor 5: inside the Studio's working folder too (`var/workspaces` holds the demo's approval records).
   const inVar = join(VARDIR, "records"); mkdirSync(inVar, { recursive: true }); writeFileSync(join(inVar, "approved.json"), "{}");
   const varWipe = spawnSync(TSX, [join(STUDIO, "extension", "build.ts"), "development", "http://localhost:4400", "apr.example.gc.ca", inVar], { encoding: "utf8", timeout: 120_000 });
