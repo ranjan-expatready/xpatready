@@ -59,7 +59,7 @@ export function missingItems(s: Snapshot, participants: Participant[], problems:
       : line("no_forms", "No forms yet.", "Add sources", " (add the forms this application files)"));
   }
   // W1-02 (P-102): every form is read from its PDF, so a line filed Online needs its PDF form fields mapped too.
-  const unmapped = forms.filter((f) => (f.form_kind ?? "data_form") === "data_form" && !(s.field_maps as FieldMap[]).some((m) => m.form_number === f.form_number && m.entries.length)).map((f) => f.form_number);
+  const unmapped = forms.filter((f) => (f.form_kind ?? "data_form") === "data_form" && !(s.field_maps as (FieldMap & { channel?: string })[]).some((m) => m.form_number === f.form_number && m.channel !== "ONLINE" && m.entries.length)).map((f) => f.form_number);
   if (unmapped.length) out.push(line("form_without_edition", `No form fields mapped yet for ${unmapped.join(", ")}.`, "Draft setup", " (AI maps the form fields from the form)"));
   // Founder finding F2: one cause, one line, with what to do next (not one line per person role).
   const roles = personQuestions(s).length ? [] : applicants(participants).map((p) => p.label);

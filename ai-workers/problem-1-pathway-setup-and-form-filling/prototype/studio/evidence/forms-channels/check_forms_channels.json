@@ -1,5 +1,5 @@
 {
- "at": "2026-10-26T13:28:53.853Z",
+ "at": "2026-10-26T14:35:19.373Z",
  "port": 4450,
  "database": "xr_studio_forms_f1",
  "paid_calls": 0,
@@ -429,7 +429,7 @@
   {
    "name": "C1.6: fill fail: a line filed Online is not filled as a PDF, even though the library has the PDF",
    "ok": true,
-   "detail": "IMM 1295 is filed Online here: its answers go on the portal sheet, not in a PDF."
+   "detail": "IMM 1295 is filed Online here: it needs the browser extension (later wave), so the product does not fill it. File it as a PDF upload to fill its PDF."
   },
   {
    "name": "C3.8: answer list: a list linked by mistake can be taken off; no option-map problem is left for that field",
@@ -493,8 +493,8 @@
    "name": "C3.5: merge fail: the same merge proposed twice at the same moment is stored once",
    "ok": true,
    "detail": [
-    201,
-    409
+    409,
+    201
    ]
   },
   {

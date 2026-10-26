@@ -1,12 +1,12 @@
 {
- "at": "2026-10-26T13:34:35.038Z",
+ "at": "2026-10-26T14:38:07.713Z",
  "pass": 135,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 4.953
+   "detail": 7.04
   },
   {
    "name": "BR-1 pass: Individual shows only Individual programs; Corporate only Corporate",
@@ -280,7 +280,7 @@
    "name": "QA-1 pass: submitted and signed, the combination will be released",
    "ok": true,
    "detail": {
-    "combinationId": "04f0909b-623b-4ee9-9bfe-c3624cc8276c",
+    "combinationId": "c770f1dc-9212-41a4-895f-c3eaef0d4977",
     "label": "Spouse of a student",
     "path": [
      "Work permits",
@@ -601,10 +601,10 @@
    "name": "source-trust race: repeated unapproved edition uploads remain held once (database guard)",
    "ok": true,
    "detail": [
+    "Held for source verification: IMM 1295 (",
     "Already waiting for a person: checksum n",
     "Already waiting for a person: checksum n",
-    "Already waiting for a person: checksum n",
-    "Held for source verification: IMM 1295 ("
+    "Already waiting for a person: checksum n"
    ]
   },
   {
@@ -817,13 +817,13 @@
     [
      {
       "field": "label",
-      "message": "\"Race at once\" already exists under Visitors: choose it instead."
+      "message": "\"Race at once\" already exists here (names are compared ignoring case, spaces and punctuation)."
      }
     ],
     [
      {
       "field": "label",
-      "message": "\"Race at once\" already exists under Visitors: choose it instead."
+      "message": "\"Race at once\" already exists here (names are compared ignoring case, spaces and punctuation)."
      }
     ],
     [
@@ -966,7 +966,7 @@
   {
    "name": "performance: a filtered catalogue answers in under 200 ms with the sample data",
    "ok": true,
-   "detail": "5 ms"
+   "detail": "6 ms"
   },
   {
    "name": "QA-6 fail: a name of symbols only is refused on its field in plain words; nothing is created",
@@ -1005,7 +1005,7 @@
     "label": "With an LMIA",
     "combinations": 1,
     "hasSetup": true,
-    "combinationId": "6d1d939b-37a8-4489-8c09-fd573289e5e1"
+    "combinationId": "99cfdbae-6f86-4fe9-82f3-b40cb1f9d307"
    }
   },
   {
@@ -1021,7 +1021,7 @@
   {
    "name": "QA-5: the app still shows it at the real time",
    "ok": true,
-   "detail": "2026-10-26T13:34:27.515Z"
+   "detail": "2026-10-26T14:37:59.802Z"
   },
   {
    "name": "QA-5 condition: the database's own zone is not UTC on this machine, so the check above is a real test of the fix",
@@ -1039,7 +1039,7 @@
    "detail": [
     [
      201,
-     6.409
+     6.645
     ],
     [
      409,

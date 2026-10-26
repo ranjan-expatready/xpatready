@@ -1,14 +1,14 @@
 // Filing channels (P-61 §2, F1 challenge point 4): each form line says how it is filed; the combination's filing method
 // and each line's signature method are worked out from the lines, never stored, so they cannot contradict them. The
 // validator rules for channels and option maps (P-62 §5.3, no AI) run on the snapshot, with everything else in
-// engine/validate.ts, at review and release. W1-02 (P-102, P-107): Online stays a choice per line, filled by the browser
+// engine/validate.ts, at review and release. W1-02 (P-102, P-107 as amended by P-114): Online stays a choice per line, filled by the browser
 // extension in a later wave; portals, online versions and screen maps are parked with it.
 import { CHANNEL_WORDS, SIGNATURE_WORDS, type Channel } from "../contracts/forms.ts";
 import { hasCodes, optionMapProblems, type OptionMap } from "./options.ts";
 import type { Problem } from "./validate.ts";
 import type { Snapshot } from "./snapshot.ts";
 
-type Line = { form_number: string; channel?: Channel; status?: string; condition_plain?: string | null; who?: string; title?: string };
+type Line = { form_number: string; channel?: Channel; status?: string; condition_plain?: string | null; who?: string; title?: string; form_kind?: string | null; online_only?: boolean };
 /** The parts of the snapshot (engine/snapshot.ts) these rules read. */
 type MapEntry = { data_path: string; caption?: string | null; outcome: string; fact?: string | null; transform?: string | null; option_map?: OptionMap | null; row?: number | null; list_purpose?: { kind: string; overflow: string } | null };
 type FieldMap = { form_number: string; form_edition: string; channel?: string; entries: MapEntry[] };
@@ -54,9 +54,14 @@ export function channelProblems(s: Snapshot): Problem[] {
   const lists = new Map<string, string[]>((s.canonical_fields as FieldDef[]).flatMap((f) => (f.answer_list ? [[f.id, f.answer_list.values.map((v) => v.key)] as [string, string[]]] : [])));
   // P-107: a line filed Online is allowed (what IRCC accepts is the library's, W1-06); the product cannot fill it until
   // the browser extension returns, so it is said once as a warning, never an error that blocks a release.
-  for (const f of s.forms as Line[]) if (chOf(f) === "ONLINE")
-    out.push({ level: "warning", where: "Forms", item: f.form_number, message: `${f.form_number} is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF.` });
-  for (const m of mapsOf(s)) for (const e of m.entries) {
+  for (const f of s.forms as Line[]) {
+    // W1-02 (break M1): every form is read and filled from its PDF (P-102). A form the library holds only as an online
+    // version (parked with the extension, on an older database) has nothing to read or fill: release is refused.
+    if ((f.form_kind ?? "data_form") === "data_form" && f.online_only) out.push({ level: "error", where: "Forms", item: f.form_number, message: `${f.form_number} has no PDF edition in the library: forms come in only as their official PDF. Add ${f.form_number}'s PDF from IRCC (Add form), or remove the form from this combination.` });
+    if (chOf(f) === "ONLINE") out.push({ level: "warning", where: "Forms", item: f.form_number, message: `${f.form_number} is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF.` });
+  }
+  const pdfMaps = mapsOf(s).filter((m) => m.channel !== "ONLINE"); // W1-02: an older release's online maps are parked
+  for (const m of pdfMaps) for (const e of m.entries) {
     const values = e.outcome === "mapped" && e.fact ? lists.get(e.fact) : undefined;
     // Only a form field with codes of its own needs an option map; a derived or text field writes the value itself.
     if (!values || (!e.option_map && !hasCodes(e.transform))) continue;
@@ -64,7 +69,7 @@ export function channelProblems(s: Snapshot): Problem[] {
   }
   // F1-P (Screen 02 Q3): a list's rows say what the list holds and where extra rows go; until then it is a warning,
   // never an error, so configurations released before F1-P stay releasable.
-  for (const m of mapsOf(s)) {
+  for (const m of pdfMaps) {
     const unset = m.entries.filter((e) => e.outcome === "mapped" && e.row != null && !e.list_purpose);
     if (unset.length) out.push({ level: "warning", where: `Field map ${m.form_edition}`, item: m.form_number, message: `${unset.length} list row${unset.length > 1 ? "s have" : " has"} no purpose yet (for example ${unset[0].caption ?? unset[0].data_path}): choose what the list holds and what happens to rows the form has no room for.` });
   }

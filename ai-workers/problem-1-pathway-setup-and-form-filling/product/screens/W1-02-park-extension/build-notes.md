@@ -19,7 +19,7 @@ US$0: no live AI, every AI path in the checks is a stub or a replayed saved answ
 | `api/src/sources.ts` | Online versions in the Forms library list (PDF editions only) |
 | `api/src/ai.ts` | The screen-map exception in AI work retry |
 | `engine/twin.ts` | Screen-map drafting (no AI and AI proposals) and online screen coverage; kept: label normalising and PDF section groups and labels |
-| `engine/snapshot.ts`, `engine/validate.ts` | Online editions, portal, re-check and screen keys in a configuration's snapshot (configurations without online lines keep their fingerprint: checked) |
+| `engine/snapshot.ts`, `engine/validate.ts` | Nothing in the end: first removed, then restored in FIX (break M2), so older releases keep their fingerprint |
 | `web/` | The Extension page and its menu entry, "Add an online form" panel, online-forms list, portal select, "File these Online", drafting-sources table, capture review page (view 6), screen-map page (view 5) |
 | tests | `check_forms_apr`, `_f2a`, `_f2a_api`, `_f2b`, `_f2c`, `_f2c_fill`, `_f2d`, `_f3c`, `_f3c2`, `forms_f2_setup.ts`, fixtures `portal/`, `portal-apr/`, `portal-fill/`, `portal-server.mjs` |
 
@@ -59,6 +59,28 @@ option maps, answer lists, merges), `check_forms_demo` 25/25, `check_forms_f3a0`
 `check_screen01_api` 135/135, `check_screen01_rules` 67/67, `check_screen02_slice2` 56/56, `check_screen01_browser`
 129/129, `check_screen01_smallfix` all, `check_screen02_slice1` all, `check_screen02_slice2_browser` all.
 PDF regression (unchanged suites): see the lane log line.
+
+## Fixes (CHECK 26 Oct: review.md Ship after fixes 8.5/10, 1 Major, 6 Minor · break-report.md 0 Blocker, 2 Major, 5 Minor)
+Each has a passing and a failing case in `tests/check_forms_w102_fix.ts` (20/20) or `check_forms_demo.ts` (26/26). An
+"older database" in those checks is made by SQL in the shape the pre-park code wrote, as the breaker did.
+
+| Finding | Fix |
+|---|---|
+| Review M1: Preview offered "Fill PDF" on a line filed Online, refused with "portal sheet" | `GET /combinations/:id/preview` names `online_forms`; Preview shows "Needs the browser extension (later wave)" there instead of the button (`web/src/pages/preview.tsx`); the Studio fill refusal uses the same words (`api/src/fill.ts`). The case fill (`fill-case.ts`, runtime lane) keeps "portal sheet": for portal-only forms P-113 plans that answer sheet, so its words are the runtime/m3 lanes' |
+| Break M1: on an older database a form held only as an online version was released with no PDF | `engine/channels.ts`: a data form line whose form has no PDF edition is an **error** ("has no PDF edition in the library: forms come in only as their official PDF. Add its PDF from IRCC…"), so submit and release refuse it |
+| Break M2: older releases with a portal or an Online line lost their fingerprint (phantom changes; an empty submission could be released) | `engine/snapshot.ts` and `engine/validate.ts` are back exactly as before the park (portal, an Online line's online versions and online field maps appear in a snapshot only when such dormant data exists, which a database made since never holds), so an older release keeps its fingerprint; and `submit` now refuses a draft with no listed change even when the fingerprint moved (`api/src/studio.ts`) |
+| Break m1: a parked screen-map AI batch could be retried (LIVE step, raw error) | `api/src/ai.ts`: no retry offered, a retry is refused in plain words |
+| Break m2: the first official PDF of a form held only online went to impact review | `api/src/intake.ts`: only PDF editions count as the form's current edition |
+| Break m3: parked online data still served | editions list PDF only; option maps and list purposes of an online edition 404 (`forms.ts pdfEdition`); its form fields 404 (`screen02.ts`); channel rules and the "No form fields mapped" line read PDF maps only (`engine/channels.ts`, `engine/programs.ts`) |
+| Break m4 / review M1 words | as review M1 above (Studio side); case side left to the runtime lane, said in the block |
+| Break m5: the demo story's run-once mark was a file-name suffix | a finished run leaves its own history entry (`audit_event` seeded · demo story), which is the mark |
+| Review m1: the later-wave sentence four times on the Forms card | the filing line no longer repeats it (once per line, plus the warning) |
+| Review m2: the Reset dialog listed "parked portal captures" | counts "Answer lists and merges"; reset still empties the parked tables |
+| Review m3: code kept for parked data | kept on purpose where an older database still holds that data (start-up sweep of screen-map AI work, the ONLINE filters), each with its reason |
+| Review m4 | fixed by break M2 |
+| Review m5: P-114 | cited beside P-107 in the code |
+
+Choice 1 above now reads: no schema change, **and the snapshot keeps reading the dormant data** (break M2).
 
 ## Not done here (for the Lead)
 * qa lane's own checks that drive parked routes or code: `tests/qa/check_qa_s2_probe.ts` (imports `screenMapProposals`,

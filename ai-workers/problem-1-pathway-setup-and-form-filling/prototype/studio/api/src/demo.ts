@@ -120,8 +120,8 @@ export class Demo {
       "Sample profiles and facts": (await t.sampleProfile.count({ where: ws })) + (await t.sampleFact.count({ where: ws })), "Generated PDFs and reports": await t.generatedArtifact.count({ where: ws }), "Activity entries": await t.auditEvent.count({ where: ws }),
       // Runtime lane (R1): cases, the people on them and their answers (all versions)
       Cases: await t.case.count({ where: ws }), "People on cases": await t.party.count({ where: ws }), "Case answers (all versions) and rows": (await t.clientCanonicalAnswer.count({ where: ws })) + (await t.clientFactRecord.count({ where: ws })),
-      // F1 (forms lane): answer lists and field merges, with any portal captures from before W1-02 (P-102, parked)
-      "Answer lists, merges and parked portal captures": (await t.portalCapture.count({ where: ws })) + (await t.answerList.count({ where: ws })) + (await t.fieldMerge.count({ where: ws })),
+      // F1 (forms lane): answer lists and field merges (rows parked by W1-02 on an older database are removed too)
+      "Answer lists and merges": (await t.answerList.count({ where: ws })) + (await t.fieldMerge.count({ where: ws })),
       "Library changes and sources approved in the product": (await t.libraryChange.count({ where: ws })) + (await t.approvedSource.count({ where: ws })),
     };
     const dir = VAR("demo");

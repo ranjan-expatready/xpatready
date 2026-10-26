@@ -292,8 +292,10 @@ export class Intake {
       await this.record(actor, workspaceId, combination?.id ?? null, name, stored, hash, file.buffer.length, r, "HELD", "same edition, different file");
       return r;
     }
-    if (def?.editions.length) {
-      const current = newestEdition(def.editions)!;
+    // W1-02 (break m2): an online version (parked, on an older database) is not an edition the PDF is compared with.
+    const pdfEditions = (def?.editions ?? []).filter((e) => e.channel !== "ONLINE");
+    if (pdfEditions.length) {
+      const current = newestEdition(pdfEditions)!;
       const newer = editionMonth(id.edition_label) > editionMonth(current.editionLabel);
       const r: IntakeResult = newer
         ? { file: name, outcome: "new_edition_held", ...read, message: `New edition: impact review needed. ${id.edition_label} is newer than the library's ${current.editionLabel}. It is held: not added to the library, not attached and not used until a person reviews what changed.` }

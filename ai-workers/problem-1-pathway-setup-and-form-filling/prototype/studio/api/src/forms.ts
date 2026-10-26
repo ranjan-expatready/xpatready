@@ -47,6 +47,13 @@ export class Forms {
 
   private editionView(e: FormEdition) { return { id: e.id, label: e.editionLabel, channel: e.channel, fingerprint: e.sha256, questions: e.dataBoundBoxes }; }
 
+  /** A PDF edition by id; an online version (parked with the browser extension, on an older database) is not found. */
+  private async pdfEdition(id: string) {
+    const ed = await this.db.formEdition.findUniqueOrThrow({ where: { id } });
+    if (ed.channel === "ONLINE") fail("This form edition is not in the library (online versions are parked with the browser extension).", HttpStatus.NOT_FOUND);
+    return ed;
+  }
+
   // ───────────────────────────────────────────────────────────── library rows
   private async libraryRows(workspaceId: string, db: Pick<Db, "canonicalField"> = this.db) {
     const rows = await db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "desc" } });
@@ -64,7 +71,7 @@ export class Forms {
     const workspaceId = await this.ws.id();
     const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey } }, include: { editions: { include: { _count: { select: { maps: true } } } } } });
     if (!def) fail(`${formKey} is not in the library.`, HttpStatus.NOT_FOUND);
-    return def!.editions.map((e) => ({ ...this.editionView(e), mapped: e._count.maps }));
+    return def!.editions.filter((e) => e.channel !== "ONLINE").map((e) => ({ ...this.editionView(e), mapped: e._count.maps }));
   }
 
   async setChannel(actor: Actor, combinationId: string, lineKey: string, body: unknown) {
@@ -172,7 +179,7 @@ export class Forms {
    *  answer list, without AI. A published row gets a new draft version; released content is untouched. */
   async draftOptionMaps(actor: Actor, editionId: string) {
     need(actor, "author");
-    const ed = await this.db.formEdition.findUniqueOrThrow({ where: { id: editionId } });
+    const ed = await this.pdfEdition(editionId);
     const lib = new Map((await this.libraryRows(ed.workspaceId)).map((r) => [r.canonicalFieldKey, r]));
     const lists = new Map((await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } }, orderBy: { version: "desc" } })).map((l) => [l.answerListKey, l]));
     const all = await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } });
@@ -195,7 +202,7 @@ export class Forms {
   async setOptionMap(actor: Actor, editionId: string, body: unknown) {
     need(actor, "author");
     const b = parse(SetOptionMap, body), dataPath = b.dataPath;
-    const ed = await this.db.formEdition.findUniqueOrThrow({ where: { id: editionId } });
+    const ed = await this.pdfEdition(editionId);
     const rows = await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath } });
     const m = effective(rows, (x) => x.dataPath, "draft")[0];
     if (!m || m.outcome !== "mapped" || !m.canonicalFieldKey) fail("That form field is not mapped to a shared field.", HttpStatus.NOT_FOUND);
@@ -217,7 +224,7 @@ export class Forms {
   async setListPurpose(actor: Actor, editionId: string, body: unknown) {
     need(actor, "author");
     const b = parse(SetListPurpose, body), dataPath = b.dataPath;
-    const ed = await this.db.formEdition.findUniqueOrThrow({ where: { id: editionId } });
+    const ed = await this.pdfEdition(editionId);
     const rows = await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath } });
     const m = effective(rows, (x) => x.dataPath, "draft")[0];
     if (!m) fail("That form field is not on this form's field map.", HttpStatus.NOT_FOUND);

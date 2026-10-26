@@ -43,8 +43,8 @@ export async function seedFormsStory(s: Services, actor: Actor, combinationId: s
 
 async function seedSteps(s: Services, combinationId: string, label: string): Promise<FormsStory> {
   const combo = await s.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
-  // Run once per combination: the story's off-list copy (row 1) is its mark.
-  if (await s.db.intakeItem.count({ where: { combinationId, fileName: { endsWith: "-from-email.pdf" } } }))
+  // Run once per combination: a finished run leaves its own history entry (break m5: never a file name a person could also use).
+  if (await s.db.auditEvent.count({ where: { combinationId, action: "seeded", entity: "demo story" } }))
     fail(`"${label}" already holds the forms part of the demo story: reset the demo to run it again.`, HttpStatus.CONFLICT);
   const log: string[] = [];
   // Row 1: each official file through the one intake (code, edition, checksum read without AI); a form is read here.
@@ -74,5 +74,6 @@ async function seedSteps(s: Services, combinationId: string, label: string): Pro
   const checklist = await s.db.sourceAttachment.findFirst({ where: { combinationId, kind: "Document checklist", recognised: true }, orderBy: { createdAt: "asc" } });
   const job = checklist ? await s.checklists.draft(AUTHOR, checklist.id, { mode: "stub" }) : null;
   log.push(`row 7: ${checklist ? `${checklist.edition}: checklist drafting stub pass (US$0, the live draft waits for the founder)` : "no checklist attached"}`);
+  await s.db.auditEvent.create({ data: { workspaceId: combo.workspaceId, actor: AUTHOR.id, action: "seeded", entity: "demo story", entityKey: "forms", summary: `The forms part of the demo story ran on "${label}" (rows 1 and 7; Sample, no AI)`, combinationId } });
   return { log, held_decision: decision, checklist_job_id: job?.id ?? null };
 }

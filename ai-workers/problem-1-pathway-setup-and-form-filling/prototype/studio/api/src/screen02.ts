@@ -56,7 +56,7 @@ export class Screen02 {
   /** The undecided and decided form fields of a PDF edition (K1), for the review page beside the source. */
   async formFields(editionId: string) {
     const ed = await this.db.formEdition.findUnique({ where: { id: editionId }, include: { form: true } }).catch(() => null);
-    if (!ed) fail("This form edition does not exist.", HttpStatus.NOT_FOUND);
+    if (!ed || ed.channel === "ONLINE") fail("This form edition does not exist.", HttpStatus.NOT_FOUND); // W1-02 (break m3): online versions are parked
     const rows = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed!.id } }), (m) => m.dataPath, "draft");
     const word: Record<string, string> = { mapped: "Mapped", not_a_fact: "Not a fact", never_filled: "Not a fact", by_hand: "Filled by hand", unresolved: "No decision" };
     return { edition: { id: ed!.id, label: ed!.editionLabel, form: ed!.form.formKey }, fields: rows.map((r) => ({ dataPath: r.dataPath, caption: r.caption, heading: r.heading, outcome: r.outcome, outcome_word: word[r.outcome] ?? r.outcome, field: r.canonicalFieldKey, reason: r.reason, status: r.status, carried: r.outcome === "unresolved" && r.status === "PUBLISHED" })) };

@@ -28,10 +28,14 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   const vv = sql("select id from combination where combination_key='vv.single'");
   ok("setup: the runtime lane's Visitor visa is released (release 1, every form a PDF)", !!vv && sql(`select count(*) from config_release where combination_id='${vv}'`) === "1");
   let r = await call("POST", "/demo/forms-story", { combinationId: vv }, "user-C");
-  ok("demo fail: only an author runs the forms part of the story (the content reviewer: 403); nothing is seeded", r.status === 403 && sql("select count(*) from intake_item where file_name like '%-from-email.pdf'") === "0", r.body.message);
+  ok("demo fail: only an author runs the forms part of the story (the content reviewer: 403); nothing is seeded", r.status === 403 && sql("select count(*) from intake_item where file_name like '%-from-email.pdf' and file_name <> 'mine-from-email.pdf'") === "0", r.body.message);
   r = await call("POST", "/demo/forms-story", { combinationId: "00000000-0000-4000-8000-000000000000" });
   ok("demo fail: a combination that does not exist (404)", r.status === 404, r.body.message);
 
+  // Break m5: a person's own file whose name ends like the story's copy never marks the story as already run.
+  const own = new FormData(); own.append("files", new Blob([readFileSync(join(import.meta.dirname, "..", "..", "..", "official-sources", "ircc", "forms", "imm5476e.pdf"))]), "mine-from-email.pdf");
+  await fetch(`http://localhost:${PORT}/api/combinations/${vv}/attachments`, { method: "POST", headers: { "x-actor": "user-A" }, body: own });
+  ok("demo setup (break m5): a person uploads their own file named mine-from-email.pdf on the Visitor visa first", sql("select count(*) from intake_item where file_name='mine-from-email.pdf'") === "1");
   r = await call("POST", "/demo/forms-story", { combinationId: vv, online: true });
   ok("demo: the forms part of the story runs and says what it did, row by row (rows 1 and 7; no APR row, no capture, the old online flag ignored)", r.status === 201 && ["row 1:", "row 7:"].every((x) => (r.body.log as string[]).some((l) => l.startsWith(x))) && !(r.body.log as string[]).some((l) => /^row (2|13):/.test(l)) && r.body.capture_id === undefined && sql("select count(*) from portal_capture") === "0", r.body.log ?? r.body.message);
   const files = sql(`select string_agg(distinct split_part(edition, ' (', 1), ',' order by split_part(edition, ' (', 1)) from source_attachment where combination_id='${vv}' and recognised`);
@@ -40,9 +44,9 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   // The library already holds every visitor visa form from its official file, so the second person rejects the copy as
   // not needed (review-3 Major 1: never approved into a loop); approval of an off-list file is P-80's (p80_guard).
   const VISITOR_FORMS = ["IMM 5257", "IMM 5257 SCH1", "IMM 5707", "IMM 5476", "IMM 5484", "IMM 5409", "IMM 5881"];
-  const copyCodes = () => sql("select string_agg(distinct code, ',') from intake_item where file_name like '%-from-email.pdf'").split(",");
+  const copyCodes = () => sql("select string_agg(distinct code, ',') from intake_item where file_name like '%-from-email.pdf' and file_name <> 'mine-from-email.pdf'").split(",");
   ok("C2.2: review-4 Major 2 the demo's off-list copy is a visitor visa form (IMM 5409 here), never a sponsorship form", copyCodes().join() === "IMM 5409" && copyCodes().every((c) => VISITOR_FORMS.includes(c)), copyCodes());
-  const decided = sql("select created_by || '|' || status || '|' || coalesce(reason,'') from intake_item where file_name like '%-from-email.pdf'");
+  const decided = sql("select created_by || '|' || status || '|' || coalesce(reason,'') from intake_item where file_name like '%-from-email.pdf' and file_name <> 'mine-from-email.pdf'");
   ok("C2.2/C2.3: DEMO row 1 the off-list copy was held, then decided by a second person (the reviewer, not the uploader): rejected as not needed, the library holds IMM 5409 from the official file",
     r.body.held_decision === "rejected" && /^user-A\|DONE\|Rejected by Content reviewer: Sample: the library already holds IMM 5409/.test(decided) && sql("select count(*) from audit_event where action='rejected' and actor='user-C'") !== "0", { decision: r.body.held_decision, decided });
   ok("C2.3: review-3 Major 1 the rejected copy is not in the library, not attached, and nothing is left waiting in To review", sql("select count(*) from approved_source") === "0" && sql("select count(*) from intake_item where status='HELD'") === "0", sql("select string_agg(outcome || ':' || coalesce(reason,''), ' / ') from intake_item where status='HELD'"));
@@ -92,7 +96,7 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   } finally { await browser.close(); }
 
   r = await call("POST", "/demo/forms-story", { combinationId: vv });
-  ok("demo fail: run twice on the same combination, it is refused in words (409) and nothing is added twice", r.status === 409 && /reset the demo/.test(r.body.message) && sql("select count(*) from intake_item where file_name like '%-from-email.pdf'") === "1", r.body.message);
+  ok("demo fail: run twice on the same combination, it is refused in words (409) and nothing is added twice (one run recorded, one copy)", r.status === 409 && /reset the demo/.test(r.body.message) && sql("select count(*) from audit_event where action='seeded' and entity='demo story'") === "1" && sql("select count(*) from intake_item where file_name like '%-from-email.pdf' and file_name <> 'mine-from-email.pdf'") === "1", r.body.message);
   r = await call("POST", "/demo/reset", { confirm: "RESET" });
   ok("demo: a reset removes the story's held copies and approvals (blank again)", r.status < 300 && sql("select (select count(*) from intake_item) + (select count(*) from approved_source)") === "0", r.status);
 

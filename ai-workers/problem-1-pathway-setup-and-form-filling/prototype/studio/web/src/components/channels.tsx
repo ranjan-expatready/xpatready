@@ -43,11 +43,9 @@ function usePick<T extends string>(saved: T, save: (v: T, from: T) => Promise<bo
 
 /** The line under "Forms": the derived filing method. */
 export function FilingLine({ sum }: { sum: CombinationSummary }) {
-  const online = sum.forms.some((f) => !f.document && f.channel === "ONLINE");
   return (
     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" data-filing>
       <span title={sum.filingDetail !== sum.filing ? sum.filingDetail : undefined}><span className="text-text-muted">Filing: </span><b className="font-semibold">{sum.filing}</b>{sum.filingDetail !== sum.filing && sum.forms.length ? <span className="sr-only"> ({sum.filingDetail})</span> : null}</span>
-      {online ? <span className="text-xs text-text-muted">Forms filed Online: {ONLINE_LATER.toLowerCase()}; the product does not fill them yet.</span> : null}
     </div>
   );
 }

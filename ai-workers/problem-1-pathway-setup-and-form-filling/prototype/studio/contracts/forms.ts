@@ -13,7 +13,7 @@ export const SIGNATURE_WORDS: Record<Channel, string> = {
   SIGNED_PDF_UPLOAD: "Printed, signed by hand, scanned and uploaded",
   PDF_UPLOAD: "No signature in the file",
 };
-/** P-102, P-107: Online stays selectable per line; the product fills it only once the browser extension returns. */
+/** P-102, P-107 (P-114: the channel follows the filing route): Online stays selectable per line; the product fills it only once the browser extension returns. */
 export const ONLINE_LATER = "Needs the browser extension (later wave)";
 
 export const SetChannel = z.object({ channel: z.enum(CHANNELS, { message: "Choose PDF upload, Online or Signed PDF upload." }), from: z.enum(CHANNELS).optional() });
