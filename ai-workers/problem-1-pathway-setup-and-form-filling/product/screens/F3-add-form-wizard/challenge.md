@@ -141,10 +141,9 @@ Real-APR risk to carry, not F3's to solve: if the real APR screens render inside
 6. **F3d:** one seed owner for rows 1–3, 13 (merge with Pass B item 4, not twice), the end-to-end journey of the board's view 9 as corrected, then `/qa capability ingestion` and a scout charter; then the founder's real APR capture (G3) walked through the rail.
 7. Form drawer "Setup" (library door) with Screen 04 slice 4.
 
-## Questions for the founder (recommendation first)
-Settled 26 Oct: see the Lead response.
 ## Lead response
 26 Oct (Lead, Mac). Spot-checked: `DraftingJob.combinationId` is required (`prisma/schema.prisma`); `POST /api/captures` already takes `way: extension` with a `combinationId` and creates an OPEN capture the panel lists (`api/src/forms.ts`, `openCaptures`). **All seven Majors accepted.** M1: per-kind queue functions in `engine/` with a form code, `form` on validator problems, one contract test rail = To review = header (F3a-1). M2: K1 changed to key (form, combination), library parts shared; state "Being mapped in <combination>" and a guard against a second draft. M3: reuse is "Add from the library · no AI · US$0". M4: K2 changed, no new record; the capture starts from the existing Add an online form panel, idempotent. M5: F3b after Screen 03 S1 merges; chip in "Version and field map", rail in place of the line panel. M6: "PDF sections not seen on any captured screen yet", cleared by a person's "asked differently online". M7: X2, X7 and the seed stay in forms Pass A/B; X8 capture-mode route; X10 no hover text. K3 agreed.
 Questions: Q1 answered by the founder (P-99 amended, P-100: no new approval). Q2 settled by F2 Q2 and P-66: usable with the M6 warning; an unseen screen gives "Capture needed" and is filled by hand. Q3 settled by P-51: both doors open the same rail; from the Forms library it stops after step 1. Slice order as proposed above; the board is corrected before the founder clicks it.
 ## Agreement
+Agreed 26 Oct: the founder said Go on the r2 board; plan input `concept.md`; next the forms lane's PLAN.
 ## Build discoveries
