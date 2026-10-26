@@ -15,12 +15,12 @@ Run `bash P/tools/lane.sh whoami` (Mac: on `lead/<date>` from `origin/main`). `u
 ## Start of every chat
 0. **Cloud session (P-82):** run `bash P/tools/cloud-setup.sh` once.
 0b. **One Lead at a time (Mac or cloud):** `bash P/tools/lane.sh leads` lists a Lead commit this chat did not make → ask the founder whether that chat still runs and whether its branch merges first; never build beside an unmerged Lead branch.
-1. Read `LEAD.md`, `STATE.md`, `lanes/*.md`, `qa/BUGS.md`, open rows of `REQUESTS.md`, the newest lines of `DECISIONS.md`; `WORKFLOW.md` if roles or stages are in question.
+1. Read `WAVE-1.md` first (scope and order, P-101), then `LEAD.md`, `STATE.md`, `lanes/*.md`, `qa/BUGS.md`, open rows of `REQUESTS.md`, the newest lines of `DECISIONS.md`; `WORKFLOW.md` if roles or stages are in question.
 2. `lane.sh status`, each lane's newest commits (`git log main..<branch>`), and `lane.sh inbox`: drain it (`inbox/README.md`).
 3. **Pick up lanes:** a lane owned by Builder with no session working → a fresh session, prompt `/next <lane>` or `/qa <mode>`: Mac `start_session` (own worktree, `source_branch` = its branch or main); cloud `create_session` (`source_revision`, `outcome_branch` = `lane.sh branch <lane>`; none yet: `main` and a new `claude/<lane>-<word>`). Evidence and anything needing `sources/` or `code/` stay on the Mac (P-82). Name the lanes resumed; never disturb a lane writing files.
 4. **Top of every reply: the lanes table** (`lane.sh table`) and one progress line (`tools/progress.sh`: capabilities that work per milestone; never dates, P-75), then what changed and what was merged, then at most three things needed from the founder, each with a recommendation, in plain business words, one question at a time.
 
-## Acting on a lane's Paste to Lead (sent by lane sessions, or pasted by the founder)
+## Acting on a lane's Paste to Lead (from lane sessions or the founder)
 * **CHALLENGE / PLAN:** answer every objection under "Lead response" (accept, or reject with the reason, as honest about your design as theirs); product choices go to the founder (skill grilling); when settled write "Agreed <date>". Build only on decisions the founder has agreed.
 * **Every stage:** label each element Capability or Scaffolding (P-33): "in production, who does this, on which screen?"
 * **EARLY-LOOK:** screenshots next to the board; list differences; founder says Go or changes (changes go to the board first).
@@ -33,7 +33,7 @@ Run `bash P/tools/lane.sh whoami` (Mac: on `lead/<date>` from `origin/main`). `u
 * **Hand-back and running lanes (P-64, P-68):** the Lead writes only the **"From the Lead"** section at the top of `lanes/<lane>.md` on `main` (replace it; dated; stage, owner, what to do) and a STATE log line; the lane applies it at its next sync. Then continue its session (`SendMessage`: `/next <lane>`) or start a fresh one. The founder never has to type `/next`.
 * Never edit app code or a lane's own files on its branch. A founder request about the workflow made in a lane session comes to the Lead.
 
-## Scheduled run (P-84: cloud, every 4 hours; prompt "scheduled run") — no founder present
+## Scheduled run (P-84; paused) — no founder present
 1. Step 0b finds another Lead's recent commit → write nothing, one line, stop.
 2. Each lane owned by Lead: its Lead stage as above (CHECK reads CI, P-85; MERGE under the standing OK). What needs the founder (EARLY-LOOK, DEMO, product choices) → check, then one plain question with a recommendation under "Questions for the founder" in `LEAD.md`.
 3. A lane owned by Builder whose Lead note, 4+ hours old, is not applied on its origin branch → `create_session` on `lane.sh branch <lane>`, prompt `/next <lane>`. Never evidence (Mac); never a lane with an origin commit in the last 2 hours.

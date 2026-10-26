@@ -1,7 +1,8 @@
 # Lane: evidence — proof that filled forms pass, and an AI scoring set
 
 ## From the Lead
-2026-10-25 11:30 (Lead, Devin, Mac): **IMM 5409 EARLY-LOOK accepted** (`prototype/evidence-lane/E1/imm5409/STATUS.md`): the product's part passes — 18/18 Sample values in their boxes, unchanged after Adobe's save, UR3 verifies; Validate's only person step is the oath block (F6); F5 confirmed (static form: page fields read empty outside Adobe until saved there — the as-written file is correct). F5 and F6 are on the forms lane's note. Stage BUILD, owner Builder, Mac only: **IMM 5476** (trial list 4/4, the other static form): record page fields before and after Adobe's save, one commit and one EARLY-LOOK report as before. Sync main first.
+
+2026-10-26 evening (Lead, Mac): **Wave 1 reset (P-101; `WAVE-1.md`).** Hold. Your next item is W1-12: Adobe checks of the official PDFs for the founder's 5 combinations, once the Lead's research lists them (Sample until the expert confirms). Owner Lead until then.
 
 Command: `/next evidence` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
