@@ -2,7 +2,7 @@
 
 Rule: whenever the founder states a requirement, preference or correction (in any chat or session), the Lead or builder appends it here the same day, in plain words, and points to where it is handled. Status: **Open** · **Handled** (where) · **Decision needed**.
 
-Twenty fully handled rows between R-01 and R-29 (24 Oct) and R-33–R-36, R-40 (26 Oct) moved to `history/REQUESTS-handled-early.md` (24 Oct); rows still open or partly handled stay here.
+Twenty fully handled rows between R-01 and R-29 (24 Oct) and R-33–R-36, R-40 (26 Oct) moved to `history/REQUESTS-handled-early.md`; rows still open or partly handled stay here.
 
 | # | Date | Request (founder's words, condensed) | Handled in | Status |
 |---|---|---|---|---|
