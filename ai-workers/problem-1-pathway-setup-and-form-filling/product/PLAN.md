@@ -10,6 +10,7 @@ Owner: the Lead. Founder rule (23 Oct): no dates; show progress. Progress is **c
 | M3 · case, agent and client | **0 of 12** | 0 | 0 | 0 | 12 | 12 |
 
 ## Order of work per lane (now → next → after)
+**Superseded 26 Oct by `WAVE-1.md` (P-101): the table below is the earlier order, kept for reference.**
 | Lane | Now | Next | After |
 |---|---|---|---|
 | screens | Screen 02 FIX (breaker + re-check items), then merge (first) | Screen 04 shared library (board redrawn after the 25 Oct re-check) | PQR picks by AI through Draft setup (C4.7) |
