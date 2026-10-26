@@ -17,11 +17,12 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 current_item: F3-add-form-wizard (slices 1–4 built: F3a-0, F3a-1c, F3c-1 without X4, F3c-2)
 stage: CHECK
 owner: Builder
-next_action: reviewer (review.md) and breaker (break-report.md) running on f9e748d; then FIX any Must/Blocker/Major or hand back to the Lead. DEMO row 1 stays rejected until the runtime lane's demo.ts keepForm change lands
+next_action: breaker still running; then FIX review Major 1 (partly seen sections called "not seen", counts in form fields) and the Minors worth taking, with the breaker's findings; then hand back at CHECK. DEMO row 1 stays rejected until the runtime lane's demo.ts keepForm change lands
 blocked_by: none
 updated: 2026-10-26
 
 ## Log (last 10 lines)
+- 2026-10-26 · F3 · CHECK · reviewer (review.md): Ship after fixes, journey 8.5/10, 0 Must, 1 Major (finish summary calls partly seen sections "not seen"), 6 Minor; checks re-run 15/20/26/17, race mutation caught 10/10. PR #35 fix 715c639 pushed (manifest AND build files only; apr 50/50). Breaker running. US$0.
 - 2026-10-26 · F3 · BUILD → CHECK · slices 1–4 built and pushed: 8f4ea2c (f3a0 15/15), 6f671d1 (f3a1c 20/20), eb5c78d (f3c 26/26), f9e748d (f3c2 17/17); PR #34 review fix 2ee3642 (apr 49/49); main 4ab7da9 merged; apr, f2d, f2b, f2c, f2c_fill, f2a_api, demo, channels, slice2, ai suites, Screen 01 and 02 green; build-notes.md written. Reviewer and breaker launched. US$0.
 - 2026-10-26 · F3 · BUILD · Lead answers: IMM 5409 leaves the starting library through runtime's demo.ts (option a; row 1 stays rejected until then); PR #34 merged (4ab7da9); PR #34 review fix to build.ts written with its fail-before test (assets-only folder refused), run and commit next. US$0.
 - 2026-10-26 · F3 · BUILD · applied Lead note 2026-10-26 night (Pass A+B merged; BUILD slices 1–4): slice 1 F3a-0 section groups, Sample labels, coverage by shared field and person (f3a0 15/15, 8f4ea2c); slice 2 F3a-1c second-draft guard (f3a1c 20/20, slice2 53/53, ai suites green, 6f671d1); slice 3 F3c-1 built (f3c 26/26), regression running. US$0.
@@ -31,4 +32,3 @@ updated: 2026-10-26
 - 2026-10-26 · F2 · BUILD → CHECK · applied Lead note 2026-10-26 (read from origin/lead/2026-10-26, PR #33 not merged; code from main e06a54e). Pass A: per-code wrong-try limit in the database (f2b 45), SC-3 picker, PR #27 (returned capture resumes with Remove, ids that look like client details dropped, check list dropped on navigation), P-80 approved files drafted (p80_guard 41). Pass B: APR Portal default, Sample APR screens with branches, dev build takes the real host, unknown markup "not read" (apr 37, f2a 60), demo seed rows 1, 2, 7, 13 (demo 12); PDF hardening 49. US$0.
 - 2026-10-25 · F2 · CHECK · fresh reviewer re-score on 1b93a45: Ship, journey 9.5/10, 0 Must, 0 Major, 3 Minor (in-memory per-address code limit; m1, m7 kept on purpose); f1p 16, f2a 34, f2a_api 34, f2b 39, f2c 36, f2c_fill 17, f2d 37. US$0. Owner → Lead.
 - 2026-10-25 · F2 · CHECK · applied Lead note 2026-10-25 09:30 (MERGE after three items; main b2c0710 synced): demo reset deletes extension rows (f2b 39/39), "Check this screen again" after a changed screen (f2d 37/37); reviewer re-score launched. US$0.
-- 2026-10-25 · F2 · FIX → CHECK · full run-suites on dada3e7: 27 suites green (f1p 16, f2a 34, f2a_api 34, f2b 36, f2c 36, f2c_fill 17, f2d 36); copy clean. US$0. Owner → Lead.
