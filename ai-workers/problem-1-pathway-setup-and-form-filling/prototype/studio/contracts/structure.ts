@@ -67,6 +67,8 @@ export type UsesView = {
   uses: Use[];
   can: { delete: string | null; retire: string | null; restore: string | null };
   pending: { id: string; action: LifecycleAction; by: string | null } | null;
+  /** Its Activity lines, newest first (added, renamed, reordered, proposed, removed …). */
+  history: { at: string; by: string | null; what: string }[];
 };
 
 /** GET /structure node. */
@@ -74,6 +76,8 @@ export type StructureNode = {
   key: string; level: Level; parentKey: string | null; label: string; pathwayType: PathwayType;
   allowedLocations: string[]; order: number; combinations: number; live: number; hasSetup: boolean;
   meaningChecked: boolean; version: number; retired: boolean; pending: { id: string; action: LifecycleAction } | null;
+  /** A last-level name is a combination (BR-2): its state, Not started when it has no setup yet (id null). */
+  combination: { id: string | null; status: "IN_SETUP" | "NOT_READY" | "READY"; statusText: string; retired: boolean } | null;
 };
 
 /** The four setup steps on a card (addendum A3, Lead 26 Oct), calculated from data the app already keeps. */

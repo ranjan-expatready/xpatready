@@ -1,5 +1,29 @@
 # W1-structure-programs (W1-03/04/05) — build notes
 
+## Slice 2 (BUILD, 27 Oct): the Structure page — Lead Go 27 Oct (slice 1 passed; slices 1 and 2 merge together)
+
+### Top 5 production improvements over the board (written before the page code)
+1. **The detail panel does not cover the outline.** The board's panel sits beside the outline, so it is built as a non-modal side panel with pinned header and footer, the team's panel layout. The team's modal `Panel` would lock the outline every time a name is selected. The outline stays usable, so the next name is one click or one arrow key away.
+2. **Remove, retire, restore and reorder are part of the page** (P-116, agreed after the board marked them Not built). The panel shows "Where used" first, then the one action allowed, with the reason any other action is not allowed. Reorder uses Move up / Move down buttons, which work from the keyboard, rather than drag-only.
+3. **One keyboard model:** the WAI-ARIA tree pattern (arrows, Home/End, Right opens, Left closes or goes to the parent, Enter selects), one tab stop for the whole outline, and Enter/Esc on the "+ Add" row.
+4. **The checks the server makes are shown live, and the server still decides.** The add row calls the free name check as you type (debounced). Save sends the same request, so a twin added by someone else in the meantime still gets the server's 409, shown on the row.
+5. **Every leaf shows its combination's real state** (Not started, In setup, Not ready, Live, Retired), read from the same rows as Immigration programs, never a second calculation.
+
+### What was built
+`web/src/pages/structure.tsx` (route `/structure`, menu "Structure" under Configure after Programs) on the slice-1 API. Small API additions: each name's `history` and the leaf's `combination` state in `GET /structure`; "used by" links point at the web route `/c/:id`.
+* **Outline:** type tabs Retail · Corporate and employers (filled segmented control); Find a name, which keeps the names above a match; Expand all / Collapse all; a stats line; level tags; combination chips; where cases may be opened, or the number of combinations; "+ Add program / category / sub-category / pathway" rows; one tab stop, arrows, Home/End, Enter.
+* **Add row:** typed in place, with the free check as you type ("No exact match under Visitors · no close spelling · Not meaning-checked · Enter to add, Esc to cancel"). An exact twin is refused (red, Add disabled, "Show it"). A close name shows "Did you mean <trail> (why)?" with "Use existing" or "Add mine anyway". Locations are Inside · Outside · Both, Sample; a sub-category starts from its category's. The row stays open for the next name.
+* **Side panel:** trail (last part bold), used by (with Open), cases opened from, Not meaning-checked, name (rename with the next-release words), Move up / Move down, Add sub-category (disabled with the reason when the category has setup), "Where used" with Remove / Retire / Restore (each disabled with its reason as a tooltip, or sent for approval with a required reason), the pending change with Withdraw, history, Close / Save. A stale save shows "Changed meanwhile" with Reload, and what was typed is not lost.
+* **States:** empty after Reset (Add pathway), loading skeleton with a status line, error with a real Retry, find with no match (and "N matches in the other tab: Show it"), read-only approver (add rows, name, Save and actions disabled with the reason), long names wrapping, removal waiting.
+* **Tests:** `tests/check_w1_structure_browser.cjs` 61/61. A real Chrome walks every state above, adding the P-112 Sample names as a person would. axe (WCAG 2.2 AA) is clean on every state, there is no sideways scroll at 1024 px, and no script errors. Screenshots of 13 states at 1440 and 1024 px are in `screenshots/slice2/`.
+
+### Deviations from the board (for EARLY-LOOK)
+* **Remove / Retire / Restore and Move up / down are in the panel.** The board marked them Not built; P-116 added them after it.
+* **Below 1280 px the panel overlays the right of the outline** (the team's sheet), with Close. At 1440 and wider it sits beside the outline as drawn.
+* **The menu still says "Programs".** It becomes "Immigration programs" with that page's redesign in slice 3, so the menu and the page title change together.
+* **Meaning check on (running, stopped, failed) is not drawn:** the paid-run switch stays off until W1-07, so only "Not meaning-checked" shows.
+* **The Corporate sample comes from the test's names, not from Load sample.** Load sample still brings the earlier Sample names; W1-11 (runtime) brings the P-112 names.
+
 ## Slice 1 (BUILD, 27 Oct): data and API
 The contract is `concept.md` §3, §5, §9, §10, §10b and the addendum A1–A5 as the Lead answered it on 26 Oct (`challenge.md`). The slice has no page, so it has no board and no screenshots. Slices 2–4 draw the Structure, Immigration programs and New combination pages on this API.
 

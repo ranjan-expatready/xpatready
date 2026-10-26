@@ -53,7 +53,8 @@ export class Structure {
       const own = leaves.get(n.programNodeKey);
       let combinations = own && !own.retired ? 1 : 0, live = own?.live ? 1 : 0;
       const view: StructureNode = { key: n.programNodeKey, level: LEVEL_OF[n.nodeKind], parentKey: n.parentNodeKey, label: n.label, pathwayType: q.pathwayType, allowedLocations: n.allowedLocations,
-        order: n.displayOrder, combinations: 0, live: 0, hasSetup: !!own?.combinationId, meaningChecked: false, version: n.version, retired: !!n.retiredAt, pending: pending.get(n.programNodeKey) ?? null };
+        order: n.displayOrder, combinations: 0, live: 0, hasSetup: !!own?.combinationId, meaningChecked: false, version: n.version, retired: !!n.retiredAt, pending: pending.get(n.programNodeKey) ?? null,
+        combination: own ? { id: own.combinationId, status: own.status, statusText: own.statusText, retired: own.retired } : null };
       if (q.retired === "1" || !n.retiredAt) out.push(view);
       for (const k of kids) { const s = walk(k); combinations += s.combinations; live += s.live; }
       view.combinations = combinations; view.live = live;

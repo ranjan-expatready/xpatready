@@ -168,7 +168,7 @@ const releaseAll = async (actor = "user-B") => { const d = (await call("GET", "/
   r = await call("DELETE", `/structure/nodes/${visitors}`, { reason: "Not needed" });
   ok("C11.9 L6 fail: a program with names under it cannot be removed; each use is listed", r.status === 409 && r.body.uses?.some((x: any) => x.kind === "child" && x.blocks), r.body.detail);
   r = await call("DELETE", `/structure/nodes/${vv}`, { reason: "Not needed" });
-  ok("C11.9 L6 fail: a name whose combination has setup cannot be removed (remove the combination first)", r.status === 409 && r.body.uses?.some((x: any) => x.kind === "combination" && x.href === `/combinations/${combo.id}`), r.body.detail);
+  ok("C11.9 L6 fail: a name whose combination has setup cannot be removed (remove the combination first)", r.status === 409 && r.body.uses?.some((x: any) => x.kind === "combination" && x.href === `/c/${combo.id}`), r.body.detail);
   const fsw = (await structure()).nodes.find((n: any) => n.label === "Federal skilled worker").key;
   r = await call("DELETE", `/structure/nodes/${fsw}`, { reason: "Wrong place" });
   const late = r.body;

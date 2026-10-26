@@ -55,8 +55,8 @@ export class Lifecycle {
     for (const c of combos) {
       const at = g.nodes.find((n) => n.id === c.programDefId)!;
       const trail = trailOf(g, at.programNodeKey).join(" › ");
-      uses.push({ kind: "combination", label: trail, href: `/combinations/${c.id}`, blocks: !c.retiredAt, why: c.retiredAt ? "Combination, retired" : c.releases.length ? "Combination released to firms: retire it first" : "Combination with setup: remove it first" });
-      if (c.releases.length) uses.push({ kind: "release", label: `${trail} · Release ${c.releases[0].version}`, href: `/combinations/${c.id}`, blocks: false, why: "Kept by earlier releases (never changed)" });
+      uses.push({ kind: "combination", label: trail, href: `/c/${c.id}`, blocks: !c.retiredAt, why: c.retiredAt ? "Combination, retired" : c.releases.length ? "Combination released to firms: retire it first" : "Combination with setup: remove it first" });
+      if (c.releases.length) uses.push({ kind: "release", label: `${trail} · Release ${c.releases[0].version}`, href: `/c/${c.id}`, blocks: false, why: "Kept by earlier releases (never changed)" });
       if (c._count.cases) uses.push({ kind: "case", label: `${trail} · ${c._count.cases} case${c._count.cases === 1 ? "" : "s"}`, href: null, blocks: false, why: "Open cases keep their release" });
     }
     const p = await this.pending(workspaceId, "structure_node", key);
@@ -69,7 +69,7 @@ export class Lifecycle {
       retire: p ? "A change to it is already open." : node.retiredAt ? "It is already retired." : !released ? "It was never released: remove it instead (L1)." : blocking.length ? `Still used: ${blocking.slice(0, 3).map((u) => u.label).join("; ")}${blocking.length > 3 ? ` and ${blocking.length - 3} more` : ""} (L3).` : null,
       restore: p ? "A change to it is already open." : !node.retiredAt ? "It is not retired." : parent?.retiredAt ? `"${parent.label}" above it is retired: restore it first.` : null,
     };
-    return { key, label: node.label, trail: trailOf(g, key), retired: !!node.retiredAt, released, uses, can, pending: p ? { id: p.id, action: p.action as LifecycleAction, by: nameOf(p.proposedBy) } : null };
+    return { key, label: node.label, trail: trailOf(g, key), retired: !!node.retiredAt, released, uses, can, pending: p ? { id: p.id, action: p.action as LifecycleAction, by: nameOf(p.proposedBy) } : null, history: await this.history(workspaceId, key) };
   }
 
   /** Where a combination is used (addendum A2): its own releases do not count as a use of itself, so a Live combination
@@ -81,7 +81,7 @@ export class Lifecycle {
     const g = await graph(this.db, workspaceId);
     const trail = trailOf(g, c.program.programNodeKey);
     const uses: Use[] = [];
-    if (c.releases.length) uses.push({ kind: "release", label: `Release ${c.releases.map((r) => r.version).join(", ")}`, href: `/combinations/${c.id}`, blocks: false, why: "Kept by earlier releases (never changed)" });
+    if (c.releases.length) uses.push({ kind: "release", label: `Release ${c.releases.map((r) => r.version).join(", ")}`, href: `/c/${c.id}`, blocks: false, why: "Kept by earlier releases (never changed)" });
     if (c._count.cases) uses.push({ kind: "case", label: `${c._count.cases} case${c._count.cases === 1 ? "" : "s"}`, href: null, blocks: false, why: "Open cases keep their release" });
     const p = await this.pending(workspaceId, "combination", id);
     if (p) uses.push({ kind: "draft_change", label: `${p.action[0]}${p.action.slice(1).toLowerCase()} waiting (${p.status.toLowerCase()})`, href: `/review/change/${p.id}`, blocks: true, why: "A change to it is already open: approve, return or withdraw it first" });
@@ -91,7 +91,14 @@ export class Lifecycle {
       retire: p ? "A change to it is already open." : c.retiredAt ? "It is already retired." : !released ? "It was never released: remove it instead (L1)." : null,
       restore: p ? "A change to it is already open." : !c.retiredAt ? "It is not retired." : c.program.retiredAt ? `"${c.program.label}" is retired: restore it on the Structure first.` : null,
     };
-    return { key: id, label: c.label, trail, retired: !!c.retiredAt, released, uses, can, pending: p ? { id: p.id, action: p.action as LifecycleAction, by: nameOf(p.proposedBy) } : null };
+    return { key: id, label: c.label, trail, retired: !!c.retiredAt, released, uses, can, pending: p ? { id: p.id, action: p.action as LifecycleAction, by: nameOf(p.proposedBy) } : null, history: await this.history(workspaceId, id, false) };
+  }
+
+  /** A name's or combination's own Activity lines, newest first (the detail panel's History). */
+  private async history(workspaceId: string, key: string, node = true) {
+    // A rename also writes one line per combination below it (for its draft authors): the name's own lines only.
+    const rows = await this.db.auditEvent.findMany({ where: { workspaceId, entityKey: key, ...(node ? { combinationId: null } : {}) }, orderBy: { at: "desc" }, take: 10, select: { at: true, actor: true, summary: true } });
+    return rows.map((r) => ({ at: r.at.toISOString(), by: nameOf(r.actor) ?? (r.actor === "system" ? "The studio" : r.actor), what: r.summary }));
   }
 
   private async usesOf(kind: LifecycleKind, key: string) { return kind === "structure_node" ? this.nodeUses(key) : this.combinationUses(key); }
