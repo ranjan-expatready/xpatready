@@ -30,3 +30,4 @@
 | R-36 | 21 Oct | "Top 5" means top combinations, not forms, split across Individual and Corporate (e.g. 5 + 5, or 3 + 2) | P-28; PRODUCT.md §1; SCREENS.md 03b; P-29: SCREENS.md "Demo combinations" (founder delegated the choice) | Handled |
 | R-40 | 21 Oct | Think every capability as production: a person uploads forms; a person uploads the replacement when a form changes; AI checks the impact on reusable components; align all requirements to that | P-32; PRODUCT.md §1; SCREENS 02/04/03b; Screen 01 concept (new edition held); previous-edition test files | Handled |
 | R-117 | 26 Oct | Validate every artifact the founder gives (sheet, progress page, map) instead of following it blindly; set everything up | `WAVE-1.md` "Founder inputs checked"; P-101 | Handled |
+| R-118 | 26 Oct | Be brutally honest whether parallel work makes us faster and more solid, and how to manage context: sequential or not | P-111 (two build lanes + qa) | Handled |
