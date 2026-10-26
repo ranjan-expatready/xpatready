@@ -36,7 +36,9 @@ export type Scope = { kind: "catalogue" | "program" | "combination" | "source"; 
 type Action = "draft" | "reuse_saved_output" | "reuse_library" | "skip" | "not_eligible";
 type Target = { combinationId: string; combination: string; program: string; attachmentId: string; source: string; action: Action; why: string; read_first?: boolean; run_file?: string; fingerprint?: string; expected_usd: number | null; worst_usd: number;
   /** A4: the draft reuse first and in parts (how many form fields the library fills, how many the AI sees, in how many parts). */
-  a4?: { total: number; reused: number; reused_from: string[]; to_ai: number; parts: { index: number; sections: string[]; fields: number; worst_usd: number }[] } };
+  a4?: { total: number; reused: number; reused_from: string[]; to_ai: number; parts: { index: number; sections: string[]; fields: number; worst_usd: number }[] };
+  /** F3 D4, BR-7: the same file is being mapped in another combination (its job, for a link). */
+  elsewhere?: { combination: string; job_href: string } };
 
 const ACTION_TEXT: Record<Action, string> = { draft: "Draft field map", reuse_saved_output: "Use the saved AI answer (no cost)", reuse_library: "Add from library", skip: "Skip", not_eligible: "Not eligible" };
 
@@ -73,6 +75,8 @@ export class Ai implements OnModuleInit {
     const order = new Map(combinationIds.map((id, i) => [id, i]));
     const targets: Target[] = [];
     const draftedHere = new Map<string, string>(); // form edition (file hash) → the combination whose draft covers it
+    // F3 D4 (review Minor 5): who is mapping each file, read once for the whole plan, never once per source.
+    const elsewhereOf = await this.mappingIndex(workspaceId, comps.flatMap((c) => c.attachments.map((a) => a.sha256)));
     for (const c of [...comps].sort((a, b) => order.get(a.id)! - order.get(b.id)!)) {
       const inConfig = new Set<string>();
       const byLineage = new Map<string, { status: string; version: number }>();
@@ -90,6 +94,11 @@ export class Ai implements OnModuleInit {
         if (inConfig.has(formKey)) { targets.push({ ...base, action: "skip", why: `${formKey} is already in this combination's configuration.` }); continue; }
         if (active) { targets.push({ ...base, action: "skip", why: "A step for this form is already queued or running." }); continue; }
         if (editions.some((e) => e.sha256 === a.sha256)) { targets.push({ ...base, action: "reuse_library", why: "The library holds this edition's reviewed field map: add it to the draft, no AI call, US$0." }); continue; }
+        // F3 D4, BR-7 (P-38 "analysed once"): the same file being mapped in another combination is never drafted again,
+        // even from the form's own Draft setup button (draftAgain) or from a saved answer; its decisions come here once
+        // they are added to the draft.
+        const elsewhere = elsewhereOf(a.sha256, a.id);
+        if (elsewhere) { targets.push({ ...base, action: "skip", why: elsewhere.why, elsewhere: { combination: elsewhere.combination, job_href: elsewhere.href } }); continue; }
         if (waiting && !opts.draftAgain) { targets.push({ ...base, action: "skip", why: "An AI draft of this form is waiting for review; review it, or choose to draft again." }); continue; }
         if (draftedHere.has(a.sha256)) { targets.push({ ...base, action: "skip", why: `Same form as in ${draftedHere.get(a.sha256)}: review that draft once; once applied, add it here from the library.` }); continue; }
         draftedHere.set(a.sha256, c.label);
@@ -126,6 +135,30 @@ export class Ai implements OnModuleInit {
     const ledger = this.sources.ledger();
     const plan_sha256 = sha(JSON.stringify({ mode, scope: scope.kind, targets: targets.map((t) => [t.combinationId, t.attachmentId, t.action, t.run_file ?? null, t.fingerprint ?? null]) }));
     return { operation: "draft_field_maps", operation_label: "Draft field maps for added forms", capability_note: "AI drafts each form's field map (which fact fills each form field). Questions, sections, document requirements and rules are not AI-drafted here: people author them, and AI field maps only propose library fields.", scope: { ...scope, label }, mode, targets: targets.map((t) => ({ ...t, action_label: ACTION_TEXT[t.action] })), totals, ledger, per_run_cap_usd: RUN_CAP_USD, plan_sha256 };
+  }
+
+  /** F3 D4: for each file (checksum), the draft of it being mapped in another source. A source's draft is its newest
+   *  field-map step that is not a stub pass and is queued, running, done or applied: any other step (failed, stopped,
+   *  blocked by the usage limit, a failed "add from the library") never hides a draft waiting for review (break M4,
+   *  Lead check Major). It is being mapped while queued, running, or done with proposals to decide or not yet added to
+   *  its draft. An applied one is in the library and is added from there. One set of queries for a whole plan. */
+  private async mappingIndex(workspaceId: string, sha256s: string[], db: Pick<Db, "sourceAttachment" | "draftingJob" | "normalizationItem"> = this.db) {
+    const shas = [...new Set(sha256s)];
+    const atts = shas.length ? await db.sourceAttachment.findMany({ where: { workspaceId, sha256: { in: shas } }, select: { id: true, sha256: true, combination: { select: { label: true } } } }) : [];
+    const jobs = atts.length ? await db.draftingJob.findMany({ where: { workspaceId, attachmentId: { in: atts.map((a) => a.id) }, kind: "field_map", mode: { not: "STUB" }, status: { in: ["QUEUED", "RUNNING", "COMPLETED", "APPLIED"] } }, orderBy: { startedAt: "desc" }, select: { id: true, attachmentId: true, combinationId: true, status: true } }) : [];
+    const newest = new Map<string, (typeof jobs)[number]>();
+    for (const j of jobs) if (j.attachmentId && !newest.has(j.attachmentId)) newest.set(j.attachmentId, j);
+    const waiting = [...newest.values()].filter((j) => ["QUEUED", "RUNNING", "COMPLETED"].includes(j.status));
+    const done = waiting.filter((j) => j.status === "COMPLETED").map((j) => j.id);
+    const left = new Map(done.length ? (await db.normalizationItem.groupBy({ by: ["jobId"], where: { jobId: { in: done }, decision: "PENDING" }, _count: true })).map((g) => [g.jobId, g._count] as const) : []);
+    const of = new Map(atts.map((a) => [a.id, a]));
+    return (sha256: string, attachmentId: string) => {
+      const j = waiting.find((x) => x.attachmentId !== attachmentId && of.get(x.attachmentId!)?.sha256 === sha256);
+      if (!j) return null;
+      const combination = of.get(j.attachmentId!)!.combination.label, n = left.get(j.id) ?? 0;
+      const state = j.status !== "COMPLETED" ? `the AI draft is ${j.status === "RUNNING" ? "running" : "queued"}` : n ? `${n} proposal${n === 1 ? "" : "s"} left · a content publisher` : "every proposal is decided · the configuration author adds them to the draft";
+      return { combination, href: `/c/${j.combinationId}/jobs/${j.id}`, why: `Being mapped in ${combination}: ${state}. Its decisions are reused here once they are added to the draft; no second AI draft.` };
+    };
   }
 
   /** Expected cost from the newest real run of the same input; worst case exactly as the ledger reserves it. */
@@ -180,7 +213,22 @@ export class Ai implements OnModuleInit {
     const created = await this.db.$transaction(async (tx) => {
       const batch = await tx.aiBatch.create({ data: { workspaceId, idempotencyKey: b.idempotencyKey, operation: plan.operation, scopeKind: b.scope.kind, scopeLabel: plan.scope.label, mode: b.mode, status: "QUEUED", planSha256: plan.plan_sha256, plan: plan as any, spendLimitUsd: limit, worstCaseUsd: plan.totals.worst_usd, expectedUsd: plan.totals.expected_usd, startedBy: actor.id, message: `${run.length} step${run.length === 1 ? "" : "s"} queued` } });
       const ids: string[] = [];
+      // F3 D4: one draft per file at a time, across combinations: two launches of the same file at the same moment queue
+      // one job; the other is refused (the plan each saw was taken before the other's job existed). A stub pass is no
+      // draft to review (no AI, nothing to decide), so stub passes never wait for each other. Every file's lock is taken
+      // first, in one order, so two launches of the same files in another order wait in turn (break m1: never a deadlock).
+      const guarded = b.mode === "STUB" ? [] : run.filter((t) => t.action !== "reuse_library");
+      const shaOf = new Map((await tx.sourceAttachment.findMany({ where: { id: { in: guarded.map((t) => t.attachmentId) } }, select: { id: true, sha256: true } })).map((a) => [a.id, a.sha256]));
+      for (const sha of [...new Set(shaOf.values())].sort()) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`draft:${workspaceId}:${sha}`}))`;
+      const elsewhereNow = await this.mappingIndex(workspaceId, [...shaOf.values()], tx);
       for (const t of run) {
+        const sha = shaOf.get(t.attachmentId);
+        if (sha) {
+          const same = (await tx.sourceAttachment.findMany({ where: { workspaceId, sha256: sha }, select: { id: true } })).map((x) => x.id);
+          const busy = await tx.draftingJob.findFirst({ where: { workspaceId, kind: "field_map", mode: { not: "STUB" }, status: { in: ["QUEUED", "RUNNING"] }, attachmentId: { in: same } }, include: { combination: { select: { label: true } } } });
+          const other = busy ? null : elsewhereNow(sha, t.attachmentId);
+          if (busy || other) fail(other?.why ?? `Being mapped in ${busy!.combination.label}: a draft of this same form was started a moment ago. Nothing new was started; open it there.`, HttpStatus.CONFLICT);
+        }
         const j = await tx.draftingJob.create({ data: { workspaceId, combinationId: t.combinationId, attachmentId: t.attachmentId, batchId: batch.id, kind: t.action === "reuse_library" ? "reuse_map" : "field_map", mode: t.action === "reuse_library" ? "LOCAL" : t.action === "reuse_saved_output" ? "REPLAY" : b.mode, status: "QUEUED", fingerprint: t.fingerprint ?? null, startedBy: actor.id,
           runFile: t.run_file ? `prototype/p2/runs/${t.run_file}` : null, runId: t.run_file ? t.run_file.replace(/(\.reconverted)?\.json$/, "") : null, costUsd: t.action === "draft" && b.mode === "LIVE" ? null : 0,
           message: `Queued: ${ACTION_TEXT[t.action]}${t.read_first ? " (read the form first)" : ""}` } });
@@ -209,7 +257,7 @@ export class Ai implements OnModuleInit {
     const scope: Scope = { kind: "source", ids: [attachmentId] };
     const p = await this.plan(scope, m, { draftAgain: true });
     const t = p.targets[0];
-    if (!t || t.action === "skip" || t.action === "not_eligible") fail(t?.why ?? "Nothing to draft for this source.", t?.why?.includes("already queued or running") ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST);
+    if (!t || t.action === "skip" || t.action === "not_eligible") fail(t?.why ?? "Nothing to draft for this source.", t?.why?.includes("already queued or running") || t?.elsewhere ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST);
     if (m === "REPLAY" && runFile && t.run_file !== runFile) fail("That saved run is not the newest valid run for this form; choose again.", HttpStatus.CONFLICT);
     const batch = await this.launch(actor, { scope, mode: m, idempotencyKey: idempotencyKey ?? `source-${attachmentId}-${Date.now()}`, planSha256: p.plan_sha256, draftAgain: true });
     return batch.jobs[0];

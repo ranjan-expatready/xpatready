@@ -97,7 +97,7 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
     // s1 during real work: a person has typed into it (BR-1: the extension never reads an answer).
     await tab.goto(portal("imm5257-online-s1-personal.html")); await tab.fill("#familyName", "SAMPLE-TYPED"); await tab.fill("#uci", "12345678"); await tab.selectOption("#sex", "FEMALE");
     await panel.getByRole("button", { name: "Capture this screen" }).click();
-    await panel.getByText("Check before sending: these texts go to ExpatReady").waitFor();
+    await panel.getByText(/^Check before sending: \d+ questions? go to ExpatReady/).waitFor();
     const sent = await panel.getByRole("region", { name: "Check before sending" }).innerText();
     ok("C2.9: BR-3 every text the screen will send is listed before sending; none of the typed answers is among them", /Personal details/.test(sent) && /Family name/.test(sent) && !/SAMPLE-TYPED|12345678/.test(sent), sent.slice(0, 200));
     await axe(panel, "check before sending"); await shot(panel, "02-check-before-sending-360");
@@ -107,9 +107,11 @@ async function shot(page: Page, name: string) { if (EVIDENCE) { mkdirSync(SHOTS,
       await tab.goto(portal(f)); await panel.getByRole("button", { name: "Capture this screen" }).click();
       await panel.getByRole("button", { name: "Send this screen" }).click(); await panel.getByText(/Screen [23] captured/).waitFor();
     }
-    await tab.goto(portal("imm5257-online-s3-language.html")); await panel.getByRole("button", { name: "Capture this screen" }).click(); await panel.getByRole("button", { name: "Send this screen" }).click();
-    await panel.getByText(/is already captured/).waitFor();
-    ok("C2.9: BR-4 the same screen again is \"already captured\"", true);
+    // F3 X3: the same screen again is "already captured" in the panel before anything is read for sending (the server's
+    // own "already captured" answer stays, for a screen sent by another way: f2a_api).
+    await tab.goto(portal("imm5257-online-s3-language.html")); await panel.getByRole("button", { name: "Capture this screen" }).click();
+    await panel.getByText(/It is screen 3\. Nothing was sent/).waitFor();
+    ok("C2.9: BR-4 the same screen again is \"already captured\" (screen 3); no check opens and nothing is sent", (await panel.getByRole("region", { name: "Check before sending" }).count()) === 0 && (JSON.parse(sql("select record::text from portal_capture where way='extension' and status='OPEN'")).screens as unknown[]).length === 3);
     // Review Major 1: the panel is closed or reloaded in the middle of a capture: it offers to continue it.
     await panel.reload();
     await panel.getByRole("button", { name: "Continue IMM 5257 · 3 screens so far" }).waitFor();
