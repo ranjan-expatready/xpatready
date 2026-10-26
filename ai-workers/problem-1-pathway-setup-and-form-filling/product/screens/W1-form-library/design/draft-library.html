@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>W1-form-library · Form library as the one door and the form finder · draft board (screen-designer, 26 Oct)</title>
+<!-- Self-contained draft board. Team tokens from prototype/studio/web/src/styles/tokens.css (primary #0862c5, link #054e9c,
+     neutral scale, ok/danger/orange); muted text #595959 on grey (P-41). Type 12/14/16/18/24 only. Form numbers, titles,
+     canada.ca dates and quoted lines are copied from canada.ca pages saved under official-sources/ircc/ (19-26 Oct).
+     Which forms a combination needs, what IRCC accepts, counts, costs and durations are Sample. Board controls (view tabs,
+     Show labels) are not product. Where this board and concept-draft.md differ, the concept wins. -->
+<style>
+:root{--primary:#0862c5;--link:#054e9c;--link-dark:#043a73;--text:#2d2d2d;--muted:#595959;--border:#d9d9d9;--border-strong:#bfbfbf;--surface:#f7f7f7;--raised:#fff;--soft:#eeeeee;
+--ok-bg:#e7f6ec;--ok:#0f5c2e;--danger-bg:#fdecec;--danger:#991b1b;--warn-bg:#fff3e0;--warn:#663200;--warn-line:#ffc773;--ai-bg:#e6f4ff;--ai:#043a73;--ai-line:#cce9ff;--violet:#7c3aed}
+*{box-sizing:border-box}
+body{margin:0;background:#e9ecef;color:var(--text);font:14px/1.45 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+h1,h2,h3{font-family:"Proxima Nova",Inter,system-ui,sans-serif;margin:0}
+h1{font-size:24px;font-weight:700}h2{font-size:18px;font-weight:600}h3{font-size:16px;font-weight:600}
+a,.lnk{color:var(--link);font-weight:600;text-decoration:underline;text-underline-offset:2px;cursor:pointer;background:none;border:0;padding:0;font:inherit;font-weight:600}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+.mut{color:var(--muted)}.s12{font-size:12px}.mono{font-family:ui-monospace,Menlo,monospace;font-size:12px}.b{font-weight:600}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:6px;font-weight:600;font-size:14px;border:1px solid var(--border-strong);background:#fff;color:var(--text);cursor:pointer;white-space:nowrap;font-family:inherit}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:#fff}.btn.sm{min-height:30px;padding:0 10px;font-size:12px}.btn.ghost{border-color:transparent;background:transparent}
+.btn.danger{color:var(--danger);border-color:#e7a1a1}
+.btn[disabled]{background:var(--soft);border-color:var(--border);color:var(--muted);cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;border:1px solid transparent}
+.ok{background:var(--ok-bg);color:var(--ok)}.no{background:var(--danger-bg);color:var(--danger)}.neu{background:var(--soft);color:#404040}.ai{background:var(--ai-bg);color:var(--ai)}.warn{background:var(--warn-bg);color:var(--warn)}.smp{background:#fff;border:1px dashed #8c8c8c;color:#404040}
+.vio{background:#f3edff;color:#5b21b6}
+.card{background:#fff;border:1px solid var(--border);border-radius:8px}
+.pad{padding:14px 16px}.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.grow{flex:1}.stack{display:flex;flex-direction:column;gap:12px}
+.notice{border-radius:8px;padding:10px 14px;border:1px solid var(--border);display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.notice.info{background:#f5faff;border-color:var(--ai-line)}.notice.warn{background:var(--warn-bg);border-color:var(--warn-line)}.notice.err{background:var(--danger-bg);border-color:#f5b5b5}.notice.okn{background:var(--ok-bg);border-color:#b7e2c4}
+table{border-collapse:collapse;width:100%;background:#fff}
+th{font-weight:600;text-align:left;font-size:12px;color:var(--muted);padding:8px 12px;border-bottom:1px solid var(--border);background:#fbfbfb;white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid var(--soft);vertical-align:top}
+tr.grp td{background:#fbfbfb;font-weight:600;font-size:12px;color:#404040;padding:7px 12px}
+table[aria-label^="Forms"] td:nth-child(3),table[aria-label^="Forms"] td:nth-child(4){white-space:nowrap}
+.trunc{max-width:330px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.ailine{display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:12px;color:#404040;background:#f5faff;border:1px solid var(--ai-line);border-radius:6px;padding:6px 10px}
+.quote{border-left:3px solid var(--ai-line);padding:2px 0 2px 10px;color:#404040;font-size:12px;margin-top:4px}
+.quote mark{background:#fff3c4;color:inherit;padding:0 2px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600}
+input[type=text],input[type=url],select,textarea{font:inherit;font-size:14px;padding:8px 10px;border:1px solid #8c8c8c;border-radius:6px;background:#fff;color:var(--text)}
+.radio{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer}
+.radio.on{border-color:var(--primary);background:#f5faff}
+.drop{border:2px dashed var(--border-strong);border-radius:10px;padding:14px 16px;background:#fff;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.skel{background:linear-gradient(90deg,#eee,#f6f6f6,#eee);border-radius:4px;height:14px}
+@media (prefers-reduced-motion:no-preference){.skel{background-size:200% 100%;animation:sk 1.4s infinite}@keyframes sk{to{background-position:-200% 0}}
+.seg.cur>i{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.35) 0 8px,transparent 8px 16px);background-size:22px 22px;animation:st 1s linear infinite}@keyframes st{to{background-position:22px 0}}}
+.segs{display:flex;gap:4px}.seg{flex:1;height:10px;border-radius:5px;background:var(--soft);overflow:hidden}.seg>i{display:block;height:100%;background:var(--primary)}.seg.done>i{width:100%}.seg.cur>i{width:100%;background-color:#5cb8ff}
+/* shell */
+.board{max-width:1440px;margin:0 auto 28px;border:1px solid #cfd4da;border-radius:10px;overflow:hidden;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.top{display:flex;align-items:center;gap:14px;background:#fff;border-bottom:1px solid var(--border);padding:10px 18px}
+.logo{display:flex;align-items:center;gap:8px;color:var(--primary);font-weight:700;font-size:18px}.logo i{width:24px;height:24px;border-radius:5px;background:var(--primary);display:inline-block}
+.demo{margin-left:auto;font-size:12px;border:1px dashed #b35a00;color:#663200;background:#fff3e0;border-radius:6px;padding:4px 8px}
+.runchip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--ai-line);background:#f5faff;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--ai)}
+.layout{display:grid;grid-template-columns:220px 1fr;min-height:560px}
+nav.side{background:#fff;border-right:1px solid var(--border);padding:14px 10px;font-size:14px}
+nav.side p{font-size:12px;color:var(--muted);margin:12px 10px 4px;font-weight:600}nav.side a{display:block;color:#404040;text-decoration:none;font-weight:500;padding:7px 10px;border-radius:6px}
+nav.side a.on{background:#e6f4ff;color:var(--link-dark);font-weight:600}
+main{padding:22px 26px;position:relative}
+.panel{position:absolute;top:0;right:0;bottom:0;width:560px;background:#fff;border-left:1px solid var(--border);box-shadow:-8px 0 24px rgba(0,0,0,.08);display:flex;flex-direction:column}
+.panel header{padding:16px 18px;border-bottom:1px solid var(--border)}.panel .body{padding:16px 18px;overflow:auto;flex:1}.panel footer{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;align-items:center}
+.dim{opacity:.45;pointer-events:none}
+/* board chrome */
+.bctl{position:sticky;top:0;z-index:5;background:#2d2d2d;color:#fff;padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.bctl button{background:#404040;color:#fff;border:1px solid #595959;border-radius:6px;padding:5px 9px;font-size:12px;cursor:pointer;font-family:inherit}.bctl button.on{background:#0862c5;border-color:#0862c5}
+.bctl label{margin-left:auto;font-size:12px;display:flex;gap:6px;align-items:center}
+.vh{max-width:1440px;margin:16px auto 8px;padding:0 4px}.vh p{margin:4px 0 0;color:#404040}
+.lb{display:none}
+body.labels .lb{display:inline-block;font-size:12px;font-weight:600;background:#fffbe6;border:1px solid #e6c200;color:#5c4a00;border-radius:4px;padding:0 5px;margin:2px 4px;white-space:nowrap;vertical-align:middle}
+body.labels .lb.scf{background:#fdecec;border-color:#e7a1a1;color:#7a1d1d}
+body.labels .lb.nb{background:#eee;border-color:#a6a6a6;color:#404040}
+.view{display:none}.view.on{display:block}
+.tip{border-bottom:1px dotted #595959;cursor:help}
+.kbd{font-family:ui-monospace,Menlo,monospace;font-size:12px;border:1px solid var(--border-strong);border-radius:4px;padding:0 4px;background:#fff}
+</style>
+</head>
+<body>
+<div class="bctl" role="toolbar" aria-label="Board views (not product)">
+  <b style="margin-right:8px">Board · W1-06 form library</b>
+  <button data-v="1">1 Empty after Reset</button><button data-v="2" class="on">2 Library · all forms</button><button data-v="3">3 Combination picked</button>
+  <button data-v="4">4 Finder · how</button><button data-v="5">5 Finder · running</button><button data-v="6">6 Proposals</button>
+  <button data-v="7">7 Download results</button><button data-v="8">8 Approve a download</button><button data-v="9">9 Upload by hand</button>
+  <button data-v="10">10 Form drawer · IRCC accepts</button><button data-v="11">11 Other states + options</button>
+  <label><input type="checkbox" id="lbl"> Show labels</label>
+</div>
+
+<!-- shared shell pieces are repeated per view so each view reads alone -->
+<template id="nav"><nav class="side" aria-label="Studio menu">
+  <p>Configure</p><a href="#">To review</a><a href="#">Programs</a>
+  <p>Shared library</p><a href="#">Fields</a><a href="#">Sections</a><a href="#">Document types</a><a href="#" class="on" aria-current="page">Forms</a><a href="#">Checks</a><a href="#">Rules</a>
+  <p>History</p><a href="#">AI work</a><a href="#">Releases</a><a href="#">Activity</a>
+  <span class="lb">"Browser extension" item removed: P-102</span>
+</nav></template>
+<template id="top"><div class="top"><span class="logo"><i></i>ExpatReady</span><span><b>Product Studio</b><br><span class="s12 mut">Pathway Configurator</span></span><span class="demo">Prototype · demo workspace · Acting as content publisher <span class="lb scf">Scaffolding · not ported</span></span></div></template>
+
+<!-- VIEW 1 -->
+<section class="view" id="v1"><div class="vh"><h2>1 · Library empty after Reset</h2><p>P-108: Reset empties the library. The empty state teaches the first action. Load sample is demo chrome, visually apart.</p></div>
+<div class="board"><div data-t="top"></div><div class="layout"><div data-t="nav"></div><main>
+  <div class="row"><div class="grow"><h1>Forms</h1><p class="mut" style="margin:4px 0 0">Official IRCC forms, stored once and used by any combination. Each form comes from canada.ca or from a PDF you upload.</p></div>
+  <button class="btn">Upload PDFs</button><button class="btn pri">Find forms for a combination</button><span class="lb">Capability · Needed · [F] P-103</span></div>
+  <div class="card" style="margin-top:18px;padding:42px;text-align:center">
+    <h2>No forms yet</h2>
+    <p class="mut" style="max-width:620px;margin:8px auto 16px">Pick a combination and let the form finder list what IRCC asks for, or upload IRCC PDFs. Every form is stored once and used by any combination.</p>
+    <div class="row" style="justify-content:center"><button class="btn pri">Find forms for a combination</button><button class="btn">Upload PDFs</button></div>
+    <p class="s12 mut" style="margin-top:14px">You need at least one combination first. <a href="#">Go to Programs</a></p>
+  </div>
+  <div class="notice warn" style="margin-top:16px;border-style:dashed"><div class="grow"><b>Demo only:</b> Load sample adds the structure of the 5 Retail combinations (+1 Corporate Sample) and their official PDFs from the committed copies.</div><button class="btn sm">Load sample</button><span class="lb scf">Scaffolding · never shown as the download · [F] P-108, P-83</span></div>
+</main></div></div></section>
+
+<!-- VIEW 2 -->
+<section class="view on" id="v2"><div class="vh"><h2>2 · Library: all forms with IRCC's own columns</h2><p>Columns mirror canada.ca: form number and title from its list of forms, "Last updated" from each form's page (the list's "Date modified" is the page's date), plus the printed edition, what IRCC accepts (Sample), origin, use and status. Long titles truncate with the full title on hover.</p></div>
+<div class="board"><div data-t="top"></div><div class="layout"><div data-t="nav"></div><main>
+  <div class="row"><div class="grow"><h1>Forms</h1><p class="mut" style="margin:4px 0 0">Official IRCC forms, stored once and used by any combination. Each form comes from canada.ca or from a PDF you upload.</p></div>
+  <button class="btn" title="Upload one or many IRCC PDFs. Duplicates are recognised.">Upload PDFs</button><button class="btn pri" title="Pick a combination: the finder lists the forms its IRCC guide asks for.">Find forms for a combination</button></div>
+  <div class="row" style="margin:16px 0 10px">
+    <label class="f" style="min-width:420px">For combination <select aria-label="For combination"><option>All forms (no combination picked)</option><option>Retail › Temporary residence › Visitors › Visitor visa</option></select></label>
+    <span class="lb">Capability · Needed · lens [F] founder 26 Oct, option a-A</span>
+    <input type="text" placeholder="Search form number or title" aria-label="Search forms" style="min-width:260px;margin-top:18px">
+    <span class="grow"></span><span class="s12 mut" style="margin-top:18px">11 forms · 1 waiting for approval</span>
+  </div>
+  <table aria-label="Forms in the library">
+    <thead><tr><th>Form number</th><th>Form title</th><th><span class="tip" title="The edition printed on the form, read from the file.">Edition</span></th><th><span class="tip" title="The &quot;Last updated&quot; date on the form's own canada.ca page.">canada.ca last updated</span></th><th><span class="tip" title="What IRCC accepts for this form: PDF upload, online in the portal, or either. Sample until the immigration expert confirms. Online needs the browser extension (later wave).">IRCC accepts</span></th><th>Origin</th><th>Used in</th><th>Status</th></tr></thead>
+    <tbody>
+    <tr><td class="mono">IMM 0008</td><td>Generic Application Form for Canada</td><td>05-2026</td><td>2026-05</td><td><span class="chip smp">PDF or online · Sample</span></td><td class="s12">canada.ca</td><td>1 combination</td><td><span class="chip ok">✓ Ready</span></td></tr>
+    <tr><td class="mono">IMM 1294</td><td>Application for a Study Permit Made Outside of Canada</td><td>06-2026</td><td>2026-06</td><td><span class="chip smp">PDF or online · Sample</span></td><td class="s12">canada.ca</td><td>1 combination</td><td><span class="chip ok">✓ Ready</span></td></tr>
+    <tr><td class="mono">IMM 5257</td><td>Application for visitor visa (temporary resident visa)</td><td>09-2023</td><td>2023-09</td><td><span class="chip smp">PDF or online · Sample</span></td><td class="s12">canada.ca</td><td>1 combination</td><td><span class="chip ok">✓ Ready</span></td></tr>
+    <tr><td class="mono">IMM 5406</td><td>Additional Family Information Form – Permanent Residence</td><td>05-2026</td><td>2026-05</td><td><span class="chip smp">PDF · Sample</span></td><td class="s12">canada.ca</td><td>2 combinations</td><td><span class="chip ok">✓ Ready</span></td></tr>
+    <tr><td class="mono">IMM 5409</td><td><span class="trunc" title="Statutory Declaration of Common-Law Union – Temporary and Permanent Residence">Statutory Declaration of Common-Law Union – Temporary and Permanent Residence</span></td><td>01-2023</td><td>2023-01</td><td><span class="chip neu">Not set</span></td><td class="s12">canada.ca</td><td>3 combinations</td><td><span class="chip ok">✓ Ready</span></td></tr>
+    <tr><td class="mono">IMM 5475</td><td><span class="trunc" title="Authority to Release Personal Information to a Designated Individual">Authority to Release Personal Information to a Designated Individual</span></td><td>05-2021<br><span class="s12 mut">file dated 16-12-2022</span></td><td>2021-05</td><td><span class="chip smp">PDF · Sample</span></td><td class="s12">Uploaded</td><td>2 combinations</td><td><span class="chip ok">✓ Ready</span></td></tr>
+    <tr><td class="mono">IMM 5476</td><td>Use of a Representative Form</td><td>11-2025</td><td>2025-11</td><td><span class="chip smp">PDF · Sample</span></td><td class="s12">canada.ca</td><td>5 combinations</td><td><span class="chip ok">✓ Ready</span></td></tr>
+    <tr><td class="mono">IMM 5484</td><td><span class="trunc" title="Document Checklist: Temporary Resident Visa (Visitor Visa) outside of Canada">Document Checklist: Temporary Resident Visa (Visitor Visa) outside of Canada</span> <span class="chip neu">Checklist</span></td><td>05-2026</td><td>2026-05</td><td><span class="chip neu" title="A checklist is read for documents, not filed.">Not filed</span></td><td class="s12">canada.ca</td><td>1 combination</td><td><span class="chip ok">✓ Ready</span></td></tr>
+    <tr><td class="mono">IMM 5645</td><td><span class="trunc" title="Family Information Form – Visitors, Students and Workers">Family Information Form – Visitors, Students and Workers</span></td><td>01-2021</td><td>2021-01</td><td><span class="chip neu">Not set</span></td><td class="s12">canada.ca</td><td>—</td><td><span class="chip warn" title="Downloaded from canada.ca; not usable until a person approves it.">◷ Waiting for approval</span> <a href="#" class="s12">Review</a></td></tr>
+    <tr><td class="mono">IMM 5669</td><td>Schedule A: Background / Declaration Form</td><td>05-2021</td><td>2021-05</td><td><span class="chip smp">PDF · Sample</span></td><td class="s12">canada.ca</td><td>2 combinations</td><td><span class="chip ok">✓ Ready</span></td></tr>
+    <tr><td class="mono">IMM 5707</td><td><span class="trunc" title="Family Information Form – Visitors, Students and Workers">Family Information Form – Visitors, Students and Workers</span></td><td>01-2023</td><td>2023-01</td><td><span class="chip smp">PDF · Sample</span></td><td class="s12">canada.ca</td><td>2 combinations</td><td><span class="chip ok">✓ Ready</span></td></tr>
+    </tbody></table>
+  <p class="s12 mut" style="margin-top:8px">A form in use is retired, never deleted. Last checked on canada.ca: today. <span class="lb">Capability · Needed · IRCC columns [F] P-103 · accepts [F] P-107 (Sample) · retire [F] P-52</span><span class="lb nb">Not built: scheduled re-check for new editions</span></p>
+</main></div></div></section>
+
+<!-- VIEW 3 -->
+<section class="view" id="v3"><div class="vh"><h2>3 · A combination picked: on it · in the library · missing</h2><p>Founder's unified way: pick a combination → present / missing → add. Reached from Programs › Visitor visa › Forms tab › "Find missing forms" too (same page, same lens).</p></div>
+<div class="board"><div data-t="top"></div><div class="layout"><div data-t="nav"></div><main>
+  <p class="s12" style="margin:0 0 6px"><a href="#">← Back to Visitor visa</a></p>
+  <div class="row"><div class="grow"><h1>Forms</h1><p class="mut" style="margin:4px 0 0">For <b>Retail › Temporary residence › Visitors › Visitor visa</b> <span class="chip smp">Sample trail</span></p></div>
+  <button class="btn">Upload PDFs</button><button class="btn pri">Find missing forms</button></div>
+  <div class="row" style="margin:14px 0 10px"><label class="f" style="min-width:460px">For combination <select><option selected>Retail › Temporary residence › Visitors › Visitor visa</option><option>All forms</option></select></label>
+  <span class="grow"></span><span class="s12 mut" style="margin-top:18px">Guide checked today: <a href="#">Guide 5256 on canada.ca</a> · finder run by a content publisher, 10:41</span></div>
+  <table aria-label="Forms for Visitor visa">
+    <thead><tr><th style="width:110px">Form number</th><th>Form title and why</th><th>Edition</th><th>IRCC accepts</th><th style="width:220px">Next</th></tr></thead>
+    <tbody>
+    <tr class="grp"><td colspan="5">On this combination (3) <span class="tip" title="Forms this combination already uses.">ⓘ</span></td></tr>
+    <tr><td class="mono">IMM 5257</td><td>Application for visitor visa (temporary resident visa)<div class="quote">"This form must be completed by each person applying for a Temporary Resident Visa"</div></td><td>09-2023</td><td><span class="chip smp">PDF or online · Sample</span></td><td><span class="chip ok">✓ On this combination</span></td></tr>
+    <tr><td class="mono">IMM 5476</td><td>Use of a Representative Form<div class="quote">Only if (AI): <b>Has a representative</b></div></td><td>11-2025</td><td><span class="chip smp">PDF · Sample</span></td><td><span class="chip ok">✓ On this combination</span></td></tr>
+    <tr><td class="mono">IMM 5484</td><td>Document Checklist: Temporary Resident Visa (Visitor Visa) outside of Canada <span class="chip neu">Checklist</span></td><td>05-2026</td><td><span class="chip neu">Not filed</span></td><td><span class="chip ok">✓ On this combination</span></td></tr>
+    <tr class="grp"><td colspan="5">In the library, not on this combination (2) <span class="tip" title="The guide lists these and the library already has them. Adding uses the stored form; nothing is downloaded.">ⓘ</span></td></tr>
+    <tr><td class="mono">IMM 5409</td><td>Statutory Declaration of Common-Law Union – Temporary and Permanent Residence<div class="quote">"If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union <mark>[IMM 5409]</mark>" · Only if (AI): <b>Is in a common-law union</b></div></td><td>01-2023</td><td><span class="chip neu">Not set</span></td><td><button class="btn sm">Add to combination</button></td></tr>
+    <tr><td class="mono">IMM 5707</td><td>Family Information Form – Visitors, Students and Workers<div class="quote">"Family Information (<mark>IMM 5707</mark> or IMM 5645) … must be completed by each person, 18 years of age or older" · <span class="chip ai">AI: either form</span></div></td><td>01-2023</td><td><span class="chip smp">PDF · Sample</span></td><td><button class="btn sm">Add to combination</button></td></tr>
+    <tr class="grp"><td colspan="5">Missing: not in the library yet (1) <span class="tip" title="Found by the form finder. Download fetches the official PDF from canada.ca; it waits for approval before use.">ⓘ</span></td></tr>
+    <tr><td class="mono">IMM 5257 Schedule 1</td><td>Schedule 1 – Application for Temporary Residence <span class="chip neu" title="Combinations of this kind use this form (Sample until the expert confirms).">Known list</span><div class="quote">Not named on guide 5256. Listed for visitor visas in the known list (Sample until the expert confirms).</div></td><td class="mut">—</td><td class="mut">—</td><td><button class="btn sm pri">Download from canada.ca</button></td></tr>
+    <tr class="grp"><td colspan="5"><button class="lnk s12" aria-expanded="false">Dismissed (2) ▸</button> <span class="mut" style="font-weight:400">IMM 5782 (a separate application) · IMM 5645 (IMM 5707 chosen instead)</span></td></tr>
+    </tbody></table>
+  <div class="ailine" style="margin-top:10px">Found by: page scan (US$0) · known list (US$0) · AI read of guide 5256 (US$0.09, Sample) · Missing forms are calculated, not ticked. <span class="lb">Capability · Needed · BR-8 · [F] EXPERIENCE §2.5–2.7</span></div>
+</main></div></div></section>
+
+<!-- VIEW 4 -->
+<section class="view" id="v4"><div class="vh"><h2>4 · Form finder panel: where IRCC lists the forms, and how to find them</h2><p>Right panel (TEAM-PATTERNS). The guide page is remembered as the combination's guide source. Rules then AI is the default (P-105 pattern); the cost shows before Start.</p></div>
+<div class="board"><div data-t="top"></div><div class="layout"><div data-t="nav"></div><main style="min-height:760px">
+  <div class="dim"><h1>Forms</h1><p class="mut">For Retail › Temporary residence › Visitors › Visitor visa</p><div class="card" style="height:300px;margin-top:16px"></div></div>
+  <aside class="panel" role="dialog" aria-label="Find missing forms">
+    <header><div class="row"><h2 class="grow">Find missing forms</h2><button class="btn ghost sm" aria-label="Close">✕</button></div><p class="mut s12" style="margin:4px 0 0">Visitor visa · Retail › Temporary residence › Visitors</p></header>
+    <div class="body stack">
+      <label class="f">Where IRCC lists the forms <span class="mut" style="font-weight:400">The official guide or checklist page on canada.ca</span>
+        <input type="url" value="https://www.canada.ca/en/immigration-refugees-citizenship/services/application/application-forms-guides/guide-5256-applying-visitor-visa-temporary-resident-visa.html" aria-describedby="h1"></label>
+      <p id="h1" class="s12 mut" style="margin:-6px 0 0">Remembered for this combination. Only pages on canada.ca or ircc.canada.ca can be read. <span class="lb">Capability · Needed · [M3] stored as the guide source · BR-2</span></p>
+      <fieldset style="border:0;padding:0;margin:0" class="stack"><legend class="b" style="margin-bottom:6px">How to find them</legend>
+        <label class="radio on"><input type="radio" name="m" checked><span><b>Rules then AI</b> <span class="chip ok">Recommended</span><br><span class="s12 mut">Free first: finds every form number on the IRCC page and adds the known list for this kind of application. Then AI reads the page for conditions and exceptions. Nothing is added until you select it.</span></span></label>
+        <label class="radio"><input type="radio" name="m"><span><b>Rules only</b><br><span class="s12 mut">Free. Form numbers found on the page plus the known list; no conditions, and you spot the exceptions.</span></span></label>
+        <label class="radio"><input type="radio" name="m"><span><b>AI only</b><br><span class="s12 mut">AI reads the page and proposes forms with the line it read. Costs each time.</span></span></label>
+        <span class="lb">Capability · Needed · [F] P-105 pattern · Q1</span>
+      </fieldset>
+      <div class="card pad" style="background:#fbfbfb"><h3 style="font-size:14px">What this run does</h3>
+        <ol class="s12" style="margin:6px 0 0;padding-left:18px;line-height:1.8">
+          <li>Read the IRCC page <span class="chip neu">No AI · US$0</span></li>
+          <li>Find form numbers on the page <span class="chip neu">No AI · US$0</span></li>
+          <li>Add the known list for visitor visas <span class="chip neu">No AI · US$0</span> <span class="chip smp">Sample list</span></li>
+          <li>AI reads the page for conditions and exceptions <span class="chip vio">Live AI · about US$0.10 · at most US$0.50</span></li>
+          <li>Check every proposal against the page and the library <span class="chip neu">No AI · US$0</span></li>
+        </ol>
+        <p class="s12 mut" style="margin:8px 0 0">Costs are a Sample estimate until the first live run. Wave 1 live tests: US$12.40 of US$40 used (Sample). <span class="lb">Capability · Needed · BR-11 · [F] P-110</span></p></div>
+    </div>
+    <footer><button class="btn ghost">Cancel</button><button class="btn pri">Start · at most US$0.50</button></footer>
+  </aside>
+</main></div></div></section>
+
+<!-- VIEW 5 -->
+<section class="view" id="v5"><div class="vh"><h2>5 · Finder running: the shared run card inline (W1-07)</h2><p>Option c-A: the run card appears where it was launched; the header chip follows the person while it runs. Every run state: see draft-ai-run.html.</p></div>
+<div class="board"><div class="top"><span class="logo"><i></i>ExpatReady</span><span><b>Product Studio</b><br><span class="s12 mut">Pathway Configurator</span></span><span class="runchip" title="A run is in progress. Open it.">◐ Finding forms · step 4 of 5 <a href="#" class="s12">Open</a></span><span class="lb">Capability · Needed · header chip [F] P-110</span><span class="demo">Prototype · demo workspace</span></div>
+<div class="layout"><div data-t="nav"></div><main style="min-height:640px">
+  <div class="dim"><h1>Forms</h1><div class="card" style="height:300px;margin-top:16px"></div></div>
+  <aside class="panel" role="dialog" aria-label="Find missing forms">
+    <header><div class="row"><h2 class="grow">Find missing forms</h2><button class="btn ghost sm" aria-label="Close">✕</button></div><p class="mut s12" style="margin:4px 0 0">Visitor visa · Guide 5256 · Rules then AI</p></header>
+    <div class="body stack">
+      <div class="card pad stack" role="status" aria-live="polite">
+        <div class="row"><span style="color:var(--violet)">✦</span><b class="grow">Finding forms for Visitor visa</b><span class="chip ai">◐ Running</span><button class="btn sm" title="Ends this run now. Steps already finished keep their results. A call already sent to the AI may still be charged (at most US$0.50).">■ Stop</button></div>
+        <div class="segs" role="progressbar" aria-label="Step 4 of 5" aria-valuemin="0" aria-valuemax="5" aria-valuenow="3"><div class="seg done"><i></i></div><div class="seg done"><i></i></div><div class="seg done"><i></i></div><div class="seg cur"><i></i></div><div class="seg"><i></i></div></div>
+        <p style="margin:0"><b>Step 4 of 5 · AI reads the guide for conditions</b><br><span class="s12 mut">Waiting for the AI's answer · 38 s so far · usually about 1 min (last run)</span></p>
+        <ul class="s12" style="margin:0;padding-left:18px;line-height:1.8">
+          <li>✓ Read the IRCC page · guide 5256 · 1 s · US$0</li><li>✓ Found 7 form numbers on the page · US$0</li><li>✓ Known list added 1 form · US$0</li><li>◐ AI reads the page for conditions · live · at most US$0.50</li><li class="mut">○ Check proposals against the page and the library</li></ul>
+        <p class="s12 mut" style="margin:0">Spent US$0.00 so far · at most US$0.50. You can close this panel; the run continues and shows in the header.</p>
+      </div>
+    </div>
+    <footer><button class="btn ghost">Close</button><button class="btn pri" disabled title="Proposals appear when the run finishes.">Review proposals</button></footer>
+  </aside>
+</main></div></div></section>
+
+<!-- VIEW 6 -->
+<section class="view" id="v6"><div class="vh"><h2>6 · Proposals: every form with the line it came from</h2><p>Chips say who found it (On the page · Known list · AI). AI never adds a form number on its own; a quote not on the page is dropped and listed. IMM 5782 is mentioned on guide 5256 but is a separate application.</p></div>
+<div class="board"><div data-t="top"></div><div class="layout"><div data-t="nav"></div><main style="min-height:900px">
+  <div class="dim"><h1>Forms</h1><div class="card" style="height:300px;margin-top:16px"></div></div>
+  <aside class="panel" role="dialog" aria-label="Find missing forms: proposals">
+    <header><div class="row"><h2 class="grow">7 forms found for Visitor visa</h2><button class="btn ghost sm" aria-label="Close">✕</button></div><p class="mut s12" style="margin:4px 0 0">From guide 5256 on canada.ca · 3 already on this combination · select what to add</p></header>
+    <div class="body stack" style="gap:10px">
+      <div class="ailine">Page scan US$0 · known list US$0 · AI US$0.09 · confidence per line below · AI proposals are checked against the page <span class="lb">Capability · Needed · BR-6 · [F] P-103, STANDARDS §3.8</span></div>
+      <div class="card pad"><div class="row"><input type="checkbox" checked disabled aria-label="IMM 5257 already on this combination"><span class="mono b">IMM 5257</span><span class="grow">Application for visitor visa</span><span class="chip neu" title="This form number is printed on the IRCC page you chose.">On the page</span><span class="chip ok">✓ On this combination</span></div><div class="quote">"This form must be completed by each person applying for a Temporary Resident Visa" · For: <b>each person applying</b></div></div>
+      <div class="card pad"><div class="row"><input type="checkbox" checked aria-label="Add IMM 5409"><span class="mono b">IMM 5409</span><span class="grow">Statutory Declaration of Common-Law Union</span><span class="chip neu">On the page</span><span class="chip ai" title="AI read this condition from the quoted line. Check it.">AI · High</span><span class="chip ok">In the library</span></div><div class="quote">"If you are in a common-law union, you must also request and fill out the Statutory Declaration of Common-law Union <mark>[IMM 5409]</mark> form and include it with your application." · Only if: <b>Is in a common-law union</b> · For: <b>Principal applicant</b></div></div>
+      <div class="card pad"><div class="row"><input type="checkbox" checked aria-label="Add IMM 5707"><span class="mono b">IMM 5707</span><span class="grow">Family Information Form</span><span class="chip neu">On the page</span><span class="chip ai">AI · Medium</span><span class="chip ok">In the library</span></div><div class="quote">"Family Information (<mark>IMM 5707 or IMM 5645</mark>) … This form must be completed by each person, 18 years of age or older" · <b>AI: the guide accepts either form; pick one.</b> For: <b>each person 18 or older</b></div></div>
+      <div class="card pad"><div class="row"><input type="checkbox" aria-label="Add IMM 5645"><span class="mono b">IMM 5645</span><span class="grow">Family Information Form</span><span class="chip neu">On the page</span><span class="chip warn">Missing · would download</span></div><div class="quote">Same line as IMM 5707: "either" form. Leave unticked if IMM 5707 is used. <button class="lnk s12">Dismiss with reason</button></div></div>
+      <div class="card pad"><div class="row"><input type="checkbox" checked aria-label="Add IMM 5257 Schedule 1"><span class="mono b">IMM 5257 Schedule 1</span><span class="grow">Schedule 1 – Application for Temporary Residence</span><span class="chip neu" title="Combinations of this kind use this form (Sample until the expert confirms).">Known list</span><span class="chip warn">Missing · will download</span></div><div class="quote">Not named on guide 5256. On the visitor-visa known list (Sample until the expert confirms).</div></div>
+      <div class="card pad"><div class="row"><input type="checkbox" checked disabled><span class="mono b">IMM 5476</span><span class="grow">Use of a Representative Form</span><span class="chip neu">On the page</span><span class="chip ai">AI · High</span><span class="chip ok">✓ On this combination</span></div><div class="quote">"If you wish to have a representative … fill out the Use of a Representative ( <mark>IMM 5476</mark> ) form." · Only if: <b>Has a representative</b></div></div>
+      <div class="card pad" style="background:#fafafa"><div class="row"><input type="checkbox" aria-label="Include IMM 5782 anyway"><span class="mono b mut">IMM 5782</span><span class="grow mut">Application for PR renunciation</span><span class="chip neu">On the page</span><span class="chip no" title="Not for this application: the page says it is a separate application.">AI · not for this application</span></div><div class="quote">"…submit the application for PR renunciation <mark>[IMM 5782]</mark> in a separate envelope from your Temporary Resident application." <button class="lnk s12">Include anyway</button></div></div>
+      <div class="notice info s12"><div>1 AI line dropped: its quote was not found on the page (shown in Details). Conditions become proposals for the combination's "Only if" on its Forms tab; nothing changes the combination here. <span class="lb">[F] BR-6 · W1-08/W1-10 own "Only if"</span></div></div>
+    </div>
+    <footer><button class="btn ghost">Back</button><span class="s12 mut">2 from the library · 1 from canada.ca</span><button class="btn pri">Add 3 forms</button></footer>
+  </aside>
+</main></div></div></section>
+
+<!-- VIEW 7 -->
+<section class="view" id="v7"><div class="vh"><h2>7 · Download run and results (system run, no AI, US$0)</h2><p>Same run card, gear icon for a system run. Sample: a second run on Visitor visa with three downloads, to show every result: held for approval, same edition from a different file, canada.ca not answering.</p></div>
+<div class="board"><div data-t="top"></div><div class="layout"><div data-t="nav"></div><main style="min-height:760px">
+  <div class="dim"><h1>Forms</h1><div class="card" style="height:300px;margin-top:16px"></div></div>
+  <aside class="panel" role="dialog" aria-label="Download results">
+    <header><div class="row"><h2 class="grow">Downloading from canada.ca</h2><button class="btn ghost sm" aria-label="Close">✕</button></div><p class="mut s12" style="margin:4px 0 0">For Visitor visa · no AI · US$0</p></header>
+    <div class="body stack">
+      <div class="card pad stack">
+        <div class="row"><span>⚙</span><b class="grow">3 forms from canada.ca</b><span class="chip warn">Done with problems</span></div>
+        <div class="segs" aria-hidden="true"><div class="seg done"><i></i></div><div class="seg done"><i></i></div><div class="seg"><i style="width:100%;background:#dc2626"></i></div></div>
+        <p class="s12 mut" style="margin:0">2 of 3 forms downloaded · 1 failed · each: find on canada.ca's list → open its page → download → read number, edition, fingerprint → duplicate check</p>
+      </div>
+      <div class="card pad"><div class="row"><span class="mono b">IMM 5257 Schedule 1</span><span class="grow">09-2023 · canada.ca last updated Sep 2023</span><span class="chip warn">◷ Waiting for approval</span></div><p class="s12 mut" style="margin:4px 0 6px">New form. Downloaded from the link on its canada.ca page. Not usable until approved.</p><button class="btn sm pri">Review and approve</button></div>
+      <div class="card pad"><div class="row"><span class="mono b">IMM 5475</span><span class="grow">05-2021</span><span class="chip warn">◷ Same edition, different file</span></div><p class="s12 mut" style="margin:4px 0 6px">The library has IMM 5475 (05-2021) from another file. IRCC sometimes republishes an edition. Compare the two; approving replaces the file through the edition comparison. <span class="lb">[C2] Lead settles</span></p><button class="btn sm">Compare the two files</button></div>
+      <div class="card pad" style="border-color:#f5b5b5"><div class="row"><span class="mono b">IMM 5645</span><span class="grow"></span><span class="chip no">✕ Not downloaded</span></div><p class="s12" style="margin:4px 0 6px">canada.ca did not answer within 20 s. Try again, or open the form's page, download the PDF in your browser and upload it here: we check it is the same file the page links to.</p><div class="row"><button class="btn sm">Try again</button><a class="s12" href="#">Open the IMM 5645 page on canada.ca</a><button class="btn sm">Upload instead</button></div></div>
+      <span class="lb">Capability · Needed · BR-2, BR-4, BR-5 · deterministic, checked 26 Oct on the Mac (IMM 1295 checksum = manifest)</span>
+    </div>
+    <footer><button class="btn ghost">Close</button><button class="btn pri">Back to the forms</button></footer>
+  </aside>
+</main></div></div></section>
+
+<!-- VIEW 8 -->
+<section class="view" id="v8"><div class="vh"><h2>8 · Approve a downloaded file (Q2 recommended: the person who selected it)</h2><p>The drawer shows what the system proved. Alternative if the founder keeps a second person (P-80): the selector sees "Waiting for a second person" and no Approve; the approval moves to To review.</p></div>
+<div class="board"><div data-t="top"></div><div class="layout"><div data-t="nav"></div><main style="min-height:720px">
+  <div class="dim"><h1>Forms</h1><div class="card" style="height:300px;margin-top:16px"></div></div>
+  <aside class="panel" role="dialog" aria-label="Review IMM 5257 Schedule 1">
+    <header><div class="row"><h2 class="grow">IMM 5257 Schedule 1 (09-2023)</h2><span class="chip warn">◷ Waiting for approval</span></div><p class="mut s12" style="margin:4px 0 0">Schedule 1 – Application for Temporary Residence · downloaded today 10:44 by a content publisher</p></header>
+    <div class="body stack">
+      <h3 style="font-size:14px">What the system checked</h3>
+      <ul style="margin:0;padding-left:18px;line-height:1.9">
+        <li>✓ Downloaded from <b>www.canada.ca</b> over a secure connection</li>
+        <li>✓ The link came from the form's own page: <a href="#">IMM 5257 Schedule 1 on canada.ca</a></li>
+        <li>✓ Form number read from the file: <b>IMM 5257 Schedule 1</b></li>
+        <li>✓ Edition printed on the form: <b>09-2023</b> · canada.ca last updated <b>Sep 2023</b></li>
+        <li>✓ Not in the library yet: a new form</li>
+        <li>✓ PDF, 12 pages, 1.1 MB <span class="chip smp">Sample</span></li>
+      </ul>
+      <div class="row"><a href="#">Open the canada.ca page</a><a href="#">Open the file</a><button class="lnk s12" aria-expanded="false">Details ▸</button></div>
+      <p class="s12 mut" style="margin:0">Details holds the fingerprint (checksum) and the exact link, for admins.</p>
+      <div class="notice info s12"><div>Approving records you, the time, the canada.ca page and the file's fingerprint. The form can then be added to any combination and read by AI. <span class="lb">[F] P-103, P-80 recording · [C1] → Q2</span></div></div>
+      <label class="f">Reason (only to reject)<textarea rows="2" placeholder="For example: the page shows a newer edition"></textarea></label>
+    </div>
+    <footer><button class="btn danger">Reject</button><button class="btn pri">Approve and add to the library</button></footer>
+  </aside>
+</main></div></div></section>
+
+<!-- VIEW 9 -->
+<section class="view" id="v9"><div class="vh"><h2>9 · Upload by hand, with the duplicate check explained</h2><p>Person upload stays (P-103). A hand upload keeps the second person (P-80): the uploader records the IRCC page it came from.</p></div>
+<div class="board"><div data-t="top"></div><div class="layout"><div data-t="nav"></div><main style="min-height:700px">
+  <div class="dim"><h1>Forms</h1><div class="card" style="height:300px;margin-top:16px"></div></div>
+  <aside class="panel" role="dialog" aria-label="Upload PDFs">
+    <header><div class="row"><h2 class="grow">Upload PDFs</h2><button class="btn ghost sm" aria-label="Close">✕</button></div><p class="mut s12" style="margin:4px 0 0">To the library · optional: also add to Visitor visa</p></header>
+    <div class="body stack">
+      <div class="drop"><span style="font-size:20px">⇪</span><div class="grow"><b>Drop IRCC PDFs here</b><br><span class="s12 mut">One or many, up to 20 files of 25 MB each.</span></div><button class="btn">Choose files</button></div>
+      <div class="notice info s12"><div><b>How duplicates are caught.</b> We read the form number, edition and a fingerprint of the file itself. The same file twice is recognised and not added again. The same form and edition from a different file is held for a person to compare. A newer edition goes to edition review. <span class="lb">Capability · Needed · BR-3, BR-4 · [F] P-32, P-41, P-51</span></div></div>
+      <ul style="list-style:none;margin:0;padding:0;border:1px solid var(--border);border-radius:8px" aria-label="Upload results">
+        <li class="pad" style="border-bottom:1px solid var(--soft)"><div class="row"><b>IMM 5257 (09-2023)</b><span class="chip ok">Already in the library</span></div><p class="s12 mut" style="margin:2px 0 0">The same file is already stored. Nothing was added.</p></li>
+        <li class="pad" style="border-bottom:1px solid var(--soft)"><div class="row"><b>IMM 5710 (09-2023)</b><span class="chip warn">Held for a second person</span></div><p class="s12 mut" style="margin:2px 0 6px">New form, uploaded by hand. A different person compares it with the IRCC page before use.</p><label class="f">IRCC page it came from<input type="url" placeholder="https://www.canada.ca/…/imm5710.html"></label></li>
+        <li class="pad" style="border-bottom:1px solid var(--soft)"><div class="row"><b>IMM 5476 (2021 edition)</b><span class="chip neu">Older edition: not used</span></div><p class="s12 mut" style="margin:2px 0 0">The library has the newer 11-2025 edition.</p></li>
+        <li class="pad" style="border-bottom:1px solid var(--soft)"><div class="row"><b>imm5257f.pdf</b><span class="chip warn">Held for a person</span></div><p class="s12 mut" style="margin:2px 0 0">French version of an English edition: never taken for the English form.</p></li>
+        <li class="pad"><div class="row"><b>passport-scan.jpg</b><span class="chip no">Refused</span></div><p class="s12 mut" style="margin:2px 0 0">Only PDF files of official forms can be added here. Client documents belong on a case.</p></li>
+      </ul>
+    </div>
+    <footer><button class="btn ghost">Close</button><button class="btn pri">Done</button></footer>
+  </aside>
+</main></div></div></section>
+
+<!-- VIEW 10 -->
+<section class="view" id="v10"><div class="vh"><h2>10 · Form drawer: definition, what IRCC accepts, where used</h2><p>P-107: the library allows, the combination defaults (W1-08), the agent picks (W4). Sample until the expert confirms. Sections, not tabs.</p></div>
+<div class="board"><div data-t="top"></div><div class="layout"><div data-t="nav"></div><main style="min-height:820px">
+  <div class="dim"><h1>Forms</h1><div class="card" style="height:300px;margin-top:16px"></div></div>
+  <aside class="panel" role="dialog" aria-label="IMM 5476">
+    <header><div class="row"><h2 class="grow">IMM 5476 · Use of a Representative Form</h2><span class="chip ok">✓ Ready</span></div><p class="mut s12" style="margin:4px 0 0">Edition 11-2025 · used in 5 combinations</p></header>
+    <div class="body stack">
+      <h3 style="font-size:14px">Definition</h3>
+      <table style="font-size:14px"><tbody>
+        <tr><td class="mut" style="width:200px">Form number</td><td>IMM 5476 <span class="s12 mut">read from the file</span></td></tr>
+        <tr><td class="mut">Form title</td><td>Use of a Representative Form <span class="s12 mut">as on canada.ca</span></td></tr>
+        <tr><td class="mut">Edition printed on the form</td><td>11-2025</td></tr>
+        <tr><td class="mut">canada.ca last updated</td><td>2025-11 <span class="s12 mut">from the form's page</span></td></tr>
+        <tr><td class="mut">Came from</td><td>canada.ca, approved by a content publisher, 26 Oct · <a href="#">form page</a> · <a href="#">PDF</a></td></tr>
+        <tr><td class="mut">Last checked on canada.ca</td><td>today</td></tr>
+      </tbody></table>
+      <h3 style="font-size:14px">What IRCC accepts <span class="chip smp">Sample</span></h3>
+      <fieldset style="border:0;padding:0;margin:0" class="row"><legend class="sr-only">What IRCC accepts</legend>
+        <label class="radio on"><input type="radio" name="acc" checked><span>PDF</span></label><label class="radio"><input type="radio" name="acc"><span>Online</span></label><label class="radio"><input type="radio" name="acc"><span>PDF or online</span></label></fieldset>
+      <p class="s12 mut" style="margin:0">What IRCC accepts for this form: PDF upload, online in the portal, or either. Sample until the immigration expert confirms. Online needs the browser extension (later wave). A combination's default must be one of these. <span class="lb">Capability · Needed · BR-9 · [F] P-107 · [M2] set by a person</span></p>
+      <div class="notice warn s12"><div>Changing it to PDF only affects 1 combination whose default is Online: <a href="#">Visitor visa</a>. It will show "IRCC accepts this form as a PDF only" there.</div></div>
+      <h3 style="font-size:14px">Where used (5)</h3>
+      <p class="s12" style="margin:0">Visitor visa · Study permit › From outside Canada · Employer-specific work permit (LMIA) › From inside Canada · Permanent residence application (Express Entry) › Ontario · Spouse or common-law partner › Applicant outside Canada <span class="chip smp">Sample</span></p>
+      <h3 style="font-size:14px">History</h3>
+      <p class="s12 mut" style="margin:0">26 Oct 10:44 downloaded from canada.ca · 10:46 approved · 10:50 added to Visitor visa</p>
+    </div>
+    <footer><button class="btn ghost">Close</button><button class="btn" title="Blocked while in use; lists every use.">Retire</button></footer>
+  </aside>
+</main></div></div></section>
+
+<!-- VIEW 11 -->
+<section class="view" id="v11"><div class="vh"><h2>11 · Other states, and the options not recommended</h2><p>Loading, read-only, conflict, AI off, number not on canada.ca, page not on canada.ca; then the alternatives for (a) and (b).</p></div>
+<div class="board" style="padding:20px"><div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="card pad stack"><h3>Loading</h3><div class="skel" style="width:40%"></div><div class="skel"></div><div class="skel"></div><div class="skel" style="width:80%"></div><span class="sr-only" role="status">Loading forms</span></div>
+  <div class="card pad stack"><h3>Read-only (no author duty)</h3><p class="mut" style="margin:0">Upload PDFs and Find forms are not shown. "A content publisher adds forms. You can see them and where they are used."</p></div>
+  <div class="card pad stack"><h3>Conflict</h3><div class="notice warn"><div>IMM 5257 was added by another person a moment ago: nothing downloaded twice. <a href="#">Reload the list</a></div></div></div>
+  <div class="card pad stack"><h3>AI off or failing</h3><div class="notice info"><div>The AI provider's usage limit is reached; nothing was charged. Continue with Rules only: 7 form numbers from the page and the known list are ready. <button class="btn sm">Continue with Rules only</button></div></div><span class="lb">[F] BR-7, STANDARDS §4 works with AI off</span></div>
+  <div class="card pad stack"><h3>Number not on canada.ca</h3><div class="notice warn"><div>IMM 9999 is not on canada.ca's list of forms. It may be a visa-office document: upload it by hand.</div></div></div>
+  <div class="card pad stack"><h3>Page not on canada.ca</h3><label class="f">Where IRCC lists the forms<input type="url" value="https://example.org/visa-forms" aria-invalid="true" aria-describedby="e1" style="border-color:#dc2626"></label><p id="e1" class="s12" style="color:var(--danger);margin:0">Only pages on canada.ca can be read. Paste the address of the official guide or checklist page.</p></div>
+  <div class="card pad stack"><h3>(a) Option B · one finder panel from both pages</h3><p class="s12 mut" style="margin:0">Programs › Visitor visa › Forms tab opens the same finder panel in place; the library stays a plain list. Stays in context; two entry pages to test; present/missing only on the combination.</p></div>
+  <div class="card pad stack"><h3>(a) Option C · Forms by combination matrix</h3><table class="s12"><thead><tr><th>Form</th><th>Visitor visa</th><th>Study permit</th><th>LMIA inside</th><th>Ontario PR</th><th>Spouse outside</th></tr></thead><tbody><tr><td>IMM 5476</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr><tr><td>IMM 5409</td><td>missing</td><td>✓</td><td>—</td><td>—</td><td>✓</td></tr></tbody></table><p class="s12 mut" style="margin:0">All five at a glance; new menu item; breaks past ~8 combinations and at 1024 px.</p></div>
+  <div class="card pad stack"><h3>(b) Option A · AI only</h3><p class="s12 mut" style="margin:0">One step: AI reads the page and proposes. Pays every run (about US$0.10, Sample); nothing works when AI is down; still needs the quote check.</p></div>
+  <div class="card pad stack"><h3>(b) Option B · Rules only</h3><p class="s12 mut" style="margin:0">Page scan + known list, US$0. Shows IMM 5782 and both family forms as plain candidates without "a separate application" or "either"; the person must spot it.</p></div>
+</div></div></section>
+
+<script>
+document.querySelectorAll('[data-t]').forEach(function(el){var t=document.getElementById(el.getAttribute('data-t'));el.replaceWith(t.content.cloneNode(true));});
+document.querySelectorAll('.bctl button').forEach(function(b){b.addEventListener('click',function(){document.querySelectorAll('.bctl button').forEach(function(x){x.classList.remove('on')});b.classList.add('on');document.querySelectorAll('.view').forEach(function(v){v.classList.remove('on')});document.getElementById('v'+b.dataset.v).classList.add('on');window.scrollTo(0,0);});});
+document.getElementById('lbl').addEventListener('change',function(e){document.body.classList.toggle('labels',e.target.checked);});
+document.querySelectorAll('.radio input').forEach(function(r){r.addEventListener('change',function(){var n=r.name;document.querySelectorAll('.radio input[name="'+n+'"]').forEach(function(x){x.closest('.radio').classList.toggle('on',x.checked)});});});
+</script>
+<style>.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}</style>
+</body>
+</html>

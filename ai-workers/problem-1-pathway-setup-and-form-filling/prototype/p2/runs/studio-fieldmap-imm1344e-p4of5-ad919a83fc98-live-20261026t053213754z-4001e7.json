@@ -1,0 +1,897 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-imm1344e-p4of5-ad919a83fc98-live-20261026t053213754z-4001e7",
+  "idempotency_key": "e08fd7bbaffd39a77d790510551804b7eb88aa077987bf1c7c2fb63954b3787c",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "a5d80cf49416d8b3dc53a276e6ba07aa3ce97ccb8f5a207547ceecf7dbd141bf",
+  "inputs": {
+   "combination": "studio",
+   "official_files": [
+    {
+     "file": "prototype/p2/parts/imm1344e.p4of5-ad919a83fc98.part.json",
+     "sha256": "1de53330e2bec1478507456851494c6c65e674727bcbc01beb6a1dedab6d8bd3"
+    }
+   ],
+   "configuration_version": "studio-add-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 600000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 19900,
+   "prompt_version": "field-map-part.v1.md",
+   "prompt_sha256": "a9136d0a9d77791de0bfe52dcf2c61c928f80c387223019bd68524eb343893aa"
+  },
+  "status": "completed_with_unresolved",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 22238,
+    "output_tokens": 15637,
+    "duration_ms": 110733
+   }
+  ],
+  "usage": {
+   "input_tokens": 22238,
+   "output_tokens": 15637,
+   "cost_usd": 0.401692,
+   "duration_ms": 110733
+  },
+  "started_at": "2026-10-26T05:32:13.755Z",
+  "ended_at": "2026-10-26T05:34:04.705Z",
+  "entries": [
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].FromMM[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Hidden box (presence invisible) with no caption and no script in this part that shows it; the matching From-year box is not in this part and the form gives one slot only, so it cannot be confirmed which previous marriage (if any) it records or whether the form uses it.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "CO-SIGNER PERSONAL DETAILS"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].FromDD[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Hidden box (presence invisible) with no caption and no script in this part that shows it; cannot confirm which previous marriage it records or whether the form uses it.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "CO-SIGNER PERSONAL DETAILS"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].ToYr[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Hidden box (presence invisible) with no caption and no script in this part that shows it; cannot confirm which previous marriage it records or whether the form uses it.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "CO-SIGNER PERSONAL DETAILS"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].ToMM[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Hidden box (presence invisible) with no caption and no script in this part that shows it; cannot confirm which previous marriage it records or whether the form uses it.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "CO-SIGNER PERSONAL DETAILS"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].ToDD[0]",
+    "outcome": "unresolved",
+    "confidence": "low",
+    "unresolved_reason": "Hidden box (presence invisible) with no caption and no script in this part that shows it; cannot confirm which previous marriage it records or whether the form uses it.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "CO-SIGNER PERSONAL DETAILS"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].CanadaUS[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.telephone_number",
+    "transform": "phone_region_flag: 1 if country calling code is 1 (Canada/US), else 0",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Canada/US"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].Other[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.telephone_number",
+    "transform": "phone_region_flag: 1 if country calling code is not 1 (outside Canada/US), else 0",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Other"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].Type[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.telephone_type",
+    "transform": "code_list:imm1344.phone_type (Residence=01, Cellular=02, Business=03)",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Type"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NumberCountry[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.telephone_number",
+    "transform": "phone_country_calling_code (digits only, max 4)",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs; expected when Other is ticked",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Country Code"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NumberExt[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.telephone_extension",
+    "transform": "as_is (max 5 chars)",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Ext."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].ActualNumber[0]",
+    "outcome": "not_a_fact",
+    "confidence": "medium",
+    "unresolved_reason": "Hidden helper box (presence invisible, no caption, no script shows it); the number is entered in the visible Canada/US or international number boxes.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Telephone no."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NANumber[0].AreaCode[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.telephone_number",
+    "transform": "nanp_area_code (3 digits)",
+    "condition": "Only when the co-signer section applies and Canada/US is ticked (script shows NANumber)",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "No."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NANumber[0].FirstThree[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.telephone_number",
+    "transform": "nanp_exchange (3 digits)",
+    "condition": "Only when the co-signer section applies and Canada/US is ticked (script shows NANumber)",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Question 1: 3 digit Exchange Number"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NANumber[0].LastFive[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.telephone_number",
+    "transform": "nanp_subscriber (4 digits)",
+    "condition": "Only when the co-signer section applies and Canada/US is ticked (script shows NANumber)",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Question 1 : 4 digit Subscriber Number"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].IntlNumber[0].IntlNumber[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.telephone_number",
+    "transform": "phone_national_number without country calling code (max 20 chars)",
+    "condition": "Only when the co-signer section applies and Other is ticked (script shows IntlNumber)",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "No."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].CanadaUS[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.alternate_telephone_number",
+    "transform": "phone_region_flag: 1 if country calling code is 1 (Canada/US), else 0",
+    "condition": "Only when the co-signer section applies and an alternate number exists",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Canada/É.-U."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].Other[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.alternate_telephone_number",
+    "transform": "phone_region_flag: 1 if country calling code is not 1 (outside Canada/US), else 0",
+    "condition": "Only when the co-signer section applies and an alternate number exists",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Other"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].Type[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.alternate_telephone_type",
+    "transform": "code_list:imm1344.phone_type (Residence=01, Cellular=02, Business=03)",
+    "condition": "Only when the co-signer section applies and an alternate number exists",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Type"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NumberCountry[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.alternate_telephone_number",
+    "transform": "phone_country_calling_code (digits only, max 4)",
+    "condition": "Only when the co-signer section applies and an alternate number exists; expected when Other is ticked",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Country Code"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NumberExt[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.alternate_telephone_extension",
+    "transform": "as_is (max 5 chars)",
+    "condition": "Only when the co-signer section applies and an alternate number exists",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Ext."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].ActualNumber[0]",
+    "outcome": "not_a_fact",
+    "confidence": "medium",
+    "unresolved_reason": "Hidden helper box (presence invisible, no caption, no script shows it); the number is entered in the visible Canada/US or international number boxes.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Alternate Telephone no."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NANumber[0].AreaCode[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.alternate_telephone_number",
+    "transform": "nanp_area_code (3 digits)",
+    "condition": "Only when the co-signer section applies and Canada/US is ticked for the alternate number",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "No."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NANumber[0].FirstThree[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.alternate_telephone_number",
+    "transform": "nanp_exchange (3 digits)",
+    "condition": "Only when the co-signer section applies and Canada/US is ticked for the alternate number",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Question 2: 3 digit Exchange Number"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NANumber[0].LastFive[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.alternate_telephone_number",
+    "transform": "nanp_subscriber (4 digits)",
+    "condition": "Only when the co-signer section applies and Canada/US is ticked for the alternate number",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Question 2: 4 digit Subscriber Number"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].IntlNumber[0].IntlNumber[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.alternate_telephone_number",
+    "transform": "phone_national_number without country calling code (max 20 chars)",
+    "condition": "Only when the co-signer section applies and Other is ticked for the alternate number",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "No."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].FaxCanOther[0].CanadaUS[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.fax_number",
+    "transform": "phone_region_flag: 1 if country calling code is 1 (Canada/US), else 0",
+    "condition": "Only when the co-signer section applies and a fax number exists",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Canada/US"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].FaxCanOther[0].Other[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.fax_number",
+    "transform": "phone_region_flag: 1 if country calling code is not 1 (outside Canada/US), else 0",
+    "condition": "Only when the co-signer section applies and a fax number exists",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Other"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NumberExt[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.fax_extension",
+    "transform": "as_is (max 5 chars)",
+    "condition": "Only when the co-signer section applies and a fax number exists",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Ext."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NumberCountry[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.fax_number",
+    "transform": "phone_country_calling_code (digits only, max 4)",
+    "condition": "Only when the co-signer section applies and a fax number exists; expected when Other is ticked",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Country Code"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].ActualNumber[0]",
+    "outcome": "not_a_fact",
+    "confidence": "medium",
+    "unresolved_reason": "Hidden helper box (presence invisible, no caption, no script shows it); the number is entered in the visible Canada/US or international number boxes.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Fax no."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NANumber[0].AreaCode[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.fax_number",
+    "transform": "nanp_area_code (3 digits)",
+    "condition": "Only when the co-signer section applies and Canada/US is ticked for the fax number",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "No."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NANumber[0].FirstThree[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.fax_number",
+    "transform": "nanp_exchange (3 digits)",
+    "condition": "Only when the co-signer section applies and Canada/US is ticked for the fax number",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Question 3: 3 digit Exchange Number"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NANumber[0].LastFive[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.fax_number",
+    "transform": "nanp_subscriber (4 digits)",
+    "condition": "Only when the co-signer section applies and Canada/US is ticked for the fax number",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Question 3: 4 digit Subscriber Number"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].IntlNumber[0].IntlNumber[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.fax_number",
+    "transform": "phone_national_number without country calling code (max 20 chars)",
+    "condition": "Only when the co-signer section applies and Other is ticked for the fax number",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "No."
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Email[0].Email[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.email_address",
+    "transform": "as_is (max 100 chars)",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "E-mail address"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignResidency[0].question[0].LiveQC[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.canadian_province_or_territory_of_residence",
+    "transform": "derive: Y if province is Quebec, N if another Canadian province or territory",
+    "condition": "Only when the co-signer section applies and the co-signer lives in Canada",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you a Canadian citizen living exclusively outside Canada? See \"Who can sponsor\" in the Guide for information on resi"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignResidency[0].question[0].LiveOutsideCan[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.canadian_citizen_living_exclusively_outside_canada",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you a Canadian citizen living exclusively outside Canada? See \"Who can sponsor\" in the Guide for information on resi"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q1[0].Over18Ind[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.date_of_birth",
+    "transform": "derive_age_at_least_18: Y if age is 18 or more on the date of signing, else N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you 18 years of age or older?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q2[0].CanCitzInd[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.canadian_immigration_status",
+    "transform": "derive: Y if Canadian citizen or permanent resident, else N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you a Canadian citizen or permanent resident?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q4[0].ResideCanInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.resides_in_canada_only",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Do you reside in Canada and in no other country? If you answered \"NO\", but are a Canadian citizen living exclusively out"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q7[0].SocialAssistInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.receives_social_assistance_non_disability",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you in receipt of social assistance for a reason other than disability?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q8[0].BankruptInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.undischarged_bankrupt",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you an undischarged bankrupt under the Bankruptcy and Insolvency Act?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q9[0].PrevSocialInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.previously_sponsored_received_social_assistance",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Have persons you previously sponsored or their family members received social assistance during the validity period of t"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q10[0].UndertakeInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.cosigned_undertaking_social_assistance_received",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Did you co-sign an undertaking where the sponsored person or their family members received social assistance during the"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q11[0].LeaveCanInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.ordered_to_leave_canada",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Have you been ordered to leave Canada?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q12[0].LatePayInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.late_on_immigration_debt_payment",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you late in making a required payment on an immigration loan, a performance bond or any other amounts you agreed to"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q13[0].JailInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.currently_detained",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you currently detained in jail, prison, penitentiary or reformatory?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q14[0].SexOffInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.convicted_sexual_or_violent_offence",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Have you been convicted of a sexual offence or serious violent offence against anyone, or an offence causing bodily harm"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q15[0].SupportPayInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.in_default_of_support_order",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you in default of a court order to make support payments to your spouse, former spouse, common-law partner, former c"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q16[0].RevokeCitzInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.subject_of_citizenship_revocation",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you the subject of an application to revoke your Canadian citizenship?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q17[0].InadmissibleInd[0]",
+    "outcome": "mapped",
+    "confidence": "high",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.subject_of_inadmissibility_report",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Are you the subject of a report on inadmissibility?"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].q18[0].ActParlimentInd[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.charged_with_serious_offence",
+    "transform": "yes_no_code:Y/N",
+    "condition": "Only when the sponsor's spouse or common-law partner co-signs",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Have you been charged with an offence under an Act of Parliament punishable by a maximum term of imprisonment of at leas"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Part1[0].CoSigner[0].CosignEA[0].IfYesDetails[0].Details[0]",
+    "outcome": "mapped",
+    "confidence": "medium",
+    "person": "subject_spouse_or_partner",
+    "fact": "person.sponsorship_eligibility_details",
+    "transform": "as_is (max 200 chars)",
+    "condition": "Only when the co-signer section applies and the co-signer answered Yes to question 10, 13, 14 or 15",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "If you answered \"Yes\" to question 10, 13, 14, or 15 please provide details including date and place."
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": null,
+  "needs_person": [],
+  "set_aside_fields": []
+ },
+ "launch_evidence": {
+  "path_code_sha256": "94638cfab2c74192bd98d0fc71950394cbce9d5f60780b1ad090a90e64720f30",
+  "template_sha256": "966ad8b94385fa99450bef25c615d65fcff2c8230f02f0a356c6c3e0cad30c2c",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IMM 1344 (09-2024)"
+  },
+  "screened": true,
+  "output_sha256": "a5d80cf49416d8b3dc53a276e6ba07aa3ce97ccb8f5a207547ceecf7dbd141bf",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "82b0e4ca5ffdbadb5e79aa3b616be944e76334b231754cad2efa58cba8a0db6a",
+  "request_bytes": 45208,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 100,
+   "committed_usd": 37.36492
+  },
+  "admitted": [
+   {
+    "file": "prototype/p2/parts/imm1344e.p4of5-ad919a83fc98.part.json",
+    "sha256": "1de53330e2bec1478507456851494c6c65e674727bcbc01beb6a1dedab6d8bd3",
+    "kind": "inventory_part"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "e9ce8d94f7927a62b9dc7dd317a4942095c8333a67cbc3672e1b13085832b10f",
+   "digest_made_at": "2026-10-26T05:32:13.755Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "783c488ca56a4f530e90995588b427a4",
+   "ticket_expires_at": "2026-10-26T05:34:13.755Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 1344 (09-2024)\",\"canonical_fields\":[{\"id\":\"person.telephone_number\",\"meaning\":\"Person's primary telephone number, including its international country calling code\",\"value_type\":\"text\"},{\"id\":\"person.telephone_type\",\"meaning\":\"Kind of line for the primary telephone number (residence, cellular, business)\",\"value_type\":\"code\"},{\"id\":\"person.telephone_extension\",\"meaning\":\"Extension for the primary telephone number\",\"value_type\":\"text\"},{\"id\":\"person.alternate_telephone_number\",\"meaning\":\"Person's alternate telephone number, including its international country calling code\",\"value_type\":\"text\"},{\"id\":\"person.alternate_telephone_type\",\"meaning\":\"Kind of line for the alternate telephone number (residence, cellular, business)\",\"value_type\":\"code\"},{\"id\":\"person.alternate_telephone_extension\",\"meaning\":\"Extension for the alternate telephone number\",\"value_type\":\"text\"},{\"id\":\"person.fax_number\",\"meaning\":\"Person's fax number, including its international country calling code\",\"value_type\":\"text\"},{\"id\":\"person.fax_extension\",\"meaning\":\"Extension for the fax number\",\"value_type\":\"text\"},{\"id\":\"person.email_address\",\"meaning\":\"Person's e-mail address\",\"value_type\":\"text\"},{\"id\":\"person.canadian_province_or_territory_of_residence\",\"meaning\":\"Canadian province or territory where the person lives\",\"value_type\":\"code\"},{\"id\":\"person.canadian_citizen_living_exclusively_outside_canada\",\"meaning\":\"Whether the person is a Canadian citizen living exclusively outside Canada\",\"value_type\":\"yes_no\"},{\"id\":\"person.date_of_birth\",\"meaning\":\"Person's date of birth\",\"value_type\":\"date\"},{\"id\":\"person.canadian_immigration_status\",\"meaning\":\"Person's status in Canada (for example Canadian citizen, permanent resident, other)\",\"value_type\":\"code\"},{\"id\":\"person.resides_in_canada_only\",\"meaning\":\"Whether the person resides in Canada and in no other country\",\"value_type\":\"yes_no\"},{\"id\":\"person.receives_social_assistance_non_disability\",\"meaning\":\"Whether the person receives social assistance for a reason other than disability\",\"value_type\":\"yes_no\"},{\"id\":\"person.undischarged_bankrupt\",\"meaning\":\"Whether the person is an undischarged bankrupt under the Bankruptcy and Insolvency Act\",\"value_type\":\"yes_no\"},{\"id\":\"person.previously_sponsored_received_social_assistance\",\"meaning\":\"Whether persons the person previously sponsored, or their family members, received social assistance during the undertaking validity period\",\"value_type\":\"yes_no\"},{\"id\":\"person.cosigned_undertaking_social_assistance_received\",\"meaning\":\"Whether the person co-signed an undertaking where the sponsored person or their family members received social assistance during its validity period\",\"value_type\":\"yes_no\"},{\"id\":\"person.ordered_to_leave_canada\",\"meaning\":\"Whether the person has been ordered to leave Canada\",\"value_type\":\"yes_no\"},{\"id\":\"person.late_on_immigration_debt_payment\",\"meaning\":\"Whether the person is late on a required payment of an immigration loan, performance bond or other agreed amount\",\"value_type\":\"yes_no\"},{\"id\":\"person.currently_detained\",\"meaning\":\"Whether the person is currently detained in jail, prison, penitentiary or reformatory\",\"value_type\":\"yes_no\"},{\"id\":\"person.convicted_sexual_or_violent_offence\",\"meaning\":\"Whether the person has been convicted of a sexual offence, serious violent offence or offence causing bodily harm as described on the form\",\"value_type\":\"yes_no\"},{\"id\":\"person.in_default_of_support_order\",\"meaning\":\"Whether the person is in default of a court order to make support payments\",\"value_type\":\"yes_no\"},{\"id\":\"person.subject_of_citizenship_revocation\",\"meaning\":\"Whether the person is the subject of an application to revoke Canadian citizenship\",\"value_type\":\"yes_no\"},{\"id\":\"person.subject_of_inadmissibility_report\",\"meaning\":\"Whether the person is the subject of a report on inadmissibility\",\"value_type\":\"yes_no\"},{\"id\":\"person.charged_with_serious_offence\",\"meaning\":\"Whether the person has been charged with an offence under an Act of Parliament punishable by a long maximum term of imprisonment, as described on the form\",\"value_type\":\"yes_no\"},{\"id\":\"person.sponsorship_eligibility_details\",\"meaning\":\"Details, including date and place, explaining yes answers to sponsorship eligibility questions\",\"value_type\":\"text\"}],\"entries\":[{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].FromMM[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Hidden box (presence invisible) with no caption and no script in this part that shows it; the matching From-year box is not in this part and the form gives one slot only, so it cannot be confirmed which previous marriage (if any) it records or whether the form uses it.\",\"evidence_quote\":\"CO-SIGNER PERSONAL DETAILS\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].FromDD[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Hidden box (presence invisible) with no caption and no script in this part that shows it; cannot confirm which previous marriage it records or whether the form uses it.\",\"evidence_quote\":\"CO-SIGNER PERSONAL DETAILS\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].ToYr[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Hidden box (presence invisible) with no caption and no script in this part that shows it; cannot confirm which previous marriage it records or whether the form uses it.\",\"evidence_quote\":\"CO-SIGNER PERSONAL DETAILS\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].ToMM[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Hidden box (presence invisible) with no caption and no script in this part that shows it; cannot confirm which previous marriage it records or whether the form uses it.\",\"evidence_quote\":\"CO-SIGNER PERSONAL DETAILS\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignDetails[0].q9bNew[0].PreviouslyMarriedDates[0].ToDD[0]\",\"outcome\":\"unresolved\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"low\",\"unresolved_reason\":\"Hidden box (presence invisible) with no caption and no script in this part that shows it; cannot confirm which previous marriage it records or whether the form uses it.\",\"evidence_quote\":\"CO-SIGNER PERSONAL DETAILS\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].CanadaUS[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.telephone_number\",\"transform\":\"phone_region_flag: 1 if country calling code is 1 (Canada/US), else 0\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Canada/US\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].Other[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.telephone_number\",\"transform\":\"phone_region_flag: 1 if country calling code is not 1 (outside Canada/US), else 0\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Other\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].Type[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.telephone_type\",\"transform\":\"code_list:imm1344.phone_type (Residence=01, Cellular=02, Business=03)\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Type\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NumberCountry[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.telephone_number\",\"transform\":\"phone_country_calling_code (digits only, max 4)\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs; expected when Other is ticked\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Country Code\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NumberExt[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.telephone_extension\",\"transform\":\"as_is (max 5 chars)\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Ext.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].ActualNumber[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Hidden helper box (presence invisible, no caption, no script shows it); the number is entered in the visible Canada/US or international number boxes.\",\"evidence_quote\":\"Telephone no.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NANumber[0].AreaCode[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.telephone_number\",\"transform\":\"nanp_area_code (3 digits)\",\"condition\":\"Only when the co-signer section applies and Canada/US is ticked (script shows NANumber)\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"No.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NANumber[0].FirstThree[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.telephone_number\",\"transform\":\"nanp_exchange (3 digits)\",\"condition\":\"Only when the co-signer section applies and Canada/US is ticked (script shows NANumber)\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 1: 3 digit Exchange Number\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].NANumber[0].LastFive[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.telephone_number\",\"transform\":\"nanp_subscriber (4 digits)\",\"condition\":\"Only when the co-signer section applies and Canada/US is ticked (script shows NANumber)\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 1 : 4 digit Subscriber Number\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].Phone[0].IntlNumber[0].IntlNumber[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.telephone_number\",\"transform\":\"phone_national_number without country calling code (max 20 chars)\",\"condition\":\"Only when the co-signer section applies and Other is ticked (script shows IntlNumber)\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"No.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].CanadaUS[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.alternate_telephone_number\",\"transform\":\"phone_region_flag: 1 if country calling code is 1 (Canada/US), else 0\",\"condition\":\"Only when the co-signer section applies and an alternate number exists\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Canada/É.-U.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].Other[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.alternate_telephone_number\",\"transform\":\"phone_region_flag: 1 if country calling code is not 1 (outside Canada/US), else 0\",\"condition\":\"Only when the co-signer section applies and an alternate number exists\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Other\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].Type[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.alternate_telephone_type\",\"transform\":\"code_list:imm1344.phone_type (Residence=01, Cellular=02, Business=03)\",\"condition\":\"Only when the co-signer section applies and an alternate number exists\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Type\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NumberCountry[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.alternate_telephone_number\",\"transform\":\"phone_country_calling_code (digits only, max 4)\",\"condition\":\"Only when the co-signer section applies and an alternate number exists; expected when Other is ticked\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Country Code\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NumberExt[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.alternate_telephone_extension\",\"transform\":\"as_is (max 5 chars)\",\"condition\":\"Only when the co-signer section applies and an alternate number exists\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Ext.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].ActualNumber[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Hidden helper box (presence invisible, no caption, no script shows it); the number is entered in the visible Canada/US or international number boxes.\",\"evidence_quote\":\"Alternate Telephone no.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NANumber[0].AreaCode[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.alternate_telephone_number\",\"transform\":\"nanp_area_code (3 digits)\",\"condition\":\"Only when the co-signer section applies and Canada/US is ticked for the alternate number\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"No.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NANumber[0].FirstThree[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.alternate_telephone_number\",\"transform\":\"nanp_exchange (3 digits)\",\"condition\":\"Only when the co-signer section applies and Canada/US is ticked for the alternate number\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 2: 3 digit Exchange Number\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].NANumber[0].LastFive[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.alternate_telephone_number\",\"transform\":\"nanp_subscriber (4 digits)\",\"condition\":\"Only when the co-signer section applies and Canada/US is ticked for the alternate number\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 2: 4 digit Subscriber Number\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q1-2[0].AltPhone[0].IntlNumber[0].IntlNumber[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.alternate_telephone_number\",\"transform\":\"phone_national_number without country calling code (max 20 chars)\",\"condition\":\"Only when the co-signer section applies and Other is ticked for the alternate number\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"No.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].FaxCanOther[0].CanadaUS[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.fax_number\",\"transform\":\"phone_region_flag: 1 if country calling code is 1 (Canada/US), else 0\",\"condition\":\"Only when the co-signer section applies and a fax number exists\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Canada/US\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].FaxCanOther[0].Other[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.fax_number\",\"transform\":\"phone_region_flag: 1 if country calling code is not 1 (outside Canada/US), else 0\",\"condition\":\"Only when the co-signer section applies and a fax number exists\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Other\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NumberExt[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.fax_extension\",\"transform\":\"as_is (max 5 chars)\",\"condition\":\"Only when the co-signer section applies and a fax number exists\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Ext.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NumberCountry[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.fax_number\",\"transform\":\"phone_country_calling_code (digits only, max 4)\",\"condition\":\"Only when the co-signer section applies and a fax number exists; expected when Other is ticked\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Country Code\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].ActualNumber[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Hidden helper box (presence invisible, no caption, no script shows it); the number is entered in the visible Canada/US or international number boxes.\",\"evidence_quote\":\"Fax no.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NANumber[0].AreaCode[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.fax_number\",\"transform\":\"nanp_area_code (3 digits)\",\"condition\":\"Only when the co-signer section applies and Canada/US is ticked for the fax number\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"No.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NANumber[0].FirstThree[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.fax_number\",\"transform\":\"nanp_exchange (3 digits)\",\"condition\":\"Only when the co-signer section applies and Canada/US is ticked for the fax number\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 3: 3 digit Exchange Number\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].NANumber[0].LastFive[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.fax_number\",\"transform\":\"nanp_subscriber (4 digits)\",\"condition\":\"Only when the co-signer section applies and Canada/US is ticked for the fax number\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Question 3: 4 digit Subscriber Number\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Fax[0].IntlNumber[0].IntlNumber[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.fax_number\",\"transform\":\"phone_national_number without country calling code (max 20 chars)\",\"condition\":\"Only when the co-signer section applies and Other is ticked for the fax number\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"No.\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignContactInfo[0].q3-4[0].Email[0].Email[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.email_address\",\"transform\":\"as_is (max 100 chars)\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"E-mail address\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignResidency[0].question[0].LiveQC[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.canadian_province_or_territory_of_residence\",\"transform\":\"derive: Y if province is Quebec, N if another Canadian province or territory\",\"condition\":\"Only when the co-signer section applies and the co-signer lives in Canada\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you a Canadian citizen living exclusively outside Canada? See \\\"Who can sponsor\\\" in the Guide for information on resi\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignResidency[0].question[0].LiveOutsideCan[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.canadian_citizen_living_exclusively_outside_canada\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you a Canadian citizen living exclusively outside Canada? See \\\"Who can sponsor\\\" in the Guide for information on resi\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q1[0].Over18Ind[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.date_of_birth\",\"transform\":\"derive_age_at_least_18: Y if age is 18 or more on the date of signing, else N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you 18 years of age or older?\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q2[0].CanCitzInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.canadian_immigration_status\",\"transform\":\"derive: Y if Canadian citizen or permanent resident, else N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you a Canadian citizen or permanent resident?\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q4[0].ResideCanInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.resides_in_canada_only\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Do you reside in Canada and in no other country? If you answered \\\"NO\\\", but are a Canadian citizen living exclusively out\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q7[0].SocialAssistInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.receives_social_assistance_non_disability\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you in receipt of social assistance for a reason other than disability?\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q8[0].BankruptInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.undischarged_bankrupt\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you an undischarged bankrupt under the Bankruptcy and Insolvency Act?\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q9[0].PrevSocialInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.previously_sponsored_received_social_assistance\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Have persons you previously sponsored or their family members received social assistance during the validity period of t\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q10[0].UndertakeInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.cosigned_undertaking_social_assistance_received\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Did you co-sign an undertaking where the sponsored person or their family members received social assistance during the \"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q11[0].LeaveCanInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.ordered_to_leave_canada\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Have you been ordered to leave Canada?\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q12[0].LatePayInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.late_on_immigration_debt_payment\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you late in making a required payment on an immigration loan, a performance bond or any other amounts you agreed to \"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q13[0].JailInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.currently_detained\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you currently detained in jail, prison, penitentiary or reformatory?\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q14[0].SexOffInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.convicted_sexual_or_violent_offence\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Have you been convicted of a sexual offence or serious violent offence against anyone, or an offence causing bodily harm\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q15[0].SupportPayInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.in_default_of_support_order\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you in default of a court order to make support payments to your spouse, former spouse, common-law partner, former c\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q16[0].RevokeCitzInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.subject_of_citizenship_revocation\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you the subject of an application to revoke your Canadian citizenship?\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q17[0].InadmissibleInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.subject_of_inadmissibility_report\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"high\",\"unresolved_reason\":null,\"evidence_quote\":\"Are you the subject of a report on inadmissibility?\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].q18[0].ActParlimentInd[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.charged_with_serious_offence\",\"transform\":\"yes_no_code:Y/N\",\"condition\":\"Only when the sponsor's spouse or common-law partner co-signs\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"Have you been charged with an offence under an Act of Parliament punishable by a maximum term of imprisonment of at leas\"},{\"data_path\":\"form1[0].Part1[0].CoSigner[0].CosignEA[0].IfYesDetails[0].Details[0]\",\"outcome\":\"mapped\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":\"person.sponsorship_eligibility_details\",\"transform\":\"as_is (max 200 chars)\",\"condition\":\"Only when the co-signer section applies and the co-signer answered Yes to question 10, 13, 14 or 15\",\"confidence\":\"medium\",\"unresolved_reason\":null,\"evidence_quote\":\"If you answered \\\"Yes\\\" to question 10, 13, 14, or 15 please provide details including date and place.\"}]}"
+}

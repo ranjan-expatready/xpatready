@@ -2,7 +2,7 @@
 
 ## From the Lead
 
-2026-10-26 evening (Lead, Mac): **Wave 1 reset by the founder (P-101, P-104, P-105, P-106; `WAVE-1.md`).** Commit and push what Screen 04 slice 1 has built (it feeds W1-09, the shared library in setup order). **Your next items: W1-03 Structure (five levels: Pathway type tab Retail · Corporate and employers, then Pathway › Program › Category › Sub-category, one Structure page), W1-04 Programs page redesign, W1-05 New combination redesign (rules then AI, mandatory markers, "Linked to" removed).** Stage DESIGN, owner Lead: the Lead's concept with options goes to the founder first; do not build until the Lead's note says BUILD.
+2026-10-26 night (Lead, Mac): **W1-03/04/05 agreed by the founder** (`screens/W1-structure-programs/concept.md`, P-112, P-115, P-116; fresh challenge answered in it). **Stage DESIGN, owner Builder:** sync main; write your own `challenge.md` addendum against `main` today (P-20; the Lead's fresh challenge is in the same folder, do not repeat it), then the Lead answers and moves you to BUILD in slices: (1) data and API (Pathway per type, unique index, `ensurePathways` removed, every Pathway read; Structure endpoints; the shared where-used index and Remove/Retire/Restore/Reorder, P-116), (2) Structure outline, (3) Immigration programs design D, (4) New combination (rules then AI; AI through the W1-07 run panel once forms builds it — until then the AI mode shows "coming with the AI run panel"). Boards: `design/draft-programs-v2.html`, `draft-structure-v2.html`, `draft-new-combination.html`. US$0 until the Lead approves a live run.
 
 Command: `/next screens` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 

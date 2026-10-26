@@ -1,0 +1,272 @@
+{
+ "label": "AI-drafted under a prototype-only exception to the AI-processing rule; not the product's provider route",
+ "caller": "live",
+ "drafting_run": {
+  "run_id": "studio-fieldmap-imm1344e-p5of5-e680cd3035fd-live-20261026t053405371z-4023d9",
+  "idempotency_key": "b0744e52b9d52406f2e17b326cf0fbb22b0724761414d681c128f1716b28c18b",
+  "contract_version": "drafting-run/v0",
+  "kind": "field_map",
+  "output_sha256": "03a4b34281c75e75c9b110868b8dfed22b23ffe13f5e00523eb83f196c6def16",
+  "inputs": {
+   "combination": "studio",
+   "official_files": [
+    {
+     "file": "prototype/p2/parts/imm1344e.p5of5-e680cd3035fd.part.json",
+     "sha256": "d6e0e5b5461ba71ec6a0acc26aab4a87200f96fc36498224fb77484ef2bcfce3"
+    }
+   ],
+   "configuration_version": "studio-add-form"
+  },
+  "settings": {
+   "provider_route": "anthropic-api/aiw-d261-prototype-exception-aiw-d260",
+   "model": "claude-opus-5-5",
+   "effort": "high",
+   "timeout_ms": 600000,
+   "max_attempts": 2,
+   "budget_usd": 5,
+   "max_output_tokens": 7600,
+   "prompt_version": "field-map-part.v1.md",
+   "prompt_sha256": "a9136d0a9d77791de0bfe52dcf2c61c928f80c387223019bd68524eb343893aa"
+  },
+  "status": "completed",
+  "attempts": [
+   {
+    "n": 1,
+    "outcome": "ok",
+    "input_tokens": 11138,
+    "output_tokens": 2408,
+    "duration_ms": 18915
+   }
+  ],
+  "usage": {
+   "input_tokens": 11138,
+   "output_tokens": 2408,
+   "cost_usd": 0.092712,
+   "duration_ms": 18915
+  },
+  "started_at": "2026-10-26T05:34:05.375Z",
+  "ended_at": "2026-10-26T05:34:24.562Z",
+  "entries": [
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Signatures[0].Sigs[0].SponSiglbl[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Handwritten signature of the sponsor; the system must never fill a signature.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Sponsor's signature"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Signatures[0].Sigs[0].SponSigDate[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date the sponsor signs; it is written at signing time and must match the handwritten signature, so it is not pre-filled. A presence script on this box also shows or hides form1.Page5. The reviewer should confirm the firm's policy on pre-dating signatures.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Date: YYYY-MM-DD"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Signatures[0].Sigs[0].CoSignSiglbl[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "condition": "Only if the sponsor's spouse or common-law partner is a co-signer",
+    "unresolved_reason": "Handwritten signature of the co-signer, who is the sponsor's spouse or common-law partner; the system must never fill a signature.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Signature of sponsor's spouse or common-law partner (if co-signer)"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Signatures[0].Sigs[0].CoSignSigDate[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "condition": "Only if the sponsor's spouse or common-law partner is a co-signer",
+    "unresolved_reason": "Date the co-signer signs; it is written at signing time alongside the handwritten signature, so it is not pre-filled. A presence script on this box also shows or hides form1.Page5.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Date: YYYY-MM-DD"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Signatures[0].Sigs[0].PASiglbl[0]",
+    "outcome": "never_filled",
+    "confidence": "high",
+    "unresolved_reason": "Handwritten signature of the sponsored person (principal applicant); the system must never fill a signature. The person is set to none because the sponsored person's relationship to the sponsor (the form subject) varies by case and does not fit a fixed person value.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Signature of sponsored person (principal applicant)"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Signatures[0].Sigs[0].PASignDate[0]",
+    "outcome": "never_filled",
+    "confidence": "medium",
+    "unresolved_reason": "Date the sponsored person (principal applicant) signs; it is written at signing time, so it is not pre-filled. A presence script on this box also shows or hides barcodeValues. The person is set to none because the sponsored person's relationship to the sponsor varies by case.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Date: YYYY-MM-DD"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].Barcodes[0].DateLastValidated[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Hidden helper box that records when the form's validation was last run; it is form mechanics, not a case fact.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "Date Last validated"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].barcodeValues[0].TextField1[0]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Barcode data box that the form's own scripts generate; it is form mechanics, not a case fact.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "BC1"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].barcodeValues[0].TextField1[1]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Barcode data box that the form's own scripts generate; it is form mechanics, not a case fact.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "BC2"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].barcodeValues[0].TextField1[2]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Barcode data box that the form's own scripts generate; it is form mechanics, not a case fact.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "BC3"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].barcodeValues[0].TextField1[3]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Barcode data box that the form's own scripts generate; it is form mechanics, not a case fact.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "BC4"
+    }
+   },
+   {
+    "form_edition": "IMM 1344 (09-2024)",
+    "form_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+    "data_path": "form1[0].barcodeValues[0].TextField1[4]",
+    "outcome": "not_a_fact",
+    "confidence": "high",
+    "unresolved_reason": "Barcode data box that the form's own scripts generate; it is form mechanics, not a case fact.",
+    "evidence": {
+     "file_sha256": "bb11ccbd585d371d770edd32eb2ee646f6b9f355dba0c523a309641c736174d2",
+     "quote": "BC5"
+    }
+   }
+  ]
+ },
+ "contract_valid": true,
+ "contract_errors": null,
+ "output_errors": null,
+ "conversion": {
+  "weak_evidence": [],
+  "edition_note": null,
+  "needs_person": [],
+  "set_aside_fields": []
+ },
+ "launch_evidence": {
+  "path_code_sha256": "df1b2e2c24e54d8d1da73afd8acd3d39983d3c47601a7974f6b69c4b58015713",
+  "template_sha256": "966ad8b94385fa99450bef25c615d65fcff2c8230f02f0a356c6c3e0cad30c2c",
+  "schema_file": "field-map-output.v2.schema.json",
+  "schema_sha256": "a9583204f0ff5325721c1240af88c2f86d9701dac3c1f466061c0073c4f2d68a",
+  "known": {
+   "form_edition": "IMM 1344 (09-2024)"
+  },
+  "screened": true,
+  "output_sha256": "03a4b34281c75e75c9b110868b8dfed22b23ffe13f5e00523eb83f196c6def16",
+  "isolation": {
+   "permission_model": true,
+   "entry_script": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/draft.ts",
+   "entry_is_draft_ts": true,
+   "forbidden_readable": [],
+   "official_readable": true,
+   "writable_outside_ledger": [],
+   "ledger_writable": true,
+   "child_process_allowed": false,
+   "worker_allowed": false
+  },
+  "request_sha256": "ee977668f5384f6d94c59a768dbeae4ff9f77f4208213b758b4abbd3f8bb5d86",
+  "request_bytes": 23088,
+  "stub_calls": null,
+  "ledger": {
+   "file": "/Users/ranjansingh/Desktop/Xpatready/ai-workers/problem-1-pathway-setup-and-form-filling/prototype/p2/ledger/spend.jsonl",
+   "cap_usd": 100,
+   "committed_usd": 37.457632
+  },
+  "admitted": [
+   {
+    "file": "prototype/p2/parts/imm1344e.p5of5-e680cd3035fd.part.json",
+    "sha256": "d6e0e5b5461ba71ec6a0acc26aab4a87200f96fc36498224fb77484ef2bcfce3",
+    "kind": "inventory_part"
+   }
+  ],
+  "screening": {
+   "digest_sha256": "7ce610504c14f71bac1eb7f31a881cb9bed2166c1d77fcb6a9fae7e106ccbf0f",
+   "digest_made_at": "2026-10-26T05:34:05.372Z",
+   "digest_sources": [
+    {
+     "file": "prototype/expected/slice-1-field-map.json",
+     "sha256": "18d4ebe3351da916c9afc7e24c84469861b4c271f4365def711652bec1142a3e"
+    },
+    {
+     "file": "prototype/expected/slice-1-field-map.v2.json",
+     "sha256": "c9576b2619f2b51f1f6e92871398ad3ff436e29205b2bc104cccdb16e8859b42"
+    },
+    {
+     "file": "prototype/p1/e5-family-values.json",
+     "sha256": "88f6ec2372dd66cb5f7e2ab0ae05eae355d4a179e01daaf3158ed9be33136440"
+    },
+    {
+     "file": "prototype/p1/adobe-complete-1295-values.json",
+     "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
+    }
+   ],
+   "ticket_nonce": "2f278f4c35c24d4652318f34a489dca1",
+   "ticket_expires_at": "2026-10-26T05:36:05.372Z",
+   "items_screened": 2,
+   "request_screened": true,
+   "stub_gate_checked": true
+  }
+ },
+ "raw_output": "{\"form_edition\":\"IMM 1344 (09-2024)\",\"canonical_fields\":[],\"entries\":[{\"data_path\":\"form1[0].Signatures[0].Sigs[0].SponSiglbl[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the sponsor; the system must never fill a signature.\",\"evidence_quote\":\"Sponsor's signature\"},{\"data_path\":\"form1[0].Signatures[0].Sigs[0].SponSigDate[0]\",\"outcome\":\"never_filled\",\"person\":\"form_subject\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date the sponsor signs; it is written at signing time and must match the handwritten signature, so it is not pre-filled. A presence script on this box also shows or hides form1.Page5. The reviewer should confirm the firm's policy on pre-dating signatures.\",\"evidence_quote\":\"Date: YYYY-MM-DD\"},{\"data_path\":\"form1[0].Signatures[0].Sigs[0].CoSignSiglbl[0]\",\"outcome\":\"never_filled\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only if the sponsor's spouse or common-law partner is a co-signer\",\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the co-signer, who is the sponsor's spouse or common-law partner; the system must never fill a signature.\",\"evidence_quote\":\"Signature of sponsor's spouse or common-law partner (if co-signer)\"},{\"data_path\":\"form1[0].Signatures[0].Sigs[0].CoSignSigDate[0]\",\"outcome\":\"never_filled\",\"person\":\"subject_spouse_or_partner\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":\"Only if the sponsor's spouse or common-law partner is a co-signer\",\"confidence\":\"medium\",\"unresolved_reason\":\"Date the co-signer signs; it is written at signing time alongside the handwritten signature, so it is not pre-filled. A presence script on this box also shows or hides form1.Page5.\",\"evidence_quote\":\"Date: YYYY-MM-DD\"},{\"data_path\":\"form1[0].Signatures[0].Sigs[0].PASiglbl[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Handwritten signature of the sponsored person (principal applicant); the system must never fill a signature. The person is set to none because the sponsored person's relationship to the sponsor (the form subject) varies by case and does not fit a fixed person value.\",\"evidence_quote\":\"Signature of sponsored person (principal applicant)\"},{\"data_path\":\"form1[0].Signatures[0].Sigs[0].PASignDate[0]\",\"outcome\":\"never_filled\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"medium\",\"unresolved_reason\":\"Date the sponsored person (principal applicant) signs; it is written at signing time, so it is not pre-filled. A presence script on this box also shows or hides barcodeValues. The person is set to none because the sponsored person's relationship to the sponsor varies by case.\",\"evidence_quote\":\"Date: YYYY-MM-DD\"},{\"data_path\":\"form1[0].Barcodes[0].DateLastValidated[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Hidden helper box that records when the form's validation was last run; it is form mechanics, not a case fact.\",\"evidence_quote\":\"Date Last validated\"},{\"data_path\":\"form1[0].barcodeValues[0].TextField1[0]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Barcode data box that the form's own scripts generate; it is form mechanics, not a case fact.\",\"evidence_quote\":\"BC1\"},{\"data_path\":\"form1[0].barcodeValues[0].TextField1[1]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Barcode data box that the form's own scripts generate; it is form mechanics, not a case fact.\",\"evidence_quote\":\"BC2\"},{\"data_path\":\"form1[0].barcodeValues[0].TextField1[2]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Barcode data box that the form's own scripts generate; it is form mechanics, not a case fact.\",\"evidence_quote\":\"BC3\"},{\"data_path\":\"form1[0].barcodeValues[0].TextField1[3]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Barcode data box that the form's own scripts generate; it is form mechanics, not a case fact.\",\"evidence_quote\":\"BC4\"},{\"data_path\":\"form1[0].barcodeValues[0].TextField1[4]\",\"outcome\":\"not_a_fact\",\"person\":\"none\",\"row\":null,\"fact\":null,\"transform\":null,\"condition\":null,\"confidence\":\"high\",\"unresolved_reason\":\"Barcode data box that the form's own scripts generate; it is form mechanics, not a case fact.\",\"evidence_quote\":\"BC5\"}]}"
+}
