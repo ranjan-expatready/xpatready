@@ -24,13 +24,13 @@ import type { Response } from "express";
 import { AddExtensionScreen } from "../../contracts/extension.ts";
 import { mergeCapture, screenFingerprint, screenProblems } from "../../engine/extension/screens.ts";
 import { ANSWER_ON_SCREEN } from "../../engine/extension/fill.ts";
-import { AbandonCapture, AcceptAiProposals, AcceptScreenMap, CAPTURE_LIMITS, CAPTURE_STATUS_WORDS, CHANNEL_WORDS, DRAFT_FROM_WORDS, DraftLeftovers, SetDraftFrom, UseDefaults, type Channel, type DraftFrom, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS,DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
+import { ASKED_DIFFERENTLY, AbandonCapture, AcceptAiProposals, AcceptScreenMap, CAPTURE_LIMITS, CAPTURE_STATUS_WORDS, CHANNEL_WORDS, DRAFT_FROM_WORDS, DraftLeftovers, SetDraftFrom, UseDefaults, type Channel, type DraftFrom, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS,DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
 import { buildRecord, contractProblems, difference, fingerprint, noAnswers, reviewHtml, type CaptureInput, type CaptureRecord } from "../../engine/capture.ts";
 import { channelProblems, channelsView } from "../../engine/channels.ts";
 import { newestEdition } from "../../engine/programs.ts";
 import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
-import { compatible, draftScreenMap, inputKey, normLabel, screenIdentity, readScreenRun, transformFor, type AiProposal, type PdfEntry, type Proposal } from "../../engine/twin.ts";
+import { compatible, draftScreenMap, inputKey, normLabel, screenCoverage, screenIdentity, readScreenRun, transformFor, type AiProposal, type PdfEntry, type Proposal, type SectionNotSeen } from "../../engine/twin.ts";
 import { partOutputTokens } from "../../engine/parts.ts";
 import { factKeyProblem } from "../../../contracts/fact-key.ts";
 import { costUsd } from "../../../p2/ledger.ts";
@@ -121,9 +121,16 @@ export class Forms {
     if (b.combinationId && !combo) fail("That combination does not exist.", HttpStatus.NOT_FOUND);
     const known = (await this.db.govFormDef.findMany({ where: { workspaceId }, select: { formKey: true } })).find((d) => compact(d.formKey) === compact(form));
     if (known) form = known.formKey;
-    const c = await this.db.portalCapture.create({ data: { workspaceId, portalKey: b.portal, formKey: form, title: b.title, applicationType: b.applicationType ?? null, way: b.way ?? "saved_page", status: "OPEN", statusDetail: b.way === "extension" ? "Capture each screen in the browser extension, in portal order; only the screens seen are compared with the current version." : "Add the blank screens in portal order: saved pages or the template.", record: { screens: [] }, combinationId: combo?.id ?? null, capturedBy: actor.id } });
-    await this.audit.log(workspaceId, actor.id, "started", "portal capture", form, `${actor.name} started capturing ${form} from the ${portalLabel(b.portal)}${combo ? ` for "${combo.label}"` : ""}`, undefined, combo?.id);
-    return this.view(c);
+    const data = { workspaceId, portalKey: b.portal, formKey: form, title: b.title, applicationType: b.applicationType ?? null, way: b.way ?? "saved_page", status: "OPEN", statusDetail: b.way === "extension" ? "Capture each screen in the browser extension, in portal order; only the screens seen are compared with the current version." : "Add the blank screens in portal order: saved pages or the template.", record: { screens: [] }, combinationId: combo?.id ?? null, capturedBy: actor.id };
+    // F3 D6, BR-15: one open extension capture per person, form and portal. A second start (a double click, the Studio
+    // then the panel) returns the open or returned one, with the combination it was started for; never a second capture.
+    const r = b.way !== "extension" ? { c: await this.db.portalCapture.create({ data }), reused: false } : await this.db.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`extension-capture:${workspaceId}:${actor.id}:${form}:${b.portal}`}))`;
+      const open = await tx.portalCapture.findFirst({ where: { workspaceId, capturedBy: actor.id, formKey: form, portalKey: b.portal, way: "extension", status: { in: ["OPEN", "RETURNED"] } }, orderBy: { createdAt: "desc" } });
+      return open ? { c: open, reused: true } : { c: await tx.portalCapture.create({ data }), reused: false };
+    });
+    if (!r.reused) await this.audit.log(workspaceId, actor.id, "started", "portal capture", form, `${actor.name} started capturing ${form} from the ${portalLabel(b.portal)}${combo ? ` for "${combo.label}"` : ""}`, undefined, combo?.id);
+    return { ...(await this.capture(r.c.id)), reused: r.reused };
   }
 
   /** Adds screens: each saved page is one screen, a template file holds many. A file holding an answer is refused and
@@ -242,7 +249,7 @@ export class Forms {
     if (same) {
       const u = await this.write(c, ["OPEN"], { record: json(record), contentSha256: fp, status: "IN_LIBRARY", formEditionId: same.id, statusDetail: `Already in the library: the screens are identical to ${same.editionLabel} (same fingerprint).${seen} Nothing new to approve. ${NEXT.IN_LIBRARY}` });
       await this.audit.log(c.workspaceId, actor.id, "finished", "portal capture", c.formKey, `${actor.name} finished the ${c.formKey} capture: identical to ${same.editionLabel}, nothing new`);
-      return this.view(u);
+      return { ...this.view(u), summary: await this.finishSummary(c, record) };
     }
     const previous = versions[0] ?? null;
     const diff = previous ? difference(this.twinOf(previous.inventoryFile!).record, record) : null;
@@ -262,7 +269,14 @@ export class Forms {
       statusDetail: previous ? `Held for a second person: ${diff!.length} difference${diff!.length === 1 ? "" : "s"} from ${previous.editionLabel} (impact review).${seen} Not used until approved.` : "Held for a second person: a new online version. Not used until approved." });
     this.printReview(c.id, htmlPath);
     await this.audit.log(c.workspaceId, actor.id, "finished", "portal capture", c.formKey, `${actor.name} finished the ${c.formKey} capture (${record.screens.length} screens): held for a second person${previous ? `, ${diff!.length} differences from ${previous.editionLabel}` : ""}`, { fingerprint: fp });
-    return this.view(u);
+    return { ...this.view(u), summary: await this.finishSummary(c, record) };
+  }
+
+  /** F3 X6: what a finished capture holds, in counts, and the PDF sections no captured screen asks yet (BR-12: a warning,
+   *  never a block); a second person approves it before anything uses it (BR-9). */
+  private async finishSummary(c: PortalCapture, record: CaptureRecord) {
+    const cov = await this.sectionsNotSeen(c.workspaceId, c.formKey, c.portalKey, record);
+    return { screens: record.screens.length, questions: record.screens.reduce((n, s) => n + s.inputs.length, 0), pdf_edition: cov.pdf_edition, pdf_sections_not_seen: cov.sections.map((x) => ({ group: x.group, label: x.label, questions: x.questions })) };
   }
 
   /** The second person (never the one who captured it) approves: the capture becomes an online version. */
@@ -367,7 +381,11 @@ export class Forms {
     const n = Math.min(Math.max(Number(take) || 50, 1), 200), from = Math.max(Number(skip) || 0, 0);
     return (await this.db.portalCapture.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: n, skip: from })).map((c) => { const v = this.view(c); return { ...v, difference: undefined, differences: Array.isArray(c.difference) ? c.difference.length : 0 }; });
   }
-  async capture(id: string) { return this.view(await this.db.portalCapture.findUniqueOrThrow({ where: { id } }), true); }
+  async capture(id: string) {
+    const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id }, include: { combination: { select: { id: true, label: true } } } });
+    // F3 X1: the combination a capture was started for in the Studio ("Started in the Studio · Visitor visa").
+    return { ...this.view(c, true), combination: c.combination };
+  }
   async reviewDocument(id: string) {
     const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id } });
     if (!c.reviewFile) fail("The review document is made when the capture is finished.", HttpStatus.NOT_FOUND);
@@ -410,6 +428,34 @@ export class Forms {
     return [...newest.values()];
   }
   private async mapRows(editionId: string) { return effective(await this.db.formFieldMap.findMany({ where: { formEditionId: editionId } }), (m) => m.dataPath, "draft"); }
+  /** What a screen map is drafted from: the newest PDF version's field map, earlier online versions' rows for the same
+   *  inputs on the same screens, and the shared-field library. The screen-map draft and a capture's coverage (F3 D1)
+   *  read the same context, so they match a screen the same way. */
+  private async screenMapContext(workspaceId: string, editions: FormEdition[], portalKey: string | null, excludeId: string | null, withPdf: boolean) {
+    const pdfs = editions.filter((e) => e.channel === "PDF").sort((a, b) => (a.editionLabel < b.editionLabel ? 1 : -1));
+    let pdfEdition: string | null = null, pdf: PdfEntry[] = [];
+    if (withPdf) for (const p of pdfs) { const rows = await this.mapRows(p.id); if (rows.length) { pdfEdition = p.editionLabel; pdf = rows.map((m) => ({ data_path: m.dataPath, caption: m.caption, heading: m.heading, fact: m.canonicalFieldKey, transform: m.transform, person: m.person, outcome: m.outcome })); break; } }
+    const previous = new Map<string, { fact: string | null; transform: string | null; person: string | null; edition: string }>();
+    // Keyed by screen and element id (F2a, B1): a map row is reused only for the same input on the same screen.
+    for (const o of editions.filter((e) => e.channel === "ONLINE" && e.portalKey === portalKey && e.id !== excludeId && e.inventoryFile)) {
+      const titles = new Map(this.twinOf(o.inventoryFile!).record.screens.map((x) => [x.key, x.title]));
+      for (const m of await this.mapRows(o.id)) { const k = inputKey(titles.get(m.screenKey ?? "") ?? m.heading ?? "", m.dataPath); if (m.outcome === "mapped" && !previous.has(k)) previous.set(k, { fact: m.canonicalFieldKey, transform: m.transform, person: m.person, edition: o.editionLabel }); }
+    }
+    const library = (await this.libraryRows(workspaceId)).filter((r) => r.status !== "RETIRED" || r.mergedIntoKey).map((r) => ({ key: r.canonicalFieldKey, valueType: r.valueType, aliases: r.aliases, mergedIntoKey: r.mergedIntoKey, answerListKey: r.answerListKey }));
+    return { pdf, pdfEdition, previous, library };
+  }
+  /** F3 D1, X6: the PDF sections no screen of this capture asks yet, matched as the screen-map draft would match them
+   *  (shared field and person), minus sections the form's online version marks asked differently. No AI, nothing stored. */
+  private async sectionsNotSeen(workspaceId: string, formKey: string, portalKey: string, record: CaptureRecord) {
+    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey } }, include: { editions: true } });
+    if (!def) return { pdf_edition: null, sections: [] as SectionNotSeen[] };
+    const ctx = await this.screenMapContext(workspaceId, def.editions, portalKey, null, true);
+    if (!ctx.pdf.length) return { pdf_edition: null, sections: [] as SectionNotSeen[] };
+    const seen = draftScreenMap(record, ctx).proposals.filter((p) => p.outcome === "mapped").map((p) => ({ fact: p.fact, person: p.person }));
+    const online = def.editions.filter((e) => e.channel === "ONLINE" && e.portalKey === portalKey).sort((a, b) => (a.editionLabel < b.editionLabel ? 1 : -1))[0];
+    const decided = online ? (await this.mapRows(online.id)).filter((m) => m.outcome === ASKED_DIFFERENTLY.outcome && m.heading).map((m) => m.heading!) : [];
+    return { pdf_edition: ctx.pdfEdition, sections: screenCoverage(formKey, ctx.pdf, seen, decided) };
+  }
 
   async draftScreenMapFor(actor: Actor, editionId: string) {
     need(actor, "author");
@@ -417,18 +463,10 @@ export class Forms {
     if (ed.channel !== "ONLINE") fail("Screen maps are drafted for online versions; a PDF edition's field map is drafted from its file.");
     if (await this.db.formFieldMap.count({ where: { formEditionId: editionId } })) conflict(`${ed.editionLabel} already has a screen map.`);
     const twin = this.twinOf(ed.inventoryFile!);
-    const pdfs = ed.form.editions.filter((e) => e.channel === "PDF").sort((a, b) => (a.editionLabel < b.editionLabel ? 1 : -1));
-    let pdfEdition: string | null = null, pdf: PdfEntry[] = [];
     // The form's drafting source (C2.10): ONLINE_ONLY drafts from the online screens alone, never the PDF version.
-    if (ed.form.draftFrom !== "ONLINE_ONLY") for (const p of pdfs) { const rows = await this.mapRows(p.id); if (rows.length) { pdfEdition = p.editionLabel; pdf = rows.map((m) => ({ data_path: m.dataPath, caption: m.caption, heading: m.heading, fact: m.canonicalFieldKey, transform: m.transform, person: m.person, outcome: m.outcome })); break; } }
-    const previous = new Map<string, { fact: string | null; transform: string | null; person: string | null; edition: string }>();
-    // Keyed by screen and element id (F2a, B1): a map row is reused only for the same input on the same screen.
-    for (const o of ed.form.editions.filter((e) => e.channel === "ONLINE" && e.portalKey === ed.portalKey && e.id !== ed.id && e.inventoryFile)) {
-      const titles = new Map(this.twinOf(o.inventoryFile!).record.screens.map((x) => [x.key, x.title]));
-      for (const m of await this.mapRows(o.id)) { const k = inputKey(titles.get(m.screenKey ?? "") ?? m.heading ?? "", m.dataPath); if (m.outcome === "mapped" && !previous.has(k)) previous.set(k, { fact: m.canonicalFieldKey, transform: m.transform, person: m.person, edition: o.editionLabel }); }
-    }
-    const library = (await this.libraryRows(ed.workspaceId)).filter((r) => r.status !== "RETIRED" || r.mergedIntoKey).map((r) => ({ key: r.canonicalFieldKey, valueType: r.valueType, aliases: r.aliases, mergedIntoKey: r.mergedIntoKey, answerListKey: r.answerListKey }));
-    const draft = draftScreenMap(twin.record, { pdf, pdfEdition, previous, library });
+    const ctx = await this.screenMapContext(ed.workspaceId, ed.form.editions, ed.portalKey, ed.id, ed.form.draftFrom !== "ONLINE_ONLY");
+    const pdfEdition = ctx.pdfEdition;
+    const draft = draftScreenMap(twin.record, ctx);
     const dir = join(VAR("demo"), "screen-maps"); mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, `${ed.id}.json`), JSON.stringify({ edition: ed.editionLabel, fingerprint: twin.fingerprint, pdf_edition: pdfEdition, at: new Date().toISOString(), ...draft }, null, 1));
     await this.audit.log(ed.workspaceId, actor.id, "drafted", "screen map", ed.form.formKey, `${actor.name} drafted the screen map of ${ed.editionLabel} without AI: ${draft.counts.mapped} of ${draft.counts.inputs} inputs matched (${draft.counts.same_path} same id, ${draft.counts.pdf_twin} from ${pdfEdition ?? "no PDF twin"}, ${draft.counts.alias} by alias); ${draft.counts.leftover} left for drafting or a person; US$0`);
@@ -1068,7 +1106,7 @@ export class FormsController {
   }
   @Get("portals") portals() { return this.f.portals(); }
   @Get("captures") captures(@Query("take") take?: string, @Query("skip") skip?: string) { return this.f.captures(Number(take ?? 50), Number(skip ?? 0)); }
-  @Post("captures") create(@Headers("x-actor") a: H, @Body() b: unknown) { return this.f.createCapture(actorOf(a), b); }
+  @Post("captures") create(@Headers("x-actor") a: H, @Body() b: unknown, @Res({ passthrough: true }) res: Response) { return this.f.createCapture(actorOf(a), b).then((r) => { res.status(r.reused ? 200 : 201); return r; }); }
   @Get("captures/:id") capture(@Param("id") id: string) { return this.f.capture(id); }
   @Post("captures/:id/screens") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: CAPTURE_LIMITS.fileMb * 1024 * 1024, files: CAPTURE_LIMITS.files } }))
   screens(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: Upload[]) { return this.f.addScreens(actorOf(a), id, files); }

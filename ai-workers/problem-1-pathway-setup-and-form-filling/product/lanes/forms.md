@@ -17,11 +17,12 @@ Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes th
 current_item: F3-add-form-wizard (BUILD slices 1–4: F3a-0, F3a-1c, F3c-1 without X4, F3c-2)
 stage: BUILD
 owner: Builder
-next_action: slice 3 (F3c-1) regression run, commit; slice 4 (F3c-2: X8 capture-mode re-capture tasks, X9 grouped fill results, X10 outline and Undo, X12 session end); then CHECK. Waiting on the Lead: how IMM 5409 leaves the starting library (demo.ts keepForm, runtime) so DEMO row 1 approves
+next_action: PR #34 review fix first (build.ts empties a non-empty folder only when it holds this extension's manifest; assets-only folder refused, apr check), commit on its own; sync origin/main (4ab7da9); then commit slice 3 (F3c-1) after its regression run; slice 4 (F3c-2); then CHECK. DEMO row 1 stays rejected until the runtime lane's demo.ts keepForm change lands (Lead: option a)
 blocked_by: none
 updated: 2026-10-26
 
 ## Log (last 10 lines)
+- 2026-10-26 · F3 · BUILD · Lead answers: IMM 5409 leaves the starting library through runtime's demo.ts (option a; row 1 stays rejected until then); PR #34 merged (4ab7da9); PR #34 review fix to build.ts written with its fail-before test (assets-only folder refused), run and commit next. US$0.
 - 2026-10-26 · F3 · BUILD · applied Lead note 2026-10-26 night (Pass A+B merged; BUILD slices 1–4): slice 1 F3a-0 section groups, Sample labels, coverage by shared field and person (f3a0 15/15, 8f4ea2c); slice 2 F3a-1c second-draft guard (f3a1c 20/20, slice2 53/53, ai suites green, 6f671d1); slice 3 F3c-1 built (f3c 26/26), regression running. US$0.
 - 2026-10-26 · F2 · FIX → CHECK · applied Lead note 2026-10-26 evening (review-4: Ship after fixes, 8.5/10, 2 Major): firm-wide pairing count capped per address (f2b 52), demo copy is IMM 5409 (visitor), rejected as not needed since the library holds it (demo 27), two removals keep portal order (apr), held page offers Reject only when Approve would be refused (demo), build refuses a var folder holding files (apr). US$0. Owner → Lead.
 - 2026-10-26 · F3 · PLAN · applied Lead note 2026-10-26 (F3 PLAN after Pass A+B; read from origin/lead/2026-10-26): plan.md for F3a-1, F3a-2, F3c-1, F3c-2 (no table, no migration); "asked differently online" = a released screen-map decision per PDF subform group, keyed by shared field and person, only after the screen map is accepted; fresh challenge (2 Blocker, 6 Major, 10 Minor) all applied; slices reordered around the runtime merge. No code. Owner → Lead.
@@ -31,4 +32,3 @@ updated: 2026-10-26
 - 2026-10-25 · F2 · CHECK · applied Lead note 2026-10-25 09:30 (MERGE after three items; main b2c0710 synced): demo reset deletes extension rows (f2b 39/39), "Check this screen again" after a changed screen (f2d 37/37); reviewer re-score launched. US$0.
 - 2026-10-25 · F2 · FIX → CHECK · full run-suites on dada3e7: 27 suites green (f1p 16, f2a 34, f2a_api 34, f2b 36, f2c 36, f2c_fill 17, f2d 36); copy clean. US$0. Owner → Lead.
 - 2026-10-25 · F2 · CHECK → FIX · reviewer: ship after fixes, journey 7/10 (1 Must = wrong-person fill via screen identity), 1 Major (capture lost on panel reload), 9 Minor; breaker: 2 Blocker (identity collision; Next during fill), 4 Major, 7 Minor; all fixed with tests (f2a_api 34, f2b 36, f2c 36, f2c_fill 17, f2d 36) except E-1 step id (no page has one) and two by-design answers. US$0.
-- 2026-10-25 · F2 · BUILD → CHECK · F1-P, F2a–F2d built and pushed (d67b592, c9b8269, a9745ae, bebc666, c16bf6f, 6f6e098); reviewer and breaker launched on 6f6e098; full suite run in progress. US$0.

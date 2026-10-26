@@ -8,7 +8,7 @@
 import { createRoot } from "react-dom/client";
 import * as React from "react";
 import RULES from "../../contracts/portal-reader-rules.json";
-import { ApiError, call, token } from "./api.ts";
+import { API, ApiError, call, token } from "./api.ts";
 import type { Outcome, PlanInput } from "./filler.ts";
 import type { ReaderResult, ReadScreen } from "./reader.ts";
 import "./panel.css";
@@ -17,7 +17,19 @@ type Person = { id: string; name: string; role: string };
 type Me = { person: Person; modes: ("capture" | "fill")[]; expires_at: string };
 type CaseRow = { id: string; reference: string; release: string; people: { subject_id: string; label: string; role: string }[]; online_forms: string[] };
 type Plan = { match: true; screen: string; inputs: (PlanInput & { why: string })[]; counts: Record<string, number>; message: string } | { match: false; reason: string; message: string; screen?: string; differences?: { input: string; change: string; approved_label: string | null }[]; task?: { times: number; message: string } | null };
-type Capture = { id: string; revision: number; status: string; status_detail: string; form: string; screens: { order: number; title: string; questions: number }[] };
+type Summary = { screens: number; questions: number; pdf_edition: string | null; pdf_sections_not_seen: { group: string; label: string; questions: number }[] };
+type Capture = { id: string; revision: number; status: string; status_detail: string; form: string; screens: { order: number; title: string; questions: number }[];
+  /** F3 X1: the combination it was started for in the Studio. */ combination?: { id: string; label: string } | null; reused?: boolean; summary?: Summary };
+/** A screen's identity as the Studio compares screens (engine/twin.ts screenIdentity): its heading, case and spacing aside. */
+const ident = (title: string) => title.normalize("NFKC").replace(/[\u200B-\u200D\u2060\uFEFF\u00AD]/g, "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "-").replace(/^-|-$/g, "");
+const KIND: Record<string, string> = { text: "Text", textarea: "Text", select: "Choose one", radio: "Choose one", checkbox: "Tick box", date: "Date", email: "Email", tel: "Telephone", number: "Number", file: "File upload" };
+/** F3 X5: what "Check before sending" shows for each question: its label, kind and choices, and any text that looks
+ *  like a client's detail. */
+type Question = { label: string; kind: string; choices: string[]; bad: { text: string; what: string } | null };
+const badOf = (texts: (string | undefined | null)[]) => { for (const t of texts) { if (!t) continue; const hit = CLIENT.find(([rx]) => rx.test(t)); if (hit) return { text: t, what: hit[1] }; } return null; };
+const questionsOf = (s: ReadScreen): Question[] => [{ label: s.title, kind: "Screen title", choices: [], bad: badOf([s.title]) },
+  ...s.inputs.map((i) => ({ label: i.group ? `${i.group} › ${i.label}` : i.label, kind: `${KIND[i.type] ?? i.type}${i.part ? ` (${i.part === "YYYY" ? "year" : i.part === "MM" ? "month" : "day"})` : ""}${i.required ? ", required" : ""}`, choices: (i.options ?? []).map((o) => o.label), bad: badOf([i.label, i.group, i.help, ...(i.options ?? []).map((o) => o.label)]) }))];
+const FIX = "Fix: open a blank application with no client's details, go to this screen and capture it again. Nothing was sent.";
 const CLIENT = RULES.client_data.map((c) => [new RegExp(c.pattern), c.what] as const);
 const PLAN_MINUTES = 5; // Sample (BR-13)
 /** The portals as contracts/forms.ts lists them (kept here so the panel does not bundle the request contracts); P-98:
@@ -180,17 +192,27 @@ function FillMode({ onError, clearError }: { onError: (e: unknown) => void; clea
 // ─── capture mode
 function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; clearError: () => void }) {
   const [cap, setCap] = React.useState<Capture | null>(null), [meta, setMeta] = React.useState({ portal: PORTALS[0][0] as string, form: "", title: "", applicationType: "" });
-  const [check, setCheck] = React.useState<{ screen: ReadScreen; tabId: number; texts: { text: string; what: string | null }[] } | null>(null), [note, setNote] = React.useState<{ tone: "ok" | "warn" | "danger"; text: string } | null>(null), [busy, setBusy] = React.useState(false);
-  const start = async (e: React.FormEvent) => { e.preventDefault(); setBusy(true); clearError(); try { setCap(await call<Capture>("POST", "/captures", { portal: meta.portal, form: meta.form, title: meta.title, ...(meta.applicationType ? { applicationType: meta.applicationType } : {}) })); } catch (err) { onError(err); } finally { setBusy(false); } };
+  const [check, setCheck] = React.useState<{ screen: ReadScreen; tabId: number; questions: Question[] } | null>(null), [note, setNote] = React.useState<{ tone: "ok" | "warn" | "danger"; text: string } | null>(null), [busy, setBusy] = React.useState(false);
+  const start = async (e: React.FormEvent) => {
+    e.preventDefault(); setBusy(true); clearError();
+    try {
+      const c = await call<Capture>("POST", "/captures", { portal: meta.portal, form: meta.form, title: meta.title, ...(meta.applicationType ? { applicationType: meta.applicationType } : {}) });
+      setCap(c);
+      // F3 D6: one open capture per person, form and portal: a second start continues the one already open.
+      if (c.reused) setNote({ tone: "warn", text: `You already have this capture open${c.combination ? ` (started in the Studio for ${c.combination.label})` : ""}: continuing it, ${c.screens.length} screen${c.screens.length === 1 ? "" : "s"} so far. Nothing new was started.` });
+    } catch (err) { onError(err); } finally { setBusy(false); }
+  };
   // BR-3: every text the screen would send is listed first; a text that looks like a client's detail refuses the screen.
   const read = async () => {
     setBusy(true); clearError(); setNote(null);
     try {
       const { tabId, answer: r } = await ask<ReaderResult>({ kind: "read" });
-      if (!r.ok) { setCheck(null); setNote({ tone: "danger", text: "refused" in r ? `Refused: ${r.refused[0].why}. Nothing was sent.` : `Not read: ${r.error}. Nothing was sent.` }); return; }
+      if (!r.ok) { setCheck(null); setNote({ tone: "danger", text: "refused" in r ? `Refused: ${r.refused[0].why}. ${FIX}` : `Not read: ${r.error}. Nothing was sent.` }); return; }
       const s = r.screens[0];
-      const texts = [s.title, ...s.inputs.flatMap((i) => [i.label, i.group, i.help, ...(i.options ?? []).map((o) => o.label)])].filter((t): t is string => !!t);
-      setCheck({ screen: s, tabId, texts: [...new Set(texts)].map((text) => ({ text, what: CLIENT.find(([rx]) => rx.test(text))?.[1] ?? null })) });
+      // F3 X3: a screen already in this capture says so before anything is checked or sent.
+      const n = cap?.screens.find((x) => ident(x.title) === ident(s.title))?.order;
+      if (n) { setCheck(null); setPrompt({ title: s.title, n }); return; }
+      setCheck({ screen: s, tabId, questions: questionsOf(s) });
     } catch (e) { onError(e); } finally { setBusy(false); }
   };
   const send = async () => {
@@ -209,6 +231,26 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
     chrome.tabs.onUpdated.addListener(moved); chrome.tabs.onRemoved.addListener(closed);
     return () => { chrome.tabs.onUpdated.removeListener(moved); chrome.tabs.onRemoved.removeListener(closed); };
   }, [check]);
+  // F3 X3: on each new portal page the panel names the screen and says whether it is new or already captured. The
+  // screen is read on this computer only: nothing is sent until the person checks it and chooses Send.
+  const [prompt, setPrompt] = React.useState<{ title: string; n: number | null } | null>(null);
+  const live = !!cap && ["OPEN", "RETURNED"].includes(cap.status);
+  const titles = cap?.screens.map((x) => `${x.order}:${x.title}`).join("|") ?? "";
+  React.useEffect(() => {
+    if (!live) { setPrompt(null); return; }
+    let gone = false;
+    const look = async (tabId?: number) => {
+      try {
+        const { answer: r } = await ask<ReaderResult>({ kind: "read" }, tabId);
+        const title = r.ok ? r.screens[0].title : "title" in r ? r.title : null;
+        if (!gone) setPrompt(title ? { title, n: cap!.screens.find((x) => ident(x.title) === ident(title))?.order ?? null } : null);
+      } catch { if (!gone) setPrompt(null); }
+    };
+    void look();
+    const loaded = (id: number, info: { status?: string }) => { if (info.status === "complete") void portalTab().then((t) => { if (t?.id === id) void look(id); }); };
+    chrome.tabs.onUpdated.addListener(loaded);
+    return () => { gone = true; chrome.tabs.onUpdated.removeListener(loaded); };
+  }, [live, cap?.id, titles]);
   // PR #27: a capture the second person returned goes on here: remove the screens that are wrong, capture them again, finish.
   const remove = async (order: number) => { if (!cap) return; setBusy(true); clearError(); try { setCap(await call<Capture>("DELETE", `/captures/${cap.id}/screens/${order}?revision=${cap.revision}`)); setNote({ tone: "ok", text: `Screen ${order} removed: capture it again in the portal.` }); } catch (e) { onError(e); } finally { setBusy(false); } };
   // Review Major 1: a capture left open (the panel was closed or reloaded) is offered again, never lost.
@@ -219,7 +261,7 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
     <form onSubmit={start} className="space-y-3">
       {open?.length ? <section aria-label="Captures to continue" className="space-y-2">
         <p className="text-sm font-semibold">Continue a capture</p>
-        {open.map((o) => <Button key={o.id} type="button" onClick={() => { void call<Capture>("GET", `/captures/${o.id}`).then((fresh) => { setCap(fresh); setNote(null); }).catch(onError); }} className="w-full">{o.status === "RETURNED" ? `Returned to you: ${o.form} · ${o.screens.length} screen${o.screens.length === 1 ? "" : "s"}` : `Continue ${o.form} · ${o.screens.length} screen${o.screens.length === 1 ? "" : "s"} so far`}</Button>)}
+        {open.map((o) => <Button key={o.id} type="button" onClick={() => { void call<Capture>("GET", `/captures/${o.id}`).then((fresh) => { setCap(fresh); setNote(null); }).catch(onError); }} className="w-full">{o.status === "RETURNED" ? `Returned to you: ${o.form} · ${o.screens.length} screen${o.screens.length === 1 ? "" : "s"}` : o.combination ? `Started in the Studio · ${o.combination.label}: ${o.form} · ${o.screens.length} screen${o.screens.length === 1 ? "" : "s"} so far` : `Continue ${o.form} · ${o.screens.length} screen${o.screens.length === 1 ? "" : "s"} so far`}</Button>)}
         <p className="pt-2 text-sm font-semibold">Or start a new capture</p>
       </section> : null}
       <Note>Capture records each portal screen's structure in portal order, never an answer. A second person approves it before anything uses it.</Note>
@@ -235,13 +277,30 @@ function CaptureMode({ onError, clearError }: { onError: (e: unknown) => void; c
     <div className="space-y-3">
       {/* Review m2: once finished, the record holds the version's screens too (Q2), so the count is not "captured" any more. */}
       <Note tone={done ? "ok" : returned ? "warn" : "info"} title={done ? `${cap.form} · ${cap.status === "HELD" ? "held for a second person" : cap.status === "APPROVED" ? "approved" : cap.status === "ABANDONED" ? "abandoned" : "already in the library"}` : returned ? `${cap.form} · returned to you` : `${cap.form} · ${cap.screens.length} screen${cap.screens.length === 1 ? "" : "s"} captured`}>{done || returned ? cap.status_detail : "Go to each screen in portal order and capture it."}</Note>
+      {cap.combination && <p className="text-xs text-text-muted">Started in the Studio · {cap.combination.label}</p>}
       {note && <Note tone={note.tone}>{note.text}</Note>}
+      {!done && !check && prompt && (prompt.n
+        ? <Note title={`Already captured: ${prompt.title}`}>{`It is screen ${prompt.n}. Nothing was sent; go on to the next screen in the portal.`}</Note>
+        : <Note title={`New screen: ${prompt.title}`}>Capture this screen when it is the next one in portal order. Nothing is sent until you check it.</Note>)}
       {check && <section aria-label="Check before sending" className="space-y-2 rounded-md border border-border bg-surface-raised p-2">
-        <p className="text-sm font-semibold">Check before sending: these texts go to ExpatReady</p>
-        <ul tabIndex={0} aria-label="Texts this screen sends" className="max-h-60 space-y-1 overflow-y-auto text-xs">{check.texts.map((t, i) => <li key={i} className={t.what ? "font-semibold text-text-danger" : ""}>{t.text}{t.what ? ` — looks like ${t.what}` : ""}</li>)}</ul>
-        {check.texts.some((t) => t.what)
-          ? <Note tone="danger">{`Refused: this text looks like a client's detail (${check.texts.find((t) => t.what)!.what}). Nothing was sent.`}</Note>
+        <p className="text-sm font-semibold">Check before sending: {check.questions.length - 1} question{check.questions.length === 2 ? "" : "s"} go to ExpatReady, as structure only</p>
+        <ul tabIndex={0} aria-label="Questions this screen sends" className="max-h-60 divide-y divide-border overflow-y-auto text-xs">{check.questions.map((q, i) => (
+          <li key={i} className={`py-1 ${q.bad ? "text-text-danger" : ""}`}><p className={q.bad ? "font-semibold" : "font-medium text-text"}>{q.label}</p>
+            <p className="text-text-muted">{q.kind}{q.choices.length ? `: ${q.choices.join(" · ")}` : ""}</p>
+            {q.bad && <p className="font-semibold">{`"${q.bad.text}" looks like ${q.bad.what}`}</p>}</li>))}</ul>
+        {check.questions.some((q) => q.bad)
+          ? <Note tone="danger">{`Refused: "${check.questions.find((q) => q.bad)!.label}" shows a text that looks like ${check.questions.find((q) => q.bad)!.bad!.what}. ${FIX}`}</Note>
           : <Button primary onClick={send} disabled={busy} className="w-full">Send this screen</Button>}
+      </section>}
+      {done && cap.summary && <section aria-label="Capture summary" className="space-y-2 rounded-md border border-border bg-surface-raised p-2 text-sm">
+        <p className="font-semibold">{`${cap.summary.screens} screen${cap.summary.screens === 1 ? "" : "s"} · ${cap.summary.questions} question${cap.summary.questions === 1 ? "" : "s"}`}</p>
+        {cap.status === "HELD" && <p>A second person approves it in the Studio before anything uses it.</p>}
+        {cap.summary.pdf_sections_not_seen.length
+          ? <div><p className="font-medium">PDF sections not seen on any captured screen yet ({cap.summary.pdf_edition}):</p>
+              <ul className="list-disc pl-5">{cap.summary.pdf_sections_not_seen.map((x) => <li key={x.group}>{x.label} ({x.questions})</li>)}</ul>
+              <p className="text-xs text-text-muted">Each is a screen that appears only after some answers, or a question asked differently online. Capture it later, or mark it asked differently on the screen map.</p></div>
+          : cap.summary.pdf_edition ? <p>Every section of {cap.summary.pdf_edition} is asked on a captured screen.</p> : null}
+        <a className="text-text-link underline" href={`${API}/review/capture/${cap.id}`} target="_blank" rel="noreferrer">Open it in the Studio</a>
       </section>}
       {!done && !check && <Pinned><Button primary onClick={read} disabled={busy} className="w-full">Capture this screen</Button></Pinned>}
       {/* A returned capture is finished again only after a change (remove a wrong screen or capture one). */}

@@ -161,6 +161,23 @@ export function AddOnlineFormPanel({ id, sum, codes, onClose, resume }: { id: st
   const [results, setResults] = React.useState<AddResult[] | null>(null);
   const [done, setDone] = React.useState<string | null>(null);
   const tooBig = files.find((f) => f.size > CAPTURE_LIMITS.fileMb * 1024 * 1024);
+  // F3 X1, BR-15: the capture can be made screen by screen in the browser extension instead. The page never messages
+  // the extension: it records the open capture, which the extension's panel lists first ("Started in the Studio").
+  const inExtension = async () => {
+    setBusy(true); setErrors({}); setProblem(null); setResults(null);
+    try {
+      const c = await api<{ reused: boolean; screens: unknown[] }>("/captures", { method: "POST", json: { way: "extension", portal, form, title, combinationId: id } });
+      setDone(c.reused
+        ? `Already started in the extension (${c.screens.length} screen${c.screens.length === 1 ? "" : "s"} so far): open the ExpatReady extension on the ${PORTALS.find((p) => p.key === portal)?.label ?? "portal"} and continue it there.`
+        : `Started: open the ExpatReady extension on the ${PORTALS.find((p) => p.key === portal)?.label ?? "portal"}. It lists this capture first, as "Started in the Studio · ${sum.row?.label ?? "this combination"}". Capture each blank screen there, in portal order.`);
+      toast.push({ tone: "ok", text: `${form} capture ${c.reused ? "already started" : "started"} in the extension` });
+      refresh(qc, id);
+    } catch (e) {
+      const errs = ((e as { problem?: { errors?: { field: string; message: string }[] } }).problem?.errors ?? []);
+      if (errs.length) setErrors(Object.fromEntries(errs.map((x) => [x.field.split(".")[0], x.message])));
+      else setProblem((e as Error).message);
+    } finally { setBusy(false); }
+  };
   const submit = async () => {
     setBusy(true); setErrors({}); setProblem(null); setResults(null);
     try {
@@ -187,7 +204,7 @@ export function AddOnlineFormPanel({ id, sum, codes, onClose, resume }: { id: st
   };
   return (
     <Panel open onOpenChange={(o) => !o && onClose()} title={resume ? `Continue the ${resume.form} online form` : "Add an online form"} description="Record the form as the portal shows it: its blank screens, never a client's answers. A second person approves it before it is used."
-      footer={done ? <Button onClick={onClose}>Close</Button> : <><Button variant="ghost" onClick={onClose}>Cancel</Button><Button busy={busy} disabled={!portal || !form.trim() || title.trim().length < 3 || !files.length || !!tooBig} onClick={() => void submit()}><Upload /> Add and send for approval</Button></>}>
+      footer={done ? <Button onClick={onClose}>Close</Button> : <><Button variant="ghost" onClick={onClose}>Cancel</Button>{!resume && <Button variant="secondary" disabled={busy || !portal || !form.trim() || title.trim().length < 3} onClick={() => void inExtension()}>Start the capture in the extension</Button>}<Button busy={busy} disabled={!portal || !form.trim() || title.trim().length < 3 || !files.length || !!tooBig} onClick={() => void submit()}><Upload /> Add and send for approval</Button></>}>
       <div className="flex flex-col gap-4">
         <Field label="Portal" error={errors.portal} hint={!sum.portal ? "This combination has no portal yet: the APR Portal is chosen, the one portal proven now. Change it if the form is filed elsewhere." : portal && portal !== sum.portal ? `Not this combination's portal (${sum.portalLabel}): its lines filed Online use the ${sum.portalLabel}.` : "This combination's portal"}>
           <Select value={portal} disabled={!!resume} onChange={(e) => { touched.current = true; setPortal(e.target.value); }} aria-label="Portal"><option value="">Choose…</option>{PORTALS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}</Select>
@@ -202,7 +219,8 @@ export function AddOnlineFormPanel({ id, sum, codes, onClose, resume }: { id: st
         </Field>
         {problem ? <Notice tone="danger" title="Not added">{problem}</Notice> : null}
         {results ? <ul aria-label="Screen results" className="space-y-1 text-sm">{results.map((r, i) => <li key={i} className="flex gap-2"><Pill tone={r.outcome === "added" ? "ok" : r.outcome === "duplicate" ? "neutral" : "danger"}>{r.outcome === "added" ? "Added" : r.outcome === "duplicate" ? "Already there" : "Refused"}</Pill><span><b className="font-medium">{r.file}</b>: {r.message}</span></li>)}</ul> : null}
-        {done ? <Notice tone="ok" title={`${form} online form added`}>{done}</Notice> : null}
+        {!resume && !done ? <p className="text-sm text-text-muted">Or capture it in the browser extension, screen by screen on the portal: choose <b className="font-medium">Start the capture in the extension</b> (no files needed here).</p> : null}
+        {done ? <Notice tone="ok" title={done.startsWith("Started") || done.startsWith("Already started") ? `${form} capture in the extension` : `${form} online form added`}>{done}</Notice> : null}
       </div>
     </Panel>
   );

@@ -11,7 +11,8 @@
 // (review-3 Major 2: one client could otherwise sweep every selector and void the office's codes).
 // Answers and tokens are never logged.
 // The Studio's sign-in is the simulated x-actor header: pairing proves the flow, not the security (Scaffolding, P-33).
-import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Ip, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Headers, HttpCode, HttpException, HttpStatus, Inject, Injectable, Ip, Param, Post, Query, Res } from "@nestjs/common";
+import type { Response } from "express";
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -160,7 +161,8 @@ export class Extension {
    *  was closed or reloaded continues one instead of losing it. */
   async openCaptures(sig: Signed) {
     const rows = await this.db.portalCapture.findMany({ where: { workspaceId: sig.workspaceId, way: "extension", capturedBy: sig.actor.id, status: { in: ["OPEN", "RETURNED"] } }, orderBy: { createdAt: "desc" }, take: 20 });
-    return Promise.all(rows.map((c) => this.forms.capture(c.id)));
+    // F3 X1: a capture started in the Studio for a combination is listed first.
+    return Promise.all([...rows.filter((c) => c.combinationId), ...rows.filter((c) => !c.combinationId)].map((c) => this.forms.capture(c.id)));
   }
   startCapture(sig: Signed, body: unknown) { return this.forms.createCapture(sig.actor, { ...parse(NewExtensionCapture, body), way: "extension" }); }
   async addScreen(sig: Signed, id: string, body: unknown) { await this.ownCapture(sig, id); return this.forms.addExtensionScreen(sig.actor, id, body); }
@@ -271,7 +273,7 @@ export class ExtensionController {
   @Post("sessions") session(@Body() b: unknown, @Headers("origin") o: H, @Ip() ip: string) { return this.x.session(b, o, ip); }
   @Get("session") async me(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { return this.x.me(await this.x.signed(t, o, a)); }
   @Delete("session") @HttpCode(204) async signOut(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { await this.x.signOut(await this.x.signed(t, o, a)); }
-  @Post("captures") async start(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Body() b: unknown) { return this.x.startCapture(await this.x.signed(t, o, a, "capture"), b); }
+  @Post("captures") async start(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Body() b: unknown, @Res({ passthrough: true }) res: Response) { const r = await this.x.startCapture(await this.x.signed(t, o, a, "capture"), b); res.status(r.reused ? 200 : 201); return r; }
   @Get("captures") async captures(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H) { return this.x.openCaptures(await this.x.signed(t, o, a, "capture")); }
   @Get("captures/:id") async capture(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string) { return this.x.capture(await this.x.signed(t, o, a, "capture"), id); }
   @Delete("captures/:id/screens/:order") async removeScreen(@Headers("authorization") t: H, @Headers("origin") o: H, @Headers("x-actor") a: H, @Param("id") id: string, @Param("order") n: string, @Query("revision") rev?: string) { return this.x.removeScreen(await this.x.signed(t, o, a, "capture"), id, Number(n), rev); }
