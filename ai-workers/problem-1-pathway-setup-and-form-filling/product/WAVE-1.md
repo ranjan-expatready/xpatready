@@ -5,9 +5,9 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 ## Order of work (one actor at a time; engine work alongside)
 | ID | Business name | Lane | Depends on | Status |
 |---|---|---|---|---|
-| W1-01 | Decisions recorded, plan, lanes redirected, workflow trimmed | Lead | — | Merged when the Lead PR lands |
-| W1-02 | Park the browser extension (branch `lead/parked-extension-2026-10-26`; remove capture, pairing, online fill, APR twin, Extension page, "Add an online form", portal fields; demo rows that need it) | forms | W1-01 | Not started |
-| W1-03 | Structure: five levels, Pathway type as tab (Retail · Corporate and employers), Structure page with links, duplicate check, AI "did you mean" | screens | W1-01 | Agreed (P-115) → screens challenge, then BUILD |
+| W1-01 | Decisions recorded, plan, lanes redirected, workflow trimmed | Lead | — | Merged |
+| W1-02 | Park the browser extension (branch `lead/parked-extension-2026-10-26`; remove capture, pairing, online fill, APR twin, Extension page, "Add an online form", portal fields; demo rows that need it) | forms | W1-01 | Merged 27 Oct (PR #39; local suites 32/32 + browser 44/44); qa after-merge next |
+| W1-03 | Structure: five levels, Pathway type as tab (Retail · Corporate and employers), Structure page with links, duplicate check, AI "did you mean" | screens | W1-01 | Build (slice 1; challenge addendum agreed 26 Oct) |
 | W1-04 | Programs page redesign: modern tabs, full five-part trail, no filter-tab row, search and New combination placed, tooltips | screens | W1-03 | Agreed (P-115) → screens challenge, then BUILD |
 | W1-05 | New combination redesign: pick from Structure, Rules then AI proposal, mandatory markers, "Linked to" removed | screens | W1-03 | Agreed (P-115) → screens challenge, then BUILD |
 | W1-06 | Form library as the one door, with the **form finder** (founder's ask: pick a combination → AI suggests its forms from the official IRCC guide/checklist with the quoted line → the person ticks → the system downloads only from canada.ca and files them in the library). Honest split: AI chooses which forms and under what condition; the lookup, download, code/edition/checksum and duplicate check are deterministic; a person approves. Also: IRCC columns, duplicate check (number + edition + checksum), person upload, AI proposes forms → system downloads from canada.ca → person approves, "Find missing forms", the form edition × filing route mapping (online form · PDF upload · print and sign · not needed; P-114) | forms | W1-02 | Concept |
