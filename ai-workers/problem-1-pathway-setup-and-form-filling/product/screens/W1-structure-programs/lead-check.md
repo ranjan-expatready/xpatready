@@ -8,3 +8,10 @@
 * **Not merged alone.** From an empty workspace the current New combination now says "add one on the Structure first", but the Structure page arrives in slice 2. Merging slice 1 by itself would leave Reset with no way forward in the app. Slices 1 and 2 merge together.
 * **qa files:** the four `tests/qa/` checks that add programs under `individual` need a Pathway first; the qa lane is told in its note.
 * **Next:** BUILD slice 2 (Structure page) on the same branch; EARLY-LOOK with screenshots next to `design/draft-structure-v2.html`.
+
+## Slice 2, Structure page — EARLY-LOOK (27 Oct, b471938)
+* **Read:** build notes (Top 5 improvements written before code), 13 states × 2 widths in `screenshots/slice2/`, next to `design/preview-structure-v2.png`. Lane checks: browser journey 61/61, axe clean, no sideways scroll at 1024 px, 33 suites, US$0.
+* **Matches the board:** type tabs, find, Expand/Collapse, stats line, outline with level tags and combination chips, "+ Add …" rows typed in place with the free check, exact twin refused, "Did you mean <trail> (1 letter apart)" with Use existing / Add mine anyway, side panel (trail, used by, cases opened from, Not meaning-checked, rename with next-release words, history), P-112 names, Sample note.
+* **Differences, all accepted:** Remove / Retire / Restore and Move up / down in the panel (P-116 came after the board); below 1280 px the panel overlays the outline (team sheet); menu still "Programs" until slice 3; meaning check states not drawn (paid runs off until W1-07); Corporate sample from the test, P-112 sample in Load sample comes with W1-11.
+* **Three small changes for the lane (FIX inside slice 3, not blocking):** (1) "Used by" says only "1 combination"; the board names it with Open, as Where used already does. (2) Success toasts sit over the panel's History; place them where they cover neither outline nor panel. (3) The left menu's white background stops short on tall pages: app-wide since before wave 1 (baseline screenshots show it); fix with the menu rename in slice 3.
+* **Lead view:** Go. Then the Lead reruns the suites on the branch head and merges slices 1 and 2 together.
