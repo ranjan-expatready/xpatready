@@ -6,13 +6,14 @@ Owner: the Lead. Decided by the founder on 25 Oct: the demo data is **one story*
 **Combination A — Individual › Visitors › Visitor visa, a family of four** (the hero; most of it is already proven: R1, E1, F1, F2).
 People: Applicant · Spouse (travelling) · Child under 18 (the principal answers for them, P-78) · Child 18 or over (answers for themselves).
 **Combination B — Individual › Work permits › Employer-specific › With an LMIA** (the reuse proof). The same family facts and the same shared library: IMM 5707 and IMM 5476 are reused with no new mapping, and only IMM 1295 is new. It is "Supported by" Corporate › LMIA (link only; the corporate seed is optional).
+Every online line in A and B is filed through the **APR Portal** (P-98: the one portal the proof of concept proves; the expert confirms per combination).
 **Combination C — Family sponsorship › Spouse or partner (sponsor + applicant)** comes later, only after the expert answers the sponsor and Schedule A questions.
 
 ## Scenario matrix (every row must be visible in the demo; status = capability rows in `qa/CAPABILITIES.md`)
 | # | Mechanism | Where in the story | Capability | Owner lane |
 |---|---|---|---|---|
 | 1 | Ingest a PDF form: code, edition, checksum read without AI; an off-list file held, then approved by a second person | A: attach IMM 5257, IMM 5707, IMM 5476; one off-list file held | C2.1, C2.2, C2.3 | forms, screens |
-| 2 | Ingest an online form: portal screens captured with the extension, checked before sending, a second person approves | A: IMM 5257 online, Sample portal screens | C2.5, C2.8, C2.9 | forms |
+| 2 | Ingest an online form: portal screens captured with the extension, checked before sending, a second person approves | A: IMM 5257 online, Sample APR Portal screens, then the real blank APR screens the founder captures (P-98) | C2.5, C2.8, C2.9 | forms |
 | 3 | AI maps form fields to shared fields (reuse, new, ambiguous), saved answers replayed at US$0; one live run when the founder approves | A: the three forms; B: only IMM 1295 | C3.1, C3.3 | screens, forms |
 | 4 | A person reviews: accept with a reason, edit, reject; form-field decisions (not a fact, filled by hand) | A | C3.2, C3.8 | screens |
 | 5 | Master data: new shared fields approved by a second person; duplicates found; "Describe it"; aliases and a merge | A creates, B reuses | C3.5, C3.6, C3.13, C5.3 | screens |
