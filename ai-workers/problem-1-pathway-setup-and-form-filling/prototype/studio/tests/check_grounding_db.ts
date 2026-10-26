@@ -24,10 +24,14 @@ const sql = (q: string) => execFileSync("/opt/homebrew/opt/postgresql@18/bin/psq
   // ------------------------------------------------------------ finding 1 / D285: levels, scope, duplicates
   // Screen 01 (21 Oct): pathways are fixed values the studio always has; nodes are added with POST /program-nodes
   // (contracts/programs.ts); a combination is created on a last-level node with POST /combinations {nodeKey}.
+  // W1-03 (B1, 27 Oct): the Pathway type is a fixed value, never a row; Pathways are names an author adds on the
+  // Structure (POST /structure/nodes), and a read creates none.
   let r = await call("GET", "/catalogue?pathway=INDIVIDUAL");
-  ok("the two pathways exist without sample data: one Individual, one Corporate", sql(`select string_agg(client_type, ',' order by client_type) from program_def where node_kind='PATHWAY'`) === "CORPORATE,INDIVIDUAL");
+  ok("no pathway exists without data, and a read creates none (W1-03)", sql(`select count(*) from program_def where node_kind='PATHWAY'`) === "0");
+  for (const [t, label] of [["INDIVIDUAL", "Individual"], ["CORPORATE", "Corporate"]]) await call("POST", "/structure/nodes", { pathwayType: t, level: "pathway", label });
+  ok("an author adds one pathway per type on the Structure", sql(`select string_agg(client_type || ':' || program_node_key, ',' order by client_type) from program_def where node_kind='PATHWAY'`) === "CORPORATE:corporate,INDIVIDUAL:individual");
   r = await call("POST", "/program-nodes", { kind: "PATHWAY", label: "People", parentKey: "individual" });
-  ok("a third pathway cannot be added", r.status === 400, r.body.detail);
+  ok("a pathway is not added through the path builder's node route (Structure only)", r.status === 400, r.body.detail);
   r = await call("POST", "/program-nodes", { kind: "STREAM", label: "Visitor visa", parentKey: "individual" });
   ok("level order: a category cannot sit directly under a pathway", r.status === 400 && /goes under a program/.test(r.body.detail), r.body.detail);
   r = await call("POST", "/program-nodes", { kind: "PROGRAM", label: "Visitors", parentKey: "individual" });

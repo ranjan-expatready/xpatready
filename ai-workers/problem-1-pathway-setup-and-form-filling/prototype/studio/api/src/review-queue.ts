@@ -8,7 +8,7 @@ import { problemFromZod } from "../../contracts/programs.ts";
 import { buildSnapshots, effective, type Snapshot } from "../../engine/snapshot.ts";
 import { ACTORS, actorOf, Db, Workspace, type Actor } from "./core.ts";
 import { Studio } from "./studio.ts";
-import { itemsOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
+import { itemsOf, KIND_NOUN, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const holds = (a: Actor, duty: string) => (a.duties as readonly string[]).includes(duty);
@@ -53,7 +53,8 @@ export class ReviewQueueService {
     const byId = new Map(nodes.map((n) => [n.id, n]));
     const pathOf = (programDefId: string) => {
       const out: string[] = [];
-      for (let n = byId.get(programDefId); n; n = n.parentNodeKey ? byKey.get(n.parentNodeKey) : undefined) if (n.nodeKind !== "PATHWAY") out.unshift(n.label);
+      // W1-03 (BR-7): the Pathway's name joins the trail (several Pathways per type).
+      for (let n = byId.get(programDefId); n; n = n.parentNodeKey ? byKey.get(n.parentNodeKey) : undefined) out.unshift(n.label);
       return out.join(" › ");
     };
     const combo = new Map(combos.map((c) => [c.id, { label: c.label, path: pathOf(c.programDefId) }]));
@@ -147,7 +148,7 @@ export class ReviewQueueService {
     // Library changes (P-53, Screen 04 B1): a new shared field and later adds, retires and restores, approved by a
     // second person; a returned one goes back to the person who proposed it.
     for (const c of changes) {
-      const mine = c.proposedBy === actor.id, word = c.kind === "field" ? "shared field" : c.kind.replace("_", " ");
+      const mine = c.proposedBy === actor.id, word = KIND_NOUN[c.kind] ?? c.kind.replace("_", " ");
       const what = `${c.action === "ADD" ? `New ${word}` : `${c.action[0]}${c.action.slice(1).toLowerCase()} the ${word}`}${c.reason ? `. Reason: ${c.reason}` : ""}${c.aiVerdict ? ` · Advisory check: ${c.aiVerdict}` : ""}`;
       const base = { id: `change:${c.id}`, kind: "library_change" as const, title: c.label ?? c.key, by: nameOf(c.proposedBy), at: c.proposedAt.toISOString(), cost_usd: null };
       if (c.status === "RETURNED") out.push({ ...base, what: `${what} · Returned by ${nameOf(c.decidedBy)}: ${c.decisionNote}`, ...(mine || holds(actor, "author") ? { state: "needs" as const, waiting_on: null, next: { label: "Correct or withdraw", href: `/review/change/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: "The person who proposed it, or an author, corrects or withdraws it.", next: null }) });

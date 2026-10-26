@@ -111,7 +111,8 @@ model ProgramDef {
   nameKey        String?         @map("name_key")
   description    String?
   sourceBasis    SourceBasis     @default(SOURCE_BACKED) @map("source_basis")
-  /// PATHWAY only (SA-1B-50/51): who the client is, INDIVIDUAL or CORPORATE. Client type comes from the pathway.
+  /// PATHWAY only (SA-1B-50/51, W1-03 P-104): the Pathway type, INDIVIDUAL (Retail) or CORPORATE (Corporate and
+  /// employers), a fixed value (contracts/structure.ts PATHWAY_TYPES), never a row; several Pathways per type.
   clientType     String?         @map("client_type")
   /// Category / sub-category (SA-1B-51): locations a case may choose when it is opened (inside/outside Canada is a
   /// case detail, not a level). The prototype's sourced rows allow "outside_canada" only.
@@ -123,6 +124,12 @@ model ProgramDef {
   linkLabel      String?         @map("link_label")
   createdBy      String          @map("created_by")
   createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz
+  /// W1-03: raised by every rename or location edit; a PATCH with an older version is refused with the current row.
+  version        Int             @default(1)
+  /// P-116 (P-52 L2): a retired name is hidden from pickers and AI; earlier releases and open cases keep it. Set by the
+  /// release that carries its approved retire (api/src/lifecycle.ts); cleared by a released restore.
+  retiredAt      DateTime?       @map("retired_at") @db.Timestamptz
+  retiredBy      String?         @map("retired_by")
 
   combination Combination?
 
@@ -150,6 +157,10 @@ model Combination {
   portalKey      String?     @map("portal_key")
   createdBy      String      @map("created_by")
   createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  /// P-116 / addendum A2: set by the release that carries an approved retire. No new case opens on it (runtime.ts);
+  /// open cases keep their pinned release.
+  retiredAt      DateTime?   @map("retired_at") @db.Timestamptz
+  retiredBy      String?     @map("retired_by")
 
   program      ProgramDef            @relation(fields: [programDefId], references: [id], onDelete: Restrict)
   attachments  SourceAttachment[]

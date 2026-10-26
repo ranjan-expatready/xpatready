@@ -10,6 +10,7 @@ import { effective } from "../../engine/snapshot.ts";
 import { ACTORS, actorOf, Audit, Db, fail, need, revise, strip, Workspace, type Actor } from "./core.ts";
 import { changeView, decideChange, resubmitChange, withdrawChange } from "./library-changes.ts";
 import { Intake } from "./intake.ts";
+import { Lifecycle } from "./lifecycle.ts";
 import { Impact } from "./impact.ts";
 import { Programs } from "./programs.ts";
 
@@ -32,7 +33,7 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
 
 @Injectable()
 export class Screen02 {
-  constructor(@Inject(Db) readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
+  constructor(@Inject(Db) readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Lifecycle) private readonly lifecycle: Lifecycle) {}
 
   /** K1: decides one PDF form field that no shared field fills. A new draft version of that form field (origin HUMAN);
    *  an undecided form field of an edition changed in this draft blocks release until it is decided. */
@@ -97,8 +98,12 @@ export class Screen02 {
     return { ...changeView(c!), field: field ? { key: field.canonicalFieldKey, label: field.label, meaning: field.meaning, value_type: field.valueType, group: field.groupKey, status: field.status } : null };
   }
   async decideLibraryChange(actor: Actor, id: string, decision: "approve" | "return", note?: string) {
+    // W1-03 (P-116): a remove, retire or restore is checked again at approval; an approved remove applies at once.
+    const before = decision === "approve" ? await this.db.libraryChange.findUnique({ where: { id } }) : null;
+    if (before?.status === "WAITING") await this.lifecycle.checkApprove(before);
     const out = await decideChange(this.db, actor, id, decision, note);
     const c = (await this.db.libraryChange.findUnique({ where: { id } }))!;
+    if (decision === "approve") await this.lifecycle.afterApprove(actor, c);
     await this.audit.log(c.workspaceId, actor.id, decision === "approve" ? "approved" : "returned", `library ${c.kind}`, c.key, `${actor.name} ${decision === "approve" ? "approved" : "returned"} "${c.label ?? c.key}" (${c.action.toLowerCase()})${note ? `: ${note}` : ""}`, undefined, c.combinationId ?? undefined);
     return out;
   }
@@ -129,7 +134,7 @@ export async function proposePath(programs: Programs, body: { pathway?: string; 
   const leaf = best.l.s ?? best.l.c;
   const close = scored[1] && scored[1].score === best.score;
   return { mode: "no_ai", cost_usd: 0, why: `Matched by the words ${best.hits.map((w) => `"${w}"`).join(", ")} (no AI).`, confidence: close ? "Medium" : "High",
-    proposal: { pathway: opts.pathway, path: best.path, program: { key: best.l.p.key, label: best.l.p.label }, category: { key: best.l.c.key, label: best.l.c.label }, subCategory: best.l.s ? { key: best.l.s.key, label: best.l.s.label } : null, exists: !!leaf.hasSetup, combinationId: leaf.combinationId ?? null },
+    proposal: { pathway: opts.pathway, pathwayKey: best.l.p.pathway.key, pathwayLabel: best.l.p.pathway.label, path: best.path, program: { key: best.l.p.key, label: best.l.p.label }, category: { key: best.l.c.key, label: best.l.c.label }, subCategory: best.l.s ? { key: best.l.s.key, label: best.l.s.label } : null, exists: !!leaf.hasSetup, combinationId: leaf.combinationId ?? null },
     others: scored.slice(1, 3).map((x) => x.path.join(" › ")) };
 }
 

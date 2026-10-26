@@ -108,7 +108,15 @@ Against `main` 4cbb326 and the agreed `concept.md` (with §10b), read in code. I
 **Questions for the Lead (not the founder):** (1) Reorder of structure nodes: apply at once with an audit line (recommended), or approved by a second person as §10b says? (2) May this lane add the one-line retired-combination guard in `runtime.ts`, with its test (recommended: yes, since the runtime lane is paused)?
 
 ## Lead response
+Copied by the screens lane on 27 Oct, word for word in substance, from the Lead's note in `lanes/screens.md` (27 Oct) and the Lead log in `STATE.md` (26 Oct night). The Lead wrote it there, not here.
+* Addendum A1–A5 (5 Major) **accepted** on 26 Oct. It is the contract for BUILD:
+  * A1: the lifecycle goes through `LibraryChange` and the new `api/src/lifecycle.ts`. **Structure reorder applies at once with an audit line**, with no second approver (Lead question 1).
+  * A2: **the screens lane adds the retired-combination guard in `runtime.ts`, with its test** (Lead question 2).
+  * A3: setup steps Forms · Draft · Review · Release, calculated from data that already exists.
+  * A4: "PDF + answer sheet (later wave)". **The answer sheet itself is owned by W4.**
+  * A5: BUILD slice 1 waited for the forms lane's W1-02 to merge. **W1-02 was merged into main on 27 Oct (PR #39)**, and new code goes into new files.
 
 ## Agreement
 
 ## Build discoveries
+* **27 Oct, slice 1 (screens lane): my addendum A2 contradicted P-52 L3 on one point.** A2 said a structure name is "in use when … any combination below it has open cases". P-52 L3 says "Superseded releases and open cases do not count", and retiring a name only hides it from pickers: open cases read their pinned release, so they are not affected. I built it per L3. Open cases and earlier releases are listed as uses that do not block. Retire is blocked by a name or combination below it that is not retired, or by an open change. Test: `check_w1_structure.ts` "a released name whose combination is retired may be retired (earlier releases and cases listed, not blocking)". If the Lead wants A2 as written, it is a one-line change in `api/src/lifecycle.ts` (`case` uses with `blocks: true`).

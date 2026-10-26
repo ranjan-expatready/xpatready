@@ -12,6 +12,8 @@ import { channelProblems, channelsView, filingKind } from "../../engine/channels
 import { CHANNEL_WORDS, type Channel } from "../../contracts/forms.ts";
 import { checkedOf, comparePaths, compareStatus, isLive, missingItems, needsWork, newestEdition, nextActionOf, rowCounts, statusOf, STATUS_TEXT } from "../../engine/programs.ts";
 import { buildSnapshot, buildSnapshots, type Snapshot } from "../../engine/snapshot.ts";
+import { filedOf, setupProgress } from "../../engine/structure.ts";
+import { PATHWAY_TYPE_LABEL, type PathwayType } from "../../contracts/structure.ts";
 import { diff, validate } from "../../engine/validate.ts";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -27,7 +29,6 @@ export function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S
   if (!r.success) throw new HttpException(problemFromZod(r.error), HttpStatus.BAD_REQUEST);
   return r.data;
 }
-export const PATHWAY_NODES = [["individual", "Individual", "INDIVIDUAL", "The applicant on the government form is a person."], ["corporate", "Corporate and employers", "CORPORATE", "The applicant on the government form is an employer or organisation."]] as const;
 const problem = (status: number, title: string, detail: string, extra: Record<string, unknown> = {}) => new HttpException({ type: `https://expatready.local/problems/${title.toLowerCase().replace(/[^a-z]+/g, "-")}`, title, status, detail, ...extra }, status);
 
 /** The derived definitions a snapshot carries, as the validator reads them. */
@@ -53,8 +54,6 @@ export class Programs {
 
   private cache: { key: string; rows: Row[]; nodes: ProgramDef[]; at: number } | null = null;
 
-  /** The two pathways are fixed values (BR-1, SA-1B-50), not content: they exist in every workspace, sample data or not,
-   *  so the first program can be added to an empty workspace. */
   /** Names the migration could not key in SQL (other scripts) get the app's own BR-6 key once per process (QA-14,
    *  break round 3). A name that would duplicate an earlier one keeps no key, as the migration does for duplicates. */
   private keyed = false;
@@ -64,19 +63,12 @@ export class Programs {
     for (const n of open) await this.db.programDef.update({ where: { id: n.id }, data: { nameKey: normalizeLabel(n.label) } }).catch((e) => { if ((e as { code?: string }).code !== "P2002") throw e; });
   }
 
-  async ensurePathways(workspaceId: string) {
-    await this.backfillNameKeys(workspaceId);
-    for (const [key, label, clientType, description] of PATHWAY_NODES) {
-      if (await this.db.programDef.findFirst({ where: { workspaceId, nodeKind: "PATHWAY", clientType } })) continue;
-      await this.db.programDef.create({ data: { workspaceId, programNodeKey: key, nodeKind: "PATHWAY", label, nameKey: normalizeLabel(label), clientType, description, sourceBasis: "SOURCE_BACKED", createdBy: "system" } }).catch((e) => { if (e?.code !== "P2002") throw e; });
-    }
-  }
-
   /** Every row's summary, recomputed only when the workspace changed: each write records an audit event and AI steps
-   *  move job times, so the revision below changes with any edit (sample-data scale; stored summaries are the team's). */
+   *  move job times, so the revision below changes with any edit (sample-data scale; stored summaries are the team's).
+   *  A read creates nothing (W1-03 B1): the Pathway type is a fixed value and Pathways are names a person adds. */
   private async rows() {
     const workspaceId = await this.ws.id();
-    await this.ensurePathways(workspaceId);
+    await this.backfillNameKeys(workspaceId);
     const [a, j, p, h] = await Promise.all([
       this.db.auditEvent.aggregate({ where: { workspaceId }, _count: true, _max: { at: true } }),
       this.db.draftingJob.aggregate({ where: { workspaceId }, _count: true, _max: { startedAt: true, finishedAt: true } }),
@@ -99,6 +91,8 @@ export class Programs {
     // "New today": made by a person in the last day, after the sample load (the loader's own nodes are not new).
     const loadedAt = (await this.db.auditEvent.findFirst({ where: { workspaceId, action: "loaded" }, orderBy: { at: "desc" }, select: { at: true } }))?.at.getTime() ?? 0;
     const snaps = combos.length ? await buildSnapshots(this.db, workspaceId, combos.map((c) => c.id), "draft") : new Map();
+    // Review step (addendum A3): the current draft passed review, read with the same gate the release uses.
+    const gates = combos.length ? await this.studio.releaseGates(combos.map((c) => ({ combinationId: c.id, sha256: (snaps.get(c.id) as { sha256: string }).sha256 }))) : new Map();
     const library = lib.filter((f) => f.status !== "RETIRED").map((f) => ({ key: f.canonicalFieldKey, valueType: f.valueType }));
     const latest = new Map<string, (typeof releases)[number]>();
     for (const r of releases) if (!latest.has(r.combinationId)) latest.set(r.combinationId, r);
@@ -113,18 +107,23 @@ export class Programs {
     for (const n of nodes) {
       if ((n.nodeKind !== "STREAM" && n.nodeKind !== "CATEGORY") || nodes.some((x) => x.parentNodeKey === n.programNodeKey)) continue;
       const chain = chainOf(n.programNodeKey);
-      const pathway = chain.find((x) => x.nodeKind === "PATHWAY")?.clientType ?? "INDIVIDUAL";
+      const pw = chain.find((x) => x.nodeKind === "PATHWAY");
+      const pathway = (pw?.clientType ?? "INDIVIDUAL") as PathwayType;
       const path = chain.filter((x) => x.nodeKind !== "PATHWAY").map((x) => x.label);
       const c = combos.find((x) => x.programDefId === n.id);
       const programKey = chain.find((x) => x.nodeKind === "PROGRAM")?.programNodeKey ?? "";
       const newToday = now.getTime() - n.createdAt.getTime() < 864e5 && n.createdAt.getTime() > loadedAt;
       const pathKeys = chain.filter((x) => x.nodeKind !== "PATHWAY").map((x) => x.programNodeKey as string);
-      const base = { kind: "combination" as const, nodeKey: n.programNodeKey, label: n.label, level: (n.nodeKind === "STREAM" ? "Category" : "Sub-category") as CatalogueLeaf["level"], path, linkLabel: n.linkLabel, matches: [] as string[], programKey, pathKeys };
+      // BR-7: five parts, never blank; a combination or a name above it that a release retired is retired (P-116).
+      const trail = [PATHWAY_TYPE_LABEL[pathway], pw?.label ?? "", ...path, ...(n.nodeKind === "STREAM" ? ["No sub-category"] : [])];
+      const retired = !!c?.retiredAt || chain.some((x) => x.retiredAt);
+      const base = { kind: "combination" as const, nodeKey: n.programNodeKey, label: n.label, level: (n.nodeKind === "STREAM" ? "Category" : "Sub-category") as CatalogueLeaf["level"], path, linkLabel: n.linkLabel, matches: [] as string[], programKey, pathKeys,
+        pathwayType: pathway, pathwayKey: pw?.programNodeKey ?? "", pathwayLabel: pw?.label ?? "", trail, retired };
       const noteOf = (aiProposals: number, next: string | undefined, held: { edition: string }[] = []) => [n.linkLabel, aiProposals && next !== "review_proposals" ? `${aiProposals} AI proposal${aiProposals === 1 ? "" : "s"} to review` : null,
         held.length && next !== "see_new_edition" ? `New edition waiting: ${held.map((x) => x.edition).join(", ")}` : null, newToday ? "New today" : null].filter(Boolean).join(" · ");
       if (!c) {
         rows.push({ pathway, changes: 0, errors: 0, firstError: null, hasContent: false, searchText: path.join(" "), docNames: [],
-          leaf: { ...base, combinationId: null, forms: [], filing: null, counts: null, status: "IN_SETUP", statusText: "Not started", missing: [{ code: "not_started", step: "Add sources", text: "Not started: no setup yet. Next step: Add sources." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: true, live: false, held: [], note: noteOf(0, "start") } });
+          leaf: { ...base, combinationId: null, forms: [], filing: null, filed: "No forms yet", progress: setupProgress({ forms: 0, allDrafted: false, reviewed: false, aiProposals: 0, live: false, changes: 0 }), counts: null, status: "IN_SETUP", statusText: retired ? "Retired" : "Not started", missing: [{ code: "not_started", step: "Add sources", text: "Not started: no setup yet. Next step: Add sources." }], aiProposals: 0, aiRunning: null, release: null, checked: null, nextAction: nextActionOf({ exists: false, status: "IN_SETUP", forms: 0, sources: 0, draftable: 0, fromLibrary: [], running: null, proposals: [], changes: 0, missing: [] }), needs: !retired, live: false, held: [], note: noteOf(0, "start") } });
         continue;
       }
       const { snapshot } = snaps.get(c.id)! as { snapshot: Snapshot };
@@ -162,14 +161,21 @@ export class Programs {
       const held = heldItems.filter((x) => x.combinationId === c.id || (x.code && codes.has(x.code))).map((x) => ({ code: x.code ?? "", edition: x.editionLabel ?? x.code ?? "" }))
         .filter((x, i, all) => all.findIndex((y) => y.edition === x.edition) === i);
       const nextAction = nextActionOf({ ...setup, status, changes, missing, held: held.length });
+      const progress = setupProgress({ forms: snapForms.length, allDrafted: forms.every((f) => f.drafted), reviewed: changes === 0 ? !!rel : !!gates.get(c.id)?.ok, aiProposals, live: isLive({ status }), changes });
       rows.push({ pathway, changes, errors: errors.length, firstError: errors[0] ? `${errors[0].item}: ${errors[0].message}` : null, hasContent, docNames,
         searchText: [...path, ...forms.map((f) => f.code), ...docNames].join(" "),
-        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
+        leaf: { ...base, combinationId: c.id, forms, filing: snapForms.length ? filingKind(snapForms) : null, filed: filedOf(snapForms), progress, counts: hasContent ? rowCounts(snapshot, participants) : null, status, statusText: retired ? "Retired" : status === "READY" ? `Live · Release ${rel!.packVersion?.version ?? 1}` : STATUS_TEXT[status],
           missing, aiProposals, aiRunning: running, release: rel ? { pack: rel.packVersion?.version ?? 1, at: rel.releasedAt.toISOString() } : null, checked,
-          nextAction, needs: needsWork({ status, nextAction }), live: isLive({ status }), held, note: noteOf(aiProposals, nextAction?.kind, held) } });
+          nextAction, needs: !retired && needsWork({ status, nextAction }), live: !retired && isLive({ status }), held, note: noteOf(aiProposals, nextAction?.kind, held) } });
     }
     this.cache = { key, rows, nodes, at: Math.round(performance.now() - t0) };
     return this.cache;
+  }
+
+  /** Each last-level name's combination state, for the Structure outline (counts, Live, has setup, retired). */
+  async leafStates() {
+    const { rows } = await this.rows();
+    return new Map(rows.map((r) => [r.leaf.nodeKey, { combinationId: r.leaf.combinationId, live: r.leaf.live, retired: r.leaf.retired }]));
   }
 
   /** GET /catalogue: one request for the whole tree of one pathway, filtered and searched on the server. */
@@ -192,42 +198,55 @@ export class Programs {
       for (const d of r.docNames) if (normalizeLabel(d).includes(words)) out.push(`Document: ${d}`);
       return [...new Set(out)];
     };
-    const inPathway = rows.filter((r) => r.pathway === q.pathway);
+    // Retired combinations (P-116) are left out of every view but "Retired" (addendum A2).
+    const everyInPathway = rows.filter((r) => r.pathway === q.pathway);
+    const inPathway = everyInPathway.filter((r) => q.filter === "retired" ? r.leaf.retired : !r.leaf.retired);
     const inProgram = inPathway.filter((r) => (!q.program || r.leaf.programKey === q.program) && (!q.under || r.leaf.pathKeys.includes(q.under)));
     const searched = inProgram.map((r) => ({ r, m: hit(r) })).filter((x) => !words || x.m.length);
     // "Needs work" with nothing to do falls back to All, and says so (P-35, P-49).
     const fellBack = q.filter === "needs" && !searched.some((x) => x.r.leaf.needs);
     const filter = fellBack ? "all" : q.filter;
-    const pass = (r: Row) => filter === "all" || (filter === "needs" ? r.leaf.needs : filter === "live" ? r.leaf.live : filter === "ai_proposals" ? r.leaf.aiProposals > 0 : r.leaf.status === filter.toUpperCase());
+    const pass = (r: Row) => filter === "all" || filter === "retired" || (filter === "needs" ? r.leaf.needs : filter === "live" ? r.leaf.live : filter === "ai_proposals" ? r.leaf.aiProposals > 0 : r.leaf.status === filter.toUpperCase());
     const shown = new Map(searched.filter((x) => pass(x.r)).map((x) => [x.r.leaf.nodeKey, { ...x.r.leaf, matches: x.m }]));
-    const count = (list: Row[]) => ({ needs: list.filter((r) => r.leaf.needs).length, live: list.filter((r) => r.leaf.live).length, all: list.length, ready: list.filter((r) => r.leaf.status === "READY").length, not_ready: list.filter((r) => r.leaf.status === "NOT_READY").length, in_setup: list.filter((r) => r.leaf.status === "IN_SETUP").length, ai_proposals: list.filter((r) => r.leaf.aiProposals > 0).length });
-    const pw = nodes.find((n) => n.nodeKind === "PATHWAY" && n.clientType === q.pathway);
+    const count = (list: Row[]) => ({ needs: list.filter((r) => r.leaf.needs).length, live: list.filter((r) => r.leaf.live).length, all: list.filter((r) => !r.leaf.retired).length, ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "READY").length, not_ready: list.filter((r) => !r.leaf.retired && r.leaf.status === "NOT_READY").length, in_setup: list.filter((r) => !r.leaf.retired && r.leaf.status === "IN_SETUP").length, ai_proposals: list.filter((r) => r.leaf.aiProposals > 0).length, retired: list.filter((r) => r.leaf.retired).length });
+    // W1-03 B1: every Pathway of the type, in Structure order (several per type).
+    const pws = nodes.filter((n) => n.nodeKind === "PATHWAY" && n.clientType === q.pathway);
     const kids = (k: string) => nodes.filter((n) => n.parentNodeKey === k);
     const summarise = (leaves: CatalogueLeaf[]) => ({ IN_SETUP: leaves.filter((l) => l.status === "IN_SETUP").length, NOT_READY: leaves.filter((l) => l.status === "NOT_READY").length, READY: leaves.filter((l) => l.status === "READY").length, ai_proposals: leaves.filter((l) => l.aiProposals > 0).length, combinations: leaves.length });
     const allLeaves = new Map(inPathway.map((r) => [r.leaf.nodeKey, r.leaf]));
+    const everyLeaf = new Set(everyInPathway.map((r) => r.leaf.nodeKey));
     const leavesUnder = (k: string): CatalogueLeaf[] => kids(k).flatMap((n) => allLeaves.get(n.programNodeKey) ? [allLeaves.get(n.programNodeKey)!] : leavesUnder(n.programNodeKey));
     const build = (n: ProgramDef): CatalogueNode | null => {
       const leaf = shown.get(n.programNodeKey);
       if (leaf) return leaf;
-      if (allLeaves.has(n.programNodeKey)) return null; // a leaf filtered out
+      if (allLeaves.has(n.programNodeKey) || everyLeaf.has(n.programNodeKey)) return null; // a leaf filtered out (or retired)
       const children = kids(n.programNodeKey).map(build).filter(Boolean) as CatalogueNode[];
       const filtering = filter !== "all" || !!words || !!q.program || !!q.under;
       if (filtering && !children.length) return null;
+      // A retired name with nothing shown under it is left out (it holds only retired combinations).
+      if (n.retiredAt && !children.length) return null;
       return { kind: n.nodeKind === "PROGRAM" ? "program" : "category", nodeKey: n.programNodeKey, label: n.label, linkLabel: n.linkLabel, children, summary: summarise(leavesUnder(n.programNodeKey)) } satisfies CatalogueGroup;
     };
-    const tree = pw ? (kids(pw.programNodeKey).map(build).filter(Boolean) as CatalogueGroup[]) : [];
+    const sections = pws.map((p) => {
+      const t = kids(p.programNodeKey).map(build).filter(Boolean) as CatalogueGroup[];
+      const mine = inPathway.filter((r) => r.leaf.pathwayKey === p.programNodeKey);
+      return { pathwayKey: p.programNodeKey, label: p.label, combinations: mine.length, needs: mine.filter((r) => r.leaf.needs).length, live: mine.filter((r) => r.leaf.live).length, tree: t };
+    });
+    const tree = sections.flatMap((s) => s.tree);
     const other = q.pathway === "INDIVIDUAL" ? "CORPORATE" : "INDIVIDUAL";
-    const totals = { programs: pw ? kids(pw.programNodeKey).length : 0, categories: pw ? kids(pw.programNodeKey).flatMap((p) => kids(p.programNodeKey)).length : 0, combinations: inPathway.length };
-    const programs = (pw ? kids(pw.programNodeKey) : []).map((p) => ({ key: p.programNodeKey as string, label: p.label as string, combinations: inPathway.filter((r) => r.leaf.programKey === p.programNodeKey).length }))
+    const progs = pws.flatMap((p) => kids(p.programNodeKey));
+    const totals = { programs: progs.length, categories: progs.flatMap((p) => kids(p.programNodeKey)).length, combinations: inPathway.length };
+    const programs = progs.map((p) => ({ key: p.programNodeKey as string, label: p.label as string, combinations: inPathway.filter((r) => r.leaf.programKey === p.programNodeKey).length }))
       .sort((a, b) => a.label.localeCompare(b.label, "en-CA", { sensitivity: "base" }));
     return {
       pathway: q.pathway, filter, requestedFilter: q.filter, fellBack, q: q.q, program: q.program, under: q.under, sort: q.sort,
       underPath: q.under ? underPath(nodes, q.under) : null,
       /** Layout v2: one flat list in Program › Category › Sub-category order (route steps in step order), or by status. */
       rows: [...shown.values()].sort((x, y) => (q.sort === "path" ? 0 : (q.sort === "status" ? 1 : -1) * compareStatus(x, y)) || comparePaths(x, y)), programs,
-      pathways: [["INDIVIDUAL", "Individual"], ["CORPORATE", "Corporate and employers"]].map(([v, l]) => ({ value: v, label: l, combinations: rows.filter((r) => r.pathway === v).length })),
-      counts: count(searched.map((x) => x.r)), totals, tree,
-      otherPathwayMatches: words ? rows.filter((r) => r.pathway === other && hit(r).length).length : 0,
+      // The type switch's words stay until slice 3 redraws the page with "Retail" (P-104); the trail already says it.
+      pathways: [["INDIVIDUAL", "Individual"], ["CORPORATE", "Corporate and employers"]].map(([v, l]) => ({ value: v, label: l, combinations: rows.filter((r) => r.pathway === v && !r.leaf.retired).length })),
+      counts: { ...count(searched.map((x) => x.r)), retired: everyInPathway.filter((r) => r.leaf.retired).length }, totals, tree, sections,
+      otherPathwayMatches: words ? rows.filter((r) => r.pathway === other && !r.leaf.retired && hit(r).length).length : 0,
       timing_ms: { rows: at, total: Math.round(performance.now() - t0) },
     };
   }
@@ -300,7 +319,6 @@ export class Programs {
     need(actor, "author");
     const b = parse(CreateNodeBody, body);
     const workspaceId = await this.ws.id();
-    await this.ensurePathways(workspaceId);
     const parent = await this.db.programDef.findFirst({ where: { workspaceId, programNodeKey: b.parentKey }, include: { combination: { include: { _count: { select: { forms: true, attachments: true, requirements: true } } } } } });
     if (!parent) throw problem(404, "Not found", "That parent does not exist (it may have been removed by a reset).", { errors: [{ field: "parentKey", message: "Choose an existing parent." }] });
     const want = { PROGRAM: "PATHWAY", STREAM: "PROGRAM", CATEGORY: "STREAM" }[b.kind];
@@ -365,14 +383,17 @@ export class Programs {
   async pathOptions(pathway: string) {
     const pw = pathway === "CORPORATE" ? "CORPORATE" : "INDIVIDUAL";
     const { rows, nodes } = await this.rows();
-    const top = nodes.find((n) => n.nodeKind === "PATHWAY" && n.clientType === pw);
-    const kids = (k: string) => nodes.filter((n) => n.parentNodeKey === k).sort((a, b) => a.label.localeCompare(b.label, "en-CA", { sensitivity: "base" }));
-    const leafOf = new Map(rows.map((r) => [r.leaf.nodeKey, r.leaf]));
+    // W1-03: every Pathway of the type; retired names are hidden from pickers (P-52 L2, P-116).
+    const tops = nodes.filter((n) => n.nodeKind === "PATHWAY" && n.clientType === pw && !n.retiredAt);
+    const kids = (k: string) => nodes.filter((n) => n.parentNodeKey === k && !n.retiredAt).sort((a, b) => a.label.localeCompare(b.label, "en-CA", { sensitivity: "base" }));
+    const leafOf = new Map(rows.filter((r) => !r.leaf.retired).map((r) => [r.leaf.nodeKey, r.leaf]));
     const under = (k: string): number => (leafOf.has(k) ? 1 : 0) + kids(k).reduce((s, n) => s + under(n.programNodeKey), 0);
     const opt = (n: ProgramDef) => ({ key: n.programNodeKey, label: n.label, combinations: under(n.programNodeKey), hasSetup: !!leafOf.get(n.programNodeKey)?.combinationId, combinationId: leafOf.get(n.programNodeKey)?.combinationId ?? null });
+    const programsOf = (top: ProgramDef) => kids(top.programNodeKey).map((p) => ({ ...opt(p), pathway: { key: top.programNodeKey, label: top.label }, categories: kids(p.programNodeKey).map((c) => ({ ...opt(c), subCategories: kids(c.programNodeKey).map(opt) })) }));
     return {
       pathway: pw,
-      programs: top ? kids(top.programNodeKey).map((p) => ({ ...opt(p), categories: kids(p.programNodeKey).map((c) => ({ ...opt(c), subCategories: kids(c.programNodeKey).map(opt) })) })) : [],
+      pathways: tops.map((t) => ({ key: t.programNodeKey, label: t.label, programs: programsOf(t) })),
+      programs: tops.flatMap(programsOf),
       combinations: rows.map((r) => ({ nodeKey: r.leaf.nodeKey, pathway: r.pathway, path: r.leaf.path })).sort((a, b) => comparePaths({ path: a.path, linkLabel: null }, { path: b.path, linkLabel: null })),
     };
   }
@@ -385,18 +406,22 @@ export class Programs {
     need(actor, "author");
     const b = parse(CreatePathBody, body);
     const workspaceId = await this.ws.id();
-    await this.ensurePathways(workspaceId);
     const all = await this.db.programDef.findMany({ where: { workspaceId }, include: { combination: true } });
     const byKey = new Map(all.map((n) => [n.programNodeKey, n]));
     const kidsOf = (k: string | null) => all.filter((n) => n.parentNodeKey === k);
-    const pathwayNode = all.find((n) => n.nodeKind === "PATHWAY" && n.clientType === b.pathway)!;
+    // W1-03: the Pathway is the one asked for, the existing program's own, or the type's only Pathway.
+    const pathways = all.filter((n) => n.nodeKind === "PATHWAY" && n.clientType === b.pathway && !n.retiredAt);
+    const fromProgram = "key" in b.program ? byKey.get(byKey.get(b.program.key)?.parentNodeKey ?? "") : undefined;
+    const pathwayNode = b.pathwayKey ? pathways.find((p) => p.programNodeKey === b.pathwayKey) : fromProgram?.nodeKind === "PATHWAY" ? pathways.find((p) => p.id === fromProgram.id) : pathways.length === 1 ? pathways[0] : undefined;
+    if (!pathways.length) throw problem(409, "No pathway yet", `${PATHWAY_TYPE_LABEL[b.pathway]} has no pathway yet: add one on the Structure first.`, { errors: [{ field: "pathwayKey", message: "Add a pathway on the Structure." }] });
+    if (!pathwayNode) throw problem(400, "Choose the pathway", `Choose the pathway in ${PATHWAY_TYPE_LABEL[b.pathway]}: ${pathways.map((p) => p.label).join(", ")}.`, { errors: [{ field: "pathwayKey", message: "Choose the pathway." }] });
     const errors: { field: string; message: string }[] = [];
     type Level = { existing: (typeof all)[number] | null; label: string };
     const pick = (field: string, want: string, parent: Level | null, lv: { key: string } | { create: string } | null): Level | null => {
       if (!lv) return null;
       if ("key" in lv) {
         const n = byKey.get(lv.key);
-        if (!n || n.nodeKind !== want || (parent?.existing && n.parentNodeKey !== parent.existing.programNodeKey) || (parent && !parent.existing)) { errors.push({ field, message: `Choose a ${LEVEL_NAME[want].toLowerCase()} from the list.` }); return null; }
+        if (!n || n.nodeKind !== want || n.retiredAt || (parent?.existing && n.parentNodeKey !== parent.existing.programNodeKey) || (parent && !parent.existing)) { errors.push({ field, message: `Choose a ${LEVEL_NAME[want].toLowerCase()} from the list.` }); return null; }
         return { existing: n, label: n.label };
       }
       if (parent?.existing) {

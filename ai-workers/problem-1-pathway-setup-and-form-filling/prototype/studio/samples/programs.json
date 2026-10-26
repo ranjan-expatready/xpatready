@@ -1,5 +1,19 @@
 {
- "note": "Sample programs for the Programs screen (Screen 01). Names are illustrative and labelled Sample on screen; the immigration expert confirms the real lists and every value. Only the rows with a 'setup' block get a combination and official files when the sample inputs are loaded; the others show as Not started. 'import': 'release' starts that row from the reviewed work-permit release (the only released sample). The two pathways are fixed values the studio always has (Individual; Corporate and employers). Super visa is one combination (parent or grandparent is a condition, not a sub-category, P-35); demo names follow SCREENS.md \"Demo combinations\".",
+ "note": "Sample programs for the Programs screen (Screen 01). Names are illustrative and labelled Sample on screen; the immigration expert confirms the real lists and every value. Only the rows with a 'setup' block get a combination and official files when the sample inputs are loaded; the others show as Not started. 'import': 'release' starts that row from the reviewed work-permit release (the only released sample). The Pathway type (Retail; Corporate and employers) is a fixed value; the two pathways below are Sample names a person would add on the Structure (W1-03; W1-11 brings the P-112 names). Super visa is one combination (parent or grandparent is a condition, not a sub-category, P-35); demo names follow SCREENS.md \"Demo combinations\".",
+ "pathways": [
+  {
+   "key": "individual",
+   "label": "Individual",
+   "type": "INDIVIDUAL",
+   "description": "Sample pathway: applications a person makes for themselves and their family."
+  },
+  {
+   "key": "corporate",
+   "label": "Corporate and employers",
+   "type": "CORPORATE",
+   "description": "Sample pathway: applications an employer or organisation makes."
+  }
+ ],
  "programs": [
   {
    "pathway": "individual",
