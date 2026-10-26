@@ -121,14 +121,14 @@ footer { font-size: 12px; color: var(--muted); }
 
 <script>
 const D = {
-  asof: "Updated 25 Oct 2026. Source files: product/PLAN.md, STATE.md, DEMO.md, qa/CAPABILITIES.md, qa/BUGS.md, DECISIONS.md, BACKLOG.md.",
+  asof: "Updated 26 Oct 2026. Source files: product/PLAN.md, STATE.md, DEMO.md, qa/CAPABILITIES.md, qa/BUGS.md, DECISIONS.md, BACKLOG.md.",
   summary: [
-    ["M2 progress (counted on main)", "12 of 44 work", "9 partial · 1 not tested · 22 not built; about 10 more built and in their final checks"],
-    ["R1 and M3", "5 of 8 · 0 of 15", "R1 thin slice works; M3 design starts in the new m3 lane (P-94)"],
-    ["Lanes running", "4 build + qa + 2 on the Mac", "screens Screen 02 check, forms extension re-score, runtime Screen 03, m3 design; scout and evidence on the Mac"],
-    ["Merged today", "Lead PRs #20–#24", "Screen 03 early look, cloud database, CI browser, scout session, Devin audit, inbox, demo story"],
+    ["Your priority (26 Oct)", "Ingestion + extension, end to end", "PDF and online forms into shared fields, sections and field maps, tested hard; one portal, APR (P-98); a guided Add a form path (P-99)"],
+    ["M2 progress (counted on main)", "12 of 47 work", "9 partial · 1 not tested · 25 not built; extension and Screen 02 merged 25 Oct, waiting for qa"],
+    ["R1 and M3", "5 of 8 · 0 of 16", "R1 thin slice works; M3 challenge written, the Lead answers it"],
+    ["Lanes", "Blocked by disk space", "The Mac has 1.1 GB free; each lane copy needs 5.4 GB. forms, screens and qa start once space is freed"],
     ["Merge order", "forms → screens → runtime", "They share the release path; m3 merges after runtime"],
-    ["Open bugs", "0 Critical · 1 Major on main", "QA-38 (fixed on the runtime branch); D-1, D-2 from Devin go to runtime"]
+    ["Open bugs", "0 Critical · 1 Major on main", "QA-38 (fixed on the runtime branch); D-1, D-2 fixed on the runtime branch"]
   ],
   solutions: { head: ["Decision", "What it is", "Built", "Where you will see it", "Order"], rows: [
     ["Portal forms as sources (P-61, P-66)", "Capture each portal screen's structure, never values: extension capture mode (primary), saved blank page or template (fallbacks); a second person approves; builds the portal twin", "<span class='chip s-ok'>Back end merged</span>", "Screen 01: \"Add an online form\" on the combination; Screen 02: review and approve the capture", "Screen 01 now; Screen 02 next"],
@@ -162,23 +162,28 @@ const D = {
     ["Demo story (P-93)", "One Sample family: Visitor visa family of four + LMIA work permit reuse; every mechanism in DEMO.md; reset, configured (M2 gate) and finished story (M3 gate)", "<span class='chip s-none'>Seed after Screen 03 part 2</span>", "Runtime slice D1; every lane adds its row"]
   ]},
   lanes: { head: ["Lane", "Owns", "Now", "Who acts", "Next"], rows: [
-    ["screens", "Milestone 2 screens", "Screen 02 AI work · CHECK round 2", "Builder", "Then the Lead check and merge; then Screen 04 shared library"],
-    ["forms", "PDF and online forms, capture, extension", "F2 extension · CHECK (re-score)", "Builder", "Merge first; then AI drafts from checklists"],
-    ["runtime", "Screen 03 workspace, then the demo seed", "Screen 03 part 2 · BUILD", "Builder", "Sync after screens merges; then demo checkpoints (D1)"],
-    ["m3", "M3 Prepare application (P-94)", "DESIGN challenge", "Builder", "The Lead answers, then BUILD in new files"],
-    ["qa", "Independent testing of main", "Waiting for the next merge", "Tester", "After-merge run on the extension"],
+    ["forms", "PDF and online forms, capture, extension", "BUILD: small fixes, then the APR pass", "Builder (waits for disk space)", "Then CHECK; then the wizard's ingestion parts"],
+    ["screens", "Milestone 2 screens", "Screen 04 shared library · BUILD slice 1", "Builder (waits for disk space)", "Early look by the Lead"],
+    ["runtime", "Screen 03 workspace, then the demo seed", "Screen 03 part 2 · early look", "Lead", "Then CHECK; demo checkpoints (D1)"],
+    ["m3", "M3 Prepare application (P-94)", "Challenge written (7 Majors)", "Lead", "The Lead answers, then BUILD in new files"],
+    ["qa", "Independent testing of main", "After-merge + ingestion campaign", "Tester (waits for disk space)", "APR rerun after the forms APR pass"],
     ["scout (Mac, Goose)", "Outside-in exploration", "Next charter ai-draft-review", "Founder starts it", "GOOSE-TASKS.md G2"],
-    ["evidence (Mac)", "Adobe fill trials", "IMM 5476 next", "Founder (Mac)", "Goose task G4 coming"]
+    ["evidence (Mac)", "Adobe fill trials", "IMM 5476 next", "Builder (Mac)", "Early look by the Lead"]
   ]},
   open: [
+    ["Free disk space on the Mac", "1.1 GB free; each lane copy needs 5.4 GB, and the suites fail when the disk fills.", "Free about 5 GB; the four old copies in /private/tmp (1.4 GB, nothing unpushed) can go with your OK."],
+    ["Your APR capture (G3)", "When the forms APR pass merges: check APR offers visitor visa and work permit, send the screens' host, capture blank screens.", "Lead says when it is ready."],
+    ["Add a form path: three questions", "What the second person approves; an online version with branches not seen; adding from the library.", "Asked one at a time after the concept's challenge."],
     ["Devin small fixes", "May Devin fix small verified bugs itself, by PR, under the scout's limits?", "Lead recommends yes; D-1 stays with runtime (its file is busy)."],
     ["Who sets who fills each question", "Once in the shared library, or per combination?", "Lead recommends once in the library, a change approved by a second person."],
     ["Screen 02 real AI runs", "Describe it and the AI checklist draft, one run each.", "Lead recommends yes, US$5 for both, run by Goose after Screen 02 merges."],
-    ["Mac work through Goose", "G1: the US$12 AI drafts (approved 24 Oct); G2: scout charter ai-draft-review.", "Paste from GOOSE-TASKS.md whenever you like."],
+    ["Mac work through Goose", "G2: scout charter ai-draft-review. G1 (US$12 PR Portal drafts) on hold under P-98.", "Paste from GOOSE-TASKS.md whenever you like."],
     ["Questions for the immigration expert", "Portal addresses, which forms are filed online, Schedule A, a structure-only portal capture, sponsor as a person on the case, and more (13).", "Relay in one message; they gate the real-world proof."],
     ["Starter set and per-combination reset", "BACKLOG B34 and B35.", "Lead recommends later and no."]
   ],
   decisions: [
+    ["One portal for the proof: APR (P-98)", "Online ingestion, the portal twin, screen maps and online fill are proven on the Authorized Paid Representatives Portal only; you capture the real blank APR screens with the extension (structure only). PR Portal drafts wait."],
+    ["One guided Add a form path (P-99)", "Read or capture → AI maps → you review → new shared fields and sections → second person → field map complete → online twin reuses the PDF map; each step opens the screen already built; the extension designed with it to a best-in-class bar."],
     ["Pre-qualification inside the client questionnaire", "PQR is part of the SQR, which is part of the agent view; AI drafts each combination's PQR, a person approves, released with the combination; a general PQR is built from released combinations (P-76). Prototype: PQR answers flow into the SQR; a staff eligibility page on the rules engine with Sample gates; no verdict to prospects (P-77)."],
     ["One demo story (P-93)", "A Visitor visa family of four plus the LMIA work permit shows every mechanism: PDF and online ingestion, AI mapping and review, master data, PDF fill with barcodes, online fill, mixed channels, checklist, new edition. Reset, configured (M2 gate), finished story (M3 gate)."],
     ["M3 in parallel (P-94)", "A fourth build lane, m3, designs and builds Prepare application while M2 finishes."],

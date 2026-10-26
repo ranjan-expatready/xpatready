@@ -4,7 +4,7 @@ The Lead is Claude Code in the main copy, started with `/lead` (skill `lead`). I
 
 ## Standing context
 * Founder = product owner and, for now, the RCIC reviewer (P-17); talks only to the Lead; decisions one at a time with a recommendation (skill grilling).
-* Visual pages: "Programme map" https://claude.ai/artifact/8UHw3EhbcHTUXWoqABdLdG (source `design/programme-map.html`; data block at the bottom; republish the same file after changes), "Pathway Configurator Screens" (Screen 1 boards), "Pathway Configurator Status Report" (R-73).
+* Visual pages: "Programme map" — the link https://claude.ai/artifact/8UHw3EhbcHTUXWoqABdLdG no longer opens from this account (26 Oct: deleted or no access); republish as a new artifact when the founder agrees (source `design/programme-map.html`; data block at the bottom; republish the same file after changes), "Pathway Configurator Screens" (Screen 1 boards), "Pathway Configurator Status Report" (R-73).
 * Standing merge OK after the Lead check (23 Oct). Restart :4400 only with the founder's OK. **P-87:** nobody pushes `main`; every change (Lead, lanes, team) by PR, merged by the Lead on green CI with review comments answered; never force-push.
 
 ## Open items the Lead is holding
