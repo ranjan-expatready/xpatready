@@ -21,7 +21,7 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 | W1-13 | Content publisher end to end on the 5 combinations, tested like a person | qa | W1-02–W1-11 | Not started |
 | W2 | Immigration expert: second-person approvals, release gate, Sample values confirmed | screens · runtime | W1-13 | Not started |
 | W3 | AI wherever designed: describe what you need, propose facts from documents, AI review, new-edition impact | forms | W2 | Not started |
-| W4 | Case officer / agent view: open case, PDF / online / both per form (P-107), case link to an employer case (P-106), confirm section by section, prepare and record the filing | m3 (design now: IRCC representative-portal research) | W2 | Concept research |
+| W4 | Case officer / agent view: open case, filing route per application, channel per form inside it (P-114), case link to an employer case (P-106), confirm section by section, prepare and record the filing | m3 (design now: IRCC representative-portal research) | W2 | Concept research |
 | W5 | Client and prospect: PQR, SQR, sign | runtime | W4 | Not started |
 | W6 | Browser extension for online fill (unpark; capture does not return). Carry the PR #37 review findings: a repeated fill keeps Undo; portal option codes are checked for client details | forms | W5 | Parked |
 
