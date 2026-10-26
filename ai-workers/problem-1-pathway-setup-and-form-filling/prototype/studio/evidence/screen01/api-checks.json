@@ -1,12 +1,12 @@
 {
- "at": "2026-10-25T11:40:45.378Z",
+ "at": "2026-10-26T13:34:35.038Z",
  "pass": 135,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 4.969
+   "detail": 4.953
   },
   {
    "name": "BR-1 pass: Individual shows only Individual programs; Corporate only Corporate",
@@ -194,7 +194,7 @@
    "detail": "Choose whose form it is from the list."
   },
   {
-   "name": "F1: \"+ Add line\" gives the line its default channel (PDF upload: this combination has no portal)",
+   "name": "F1: \"+ Add line\" gives the line its default channel (PDF upload: forms come in only as PDFs, P-102)",
    "ok": true
   },
   {
@@ -280,7 +280,7 @@
    "name": "QA-1 pass: submitted and signed, the combination will be released",
    "ok": true,
    "detail": {
-    "combinationId": "60285603-ee01-4b97-b83f-f5b8cc698a60",
+    "combinationId": "04f0909b-623b-4ee9-9bfe-c3624cc8276c",
     "label": "Spouse of a student",
     "path": [
      "Work permits",
@@ -476,7 +476,7 @@
   {
    "name": "source-trust: a different, unapproved PDF with a readable code is held before edition comparison",
    "ok": true,
-   "detail": "Held for source verification: IMM 1344 (09-2024) is not on the approved source list. It was not added to the library, attached, or sent to AI."
+   "detail": "Held for source verification: IMM 1344 (09-2024) is not on the approved source list. It was not added to the library, attached, or sent to AI. The library already holds IMM 1344 (09-2024) from the official file, so this copy is not needed: use the library's."
   },
   {
    "name": "P-51: a file whose code and edition cannot be read is held for a person with the reason",
@@ -817,13 +817,13 @@
     [
      {
       "field": "label",
-      "message": "\"Race at once\" already exists here (names are compared ignoring case, spaces and punctuation)."
+      "message": "\"Race at once\" already exists under Visitors: choose it instead."
      }
     ],
     [
      {
       "field": "label",
-      "message": "\"Race at once\" already exists here (names are compared ignoring case, spaces and punctuation)."
+      "message": "\"Race at once\" already exists under Visitors: choose it instead."
      }
     ],
     [
@@ -966,7 +966,7 @@
   {
    "name": "performance: a filtered catalogue answers in under 200 ms with the sample data",
    "ok": true,
-   "detail": "4 ms"
+   "detail": "5 ms"
   },
   {
    "name": "QA-6 fail: a name of symbols only is refused on its field in plain words; nothing is created",
@@ -1005,7 +1005,7 @@
     "label": "With an LMIA",
     "combinations": 1,
     "hasSetup": true,
-    "combinationId": "0603a952-b902-42d9-b9d4-9a8de2df43ba"
+    "combinationId": "6d1d939b-37a8-4489-8c09-fd573289e5e1"
    }
   },
   {
@@ -1021,7 +1021,7 @@
   {
    "name": "QA-5: the app still shows it at the real time",
    "ok": true,
-   "detail": "2026-10-25T11:40:39.571Z"
+   "detail": "2026-10-26T13:34:27.515Z"
   },
   {
    "name": "QA-5 condition: the database's own zone is not UTC on this machine, so the check above is a real test of the fix",
@@ -1038,12 +1038,12 @@
    "ok": true,
    "detail": [
     [
-     409,
-     "The sample inputs are already loading: wait for them to finish."
+     201,
+     6.409
     ],
     [
-     201,
-     5.022
+     409,
+     "The sample inputs are already loading: wait for them to finish."
     ]
    ]
   },

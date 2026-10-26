@@ -1,98 +1,36 @@
-// F1 forms channels (forms lane, slice 1; P-61, P-62, P-65, P-66). No AI anywhere in this file.
-//   captures:   a person adds blank portal screens (saved pages or the template) to a capture; a screen holding any
-//               answer is refused and not kept; "finish" builds the capture record, its fingerprint, the portal twin and
-//               the review document; a second person approves it (P-57 amended for this kind) → an online version
-//               (FormEdition, channel ONLINE). The same structure again is "already in the library"; a different one is
-//               held with its field-by-field difference (P-66 §2.3).
-//   screen map: drafted without AI from an earlier version's element ids, the PDF twin, then shared-field aliases; a
-//               person accepts it; leftovers wait for drafting (slice 2) or a person.
-//   channels:   each line's channel and the combination's portal; the filing method and signatures are derived.
-//   library:    aliases, answer lists and option maps per channel, and reviewed merges (P-65).
-// CHECK fixes (23 Oct): every write to a capture claims its revision (two writes cannot both win); a screen can be
-// removed and a capture abandoned; an identical re-capture lets a second person confirm the re-check date; a person maps
-// the inputs the drafting left open; merges are checked again when approved; the review document prints in the
-// background, never inside the request.
-import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post, Query, Res, UploadedFiles, UseInterceptors } from "@nestjs/common";
-import { AnyFilesInterceptor } from "@nestjs/platform-express";
-import { execFile } from "node:child_process";
-import { createHash, randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { basename, join, relative } from "node:path";
-import { promisify } from "node:util";
-import { Prisma, type FormEdition, type PortalCapture } from "@prisma/client";
-import type { Response } from "express";
-import { AddExtensionScreen } from "../../contracts/extension.ts";
-import { mergeCapture, screenFingerprint, screenProblems } from "../../engine/extension/screens.ts";
-import { ANSWER_ON_SCREEN } from "../../engine/extension/fill.ts";
-import { ASKED_DIFFERENTLY, AbandonCapture, AcceptAiProposals, AcceptScreenMap, CAPTURE_LIMITS, CAPTURE_STATUS_WORDS, CHANNEL_WORDS, DRAFT_FROM_WORDS, DraftLeftovers, SetDraftFrom, UseDefaults, type Channel, type DraftFrom, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS,DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewCapture, NewMerge, PORTALS, portalLabel, RECHECK_DAYS, ResolveInput, ReturnCapture, SetChannel, SetPortal } from "../../contracts/forms.ts";
-import { buildRecord, contractProblems, difference, fingerprint, noAnswers, reviewHtml, type CaptureInput, type CaptureRecord } from "../../engine/capture.ts";
+// Forms channels and the shared-field library (forms lane; P-61, P-65, P-107). No AI anywhere in this file.
+//   channels:   each line's channel (PDF upload, Online, Signed PDF upload); the filing method and signatures are derived.
+//               Online stays selectable and is filled by the browser extension in a later wave (P-102, P-107).
+//   library:    aliases, answer lists and option maps, list purposes, and reviewed merges (P-65).
+// W1-02 (P-102): portal capture, online versions and their screen maps, the portal choice and online drafting are parked
+// with the browser extension on branch lead/parked-extension-2026-10-26; forms come in only as PDFs.
+import { Body, Controller, Delete, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Param, Patch, Post } from "@nestjs/common";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { Prisma, type FormEdition } from "@prisma/client";
+import { CHANNEL_WORDS, type Channel, SetOptionMap, SetListPurpose, LIST_PURPOSES, LIST_OVERFLOWS, DecideMerge, LinkAnswerList, NewAlias, NewAnswerList, NewMerge, SetChannel } from "../../contracts/forms.ts";
 import { channelProblems, channelsView } from "../../engine/channels.ts";
-import { compareEditions, newestEdition } from "../../engine/programs.ts";
 import { draftOptionMap, pdfOptions, type FormOption } from "../../engine/options.ts";
 import { buildSnapshot, effective } from "../../engine/snapshot.ts";
-import { compatible, draftScreenMap, inputKey, isScreenInput, normLabel, screenCoverage, screenIdentity, readScreenRun, transformFor, type AiProposal, type PdfEntry, type Proposal, type SectionNotSeen } from "../../engine/twin.ts";
-import { partOutputTokens } from "../../engine/parts.ts";
-import { factKeyProblem } from "../../../contracts/fact-key.ts";
-import { costUsd } from "../../../p2/ledger.ts";
-import { PARTS_DIR, RUN_CAP_USD, SCREEN_INVENTORIES } from "../../../p2/policy.ts";
-import { defaultChannelFor, resolveKey } from "./form-lines.ts";
+import { normLabel } from "../../engine/twin.ts";
 import { Sources } from "./sources.ts";
 import { Intake } from "./intake.ts";
 import { Checklists } from "./checklist.ts";
 import { seedFormsStory } from "./forms-demo.ts";
-import { actorOf, ACTORS, Audit, Db, fail, NODE, need, PROTOTYPE, PY, revise, ROOT, SOLUTION, STUDIO, strip, VAR, Workspace, type Actor } from "./core.ts";
+import { actorOf, ACTORS, Audit, Db, fail, need, revise, SOLUTION, strip, Workspace, type Actor } from "./core.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import type { z } from "zod";
 
-const run = promisify(execFile);
-const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex");
 const nameOf = (id: string) => ACTORS.find((a) => a.id === id)?.name ?? id;
-const day = (d: Date) => d.toISOString().slice(0, 10);
-const rel = (p: string) => relative(SOLUTION, p);
 const conflict = (msg: string) => fail(msg, HttpStatus.CONFLICT);
 /** Channel saves are a few rows; the default 5 s is kept short on purpose but busy machines need room (23 Oct). */
 const CHANNEL_TX = { timeout: 20_000, maxWait: 10_000 };
 /** Two saves that both made a new version of a released line: the database keeps one; the other is a 409. */
 const raced = (e: unknown): never => { if ((e as { code?: string } | null)?.code === "P2002") conflict("This line was changed at the same moment: refresh to see it."); throw e; };
-/** A form code as the library writes it: capitals, one space between its parts ("IMM-5257" → "IMM 5257"). */
-const formCode = (s: string) => s.toUpperCase().replace(/[\s_-]+/g, " ").trim(); // trimmed last: "ee_profile_" → "EE PROFILE" (break m5)
-const compact = (s: string) => s.toUpperCase().replace(/[^A-Z0-9]/g, "");
-const slug = (s: string) => normLabel(s).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "screen";
-/** A screen and its question, said once ("Date of birth › Year"; a radio group's legend is its question). */
-const captionOf = (group: string | null | undefined, label: string) => (group && normLabel(group) !== normLabel(label) ? `${group} › ${label}` : label);
-const STATUS_WORDS: Record<string, string> = { OPEN: "reopened", HELD: "finished", APPROVED: "approved", RETURNED: "returned", IN_LIBRARY: "found already in the library", ABANDONED: "abandoned" };
-/** What a capture's author or reviewer does next, by status. */
-const NEXT: Record<string, string> = {
-  OPEN: "Add the next screen, remove a wrong one, or finish the capture.",
-  HELD: "A second person approves it or returns it with a reason.",
-  RETURNED: "Remove the screens that are wrong, capture them again and finish; or abandon the capture in the Studio.",
-  IN_LIBRARY: "A second person confirms the screens are unchanged, which renews the online version's re-check date.",
-  APPROVED: "Draft its screen map (no AI); a person accepts it and maps what is left.",
-  ABANDONED: "Nothing: start a new capture to record the screens again.",
-};
-type Upload = { originalname: string; buffer: Buffer };
-type Refusal = { id: string | null; label: string; why: string };
-type ReaderResult = { ok: boolean; screens?: { title: string; inputs: CaptureInput[] }[]; refused?: Refusal[]; error?: string };
-/** A screen as added (before "finish" numbers it): its structure and the checksum of the file it came from. */
-type DraftScreen = { title: string; inputs: CaptureInput[]; file: string; sha256: string; way: string };
-type KeptFile = { file: string; sha256: string; bytes: number; way: string; screens: number };
-type AddResult = { file: string; outcome: "added" | "refused" | "duplicate"; message: string; refused?: Refusal[] };
 type Versioned = { id: string; version: number; status: string };
 type Library = Awaited<ReturnType<Forms["libraryRows"]>>;
 type Delegate = Parameters<typeof revise>[0];
 const json = (v: unknown) => v as Prisma.InputJsonValue;
-/** The screens of a capture: as added (open), or numbered in its record (finished; a returned capture reopens). */
-/** The portal order of every screen a capture has seen, by screen identity (kept through removals); a record without one
- *  takes its screens' order. Bounded, like the capture. */
-const CAPTURE_ORDER_MAX = 4 * CAPTURE_LIMITS.screens;
-const portalOrder = (record: Prisma.JsonValue, screens: { title: string }[]): string[] => {
-  const kept = (record as { order?: unknown } | null)?.order;
-  const order = Array.isArray(kept) ? kept.filter((x): x is string => typeof x === "string") : [];
-  for (const s of screens) if (!order.includes(screenIdentity(s.title))) order.push(screenIdentity(s.title));
-  return order.slice(-CAPTURE_ORDER_MAX);
-};
-const screensOf = (record: Prisma.JsonValue): DraftScreen[] => ((record as { screens?: (DraftScreen | CaptureRecord["screens"][number])[] } | null)?.screens ?? [])
-  .map((x) => ("source" in x ? { title: x.title, inputs: x.inputs, file: x.source.file, sha256: x.source.sha256, way: x.source.way } : x));
 /** A request body checked against its contract; a mismatch is a 400 Problem Details with field errors. */
 function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
   // QA-27: a list where one set of details is expected is refused in plain words (text, numbers and broken JSON are
@@ -105,661 +43,15 @@ function parse<S extends z.ZodType>(schema: S, input: unknown): z.infer<S> {
 
 @Injectable()
 export class Forms {
-  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit, @Inject(Sources) private readonly sources: Sources) {}
+  constructor(@Inject(Db) private readonly db: Db, @Inject(Workspace) private readonly ws: Workspace, @Inject(Audit) private readonly audit: Audit) {}
 
-  portals() { return PORTALS; }
+  private editionView(e: FormEdition) { return { id: e.id, label: e.editionLabel, channel: e.channel, fingerprint: e.sha256, questions: e.dataBoundBoxes }; }
 
-  // ───────────────────────────────────────────────────────────── captures (P-66 §1 ways B and C)
-  async createCapture(actor: Actor, body: unknown) {
-    need(actor, "author");
-    const b = parse(NewCapture, body);
-    const workspaceId = await this.ws.id();
-    // One form, one code (break M4): "IMM-5257" or "IMM  5257" is the library's IMM 5257, never a second form.
-    let form = formCode(b.form);
-    // Added from a combination (C2.7): it must be one of this workspace's combinations.
-    const combo = b.combinationId ? await this.db.combination.findFirst({ where: { id: b.combinationId, workspaceId } }) : null;
-    if (b.combinationId && !combo) fail("That combination does not exist.", HttpStatus.NOT_FOUND);
-    const known = (await this.db.govFormDef.findMany({ where: { workspaceId }, select: { formKey: true } })).find((d) => compact(d.formKey) === compact(form));
-    if (known) form = known.formKey;
-    const data = { workspaceId, portalKey: b.portal, formKey: form, title: b.title, applicationType: b.applicationType ?? null, way: b.way ?? "saved_page", status: "OPEN", statusDetail: b.way === "extension" ? "Capture each screen in the browser extension, in portal order; only the screens seen are compared with the current version." : "Add the blank screens in portal order: saved pages or the template.", record: { screens: [] }, combinationId: combo?.id ?? null, capturedBy: actor.id };
-    // F3 D6, BR-15: one open extension capture per person, form and portal. A second start (a double click, the Studio
-    // then the panel) returns the open, returned or held one, with the combination it was started for; never a second
-    // capture (break M2: a held capture returned later would otherwise make two open ones). The form compares as the
-    // library does ("ABC 123" is "ABC123", break m2); a capture started without a combination takes this start's (M3).
-    const r = b.way !== "extension" ? { c: await this.db.portalCapture.create({ data }), reused: false } : await this.db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`extension-capture:${workspaceId}:${actor.id}:${compact(form)}:${b.portal}`}))`;
-      const mine = await tx.portalCapture.findMany({ where: { workspaceId, capturedBy: actor.id, portalKey: b.portal, way: "extension", status: { in: ["OPEN", "RETURNED", "HELD"] } }, orderBy: { createdAt: "desc" } });
-      const open = mine.find((x) => compact(x.formKey) === compact(form));
-      if (open && !open.combinationId && combo) return { c: await tx.portalCapture.update({ where: { id: open.id }, data: { combinationId: combo.id } }), reused: true };
-      return open ? { c: open, reused: true } : { c: await tx.portalCapture.create({ data }), reused: false };
-    });
-    if (!r.reused) await this.audit.log(workspaceId, actor.id, "started", "portal capture", form, `${actor.name} started capturing ${form} from the ${portalLabel(b.portal)}${combo ? ` for "${combo.label}"` : ""}`, undefined, combo?.id);
-    return { ...(await this.capture(r.c.id)), reused: r.reused };
-  }
-
-  /** Adds screens: each saved page is one screen, a template file holds many. A file holding an answer is refused and
-   *  nothing of it is kept; the others are added. Only the structure and each file's checksum are stored. */
-  async addScreens(actor: Actor, id: string, files: Upload[] | undefined) {
-    need(actor, "author");
-    if (!files?.length) fail("Choose at least one saved screen or template file.");
-    const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id } });
-    if (!["OPEN", "RETURNED"].includes(c.status)) conflict(`This capture is ${c.status.toLowerCase()}: start a new capture to record the screens again.`);
-    if (c.way === "extension") conflict("This capture is made in the browser extension, screen by screen: add saved pages to a capture of their own.");
-    const tmp = join(VAR("demo"), "capture-reading"); mkdirSync(tmp, { recursive: true });
-    const screens = screensOf(c.record), kept = [...(c.files as unknown as KeptFile[])], results: AddResult[] = [];
-    for (const f of files!) {
-      const hash = sha(f.buffer ?? Buffer.alloc(0));
-      let name = basename(f.originalname || "screen").replace(/[^A-Za-z0-9._ -]/g, "_").slice(-100);
-      const mode = /\.csv$/i.test(name) ? "template" : "page";
-      // A file name can carry a client's details (a name, a number): such a name is not kept (review 13).
-      if (/\d{6,}|@/.test(name) || /\b[A-Z]{2,}[ _-][A-Z]{2,}\b/.test(name)) name = `${mode}-${hash.slice(0, 8)}.${mode === "template" ? "csv" : "html"}`;
-      if (!f.buffer?.length) { results.push({ file: name, outcome: "refused", message: "The file is empty." }); continue; }
-      if (kept.some((k) => k.sha256 === hash)) { results.push({ file: name, outcome: "duplicate", message: "This file is already part of the capture; nothing added." }); continue; }
-      const path = join(tmp, `${hash.slice(0, 12)}.${mode === "template" ? "csv" : "html"}`);
-      writeFileSync(path, f.buffer);
-      let r: ReaderResult;
-      try { const { stdout } = await run(PY, ["-I", join(STUDIO, "tools", "read_portal_capture.py"), mode, path], { cwd: ROOT, timeout: 60_000, maxBuffer: 10 * 1024 * 1024 }); r = JSON.parse(stdout.trim().split("\n").pop()!); }
-      catch { r = { ok: false, error: "the file could not be read" }; }
-      finally { rmSync(path, { force: true }); } // the page itself is never kept (it may show a client's data as text)
-      if (r.refused) {
-        const what = r.refused.slice(0, 3).map((x) => `${x.label}: ${x.why}`).join("; ");
-        results.push({ file: name, outcome: "refused", message: `Refused: this screen holds an answer (${what}). Nothing of it was kept. Save the screen from a blank application, before anything is typed or chosen.`, refused: r.refused });
-        await this.audit.log(c.workspaceId, actor.id, "refused", "portal screen", c.formKey, `${actor.name}'s screen ${name} was refused: it held an answer (nothing kept)`, { sha256: hash, inputs: r.refused.length });
-        continue;
-      }
-      if (!r.ok || !r.screens) { results.push({ file: name, outcome: "refused", message: `Not read: ${r.error}. Nothing was added.` }); continue; }
-      const way = mode === "template" ? "template" : "saved_page";
-      // Element ids are the inputs' identity (review 5, break M3). The same screen again is a duplicate; another screen
-      // reusing an id (an applicant's and a spouse's screen) keeps it qualified by its screen ("familyName@your-spouse").
-      const taken = new Set(screens.flatMap((x) => x.inputs.map((i) => i.id)));
-      const ids = (x: { inputs: { id: string }[] }) => x.inputs.map((i) => i.id).join("|");
-      const again = r.screens.map((s) => screens.findIndex((x) => normLabel(x.title) === normLabel(s.title) && ids(x) === ids(s))).find((n) => n >= 0);
-      if (again !== undefined) { results.push({ file: name, outcome: "duplicate", message: `This screen is already screen ${again + 1} of the capture ("${screens[again].title}"); nothing added. To replace it, remove screen ${again + 1} first.` }); continue; }
-      const read = r.screens.map((s) => ({ title: s.title, inputs: (s.inputs as CaptureInput[]).map((i) => (taken.has(i.id) ? { ...i, id: `${i.id}@${slug(s.title)}` } : i)) }));
-      const clash = read.flatMap((s) => s.inputs.map((i) => i.id)).filter((i) => taken.has(i));
-      if (clash.length) { results.push({ file: name, outcome: "refused", message: `Not read: the element id ${clash.slice(0, 3).join(", ")} is already captured on a screen with the same title. Remove that screen first, or check the page.` }); continue; }
-      if (screens.length + read.length > CAPTURE_LIMITS.screens) { results.push({ file: name, outcome: "refused", message: `Not added: a capture holds at most ${CAPTURE_LIMITS.screens} screens.` }); continue; }
-      for (const s of read) screens.push({ title: s.title, inputs: s.inputs, file: name, sha256: hash, way });
-      kept.push({ file: name, sha256: hash, bytes: f.buffer.length, way, screens: r.screens.length });
-      results.push({ file: name, outcome: "added", message: `${r.screens.length} screen${r.screens.length > 1 ? "s" : ""} read (${r.screens.reduce((a, s) => a + s.inputs.length, 0)} questions): ${r.screens.map((s) => s.title).join(", ")}.` });
-    }
-    const added = results.filter((x) => x.outcome === "added").length;
-    if (!added) return { capture: this.view(c), results };
-    // Claimed on the revision read above: a screen added or a finish at the same moment makes this a 409, never "added"
-    // for a screen that is then lost (review 4, break M2).
-    const u = await this.write(c, ["OPEN", "RETURNED"], { record: json({ screens }), files: json(kept), way: kept[0]?.way ?? c.way, status: "OPEN", statusDetail: `${screens.length} screen${screens.length === 1 ? "" : "s"} so far. ${NEXT.OPEN}` });
-    await this.audit.log(c.workspaceId, actor.id, "captured", "portal screens", c.formKey, `${actor.name} added ${added} file${added > 1 ? "s" : ""} to the ${c.formKey} capture (${screens.length} screens in all; structure only)`);
-    return { capture: this.view(u), results };
-  }
-
-  /** F2a (BR-1, BR-4): one screen read by the browser extension from the open portal page. It is checked again here with
-   *  the readers' own rules (contract, no answer, client details, a label with text after its colon); any problem
-   *  refuses the whole screen and nothing of it is kept. The same screen (same heading) twice is "already captured". */
-  async addExtensionScreen(actor: Actor, id: string, body: unknown) {
-    need(actor, "author");
-    const answers = noAnswers((body as { screen?: unknown } | null)?.screen ?? {});
-    const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id } });
-    if (answers.length) {
-      await this.audit.log(c.workspaceId, actor.id, "refused", "portal screen", c.formKey, `${actor.name}'s extension screen was refused: it carried an answer field (nothing kept)`);
-      fail(`Refused: the screen carried an answer (${answers.slice(0, 3).join(", ")}). Nothing was kept: the extension sends structure only.`);
-    }
-    const b = parse(AddExtensionScreen, body);
-    if (c.way !== "extension") conflict("This capture is made from saved pages: start a capture with the browser extension to add screens from it.");
-    if (!["OPEN", "RETURNED"].includes(c.status)) conflict(`This capture is ${c.status.toLowerCase()}: start a new capture to record the screens again.`);
-    if (b.revision !== c.revision) conflict("This capture changed since the extension last read it (a screen was added or removed): nothing was added. Look at the capture and send the screen again.");
-    const problems = screenProblems(b.screen as { title: string; inputs: CaptureInput[] });
-    if (problems.length) {
-      await this.audit.log(c.workspaceId, actor.id, "refused", "portal screen", c.formKey, `${actor.name}'s extension screen was refused: ${problems.length} text${problems.length > 1 ? "s" : ""} looked like a client's details (nothing kept)`);
-      fail(`Refused: ${problems.slice(0, 3).join("; ")}. Nothing was sent to the library or kept.`, HttpStatus.UNPROCESSABLE_ENTITY);
-    }
-    const screens = screensOf(c.record);
-    const ident = screenIdentity(b.screen.title);
-    const again = screens.findIndex((x) => screenIdentity(x.title) === ident);
-    if (again >= 0) return { capture: this.view(c), result: { outcome: "duplicate", message: `"${screens[again].title}" is already captured (screen ${again + 1}); nothing added. Go to the next screen in the portal, or remove screen ${again + 1} first.` } };
-    if (screens.length + 1 > CAPTURE_LIMITS.screens) conflict(`Not added: a capture holds at most ${CAPTURE_LIMITS.screens} screens.`);
-    const fp = screenFingerprint(b.screen as { title: string; inputs: CaptureInput[] });
-    // Review-3 Minor 1, review-4 Minor 1: the capture keeps the portal order of every screen it has seen; a removed screen
-    // captured again goes back before the next screen it came before (any number of removals), a new screen at the end.
-    const order = portalOrder(c.record, screens);
-    const rank = order.indexOf(ident);
-    const next = rank < 0 ? -1 : screens.findIndex((x) => order.indexOf(screenIdentity(x.title)) > rank);
-    const at = next < 0 ? screens.length : next;
-    screens.splice(at, 0, { title: b.screen.title, inputs: b.screen.inputs as CaptureInput[], file: `extension-${fp.slice(0, 12)}`, sha256: fp, way: "extension" });
-    const u = await this.write(c, ["OPEN", "RETURNED"], { record: json({ screens, order: rank < 0 ? [...order, ident].slice(-CAPTURE_ORDER_MAX) : order }), status: "OPEN", statusDetail: `${screens.length} screen${screens.length === 1 ? "" : "s"} so far. ${NEXT.OPEN}` });
-    await this.audit.log(c.workspaceId, actor.id, "captured", "portal screens", c.formKey, `${actor.name} captured "${b.screen.title}" with the browser extension for ${c.formKey} (screen ${at + 1}; ${b.screen.inputs.length} questions, structure only)`);
-    return { capture: this.view(u), result: { outcome: "added", message: at < screens.length - 1 ? `"${b.screen.title}" captured again as screen ${at + 1}, before "${screens[at + 1].title}" · go on in the portal.` : `Screen ${screens.length} captured · go to the next screen in the portal.` } };
-  }
-
-  /** Builds the record, its fingerprint, the twin and the review document; then holds it for a second person, or says
-   *  it is already in the library. */
-  async finish(actor: Actor, id: string) {
-    need(actor, "author");
-    const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id } });
-    if (c.status !== "OPEN") conflict(`This capture is ${c.status.toLowerCase()}; only an open capture can be finished.`);
-    const screens = screensOf(c.record);
-    if (!screens.length) fail("Add at least one screen before finishing the capture.");
-    const meta = { portal: c.portalKey, form: c.formKey, title: c.title, applicationType: c.applicationType, way: c.way };
-    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId: c.workspaceId, formKey: c.formKey } } });
-    const versions = def ? await this.db.formEdition.findMany({ where: { govFormDefId: def.id, channel: "ONLINE", portalKey: c.portalKey }, orderBy: { capturedOn: "desc" } }) : [];
-    // Q2: a capture made in the extension during real work adds to the current version: only the screens it saw are
-    // compared; the others stay as approved ("not seen this time"); a new screen is added.
-    const merge = c.way === "extension" ? mergeCapture(versions[0]?.inventoryFile ? this.twinOf(versions[0].inventoryFile).record : null, screens.map((s) => ({ title: s.title, inputs: s.inputs, source: { way: s.way, file: s.file, sha256: s.sha256 } })), meta) : null;
-    const record = merge ? merge.record : buildRecord(meta, screens);
-    const problems = [...contractProblems(record), ...noAnswers(record).map((p) => `${p}: a capture holds structure only`)];
-    if (problems.length) fail(`The capture does not meet the capture contract: ${problems.join("; ")}.`, HttpStatus.UNPROCESSABLE_ENTITY);
-    const fp = fingerprint(record);
-    const seen = merge && versions[0] ? ` Compared ${merge.compared.length + merge.unchanged.length} screen${merge.compared.length + merge.unchanged.length === 1 ? "" : "s"} seen (${merge.compared.length} changed); ${merge.not_seen.length} not seen this time; ${merge.added.length} added.` : "";
-    const same = versions.find((v) => v.contentSha256 === fp);
-    if (same) {
-      const u = await this.write(c, ["OPEN"], { record: json(record), contentSha256: fp, status: "IN_LIBRARY", formEditionId: same.id, statusDetail: `Already in the library: the screens are identical to ${same.editionLabel} (same fingerprint).${seen} Nothing new to approve. ${NEXT.IN_LIBRARY}` });
-      await this.audit.log(c.workspaceId, actor.id, "finished", "portal capture", c.formKey, `${actor.name} finished the ${c.formKey} capture: identical to ${same.editionLabel}, nothing new`);
-      return { ...this.view(u), summary: await this.finishSummary(c, record) };
-    }
-    const previous = versions[0] ?? null;
-    const diff = previous ? difference(this.twinOf(previous.inventoryFile!).record, record) : null;
-    const dir = join(VAR("demo"), "portal-twins"); mkdirSync(dir, { recursive: true });
-    // Named by the capture, not the fingerprint: two held captures of the same screens keep their own files (break m6).
-    const twinPath = join(dir, `${c.formKey.replace(/\W+/g, "")}-${c.portalKey}-${c.id.slice(0, 8)}-${fp.slice(0, 12)}.twin.json`);
-    // Q2: the day each screen was last seen in a capture (a screen this capture did not see keeps its earlier day).
-    const prior = previous?.inventoryFile ? this.twinOf(previous.inventoryFile) : null;
-    const seenNow = new Set(screens.map((s) => screenIdentity(s.title)));
-    const last_seen = Object.fromEntries(record.screens.map((s) => { const k = screenIdentity(s.title); return [k, seenNow.has(k) ? day(c.capturedOn) : prior?.last_seen?.[k] ?? (previous?.capturedOn ? day(previous.capturedOn) : day(c.capturedOn))]; }));
-    writeFileSync(twinPath, JSON.stringify({ contract: "portal-twin/v1", fingerprint: fp, capture_id: c.id, record, last_seen, seen: [...seenNow] }, null, 1));
-    const status = "HELD";
-    // Every prototype capture comes from the Sample fixtures until a real blank screen exists (challenge point 5).
-    const html = reviewHtml({ id: c.id, status, capturedBy: nameOf(c.capturedBy), capturedOn: day(c.capturedOn), fingerprint: fp, record, difference: diff, changes: previous?.editionLabel ?? null, sample: true });
-    const htmlPath = twinPath.replace(/\.twin\.json$/, ".review.html"); writeFileSync(htmlPath, html);
-    const u = await this.write(c, ["OPEN"], { record: json(record), contentSha256: fp, status, twinFile: rel(twinPath), reviewFile: rel(htmlPath), changesEditionId: previous?.id ?? null, difference: diff ? json(diff) : undefined,
-      statusDetail: previous ? `Held for a second person: ${diff!.length} difference${diff!.length === 1 ? "" : "s"} from ${previous.editionLabel} (impact review).${seen} Not used until approved.` : "Held for a second person: a new online version. Not used until approved." });
-    this.printReview(c.id, htmlPath);
-    await this.audit.log(c.workspaceId, actor.id, "finished", "portal capture", c.formKey, `${actor.name} finished the ${c.formKey} capture (${record.screens.length} screens): held for a second person${previous ? `, ${diff!.length} differences from ${previous.editionLabel}` : ""}`, { fingerprint: fp });
-    return { ...this.view(u), summary: await this.finishSummary(c, record) };
-  }
-
-  /** F3 X6: what a finished capture holds, in counts, and the PDF sections no captured screen asks yet (BR-12: a warning,
-   *  never a block); a second person approves it before anything uses it (BR-9). */
-  private async finishSummary(c: PortalCapture, record: CaptureRecord) {
-    // Review Minor 4: the counts are this capture's own screens; a re-capture merged into the version says so apart.
-    const own = screensOf(c.record);
-    const cov = await this.sectionsNotSeen(c.workspaceId, c.formKey, c.portalKey, record, own);
-    return { screens: own.length, questions: own.reduce((n, s) => n + s.inputs.length, 0), version_screens: record.screens.length, pdf_edition: cov.pdf_edition, unmatched_questions: cov.unmatched,
-      matched_here: cov.matched_here, matched_kept: cov.matched_kept,
-      pdf_sections_not_seen: cov.sections.map((x) => ({ group: x.group, label: x.label, questions: x.questions, total: x.total })) };
-  }
-
-  /** The second person (never the one who captured it) approves: the capture becomes an online version. */
-  async approve(actor: Actor, id: string) {
-    need(actor, "review");
-    const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id } });
-    if (c.status !== "HELD") conflict(c.status === "APPROVED" ? "Already approved." : `This capture is ${c.status.toLowerCase()}; only a held capture can be approved.`);
-    if (c.capturedBy === actor.id) fail("A second person approves a capture: the person who captured the screens cannot approve them (P-57 as amended by P-66).", HttpStatus.FORBIDDEN);
-    const record = c.record as unknown as CaptureRecord;
-    const inputs = record.screens.reduce((a, s) => a + s.inputs.length, 0);
-    const changed = async (tx: Pick<Db, "portalCapture">) => { const now = await tx.portalCapture.findUnique({ where: { id } }); return conflict(now?.status === "APPROVED" ? "Already approved." : `This capture was ${STATUS_WORDS[now?.status ?? ""] ?? "changed"} at the same moment: it is not approved. Refresh to see it.`); };
-    const recheck = new Date(c.capturedOn); recheck.setUTCDate(recheck.getUTCDate() + RECHECK_DAYS);
-    try {
-      const ed = await this.db.$transaction(async (tx) => {
-        const def = await tx.govFormDef.upsert({ where: { workspaceId_formKey: { workspaceId: c.workspaceId, formKey: c.formKey } }, update: {}, create: { workspaceId: c.workspaceId, formKey: c.formKey, displayName: c.title, formKind: "data_form" } });
-        const base = `${c.formKey} online · ${portalLabel(c.portalKey)} · ${day(c.capturedOn)}`;
-        let label = base; for (let n = 2; await tx.formEdition.findUnique({ where: { workspaceId_editionLabel: { workspaceId: c.workspaceId, editionLabel: label } } }); n++) label = `${base} (${n})`;
-        const e = await tx.formEdition.create({ data: { workspaceId: c.workspaceId, govFormDefId: def.id, editionLabel: label, channel: "ONLINE", portalKey: c.portalKey, capturedOn: c.capturedOn, recheckBy: recheck, contentSha256: c.contentSha256, inventoryFile: c.twinFile, dataBoundBoxes: inputs } });
-        const claimed = await tx.portalCapture.updateMany({ where: { id, status: "HELD", revision: c.revision }, data: { status: "APPROVED", approvedBy: actor.id, approvedAt: new Date(), formEditionId: e.id, revision: { increment: 1 }, statusDetail: `Approved by ${actor.name}: online version ${label}, re-check by ${day(recheck)}. Next: ${NEXT.APPROVED}` } });
-        if (!claimed.count) await changed(tx);
-        // F2c (XT-6): the screens this capture saw close their "Re-capture needed" tasks on any earlier version of the
-        // form on this portal; a screen it did not see keeps its task open.
-        const seen = c.twinFile ? ((JSON.parse(readFileSync(join(SOLUTION, c.twinFile), "utf8")) as { seen?: string[] }).seen ?? record.screens.map((x) => screenIdentity(x.title))) : record.screens.map((x) => screenIdentity(x.title));
-        // A screen the earlier version did not have is kept as a checksum of its heading (api/src/extension.ts, break M2).
-        const pages = [...seen, ...seen.map((x) => `unknown-${createHash("sha256").update(x).digest("hex").slice(0, 16)}`)];
-        await tx.recaptureTask.updateMany({ where: { workspaceId: c.workspaceId, status: "OPEN", screenPage: { in: pages }, edition: { govFormDefId: def.id, portalKey: c.portalKey } }, data: { status: "DONE", closedBy: c.id, closedAt: new Date() } });
-        return e;
-      });
-      await this.audit.log(c.workspaceId, actor.id, "approved", "portal capture", c.formKey, `${actor.name} approved the ${c.formKey} capture by ${nameOf(c.capturedBy)}: online version ${ed.editionLabel} (${inputs} questions), re-check by ${day(recheck)}`);
-      return { capture: this.view(await this.db.portalCapture.findUniqueOrThrow({ where: { id } })), edition: this.editionView(ed) };
-    } catch (e) {
-      if ((e as { code?: string } | null)?.code !== "P2002") throw e;
-      // An identical online version was approved at the same moment (another capture of the same screens): this one
-      // is then already in the library, not left held for ever (break m6).
-      const same = await this.db.formEdition.findFirst({ where: { workspaceId: c.workspaceId, channel: "ONLINE", portalKey: c.portalKey, contentSha256: c.contentSha256 } });
-      if (same) await this.db.portalCapture.updateMany({ where: { id, status: "HELD" }, data: { status: "IN_LIBRARY", formEditionId: same.id, revision: { increment: 1 }, statusDetail: `Already in the library: identical to ${same.editionLabel}, approved at the same moment. ${NEXT.IN_LIBRARY}` } });
-      return conflict("Already in the library: an identical online version was approved at the same moment.");
-    }
-  }
-
-  async returnCapture(actor: Actor, id: string, body: unknown) {
-    need(actor, "review");
-    const b = parse(ReturnCapture, body);
-    const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id } });
-    if (c.status !== "HELD") conflict("Only a held capture can be returned.");
-    if (c.capturedBy === actor.id) fail("A second person reviews a capture: the person who captured it cannot return it to themselves.", HttpStatus.FORBIDDEN);
-    // Claimed like approval (break M1): an approval and a return at the same moment cannot both succeed.
-    const u = await this.write(c, ["HELD"], { status: "RETURNED", decisionNote: b.note, statusDetail: `Returned by ${actor.name}: ${b.note.trim().replace(/[.!?]+$/, "")}. Next: ${NEXT.RETURNED}` });
-    await this.audit.log(c.workspaceId, actor.id, "returned", "portal capture", c.formKey, `${actor.name} returned the ${c.formKey} capture: ${b.note}`);
-    return this.view(u);
-  }
-
-  /** Removes one screen of an open or returned capture (a wrong or edited screen; review 6, break m3). */
-  async removeScreen(actor: Actor, id: string, order: number, revision?: number) {
-    need(actor, "author");
-    const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id } });
-    if (!["OPEN", "RETURNED"].includes(c.status)) conflict(`This capture is ${c.status.toLowerCase()}: only an open or returned capture's screens can be removed.`);
-    // Break (26 Oct): a screen is named by its place, so a list shown before another change would remove the wrong one.
-    if (revision !== undefined && revision !== c.revision) conflict("This capture changed since you last saw it (a screen was added or removed): nothing was removed. Look at its screens again, then remove the one you mean.");
-    const screens = screensOf(c.record);
-    if (!Number.isInteger(order) || order < 1 || order > screens.length) fail(`There is no screen ${order} in this capture (it has ${screens.length}).`, HttpStatus.NOT_FOUND);
-    const [gone] = screens.splice(order - 1, 1);
-    const kept = (c.files as unknown as KeptFile[]).filter((k) => screens.some((s) => s.sha256 === k.sha256));
-    const u = await this.write(c, ["OPEN", "RETURNED"], { record: json({ screens, order: portalOrder(c.record, screensOf(c.record)) }), files: json(kept), status: "OPEN", statusDetail: `Screen ${order} ("${gone.title}") removed; ${screens.length} screen${screens.length === 1 ? "" : "s"} left. ${NEXT.OPEN}` });
-    await this.audit.log(c.workspaceId, actor.id, "removed", "portal screen", c.formKey, `${actor.name} removed screen ${order} ("${gone.title}") from the ${c.formKey} capture`);
-    return this.view(u);
-  }
-
-  /** An author gives a capture up (it stays, for the audit); a held one is withdrawn before anyone approves it. */
-  async abandon(actor: Actor, id: string, body: unknown) {
-    need(actor, "author");
-    const b = parse(AbandonCapture, body);
-    const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id } });
-    if (!["OPEN", "RETURNED", "HELD"].includes(c.status)) conflict(`This capture is ${c.status.toLowerCase()}: only an open, returned or held capture can be abandoned.`);
-    const u = await this.write(c, ["OPEN", "RETURNED", "HELD"], { status: "ABANDONED", decisionNote: b.note ?? null, statusDetail: `Abandoned by ${actor.name}${b.note ? `: ${b.note}` : ""}. ${NEXT.ABANDONED}` });
-    await this.audit.log(c.workspaceId, actor.id, "abandoned", "portal capture", c.formKey, `${actor.name} abandoned the ${c.formKey} capture${b.note ? `: ${b.note}` : ""}`);
-    return this.view(u);
-  }
-
-  /** The same screens captured again ("already in the library"): a second person confirms they are unchanged, and the
-   *  online version's re-check date runs from this capture (review 3, break M6). */
-  async confirmRecheck(actor: Actor, id: string) {
-    need(actor, "review");
-    const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id } });
-    if (c.status !== "IN_LIBRARY" || !c.formEditionId) conflict("Only a capture found already in the library confirms an online version's re-check date.");
-    if (c.approvedBy) conflict("Already confirmed.");
-    if (c.capturedBy === actor.id) fail("A second person confirms the screens are unchanged: not the person who captured them.", HttpStatus.FORBIDDEN);
-    const recheck = new Date(c.capturedOn); recheck.setUTCDate(recheck.getUTCDate() + RECHECK_DAYS);
-    const ed = await this.db.$transaction(async (tx) => {
-      const claimed = await tx.portalCapture.updateMany({ where: { id, status: "IN_LIBRARY", approvedBy: null, revision: c.revision }, data: { approvedBy: actor.id, approvedAt: new Date(), revision: { increment: 1 }, statusDetail: `Confirmed unchanged by ${actor.name}: the online version's re-check date runs to ${day(recheck)}.` } });
-      if (!claimed.count) conflict("Already confirmed, or the capture changed at the same moment: refresh to see it.");
-      const e = await tx.formEdition.findUniqueOrThrow({ where: { id: c.formEditionId! } });
-      return e.recheckBy && e.recheckBy >= recheck ? e : tx.formEdition.update({ where: { id: e.id }, data: { recheckBy: recheck } });
-    });
-    await this.audit.log(c.workspaceId, actor.id, "confirmed", "online version", ed.editionLabel, `${actor.name} confirmed ${ed.editionLabel} unchanged (capture by ${nameOf(c.capturedBy)}): re-check by ${day(ed.recheckBy!)}`);
-    return { capture: this.view(await this.db.portalCapture.findUniqueOrThrow({ where: { id } })), edition: this.editionView(ed) };
-  }
-
-  /** A newest-first page of captures; the field-by-field difference is in each capture's own view (break m16). */
-  async captures(take = 50, skip = 0) {
-    const workspaceId = await this.ws.id();
-    const n = Math.min(Math.max(Number(take) || 50, 1), 200), from = Math.max(Number(skip) || 0, 0);
-    return (await this.db.portalCapture.findMany({ where: { workspaceId }, orderBy: { createdAt: "desc" }, take: n, skip: from })).map((c) => { const v = this.view(c); return { ...v, difference: undefined, differences: Array.isArray(c.difference) ? c.difference.length : 0 }; });
-  }
-  async capture(id: string) {
-    const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id }, include: { combination: { select: { id: true, label: true } } } });
-    // F3 X1: the combination a capture was started for in the Studio ("Started in the Studio · Visitor visa").
-    return { ...this.view(c, true), combination: c.combination };
-  }
-  async reviewDocument(id: string) {
-    const c = await this.db.portalCapture.findUniqueOrThrow({ where: { id } });
-    if (!c.reviewFile) fail("The review document is made when the capture is finished.", HttpStatus.NOT_FOUND);
-    return { path: join(SOLUTION, c.reviewFile!), name: basename(c.reviewFile!) };
-  }
-
-  private twinOf(file: string) { return JSON.parse(readFileSync(join(SOLUTION, file), "utf8")) as { fingerprint: string; record: CaptureRecord; last_seen?: Record<string, string> }; }
-  private view(c: PortalCapture, full = false) {
-    const screens = screensOf(c.record);
-    return { id: c.id, portal: c.portalKey, portal_label: portalLabel(c.portalKey), form: c.formKey, title: c.title, application_type: c.applicationType, way: c.way, status: c.status, status_detail: c.statusDetail,
-      screens: screens.map((s, i) => ({ order: i + 1, title: s.title, questions: s.inputs.length, file: s.file })), questions: screens.reduce((a, s) => a + s.inputs.length, 0), files: c.files, fingerprint: c.contentSha256,
-      difference: c.difference, changes_edition_id: c.changesEditionId, form_edition_id: c.formEditionId, review_file: c.reviewFile, captured_on: c.capturedOn ? day(c.capturedOn) : null, captured_by: c.capturedBy, captured_by_name: nameOf(c.capturedBy),
-      approved_by: c.approvedBy, approved_at: c.approvedAt, decision_note: c.decisionNote, revision: c.revision, next: NEXT[c.status] ?? null, ...(full ? { record: c.record } : {}) };
-  }
-
-  /** One write to a capture, claimed on the revision and status it was read with; a write in between is a 409. */
-  private async write(c: PortalCapture, statuses: string[], data: Prisma.PortalCaptureUpdateManyMutationInput) {
-    const r = await this.db.portalCapture.updateMany({ where: { id: c.id, revision: c.revision, status: { in: statuses } }, data: { ...data, revision: { increment: 1 } } });
-    if (!r.count) {
-      const now = await this.db.portalCapture.findUnique({ where: { id: c.id } });
-      conflict(now && now.status !== c.status ? `This capture was ${STATUS_WORDS[now.status] ?? "changed"} at the same moment: nothing was changed. Refresh to see it.` : "This capture changed at the same moment (a screen was added or removed): nothing was changed. Refresh and try again.");
-    }
-    return this.db.portalCapture.findUniqueOrThrow({ where: { id: c.id } });
-  }
-
-  /** Prints the review document to PDF after the request has answered (STANDARDS §4: never inside a web request);
-   *  the HTML stands until the PDF exists. */
-  private printReview(id: string, htmlPath: string) {
-    const pdfPath = htmlPath.replace(/\.html$/, ".pdf");
-    run(NODE, [join(STUDIO, "tools", "print_pdf.mjs"), htmlPath, pdfPath], { cwd: STUDIO, timeout: 180_000 })
-      .then(() => this.db.portalCapture.updateMany({ where: { id, reviewFile: rel(htmlPath) }, data: { reviewFile: rel(pdfPath) } }))
-      .catch((e: Error) => console.error(`review document of capture ${id} not printed (the HTML stands): ${e.message.slice(0, 300)}`));
-  }
-  private editionView(e: FormEdition) { return { id: e.id, label: e.editionLabel, channel: e.channel, portal: e.portalKey, captured_on: e.capturedOn ? day(e.capturedOn) : null, recheck_by: e.recheckBy ? day(e.recheckBy) : null, fingerprint: e.contentSha256, questions: e.dataBoundBoxes }; }
-
-  // ───────────────────────────────────────────────────────────── online versions: screen map without AI
+  // ───────────────────────────────────────────────────────────── library rows
   private async libraryRows(workspaceId: string, db: Pick<Db, "canonicalField"> = this.db) {
     const rows = await db.canonicalField.findMany({ where: { workspaceId }, orderBy: { version: "desc" } });
     const newest = new Map<string, (typeof rows)[number]>(); for (const r of rows) if (!newest.has(r.canonicalFieldKey)) newest.set(r.canonicalFieldKey, r);
     return [...newest.values()];
-  }
-  private async mapRows(editionId: string) { return effective(await this.db.formFieldMap.findMany({ where: { formEditionId: editionId } }), (m) => m.dataPath, "draft"); }
-  /** What a screen map is drafted from: the newest PDF version's field map, earlier online versions' rows for the same
-   *  inputs on the same screens, and the shared-field library. The screen-map draft and a capture's coverage (F3 D1)
-   *  read the same context, so they match a screen the same way. */
-  private async screenMapContext(workspaceId: string, editions: FormEdition[], portalKey: string | null, excludeId: string | null, withPdf: boolean) {
-    // Break m9: the newest PDF edition by the editions' own dates, never by sorting their labels as text.
-    const pdfs = editions.filter((e) => e.channel === "PDF").sort((a, b) => compareEditions(b, a));
-    let pdfEdition: string | null = null, pdf: PdfEntry[] = [];
-    if (withPdf) for (const p of pdfs) { const rows = await this.mapRows(p.id); if (rows.length) { pdfEdition = p.editionLabel; pdf = rows.map((m) => ({ data_path: m.dataPath, caption: m.caption, heading: m.heading, fact: m.canonicalFieldKey, transform: m.transform, person: m.person, outcome: m.outcome })); break; } }
-    const previous = new Map<string, { fact: string | null; transform: string | null; person: string | null; edition: string }>();
-    // Keyed by screen and element id (F2a, B1): a map row is reused only for the same input on the same screen.
-    for (const o of editions.filter((e) => e.channel === "ONLINE" && e.portalKey === portalKey && e.id !== excludeId && e.inventoryFile)) {
-      const titles = new Map(this.twinOf(o.inventoryFile!).record.screens.map((x) => [x.key, x.title]));
-      for (const m of await this.mapRows(o.id)) { const k = inputKey(titles.get(m.screenKey ?? "") ?? m.heading ?? "", m.dataPath); if (m.outcome === "mapped" && !previous.has(k)) previous.set(k, { fact: m.canonicalFieldKey, transform: m.transform, person: m.person, edition: o.editionLabel }); }
-    }
-    const library = (await this.libraryRows(workspaceId)).filter((r) => r.status !== "RETIRED" || r.mergedIntoKey).map((r) => ({ key: r.canonicalFieldKey, valueType: r.valueType, aliases: r.aliases, mergedIntoKey: r.mergedIntoKey, answerListKey: r.answerListKey }));
-    return { pdf, pdfEdition, previous, library };
-  }
-  /** F3 D1, X6: the PDF sections no screen of this capture asks yet, matched as the screen-map draft would match them
-   *  (shared field and person), minus sections the form's online version marks asked differently. No AI, nothing stored. */
-  private async sectionsNotSeen(workspaceId: string, formKey: string, portalKey: string, record: CaptureRecord, own: { title: string }[] = record.screens) {
-    const def = await this.db.govFormDef.findUnique({ where: { workspaceId_formKey: { workspaceId, formKey } }, include: { editions: true } });
-    if (!def) return { pdf_edition: null, sections: [] as SectionNotSeen[], unmatched: 0, matched_here: 0, matched_kept: 0 };
-    const ctx = await this.screenMapContext(workspaceId, def.editions, portalKey, null, true);
-    if (!ctx.pdf.length) return { pdf_edition: null, sections: [] as SectionNotSeen[], unmatched: 0, matched_here: 0, matched_kept: 0 };
-    const proposals = draftScreenMap(record, ctx).proposals;
-    const seen = proposals.filter((p) => p.outcome === "mapped").map((p) => ({ fact: p.fact, person: p.person }));
-    const online = def.editions.filter((e) => e.channel === "ONLINE" && e.portalKey === portalKey).sort((a, b) => (b.capturedOn?.getTime() ?? 0) - (a.capturedOn?.getTime() ?? 0))[0];
-    const rows = online ? await this.mapRows(online.id) : [];
-    const decided = rows.filter((m) => m.outcome === ASKED_DIFFERENTLY.outcome && m.heading).map((m) => m.heading!);
-    // Break M5, Lead check Minor 1: the questions on THIS capture's own screens that nothing matches yet and no person
-    // has decided on the current version's screen map (mapped, not a fact, answered on screen); a section they belong
-    // to stays listed until then, and the summary says why. Counts say what they count.
-    const titles = online?.inventoryFile ? new Map(this.twinOf(online.inventoryFile).record.screens.map((x) => [x.key, x.title])) : new Map<string, string>();
-    const settled = new Set(rows.filter((m) => isScreenInput(m) && m.outcome !== "unresolved").map((m) => inputKey(titles.get(m.screenKey ?? "") ?? m.heading ?? "", m.dataPath)));
-    const mine = new Set(own.map((x) => screenIdentity(x.title)));
-    const unmatched = proposals.filter((p) => p.outcome === "leftover" && mine.has(screenIdentity(p.screen)) && !settled.has(inputKey(p.screen, p.input))).length;
-    // PR #36 review: the sections are worked out over the whole version a re-capture merges into; the form fields its own
-    // screens match are kept apart from those only the screens kept from the approved version match.
-    const key = (f: string | null, p: string | null) => `${f}|${p ?? "form_subject"}`;
-    const here = new Set(proposals.filter((p) => p.outcome === "mapped" && mine.has(screenIdentity(p.screen))).map((p) => key(p.fact, p.person)));
-    const all = new Set(seen.map((x) => key(x.fact, x.person)));
-    const fields = ctx.pdf.filter((e) => e.outcome === "mapped" && e.fact);
-    const matched_here = fields.filter((e) => here.has(key(e.fact, e.person))).length, matched_kept = fields.filter((e) => !here.has(key(e.fact, e.person)) && all.has(key(e.fact, e.person))).length;
-    return { pdf_edition: ctx.pdfEdition, sections: screenCoverage(formKey, ctx.pdf, seen, decided), unmatched, matched_here, matched_kept };
-  }
-
-  async draftScreenMapFor(actor: Actor, editionId: string) {
-    need(actor, "author");
-    const ed = await this.db.formEdition.findUniqueOrThrow({ where: { id: editionId }, include: { form: { include: { editions: true } } } });
-    if (ed.channel !== "ONLINE") fail("Screen maps are drafted for online versions; a PDF edition's field map is drafted from its file.");
-    if (await this.db.formFieldMap.count({ where: { formEditionId: editionId } })) conflict(`${ed.editionLabel} already has a screen map.`);
-    const twin = this.twinOf(ed.inventoryFile!);
-    // The form's drafting source (C2.10): ONLINE_ONLY drafts from the online screens alone, never the PDF version.
-    const ctx = await this.screenMapContext(ed.workspaceId, ed.form.editions, ed.portalKey, ed.id, ed.form.draftFrom !== "ONLINE_ONLY");
-    const pdfEdition = ctx.pdfEdition;
-    const draft = draftScreenMap(twin.record, ctx);
-    const dir = join(VAR("demo"), "screen-maps"); mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, `${ed.id}.json`), JSON.stringify({ edition: ed.editionLabel, fingerprint: twin.fingerprint, pdf_edition: pdfEdition, at: new Date().toISOString(), ...draft }, null, 1));
-    await this.audit.log(ed.workspaceId, actor.id, "drafted", "screen map", ed.form.formKey, `${actor.name} drafted the screen map of ${ed.editionLabel} without AI: ${draft.counts.mapped} of ${draft.counts.inputs} inputs matched (${draft.counts.same_path} same id, ${draft.counts.pdf_twin} from ${pdfEdition ?? "no PDF twin"}, ${draft.counts.alias} by alias); ${draft.counts.leftover} left for drafting or a person; US$0`);
-    return { edition: this.editionView(ed), pdf_edition: pdfEdition, ...draft };
-  }
-
-  /** A person accepts the drafted screen map (all matches, or the listed inputs): it becomes the online version's field
-   *  map (DRAFT, origin CODE_MATCH); leftovers stay unresolved with the reason. The online labels of PDF-twin matches are
-   *  learned as aliases, and choice inputs on an answer list get their option map drafted. */
-  async acceptScreenMap(actor: Actor, editionId: string, body: unknown) {
-    need(actor, "review");
-    const b = parse(AcceptScreenMap, body);
-    const ed = await this.db.formEdition.findUniqueOrThrow({ where: { id: editionId }, include: { form: true } });
-    const file = join(VAR("demo"), "screen-maps", `${ed.id}.json`);
-    if (!existsSync(file)) fail("Draft the screen map first.", HttpStatus.CONFLICT);
-    const draft = JSON.parse(readFileSync(file, "utf8")) as { fingerprint: string; proposals: Proposal[] };
-    const twin = this.twinOf(ed.inventoryFile!);
-    if (draft.fingerprint !== twin.fingerprint) conflict("The online version changed since the screen map was drafted: draft it again.");
-    const pick = b.inputs ? new Set(b.inputs) : null;
-    const lib = new Map((await this.libraryRows(ed.workspaceId)).map((r) => [r.canonicalFieldKey, r]));
-    const lists = new Map((await this.db.answerList.findMany({ where: { workspaceId: ed.workspaceId }, include: { values: { orderBy: { sortOrder: "asc" } } }, orderBy: { version: "desc" } })).map((l) => [l.answerListKey, l]));
-    const inputOf = new Map(twin.record.screens.flatMap((s) => s.inputs.map((i) => [i.id, i] as const)));
-    let learned = 0;
-    const res = await this.db.$transaction(async (tx) => {
-      const claimed = await tx.formFieldMap.count({ where: { formEditionId: ed.id } });
-      if (claimed) conflict(`${ed.editionLabel} already has a screen map.`);
-      const rows = draft.proposals.map((p) => {
-        const take = p.outcome === "mapped" && (!pick || pick.has(p.input));
-        const field = take && p.fact ? lib.get(p.fact) : undefined;
-        const list = field?.answerListKey ? lists.get(field.answerListKey) : undefined;
-        const opts = (inputOf.get(p.input)?.options ?? []) as FormOption[];
-        const om = take && list && opts.length ? draftOptionMap(list.values.map((v) => ({ key: v.valueKey, label: v.label })), opts) : null;
-        return { workspaceId: ed.workspaceId, formEditionId: ed.id, dataPath: p.input, caption: captionOf(p.group, p.label).slice(0, 500), heading: p.screen, screenKey: `s${String(p.screen_order).padStart(2, "0")}`, screenOrder: p.screen_order, inputOrder: p.input_order,
-          // Same element id as an accepted version is high; a label match (PDF twin or alias) is medium (review 8).
-          outcome: take ? "mapped" : p.outcome === "not_a_fact" ? "not_a_fact" : "unresolved", person: take ? p.person : null, canonicalFieldKey: take ? p.fact : null, transform: take ? p.transform : null, confidence: take ? (p.method === "same_path" ? "high" : "medium") : null,
-          evidenceQuote: take ? (p.from ?? p.why).slice(0, 500) : null, reason: take ? null : p.outcome === "mapped" ? `not accepted by ${actor.name}` : p.why, optionMap: om ? json(om.optionMap) : undefined,
-          version: 1, status: "DRAFT" as const, origin: "CODE_MATCH" as const, updatedBy: actor.id };
-      });
-      await tx.formFieldMap.createMany({ data: rows });
-      // Learned aliases: the label a person accepted for a shared field (matching metadata, outside released content),
-      // with its group ("Place of birth › Country or territory", never the bare "Country or territory"), and only when no
-      // other field already answers to it: one label, one field (review 8, break M7).
-      for (const p of draft.proposals.filter((x) => x.method === "pdf_twin" && x.fact && (!pick || pick.has(x.input)))) {
-        const label = p.part ? p.group : captionOf(p.group, p.label); const f = lib.get(p.fact!);
-        if (!label || !f || f.aliases.some((a) => normLabel(a) === normLabel(label)) || this.namedBy([...lib.values()], label, f.canonicalFieldKey)) continue;
-        f.aliases = [...f.aliases, label]; await tx.canonicalField.update({ where: { id: f.id }, data: { aliases: f.aliases } }); learned++;
-      }
-      return { mapped: rows.filter((r) => r.outcome === "mapped").length, unresolved: rows.filter((r) => r.outcome === "unresolved").length, not_a_fact: rows.filter((r) => r.outcome === "not_a_fact").length, option_maps: rows.filter((r) => r.optionMap).length };
-    });
-    await this.audit.log(ed.workspaceId, actor.id, "accepted", "screen map", ed.form.formKey, `${actor.name} accepted the screen map of ${ed.editionLabel}: ${res.mapped} mapped, ${res.unresolved} still open, ${res.not_a_fact} not a fact; ${learned} labels learned as aliases; no AI`);
-    return { ...res, aliases_learned: learned };
-  }
-
-  /** A person maps one input the drafting left open (or corrects one): to a shared field, or as "not a fact" with the
-   *  reason. A new draft version of that form field; origin HUMAN (review 2: leftovers had no way through). */
-  async resolveInput(actor: Actor, editionId: string, body: unknown) {
-    need(actor, "review");
-    const b = parse(ResolveInput, body);
-    const ed = await this.db.formEdition.findUniqueOrThrow({ where: { id: editionId } });
-    if (ed.channel !== "ONLINE") fail("This maps an online version's inputs; a PDF edition's form fields are reviewed on its field map.");
-    const rows = await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: b.input } });
-    if (!rows.length) fail(`${ed.editionLabel} has no input ${b.input} in its accepted screen map (accept the screen map first).`, HttpStatus.NOT_FOUND);
-    const input = this.twinOf(ed.inventoryFile!).record.screens.flatMap((s) => s.inputs).find((i) => i.id === b.input);
-    let changes: Record<string, unknown>, said: string;
-    if (b.fact) {
-      const key = await resolveKey(this.db, ed.workspaceId, b.fact);
-      const field = (await this.libraryRows(ed.workspaceId)).find((r) => r.canonicalFieldKey === key);
-      if (!field || field.status === "RETIRED") fail(`${b.fact} is not in the library.`, HttpStatus.NOT_FOUND);
-      if (input && !compatible(input.type, input.part ?? null, field!.valueType)) fail(`${key} holds a ${field!.valueType}; this input is a ${input.part ? `date part (${input.part})` : input.type}.`);
-      const list = field!.answerListKey ? await this.db.answerList.findFirst({ where: { workspaceId: ed.workspaceId, answerListKey: field!.answerListKey }, include: { values: { orderBy: { sortOrder: "asc" } } }, orderBy: { version: "desc" } }) : null;
-      const om = list && input?.options?.length ? draftOptionMap(list.values.map((v) => ({ key: v.valueKey, label: v.label })), input.options) : null;
-      changes = { outcome: "mapped", canonicalFieldKey: key, person: b.person ?? "form_subject", transform: transformFor(input?.type ?? "text", input?.part ?? null, { answerListKey: field!.answerListKey }), confidence: "high", evidenceQuote: `Chosen by ${actor.name}${key !== b.fact ? ` (${b.fact} was merged into ${key})` : ""}`, reason: null, origin: "HUMAN", optionMap: om ? json(om.optionMap) : Prisma.DbNull };
-      said = `${key}${b.person && b.person !== "form_subject" ? ` (${b.person})` : ""}`;
-    } else if (b.answerOnScreen) {
-      // Q3: only the immigration expert role marks what the representative answers on screen (a second person approves
-      // the map at release, as every map change).
-      need(actor, "sme");
-      changes = { outcome: ANSWER_ON_SCREEN, canonicalFieldKey: null, person: null, transform: null, confidence: null, evidenceQuote: null, reason: `${b.reason} (${actor.name})`, origin: "HUMAN", optionMap: Prisma.DbNull, listPurpose: Prisma.DbNull };
-      said = `you answer this on screen: ${b.reason}`;
-    } else {
-      changes = { outcome: "not_a_fact", canonicalFieldKey: null, person: null, transform: null, confidence: null, evidenceQuote: null, reason: `${b.reason} (${actor.name})`, origin: "HUMAN", optionMap: Prisma.DbNull, listPurpose: Prisma.DbNull };
-      said = `not a fact: ${b.reason}`;
-    }
-    await revise(this.db.formFieldMap, rows, changes, actor.id, strip);
-    await this.audit.log(ed.workspaceId, actor.id, "mapped", "online input", b.input, `${actor.name} mapped ${rows[0].caption ?? b.input} on ${ed.editionLabel}: ${said}`);
-    return { input: b.input, outcome: changes.outcome, fact: changes.canonicalFieldKey ?? null };
-  }
-
-  // ───────────────────────────────────────────── F1 slice 2: the guarded screen_map job for the inputs left open
-  /** The inputs of an online version still open after a person accepted its code-drafted screen map, the approved
-   *  screen inventory and the part with only those inputs (both admitted by the guard), and the guarded job file. */
-  private async leftoverJob(ed: FormEdition & { form: { formKey: string } }, write: boolean) {
-    const rows = effective(await this.db.formFieldMap.findMany({ where: { formEditionId: ed.id } }), (m) => m.dataPath, "draft");
-    if (!rows.length) fail("Accept the screen map first (no AI); the AI drafts only what is left open.", HttpStatus.CONFLICT);
-    const open = rows.filter((r) => r.outcome === "unresolved");
-    if (!open.length) fail(`Nothing is left open on ${ed.editionLabel}: every input is mapped or "not a fact".`, HttpStatus.CONFLICT);
-    const cap = await this.db.portalCapture.findFirst({ where: { formEditionId: ed.id, status: "APPROVED" }, orderBy: { approvedAt: "asc" } });
-    if (!cap?.approvedBy) fail("This online version has no approved capture; only approved screens are sent to the AI.", HttpStatus.CONFLICT);
-    const twin = this.twinOf(ed.inventoryFile!);
-    const fp = twin.fingerprint, slugForm = ed.form.formKey.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    const screensBody = { contract: "screen-inventory/v1", fingerprint: fp, record: twin.record, approval: { capture_id: cap!.id, captured_by: cap!.capturedBy, approved_by: cap!.approvedBy, approved_at: cap!.approvedAt!.toISOString(), edition: ed.editionLabel } };
-    const screensFile = `${slugForm}-${ed.portalKey}-${fp.slice(0, 12)}.screens.json`, screensBytes = JSON.stringify(screensBody, null, 1) + "\n";
-    const ids = new Set(open.map((r) => r.dataPath));
-    const inputs = twin.record.screens.flatMap((s) => s.inputs.filter((i) => ids.has(i.id)).map((input) => ({ screen: s.key, title: s.title, input })));
-    const partBody = { contract: "inventory-part/v1", parent: { file: `prototype/p2/screen-inventories/${screensFile}`, sha256: sha(screensBytes) }, part: { index: 1, count: 1, section: "inputs left open" }, inputs };
-    const partBytes = JSON.stringify(partBody, null, 1) + "\n";
-    const partFile = `${slugForm}-${ed.portalKey}-${fp.slice(0, 12)}.open-${sha(canonicalIds(inputs)).slice(0, 12)}.part.json`;
-    const jobId = `studio-screenmap-${slugForm}-${ed.portalKey!.replace(/_/g, "-")}-${fp.slice(0, 12)}`;
-    const settings = { provider_route: "anthropic-api/aiw-d261-prototype-exception-aiw-d260", model: "claude-opus-5-5", effort: "high", timeout_ms: 600_000, max_attempts: 2, budget_usd: 5, max_output_tokens: partOutputTokens(inputs.length) };
-    const job = { job_id: jobId, kind: "screen_map", combination: "studio", configuration_version: "studio-screen-map", template: "screen-map.v1.md", output_schema: "screen-map-output.v1.schema.json", inputs: [{ file: `prototype/p2/parts/${partFile}`, sha256: sha(partBytes) }], settings };
-    if (write) {
-      mkdirSync(SCREEN_INVENTORIES, { recursive: true }); mkdirSync(PARTS_DIR, { recursive: true });
-      writeFileSync(join(SCREEN_INVENTORIES, screensFile), screensBytes); writeFileSync(join(PARTS_DIR, partFile), partBytes);
-      writeFileSync(join(PROTOTYPE, "p2", "jobs", `${jobId}.json`), JSON.stringify(job, null, 1) + "\n");
-    }
-    const worst = Math.round(Math.min(RUN_CAP_USD, costUsd(settings.model, partBytes.length + 8_000, settings.max_output_tokens) * settings.max_attempts) * 100) / 100;
-    const leftovers = inputs.map((x) => ({ input: x.input.id, type: x.input.type, part: x.input.part ?? null, label: captionOf(x.input.group, x.input.label) }));
-    return { jobId, leftovers, worst };
-  }
-
-  /** Starts the guarded screen_map job for the inputs left open (STUB: the path at US$0; LIVE: a paid call, confirmed at
-   *  its worst case). Runs after the request answers; the job's progress is read at GET /api/jobs/:id. */
-  async draftLeftovers(actor: Actor, editionId: string, body: unknown) {
-    need(actor, "author");
-    const b = parse(DraftLeftovers, body);
-    const ed = await this.db.formEdition.findUniqueOrThrow({ where: { id: editionId }, include: { form: true } });
-    if (ed.channel !== "ONLINE") fail("The screen_map job drafts an online version's inputs; a PDF edition's form fields are drafted from its file.");
-    const comb = await this.db.combination.findUniqueOrThrow({ where: { id: b.combinationId } });
-    if (comb.workspaceId !== ed.workspaceId || !(await this.db.combinationForm.findFirst({ where: { combinationId: comb.id, lineageKey: ed.form.formKey } }))) fail(`${comb.label} does not file ${ed.form.formKey}.`, HttpStatus.NOT_FOUND);
-    const first = await this.leftoverJob(ed, false);
-    // D3 (PR 7 review): a finished draft whose proposals are still waiting is reused at US$0, never paid for again.
-    if (b.mode === "LIVE") { const w = await this.waitingDraft(this.db, ed.id, first.leftovers.map((x) => x.input)); if (w) return this.reuseDraft(actor, w, ed, comb.id); }
-    if (b.mode === "LIVE" && b.confirmWorstUsd !== first.worst) conflict(`A live screen-map draft costs at most US$${first.worst.toFixed(2)} (${first.leftovers.length} inputs, up to 2 attempts): send that amount as confirmWorstUsd to go ahead.`);
-    let plan = first;
-    // One draft per online version at a time, decided under a lock on the version: two starts at the same moment make
-    // one job, never two (break/review: both answered 201 and, live, would have paid twice).
-    const j = await this.db.$transaction(async (tx) => {
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`screen_map:${ed.id}`}))`;
-      const active = await tx.draftingJob.findFirst({ where: { workspaceId: ed.workspaceId, kind: "screen_map", status: { in: ["QUEUED", "RUNNING"] }, detail: { path: ["edition_id"], equals: ed.id } } });
-      if (active) conflict("A screen-map draft of this online version is already running.");
-      // D3, again under the lock: a draft that finished while this start waited is reused, not paid for twice.
-      // The open inputs are read again here, under the lock (break m6): a person may have mapped some meanwhile.
-      if (b.mode === "LIVE") { const w = await this.waitingDraft(tx, ed.id, (await this.leftoverJob(ed, false)).leftovers.map((x) => x.input)); if (w) return w; }
-      // The job files are written here, under the lock, and the worst case confirmed is the one of exactly these files
-      // (review 11: it was checked against a plan made before the files were rewritten).
-      plan = await this.leftoverJob(ed, true);
-      if (b.mode === "LIVE" && b.confirmWorstUsd !== plan.worst) conflict(`The open inputs changed: a live screen-map draft now costs at most US$${plan.worst.toFixed(2)}; confirm that amount.`);
-      const { jobId, leftovers } = plan;
-      // QA-31: a live screen-map draft is its own AI work, so the one cancel (POST /ai/batches/:id/cancel) stops it before
-      // its paid call. A stub (no AI, US$0, seconds) has nothing to stop and makes no AI work entry (break m5).
-      const batch = b.mode === "LIVE" ? await tx.aiBatch.create({ data: { workspaceId: ed.workspaceId, idempotencyKey: `screen-map-${randomUUID()}`, operation: "screen_map", scopeKind: "online_version", scopeLabel: ed.editionLabel, mode: b.mode, status: "RUNNING", planSha256: "screen-map",
-        plan: json({ operation_label: "Screen-map draft with AI", capability_note: "The AI proposes the inputs a person left open on an approved online version; a person accepts each proposal. A screen-map draft is started again from its online version, not retried here.", targets: [], totals: { worst_usd: plan.worst, expected_usd: null } }),
-        spendLimitUsd: plan.worst, worstCaseUsd: plan.worst, startedBy: actor.id, message: "Screen-map draft running" } }) : null;
-      return tx.draftingJob.create({ data: { batchId: batch?.id ?? null, workspaceId: ed.workspaceId, combinationId: comb.id, kind: "screen_map", mode: b.mode, status: "RUNNING", message: `${b.mode === "LIVE" ? "Stub pass, then the AI call" : "Stub pass of the guarded path (no network, no cost)"} for ${leftovers.length} open input${leftovers.length === 1 ? "" : "s"} of ${ed.editionLabel}`, startedBy: actor.id, detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, sent_inputs: leftovers.map((x) => x.input), worst_usd: b.mode === "LIVE" ? plan.worst : 0 }) } });
-    });
-    // A draft found waiting under the lock is the one returned: never looked up again after the commit (break m6: an
-    // accept landing in between made that second look-up empty, a 500).
-    if ("waiting" in j) return this.reuseDraft(actor, j, ed, comb.id);
-    const { jobId, leftovers } = plan;
-    await this.audit.log(ed.workspaceId, actor.id, "started", "screen-map draft", ed.editionLabel, `${actor.name} started the ${b.mode === "LIVE" ? `live (worst case US$${plan.worst.toFixed(2)})` : "stub (US$0)"} screen-map draft of ${leftovers.length} open inputs of ${ed.editionLabel}`, undefined, comb.id);
-    void this.runLeftovers(j.id, ed, jobId, leftovers, b.mode === "LIVE" ? "live" : "stub").catch(() => undefined); // never an unhandled rejection (break M2)
-    return this.sources.job(j.id);
-  }
-
-  /** D3: the latest finished screen-map draft of this online version whose proposals are not all decided: a proposal
-   *  (mapped or "not a fact") not yet accepted, for an input still open. When the inputs open now are not all ones it
-   *  was sent, a new draft would pay for some of them again: refused until its proposals are decided (accepted, or the
-   *  inputs mapped by hand). Returns null when nothing is waiting. */
-  private async waitingDraft(db: Pick<Db, "draftingJob">, editionId: string, open: string[]) {
-    const jobs = await db.draftingJob.findMany({ where: { kind: "screen_map", status: "COMPLETED", detail: { path: ["edition_id"], equals: editionId } }, orderBy: { startedAt: "desc" } });
-    const openNow = new Set(open);
-    for (const j of jobs) {
-      const d = (j.detail ?? {}) as { proposals?: AiProposal[]; accepted_inputs?: string[]; sent_inputs?: string[] };
-      if (!d.proposals) continue;
-      const accepted = new Set(d.accepted_inputs ?? []);
-      const waiting = d.proposals.filter((p) => p.outcome !== "unresolved" && !accepted.has(p.input) && openNow.has(p.input));
-      if (!waiting.length) continue;
-      const sent = new Set(d.sent_inputs ?? d.proposals.map((p) => p.input));
-      const notSent = open.filter((i) => !sent.has(i));
-      if (notSent.length) conflict(`A finished AI draft of this online version has ${waiting.length} proposal${waiting.length === 1 ? "" : "s"} waiting (job ${j.id}): accept them, or map those inputs by hand, before a new draft. A new draft now would pay again for inputs that draft already answered.`);
-      return { job: j, waiting: waiting.length };
-    }
-    return null;
-  }
-
-  /** D3: the waiting draft is returned instead of a new paid call (US$0), with an audit line. */
-  private async reuseDraft(actor: Actor, w: { job: { id: string }; waiting: number }, ed: FormEdition, combinationId: string) {
-    await this.audit.log(ed.workspaceId, actor.id, "reused", "screen-map draft", ed.editionLabel, `${actor.name} asked for a new live screen-map draft of ${ed.editionLabel}; the finished draft with ${w.waiting} proposal${w.waiting === 1 ? "" : "s"} waiting was reused (no AI call, US$0)`, undefined, combinationId);
-    return { ...(await this.sources.job(w.job.id)), reused: true, reused_message: `No new AI call (US$0): the finished draft of these inputs still has ${w.waiting} proposal${w.waiting === 1 ? "" : "s"} waiting. Accept them, or map those inputs by hand; a new draft is possible once they are decided.` };
-  }
-
-  private async runLeftovers(id: string, ed: FormEdition, jobId: string, leftovers: { input: string; type: string; part: string | null; label: string }[], mode: "stub" | "live") {
-    const lastJson = (s: string) => { for (const l of s.trim().split("\n").reverse()) { try { return JSON.parse(l); } catch { /* not JSON */ } } return null; };
-    // The job ends, and its AI work (batch) with it: cancelled when a cancel was asked for, else as the job ended. A job a
-    // workspace reset removed meanwhile ends nowhere, quietly (break M2: the update threw, and the server process exited).
-    const done = async (data: Prisma.DraftingJobUpdateInput) => {
-      const j = await this.db.draftingJob.update({ where: { id }, data: { finishedAt: new Date(), ...data } }).catch(() => null);
-      if (j?.batchId) { const b = await this.db.aiBatch.findUnique({ where: { id: j.batchId } }); if (b) await this.db.aiBatch.update({ where: { id: b.id }, data: { status: b.cancelRequested ? "CANCELLED" : j.status === "COMPLETED" ? "COMPLETED" : "FAILED", finishedAt: new Date(), message: `${j.status.toLowerCase()} · spent US$${(j.costUsd ?? 0).toFixed(2)}` } }).catch(() => null); }
-      return j;
-    };
-    const wanted = () => this.sources.stillWanted(id);
-    try {
-      if (!(await wanted())) { await done({ status: "CANCELLED", costUsd: 0, message: "Cancelled before it started: nothing was sent. US$0." }); return; }
-      const stub = await this.sources.launchOnce(jobId, "stub"), sj = lastJson(stub.out);
-      if (stub.code !== 0) { await done({ status: "FAILED", message: `Stub pass failed: ${this.sources.plainRefusal(String(sj?.refused ?? stub.err).slice(-400))}. Nothing was drafted.` }); return; }
-      if (mode === "stub") { await done({ status: "COMPLETED", costUsd: 0, message: `Stub pass completed: the guarded path admitted the approved screens and the ${leftovers.length} open inputs. A stub has no AI content, so there is nothing to accept.` }); return; }
-      // QA-31: a cancel is honoured up to the moment the paid call starts, however long the launch waits for its turn.
-      const live = await this.sources.launchOnce(jobId, "live", wanted), lj = lastJson(live.out);
-      if (live.cancelled) { await done({ status: "CANCELLED", costUsd: 0, message: "Cancelled after the stub pass: the AI call was not made. Nothing was drafted. US$0." }); return; }
-      if (!lj?.run_file) { await done({ status: "FAILED", message: `The AI step did not run: ${String(lj?.refused ?? lj?.error ?? live.err.split("\n").filter(Boolean).slice(-2).join(" ")).slice(0, 400)}. Nothing was drafted.` }); return; }
-      const rec = JSON.parse(readFileSync(lj.run_file, "utf8"));
-      const library = (await this.libraryRows(ed.workspaceId)).filter((r) => r.status !== "RETIRED" || r.mergedIntoKey).map((r) => ({ key: r.canonicalFieldKey, valueType: r.valueType, aliases: r.aliases, mergedIntoKey: r.mergedIntoKey, answerListKey: r.answerListKey }));
-      const r = readScreenRun(rec, leftovers, library, factKeyProblem);
-      if (!r.ok) { await done({ status: "FAILED", costUsd: r.cost, runId: rec.drafting_run?.run_id, message: r.message }); return; }
-      const { ok: _ok, cost, message, ...out } = r;
-      // Cancelled while the AI call ran (break m1): the answer is kept in its run record but never offered for acceptance.
-      if (!(await wanted())) { await done({ status: "CANCELLED", costUsd: cost, runId: rec.drafting_run?.run_id, runFile: String(lj.run_file).replace(`${SOLUTION}/`, ""), message: `Cancelled while the AI call ran: its answer is kept in the run record but not offered for acceptance. Cost US$${cost.toFixed(2)}.` }); return; }
-      await done({ status: "COMPLETED", costUsd: cost, runId: rec.drafting_run?.run_id, runFile: String(lj.run_file).replace(`${SOLUTION}/`, ""), detail: json({ edition_id: ed.id, job_id: jobId, inputs: leftovers.length, sent_inputs: leftovers.map((x) => x.input), ...out }), message });
-    } catch (e) {
-      await done({ status: "FAILED", message: (e as Error).message.slice(0, 400) });
-    }
-  }
-
-  /** A person accepts the AI's proposals for open inputs (all, or the listed ones): each becomes a new draft version of
-   *  that input's row, origin AI_PROPOSAL, with the run and the person who accepted it. An input a person mapped in the
-   *  meantime is left as it is. */
-  async acceptAiProposals(actor: Actor, editionId: string, body: unknown) {
-    need(actor, "review");
-    const b = parse(AcceptAiProposals, body);
-    const j = await this.db.draftingJob.findUniqueOrThrow({ where: { id: b.jobId } });
-    const d = (j.detail ?? {}) as { edition_id?: string; proposals?: AiProposal[] };
-    if (j.kind !== "screen_map" || d.edition_id !== editionId) fail("That job is not a screen-map draft of this online version.", HttpStatus.NOT_FOUND);
-    if (j.status !== "COMPLETED" || !d.proposals) conflict(j.status === "APPLIED" ? "Already accepted." : "This draft has no proposals to accept (a stub pass, or it did not finish).");
-    const ed = await this.db.formEdition.findUniqueOrThrow({ where: { id: editionId } });
-    const pick = b.inputs ? new Set(b.inputs) : null;
-    const lib = new Map((await this.libraryRows(ed.workspaceId)).map((r) => [r.canonicalFieldKey, r]));
-    const inputOf = new Map(this.twinOf(ed.inventoryFile!).record.screens.flatMap((s) => s.inputs.map((i) => [i.id, i] as const)));
-    let accepted = 0; const kept: string[] = [];
-    await this.db.$transaction(async (tx) => {
-      // Accepted under a lock on the job: a part of the proposals may be accepted now and the rest later (break m13);
-      // each proposal is applied once.
-      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`screen_map_accept:${j.id}`}))`;
-      const now = await tx.draftingJob.findUniqueOrThrow({ where: { id: j.id } });
-      const done = new Set(((now.detail ?? {}) as { accepted_inputs?: string[] }).accepted_inputs ?? []);
-      if (now.status !== "COMPLETED") conflict("Already accepted.");
-      const take = d.proposals!.filter((x) => x.outcome !== "unresolved" && !done.has(x.input) && (!pick || pick.has(x.input)));
-      if (!take.length) conflict(pick ? "Those proposals are already accepted, or there is none for those inputs." : "Already accepted.");
-      for (const p of take) done.add(p.input);
-      const rest = d.proposals!.filter((x) => x.outcome !== "unresolved" && !done.has(x.input)).length;
-      await tx.draftingJob.update({ where: { id: j.id }, data: { status: rest ? "COMPLETED" : "APPLIED", detail: json({ ...(now.detail as object), accepted_inputs: [...done] }), message: rest ? now.message : `${now.message} Accepted by ${actor.name}.` } });
-      for (const p of take) {
-        const rows = await tx.formFieldMap.findMany({ where: { formEditionId: ed.id, dataPath: p.input } });
-        const now = [...rows].sort((x, y) => y.version - x.version)[0];
-        if (!now || now.outcome !== "unresolved") { kept.push(p.input); continue; }
-        const field = p.fact ? lib.get(p.fact) : undefined;
-        const input = inputOf.get(p.input);
-        // Checked again now: the field may have been retired, merged or changed type since the draft (break m8).
-        if (p.outcome === "mapped" && (!field || field.status === "RETIRED" || field.mergedIntoKey || !input || !compatible(input.type, input.part ?? null, field.valueType))) { kept.push(p.input); continue; }
-        const list = field?.answerListKey ? await tx.answerList.findFirst({ where: { workspaceId: ed.workspaceId, answerListKey: field.answerListKey }, include: { values: { orderBy: { sortOrder: "asc" } } }, orderBy: { version: "desc" } }) : null;
-        const om = list && input?.options?.length ? draftOptionMap(list.values.map((v) => ({ key: v.valueKey, label: v.label })), input.options) : null;
-        await revise(tx.formFieldMap, rows, p.outcome === "mapped"
-          ? { outcome: "mapped", canonicalFieldKey: p.fact, person: p.person, transform: p.transform, confidence: p.ai_confidence, evidenceQuote: `${p.why} · run ${j.runId}, accepted by ${actor.name}`.slice(0, 500), reason: null, origin: "AI_PROPOSAL", draftingRunId: j.runId, optionMap: om ? json(om.optionMap) : Prisma.DbNull }
-          : { outcome: "not_a_fact", canonicalFieldKey: null, person: null, transform: null, confidence: null, evidenceQuote: null, reason: `${p.why} · run ${j.runId}, accepted by ${actor.name}`.slice(0, 500), origin: "AI_PROPOSAL", draftingRunId: j.runId, optionMap: Prisma.DbNull, listPurpose: Prisma.DbNull }, actor.id, strip);
-        accepted++;
-      }
-    });
-    await this.audit.log(ed.workspaceId, actor.id, "accepted", "AI screen map", ed.editionLabel, `${actor.name} accepted ${accepted} AI proposal${accepted === 1 ? "" : "s"} for open inputs of ${ed.editionLabel} (run ${j.runId})${kept.length ? `; ${kept.length} left as they were (changed meanwhile)` : ""}`, undefined, j.combinationId);
-    return { accepted, left_as_they_were: kept };
   }
 
   /** The library field (other than `except`) that already answers to this label: an alias or its own name. */
@@ -775,41 +67,11 @@ export class Forms {
     return def!.editions.map((e) => ({ ...this.editionView(e), mapped: e._count.maps }));
   }
 
-  // ───────────────────────────────────────────────────────────── channels per combination
-  async setPortal(actor: Actor, combinationId: string, body: unknown) {
-    need(actor, "author");
-    const b = parse(SetPortal, body);
-    const before = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
-    if (before.portalKey === b.portal) return this.channels(combinationId);
-    // Claimed on the value the screen showed (break round 2 M2): a stale screen gets a 409, never a silent overwrite.
-    const from = b.from === undefined ? before.portalKey : b.from;
-    const n = await this.db.combination.updateMany({ where: { id: combinationId, portalKey: from }, data: { portalKey: b.portal } });
-    if (!n.count) conflict(`The portal was changed to ${portalLabel(before.portalKey)} while you were choosing. Your choice was not saved; check it and choose again.`);
-    await this.audit.log(before.workspaceId, actor.id, "changed", "combination", before.combinationKey, `${actor.name} set the portal of "${before.label}" to ${b.portal ? portalLabel(b.portal) : "none"}`, undefined, before.id);
-    return this.channels(combinationId);
-  }
-
   async setChannel(actor: Actor, combinationId: string, lineKey: string, body: unknown) {
     need(actor, "author");
     const b = parse(SetChannel, body);
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     await this.db.$transaction((tx) => this.channelOf(tx, c, lineKey, b.channel, b.from, actor), CHANNEL_TX).catch(raced);
-    return this.channels(combinationId);
-  }
-
-  /** "Use the default" (C1.7): every listed line to Online, in one transaction, each claimed on the channel the screen
-   *  showed; any line changed meanwhile, or whose default is not Online, refuses the whole set (review round 2). */
-  async useDefaults(actor: Actor, combinationId: string, body: unknown) {
-    need(actor, "author");
-    const b = parse(UseDefaults, body);
-    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
-    await this.db.$transaction(async (tx) => {
-      for (const l of b.lines) {
-        const row = await tx.combinationForm.findFirst({ where: { combinationId, lineageKey: l.line }, orderBy: { version: "desc" } });
-        if (!row || (await defaultChannelFor(tx, combinationId, row.govFormDefId)) !== "ONLINE") conflict(`${l.line}'s default is not Online for this combination's portal: nothing was changed.`);
-        await this.channelOf(tx, c, l.line, "ONLINE", l.from, actor);
-      }
-    }, CHANNEL_TX).catch(raced);
     return this.channels(combinationId);
   }
 
@@ -831,54 +93,6 @@ export class Forms {
     const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId } });
     const { snapshot } = await buildSnapshot(this.db, c.workspaceId, combinationId, "draft");
     return { ...channelsView(snapshot), problems: channelProblems(snapshot) };
-  }
-
-  /** The online forms an author added from this combination (C2.7), newest first, in the combination's words. */
-  async onlineForms(combinationId: string) {
-    // QA-43: an unknown combination is a 404, as a malformed id is, never an empty list.
-    if (!(await this.db.combination.findFirst({ where: { id: combinationId, workspaceId: await this.ws.id() }, select: { id: true } }))) fail("That combination does not exist.", HttpStatus.NOT_FOUND);
-    const rows = await this.db.portalCapture.findMany({ where: { combinationId }, orderBy: { createdAt: "desc" } });
-    return rows.map((c) => ({ ...this.view(c), status_words: CAPTURE_STATUS_WORDS[c.status] ?? c.status }));
-  }
-
-  /** For each form of a combination (its lines, its attached forms, the online forms added from it): which source
-   *  drafting reads (C2.10, P-62 §1), what exists of each, and the per-form choice. */
-  async draftingSources(combinationId: string) {
-    const c = await this.db.combination.findUniqueOrThrow({ where: { id: combinationId }, include: { attachments: { where: { kind: "Form", status: { not: "HELD" } }, select: { edition: true } } } }); // official or approved in the product (P-80)
-    const lines = await this.db.combinationForm.findMany({ where: { combinationId }, select: { lineageKey: true } });
-    const captured = await this.db.portalCapture.findMany({ where: { combinationId, status: { not: "ABANDONED" } }, select: { formKey: true } });
-    const codes = [...new Set([...lines.map((l) => l.lineageKey), ...c.attachments.map((a) => (a.edition ?? "").split(" (")[0]).filter(Boolean), ...captured.map((x) => x.formKey)])].sort();
-    const defs = await this.db.govFormDef.findMany({ where: { workspaceId: c.workspaceId, formKey: { in: codes } }, include: { editions: { include: { _count: { select: { maps: true } } } } } });
-    return { portal: c.portalKey, portal_label: c.portalKey ? portalLabel(c.portalKey) : null, forms: codes.map((code) => {
-      const def = defs.find((d) => d.formKey === code);
-      const pdf = newestEdition((def?.editions ?? []).filter((e) => e.channel !== "ONLINE")) ?? null;
-      const online = (def?.editions ?? []).filter((e) => e.channel === "ONLINE" && !!c.portalKey && e.portalKey === c.portalKey).sort((a, b) => (b.capturedOn?.getTime() ?? 0) - (a.capturedOn?.getTime() ?? 0))[0] ?? null;
-      const choice = (def?.draftFrom ?? "PDF_FIRST") as DraftFrom;
-      const reads = !def ? "Not in the library yet: nothing to draft from until its file or its screens are added."
-        : choice === "ONLINE_ONLY" ? (online ? `Reads the ${portalLabel(online.portalKey)} screens (${online.editionLabel}) alone; the PDF version is not reused.` : !c.portalKey ? "Online screens only, but this combination has no portal yet: choose its portal first." : `Online screens only, but no online version from the ${portalLabel(c.portalKey)} has been approved yet: nothing to draft from.`)
-        : pdf && online ? `Reads the PDF version (${pdf.editionLabel}) first, then the ${portalLabel(online.portalKey)} screens for what differs.`
-        : pdf ? `Reads the PDF version (${pdf.editionLabel})${c.portalKey ? `; no online version from the ${portalLabel(c.portalKey)} yet` : ""}.`
-        : online ? `Reads the ${portalLabel(online.portalKey)} screens (${online.editionLabel}): the library has no PDF version.` : "No PDF version or online version yet.";
-      return { code, in_library: !!def, draft_from: choice, draft_from_words: DRAFT_FROM_WORDS[choice], pdf: pdf ? { edition: pdf.editionLabel, mapped: pdf._count.maps } : null, online: online ? { edition: online.editionLabel, portal: online.portalKey, mapped: online._count.maps } : null, reads };
-    }) };
-  }
-
-  /** The author chooses which source drafting reads for one library form (C2.10); it applies wherever the form is used. */
-  async setDraftFrom(actor: Actor, formKey: string, body: unknown) {
-    need(actor, "author");
-    const b = parse(SetDraftFrom, body);
-    const workspaceId = await this.ws.id();
-    // "imm 5707", "IMM-5707" and "IMM  5707" are the library's IMM 5707 (as captures read them; break round 2 m4).
-    const def = (await this.db.govFormDef.findMany({ where: { workspaceId } })).find((d) => compact(d.formKey) === compact(formKey));
-    if (!def) fail(`${formCode(formKey)} is not in the library.`, HttpStatus.NOT_FOUND);
-    formKey = def!.formKey;
-    if (def!.formKind !== "data_form") fail(`${formKey} is a checklist: nothing is drafted from it.`);
-    if (b.from && def!.draftFrom !== b.from) conflict(`What drafting reads for ${formKey} was changed while you were choosing. Your choice was not saved; check it and choose again.`);
-    if (def!.draftFrom === b.draftFrom) return { form: formKey, draft_from: b.draftFrom, draft_from_words: DRAFT_FROM_WORDS[b.draftFrom] };
-    const n = await this.db.govFormDef.updateMany({ where: { id: def!.id, draftFrom: def!.draftFrom }, data: { draftFrom: b.draftFrom } });
-    if (!n.count) conflict(`What drafting reads for ${formKey} was changed at the same moment: refresh to see it.`);
-    await this.audit.log(workspaceId, actor.id, "changed", "form", formKey, `${actor.name} set what drafting reads for ${formKey}: ${DRAFT_FROM_WORDS[b.draftFrom]}`);
-    return { form: formKey, draft_from: b.draftFrom, draft_from_words: DRAFT_FROM_WORDS[b.draftFrom] };
   }
 
   // ───────────────────────────────────────────────────────────── library: aliases, answer lists, option maps (P-65)
@@ -954,7 +168,7 @@ export class Forms {
     return { key, answer_list: null };
   }
 
-  /** Drafts the option maps of one edition (PDF or online) for every mapped form field whose shared field has an
+  /** Drafts the option maps of one PDF edition for every mapped form field whose shared field has an
    *  answer list, without AI. A published row gets a new draft version; released content is untouched. */
   async draftOptionMaps(actor: Actor, editionId: string) {
     need(actor, "author");
@@ -1015,13 +229,12 @@ export class Forms {
     return { form_field: dataPath, list_purpose: purpose, words };
   }
 
-  /** A form field's own choices: the online twin's (code, label); a PDF field's from its inventory (resolved options),
-   *  else from its field map's code list ("code_list:… (Married=5, …)"), as the filler reads them (review 1). */
-  private formOptions(ed: { channel: string; inventoryFile: string | null }, maps: { dataPath: string; transform: string | null }[]) {
+  /** A PDF form field's own choices: from its inventory (resolved options), else from its field map's code list
+   *  ("code_list:… (Married=5, …)"), as the filler reads them (review 1). */
+  private formOptions(ed: { inventoryFile: string | null }, maps: { dataPath: string; transform: string | null }[]) {
     const out = new Map<string, FormOption[]>();
     if (!ed.inventoryFile) return out;
-    const inv = JSON.parse(readFileSync(join(SOLUTION, ed.inventoryFile), "utf8")) as { record?: CaptureRecord; fields?: { data_path?: string; options_resolved?: [string, string][] | null; options?: unknown }[] };
-    if (ed.channel === "ONLINE") { for (const s of inv.record?.screens ?? []) for (const i of s.inputs) if (i.options?.length) out.set(i.id, i.options); return out; }
+    const inv = JSON.parse(readFileSync(join(SOLUTION, ed.inventoryFile), "utf8")) as { fields?: { data_path?: string; options_resolved?: [string, string][] | null; options?: unknown }[] };
     const box = new Map((inv.fields ?? []).filter((f) => f.data_path).map((f) => [f.data_path!, f]));
     for (const m of maps) { const o = pdfOptions(box.get(m.dataPath) ?? {}, m.transform); if (o.length) out.set(m.dataPath, o); }
     return out;
@@ -1118,47 +331,19 @@ export class Forms {
 }
 
 type H = string | undefined;
-const canonicalIds = (inputs: { input: { id: string } }[]) => inputs.map((x) => x.input.id).join("|");
-// dotfiles "allow": lane copies live under .claude/worktrees/, and a hidden folder in the path made the download a 404.
-const send = async (res: Response, file: { path: string; name: string }) => { if (!existsSync(file.path)) throw new HttpException("Not found", HttpStatus.NOT_FOUND); res.download(file.path, file.name, { dotfiles: "allow" }); };
 
 @Controller("api")
 export class FormsController {
   constructor(@Inject(Forms) private readonly f: Forms, @Inject(Db) private readonly db: Db, @Inject(Intake) private readonly intake: Intake, @Inject(Sources) private readonly sources: Sources, @Inject(Checklists) private readonly checklists: Checklists) {}
-  /** P-93: the forms lane's part of the demo story (DEMO.md rows 1, 2, 7, 13 on the APR Portal), for the runtime lane's seed. */
-  @Post("demo/forms-story") story(@Headers("x-actor") a: H, @Body() b: { combinationId?: string; online?: boolean } | undefined) {
-    return seedFormsStory({ db: this.db, forms: this.f, intake: this.intake, sources: this.sources, checklists: this.checklists }, actorOf(a), String(b?.combinationId ?? ""), { online: b?.online === true });
+  /** P-93: the forms lane's part of the demo story (DEMO.md rows 1 and 7), for the runtime lane's seed. */
+  @Post("demo/forms-story") story(@Headers("x-actor") a: H, @Body() b: { combinationId?: string } | undefined) {
+    return seedFormsStory({ db: this.db, intake: this.intake, sources: this.sources, checklists: this.checklists }, actorOf(a), String(b?.combinationId ?? ""));
   }
-  @Get("portals") portals() { return this.f.portals(); }
-  @Get("captures") captures(@Query("take") take?: string, @Query("skip") skip?: string) { return this.f.captures(Number(take ?? 50), Number(skip ?? 0)); }
-  @Post("captures") create(@Headers("x-actor") a: H, @Body() b: unknown, @Res({ passthrough: true }) res: Response) { return this.f.createCapture(actorOf(a), b).then((r) => { res.status(r.reused ? 200 : 201); return r; }); }
-  @Get("captures/:id") capture(@Param("id") id: string) { return this.f.capture(id); }
-  @Post("captures/:id/screens") @UseInterceptors(AnyFilesInterceptor({ limits: { fileSize: CAPTURE_LIMITS.fileMb * 1024 * 1024, files: CAPTURE_LIMITS.files } }))
-  screens(@Headers("x-actor") a: H, @Param("id") id: string, @UploadedFiles() files: Upload[]) { return this.f.addScreens(actorOf(a), id, files); }
-  @Delete("captures/:id/screens/:order") removeScreen(@Headers("x-actor") a: H, @Param("id") id: string, @Param("order") o: string, @Query("revision") rev?: string) { return this.f.removeScreen(actorOf(a), id, Number(o), rev === undefined ? undefined : Number(rev)); }
-  @Post("captures/:id/abandon") abandon(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.abandon(actorOf(a), id, b); }
-  @Post("captures/:id/confirm") confirm(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.confirmRecheck(actorOf(a), id); }
-  @Post("captures/:id/finish") finish(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.finish(actorOf(a), id); }
-  @Post("captures/:id/approve") approve(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.approve(actorOf(a), id); }
-  @Post("captures/:id/return") ret(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.returnCapture(actorOf(a), id, b); }
-  @Get("captures/:id/review") async review(@Param("id") id: string, @Res() res: Response) { await send(res, await this.f.reviewDocument(id)); }
   @Get("library/forms/:code/editions") editions(@Param("code") code: string) { return this.f.editions(code); }
-  @Post("online-versions/:id/screen-map/draft") draft(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.draftScreenMapFor(actorOf(a), id); }
-  @Patch("online-versions/:id/screen-map") resolve(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.resolveInput(actorOf(a), id, b); }
-  @Post("online-versions/:id/screen-map/ai") draftAi(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.draftLeftovers(actorOf(a), id, b); }
-  @Post("online-versions/:id/screen-map/ai/accept") acceptAi(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.acceptAiProposals(actorOf(a), id, b); }
-  @Post("online-versions/:id/screen-map/accept") accept(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.acceptScreenMap(actorOf(a), id, b); }
   @Post("editions/:id/option-maps/draft") optionMaps(@Headers("x-actor") a: H, @Param("id") id: string) { return this.f.draftOptionMaps(actorOf(a), id); }
   @Patch("editions/:id/option-maps") setOptionMap(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setOptionMap(actorOf(a), id, b); }
   @Patch("editions/:id/list-purposes") setListPurpose(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setListPurpose(actorOf(a), id, b); }
   @Get("combinations/:id/channels") channels(@Param("id") id: string) { return this.f.channels(id); }
-  @Patch("combinations/:id/portal") portal(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.setPortal(actorOf(a), id, b); }
-  /** The spreadsheet template for recording blank portal screens by hand (P-66 way C). */
-  @Get("capture-template.csv") template(@Res() res: Response) { res.type("text/csv").setHeader("content-disposition", 'attachment; filename="portal-capture-template.csv"'); res.send(readFileSync(join(STUDIO, "samples", "portal-capture-template.csv"))); }
-  @Get("combinations/:id/online-forms") onlineForms(@Param("id") id: string) { return this.f.onlineForms(id); }
-  @Get("combinations/:id/drafting-sources") draftingSources(@Param("id") id: string) { return this.f.draftingSources(id); }
-  @Patch("library/forms/:code/draft-from") draftFrom(@Headers("x-actor") a: H, @Param("code") code: string, @Body() b: unknown) { return this.f.setDraftFrom(actorOf(a), code, b); }
-  @Post("combinations/:id/channels/use-defaults") useDefaults(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: unknown) { return this.f.useDefaults(actorOf(a), id, b); }
   @Patch("combinations/:id/forms/:line/channel") channel(@Headers("x-actor") a: H, @Param("id") id: string, @Param("line") l: string, @Body() b: unknown) { return this.f.setChannel(actorOf(a), id, l, b); }
   @Post("library/fields/:key/aliases") alias(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.f.addAlias(actorOf(a), k, b); }
   @Post("library/fields/:key/answer-list") link(@Headers("x-actor") a: H, @Param("key") k: string, @Body() b: unknown) { return this.f.linkAnswerList(actorOf(a), k, b); }

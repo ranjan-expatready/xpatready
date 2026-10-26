@@ -1,6 +1,6 @@
 {
  "job_id": "studio-fieldmap-imm5257e-p2of5-9bf0d1004385",
- "path_code_sha256": "9b69f9dc277c7023136eb3b58cd4120ee4f77e26d87b6d221aae9a1732763d75",
+ "path_code_sha256": "fa8a40f34a5364d7ca0dc2737aa9e3992c56803dacfabe267e587c35aa1118b5",
  "screening_sources": [
   {
    "file": "prototype/expected/slice-1-field-map.json",
@@ -19,8 +19,8 @@
    "sha256": "6a3f80b9e8a8e980ed7af2f8038c042c4631bc51fcea5f3a9779921e2051de22"
   }
  ],
- "digest_sha256": "a161fbd8202a33af99f4c33a7c82ff1ee757bc8a6361e50b193d52ae384335e1",
- "run_id": "studio-fieldmap-imm5257e-p2of5-9bf0d1004385-stub-20261025t114326584z-cfa7eb",
- "at": "2026-10-25T11:43:26.904Z",
+ "digest_sha256": "ae8d135631aaf356f131c9c04666203a32778f56e8c921407ec4f1c19833b497",
+ "run_id": "studio-fieldmap-imm5257e-p2of5-9bf0d1004385-stub-20261026t134615486z-71e83e",
+ "at": "2026-10-26T13:46:16.369Z",
  "stub_calls": 1
 }

@@ -1,14 +1,12 @@
 // Screen 02 slice 1: "To review" (P-79). One list of what waits for a person, read from the records the other screens
-// already keep (no new table): AI proposals, submitted combinations, portal captures, screen maps, merges, held files and
-// new editions, plus AI work still running. Each item says the one step the asking person can take, or who acts next;
+// already keep (no new table): AI proposals, submitted combinations, merges, held files and new editions (portal
+// captures and screen maps are parked with the browser extension, W1-02), plus AI work still running. Each item says the one step the asking person can take, or who acts next;
 // the endpoint that takes the step checks the same rule again (BR-9).
 import { Controller, Get, Headers, HttpException, HttpStatus, Inject, Injectable, Query } from "@nestjs/common";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { KIND_WORDS, ReviewQueueQuery, type QueueFilter, type QueueItem, type QueueKind, type ReviewQueue } from "../../contracts/review-queue.ts";
 import { problemFromZod } from "../../contracts/programs.ts";
 import { buildSnapshots, effective, type Snapshot } from "../../engine/snapshot.ts";
-import { ACTORS, actorOf, Db, VAR, Workspace, type Actor } from "./core.ts";
+import { ACTORS, actorOf, Db, Workspace, type Actor } from "./core.ts";
 import { Studio } from "./studio.ts";
 import { itemsOf, unapprovedAdds, unapprovedWhy } from "./library-changes.ts";
 
@@ -40,15 +38,13 @@ export class ReviewQueueService {
 
   private async items(actor: Actor): Promise<QueueItem[]> {
     const workspaceId = await this.ws.id();
-    const [nodes, combos, jobs, pending, batches, subs, captures, online, merges, held, changes] = await Promise.all([
+    const [nodes, combos, jobs, pending, batches, subs, merges, held, changes] = await Promise.all([
       this.db.programDef.findMany({ where: { workspaceId }, select: { id: true, programNodeKey: true, parentNodeKey: true, nodeKind: true, label: true } }),
       this.db.combination.findMany({ where: { workspaceId }, select: { id: true, programDefId: true, label: true } }),
       this.db.draftingJob.findMany({ where: { workspaceId, kind: { in: ["field_map", "reuse_map"] } }, orderBy: { startedAt: "desc" }, select: { id: true, combinationId: true, attachmentId: true, kind: true, mode: true, status: true, costUsd: true, startedBy: true, startedAt: true, finishedAt: true, detail: true } }),
       this.db.normalizationItem.groupBy({ by: ["jobId"], where: { workspaceId, decision: "PENDING" }, _count: true }),
       this.db.aiBatch.findMany({ where: { workspaceId, status: { in: ["QUEUED", "RUNNING"] } }, include: { jobs: { select: { status: true, costUsd: true } } } }),
       this.db.reviewSubmission.findMany({ where: { workspaceId }, orderBy: { submittedAt: "desc" } }),
-      this.db.portalCapture.findMany({ where: { workspaceId, status: "HELD" } }),
-      this.db.formEdition.findMany({ where: { workspaceId, channel: "ONLINE" }, select: { id: true, editionLabel: true, capturedOn: true, maps: { select: { id: true }, take: 1 } } }),
       this.db.fieldMerge.findMany({ where: { workspaceId, status: "PROPOSED" } }),
       this.db.intakeItem.findMany({ where: { workspaceId, status: "HELD" } }),
       this.db.libraryChange.findMany({ where: { workspaceId, status: { in: ["WAITING", "RETURNED"] } } }),
@@ -99,25 +95,6 @@ export class ReviewQueueService {
         else if (/changed after it was submitted/.test(gate.why)) out.push({ ...base, what: `The draft changed after it was submitted. ${gate.why.split(": ")[1] ?? ""}`.trim(), ...(holds(actor, "review") ? { state: "needs" as const, waiting_on: null, next: { label: "Submit again", href, note: null } } : { state: "waiting" as const, waiting_on: "A content publisher submits it again.", next: null }) });
         else out.push({ ...base, what: `Submitted with ${plural(changes, "change")}. ${gate.why}`, ...(holds(actor, "sme") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Review and sign", href, note: null } } : { state: "waiting" as const, waiting_on: mine ? "The content reviewer signs it: not the person who submitted it." : "The content reviewer signs the changes that need the SME duty.", next: null }) });
       }
-    }
-
-    // Portal captures held for a second person (P-66): never the person who captured it.
-    for (const c of captures) {
-      const mine = c.capturedBy === actor.id, screens = ((c.record as { screens?: unknown[] } | null)?.screens ?? []).length;
-      const diffs = Array.isArray(c.difference) ? c.difference.length : 0;
-      out.push({ id: `capture:${c.id}`, kind: "capture", title: `${c.formKey} online · ${c.title}`, by: nameOf(c.capturedBy), at: c.createdAt.toISOString(), cost_usd: null,
-        what: `${plural(screens, "screen")} captured from blank pages by ${nameOf(c.capturedBy)}${c.changesEditionId ? ` · ${plural(diffs, "difference")} from the approved version` : " · a new online version"}. Not used until a second person approves it.`,
-        ...(holds(actor, "review") && !mine ? { state: "needs" as const, waiting_on: null, next: { label: "Approve or return", href: `/review/capture/${c.id}`, note: null } } : { state: "waiting" as const, waiting_on: mine ? "You captured it; a different person approves or returns it." : "A content publisher approves or returns it.", next: null }) });
-    }
-
-    // Online versions without a screen map: drafted (waiting for a person to accept) or not drafted yet (no AI).
-    for (const e of online) {
-      if (e.maps.length) continue;
-      const drafted = existsSync(join(VAR("demo"), "screen-maps", `${e.id}.json`));
-      const duty = drafted ? "review" : "author";
-      out.push({ id: `screen-map:${e.id}`, kind: "screen_map", title: e.editionLabel, by: null, at: (e.capturedOn ?? new Date(0)).toISOString(), cost_usd: drafted ? 0 : null,
-        what: drafted ? "Screen map drafted without AI: a person accepts the matches and maps what is left." : "Approved online version with no screen map yet. Drafting it reuses the PDF twin and the library first (no AI).",
-        ...(holds(actor, duty) ? { state: "needs" as const, waiting_on: null, next: { label: drafted ? "Review the screen map" : "Draft the screen map", href: `/review/screen-map/${e.id}`, note: null } } : { state: "waiting" as const, waiting_on: drafted ? "A content publisher accepts it." : "The configuration author drafts it.", next: null }) });
     }
 
     // Merges proposed for a second person (P-65).

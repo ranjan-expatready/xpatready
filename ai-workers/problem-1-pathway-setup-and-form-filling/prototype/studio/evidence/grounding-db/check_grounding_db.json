@@ -1,7 +1,7 @@
 {
- "at": "2026-10-25T11:40:18.704Z",
- "port": 4440,
- "database": "xr_studio_screens_g",
+ "at": "2026-10-26T13:44:00.360Z",
+ "port": 4457,
+ "database": "xr_studio_forms_gdb",
  "pass": 30,
  "fail": 0,
  "log": [
@@ -59,8 +59,8 @@
    "name": "one combination per last-level node, also under concurrent creates: one created, the other returns it",
    "ok": true,
    "detail": [
-    201,
-    200
+    200,
+    201
    ]
   },
   {
@@ -152,7 +152,7 @@
     {
      "key": "individual.visitors.visitor_visa",
      "kind": "Row details",
-     "label": "name, path, portal, source basis or allowed locations (no line changed)",
+     "label": "name, path, source basis or allowed locations (no line changed)",
      "change": "changed",
      "needs_sme": false
     }
@@ -183,7 +183,7 @@
   {
    "name": "isolated copy: sample inputs load through the normal paths: 2 pathways, 11 programs, 6 combinations set up",
    "ok": true,
-   "detail": 6.225
+   "detail": 8.355
   },
   {
    "name": "a person makes the given-names question conditional (saved as draft)",

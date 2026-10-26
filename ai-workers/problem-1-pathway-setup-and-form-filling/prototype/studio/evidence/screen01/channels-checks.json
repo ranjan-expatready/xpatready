@@ -1,12 +1,12 @@
 {
- "at": "2026-10-25T11:42:12.504Z",
- "pass": 42,
+ "at": "2026-10-26T13:32:56.834Z",
+ "pass": 16,
  "fail": 0,
  "log": [
   {
    "name": "setup: sample inputs load",
    "ok": true,
-   "detail": 11.758
+   "detail": 7.17
   },
   {
    "name": "C1.6 pass: every line shows its channel (PDF upload today) and the combination its filing method",
@@ -62,187 +62,36 @@
    "ok": true
   },
   {
-   "name": "C1.7 fail: a line filed Online with no portal blocks release, in plain words",
+   "name": "C1.6 P-107 pass: a line filed Online is saved and says it needs the browser extension (later wave): a warning, never \"no portal\" or an error",
    "ok": true,
    "detail": [
-    "IMM 5707 is filed Online, but this combination has no portal yet: choose the portal it is filed through."
+    "IMM 5707 is filed Online: it needs the browser extension (later wave), so the product does not fill it yet. File it as a PDF upload to fill its PDF."
    ]
   },
   {
-   "name": "C1.7 pass: the author picks the combination's portal; the page names it",
-   "ok": true
-  },
-  {
-   "name": "round 2 M1 pass: on a Live combination the portal change is a draft change, listed for review (\"Row details\")",
-   "ok": true,
-   "detail": [
-    {
-     "kind": "Row details",
-     "key": "wp.family",
-     "change": "changed",
-     "needs_sme": false,
-     "label": "name, path, portal, source basis or allowed locations (no line changed)"
-    }
-   ]
-  },
-  {
-   "name": "round 2 M2 fail: a portal save from a screen that still showed no portal is refused",
-   "ok": true,
-   "detail": "The portal was changed to IRCC Portal while you were choosing. Your choice was not saved; check it and choose again."
-  },
-  {
-   "name": "C1.7 fail: Online with the portal but no approved online version still blocks release, saying what to do",
-   "ok": true,
-   "detail": [
-    "IMM 5707 is filed Online, but the library has no approved online version captured from the IRCC Portal: capture its screens, or file it as a PDF upload."
-   ]
-  },
-  {
-   "name": "C1.7: with no approved online version the default stays PDF upload",
-   "ok": true
-  },
-  {
-   "name": "C1.7 fail: a portal not on the list is refused",
-   "ok": true
-  },
-  {
-   "name": "C1.7 fail: only an author picks the portal",
-   "ok": true
-  },
-  {
-   "name": "C2.7 fail: an online form is only added from an existing combination",
-   "ok": true,
-   "detail": "That combination does not exist."
-  },
-  {
-   "name": "C2.7 fail: a screen holding an answer is refused and not kept; the online form shows as still being captured",
-   "ok": true,
-   "detail": "Being captured: add the remaining screens, then finish"
-  },
-  {
-   "name": "C2.7 pass: blank screens added and finished from the combination show \"Awaiting a second person\" there",
-   "ok": true,
-   "detail": {
-    "id": "f039148a-6599-4357-b31f-f35e65fc3f45",
-    "form": "IMM 5707",
-    "title": "Family information (online)",
-    "portal": "ircc_portal",
-    "portalLabel": "IRCC Portal",
-    "status": "HELD",
-    "statusWords": "Awaiting a second person",
-    "detail": "Held for a second person: a new online version. Not used until approved.",
-    "at": "2026-10-25T11:42:08.107Z"
-   }
-  },
-  {
-   "name": "C2.7: while it waits it is not an online version (nothing in the library yet)",
-   "ok": true
-  },
-  {
-   "name": "C2.7 fail: the person who added it cannot approve it",
-   "ok": true
-  },
-  {
-   "name": "C2.7 pass: a second person approves it; the combination shows it approved, as an online version in the library",
-   "ok": true,
-   "detail": "Approved: an online version in the library"
-  },
-  {
-   "name": "C1.7 pass: with an approved online version from its portal, the line's default channel is Online",
-   "ok": true
-  },
-  {
-   "name": "C1.7: the default is shown, never applied silently (the line stays PDF upload until the author chooses)",
-   "ok": true
-  },
-  {
-   "name": "C1.7 fail: \"use the default\" for a line whose default is not Online changes nothing at all (one transaction)",
-   "ok": true,
-   "detail": "IMM 1295's default is not Online for this combination's portal: nothing was changed."
-  },
-  {
-   "name": "C1.7 fail: \"use the default\" from an out-of-date screen is refused",
-   "ok": true
-  },
-  {
-   "name": "C1.7 pass: the author applies the default: the line is filed Online and the filing method is Mixed",
+   "name": "C1.6 P-107: the filing method follows (Mixed: online and PDF) on the page and the Programs row",
    "ok": true,
    "detail": "Mixed: online and PDF"
   },
   {
-   "name": "C2.7 fail: a form the library has only online cannot be added to a combination without a portal, and the message says to choose the portal",
+   "name": "C1.6 P-107 fail case: an Online line is never a \"cannot be filed\" line in the missing list (the warning does not block)",
    "ok": true,
-   "detail": "IMM 9101 is in the library only as an online version (IRCC Portal). Choose this combination's portal first, then add it; or upload the IRCC PDF."
+   "detail": []
   },
   {
-   "name": "C2.7 pass: with the portal set, \"+ Add\" makes it a form line filed Online",
-   "ok": true,
-   "detail": {
-    "added": "form_line",
-    "form": "IMM 9101",
-    "edition": "IMM 9101 online · IRCC Portal · 2026-10-25"
-   }
+   "name": "C1.6 P-102: the summary carries no portal, no default channel and no online forms",
+   "ok": true
   },
   {
-   "name": "review 2 should 2: an Online line without its screen map is one filing line in the missing list, with its own step (not \"map the PDF\" or \"fix a rule\")",
+   "name": "C1.6 P-102 fail: the parked portal choice, \"use the default\", \"Add an online form\" and what drafting reads online answer 404; nothing changes",
    "ok": true,
    "detail": [
-    "No questions yet for Applicant, Spouse or partner (travelling), Child (travelling). Next step: Add 1 form from the library.",
-    "1 form cannot be filed as set (first: IMM 9101 is filed Online and has an approved online version from the IRCC Portal, but no screen map yet: draft and accept it (no AI).) Next step: change how it is filed (Overview › Forms), or add what it needs."
+    404,
+    404,
+    404,
+    404,
+    404
    ]
-  },
-  {
-   "name": "C2.10 pass: by default drafting reads the PDF version first, then the portal's screens for what differs",
-   "ok": true,
-   "detail": "Reads the PDF version (IMM 5707 (01-2023)) first, then the IRCC Portal screens for what differs."
-  },
-  {
-   "name": "C2.10 pass: the author changes it per form; the page says so and screen-map drafting no longer reuses the PDF version",
-   "ok": true,
-   "detail": {
-    "pdfFirst": "IMM 5707 (01-2023)",
-    "pdfTwin": 2,
-    "onlineOnly": {
-     "inputs": 13,
-     "mapped": 0,
-     "same_path": 0,
-     "pdf_twin": 0,
-     "alias": 0,
-     "leftover": 13,
-     "not_a_fact": 0,
-     "ai_calls": 0
-    }
-   }
-  },
-  {
-   "name": "round 2 m4: on a combination without a portal the words say so (never another portal's screens)",
-   "ok": true,
-   "detail": "Online screens only, but this combination has no portal yet: choose its portal first."
-  },
-  {
-   "name": "round 2 m4 pass: a code written another way is the library's form",
-   "ok": true
-  },
-  {
-   "name": "round 2 M2 fail: a drafting-source save from an out-of-date screen is refused",
-   "ok": true,
-   "detail": "What drafting reads for IMM 5707 was changed while you were choosing. Your choice was not saved; check it and choose again."
-  },
-  {
-   "name": "review 2 should 4 fail: nothing is drafted from a checklist, so it has no drafting choice",
-   "ok": true
-  },
-  {
-   "name": "C2.10 fail: a choice that is not one of the two is refused on its field",
-   "ok": true
-  },
-  {
-   "name": "C2.10 fail: only an author changes it",
-   "ok": true
-  },
-  {
-   "name": "C2.10 fail: a form that is not in the library has no choice to make",
-   "ok": true
   }
  ]
 }

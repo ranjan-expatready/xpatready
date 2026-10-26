@@ -6,14 +6,15 @@
 
 Command: `/next forms` in this lane's own copy (`LANES.md`). This lane writes this file; the Lead adds hand-back lines on `main`.
 
-current_item: F3-add-form-wizard (slices 1–4 built: F3a-0, F3a-1c, F3c-1 without X4, F3c-2)
+current_item: W1-02-park-extension (Park the browser extension, P-102, P-107)
 stage: CHECK
-owner: Lead
-next_action: Lead takes the PR #36 review fixes into PR #36 and merges; next pass: review-2 Minor 2 (queries per target) and reader-side id checks; slices 5-8 wait for runtime Screen 03 and the screens lane on review-queue.ts. DEMO row 1 stays rejected until the runtime lane demo.ts keepForm change lands
+owner: Builder
+next_action: launch screen-reviewer and screen-breaker on W1-02 (contracts, removed routes, data, roles; PDF paths unchanged); then owner Lead. Lead: drop the dormant tables by migration now or at W6? qa lane parks its 4 probes that drive parked code (build-notes)
 blocked_by: none
 updated: 2026-10-26
 
 ## Log (last 10 lines)
+- 2026-10-26 · W1-02 · BUILD → CHECK · applied Lead note 2026-10-26 evening (wave 1 reset): extension parked: extension/, capture, pairing, online fill, APR twin and screen maps, Extension page, Add an online form, portal choice, use-defaults, drafting-sources, capture/screen-map review pages and queue kinds, re-capture removed from app, API, tests, seed (DEMO rows 2, 13) and demo; Online stays a choice with a later-wave warning (P-107); no schema change (dormant tables, build-notes). Checks: channels 53, demo 25, f3a0 7, slice2 41, slice2b 36, f1p 16, ai launch 39, s01 channels 16, s01 api 135, s01 rules 67, s02 slice2 56, s01 browser 129, smallfix, s02 browser ×2 all; PDF regression engine 38, ai drafting 48, f3a1c 33, p80 41, pdf hardening 49, s02 fix 59, release race pass, grounding 30, ai orchestration 22, runtime r1d 63; graph --check 0. US$0.
 - 2026-10-26 · F3 · FIX → CHECK · PR #36 review: retry shares the launch guard (locks and re-check before insert; f3a1c 33/33), re-capture coverage worded as version-wide with matches kept apart, Check before sending shows ids, help, format and choice codes (f3c 35/35). US$0. Owner → Lead.
 - 2026-10-26 · F3 · FIX → CHECK · applied Lead check (review-2: 8.5/10, 1 Major): guard counts only queued, running, done or applied steps (a blocked step never hides a waiting draft; f3a1c 30/30); re-capture summary counts its own undecided questions only (f3c 33/33); f3a1c removes its job file; f3c2 20, apr 50, slice2 53. US$0. Owner → Lead.
 - 2026-10-26 · F3 · FIX → CHECK · wider suites green on the fixes: apr 50, f2d 37, demo 27, f2a_api 34, f2a reader 62, f2b 52, f2c 38, channels 106, slice2 53, ai launch paths 56, Screen 01 browser 136; graph --check exit 0. US$0. Owner → Lead.
@@ -23,4 +24,3 @@ updated: 2026-10-26
 - 2026-10-26 · F3 · BUILD · Lead answers: IMM 5409 leaves the starting library through runtime's demo.ts (option a; row 1 stays rejected until then); PR #34 merged (4ab7da9); PR #34 review fix to build.ts written with its fail-before test (assets-only folder refused), run and commit next. US$0.
 - 2026-10-26 · F3 · BUILD · applied Lead note 2026-10-26 night (Pass A+B merged; BUILD slices 1–4): slice 1 F3a-0 section groups, Sample labels, coverage by shared field and person (f3a0 15/15, 8f4ea2c); slice 2 F3a-1c second-draft guard (f3a1c 20/20, slice2 53/53, ai suites green, 6f671d1); slice 3 F3c-1 built (f3c 26/26), regression running. US$0.
 - 2026-10-26 · F2 · FIX → CHECK · applied Lead note 2026-10-26 evening (review-4: Ship after fixes, 8.5/10, 2 Major): firm-wide pairing count capped per address (f2b 52), demo copy is IMM 5409 (visitor), rejected as not needed since the library holds it (demo 27), two removals keep portal order (apr), held page offers Reject only when Approve would be refused (demo), build refuses a var folder holding files (apr). US$0. Owner → Lead.
-- 2026-10-26 · F3 · PLAN · applied Lead note 2026-10-26 (F3 PLAN after Pass A+B; read from origin/lead/2026-10-26): plan.md for F3a-1, F3a-2, F3c-1, F3c-2 (no table, no migration); "asked differently online" = a released screen-map decision per PDF subform group, keyed by shared field and person, only after the screen map is accepted; fresh challenge (2 Blocker, 6 Major, 10 Minor) all applied; slices reordered around the runtime merge. No code. Owner → Lead.

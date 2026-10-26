@@ -2,10 +2,11 @@
 // sample inputs loaded. No model call.
 //   QA-4  (C2.1, C3.1 · P-64) a stored source file and a filled PDF download when their path has a dot-folder, as every
 //         lane copy's does (.claude/worktrees/): two rows point at files under var/…/.lane-copy/; before the fix both 404.
-//   QA-20 (C1.6, C1.7 · EXPERIENCE 400 px) the combination page with the author's Portal select has no sideways scroll.
+//   QA-20 (C1.6 · EXPERIENCE 400 px) the combination page with the author's "Filed as" selects has no sideways scroll
+//         (W1-02, P-102: the Portal select is parked with the browser extension; Online shows its later-wave note).
 //   QA-22 (C1.1 · EXPERIENCE feedback and state) while the session request is still on its way the author is never told
 //         "A configuration author adds combinations here." and never sees a disabled New combination in the empty state.
-//   CHECK 24 Oct fixes: break K1 (keyboard on the Portal and "Filed as" selects: no save per arrow press, focus stays),
+//   CHECK 24 Oct fixes: break K1 (keyboard on the "Filed as" select: no save per arrow press, focus stays),
 //         m1 (a session that never answers does not hide Programs), m3 + review should 2 (a refused, failed or empty
 //         session: the right notice and neutral words), m4 (the combination page's forms wait for the person), m5 (ENOTDIR
 //         and a NUL byte in an id are a plain 404), review should 1 (the forms table scrolls by keyboard: axe at 400 px).
@@ -92,42 +93,34 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
       sql(`update source_attachment set stored_path='${was}' where id='${att}'`); sql(`delete from generated_artifact where id='${art}'`);
     }
 
-    // -------------------------------------------------------------- QA-20: 400 px, the author's Portal select
+    // -------------------------------------------------------------- QA-20: 400 px, the author's "Filed as" selects
     const ctx = await b.newContext({ viewport: { width: 400, height: 900 } }); const p = await ctx.newPage();
     const wp = sql("select id from combination where combination_key='wp.family'");
+    const filedAs = () => p.getByRole("combobox", { name: /^How .* is filed$/ }).first();
     for (const w of [400, 390, 1024]) {
       await p.setViewportSize({ width: w, height: 900 });
-      await p.goto(`${BASE}/c/${wp}`); await p.locator("main select[id^='portal-']").first().waitFor();
+      await p.goto(`${BASE}/c/${wp}`); await filedAs().waitFor();
       const sw = await p.evaluate(() => document.documentElement.scrollWidth);
-      const sel = await p.locator("main select[id^='portal-']").first().evaluate((e) => Math.round(e.getBoundingClientRect().right));
-      step(`C1.7 QA-20: ${w} px, the combination page with the Portal select has no sideways scroll`, sw <= w && sel <= w, `page ${sw} px, select ends at ${sel} px`);
+      step(`C1.6 QA-20: ${w} px, the combination page with the "Filed as" selects has no sideways scroll`, sw <= w, `page ${sw} px`);
     }
-    await p.locator("main select[id^='portal-']").first().selectOption("rep_pr_portal"); await p.waitForTimeout(800);
-    await p.setViewportSize({ width: 400, height: 900 }); await p.reload(); await p.locator("main select[id^='portal-']").first().waitFor();
-    step("C1.7 QA-20: 400 px with the longest portal chosen, still no sideways scroll", await p.evaluate(() => document.documentElement.scrollWidth) <= 400, await p.evaluate(() => document.documentElement.scrollWidth));
-    await p.locator("main select[id^='portal-']").first().selectOption(""); await p.waitForTimeout(800);
+    await filedAs().dispatchEvent("pointerdown"); await filedAs().selectOption("ONLINE"); await p.waitForTimeout(800);
+    await p.setViewportSize({ width: 400, height: 900 }); await p.reload(); await filedAs().waitFor();
+    step("C1.6 QA-20 P-107: 400 px with a line filed Online (its later-wave note shown), still no sideways scroll", await p.evaluate(() => document.documentElement.scrollWidth) <= 400 && await p.locator("[data-online-later]").count() >= 1, await p.evaluate(() => document.documentElement.scrollWidth));
+    await filedAs().dispatchEvent("pointerdown"); await filedAs().selectOption("PDF_UPLOAD"); await p.waitForTimeout(800);
 
     // -------------------------------------------------------------- review should 1: the forms table scrolls by keyboard
-    await p.setViewportSize({ width: 400, height: 900 }); await p.goto(`${BASE}/c/${wp}`); await p.locator("main select[id^='portal-']").first().waitFor();
+    await p.setViewportSize({ width: 400, height: 900 }); await p.goto(`${BASE}/c/${wp}`); await filedAs().waitFor();
     const ax = await new AxeBuilder({ page: p }).withRules(["scrollable-region-focusable"]).analyze();
     step("C1.6 review should 1: at 400 px every sideways-scrolling area takes keyboard focus (axe scrollable-region-focusable)", ax.violations.length === 0, ax.violations.map((v) => v.nodes.map((n) => n.target.join(" ")).join("; ")).join(" | ") || "none");
 
-    // -------------------------------------------------------------- break K1: keyboard on the Portal and "Filed as" selects
-    await p.setViewportSize({ width: 1440, height: 900 }); await p.goto(`${BASE}/c/${wp}`);
-    const portal = p.locator("main select[id^='portal-']").first(); await portal.waitFor();
+    // -------------------------------------------------------------- break K1: keyboard on the "Filed as" select
+    await p.setViewportSize({ width: 1440, height: 900 }); await p.goto(`${BASE}/c/${wp}`); await filedAs().waitFor();
     const patches = []; p.on("request", (rq) => { if (rq.method() === "PATCH") patches.push(rq.url()); });
-    await portal.focus(); for (let i = 0; i < 3; i++) { await p.keyboard.press("ArrowDown"); await p.waitForTimeout(80); }
-    const focused = await p.evaluate(() => document.activeElement?.id ?? "");
-    const during = patches.filter((u) => /\/portal$/.test(u)).length;
-    const shown = await portal.inputValue();
-    await p.waitForTimeout(1600);
-    const saved = sql(`select portal_key from combination where id='${wp}'`);
-    step("C1.7 break K1: three arrow presses on Portal save nothing yet and focus stays on it", during === 0 && /^portal-/.test(focused), `saves while pressing ${during}, focus on "${focused}"`);
-    step("C1.7 break K1: after a pause the choice is saved once, and it is the one shown", patches.filter((u) => /\/portal$/.test(u)).length === 1 && saved === shown && shown !== "", `saves ${patches.filter((u) => /\/portal$/.test(u)).length}, shown ${shown}, stored ${saved}`);
-    await portal.dispatchEvent("pointerdown"); await portal.selectOption(""); await p.waitForTimeout(500);
-    step("C1.7 break K1 control: a pointer pick saves at once", sql(`select coalesce(portal_key,'') from combination where id='${wp}'`) === "", sql(`select coalesce(portal_key,'') from combination where id='${wp}'`));
     const chan = p.getByRole("combobox", { name: /^How .* is filed$/ }).first(); const n0 = patches.filter((u) => /\/channel$/.test(u)).length;
-    await chan.focus(); await p.keyboard.press("ArrowDown"); await p.waitForTimeout(80); await p.keyboard.press("ArrowDown"); await p.waitForTimeout(80);
+    // Headless Chrome on the Mac opens a closed select's popup on ArrowDown instead of changing it, so each arrow press is
+    // a key event on the select followed by the change it makes (what a person's arrow press does in a real browser).
+    const arrow = async (v) => { await chan.dispatchEvent("keydown", { key: "ArrowDown" }); await chan.selectOption(v); await p.waitForTimeout(80); };
+    await chan.focus(); await arrow("ONLINE"); await arrow("SIGNED_PDF_UPLOAD");
     const cDuring = patches.filter((u) => /\/channel$/.test(u)).length - n0, cFocus = await p.evaluate(() => document.activeElement?.getAttribute("aria-label") ?? "");
     await p.keyboard.press("Tab"); await p.waitForTimeout(900);
     step("C1.6 break K1: arrow presses on Filed as save nothing until focus leaves, then once; focus stayed on it", cDuring === 0 && /is filed$/.test(cFocus) && patches.filter((u) => /\/channel$/.test(u)).length - n0 === 1, `while pressing ${cDuring}, focus "${cFocus}", after Tab ${patches.filter((u) => /\/channel$/.test(u)).length - n0}`);
@@ -139,8 +132,9 @@ const step = (name, ok, detail) => { if (!ok) fail++; console.log(`${ok ? "PASS"
       await q.route("**/api/session**", async (r) => { await new Promise((res) => setTimeout(res, 1500)); await r.continue(); });
       await q.goto(`${BASE}/c/${wp}`);
       let readOnly = 0; const until = Date.now() + 3000;
-      while (Date.now() < until) { readOnly += await q.locator("main b[id^='portal-']").count(); await q.waitForTimeout(50); }
-      step("C1.7 break m4: while the session loads, the author never sees Portal as read-only words", readOnly === 0 && await q.locator("main select[id^='portal-']").count() === 1, `read-only looks ${readOnly}`);
+      const filed = () => q.getByRole("combobox", { name: /^How .* is filed$/ });
+      while (Date.now() < until) { if (await q.locator('[aria-labelledby="ov-forms"] table').count() && !(await filed().count())) readOnly++; await q.waitForTimeout(50); }
+      step("C1.6 break m4: while the session loads, the author never sees the forms' channels as read-only words", readOnly === 0 && await filed().count() >= 1, `read-only looks ${readOnly}`);
       await c.close();
     }
   } finally { await b.close(); }
