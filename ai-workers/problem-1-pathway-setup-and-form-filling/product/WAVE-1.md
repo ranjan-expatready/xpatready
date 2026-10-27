@@ -2,6 +2,19 @@
 
 Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. Goal: the whole journey **without the browser extension**, actor by actor, on the founder's 5 Retail combinations (+1 Corporate Sample). Forms come in only as PDFs; the extension returns last, for online fill only. Status words: Not started · Concept · Founder choice · Build · Check · Merged · Works (tested by qa).
 
+## Screen queue (P-117: one at a time; the Lead guides; "Founder OK" moves to the next)
+| # | Screen | Closes asks | Status | Founder OK |
+|---|---|---|---|---|
+| S1 | Structure (+ level switch; "Used by" names; toasts; menu background) | B5; B1, B2 in part | Built; merging; finish items next | |
+| S2 | Immigration programs, card layout (design D) | B1–B4, C2 | Agreed design; next build | |
+| S3 | New combination | C1–C5 | Agreed design | |
+| S4 | Form library + form finder + AI run panel | E1, D6, A4 data, F6 | Concept draft | |
+| S5 | Combination workspace | D1, D3–D5 | Concept draft | |
+| S6 | Shared library: add by hand or ask AI, setup order | F3–F5, H1, H6 | Concept draft | |
+| S7 | Reset + Load sample (5 combinations with their PDFs) | B6, E2, F1, F2 | Concept draft | |
+| S8 | Content publisher walk-through (qa, like a person) | W1-13 | Not started | |
+Then W2–W6 below, the same way. At the end of every screen the Lead asks: Is it working? Anything to change? OK to move on?
+
 ## Order of work (one actor at a time; engine work alongside)
 | ID | Business name | Lane | Depends on | Status |
 |---|---|---|---|---|
@@ -24,6 +37,8 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 | W4 | Case officer / agent view (includes the P-113 answer sheet in portal order for portal-only forms): open case, filing route per application, channel per form inside it (P-114), case link to an employer case (P-106), confirm section by section, prepare and record the filing | m3 (design now: IRCC representative-portal research) | W2 | Concept research |
 | W5 | Client and prospect: PQR, SQR, sign | runtime | W4 | Not started |
 | W6 | Browser extension for online fill (unpark; capture does not return). Carry the PR #37 review findings: a repeated fill keeps Undo; portal option codes are checked for client details | forms | W5 | Parked |
+
+**Founder asks of 26 Oct, one line each** (44 asks, where each lives, status, and the gaps still open for the founder): `screens/W1-baseline/founder-asks.md`. Progress page for the founder: `design/end-to-end-progress.html`. Keep all three in step.
 
 ## Founder inputs checked (not followed blindly)
 * **Sheet of 5 combinations:** "Study Permit › Study Permit" repeats the program (category becomes the application type); "Express Entry Stream _ Province" typo; Ontario as a sub-category changes no IRCC form (P-109); inside/outside Canada and inland/outland are levels only where IRCC files them as different applications (expert confirms); the forms column was empty (W1-12).
@@ -48,5 +63,5 @@ Owner: the Lead. Founder brief 26 Oct (R-115–R-117), decisions P-101–P-110. 
 | Lead PRs #28 (roles audit), #30 (archive non-POC folders) | open since 25 Oct | Founder decides later; not blocking |
 
 ## Rules for this wave
-**Remove, retire, reorder (P-116):** one shared mechanism on every master (where used first; remove only unused, retire/restore used; reorder where order matters; no move), built with W1-03 and reused by W1-06, W1-08, W1-09. **Lanes (P-111):** two build lanes (screens, forms) plus qa after every merge; runtime (workspace) starts after both merge; m3 research only; scout, evidence, Devin and Goose paused; one Lead chat at a time, a fresh /lead each day. Permanent-residence combinations: PDFs where IRCC takes them, an answer sheet for portal-only forms (P-113).
+**Remove, retire, reorder (P-116):** one shared mechanism on every master (where used first; remove only unused, retire/restore used; reorder where order matters; no move), built with W1-03 and reused by W1-06, W1-08, W1-09. **Lanes (P-111, amended by P-117):** one build lane at a time on the demo path, qa after every merge; m3 research only; scout, evidence, Devin and Goose paused; one Lead chat at a time, a fresh /lead each day. Permanent-residence combinations: PDFs where IRCC takes them, an answer sheet for portal-only forms (P-113).
 Concepts offer the founder 2–3 options with a recommendation before BUILD (founder: "discuss the available solutions, then select one"). Tooltips in plain functional words on every control. Corporate stays empty except one Sample. AI only proposes; every AI action follows W1-07.
