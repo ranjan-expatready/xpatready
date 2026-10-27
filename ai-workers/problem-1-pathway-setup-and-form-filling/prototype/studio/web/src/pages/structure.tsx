@@ -220,8 +220,11 @@ function useFitToScreen() {
     const wide = window.matchMedia("(min-width: 1280px)");
     const run = () => { el.style.height = wide.matches ? `${Math.max(320, window.innerHeight - Math.max(80, el.getBoundingClientRect().top) - 16)}px` : ""; };
     run();
+    // Content above it (the Pathway cards, a notice) can arrive after it does and push it down: watch the page too.
+    // A slow check as well: a late row above it can move it without resizing anything observed.
+    const ro = new ResizeObserver(run); ro.observe(document.body); const tick = window.setInterval(run, 500);
     window.addEventListener("scroll", run, { passive: true }); window.addEventListener("resize", run); wide.addEventListener("change", run);
-    return () => { window.removeEventListener("scroll", run); window.removeEventListener("resize", run); wide.removeEventListener("change", run); };
+    return () => { ro.disconnect(); window.clearInterval(tick); window.removeEventListener("scroll", run); window.removeEventListener("resize", run); wide.removeEventListener("change", run); };
   }, [el]);
   return setEl;
 }

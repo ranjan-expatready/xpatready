@@ -1,9 +1,9 @@
 {
- "at": "2026-10-26T14:41:51.833Z",
+ "at": "2026-10-27T06:22:41.893Z",
  "timings": {
-  "cold_first_view_ms": 497,
-  "first_view_ms": 197,
-  "filter_ms": 30
+  "cold_first_view_ms": 610,
+  "first_view_ms": 91,
+  "filter_ms": 49
  },
  "pass": 129,
  "fail": 0,
@@ -11,7 +11,7 @@
   {
    "name": "setup: sample inputs load through the form intake",
    "ok": true,
-   "detail": "7.871"
+   "detail": "12.312"
   },
   {
    "name": "setup: one replay of a saved real AI run on Super visa (no model call, US$0)",
@@ -26,22 +26,21 @@
   {
    "name": "performance: first view under 1 s with the sample data (app files cached)",
    "ok": true,
-   "detail": "197 ms (cold browser 497 ms)"
+   "detail": "91 ms (cold browser 610 ms)"
   },
   {
-   "name": "P-49: Needs work is the default view, with its count",
-   "ok": true,
-   "detail": "Needs work · 20"
+   "name": "BR-13: All is the default view; the status is one menu, no filter-tab row",
+   "ok": true
   },
   {
-   "name": "P-49: the three views are Needs work · Live · All, each with a count",
+   "name": "BR-13: Status offers All · Needs work · Not started · In setup · Not ready · Live, each with a count",
    "ok": true,
-   "detail": "Needs work · 20 | Live · 1 | All · 21"
+   "detail": "All · default21Every combination of this tab. | Needs work20Anything with a next step: not released yet, not ready, or waiting for you. | Not started15Added to the Structure; no setup yet. | In setup4"
   },
   {
-   "name": "item 4: sentence-case column headers (Combination · Status · Next step), no capitals styling",
+   "name": "item 4: sentence-case column headers (Combination · Status · Setup · Next step), no capitals styling",
    "ok": true,
-   "detail": "Combination|Status |Next step / none"
+   "detail": "Combination|Status |Setup|Next step / none"
   },
   {
    "name": "P-49: \"Ready\" never appears; statuses say In setup, Not ready or Live",
@@ -57,9 +56,9 @@
    "detail": "Review 84 AI proposals"
   },
   {
-   "name": "item 3: path on two lines — muted Program › Category above, the combination's name below; nothing truncated",
+   "name": "item 3 + BR-7 (S2): the full five-part trail in one line, first parts muted, the last levels bold; nothing truncated",
    "ok": true,
-   "detail": "[{\"t\":\"Economic immigration › Express Entry\",\"cut\":false,\"ell\":\"clip\"},{\"t\":\"Permanent residence application\",\"cut\":false,\"ell\":\"clip\"}]"
+   "detail": "{\"t\":\"Retail › Individual › Economic immigration › Express Entry › Permanent residence application\",\"bold\":[\"Express Entry\",\"Permanent residence application\"],\"cut\":false}"
   },
   {
    "name": "axe: programs-needs-work-default has no WCAG A/AA violation",
@@ -90,12 +89,12 @@
   {
    "name": "item 5: Super visa is one row, Visitors › Super visa (no Parent / Grandparent)",
    "ok": true,
-   "detail": "VisitorsSuper visaIn setupReview 84 AI proposals"
+   "detail": "Retail › Individual › Visitors › Super visa › No sub-categoryIn setupReview 84 AI proposals"
   },
   {
    "name": "performance: changing the view answers under 200 ms",
    "ok": true,
-   "detail": "30 ms"
+   "detail": "49 ms"
   },
   {
    "name": "F1: Live shows every row whose status is Live",
@@ -130,7 +129,7 @@
    "ok": true
   },
   {
-   "name": "Program filter: only Work permits rows, in path order",
+   "name": "Program scope: only Work permits rows, in path order, with a 'Showing: Work permits' chip",
    "ok": true
   },
   {
@@ -169,9 +168,9 @@
    "ok": true
   },
   {
-   "name": "regression: \"Show all\" keeps the All view after the search box settles (no stale URL rewrite)",
+   "name": "regression: \"Clear search\" keeps the All view after the search box settles (no stale URL rewrite)",
    "ok": true,
-   "detail": "http://localhost:4454/?f=all"
+   "detail": "http://localhost:4404/"
   },
   {
    "name": "item 5: Corporate shows the demo names (LMIA › High-wage position, Low-wage position, Global Talent Stream, In-home caregiver)",
@@ -189,12 +188,12 @@
   {
    "name": "keyboard: one tab stop, ↑/↓/Home/End move, Enter opens the combination page (P-50)",
    "ok": true,
-   "detail": "Spouse of a skilled worker → http://localhost:4454/c/9d711439-1c1d-46f9-951c-21eca2ea59de"
+   "detail": "Spouse of a skilled worker → http://localhost:4404/c/894573bd-177c-4930-a306-ada87d16cc51"
   },
   {
    "name": "P-50: Back keeps the view (All), highlights the opened row and restores the scroll",
    "ok": true,
-   "detail": "{\"url\":\"?f=all&sel=individual.work_permits.open.spouse_worker\",\"sel\":\"Spouse of a skilled worker\",\"y\":695,\"focus\":\"Spouse of a skilled worker\",\"scrollBefore\":695}"
+   "detail": "{\"url\":\"?f=all&sel=individual.work_permits.open.spouse_worker\",\"sel\":\"Spouse of a skilled worker\",\"y\":600,\"focus\":\"Spouse of a skilled worker\",\"scrollBefore\":600}"
   },
   {
    "name": "axe: programs-back-row-highlighted has no WCAG A/AA violation",
@@ -211,9 +210,9 @@
    "detail": "{\"sel\":\"Super visa\",\"focus\":\"Super visa\",\"url\":\"?f=all&sel=individual.visitors.super_visa\"}"
   },
   {
-   "name": "P-50: the page header carries the full path, every level a link (Programs › Individual › Visitors › Visitor visa)",
+   "name": "P-50: the page header carries the full path, every level a link (Immigration programs › Individual › Visitors › Visitor visa)",
    "ok": true,
-   "detail": "Programs › Individual › Visitors › Visitor visa"
+   "detail": "Immigration programs › Individual › Visitors › Visitor visa"
   },
   {
    "name": "item 1: Visitor visa — row step = header step = the missing list's one shared step (said once); sources and set-up forms counted apart",
@@ -332,7 +331,7 @@
   {
    "name": "source-trust: the held unapproved edition does not change a Live row or expose edition-impact review",
    "ok": true,
-   "detail": "Work permits › Employer-specific work permitWith an LMIASupported by: Corporate › LMIAFiled: PDF onlyLiveOpen"
+   "detail": "Retail › Individual › Work permits › Employer-specific work permit › With an LMIAFiled: PDFLiveOpen"
   },
   {
    "name": "axe: programs-live-row-unverified-source-held has no WCAG A/AA violation",
@@ -344,14 +343,14 @@
    "ok": true
   },
   {
-   "name": "F1: Individual: the Live count equals the rows showing Live, and the Live view lists them",
+   "name": "F1: Retail: the Live count equals the rows showing Live, and the Live view lists them",
    "ok": true,
-   "detail": "Live · 1 · chips 1 · shown 1"
+   "detail": "1 · chips 1 · shown 1"
   },
   {
    "name": "F1: Corporate: the Live count equals the rows showing Live, and the Live view lists them",
    "ok": true,
-   "detail": "Live · 0 · chips 0 · shown 0"
+   "detail": "0 · chips 0 · shown 0"
   },
   {
    "name": "review #3: released version and approver role appear without a technical fingerprint",
@@ -486,7 +485,7 @@
   {
    "name": "QA-11: \"Open the existing combination\" opens that combination's page (not the list)",
    "ok": true,
-   "detail": "http://localhost:4454/c/15e5a631-8590-47d5-813a-471e798ff3cf"
+   "detail": "http://localhost:4404/c/bc2e46b8-a511-42b5-b493-b8f74bbfd2ea"
   },
   {
    "name": "QA-1: the shared Release page holds back a combination nobody submitted, saying why",
@@ -535,8 +534,9 @@
    "detail": "{\"nameW\":354,\"over\":0,\"clipped\":0}"
   },
   {
-   "name": "C1.6: the Programs row says how the combination is filed",
-   "ok": true
+   "name": "C1.6 BR-14 (S2): the row says how the combination is filed, in the card's words (Filed: PDF)",
+   "ok": true,
+   "detail": "Retail › Individual › Work permits › Employer-specific work permit › With an LMIAFiled: PDFLiveOpen"
   },
   {
    "name": "C1.6: the combination page shows the filing method and each line's channel",
@@ -578,7 +578,7 @@
   {
    "name": "QA-17: a step run on another day shows its date (\"Oct 21, …\"); one run today says \"today\"",
    "ok": true,
-   "detail": "today 8:10 p.m. | today 8:10 p.m. | today 8:10 p.m."
+   "detail": "today 11:51 a.m. | today 11:51 a.m. | today 11:51 a.m."
   },
   {
    "name": "P-63: no page says \"box\" or \"box map\" (form field, field map)",

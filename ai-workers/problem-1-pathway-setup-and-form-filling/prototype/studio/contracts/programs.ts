@@ -184,6 +184,8 @@ export type CatalogueSection = { pathwayKey: string; label: string; combinations
 /** GET /catalogue. */
 export type CatalogueResponse = {
   pathway: (typeof PATHWAYS)[number]; filter: Filter; requestedFilter: Filter; fellBack: boolean; q: string; program: string; under: string; sort: (typeof SORTS)[number];
+  /** S2: the Pathway card this answer is for ("" = All pathways), so the page never pairs one Pathway's name with another view's counts. */
+  pathwayKey: string;
   underPath: string[] | null;
   rows: CatalogueLeaf[];
   programs: { key: string; label: string; combinations: number }[];

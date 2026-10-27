@@ -109,7 +109,9 @@ export function ProgramsPage() {
   }
   const rows: CatalogueLeaf[] = cat.data?.rows ?? [];
   const sections: CatalogueSection[] = cat.data?.sections ?? [];
-  const shownSections = pathwayKey && sections.some((s) => s.pathwayKey === pathwayKey) ? sections.filter((s) => s.pathwayKey === pathwayKey) : sections;
+  // From the answer, not the address: while a new Pathway's answer is on its way, the page keeps showing the last one whole.
+  const answered = cat.data?.pathwayKey ?? "";
+  const shownSections = answered && sections.some((s) => s.pathwayKey === answered) ? sections.filter((s) => s.pathwayKey === answered) : sections;
   const filtering = filter !== "all" || !!q || !!program || !!under;
   const groups = shownSections.map((s) => ({ s, rows: rows.filter((r) => r.pathwayKey === s.pathwayKey) })).filter((g) => g.rows.length || !filtering);
   const [closed, setClosed] = React.useState<Set<string>>(new Set());
@@ -142,7 +144,7 @@ export function ProgramsPage() {
   const progLabel = (cat.data?.programs ?? []).find((p) => p.key === (cat.data?.program ?? program))?.label;
   const underLabel = (cat.data?.underPath ?? []).join(" › ");
   const scopeChip = progLabel ?? (cat.data?.under && underLabel ? underLabel : null);
-  const pathwayLabel = shownSections.length === 1 && pathwayKey ? shownSections[0].label : null;
+  const pathwayLabel = shownSections.length === 1 && answered ? shownSections[0].label : null;
   const counts = cat.data?.counts;
   const other = pathway === "INDIVIDUAL" ? "CORPORATE" : "INDIVIDUAL";
   const nothingAtAll = !!cat.data && !sections.length && !q;

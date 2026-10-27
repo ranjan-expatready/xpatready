@@ -239,7 +239,7 @@ export class Programs {
     const programs = progs.map((p) => ({ key: p.programNodeKey as string, label: p.label as string, combinations: inPathway.filter((r) => r.leaf.programKey === p.programNodeKey).length }))
       .sort((a, b) => a.label.localeCompare(b.label, "en-CA", { sensitivity: "base" }));
     return {
-      pathway: q.pathway, filter, requestedFilter: q.filter, fellBack, q: q.q, program: q.program, under: q.under, sort: q.sort,
+      pathway: q.pathway, filter, requestedFilter: q.filter, fellBack, q: q.q, program: q.program, under: q.under, sort: q.sort, pathwayKey: q.pathwayKey,
       underPath: q.under ? underPath(nodes, q.under) : null,
       /** Layout v2: one flat list in Program › Category › Sub-category order (route steps in step order), or by status. */
       rows: [...shown.values()].sort((x, y) => (q.sort === "path" ? 0 : (q.sort === "status" ? 1 : -1) * compareStatus(x, y)) || comparePaths(x, y)), programs,
