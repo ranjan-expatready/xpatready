@@ -7,7 +7,7 @@ import { AnyFilesInterceptor } from "@nestjs/platform-express";
 import type { NestExpressApplication } from "@nestjs/platform-express";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { actorOf, Audit, Db, STUDIO, Workspace } from "./core.ts";
+import { actorOf, Audit, Db, readerOf, STUDIO, Workspace } from "./core.ts";
 import { Ai } from "./ai.ts";
 import { Demo } from "./demo.ts";
 import { Fill } from "./fill.ts";
@@ -110,12 +110,12 @@ class AiController {
 @Controller("api")
 class ProgramsController {
   constructor(@Inject(Programs) private readonly p: Programs, @Inject(Sources) private readonly sources: Sources, @Inject(Intake) private readonly intake: Intake) {}
-  @Get("catalogue") catalogue(@Query() q: any) { return this.p.catalogue(q); }
+  @Get("catalogue") catalogue(@Headers("x-actor") a: H, @Query() q: any) { readerOf(a); return this.p.catalogue(q); }
   @Get("draft") draft(@Headers("x-actor") a: H, @Query("summary") summary?: string) { return this.p.draft(actorOf(a), summary === "1"); }
   @Post("pack/release") release(@Headers("x-actor") a: H, @Body() b: any) { return this.p.release(actorOf(a), b); }
   @Post("program-nodes") node(@Headers("x-actor") a: H, @Body() b: any) { return this.p.createNode(actorOf(a), b); }
   @Post("combinations") create(@Headers("x-actor") a: H, @Body() b: any, @Res({ passthrough: true }) res: any) { return this.p.createCombination(actorOf(a), b).then((r) => { res.status(r.created ? 201 : 200); return r; }); }
-  @Get("path-options") pathOptions(@Query("pathway") pw: string) { return this.p.pathOptions(pw); }
+  @Get("path-options") pathOptions(@Headers("x-actor") a: H, @Query("pathway") pw: string) { readerOf(a); return this.p.pathOptions(pw); }
   @Post("combinations/path") path(@Headers("x-actor") a: H, @Body() b: any, @Res({ passthrough: true }) res: any) { return this.p.createPath(actorOf(a), b).then((r) => { res.status(r.created ? 201 : 200); return r; }); }
   @Get("combinations/:id/summary") summary(@Param("id") id: string) { return this.p.summary(id); }
   @Post("combinations/:id/lines") line(@Headers("x-actor") a: H, @Param("id") id: string, @Body() b: any) { return this.p.addLine(actorOf(a), id, b); }
