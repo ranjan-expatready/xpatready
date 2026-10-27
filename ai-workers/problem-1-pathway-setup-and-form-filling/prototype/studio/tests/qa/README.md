@@ -1,6 +1,6 @@
 # qa lane checks (independent tester, P-68)
 
-Written by the qa lane only; never app code. Each finding in `product/qa/BUGS.md` has a check here that **fails while the finding is open and passes when fixed** (closed findings' checks now pass: QA-1, 2, 4, 5, 8, 13, 14, 15, 17, 20, 22–25, 27–34; QA-16 red again as QA-37). Ports 4470–4479, databases `xr_studio_qa_*`; never :4400, except the read-only QA-19 check (GET requests only). No model call.
+Written by the qa lane only; never app code. Each finding in `product/qa/BUGS.md` has a check here that **fails while the finding is open and passes when fixed** (closed findings' checks now pass: QA-1, 2, 4, 5, 8, 13, 14, 15, 17, 20, 22–25, 27–34, 41–43; QA-16 red again as QA-37). Ports 4470–4479, databases `xr_studio_qa_*`; never :4400, except the read-only QA-19 check (GET requests only). No model call.
 
 | Check | Bug | Run (from `prototype/studio/`) |
 |---|---|---|
@@ -23,6 +23,7 @@ Written by the qa lane only; never app code. Each finding in `product/qa/BUGS.md
 | QA-8, QA-21 | AI sandbox in lane copies; racy builder check | the builder suites themselves: `tests/check_ai_orchestration.ts`, `tests/check_screen01_browser.cjs` |
 | `check_qa_m2_journeys.cjs` | M2 journeys J1–J8 (author, reviewer, approver; QA-1 in the browser, QA-6, QA-7, QA-10, QA-11) | see its header; `QA_HEADED=1` shows the browser |
 | `check_qa_explore_1025.cjs` | /qa explore 25 Oct: QA-38 to QA-43 (fail until fixed); a real Online release; officer Confirm section and None apply by click with a stale refusal; G4 pages and G3 API routes | `isolated.sh qa_x1 4476 start`, `setup_visitor_visa.ts 4476 xr_studio_qa_x1`, then `node studio/tests/qa/check_qa_explore_1025.cjs 4476 xr_studio_qa_x1` |
+| `check_qa_am_1027.cjs` | /qa after-merge 27 Oct: S1 Structure typed on the page (QA-44, QA-45, QA-46), W1-02 removal and the PDF path (QA-47), Retire/Restore of a Live combination (QA-48), QA-38 and QA-40 re-seen; QA-41, QA-42, QA-43 now pass | `isolated.sh qa_am1027 4471 start`; `isolated.sh qa_x1 4476 start` + `setup_visitor_visa.ts 4476 xr_studio_qa_x1`; then `node studio/tests/qa/check_qa_am_1027.cjs 4471 xr_studio_qa_am1027 4476 xr_studio_qa_x1` (fresh copies each run) |
 
 Harness (scaffolding, never product):
 * `page-proxy.mjs` — forwards to a copy and serves the page for page addresses while QA-4 is open, so browser checks can run in a lane copy.

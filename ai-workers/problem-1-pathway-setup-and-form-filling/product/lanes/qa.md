@@ -6,12 +6,12 @@
 
 Command: `/qa <mode>` in this lane's own copy (`LANES.md`). This lane writes everything below; the Lead writes only the section above.
 
-current_item: explore on main 8360565 (Screen 01, forms channels, R1 slice; Lead note 25 Oct, P-89)
+current_item: after-merge on main 76628a4 (W1-02 extension parked, PDF path; S1 Structure; Lead note 27 Oct)
 stage: WAITING
 owner: Lead
-next_action: Lead reads `qa/reports/2026-10-25-explore.md` (not ready on QA-38 Major, runtime: "Open a case" names the oldest release; new Minors QA-39–43) and assigns lanes; 2 questions (QA-40 wording, cloud PostgreSQL host).
+next_action: Lead reads `qa/reports/2026-10-27-after-merge.md` (not ready on QA-45 and QA-48, Majors, screens: first sub-category cannot be added on the page; a released combination is retired only by API; QA-38 still open, runtime) and assigns lanes; 2 questions (where combination Retire lives; coverage runs on the Mac under load).
 blocked_by: none
-updated: 2026-10-25
+updated: 2026-10-27
 
 ## Log (last 10 lines)
 - 2026-10-23 · Lead: lane created at the founder's request (R-82, P-68); ports 4470–4479, databases `qa_*`.
@@ -23,3 +23,4 @@ updated: 2026-10-25
 - 2026-10-24 · applied Lead note 2026-10-24 21:10. after-merge on main 12e7207 (one run): suites 19/20 + p2 guard 75/75 plain; closed QA-4, 15, 20, 22–25, 27–34; QA-26 2 of 3; R1c walk 24/27 (officer and client, 1440 and 390 px); new QA-35 Major (blank case area from the Demo menu), QA-36, QA-37 Minor; coverage api 95.95/80.95, engine 99.39/87.53, floor 95/80 · 99/87. US$0.
 - 2026-10-25 · applied Lead note 2026-10-25 02:00. after-merge on main 8aef175 (one run): suites 20/21 + p2 guard 75/75 plain; closed QA-26, 35, 36 (Lead's save-and-flag), 37; R1d walk 35/35 (forms panel, P-71, stale after filing, none apply, online not offered; 1440/390 px); R1c walk 27/27; journeys 47/47; coverage api 96.25/81.55, engine 99.42/88.24, floor 96/81 · 99/88; open: QA-19 only. US$0.
 - 2026-10-25 · applied Lead note 25 Oct (P-89). QA-19 → BUGS-CLOSED. explore on main 8360565: suites 21/21 (with --demo); officer Confirm section and None apply by click (stale refusal 409), client keyboard only 15/15 parts at 390 px, 200% zoom on 12 pages, a real Online release (release 2); new QA-38 Major (Open a case names release 1), QA-39–43 Minor; graph G3 22→2, G4 7→0; coverage not rerun (no app code change). PostgreSQL 18.3 from npm (apt host denied). US$0.
+- 2026-10-27 · applied Lead note 27 Oct (PR #51). after-merge on main 76628a4 (W1-02 + S1 Structure; app code = d393155): CI suites 35/35 on the same code; Mac plain reruns green; W1-02 clean (routes 404, pages 'Page not found', no extension words, later-wave note, PDF path end to end, fill 44/44); Structure walked by typing, journey 7/10; new QA-44–48 (Majors QA-45, QA-48, screens); closed QA-41, 42, 43; QA-38, 39, 40 open; coverage api 96.78/81.84, engine 99.38/89.05, floor 96/81 · 99/89; check `check_qa_am_1027.cjs` 50/57 then 51/57. US$0.
