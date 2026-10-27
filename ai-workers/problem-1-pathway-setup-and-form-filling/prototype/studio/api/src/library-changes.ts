@@ -12,7 +12,7 @@ import { isLifecycleKind, publishLifecycle, withdrawLifecycle } from "./lifecycl
 export const LIBRARY_KINDS = ["field", "section", "document_type", "check"] as const;
 export type LibraryKind = (typeof LIBRARY_KINDS)[number];
 export const KIND_NOUN: Record<string, string> = { field: "shared field", section: "section", document_type: "document type", check: "check", structure_node: "structure name", combination: "combination" };
-const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: "Delete", RETIRE: "Retire", RESTORE: "Restore", EDIT_RULE: "Change the rule of" };
+const ACTION_WORD: Record<string, string> = { ADD: "Add", DELETE: "Remove", RETIRE: "Retire", RESTORE: "Restore", EDIT_RULE: "Change the rule of" };
 const nameOf = (id: string | null | undefined) => (id ? ACTORS.find((a) => a.id === id)?.name ?? "A person" : null);
 const problem = (status: number, title: string, detail: string) => new HttpException({ type: `https://expatready.local/problems/${status}`, title, status, detail }, status);
 

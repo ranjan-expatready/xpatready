@@ -121,7 +121,7 @@ const step = (name, ok, detail) => { ok ? pass++ : fail++; console.log(`${ok ? "
   await cat.fill("Tourist visa");
   await p.waitForFunction(() => /No exact match under Visitors/.test(document.querySelector("[data-add-row]")?.textContent ?? ""));
   await cat.press("Enter");
-  await p.locator("[data-add-row] [data-done]").waitFor();
+  await p.locator("[data-add-row] [data-done]").filter({ hasText: /^Added/ }).waitFor(); // "Adding …" shows first (QA-44)
   step("S1-3 adding a name says so on the add row itself", /Added "Tourist visa" under Visitors\./.test(await p.locator("[data-add-row] [data-done]").textContent()));
   step("S1-3 no toast is shown (nothing covers the outline or the panel)", await toastsShown() === 0);
   await cat.press("Escape");
